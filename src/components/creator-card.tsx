@@ -8,10 +8,10 @@ import {
   IconVerified,
   SocialIcon,
 } from "@/components/icons";
+import type { CardFeatureFlags } from "@/lib/cms";
 import {
   formatFollowers,
   specialtyLabel,
-  totalFollowers,
   type SeedCreator,
 } from "@/lib/seed-data";
 import { getEntitlements, type PlanCode } from "@/lib/entitlements";
@@ -24,106 +24,220 @@ const BADGE_STYLES: Record<string, string> = {
   "High Engagement": "bg-[#633CFF] text-white",
 };
 
-export function CreatorCard({ creator }: { creator: SeedCreator }) {
-  const socialPreview = creator.socials.slice(0, 3);
+const DEFAULT_FEATURES: CardFeatureFlags = {
+  showBadge: true,
+  showHeart: true,
+  showVerified: true,
+  showLocation: true,
+  showSpecialties: true,
+  showSocials: true,
+  showFollowerCounts: true,
+  showQr: true,
+  showStatus: true,
+  visiblePlatforms: [],
+};
+
+export type CreatorCardProps = {
+  creator: SeedCreator;
+  /** Width in px (height unchanged). Default ~264 = +20% over ~220. */
+  widthPx?: number;
+  socialIconSize?: number;
+  qrSize?: number;
+  features?: Partial<CardFeatureFlags>;
+};
+
+export function CreatorCard({
+  creator,
+  widthPx = 264,
+  socialIconSize = 22,
+  qrSize = 22,
+  features: featureOverrides,
+}: CreatorCardProps) {
+  const features = { ...DEFAULT_FEATURES, ...featureOverrides };
   const entitlements = getEntitlements(creator.planTier as PlanCode);
-  const showQr = entitlements.standardQr || entitlements.dynamicQr;
+  const canQr = entitlements.standardQr || entitlements.dynamicQr;
+  const showQr = features.showQr && canQr;
   const badgeClass = BADGE_STYLES[creator.badge] ?? "bg-white text-violet";
 
+  const socials = creator.socials.filter((s) =>
+    features.visiblePlatforms.length
+      ? features.visiblePlatforms.includes(s.platform)
+      : true,
+  ).slice(0, 4);
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-[0_12px_32px_rgba(17,26,90,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+    <article
+      style={{ width: widthPx, minWidth: widthPx }}
+      className="group flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-[0_12px_32px_rgba(17,26,90,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+    >
       <div className="relative h-52 overflow-hidden">
         <Image
           src={creator.image}
           alt={creator.displayName}
           fill
           className="object-cover transition duration-500 group-hover:scale-105"
-          sizes="(max-width:768px) 100vw, 20vw"
+          sizes={`${widthPx}px`}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-indigo/55 via-transparent to-transparent" />
-        <span
-          className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold shadow ${badgeClass}`}
-        >
-          {creator.badge}
-        </span>
-        <form action={actionAddShortlist} className="absolute right-3 top-3">
-          <input type="hidden" name="slug" value={creator.slug} />
-          <input type="hidden" name="note" value="Saved from Discover" />
-          <button
-            type="submit"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-violet shadow"
-            aria-label="Add to business shortlist"
-            title="Add to shortlist"
+        {features.showBadge ? (
+          <span
+            className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold shadow ${badgeClass}`}
           >
-            <IconHeart size={15} />
-          </button>
-        </form>
+            {creator.badge}
+          </span>
+        ) : null}
+        {features.showHeart ? (
+          <form action={actionAddShortlist} className="absolute right-3 top-3">
+            <input type="hidden" name="slug" value={creator.slug} />
+            <input type="hidden" name="note" value="Saved from Discover" />
+            <button
+              type="submit"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-violet shadow"
+              aria-label="Add to business shortlist"
+              title="Add to shortlist"
+            >
+              <IconHeart size={15} />
+            </button>
+          </form>
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-2.5 px-3.5 pb-0 pt-3.5">
         <div>
-          <h3 className="flex items-center gap-1 font-display text-[15px] font-bold text-indigo">
+          <h3 className="flex items-center gap-1.5 font-display text-[15px] font-bold text-indigo">
             <Link href={`/creators/${creator.slug}`} className="hover:underline">
               {creator.displayName}
             </Link>
-            <IconVerified className="text-blue" size={15} />
+            {features.showVerified ? <IconVerified size={16} /> : null}
           </h3>
-          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
-            <IconMapPin size={12} className="shrink-0 text-violet" />
-            {creator.locationCity}, {creator.locationCountry}
-          </p>
+          {features.showLocation ? (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
+              <IconMapPin size={12} className="shrink-0 text-violet" />
+              {creator.locationCity}, {creator.locationCountry}
+            </p>
+          ) : null}
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {creator.specialties.slice(0, 3).map((s) => (
-            <span key={s} className="rounded-full bg-lavender px-2 py-0.5 text-[10px] font-semibold text-violet">
-              {specialtyLabel(s)}
-            </span>
-          ))}
-        </div>
+        {features.showSpecialties ? (
+          <div className="flex flex-wrap gap-1.5">
+            {creator.specialties.slice(0, 3).map((s) => (
+              <span
+                key={s}
+                className="rounded-full bg-lavender px-2 py-0.5 text-[10px] font-semibold text-violet"
+              >
+                {specialtyLabel(s)}
+              </span>
+            ))}
+          </div>
+        ) : null}
 
-        <div className="flex items-end justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-1.5 text-muted">
-              {socialPreview.map((s) => (
-                <SocialIcon key={s.platform} platform={s.platform} size={14} className="text-indigo/80" />
+        <div className="flex items-center justify-between gap-2">
+          {features.showSocials ? (
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              {socials.map((s) => (
+                <span key={s.platform} className="inline-flex items-center gap-1">
+                  <SocialIcon platform={s.platform} size={socialIconSize} />
+                  {features.showFollowerCounts ? (
+                    <span className="text-xs font-bold text-indigo">
+                      {formatFollowers(s.followers)}
+                    </span>
+                  ) : null}
+                </span>
               ))}
             </div>
-            <p className="mt-1 font-display text-lg font-bold leading-none text-indigo">
-              {formatFollowers(totalFollowers(creator))}
-            </p>
-          </div>
+          ) : (
+            <span />
+          )}
+
           {showQr ? (
             <Link
               href={`/c/${creator.slug}`}
-              className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-white p-0.5"
+              className="relative shrink-0 overflow-hidden rounded-sm border border-border bg-white"
+              style={{ width: qrSize, height: qrSize }}
               title="Open Influencer Card"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`/api/qr/${creator.slug}`}
                 alt={`${creator.displayName} QR`}
-                width={56}
-                height={56}
+                width={qrSize}
+                height={qrSize}
                 className="h-full w-full object-contain"
               />
             </Link>
-          ) : (
+          ) : features.showQr ? (
             <Link
               href={`/c/${creator.slug}`}
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-dashed border-border text-[9px] font-bold text-muted"
+              className="flex shrink-0 items-center justify-center rounded-sm border border-dashed border-border text-[8px] font-bold text-muted"
+              style={{ width: qrSize, height: qrSize }}
             >
               Card
             </Link>
-          )}
+          ) : null}
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-center gap-1.5 border-t border-emerald-100 bg-emerald-50/80 px-3 py-2.5 text-[11px] font-semibold text-emerald-700">
-        <IconCheck size={13} className="text-emerald-600" />
-        {creator.statusLabel}
-      </div>
+      {features.showStatus ? (
+        <div className="mt-3 flex items-center justify-center gap-1.5 border-t border-emerald-100 bg-emerald-50/80 px-3 py-2.5 text-[11px] font-semibold text-emerald-700">
+          <IconCheck size={13} className="text-emerald-600" />
+          {creator.statusLabel}
+        </div>
+      ) : (
+        <div className="mt-3" />
+      )}
     </article>
+  );
+}
+
+/** Compact marketing card matching the Influencer Card template (circular avatar, not tall portrait). */
+export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
+  const socials = creator.socials.slice(0, 4);
+
+  return (
+    <div className="relative w-full max-w-[280px] rounded-[1.75rem] bg-white p-6 text-center shadow-2xl ring-1 ring-border">
+      <div className="relative mx-auto h-24 w-24 overflow-hidden rounded-full ring-4 ring-lavender shadow-lg">
+        <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="96px" />
+      </div>
+      <h3 className="mt-4 flex items-center justify-center gap-1.5 font-display text-xl font-bold text-indigo">
+        {creator.displayName}
+        <IconVerified size={18} />
+      </h3>
+      <p className="mt-1 text-sm text-muted">{creator.title}</p>
+      <p className="mt-1 flex items-center justify-center gap-1 text-xs text-muted">
+        <IconMapPin size={12} className="text-violet" />
+        {creator.locationCity}, {creator.locationCountry}
+      </p>
+      <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+        {creator.specialties.slice(0, 4).map((s) => (
+          <span key={s} className="rounded-full bg-[#E8F0FF] px-2.5 py-0.5 text-[10px] font-semibold text-blue">
+            {specialtyLabel(s)}
+          </span>
+        ))}
+      </div>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+        {socials.map((s) => (
+          <span key={s.platform} className="inline-flex items-center gap-1.5">
+            <SocialIcon platform={s.platform} size={22} />
+            <span className="text-xs font-bold text-indigo">{formatFollowers(s.followers)}</span>
+          </span>
+        ))}
+      </div>
+      <div className="mt-5 flex items-center justify-center gap-3 rounded-2xl bg-[#F4F7FF] px-4 py-3">
+        <div className="h-[22px] w-[22px] overflow-hidden rounded-sm border border-border bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/api/qr/${creator.slug}`}
+            alt="QR"
+            width={22}
+            height={22}
+            className="h-full w-full object-contain"
+          />
+        </div>
+        <p className="text-left text-[11px] font-semibold text-muted">
+          Scan to view my full card
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -158,7 +272,10 @@ export function InfluencerCardView({ creator }: { creator: SeedCreator }) {
       </div>
       <div className={`-mt-6 space-y-4 rounded-t-[1.5rem] px-5 pb-6 pt-8 ${isPro ? "bg-pro" : "bg-white"}`}>
         <div className="text-center">
-          <h1 className="font-display text-2xl font-bold">{creator.displayName}</h1>
+          <h1 className="flex items-center justify-center gap-1.5 font-display text-2xl font-bold">
+            {creator.displayName}
+            <IconVerified size={20} />
+          </h1>
           <p className={`mt-1 text-sm ${isPro ? "text-white/70" : "text-muted"}`}>{creator.title}</p>
           <p className={`mt-1 text-sm ${isPro ? "text-white/70" : "text-muted"}`}>
             {creator.locationCity}, {creator.locationCountry}
@@ -176,30 +293,23 @@ export function InfluencerCardView({ creator }: { creator: SeedCreator }) {
             </span>
           ))}
         </div>
-        <div className={`space-y-2 rounded-2xl p-3 ${isPro ? "bg-white/5" : "border border-border bg-starter-bg"}`}>
-          {socials.map((s) => (
-            <a
-              key={s.platform}
-              href={s.url}
-              target="_blank"
-              rel="noreferrer"
-              className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${
-                isPro ? "hover:bg-white/10" : "bg-white hover:bg-lavender/40"
-              }`}
-            >
-              <span className="flex items-center gap-2 font-medium">
-                <SocialIcon platform={s.platform} size={16} />
-                {s.platform === "INSTAGRAM"
-                  ? "Instagram"
-                  : s.platform === "TIKTOK"
-                    ? "TikTok"
-                    : s.platform === "YOUTUBE"
-                      ? "YouTube"
-                      : s.platform}
-              </span>
-              <span className="font-bold">{formatFollowers(s.followers)}</span>
-            </a>
-          ))}
+        <div className={`rounded-2xl p-3 ${isPro ? "bg-white/5" : "border border-border bg-starter-bg"}`}>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {socials.map((s) => (
+              <a
+                key={s.platform}
+                href={s.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5"
+              >
+                <SocialIcon platform={s.platform} size={22} />
+                <span className={`text-xs font-bold ${isPro ? "text-white" : "text-indigo"}`}>
+                  {formatFollowers(s.followers)}
+                </span>
+              </a>
+            ))}
+          </div>
         </div>
         <div
           className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm ${
@@ -212,23 +322,18 @@ export function InfluencerCardView({ creator }: { creator: SeedCreator }) {
           </div>
           {entitlements.standardQr || entitlements.dynamicQr ? (
             <div
-              className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg ${
-                isPro ? "ring-2 ring-gold" : "border border-border"
+              className={`relative h-[22px] w-[22px] shrink-0 overflow-hidden rounded-sm ${
+                isPro ? "ring-1 ring-gold" : "border border-border"
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`/api/qr/${creator.slug}`}
                 alt={`${creator.displayName} QR code`}
-                width={64}
-                height={64}
-                className="h-full w-full object-contain bg-white p-0.5"
+                width={22}
+                height={22}
+                className="h-full w-full object-contain bg-white"
               />
-              {isPro ? (
-                <span className="absolute bottom-0 left-0 right-0 bg-gold/90 text-center text-[8px] font-bold text-pro">
-                  DYNAMIC
-                </span>
-              ) : null}
             </div>
           ) : (
             <div className="text-xs text-muted">No QR on Starter</div>

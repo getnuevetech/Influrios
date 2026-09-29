@@ -20,7 +20,7 @@ const NAV = [
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[90rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-10">
         <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold text-indigo">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white shadow-md shadow-violet/30">
             ∞
@@ -42,6 +42,12 @@ export function SiteHeader() {
           >
             <IconSearch size={18} />
           </Link>
+          <Link
+            href="/admin"
+            className="hidden text-sm font-semibold text-muted hover:text-indigo sm:inline"
+          >
+            Admin
+          </Link>
           <Link href="/claim" className="btn-primary !px-4 !py-2 text-sm">
             Sign Up →
           </Link>
@@ -54,7 +60,7 @@ export function SiteHeader() {
 export function SiteFooter() {
   return (
     <footer className="mt-0 border-t border-white/10 bg-pro text-white">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-5">
+      <div className="mx-auto grid w-full max-w-[90rem] gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-5 lg:px-10">
         <div className="lg:col-span-1">
           <div className="flex items-center gap-2 font-display text-lg font-bold">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm">

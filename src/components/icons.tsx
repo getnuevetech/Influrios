@@ -40,10 +40,23 @@ export function IconCheck(props: IconProps) {
   );
 }
 
+/** Official-style solid blue verification badge */
 export function IconVerified(props: IconProps) {
+  const size = props.size ?? 18;
   return (
-    <svg {...base({ size: 16, ...props })} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.5 14.6 5l3.4.5-.1 3.4 2.4 2.4-2.4 2.4.1 3.4-3.4.5L12 21.5 9.4 19l-3.4-.5.1-3.4L3.7 12.7l2.4-2.4-.1-3.4 3.4-.5L12 2.5Zm-1.2 11.3-2.6-2.6 1.4-1.4 1.2 1.2 3.8-3.8 1.4 1.4-5.2 5.2Z" />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      className={props.className}
+      aria-label="Verified"
+      role="img"
+    >
+      <circle cx="12" cy="12" r="11" fill="#1D9BF0" />
+      <path
+        d="M10.1 15.8 6.8 12.5l1.4-1.4 1.9 1.9 5-5.1 1.4 1.4-6.4 6.5Z"
+        fill="#fff"
+      />
     </svg>
   );
 }
@@ -52,6 +65,14 @@ export function IconArrowRight(props: IconProps) {
   return (
     <svg {...base(props)} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+export function IconArrowLeft(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 12H5M11 6l-6 6 6 6" />
     </svg>
   );
 }
@@ -100,42 +121,76 @@ export function IconBuilding(props: IconProps) {
   );
 }
 
-export function IconInstagram(props: IconProps) {
+/** Brand-colored Instagram glyph */
+export function IconInstagram({ size = 20, className }: IconProps) {
   return (
-    <svg {...base(props)} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 7.2A4.8 4.8 0 1 0 12 16.8 4.8 4.8 0 0 0 12 7.2Zm0 7.9a3.1 3.1 0 1 1 0-6.2 3.1 3.1 0 0 1 0 6.2Zm5.1-8.3a1.12 1.12 0 1 1-2.24 0 1.12 1.12 0 0 1 2.24 0ZM12 3.5c-2.3 0-2.6 0-3.5.05a5.4 5.4 0 0 0-3.8 1.4 5.4 5.4 0 0 0-1.4 3.8C3.5 9.4 3.5 9.7 3.5 12s0 2.6.05 3.5a5.4 5.4 0 0 0 1.4 3.8 5.4 5.4 0 0 0 3.8 1.4c.9.05 1.2.05 3.5.05s2.6 0 3.5-.05a5.4 5.4 0 0 0 3.8-1.4 5.4 5.4 0 0 0 1.4-3.8c.05-.9.05-1.2.05-3.5s0-2.6-.05-3.5a5.4 5.4 0 0 0-1.4-3.8 5.4 5.4 0 0 0-3.8-1.4C14.6 3.5 14.3 3.5 12 3.5Zm0 1.5c2.25 0 2.52 0 3.4.05a3.9 3.9 0 0 1 2.7 1.05 3.9 3.9 0 0 1 1.05 2.7c.04.88.05 1.15.05 3.4s0 2.52-.05 3.4a3.9 3.9 0 0 1-1.05 2.7 3.9 3.9 0 0 1-2.7 1.05c-.88.04-1.15.05-3.4.05s-2.52 0-3.4-.05a3.9 3.9 0 0 1-2.7-1.05 3.9 3.9 0 0 1-1.05-2.7C5.2 14.52 5.2 14.25 5.2 12s0-2.52.05-3.4a3.9 3.9 0 0 1 1.05-2.7 3.9 3.9 0 0 1 2.7-1.05C9.48 5 9.75 5 12 5Z" />
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <defs>
+        <linearGradient id="igBrand" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#f09433" />
+          <stop offset="25%" stopColor="#e6683c" />
+          <stop offset="50%" stopColor="#dc2743" />
+          <stop offset="75%" stopColor="#cc2366" />
+          <stop offset="100%" stopColor="#bc1888" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#igBrand)" />
+      <circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" strokeWidth="1.8" />
+      <circle cx="17.4" cy="6.6" r="1.2" fill="#fff" />
     </svg>
   );
 }
 
-export function IconTikTok(props: IconProps) {
+export function IconTikTok({ size = 20, className }: IconProps) {
   return (
-    <svg {...base(props)} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M19.6 8.3a6.7 6.7 0 0 1-3.9-1.2v6.5a5.6 5.6 0 1 1-4.8-5.5v2.6a3.1 3.1 0 1 0 2.2 3v-11h2.5a4.3 4.3 0 0 0 4 3.7v1.9Z" />
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <path
+        fill="#25F4EE"
+        d="M19.2 7.9a6.4 6.4 0 0 1-3.7-1.2v6.8a5.4 5.4 0 1 1-4.6-5.3v2.5a3 3 0 1 0 2.1 2.9V3.5h2.4c.1 1.5.8 2.9 1.9 3.9.6.5 1.2.8 1.9 1v-.5Z"
+        transform="translate(0.6 0.4)"
+      />
+      <path
+        fill="#FE2C55"
+        d="M18.4 7.5a6.4 6.4 0 0 1-3.7-1.2v6.8a5.4 5.4 0 1 1-4.6-5.3v2.5a3 3 0 1 0 2.1 2.9V3.1h2.4c.1 1.5.8 2.9 1.9 3.9.6.5 1.2.8 1.9 1v-.5Z"
+        transform="translate(-0.5 -0.3)"
+      />
+      <path
+        fill="#000"
+        d="M18.8 7.7a6.4 6.4 0 0 1-3.7-1.2v6.8a5.4 5.4 0 1 1-4.6-5.3v2.5a3 3 0 1 0 2.1 2.9V3.3h2.4c.1 1.5.8 2.9 1.9 3.9.6.5 1.2.8 1.9 1v-.5Z"
+      />
     </svg>
   );
 }
 
-export function IconYouTube(props: IconProps) {
+export function IconYouTube({ size = 20, className }: IconProps) {
   return (
-    <svg {...base(props)} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M22.5 7.6a3 3 0 0 0-2.1-2.1C18.6 5 12 5 12 5s-6.6 0-8.4.5A3 3 0 0 0 1.5 7.6 31 31 0 0 0 1 12a31 31 0 0 0 .5 4.4 3 3 0 0 0 2.1 2.1C5.4 19 12 19 12 19s6.6 0 8.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 23 12a31 31 0 0 0-.5-4.4ZM10 15.2V8.8L15.5 12 10 15.2Z" />
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect x="1.5" y="5" width="21" height="14" rx="3.5" fill="#FF0000" />
+      <path d="M10 9.2v5.6L15.2 12 10 9.2Z" fill="#fff" />
     </svg>
   );
 }
 
-export function IconX(props: IconProps) {
+export function IconX({ size = 20, className }: IconProps) {
   return (
-    <svg {...base(props)} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M17.7 3.5h2.8l-6.1 7 7.2 10H16l-4.4-5.8L6.6 20.5H3.8l6.5-7.5L3.5 3.5H9l4 5.3 4.7-5.3Zm-1 15.3h1.6L7.4 5.1H5.7l11 13.7Z" />
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#000" />
+      <path
+        fill="#fff"
+        d="M16.8 6.2h1.9L13.9 11l5.2 6.8h-4.1l-3.2-4.2-3.7 4.2H6.2l5.1-5.8L6.5 6.2h4.2l2.9 3.8 3.2-3.8Zm-.7 10.8h1.1L8.1 7.3H7L16.1 17Z"
+      />
     </svg>
   );
 }
 
-export function IconLinkedIn(props: IconProps) {
+export function IconLinkedIn({ size = 20, className }: IconProps) {
   return (
-    <svg {...base(props)} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M5.3 9.3H2.5V21h2.8V9.3ZM3.9 3.5A1.7 1.7 0 1 0 3.9 7a1.7 1.7 0 0 0 0-3.5ZM21.5 21h-2.8v-5.7c0-1.4 0-3.1-1.9-3.1s-2.2 1.5-2.2 3v5.8H11.8V9.3h2.7v1.6h.1c.4-.7 1.3-1.9 3.3-1.9 3.5 0 4.1 2.3 4.1 5.3V21Z" />
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="4" fill="#0A66C2" />
+      <path
+        fill="#fff"
+        d="M7.2 9.4H4.8V19h2.4V9.4ZM6 4.8a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8ZM19.2 19h-2.4v-4.8c0-1.1 0-2.6-1.6-2.6s-1.8 1.2-1.8 2.5V19h-2.4V9.4h2.3v1.3h.1c.3-.6 1.1-1.6 2.8-1.6 3 0 3.5 2 3.5 4.5V19Z"
+      />
     </svg>
   );
 }
@@ -148,7 +203,6 @@ export function IconPlus(props: IconProps) {
   );
 }
 
-/** Category glyph icons for the Explore grid */
 export function CategoryGlyph({ slug, size = 22 }: { slug: string; size?: number }) {
   const common = { size, className: "text-white drop-shadow" };
   switch (slug) {
@@ -229,7 +283,7 @@ export function CategoryGlyph({ slug, size = 22 }: { slug: string; size?: number
 
 export function SocialIcon({
   platform,
-  size = 16,
+  size = 20,
   className,
 }: {
   platform: string;
@@ -245,6 +299,8 @@ export function SocialIcon({
       return <IconYouTube size={size} className={className} />;
     case "X":
       return <IconX size={size} className={className} />;
+    case "LINKEDIN":
+      return <IconLinkedIn size={size} className={className} />;
     default:
       return <IconInstagram size={size} className={className} />;
   }
