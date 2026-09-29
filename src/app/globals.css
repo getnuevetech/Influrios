@@ -126,6 +126,13 @@ a {
   color: var(--royal-violet);
 }
 
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;

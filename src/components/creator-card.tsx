@@ -1,34 +1,50 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   formatFollowers,
   specialtyLabel,
+  totalFollowers,
   type SeedCreator,
 } from "@/lib/seed-data";
 import { getEntitlements, type PlanCode } from "@/lib/entitlements";
 
 export function CreatorCard({ creator }: { creator: SeedCreator }) {
-  const primary = creator.specialties[0];
   const socialPreview = creator.socials.slice(0, 3);
-  const totalFollowers = creator.socials.reduce((sum, s) => sum + s.followers, 0);
 
   return (
-    <article className="card-surface flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
-      <div
-        className="relative flex h-36 items-end p-4 text-white"
-        style={{
-          background: `linear-gradient(135deg, ${creator.avatarColor}, #111a5a)`,
-        }}
-      >
-        <span className="absolute left-3 top-3 rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold backdrop-blur">
-          {creator.planTier === "STARTER" ? "Starter" : creator.planTier === "PLUS" ? "Plus" : "Pro"}
+    <article className="card-surface group flex flex-col overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+      <div className="relative h-56 overflow-hidden">
+        <Image
+          src={creator.image}
+          alt={creator.displayName}
+          fill
+          className="object-cover transition duration-500 group-hover:scale-105"
+          sizes="(max-width:768px) 100vw, 25vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-indigo/70 via-transparent to-transparent" />
+        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-violet shadow">
+          {creator.badge}
         </span>
-        <div>
-          <h3 className="font-display text-lg font-bold">{creator.displayName}</h3>
-          <p className="text-sm text-white/80">{creator.locationCity}, {creator.locationCountry}</p>
-        </div>
+        <button
+          type="button"
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-violet"
+          aria-label="Save creator"
+        >
+          ♡
+        </button>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
-        <p className="text-sm font-medium text-muted">{creator.title}</p>
+        <div>
+          <h3 className="font-display text-lg font-bold text-indigo">
+            {creator.displayName}{" "}
+            <span className="text-blue" aria-label="Verified">
+              ✓
+            </span>
+          </h3>
+          <p className="text-sm text-muted">
+            {creator.locationCity}, {creator.locationCountry}
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           {creator.specialties.slice(0, 3).map((s) => (
             <span key={s} className="chip">
@@ -36,30 +52,30 @@ export function CreatorCard({ creator }: { creator: SeedCreator }) {
             </span>
           ))}
         </div>
-        <div className="flex flex-wrap gap-3 text-xs font-semibold text-muted">
-          {socialPreview.map((s) => (
-            <span key={s.platform}>
-              {s.platform.slice(0, 2)} {formatFollowers(s.followers)}
-            </span>
-          ))}
-          <span className="text-indigo">{formatFollowers(totalFollowers)} total</span>
+        <div className="flex items-center justify-between gap-2 text-xs font-semibold text-muted">
+          <div className="flex flex-wrap gap-2">
+            {socialPreview.map((s) => (
+              <span key={s.platform}>
+                {s.platform.slice(0, 2)} {formatFollowers(s.followers)}
+              </span>
+            ))}
+          </div>
+          <span className="text-indigo">{formatFollowers(totalFollowers(creator))}</span>
         </div>
         <p className="line-clamp-2 text-sm text-muted">{creator.bio}</p>
-        <div className="mt-auto flex gap-2 pt-2">
-          <Link href={`/creators/${creator.slug}`} className="btn-primary flex-1 !py-2 text-sm">
-            View Profile
+        <div className="mt-auto flex items-center gap-2 pt-1">
+          <Link href={`/creators/${creator.slug}`} className="btn-primary flex-1 !py-2.5 text-sm">
+            View Profile →
           </Link>
           <Link
             href={`/c/${creator.slug}`}
-            className="btn-secondary !px-3 !py-2 text-sm"
-            aria-label="Open Influencer Card"
+            className="btn-secondary !px-3 !py-2.5 text-xs"
+            title="Influencer Card"
           >
-            Card
+            QR
           </Link>
         </div>
-        {primary ? (
-          <p className="text-xs text-muted">Specialty focus: {specialtyLabel(primary)}</p>
-        ) : null}
+        <p className="text-center text-xs font-semibold text-violet">{creator.statusLabel}</p>
       </div>
     </article>
   );
@@ -83,18 +99,12 @@ export function InfluencerCardView({ creator }: { creator: SeedCreator }) {
         isPro ? "bg-pro text-white ring-1 ring-gold/40" : "bg-white text-indigo"
       }`}
     >
-      <div
-        className="relative h-52"
-        style={{
-          background: isPro
-            ? `linear-gradient(160deg, #0b123f, ${creator.avatarColor})`
-            : `linear-gradient(160deg, ${creator.avatarColor}, #2979ff)`,
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
+      <div className="relative h-52">
+        <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="400px" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         <span
           className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${
-            isPro ? "bg-gold/20 text-gold-highlight text-[#F6E7B0]" : "bg-white/90 text-violet"
+            isPro ? "bg-gold/20 text-[#F6E7B0]" : "bg-white/95 text-violet"
           }`}
         >
           {creator.planTier === "STARTER" ? "Starter" : creator.planTier === "PLUS" ? "Plus" : "Pro"}
@@ -120,7 +130,7 @@ export function InfluencerCardView({ creator }: { creator: SeedCreator }) {
             </span>
           ))}
         </div>
-        <div className={`space-y-2 rounded-2xl p-3 ${isPro ? "bg-white/5" : "bg-starter-bg border border-border"}`}>
+        <div className={`space-y-2 rounded-2xl p-3 ${isPro ? "bg-white/5" : "border border-border bg-starter-bg"}`}>
           {socials.map((s) => (
             <a
               key={s.platform}
@@ -142,15 +152,14 @@ export function InfluencerCardView({ creator }: { creator: SeedCreator }) {
           }`}
         >
           <div className="min-w-0">
-            <div className={`truncate font-semibold ${isPro ? "text-blue" : "text-blue"}`}>{cardUrl}</div>
+            <div className="truncate font-semibold text-blue">{cardUrl}</div>
             <div className={`text-xs ${isPro ? "text-white/50" : "text-muted"}`}>Share my profile</div>
           </div>
           {entitlements.standardQr || entitlements.dynamicQr ? (
             <div
               className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold ${
-                isPro ? "bg-white text-pro ring-2 ring-gold" : "bg-white text-indigo border border-border"
+                isPro ? "bg-white text-pro ring-2 ring-gold" : "border border-border bg-white text-indigo"
               }`}
-              aria-label={entitlements.dynamicQr ? "Dynamic QR code" : "Standard QR code"}
             >
               QR
             </div>
@@ -164,11 +173,7 @@ export function InfluencerCardView({ creator }: { creator: SeedCreator }) {
         >
           {isPro ? "Work With Me →" : isPlus ? "Contact →" : "View Profile →"}
         </Link>
-        {entitlements.platformBranding !== "minimal" ? (
-          <p className={`text-center text-xs ${isPro ? "text-white/40" : "text-muted"}`}>Influrios</p>
-        ) : (
-          <p className="text-center text-[10px] text-white/30">Influrios</p>
-        )}
+        <p className={`text-center text-xs ${isPro ? "text-white/40" : "text-muted"}`}>Influrios</p>
       </div>
     </div>
   );

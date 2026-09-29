@@ -5,6 +5,15 @@ export type SeedSocial = {
   followers: number;
 };
 
+export type SeedContent = {
+  id: string;
+  category: string;
+  platform: string;
+  image: string;
+  views: string;
+  likes: string;
+};
+
 export type SeedCreator = {
   slug: string;
   displayName: string;
@@ -14,15 +23,57 @@ export type SeedCreator = {
   locationCountry: string;
   languages: string[];
   avatarColor: string;
+  image: string;
+  coverImage?: string;
+  badge: string;
+  statusLabel: string;
   planTier: "STARTER" | "PLUS" | "PRO";
   specialties: string[];
   socials: SeedSocial[];
   openToCollab: boolean;
   offer?: string;
   need?: string;
+  age?: number;
+  email?: string;
+  stats?: {
+    engagementRate: string;
+    engagementDelta: string;
+    totalReach: string;
+    reachDelta: string;
+    avgViews: string;
+    viewsDelta: string;
+    collaborations: string;
+    collabDelta: string;
+  };
+  demographics?: {
+    female: number;
+    male: number;
+    locations: { name: string; pct: number }[];
+    ages: { range: string; pct: number }[];
+  };
+  collabPrefs?: string[];
+  polaroids?: { image: string; caption: string }[];
+  featuredContent?: SeedContent[];
 };
 
-export const SPECIALTY_TAXONOMY: { slug: string; name: string; children?: { slug: string; name: string }[] }[] = [
+export const CATEGORY_IMAGES: Record<string, string> = {
+  beauty: "/demo/categories/cat-beauty.jpg",
+  fashion: "/demo/categories/cat-fashion.jpg",
+  food: "/demo/categories/cat-food.jpg",
+  "home-interior": "/demo/categories/cat-home.jpg",
+  hair: "/demo/categories/cat-hair.jpg",
+  suppliers: "/demo/categories/cat-suppliers.jpg",
+  travel: "/demo/categories/cat-travel.jpg",
+  fitness: "/demo/categories/cat-fitness.jpg",
+  tech: "/demo/categories/cat-tech.jpg",
+  lifestyle: "/demo/categories/cat-lifestyle.jpg",
+};
+
+export const SPECIALTY_TAXONOMY: {
+  slug: string;
+  name: string;
+  children?: { slug: string; name: string }[];
+}[] = [
   {
     slug: "beauty",
     name: "Beauty",
@@ -100,22 +151,78 @@ export const SEED_CREATORS: SeedCreator[] = [
     slug: "sofia-martinez",
     displayName: "Sofia Martinez",
     title: "Beauty & Lifestyle Creator",
-    bio: "Natural beauty educator helping brands reach audiences who care about skincare rituals and everyday confidence.",
+    bio: "Helping people create brighter, more confident routines through honest beauty content, travel moments, and brand stories that feel real.",
     locationCity: "Los Angeles",
     locationCountry: "USA",
     languages: ["English", "Spanish"],
     avatarColor: "#633CFF",
+    image: "/demo/creators/creator-sofia.jpg",
+    coverImage: "/demo/sofia/sofia-banner.jpg",
+    badge: "Top Creator",
+    statusLabel: "Open to Collaborations",
     planTier: "PLUS",
-    specialties: ["beauty", "skincare", "lifestyle"],
+    specialties: ["beauty", "lifestyle", "fashion", "travel", "skincare"],
     socials: [
       { platform: "INSTAGRAM", handle: "@sofia.m", url: "https://instagram.com/sofia.m", followers: 2_400_000 },
       { platform: "TIKTOK", handle: "@sofiam", url: "https://tiktok.com/@sofiam", followers: 1_800_000 },
       { platform: "YOUTUBE", handle: "Sofia Martinez", url: "https://youtube.com/@sofiam", followers: 620_000 },
       { platform: "X", handle: "@sofiam", url: "https://x.com/sofiam", followers: 480_000 },
+      { platform: "WEBSITE", handle: "sofiamartinez.com", url: "https://sofiamartinez.com", followers: 120_000 },
     ],
     openToCollab: true,
     offer: "Beauty tutorials and product education",
     need: "Skincare brands and hair-care specialists",
+    age: 27,
+    email: "brand@sofia.demo",
+    stats: {
+      engagementRate: "4.8%",
+      engagementDelta: "+12% from last month",
+      totalReach: "12.6M",
+      reachDelta: "+28% from last month",
+      avgViews: "1.2M",
+      viewsDelta: "+18% from last month",
+      collaborations: "120+",
+      collabDelta: "+32% from last year",
+    },
+    demographics: {
+      female: 72,
+      male: 28,
+      locations: [
+        { name: "Los Angeles", pct: 24 },
+        { name: "New York", pct: 18 },
+        { name: "London", pct: 12 },
+        { name: "Toronto", pct: 8 },
+        { name: "Sydney", pct: 6 },
+      ],
+      ages: [
+        { range: "13-17", pct: 8 },
+        { range: "18-24", pct: 32 },
+        { range: "25-34", pct: 36 },
+        { range: "35-44", pct: 16 },
+        { range: "45+", pct: 8 },
+      ],
+    },
+    collabPrefs: [
+      "Sponsored Content",
+      "Product Reviews",
+      "Brand Campaigns",
+      "Events & Experiences",
+      "Travel Partnerships",
+      "Long-term Ambassadorships",
+    ],
+    polaroids: [
+      { image: "/demo/sofia/sofia-polaroid-1.jpg", caption: "Good Beauty. Real Life." },
+      { image: "/demo/sofia/sofia-polaroid-2.jpg", caption: "Explore More." },
+      { image: "/demo/sofia/sofia-polaroid-3.jpg", caption: "Same Girl. Bigger Dreams." },
+    ],
+    featuredContent: [
+      { id: "1", category: "Beauty", platform: "TikTok", image: "/demo/content/content-beauty-1.jpg", views: "1.2M", likes: "89K" },
+      { id: "2", category: "Beauty", platform: "Instagram", image: "/demo/content/content-beauty-2.jpg", views: "860K", likes: "64K" },
+      { id: "3", category: "Travel", platform: "YouTube", image: "/demo/content/content-travel-1.jpg", views: "2.1M", likes: "112K" },
+      { id: "4", category: "Lifestyle", platform: "Instagram", image: "/demo/content/content-lifestyle-1.jpg", views: "540K", likes: "41K" },
+      { id: "5", category: "Fashion", platform: "TikTok", image: "/demo/content/content-fashion-1.jpg", views: "980K", likes: "73K" },
+      { id: "6", category: "Brand Collaborations", platform: "Instagram", image: "/demo/content/content-collab-1.jpg", views: "1.5M", likes: "96K" },
+    ],
   },
   {
     slug: "daniel-kim",
@@ -126,6 +233,9 @@ export const SEED_CREATORS: SeedCreator[] = [
     locationCountry: "South Korea",
     languages: ["English", "Korean"],
     avatarColor: "#2979FF",
+    image: "/demo/creators/creator-daniel.jpg",
+    badge: "Rising Star",
+    statusLabel: "Open to Collaborations",
     planTier: "STARTER",
     specialties: ["travel"],
     socials: [
@@ -144,6 +254,9 @@ export const SEED_CREATORS: SeedCreator[] = [
     locationCountry: "USA",
     languages: ["English", "Hindi"],
     avatarColor: "#7B46F6",
+    image: "/demo/creators/creator-priya.jpg",
+    badge: "Business Friendly",
+    statusLabel: "Great for Brand Collaborations",
     planTier: "PRO",
     specialties: ["home-interior", "interior-design", "woodworking"],
     socials: [
@@ -165,6 +278,9 @@ export const SEED_CREATORS: SeedCreator[] = [
     locationCountry: "Canada",
     languages: ["English"],
     avatarColor: "#111A5A",
+    image: "/demo/creators/creator-marcus.jpg",
+    badge: "Fast Growing",
+    statusLabel: "Open to Collaborations",
     planTier: "PLUS",
     specialties: ["fitness", "training"],
     socials: [
@@ -185,8 +301,11 @@ export const SEED_CREATORS: SeedCreator[] = [
     locationCountry: "USA",
     languages: ["English"],
     avatarColor: "#E879F9",
+    image: "/demo/creators/creator-amara.jpg",
+    badge: "Rising Star",
+    statusLabel: "Open to Collaborations",
     planTier: "STARTER",
-    specialties: ["natural-hair"],
+    specialties: ["natural-hair", "beauty", "hair"],
     socials: [
       { platform: "INSTAGRAM", handle: "@amara.hair", url: "https://instagram.com/amara.hair", followers: 312_000 },
     ],
@@ -203,6 +322,9 @@ export const SEED_CREATORS: SeedCreator[] = [
     locationCountry: "UK",
     languages: ["English"],
     avatarColor: "#4979FF",
+    image: "/demo/creators/creator-jordan.jpg",
+    badge: "High Engagement",
+    statusLabel: "Great for Brand Collaborations",
     planTier: "PLUS",
     specialties: ["tech", "smart-home", "consumer-tech"],
     socials: [
@@ -213,6 +335,29 @@ export const SEED_CREATORS: SeedCreator[] = [
     openToCollab: true,
     offer: "Product demos and install walkthroughs",
     need: "Home security creators",
+  },
+];
+
+export const COLLAB_MATCH_PRESETS = [
+  {
+    title: "Interior Designer + Woodwork Creator",
+    image: "/demo/categories/cat-home.jpg",
+    tags: ["Design", "Craft", "Home Decor"],
+  },
+  {
+    title: "Hair Stylist + Hair Supplier",
+    image: "/demo/categories/cat-hair.jpg",
+    tags: ["Beauty", "Hair", "Supply"],
+  },
+  {
+    title: "Food Creator + Kitchen Brand",
+    image: "/demo/categories/cat-food.jpg",
+    tags: ["Food", "Kitchen", "Brand"],
+  },
+  {
+    title: "Travel Influencer + Tourism Brand",
+    image: "/demo/categories/cat-travel.jpg",
+    tags: ["Travel", "Tourism"],
   },
 ];
 
@@ -259,4 +404,8 @@ export function specialtyLabel(slug: string): string {
     if (child) return child.name;
   }
   return slug;
+}
+
+export function totalFollowers(creator: SeedCreator): number {
+  return creator.socials.reduce((sum, s) => sum + s.followers, 0);
 }
