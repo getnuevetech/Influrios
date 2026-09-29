@@ -190,58 +190,61 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
   }
 
   return (
-    <article className="w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-[0_20px_50px_rgba(17,26,90,0.14)] ring-1 ring-[#E4E9F5]">
+    <article className="w-full max-w-[480px] overflow-hidden rounded-2xl bg-white shadow-[0_20px_50px_rgba(17,26,90,0.14)] ring-1 ring-[#E4E9F5]">
       {/* Body: left content + QR panel */}
-      <div className="grid grid-cols-[1fr_auto] items-stretch gap-3 p-4 sm:gap-4 sm:p-5">
-        <div className="flex min-w-0 flex-col">
-          {/* Header: photo + identity */}
+      <div className="flex items-stretch gap-3 p-4 sm:gap-4 sm:p-5">
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Header: photo | identity + stats */}
           <div className="flex gap-3">
-            <div className="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-xl sm:h-[88px] sm:w-[88px]">
+            <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl sm:h-[100px] sm:w-[100px]">
               <Image
                 src={creator.image}
                 alt={creator.displayName}
                 fill
                 className="object-cover"
-                sizes="88px"
+                sizes="100px"
               />
             </div>
-            <div className="flex min-w-0 flex-col justify-center">
-              <h3 className="flex items-center gap-1.5 font-display text-base font-bold leading-tight text-indigo sm:text-[1.125rem]">
-                <span className="truncate">{creator.displayName}</span>
-                <IconVerified size={16} className="shrink-0" />
-              </h3>
-              <p className="mt-0.5 truncate text-xs text-[#7B8499] sm:text-[13px]">
-                {creator.title}
-              </p>
-              <p className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-[#633CFF] sm:text-xs">
-                <IconMapPin size={12} className="shrink-0 text-[#633CFF]" />
-                <span className="truncate">
-                  {creator.locationCity}, {creator.locationCountry}
-                </span>
-              </p>
+
+            <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+              <div>
+                <h3 className="flex items-center gap-1.5 font-display text-base font-bold leading-tight text-indigo sm:text-lg">
+                  <span className="truncate">{creator.displayName}</span>
+                  <IconVerified size={16} className="shrink-0" />
+                </h3>
+                <p className="mt-0.5 truncate text-xs text-[#7B8499] sm:text-[13px]">
+                  {creator.title}
+                </p>
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-[#7B8499] sm:text-xs">
+                  <IconMapPin size={12} className="shrink-0 text-[#633CFF]" />
+                  <span className="truncate">
+                    {creator.locationCity}, {creator.locationCountry}
+                  </span>
+                </p>
+              </div>
+
+              {/* Stats with vertical dividers — beside photo under identity */}
+              <div className="mt-2.5 flex items-stretch">
+                {socials.map((s, i) => (
+                  <div key={s.platform} className="flex items-stretch">
+                    {i > 0 ? (
+                      <span className="mx-3 w-px self-stretch bg-[#DDE3F0] sm:mx-3.5" aria-hidden />
+                    ) : null}
+                    <div className="flex min-w-0 flex-col">
+                      <p className="font-display text-[15px] font-bold leading-none text-indigo sm:text-base">
+                        {formatFollowers(s.followers)}
+                      </p>
+                      <p className="mt-1 whitespace-nowrap text-[10px] font-medium leading-none text-[#8B93A7] sm:text-[11px]">
+                        {platformLabel(s.platform)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Stats with vertical dividers */}
-          <div className="mt-3.5 flex items-stretch">
-            {socials.map((s, i) => (
-              <div
-                key={s.platform}
-                className={`flex min-w-0 flex-1 flex-col justify-center ${
-                  i > 0 ? "border-l border-[#E4E9F5] pl-3 sm:pl-4" : ""
-                } ${i < socials.length - 1 ? "pr-3 sm:pr-4" : ""}`}
-              >
-                <p className="font-display text-[15px] font-bold leading-none text-indigo sm:text-base">
-                  {formatFollowers(s.followers)}
-                </p>
-                <p className="mt-1 text-[10px] font-medium leading-none text-[#8B93A7] sm:text-[11px]">
-                  {platformLabel(s.platform)}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Specialty tags */}
+          {/* Specialty tags — under photo + identity */}
           <div className="mt-3.5 flex flex-wrap gap-1.5">
             {creator.specialties.slice(0, 4).map((s) => (
               <span
@@ -254,15 +257,15 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
           </div>
         </div>
 
-        {/* QR panel — full height of left column */}
-        <div className="flex w-[104px] shrink-0 flex-col items-center justify-center rounded-xl bg-[#F5F6FA] px-2.5 py-3 sm:w-[116px]">
-          <div className="h-[76px] w-[76px] overflow-hidden rounded-md bg-white p-1 sm:h-[84px] sm:w-[84px]">
+        {/* QR panel */}
+        <div className="flex w-[108px] shrink-0 flex-col items-center justify-center rounded-xl bg-[#F5F6FA] px-2.5 py-3 sm:w-[120px]">
+          <div className="h-[80px] w-[80px] overflow-hidden rounded-md bg-white p-1 sm:h-[88px] sm:w-[88px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/api/qr/${creator.slug}`}
               alt={`${creator.displayName} QR`}
-              width={84}
-              height={84}
+              width={88}
+              height={88}
               className="h-full w-full object-contain"
             />
           </div>
@@ -274,8 +277,8 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
         </div>
       </div>
 
-      {/* Bottom social strip — brand icons evenly across full width */}
-      <div className="flex items-center justify-between border-t border-[#EEF1FA] bg-white px-6 py-3.5 sm:px-8">
+      {/* Bottom social strip — left-aligned with content, even icon gaps */}
+      <div className="flex items-center gap-5 border-t border-[#EEF1FA] bg-white px-4 py-3.5 sm:gap-6 sm:px-5">
         {stripPlatforms.map((platform) => {
           const linked = creator.socials.find((s) => s.platform === platform);
           const icon = <SocialIcon platform={platform} size={26} />;
@@ -285,7 +288,7 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
               href={linked.url}
               target="_blank"
               rel="noreferrer"
-              className="flex h-7 w-7 items-center justify-center transition hover:scale-110"
+              className="flex h-7 w-7 shrink-0 items-center justify-center transition hover:scale-110"
               aria-label={platformLabel(platform)}
             >
               {icon}
@@ -293,7 +296,7 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
           ) : (
             <span
               key={platform}
-              className="flex h-7 w-7 items-center justify-center opacity-35"
+              className="flex h-7 w-7 shrink-0 items-center justify-center opacity-35"
               aria-hidden
             >
               {icon}
@@ -302,7 +305,7 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
         })}
         <Link
           href={`/c/${creator.slug}`}
-          className="flex h-7 w-7 items-center justify-center transition hover:scale-110"
+          className="flex h-7 w-7 shrink-0 items-center justify-center transition hover:scale-110"
           aria-label="Open Influencer Card link"
         >
           <IconLink size={26} />
