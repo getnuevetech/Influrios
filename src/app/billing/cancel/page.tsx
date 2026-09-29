@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cancelCheckout } from "@/lib/billing";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Checkout canceled" };
 
 type Props = {

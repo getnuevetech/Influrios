@@ -8,6 +8,7 @@ import {
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Billing & Plans" };
 
 type Props = {

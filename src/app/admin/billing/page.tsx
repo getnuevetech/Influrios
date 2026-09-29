@@ -6,6 +6,7 @@ import {
 } from "@/lib/billing";
 import { getWorkspace } from "@/lib/business";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Billing" };
 
 export default async function AdminBillingPage() {

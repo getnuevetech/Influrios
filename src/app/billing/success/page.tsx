@@ -4,6 +4,7 @@ import {
   getProduct,
 } from "@/lib/billing";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Checkout success" };
 
 type Props = {
