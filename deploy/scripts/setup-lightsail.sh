@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
 # Influrios — first-time AWS Lightsail Ubuntu server preparation
 # Run as a sudo-capable user on a fresh Ubuntu 22.04/24.04 Lightsail instance.
-# Usage: curl -fsSL ... | bash   OR   bash deploy/scripts/setup-lightsail.sh
+#
+# BEFORE running this script on a brand-new server, complete:
+#   docs/deploy/FRESH_SERVER_SETUP.md
+#   (apt upgrade, GitHub deploy key, git clone into /var/www/influrios)
+#
+# Usage: bash deploy/scripts/setup-lightsail.sh
 set -euo pipefail
 
 APP_USER="${APP_USER:-ubuntu}"
 APP_DIR="${APP_DIR:-/var/www/influrios}"
 NODE_MAJOR="${NODE_MAJOR:-22}"
+
+if [[ ! -d "${APP_DIR}/.git" ]] && [[ ! -f "${APP_DIR}/package.json" ]]; then
+  echo "NOTE: ${APP_DIR} does not look like the Influrios repo yet."
+  echo "      Follow docs/deploy/FRESH_SERVER_SETUP.md to add a GitHub deploy key and clone first."
+  echo "      Continuing with runtime install anyway..."
+fi
 
 echo "==> [1/8] System packages"
 sudo apt-get update -y
@@ -37,8 +48,9 @@ sudo mkdir -p "${APP_DIR}"
 sudo chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
 
 echo "==> [6/8] Nginx site (HTTP; add Certbot after DNS)"
-if [[ -f "$(dirname "$0")/../nginx/influrios.conf" ]]; then
-  sudo cp "$(dirname "$0")/../nginx/influrios.conf" /etc/nginx/sites-available/influrios
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/../nginx/influrios.conf" ]]; then
+  sudo cp "${SCRIPT_DIR}/../nginx/influrios.conf" /etc/nginx/sites-available/influrios
 else
   echo "WARNING: nginx config not found next to script; install deploy/nginx/influrios.conf manually"
 fi
@@ -57,12 +69,14 @@ cat <<EOF
 
 Server baseline is ready.
 
+GitHub + first clone checklist: docs/deploy/FRESH_SERVER_SETUP.md
+
 Next:
-  1. Create a Lightsail managed PostgreSQL DB (or install Postgres on-box).
-  2. Clone the repo into ${APP_DIR}
+  1. Ensure repo is at ${APP_DIR} (git clone via deploy key)
+  2. Create Lightsail managed PostgreSQL (or local Postgres)
   3. Copy .env.example → ${APP_DIR}/.env and set DATABASE_URL + NEXT_PUBLIC_APP_URL
   4. Run: bash deploy/scripts/deploy.sh
-  5. Point your domain A record to this Lightsail static IP
+  5. Point domain A record to this Lightsail static IP
   6. Run certbot for HTTPS
 
 See docs/deploy/AWS_LIGHTSAIL.md for the full checklist.
