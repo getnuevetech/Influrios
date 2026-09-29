@@ -170,6 +170,9 @@ export function SiteFooter() {
               <Link href="/payments">Protected payments</Link>
             </li>
             <li>
+              <Link href="/trust">Trust &amp; disputes</Link>
+            </li>
+            <li>
               <Link href="/claim">Create your card</Link>
             </li>
             <li>

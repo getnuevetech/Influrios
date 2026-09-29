@@ -306,6 +306,10 @@ export default async function PaymentsPage({ searchParams }: Props) {
             Payments console
           </Link>
           {" · "}
+          <Link href="/trust" className="font-semibold text-violet hover:underline">
+            Trust &amp; disputes
+          </Link>
+          {" · "}
           <Link href="/billing" className="font-semibold text-violet hover:underline">
             Plan billing
           </Link>

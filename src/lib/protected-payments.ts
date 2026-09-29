@@ -292,6 +292,47 @@ export async function refundDeal(dealId: string, note?: string): Promise<EscrowD
   return deal;
 }
 
+/** Phase 10 — flag milestone while mediation runs. */
+export async function markMilestoneDisputed(
+  dealId: string,
+  milestoneId: string,
+  note?: string,
+): Promise<EscrowDeal> {
+  const store = await ensureStore();
+  const deal = store.deals.find((d) => d.id === dealId);
+  if (!deal) throw new Error("Deal not found");
+  const ms = deal.milestones.find((m) => m.id === milestoneId);
+  if (!ms) throw new Error("Milestone not found");
+  if (ms.status === "released") throw new Error("Already released");
+  ms.status = "disputed";
+  ms.note = note?.trim() || "Disputed — under mediation";
+  ms.updatedAt = now();
+  deal.updatedAt = ms.updatedAt;
+  deal.status = "in_progress";
+  await saveStore(store);
+  return deal;
+}
+
+/** Clear disputed flag before release / resume (mediator outcome). */
+export async function resolveDisputedMilestone(
+  dealId: string,
+  milestoneId: string,
+  next: Exclude<MilestoneStatus, "disputed" | "released"> = "submitted",
+): Promise<EscrowDeal> {
+  const store = await ensureStore();
+  const deal = store.deals.find((d) => d.id === dealId);
+  if (!deal) throw new Error("Deal not found");
+  const ms = deal.milestones.find((m) => m.id === milestoneId);
+  if (!ms) throw new Error("Milestone not found");
+  if (ms.status === "released") return deal;
+  ms.status = next;
+  ms.updatedAt = now();
+  deal.updatedAt = ms.updatedAt;
+  recomputeStatus(deal);
+  await saveStore(store);
+  return deal;
+}
+
 export function escrowStats(store: ProtectedPaymentsStore) {
   const funded = store.deals.reduce((s, d) => s + d.fundedCents, 0);
   const released = store.deals.reduce((s, d) => s + d.releasedCents, 0);
