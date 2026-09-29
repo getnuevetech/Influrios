@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getAgencyStore, listPublishedPortfolios } from "@/lib/agency";
 import {
   allCreatorMatches,
   BUSINESS_REQUESTS,
@@ -36,6 +37,8 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const viewer = params.from ? getCreatorBySlug(params.from) : SEED_CREATORS[0];
   const viewerPlan = (viewer?.planTier ?? "STARTER") as PlanCode;
   const canRequest = canRequestMatch(viewerPlan);
+  const agency = await getAgencyStore();
+  const portfolios = listPublishedPortfolios(agency);
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -224,6 +227,54 @@ export default async function CollaborationPage({ searchParams }: Props) {
                     viewerPlan={viewerPlan}
                   />
                 ))}
+              </div>
+            </section>
+          ) : null}
+
+          {portfolios.length > 0 ? (
+            <section>
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-xl font-bold text-indigo">
+                    Joint portfolio case studies
+                  </h2>
+                  <p className="mt-1 text-sm text-muted">
+                    Proof from complementary pairs — Phase 11 agency stubs.
+                  </p>
+                </div>
+                <Link href="/agency" className="text-sm font-semibold text-violet hover:underline">
+                  Agency workspace →
+                </Link>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {portfolios.map((p) => {
+                  const left = getCreatorBySlug(p.leftSlug);
+                  const right = getCreatorBySlug(p.rightSlug);
+                  return (
+                    <article key={p.id} className="card-surface p-5">
+                      <p className="text-xs font-bold uppercase tracking-wide text-violet">
+                        {specialtyLabel(p.specialty)}
+                      </p>
+                      <h3 className="mt-1 font-display text-lg font-bold text-indigo">{p.title}</h3>
+                      <p className="text-sm text-muted">{p.tagline}</p>
+                      <p className="mt-2 text-sm font-semibold text-indigo">
+                        {left?.displayName ?? p.leftSlug} × {right?.displayName ?? p.rightSlug}
+                      </p>
+                      <p className="mt-2 text-sm text-muted">{p.outcome}</p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        {p.metrics.map((m) => (
+                          <span
+                            key={m.label}
+                            className="rounded-lg bg-[#F0F4FF] px-2.5 py-1 font-semibold text-indigo"
+                          >
+                            {m.value}{" "}
+                            <span className="font-normal text-muted">{m.label}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             </section>
           ) : null}

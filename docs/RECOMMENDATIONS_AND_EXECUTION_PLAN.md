@@ -259,7 +259,7 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Explainable Creator→Creator scoring (`src/lib/matching.ts`) + breakdown UI  
 - [x] Structured proposal flow (`/collaboration/propose`) with Plus/Pro gate  
 - [x] Business requests + creator opportunity demo lists  
-- [ ] Joint portfolio / case-study stubs (next)  
+- [x] Joint portfolio / case-study stubs (`/agency`, surfaced on `/collaboration`)  
 - [ ] Persist proposals to Prisma `Opportunity` rows  
 
 **Defer:** Complex contracting  
@@ -389,6 +389,22 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [ ] Persist disputes to Prisma  
 
 **Defer:** Live Stripe Connect dispute holds until payout rails ship  
+
+---
+
+### Phase 11 — Agency Workspace & Joint Portfolios ✅ *started (demo live)*
+
+**Proof:** Will agencies run multi-creator rosters and publish collab case studies?
+
+- [x] Agency store — roster, campaigns, joint portfolios (`src/lib/agency.ts`)  
+- [x] Agency workspace UI gated by `agencyWorkspace` entitlement (`/agency`)  
+- [x] Campaign status pipeline (briefing → casting → live → wrapped)  
+- [x] Joint portfolio case studies published to Collaboration surface  
+- [x] Admin agency console + `agency.view` / `agency.manage` RBAC (`/admin/agency`)  
+- [ ] Multi-seat agency team auth  
+- [ ] Persist agency store to Prisma  
+
+**Defer:** White-label client portals until agency retention validates  
 
 ---
 
