@@ -19,11 +19,15 @@ export function CreatorCardQrButton({ creator, qrSize, hasQr }: Props) {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(true);
+        }}
         className={
           hasQr
-            ? "relative shrink-0 overflow-hidden rounded-sm border border-border bg-white transition hover:ring-2 hover:ring-blue/40"
-            : "flex shrink-0 items-center justify-center rounded-sm border border-dashed border-border text-[8px] font-bold text-muted transition hover:border-violet hover:text-violet"
+            ? "relative z-10 shrink-0 overflow-hidden rounded-sm border border-border bg-white transition hover:ring-2 hover:ring-blue/40"
+            : "relative z-10 flex shrink-0 items-center justify-center rounded-sm border border-dashed border-border text-[8px] font-bold text-muted transition hover:border-violet hover:text-violet"
         }
         style={{ width: qrSize, height: qrSize }}
         title="Open Influencer Card"
