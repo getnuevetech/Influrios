@@ -1,13 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { actionAddShortlist } from "@/app/business/actions";
 import {
   IconCheck,
-  IconHeart,
   IconMapPin,
   IconVerified,
   SocialIcon,
 } from "@/components/icons";
+import { ShortlistHeartButton } from "@/components/shortlist-heart-button";
 import type { CardFeatureFlags } from "@/lib/cms";
 import {
   formatFollowers,
@@ -86,20 +85,7 @@ export function CreatorCard({
             {creator.badge}
           </span>
         ) : null}
-        {features.showHeart ? (
-          <form action={actionAddShortlist} className="absolute right-3 top-3">
-            <input type="hidden" name="slug" value={creator.slug} />
-            <input type="hidden" name="note" value="Saved from Discover" />
-            <button
-              type="submit"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-violet shadow"
-              aria-label="Add to business shortlist"
-              title="Add to shortlist"
-            >
-              <IconHeart size={15} />
-            </button>
-          </form>
-        ) : null}
+        {features.showHeart ? <ShortlistHeartButton slug={creator.slug} /> : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-2.5 px-3.5 pb-0 pt-3.5">

@@ -140,7 +140,6 @@ async function ensureStore(): Promise<SiteCms> {
     await fs.mkdir(DATA_DIR, { recursive: true });
     const raw = await fs.readFile(STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as SiteCms;
-    // Merge defaults for any missing keys
     return {
       banners: { ...DEFAULT_CMS.banners, ...parsed.banners },
       featuredCards: {
@@ -152,8 +151,12 @@ async function ensureStore(): Promise<SiteCms> {
       },
     };
   } catch {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_CMS, null, 2));
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_CMS, null, 2));
+    } catch {
+      // Read-only FS during some build contexts — fall back to defaults in memory
+    }
     return structuredClone(DEFAULT_CMS);
   }
 }
