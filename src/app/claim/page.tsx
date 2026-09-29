@@ -1,13 +1,20 @@
 import Link from "next/link";
+import { actionCreateDraft } from "@/app/claim/actions";
 
 export const metadata = {
   title: "Create Your Influencer Card",
 };
 
-export default function ClaimPage() {
+type Props = { searchParams: Promise<{ error?: string }> };
+
+export default async function ClaimPage({ searchParams }: Props) {
+  const params = await searchParams;
+
   return (
     <div className="mx-auto max-w-xl px-4 py-14 sm:px-6">
-      <p className="text-sm font-semibold uppercase tracking-wider text-violet">Value before signup</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-violet">
+        Phase 8 · Value before signup
+      </p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo sm:text-4xl">
         Create your free Influencer Card
       </h1>
@@ -16,7 +23,13 @@ export default function ClaimPage() {
         it, verify ownership, and publish your Starter card with a shareable link.
       </p>
 
-      <form action="/c/sofia-martinez" className="card-surface mt-8 space-y-4 p-6">
+      {params.error ? (
+        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {params.error}
+        </div>
+      ) : null}
+
+      <form action={actionCreateDraft} className="card-surface mt-8 space-y-4 p-6">
         <label className="block text-sm font-semibold text-indigo">
           Social profile URL or handle
           <input
@@ -27,8 +40,7 @@ export default function ClaimPage() {
           />
         </label>
         <p className="text-xs text-muted">
-          Phase 1 preview: draft generation is stubbed. Submitting opens a sample Starter/Plus card
-          experience while auth and verification land next.
+          No account needed yet. Preview is private until you claim and publish.
         </p>
         <button type="submit" className="btn-primary w-full">
           Preview my card →
@@ -51,7 +63,11 @@ export default function ClaimPage() {
       </ol>
 
       <p className="mt-8 text-center text-sm">
-        Already have a profile?{" "}
+        Already published?{" "}
+        <Link href="/dashboard" className="font-semibold text-violet hover:underline">
+          Open creator dashboard
+        </Link>
+        {" · "}
         <Link href="/discover" className="font-semibold text-violet hover:underline">
           Browse the directory
         </Link>

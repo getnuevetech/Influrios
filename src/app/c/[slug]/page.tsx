@@ -1,12 +1,15 @@
 import { notFound } from "next/navigation";
 import { InfluencerCardView } from "@/components/influencer-card-view";
+import { getPublishedCreatorBySlug } from "@/lib/claim";
 import { getCreatorBySlug } from "@/lib/seed-data";
 
 type Props = { params: Promise<{ slug: string }> };
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const creator = getCreatorBySlug(slug);
+  const creator = getCreatorBySlug(slug) ?? (await getPublishedCreatorBySlug(slug));
   if (!creator) return { title: "Card not found" };
   return {
     title: `${creator.displayName} · Influencer Card`,
@@ -16,7 +19,7 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function PublicCardPage({ params }: Props) {
   const { slug } = await params;
-  const creator = getCreatorBySlug(slug);
+  const creator = getCreatorBySlug(slug) ?? (await getPublishedCreatorBySlug(slug));
   if (!creator) notFound();
 
   return (

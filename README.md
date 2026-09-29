@@ -52,7 +52,8 @@ bash deploy/scripts/deploy.sh            # docker compose up --build
 | `/creators/[slug]` | Influence profile |
 | `/c/[slug]` | Vertical Influencer Card (tier-aware) |
 | `/card` | Card marketing |
-| `/claim` | Value-before-signup entry |
+| `/claim` | Draft → claim → verify → publish (Phase 8) |
+| `/dashboard` | Creator completeness dashboard (Phase 8) |
 | `/collaboration` | Match preview (Phase 2 stub) |
 
 Production branding: **Influrios** only.
