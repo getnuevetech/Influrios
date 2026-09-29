@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { actionUpdateCard, actionUpdateFeaturedGlobals } from "@/app/admin/actions";
+import { requireAdminPage } from "@/app/admin/guard";
 import { getCms } from "@/lib/cms";
 import { getCreatorBySlug } from "@/lib/seed-data";
 
@@ -20,12 +21,13 @@ const FEATURE_KEYS = [
 ] as const;
 
 export default async function AdminCardsPage({ searchParams }: Props) {
+  await requireAdminPage("cards");
   const params = await searchParams;
   const cms = await getCms();
   const cards = [...cms.featuredCards.cards].sort((a, b) => a.order - b.order);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
       <div>
         <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
           ← Admin

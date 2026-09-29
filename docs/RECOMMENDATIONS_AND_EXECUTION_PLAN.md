@@ -329,6 +329,18 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 
 ---
 
+### Phase 7 — Discover fidelity + Admin RBAC ✅ *started*
+
+**Proof:** Can brands find creators with serious filters, and can ops safely share admin?
+
+- [x] Full-width Discover with sidebar filters (country / state / city + platform, followers, engagement, language, verified, open-to-collab)  
+- [x] 4-column influencer grid on wide viewports  
+- [x] Admin login (cookie session) — portal no longer open to anyone  
+- [x] Super Admin creates roles + admin users with scoped permissions (`/admin/access`)  
+- [ ] SSO / Clerk (or Auth.js) for production identity  
+
+---
+
 ## 8. Creator acquisition & activation (strategy §20)
 
 **Wedge message:** *“Create Your Free Influencer Card. One Card. All Your Influence.”*

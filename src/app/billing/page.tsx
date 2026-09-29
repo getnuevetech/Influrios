@@ -27,7 +27,7 @@ export default async function BillingPage({ searchParams }: Props) {
   return (
     <div className="bg-[#F7FAFF]">
       <section className="hero-atmosphere text-white">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
             Phase 6 · Monetization
           </p>
@@ -42,7 +42,7 @@ export default async function BillingPage({ searchParams }: Props) {
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
+      <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
         {params.error ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Checkout error: {params.error}

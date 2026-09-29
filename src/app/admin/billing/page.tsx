@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdminPage } from "@/app/admin/guard";
 import {
   BILLING_CATALOG,
   getBillingStore,
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Billing" };
 
 export default async function AdminBillingPage() {
+  await requireAdminPage("billing");
   const store = await getBillingStore();
   const ws = await getWorkspace();
   const stripeLive = isStripeConfigured();
@@ -17,7 +19,7 @@ export default async function AdminBillingPage() {
   const open = store.sessions.filter((s) => s.status === "open").length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
       <div>
         <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
           ← Admin

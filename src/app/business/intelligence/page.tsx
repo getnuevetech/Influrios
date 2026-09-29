@@ -29,7 +29,7 @@ export default async function BusinessIntelligencePage() {
   return (
     <div className="bg-[#F7FAFF]">
       <section className="hero-atmosphere text-white">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
           <Link href="/business" className="text-sm font-semibold text-lavender/90 hover:underline">
             ← Business workspace
           </Link>
@@ -44,7 +44,7 @@ export default async function BusinessIntelligencePage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-[90rem] space-y-6 px-4 py-8 sm:px-6">
         {locked ? (
           <div className="card-surface p-8 text-center">
             <h2 className="font-display text-2xl font-bold text-indigo">Business Pro unlocks Intelligence</h2>

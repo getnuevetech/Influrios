@@ -41,7 +41,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
     <div className="bg-[#F7FAFF]">
       {/* Hero */}
       <section className="hero-atmosphere relative overflow-hidden text-white">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="mx-auto grid max-w-[90rem] items-center gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
               Home · Collaboration Matches
@@ -79,7 +79,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
       </section>
 
       {/* Popular chips */}
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <section className="mx-auto max-w-[90rem] px-4 py-10 sm:px-6">
         <div className="mb-4 flex items-end justify-between">
           <h2 className="font-display text-xl font-bold text-indigo">Popular collaboration matches</h2>
           <Link href="/collaboration" className="text-sm font-semibold text-violet">
@@ -102,7 +102,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
       </section>
 
       {params.requested ? (
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-[90rem] px-4 sm:px-6">
           <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             Collaboration proposal submitted for review. The other creator will see your structured
             brief (demo — no email sent yet).
@@ -110,7 +110,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
         </div>
       ) : null}
 
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 pb-16 sm:px-6 lg:grid-cols-[260px_1fr]">
+      <div className="mx-auto grid max-w-[90rem] gap-8 px-4 pb-16 sm:px-6 lg:grid-cols-[260px_1fr]">
         {/* Filters */}
         <aside className="card-surface h-fit p-5">
           <div className="mb-4 flex items-center justify-between">
@@ -293,7 +293,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
 
       {/* Stats + CTA */}
       <section className="border-t border-border bg-white py-10">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 sm:grid-cols-4 sm:px-6">
+        <div className="mx-auto grid max-w-[90rem] grid-cols-2 gap-4 px-4 sm:grid-cols-4 sm:px-6">
           {[
             ["3.5x", "Higher Engagement"],
             ["2.8x", "Audience Growth"],
@@ -308,7 +308,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      <section className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
         <div className="overflow-hidden rounded-[1.75rem] brand-gradient p-8 text-white sm:p-10">
           <h2 className="font-display text-3xl font-bold">Ready to find your perfect match?</h2>
           <p className="mt-2 max-w-xl text-white/80">

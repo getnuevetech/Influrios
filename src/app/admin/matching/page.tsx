@@ -5,6 +5,7 @@ import {
   actionCreateIntro,
   actionSetOptIn,
 } from "@/app/admin/matching/actions";
+import { requireAdminPage } from "@/app/admin/guard";
 import {
   getManagedMatching,
   INTRO_STATUSES,
@@ -28,13 +29,14 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default async function AdminMatchingPage({ searchParams }: Props) {
+  await requireAdminPage("matching");
   const params = await searchParams;
   const store = await getManagedMatching();
   const optInCount = store.optIns.filter((o) => o.openToManaged).length;
   const paidCount = store.intros.filter((i) => i.status === "paid").length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
