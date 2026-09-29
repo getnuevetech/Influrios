@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   IconCheck,
+  IconLink,
   IconMapPin,
   IconVerified,
   SocialIcon,
@@ -175,55 +176,108 @@ export function CreatorCard({
   );
 }
 
-/** Compact marketing card matching the Influencer Card template (circular avatar, not tall portrait). */
+/** Horizontal marketing Influencer Card matching the design template. */
 export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
-  const socials = creator.socials.slice(0, 4);
+  const socials = creator.socials.slice(0, 3);
+  const stripPlatforms = ["INSTAGRAM", "TIKTOK", "YOUTUBE", "X"] as const;
 
   return (
-    <div className="relative w-full max-w-[280px] rounded-[1.75rem] bg-white p-6 text-center shadow-2xl ring-1 ring-border">
-      <div className="relative mx-auto h-24 w-24 overflow-hidden rounded-full ring-4 ring-lavender shadow-lg">
-        <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="96px" />
-      </div>
-      <h3 className="mt-4 flex items-center justify-center gap-1.5 font-display text-xl font-bold text-indigo">
-        {creator.displayName}
-        <IconVerified size={18} />
-      </h3>
-      <p className="mt-1 text-sm text-muted">{creator.title}</p>
-      <p className="mt-1 flex items-center justify-center gap-1 text-xs text-muted">
-        <IconMapPin size={12} className="text-violet" />
-        {creator.locationCity}, {creator.locationCountry}
-      </p>
-      <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-        {creator.specialties.slice(0, 4).map((s) => (
-          <span key={s} className="rounded-full bg-[#E8F0FF] px-2.5 py-0.5 text-[10px] font-semibold text-blue">
-            {specialtyLabel(s)}
-          </span>
-        ))}
-      </div>
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-        {socials.map((s) => (
-          <span key={s.platform} className="inline-flex items-center gap-1.5">
-            <SocialIcon platform={s.platform} size={22} />
-            <span className="text-xs font-bold text-indigo">{formatFollowers(s.followers)}</span>
-          </span>
-        ))}
-      </div>
-      <div className="mt-5 flex items-center justify-center gap-3 rounded-2xl bg-[#F4F7FF] px-4 py-3">
-        <div className="h-[22px] w-[22px] overflow-hidden rounded-sm border border-border bg-white">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`/api/qr/${creator.slug}`}
-            alt="QR"
-            width={22}
-            height={22}
-            className="h-full w-full object-contain"
-          />
+    <article className="w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_20px_50px_rgba(17,26,90,0.14)] ring-1 ring-border">
+      <div className="flex gap-3 p-4 sm:gap-4 sm:p-5">
+        <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl sm:h-[100px] sm:w-[100px]">
+          <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="100px" />
         </div>
-        <p className="text-left text-[11px] font-semibold text-muted">
-          Scan to view my full card
-        </p>
+
+        <div className="min-w-0 flex-1">
+          <h3 className="flex flex-wrap items-center gap-1.5 font-display text-lg font-bold leading-tight text-indigo sm:text-xl">
+            {creator.displayName}
+            <IconVerified size={18} />
+          </h3>
+          <p className="mt-0.5 text-sm text-muted">{creator.title}</p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-muted">
+            <IconMapPin size={12} className="shrink-0 text-violet" />
+            {creator.locationCity}, {creator.locationCountry}
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+            {socials.map((s) => (
+              <div key={s.platform} className="min-w-[4.5rem]">
+                <p className="font-display text-base font-bold leading-none text-indigo">
+                  {formatFollowers(s.followers)}
+                </p>
+                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  {s.platform === "INSTAGRAM"
+                    ? "Instagram"
+                    : s.platform === "TIKTOK"
+                      ? "TikTok"
+                      : s.platform === "YOUTUBE"
+                        ? "YouTube"
+                        : s.platform}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {creator.specialties.slice(0, 4).map((s) => (
+              <span
+                key={s}
+                className="rounded-full bg-[#EAE4FF] px-2.5 py-0.5 text-[10px] font-semibold text-violet"
+              >
+                {specialtyLabel(s)}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="hidden w-[92px] shrink-0 flex-col items-center justify-start sm:flex">
+          <div className="h-[84px] w-[84px] overflow-hidden rounded-lg border border-border bg-white p-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/qr/${creator.slug}`}
+              alt={`${creator.displayName} QR`}
+              width={84}
+              height={84}
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <p className="mt-1.5 text-center text-[9px] font-semibold leading-tight text-muted">
+            Scan to view my full profile
+          </p>
+        </div>
       </div>
-    </div>
+
+      {/* Bottom strip — brand-colored social icons */}
+      <div className="flex items-center justify-center gap-5 border-t border-[#EEF1FA] bg-[#FAFBFF] px-4 py-3">
+        {stripPlatforms.map((platform) => {
+          const linked = creator.socials.find((s) => s.platform === platform);
+          const icon = <SocialIcon platform={platform} size={22} />;
+          return linked ? (
+            <a
+              key={platform}
+              href={linked.url}
+              target="_blank"
+              rel="noreferrer"
+              className="transition hover:scale-110"
+              aria-label={platform}
+            >
+              {icon}
+            </a>
+          ) : (
+            <span key={platform} className="opacity-40" aria-hidden>
+              {icon}
+            </span>
+          );
+        })}
+        <Link
+          href={`/c/${creator.slug}`}
+          className="transition hover:scale-110"
+          aria-label="Open Influencer Card link"
+        >
+          <IconLink size={22} />
+        </Link>
+      </div>
+    </article>
   );
 }
 

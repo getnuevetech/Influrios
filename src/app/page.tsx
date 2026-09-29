@@ -468,24 +468,21 @@ export default async function HomePage() {
         </Shell>
       </section>
 
-      {/* —— Influencer Card promo (compact template card) —— */}
+      {/* —— Influencer Card promo (template horizontal card) —— */}
       {cardPromo.enabled ? (
-        <section className="w-full bg-gradient-to-br from-[#EEF2FF] via-[#F7FAFF] to-lavender/70 py-12">
-          <Shell className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="w-full bg-gradient-to-br from-[#EEF2FF] via-[#F7FAFF] to-lavender/70 py-10">
+          <Shell className="grid items-center gap-8 lg:grid-cols-[0.95fr_1.15fr_0.85fr]">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Influencer Card</p>
-              <h2 className="mt-2 font-display text-3xl font-bold text-indigo sm:text-4xl">
-                {cardPromo.title.includes(",") ? (
-                  <>
-                    {cardPromo.title.split(",")[0]},
-                    <span className="brand-gradient-text"> {cardPromo.title.split(",").slice(1).join(",").trim()}</span>
-                  </>
-                ) : (
-                  cardPromo.title
-                )}
+              <h2 className="mt-2 font-display text-3xl font-bold text-indigo sm:text-[2.15rem]">
+                Your Influencer{" "}
+                <span className="brand-gradient-text">Card</span>, Everywhere
               </h2>
-              <p className="mt-3 max-w-md text-muted">{cardPromo.subtitle}</p>
-              <ul className="mt-6 space-y-3">
+              <p className="mt-3 max-w-md text-sm text-muted sm:text-base">
+                {cardPromo.subtitle ||
+                  "A powerful digital profile that contains all your influencer information, social links, and collaboration details."}
+              </p>
+              <ul className="mt-5 space-y-2.5">
                 {[
                   "All your social media in one place",
                   "Showcase your specialties and stats",
@@ -493,57 +490,62 @@ export default async function HomePage() {
                   "Make it easy for brands to connect",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet text-white">
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue text-white">
                       <IconCheck size={14} />
                     </span>
-                    <span className="font-medium text-indigo/80">{item}</span>
+                    <span className="text-sm font-medium text-indigo/80">{item}</span>
                   </li>
                 ))}
               </ul>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link href={cardPromo.ctaHref} className="btn-primary inline-flex">
-                  {cardPromo.ctaLabel} <IconArrowRight size={16} />
-                </Link>
-                <Link href="/c/sofia-martinez" className="btn-secondary inline-flex">
-                  See live example
-                </Link>
-              </div>
-              <div className="mt-6 flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {SEED_CREATORS.slice(0, 4).map((c) => (
-                    <span key={c.slug} className="relative h-8 w-8 overflow-hidden rounded-full ring-2 ring-white">
-                      <Image src={c.image} alt="" fill className="object-cover" sizes="32px" />
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs font-semibold text-muted">50K+ creators already use Influencer Cards</p>
-              </div>
+              <Link href={cardPromo.ctaHref} className="btn-primary mt-7 inline-flex">
+                {cardPromo.ctaLabel} <IconArrowRight size={16} />
+              </Link>
             </div>
 
-            <div className="relative mx-auto flex w-full max-w-md items-end justify-center">
+            <div className="flex justify-center">
               <CompactInfluencerCard creator={SEED_CREATORS[0]} />
-              {/* Phone peek */}
-              <div className="absolute -right-1 bottom-2 hidden w-[140px] md:block lg:-right-4">
-                <div className="rounded-[1.5rem] border-[5px] border-[#1a1a2e] bg-[#1a1a2e] p-1 shadow-2xl">
-                  <div className="overflow-hidden rounded-[1.1rem] bg-white p-3 text-center">
-                    <div className="relative mx-auto h-14 w-14 overflow-hidden rounded-full">
-                      <Image src={SEED_CREATORS[0].image} alt="" fill className="object-cover" sizes="56px" />
-                    </div>
-                    <p className="mt-2 text-xs font-bold text-indigo">{SEED_CREATORS[0].displayName}</p>
-                    <div className="mt-2 space-y-1">
-                      {SEED_CREATORS[0].socials.slice(0, 2).map((s) => (
-                        <div
-                          key={s.platform}
-                          className="flex items-center justify-center gap-1 rounded-full bg-lavender/70 py-1 text-[9px] font-semibold text-violet"
-                        >
-                          <SocialIcon platform={s.platform} size={12} />
-                          {s.platform === "INSTAGRAM" ? "Instagram" : "TikTok"}
-                        </div>
-                      ))}
+            </div>
+
+            <div className="relative mx-auto hidden max-w-[200px] lg:block">
+              <div className="rounded-[1.6rem] border-[5px] border-[#1a1a2e] bg-[#1a1a2e] p-1 shadow-2xl">
+                <div className="overflow-hidden rounded-[1.15rem] bg-white">
+                  <div className="relative h-28">
+                    <Image
+                      src={SEED_CREATORS[0].image}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="200px"
+                    />
+                  </div>
+                  <div className="space-y-1.5 px-3 py-3 text-center">
+                    <p className="font-display text-sm font-bold text-indigo">
+                      {SEED_CREATORS[0].displayName}
+                    </p>
+                    {SEED_CREATORS[0].socials.slice(0, 2).map((s) => (
+                      <div
+                        key={s.platform}
+                        className="flex items-center justify-center gap-1.5 rounded-full bg-lavender/70 py-1.5 text-[10px] font-semibold text-violet"
+                      >
+                        <SocialIcon platform={s.platform} size={12} />
+                        Follow on {s.platform === "INSTAGRAM" ? "Instagram" : "TikTok"}
+                      </div>
+                    ))}
+                    <div className="rounded-full brand-gradient py-1.5 text-[10px] font-bold text-white">
+                      Work With Me
                     </div>
                   </div>
                 </div>
               </div>
+              <p
+                className="mt-4 text-center font-display text-sm font-bold italic leading-snug text-violet"
+                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+              >
+                One Card
+                <br />
+                Endless Opportunities
+                <span className="mt-1 block text-pink">♡</span>
+              </p>
             </div>
           </Shell>
         </section>
