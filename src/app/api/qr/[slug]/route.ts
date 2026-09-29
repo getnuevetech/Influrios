@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import QRCode from "qrcode";
+import { buildBrandedQrSvg } from "@/lib/branded-qr";
 import { getCreatorBySlug } from "@/lib/seed-data";
 import { getEntitlements, type PlanCode } from "@/lib/entitlements";
 
 /**
  * Dynamic / standard QR for Influencer Cards.
- * Pro: opaque token-style URL (ic.me/q/{slug}) — content can change without reprinting.
+ * Pro: opaque token-style URL (/q/{slug}) — content can change without reprinting.
  * Plus: direct card URL.
  * Starter: 403 — no QR entitlement.
+ *
+ * Query: size (px, default 512), logo=0 to omit center Influrios mark.
+ * Response: SVG in primary electric blue (#2979FF).
  */
 export async function GET(
   request: NextRequest,
@@ -29,16 +32,16 @@ export async function GET(
     ? `${appUrl}/q/${creator.slug}`
     : `${appUrl}/c/${creator.slug}`;
 
-  const png = await QRCode.toBuffer(target, {
-    type: "png",
-    width: 256,
-    margin: 1,
-    color: { dark: "#111A5A", light: "#FFFFFF" },
-  });
+  const sizeRaw = Number(request.nextUrl.searchParams.get("size") || 512);
+  const size = Number.isFinite(sizeRaw) ? Math.min(1024, Math.max(64, Math.round(sizeRaw))) : 512;
+  const logoParam = request.nextUrl.searchParams.get("logo");
+  const withLogo = logoParam === "0" ? false : logoParam === "1" ? true : size >= 120;
 
-  return new NextResponse(new Uint8Array(png), {
+  const svg = await buildBrandedQrSvg({ target, size, withLogo, margin: 1 });
+
+  return new NextResponse(svg, {
     headers: {
-      "Content-Type": "image/png",
+      "Content-Type": "image/svg+xml; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
     },
   });
