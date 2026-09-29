@@ -195,6 +195,22 @@ export function IconLinkedIn({ size = 20, className }: IconProps) {
   );
 }
 
+/** Brand-blue link / chain glyph for card bottom strip */
+export function IconLink({ size = 20, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="11" fill="#2979FF" />
+      <path
+        fill="none"
+        stroke="#fff"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        d="M10 14.2a3.2 3.2 0 0 1 0-4.5l1.6-1.6a3.2 3.2 0 0 1 4.5 4.5l-.8.8M14 9.8a3.2 3.2 0 0 1 0 4.5L12.4 16a3.2 3.2 0 1 1-4.5-4.5l.8-.8"
+      />
+    </svg>
+  );
+}
+
 export function IconPlus(props: IconProps) {
   return (
     <svg {...base(props)} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

@@ -1,0 +1,275 @@
+import Image from "next/image";
+import Link from "next/link";
+import {
+  actionAdvanceIntro,
+  actionCreateIntro,
+  actionSetOptIn,
+} from "@/app/admin/matching/actions";
+import {
+  getManagedMatching,
+  INTRO_STATUSES,
+} from "@/lib/managed-matching";
+import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+
+export const metadata = { title: "Admin · Managed Matching" };
+
+type Props = {
+  searchParams: Promise<{ created?: string; advanced?: string; optin?: string }>;
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  draft: "bg-slate-100 text-slate-700",
+  outreach: "bg-amber-100 text-amber-800",
+  introduced: "bg-blue-100 text-blue-800",
+  in_conversation: "bg-violet-100 text-violet-800",
+  paid: "bg-emerald-100 text-emerald-800",
+  declined: "bg-rose-100 text-rose-800",
+  closed: "bg-slate-200 text-slate-600",
+};
+
+export default async function AdminMatchingPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const store = await getManagedMatching();
+  const optInCount = store.optIns.filter((o) => o.openToManaged).length;
+  const paidCount = store.intros.filter((i) => i.status === "paid").length;
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
+            ← Admin
+          </Link>
+          <h1 className="mt-2 font-display text-3xl font-bold text-indigo">
+            Managed Matching
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            Phase 4 ops console — creator opt-in, shortlist delivery, facilitated intros, and
+            intro → paid tracking. Automate only after this manual pilot works.
+          </p>
+        </div>
+        <div className="flex gap-3 text-center text-xs">
+          <div className="rounded-xl bg-lavender px-4 py-2">
+            <p className="font-display text-lg font-bold text-violet">{optInCount}</p>
+            <p className="text-muted">Opted in</p>
+          </div>
+          <div className="rounded-xl bg-[#D9E8FF] px-4 py-2">
+            <p className="font-display text-lg font-bold text-blue">{store.intros.length}</p>
+            <p className="text-muted">Intros</p>
+          </div>
+          <div className="rounded-xl bg-emerald-100 px-4 py-2">
+            <p className="font-display text-lg font-bold text-emerald-700">{paidCount}</p>
+            <p className="text-muted">Paid</p>
+          </div>
+        </div>
+      </div>
+
+      {params.created || params.advanced || params.optin ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Saved
+          {params.created ? " · intro created" : ""}
+          {params.advanced ? " · status advanced" : ""}
+          {params.optin ? ` · opt-in updated (${params.optin})` : ""}.
+        </div>
+      ) : null}
+
+      {/* Create intro from shortlist delivery */}
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Deliver shortlist → create intro</h2>
+        <p className="mt-1 text-sm text-muted">
+          Manual facilitation first. Pick an opted-in creator and open an intro pipeline.
+        </p>
+        <form action={actionCreateIntro} className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            <span className="font-semibold text-indigo">Business</span>
+            <input
+              name="businessName"
+              defaultValue="Luminous Beauty"
+              required
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="font-semibold text-indigo">Creator</span>
+            <select name="creatorSlug" className="mt-1 w-full rounded-xl border border-border px-3 py-2" required>
+              {store.optIns
+                .filter((o) => o.openToManaged)
+                .map((o) => (
+                  <option key={o.creatorSlug} value={o.creatorSlug}>
+                    {getCreatorBySlug(o.creatorSlug)?.displayName ?? o.creatorSlug}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="text-sm sm:col-span-2">
+            <span className="font-semibold text-indigo">Brief / campaign</span>
+            <input
+              name="briefTitle"
+              defaultValue="Clean Skincare Launch"
+              required
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm sm:col-span-2">
+            <span className="font-semibold text-indigo">Ops notes</span>
+            <textarea
+              name="notes"
+              rows={2}
+              placeholder="Why this fit, outreach angle…"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="font-semibold text-indigo">Expected fee</span>
+            <input
+              name="feeExpected"
+              defaultValue="15% success fee"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+            />
+          </label>
+          <div className="flex items-end">
+            <button type="submit" className="btn-primary w-full !py-2 text-sm">
+              Create intro
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {/* Intro pipeline */}
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Intro pipeline</h2>
+        <ul className="mt-4 space-y-4">
+          {store.intros.map((intro) => {
+            const creator = getCreatorBySlug(intro.creatorSlug);
+            return (
+              <li
+                key={intro.id}
+                className="rounded-2xl border border-border bg-starter-bg p-4"
+              >
+                <div className="flex flex-wrap items-start gap-3">
+                  <span className="relative h-12 w-12 overflow-hidden rounded-full">
+                    {creator ? (
+                      <Image src={creator.image} alt="" fill className="object-cover" sizes="48px" />
+                    ) : null}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-bold text-indigo">
+                        {intro.businessName} ↔ {creator?.displayName ?? intro.creatorSlug}
+                      </p>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${STATUS_COLOR[intro.status]}`}
+                      >
+                        {intro.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted">
+                      {intro.briefTitle}
+                      {intro.feeExpected ? ` · ${intro.feeExpected}` : ""}
+                    </p>
+                    {intro.notes ? <p className="mt-1 text-xs text-muted">{intro.notes}</p> : null}
+                    <ol className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold text-muted">
+                      {intro.timeline.map((t, i) => (
+                        <li key={`${t.at}-${i}`} className="rounded bg-white px-2 py-0.5 ring-1 ring-border">
+                          {t.status}
+                          {t.note ? ` — ${t.note}` : ""}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+                <form action={actionAdvanceIntro} className="mt-3 flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="id" value={intro.id} />
+                  <label className="text-xs">
+                    <span className="font-semibold text-indigo">Advance to</span>
+                    <select
+                      name="status"
+                      defaultValue={
+                        INTRO_STATUSES[
+                          Math.min(
+                            INTRO_STATUSES.findIndex((s) => s.code === intro.status) + 1,
+                            INTRO_STATUSES.length - 1,
+                          )
+                        ]?.code ?? "outreach"
+                      }
+                      className="ml-2 rounded-lg border border-border px-2 py-1"
+                    >
+                      {INTRO_STATUSES.map((s) => (
+                        <option key={s.code} value={s.code}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <input
+                    name="note"
+                    placeholder="Note (optional)"
+                    className="min-w-[10rem] flex-1 rounded-lg border border-border px-2 py-1 text-sm"
+                  />
+                  <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
+                    Update status
+                  </button>
+                </form>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {/* Creator opt-in targeting */}
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Creator opt-in targeting</h2>
+        <p className="mt-1 text-sm text-muted">
+          Only opted-in creators appear in the intro delivery picker.
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {SEED_CREATORS.map((c) => {
+            const opt = store.optIns.find((o) => o.creatorSlug === c.slug);
+            return (
+              <form
+                key={c.slug}
+                action={actionSetOptIn}
+                className="rounded-xl border border-border bg-white p-4"
+              >
+                <input type="hidden" name="creatorSlug" value={c.slug} />
+                <div className="flex items-center gap-3">
+                  <span className="relative h-10 w-10 overflow-hidden rounded-full">
+                    <Image src={c.image} alt="" fill className="object-cover" sizes="40px" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold text-indigo">{c.displayName}</p>
+                    <p className="truncate text-xs text-muted">{c.title}</p>
+                  </div>
+                  <label className="flex items-center gap-1 text-xs font-semibold text-indigo">
+                    <input
+                      type="checkbox"
+                      name="openToManaged"
+                      defaultChecked={opt?.openToManaged}
+                      className="accent-violet"
+                    />
+                    Opt in
+                  </label>
+                </div>
+                <input
+                  name="niches"
+                  defaultValue={(opt?.niches ?? c.specialties).join(",")}
+                  className="mt-3 w-full rounded-lg border border-border px-2 py-1.5 text-xs"
+                  placeholder="niches"
+                />
+                <input
+                  name="targetingNotes"
+                  defaultValue={opt?.targetingNotes ?? c.offer ?? ""}
+                  className="mt-2 w-full rounded-lg border border-border px-2 py-1.5 text-xs"
+                  placeholder="Targeting notes"
+                />
+                <button type="submit" className="btn-secondary mt-2 !py-1.5 text-xs">
+                  Save
+                </button>
+              </form>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}

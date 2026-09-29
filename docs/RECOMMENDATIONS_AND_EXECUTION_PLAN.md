@@ -281,14 +281,16 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 
 ---
 
-### Phase 4 — Managed Matching (manual ops console)
+### Phase 4 — Managed Matching (manual ops console) ✅ *started (ops demo live)*
 
 **Proof:** Can platform generate commercial outcomes?
 
-- Creator opt-in targeting + admin outreach console  
-- Business shortlist delivery + facilitated intros  
-- Track intro → paid relationship; test success fees  
-- **Automate only after** manual pilot works  
+- [x] Creator opt-in targeting (`/admin/matching`)  
+- [x] Admin outreach / intro console with status pipeline  
+- [x] Shortlist delivery → create facilitated intro  
+- [x] Track intro → paid relationship (+ expected success fee field)  
+- [ ] Persist to Prisma + notify parties by email  
+- [ ] Automate matching only after manual pilot works  
 
 **Defer:** Escrow / full marketplace  
 
