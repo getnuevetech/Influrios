@@ -27,6 +27,13 @@ if command -v pm2 >/dev/null 2>&1; then
   pm2 save >/dev/null 2>&1 || true
 fi
 
+echo "==> Ensure swap (avoids Next.js webpack OOM on small Lightsail)"
+if [[ "$(id -u)" -eq 0 ]]; then
+  bash deploy/scripts/ensure-swap.sh || true
+else
+  sudo bash deploy/scripts/ensure-swap.sh || true
+fi
+
 echo "==> Build & start containers (postgres + web)"
 docker compose up -d --build postgres
 bash deploy/scripts/db-up.sh
