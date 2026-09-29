@@ -109,7 +109,7 @@ export function InfluencerCardView({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`/api/qr/${creator.slug}?size=512&logo=1`}
+                src={`/api/qr/${creator.slug}?size=512&logo=1&v=2`}
                 alt={`${creator.displayName} Influrios QR code`}
                 width={qrPx}
                 height={qrPx}
