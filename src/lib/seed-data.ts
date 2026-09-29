@@ -236,10 +236,11 @@ export const SEED_CREATORS: SeedCreator[] = [
     image: "/demo/creators/creator-daniel.jpg",
     badge: "Rising Star",
     statusLabel: "Open to Collaborations",
-    planTier: "STARTER",
+    planTier: "PLUS",
     specialties: ["travel"],
     socials: [
       { platform: "INSTAGRAM", handle: "@daniel.travels", url: "https://instagram.com/daniel.travels", followers: 890_000 },
+      { platform: "YOUTUBE", handle: "@danieltravels", url: "https://youtube.com/@danieltravels", followers: 210_000 },
     ],
     openToCollab: true,
     offer: "Travel itinerary content",

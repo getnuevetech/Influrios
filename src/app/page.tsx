@@ -73,7 +73,11 @@ const HERO_FLOATS = [
 ];
 
 export default function HomePage() {
-  const featured = SEED_CREATORS.slice(0, 5);
+  // Prefer Plus/Pro so featured cards show live QR like the design template
+  const featured = [
+    ...SEED_CREATORS.filter((c) => c.planTier === "PLUS" || c.planTier === "PRO"),
+    ...SEED_CREATORS.filter((c) => c.planTier === "STARTER"),
+  ].slice(0, 5);
   const proofAvatars = SEED_CREATORS.slice(0, 5);
 
   return (
