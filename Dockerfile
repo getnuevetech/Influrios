@@ -5,7 +5,9 @@ RUN apk add --no-cache libc6-compat openssl
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 # Install ALL deps (Tailwind/PostCSS needed at build time)
-RUN npm ci
+# Explicitly keep optional native SWC for Alpine (musl) — avoids WASM OOM fallback
+RUN npm ci --include=optional \
+  && node -e "require('@next/swc-linux-x64-musl'); console.log('OK: native SWC musl present')"
 
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -14,12 +16,16 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-# Give webpack enough heap on small Lightsail instances
-ENV NODE_OPTIONS="--max-old-space-size=2048"
+# Modest heap — oversized heaps get killed on 1–2GB Lightsail boxes
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 # Dummy URL so Prisma generate succeeds during image build
 ENV DATABASE_URL="postgresql://influrios:influrios@postgres:5432/influrios?schema=public"
 RUN npx prisma generate
-RUN npm run build
+# Surface memory + SWC diagnostics if webpack fails
+RUN free -h || true \
+  && node -e "require('@next/swc-linux-x64-musl'); console.log('OK: SWC musl')" \
+  && npm run build \
+  || (echo "==== BUILD FAILED — diagnostics ===="; free -h || true; ls -la node_modules/@next 2>/dev/null || true; exit 1)
 
 FROM node:22-alpine AS runner
 WORKDIR /app
