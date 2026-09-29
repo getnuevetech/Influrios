@@ -22,6 +22,8 @@ export const ADMIN_PERMISSIONS = [
   "billing.view",
   "payments.view",
   "payments.manage",
+  "trust.view",
+  "trust.mediate",
   "access.manage_roles",
   "access.manage_users",
 ] as const;
@@ -35,6 +37,7 @@ export type AdminModule =
   | "intelligence"
   | "billing"
   | "payments"
+  | "trust"
   | "access";
 
 export const ADMIN_PERMISSION_GROUPS: {
@@ -96,6 +99,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     permissions: [
       { id: "payments.view", label: "View payments", hint: "Open escrow console" },
       { id: "payments.manage", label: "Manage payments", hint: "Create deals, fund, release, refund" },
+    ],
+  },
+  {
+    module: "trust",
+    label: "Trust & disputes",
+    description: "Mediation queue and collab contract briefs",
+    permissions: [
+      { id: "trust.view", label: "View trust", hint: "Open disputes & contracts console" },
+      { id: "trust.mediate", label: "Mediate disputes", hint: "Advance cases and attach contracts" },
     ],
   },
   {
@@ -162,6 +174,7 @@ const LEGACY_PERMISSION_MAP: Record<string, AdminPermission[]> = {
   intelligence: ["intelligence.view", "intelligence.export"],
   billing: ["billing.view"],
   payments: ["payments.view", "payments.manage"],
+  trust: ["trust.view", "trust.mediate"],
   access: ["access.manage_roles", "access.manage_users"],
 };
 
@@ -183,7 +196,7 @@ const DEFAULT_ROLES: AdminRole[] = [
   {
     id: "role_ops",
     name: "Ops Admin",
-    description: "Managed matching, intelligence, and protected payments (no billing/access).",
+    description: "Matching, intelligence, payments, and trust mediation (no billing/access).",
     permissions: [
       "matching.view",
       "matching.manage_optins",
@@ -193,6 +206,8 @@ const DEFAULT_ROLES: AdminRole[] = [
       "intelligence.export",
       "payments.view",
       "payments.manage",
+      "trust.view",
+      "trust.mediate",
     ],
     system: true,
   },
@@ -208,6 +223,13 @@ const DEFAULT_ROLES: AdminRole[] = [
     name: "Payments Admin",
     description: "Protected payments escrow console only.",
     permissions: ["payments.view", "payments.manage"],
+    system: true,
+  },
+  {
+    id: "role_trust",
+    name: "Trust Admin",
+    description: "Dispute mediation and contract briefs only.",
+    permissions: ["trust.view", "trust.mediate"],
     system: true,
   },
   {

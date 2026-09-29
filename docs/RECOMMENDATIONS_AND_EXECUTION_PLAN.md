@@ -375,6 +375,23 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 
 ---
 
+### Phase 10 — Disputes, Trust & Contract briefs ✅ *started (demo live)*
+
+**Proof:** Can ops mediate escrow disputes and attach lightweight collab briefs?
+
+- [x] Dispute cases linked to escrow milestones (`src/lib/trust.ts`)  
+- [x] Open dispute → milestone flagged `disputed` (`/trust`)  
+- [x] Admin mediation queue — under review / release / refund / partial / withdraw (`/admin/trust`)  
+- [x] Contract brief templates + attach to deal  
+- [x] Granular admin perms `trust.view` / `trust.mediate`  
+- [ ] E-sign / DocuSign integration  
+- [ ] Formal legal templates + counsel review  
+- [ ] Persist disputes to Prisma  
+
+**Defer:** Live Stripe Connect dispute holds until payout rails ship  
+
+---
+
 ## 8. Creator acquisition & activation (strategy §20)
 
 **Wedge message:** *“Create Your Free Influencer Card. One Card. All Your Influence.”*

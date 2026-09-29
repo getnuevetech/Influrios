@@ -12,6 +12,7 @@ import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
 import { escrowStats, getProtectedPaymentsStore } from "@/lib/protected-payments";
+import { getTrustStore, trustStats } from "@/lib/trust";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -31,6 +32,7 @@ const LINKS: {
     completedCheckouts: number;
     escrowActive: number;
     escrowHeld: string;
+    trustOpen: number;
   }) => string;
 }[] = [
   {
@@ -77,6 +79,13 @@ const LINKS: {
     meta: (c) => `${c.escrowActive} active · ${c.escrowHeld} held`,
   },
   {
+    href: "/admin/trust",
+    title: "Trust & Disputes",
+    blurb: "Mediation queue and collab contract briefs.",
+    module: "trust",
+    meta: (c) => `${c.trustOpen} open cases`,
+  },
+  {
     href: "/admin/access",
     title: "Access levels",
     blurb: "Create roles from granular features and assign admin users.",
@@ -99,6 +108,8 @@ export default async function AdminHomePage({
   const billing = await getBillingStore();
   const payments = await getProtectedPaymentsStore();
   const payStats = escrowStats(payments);
+  const trust = await getTrustStore();
+  const tStats = trustStats(trust);
   const visibleCards = cms.featuredCards.cards.filter((c) => c.visible).length;
   const optIns = matching.optIns.filter((o) => o.openToManaged).length;
   const snapshots = getAllAudienceSnapshots().length;
@@ -118,6 +129,7 @@ export default async function AdminHomePage({
       currency: "USD",
       maximumFractionDigits: 0,
     }).format(payStats.held / 100),
+    trustOpen: tStats.open,
   };
 
   const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));
