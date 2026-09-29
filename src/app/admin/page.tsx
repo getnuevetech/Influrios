@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCms } from "@/lib/cms";
+import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
 
 export const metadata = { title: "Admin" };
@@ -9,13 +10,15 @@ export default async function AdminHomePage() {
   const matching = await getManagedMatching();
   const visibleCards = cms.featuredCards.cards.filter((c) => c.visible).length;
   const optIns = matching.optIns.filter((o) => o.openToManaged).length;
+  const snapshots = getAllAudienceSnapshots().length;
+  const rising = getNicheTrends().filter((t) => t.signal === "rising").length;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Influrios Admin</p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Content & ops controls</h1>
       <p className="mt-2 max-w-2xl text-muted">
-        Manage landing banners, influencer card features, and Phase 4 managed matching.
+        Manage landing banners, influencer cards, managed matching, and Phase 5 intelligence.
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -51,6 +54,18 @@ export default async function AdminHomePage() {
           </p>
           <p className="mt-4 text-xs font-semibold text-violet">
             {optIns} opted in · {matching.intros.length} intros
+          </p>
+        </Link>
+        <Link
+          href="/admin/intelligence"
+          className="card-surface block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <h2 className="font-display text-xl font-bold text-indigo">Intelligence</h2>
+          <p className="mt-2 text-sm text-muted">
+            Phase 5 — audience snapshots, niche trends, relationship signals, exports.
+          </p>
+          <p className="mt-4 text-xs font-semibold text-violet">
+            {snapshots} snapshots · {rising} rising niches
           </p>
         </Link>
       </div>

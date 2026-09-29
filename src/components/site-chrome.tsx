@@ -114,6 +114,9 @@ export function SiteFooter() {
               <Link href="/business">Business workspace</Link>
             </li>
             <li>
+              <Link href="/business/intelligence">Intelligence</Link>
+            </li>
+            <li>
               <Link href="/business#pricing">Business Pro</Link>
             </li>
             <li>

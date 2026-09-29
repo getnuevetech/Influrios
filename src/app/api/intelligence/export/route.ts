@@ -1,0 +1,44 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  buildIntelligenceExport,
+  intelligenceExportToCsv,
+} from "@/lib/intelligence";
+import { getWorkspace } from "@/lib/business";
+import { getBusinessEntitlements } from "@/lib/business-entitlements";
+
+/**
+ * Phase 5 export API — JSON or CSV audience / trend / signal payload.
+ * Gated by demo Business Pro / Agency intelligence entitlement.
+ */
+export async function GET(req: NextRequest) {
+  const ws = await getWorkspace();
+  const entitlements = getBusinessEntitlements(ws.plan);
+
+  if (!entitlements.intelligence || !entitlements.exports) {
+    return NextResponse.json(
+      {
+        error: "Intelligence exports require Business Pro or Agency.",
+        upgrade: "/business#pricing",
+      },
+      { status: 403 },
+    );
+  }
+
+  const { searchParams } = new URL(req.url);
+  const format = (searchParams.get("format") ?? "json").toLowerCase();
+  const slug = searchParams.get("slug") ?? undefined;
+  const payload = await buildIntelligenceExport({ slug });
+
+  if (format === "csv") {
+    const csv = intelligenceExportToCsv(payload);
+    return new NextResponse(csv, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="influrios-intelligence${slug ? `-${slug}` : ""}.csv"`,
+      },
+    });
+  }
+
+  return NextResponse.json(payload);
+}

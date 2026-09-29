@@ -296,9 +296,20 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 
 ---
 
-### Phase 5 — Intelligence
+### Phase 5 — Intelligence ✅ *started (demo live)*
 
-Audience snapshots, trends, relationship signals, exports/API — only for validated B2B demand.
+**Proof:** Will B2B pay for audience + relationship signal depth?
+
+- [x] Audience snapshots from seed/claimed demographics (`src/lib/intelligence.ts`)  
+- [x] Niche demand trends (rising / stable / cooling)  
+- [x] Relationship signals (managed intros + collab fit)  
+- [x] Business Intelligence UI (`/business/intelligence`) gated by Business Pro / Agency  
+- [x] Admin Intelligence ops view (`/admin/intelligence`)  
+- [x] Export API (`/api/intelligence/export` JSON + CSV)  
+- [ ] Live social / first-party sync (OAuth) after demand validates  
+- [ ] Persist intelligence store to Prisma  
+
+**Defer:** Full analytics warehouse, precise geo, scrape-dependent metrics
 
 ---
 
