@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+:root {
+  /* Influrios brand tokens (Strategy v2.2) */
+  --deep-indigo: #111a5a;
+  --royal-violet: #633cff;
+  --electric-blue: #2979ff;
+  --soft-lavender: #eae4ff;
+  --pink-accent: #e879f9;
+  --champagne-gold: #d7b56d;
+  --gold-highlight: #f6e7b0;
+
+  --starter-bg: #f7faff;
+  --starter-soft-blue: #d9e8ff;
+  --starter-action: #4979ff;
+  --starter-violet: #7b46f6;
+
+  --pro-deep-base: #0b123f;
+
+  --background: #f7faff;
+  --foreground: #111a5a;
+  --muted: #5b647e;
+  --surface: #ffffff;
+  --border: #e4e9f5;
+  --ring: #633cff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-indigo: var(--deep-indigo);
+  --color-violet: var(--royal-violet);
+  --color-blue: var(--electric-blue);
+  --color-lavender: var(--soft-lavender);
+  --color-pink: var(--pink-accent);
+  --color-gold: var(--champagne-gold);
+  --color-pro: var(--pro-deep-base);
+  --font-sans: var(--font-plus-jakarta);
+  --font-display: var(--font-sora);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-plus-jakarta), "Segoe UI", sans-serif;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand-gradient {
+  background: linear-gradient(120deg, var(--electric-blue), var(--royal-violet));
+}
+
+.brand-gradient-text {
+  background: linear-gradient(120deg, var(--electric-blue), var(--royal-violet));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-atmosphere {
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 20%, rgba(99, 60, 255, 0.28), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 20% 80%, rgba(41, 121, 255, 0.18), transparent 50%),
+    linear-gradient(165deg, #0b123f 0%, #111a5a 45%, #1a1460 100%);
+}
+
+.card-surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  box-shadow: 0 10px 30px rgba(17, 26, 90, 0.06);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  color: white;
+  font-weight: 600;
+  background: linear-gradient(120deg, var(--electric-blue), var(--royal-violet));
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(99, 60, 255, 0.35);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--deep-indigo);
+  background: white;
+  border: 1px solid var(--border);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--soft-lavender);
+  color: var(--royal-violet);
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise-in 0.6s ease both;
+}
+
+.animate-rise-delay {
+  animation: rise-in 0.7s ease 0.12s both;
+}

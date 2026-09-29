@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CREATOR
+  BUSINESS
+  AGENCY
+  ADMIN
+}
+
+enum PlanTier {
+  STARTER
+  PLUS
+  PRO
+  BUSINESS_FREE
+  BUSINESS_PRO
+  AGENCY
+}
+
+enum DataSource {
+  CREATOR_CLAIMED
+  PLATFORM_VERIFIED
+  PROVIDER_SYNCED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum SocialPlatform {
+  INSTAGRAM
+  TIKTOK
+  YOUTUBE
+  X
+  FACEBOOK
+  LINKEDIN
+  PINTEREST
+  WEBSITE
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  role          UserRole @default(CREATOR)
+  planTier      PlanTier @default(STARTER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  creator       Creator?
+  business      BusinessProfile?
+}
+
+model EntitlementPlan {
+  id          String   @id @default(cuid())
+  code        PlanTier @unique
+  name        String
+  description String?
+  limitsJson  Json
+  featuresJson Json
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Specialty {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  parentId    String?
+  parent      Specialty?  @relation("SpecialtyTree", fields: [parentId], references: [id])
+  children    Specialty[] @relation("SpecialtyTree")
+  creators    CreatorSpecialty[]
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Creator {
+  id                 String             @id @default(cuid())
+  userId             String?            @unique
+  user               User?              @relation(fields: [userId], references: [id])
+  slug               String             @unique
+  displayName        String
+  title              String?
+  bio                String?
+  locationCity       String?
+  locationCountry    String?
+  languages          String[]           @default([])
+  avatarUrl          String?
+  coverUrl           String?
+  openToCollab       Boolean            @default(true)
+  availability       String             @default("OPEN_TO_PARTNERSHIPS")
+  identityVerified   VerificationStatus @default(UNVERIFIED)
+  claimed            Boolean            @default(false)
+  planTier           PlanTier           @default(STARTER)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  specialties        CreatorSpecialty[]
+  socialAccounts     SocialAccount[]
+  card               InfluenceCard?
+  collabOffers       CollaborationOffer[]
+  collabNeeds        CollaborationNeed[]
+}
+
+model CreatorSpecialty {
+  id          String    @id @default(cuid())
+  creatorId   String
+  specialtyId String
+  isPrimary   Boolean   @default(false)
+  source      DataSource @default(CREATOR_CLAIMED)
+  creator     Creator   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  specialty   Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, specialtyId])
+}
+
+model SocialAccount {
+  id           String         @id @default(cuid())
+  creatorId    String
+  platform     SocialPlatform
+  handle       String
+  url          String
+  followers    Int?
+  source       DataSource     @default(CREATOR_CLAIMED)
+  refreshedAt  DateTime?
+  creator      Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, platform])
+}
+
+model InfluenceCard {
+  id              String   @id @default(cuid())
+  creatorId       String   @unique
+  slug            String   @unique
+  shortAlias      String?  @unique
+  qrToken         String?  @unique
+  theme           String   @default("starter")
+  published       Boolean  @default(false)
+  platformBrandVisible Boolean @default(true)
+  creator         Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CollaborationOffer {
+  id          String   @id @default(cuid())
+  creatorId   String
+  summary     String
+  details     String?
+  creator     Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model CollaborationNeed {
+  id          String   @id @default(cuid())
+  creatorId   String
+  summary     String
+  details     String?
+  creator     Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model BusinessProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  industry    String?
+  geography   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model QrRedirect {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  targetUrl   String
+  creatorId   String?
+  campaign    String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  eventType   String
+  creatorId   String?
+  cardId      String?
+  metaJson    Json?
+  createdAt   DateTime @default(now())
+}

@@ -170,8 +170,9 @@ Prefer CSS/SVG for aurora backgrounds; use raster backgrounds (`influencer_card_
 | App | Next.js (App Router) + TypeScript |
 | UI | Tailwind + CSS design tokens (tier themes) |
 | DB | PostgreSQL + Prisma |
+| Hosting | **AWS Lightsail** — Ubuntu, Nginx, PM2, managed Postgres |
 | Auth | Clerk or Auth.js (roles: creator, business, agency, admin) |
-| Files | R2/S3 for avatars / portfolio |
+| Files | S3 or Lightsail bucket for avatars / portfolio |
 | Short links / QR | Own redirect service + server QR generation |
 | Billing | Stripe (Creator / Business / Agency / card SKUs) |
 | Search | Postgres → Meilisearch/Typesense when filter load grows |
@@ -367,17 +368,18 @@ Existing comps cover marketing, Discover, Profile, Collab, Card marketing, and t
 
 ---
 
-## 12. Decisions still needed to start build
+## 12. Decisions — status
 
-Defaults in **bold** if you want us to proceed:
-
-1. **Short domain:** Own `ic.me` (or similar) vs path-only `/c/{slug}` + `/q/{token}` on primary domain?  
-2. **Auth:** **Clerk** / Auth.js / other?  
-3. **Hosting:** **Vercel + managed Postgres** / other?  
-4. **Phase 1 Pro dynamic QR:** include late Phase 1 / **defer to Phase 3 with billing**?  
-5. **AI draft extraction:** which providers / budget for specialty & bio suggestions?  
-6. **Initial taxonomy:** do you have a specialty list, or should we draft Beauty/Fashion/Food/… + sub-specialties from comps?  
-7. **Design fidelity:** rebuild comps under Influrios tokens now, or **implement tokens in code first** and restyle comps in parallel?
+| Decision | Status |
+|----------|--------|
+| Hosting | **Locked: AWS Lightsail** (Ubuntu + Nginx + PM2 + managed Postgres). See `docs/deploy/AWS_LIGHTSAIL.md`. |
+| Phase 0–1 kickoff | **Started** on branch `cursor/phase-0-1-mvp-lightsail-0127` |
+| Short domain | Open: own `ic.me` vs path-only `/c/{slug}` + `/q/{token}` on primary domain |
+| Auth | Open: **Clerk** / Auth.js / other |
+| Phase 1 Pro dynamic QR | Open: late Phase 1 / **defer to Phase 3 with billing** |
+| AI draft extraction | Open: provider + budget |
+| Initial taxonomy | **Drafted** in `src/lib/seed-data.ts` (Beauty, Fashion, Food, Home, Hair, Travel, Fitness, Tech, Lifestyle, Suppliers + sub-specialties) |
+| Design fidelity | **Code-first tokens** (v2.2 hex values in `globals.css`); comps remain visual references |
 
 ---
 
