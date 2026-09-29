@@ -15,20 +15,22 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+set -a
+# shellcheck disable=SC1091
+source .env
+set +a
+
+PGUSER="${POSTGRES_USER:-influrios}"
+PGDB="${POSTGRES_DB:-influrios}"
+
 echo "==> Starting Postgres container"
 docker compose up -d postgres
 
 echo "==> Waiting for Postgres healthy…"
-for i in $(seq 1 60); do
-  status="$(docker compose ps --format json postgres 2>/dev/null | head -1 || true)"
-  if docker compose exec -T postgres pg_isready -U "${POSTGRES_USER:-influrios}" -d "${POSTGRES_DB:-influrios}" >/dev/null 2>&1; then
+for _ in $(seq 1 60); do
+  if docker compose exec -T postgres pg_isready -U "${PGUSER}" -d "${PGDB}" >/dev/null 2>&1; then
     echo "OK: Postgres is ready"
     docker compose ps postgres
-    exit 0
-  fi
-  # Fallback health via docker inspect
-  if docker inspect --format='{{.State.Health.Status}}' influrios-postgres 2>/dev/null | grep -q healthy; then
-    echo "OK: Postgres is healthy"
     exit 0
   fi
   sleep 1

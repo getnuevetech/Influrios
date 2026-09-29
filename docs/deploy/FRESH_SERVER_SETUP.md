@@ -223,19 +223,18 @@ chmod +x deploy/scripts/*.sh
 bash deploy/scripts/setup-lightsail.sh
 ```
 
-This installs **Docker** (for Postgres), Nginx reverse proxy to port 3000, UFW rules, and PM2 startup (safe to re-run).
+This installs **Docker** (Postgres + Next.js web) and Nginx → `127.0.0.1:3000`. **PM2 is not used.**
 
 After first Docker install, refresh group membership:
 
 ```bash
 newgrp docker
-# or log out and SSH back in
 docker ps   # should work without sudo
 ```
 
 ---
 
-## 9. Environment + Docker database + first deploy
+## 9. Environment + Docker stack + first deploy
 
 ```bash
 cd /var/www/influrios
@@ -243,39 +242,24 @@ cp .env.example .env
 nano .env
 ```
 
-Set at minimum (Docker Postgres — recommended):
-
 ```env
-NODE_ENV=production
-PORT=3000
 NEXT_PUBLIC_APP_URL=http://STATIC_IP
-
 POSTGRES_USER=influrios
 POSTGRES_PASSWORD=pick-a-strong-password
 POSTGRES_DB=influrios
 DATABASE_URL="postgresql://influrios:pick-a-strong-password@127.0.0.1:5432/influrios?schema=public"
 ```
 
-`POSTGRES_PASSWORD` and the password inside `DATABASE_URL` **must match**.
-
-Start the database, then deploy the app:
+(`127.0.0.1` is for host tools. The web container uses Docker hostname `postgres` automatically.)
 
 ```bash
-bash deploy/scripts/db-up.sh      # docker compose up -d postgres
-bash deploy/scripts/deploy.sh     # also ensures DB is up, then migrate/seed/build/PM2
+pm2 delete influrios 2>/dev/null || true   # stop legacy PM2 if present
+bash deploy/scripts/deploy.sh              # docker compose up -d --build
 ```
 
-Useful DB commands:
-
 ```bash
-docker compose ps postgres
-docker compose logs -f postgres
-npm run db:down                   # stop container (keeps data volume)
-```
-
-Test:
-
-```bash
+docker compose ps
+docker compose logs -f web
 curl -I http://127.0.0.1:3000
 curl -I http://STATIC_IP
 ```
@@ -284,11 +268,8 @@ curl -I http://STATIC_IP
 
 ## 10. Ongoing updates from GitHub
 
-Whenever you push new code:
-
 ```bash
 cd /var/www/influrios
-git checkout main
 git pull origin main
 bash deploy/scripts/deploy.sh
 ```
@@ -298,7 +279,7 @@ bash deploy/scripts/deploy.sh
 ## 11. Domain + HTTPS (after DNS works)
 
 1. DNS A record `@` and `www` → static IP  
-2. Edit `/etc/nginx/sites-available/influrios` → set `server_name your-domain.com www.your-domain.com`  
+2. Edit `/etc/nginx/sites-available/influrios` → set `server_name`  
 3. `sudo nginx -t && sudo systemctl reload nginx`  
 4. Certbot:
 
@@ -307,7 +288,7 @@ sudo apt-get install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ```
 
-5. Set `NEXT_PUBLIC_APP_URL=https://your-domain.com` in `.env` → `pm2 restart influrios`
+5. Set `NEXT_PUBLIC_APP_URL=https://your-domain.com` in `.env` → `docker compose up -d --build web`
 
 ---
 

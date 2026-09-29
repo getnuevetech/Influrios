@@ -6,28 +6,34 @@
 ## Quick start (local)
 
 ```bash
-cp .env.example .env          # set POSTGRES_PASSWORD + matching DATABASE_URL
-npm run db:up                 # Docker Postgres on 127.0.0.1:5432
+cp .env.example .env          # set POSTGRES_PASSWORD + NEXT_PUBLIC_APP_URL
+docker compose up -d --build  # Postgres + Next.js web
+# open http://localhost:3000
+```
+
+Optional host tooling (seed against published DB port):
+
+```bash
 npm ci
 npx prisma db push
 npm run db:seed
-npm run dev                   # http://localhost:3000
 ```
 
-Database runs in **Docker** (see `docker-compose.yml`). UI seed data also works before Prisma is wired to pages.
+## Why Docker (not PM2)?
+
+The app and database both run in **Docker Compose**. Nginx on the host proxies to `127.0.0.1:3000`.
+
+PM2 was an earlier host process manager; it caused incomplete builds / missing Tailwind deps on the server. Docker builds the app in a clean image with all build dependencies included.
 
 ## AWS Lightsail deploy
 
-**New / fresh server (GitHub + OS update + Docker DB):**  
 → **[docs/deploy/FRESH_SERVER_SETUP.md](./docs/deploy/FRESH_SERVER_SETUP.md)**
 
 ```bash
-# After GitHub SSH works and repo is cloned to /var/www/influrios:
-bash deploy/scripts/setup-lightsail.sh   # installs Docker + Node + Nginx + PM2
+bash deploy/scripts/setup-lightsail.sh   # Docker + Nginx
 newgrp docker
-cp .env.example .env                     # strong POSTGRES_PASSWORD + DATABASE_URL
-bash deploy/scripts/db-up.sh             # start Postgres container
-bash deploy/scripts/deploy.sh
+cp .env.example .env                     # POSTGRES_PASSWORD + NEXT_PUBLIC_APP_URL=http://YOUR_IP
+bash deploy/scripts/deploy.sh            # docker compose up --build
 ```
 
 ## Docs

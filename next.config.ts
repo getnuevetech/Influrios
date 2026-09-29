@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Regular Next build + `next start` via PM2 (simpler on Lightsail than standalone)
+  // Required for lean Docker image (copies .next/standalone)
+  output: "standalone",
   images: {
     remotePatterns: [
       {

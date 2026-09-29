@@ -1,10 +1,10 @@
-# Influrios — PostgreSQL via Docker (local + Lightsail)
-# Start:  docker compose up -d
-# Stop:   docker compose down
-# Logs:   docker compose logs -f postgres
+# Influrios — Docker Compose (Postgres + Next.js web)
+# Start everything:  docker compose up -d --build
+# Logs:              docker compose logs -f web
+# Stop:              docker compose down
 #
-# Credentials come from .env (see .env.example).
-# Postgres is bound to 127.0.0.1 only — not exposed to the public internet.
+# Postgres + web are on an internal Docker network.
+# Web is published only on 127.0.0.1:3000 for Nginx on the host.
 
 services:
   postgres:
@@ -16,6 +16,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-influrios}
       POSTGRES_DB: ${POSTGRES_DB:-influrios}
     ports:
+      # Host access for local prisma/seed tooling only
       - "127.0.0.1:5432:5432"
     volumes:
       - influrios_pg:/var/lib/postgresql/data
@@ -25,7 +26,41 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+    networks:
+      - influrios
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: influrios-web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_SHORT_LINK_HOST: ${NEXT_PUBLIC_SHORT_LINK_HOST:-ic.me}
+      # Inside Docker network, host is the service name "postgres" (not 127.0.0.1)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-influrios}:${POSTGRES_PASSWORD:-influrios}@postgres:5432/${POSTGRES_DB:-influrios}?schema=public
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - influrios
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
 volumes:
   influrios_pg:
     name: influrios_pg
+
+networks:
+  influrios:
+    name: influrios
