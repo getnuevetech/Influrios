@@ -1,341 +1,416 @@
-# Influrios / Influence Connect — Recommendations & Execution Plan
+# Influrios — Recommendations & Execution Plan
 
-**Status:** For stakeholder review  
+**Status:** For stakeholder review (aligned to Product Strategy v2.2)  
 **Repo:** `getnuevetech/Influrios`  
-**Source materials reviewed:** 14 design templates (web + mobile), product UI mockups, background assets  
-**Date:** 2026-09-29
+**Sources reviewed:** Product Strategy v2.2 · 14 design templates · card/background assets  
+**Date:** 2026-09-29 · **Doc version:** 2.0
 
 ---
 
 ## 1. Executive summary
 
-The attached materials describe a **two-sided creator–brand marketplace** with a strong secondary product: a shareable **Influencer Card** (digital business card + QR + short link). Designs cover marketing/web surfaces and a tiered mobile card experience (Starter → Plus → Pro).
+**Influrios** is an **Influence Discovery & Collaboration Platform** — not another follower-count directory. Positioning: *“Find the right influence. Build the right collaboration.”* Brand line: *“Influence. Identity. Opportunity.”*
 
-**Verdict:** The vision is clear and commercially coherent. Scope in the templates is large. We should **ship a focused MVP** around Discover + Profiles + Influencer Card, then layer Collaboration Matching and paid tiers—rather than building every screen and AI feature at once.
+Four connected engines from the strategy:
 
-**Immediate decisions needed from you (see §8):** brand name, stack preference, MVP cut, and whether web-first or mobile-first.
+| Engine | Job | Monetization |
+|--------|-----|--------------|
+| **Influence Discovery** | Search by specialty, audience, geography, platform | Traffic + freemium |
+| **Creator Collaboration Network** | Complementary creator ↔ creator matching | Pro / collab tools |
+| **Influencer Card + Share Identity** | Portable commercial identity (link → QR → dynamic QR by tier) | Creator Pro / card SKU |
+| **Business Matching + Managed Promotion** | Intros, shortlists, facilitated deals | B2B subs + managed fees |
 
----
+**Verdict:** Strategy v2.2 is coherent and execution-ready. It correctly prioritizes **density (free discovery + card)** before marketplace/escrow complexity. Our earlier design-only review is **superseded** by this doc on naming, tiers, QR rules, colors, onboarding, and phase order.
 
-## 2. What the materials define
-
-### 2.1 Product surfaces in the designs
-
-| Surface | Role | Complexity |
-|--------|------|------------|
-| **Home / Landing** | Acquisition; search hero; categories; featured creators; social proof | Medium |
-| **Discover Influencers** | Marketplace search + heavy filters + AI “Top Matches” | High |
-| **Creator Profile** | Media-kit style page: stats, demographics, content, collab prefs, brands | High |
-| **Collaboration Matches** | AI match scoring, brand requests, creator-x-creator opps | Very high |
-| **Influencer Card (marketing)** | Product landing for the digital card | Medium |
-| **Influencer Card (mobile)** | Shareable card UI in **3 tiers** (Starter / Plus / Pro) | Medium–High |
-| **Backgrounds / art** | Light aurora + dark cosmic assets for cards, splash, premium | Asset pipeline |
-
-### 2.2 Core user jobs
-
-1. **Brands:** Find creators by niche/location/platform/followers/engagement → evaluate → contact / invite to collaborate.  
-2. **Creators:** Publish a professional presence → share via QR/short link → get discovered → receive collab requests.  
-3. **Both:** Use Collaboration Matches for AI-suggested pairings (later phase).
-
-### 2.3 Differentiator vs. Linktree / creator directories
-
-The **Influencer Card** is the clearest unique wedge:
-
-- Multi-platform reach on one card  
-- QR + short URL (`ic.me/...`)  
-- Tiered feature unlocks (tags, QR, brand inquiry email, media-kit badges)  
-- Bridge into full platform profile and collab flows  
-
-Recommend treating the Card as **MVP hero**, with Discover/Profile as the marketplace that makes the card valuable.
+**Ship order (aligned):** Taxonomy → claimable profiles + tier-aware Card → specialty search → I offer / I need collab → Business Pro → managed matching (manual first) → intelligence.
 
 ---
 
-## 3. Design & UX review
+## 2. Decisions resolved by v2.2
 
-### 3.1 Strengths
+| Topic | Prior open question | **Locked by v2.2** |
+|-------|---------------------|---------------------|
+| Product name | Influrios vs Influence Connect | **Influrios** only. Do not revive “Influence Connect” in production UI, emails, cards, QR landings, or admin. |
+| Card product name | — | **Influrios Card** or **Influencer Card by Influrios**; “Influencer Card” = category term |
+| Card vs Profile | Blurred in mockups | **Card** = portable identity & connection · **Profile** = discovery, intelligence, portfolio depth |
+| Starter QR | Mockups showed QR on Starter | **No QR at Starter** (launch default). Plus = standard QR + shortlink. Pro = **dynamic** platform QR |
+| Starter socials | — | **1** public social link (admin-configurable) |
+| Specialties | — | Starter **1** · Plus **up to 3** · Pro admin-configured higher limit |
+| Color system | Generic purple AI look | Blue = trust/platform · Purple = creator/collab · Pink = sparse accent · **Champagne gold = Pro only** |
+| Onboarding | Missing from mockups | **Value before registration:** draft card → claim → verify → publish Starter |
+| Monetization | Implied | Creator Pro $12–25 · Business Pro $79–129 · Agency $249–499 · Managed + success fees |
+| MVP rule | — | **No** escrow, payouts, full contracts, or social publishing in early phases |
 
-- Clear dual CTA pattern: **Join as Creator** / **Join as Business**  
-- Consistent visual language: purple–blue gradients, rounded cards, verified badges, social metrics  
-- Influencer Card tiers are productized (Starter / Plus / Pro)—good monetization path  
-- Discover filters match real brand buying criteria (niche, geo, platform, followers, engagement, rate, verified, open-to-collab)  
-- Profile page reads as a **sales media kit**, which brands expect  
+Remaining decisions for engineering kickoff: §12.
 
-### 3.2 Risks & gaps in the current templates
+---
 
-| Issue | Why it matters | Recommendation |
-|-------|----------------|----------------|
-| **Brand conflict:** repo/README = *Influrios*; designs = *Influence Connect* | Confused identity, domains, legal | Pick one name before build; update all copy |
-| **No auth, onboarding, dashboards, messaging, or payment UIs** | Can’t operate the marketplace from marketing screens alone | Design these before/alongside Phase 1 build |
-| **AI matching + live social APIs shown as fact** | Instagram/TikTok/YouTube APIs are restricted, costly, and often unavailable for follower sync | Start with **manual / claimed stats** + optional OAuth later; mock AI scores until data exists |
-| **Heavy card / dashboard density on every page** | Templates are card-heavy marketing comps; easy to overbuild | Keep marketplace utility pages denser; keep marketing heroes simpler (one composition per first viewport) |
-| **Default AI-look palette** (purple gradients everywhere) | Fine for brand continuity if intentional; easy to feel generic | Lock a **design system** (tokens, type, radius) and one expressive typeface—not Inter-by-default |
-| **Copyrighted brand logos** (Samsung, Nike, L’Oréal, etc.) in comps | Cannot ship as-is without permission | Use placeholders or licensed/partner logos only |
-| **No empty / loading / error / mobile web layouts** | Production will need them | Spec responsive breakpoints and states early |
-| **Demographics & engagement charts** | Implies first-party analytics or expensive third-party data | Phase 2+; seed with user-entered or partner data |
+## 3. Reconciliation: designs vs strategy
 
-### 3.3 Influencer Card tier model (from templates)
+Mockups remain valid for **layout hierarchy and tier feel**. Production must diverge where strategy overrides them.
+
+| Design artifact | Strategy correction |
+|-----------------|---------------------|
+| “Influence Connect” wordmarks | Replace with **Influrios** everywhere in production |
+| Starter cards with QR / multi-social | Strip QR; one social; one specialty; profile URL only |
+| Plus cards | Shortlink + **standard** QR; up to 3 specialties / 4 socials |
+| Pro cards | Dynamic QR (`ic.me/q/{opaqueId}`); gold accents only on badge/border/highlights |
+| Horizontal “card” website modules | Allowed as **previews only**; canonical card is **portrait ~4:5** |
+| Baked-in follower counts / QR bitmaps | Live UI components + server-rendered QR; no rasterized live data |
+| Brand logos (Nike, Samsung, etc.) | Placeholders / partners only |
+| Demographics / engagement dashboards | Post-MVP intelligence; label data source when shown |
+
+**Action:** Treat comps as visual references; implement responsive components driven by an **entitlement matrix** (admin-editable), not hard-coded plan names.
+
+---
+
+## 4. Product model (engineering view)
+
+### 4.1 Influence DNA (profile)
+
+Not a vanity score. Fields should answer *what they influence* and *commercial fit*:
+
+- Primary + secondary specialties (entitlement-capped)  
+- Content concentration / style  
+- Verified social accounts + freshness timestamps  
+- Geography + languages  
+- Portfolio / featured content  
+- Disclosed brand history  
+- Commercial services + availability  
+- Collaboration offers & needs  
+- Contact routing (platform-mediated preferred)  
+- Optional rate card / request quote  
+- Verification status + last refreshed  
+
+**Avoid** a single universal influencer score. Prefer **topic-specific strength / fit** explanations.
+
+### 4.2 Influencer Card (standalone SKU)
+
+Vertical digital business card, **monetizable alone** or bundled with creator plans.
 
 | Capability | Starter | Plus | Pro |
 |------------|---------|------|-----|
-| Photo + name + verification | ✓ | ✓ | ✓ |
-| Single niche / limited tags | 1 tag | 3 tags | 5+ tags |
-| Social stats | 1 platform row | 4 platforms | 5 platforms + website |
-| Short link | Full URL | Short `ic.me/...` + copy | Short link + copy |
-| QR code | — | ✓ | ✓ (emphasized) |
-| Brand inquiry email | — | — | ✓ |
-| Status badges (Media Kit, Collab Ready, Priority) | — | — | ✓ |
-| Primary CTA | View Profile | Contact | Work With Me |
-| Visual treatment | Light glass | Light + richer chrome | Dark / premium glass + gold accents |
+| Public vertical card | ✓ | ✓ | ✓ |
+| Specialties | 1 | ≤3 | Admin limit |
+| Social links | 1 | ≤4 | Admin / all supported |
+| Profile URL | ✓ | ✓ | ✓ |
+| Shortlink | — | ✓ | ✓ (+ custom alias if entitled) |
+| QR | — | Standard → card URL | **Dynamic** opaque redirect |
+| Contact / inquiry | Limited / none | ✓ | ✓ + richer lead route |
+| Collab CTA | Config | Optional | ✓ |
+| Portfolio | None / minimal | Limited | Expanded |
+| Analytics | Basic views | Views / scans / clicks | + leads / advanced QR |
+| Themes | Platform default | Limited | Full creator-brand colors |
+| Platform branding | Visible | Reduced | Minimal / removable if entitled |
+| Media kit / brand history | — | Optional | ✓ |
+| Lead tracking | — | Limited | ✓ |
 
-**Recommendation:** Encode tiers as a **feature-flag matrix** in code from day one, even if only Starter ships free.
+Commercial rule: table = **launch defaults**. Admin must change limits per plan/country/promo **without deploy**.
 
-### 3.4 Background assets
-
-- **Light pastel aurora** → Starter/Plus cards, light marketing sections  
-- **Blue cosmic ribbons / dark gold-sparkle** → Pro cards, splash, premium upsell  
-
-Prefer **CSS/SVG gradients** for simple aurora backgrounds where possible; reserve raster art for Pro/splash to control bundle size.
-
----
-
-## 4. Architecture recommendations
-
-### 4.1 Suggested product shape
+### 4.3 QR & link strategy
 
 ```
-Web app (Next.js)          Mobile (later / PWA first)
-├── Marketing pages        └── Influencer Card share views
-├── Discover + Profile         (same card components)
-├── Auth + Creator/Brand
-│   onboarding
-├── Messaging / Requests
-└── Billing (Stripe)
-         │
-         ▼
-   API (Node or Nest) + Postgres
-         │
-   ├─ Profiles, niches, locations
-   ├─ Cards + QR + short links
-   ├─ Collab requests / matches
-   └─ Optional: social OAuth sync jobs
+Starter  →  influrios.com/c/{slug}          (no QR)
+Plus     →  ic.me/{alias}  +  static QR → card URL
+Pro      →  ic.me/q/{opaqueToken}  (redirect table; content changes without reprinting QR)
 ```
 
-### 4.2 Recommended stack (default if no preference)
+Pro analytics (privacy-permitted): scan count, time, campaign/source, device class, **coarse** geo — not precise location.
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Frontend | **Next.js (App Router) + TypeScript** | SEO for Discover/Profile; shared React for card UIs |
-| Styling | **Tailwind + CSS variables** (design tokens) | Matches rapid UI from comps; theming for tiers |
-| Backend | **Next.js Route Handlers or NestJS** | Start simple; extract Nest if matching/jobs grow |
-| DB | **PostgreSQL + Prisma** | Relational fit for filters, tiers, orgs |
-| Auth | **Clerk or Auth.js** | Dual roles (creator / business) quickly |
-| Files | **S3-compatible (R2/S3)** | Avatars, content thumbnails |
-| QR | Server-generated (e.g. `qrcode`) with logo overlay | Matches designs |
-| Short links | Dedicated route/`ic.me` subdomain or path redirects | Core card feature |
-| Payments | **Stripe** (Plus / Pro subscriptions) | Maps to tier badges |
-| Search | Postgres full-text → **Typesense/Meilisearch** when scale needs it | Discover filters are demanding |
-| Charts | Lightweight (e.g. Recharts) only when real data exists | Avoid fake-precision charts in MVP |
+### 4.4 Collaboration network
 
-### 4.3 Domain model (MVP entities)
+Complementary matching, not competition:
 
-- `User` (role: `creator` | `business` | `admin`)  
-- `CreatorProfile` (bio, location, languages, verified, openToCollab, tier)  
-- `SocialAccount` (platform, handle, followers, url) — initially user-claimed  
-- `Category` / `Niche` (with counts for filters)  
-- `InfluencerCard` (slug, theme, QR payload, visibility)  
-- `BusinessProfile`  
-- `CollabRequest` / `SavedCreator`  
-- `Match` (optional Phase 3; score breakdown fields as in comps)
+1. Declare offers / needs  
+2. Match (specialty complementarity, audience adjacency, geo, platform, availability)  
+3. Propose structured collab  
+4. Build joint scope  
+5. Showcase joint case study  
 
-### 4.4 What *not* to build first
+Separate match engines: **Creator→Creator**, **Business→Creator**, **Business→Creator Team** — each with explainable “Why this match?”
 
-- Live Instagram/TikTok follower sync  
-- Full demographic analytics  
-- AI match engine with explainability UI  
-- Native iOS/Android apps  
-- Campaign management / escrow payments  
-- NFC writing  
+### 4.5 Managed layer (later, manual-first)
+
+Opt-in promotion → package media kit → target businesses → permissioned intros → facilitate brief → retain as recurring. Pilot with humans before automation.
 
 ---
 
-## 5. Phased execution plan
+## 5. Design system (from v2.2 tokens)
 
-### Phase 0 — Align & foundation *(review gate)*
+### Brand colors
 
-**Outcomes**
+| Token | Hex | Use |
+|-------|-----|-----|
+| Deep Indigo | `#111A5A` | Trust, nav, strong text |
+| Royal Violet | `#633CFF` | Creator identity, collab, primary gradient |
+| Electric Blue | `#2979FF` | Platform actions, links |
+| Soft Lavender | `#EAE4FF` | Soft surfaces, chips |
+| White | `#FFFFFF` | Card surfaces |
+| Pink Accent | `#E879F9` | Energy only — sparingly |
+| Champagne Gold | `#D7B56D` | **Pro-only** accents |
 
-- [ ] Confirm product name: **Influrios** vs **Influence Connect** (or Influrios product / Influence Connect brand)  
-- [ ] Confirm MVP scope cut (recommend §5 Phase 1 below)  
-- [ ] Confirm web-first vs mobile app  
-- [ ] Domain + short-link strategy (`influrios.com`, `influenceconnect.com`, `ic.me`)  
-- [ ] Legal: trademark search; remove third-party logos from production assets  
-- [ ] Design system: colors, type, radius, button/card tokens extracted from comps  
-- [ ] Repo bootstrap: Next.js app, CI, lint, env, staging  
+### Tier surfaces (implement as CSS variables)
 
-**Deliverable:** Signed MVP brief + Figma/component inventory (or this doc approved)
+- **Starter:** white / `#F7FAFF` / soft blue-lavender · low glow · clear Influrios branding  
+- **Plus:** electric blue ↔ royal violet · moderate glow · shortlink + QR visible  
+- **Pro:** `#0B123F` / deep indigo · gold on badge/border only · dynamic QR prominent  
+
+Accessibility: color never sole plan indicator; WCAG AA; explicit tier labels; test creator-custom Pro themes.
+
+Prefer CSS/SVG for aurora backgrounds; use raster backgrounds (`influencer_card_*_background.png` refs) only where needed for Pro/splash.
 
 ---
 
-### Phase 1 — MVP marketplace + Influencer Card *(primary build)*
+## 6. Architecture recommendations
 
-**Goal:** A brand can search creators; a creator can publish a profile and share a Starter/Plus card.
+### 6.1 Stack (default)
 
-| Workstream | Scope |
-|------------|--------|
-| Design system | Tokens, Logo, Nav, Footer, Buttons, Tags, Badges, Social icons |
-| Auth | Sign up / log in; role select Creator vs Business |
-| Creator onboarding | Profile basics, niches, location, socials (manual), photo |
-| Home | Simplified landing: brand, headline, search CTA, categories teaser, featured row, dual join CTAs |
-| Discover | Search + filters (niche, location, platform, follower range, verified, open-to-collab); result grid; sort |
-| Profile | Public media-kit page (stats, about, tags, collab prefs); Contact / Share Card CTAs |
-| Influencer Card | Public share page + QR + slug URL; Starter + Plus layouts |
-| Business light path | Save creators; “Invite to Collaborate” creates a request (email or in-app inbox v1) |
-| Admin light | Seed categories; verify creators manually |
+| Layer | Choice |
+|-------|--------|
+| App | Next.js (App Router) + TypeScript |
+| UI | Tailwind + CSS design tokens (tier themes) |
+| DB | PostgreSQL + Prisma |
+| Auth | Clerk or Auth.js (roles: creator, business, agency, admin) |
+| Files | R2/S3 for avatars / portfolio |
+| Short links / QR | Own redirect service + server QR generation |
+| Billing | Stripe (Creator / Business / Agency / card SKUs) |
+| Search | Postgres → Meilisearch/Typesense when filter load grows |
+| Entitlements | DB-driven plan feature flags (not `if (plan === 'pro')` in UI) |
 
-**Explicitly out of Phase 1:** Collaboration Matches page, demographics charts, Pro dark card, Stripe, AI scoring.
+### 6.2 Core data model (relationship-first)
+
+`Creator` · `SocialAccount` · `Specialty` · `AudienceSnapshot` · `CollaborationOffer` · `CollaborationNeed` · `BusinessProfile` · `Opportunity` · `Relationship` · `InfluenceCard` · `EntitlementPlan` · `EntitlementOverride` · `QrRedirect` · `AnalyticsEvent` · `Invitation` (admin/brand/creator/agency) · `AttributionTouch`
+
+Label fields as `creator_claimed` vs `platform_verified` vs `provider_synced` + `refreshed_at`.
+
+### 6.3 Entitlement engine (critical)
+
+```
+effectiveEntitlements(user) =
+  planDefaults(planId)
+  ⊕ country/promo overrides
+  ⊕ admin grants
+  ⊕ bundle includes (card SKU ↔ marketplace plan)
+```
+
+UI and API both check **effective entitlements**. Locked actions show contextual upgrade CTAs (strategy §20).
+
+### 6.4 Trust & compliance (build-in from Phase 0)
+
+- Official APIs / authorized data only — no scrape-dependent business model  
+- Claim / correct / opt-out for seeded profiles  
+- Platform inquiry routing; no private email/phone on public card without consent  
+- Sponsored placements clearly labeled; never overwrite relevance  
+- Verification ≠ paid badge  
+- Abuse: impersonation, fake metrics, spam, prohibited categories  
+- Managed promotion requires explicit creator authorization (scope, comp, exclusivity)
+
+---
+
+## 7. Phased execution plan (aligned to strategy §14–§18)
+
+### Phase 0 — Foundation
+
+**Proof:** Can we describe influence accurately?
+
+- Specialty taxonomy (primary + sub-specialty) + geography model  
+- Profile / card schema + entitlement matrix (admin-configurable)  
+- Design tokens + Influrios wordmark (retire Influence Connect assets)  
+- Auth roles + verification status model (identity ≠ social ≠ data)  
+- Data permissions, claim/correction/opt-out flows  
+- Attribution taxonomy (ORGANIC_SIGNUP, PROFILE_CLAIM, ADMIN_EMAIL_INVITE, …)
+
+**Defer:** Payments, campaign management  
+
+---
+
+### Phase 1 — Directory + Influencer Card *(MVP)*
+
+**Proof:** Do creators claim/share? Do users search?
+
+| Build | Notes |
+|-------|--------|
+| Homepage / Search | “Who influences what?” + specialty/location shortcuts |
+| Public Influence Profile | Influence DNA lite; socials; inquiry; collab CTA stubs |
+| Vertical Influencer Card | Starter live; Plus layout ready behind entitlements |
+| Claim / create flow | **Draft preview → claim → verify → publish** (value before signup) |
+| Free search | Specialty + geography + platform (+ basic filters) |
+| Creator dashboard (lite) | Completeness score + next-best actions |
+| Shortlink + Plus QR | Behind Plus entitlement |
+| Seed + admin invite CRM | Seed profiles; creator-specific claim links |
+
+**Defer:** Advanced intelligence, Pro dynamic QR (can ship late Phase 1 if capacity), full collab matching  
 
 **Exit criteria**
 
-- 20+ seeded demo creators browsable on Discover  
-- Creator can edit profile and open shareable card URL + QR  
-- Business can filter and send a collab request  
+- Seeded specialty/location pages + claimable profiles  
+- Creator publishes Starter card with shareable URL on day one  
+- Search → profile view funnel measurable  
 
 ---
 
-### Phase 2 — Monetization & card depth
+### Phase 2 — Collaboration Network
 
-| Workstream | Scope |
-|------------|--------|
-| Billing | Stripe: Plus / Pro subscriptions; webhook → tier on profile |
-| Pro card | Dark glassmorphism layout; brand email; status badges; 5 platforms |
-| Card marketing page | “Your Influencer Card, Everywhere” funnel |
-| Messaging | Threaded inbox for collab requests (replace email-only) |
-| Creator dashboard | Edit card, view profile views / link clicks (basic analytics) |
-| Business dashboard | Saved lists, request status |
+**Proof:** Will creators use complementary matches?
 
-**Exit criteria:** Paid upgrade path works; Pro card matches approved design; basic funnel analytics.
+- I offer / I need fields + Collaboration Explorer  
+- Explainable Creator→Creator recommendations  
+- Structured proposals + joint portfolio stubs  
+- Contextual Plus/Pro upsells for collab controls  
+
+**Defer:** Complex contracting  
 
 ---
 
-### Phase 3 — Collaboration matching
+### Phase 3 — Business Pro
 
-| Workstream | Scope |
-|------------|--------|
-| Match UI | Recommended Match card with score breakdown (as in comps) |
-| Rules engine v1 | Weighted scoring on niche overlap, geo, platform, audience size (deterministic—not LLM-first) |
-| Listings | Business requests + creator “looking for” opportunities |
-| Filters | Industry, collab type, budget, campaign goal |
-| Explainability | “Why this match works” from structured reasons |
+**Proof:** Will businesses pay for precision + workflow?
 
-Optional later: LLM rewrite of match rationale; true ML ranking once enough outcomes exist.
+- Advanced specialty/audience filters, shortlists, briefs, inquiries  
+- Fit explanations (“Why this creator?”)  
+- Stripe: Creator Pro + Business Pro (+ Agency later)  
+- Contact/inquiry limits by plan  
+- Pro card: dynamic QR, gold accents, lead routing, advanced analytics  
 
 ---
 
-### Phase 4 — Scale & platform depth
+### Phase 4 — Managed Matching (manual ops console)
 
-- Social OAuth / partner data for verified metrics (where legally available)  
-- Audience demographics (partner or first-party pixel)  
-- Campaign tools, contracts, payments escrow  
-- Native apps or refined PWA for card sharing at events  
-- Categories directory page, pricing page, resources/CMS  
-- Performance: search index, CDN images, edge caching for cards  
+**Proof:** Can platform generate commercial outcomes?
 
----
+- Creator opt-in targeting + admin outreach console  
+- Business shortlist delivery + facilitated intros  
+- Track intro → paid relationship; test success fees  
+- **Automate only after** manual pilot works  
 
-## 6. Frontend implementation notes (from templates)
-
-### 6.1 Shared components to build once
-
-- `AppHeader` / `AppFooter`  
-- `CreatorCard` (home featured + discover grid variants)  
-- `InfluencerCard` (tier-aware: Starter | Plus | Pro)  
-- `FilterSidebar` (Discover; later Collab)  
-- `StatPill` / `SocialMetric`  
-- `CategoryChip`  
-- `VerifyBadge`, `TierBadge`  
-- `QrBlock`  
-- `CtaBanner` (Creator / Business dual CTAs)  
-- `MatchScoreRing` (Phase 3)
-
-### 6.2 Responsive strategy
-
-- Discover: sidebar collapses to drawer/bottom sheet on mobile  
-- Profile: stack hero → stats → about → content  
-- Cards: single-column share view is already mobile-native—reuse for PWA
-
-### 6.3 Motion (keep intentional, not noisy)
-
-- Hero fade/rise on load  
-- Card hover lift on desktop grids  
-- Soft gradient drift on card backgrounds (CSS only)  
-- Avoid continuous sparkle animations that hurt performance/accessibility  
-
-### 6.4 Accessibility & contrast
-
-- Light aurora backgrounds → **dark navy text** only  
-- Dark Pro cards → white/light text; ensure WCAG AA on badges and secondary labels  
-- Don’t place body copy directly on busy cosmic backgrounds—use glass panels  
+**Defer:** Escrow / full marketplace  
 
 ---
 
-## 7. Data, compliance, and ops
+### Phase 5 — Intelligence
 
-- **Claimed metrics disclaimer** until verified sync exists  
-- **GDPR/CCPA:** data export/delete for profiles; consent for marketing  
-- **Age:** creators should be 18+ for commercial collabs  
-- **Brand safety:** reporting / block for profiles  
-- **Rate limits** on contact forms to reduce spam  
-- **QR payload:** prefer HTTPS profile URL, not raw PII  
+Audience snapshots, trends, relationship signals, exports/API — only for validated B2B demand.
 
 ---
 
-## 8. Decisions we need from you
+## 8. Creator acquisition & activation (strategy §20)
 
-Please reply with preferences (defaults in **bold** if you want us to proceed without waiting):
+**Wedge message:** *“Create Your Free Influencer Card. One Card. All Your Influence.”*
 
-1. **Product name:** Influrios / Influence Connect / other?  
-2. **MVP cut:** **Phase 1 as written** / narrower (Card-only) / fuller (include matching)?  
-3. **Client:** **Web-first (Next.js)** / Flutter / React Native?  
-4. **Auth vendor:** **Clerk** / Auth.js / other?  
-5. **Short domain:** Do you own or want `ic.me`-style links, or path-based `/c/sofia` on main domain?  
-6. **Design fidelity:** Pixel-match comps / **interpret into a tighter design system**?  
-7. Any **must-have** integrations already (CRM, Stripe account, social APIs)?
+### Funnel
 
----
+`DISCOVER → PREVIEW → CLAIM → VERIFY → ACTIVATE → PUBLISH → SHARE → ENGAGE → UPGRADE`
 
-## 9. Suggested near-term engineering sequence (after approval)
+### Engineering implications
 
-1. Bootstrap Next.js + design tokens + layout shell  
-2. Seed data model + fake creator catalog  
-3. Discover + Profile (read-only)  
-4. Auth + creator edit flows  
-5. Influencer Card Starter/Plus public routes + QR  
-6. Business save + collab request  
-7. Hardening, analytics, staging demo for stakeholders  
+1. **Unauthenticated draft generation** from one handle/URL (permitted public / provider data), clearly labeled draft  
+2. Claim creates account + ownership transfer  
+3. Separate statuses: identity verified / social verified / data verified  
+4. AI suggests specialties/title/bio — creator confirms (never auto-publish inferred claims as verified)  
+5. Progressive completion after publish (no long mandatory form)  
+6. Invitation types: admin, brand/campaign, creator-to-creator, agency import, event QR — all deep-link to **that creator’s draft**, not generic signup  
+7. Report Invited → Previewed → Claim Started → Verified → Published → Shared → Engaged → Paid by source  
 
----
+### Launch campaigns (copy-ready)
 
-## 10. Design reference index
+- Free Influencer Card  
+- Claim Your Influence  
+- Get Discovered by Specialty  
+- Collaboration Network  
 
-Files copied to `docs/design-references/`:
-
-| File | Likely screen |
-|------|----------------|
-| `43db205a-...png` | Home / landing |
-| `41af99d3-...png` | Creator profile (Sofia Martinez) |
-| `7e83886a-...png` | Discover influencers |
-| `9201a4e6-...png` | Collaboration matches |
-| `23349ba3-...png` | Influencer Card marketing landing |
-| `afe96cd0-...png` / `13cacfc6-...png` | Card — Starter |
-| `3be1f309-...png` / `8de33766-...png` | Card — Plus |
-| `d29dd52f-...png` / `13e75916-...png` | Card — Pro |
-| `71c28254-...png` | Light aurora background |
-| `5db6a37e-...png` / `8fea709a-...png` | Dark cosmic / premium backgrounds |
+**Motion:** Seed useful profiles → free Starter card + claim invites + admin outreach → invite creators into real brand/collab opportunities.
 
 ---
 
-## 11. Bottom line
+## 9. Screens to design next (gaps vs mockups)
 
-Ship **Discover + Profile + Influencer Card (Starter/Plus)** as the first usable product. Treat Collaboration Matching and live social analytics as later phases. Resolve **Influrios vs Influence Connect** naming before any public UI. Encode **subscription tiers** in the data model early so Pro designs are a layout + billing unlock, not a rewrite.
+Existing comps cover marketing, Discover, Profile, Collab, Card marketing, and tier cards. **Still needed before/alongside Phase 1:**
 
-Once you confirm the decisions in §8, we can start Phase 0/1 implementation on this repo.
+1. Unauthenticated **draft card preview** + claim  
+2. Verification / consent steps  
+3. Creator dashboard (completeness + next actions)  
+4. Progressive “add specialty / social / collab prefs” flows  
+5. Contextual upgrade modals (locked QR, shortlink, extra social, analytics)  
+6. Admin: taxonomy, entitlements, invitations, trust/abuse  
+7. Business workspace (shortlists, briefs) — Phase 3 polish  
+8. Empty / loading / error / mobile web for Discover + Profile  
+9. Influrios-branded redraws of all legacy “Influence Connect” screens  
+
+---
+
+## 10. Metrics that matter (instrument from Phase 1)
+
+| Stage | Metric |
+|-------|--------|
+| Supply | Claimed profiles / completeness |
+| Distribution | Card shares / (later) QR scans |
+| Discovery | Searches → profile views |
+| Collaboration | Match views → proposals → accepted |
+| Business | Search/brief → inquiry → qualified response |
+| Revenue | Free → paid conversion |
+| Managed | Intros → paid relationships |
+| Retention | Repeat business–creator relationships |
+
+---
+
+## 11. Risks & mitigations
+
+| Risk | Mitigation |
+|------|------------|
+| Cold-start empty directory | Seed + claim invites + admin outreach before big marketing |
+| Social API limits | Claimed metrics + OAuth where available; never block MVP on sync |
+| Entitlement sprawl hard-coded | Feature-flag matrix + admin UI from Phase 0 |
+| Trust / fake profiles | Verification states, freshness labels, abuse queue |
+| Overbuilding marketplace | Stick to MVP rule: no escrow/payouts until discovery+card+collab proven |
+| Brand drift (Influence Connect assets) | Asset audit; lint/copy check for banned string in CI |
+| Generic purple UI | Enforce token set; gold Pro-only; pink sparse; expressive type |
+
+---
+
+## 12. Decisions still needed to start build
+
+Defaults in **bold** if you want us to proceed:
+
+1. **Short domain:** Own `ic.me` (or similar) vs path-only `/c/{slug}` + `/q/{token}` on primary domain?  
+2. **Auth:** **Clerk** / Auth.js / other?  
+3. **Hosting:** **Vercel + managed Postgres** / other?  
+4. **Phase 1 Pro dynamic QR:** include late Phase 1 / **defer to Phase 3 with billing**?  
+5. **AI draft extraction:** which providers / budget for specialty & bio suggestions?  
+6. **Initial taxonomy:** do you have a specialty list, or should we draft Beauty/Fashion/Food/… + sub-specialties from comps?  
+7. **Design fidelity:** rebuild comps under Influrios tokens now, or **implement tokens in code first** and restyle comps in parallel?
+
+---
+
+## 13. Immediate engineering sequence (after §12)
+
+1. Bootstrap Next.js + Influrios tokens + entitlement schema  
+2. Specialty taxonomy seed + Creator / Card / SocialAccount models  
+3. Public profile + Starter card routes  
+4. Draft → claim → verify → publish funnel  
+5. Search (specialty + geo + platform)  
+6. Creator dashboard completeness  
+7. Plus shortlink + standard QR (entitlement-gated)  
+8. Admin invitations + attribution events  
+9. Staging demo with seeded creators for stakeholder review  
+
+---
+
+## 14. Design reference index
+
+See `docs/design-references/` — visual hierarchy only. Production renders **Influrios** branding and live data.
+
+| Asset | Use |
+|-------|-----|
+| Home, Discover, Profile, Collab, Card marketing comps | Layout reference; rebrand required |
+| Starter / Plus / Pro card comps | Tier density & hierarchy; apply §4.2 entitlement rules |
+| Light / cosmic backgrounds | Optional decorative layers; prefer CSS/SVG |
+
+---
+
+## 15. Bottom line
+
+v2.2 locks the product: **Influrios** discovers influence by specialty, connects complementary creators, and sells portable identity (Card) plus workflow/matching — not directory spam or paid “verification.”
+
+**Build Phase 0–1 next:** taxonomy, entitlements, claimable profiles, Starter card with value-before-signup onboarding, and free specialty search. Collaboration, Business Pro, and managed matching follow only after those loops show signal.
+
+Confirm §12 and we start foundation implementation on this repo.
