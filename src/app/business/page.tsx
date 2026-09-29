@@ -104,6 +104,7 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
                     <li>✓ {e.inquiryMaxPerMonth} inquiries / month</li>
                     <li>{e.fitInsights ? "✓" : "–"} Fit insights</li>
                     <li>{e.advancedFilters ? "✓" : "–"} Advanced filters</li>
+                    <li>{e.intelligence ? "✓" : "–"} Intelligence</li>
                     <li>{e.exports ? "✓" : "–"} Exports</li>
                   </ul>
                   <button type="submit" className={`mt-4 w-full !py-2 text-sm ${active ? "btn-secondary" : "btn-primary"}`}>
@@ -113,6 +114,24 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
               );
             })}
           </div>
+        </section>
+
+        {/* Phase 5 Intelligence entry */}
+        <section className="card-surface flex flex-wrap items-center justify-between gap-4 p-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Phase 5</p>
+            <h2 className="mt-1 font-display text-xl font-bold text-indigo">Intelligence</h2>
+            <p className="mt-1 max-w-xl text-sm text-muted">
+              Audience snapshots, niche trends, relationship signals, and CSV/JSON exports
+              {entitlements.intelligence ? " — included on your plan." : " — upgrade to Business Pro to unlock."}
+            </p>
+          </div>
+          <Link
+            href="/business/intelligence"
+            className={entitlements.intelligence ? "btn-primary" : "btn-secondary"}
+          >
+            {entitlements.intelligence ? "Open Intelligence →" : "Preview / unlock →"}
+          </Link>
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
