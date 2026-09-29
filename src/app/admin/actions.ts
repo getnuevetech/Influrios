@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireAdminAction } from "@/app/admin/guard";
 import {
   addBannerImage,
   removeBannerImage,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/cms";
 
 export async function actionUpdateBanner(formData: FormData) {
+  await requireAdminAction("banners.edit");
   const id = String(formData.get("id")) as BannerSlot;
   await updateBanner(id, {
     enabled: formData.get("enabled") === "on",
@@ -29,6 +31,7 @@ export async function actionUpdateBanner(formData: FormData) {
 }
 
 export async function actionUploadBannerImage(formData: FormData) {
+  await requireAdminAction("banners.edit");
   const id = String(formData.get("id")) as BannerSlot;
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -43,6 +46,7 @@ export async function actionUploadBannerImage(formData: FormData) {
 }
 
 export async function actionRemoveBannerImage(formData: FormData) {
+  await requireAdminAction("banners.edit");
   const id = String(formData.get("id")) as BannerSlot;
   const image = String(formData.get("image") ?? "");
   await removeBannerImage(id, image);
@@ -52,6 +56,7 @@ export async function actionRemoveBannerImage(formData: FormData) {
 }
 
 export async function actionUpdateFeaturedGlobals(formData: FormData) {
+  await requireAdminAction("cards.edit");
   await updateFeaturedCardsConfig({
     widthScale: Number(formData.get("widthScale") || 1.2),
     socialIconSize: Number(formData.get("socialIconSize") || 22),
@@ -63,6 +68,7 @@ export async function actionUpdateFeaturedGlobals(formData: FormData) {
 }
 
 export async function actionUpdateCard(formData: FormData) {
+  await requireAdminAction("cards.edit");
   const slug = String(formData.get("slug") ?? "");
   const features: CardFeatureFlags = {
     showBadge: formData.get("showBadge") === "on",

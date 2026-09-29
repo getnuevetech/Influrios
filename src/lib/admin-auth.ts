@@ -1,22 +1,101 @@
 /**
  * Admin access control — cookie sessions + file-backed roles/permissions.
- * Super admin (env) can create admin accounts with scoped access levels.
+ * Super admin can create access levels from granular feature permissions.
  */
 import { createHmac, timingSafeEqual, randomBytes, scryptSync } from "crypto";
 import { promises as fs } from "fs";
 import { cookies } from "next/headers";
 import path from "path";
 
+/** Granular feature permissions selectable when creating an access level. */
 export const ADMIN_PERMISSIONS = [
-  "banners",
-  "cards",
-  "matching",
-  "intelligence",
-  "billing",
-  "access",
+  "banners.view",
+  "banners.edit",
+  "cards.view",
+  "cards.edit",
+  "matching.view",
+  "matching.manage_optins",
+  "matching.create_intros",
+  "matching.advance_intros",
+  "intelligence.view",
+  "intelligence.export",
+  "billing.view",
+  "access.manage_roles",
+  "access.manage_users",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
+
+export type AdminModule =
+  | "banners"
+  | "cards"
+  | "matching"
+  | "intelligence"
+  | "billing"
+  | "access";
+
+export const ADMIN_PERMISSION_GROUPS: {
+  module: AdminModule;
+  label: string;
+  description: string;
+  permissions: { id: AdminPermission; label: string; hint: string }[];
+}[] = [
+  {
+    module: "banners",
+    label: "Banners",
+    description: "Landing hero, sponsored, card promo, and CTA banners",
+    permissions: [
+      { id: "banners.view", label: "View banners", hint: "Open the banners console" },
+      { id: "banners.edit", label: "Edit banners", hint: "Update copy, CTAs, and uploads" },
+    ],
+  },
+  {
+    module: "cards",
+    label: "Influencer cards",
+    description: "Featured card sizing and per-creator feature toggles",
+    permissions: [
+      { id: "cards.view", label: "View cards CMS", hint: "Open the cards console" },
+      { id: "cards.edit", label: "Edit cards CMS", hint: "Change globals and card flags" },
+    ],
+  },
+  {
+    module: "matching",
+    label: "Managed matching",
+    description: "Creator opt-in, shortlist intros, and pipeline status",
+    permissions: [
+      { id: "matching.view", label: "View matching", hint: "See opt-ins and intro pipeline" },
+      { id: "matching.manage_optins", label: "Manage opt-ins", hint: "Toggle creator managed opt-in" },
+      { id: "matching.create_intros", label: "Create intros", hint: "Deliver shortlist → create intro" },
+      { id: "matching.advance_intros", label: "Advance intros", hint: "Move intro status / mark paid" },
+    ],
+  },
+  {
+    module: "intelligence",
+    label: "Intelligence",
+    description: "Audience snapshots, trends, and relationship signals",
+    permissions: [
+      { id: "intelligence.view", label: "View intelligence", hint: "Open intelligence console" },
+      { id: "intelligence.export", label: "Export intelligence", hint: "Hit JSON/CSV export API from admin" },
+    ],
+  },
+  {
+    module: "billing",
+    label: "Billing",
+    description: "Plan catalog and checkout session history",
+    permissions: [
+      { id: "billing.view", label: "View billing", hint: "Open billing ops console" },
+    ],
+  },
+  {
+    module: "access",
+    label: "Access control",
+    description: "Create roles and admin users (typically Super Admin)",
+    permissions: [
+      { id: "access.manage_roles", label: "Manage roles", hint: "Create access levels / permission sets" },
+      { id: "access.manage_users", label: "Manage users", hint: "Invite admins, set roles, enable/disable" },
+    ],
+  },
+];
 
 export type AdminRole = {
   id: string;
@@ -58,40 +137,62 @@ const STORE_PATH = path.join(DATA_DIR, "admin-auth.json");
 const COOKIE_NAME = "influrios_admin_session";
 const SESSION_DAYS = 7;
 
+/** Map legacy coarse permissions → granular set (store migration). */
+const LEGACY_PERMISSION_MAP: Record<string, AdminPermission[]> = {
+  banners: ["banners.view", "banners.edit"],
+  cards: ["cards.view", "cards.edit"],
+  matching: [
+    "matching.view",
+    "matching.manage_optins",
+    "matching.create_intros",
+    "matching.advance_intros",
+  ],
+  intelligence: ["intelligence.view", "intelligence.export"],
+  billing: ["billing.view"],
+  access: ["access.manage_roles", "access.manage_users"],
+};
+
 const DEFAULT_ROLES: AdminRole[] = [
   {
     id: "role_super",
     name: "Super Admin",
-    description: "Full access — manage admins, content, matching, intelligence, billing.",
+    description: "Full access — every admin feature and access-control tools.",
     permissions: [...ADMIN_PERMISSIONS],
     system: true,
   },
   {
     id: "role_content",
     name: "Content Admin",
-    description: "Landing banners and influencer card CMS only.",
-    permissions: ["banners", "cards"],
+    description: "Landing banners and influencer card CMS (view + edit).",
+    permissions: ["banners.view", "banners.edit", "cards.view", "cards.edit"],
     system: true,
   },
   {
     id: "role_ops",
     name: "Ops Admin",
-    description: "Managed matching and intelligence consoles.",
-    permissions: ["matching", "intelligence"],
+    description: "Managed matching pipeline and intelligence (no billing/access).",
+    permissions: [
+      "matching.view",
+      "matching.manage_optins",
+      "matching.create_intros",
+      "matching.advance_intros",
+      "intelligence.view",
+      "intelligence.export",
+    ],
     system: true,
   },
   {
     id: "role_billing",
     name: "Billing Admin",
     description: "Billing catalog and checkout sessions only.",
-    permissions: ["billing"],
+    permissions: ["billing.view"],
     system: true,
   },
   {
     id: "role_readonly",
     name: "Read-only Admin",
-    description: "View banners and cards; no matching/billing/access.",
-    permissions: ["banners", "cards"],
+    description: "View banners and cards only — no edits.",
+    permissions: ["banners.view", "cards.view"],
     system: true,
   },
 ];
@@ -121,10 +222,32 @@ function signPayload(payload: string) {
   return createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
 }
 
+function expandPermissions(raw: string[]): AdminPermission[] {
+  const set = new Set<AdminPermission>();
+  for (const p of raw) {
+    if ((ADMIN_PERMISSIONS as readonly string[]).includes(p)) {
+      set.add(p as AdminPermission);
+      continue;
+    }
+    const mapped = LEGACY_PERMISSION_MAP[p];
+    if (mapped) mapped.forEach((m) => set.add(m));
+  }
+  return [...set];
+}
+
+function normalizeStore(store: AdminAuthStore): AdminAuthStore {
+  return {
+    ...store,
+    roles: store.roles.map((role) => ({
+      ...role,
+      permissions: expandPermissions(role.permissions as string[]),
+    })),
+  };
+}
+
 function defaultStore(): AdminAuthStore {
   const salt = randomBytes(16).toString("hex");
-  const password =
-    process.env.ADMIN_SUPER_PASSWORD || "InfluriosAdmin!2026";
+  const password = process.env.ADMIN_SUPER_PASSWORD || "InfluriosAdmin!2026";
   const email = (process.env.ADMIN_SUPER_EMAIL || "admin@influrios.com").toLowerCase();
   return {
     roles: structuredClone(DEFAULT_ROLES),
@@ -150,7 +273,11 @@ async function ensureStore(): Promise<AdminAuthStore> {
     const raw = await fs.readFile(STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as AdminAuthStore;
     if (!parsed.roles?.length || !parsed.users?.length) return defaultStore();
-    return parsed;
+    const normalized = normalizeStore(parsed);
+    // Persist migration when coarse permissions were expanded
+    const changed = JSON.stringify(parsed) !== JSON.stringify(normalized);
+    if (changed) await saveStore(normalized);
+    return normalized;
   } catch {
     const store = defaultStore();
     try {
@@ -195,6 +322,7 @@ export function decodeSession(token: string | undefined | null): AdminSession | 
   try {
     const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as AdminSession;
     if (!session.exp || Date.now() > session.exp) return null;
+    session.permissions = expandPermissions(session.permissions as string[]);
     return session;
   } catch {
     return null;
@@ -217,7 +345,7 @@ export async function loginAdmin(email: string, password: string): Promise<
     name: user.name,
     roleId: role.id,
     roleName: role.name,
-    permissions: role.permissions,
+    permissions: expandPermissions(role.permissions as string[]),
     exp: Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000,
   };
   return { ok: true, token: encodeSession(session), session };
@@ -228,14 +356,28 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   return decodeSession(jar.get(COOKIE_NAME)?.value);
 }
 
+export function hasPermission(
+  session: AdminSession | null | undefined,
+  permission: AdminPermission,
+): boolean {
+  return Boolean(session?.permissions.includes(permission));
+}
+
+export function canAccessModule(
+  session: AdminSession | null | undefined,
+  module: AdminModule,
+): boolean {
+  if (!session) return false;
+  const prefix = `${module}.`;
+  return session.permissions.some((p) => p.startsWith(prefix));
+}
+
 export async function requireAdminSession(
   permission?: AdminPermission,
 ): Promise<AdminSession> {
   const session = await getAdminSession();
-  if (!session) {
-    throw new AdminAuthError("unauthorized");
-  }
-  if (permission && !session.permissions.includes(permission)) {
+  if (!session) throw new AdminAuthError("unauthorized");
+  if (permission && !hasPermission(session, permission)) {
     throw new AdminAuthError("forbidden");
   }
   return session;
@@ -265,11 +407,13 @@ export async function createAdminRole(input: {
   permissions: AdminPermission[];
 }) {
   const store = await ensureStore();
+  const permissions = expandPermissions(input.permissions);
+  if (!permissions.length) throw new Error("Select at least one feature permission");
   const role: AdminRole = {
     id: `role_${randomBytes(4).toString("hex")}`,
     name: input.name.trim(),
     description: input.description.trim(),
-    permissions: input.permissions,
+    permissions,
   };
   store.roles.push(role);
   await saveStore(store);
@@ -330,14 +474,14 @@ export async function updateAdminUserRole(userId: string, roleId: string) {
   await saveStore(store);
 }
 
-export function permissionLabel(p: AdminPermission) {
-  const map: Record<AdminPermission, string> = {
-    banners: "Banners",
-    cards: "Influencer cards",
-    matching: "Managed matching",
-    intelligence: "Intelligence",
-    billing: "Billing",
-    access: "Admin access levels",
-  };
-  return map[p];
+export function permissionLabel(p: AdminPermission | string) {
+  for (const group of ADMIN_PERMISSION_GROUPS) {
+    const found = group.permissions.find((x) => x.id === p);
+    if (found) return found.label;
+  }
+  return String(p);
+}
+
+export function moduleLabel(module: AdminModule) {
+  return ADMIN_PERMISSION_GROUPS.find((g) => g.module === module)?.label ?? module;
 }

@@ -1,10 +1,13 @@
 import { redirect } from "next/navigation";
 import {
+  canAccessModule,
   getAdminSession,
+  hasPermission,
+  type AdminModule,
   type AdminPermission,
 } from "@/lib/admin-auth";
 
-const PERM_PATH: Record<AdminPermission, string> = {
+const MODULE_PATH: Record<AdminModule, string> = {
   banners: "/admin/banners",
   cards: "/admin/cards",
   matching: "/admin/matching",
@@ -13,11 +16,19 @@ const PERM_PATH: Record<AdminPermission, string> = {
   access: "/admin/access",
 };
 
-/** Gate an admin page by permission. Call at top of each console page. */
-export async function requireAdminPage(permission: AdminPermission) {
+/** Gate an admin page by module (any feature under that module). */
+export async function requireAdminPage(module: AdminModule) {
   const session = await getAdminSession();
-  const next = PERM_PATH[permission];
+  const next = MODULE_PATH[module];
   if (!session) redirect(`/admin/login?next=${encodeURIComponent(next)}`);
-  if (!session.permissions.includes(permission)) redirect("/admin?error=forbidden");
+  if (!canAccessModule(session, module)) redirect("/admin?error=forbidden");
+  return session;
+}
+
+/** Gate a mutating server action by exact feature permission. */
+export async function requireAdminAction(permission: AdminPermission) {
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
+  if (!hasPermission(session, permission)) redirect("/admin?error=forbidden");
   return session;
 }

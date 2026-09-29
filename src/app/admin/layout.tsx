@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { actionAdminLogout } from "@/app/admin/actions-auth";
-import { getAdminSession } from "@/lib/admin-auth";
+import { canAccessModule, getAdminSession } from "@/lib/admin-auth";
 
 /** Signed-in admin chrome bar (login page stays clean when no session). */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <Link href="/admin" className="font-semibold text-violet hover:underline">
                 Dashboard
               </Link>
-              {session.permissions.includes("access") ? (
+              {canAccessModule(session, "access") ? (
                 <Link href="/admin/access" className="font-semibold text-violet hover:underline">
                   Access levels
                 </Link>

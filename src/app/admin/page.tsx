@@ -2,7 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionAdminLogout } from "@/app/admin/actions-auth";
 import { PageShell } from "@/components/page-shell";
-import { getAdminSession, permissionLabel, type AdminPermission } from "@/lib/admin-auth";
+import {
+  canAccessModule,
+  getAdminSession,
+  type AdminModule,
+} from "@/lib/admin-auth";
 import { getBillingStore, isStripeConfigured } from "@/lib/billing";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
@@ -15,7 +19,7 @@ const LINKS: {
   href: string;
   title: string;
   blurb: string;
-  permission: AdminPermission;
+  module: AdminModule;
   meta: (ctx: {
     visibleCards: number;
     bannersEnabled: number;
@@ -30,44 +34,44 @@ const LINKS: {
     href: "/admin/banners",
     title: "Banners",
     blurb: "Hero, sponsored, card promo, and CTA.",
-    permission: "banners",
+    module: "banners",
     meta: (c) => `${c.bannersEnabled} enabled`,
   },
   {
     href: "/admin/cards",
     title: "Influencer cards",
     blurb: "Width, icon/QR sizing, and per-card feature toggles.",
-    permission: "cards",
+    module: "cards",
     meta: (c) => `${c.visibleCards} visible`,
   },
   {
     href: "/admin/matching",
     title: "Managed Matching",
     blurb: "Opt-in targeting, intros, and paid-relationship tracking.",
-    permission: "matching",
+    module: "matching",
     meta: (c) => `${c.optIns} opted in · ${c.intros} intros`,
   },
   {
     href: "/admin/intelligence",
     title: "Intelligence",
     blurb: "Audience snapshots, niche trends, relationship signals.",
-    permission: "intelligence",
+    module: "intelligence",
     meta: (c) => `${c.snapshots} snapshots · ${c.rising} rising niches`,
   },
   {
     href: "/admin/billing",
     title: "Billing",
     blurb: "Plan catalog, checkout sessions, Stripe readiness.",
-    permission: "billing",
+    module: "billing",
     meta: (c) =>
       `${c.completedCheckouts} completed · ${isStripeConfigured() ? "Stripe" : "Demo"} mode`,
   },
   {
     href: "/admin/access",
     title: "Access levels",
-    blurb: "Create roles and admin users with scoped permissions.",
-    permission: "access",
-    meta: () => "Super Admin only",
+    blurb: "Create roles from granular features and assign admin users.",
+    module: "access",
+    meta: () => "Super Admin tools",
   },
 ];
 
@@ -98,7 +102,7 @@ export default async function AdminHomePage({
     completedCheckouts,
   };
 
-  const visibleLinks = LINKS.filter((l) => session.permissions.includes(l.permission));
+  const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));
 
   return (
     <PageShell className="py-10">
@@ -111,7 +115,8 @@ export default async function AdminHomePage({
             {session.email}) · <span className="font-semibold text-violet">{session.roleName}</span>
           </p>
           <p className="mt-1 text-xs text-muted">
-            Permissions: {session.permissions.map(permissionLabel).join(" · ")}
+            {session.permissions.length} feature permission
+            {session.permissions.length === 1 ? "" : "s"} on this access level
           </p>
         </div>
         <form action={actionAdminLogout}>
@@ -123,7 +128,7 @@ export default async function AdminHomePage({
 
       {params.error === "forbidden" ? (
         <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          You don’t have permission for that admin section. Ask a Super Admin to update your access
+          You don’t have permission for that admin feature. Ask a Super Admin to update your access
           level.
         </div>
       ) : null}
@@ -145,7 +150,7 @@ export default async function AdminHomePage({
       {visibleLinks.length === 0 ? (
         <div className="card-surface mt-8 p-8 text-center">
           <p className="font-semibold text-indigo">No admin modules assigned to your role.</p>
-          <p className="mt-2 text-sm text-muted">Contact a Super Admin to grant access.</p>
+          <p className="mt-2 text-sm text-muted">Contact a Super Admin to grant feature access.</p>
         </div>
       ) : null}
 
