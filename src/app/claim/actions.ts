@@ -13,13 +13,16 @@ import {
 export async function actionCreateDraft(formData: FormData) {
   const handle = String(formData.get("handle") ?? "").trim();
   if (!handle) redirect("/claim?error=Enter+a+social+URL+or+handle");
+
+  let draftId = "";
   try {
     const draft = await createDraftFromHandle(handle, "ORGANIC_SIGNUP");
-    redirect(`/claim/preview/${draft.id}`);
+    draftId = draft.id;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not create draft";
     redirect(`/claim?error=${encodeURIComponent(message)}`);
   }
+  redirect(`/claim/preview/${draftId}`);
 }
 
 export async function actionClaimDraft(formData: FormData) {
@@ -31,11 +34,11 @@ export async function actionClaimDraft(formData: FormData) {
       name: String(formData.get("name") ?? ""),
     });
     await setCreatorSession(draft.id);
-    redirect(`/claim/verify/${draft.id}`);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Claim failed";
     redirect(`/claim/preview/${draftId}?error=${encodeURIComponent(message)}`);
   }
+  redirect(`/claim/verify/${draftId}`);
 }
 
 export async function actionVerifyDraft(formData: FormData) {
@@ -43,11 +46,11 @@ export async function actionVerifyDraft(formData: FormData) {
   try {
     await verifyDraft(draftId, String(formData.get("code") ?? ""));
     await setCreatorSession(draftId);
-    redirect(`/claim/publish/${draftId}`);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Verification failed";
     redirect(`/claim/verify/${draftId}?error=${encodeURIComponent(message)}`);
   }
+  redirect(`/claim/publish/${draftId}`);
 }
 
 export async function actionPublishDraft(formData: FormData) {
@@ -55,11 +58,11 @@ export async function actionPublishDraft(formData: FormData) {
   try {
     const draft = await publishDraft(draftId);
     await setCreatorSession(draft.id);
-    redirect(`/dashboard?published=1`);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Publish failed";
     redirect(`/claim/publish/${draftId}?error=${encodeURIComponent(message)}`);
   }
+  redirect(`/dashboard?published=1`);
 }
 
 export async function actionUpdateDashboardProfile(formData: FormData) {
@@ -76,9 +79,9 @@ export async function actionUpdateDashboardProfile(formData: FormData) {
         .map((s) => s.trim())
         .filter(Boolean),
     });
-    redirect("/dashboard?saved=1");
   } catch (err) {
     const message = err instanceof Error ? err.message : "Save failed";
     redirect(`/dashboard?error=${encodeURIComponent(message)}`);
   }
+  redirect("/dashboard?saved=1");
 }
