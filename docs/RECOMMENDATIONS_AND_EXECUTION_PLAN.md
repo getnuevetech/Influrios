@@ -266,15 +266,18 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 
 ---
 
-### Phase 3 — Business Pro
+### Phase 3 — Business Pro ✅ *started (demo workspace live)*
 
 **Proof:** Will businesses pay for precision + workflow?
 
-- Advanced specialty/audience filters, shortlists, briefs, inquiries  
-- Fit explanations (“Why this creator?”)  
-- Stripe: Creator Pro + Business Pro (+ Agency later)  
-- Contact/inquiry limits by plan  
-- Pro card: dynamic QR, gold accents, lead routing, advanced analytics  
+- [x] Business entitlements (`BUSINESS_FREE` / `BUSINESS_PRO` / `AGENCY`) + inquiry/shortlist limits  
+- [x] Business workspace UI (`/business`) — shortlists, briefs, inquiries (file-backed demo store)  
+- [x] Fit explanations (“Why this creator?”) via `fitCreatorToBrief` / `rankCreatorsForBrief`  
+- [x] Pro dynamic QR (`/api/qr/[slug]` → `/q/{token}`) + Plus standard QR on Influencer Cards  
+- [x] Discover ♡ → shortlist; profile Shortlist + Inquiry CTAs  
+- [ ] Stripe: Creator Pro + Business Pro (+ Agency later)  
+- [ ] Persist workspace to Prisma (replace `data/business-workspace.json`)  
+- [ ] Lead routing + advanced analytics on Pro cards  
 
 ---
 
@@ -336,7 +339,7 @@ Existing comps cover marketing, Discover, Profile, Collab, Card marketing, and t
 4. Progressive “add specialty / social / collab prefs” flows  
 5. Contextual upgrade modals (locked QR, shortlink, extra social, analytics)  
 6. Admin: taxonomy, entitlements, invitations, trust/abuse  
-7. Business workspace (shortlists, briefs) — Phase 3 polish  
+7. Business workspace (shortlists, briefs) — **Phase 3 demo live** (`/business`)  
 8. Empty / loading / error / mobile web for Discover + Profile  
 9. Influrios-branded redraws of all legacy “Influence Connect” screens  
 
@@ -379,7 +382,7 @@ Existing comps cover marketing, Discover, Profile, Collab, Card marketing, and t
 | Phase 0–1 kickoff | **Started** on branch `cursor/phase-0-1-mvp-lightsail-0127` |
 | Short domain | Open: own `ic.me` vs path-only `/c/{slug}` + `/q/{token}` on primary domain |
 | Auth | Open: **Clerk** / Auth.js / other |
-| Phase 1 Pro dynamic QR | Open: late Phase 1 / **defer to Phase 3 with billing** |
+| Phase 1 Pro dynamic QR | **Shipped in Phase 3** (`/api/qr` + `/q/{token}`; Stripe still open) |
 | AI draft extraction | Open: provider + budget |
 | Initial taxonomy | **Drafted** in `src/lib/seed-data.ts` (Beauty, Fashion, Food, Home, Hair, Travel, Fitness, Tech, Lifestyle, Suppliers + sub-specialties) |
 | Design fidelity | **Code-first tokens** (v2.2 hex values in `globals.css`); comps remain visual references |

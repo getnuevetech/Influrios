@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { actionAddShortlist, actionSendInquiry } from "@/app/business/actions";
 import { InfluencerCardView } from "@/components/creator-card";
 import {
   formatFollowers,
@@ -109,6 +110,13 @@ export default async function CreatorProfilePage({ params }: Props) {
                   <a href="#contact" className="btn-primary">
                     Contact
                   </a>
+                  <form action={actionAddShortlist}>
+                    <input type="hidden" name="slug" value={creator.slug} />
+                    <input type="hidden" name="note" value="Saved from profile" />
+                    <button type="submit" className="btn-secondary">
+                      Add to Shortlist
+                    </button>
+                  </form>
                   <Link href={`/collaboration?from=${creator.slug}`} className="btn-secondary">
                     Invite to Collaborate
                   </Link>
@@ -120,6 +128,9 @@ export default async function CreatorProfilePage({ params }: Props) {
                   </Link>
                   <Link href={`/c/${creator.slug}`} className="btn-secondary">
                     Share Card
+                  </Link>
+                  <Link href="/business" className="btn-secondary">
+                    Business workspace
                   </Link>
                 </div>
               </div>
@@ -202,6 +213,20 @@ export default async function CreatorProfilePage({ params }: Props) {
                 ) : null}
               </div>
             )}
+            <form action={actionSendInquiry} className="mt-6 space-y-3 border-t border-border pt-5">
+              <p className="text-sm font-semibold text-indigo">Send a business inquiry</p>
+              <input type="hidden" name="creatorSlug" value={creator.slug} />
+              <textarea
+                name="message"
+                required
+                rows={3}
+                defaultValue={`Hi ${creator.displayName.split(" ")[0]} — we'd love to explore a collaboration.`}
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
+              />
+              <button type="submit" className="btn-primary !py-2 text-sm">
+                Send inquiry →
+              </button>
+            </form>
           </section>
 
           {content.length > 0 ? (

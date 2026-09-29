@@ -236,10 +236,11 @@ export const SEED_CREATORS: SeedCreator[] = [
     image: "/demo/creators/creator-daniel.jpg",
     badge: "Rising Star",
     statusLabel: "Open to Collaborations",
-    planTier: "STARTER",
+    planTier: "PLUS",
     specialties: ["travel"],
     socials: [
       { platform: "INSTAGRAM", handle: "@daniel.travels", url: "https://instagram.com/daniel.travels", followers: 890_000 },
+      { platform: "YOUTUBE", handle: "@danieltravels", url: "https://youtube.com/@danieltravels", followers: 210_000 },
     ],
     openToCollab: true,
     offer: "Travel itinerary content",
@@ -343,21 +344,29 @@ export const COLLAB_MATCH_PRESETS = [
     title: "Interior Designer + Woodwork Creator",
     image: "/demo/categories/cat-home.jpg",
     tags: ["Design", "Craft", "Home Decor"],
+    leftSlug: "sofia-martinez",
+    rightSlug: "daniel-kim",
   },
   {
     title: "Hair Stylist + Hair Supplier",
     image: "/demo/categories/cat-hair.jpg",
     tags: ["Beauty", "Hair", "Supply"],
+    leftSlug: "amara-okonkwo",
+    rightSlug: "priya-sharma",
   },
   {
     title: "Food Creator + Kitchen Brand",
     image: "/demo/categories/cat-food.jpg",
     tags: ["Food", "Kitchen", "Brand"],
+    leftSlug: "marcus-lee",
+    rightSlug: "jordan-blake",
   },
   {
     title: "Travel Influencer + Tourism Brand",
     image: "/demo/categories/cat-travel.jpg",
     tags: ["Travel", "Tourism"],
+    leftSlug: "priya-sharma",
+    rightSlug: "sofia-martinez",
   },
 ];
 
