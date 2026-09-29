@@ -181,48 +181,75 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
   const socials = creator.socials.slice(0, 3);
   const stripPlatforms = ["INSTAGRAM", "TIKTOK", "YOUTUBE", "X"] as const;
 
+  function platformLabel(platform: string) {
+    if (platform === "INSTAGRAM") return "Instagram";
+    if (platform === "TIKTOK") return "TikTok";
+    if (platform === "YOUTUBE") return "YouTube";
+    if (platform === "X") return "X";
+    return platform;
+  }
+
   return (
-    <article className="w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_20px_50px_rgba(17,26,90,0.14)] ring-1 ring-border">
-      <div className="flex gap-3 p-4 sm:gap-4 sm:p-5">
-        <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl sm:h-[100px] sm:w-[100px]">
-          <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="100px" />
-        </div>
+    <article className="w-full max-w-[480px] overflow-hidden rounded-2xl bg-white shadow-[0_20px_50px_rgba(17,26,90,0.14)] ring-1 ring-[#E4E9F5]">
+      {/* Body: left content + QR panel */}
+      <div className="flex items-stretch gap-3 p-4 sm:gap-4 sm:p-5">
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Header: photo | identity + stats */}
+          <div className="flex gap-3">
+            <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl sm:h-[100px] sm:w-[100px]">
+              <Image
+                src={creator.image}
+                alt={creator.displayName}
+                fill
+                className="object-cover"
+                sizes="100px"
+              />
+            </div>
 
-        <div className="min-w-0 flex-1">
-          <h3 className="flex flex-wrap items-center gap-1.5 font-display text-lg font-bold leading-tight text-indigo sm:text-xl">
-            {creator.displayName}
-            <IconVerified size={18} />
-          </h3>
-          <p className="mt-0.5 text-sm text-muted">{creator.title}</p>
-          <p className="mt-1 flex items-center gap-1 text-xs text-muted">
-            <IconMapPin size={12} className="shrink-0 text-violet" />
-            {creator.locationCity}, {creator.locationCountry}
-          </p>
-
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-            {socials.map((s) => (
-              <div key={s.platform} className="min-w-[4.5rem]">
-                <p className="font-display text-base font-bold leading-none text-indigo">
-                  {formatFollowers(s.followers)}
+            <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+              <div>
+                <h3 className="flex items-center gap-1.5 font-display text-base font-bold leading-tight text-indigo sm:text-lg">
+                  <span className="truncate">{creator.displayName}</span>
+                  <IconVerified size={16} className="shrink-0" />
+                </h3>
+                <p className="mt-0.5 truncate text-xs text-[#7B8499] sm:text-[13px]">
+                  {creator.title}
                 </p>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
-                  {s.platform === "INSTAGRAM"
-                    ? "Instagram"
-                    : s.platform === "TIKTOK"
-                      ? "TikTok"
-                      : s.platform === "YOUTUBE"
-                        ? "YouTube"
-                        : s.platform}
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-[#7B8499] sm:text-xs">
+                  <IconMapPin size={12} className="shrink-0 text-[#633CFF]" />
+                  <span className="truncate">
+                    {creator.locationCity}, {creator.locationCountry}
+                  </span>
                 </p>
               </div>
-            ))}
+
+              {/* Stats with vertical dividers — beside photo under identity */}
+              <div className="mt-2.5 flex items-stretch">
+                {socials.map((s, i) => (
+                  <div key={s.platform} className="flex items-stretch">
+                    {i > 0 ? (
+                      <span className="mx-3 w-px self-stretch bg-[#DDE3F0] sm:mx-3.5" aria-hidden />
+                    ) : null}
+                    <div className="flex min-w-0 flex-col">
+                      <p className="font-display text-[15px] font-bold leading-none text-indigo sm:text-base">
+                        {formatFollowers(s.followers)}
+                      </p>
+                      <p className="mt-1 whitespace-nowrap text-[10px] font-medium leading-none text-[#8B93A7] sm:text-[11px]">
+                        {platformLabel(s.platform)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          {/* Specialty tags — under photo + identity */}
+          <div className="mt-3.5 flex flex-wrap gap-1.5">
             {creator.specialties.slice(0, 4).map((s) => (
               <span
                 key={s}
-                className="rounded-full bg-[#EAE4FF] px-2.5 py-0.5 text-[10px] font-semibold text-violet"
+                className="rounded-full bg-[#EAE4FF] px-2.5 py-1 text-[10px] font-semibold text-[#633CFF]"
               >
                 {specialtyLabel(s)}
               </span>
@@ -230,51 +257,58 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
           </div>
         </div>
 
-        <div className="hidden w-[92px] shrink-0 flex-col items-center justify-start sm:flex">
-          <div className="h-[84px] w-[84px] overflow-hidden rounded-lg border border-border bg-white p-1">
+        {/* QR panel */}
+        <div className="flex w-[108px] shrink-0 flex-col items-center justify-center rounded-xl bg-[#F5F6FA] px-2.5 py-3 sm:w-[120px]">
+          <div className="h-[80px] w-[80px] overflow-hidden rounded-md bg-white p-1 sm:h-[88px] sm:w-[88px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/api/qr/${creator.slug}`}
               alt={`${creator.displayName} QR`}
-              width={84}
-              height={84}
+              width={88}
+              height={88}
               className="h-full w-full object-contain"
             />
           </div>
-          <p className="mt-1.5 text-center text-[9px] font-semibold leading-tight text-muted">
-            Scan to view my full profile
+          <p className="mt-2.5 text-center text-[9px] font-semibold leading-snug text-[#8B93A7]">
+            Scan to view my
+            <br />
+            full profile
           </p>
         </div>
       </div>
 
-      {/* Bottom strip — brand-colored social icons */}
-      <div className="flex items-center justify-center gap-5 border-t border-[#EEF1FA] bg-[#FAFBFF] px-4 py-3">
+      {/* Bottom social strip — icons evenly across full card width */}
+      <div className="flex w-full items-center justify-between border-t border-[#EEF1FA] bg-white px-5 py-3.5 sm:px-6">
         {stripPlatforms.map((platform) => {
           const linked = creator.socials.find((s) => s.platform === platform);
-          const icon = <SocialIcon platform={platform} size={22} />;
+          const icon = <SocialIcon platform={platform} size={26} />;
           return linked ? (
             <a
               key={platform}
               href={linked.url}
               target="_blank"
               rel="noreferrer"
-              className="transition hover:scale-110"
-              aria-label={platform}
+              className="flex h-7 w-7 shrink-0 items-center justify-center transition hover:scale-110"
+              aria-label={platformLabel(platform)}
             >
               {icon}
             </a>
           ) : (
-            <span key={platform} className="opacity-40" aria-hidden>
+            <span
+              key={platform}
+              className="flex h-7 w-7 shrink-0 items-center justify-center opacity-35"
+              aria-hidden
+            >
               {icon}
             </span>
           );
         })}
         <Link
           href={`/c/${creator.slug}`}
-          className="transition hover:scale-110"
+          className="flex h-7 w-7 shrink-0 items-center justify-center transition hover:scale-110"
           aria-label="Open Influencer Card link"
         >
-          <IconLink size={22} />
+          <IconLink size={26} />
         </Link>
       </div>
     </article>
