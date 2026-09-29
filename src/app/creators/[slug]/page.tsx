@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { actionAddShortlist, actionSendInquiry } from "@/app/business/actions";
 import { InfluencerCardView } from "@/components/creator-card";
+import { getPublishedCreatorBySlug } from "@/lib/claim";
 import {
   formatFollowers,
   getCreatorBySlug,
@@ -12,16 +13,18 @@ import {
 
 type Props = { params: Promise<{ slug: string }> };
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const creator = getCreatorBySlug(slug);
+  const creator = getCreatorBySlug(slug) ?? (await getPublishedCreatorBySlug(slug));
   if (!creator) return { title: "Creator not found" };
   return { title: creator.displayName, description: creator.bio };
 }
 
 export default async function CreatorProfilePage({ params }: Props) {
   const { slug } = await params;
-  const creator = getCreatorBySlug(slug);
+  const creator = getCreatorBySlug(slug) ?? (await getPublishedCreatorBySlug(slug));
   if (!creator) notFound();
 
   const related = SEED_CREATORS.filter((c) => c.slug !== creator.slug).slice(0, 4);

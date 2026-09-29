@@ -341,6 +341,24 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 
 ---
 
+### Phase 8 — Creator Claim & Activation ✅ *started (demo live)*
+
+**Proof:** Do creators claim, verify, and publish a Starter card without friction?
+
+- [x] Unauthenticated draft generation from one social URL/handle (`/claim`)  
+- [x] Draft card preview before signup (`/claim/preview/[draftId]`)  
+- [x] Claim ownership with email + display name  
+- [x] Channel verification demo (`/claim/verify/[draftId]`)  
+- [x] Publish Starter card → live `/c/{slug}`  
+- [x] Creator dashboard lite with completeness score + next-best actions (`/dashboard`)  
+- [ ] Production auth (Clerk / Auth.js) replacing demo creator cookie  
+- [ ] Real social OAuth / DM verification challenges  
+- [ ] Persist claims to Prisma `Creator` + `User`  
+
+**Defer:** Escrow / Protected Payments until claim + share loops show signal  
+
+---
+
 ## 8. Creator acquisition & activation (strategy §20)
 
 **Wedge message:** *“Create Your Free Influencer Card. One Card. All Your Influence.”*
