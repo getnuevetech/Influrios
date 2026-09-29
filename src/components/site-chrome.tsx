@@ -167,6 +167,9 @@ export function SiteFooter() {
               <Link href="/billing">Checkout</Link>
             </li>
             <li>
+              <Link href="/payments">Protected payments</Link>
+            </li>
+            <li>
               <Link href="/claim">Create your card</Link>
             </li>
             <li>

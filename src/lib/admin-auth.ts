@@ -20,6 +20,8 @@ export const ADMIN_PERMISSIONS = [
   "intelligence.view",
   "intelligence.export",
   "billing.view",
+  "payments.view",
+  "payments.manage",
   "access.manage_roles",
   "access.manage_users",
 ] as const;
@@ -32,6 +34,7 @@ export type AdminModule =
   | "matching"
   | "intelligence"
   | "billing"
+  | "payments"
   | "access";
 
 export const ADMIN_PERMISSION_GROUPS: {
@@ -84,6 +87,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     description: "Plan catalog and checkout session history",
     permissions: [
       { id: "billing.view", label: "View billing", hint: "Open billing ops console" },
+    ],
+  },
+  {
+    module: "payments",
+    label: "Protected payments",
+    description: "Escrow deals, milestone release, and refunds",
+    permissions: [
+      { id: "payments.view", label: "View payments", hint: "Open escrow console" },
+      { id: "payments.manage", label: "Manage payments", hint: "Create deals, fund, release, refund" },
     ],
   },
   {
@@ -149,6 +161,7 @@ const LEGACY_PERMISSION_MAP: Record<string, AdminPermission[]> = {
   ],
   intelligence: ["intelligence.view", "intelligence.export"],
   billing: ["billing.view"],
+  payments: ["payments.view", "payments.manage"],
   access: ["access.manage_roles", "access.manage_users"],
 };
 
@@ -170,7 +183,7 @@ const DEFAULT_ROLES: AdminRole[] = [
   {
     id: "role_ops",
     name: "Ops Admin",
-    description: "Managed matching pipeline and intelligence (no billing/access).",
+    description: "Managed matching, intelligence, and protected payments (no billing/access).",
     permissions: [
       "matching.view",
       "matching.manage_optins",
@@ -178,6 +191,8 @@ const DEFAULT_ROLES: AdminRole[] = [
       "matching.advance_intros",
       "intelligence.view",
       "intelligence.export",
+      "payments.view",
+      "payments.manage",
     ],
     system: true,
   },
@@ -186,6 +201,13 @@ const DEFAULT_ROLES: AdminRole[] = [
     name: "Billing Admin",
     description: "Billing catalog and checkout sessions only.",
     permissions: ["billing.view"],
+    system: true,
+  },
+  {
+    id: "role_payments",
+    name: "Payments Admin",
+    description: "Protected payments escrow console only.",
+    permissions: ["payments.view", "payments.manage"],
     system: true,
   },
   {

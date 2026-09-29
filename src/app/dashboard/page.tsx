@@ -196,6 +196,9 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 Open live card →
               </Link>
             ) : null}
+            <Link href="/payments" className="block text-center text-xs font-semibold text-violet hover:underline">
+              Protected payments (escrow)
+            </Link>
             <Link href="/billing" className="block text-center text-xs font-semibold text-violet hover:underline">
               Upgrade for shortlink + QR
             </Link>

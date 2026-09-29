@@ -359,6 +359,22 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 
 ---
 
+### Phase 9 — Protected Payments ✅ *started (demo live)*
+
+**Proof:** Will brands fund collaborations in escrow and release on milestones?
+
+- [x] Escrow deal store + milestone state machine (`src/lib/protected-payments.ts`)  
+- [x] Public escrow UI — create, fund, submit, release (`/payments`)  
+- [x] Admin payments console — create/fund/release/refund + intro link (`/admin/payments`)  
+- [x] Granular admin perms `payments.view` / `payments.manage`  
+- [ ] Live Stripe Connect / payout rails  
+- [ ] Dispute workflow + mediation queue  
+- [ ] Persist deals to Prisma  
+
+**Defer:** Full contracts / legal templates until escrow volume validates  
+
+---
+
 ## 8. Creator acquisition & activation (strategy §20)
 
 **Wedge message:** *“Create Your Free Influencer Card. One Card. All Your Influence.”*

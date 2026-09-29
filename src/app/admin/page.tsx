@@ -11,6 +11,7 @@ import { getBillingStore, isStripeConfigured } from "@/lib/billing";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
+import { escrowStats, getProtectedPaymentsStore } from "@/lib/protected-payments";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -28,6 +29,8 @@ const LINKS: {
     snapshots: number;
     rising: number;
     completedCheckouts: number;
+    escrowActive: number;
+    escrowHeld: string;
   }) => string;
 }[] = [
   {
@@ -67,6 +70,13 @@ const LINKS: {
       `${c.completedCheckouts} completed · ${isStripeConfigured() ? "Stripe" : "Demo"} mode`,
   },
   {
+    href: "/admin/payments",
+    title: "Protected Payments",
+    blurb: "Escrow deals, milestone release, and refunds.",
+    module: "payments",
+    meta: (c) => `${c.escrowActive} active · ${c.escrowHeld} held`,
+  },
+  {
     href: "/admin/access",
     title: "Access levels",
     blurb: "Create roles from granular features and assign admin users.",
@@ -87,6 +97,8 @@ export default async function AdminHomePage({
   const cms = await getCms();
   const matching = await getManagedMatching();
   const billing = await getBillingStore();
+  const payments = await getProtectedPaymentsStore();
+  const payStats = escrowStats(payments);
   const visibleCards = cms.featuredCards.cards.filter((c) => c.visible).length;
   const optIns = matching.optIns.filter((o) => o.openToManaged).length;
   const snapshots = getAllAudienceSnapshots().length;
@@ -100,6 +112,12 @@ export default async function AdminHomePage({
     snapshots,
     rising,
     completedCheckouts,
+    escrowActive: payStats.active,
+    escrowHeld: new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(payStats.held / 100),
   };
 
   const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));

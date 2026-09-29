@@ -385,29 +385,34 @@ export default async function HomePage() {
               desc: "One professional identity for your socials, specialty, contact details and opportunities.",
               Icon: IconIdCard,
               tone: "bg-lavender text-violet",
+              href: "/card",
             },
             {
               title: "Influence Intelligence",
               desc: "Discover creators by what they truly influence — not just follower count.",
               Icon: IconIntelligence,
               tone: "bg-[#D9E8FF] text-blue",
+              href: "/discover",
             },
             {
               title: "Collaboration Network",
               desc: "Connect creators, complementary specialists and businesses around real opportunities.",
               Icon: IconNetwork,
               tone: "bg-[#F3E8FF] text-violet",
+              href: "/collaboration",
             },
             {
               title: "Protected Payments",
               desc: "Fund collaborations securely and release payments as agreed milestones are completed.",
               Icon: IconShieldPay,
               tone: "bg-emerald-50 text-emerald-700",
+              href: "/payments",
             },
           ].map((item, i) => (
-            <div
+            <Link
               key={item.title}
-              className={`flex flex-col items-center gap-3 text-center ${
+              href={item.href}
+              className={`flex flex-col items-center gap-3 text-center transition hover:-translate-y-0.5 ${
                 i < 4 ? "xl:border-r xl:border-[#E8ECF5] xl:pr-5" : ""
               }`}
             >
@@ -420,7 +425,7 @@ export default async function HomePage() {
                 <h3 className="font-display text-base font-bold text-indigo">{item.title}</h3>
                 <p className="mt-1 text-sm leading-snug text-muted">{item.desc}</p>
               </div>
-            </div>
+            </Link>
           ))}
 
           <div className="flex flex-col items-center justify-center border-t border-[#E8ECF5] pt-5 text-center md:col-span-2 xl:col-span-1 xl:border-t-0 xl:pl-5 xl:pt-0">
