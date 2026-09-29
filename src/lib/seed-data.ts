@@ -20,6 +20,7 @@ export type SeedCreator = {
   title: string;
   bio: string;
   locationCity: string;
+  locationState?: string;
   locationCountry: string;
   languages: string[];
   avatarColor: string;
@@ -35,6 +36,7 @@ export type SeedCreator = {
   need?: string;
   age?: number;
   email?: string;
+  verified?: boolean;
   stats?: {
     engagementRate: string;
     engagementDelta: string;
@@ -153,6 +155,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     title: "Beauty & Lifestyle Creator",
     bio: "Helping people create brighter, more confident routines through honest beauty content, travel moments, and brand stories that feel real.",
     locationCity: "Los Angeles",
+    locationState: "California",
     locationCountry: "USA",
     languages: ["English", "Spanish"],
     avatarColor: "#633CFF",
@@ -161,6 +164,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     badge: "Top Creator",
     statusLabel: "Open to Collaborations",
     planTier: "PLUS",
+    verified: true,
     specialties: ["beauty", "lifestyle", "fashion", "travel", "skincare"],
     socials: [
       { platform: "INSTAGRAM", handle: "@sofia.m", url: "https://instagram.com/sofia.m", followers: 2_400_000 },
@@ -230,6 +234,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     title: "Travel Creator",
     bio: "Destination storytelling with a focus on tourism partnerships and multi-city itineraries.",
     locationCity: "Seoul",
+    locationState: "Seoul",
     locationCountry: "South Korea",
     languages: ["English", "Korean"],
     avatarColor: "#2979FF",
@@ -237,6 +242,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     badge: "Rising Star",
     statusLabel: "Open to Collaborations",
     planTier: "PLUS",
+    verified: true,
     specialties: ["travel"],
     socials: [
       { platform: "INSTAGRAM", handle: "@daniel.travels", url: "https://instagram.com/daniel.travels", followers: 890_000 },
@@ -252,6 +258,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     title: "Interior Design Creator",
     bio: "Room transformations and accessible design for urban apartments.",
     locationCity: "Austin",
+    locationState: "Texas",
     locationCountry: "USA",
     languages: ["English", "Hindi"],
     avatarColor: "#7B46F6",
@@ -259,6 +266,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     badge: "Business Friendly",
     statusLabel: "Great for Brand Collaborations",
     planTier: "PRO",
+    verified: true,
     specialties: ["home-interior", "interior-design", "woodworking"],
     socials: [
       { platform: "INSTAGRAM", handle: "@priya.spaces", url: "https://instagram.com/priya.spaces", followers: 1_200_000 },
@@ -276,6 +284,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     title: "Fitness Creator",
     bio: "Strength training and recovery education for busy professionals.",
     locationCity: "Toronto",
+    locationState: "Ontario",
     locationCountry: "Canada",
     languages: ["English"],
     avatarColor: "#111A5A",
@@ -283,6 +292,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     badge: "Fast Growing",
     statusLabel: "Open to Collaborations",
     planTier: "PLUS",
+    verified: true,
     specialties: ["fitness", "training"],
     socials: [
       { platform: "INSTAGRAM", handle: "@marcus.fit", url: "https://instagram.com/marcus.fit", followers: 640_000 },
@@ -299,6 +309,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     title: "Natural Hair Educator",
     bio: "Protective styles and natural-hair education for beauty audiences in Houston and beyond.",
     locationCity: "Houston",
+    locationState: "Texas",
     locationCountry: "USA",
     languages: ["English"],
     avatarColor: "#E879F9",
@@ -306,6 +317,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     badge: "Rising Star",
     statusLabel: "Open to Collaborations",
     planTier: "STARTER",
+    verified: false,
     specialties: ["natural-hair", "beauty", "hair"],
     socials: [
       { platform: "INSTAGRAM", handle: "@amara.hair", url: "https://instagram.com/amara.hair", followers: 312_000 },
@@ -320,6 +332,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     title: "Tech & Smart Home Creator",
     bio: "Consumer tech reviews and integrated smart-home walkthroughs.",
     locationCity: "London",
+    locationState: "England",
     locationCountry: "UK",
     languages: ["English"],
     avatarColor: "#4979FF",
@@ -327,6 +340,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     badge: "High Engagement",
     statusLabel: "Great for Brand Collaborations",
     planTier: "PLUS",
+    verified: true,
     specialties: ["tech", "smart-home", "consumer-tech"],
     socials: [
       { platform: "YOUTUBE", handle: "Jordan Blake Tech", url: "https://youtube.com/@jordanblake", followers: 1_500_000 },
@@ -384,26 +398,109 @@ export function searchCreators(query: {
   q?: string;
   specialty?: string;
   location?: string;
+  country?: string;
+  state?: string;
+  city?: string;
   platform?: string;
+  language?: string;
+  followersMin?: string | number;
+  followersMax?: string | number;
+  engagementMin?: string | number;
+  openToCollab?: string | boolean;
+  verified?: string | boolean;
+  sort?: string;
 }) {
   const q = query.q?.toLowerCase().trim();
   const specialty = query.specialty?.toLowerCase();
   const location = query.location?.toLowerCase();
+  const country = query.country?.toLowerCase();
+  const state = query.state?.toLowerCase();
+  const city = query.city?.toLowerCase();
   const platform = query.platform?.toUpperCase();
+  const language = query.language?.toLowerCase();
+  const followersMin = Number(query.followersMin || 0) || 0;
+  const followersMax = Number(query.followersMax || 0) || 0;
+  const engagementMin = Number(query.engagementMin || 0) || 0;
+  const openOnly =
+    query.openToCollab === true ||
+    query.openToCollab === "1" ||
+    query.openToCollab === "true" ||
+    query.openToCollab === "on";
+  const verifiedOnly =
+    query.verified === true ||
+    query.verified === "1" ||
+    query.verified === "true" ||
+    query.verified === "on";
 
-  return SEED_CREATORS.filter((c) => {
+  let results = SEED_CREATORS.filter((c) => {
     if (q) {
-      const hay = `${c.displayName} ${c.title} ${c.bio} ${c.specialties.join(" ")}`.toLowerCase();
+      const hay =
+        `${c.displayName} ${c.title} ${c.bio} ${c.specialties.join(" ")} ${c.locationCity} ${c.locationCountry}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     if (specialty && !c.specialties.some((s) => s === specialty || s.includes(specialty))) return false;
     if (location) {
-      const loc = `${c.locationCity} ${c.locationCountry}`.toLowerCase();
+      const loc = `${c.locationCity} ${c.locationState ?? ""} ${c.locationCountry}`.toLowerCase();
       if (!loc.includes(location)) return false;
     }
+    if (country && c.locationCountry.toLowerCase() !== country) return false;
+    if (state && (c.locationState ?? "").toLowerCase() !== state) return false;
+    if (city && c.locationCity.toLowerCase() !== city) return false;
     if (platform && !c.socials.some((s) => s.platform === platform)) return false;
+    if (language && !c.languages.some((l) => l.toLowerCase() === language)) return false;
+    const followers = totalFollowers(c);
+    if (followersMin && followers < followersMin) return false;
+    if (followersMax && followers > followersMax) return false;
+    if (engagementMin) {
+      const rate = parseFloat(c.stats?.engagementRate ?? "0");
+      if (rate < engagementMin) return false;
+    }
+    if (openOnly && !c.openToCollab) return false;
+    if (verifiedOnly && c.verified === false) return false;
     return true;
   });
+
+  const sort = query.sort || "relevant";
+  if (sort === "followers") {
+    results = [...results].sort((a, b) => totalFollowers(b) - totalFollowers(a));
+  } else if (sort === "engagement") {
+    results = [...results].sort(
+      (a, b) => parseFloat(b.stats?.engagementRate ?? "0") - parseFloat(a.stats?.engagementRate ?? "0"),
+    );
+  } else if (sort === "name") {
+    results = [...results].sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }
+
+  return results;
+}
+
+export function getLocationOptions() {
+  const countries = new Map<string, Map<string, Set<string>>>();
+  for (const c of SEED_CREATORS) {
+    const country = c.locationCountry;
+    const state = c.locationState || "—";
+    if (!countries.has(country)) countries.set(country, new Map());
+    const states = countries.get(country)!;
+    if (!states.has(state)) states.set(state, new Set());
+    states.get(state)!.add(c.locationCity);
+  }
+  return [...countries.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([country, states]) => ({
+      country,
+      states: [...states.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([state, cities]) => ({
+          state,
+          cities: [...cities].sort(),
+        })),
+    }));
+}
+
+export function getLanguageOptions() {
+  const set = new Set<string>();
+  for (const c of SEED_CREATORS) for (const l of c.languages) set.add(l);
+  return [...set].sort();
 }
 
 export function specialtyLabel(slug: string): string {

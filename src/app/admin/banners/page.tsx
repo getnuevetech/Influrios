@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { requireAdminPage } from "@/app/admin/guard";
 import {
   actionRemoveBannerImage,
   actionUpdateBanner,
@@ -12,12 +13,13 @@ export const metadata = { title: "Admin · Banners" };
 type Props = { searchParams: Promise<{ saved?: string; uploaded?: string; error?: string }> };
 
 export default async function AdminBannersPage({ searchParams }: Props) {
+  await requireAdminPage("banners");
   const params = await searchParams;
   const cms = await getCms();
   const banners = Object.values(cms.banners);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">

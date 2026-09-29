@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAdminPage } from "@/app/admin/guard";
 import {
   getAllAudienceSnapshots,
   getIntelligenceStore,
@@ -9,6 +10,7 @@ import {
 export const metadata = { title: "Admin · Intelligence" };
 
 export default async function AdminIntelligencePage() {
+  await requireAdminPage("intelligence");
   const store = await getIntelligenceStore();
   const snapshots = getAllAudienceSnapshots();
   const trends = getNicheTrends();
@@ -16,7 +18,7 @@ export default async function AdminIntelligencePage() {
   const rising = trends.filter((t) => t.signal === "rising").length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
       <div>
         <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
           ← Admin

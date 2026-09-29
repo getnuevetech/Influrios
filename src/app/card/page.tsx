@@ -11,7 +11,7 @@ export default function CardMarketingPage() {
 
   return (
     <>
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2">
+      <section className="mx-auto grid max-w-[90rem] items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-violet">
             Influrios Card
@@ -44,7 +44,7 @@ export default function CardMarketingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+      <section id="pricing" className="mx-auto max-w-[90rem] px-4 pb-20 sm:px-6">
         <h2 className="font-display text-2xl font-bold text-indigo sm:text-3xl">
           Plans that unlock collaboration
         </h2>

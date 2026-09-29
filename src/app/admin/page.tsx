@@ -1,12 +1,85 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { actionAdminLogout } from "@/app/admin/actions-auth";
+import { PageShell } from "@/components/page-shell";
+import { getAdminSession, permissionLabel, type AdminPermission } from "@/lib/admin-auth";
 import { getBillingStore, isStripeConfigured } from "@/lib/billing";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
 
-export default async function AdminHomePage() {
+const LINKS: {
+  href: string;
+  title: string;
+  blurb: string;
+  permission: AdminPermission;
+  meta: (ctx: {
+    visibleCards: number;
+    bannersEnabled: number;
+    optIns: number;
+    intros: number;
+    snapshots: number;
+    rising: number;
+    completedCheckouts: number;
+  }) => string;
+}[] = [
+  {
+    href: "/admin/banners",
+    title: "Banners",
+    blurb: "Hero, sponsored, card promo, and CTA.",
+    permission: "banners",
+    meta: (c) => `${c.bannersEnabled} enabled`,
+  },
+  {
+    href: "/admin/cards",
+    title: "Influencer cards",
+    blurb: "Width, icon/QR sizing, and per-card feature toggles.",
+    permission: "cards",
+    meta: (c) => `${c.visibleCards} visible`,
+  },
+  {
+    href: "/admin/matching",
+    title: "Managed Matching",
+    blurb: "Opt-in targeting, intros, and paid-relationship tracking.",
+    permission: "matching",
+    meta: (c) => `${c.optIns} opted in · ${c.intros} intros`,
+  },
+  {
+    href: "/admin/intelligence",
+    title: "Intelligence",
+    blurb: "Audience snapshots, niche trends, relationship signals.",
+    permission: "intelligence",
+    meta: (c) => `${c.snapshots} snapshots · ${c.rising} rising niches`,
+  },
+  {
+    href: "/admin/billing",
+    title: "Billing",
+    blurb: "Plan catalog, checkout sessions, Stripe readiness.",
+    permission: "billing",
+    meta: (c) =>
+      `${c.completedCheckouts} completed · ${isStripeConfigured() ? "Stripe" : "Demo"} mode`,
+  },
+  {
+    href: "/admin/access",
+    title: "Access levels",
+    blurb: "Create roles and admin users with scoped permissions.",
+    permission: "access",
+    meta: () => "Super Admin only",
+  },
+];
+
+export default async function AdminHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
+
+  const params = await searchParams;
   const cms = await getCms();
   const matching = await getManagedMatching();
   const billing = await getBillingStore();
@@ -15,79 +88,70 @@ export default async function AdminHomePage() {
   const snapshots = getAllAudienceSnapshots().length;
   const rising = getNicheTrends().filter((t) => t.signal === "rising").length;
   const completedCheckouts = billing.sessions.filter((s) => s.status === "completed").length;
+  const ctx = {
+    visibleCards,
+    bannersEnabled: Object.values(cms.banners).filter((b) => b.enabled).length,
+    optIns,
+    intros: matching.intros.length,
+    snapshots,
+    rising,
+    completedCheckouts,
+  };
+
+  const visibleLinks = LINKS.filter((l) => session.permissions.includes(l.permission));
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Influrios Admin</p>
-      <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Content & ops controls</h1>
-      <p className="mt-2 max-w-2xl text-muted">
-        Manage landing banners, influencer cards, matching, intelligence, and Phase 6 billing.
-      </p>
+    <PageShell className="py-10">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Influrios Admin</p>
+          <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Content & ops controls</h1>
+          <p className="mt-2 max-w-2xl text-muted">
+            Signed in as <span className="font-semibold text-indigo">{session.name}</span> (
+            {session.email}) · <span className="font-semibold text-violet">{session.roleName}</span>
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Permissions: {session.permissions.map(permissionLabel).join(" · ")}
+          </p>
+        </div>
+        <form action={actionAdminLogout}>
+          <button type="submit" className="btn-secondary !py-2 text-sm">
+            Sign out
+          </button>
+        </form>
+      </div>
+
+      {params.error === "forbidden" ? (
+        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          You don’t have permission for that admin section. Ask a Super Admin to update your access
+          level.
+        </div>
+      ) : null}
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link
-          href="/admin/banners"
-          className="card-surface block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-        >
-          <h2 className="font-display text-xl font-bold text-indigo">Banners</h2>
-          <p className="mt-2 text-sm text-muted">
-            Hero, sponsored, card promo, and CTA. Upload multiple images per banner.
-          </p>
-          <p className="mt-4 text-xs font-semibold text-violet">
-            {Object.values(cms.banners).filter((b) => b.enabled).length} enabled
-          </p>
-        </Link>
-        <Link
-          href="/admin/cards"
-          className="card-surface block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-        >
-          <h2 className="font-display text-xl font-bold text-indigo">Influencer cards</h2>
-          <p className="mt-2 text-sm text-muted">
-            Width, icon/QR sizing, and per-card feature toggles.
-          </p>
-          <p className="mt-4 text-xs font-semibold text-violet">{visibleCards} visible</p>
-        </Link>
-        <Link
-          href="/admin/matching"
-          className="card-surface block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-        >
-          <h2 className="font-display text-xl font-bold text-indigo">Managed Matching</h2>
-          <p className="mt-2 text-sm text-muted">
-            Phase 4 — opt-in targeting, intros, and paid-relationship tracking.
-          </p>
-          <p className="mt-4 text-xs font-semibold text-violet">
-            {optIns} opted in · {matching.intros.length} intros
-          </p>
-        </Link>
-        <Link
-          href="/admin/intelligence"
-          className="card-surface block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-        >
-          <h2 className="font-display text-xl font-bold text-indigo">Intelligence</h2>
-          <p className="mt-2 text-sm text-muted">
-            Phase 5 — audience snapshots, niche trends, relationship signals, exports.
-          </p>
-          <p className="mt-4 text-xs font-semibold text-violet">
-            {snapshots} snapshots · {rising} rising niches
-          </p>
-        </Link>
-        <Link
-          href="/admin/billing"
-          className="card-surface block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-        >
-          <h2 className="font-display text-xl font-bold text-indigo">Billing</h2>
-          <p className="mt-2 text-sm text-muted">
-            Phase 6 — plan catalog, checkout sessions, Stripe webhook readiness.
-          </p>
-          <p className="mt-4 text-xs font-semibold text-violet">
-            {completedCheckouts} completed · {isStripeConfigured() ? "Stripe" : "Demo"} mode
-          </p>
-        </Link>
+        {visibleLinks.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="card-surface block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+          >
+            <h2 className="font-display text-xl font-bold text-indigo">{item.title}</h2>
+            <p className="mt-2 text-sm text-muted">{item.blurb}</p>
+            <p className="mt-4 text-xs font-semibold text-violet">{item.meta(ctx)}</p>
+          </Link>
+        ))}
       </div>
+
+      {visibleLinks.length === 0 ? (
+        <div className="card-surface mt-8 p-8 text-center">
+          <p className="font-semibold text-indigo">No admin modules assigned to your role.</p>
+          <p className="mt-2 text-sm text-muted">Contact a Super Admin to grant access.</p>
+        </div>
+      ) : null}
 
       <Link href="/" className="mt-8 inline-block text-sm font-semibold text-violet hover:underline">
         ← Back to site
       </Link>
-    </div>
+    </PageShell>
   );
 }

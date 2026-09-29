@@ -60,7 +60,7 @@ export default async function CreatorProfilePage({ params }: Props) {
           ) : null}
         </div>
 
-        <div className="relative mx-auto -mt-20 max-w-6xl px-4 sm:-mt-24 sm:px-6">
+        <div className="relative mx-auto -mt-20 max-w-[90rem] px-4 sm:-mt-24 sm:px-6">
           <div className="card-surface overflow-hidden p-5 sm:p-8">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
               <div className="relative mx-auto h-28 w-28 shrink-0 overflow-hidden rounded-full ring-4 ring-white shadow-lg sm:mx-0 sm:h-36 sm:w-36">
@@ -139,7 +139,7 @@ export default async function CreatorProfilePage({ params }: Props) {
         </div>
       </section>
 
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.4fr]">
+      <div className="mx-auto grid max-w-[90rem] gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.4fr]">
         <aside className="space-y-6">
           <div className="rounded-[1.5rem] bg-gradient-to-b from-lavender/80 to-white p-4 shadow-md">
             <InfluencerCardView creator={creator} />
@@ -339,7 +339,7 @@ export default async function CreatorProfilePage({ params }: Props) {
       </div>
 
       {/* Related */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+      <section className="mx-auto max-w-[90rem] px-4 pb-16 sm:px-6">
         <h2 className="mb-6 font-display text-2xl font-bold text-indigo">You might also like</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {related.map((c) => (

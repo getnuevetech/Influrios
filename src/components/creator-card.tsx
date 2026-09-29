@@ -39,19 +39,26 @@ const DEFAULT_FEATURES: CardFeatureFlags = {
 
 export type CreatorCardProps = {
   creator: SeedCreator;
-  /** Width in px (height unchanged). Default ~264 = +20% over ~220. */
+  /** Width in px (height unchanged). Omit for fluid grid cards. Default ~264 = +20% over ~220. */
   widthPx?: number;
   socialIconSize?: number;
   qrSize?: number;
   features?: Partial<CardFeatureFlags>;
+  /** Show title + short bio (discover template). */
+  showTitle?: boolean;
+  showBio?: boolean;
+  showViewProfile?: boolean;
 };
 
 export function CreatorCard({
   creator,
-  widthPx = 264,
+  widthPx,
   socialIconSize = 22,
   qrSize = 22,
   features: featureOverrides,
+  showTitle = false,
+  showBio = false,
+  showViewProfile = false,
 }: CreatorCardProps) {
   const features = { ...DEFAULT_FEATURES, ...featureOverrides };
   const entitlements = getEntitlements(creator.planTier as PlanCode);
@@ -67,8 +74,8 @@ export function CreatorCard({
 
   return (
     <article
-      style={{ width: widthPx, minWidth: widthPx }}
-      className="group flex shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-[0_12px_32px_rgba(17,26,90,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+      style={widthPx ? { width: widthPx, minWidth: widthPx } : undefined}
+      className={`group flex ${widthPx ? "shrink-0" : "w-full"} flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-[0_12px_32px_rgba(17,26,90,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-xl`}
     >
       <div className="relative h-52 overflow-hidden">
         <Image
@@ -76,7 +83,7 @@ export function CreatorCard({
           alt={creator.displayName}
           fill
           className="object-cover transition duration-500 group-hover:scale-105"
-          sizes={`${widthPx}px`}
+          sizes={widthPx ? `${widthPx}px` : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-indigo/55 via-transparent to-transparent" />
         {features.showBadge ? (
@@ -95,12 +102,18 @@ export function CreatorCard({
             <Link href={`/creators/${creator.slug}`} className="hover:underline">
               {creator.displayName}
             </Link>
-            {features.showVerified ? <IconVerified size={16} /> : null}
+            {features.showVerified && creator.verified !== false ? (
+              <IconVerified size={16} />
+            ) : null}
           </h3>
+          {showTitle ? (
+            <p className="mt-0.5 truncate text-xs text-muted">{creator.title}</p>
+          ) : null}
           {features.showLocation ? (
             <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
               <IconMapPin size={12} className="shrink-0 text-violet" />
-              {creator.locationCity}, {creator.locationCountry}
+              {creator.locationCity}
+              {creator.locationState ? `, ${creator.locationState}` : ""}, {creator.locationCountry}
             </p>
           ) : null}
         </div>
@@ -116,6 +129,10 @@ export function CreatorCard({
               </span>
             ))}
           </div>
+        ) : null}
+
+        {showBio ? (
+          <p className="line-clamp-2 text-xs leading-relaxed text-muted">{creator.bio}</p>
         ) : null}
 
         <div className="flex items-center justify-between gap-2">
@@ -162,9 +179,18 @@ export function CreatorCard({
             </Link>
           ) : null}
         </div>
+
+        {showViewProfile ? (
+          <Link
+            href={`/creators/${creator.slug}`}
+            className="btn-primary mt-1 mb-1 w-full !py-2 text-center text-xs"
+          >
+            View Profile →
+          </Link>
+        ) : null}
       </div>
 
-      {features.showStatus ? (
+      {features.showStatus && !showViewProfile ? (
         <div className="mt-3 flex items-center justify-center gap-1.5 border-t border-emerald-100 bg-emerald-50/80 px-3 py-2.5 text-[11px] font-semibold text-emerald-700">
           <IconCheck size={13} className="text-emerald-600" />
           {creator.statusLabel}
