@@ -72,8 +72,6 @@ const HERO_FLOATS = [
   },
 ];
 
-const BRAND_LOGOS = ["Samsung", "L'Oréal", "Airbnb", "Nike", "Adobe"];
-
 export default function HomePage() {
   const featured = SEED_CREATORS.slice(0, 5);
   const proofAvatars = SEED_CREATORS.slice(0, 5);
@@ -285,15 +283,34 @@ export default function HomePage() {
               <p className="mt-2 text-sm text-white/70">
                 Exclusive collaboration opportunities with leading global brands.
               </p>
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 lg:justify-start">
-                {BRAND_LOGOS.map((brand) => (
-                  <span
-                    key={brand}
-                    className="font-display text-sm font-bold tracking-wide text-white/90 sm:text-base"
-                  >
-                    {brand}
-                  </span>
-                ))}
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 lg:justify-start">
+                {/* Demo brand wordmarks — white monochrome style as in template */}
+                <svg viewBox="0 0 120 24" className="h-5 w-auto text-white" aria-label="Samsung" role="img">
+                  <text x="0" y="18" fill="currentColor" fontFamily="Arial,sans-serif" fontSize="16" fontWeight="700" letterSpacing="1">
+                    Samsung
+                  </text>
+                </svg>
+                <svg viewBox="0 0 90 24" className="h-5 w-auto text-white" aria-label="L'Oréal" role="img">
+                  <text x="0" y="18" fill="currentColor" fontFamily="Georgia,serif" fontSize="15" fontWeight="600" letterSpacing="2">
+                    L&apos;ORÉAL
+                  </text>
+                </svg>
+                <svg viewBox="0 0 90 24" className="h-5 w-auto text-white" aria-label="Airbnb" role="img">
+                  <text x="0" y="18" fill="currentColor" fontFamily="Arial,sans-serif" fontSize="16" fontWeight="700">
+                    airbnb
+                  </text>
+                </svg>
+                <svg viewBox="0 0 60 24" className="h-5 w-auto text-white" aria-label="Nike" role="img">
+                  <path fill="currentColor" d="M2 16c8-3 18-8 28-11 2-.5 3 1 1 2C21 12 12 16 2 19v-3z" />
+                  <text x="32" y="18" fill="currentColor" fontFamily="Arial,sans-serif" fontSize="14" fontWeight="700">
+                    Nike
+                  </text>
+                </svg>
+                <svg viewBox="0 0 80 24" className="h-5 w-auto text-white" aria-label="Adobe" role="img">
+                  <text x="0" y="18" fill="currentColor" fontFamily="Arial,sans-serif" fontSize="16" fontWeight="700">
+                    Adobe
+                  </text>
+                </svg>
               </div>
               <Link
                 href="/collaboration"
