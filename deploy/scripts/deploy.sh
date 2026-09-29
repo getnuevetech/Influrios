@@ -12,7 +12,7 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-# Load POSTGRES_* for health checks (ignore comment/blank lines)
+# Load POSTGRES_* for health checks
 set -a
 # shellcheck disable=SC1091
 source .env
@@ -25,6 +25,10 @@ else
   echo "WARNING: docker not found — assuming DATABASE_URL points to an external DB"
 fi
 
+echo "==> Stop PM2 app during rebuild (avoids crash-loop on incomplete .next)"
+pm2 stop influrios >/dev/null 2>&1 || true
+pm2 delete influrios >/dev/null 2>&1 || true
+
 echo "==> Install dependencies"
 npm ci
 
@@ -35,18 +39,32 @@ npx prisma migrate deploy 2>/dev/null || npx prisma db push
 echo "==> Seed (idempotent upserts)"
 npm run db:seed || true
 
+echo "==> Clean previous Next build"
+rm -rf .next
+
 echo "==> Build Next.js"
-npm run build
+if ! npm run build; then
+  echo "ERROR: next build failed. On 2GB Lightsail instances this is often OOM."
+  echo "Add swap, then retry:"
+  echo "  sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile"
+  exit 1
+fi
+
+if [[ ! -f .next/BUILD_ID ]]; then
+  echo "ERROR: .next/BUILD_ID missing — production build is incomplete."
+  echo "Contents of .next:"
+  ls -la .next || true
+  exit 1
+fi
+echo "OK: production build id $(cat .next/BUILD_ID)"
 
 echo "==> Ensure logs directory"
 mkdir -p logs
 
-echo "==> Restart PM2"
+echo "==> Start PM2"
 if [[ -f deploy/pm2/ecosystem.config.cjs ]]; then
-  pm2 delete influrios >/dev/null 2>&1 || true
   pm2 start deploy/pm2/ecosystem.config.cjs --update-env
 else
-  pm2 delete influrios >/dev/null 2>&1 || true
   pm2 start npm --name influrios -- start
 fi
 pm2 save
@@ -62,6 +80,8 @@ else
   pm2 status || true
   echo "---- pm2 logs (last 80 lines) ----"
   pm2 logs influrios --lines 80 --nostream || true
+  echo "---- .next check ----"
+  ls -la .next/BUILD_ID .next/static 2>&1 || true
   exit 1
 fi
 echo "DB:"

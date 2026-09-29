@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Standalone output for AWS Lightsail / PM2 deploys
-  output: "standalone",
+  // Regular Next build + `next start` via PM2 (simpler on Lightsail than standalone)
   images: {
     remotePatterns: [
       {
