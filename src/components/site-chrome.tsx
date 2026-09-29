@@ -14,7 +14,7 @@ const NAV = [
   { href: "/#categories", label: "Categories" },
   { href: "/collaboration", label: "Collaboration" },
   { href: "/business", label: "For Businesses" },
-  { href: "/card#pricing", label: "Pricing" },
+  { href: "/billing", label: "Pricing" },
 ];
 
 export function SiteHeader() {
@@ -129,6 +129,9 @@ export function SiteFooter() {
           <ul className="mt-3 space-y-2 text-sm text-white/80">
             <li>
               <Link href="/card">Pricing</Link>
+            </li>
+            <li>
+              <Link href="/billing">Checkout</Link>
             </li>
             <li>
               <Link href="/claim">Create your card</Link>

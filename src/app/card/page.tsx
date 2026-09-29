@@ -56,16 +56,19 @@ export default function CardMarketingPage() {
             {
               name: "Starter",
               price: "Free",
+              sku: null as string | null,
               points: ["Public card + profile URL", "1 specialty · 1 social", "Browse matches"],
             },
             {
               name: "Plus",
-              price: "$12–25/mo",
+              price: "$19/mo",
+              sku: "creator_plus",
               points: ["Shortlink + standard QR", "Request collab matches", "Up to 3 specialties · 4 socials"],
             },
             {
               name: "Pro",
-              price: "Custom",
+              price: "$29/mo",
+              sku: "creator_pro",
               points: ["Dynamic QR + lead routing", "Priority collab tools", "Media kit + advanced analytics"],
             },
           ].map((plan) => (
@@ -77,12 +80,25 @@ export default function CardMarketingPage() {
                   <li key={p}>✓ {p}</li>
                 ))}
               </ul>
-              <Link href="/claim" className="btn-primary mt-6 w-full !py-2 text-sm">
-                Get started
-              </Link>
+              {plan.sku ? (
+                <Link href={`/billing`} className="btn-primary mt-6 w-full !py-2 text-sm">
+                  Upgrade via checkout →
+                </Link>
+              ) : (
+                <Link href="/claim" className="btn-primary mt-6 w-full !py-2 text-sm">
+                  Get started
+                </Link>
+              )}
             </div>
           ))}
         </div>
+        <p className="mt-4 text-center text-sm text-muted">
+          Phase 6 monetization — full catalog & demo/Stripe checkout at{" "}
+          <Link href="/billing" className="font-semibold text-violet hover:underline">
+            /billing
+          </Link>
+          .
+        </p>
       </section>
     </>
   );

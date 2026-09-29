@@ -79,12 +79,15 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
           </div>
         ) : null}
 
-        {/* Plan switcher (demo — Stripe later) */}
+        {/* Plan switcher (demo — Stripe checkout on /billing) */}
         <section id="pricing" className="card-surface p-6">
           <h2 className="font-display text-xl font-bold text-indigo">Business plans</h2>
           <p className="mt-1 text-sm text-muted">
-            Stripe checkout wires in next iteration. For now, switch the demo workspace plan to feel
-            limits.
+            Switch the demo workspace plan below, or run Phase 6 checkout at{" "}
+            <Link href="/billing" className="font-semibold text-violet hover:underline">
+              /billing
+            </Link>{" "}
+            (Stripe when keys are set).
           </p>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             {(Object.keys(BUSINESS_PLAN_PRICES) as BusinessPlanCode[]).map((code) => {

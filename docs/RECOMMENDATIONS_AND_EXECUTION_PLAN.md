@@ -309,7 +309,23 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [ ] Live social / first-party sync (OAuth) after demand validates  
 - [ ] Persist intelligence store to Prisma  
 
-**Defer:** Full analytics warehouse, precise geo, scrape-dependent metrics
+**Defer:** Full analytics warehouse, precise geo, scrape-dependent metrics  
+
+---
+
+### Phase 6 — Monetization (Stripe) ✅ *started (demo checkout live)*
+
+**Proof:** Will creators and businesses pay through platform checkout?
+
+- [x] Billing catalog: Creator Plus/Pro + Business Pro/Agency (`src/lib/billing.ts`)  
+- [x] Public checkout hub (`/billing`) with demo upgrade when Stripe keys absent  
+- [x] Stripe Checkout Session + webhook scaffold (`/api/billing/webhook`) when `STRIPE_SECRET_KEY` set  
+- [x] Success / cancel routes applying plan entitlements to demo stores  
+- [x] Admin billing console (`/admin/billing`) — sessions, overrides, env readiness  
+- [ ] Live Stripe Price IDs + Customer Portal in production  
+- [ ] Persist subscriptions to Prisma `User.planTier`  
+
+**Defer:** Invoicing agency custom contracts, usage-based metering  
 
 ---
 
@@ -395,7 +411,8 @@ Existing comps cover marketing, Discover, Profile, Collab, Card marketing, and t
 | Phase 0–1 kickoff | **Started** on branch `cursor/phase-0-1-mvp-lightsail-0127` |
 | Short domain | Open: own `ic.me` vs path-only `/c/{slug}` + `/q/{token}` on primary domain |
 | Auth | Open: **Clerk** / Auth.js / other |
-| Phase 1 Pro dynamic QR | **Shipped in Phase 3** (`/api/qr` + `/q/{token}`; Stripe still open) |
+| Phase 1 Pro dynamic QR | **Shipped in Phase 3** (`/api/qr` + `/q/{token}`) |
+| Stripe billing | **Phase 6 started** — demo checkout + Stripe scaffold (`/billing`, `/api/billing/webhook`) |
 | AI draft extraction | Open: provider + budget |
 | Initial taxonomy | **Drafted** in `src/lib/seed-data.ts` (Beauty, Fashion, Food, Home, Hair, Travel, Fitness, Tech, Lifestyle, Suppliers + sub-specialties) |
 | Design fidelity | **Code-first tokens** (v2.2 hex values in `globals.css`); comps remain visual references |
