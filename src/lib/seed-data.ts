@@ -343,21 +343,29 @@ export const COLLAB_MATCH_PRESETS = [
     title: "Interior Designer + Woodwork Creator",
     image: "/demo/categories/cat-home.jpg",
     tags: ["Design", "Craft", "Home Decor"],
+    leftSlug: "sofia-martinez",
+    rightSlug: "daniel-kim",
   },
   {
     title: "Hair Stylist + Hair Supplier",
     image: "/demo/categories/cat-hair.jpg",
     tags: ["Beauty", "Hair", "Supply"],
+    leftSlug: "amara-okonkwo",
+    rightSlug: "priya-sharma",
   },
   {
     title: "Food Creator + Kitchen Brand",
     image: "/demo/categories/cat-food.jpg",
     tags: ["Food", "Kitchen", "Brand"],
+    leftSlug: "marcus-lee",
+    rightSlug: "jordan-blake",
   },
   {
     title: "Travel Influencer + Tourism Brand",
     image: "/demo/categories/cat-travel.jpg",
     tags: ["Travel", "Tourism"],
+    leftSlug: "priya-sharma",
+    rightSlug: "sofia-martinez",
   },
 ];
 
