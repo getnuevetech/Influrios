@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CompactInfluencerCard } from "@/components/creator-card";
+import type { ReactNode } from "react";
+import { CompactInfluencerCard, CreatorCard } from "@/components/creator-card";
 import { FeaturedCarousel } from "@/components/featured-carousel";
 import {
   CategoryGlyph,
@@ -79,7 +80,7 @@ function Shell({
   children,
   className = "",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return <div className={`mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-10 ${className}`}>{children}</div>;
@@ -311,12 +312,18 @@ export default async function HomePage() {
               View all influencers <IconArrowRight size={14} />
             </Link>
           </div>
-          <FeaturedCarousel
-            items={featured}
-            widthPx={widthPx}
-            socialIconSize={cms.featuredCards.socialIconSize}
-            qrSize={cms.featuredCards.qrSize}
-          />
+          <FeaturedCarousel stepPx={widthPx + 20}>
+            {featured.map(({ creator, features }) => (
+              <CreatorCard
+                key={creator.slug}
+                creator={creator}
+                widthPx={widthPx}
+                socialIconSize={cms.featuredCards.socialIconSize}
+                qrSize={cms.featuredCards.qrSize}
+                features={features}
+              />
+            ))}
+          </FeaturedCarousel>
         </Shell>
       </section>
 

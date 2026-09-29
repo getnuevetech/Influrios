@@ -1,34 +1,25 @@
 "use client";
 
-import { useRef } from "react";
-import { CreatorCard } from "@/components/creator-card";
+import { useRef, type ReactNode } from "react";
 import { IconArrowLeft, IconArrowRight } from "@/components/icons";
-import type { CardFeatureFlags } from "@/lib/cms";
-import type { SeedCreator } from "@/lib/seed-data";
 
-type Item = {
-  creator: SeedCreator;
-  features: CardFeatureFlags;
-};
-
+/**
+ * Client-only scroll shell. Cards are rendered on the server and passed as children
+ * so webpack never pulls server actions / fs modules into the client graph.
+ */
 export function FeaturedCarousel({
-  items,
-  widthPx,
-  socialIconSize,
-  qrSize,
+  children,
+  stepPx = 284,
 }: {
-  items: Item[];
-  widthPx: number;
-  socialIconSize: number;
-  qrSize: number;
+  children: ReactNode;
+  stepPx?: number;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
 
   function scrollByDir(dir: -1 | 1) {
     const el = scroller.current;
     if (!el) return;
-    const step = widthPx + 20;
-    el.scrollBy({ left: dir * step, behavior: "smooth" });
+    el.scrollBy({ left: dir * stepPx, behavior: "smooth" });
   }
 
   return (
@@ -54,16 +45,7 @@ export function FeaturedCarousel({
         ref={scroller}
         className="flex gap-5 overflow-x-auto scroll-smooth px-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {items.map(({ creator, features }) => (
-          <CreatorCard
-            key={creator.slug}
-            creator={creator}
-            widthPx={widthPx}
-            socialIconSize={socialIconSize}
-            qrSize={qrSize}
-            features={features}
-          />
-        ))}
+        {children}
       </div>
     </div>
   );

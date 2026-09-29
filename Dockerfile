@@ -14,6 +14,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Give webpack enough heap on small Lightsail instances
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 # Dummy URL so Prisma generate succeeds during image build
 ENV DATABASE_URL="postgresql://influrios:influrios@postgres:5432/influrios?schema=public"
 RUN npx prisma generate
