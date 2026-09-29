@@ -338,7 +338,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {results.map((c) => (
                   <CreatorCard
                     key={c.slug}
