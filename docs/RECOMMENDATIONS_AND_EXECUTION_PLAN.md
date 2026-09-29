@@ -250,14 +250,17 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 
 ---
 
-### Phase 2 — Collaboration Network
+### Phase 2 — Collaboration Network ✅ *started (in progress)*
 
 **Proof:** Will creators use complementary matches?
 
-- I offer / I need fields + Collaboration Explorer  
-- Explainable Creator→Creator recommendations  
-- Structured proposals + joint portfolio stubs  
-- Contextual Plus/Pro upsells for collab controls  
+- [x] I offer / I need fields on creator DNA + match signals  
+- [x] Collaboration Explorer with filters (niche, location, platform, viewer plan)  
+- [x] Explainable Creator→Creator scoring (`src/lib/matching.ts`) + breakdown UI  
+- [x] Structured proposal flow (`/collaboration/propose`) with Plus/Pro gate  
+- [x] Business requests + creator opportunity demo lists  
+- [ ] Joint portfolio / case-study stubs (next)  
+- [ ] Persist proposals to Prisma `Opportunity` rows  
 
 **Defer:** Complex contracting  
 

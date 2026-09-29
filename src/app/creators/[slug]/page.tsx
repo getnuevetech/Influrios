@@ -109,8 +109,14 @@ export default async function CreatorProfilePage({ params }: Props) {
                   <a href="#contact" className="btn-primary">
                     Contact
                   </a>
-                  <Link href="/collaboration" className="btn-secondary">
+                  <Link href={`/collaboration?from=${creator.slug}`} className="btn-secondary">
                     Invite to Collaborate
+                  </Link>
+                  <Link
+                    href={`/collaboration?from=${creator.slug}&specialty=${creator.specialties[0] ?? ""}`}
+                    className="btn-secondary"
+                  >
+                    Find Matches
                   </Link>
                   <Link href={`/c/${creator.slug}`} className="btn-secondary">
                     Share Card

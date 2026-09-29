@@ -43,6 +43,47 @@ export default function CardMarketingPage() {
           <InfluencerCardView creator={demo} />
         </div>
       </section>
+
+      <section id="pricing" className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+        <h2 className="font-display text-2xl font-bold text-indigo sm:text-3xl">
+          Plans that unlock collaboration
+        </h2>
+        <p className="mt-2 text-muted">
+          Starter is free. Plus and Pro unlock collaboration requests and richer card tools.
+        </p>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            {
+              name: "Starter",
+              price: "Free",
+              points: ["Public card + profile URL", "1 specialty · 1 social", "Browse matches"],
+            },
+            {
+              name: "Plus",
+              price: "$12–25/mo",
+              points: ["Shortlink + standard QR", "Request collab matches", "Up to 3 specialties · 4 socials"],
+            },
+            {
+              name: "Pro",
+              price: "Custom",
+              points: ["Dynamic QR + lead routing", "Priority collab tools", "Media kit + advanced analytics"],
+            },
+          ].map((plan) => (
+            <div key={plan.name} className="card-surface p-6">
+              <p className="text-sm font-bold uppercase tracking-wide text-violet">{plan.name}</p>
+              <p className="mt-2 font-display text-2xl font-bold text-indigo">{plan.price}</p>
+              <ul className="mt-4 space-y-2 text-sm text-muted">
+                {plan.points.map((p) => (
+                  <li key={p}>✓ {p}</li>
+                ))}
+              </ul>
+              <Link href="/claim" className="btn-primary mt-6 w-full !py-2 text-sm">
+                Get started
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
     </>
   );
 }
