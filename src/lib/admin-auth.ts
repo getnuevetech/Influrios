@@ -267,6 +267,30 @@ function normalizeStore(store: AdminAuthStore): AdminAuthStore {
   };
 }
 
+/** Keep system roles in sync with DEFAULT_ROLES (new modules/permissions). */
+function syncSystemRoles(store: AdminAuthStore): AdminAuthStore {
+  const defaults = new Map(DEFAULT_ROLES.map((r) => [r.id, r]));
+  const roles = store.roles.map((role) => {
+    const def = defaults.get(role.id);
+    if (def && role.system) {
+      return {
+        ...role,
+        name: def.name,
+        description: def.description,
+        permissions: [...def.permissions],
+        system: true,
+      };
+    }
+    return role;
+  });
+  for (const def of DEFAULT_ROLES) {
+    if (!roles.some((r) => r.id === def.id)) {
+      roles.push(structuredClone(def));
+    }
+  }
+  return { ...store, roles };
+}
+
 function defaultStore(): AdminAuthStore {
   const salt = randomBytes(16).toString("hex");
   const password = process.env.ADMIN_SUPER_PASSWORD || "InfluriosAdmin!2026";
@@ -295,8 +319,8 @@ async function ensureStore(): Promise<AdminAuthStore> {
     const raw = await fs.readFile(STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as AdminAuthStore;
     if (!parsed.roles?.length || !parsed.users?.length) return defaultStore();
-    const normalized = normalizeStore(parsed);
-    // Persist migration when coarse permissions were expanded
+    const normalized = syncSystemRoles(normalizeStore(parsed));
+    // Persist when coarse perms expanded or system roles gained new features
     const changed = JSON.stringify(parsed) !== JSON.stringify(normalized);
     if (changed) await saveStore(normalized);
     return normalized;
