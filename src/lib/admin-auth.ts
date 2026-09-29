@@ -24,6 +24,8 @@ export const ADMIN_PERMISSIONS = [
   "payments.manage",
   "trust.view",
   "trust.mediate",
+  "agency.view",
+  "agency.manage",
   "access.manage_roles",
   "access.manage_users",
 ] as const;
@@ -38,6 +40,7 @@ export type AdminModule =
   | "billing"
   | "payments"
   | "trust"
+  | "agency"
   | "access";
 
 export const ADMIN_PERMISSION_GROUPS: {
@@ -111,6 +114,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     ],
   },
   {
+    module: "agency",
+    label: "Agency",
+    description: "Talent roster, campaigns, and joint portfolios",
+    permissions: [
+      { id: "agency.view", label: "View agency", hint: "Open agency ops console" },
+      { id: "agency.manage", label: "Manage agency", hint: "Edit roster, campaigns, portfolios" },
+    ],
+  },
+  {
     module: "access",
     label: "Access control",
     description: "Create roles and admin users (typically Super Admin)",
@@ -175,6 +187,7 @@ const LEGACY_PERMISSION_MAP: Record<string, AdminPermission[]> = {
   billing: ["billing.view"],
   payments: ["payments.view", "payments.manage"],
   trust: ["trust.view", "trust.mediate"],
+  agency: ["agency.view", "agency.manage"],
   access: ["access.manage_roles", "access.manage_users"],
 };
 
@@ -196,7 +209,7 @@ const DEFAULT_ROLES: AdminRole[] = [
   {
     id: "role_ops",
     name: "Ops Admin",
-    description: "Matching, intelligence, payments, and trust mediation (no billing/access).",
+    description: "Matching, intelligence, payments, trust, and agency (no billing/access).",
     permissions: [
       "matching.view",
       "matching.manage_optins",
@@ -208,6 +221,8 @@ const DEFAULT_ROLES: AdminRole[] = [
       "payments.manage",
       "trust.view",
       "trust.mediate",
+      "agency.view",
+      "agency.manage",
     ],
     system: true,
   },
@@ -230,6 +245,13 @@ const DEFAULT_ROLES: AdminRole[] = [
     name: "Trust Admin",
     description: "Dispute mediation and contract briefs only.",
     permissions: ["trust.view", "trust.mediate"],
+    system: true,
+  },
+  {
+    id: "role_agency",
+    name: "Agency Admin",
+    description: "Agency roster, campaigns, and portfolios only.",
+    permissions: ["agency.view", "agency.manage"],
     system: true,
   },
   {

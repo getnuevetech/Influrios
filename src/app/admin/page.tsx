@@ -7,6 +7,7 @@ import {
   getAdminSession,
   type AdminModule,
 } from "@/lib/admin-auth";
+import { agencyStats, getAgencyStore } from "@/lib/agency";
 import { getBillingStore, isStripeConfigured } from "@/lib/billing";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
@@ -33,6 +34,7 @@ const LINKS: {
     escrowActive: number;
     escrowHeld: string;
     trustOpen: number;
+    agencyRoster: number;
   }) => string;
 }[] = [
   {
@@ -86,6 +88,13 @@ const LINKS: {
     meta: (c) => `${c.trustOpen} open cases`,
   },
   {
+    href: "/admin/agency",
+    title: "Agency",
+    blurb: "Talent roster, campaigns, joint portfolios.",
+    module: "agency",
+    meta: (c) => `${c.agencyRoster} on roster`,
+  },
+  {
     href: "/admin/access",
     title: "Access levels",
     blurb: "Create roles from granular features and assign admin users.",
@@ -110,6 +119,8 @@ export default async function AdminHomePage({
   const payStats = escrowStats(payments);
   const trust = await getTrustStore();
   const tStats = trustStats(trust);
+  const agency = await getAgencyStore();
+  const aStats = agencyStats(agency);
   const visibleCards = cms.featuredCards.cards.filter((c) => c.visible).length;
   const optIns = matching.optIns.filter((o) => o.openToManaged).length;
   const snapshots = getAllAudienceSnapshots().length;
@@ -130,6 +141,7 @@ export default async function AdminHomePage({
       maximumFractionDigits: 0,
     }).format(payStats.held / 100),
     trustOpen: tStats.open,
+    agencyRoster: aStats.roster,
   };
 
   const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));

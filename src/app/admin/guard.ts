@@ -15,6 +15,7 @@ const MODULE_PATH: Record<AdminModule, string> = {
   billing: "/admin/billing",
   payments: "/admin/payments",
   trust: "/admin/trust",
+  agency: "/admin/agency",
   access: "/admin/access",
 };
 

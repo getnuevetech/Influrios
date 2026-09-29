@@ -108,11 +108,17 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
                     <li>{e.fitInsights ? "✓" : "–"} Fit insights</li>
                     <li>{e.advancedFilters ? "✓" : "–"} Advanced filters</li>
                     <li>{e.intelligence ? "✓" : "–"} Intelligence</li>
+                    <li>{e.agencyWorkspace ? "✓" : "–"} Agency workspace</li>
                     <li>{e.exports ? "✓" : "–"} Exports</li>
                   </ul>
                   <button type="submit" className={`mt-4 w-full !py-2 text-sm ${active ? "btn-secondary" : "btn-primary"}`}>
                     {active ? "Current plan" : "Use this plan"}
                   </button>
+                  {code === "AGENCY" ? (
+                    <Link href="/agency" className="mt-2 block text-center text-xs font-semibold text-violet hover:underline">
+                      Open agency workspace →
+                    </Link>
+                  ) : null}
                 </form>
               );
             })}

@@ -1,0 +1,533 @@
+import Image from "next/image";
+import Link from "next/link";
+import {
+  actionAddRoster,
+  actionCreateCampaign,
+  actionCreatePortfolio,
+  actionEnableAgencyPlan,
+  actionSetCampaignStatus,
+  actionTogglePortfolio,
+} from "@/app/agency/actions";
+import {
+  agencyStats,
+  getAgencyStore,
+  listPublishedPortfolios,
+} from "@/lib/agency";
+import { getWorkspace } from "@/lib/business";
+import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Agency Workspace" };
+
+type Props = {
+  searchParams: Promise<{
+    error?: string;
+    roster?: string;
+    campaign?: string;
+    portfolio?: string;
+    plan?: string;
+    status?: string;
+    toggled?: string;
+  }>;
+};
+
+const CAMP_COLOR: Record<string, string> = {
+  briefing: "bg-slate-100 text-slate-700",
+  casting: "bg-amber-100 text-amber-800",
+  live: "bg-emerald-100 text-emerald-800",
+  wrapped: "bg-blue-100 text-blue-800",
+};
+
+export default async function AgencyPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const ws = await getWorkspace();
+  const entitlements = getBusinessEntitlements(ws.plan);
+  const unlocked = entitlements.agencyWorkspace;
+  const store = await getAgencyStore();
+  const stats = agencyStats(store);
+  const published = listPublishedPortfolios(store);
+
+  return (
+    <div className="bg-[#F7FAFF]">
+      <section className="hero-atmosphere text-white">
+        <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
+            Phase 11 · Agency
+          </p>
+          <h1 className="mt-2 font-display text-4xl font-bold">{store.name}</h1>
+          <p className="mt-3 max-w-2xl text-white/75">
+            Multi-creator roster, client campaigns, and joint portfolio case studies — Agency plan
+            unlocks full workspace tools.
+          </p>
+          <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+            Business plan: {ws.plan}
+            {unlocked ? " · Agency workspace on" : " · upgrade required"}
+          </p>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
+        <div className="flex flex-wrap gap-3 text-center text-xs">
+          <div className="rounded-xl bg-lavender px-4 py-2">
+            <p className="font-display text-lg font-bold text-violet">{stats.roster}</p>
+            <p className="text-muted">Roster</p>
+          </div>
+          <div className="rounded-xl bg-[#D9E8FF] px-4 py-2">
+            <p className="font-display text-lg font-bold text-blue">{stats.live}</p>
+            <p className="text-muted">Live campaigns</p>
+          </div>
+          <div className="rounded-xl bg-emerald-100 px-4 py-2">
+            <p className="font-display text-lg font-bold text-emerald-700">{stats.published}</p>
+            <p className="text-muted">Published cases</p>
+          </div>
+        </div>
+
+        {params.error === "agency_plan_required" ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Agency plan required to mutate roster / campaigns / portfolios.{" "}
+            <form action={actionEnableAgencyPlan} className="mt-2 inline">
+              <button type="submit" className="font-semibold text-violet underline">
+                Demo upgrade to AGENCY →
+              </button>
+            </form>
+          </div>
+        ) : params.error ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {params.error}
+          </div>
+        ) : null}
+
+        {params.plan || params.roster || params.campaign || params.portfolio || params.status ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Saved
+            {params.plan ? ` · plan ${params.plan}` : ""}
+            {params.roster ? " · roster updated" : ""}
+            {params.campaign ? " · campaign created" : ""}
+            {params.portfolio ? " · portfolio created" : ""}
+            {params.status ? " · campaign status updated" : ""}.
+          </div>
+        ) : null}
+
+        {!unlocked ? (
+          <section className="card-surface flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
+              <h2 className="font-display text-xl font-bold text-indigo">Unlock Agency workspace</h2>
+              <p className="mt-1 text-sm text-muted">
+                Current plan is {ws.plan}. Agency adds roster, multi-creator casting, and joint
+                portfolios.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <form action={actionEnableAgencyPlan}>
+                <button type="submit" className="btn-primary !py-2 text-sm">
+                  Demo upgrade to AGENCY →
+                </button>
+              </form>
+              <Link href="/billing" className="btn-secondary !py-2 text-sm">
+                Billing
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="space-y-4">
+          <h2 className="font-display text-2xl font-bold text-indigo">Talent roster</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {store.roster.map((m) => {
+              const c = getCreatorBySlug(m.creatorSlug);
+              return (
+                <article key={m.creatorSlug} className="card-surface flex gap-3 p-4">
+                  {c?.image ? (
+                    <Image
+                      src={c.image}
+                      alt={c.displayName}
+                      width={56}
+                      height={56}
+                      className="h-14 w-14 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-lavender text-sm font-bold text-violet">
+                      {m.creatorSlug.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-indigo">
+                      {c?.displayName ?? m.creatorSlug}
+                    </p>
+                    <p className="text-xs capitalize text-violet">{m.role} · {m.retainerLabel}</p>
+                    <p className="mt-1 text-xs text-muted">{m.notes}</p>
+                    <Link
+                      href={`/creators/${m.creatorSlug}`}
+                      className="mt-1 inline-block text-xs font-semibold text-violet hover:underline"
+                    >
+                      Profile →
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {unlocked ? (
+            <form action={actionAddRoster} className="card-surface mt-2 grid gap-3 p-5 sm:grid-cols-2">
+              <h3 className="font-display text-lg font-bold text-indigo sm:col-span-2">
+                Add to roster
+              </h3>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Creator</span>
+                <select
+                  name="creatorSlug"
+                  required
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                >
+                  {SEED_CREATORS.filter(
+                    (c) => !store.roster.some((r) => r.creatorSlug === c.slug),
+                  ).map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Role</span>
+                <select
+                  name="role"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                  defaultValue="talent"
+                >
+                  <option value="lead">Lead</option>
+                  <option value="specialist">Specialist</option>
+                  <option value="talent">Talent</option>
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Retainer</span>
+                <input
+                  name="retainerLabel"
+                  defaultValue="Project"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Notes</span>
+                <input
+                  name="notes"
+                  placeholder="Positioning"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <button type="submit" className="btn-primary sm:col-span-2 !py-2.5 text-sm">
+                Add creator →
+              </button>
+            </form>
+          ) : null}
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="font-display text-2xl font-bold text-indigo">Campaigns</h2>
+          {store.campaigns.map((camp) => (
+            <article key={camp.id} className="card-surface p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-violet">
+                    {camp.clientName}
+                  </p>
+                  <h3 className="mt-1 font-display text-lg font-bold text-indigo">{camp.title}</h3>
+                  <p className="mt-1 text-sm text-muted">
+                    {camp.summary} · {camp.budgetLabel}
+                  </p>
+                  <p className="mt-2 text-xs text-muted">
+                    Cast:{" "}
+                    {camp.creatorSlugs
+                      .map((s) => getCreatorBySlug(s)?.displayName ?? s)
+                      .join(", ")}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${CAMP_COLOR[camp.status]}`}
+                >
+                  {camp.status}
+                </span>
+              </div>
+              {unlocked ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(["briefing", "casting", "live", "wrapped"] as const).map((st) => (
+                    <form key={st} action={actionSetCampaignStatus}>
+                      <input type="hidden" name="id" value={camp.id} />
+                      <input type="hidden" name="status" value={st} />
+                      <button
+                        type="submit"
+                        className="rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-indigo hover:bg-lavender"
+                      >
+                        {st}
+                      </button>
+                    </form>
+                  ))}
+                </div>
+              ) : null}
+            </article>
+          ))}
+
+          {unlocked ? (
+            <form
+              action={actionCreateCampaign}
+              className="card-surface grid gap-3 p-5 sm:grid-cols-2"
+            >
+              <h3 className="font-display text-lg font-bold text-indigo sm:col-span-2">
+                New campaign
+              </h3>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Title</span>
+                <input
+                  name="title"
+                  required
+                  defaultValue="Holiday gift sets"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Client</span>
+                <input
+                  name="clientName"
+                  required
+                  defaultValue="Luminous Beauty"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Specialty</span>
+                <input
+                  name="specialty"
+                  defaultValue="beauty"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Budget</span>
+                <input
+                  name="budgetLabel"
+                  defaultValue="$8K package"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Cast (comma slugs)</span>
+                <input
+                  name="creatorSlugs"
+                  defaultValue={store.roster
+                    .slice(0, 2)
+                    .map((r) => r.creatorSlug)
+                    .join(",")}
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Summary</span>
+                <input
+                  name="summary"
+                  defaultValue="Multi-creator holiday push with joint cutdown."
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <button type="submit" className="btn-primary sm:col-span-2 !py-2.5 text-sm">
+                Create campaign →
+              </button>
+            </form>
+          ) : null}
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-2xl font-bold text-indigo">
+                Joint portfolios
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                Case-study stubs for complementary creator pairs — closes Phase 2 collab proof.
+              </p>
+            </div>
+            <Link
+              href="/collaboration"
+              className="text-sm font-semibold text-violet hover:underline"
+            >
+              Collaboration explorer →
+            </Link>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {store.portfolios.map((p) => {
+              const left = getCreatorBySlug(p.leftSlug);
+              const right = getCreatorBySlug(p.rightSlug);
+              return (
+                <article key={p.id} className="card-surface p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-bold uppercase tracking-wide text-violet">
+                      {p.specialty}
+                      {!p.published ? " · draft" : ""}
+                    </p>
+                    {unlocked ? (
+                      <form action={actionTogglePortfolio}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <input
+                          type="hidden"
+                          name="published"
+                          value={p.published ? "0" : "1"}
+                        />
+                        <button
+                          type="submit"
+                          className="text-xs font-semibold text-violet hover:underline"
+                        >
+                          {p.published ? "Unpublish" : "Publish"}
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
+                  <h3 className="mt-1 font-display text-lg font-bold text-indigo">{p.title}</h3>
+                  <p className="text-sm text-muted">{p.tagline}</p>
+                  <p className="mt-2 text-sm font-semibold text-indigo">
+                    {left?.displayName ?? p.leftSlug} × {right?.displayName ?? p.rightSlug}
+                  </p>
+                  <p className="mt-2 text-sm text-muted">{p.outcome}</p>
+                  <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                    {p.metrics.map((m) => (
+                      <span
+                        key={m.label}
+                        className="rounded-lg bg-[#F0F4FF] px-2.5 py-1 font-semibold text-indigo"
+                      >
+                        {m.value} <span className="font-normal text-muted">{m.label}</span>
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {unlocked ? (
+            <form
+              action={actionCreatePortfolio}
+              className="card-surface grid gap-3 p-5 sm:grid-cols-2"
+            >
+              <h3 className="font-display text-lg font-bold text-indigo sm:col-span-2">
+                New joint case study
+              </h3>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Title</span>
+                <input
+                  name="title"
+                  required
+                  defaultValue="Dual-creator launch story"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Tagline</span>
+                <input
+                  name="tagline"
+                  defaultValue="Complementary specialties, shared brand narrative"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Creator A</span>
+                <select
+                  name="leftSlug"
+                  required
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                  defaultValue={store.roster[0]?.creatorSlug}
+                >
+                  {SEED_CREATORS.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Creator B</span>
+                <select
+                  name="rightSlug"
+                  required
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                  defaultValue={store.roster[1]?.creatorSlug ?? SEED_CREATORS[1]?.slug}
+                >
+                  {SEED_CREATORS.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Specialty</span>
+                <input
+                  name="specialty"
+                  defaultValue="beauty"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="font-semibold text-indigo">Link campaign</span>
+                <select
+                  name="campaignId"
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                >
+                  <option value="">— none —</option>
+                  {store.campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Outcome</span>
+                <textarea
+                  name="outcome"
+                  rows={2}
+                  defaultValue="Joint content drove stronger saves and assisted conversion vs solo posts."
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">
+                  Metrics (one per line: Label | Value)
+                </span>
+                <textarea
+                  name="metrics"
+                  rows={3}
+                  defaultValue={"Reach | 890K\nSaves | 12.1K\nBrand lift | +14%"}
+                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                <input type="checkbox" name="published" defaultChecked className="rounded" />
+                <span className="font-semibold text-indigo">Publish to collaboration surface</span>
+              </label>
+              <button type="submit" className="btn-primary sm:col-span-2 !py-2.5 text-sm">
+                Create portfolio →
+              </button>
+            </form>
+          ) : null}
+
+          {published.length === 0 ? (
+            <p className="text-sm text-muted">No published case studies yet.</p>
+          ) : null}
+        </section>
+
+        <p className="text-center text-sm text-muted">
+          Admin:{" "}
+          <Link href="/admin/agency" className="font-semibold text-violet hover:underline">
+            Agency console
+          </Link>
+          {" · "}
+          <Link href="/business" className="font-semibold text-violet hover:underline">
+            Business workspace
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}

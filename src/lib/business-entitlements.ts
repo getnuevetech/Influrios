@@ -15,6 +15,8 @@ export type BusinessEntitlements = {
   managedMatching: boolean;
   /** Phase 5 — audience snapshots, trends, relationship signals */
   intelligence: boolean;
+  /** Phase 11 — multi-creator roster, agency campaigns, joint portfolios */
+  agencyWorkspace: boolean;
 };
 
 export const BUSINESS_ENTITLEMENTS: Record<BusinessPlanCode, BusinessEntitlements> = {
@@ -28,6 +30,7 @@ export const BUSINESS_ENTITLEMENTS: Record<BusinessPlanCode, BusinessEntitlement
     savedAlerts: false,
     managedMatching: false,
     intelligence: false,
+    agencyWorkspace: false,
   },
   BUSINESS_PRO: {
     shortlistMax: 100,
@@ -39,6 +42,7 @@ export const BUSINESS_ENTITLEMENTS: Record<BusinessPlanCode, BusinessEntitlement
     savedAlerts: true,
     managedMatching: false,
     intelligence: true,
+    agencyWorkspace: false,
   },
   AGENCY: {
     shortlistMax: 500,
@@ -50,6 +54,7 @@ export const BUSINESS_ENTITLEMENTS: Record<BusinessPlanCode, BusinessEntitlement
     savedAlerts: true,
     managedMatching: true,
     intelligence: true,
+    agencyWorkspace: true,
   },
 };
 
