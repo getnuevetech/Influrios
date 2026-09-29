@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { actionAddShortlist } from "@/app/business/actions";
 import {
   formatFollowers,
   specialtyLabel,
@@ -25,13 +26,18 @@ export function CreatorCard({ creator }: { creator: SeedCreator }) {
         <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-violet shadow">
           {creator.badge}
         </span>
-        <button
-          type="button"
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-violet"
-          aria-label="Save creator"
-        >
-          ♡
-        </button>
+        <form action={actionAddShortlist} className="absolute right-3 top-3">
+          <input type="hidden" name="slug" value={creator.slug} />
+          <input type="hidden" name="note" value="Saved from Discover" />
+          <button
+            type="submit"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-violet"
+            aria-label="Add to business shortlist"
+            title="Add to shortlist"
+          >
+            ♡
+          </button>
+        </form>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div>
@@ -157,11 +163,23 @@ export function InfluencerCardView({ creator }: { creator: SeedCreator }) {
           </div>
           {entitlements.standardQr || entitlements.dynamicQr ? (
             <div
-              className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold ${
-                isPro ? "bg-white text-pro ring-2 ring-gold" : "border border-border bg-white text-indigo"
+              className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg ${
+                isPro ? "ring-2 ring-gold" : "border border-border"
               }`}
             >
-              QR
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/qr/${creator.slug}`}
+                alt={`${creator.displayName} QR code`}
+                width={64}
+                height={64}
+                className="h-full w-full object-contain bg-white p-0.5"
+              />
+              {isPro ? (
+                <span className="absolute bottom-0 left-0 right-0 bg-gold/90 text-center text-[8px] font-bold text-pro">
+                  DYNAMIC
+                </span>
+              ) : null}
             </div>
           ) : (
             <div className="text-xs text-muted">No QR on Starter</div>

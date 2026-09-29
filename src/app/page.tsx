@@ -271,7 +271,7 @@ export default function HomePage() {
                 Join as a Creator →
               </Link>
               <Link
-                href="/discover"
+                href="/business"
                 className="rounded-full border border-white/50 px-6 py-3 text-sm font-bold text-white"
               >
                 Join as a Business →

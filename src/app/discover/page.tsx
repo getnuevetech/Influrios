@@ -20,7 +20,11 @@ export default async function DiscoverPage({ searchParams }: Props) {
         <h1 className="font-display text-3xl font-bold text-indigo sm:text-4xl">Discover influencers</h1>
         <p className="mt-2 max-w-2xl text-muted">
           Find creators by specialty, location, and platform — organized around what they actually
-          influence.
+          influence. Tap ♡ to shortlist for your{" "}
+          <Link href="/business" className="font-semibold text-violet hover:underline">
+            Business workspace
+          </Link>
+          .
         </p>
         <form className="mt-6 flex flex-col gap-3 sm:flex-row">
           <input

@@ -4,6 +4,7 @@ const NAV = [
   { href: "/", label: "Home" },
   { href: "/discover", label: "Discover" },
   { href: "/collaboration", label: "Collaboration" },
+  { href: "/business", label: "Business" },
   { href: "/card", label: "Influencer Card" },
 ];
 
@@ -50,6 +51,7 @@ export function SiteFooter() {
           <ul className="mt-3 space-y-2 text-sm text-white/80">
             <li><Link href="/discover">Discover</Link></li>
             <li><Link href="/collaboration">Collaboration</Link></li>
+            <li><Link href="/business">Business</Link></li>
             <li><Link href="/card">Influencer Card</Link></li>
           </ul>
         </div>
@@ -57,7 +59,8 @@ export function SiteFooter() {
           <div className="text-sm font-semibold uppercase tracking-wide text-white/50">For businesses</div>
           <ul className="mt-3 space-y-2 text-sm text-white/80">
             <li><Link href="/discover">Find creators</Link></li>
-            <li><Link href="/claim">Join as a business</Link></li>
+            <li><Link href="/business">Business workspace</Link></li>
+            <li><Link href="/business#pricing">Business Pro</Link></li>
           </ul>
         </div>
         <div>
