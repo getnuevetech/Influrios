@@ -17,9 +17,10 @@ Internet → Lightsail static IP
               ↓
          Next.js via PM2 (:3000)
               ↓
-    Lightsail managed PostgreSQL  (recommended)
-    — or — Postgres on the same instance (dev only)
+    Docker PostgreSQL on 127.0.0.1:5432  ← recommended
 ```
+
+Postgres runs in Docker on the **same instance**, bound to localhost only (not opened in Lightsail networking).
 
 ---
 
@@ -50,33 +51,9 @@ On the instance networking tab, allow:
 | 80 | HTTP |
 | 443 | HTTPS |
 
-Do **not** expose Postgres (`5432`) to `0.0.0.0/0`.
+Do **not** open port **5432**. Docker Postgres listens on `127.0.0.1` only.
 
-### 4. Create a managed PostgreSQL database (recommended)
-
-1. Lightsail → **Databases** → **Create database**
-2. Engine: **PostgreSQL 16** (or latest available)
-3. Plan: smallest is fine for Phase 1
-4. Master username / password — store in a password manager
-5. After creation, note:
-   - Endpoint hostname
-   - Port (`5432`)
-   - Soften firewall: allow your **web instance** only
-
-Create the app database (from any machine that can reach the DB, or via `psql` tunnel):
-
-```bash
-psql "postgresql://USER:PASSWORD@ENDPOINT:5432/postgres" \
-  -c 'CREATE DATABASE influrios;'
-```
-
-`DATABASE_URL` format:
-
-```
-postgresql://USER:PASSWORD@ENDPOINT:5432/influrios?schema=public&sslmode=require
-```
-
-### 5. SSH key access
+### 4. SSH key access
 
 Download the Lightsail default key (or use your own uploaded key), then:
 
@@ -85,34 +62,36 @@ chmod 400 ~/LightsailDefaultKey-*.pem
 ssh -i ~/LightsailDefaultKey-REGION.pem ubuntu@STATIC_IP
 ```
 
+Then follow **[FRESH_SERVER_SETUP.md](./FRESH_SERVER_SETUP.md)** for OS update + GitHub deploy key + clone.
+
 ---
 
 ## B. Prepare the server (one-time)
 
-From your laptop (with the repo checked out), or after cloning on the server:
-
 ```bash
-# On the Lightsail instance:
-git clone https://github.com/getnuevetech/Influrios.git /var/www/influrios
+# On the Lightsail instance (after GitHub SSH works):
+git clone git@github.com:getnuevetech/Influrios.git /var/www/influrios
 cd /var/www/influrios
-git checkout cursor/phase-0-1-mvp-lightsail-0127   # or main once merged
+git checkout main
 
 chmod +x deploy/scripts/*.sh
 bash deploy/scripts/setup-lightsail.sh
+newgrp docker   # so docker works without sudo
 ```
 
 What `setup-lightsail.sh` installs:
 
 1. `apt` updates + build tools  
 2. UFW firewall (SSH + Nginx)  
-3. **Node.js 22** (Nodesource)  
-4. **PM2** + systemd startup  
-5. `/var/www/influrios` ownership  
-6. **Nginx** reverse proxy to `127.0.0.1:3000`
+3. **Docker Engine + Compose** (for PostgreSQL)  
+4. **Node.js 22**  
+5. **PM2** + systemd startup  
+6. `/var/www/influrios` ownership  
+7. **Nginx** reverse proxy to `127.0.0.1:3000`
 
 ---
 
-## C. Configure environment & first deploy
+## C. Docker database + first deploy
 
 ```bash
 cd /var/www/influrios
@@ -120,32 +99,44 @@ cp .env.example .env
 nano .env
 ```
 
-Set at minimum:
+Set:
 
 ```env
 NODE_ENV=production
 PORT=3000
 NEXT_PUBLIC_APP_URL=https://your-domain.com
-DATABASE_URL=postgresql://USER:PASSWORD@ENDPOINT:5432/influrios?schema=public&sslmode=require
+
+POSTGRES_USER=influrios
+POSTGRES_PASSWORD=pick-a-strong-password
+POSTGRES_DB=influrios
+DATABASE_URL="postgresql://influrios:pick-a-strong-password@127.0.0.1:5432/influrios?schema=public"
 ```
 
-Deploy:
-
 ```bash
-bash deploy/scripts/deploy.sh
+bash deploy/scripts/db-up.sh      # starts postgres container
+bash deploy/scripts/deploy.sh     # migrate, seed, build, PM2 (also ensures DB is up)
 ```
 
-This runs `npm ci` → Prisma migrate/push → seed → `next build` → `pm2 startOrReload`.
-
-Useful PM2 commands:
+Useful commands:
 
 ```bash
+docker compose ps postgres
+docker compose logs -f postgres
+npm run db:down                   # stop DB (keeps volume)
 pm2 status
 pm2 logs influrios
-pm2 restart influrios
 ```
 
 Visit `http://STATIC_IP` — you should see the Influrios home page.
+
+### Back up Docker Postgres data
+
+```bash
+# Logical dump
+docker compose exec -T postgres pg_dump -U influrios influrios > backup-$(date +%F).sql
+
+# Or snapshot the Lightsail instance periodically (includes Docker volume disk)
+```
 
 ---
 
@@ -169,23 +160,18 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 
 ```bash
 cd /var/www/influrios
-git pull
+git pull origin main
 bash deploy/scripts/deploy.sh
 ```
 
-Optional: add a GitHub Action that SSHes and runs `deploy.sh` (wire secrets later).
-
 ---
 
-## F. Local development (before / alongside Lightsail)
+## F. Local development
 
 ```bash
-# Terminal 1 — Postgres
-docker compose up -d
-
-# Terminal 2 — app
 cp .env.example .env
-# DATABASE_URL already matches docker-compose defaults
+# set a password; keep DATABASE_URL on 127.0.0.1
+npm run db:up                     # or: docker compose up -d
 npm ci
 npx prisma db push
 npm run db:seed
@@ -194,7 +180,7 @@ npm run dev
 
 Open http://localhost:3000
 
-> UI pages currently read from `src/lib/seed-data.ts` so the app runs even before Postgres is up. Prisma schema + seed prepare the real database for Phase 1 claim/auth work.
+> UI pages currently read from `src/lib/seed-data.ts` so browsing works even before Prisma is wired to pages. Schema + seed prepare the real database for claim/auth.
 
 ---
 
@@ -202,21 +188,21 @@ Open http://localhost:3000
 
 | Item | Guidance |
 |------|----------|
-| RAM | Prefer 4 GB if building on the instance; or build CI artifacts and copy `.next` |
-| Swap | If on 2 GB: `sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile` |
-| Backups | Enable Lightsail DB automatic snapshots |
+| RAM | Prefer 4 GB if building on the instance (Node build + Postgres share RAM) |
+| Swap | If on 2 GB: add 2 GB swapfile |
+| DB backups | `pg_dump` on a schedule + Lightsail instance snapshots |
 | Updates | `sudo apt-get update && sudo apt-get upgrade` monthly |
-| Logs | `pm2 logs` + `/var/log/nginx/` |
-| Health | `curl -I https://your-domain.com` |
+| Logs | `pm2 logs` · `docker compose logs postgres` · `/var/log/nginx/` |
+| Health | `curl -I https://your-domain.com` · `docker compose ps` |
 
 ---
 
 ## H. Security baseline
 
 - [ ] SSH key only (disable password auth)  
-- [ ] UFW enabled  
-- [ ] Postgres not public  
-- [ ] `.env` permissions: `chmod 600 .env`  
+- [ ] UFW enabled; **5432 not open** on Lightsail networking  
+- [ ] Postgres bound to `127.0.0.1` only (see `docker-compose.yml`)  
+- [ ] Strong `POSTGRES_PASSWORD` · `chmod 600 .env`  
 - [ ] fail2ban installed by setup script  
 - [ ] HTTPS via Certbot before any real user data  
 - [ ] Do not commit `.env` or Lightsail PEM keys  
@@ -224,8 +210,6 @@ Open http://localhost:3000
 ---
 
 ## I. Phase 1 readiness after server is live
-
-Once the instance serves the app:
 
 1. Wire auth (Clerk / Auth.js)  
 2. Switch Discover/Profile reads from seed → Prisma  

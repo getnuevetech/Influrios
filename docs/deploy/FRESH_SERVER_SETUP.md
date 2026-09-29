@@ -199,9 +199,8 @@ sudo chown -R ubuntu:ubuntu /var/www/influrios
 git clone git@github.com:getnuevetech/Influrios.git /var/www/influrios
 cd /var/www/influrios
 
-# Use the Phase 0/1 branch until merged to main:
-git checkout cursor/phase-0-1-mvp-lightsail-0127
-# Later: git checkout main && git pull
+git checkout main
+git pull
 ```
 
 Verify:
@@ -224,11 +223,19 @@ chmod +x deploy/scripts/*.sh
 bash deploy/scripts/setup-lightsail.sh
 ```
 
-This configures Nginx reverse proxy to port 3000, UFW rules, and PM2 startup (safe to re-run).
+This installs **Docker** (for Postgres), Nginx reverse proxy to port 3000, UFW rules, and PM2 startup (safe to re-run).
+
+After first Docker install, refresh group membership:
+
+```bash
+newgrp docker
+# or log out and SSH back in
+docker ps   # should work without sudo
+```
 
 ---
 
-## 9. Environment + first deploy
+## 9. Environment + Docker database + first deploy
 
 ```bash
 cd /var/www/influrios
@@ -236,21 +243,34 @@ cp .env.example .env
 nano .env
 ```
 
-Minimum values:
+Set at minimum (Docker Postgres — recommended):
 
 ```env
 NODE_ENV=production
 PORT=3000
 NEXT_PUBLIC_APP_URL=http://STATIC_IP
-DATABASE_URL=postgresql://USER:PASSWORD@DB_ENDPOINT:5432/influrios?schema=public&sslmode=require
+
+POSTGRES_USER=influrios
+POSTGRES_PASSWORD=pick-a-strong-password
+POSTGRES_DB=influrios
+DATABASE_URL="postgresql://influrios:pick-a-strong-password@127.0.0.1:5432/influrios?schema=public"
 ```
 
-(Use your Lightsail managed Postgres URL. Create DB `influrios` first if needed.)
+`POSTGRES_PASSWORD` and the password inside `DATABASE_URL` **must match**.
 
-Deploy:
+Start the database, then deploy the app:
 
 ```bash
-bash deploy/scripts/deploy.sh
+bash deploy/scripts/db-up.sh      # docker compose up -d postgres
+bash deploy/scripts/deploy.sh     # also ensures DB is up, then migrate/seed/build/PM2
+```
+
+Useful DB commands:
+
+```bash
+docker compose ps postgres
+docker compose logs -f postgres
+npm run db:down                   # stop container (keeps data volume)
 ```
 
 Test:
@@ -268,9 +288,8 @@ Whenever you push new code:
 
 ```bash
 cd /var/www/influrios
-git fetch origin
-git checkout cursor/phase-0-1-mvp-lightsail-0127   # or main
-git pull
+git checkout main
+git pull origin main
 bash deploy/scripts/deploy.sh
 ```
 
@@ -301,6 +320,9 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 | `npm run build` killed / OOM | Upgrade to 4 GB instance, or add 2 GB swap (see main Lightsail doc) |
 | Site 502 Bad Gateway | App not running: `pm2 status` / `pm2 logs influrios` |
 | Cannot SSH to Lightsail | Check Lightsail networking port 22 + correct `.pem` |
+| `permission denied` for docker | Run `newgrp docker` or re-SSH after `usermod -aG docker` |
+| Postgres not ready | `docker compose logs postgres` · check password match in `.env` |
+| Prisma can't connect | Confirm `DATABASE_URL` uses `127.0.0.1` and container is healthy |
 
 ---
 
@@ -312,11 +334,12 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 3. ufw allow OpenSSH + Nginx Full
 4. ssh-keygen deploy key → add to GitHub Deploy keys
 5. ssh -T git@github.com   (confirm)
-6. Install Node 22 + PM2 + Nginx
-7. git clone git@github.com:getnuevetech/Influrios.git /var/www/influrios
-8. bash deploy/scripts/setup-lightsail.sh
-9. Configure .env → bash deploy/scripts/deploy.sh
-10. DNS + certbot
+6. git clone → /var/www/influrios
+7. bash deploy/scripts/setup-lightsail.sh   # installs Docker + Node + Nginx + PM2
+8. newgrp docker
+9. .env with POSTGRES_* + DATABASE_URL
+10. bash deploy/scripts/db-up.sh && bash deploy/scripts/deploy.sh
+11. DNS + certbot
 ```
 
 Full app architecture notes: [AWS_LIGHTSAIL.md](./AWS_LIGHTSAIL.md)

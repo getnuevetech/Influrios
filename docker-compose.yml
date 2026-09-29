@@ -1,20 +1,31 @@
+# Influrios — PostgreSQL via Docker (local + Lightsail)
+# Start:  docker compose up -d
+# Stop:   docker compose down
+# Logs:   docker compose logs -f postgres
+#
+# Credentials come from .env (see .env.example).
+# Postgres is bound to 127.0.0.1 only — not exposed to the public internet.
+
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: influrios-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: influrios
-      POSTGRES_PASSWORD: influrios
-      POSTGRES_DB: influrios
+      POSTGRES_USER: ${POSTGRES_USER:-influrios}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-influrios}
+      POSTGRES_DB: ${POSTGRES_DB:-influrios}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - influrios_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U influrios -d influrios"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 12
+      start_period: 10s
 
 volumes:
   influrios_pg:
+    name: influrios_pg

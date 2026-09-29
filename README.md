@@ -6,28 +6,27 @@
 ## Quick start (local)
 
 ```bash
-docker compose up -d          # Postgres
-cp .env.example .env
+cp .env.example .env          # set POSTGRES_PASSWORD + matching DATABASE_URL
+npm run db:up                 # Docker Postgres on 127.0.0.1:5432
 npm ci
 npx prisma db push
 npm run db:seed
 npm run dev                   # http://localhost:3000
 ```
 
-UI works from seed data even without Postgres; Prisma is ready for claim/auth next.
+Database runs in **Docker** (see `docker-compose.yml`). UI seed data also works before Prisma is wired to pages.
 
 ## AWS Lightsail deploy
 
-**New / fresh server (GitHub + OS update):**  
+**New / fresh server (GitHub + OS update + Docker DB):**  
 → **[docs/deploy/FRESH_SERVER_SETUP.md](./docs/deploy/FRESH_SERVER_SETUP.md)**
-
-Full architecture + DB checklist:  
-→ **[docs/deploy/AWS_LIGHTSAIL.md](./docs/deploy/AWS_LIGHTSAIL.md)**
 
 ```bash
 # After GitHub SSH works and repo is cloned to /var/www/influrios:
-bash deploy/scripts/setup-lightsail.sh
-cp .env.example .env   # set DATABASE_URL + NEXT_PUBLIC_APP_URL
+bash deploy/scripts/setup-lightsail.sh   # installs Docker + Node + Nginx + PM2
+newgrp docker
+cp .env.example .env                     # strong POSTGRES_PASSWORD + DATABASE_URL
+bash deploy/scripts/db-up.sh             # start Postgres container
 bash deploy/scripts/deploy.sh
 ```
 
