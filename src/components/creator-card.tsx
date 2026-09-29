@@ -7,6 +7,7 @@ import {
   IconVerified,
   SocialIcon,
 } from "@/components/icons";
+import { CreatorCardQrButton } from "@/components/creator-card-qr-button";
 import { ShortlistHeartButton } from "@/components/shortlist-heart-button";
 import type { CardFeatureFlags } from "@/lib/cms";
 import {
@@ -48,6 +49,11 @@ export type CreatorCardProps = {
   showTitle?: boolean;
   showBio?: boolean;
   showViewProfile?: boolean;
+  /**
+   * When true, QR opens the Influencer Card as a popup.
+   * View Profile CTA still navigates to the full profile page.
+   */
+  qrOpensPopup?: boolean;
 };
 
 export function CreatorCard({
@@ -59,6 +65,7 @@ export function CreatorCard({
   showTitle = false,
   showBio = false,
   showViewProfile = false,
+  qrOpensPopup = false,
 }: CreatorCardProps) {
   const features = { ...DEFAULT_FEATURES, ...featureOverrides };
   const entitlements = getEntitlements(creator.planTier as PlanCode);
@@ -153,7 +160,9 @@ export function CreatorCard({
             <span />
           )}
 
-          {showQr ? (
+          {features.showQr && qrOpensPopup ? (
+            <CreatorCardQrButton creator={creator} qrSize={qrSize} hasQr={showQr} />
+          ) : showQr ? (
             <Link
               href={`/c/${creator.slug}`}
               className="relative shrink-0 overflow-hidden rounded-sm border border-border bg-white"
@@ -162,7 +171,7 @@ export function CreatorCard({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`/api/qr/${creator.slug}`}
+                src={`/api/qr/${creator.slug}?size=${Math.max(64, qrSize * 3)}&logo=0`}
                 alt={`${creator.displayName} QR`}
                 width={qrSize}
                 height={qrSize}
@@ -288,7 +297,7 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
           <div className="h-[80px] w-[80px] overflow-hidden rounded-md bg-white p-1 sm:h-[88px] sm:w-[88px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`/api/qr/${creator.slug}`}
+              src={`/api/qr/${creator.slug}?size=256&logo=1`}
               alt={`${creator.displayName} QR`}
               width={88}
               height={88}
@@ -341,112 +350,4 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
   );
 }
 
-export function InfluencerCardView({ creator }: { creator: SeedCreator }) {
-  const entitlements = getEntitlements(creator.planTier as PlanCode);
-  const specialties = creator.specialties.slice(0, entitlements.specialtiesMax);
-  const socials = creator.socials.slice(0, entitlements.socialLinksMax);
-  const isPro = creator.planTier === "PRO";
-  const isPlus = creator.planTier === "PLUS" || isPro;
-
-  const cardUrl =
-    entitlements.shortlink && isPlus
-      ? `ic.me/${creator.slug.split("-")[0]}`
-      : `influrios.com/c/${creator.slug}`;
-
-  return (
-    <div
-      className={`mx-auto w-full max-w-sm overflow-hidden rounded-[1.75rem] shadow-2xl ${
-        isPro ? "bg-pro text-white ring-1 ring-gold/40" : "bg-white text-indigo"
-      }`}
-    >
-      <div className="relative h-52">
-        <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="400px" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-        <span
-          className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${
-            isPro ? "bg-gold/20 text-[#F6E7B0]" : "bg-white/95 text-violet"
-          }`}
-        >
-          {creator.planTier === "STARTER" ? "Starter" : creator.planTier === "PLUS" ? "Plus" : "Pro"}
-        </span>
-      </div>
-      <div className={`-mt-6 space-y-4 rounded-t-[1.5rem] px-5 pb-6 pt-8 ${isPro ? "bg-pro" : "bg-white"}`}>
-        <div className="text-center">
-          <h1 className="flex items-center justify-center gap-1.5 font-display text-2xl font-bold">
-            {creator.displayName}
-            <IconVerified size={20} />
-          </h1>
-          <p className={`mt-1 text-sm ${isPro ? "text-white/70" : "text-muted"}`}>{creator.title}</p>
-          <p className={`mt-1 text-sm ${isPro ? "text-white/70" : "text-muted"}`}>
-            {creator.locationCity}, {creator.locationCountry}
-          </p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-2">
-          {specialties.map((s) => (
-            <span
-              key={s}
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                isPro ? "bg-white/10 text-lavender" : "chip"
-              }`}
-            >
-              {specialtyLabel(s)}
-            </span>
-          ))}
-        </div>
-        <div className={`rounded-2xl p-3 ${isPro ? "bg-white/5" : "border border-border bg-starter-bg"}`}>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {socials.map((s) => (
-              <a
-                key={s.platform}
-                href={s.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5"
-              >
-                <SocialIcon platform={s.platform} size={22} />
-                <span className={`text-xs font-bold ${isPro ? "text-white" : "text-indigo"}`}>
-                  {formatFollowers(s.followers)}
-                </span>
-              </a>
-            ))}
-          </div>
-        </div>
-        <div
-          className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm ${
-            isPro ? "bg-white/5" : "bg-[#EEF4FF]"
-          }`}
-        >
-          <div className="min-w-0">
-            <div className="truncate font-semibold text-blue">{cardUrl}</div>
-            <div className={`text-xs ${isPro ? "text-white/50" : "text-muted"}`}>Share my profile</div>
-          </div>
-          {entitlements.standardQr || entitlements.dynamicQr ? (
-            <div
-              className={`relative h-[22px] w-[22px] shrink-0 overflow-hidden rounded-sm ${
-                isPro ? "ring-1 ring-gold" : "border border-border"
-              }`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/qr/${creator.slug}`}
-                alt={`${creator.displayName} QR code`}
-                width={22}
-                height={22}
-                className="h-full w-full object-contain bg-white"
-              />
-            </div>
-          ) : (
-            <div className="text-xs text-muted">No QR on Starter</div>
-          )}
-        </div>
-        <Link
-          href={`/creators/${creator.slug}`}
-          className={`btn-primary w-full ${isPro ? "ring-1 ring-gold/50" : ""}`}
-        >
-          {isPro ? "Work With Me →" : isPlus ? "Contact →" : "View Profile →"}
-        </Link>
-        <p className={`text-center text-xs ${isPro ? "text-white/40" : "text-muted"}`}>Influrios</p>
-      </div>
-    </div>
-  );
-}
+export { InfluencerCardView } from "@/components/influencer-card-view";

@@ -346,6 +346,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
                     showTitle
                     showBio
                     showViewProfile
+                    qrOpensPopup
                     features={{ showStatus: false }}
                   />
                 ))}
