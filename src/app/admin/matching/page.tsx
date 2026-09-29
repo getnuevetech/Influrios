@@ -6,6 +6,7 @@ import {
   actionSetOptIn,
 } from "@/app/admin/matching/actions";
 import { requireAdminPage } from "@/app/admin/guard";
+import { hasPermission } from "@/lib/admin-auth";
 import {
   getManagedMatching,
   INTRO_STATUSES,
@@ -29,7 +30,10 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default async function AdminMatchingPage({ searchParams }: Props) {
-  await requireAdminPage("matching");
+  const session = await requireAdminPage("matching");
+  const canCreateIntros = hasPermission(session, "matching.create_intros");
+  const canAdvanceIntros = hasPermission(session, "matching.advance_intros");
+  const canManageOptins = hasPermission(session, "matching.manage_optins");
   const params = await searchParams;
   const store = await getManagedMatching();
   const optInCount = store.optIns.filter((o) => o.openToManaged).length;
@@ -76,66 +80,68 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
       ) : null}
 
       {/* Create intro from shortlist delivery */}
-      <section className="card-surface p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Deliver shortlist → create intro</h2>
-        <p className="mt-1 text-sm text-muted">
-          Manual facilitation first. Pick an opted-in creator and open an intro pipeline.
-        </p>
-        <form action={actionCreateIntro} className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">
-            <span className="font-semibold text-indigo">Business</span>
-            <input
-              name="businessName"
-              defaultValue="Luminous Beauty"
-              required
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="font-semibold text-indigo">Creator</span>
-            <select name="creatorSlug" className="mt-1 w-full rounded-xl border border-border px-3 py-2" required>
-              {store.optIns
-                .filter((o) => o.openToManaged)
-                .map((o) => (
-                  <option key={o.creatorSlug} value={o.creatorSlug}>
-                    {getCreatorBySlug(o.creatorSlug)?.displayName ?? o.creatorSlug}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="text-sm sm:col-span-2">
-            <span className="font-semibold text-indigo">Brief / campaign</span>
-            <input
-              name="briefTitle"
-              defaultValue="Clean Skincare Launch"
-              required
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-            />
-          </label>
-          <label className="text-sm sm:col-span-2">
-            <span className="font-semibold text-indigo">Ops notes</span>
-            <textarea
-              name="notes"
-              rows={2}
-              placeholder="Why this fit, outreach angle…"
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="font-semibold text-indigo">Expected fee</span>
-            <input
-              name="feeExpected"
-              defaultValue="15% success fee"
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-            />
-          </label>
-          <div className="flex items-end">
-            <button type="submit" className="btn-primary w-full !py-2 text-sm">
-              Create intro
-            </button>
-          </div>
-        </form>
-      </section>
+      {canCreateIntros ? (
+        <section className="card-surface p-6">
+          <h2 className="font-display text-xl font-bold text-indigo">Deliver shortlist → create intro</h2>
+          <p className="mt-1 text-sm text-muted">
+            Manual facilitation first. Pick an opted-in creator and open an intro pipeline.
+          </p>
+          <form action={actionCreateIntro} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="text-sm">
+              <span className="font-semibold text-indigo">Business</span>
+              <input
+                name="businessName"
+                defaultValue="Luminous Beauty"
+                required
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="font-semibold text-indigo">Creator</span>
+              <select name="creatorSlug" className="mt-1 w-full rounded-xl border border-border px-3 py-2" required>
+                {store.optIns
+                  .filter((o) => o.openToManaged)
+                  .map((o) => (
+                    <option key={o.creatorSlug} value={o.creatorSlug}>
+                      {getCreatorBySlug(o.creatorSlug)?.displayName ?? o.creatorSlug}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="text-sm sm:col-span-2">
+              <span className="font-semibold text-indigo">Brief / campaign</span>
+              <input
+                name="briefTitle"
+                defaultValue="Clean Skincare Launch"
+                required
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+              />
+            </label>
+            <label className="text-sm sm:col-span-2">
+              <span className="font-semibold text-indigo">Ops notes</span>
+              <textarea
+                name="notes"
+                rows={2}
+                placeholder="Why this fit, outreach angle…"
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="font-semibold text-indigo">Expected fee</span>
+              <input
+                name="feeExpected"
+                defaultValue="15% success fee"
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+              />
+            </label>
+            <div className="flex items-end">
+              <button type="submit" className="btn-primary w-full !py-2 text-sm">
+                Create intro
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : null}
 
       {/* Intro pipeline */}
       <section className="card-surface p-6">
@@ -180,38 +186,40 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                     </ol>
                   </div>
                 </div>
-                <form action={actionAdvanceIntro} className="mt-3 flex flex-wrap items-end gap-2">
-                  <input type="hidden" name="id" value={intro.id} />
-                  <label className="text-xs">
-                    <span className="font-semibold text-indigo">Advance to</span>
-                    <select
-                      name="status"
-                      defaultValue={
-                        INTRO_STATUSES[
-                          Math.min(
-                            INTRO_STATUSES.findIndex((s) => s.code === intro.status) + 1,
-                            INTRO_STATUSES.length - 1,
-                          )
-                        ]?.code ?? "outreach"
-                      }
-                      className="ml-2 rounded-lg border border-border px-2 py-1"
-                    >
-                      {INTRO_STATUSES.map((s) => (
-                        <option key={s.code} value={s.code}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <input
-                    name="note"
-                    placeholder="Note (optional)"
-                    className="min-w-[10rem] flex-1 rounded-lg border border-border px-2 py-1 text-sm"
-                  />
-                  <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
-                    Update status
-                  </button>
-                </form>
+                {canAdvanceIntros ? (
+                  <form action={actionAdvanceIntro} className="mt-3 flex flex-wrap items-end gap-2">
+                    <input type="hidden" name="id" value={intro.id} />
+                    <label className="text-xs">
+                      <span className="font-semibold text-indigo">Advance to</span>
+                      <select
+                        name="status"
+                        defaultValue={
+                          INTRO_STATUSES[
+                            Math.min(
+                              INTRO_STATUSES.findIndex((s) => s.code === intro.status) + 1,
+                              INTRO_STATUSES.length - 1,
+                            )
+                          ]?.code ?? "outreach"
+                        }
+                        className="ml-2 rounded-lg border border-border px-2 py-1"
+                      >
+                        {INTRO_STATUSES.map((s) => (
+                          <option key={s.code} value={s.code}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <input
+                      name="note"
+                      placeholder="Note (optional)"
+                      className="min-w-[10rem] flex-1 rounded-lg border border-border px-2 py-1 text-sm"
+                    />
+                    <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
+                      Update status
+                    </button>
+                  </form>
+                ) : null}
               </li>
             );
           })}
@@ -223,10 +231,29 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
         <h2 className="font-display text-xl font-bold text-indigo">Creator opt-in targeting</h2>
         <p className="mt-1 text-sm text-muted">
           Only opted-in creators appear in the intro delivery picker.
+          {!canManageOptins ? " View-only — your role cannot change opt-ins." : ""}
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {SEED_CREATORS.map((c) => {
             const opt = store.optIns.find((o) => o.creatorSlug === c.slug);
+            if (!canManageOptins) {
+              return (
+                <div key={c.slug} className="rounded-xl border border-border bg-white p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="relative h-10 w-10 overflow-hidden rounded-full">
+                      <Image src={c.image} alt="" fill className="object-cover" sizes="40px" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-bold text-indigo">{c.displayName}</p>
+                      <p className="truncate text-xs text-muted">{c.title}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-violet">
+                      {opt?.openToManaged ? "Opted in" : "Not opted in"}
+                    </span>
+                  </div>
+                </div>
+              );
+            }
             return (
               <form
                 key={c.slug}

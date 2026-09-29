@@ -408,7 +408,7 @@ export default async function HomePage() {
             <div
               key={item.title}
               className={`flex gap-3 xl:flex-col xl:gap-3 ${
-                i < 3 ? "xl:border-r xl:border-[#E8ECF5] xl:pr-5" : ""
+                i < 4 ? "xl:border-r xl:border-[#E8ECF5] xl:pr-5" : ""
               }`}
             >
               <span
@@ -423,7 +423,7 @@ export default async function HomePage() {
             </div>
           ))}
 
-          <div className="flex flex-col justify-center border-t border-[#E8ECF5] pt-5 md:col-span-2 xl:col-span-1 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
+          <div className="flex flex-col justify-center border-t border-[#E8ECF5] pt-5 md:col-span-2 xl:col-span-1 xl:border-t-0 xl:pl-5 xl:pt-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
               More than a directory.
             </p>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/app/admin/guard";
+import { hasPermission } from "@/lib/admin-auth";
 import {
   getAllAudienceSnapshots,
   getIntelligenceStore,
@@ -10,7 +11,8 @@ import {
 export const metadata = { title: "Admin · Intelligence" };
 
 export default async function AdminIntelligencePage() {
-  await requireAdminPage("intelligence");
+  const session = await requireAdminPage("intelligence");
+  const canExport = hasPermission(session, "intelligence.export");
   const store = await getIntelligenceStore();
   const snapshots = getAllAudienceSnapshots();
   const trends = getNicheTrends();
@@ -56,9 +58,15 @@ export default async function AdminIntelligencePage() {
           <Link href="/business/intelligence" className="btn-secondary !py-2 text-sm">
             Open business Intelligence UI
           </Link>
-          <a href="/api/intelligence/export?format=json" className="btn-primary !py-2 text-sm">
-            Hit export API (JSON)
-          </a>
+          {canExport ? (
+            <a href="/api/intelligence/export?format=json" className="btn-primary !py-2 text-sm">
+              Hit export API (JSON)
+            </a>
+          ) : (
+            <span className="rounded-xl bg-[#EEF2FF] px-3 py-2 text-sm text-muted">
+              Export requires the Export intelligence feature on your access level.
+            </span>
+          )}
         </div>
       </section>
 
