@@ -1,12 +1,15 @@
 # Influrios
 
-Creator–brand marketplace and Influencer Card platform (designs also branded **Influence Connect**).
+**Influence Discovery & Collaboration Platform**  
+*Find the right influence. Build the right collaboration.*
 
 ## Docs
 
-- **[Recommendations & Execution Plan](./docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md)** — product review, architecture recommendations, and phased build plan
-- **[Design references](./docs/design-references/)** — attached UI templates and background assets
+- **[Recommendations & Execution Plan](./docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md)** — aligned to Product Strategy v2.2
+- **[Strategy notes](./docs/strategy/)** — source pointers for the product blueprint
+- **[Design references](./docs/design-references/)** — UI templates (rebrand to Influrios in production)
 
 ## Status
 
-Greenfield. No application code yet — plan is under stakeholder review.
+Greenfield. Planning under stakeholder review — no application code yet.  
+Production branding: **Influrios** only (legacy “Influence Connect” mockups are visual references).
