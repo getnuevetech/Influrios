@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireAdminAction } from "@/app/admin/guard";
 import {
   advanceIntro,
   createIntro,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/managed-matching";
 
 export async function actionCreateIntro(formData: FormData) {
+  await requireAdminAction("matching.create_intros");
   await createIntro({
     businessName: String(formData.get("businessName") ?? "Demo Business"),
     creatorSlug: String(formData.get("creatorSlug") ?? ""),
@@ -23,6 +25,7 @@ export async function actionCreateIntro(formData: FormData) {
 }
 
 export async function actionAdvanceIntro(formData: FormData) {
+  await requireAdminAction("matching.advance_intros");
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "outreach") as IntroStatus;
   const note = String(formData.get("note") ?? "") || undefined;
@@ -33,6 +36,7 @@ export async function actionAdvanceIntro(formData: FormData) {
 }
 
 export async function actionSetOptIn(formData: FormData) {
+  await requireAdminAction("matching.manage_optins");
   const creatorSlug = String(formData.get("creatorSlug") ?? "");
   await setCreatorOptIn(creatorSlug, {
     openToManaged: formData.get("openToManaged") === "on",

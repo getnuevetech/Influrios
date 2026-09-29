@@ -6,16 +6,16 @@ import { FeaturedCarousel } from "@/components/featured-carousel";
 import {
   CategoryGlyph,
   IconArrowRight,
-  IconBuilding,
   IconCheck,
-  IconGrid,
-  IconHandshake,
   IconHeart,
+  IconIdCard,
   IconInstagram,
+  IconIntelligence,
+  IconNetwork,
   IconPlus,
   IconSearch,
+  IconShieldPay,
   IconTikTok,
-  IconUsers,
   IconYouTube,
   SocialIcon,
 } from "@/components/icons";
@@ -372,28 +372,69 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {/* —— Stats —— */}
-      <section className="w-full border-y border-border bg-white py-10">
-        <Shell className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-          <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-4">
-            {[
-              { n: "50K+", l: "Influencers Worldwide", Icon: IconUsers, color: "text-violet bg-lavender" },
-              { n: "100+", l: "Categories & Niches", Icon: IconGrid, color: "text-blue bg-[#D9E8FF]" },
-              { n: "12K+", l: "Active Collaborations", Icon: IconHandshake, color: "text-violet bg-lavender" },
-              { n: "5K+", l: "Business Matches", Icon: IconBuilding, color: "text-blue bg-[#D9E8FF]" },
-            ].map(({ n, l, Icon, color }) => (
-              <div key={l} className="flex flex-col items-center text-center">
-                <span className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full ${color}`}>
-                  <Icon size={22} />
-                </span>
-                <p className="font-display text-3xl font-bold text-indigo">{n}</p>
-                <p className="mt-1 text-sm text-muted">{l}</p>
+      {/* —— Unique features —— */}
+      <section className="relative w-full overflow-hidden border-y border-border bg-white py-10">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-[radial-gradient(ellipse_at_right,_rgba(99,60,255,0.12),_transparent_70%)]"
+        />
+        <Shell className="relative grid gap-6 md:grid-cols-2 xl:grid-cols-5">
+          {[
+            {
+              title: "Influrios Card",
+              desc: "One professional identity for your socials, specialty, contact details and opportunities.",
+              Icon: IconIdCard,
+              tone: "bg-lavender text-violet",
+            },
+            {
+              title: "Influence Intelligence",
+              desc: "Discover creators by what they truly influence — not just follower count.",
+              Icon: IconIntelligence,
+              tone: "bg-[#D9E8FF] text-blue",
+            },
+            {
+              title: "Collaboration Network",
+              desc: "Connect creators, complementary specialists and businesses around real opportunities.",
+              Icon: IconNetwork,
+              tone: "bg-[#F3E8FF] text-violet",
+            },
+            {
+              title: "Protected Payments",
+              desc: "Fund collaborations securely and release payments as agreed milestones are completed.",
+              Icon: IconShieldPay,
+              tone: "bg-emerald-50 text-emerald-700",
+            },
+          ].map((item, i) => (
+            <div
+              key={item.title}
+              className={`flex gap-3 xl:flex-col xl:gap-3 ${
+                i < 3 ? "xl:border-r xl:border-[#E8ECF5] xl:pr-5" : ""
+              }`}
+            >
+              <span
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${item.tone}`}
+              >
+                <item.Icon size={22} />
+              </span>
+              <div>
+                <h3 className="font-display text-base font-bold text-indigo">{item.title}</h3>
+                <p className="mt-1 text-sm leading-snug text-muted">{item.desc}</p>
               </div>
-            ))}
+            </div>
+          ))}
+
+          <div className="flex flex-col justify-center border-t border-[#E8ECF5] pt-5 md:col-span-2 xl:col-span-1 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
+              More than a directory.
+            </p>
+            <p className="mt-2 font-display text-xl font-bold leading-tight brand-gradient-text sm:text-2xl">
+              An ecosystem for influence.
+            </p>
+            <span
+              aria-hidden
+              className="mt-3 h-1 w-12 rounded-full bg-gradient-to-r from-[#633CFF] to-[#2979FF]"
+            />
           </div>
-          <p className="shrink-0 text-center font-display text-sm italic text-violet/80 lg:max-w-[9rem] lg:text-right">
-            A growing creator economy together. <IconHeart size={12} className="inline text-pink" />
-          </p>
         </Shell>
       </section>
 

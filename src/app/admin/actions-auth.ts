@@ -35,19 +35,24 @@ export async function actionAdminLogout() {
 }
 
 export async function actionCreateRole(formData: FormData) {
-  await requireAdminSession("access");
+  await requireAdminSession("access.manage_roles");
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const permissions = ADMIN_PERMISSIONS.filter((p) => formData.get(`perm_${p}`) === "on");
   if (!name || permissions.length === 0) {
-    redirect("/admin/access?error=Role+name+and+at+least+one+permission+required");
+    redirect("/admin/access?error=Role+name+and+at+least+one+feature+permission+required");
   }
-  await createAdminRole({ name, description, permissions: permissions as AdminPermission[] });
+  try {
+    await createAdminRole({ name, description, permissions: permissions as AdminPermission[] });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to create role";
+    redirect(`/admin/access?error=${encodeURIComponent(message)}`);
+  }
   redirect("/admin/access?created=role");
 }
 
 export async function actionCreateAdminUser(formData: FormData) {
-  await requireAdminSession("access");
+  await requireAdminSession("access.manage_users");
   try {
     await createAdminUser({
       email: String(formData.get("email") ?? ""),
@@ -63,7 +68,7 @@ export async function actionCreateAdminUser(formData: FormData) {
 }
 
 export async function actionToggleAdminActive(formData: FormData) {
-  await requireAdminSession("access");
+  await requireAdminSession("access.manage_users");
   const userId = String(formData.get("userId") ?? "");
   const active = String(formData.get("active") ?? "") === "1";
   try {
@@ -76,7 +81,7 @@ export async function actionToggleAdminActive(formData: FormData) {
 }
 
 export async function actionSetAdminRole(formData: FormData) {
-  await requireAdminSession("access");
+  await requireAdminSession("access.manage_users");
   const userId = String(formData.get("userId") ?? "");
   const roleId = String(formData.get("roleId") ?? "");
   try {

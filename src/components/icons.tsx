@@ -219,6 +219,51 @@ export function IconPlus(props: IconProps) {
   );
 }
 
+/** Influrios Card — ID / profile card glyph */
+export function IconIdCard(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="9" cy="11" r="2.2" />
+      <path d="M14 10h4M14 13.5h4" />
+      <path d="M6.5 15.5c.7-1.2 1.8-1.8 2.5-1.8s1.8.6 2.5 1.8" />
+    </svg>
+  );
+}
+
+/** Influence Intelligence — search over chart */
+export function IconIntelligence(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 17V13M9 17V9M13 17v-5" />
+      <circle cx="16.5" cy="8.5" r="3.2" />
+      <path d="m18.8 10.8 2.7 2.7" />
+    </svg>
+  );
+}
+
+/** Collaboration Network — three people */
+export function IconNetwork(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="7" r="2.4" />
+      <circle cx="6" cy="15" r="2.2" />
+      <circle cx="18" cy="15" r="2.2" />
+      <path d="M12 9.5v2.2M10.5 13.2 7.8 14M13.5 13.2l2.7.8" />
+    </svg>
+  );
+}
+
+/** Protected Payments — shield with dollar */
+export function IconShieldPay(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.5 19 6.5v5.2c0 4.2-2.9 7.3-7 8.8-4.1-1.5-7-4.6-7-8.8V6.5L12 3.5Z" />
+      <path d="M12 9.2v6M10.2 11.2h2.6a1.4 1.4 0 0 1 0 2.8h-1.6a1.4 1.4 0 0 0 0 2.8H14" />
+    </svg>
+  );
+}
+
 export function CategoryGlyph({ slug, size = 22 }: { slug: string; size?: number }) {
   const common = { size, className: "text-white drop-shadow" };
   switch (slug) {
