@@ -55,7 +55,7 @@ export function InfluencerCardModal({ creator, open, onClose }: Props) {
         aria-label="Close card"
         onClick={onClose}
       />
-      <div className="relative z-10 max-h-[min(92vh,920px)] w-full max-w-md overflow-y-auto overscroll-contain rounded-[1.75rem] shadow-2xl">
+      <div className="relative z-10 w-full max-w-sm overflow-hidden rounded-[1.75rem] shadow-2xl">
         <h2 id={titleId} className="sr-only">
           {creator.displayName} Influencer Card
         </h2>
@@ -68,7 +68,7 @@ export function InfluencerCardModal({ creator, open, onClose }: Props) {
         >
           ×
         </button>
-        <InfluencerCardView creator={creator} qrDisplay="large" />
+        <InfluencerCardView creator={creator} qrDisplay="large" compact />
       </div>
     </div>,
     document.body,
