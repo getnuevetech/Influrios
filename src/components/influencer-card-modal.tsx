@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { InfluencerCardView } from "@/components/influencer-card-view";
 import type { SeedCreator } from "@/lib/seed-data";
 
@@ -10,9 +11,18 @@ type Props = {
   onClose: () => void;
 };
 
+/**
+ * Viewport-level popup. Must portal to document.body so card transforms
+ * (e.g. hover:-translate-y-1) do not trap position:fixed inside the grid card.
+ */
 export function InfluencerCardModal({ creator, open, onClose }: Props) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -30,18 +40,18 @@ export function InfluencerCardModal({ creator, open, onClose }: Props) {
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
     >
       <button
         type="button"
-        className="absolute inset-0 bg-[#0B123F]/55 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[#0B123F]/60 backdrop-blur-[2px]"
         aria-label="Close card"
         onClick={onClose}
       />
@@ -60,6 +70,7 @@ export function InfluencerCardModal({ creator, open, onClose }: Props) {
         </button>
         <InfluencerCardView creator={creator} qrDisplay="large" />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
