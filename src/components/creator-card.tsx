@@ -277,8 +277,8 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
         </div>
       </div>
 
-      {/* Bottom social strip — left-aligned with content, even icon gaps */}
-      <div className="flex items-center gap-5 border-t border-[#EEF1FA] bg-white px-4 py-3.5 sm:gap-6 sm:px-5">
+      {/* Bottom social strip — icons evenly across full card width */}
+      <div className="flex w-full items-center justify-between border-t border-[#EEF1FA] bg-white px-5 py-3.5 sm:px-6">
         {stripPlatforms.map((platform) => {
           const linked = creator.socials.find((s) => s.platform === platform);
           const icon = <SocialIcon platform={platform} size={26} />;
