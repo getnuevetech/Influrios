@@ -3,6 +3,9 @@
 **Target:** Influrios Phase 0/1 (Next.js + PostgreSQL + Nginx + PM2)  
 **Instance recommendation:** Ubuntu 22.04 or 24.04 LTS, **$10–20/mo** (2 GB RAM minimum; 4 GB preferred for `next build` on-box)
 
+> **New server?** Start here first → **[FRESH_SERVER_SETUP.md](./FRESH_SERVER_SETUP.md)**  
+> (OS update, GitHub deploy key, Node/Nginx/PM2, then clone + deploy)
+
 ---
 
 ## Architecture on Lightsail

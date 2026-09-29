@@ -1,0 +1,322 @@
+# Fresh AWS Lightsail Server Setup (GitHub + System Update)
+
+Use this checklist on a **brand-new** Ubuntu Lightsail instance before deploying Influrios.
+
+**Goal:** update the OS → harden basics → connect GitHub → install runtime → clone the repo.
+
+Estimated hands-on time: ~20–30 minutes.
+
+---
+
+## 0. What you need ready
+
+| Item | Notes |
+|------|--------|
+| Lightsail Ubuntu 22.04 or **24.04** instance | 2 GB RAM min; **4 GB recommended** |
+| Static IP attached | Lightsail → Networking |
+| Ports open | **22**, **80**, **443** on the instance firewall |
+| Lightsail SSH key (`.pem`) on your laptop | Account → Account → SSH keys, or download when created |
+| GitHub access to `getnuevetech/Influrios` | Your user must be able to read the repo (private or public) |
+
+---
+
+## 1. Create / confirm the Lightsail instance
+
+If the instance does not exist yet:
+
+1. AWS Console → **Lightsail** → **Create instance**
+2. **Linux/Unix** → **OS Only** → **Ubuntu 24.04 LTS**
+3. Pick a plan (prefer **$12–$20 / 2–4 GB**)
+4. Name it e.g. `influrios-web-1` → Create
+5. **Networking** → Create **static IP** → attach to the instance
+6. Instance → **Networking** → allow TCP **22**, **80**, **443**
+
+Copy the **static IP** (example below uses `STATIC_IP`).
+
+---
+
+## 2. First SSH login from your laptop
+
+```bash
+# Fix key permissions (once)
+chmod 400 ~/Downloads/LightsailDefaultKey-*.pem
+
+# Connect (user on Ubuntu Lightsail is usually "ubuntu")
+ssh -i ~/Downloads/LightsailDefaultKey-REGION.pem ubuntu@STATIC_IP
+```
+
+If SSH fails: confirm port 22 is open on the Lightsail firewall and that you are using the key for that region/account.
+
+---
+
+## 3. Update the fresh server (do this first)
+
+On the server:
+
+```bash
+sudo apt-get update -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+sudo apt-get install -y \
+  ca-certificates curl gnupg build-essential git \
+  ufw fail2ban unzip software-properties-common
+
+# Optional but recommended reboot after first big upgrade
+sudo reboot
+```
+
+Reconnect after reboot:
+
+```bash
+ssh -i ~/Downloads/LightsailDefaultKey-REGION.pem ubuntu@STATIC_IP
+```
+
+Confirm:
+
+```bash
+uname -a
+cat /etc/os-release | head -5
+```
+
+---
+
+## 4. Basic firewall (host-level)
+
+Lightsail has its own networking firewall; also enable UFW on the OS:
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'   # 80 + 443 (safe even before Nginx is installed)
+sudo ufw --force enable
+sudo ufw status
+```
+
+---
+
+## 5. Connect this server to GitHub (SSH deploy key)
+
+Use a **deploy key** (read-only) so the server can `git clone` / `git pull` without your personal password.
+
+### 5.1 Generate a key **on the server**
+
+```bash
+# Run as ubuntu user (do not use sudo here)
+ssh-keygen -t ed25519 -C "influrios-lightsail-deploy" -f ~/.ssh/influrios_github -N ""
+
+# Show the PUBLIC key — you will paste this into GitHub
+cat ~/.ssh/influrios_github.pub
+```
+
+### 5.2 Tell SSH to use that key for GitHub
+
+```bash
+cat >> ~/.ssh/config <<'EOF'
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/influrios_github
+  IdentitiesOnly yes
+EOF
+
+chmod 600 ~/.ssh/config
+```
+
+### 5.3 Add the deploy key in GitHub
+
+1. Open: https://github.com/getnuevetech/Influrios/settings/keys  
+   (Repo → **Settings** → **Deploy keys** → **Add deploy key**)
+2. Title: `influrios-lightsail-web-1`
+3. Key: paste contents of `~/.ssh/influrios_github.pub`
+4. Leave **Allow write access** unchecked (read-only is enough for deploy)
+5. Add key
+
+> Org/repo admin permission is required. If you cannot open Settings, ask a GitHub admin to add the deploy key, or use a fine-grained personal access token instead (see §5.5).
+
+### 5.4 Test GitHub access from the server
+
+```bash
+ssh -T git@github.com
+```
+
+Expected (success):
+
+```text
+Hi getnuevetech/Influrios! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+Or for user-linked keys: `Hi <username>! You've successfully authenticated...`
+
+### 5.5 Alternative: HTTPS + Personal Access Token (if deploy keys are blocked)
+
+```bash
+# On your laptop: GitHub → Settings → Developer settings → Fine-grained token
+# Permission: Contents = Read-only on Influrios
+
+# On the server, clone with token when prompted (or embed once — less ideal):
+git clone https://github.com/getnuevetech/Influrios.git /var/www/influrios
+# Username: your-github-username
+# Password: the PAT (not your GitHub password)
+```
+
+Prefer SSH deploy keys for servers.
+
+---
+
+## 6. Install app runtime (Node, Nginx, PM2)
+
+Still on the server:
+
+```bash
+# Node.js 22
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+node -v   # should show v22.x
+npm -v
+
+# Process manager
+sudo npm install -g pm2
+
+# Web server
+sudo apt-get install -y nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+```
+
+Enable PM2 on reboot (run the command `pm2 startup` prints):
+
+```bash
+pm2 startup systemd -u ubuntu --hp /home/ubuntu
+# Then paste/run the sudo env PATH=... line it outputs
+```
+
+---
+
+## 7. Clone the Influrios repo
+
+```bash
+sudo mkdir -p /var/www/influrios
+sudo chown -R ubuntu:ubuntu /var/www/influrios
+
+git clone git@github.com:getnuevetech/Influrios.git /var/www/influrios
+cd /var/www/influrios
+
+# Use the Phase 0/1 branch until merged to main:
+git checkout cursor/phase-0-1-mvp-lightsail-0127
+# Later: git checkout main && git pull
+```
+
+Verify:
+
+```bash
+ls
+git remote -v
+git status
+```
+
+---
+
+## 8. Finish Influrios server wiring (scripted)
+
+From the repo:
+
+```bash
+cd /var/www/influrios
+chmod +x deploy/scripts/*.sh
+bash deploy/scripts/setup-lightsail.sh
+```
+
+This configures Nginx reverse proxy to port 3000, UFW rules, and PM2 startup (safe to re-run).
+
+---
+
+## 9. Environment + first deploy
+
+```bash
+cd /var/www/influrios
+cp .env.example .env
+nano .env
+```
+
+Minimum values:
+
+```env
+NODE_ENV=production
+PORT=3000
+NEXT_PUBLIC_APP_URL=http://STATIC_IP
+DATABASE_URL=postgresql://USER:PASSWORD@DB_ENDPOINT:5432/influrios?schema=public&sslmode=require
+```
+
+(Use your Lightsail managed Postgres URL. Create DB `influrios` first if needed.)
+
+Deploy:
+
+```bash
+bash deploy/scripts/deploy.sh
+```
+
+Test:
+
+```bash
+curl -I http://127.0.0.1:3000
+curl -I http://STATIC_IP
+```
+
+---
+
+## 10. Ongoing updates from GitHub
+
+Whenever you push new code:
+
+```bash
+cd /var/www/influrios
+git fetch origin
+git checkout cursor/phase-0-1-mvp-lightsail-0127   # or main
+git pull
+bash deploy/scripts/deploy.sh
+```
+
+---
+
+## 11. Domain + HTTPS (after DNS works)
+
+1. DNS A record `@` and `www` → static IP  
+2. Edit `/etc/nginx/sites-available/influrios` → set `server_name your-domain.com www.your-domain.com`  
+3. `sudo nginx -t && sudo systemctl reload nginx`  
+4. Certbot:
+
+```bash
+sudo apt-get install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+```
+
+5. Set `NEXT_PUBLIC_APP_URL=https://your-domain.com` in `.env` → `pm2 restart influrios`
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `Permission denied (publickey)` to GitHub | Deploy key not added, or wrong `IdentityFile` in `~/.ssh/config` |
+| `Repository not found` | Deploy key is on wrong repo, or no access to private repo |
+| `npm run build` killed / OOM | Upgrade to 4 GB instance, or add 2 GB swap (see main Lightsail doc) |
+| Site 502 Bad Gateway | App not running: `pm2 status` / `pm2 logs influrios` |
+| Cannot SSH to Lightsail | Check Lightsail networking port 22 + correct `.pem` |
+
+---
+
+## Quick copy-paste order (summary)
+
+```text
+1. SSH into new instance
+2. apt update && apt upgrade && reboot
+3. ufw allow OpenSSH + Nginx Full
+4. ssh-keygen deploy key → add to GitHub Deploy keys
+5. ssh -T git@github.com   (confirm)
+6. Install Node 22 + PM2 + Nginx
+7. git clone git@github.com:getnuevetech/Influrios.git /var/www/influrios
+8. bash deploy/scripts/setup-lightsail.sh
+9. Configure .env → bash deploy/scripts/deploy.sh
+10. DNS + certbot
+```
+
+Full app architecture notes: [AWS_LIGHTSAIL.md](./AWS_LIGHTSAIL.md)

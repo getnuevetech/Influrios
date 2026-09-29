@@ -18,12 +18,14 @@ UI works from seed data even without Postgres; Prisma is ready for claim/auth ne
 
 ## AWS Lightsail deploy
 
-Full server prep + deploy checklist:
+**New / fresh server (GitHub + OS update):**  
+→ **[docs/deploy/FRESH_SERVER_SETUP.md](./docs/deploy/FRESH_SERVER_SETUP.md)**
 
+Full architecture + DB checklist:  
 → **[docs/deploy/AWS_LIGHTSAIL.md](./docs/deploy/AWS_LIGHTSAIL.md)**
 
 ```bash
-# On a fresh Ubuntu Lightsail instance (after git clone):
+# After GitHub SSH works and repo is cloned to /var/www/influrios:
 bash deploy/scripts/setup-lightsail.sh
 cp .env.example .env   # set DATABASE_URL + NEXT_PUBLIC_APP_URL
 bash deploy/scripts/deploy.sh
