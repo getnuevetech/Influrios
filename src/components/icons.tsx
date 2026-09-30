@@ -40,7 +40,7 @@ export function IconCheck(props: IconProps) {
   );
 }
 
-/** Official-style solid blue verification badge */
+/** Official-style solid blue verification badge (brand electric blue — use everywhere). */
 export function IconVerified(props: IconProps) {
   const size = props.size ?? 18;
   return (
@@ -52,7 +52,7 @@ export function IconVerified(props: IconProps) {
       aria-label="Verified"
       role="img"
     >
-      <circle cx="12" cy="12" r="11" fill="#1D9BF0" />
+      <circle cx="12" cy="12" r="11" fill="#2979FF" />
       <path
         d="M10.1 15.8 6.8 12.5l1.4-1.4 1.9 1.9 5-5.1 1.4 1.4-6.4 6.5Z"
         fill="#fff"

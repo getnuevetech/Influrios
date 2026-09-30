@@ -140,8 +140,22 @@ async function ensureStore(): Promise<SiteCms> {
     await fs.mkdir(DATA_DIR, { recursive: true });
     const raw = await fs.readFile(STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as SiteCms;
+    const banners = { ...DEFAULT_CMS.banners } as SiteCms["banners"];
+    for (const key of Object.keys(DEFAULT_CMS.banners) as BannerSlot[]) {
+      const incoming = parsed.banners?.[key];
+      if (!incoming) continue;
+      const merged = { ...DEFAULT_CMS.banners[key], ...incoming, id: key };
+      // Empty admin fields must not blank the public CTA / titles.
+      for (const field of ["title", "subtitle", "ctaLabel", "ctaHref"] as const) {
+        const val = merged[field];
+        if (typeof val !== "string" || !val.trim()) {
+          merged[field] = DEFAULT_CMS.banners[key][field];
+        }
+      }
+      banners[key] = merged;
+    }
     return {
-      banners: { ...DEFAULT_CMS.banners, ...parsed.banners },
+      banners,
       featuredCards: {
         ...DEFAULT_CMS.featuredCards,
         ...parsed.featuredCards,

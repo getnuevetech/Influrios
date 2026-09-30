@@ -355,10 +355,11 @@ export default async function HomePage() {
                     ))}
                   </div>
                   <Link
-                    href={sponsored.ctaHref}
-                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-violet shadow-lg"
+                    href={sponsored.ctaHref || "/collaboration"}
+                    className="mt-5 inline-flex min-h-[42px] min-w-[160px] items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#111A5A] shadow-lg"
                   >
-                    {sponsored.ctaLabel} <IconArrowRight size={14} />
+                    {sponsored.ctaLabel?.trim() || "View Opportunities"}{" "}
+                    <IconArrowRight size={14} />
                   </Link>
                 </div>
                 {sponsored.images[1] ? (
@@ -543,8 +544,12 @@ export default async function HomePage() {
                   </li>
                 ))}
               </ul>
-              <Link href={cardPromo.ctaHref} className="btn-primary mt-7 inline-flex">
-                {cardPromo.ctaLabel} <IconArrowRight size={16} />
+              <Link
+                href={cardPromo.ctaHref || "/claim"}
+                className="btn-primary mt-7 inline-flex min-h-[42px] min-w-[180px] items-center justify-center"
+              >
+                {cardPromo.ctaLabel?.trim() || "Create Your Influencer Card"}{" "}
+                <IconArrowRight size={16} />
               </Link>
             </div>
 
@@ -633,14 +638,14 @@ export default async function HomePage() {
               <p className="mt-2 text-sm text-white/75 sm:text-base">{cta.subtitle}</p>
               <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
                 <Link
-                  href={cta.ctaHref}
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-violet"
+                  href={cta.ctaHref || "/claim"}
+                  className="inline-flex min-h-[42px] min-w-[160px] items-center justify-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-[#111A5A]"
                 >
-                  {cta.ctaLabel} <IconArrowRight size={14} />
+                  {cta.ctaLabel?.trim() || "Join as a Creator"} <IconArrowRight size={14} />
                 </Link>
                 <Link
                   href="/business"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/10 px-6 py-2.5 text-sm font-bold text-white backdrop-blur"
+                  className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-full border border-white/50 bg-white/10 px-6 py-2.5 text-sm font-bold text-white backdrop-blur"
                 >
                   Join as a Business <IconArrowRight size={14} />
                 </Link>
