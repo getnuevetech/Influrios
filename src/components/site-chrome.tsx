@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getDirectory } from "@/lib/directory";
 import {
   IconBuilding,
   IconGrid,
@@ -22,6 +23,13 @@ const NAV = [
   { href: "/pricing", label: "Pricing" },
 ];
 
+const FOOTER_PLATFORM = [
+  { href: "/", label: "Home" },
+  { href: "/discover", label: "Discover" },
+  { href: "/collaboration", label: "Collaboration" },
+  { href: "/card", label: "Influencer Card" },
+];
+
 const FOOTER_PILLARS = [
   { l: "Influrios Card", Icon: IconIdCard, tone: "bg-white/10 text-[#C4B5FD]" },
   { l: "Influence Intelligence", Icon: IconGrid, tone: "bg-white/10 text-[#93C5FD]" },
@@ -29,7 +37,10 @@ const FOOTER_PILLARS = [
   { l: "Protected Payments", Icon: IconBuilding, tone: "bg-white/10 text-[#93C5FD]" },
 ] as const;
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const directory = await getDirectory();
+  const nav = directory.menus.filter((item) => item.menu === "header" && item.visible);
+  const links = nav.length ? nav : NAV;
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-[90rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8 xl:px-10">
@@ -40,7 +51,7 @@ export function SiteHeader() {
           Influrios
         </Link>
         <nav className="hidden items-center gap-5 text-sm font-medium text-muted lg:flex">
-          {NAV.map((item) => (
+          {links.map((item) => (
             <Link key={item.href} href={item.href} className="hover:text-indigo">
               {item.label}
             </Link>
@@ -69,7 +80,10 @@ export function SiteHeader() {
   );
 }
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const directory = await getDirectory();
+  const platform = directory.menus.filter((item) => item.menu === "footer_platform" && item.visible);
+  const platformLinks = platform.length ? platform : FOOTER_PLATFORM;
   return (
     <footer className="mt-0 border-t border-white/10 bg-pro text-white">
       {/* Value pillars — no placeholder scale statistics until figures are audited */}
@@ -122,18 +136,11 @@ export function SiteFooter() {
         <div>
           <div className="text-sm font-semibold uppercase tracking-wide text-white/50">Platform</div>
           <ul className="mt-3 space-y-2 text-sm text-white/80">
-            <li>
-              <Link href="/">Home</Link>
-            </li>
-            <li>
-              <Link href="/discover">Discover</Link>
-            </li>
-            <li>
-              <Link href="/collaboration">Collaboration</Link>
-            </li>
-            <li>
-              <Link href="/card">Influencer Card</Link>
-            </li>
+            {platformLinks.map((item) => (
+              <li key={item.href + item.label}>
+                <Link href={item.href}>{item.label}</Link>
+              </li>
+            ))}
           </ul>
         </div>
         <div>

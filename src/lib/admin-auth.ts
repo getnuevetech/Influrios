@@ -22,6 +22,8 @@ export const ADMIN_PERMISSIONS = [
   "billing.view",
   "plans.view",
   "plans.edit",
+  "taxonomy.view",
+  "taxonomy.edit",
   "payments.view",
   "payments.manage",
   "trust.view",
@@ -43,6 +45,7 @@ export type AdminModule =
   | "intelligence"
   | "billing"
   | "plans"
+  | "taxonomy"
   | "payments"
   | "trust"
   | "agency"
@@ -108,6 +111,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     permissions: [
       { id: "plans.view", label: "View plan limits", hint: "Open the entitlement matrix" },
       { id: "plans.edit", label: "Edit plan limits", hint: "Change feature limits and record an audit entry" },
+    ],
+  },
+  {
+    module: "taxonomy",
+    label: "Taxonomy",
+    description: "Specialty tree, active state, and search synonyms",
+    permissions: [
+      { id: "taxonomy.view", label: "View taxonomy", hint: "Open specialties and synonyms" },
+      { id: "taxonomy.edit", label: "Edit taxonomy", hint: "Enable specialties and add synonyms" },
     ],
   },
   {
@@ -228,7 +240,14 @@ const DEFAULT_ROLES: AdminRole[] = [
     id: "role_content",
     name: "Content Admin",
     description: "Landing banners and influencer card CMS (view + edit).",
-    permissions: ["banners.view", "banners.edit", "cards.view", "cards.edit"],
+    permissions: [
+      "banners.view",
+      "banners.edit",
+      "cards.view",
+      "cards.edit",
+      "taxonomy.view",
+      "taxonomy.edit",
+    ],
     system: true,
   },
   {

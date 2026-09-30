@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phase A (entitlement kernel + card seam) is implemented. Later phases in this document are still ahead.  
+**Status:** Phase A (entitlements) and Phase B (directory, taxonomy, homepage sections) are implemented. Later phases in this document are still ahead.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  

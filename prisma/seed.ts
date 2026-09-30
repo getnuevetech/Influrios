@@ -42,9 +42,9 @@ async function main() {
         locationCity: creator.locationCity,
         locationCountry: creator.locationCountry,
         languages: creator.languages,
+        avatarUrl: creator.image,
         planTier: creator.planTier as PlanTier,
         openToCollab: creator.openToCollab,
-        claimed: false,
       },
       create: {
         slug: creator.slug,
@@ -54,9 +54,12 @@ async function main() {
         locationCity: creator.locationCity,
         locationCountry: creator.locationCountry,
         languages: creator.languages,
+        avatarUrl: creator.image,
+        coverUrl: creator.coverImage,
         planTier: creator.planTier as PlanTier,
         openToCollab: creator.openToCollab,
         claimed: false,
+        profileState: "UNCLAIMED",
       },
     });
 

@@ -14,6 +14,7 @@ const MODULE_PATH: Record<AdminModule, string> = {
   intelligence: "/admin/intelligence",
   billing: "/admin/billing",
   plans: "/admin/plans",
+  taxonomy: "/admin/taxonomy",
   payments: "/admin/payments",
   trust: "/admin/trust",
   agency: "/admin/agency",
