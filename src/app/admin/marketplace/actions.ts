@@ -13,6 +13,7 @@ import {
   saveMilestoneTemplates,
 } from "@/lib/marketplace-ledger";
 import { saveFxRates, saveRevenueParties } from "@/lib/settlement";
+import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
 
 function flag(formData: FormData, name: string) {
   return formData.get(name) === "on";
@@ -42,6 +43,7 @@ export async function actionSaveJurisdiction(formData: FormData) {
       protectedPaymentsEnabled: flag(formData, "protectedPaymentsEnabled"),
       escrowTermAllowed: flag(formData, "escrowTermAllowed"),
       currency: String(formData.get("currency") ?? "USD"),
+      minorDigits: Number(formData.get("minorDigits") ?? 2),
       providerCode: String(formData.get("providerCode") ?? "primary"),
     });
   } catch (error) {
@@ -99,21 +101,50 @@ export async function actionSaveMarketplaceProvider(formData: FormData) {
   redirect("/admin/marketplace?saved=provider");
 }
 
+export async function actionSaveWise(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  try {
+    await saveWiseProvider({
+      enabled: flag(formData, "enabled"),
+      baseUrl: String(formData.get("baseUrl") ?? ""),
+      apiVersion: String(formData.get("apiVersion") ?? "v3"),
+      profileId: String(formData.get("profileId") ?? ""),
+      token: String(formData.get("token") ?? ""),
+      clearToken: flag(formData, "clearToken"),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save Wise.";
+    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/payments");
+  redirect("/admin/marketplace?saved=wise");
+}
+
+export async function actionCheckWiseRate(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const currency = String(formData.get("currency") ?? "GBP").trim().toUpperCase();
+  const quoted = await quoteWiseUserRate({ currency, usdCents: 10_000, minorDigits: 2 });
+  if (!quoted.ok || quoted.source !== "wise") {
+    const message = quoted.ok ? "Wise did not return a user rate. Nothing was funded." : quoted.error;
+    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  redirect(`/admin/marketplace?saved=wise-rate&wiseCurrency=${encodeURIComponent(currency)}&wiseRate=${encodeURIComponent(String(quoted.rate))}`);
+}
+
 export async function actionSaveFxRates(formData: FormData) {
   await requireAdminAction("marketplace.manage");
   const currencies = formData.getAll("currency").map((value) => String(value));
-  const minors = formData.getAll("minorPerUsd").map((value) => Number(value));
   const active = formData.getAll("activeIndex").map((value) => String(value));
   const rows = currencies.map((currency, index) => ({
     currency,
-    minorPerUsd: minors[index] ?? 0,
     active: active.includes(String(index)),
   }));
   const extra = String(formData.get("newCurrency") ?? "").trim();
   if (extra) {
     rows.push({
       currency: extra,
-      minorPerUsd: Number(formData.get("newMinorPerUsd") ?? 0),
       active: flag(formData, "newActive"),
     });
   }

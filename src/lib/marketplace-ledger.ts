@@ -14,8 +14,9 @@ import {
 } from "@/lib/ledger";
 import { resolveDealAttribution } from "@/lib/deal-attribution";
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
-import { convertFee, quoteFx, readFxSnapshot, readShareSnapshot, shareLines } from "@/lib/fx-share";
+import { convertFee, readFxSnapshot, readShareSnapshot, shareLines } from "@/lib/fx-share";
 import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
+import { quoteWiseUserRate } from "@/lib/wise-quote";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
 
 const PROVIDER_CODE = "primary";
@@ -35,8 +36,12 @@ function fxRecord(fx: {
   usdCents: number;
   minorPerUsd: number;
   currency: string;
-  source: "admin" | "identity";
+  source: "admin" | "identity" | "wise";
   convertedMinor: number;
+  rate?: number | null;
+  quoteId?: string | null;
+  quotedAt?: string | null;
+  rateType?: string | null;
 }) {
   return {
     usdCents: fx.usdCents,
@@ -44,6 +49,10 @@ function fxRecord(fx: {
     currency: fx.currency,
     source: fx.source,
     convertedMinor: fx.convertedMinor,
+    ...(fx.rate != null ? { rate: fx.rate } : {}),
+    ...(fx.quoteId ? { quoteId: fx.quoteId } : {}),
+    ...(fx.quotedAt ? { quotedAt: fx.quotedAt } : {}),
+    ...(fx.rateType ? { rateType: fx.rateType } : {}),
   };
 }
 
@@ -54,9 +63,9 @@ export async function ensureMarketplaceDefaults() {
     create: { id: "default", reviewWindowHours: 72 },
   });
   const jurisdictions = [
-    { code: "US", label: "United States", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "USD", providerCode: "primary" },
-    { code: "GB", label: "United Kingdom", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "GBP", providerCode: "primary" },
-    { code: "NG", label: "Nigeria", protectedPaymentsEnabled: false, escrowTermAllowed: false, currency: "NGN", providerCode: "primary" },
+    { code: "US", label: "United States", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "USD", minorDigits: 2, providerCode: "primary" },
+    { code: "GB", label: "United Kingdom", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "GBP", minorDigits: 2, providerCode: "primary" },
+    { code: "NG", label: "Nigeria", protectedPaymentsEnabled: false, escrowTermAllowed: false, currency: "NGN", minorDigits: 2, providerCode: "primary" },
   ];
   for (const row of jurisdictions) {
     await prisma.collaborationJurisdiction.upsert({
@@ -149,6 +158,7 @@ export async function saveJurisdiction(input: {
   protectedPaymentsEnabled: boolean;
   escrowTermAllowed: boolean;
   currency: string;
+  minorDigits: number;
   providerCode: string;
 }) {
   await ensureMarketplaceDefaults();
@@ -158,6 +168,10 @@ export async function saveJurisdiction(input: {
   if (!label) throw new Error("A jurisdiction label is required.");
   const currency = input.currency.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) throw new Error("Use a three-letter currency.");
+  const minorDigits = Math.round(input.minorDigits);
+  if (!Number.isInteger(minorDigits) || minorDigits < 0 || minorDigits > 4) {
+    throw new Error("Minor digits must be from 0 to 4.");
+  }
   const providerCode = input.providerCode.trim().toLowerCase();
   const assigned = await prisma.integrationProvider.findUnique({
     where: { kind_code: { kind: "marketplace", code: providerCode } },
@@ -170,6 +184,7 @@ export async function saveJurisdiction(input: {
       protectedPaymentsEnabled: input.protectedPaymentsEnabled,
       escrowTermAllowed: input.escrowTermAllowed && input.protectedPaymentsEnabled,
       currency,
+      minorDigits,
       providerCode,
     },
     create: {
@@ -178,6 +193,7 @@ export async function saveJurisdiction(input: {
       protectedPaymentsEnabled: input.protectedPaymentsEnabled,
       escrowTermAllowed: input.escrowTermAllowed && input.protectedPaymentsEnabled,
       currency,
+      minorDigits,
       providerCode,
     },
   });
@@ -307,6 +323,7 @@ export async function requestPrefund(input: {
   const jurisdiction = await prisma.collaborationJurisdiction.findUnique({ where: { code } });
   const assignedCode = jurisdiction?.providerCode || PROVIDER_CODE;
   const currency = (jurisdiction?.currency || "USD").toUpperCase();
+  const minorDigits = jurisdiction?.minorDigits ?? 2;
   const [provider, settings, templates, fxRate] = await Promise.all([
     prisma.integrationProvider.findUnique({ where: { kind_code: { kind: "marketplace", code: assignedCode } } }),
     prisma.marketplaceSettings.findUnique({ where: { id: "default" } }),
@@ -346,17 +363,19 @@ export async function requestPrefund(input: {
   const businessName = input.businessName.trim().slice(0, 120);
   const creatorSlug = input.creatorSlug.trim().slice(0, 80);
   const baseTitle = input.title.trim().slice(0, 140);
-  const minorPerUsd = currency === "USD" || !fxRate?.active ? null : fxRate.minorPerUsd;
+  if (currency !== "USD" && !fxRate?.active) {
+    return { ok: false as const, error: `No Wise currency is saved for ${currency}. Nothing was funded.` };
+  }
   const shareSnapshot = await activeShareSnapshot();
   const prepared: {
     gross: number;
-    fx: Extract<ReturnType<typeof quoteFx>, { ok: true }>;
+    fx: Extract<Awaited<ReturnType<typeof quoteWiseUserRate>>, { ok: true }>;
     milestoneAmounts: number[];
     quote: Awaited<ReturnType<typeof resolveFee>> | null;
   }[] = [];
   for (let index = 0; index < schedule.parts.length; index += 1) {
     const usdCents = schedule.parts[index];
-    const fx = quoteFx({ usdCents, currency, minorPerUsd });
+    const fx = await quoteWiseUserRate({ currency, usdCents, minorDigits });
     if (!fx.ok) return fx;
     const milestoneAmounts = splitGross(fx.convertedMinor, shares);
     if (!milestoneAmounts) return { ok: false as const, error: "Milestone templates must add up to 100%." };
@@ -470,11 +489,17 @@ export async function sweepDueRecurrences(now = new Date()) {
     const snapshot = readFxSnapshot(row.fxSnapshotJson);
     const usdCents = snapshot?.usdCents ?? row.grossCents;
     const currency = (row.currency || "USD").toUpperCase();
-    const rate = currency === "USD" ? null : await prisma.fxRate.findUnique({ where: { currency } });
-    const fx = quoteFx({
-      usdCents,
+    if (currency !== "USD") {
+      const allowed = await prisma.fxRate.findUnique({ where: { currency } });
+      if (!allowed?.active) continue;
+    }
+    const jurisdiction = await prisma.collaborationJurisdiction.findUnique({
+      where: { code: row.jurisdictionCode },
+    });
+    const fx = await quoteWiseUserRate({
       currency,
-      minorPerUsd: currency === "USD" || !rate?.active ? null : rate.minorPerUsd,
+      usdCents,
+      minorDigits: jurisdiction?.minorDigits ?? 2,
     });
     if (!fx.ok) continue;
     const milestoneAmounts = splitGross(fx.convertedMinor, shares);

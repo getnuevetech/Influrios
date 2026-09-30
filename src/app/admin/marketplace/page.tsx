@@ -5,9 +5,11 @@ import {
   actionSaveAttributionPolicy,
   actionSaveFundingSchedule,
   actionSaveAttributionSources,
+  actionCheckWiseRate,
   actionSaveDisputeReasons,
   actionSaveFxRates,
   actionSaveJurisdiction,
+  actionSaveWise,
   actionSaveMarketplaceProvider,
   actionSaveMarketplaceSettings,
   actionSaveRevenueParties,
@@ -19,25 +21,27 @@ import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFxRates, listRevenueParties } from "@/lib/settlement";
+import { wiseFxConfig } from "@/lib/wise-quote";
 import { formatMoney } from "@/lib/protected-payments";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };
 
-type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
+type Props = { searchParams: Promise<{ saved?: string; error?: string; wiseRate?: string; wiseCurrency?: string }> };
 
 export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, fundings, reasons, sources, rates, parties] = await Promise.all([
+  const [config, fundings, reasons, sources, rates, parties, wise] = await Promise.all([
     marketplaceConfig(),
     listFundings(),
     listDisputeReasons(),
     listAttributionSources(),
     listFxRates(),
     listRevenueParties(),
+    wiseFxConfig(),
   ]);
 
   return (
@@ -51,9 +55,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           A prefund stays unfunded until a signed provider webhook confirms it. Cancelling before that confirmation
           posts no ledger entry. Dispute decisions do not move the money the provider is holding. Attribution is
           copied onto the prefund and is not rewritten when the source list changes. A staged or recurring
-          prefund stays unfunded until each tranche has its own signed webhook. Gross is entered in USD. Another
-          currency uses the admin rate for that jurisdiction. Revenue-share lines are written when the provider
-          releases a milestone. They are not cash.
+          prefund stays unfunded until each tranche has its own signed webhook.           Gross is entered in USD. Another currency uses the Wise user rate for the saved profile. A typed
+          number is not the rate. Revenue-share lines are written when the provider releases a milestone. They are not cash.
         </p>
       </div>
 
@@ -254,6 +257,18 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               />
             </label>
             <label className="text-xs font-semibold text-muted">
+              Minor digits
+              <input
+                name="minorDigits"
+                type="number"
+                min={0}
+                max={4}
+                defaultValue={row.minorDigits}
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
               Provider
               <select
                 name="providerCode"
@@ -299,6 +314,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               <input name="currency" maxLength={3} defaultValue="USD" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase" />
             </label>
             <label className="text-xs font-semibold text-muted">
+              Minor digits
+              <input name="minorDigits" type="number" min={0} max={4} defaultValue={2} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
               Provider
               <select name="providerCode" defaultValue="primary" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
                 {config.providers.map((provider) => (
@@ -316,10 +335,75 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       </section>
 
       <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Admin FX rates</h2>
+        <h2 className="font-display text-lg font-bold text-indigo">Wise user rate</h2>
         <p className="mt-1 text-xs text-muted">
-          Minor units per 1.00 USD. This is an admin rate, not a live quote. USD stays 1.00 and does not need a row.
-          A missing rate refuses the prefund. Later edits do not rewrite a rate already copied onto a funding.
+          A non-USD prefund asks Wise for the user rate on this profile. USD stays 1.00. If Wise is not ready, or the
+          quote fails, nothing is funded. The returned rate is copied onto the funding. The minor-unit figure below is
+          only the last quote this server stored. It is not used for the next prefund. Wise transfer fees are not added.
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          Status: {wise.ready ? "ready" : "not ready"}. Token: {wise.token}. Profile: {wise.profileId || "missing"}.
+        </p>
+        {params.wiseRate ? (
+          <p className="mt-2 text-sm text-indigo">
+            Latest check for {params.wiseCurrency}: 1.00 USD = {params.wiseRate} {params.wiseCurrency} at the Wise user rate.
+          </p>
+        ) : null}
+        {canManage ? (
+          <>
+            <form action={actionSaveWise} className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-semibold text-muted">
+                Host
+                <select name="baseUrl" defaultValue={wise.baseUrl} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+                  <option value="https://api.wise.com">api.wise.com</option>
+                  <option value="https://api.wise-sandbox.com">api.wise-sandbox.com</option>
+                  <option value="https://api.transferwise.com">api.transferwise.com</option>
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                API version
+                <input name="apiVersion" defaultValue={wise.apiVersion} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                Profile id
+                <input name="profileId" defaultValue={wise.profileId} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                API token
+                <input
+                  name="token"
+                  type="password"
+                  autoComplete="off"
+                  placeholder={wise.token === "saved" ? "Saved — leave blank to keep" : "Not saved"}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm text-indigo">
+                <input type="checkbox" name="enabled" defaultChecked={wise.enabled} className="accent-violet" />
+                Enabled
+              </label>
+              <label className="flex items-center gap-2 text-sm text-indigo">
+                <input type="checkbox" name="clearToken" className="accent-violet" />
+                Clear API token
+              </label>
+              <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
+                Save Wise
+              </button>
+            </form>
+            <form action={actionCheckWiseRate} className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="text-xs font-semibold text-muted">
+                Check 100.00 USD to
+                <input name="currency" defaultValue="GBP" maxLength={3} className="mt-1 w-24 rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo" />
+              </label>
+              <button type="submit" className="btn-secondary !py-2 text-sm">
+                Pull Wise user rate
+              </button>
+            </form>
+          </>
+        ) : null}
+        <h3 className="mt-6 font-display text-base font-bold text-indigo">Allowed currencies</h3>
+        <p className="mt-1 text-xs text-muted">
+          Only an active currency can be quoted. Turning one off refuses that prefund. USD does not need a row.
         </p>
         {canManage ? (
           <form action={actionSaveFxRates} className="mt-4 space-y-3">
@@ -331,13 +415,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                   maxLength={3}
                   className="rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo"
                 />
-                <input
-                  name="minorPerUsd"
-                  type="number"
-                  min={1}
-                  defaultValue={rate.minorPerUsd}
-                  className="rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-                />
+                <p className="self-center text-sm text-muted">Last stored quote: {rate.minorPerUsd} minor units per 1.00 USD</p>
                 <label className="flex items-center gap-2 text-sm text-indigo">
                   <input type="checkbox" name="activeIndex" value={String(index)} defaultChecked={rate.active} className="accent-violet" />
                   Active
@@ -346,21 +424,21 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             ))}
             <div className="grid gap-2 sm:grid-cols-[8rem_1fr_auto]">
               <input name="newCurrency" maxLength={3} placeholder="EUR" className="rounded-lg border border-border px-3 py-2 text-sm uppercase" />
-              <input name="newMinorPerUsd" type="number" min={1} placeholder="Minor units" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <p className="self-center text-sm text-muted">A new currency waits for a Wise quote.</p>
               <label className="flex items-center gap-2 text-sm text-indigo">
                 <input type="checkbox" name="newActive" defaultChecked className="accent-violet" />
                 Active
               </label>
             </div>
             <button type="submit" className="btn-primary !py-2 text-sm">
-              Save FX rates
+              Save currencies
             </button>
           </form>
         ) : (
           <ul className="mt-3 space-y-1 text-sm text-indigo">
             {rates.map((rate) => (
               <li key={rate.currency}>
-                {rate.currency} · {rate.minorPerUsd} minor units per 1.00 USD{rate.active ? "" : " · inactive"}
+                {rate.currency} · last stored {rate.minorPerUsd} minor units{rate.active ? "" : " · inactive"}
               </li>
             ))}
           </ul>

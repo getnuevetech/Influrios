@@ -1001,6 +1001,7 @@ model CollaborationJurisdiction {
   protectedPaymentsEnabled  Boolean  @default(false)
   escrowTermAllowed         Boolean  @default(false)
   currency                  String   @default("USD")
+  minorDigits               Int      @default(2)
   providerCode              String   @default("primary")
   updatedAt                 DateTime @updatedAt
 }
