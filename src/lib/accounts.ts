@@ -1,7 +1,8 @@
 import { createHash, createHmac, randomBytes, randomInt, scryptSync, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { CONSENT_VERSION, passwordError } from "@/lib/account-policy";
+import { passwordError } from "@/lib/account-policy";
+import { getSiteConfig } from "@/lib/site-config";
 import { getCreatorSessionDraft } from "@/lib/claim";
 
 const COOKIE = "influrios_account";
@@ -67,7 +68,9 @@ export async function registerAccount(input: {
   const email = input.email.trim().toLowerCase();
   const name = input.name.trim();
   if (!email.includes("@") || !name) throw new Error("Name and a valid email are required.");
-  const problem = passwordError(input.password);
+
+  const policy = await getSiteConfig();
+  const problem = passwordError(input.password, policy.passwordMinLength);
   if (problem) throw new Error(problem);
 
   const passwordHash = hashAccountPassword(input.password);
@@ -86,7 +89,7 @@ export async function registerAccount(input: {
       });
 
   await prisma.consentRecord.create({
-    data: { userId: user.id, version: CONSENT_VERSION, source: input.source },
+    data: { userId: user.id, version: policy.consentVersion, source: input.source },
   });
   await issueEmailChallenge(user.id);
   return user;
@@ -97,6 +100,7 @@ export async function loginAccount(email: string, password: string) {
   if (!user?.passwordHash || !verifyAccountPassword(password, user.passwordHash)) {
     throw new Error("Email or password is incorrect.");
   }
+  if (user.suspendedAt) throw new Error("This account is suspended. Contact Influrios support.");
   if (!user.emailVerifiedAt) {
     await issueEmailChallenge(user.id);
     const error = new Error("Verify your email before logging in.");
@@ -143,7 +147,8 @@ export async function requestPasswordReset(email: string) {
 }
 
 export async function resetPassword(token: string, password: string) {
-  const problem = passwordError(password);
+  const policy = await getSiteConfig();
+  const problem = passwordError(password, policy.passwordMinLength);
   if (problem) throw new Error(problem);
   const row = await prisma.passwordReset.findUnique({ where: { tokenHash: hashToken(token) } });
   if (!row || row.usedAt || row.expiresAt < new Date()) throw new Error("This reset link has expired.");
@@ -212,7 +217,7 @@ export async function getAccountSession(): Promise<AccountSession | null> {
     };
     if (parsed.exp < Date.now()) return null;
     const user = await prisma.user.findUnique({ where: { id: parsed.userId } });
-    if (!user?.emailVerifiedAt) return null;
+    if (!user?.emailVerifiedAt || user.suspendedAt) return null;
     return {
       id: user.id,
       email: user.email,

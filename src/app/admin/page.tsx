@@ -12,6 +12,7 @@ import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
 import { escrowStats, getProtectedPaymentsStore } from "@/lib/protected-payments";
 import { getTrustStore, trustStats } from "@/lib/trust";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -33,6 +34,7 @@ const LINKS: {
     escrowHeld: string;
     trustOpen: number;
     agencyRoster: number;
+    memberAccounts: number;
   }) => string;
 }[] = [
   {
@@ -116,9 +118,30 @@ const LINKS: {
   {
     href: "/admin/value-prop",
     title: "Value proposition",
-    blurb: "Homepage pillars — replaces placeholder stats.",
+    blurb: "Homepage pillar section under the hero.",
     module: "banners",
     meta: () => "CMS strip",
+  },
+  {
+    href: "/admin/stats",
+    title: "Site stats",
+    blurb: "Footer counters and the script tagline. Edit the numbers here.",
+    module: "banners",
+    meta: () => "50K+ strip",
+  },
+  {
+    href: "/admin/guests",
+    title: "Guest gates",
+    blurb: "How many profile views and searches a guest gets before sign-in.",
+    module: "plans",
+    meta: () => "Soft prompt and hard stop",
+  },
+  {
+    href: "/admin/accounts",
+    title: "Member accounts",
+    blurb: "Registered members, verification, suspension, consent, and password length.",
+    module: "accounts",
+    meta: (c) => `${c.memberAccounts} accounts`,
   },
   {
     href: "/admin/fees",
@@ -145,13 +168,14 @@ export default async function AdminHomePage({
   if (!session) redirect("/admin/login");
 
   const params = await searchParams;
-  const [cms, matching, billing, payments, trust, agency] = await Promise.all([
+  const [cms, matching, billing, payments, trust, agency, memberAccounts] = await Promise.all([
     getCms().catch(() => null),
     getManagedMatching().catch(() => null),
     getBillingStore().catch(() => null),
     getProtectedPaymentsStore().catch(() => null),
     getTrustStore().catch(() => null),
     getAgencyStore().catch(() => null),
+    prisma.user.count().catch(() => 0),
   ]);
   const payStats = payments ? escrowStats(payments) : { active: 0, held: 0 };
   const tStats = trust ? trustStats(trust) : { open: 0, resolved: 0, total: 0, contracts: 0 };
@@ -177,6 +201,7 @@ export default async function AdminHomePage({
     }).format(payStats.held / 100),
     trustOpen: tStats.open,
     agencyRoster: aStats.roster,
+    memberAccounts,
   };
 
   const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));

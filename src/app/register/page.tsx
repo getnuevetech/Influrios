@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionRegister } from "@/app/account/actions";
-import { CONSENT_VERSION, safeNextPath } from "@/lib/account-policy";
+import { safeNextPath } from "@/lib/account-policy";
+import { getSiteConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Create account" };
@@ -10,6 +11,7 @@ type Props = { searchParams: Promise<{ next?: string; error?: string }> };
 export default async function RegisterPage({ searchParams }: Props) {
   const params = await searchParams;
   const next = safeNextPath(params.next);
+  const policy = await getSiteConfig();
   return (
     <div className="mx-auto max-w-md px-4 py-14">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>
@@ -34,11 +36,13 @@ export default async function RegisterPage({ searchParams }: Props) {
         </label>
         <label className="block text-sm font-semibold text-indigo">
           Password
-          <input name="password" type="password" required minLength={8} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
+          <input name="password" type="password" required minLength={policy.passwordMinLength} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
         </label>
         <label className="flex items-start gap-2 text-sm text-indigo">
           <input type="checkbox" name="consent" required className="mt-1 accent-[#633CFF]" />
-          <span>I agree to the Influrios account terms (consent version {CONSENT_VERSION}).</span>
+          <span>
+            {policy.consentCopy} (consent version {policy.consentVersion}).
+          </span>
         </label>
         <button type="submit" className="btn-primary w-full">
           Create account

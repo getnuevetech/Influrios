@@ -41,8 +41,9 @@ export function safeNextPath(raw: string | undefined | null, fallback = "/"): st
   return value;
 }
 
-export function passwordError(password: string): string | null {
-  if (password.length < 8) return "Use at least 8 characters.";
+export function passwordError(password: string, minLength = 8): string | null {
+  const min = Math.min(64, Math.max(8, Math.floor(minLength) || 8));
+  if (password.length < min) return `Use at least ${min} characters.`;
   if (password.length > 200) return "That password is too long.";
   return null;
 }

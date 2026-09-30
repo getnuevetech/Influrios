@@ -67,6 +67,7 @@ model User {
   name            String?
   passwordHash    String?
   emailVerifiedAt DateTime?
+  suspendedAt     DateTime?
   role            UserRole  @default(CREATOR)
   planTier        PlanTier  @default(STARTER)
   createdAt       DateTime  @default(now())
@@ -387,6 +388,29 @@ model PasswordReset {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+}
+
+/// Marketing counters on the public footer strip. Admins edit these; the page does not hardcode them.
+model FooterStat {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  label     String
+  iconKey   String
+  tone      String
+  sortOrder Int      @default(0)
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+/// Consent text, password rule, and the footer tagline. One row, edited in admin.
+model SiteConfig {
+  id                String   @id @default("default")
+  footerTagline     String
+  consentVersion    String
+  consentCopy       String
+  passwordMinLength Int      @default(8)
+  updatedAt         DateTime @updatedAt
 }
 
 model GuestUsagePolicy {

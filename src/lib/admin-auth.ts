@@ -34,6 +34,8 @@ export const ADMIN_PERMISSIONS = [
   "commerce.manage",
   "access.manage_roles",
   "access.manage_users",
+  "accounts.view",
+  "accounts.edit",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -50,7 +52,8 @@ export type AdminModule =
   | "trust"
   | "agency"
   | "commerce"
-  | "access";
+  | "access"
+  | "accounts";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -156,6 +159,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     permissions: [
       { id: "commerce.view", label: "View fee rules", hint: "Open commission / fee console" },
       { id: "commerce.manage", label: "Manage fee rules", hint: "Edit rules, run simulator, freeze snapshots" },
+    ],
+  },
+  {
+    module: "accounts",
+    label: "Member accounts",
+    description: "Registered members, consent version, and password rules",
+    permissions: [
+      { id: "accounts.view", label: "View accounts", hint: "Open member accounts and consent settings" },
+      { id: "accounts.edit", label: "Edit accounts", hint: "Verify, suspend, and change account policy" },
     ],
   },
   {
