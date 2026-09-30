@@ -4,7 +4,7 @@
  */
 import { createHmac, timingSafeEqual, randomBytes, scryptSync } from "crypto";
 import { promises as fs } from "fs";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import path from "path";
 
 /** Granular feature permissions selectable when creating an access level. */
@@ -553,11 +553,18 @@ export class AdminAuthError extends Error {
 
 export const ADMIN_COOKIE = COOKIE_NAME;
 
-export function adminCookieOptions(maxAgeSeconds = SESSION_DAYS * 24 * 60 * 60) {
+/** Secure only on HTTPS. The public site is served over HTTP, and a Secure cookie is dropped there. */
+export function cookieIsSecure(forwardedProto: string | null | undefined) {
+  const proto = forwardedProto?.split(",")[0]?.trim().toLowerCase();
+  return proto === "https";
+}
+
+export async function adminCookieOptions(maxAgeSeconds = SESSION_DAYS * 24 * 60 * 60) {
+  const headerStore = await headers();
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieIsSecure(headerStore.get("x-forwarded-proto")),
     path: "/",
     maxAge: maxAgeSeconds,
   };

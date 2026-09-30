@@ -103,9 +103,9 @@ export async function SiteFooter() {
   const platform = directory.menus.filter((item) => item.menu === "footer_platform" && item.visible);
   const platformLinks = platform.length ? platform : FOOTER_PLATFORM;
   return (
-    <footer className="mt-0">
+    <footer className="mt-0 border-t border-white/10 bg-pro text-white">
       {strip.stats.length ? (
-        <div className="border-y border-[#E4EBFF] bg-[#F4F7FF]">
+        <div className="border-b border-white/10">
           <div className="mx-auto flex w-full max-w-[90rem] flex-col items-center gap-8 px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-10">
             <div className="grid w-full flex-1 grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
               {strip.stats.map((stat) => {
@@ -118,14 +118,14 @@ export async function SiteFooter() {
                       <Icon size={22} />
                     </span>
                     <div className="min-w-0">
-                      <p className="font-display text-xl font-bold leading-none text-indigo">{stat.value}</p>
-                      <p className="mt-1 text-xs text-muted">{stat.label}</p>
+                      <p className="font-display text-xl font-bold leading-none text-white">{stat.value}</p>
+                      <p className="mt-1 text-xs text-white/70">{stat.label}</p>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <p className="shrink-0 text-center font-script text-[1.65rem] font-semibold leading-tight text-violet lg:max-w-[11rem] lg:text-right">
+            <p className="shrink-0 text-center font-script text-[1.65rem] font-semibold leading-tight text-[#E7DEFF] lg:max-w-[11rem] lg:text-right">
               <span aria-hidden className="mr-1 text-lg">
                 ✦
               </span>
@@ -135,7 +135,6 @@ export async function SiteFooter() {
         </div>
       ) : null}
 
-      <div className="border-t border-white/10 bg-pro text-white">
       <div className="mx-auto grid w-full max-w-[90rem] gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-5 lg:px-10">
         <div className="lg:col-span-1">
           <div className="flex items-center gap-2 font-display text-lg font-bold">
@@ -239,7 +238,6 @@ export async function SiteFooter() {
       </div>
       <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">
         © {new Date().getFullYear()} Influrios. All rights reserved.
-      </div>
       </div>
     </footer>
   );

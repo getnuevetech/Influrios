@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { decideGuestGate, passwordError, safeNextPath } from "./account-policy";
+import { cookieIsSecure } from "./admin-auth";
 
 describe("guest gate", () => {
   const limits = { soft: 3, hard: 5 };
@@ -27,6 +28,15 @@ describe("return path", () => {
     assert.equal(safeNextPath("https://evil.example/creators/sofia"), "/");
     assert.equal(safeNextPath("//evil.example"), "/");
     assert.equal(safeNextPath(""), "/");
+  });
+});
+
+describe("admin cookie", () => {
+  it("stays readable on the HTTP site and secure only behind HTTPS", () => {
+    assert.equal(cookieIsSecure("http"), false);
+    assert.equal(cookieIsSecure("https"), true);
+    assert.equal(cookieIsSecure("https,http"), true);
+    assert.equal(cookieIsSecure(null), false);
   });
 });
 
