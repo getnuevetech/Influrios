@@ -7,6 +7,7 @@ import {
 } from "@/lib/billing";
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { paymentRoutes } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Billing & Plans" };
@@ -21,6 +22,7 @@ export default async function BillingPage({ searchParams }: Props) {
   const ws = await getWorkspace();
   const be = getBusinessEntitlements(ws.plan);
   const store = await getBillingStore();
+  const routes = await paymentRoutes().catch(() => []);
   const creatorPlans = BILLING_CATALOG.filter((p) => p.audience === "creator");
   const businessPlans = BILLING_CATALOG.filter((p) => p.audience === "business");
 
@@ -47,6 +49,23 @@ export default async function BillingPage({ searchParams }: Props) {
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Checkout error: {params.error}
           </div>
+        ) : null}
+
+        {routes.length ? (
+          <section className="card-surface p-6">
+            <h2 className="font-display text-xl font-bold text-indigo">Country gateways</h2>
+            <p className="mt-1 text-sm text-muted">
+              Each country uses the gateway assigned in admin. A route is ready only after that gateway is enabled and
+              its secret is saved. This checkout does not mark Flutterwave or another gateway as paid on its own.
+            </p>
+            <ul className="mt-3 grid gap-1 text-sm text-muted sm:grid-cols-2">
+              {routes.map((route) => (
+                <li key={route.countryCode}>
+                  {route.countryCode} → {route.providerName ?? "Unassigned"} ({route.ready ? "ready" : route.reason.replace(/_/g, " ")})
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : null}
 
         <section className="card-surface p-6">

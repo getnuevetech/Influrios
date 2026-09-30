@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–F are implemented (entitlements, directory, claim persistence, accounts and guest gates, invitations, collaboration records). Footer stats, guest gates, member accounts, invitation templates, the proposal window, commercial options, and proposal limits are edited in admin. Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–F are implemented, and provider admin is in place for AI pipelines, country payment gateways, and document signing. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm; until then the platform fallback, an unpaid checkout, and a queued signature stay honest. Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  

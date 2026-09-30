@@ -352,9 +352,66 @@ model Collaboration {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   events          CollaborationEvent[]
+  signatures      SignatureRequest[]
 
   @@index([initiatorSlug, status])
   @@index([recipientSlug, status])
+}
+
+/// Admin-configured AI, payment, or document-signing connection. Secrets are ciphertext.
+model IntegrationProvider {
+  id             String   @id @default(cuid())
+  kind           String
+  code           String
+  name           String
+  enabled        Boolean  @default(false)
+  baseUrl        String?
+  publicKey      String?
+  secretCipher   String?
+  webhookCipher  String?
+  extraJson      Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  countryRoutes  PaymentCountryRoute[]
+  aiRoutes       AiFunctionRoute[]
+  signatures     SignatureRequest[]
+
+  @@unique([kind, code])
+}
+
+/// One active payment gateway per country. Example: Flutterwave for NG, Stripe for US.
+model PaymentCountryRoute {
+  id          String              @id @default(cuid())
+  countryCode String              @unique
+  providerId  String
+  provider    IntegrationProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  active      Boolean             @default(true)
+  updatedAt   DateTime            @updatedAt
+}
+
+/// Which AI provider serves a pipeline function. A null provider means the platform fallback.
+model AiFunctionRoute {
+  functionKey String               @id
+  providerId  String?
+  provider    IntegrationProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  enabled     Boolean              @default(true)
+  updatedAt   DateTime             @updatedAt
+}
+
+/// A signature request inside a collaboration. Queued is not signed.
+model SignatureRequest {
+  id              String               @id @default(cuid())
+  collaborationId String
+  collaboration   Collaboration        @relation(fields: [collaborationId], references: [id], onDelete: Cascade)
+  providerId      String?
+  provider        IntegrationProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  status          String               @default("queued")
+  title           String
+  lastError       String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([collaborationId])
 }
 
 model CollaborationEvent {
