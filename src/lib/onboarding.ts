@@ -2,6 +2,25 @@ import { decideCount, PLAN_ENTITLEMENTS, type EntitlementLimits, type PlanCode }
 
 export type OnboardingStage = "draft" | "claimed" | "verified" | "published";
 
+/** Claim funnel. Publish stays published. A draft cannot skip claim or verification. */
+export function advanceClaimStage(
+  current: OnboardingStage,
+  action: "claim" | "verify" | "publish",
+): { ok: true; stage: OnboardingStage } | { ok: false; error: string } {
+  if (action === "claim") {
+    if (current === "published") return { ok: false, error: "Already published" };
+    return { ok: true, stage: "claimed" };
+  }
+  if (action === "verify") {
+    if (current === "draft") return { ok: false, error: "Claim the card before verifying" };
+    return { ok: true, stage: "verified" };
+  }
+  if (current !== "verified" && current !== "published") {
+    return { ok: false, error: "Verify ownership before publishing" };
+  }
+  return { ok: true, stage: "published" };
+}
+
 export type CompletionRule = {
   key: string;
   label: string;
