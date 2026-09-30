@@ -427,6 +427,61 @@ export function IconPlaySolid(props: IconProps) {
   );
 }
 
+export function IconCamera(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 8.5h2.2l1.3-2h9l1.3 2H20a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18v-8A1.5 1.5 0 0 1 4 8.5Z" />
+      <circle cx="12" cy="13.2" r="3.2" />
+    </svg>
+  );
+}
+
+export function IconBag(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9.5h12l-.8 9.2a1.5 1.5 0 0 1-1.5 1.3H8.3a1.5 1.5 0 0 1-1.5-1.3L6 9.5Z" />
+      <path d="M9 9.5V8a3 3 0 0 1 6 0v1.5" />
+    </svg>
+  );
+}
+
+export function IconPlane(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.5 12.5 3.8 9.8l1-1.8 5.2 1.4L14.5 3l1.8.9-1.8 7.2 4.2 2.2.9-1.4 1.5.7-1.6 3.4-3.5-1.2-7.1 2.2-.7-1.6 1.4-.8Z" />
+    </svg>
+  );
+}
+
+export function IconMegaphone(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.5 10.5v3l4 1.2 8.5 3.3V6L8.5 9.3 4.5 10.5Z" />
+      <path d="M8.5 14.7v3.3l2.2-1.2" />
+    </svg>
+  );
+}
+
+export function IconCalendar(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="5" width="17" height="15" rx="2" />
+      <path d="M8 3.5v3M16 3.5v3M3.5 10h17" />
+    </svg>
+  );
+}
+
+/** Small blue play in white circle for content cards */
+export function IconPlayBadge(props: IconProps) {
+  const size = props.size ?? 22;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={props.className} aria-hidden>
+      <circle cx="12" cy="12" r="11" fill="#fff" />
+      <path d="M10 8.2v7.6L16.8 12 10 8.2Z" fill="#2979FF" />
+    </svg>
+  );
+}
+
 export function SocialIcon({
   platform,
   size = 20,
