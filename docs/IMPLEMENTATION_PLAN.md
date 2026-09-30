@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Phase 12.6 can split a prefund into stages or open a recurring series. Each tranche stays unfunded until its own signed webhook. Phase 12.7 converts a non-USD prefund, routes the jurisdiction to one marketplace provider, and writes revenue-share lines when that provider releases a milestone. Those lines are not cash. A missing rate or a provider that is not ready creates no funding row. Phase 12.8 pulls that rate from the Wise user quote for the saved profile. A typed minor-unit figure is not used. If Wise is not ready or does not return a rate, nothing is funded. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Phase 12.6 can split a prefund into stages or open a recurring series. Each tranche stays unfunded until its own signed webhook. Phase 12.7 converts a non-USD prefund, routes the jurisdiction to one marketplace provider, and writes revenue-share lines when that provider releases a milestone. Those lines are not cash. A missing rate or a provider that is not ready creates no funding row. Phase 12.8 pulls that rate from the Wise user quote for the saved profile. A typed minor-unit figure is not used. If Wise is not ready or does not return a rate, nothing is funded. Phase 12.9 copies a revision limit onto each milestone. Asking for a revision sends submitted work back to the creator and does not move the ledger. A later limit edit does not raise the count already saved on that milestone. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -311,6 +311,19 @@ Implemented in `src/lib/wise-fx.ts`, `src/lib/wise-quote.ts`, `src/lib/marketpla
 4. Redirects are not followed, so the token is not sent to another host.
 
 **Exit:** with Wise not ready, a GB prefund creates no row. With a user rate of 0.75, 100.00 USD is stored as 75.00 GBP and the snapshot keeps 0.75 after the stored minor units change.
+
+### Phase 12.9 — Limited milestone revisions
+
+Implemented in `src/lib/ledger.ts`, `src/lib/marketplace-ledger.ts`, `/payments`, the creator dashboard, and `/admin/marketplace`.
+
+**Proves:** a submitted milestone can be sent back until the limit copied onto that milestone; a later admin limit does not raise it; an open dispute blocks the request; the ledger is unchanged.
+
+1. The revision limit is an admin setting, seeded at 2. Zero means a submitted milestone cannot be sent back.
+2. The limit is copied onto each milestone when the prefund is created. A later edit does not rewrite milestones already saved.
+3. A revision applies only to submitted work on a provider-confirmed prefund. It returns the milestone to pending and clears the auto-approve deadline.
+4. The request does not post a hold, release, refund, or share line. Approval and release stay on their existing path.
+
+**Exit:** a milestone saved with a limit of 1 accepts one revision and refuses the next after the admin limit is raised. The provider hold is still the only ledger row.
 
 ---
 

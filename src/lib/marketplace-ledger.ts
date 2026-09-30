@@ -8,6 +8,7 @@ import {
   marketplaceDisposition,
   reconcileLedger,
   ledgerMovements,
+  requestRevision,
   shouldAutoApprove,
   splitGross,
   type LedgerMovement,
@@ -109,6 +110,7 @@ export async function marketplaceConfig() {
   const provider = providers.find((row) => row.code === PROVIDER_CODE) ?? null;
   return {
     reviewWindowHours: settings?.reviewWindowHours ?? 72,
+    maxRevisions: settings?.maxRevisions ?? 2,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
@@ -137,16 +139,25 @@ export async function marketplaceConfig() {
   };
 }
 
-export async function saveMarketplaceSettings(input: { reviewWindowHours: number; cancelUnconfirmed?: boolean }) {
+export async function saveMarketplaceSettings(input: {
+  reviewWindowHours: number;
+  maxRevisions?: number;
+  cancelUnconfirmed?: boolean;
+}) {
   await ensureMarketplaceDefaults();
   const hours = Math.round(input.reviewWindowHours);
   if (!Number.isFinite(hours) || hours < 1 || hours > 24 * 30) {
     throw new Error("Review window must be between 1 and 720 hours.");
   }
+  const maxRevisions = input.maxRevisions == null ? null : Math.round(input.maxRevisions);
+  if (maxRevisions != null && (!Number.isInteger(maxRevisions) || maxRevisions < 0 || maxRevisions > 20)) {
+    throw new Error("Revision limit must be from 0 to 20.");
+  }
   return prisma.marketplaceSettings.update({
     where: { id: "default" },
     data: {
       reviewWindowHours: hours,
+      ...(maxRevisions == null ? {} : { maxRevisions }),
       ...(input.cancelUnconfirmed == null ? {} : { cancelUnconfirmed: input.cancelUnconfirmed }),
     },
   });
@@ -360,6 +371,7 @@ export async function requestPrefund(input: {
   const shares = templates.map((row) => row.shareBps);
   const serviceLevel = (input.serviceLevel || "contracted").slice(0, 40);
   const windowHours = settings?.reviewWindowHours ?? 72;
+  const revisionLimit = settings?.maxRevisions ?? 2;
   const businessName = input.businessName.trim().slice(0, 120);
   const creatorSlug = input.creatorSlug.trim().slice(0, 80);
   const baseTitle = input.title.trim().slice(0, 140);
@@ -437,6 +449,7 @@ export async function requestPrefund(input: {
               sortOrder: template.sortOrder,
               status: "pending",
               reviewWindowHours: windowHours,
+              revisionLimit,
             })),
           },
         },
@@ -476,6 +489,7 @@ export async function sweepDueRecurrences(now = new Date()) {
   ]);
   const shares = templates.map((row) => row.shareBps);
   const windowHours = settings?.reviewWindowHours ?? 72;
+  const revisionLimit = settings?.maxRevisions ?? 2;
   const shareSnapshot = await activeShareSnapshot();
   for (const row of confirmed) {
     if (!row.scheduleId || row.trancheIndex >= row.trancheCount) continue;
@@ -551,6 +565,7 @@ export async function sweepDueRecurrences(now = new Date()) {
               sortOrder: template.sortOrder,
               status: "pending",
               reviewWindowHours: windowHours,
+              revisionLimit,
             })),
           },
         },
@@ -629,6 +644,9 @@ function presentFunding(row: {
     status: string;
     sortOrder: number;
     autoApproveAt: Date | null;
+    revisionLimit: number;
+    revisionCount: number;
+    revisionNote: string;
   }[];
   entries: { kind: string; amountCents: number }[];
   disputes?: { id: string; milestoneId: string | null; status: string }[];
@@ -664,6 +682,48 @@ export async function submitFundingMilestone(fundingId: string, milestoneId: str
     },
   });
   return { ok: true as const };
+}
+
+export async function requestFundingRevision(fundingId: string, milestoneId: string, note: string) {
+  const text = note.trim().slice(0, 500);
+  if (text.length < 8) return { ok: false as const, error: "Say what should change." };
+  const milestone = await prisma.fundingMilestone.findFirst({
+    where: { id: milestoneId, fundingId },
+    include: { funding: true },
+  });
+  if (!milestone) return { ok: false as const, error: "Milestone not found." };
+  const disputeOpen = await milestoneHasOpenDispute(fundingId, milestoneId);
+  const gate = requestRevision({
+    fundingStatus: milestone.funding.status,
+    milestoneStatus: milestone.status,
+    revisionCount: milestone.revisionCount,
+    revisionLimit: milestone.revisionLimit,
+    disputeOpen,
+  });
+  if (!gate.ok) return gate;
+  const updated = await prisma.fundingMilestone.updateMany({
+    where: { id: milestone.id, status: "submitted", revisionCount: milestone.revisionCount },
+    data: {
+      status: "pending",
+      revisionCount: gate.revisionCount,
+      revisionNote: text,
+      submittedAt: null,
+      autoApproveAt: null,
+    },
+  });
+  if (updated.count !== 1) return { ok: false as const, error: "That milestone cannot take this step." };
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: "business",
+        action: "milestone_revision_requested",
+        objectType: "FundingMilestone",
+        objectId: milestone.id,
+        after: { fundingId, revisionCount: gate.revisionCount, revisionLimit: milestone.revisionLimit },
+      },
+    })
+    .catch(() => undefined);
+  return { ok: true as const, revisionCount: gate.revisionCount };
 }
 
 export async function approveFundingMilestone(fundingId: string, milestoneId: string) {

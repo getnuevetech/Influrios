@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCreatorBySlug } from "@/lib/seed-data";
-import { approveFundingMilestone, requestPrefund, submitFundingMilestone } from "@/lib/marketplace-ledger";
+import {
+  approveFundingMilestone,
+  requestFundingRevision,
+  requestPrefund,
+  submitFundingMilestone,
+} from "@/lib/marketplace-ledger";
 import { cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
 
 function dollarsToCents(raw: string) {
@@ -49,6 +54,16 @@ export async function actionSubmitMilestone(formData: FormData) {
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   redirect("/payments?submitted=1");
+}
+
+export async function actionRequestRevision(formData: FormData) {
+  const fundingId = String(formData.get("dealId") ?? "");
+  const milestoneId = String(formData.get("milestoneId") ?? "");
+  const result = await requestFundingRevision(fundingId, milestoneId, String(formData.get("note") ?? ""));
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/payments");
+  revalidatePath("/dashboard");
+  redirect("/payments?revised=1");
 }
 
 export async function actionApproveMilestone(formData: FormData) {

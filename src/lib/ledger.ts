@@ -52,6 +52,35 @@ export function shouldAutoApprove(status: string, autoApproveAt: Date | null, no
   return status === "submitted" && autoApproveAt != null && now.getTime() >= autoApproveAt.getTime();
 }
 
+/** A revision sends submitted work back. It does not approve, release, or refund. */
+export function requestRevision(input: {
+  fundingStatus: string;
+  milestoneStatus: string;
+  revisionCount: number;
+  revisionLimit: number;
+  disputeOpen: boolean;
+}): { ok: true; revisionCount: number } | { ok: false; error: string } {
+  if (input.fundingStatus !== "held") {
+    return { ok: false, error: "Ask for a revision after the provider confirms the prefund." };
+  }
+  if (input.disputeOpen) {
+    return { ok: false, error: "A dispute is open on this milestone." };
+  }
+  if (input.milestoneStatus !== "submitted") {
+    return { ok: false, error: "A revision applies to submitted work." };
+  }
+  if (!Number.isInteger(input.revisionCount) || input.revisionCount < 0) {
+    return { ok: false, error: "That milestone cannot take this step." };
+  }
+  if (!Number.isInteger(input.revisionLimit) || input.revisionLimit < 0) {
+    return { ok: false, error: "That milestone cannot take this step." };
+  }
+  if (input.revisionCount >= input.revisionLimit) {
+    return { ok: false, error: "This milestone has used its revision limit." };
+  }
+  return { ok: true, revisionCount: input.revisionCount + 1 };
+}
+
 export function advanceMilestone(
   status: MilestoneWorkflowStatus,
   action: "submit" | "approve" | "auto_approve",

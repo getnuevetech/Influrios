@@ -399,7 +399,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       <section className="card-surface p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Protected payments</h2>
         <p className="mt-1 text-sm text-muted">
-          Submit a milestone after the marketplace provider confirms the prefund. Approval does not release the money.
+          Submit a milestone after the marketplace provider confirms the prefund. A revision sends it back to you. Approval does not release the money.
         </p>
         {params.saved === "milestone" ? (
           <p className="mt-3 text-sm font-semibold text-emerald-700">Milestone submitted for review.</p>
@@ -430,6 +430,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span>
                           {milestone.title} · {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status}
+                          {milestone.revisionCount > 0 ? ` · revision ${milestone.revisionCount} of ${milestone.revisionLimit}` : ""}
                         </span>
                         {funding.status === "held" && milestone.status === "pending" ? (
                           <form action={actionSubmitOwnMilestone}>
@@ -441,6 +442,9 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                           </form>
                         ) : null}
                       </div>
+                      {milestone.revisionNote && milestone.status === "pending" ? (
+                        <p className="mt-1 text-xs text-indigo">Revision: {milestone.revisionNote}</p>
+                      ) : null}
                       {funding.status === "held" &&
                       milestone.status !== "released" &&
                       milestone.status !== "refunded" &&
