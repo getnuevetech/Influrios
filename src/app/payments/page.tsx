@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { actionApproveMilestone, actionCancelPrefund, actionCreateDeal, actionOpenDispute, actionSubmitMilestone } from "@/app/payments/actions";
+import { listAttributionSources, listRepeatCandidates } from "@/lib/deal-attribution";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { fundingTerm } from "@/lib/ledger";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
@@ -31,10 +32,12 @@ const MILESTONE_COLOR: Record<string, string> = {
 
 export default async function PaymentsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [config, fundings, reasons] = await Promise.all([
+  const [config, fundings, reasons, sources, repeats] = await Promise.all([
     marketplaceConfig().catch(() => null),
     listFundings().catch(() => []),
     listDisputeReasons().catch(() => []),
+    listAttributionSources().catch(() => []),
+    listRepeatCandidates().catch(() => []),
   ]);
   const jurisdictions = config?.jurisdictions ?? [];
   const homeJurisdiction = jurisdictions.find((row) => row.code === "US") ?? jurisdictions[0];
@@ -153,6 +156,27 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
               />
             </label>
+            <label className="text-sm">
+              <span className="font-semibold text-indigo">Attribution</span>
+              <select name="sourceId" required className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2">
+                {sources.filter((source) => source.active).map((source) => (
+                  <option key={source.id} value={source.id}>
+                    {source.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
+              <span className="font-semibold text-indigo">Repeat a confirmed deal</span>
+              <select name="repeatOfId" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2" defaultValue="">
+                <option value="">New introduction</option>
+                {repeats.map((prior) => (
+                  <option key={prior.id} value={prior.id}>
+                    {prior.businessName} → {prior.creatorSlug} · {prior.title}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="text-sm sm:col-span-2">
               <span className="font-semibold text-indigo">Brief / campaign</span>
               <input
@@ -203,6 +227,16 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   <span>
                     Held by provider <strong className="text-amber-800">{formatMoney(deal.ledger.heldCents)}</strong>
                   </span>
+                  {deal.attributionLabel ? (
+                    <span>
+                      Attribution <strong className="text-indigo">{deal.attributionLabel}</strong>
+                    </span>
+                  ) : null}
+                  {deal.repeatOf ? (
+                    <span>
+                      Repeat of <strong className="text-indigo">{deal.repeatOf.title}</strong>
+                    </span>
+                  ) : null}
                 </div>
                 {deal.status === "awaiting_provider" ? (
                   <form action={actionCancelPrefund} className="mt-4">

@@ -428,6 +428,7 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Prefunding via approved marketplace provider adapter (12.3)  
 - [x] Milestone state machine + ledger + idempotent webhooks (12.3)  
 - [x] Milestone disputes / cancellation engine (12.4)  
+- [x] Attribution / repeat deals (12.5)  
 
 **Defer:** Staged/recurring funding, multi-provider FX, revenue-share splits (P3–P4)  
 

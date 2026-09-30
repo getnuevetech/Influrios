@@ -29,6 +29,8 @@ export async function actionCreateDeal(formData: FormData) {
     jurisdictionCode,
     grossCents,
     serviceLevel: "contracted",
+    sourceId: String(formData.get("sourceId") ?? ""),
+    repeatOfId: String(formData.get("repeatOfId") ?? ""),
   });
   if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");

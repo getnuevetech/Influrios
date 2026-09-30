@@ -979,9 +979,12 @@ model MarketplaceSettings {
   id                 String   @id @default("default")
   reviewWindowHours  Int      @default(72)
   templatesSeeded    Boolean  @default(false)
-  cancelUnconfirmed  Boolean  @default(true)
-  reasonsSeeded      Boolean  @default(false)
-  updatedAt          DateTime @updatedAt
+  cancelUnconfirmed      Boolean  @default(true)
+  reasonsSeeded          Boolean  @default(false)
+  attributionWindowDays  Int      @default(90)
+  repeatMinGrossCents    Int      @default(0)
+  sourcesSeeded          Boolean  @default(false)
+  updatedAt              DateTime @updatedAt
 }
 
 /// Protected payments and the word "escrow" are jurisdiction flags, not code switches.
@@ -1015,16 +1018,21 @@ model CollaborationFunding {
   feeCents         Int      @default(0)
   feeSnapshotJson  Json
   serviceLevel     String
-  status           String   @default("awaiting_provider")
-  providerCode     String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  milestones       FundingMilestone[]
-  entries          LedgerEntry[]
-  disputes         MilestoneDispute[]
+  status            String   @default("awaiting_provider")
+  providerCode      String
+  attributionLabel  String   @default("")
+  repeatOfId        String?
+  repeatOf          CollaborationFunding?  @relation("FundingRepeat", fields: [repeatOfId], references: [id], onDelete: SetNull)
+  repeats           CollaborationFunding[] @relation("FundingRepeat")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  milestones        FundingMilestone[]
+  entries           LedgerEntry[]
+  disputes          MilestoneDispute[]
 
   @@index([creatorSlug, status])
   @@index([status])
+  @@index([repeatOfId])
 }
 
 model FundingMilestone {
@@ -1061,6 +1069,15 @@ model LedgerEntry {
 
   @@unique([provider, eventId, kind])
   @@index([fundingId])
+}
+
+/// Admin-edited sources. The label is copied onto a funding when the prefund is requested.
+model AttributionSource {
+  id        String   @id @default(cuid())
+  label     String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  updatedAt DateTime @updatedAt
 }
 
 /// Admin-edited reasons. The label is copied onto a dispute when it is opened.

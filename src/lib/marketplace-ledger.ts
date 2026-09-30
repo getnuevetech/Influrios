@@ -11,6 +11,7 @@ import {
   splitGross,
   type LedgerMovement,
 } from "@/lib/ledger";
+import { resolveDealAttribution } from "@/lib/deal-attribution";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
 
 const PROVIDER_CODE = "primary";
@@ -79,6 +80,8 @@ export async function marketplaceConfig() {
   return {
     reviewWindowHours: settings?.reviewWindowHours ?? 72,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
+    attributionWindowDays: settings?.attributionWindowDays ?? 90,
+    repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
     jurisdictions,
     templates,
     provider: {
@@ -201,6 +204,8 @@ export async function requestPrefund(input: {
   title: string;
   grossCents: number;
   serviceLevel?: string;
+  sourceId?: string | null;
+  repeatOfId?: string | null;
 }) {
   await ensureMarketplaceDefaults();
   const code = input.jurisdictionCode.trim().toUpperCase();
@@ -218,6 +223,13 @@ export async function requestPrefund(input: {
   if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) {
     return { ok: false as const, error: "Enter a gross amount greater than zero." };
   }
+  const attribution = await resolveDealAttribution({
+    businessName: input.businessName,
+    creatorSlug: input.creatorSlug,
+    sourceId: input.sourceId,
+    repeatOfId: input.repeatOfId,
+  });
+  if (!attribution.ok) return attribution;
   const amounts = splitGross(
     input.grossCents,
     templates.map((row) => row.shareBps),
@@ -252,6 +264,8 @@ export async function requestPrefund(input: {
       },
       status: "awaiting_provider",
       providerCode: provider!.code,
+      attributionLabel: attribution.attributionLabel,
+      repeatOfId: attribution.repeatOfId,
       milestones: {
         create: templates.map((template, index) => ({
           title: template.title,
@@ -269,7 +283,13 @@ export async function requestPrefund(input: {
       action: "prefund_requested",
       objectType: "CollaborationFunding",
       objectId: funding.id,
-      after: { status: funding.status, grossCents: funding.grossCents, feeCents },
+      after: {
+        status: funding.status,
+        grossCents: funding.grossCents,
+        feeCents,
+        attributionLabel: attribution.attributionLabel,
+        repeatOfId: attribution.repeatOfId,
+      },
     },
   }).catch(() => undefined);
   return { ok: true as const, id: funding.id, status: funding.status as "awaiting_provider" };
@@ -294,7 +314,12 @@ export async function listFundings() {
   await sweepAutoApprovals();
   const rows = await prisma.collaborationFunding.findMany({
     orderBy: { createdAt: "desc" },
-    include: { milestones: { orderBy: { sortOrder: "asc" } }, entries: { orderBy: { createdAt: "asc" } }, disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } }, select: { id: true, milestoneId: true, status: true } } },
+    include: {
+      milestones: { orderBy: { sortOrder: "asc" } },
+      entries: { orderBy: { createdAt: "asc" } },
+      disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } }, select: { id: true, milestoneId: true, status: true } },
+      repeatOf: { select: { id: true, title: true } },
+    },
     take: 50,
   });
   return rows.map(presentFunding);
@@ -305,7 +330,12 @@ export async function listFundingsForCreator(creatorSlug: string) {
   const rows = await prisma.collaborationFunding.findMany({
     where: { creatorSlug },
     orderBy: { createdAt: "desc" },
-    include: { milestones: { orderBy: { sortOrder: "asc" } }, entries: true, disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } }, select: { id: true, milestoneId: true, status: true } } },
+    include: {
+      milestones: { orderBy: { sortOrder: "asc" } },
+      entries: true,
+      disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } }, select: { id: true, milestoneId: true, status: true } },
+      repeatOf: { select: { id: true, title: true } },
+    },
     take: 20,
   });
   return rows.map(presentFunding);
@@ -332,6 +362,8 @@ function presentFunding(row: {
   }[];
   entries: { kind: string; amountCents: number }[];
   disputes?: { id: string; milestoneId: string | null; status: string }[];
+  attributionLabel: string;
+  repeatOf: { id: string; title: string } | null;
 }) {
   const movements: LedgerMovement[] = ledgerMovements(row.entries);
   return { ...row, ledger: reconcileLedger(movements, row.grossCents) };
