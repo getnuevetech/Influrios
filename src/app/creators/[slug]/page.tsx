@@ -489,12 +489,12 @@ export default async function CreatorProfilePage({ params }: Props) {
 
       {/* —— Featured Content horizontal strip —— */}
       {content.length > 0 ? (
-        <section className="mx-auto max-w-[90rem] px-4 py-7 sm:px-6 lg:px-10">
-          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <section className="w-full py-7">
+          <div className="mx-auto mb-3 flex max-w-[90rem] flex-wrap items-end justify-between gap-2 px-4 sm:px-6 lg:px-10">
             <div>
               <h3 className="font-display text-[1.1rem] font-bold text-indigo">Featured Content</h3>
               <p className="mt-0.5 text-[11px] text-muted">
-                A glimpse of {firstName}&apos;s recent content across platforms.
+                A glimpse of {firstName}&apos;s recent content across platforms. Scroll sideways to explore.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -516,28 +516,29 @@ export default async function CreatorProfilePage({ params }: Props) {
             </div>
           </div>
 
-          <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:thin]">
+          <div className="flex w-full gap-3 overflow-x-auto px-4 pb-2 sm:px-6 lg:px-10 [-ms-overflow-style:auto] [scrollbar-width:thin]">
             {content.map((item) => (
               <article
                 key={item.id}
-                className="w-[168px] shrink-0 overflow-hidden rounded-2xl border border-[#E6ECFF] bg-white shadow-sm sm:w-[188px]"
+                className="w-[148px] shrink-0 overflow-hidden rounded-2xl border border-[#E6ECFF] bg-white shadow-sm sm:w-[160px]"
               >
-                <div className="relative aspect-[4/5]">
+                {/* Height reduced ~20% vs prior 4/5 aspect (now square) */}
+                <div className="relative aspect-square">
                   <Image
                     src={item.image}
                     alt={item.category}
                     fill
                     className="object-cover"
-                    sizes="188px"
+                    sizes="160px"
                   />
                   <span className="absolute right-2 top-2">
-                    <IconPlayBadge size={22} />
+                    <IconPlayBadge size={30} />
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-1.5 px-2.5 py-2">
                   <SocialIcon
                     platform={item.platform.toUpperCase()}
-                    size={13}
+                    size={15}
                     className="text-indigo"
                   />
                   <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-muted">

@@ -1,67 +1,120 @@
+import Image from "next/image";
 import Link from "next/link";
-import { SEED_CREATORS, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
+import { CategoryGlyph, IconArrowRight, IconHeart } from "@/components/icons";
+import {
+  CATEGORY_IMAGES,
+  SEED_CREATORS,
+  SPECIALTY_TAXONOMY,
+} from "@/lib/seed-data";
 
-export const metadata = { title: "Categories" };
+export const metadata = { title: "Categories · Influrios" };
+
+function creatorsInCategory(slug: string, children?: { slug: string }[]) {
+  return SEED_CREATORS.filter(
+    (c) =>
+      c.specialties.includes(slug) ||
+      children?.some((ch) => c.specialties.includes(ch.slug)),
+  );
+}
 
 export default function CategoriesPage() {
   return (
     <div className="bg-[#F7FAFF]">
-      <section className="hero-atmosphere text-white">
-        <div className="mx-auto max-w-[90rem] px-4 py-14 sm:px-6 lg:px-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
-            Discover by niche
+      <section className="border-b border-[#E4EBFF] bg-gradient-to-br from-[#EEF2FF] via-[#F7FAFF] to-[#E8F4FF]">
+        <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6 lg:px-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet">
+            Niche directory
           </p>
-          <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">Categories</h1>
-          <p className="mt-3 max-w-2xl text-white/75">
-            Browse creators by specialty — beauty, travel, fitness, tech, and more — then open
-            Discover to filter and shortlist.
+          <h1 className="mt-2 font-display text-4xl font-bold text-indigo sm:text-5xl">
+            Influencer Categories
+          </h1>
+          <p className="mt-3 max-w-2xl text-muted">
+            Browse every specialty on Influrios — open a niche to filter Discover, or drill into
+            sub-categories for tighter matches.
           </p>
+          <Link
+            href="/discover"
+            className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-violet hover:underline"
+          >
+            Open Discover filters <IconArrowRight size={14} />
+          </Link>
         </div>
       </section>
 
-      <section className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6 lg:px-10">
-        {SPECIALTY_TAXONOMY.map((parent) => {
-          const count = SEED_CREATORS.filter(
-            (c) =>
-              c.specialties.includes(parent.slug) ||
-              parent.children?.some((ch) => c.specialties.includes(ch.slug)),
-          ).length;
-          return (
-            <div key={parent.slug} className="card-surface p-5 sm:p-6">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <h2 className="font-display text-xl font-bold text-indigo">{parent.name}</h2>
-                  <p className="mt-0.5 text-[12px] text-muted">
-                    {count} creator{count === 1 ? "" : "s"} in this category
-                  </p>
-                </div>
+      <section className="mx-auto max-w-[90rem] px-4 py-10 sm:px-6 lg:px-10">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {SPECIALTY_TAXONOMY.map((parent) => {
+            const creators = creatorsInCategory(parent.slug, parent.children);
+            const count = creators.length;
+            return (
+              <article
+                key={parent.slug}
+                className="overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_rgba(17,26,90,0.08)] ring-1 ring-[#E4EBFF]"
+              >
                 <Link
                   href={`/discover?specialty=${encodeURIComponent(parent.slug)}`}
-                  className="text-[12px] font-semibold text-violet hover:underline"
+                  className="group relative block aspect-[5/4] overflow-hidden"
                 >
-                  View all →
+                  <Image
+                    src={CATEGORY_IMAGES[parent.slug] ?? CATEGORY_IMAGES.lifestyle}
+                    alt={parent.name}
+                    fill
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                    sizes="20vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-indigo/85 via-indigo/30 to-transparent" />
+                  <span className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-violet shadow">
+                    <IconHeart size={13} />
+                  </span>
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/40 backdrop-blur-sm">
+                      <CategoryGlyph slug={parent.slug} size={24} />
+                    </span>
+                  </span>
+                  <div className="absolute inset-x-0 bottom-0 p-3">
+                    <h2 className="font-display text-base font-bold text-white sm:text-lg">
+                      {parent.name}
+                    </h2>
+                    <p className="text-[11px] font-medium text-white/80">
+                      {count} creator{count === 1 ? "" : "s"}
+                    </p>
+                  </div>
                 </Link>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link
-                  href={`/discover?specialty=${encodeURIComponent(parent.slug)}`}
-                  className="rounded-full bg-violet px-3 py-1.5 text-[11px] font-semibold text-white"
-                >
-                  {parent.name}
-                </Link>
-                {(parent.children ?? []).map((ch) => (
-                  <Link
-                    key={ch.slug}
-                    href={`/discover?specialty=${encodeURIComponent(ch.slug)}`}
-                    className="rounded-full bg-[#EEF2FF] px-3 py-1.5 text-[11px] font-semibold text-indigo ring-1 ring-[#E0E7FF]"
-                  >
-                    {ch.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+
+                {(parent.children?.length ?? 0) > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 p-3">
+                    {(parent.children ?? []).slice(0, 4).map((ch) => (
+                      <Link
+                        key={ch.slug}
+                        href={`/discover?specialty=${encodeURIComponent(ch.slug)}`}
+                        className="rounded-md bg-[#EEF2FF] px-2 py-1 text-[10px] font-semibold text-indigo hover:bg-[#E0E7FF]"
+                      >
+                        {ch.name}
+                      </Link>
+                    ))}
+                    {(parent.children?.length ?? 0) > 4 ? (
+                      <Link
+                        href={`/discover?specialty=${encodeURIComponent(parent.slug)}`}
+                        className="rounded-md px-2 py-1 text-[10px] font-semibold text-violet hover:underline"
+                      >
+                        +{(parent.children?.length ?? 0) - 4} more
+                      </Link>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="p-3">
+                    <Link
+                      href={`/discover?specialty=${encodeURIComponent(parent.slug)}`}
+                      className="text-[11px] font-semibold text-violet hover:underline"
+                    >
+                      View creators →
+                    </Link>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
       </section>
     </div>
   );

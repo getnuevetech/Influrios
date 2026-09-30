@@ -34,7 +34,20 @@ type Props = {
 
 export default async function BusinessWorkspacePage({ searchParams }: Props) {
   const params = await searchParams;
-  const ws = await getWorkspace();
+  let ws;
+  try {
+    ws = await getWorkspace();
+  } catch {
+    ws = {
+      businessId: "demo-business",
+      name: "Luminous Beauty",
+      plan: "BUSINESS_PRO" as const,
+      industry: "Skincare & Wellness",
+      shortlist: [] as Awaited<ReturnType<typeof getWorkspace>>["shortlist"],
+      briefs: [] as Awaited<ReturnType<typeof getWorkspace>>["briefs"],
+      inquiries: [] as Awaited<ReturnType<typeof getWorkspace>>["inquiries"],
+    };
+  }
   const entitlements = getBusinessEntitlements(ws.plan);
   const activeBrief = ws.briefs[0];
   const ranked = activeBrief && entitlements.fitInsights ? rankCreatorsForBrief(activeBrief).slice(0, 5) : [];

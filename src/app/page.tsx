@@ -256,7 +256,7 @@ export default async function HomePage() {
               Explore Influencer Categories
             </h2>
             <Link
-              href="/discover"
+              href="/categories"
               className="inline-flex items-center gap-1 text-sm font-semibold text-violet hover:underline"
             >
               View all categories <IconArrowRight size={14} />

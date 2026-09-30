@@ -129,15 +129,23 @@ async function ensureStore(): Promise<AgencyStore> {
     const raw = await fs.readFile(STORE_PATH, "utf8");
     return JSON.parse(raw) as AgencyStore;
   } catch {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
+    } catch {
+      /* read-only FS — serve in-memory defaults */
+    }
     return structuredClone(DEFAULT_STORE);
   }
 }
 
 async function saveStore(store: AgencyStore) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+  } catch {
+    /* ignore write failures in read-only environments */
+  }
 }
 
 export async function getAgencyStore() {
