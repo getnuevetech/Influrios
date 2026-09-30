@@ -12,12 +12,15 @@ export function InfluencerCardView({
   creator,
   qrDisplay = "default",
   compact = false,
+  hideCta = false,
 }: {
   creator: SeedCreator;
   /** `large` = phone-scannable QR (popup / share). */
   qrDisplay?: "default" | "large";
   /** Tighter layout so the Discover popup fits without an inner scrollbar. */
   compact?: boolean;
+  /** Hide primary CTA (used on profile card preview). */
+  hideCta?: boolean;
 }) {
   const entitlements = getEntitlements(creator.planTier as PlanCode);
   const specialties = creator.specialties.slice(0, entitlements.specialtiesMax);
@@ -27,7 +30,7 @@ export function InfluencerCardView({
   const canQr = entitlements.standardQr || entitlements.dynamicQr;
   const largeQr = qrDisplay === "large";
   // Popup QR: 160px = 200px − 20%
-  const qrPx = largeQr ? (compact ? 160 : 200) : 22;
+  const qrPx = largeQr ? (compact ? 140 : 168) : 22;
 
   const cardUrl =
     entitlements.shortlink && isPlus
@@ -40,26 +43,28 @@ export function InfluencerCardView({
         isPro ? "bg-pro text-white ring-1 ring-gold/40" : "bg-white text-indigo"
       }`}
     >
-      <div className={`relative ${compact ? "h-40" : "h-52"}`}>
+      <div className={`relative ${compact ? "h-40" : "h-48"}`}>
         <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="400px" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-        <span
-          className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${
-            isPro ? "bg-gold/20 text-[#F6E7B0]" : "bg-white/95 text-violet"
-          }`}
-        >
-          {creator.planTier === "STARTER" ? "Starter" : creator.planTier === "PLUS" ? "Plus" : "Pro"}
-        </span>
+        {!hideCta ? (
+          <span
+            className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${
+              isPro ? "bg-gold/20 text-[#F6E7B0]" : "bg-white/95 text-violet"
+            }`}
+          >
+            {creator.planTier === "STARTER" ? "Starter" : creator.planTier === "PLUS" ? "Plus" : "Pro"}
+          </span>
+        ) : null}
       </div>
       <div
         className={`-mt-6 rounded-t-[1.5rem] ${isPro ? "bg-pro" : "bg-white"} ${
-          compact ? "space-y-2.5 px-4 pb-4 pt-6" : "space-y-4 px-5 pb-6 pt-8"
+          compact ? "space-y-2.5 px-4 pb-4 pt-6" : "space-y-3.5 px-5 pb-5 pt-7"
         }`}
       >
         <div className="text-center">
           <h1
             className={`flex items-center justify-center gap-1.5 font-display font-bold ${
-              compact ? "text-xl" : "text-2xl"
+              compact ? "text-xl" : "text-[1.35rem]"
             }`}
           >
             {creator.displayName}
@@ -82,46 +87,18 @@ export function InfluencerCardView({
             </span>
           ))}
         </div>
-        <div
-          className={`rounded-2xl ${compact ? "p-2" : "p-3"} ${
-            isPro ? "bg-white/5" : "border border-border bg-starter-bg"
-          }`}
-        >
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {socials.map((s) => (
-              <a
-                key={s.platform}
-                href={s.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5"
-              >
-                <SocialIcon platform={s.platform} size={compact ? 18 : 22} />
-                <span className={`text-xs font-bold ${isPro ? "text-white" : "text-indigo"}`}>
-                  {formatFollowers(s.followers)}
-                </span>
-              </a>
-            ))}
-          </div>
-        </div>
 
         {largeQr && canQr ? (
           <div
             className={`flex flex-col items-center rounded-2xl ${
-              compact ? "gap-2 px-3 py-3" : "gap-3 px-4 py-5"
+              compact ? "gap-2 px-3 py-3" : "gap-2.5 px-3 py-4"
             } ${isPro ? "bg-white/5" : "bg-[#EEF4FF]"}`}
           >
-            <div className="min-w-0 text-center">
-              <div className="truncate text-sm font-semibold text-blue">{cardUrl}</div>
-              <div className={`text-[11px] ${isPro ? "text-white/50" : "text-muted"}`}>
-                Scan with your phone · Share my profile
-              </div>
-            </div>
             <div
               className={`relative overflow-hidden bg-white shadow-sm ${
-                compact ? "rounded-xl p-2" : "rounded-2xl p-3"
+                compact ? "rounded-xl p-2" : "rounded-2xl p-2.5"
               } ${isPro ? "ring-1 ring-gold/50" : "ring-1 ring-border"}`}
-              style={{ width: qrPx + (compact ? 16 : 24), height: qrPx + (compact ? 16 : 24) }}
+              style={{ width: qrPx + (compact ? 16 : 20), height: qrPx + (compact ? 16 : 20) }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -131,6 +108,12 @@ export function InfluencerCardView({
                 height={qrPx}
                 className="h-full w-full object-contain"
               />
+            </div>
+            <div className="min-w-0 text-center">
+              <div className={`text-[11px] font-semibold ${isPro ? "text-white/50" : "text-muted"}`}>
+                Scan to view my full card
+              </div>
+              <div className="truncate text-sm font-semibold text-blue">{cardUrl}</div>
             </div>
           </div>
         ) : (
@@ -164,15 +147,51 @@ export function InfluencerCardView({
           </div>
         )}
 
-        <Link
-          href={`/creators/${creator.slug}`}
-          className={`btn-primary w-full ${compact ? "!py-2.5 text-sm" : ""} ${
-            isPro ? "ring-1 ring-gold/50" : ""
+        <div
+          className={`rounded-2xl ${compact ? "p-2" : "p-3"} ${
+            isPro ? "bg-white/5" : "border border-border bg-starter-bg"
           }`}
         >
-          {isPro ? "Work With Me →" : isPlus ? "Contact →" : "View Profile →"}
-        </Link>
-        <p className={`text-center text-xs ${isPro ? "text-white/40" : "text-muted"}`}>Influrios</p>
+          <p
+            className={`mb-2 text-center text-[10px] font-bold uppercase tracking-wide ${
+              isPro ? "text-white/50" : "text-muted"
+            }`}
+          >
+            Connect with me
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {socials.map((s) => (
+              <a
+                key={s.platform}
+                href={s.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5"
+              >
+                <SocialIcon platform={s.platform} size={compact ? 18 : 20} />
+                {!hideCta ? (
+                  <span className={`text-xs font-bold ${isPro ? "text-white" : "text-indigo"}`}>
+                    {formatFollowers(s.followers)}
+                  </span>
+                ) : null}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {!hideCta ? (
+          <>
+            <Link
+              href={`/creators/${creator.slug}`}
+              className={`btn-primary w-full ${compact ? "!py-2.5 text-sm" : ""} ${
+                isPro ? "ring-1 ring-gold/50" : ""
+              }`}
+            >
+              {isPro ? "Work With Me →" : isPlus ? "Contact →" : "View Profile →"}
+            </Link>
+            <p className={`text-center text-xs ${isPro ? "text-white/40" : "text-muted"}`}>Influrios</p>
+          </>
+        ) : null}
       </div>
     </div>
   );
