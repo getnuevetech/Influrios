@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { getAccountSession } from "@/lib/accounts";
 import { getDirectory } from "@/lib/directory";
+import { getFooterStrip, type FooterIconKey, type FooterTone } from "@/lib/site-config";
 import {
   IconBuilding,
-  IconGrid,
   IconHandshake,
   IconHeart,
-  IconIdCard,
   IconInstagram,
   IconLinkedIn,
   IconSearch,
   IconTikTok,
+  IconUser,
+  IconUsers,
   IconX,
   IconYouTube,
 } from "@/components/icons";
@@ -31,12 +32,18 @@ const FOOTER_PLATFORM = [
   { href: "/card", label: "Influencer Card" },
 ];
 
-const FOOTER_PILLARS = [
-  { l: "Influrios Card", Icon: IconIdCard, tone: "bg-white/10 text-[#C4B5FD]" },
-  { l: "Influence Intelligence", Icon: IconGrid, tone: "bg-white/10 text-[#93C5FD]" },
-  { l: "Collaboration Network", Icon: IconHandshake, tone: "bg-white/10 text-[#C4B5FD]" },
-  { l: "Protected Payments", Icon: IconBuilding, tone: "bg-white/10 text-[#93C5FD]" },
-] as const;
+const STAT_ICONS: Record<FooterIconKey, typeof IconUser> = {
+  user: IconUser,
+  users: IconUsers,
+  handshake: IconHandshake,
+  building: IconBuilding,
+};
+
+const STAT_TONES: Record<FooterTone, string> = {
+  violet: "bg-[#EDE7FF] text-[#633CFF]",
+  sky: "bg-[#E3F4FF] text-[#3B82F6]",
+  blue: "bg-[#E7EEFF] text-[#2979FF]",
+};
 
 export async function SiteHeader() {
   const directory = await getDirectory();
@@ -92,31 +99,43 @@ export async function SiteHeader() {
 }
 
 export async function SiteFooter() {
-  const directory = await getDirectory();
+  const [directory, strip] = await Promise.all([getDirectory(), getFooterStrip()]);
   const platform = directory.menus.filter((item) => item.menu === "footer_platform" && item.visible);
   const platformLinks = platform.length ? platform : FOOTER_PLATFORM;
   return (
-    <footer className="mt-0 border-t border-white/10 bg-pro text-white">
-      {/* Value pillars — no placeholder scale statistics until figures are audited */}
-      <div className="border-b border-white/10">
-        <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-10">
-          <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-4">
-            {FOOTER_PILLARS.map(({ l, Icon, tone }) => (
-              <div key={l} className="flex flex-col items-center text-center">
-                <span className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full ${tone}`}>
-                  <Icon size={22} />
-                </span>
-                <p className="font-display text-sm font-bold text-white sm:text-base">{l}</p>
-              </div>
-            ))}
+    <footer className="mt-0">
+      {strip.stats.length ? (
+        <div className="border-y border-[#E4EBFF] bg-[#F4F7FF]">
+          <div className="mx-auto flex w-full max-w-[90rem] flex-col items-center gap-8 px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-10">
+            <div className="grid w-full flex-1 grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+              {strip.stats.map((stat) => {
+                const Icon = STAT_ICONS[stat.iconKey];
+                return (
+                  <div key={stat.key} className="flex items-center gap-3">
+                    <span
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${STAT_TONES[stat.tone]}`}
+                    >
+                      <Icon size={22} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-display text-xl font-bold leading-none text-indigo">{stat.value}</p>
+                      <p className="mt-1 text-xs text-muted">{stat.label}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="shrink-0 text-center font-script text-[1.65rem] font-semibold leading-tight text-violet lg:max-w-[11rem] lg:text-right">
+              <span aria-hidden className="mr-1 text-lg">
+                ✦
+              </span>
+              {strip.tagline} <IconHeart size={14} className="inline text-pink" />
+            </p>
           </div>
-          <p className="shrink-0 text-center font-display text-sm italic text-[#C4B5FD] lg:max-w-[11rem] lg:text-right">
-            Influence. Identity. Opportunity.{" "}
-            <IconHeart size={12} className="inline text-pink" />
-          </p>
         </div>
-      </div>
+      ) : null}
 
+      <div className="border-t border-white/10 bg-pro text-white">
       <div className="mx-auto grid w-full max-w-[90rem] gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-5 lg:px-10">
         <div className="lg:col-span-1">
           <div className="flex items-center gap-2 font-display text-lg font-bold">
@@ -220,6 +239,7 @@ export async function SiteFooter() {
       </div>
       <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">
         © {new Date().getFullYear()} Influrios. All rights reserved.
+      </div>
       </div>
     </footer>
   );

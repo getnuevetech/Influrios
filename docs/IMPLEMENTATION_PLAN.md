@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–D are implemented (entitlements, directory, claim persistence, accounts and guest gates). Later phases in this document are still ahead.  
+**Status:** Phases A–D are implemented (entitlements, directory, claim persistence, accounts and guest gates). Footer stats, guest gates, and member-account policy are edited in admin (`/admin/stats`, `/admin/guests`, `/admin/accounts`). Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -38,7 +38,7 @@ Rules while finishing visual fidelity:
 - Production wordmark stays **Influrios**. The comps still say “Influence Connect” and `influenceconnect.com`. That raster branding is obsolete (`BRAND-001`, `BRAND-002`, `UI-IC-007`). A repo search of `src/` shows the retired name is already gone from application code. Keep it that way; add a lint check so it cannot return.
 - Cards stay live components. Do not ship the portrait PNGs as the card. Background art (`starter` light, `plus` cosmic, `pro` dark) may be optional CSS/SVG layers (`UI-IC-002`).
 - Starter shows one social, profile URL, no QR. Plus shows up to three specialties, four socials, shortlink, standard QR. Pro adds dynamic QR, extra specialties, brand inquiry, gold used only on badge and edge. Capability comes from entitlement keys, not from the tier name (`IC-002`, `UI-IC-001`).
-- Homepage “50K+ / 12K+” counters in the comp stay **off** until the numbers are audited. The value-proposition strip already replaced them. Spec still wants a statistics section type; seed it disabled (`R028`).
+- The approved footer stats strip (50K+ / 100+ / 12K+ / 5K+, script line “A growing creator economy together.”) is live and edited at `/admin/stats`. Those figures are marketing copy the stakeholder asked to restore; Discover result counts stay live directory totals. The homepage value-proposition section is a separate CMS block.
 - Profile demographics, brand logos, and “key stats” on the template are labeled samples until a source and freshness timestamp exist (`R032`, `R126`). Do not present seed math as verified audience data.
 
 Remaining design work is a **thin pass inside Phase C**, not a separate redesign project: entitlement-driven card chrome, Influrios shortlink copy, and confirmation that gold never appears on Starter or Plus.

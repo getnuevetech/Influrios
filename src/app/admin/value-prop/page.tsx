@@ -28,8 +28,7 @@ export default async function AdminValuePropPage({ searchParams }: Props) {
           Homepage value proposition
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Phase 12a — CMS-managed pillars that replace placeholder homepage statistics (Addendum
-          §23 / Product §21).
+          Homepage pillar section. The footer counters are edited separately under Site stats.
         </p>
       </div>
 

@@ -35,4 +35,9 @@ describe("password rules", () => {
     assert.equal(passwordError("short"), "Use at least 8 characters.");
     assert.equal(passwordError("long-enough"), null);
   });
+
+  it("uses the admin-configured minimum", () => {
+    assert.equal(passwordError("long-enough", 12), "Use at least 12 characters.");
+    assert.equal(passwordError("long-enough-pw", 12), null);
+  });
 });

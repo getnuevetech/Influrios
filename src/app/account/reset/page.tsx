@@ -1,4 +1,5 @@
 import { actionRequestReset, actionResetPassword } from "@/app/account/actions";
+import { getSiteConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Reset password" };
@@ -7,6 +8,7 @@ type Props = { searchParams: Promise<{ token?: string; sent?: string; error?: st
 
 export default async function ResetPasswordPage({ searchParams }: Props) {
   const params = await searchParams;
+  const policy = await getSiteConfig();
   return (
     <div className="mx-auto max-w-md px-4 py-14">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>
@@ -21,7 +23,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
         <form action={actionResetPassword} className="card-surface mt-6 space-y-3 p-6">
           <input type="hidden" name="token" value={params.token} />
           <p className="text-sm text-muted">Choose a new password for this reset link.</p>
-          <input name="password" type="password" required minLength={8} className="w-full rounded-xl border border-border px-3 py-2" />
+          <input name="password" type="password" required minLength={policy.passwordMinLength} className="w-full rounded-xl border border-border px-3 py-2" />
           <button type="submit" className="btn-primary w-full">
             Save password
           </button>
