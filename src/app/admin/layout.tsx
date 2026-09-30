@@ -5,11 +5,13 @@ import { canAccessModule, getAdminSession, type AdminModule } from "@/lib/admin-
 const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboard" }[] = [
   { href: "/admin", label: "Dashboard", module: "dashboard" },
   { href: "/admin/banners", label: "Banners", module: "banners" },
+  { href: "/admin/value-prop", label: "Value proposition", module: "banners" },
   { href: "/admin/cards", label: "Influencer cards", module: "cards" },
   { href: "/admin/matching", label: "Managed Matching", module: "matching" },
   { href: "/admin/intelligence", label: "Intelligence", module: "intelligence" },
   { href: "/admin/billing", label: "Billing", module: "billing" },
   { href: "/admin/payments", label: "Protected Payments", module: "payments" },
+  { href: "/admin/fees", label: "Collaboration fees", module: "commerce" },
   { href: "/admin/trust", label: "Trust & Disputes", module: "trust" },
   { href: "/admin/agency", label: "Agency", module: "agency" },
   { href: "/admin/access", label: "Access levels", module: "access" },

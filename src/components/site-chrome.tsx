@@ -4,11 +4,11 @@ import {
   IconGrid,
   IconHandshake,
   IconHeart,
+  IconIdCard,
   IconInstagram,
   IconLinkedIn,
   IconSearch,
   IconTikTok,
-  IconUsers,
   IconX,
   IconYouTube,
 } from "@/components/icons";
@@ -22,11 +22,11 @@ const NAV = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-const FOOTER_STATS = [
-  { n: "50K+", l: "Influencers Worldwide", Icon: IconUsers, tone: "bg-white/10 text-[#C4B5FD]" },
-  { n: "100+", l: "Categories & Niches", Icon: IconGrid, tone: "bg-white/10 text-[#93C5FD]" },
-  { n: "12K+", l: "Active Collaborations", Icon: IconHandshake, tone: "bg-white/10 text-[#C4B5FD]" },
-  { n: "5K+", l: "Business Matches", Icon: IconBuilding, tone: "bg-white/10 text-[#93C5FD]" },
+const FOOTER_PILLARS = [
+  { l: "Influrios Card", Icon: IconIdCard, tone: "bg-white/10 text-[#C4B5FD]" },
+  { l: "Influence Intelligence", Icon: IconGrid, tone: "bg-white/10 text-[#93C5FD]" },
+  { l: "Collaboration Network", Icon: IconHandshake, tone: "bg-white/10 text-[#C4B5FD]" },
+  { l: "Protected Payments", Icon: IconBuilding, tone: "bg-white/10 text-[#93C5FD]" },
 ] as const;
 
 export function SiteHeader() {
@@ -72,22 +72,21 @@ export function SiteHeader() {
 export function SiteFooter() {
   return (
     <footer className="mt-0 border-t border-white/10 bg-pro text-white">
-      {/* Stats strip — sits above the footer menu, same bg */}
+      {/* Value pillars — no placeholder scale statistics until figures are audited */}
       <div className="border-b border-white/10">
         <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-10">
           <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-4">
-            {FOOTER_STATS.map(({ n, l, Icon, tone }) => (
+            {FOOTER_PILLARS.map(({ l, Icon, tone }) => (
               <div key={l} className="flex flex-col items-center text-center">
                 <span className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full ${tone}`}>
                   <Icon size={22} />
                 </span>
-                <p className="font-display text-3xl font-bold text-white">{n}</p>
-                <p className="mt-1 text-sm text-white/60">{l}</p>
+                <p className="font-display text-sm font-bold text-white sm:text-base">{l}</p>
               </div>
             ))}
           </div>
-          <p className="shrink-0 text-center font-display text-sm italic text-[#C4B5FD] lg:max-w-[9rem] lg:text-right">
-            A growing creator economy together.{" "}
+          <p className="shrink-0 text-center font-display text-sm italic text-[#C4B5FD] lg:max-w-[11rem] lg:text-right">
+            Influence. Identity. Opportunity.{" "}
             <IconHeart size={12} className="inline text-pink" />
           </p>
         </div>

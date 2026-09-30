@@ -26,6 +26,8 @@ export const ADMIN_PERMISSIONS = [
   "trust.mediate",
   "agency.view",
   "agency.manage",
+  "commerce.view",
+  "commerce.manage",
   "access.manage_roles",
   "access.manage_users",
 ] as const;
@@ -41,6 +43,7 @@ export type AdminModule =
   | "payments"
   | "trust"
   | "agency"
+  | "commerce"
   | "access";
 
 export const ADMIN_PERMISSION_GROUPS: {
@@ -123,6 +126,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     ],
   },
   {
+    module: "commerce",
+    label: "Collaboration fees",
+    description: "Fee matrix, simulator, and immutable commercial snapshots",
+    permissions: [
+      { id: "commerce.view", label: "View fee rules", hint: "Open commission / fee console" },
+      { id: "commerce.manage", label: "Manage fee rules", hint: "Edit rules, run simulator, freeze snapshots" },
+    ],
+  },
+  {
     module: "access",
     label: "Access control",
     description: "Create roles and admin users (typically Super Admin)",
@@ -188,6 +200,7 @@ const LEGACY_PERMISSION_MAP: Record<string, AdminPermission[]> = {
   payments: ["payments.view", "payments.manage"],
   trust: ["trust.view", "trust.mediate"],
   agency: ["agency.view", "agency.manage"],
+  commerce: ["commerce.view", "commerce.manage"],
   access: ["access.manage_roles", "access.manage_users"],
 };
 
@@ -223,6 +236,8 @@ const DEFAULT_ROLES: AdminRole[] = [
       "trust.mediate",
       "agency.view",
       "agency.manage",
+      "commerce.view",
+      "commerce.manage",
     ],
     system: true,
   },

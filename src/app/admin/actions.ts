@@ -94,3 +94,114 @@ export async function actionUpdateCard(formData: FormData) {
   revalidatePath("/admin");
   redirect(`/admin/cards?saved=${slug}`);
 }
+
+export async function actionUpdateValueProposition(formData: FormData) {
+  await requireAdminAction("banners.edit");
+  const { updateValueProposition } = await import("@/lib/cms");
+  const keys = formData.getAll("itemKey").map(String);
+  const items = keys.map((key, i) => ({
+    key,
+    enabled: formData.get(`enabled_${key}`) === "on",
+    sortOrder: Number(formData.get(`sort_${key}`) || i),
+    iconKey: String(formData.get(`icon_${key}`) || "card") as
+      | "card"
+      | "intelligence"
+      | "network"
+      | "payments",
+    title: String(formData.get(`title_${key}`) ?? ""),
+    description: String(formData.get(`desc_${key}`) ?? ""),
+    microLabel: String(formData.get(`micro_${key}`) ?? ""),
+    linkUrl: String(formData.get(`link_${key}`) ?? "/"),
+    accentToken: String(formData.get(`accent_${key}`) || "violet") as
+      | "violet"
+      | "blue"
+      | "rose"
+      | "emerald",
+  }));
+  await updateValueProposition({
+    enabled: formData.get("enabled") === "on",
+    eyebrow: String(formData.get("eyebrow") ?? ""),
+    headline: String(formData.get("headline") ?? ""),
+    headlineHighlight: String(formData.get("headlineHighlight") ?? ""),
+    subtitle: String(formData.get("subtitle") ?? ""),
+    closingTaglineLine1: String(formData.get("closing1") ?? ""),
+    closingTaglineLine2: String(formData.get("closing2") ?? ""),
+    items,
+  });
+  revalidatePath("/");
+  revalidatePath("/admin/value-prop");
+  redirect("/admin/value-prop?saved=1");
+}
+
+export async function actionRestoreValueProposition() {
+  await requireAdminAction("banners.edit");
+  const { restoreDefaultValueProposition } = await import("@/lib/cms");
+  await restoreDefaultValueProposition();
+  revalidatePath("/");
+  revalidatePath("/admin/value-prop");
+  redirect("/admin/value-prop?restored=1");
+}
+
+export async function actionSimulateFee(formData: FormData) {
+  await requireAdminAction("commerce.view");
+  const jurisdiction = String(formData.get("jurisdiction") || "US");
+  const serviceLevel = String(formData.get("serviceLevel") || "contracted");
+  const gross = Math.round(Number(formData.get("grossUsd") || 0) * 100);
+  const { resolveFee } = await import("@/lib/collaboration-fees");
+  const result = await resolveFee({
+    jurisdiction,
+    serviceLevel,
+    grossValueCents: gross,
+  });
+  const q = new URLSearchParams({
+    simulated: "1",
+    jurisdiction,
+    serviceLevel,
+    grossUsd: String(formData.get("grossUsd") || "0"),
+    feeCents: String(result.feeCents),
+    rule: result.rule?.name ?? "none",
+  });
+  redirect(`/admin/fees?${q.toString()}`);
+}
+
+export async function actionFreezeFeeSnapshot(formData: FormData) {
+  await requireAdminAction("commerce.manage");
+  const jurisdiction = String(formData.get("jurisdiction") || "US");
+  const serviceLevel = String(formData.get("serviceLevel") || "contracted");
+  const gross = Math.round(Number(formData.get("grossUsd") || 0) * 100);
+  const { createFeeSnapshot } = await import("@/lib/collaboration-fees");
+  const snap = await createFeeSnapshot({
+    jurisdiction,
+    serviceLevel,
+    grossValueCents: gross,
+  });
+  revalidatePath("/admin/fees");
+  redirect(`/admin/fees?frozen=${snap.id}`);
+}
+
+export async function actionSaveFeeRule(formData: FormData) {
+  await requireAdminAction("commerce.manage");
+  const { upsertFeeRule } = await import("@/lib/collaboration-fees");
+  await upsertFeeRule({
+    id: String(formData.get("id") || "") || undefined,
+    name: String(formData.get("name") || "Untitled rule"),
+    active: formData.get("active") === "on",
+    priority: Number(formData.get("priority") || 100),
+    jurisdiction: String(formData.get("jurisdiction") || "*"),
+    serviceLevel: String(formData.get("serviceLevel") || "contracted"),
+    method: String(formData.get("method") || "percent") as
+      | "percent"
+      | "fixed"
+      | "percent_plus_fixed",
+    percentBps: Number(formData.get("percentBps") || 0),
+    fixedCents: Math.round(Number(formData.get("fixedUsd") || 0) * 100),
+    minFeeCents: Math.round(Number(formData.get("minFeeUsd") || 0) * 100),
+    maxFeeCents: formData.get("maxFeeUsd")
+      ? Math.round(Number(formData.get("maxFeeUsd")) * 100)
+      : null,
+    payer: String(formData.get("payer") || "brand") as "brand" | "creator" | "split",
+    notes: String(formData.get("notes") || ""),
+  });
+  revalidatePath("/admin/fees");
+  redirect("/admin/fees?saved=rule");
+}

@@ -408,6 +408,33 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 
 ---
 
+### Phase 12 — Collaboration Transaction Engine ✅ *started (demo live)*
+
+**Addenda:** Product & Development Addenda v1.1 (Collaboration Monetization & Protected Payments).  
+**Proof:** Can Influrios quote, freeze, and later fund collaboration fees without hard-coded commercial constants?
+
+#### Phase 12a — Homepage Value Proposition Strip ✅ *started*
+- [x] CMS model `valueProposition` in `src/lib/cms.ts` (eyebrow, headline, four pillars, closing taglines)  
+- [x] `HomepageValuePropositionStrip` component (live text/SVG — not rasterized design PNG)  
+- [x] Replace hard-coded homepage unique-features block with CMS strip  
+- [x] Replace footer placeholder scale stats (50K+/12K+) with pillar labels until audited metrics exist  
+- [x] Admin editor + restore defaults (`/admin/value-prop`, `banners.edit`)  
+
+#### Phase 12.1 — Fee rules engine ✅ *started*
+- [x] Versioned fee rules store (`src/lib/collaboration-fees.ts`) — priority, jurisdiction, service level, method  
+- [x] Deterministic `resolveFee()` + immutable `createFeeSnapshot()` (PA001 / PA002 / PA006)  
+- [x] Jurisdiction gates + “Protected Payment” vs “Escrow” label helper (PA004)  
+- [x] Admin fee matrix, simulator, snapshot freeze (`/admin/fees`, `commerce.*` RBAC)  
+- [ ] Prefunding via approved marketplace provider adapter (12.3)  
+- [ ] Milestone state machine + ledger + idempotent webhooks (12.3)  
+- [ ] Milestone disputes / cancellation engine (12.4)  
+
+**Defer:** Staged/recurring funding, multi-provider FX, revenue-share splits (P3–P4)  
+
+See also: `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md`
+
+---
+
 ## 8. Creator acquisition & activation (strategy §20)
 
 **Wedge message:** *“Create Your Free Influencer Card. One Card. All Your Influence.”*

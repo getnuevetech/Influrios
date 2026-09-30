@@ -93,6 +93,20 @@ const LINKS: {
     meta: (c) => `${c.agencyRoster} on roster`,
   },
   {
+    href: "/admin/value-prop",
+    title: "Value proposition",
+    blurb: "Homepage pillars — replaces placeholder stats.",
+    module: "banners",
+    meta: () => "CMS strip",
+  },
+  {
+    href: "/admin/fees",
+    title: "Collaboration fees",
+    blurb: "Fee matrix, simulator, immutable snapshots.",
+    module: "commerce",
+    meta: () => "Phase 12.1",
+  },
+  {
     href: "/admin/access",
     title: "Access levels",
     blurb: "Create roles from granular features and assign admin users.",

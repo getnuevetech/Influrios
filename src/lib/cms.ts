@@ -50,6 +50,31 @@ export type FeaturedCardsConfig = {
 export type SiteCms = {
   banners: Record<BannerSlot, BannerConfig>;
   featuredCards: FeaturedCardsConfig;
+  valueProposition: ValuePropositionStrip;
+};
+
+export type ValuePropositionItem = {
+  key: string;
+  enabled: boolean;
+  sortOrder: number;
+  iconKey: "card" | "intelligence" | "network" | "payments";
+  title: string;
+  description: string;
+  microLabel: string;
+  linkUrl: string;
+  accentToken: "violet" | "blue" | "rose" | "emerald";
+};
+
+export type ValuePropositionStrip = {
+  enabled: boolean;
+  eyebrow: string;
+  headline: string;
+  headlineHighlight: string;
+  subtitle: string;
+  closingTaglineLine1: string;
+  closingTaglineLine2: string;
+  items: ValuePropositionItem[];
+  updatedAt?: string;
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -77,6 +102,66 @@ function defaultCards(): ManagedCard[] {
     features: { ...DEFAULT_FEATURES },
   }));
 }
+
+const DEFAULT_VALUE_PROPOSITION: ValuePropositionStrip = {
+  enabled: true,
+  eyebrow: "Why Influrios",
+  headline: "More than a directory.",
+  headlineHighlight: "An ecosystem for influence.",
+  subtitle:
+    "Influence. Identity. Opportunity. — Discover the right influence. Build your creator identity. Collaborate with confidence.",
+  closingTaglineLine1: "More than a directory.",
+  closingTaglineLine2: "An ecosystem for influence.",
+  items: [
+    {
+      key: "influrios_card",
+      enabled: true,
+      sortOrder: 0,
+      iconKey: "card",
+      title: "Influrios Card",
+      description:
+        "One professional identity for your socials, specialty, contact details and opportunities.",
+      microLabel: "Showcase Yourself",
+      linkUrl: "/card",
+      accentToken: "violet",
+    },
+    {
+      key: "influence_intelligence",
+      enabled: true,
+      sortOrder: 1,
+      iconKey: "intelligence",
+      title: "Influence Intelligence",
+      description: "Discover creators by what they truly influence — not just follower count.",
+      microLabel: "Find the Right Match",
+      linkUrl: "/discover",
+      accentToken: "blue",
+    },
+    {
+      key: "collaboration_network",
+      enabled: true,
+      sortOrder: 2,
+      iconKey: "network",
+      title: "Collaboration Network",
+      description:
+        "Connect creators, complementary specialists and businesses around real opportunities.",
+      microLabel: "Create Opportunities",
+      linkUrl: "/collaboration",
+      accentToken: "rose",
+    },
+    {
+      key: "protected_payments",
+      enabled: true,
+      sortOrder: 3,
+      iconKey: "payments",
+      title: "Protected Payments",
+      description:
+        "Fund collaborations securely and release payments as agreed milestones are completed.",
+      microLabel: "Collaborate with Confidence",
+      linkUrl: "/payments",
+      accentToken: "emerald",
+    },
+  ],
+};
 
 const DEFAULT_CMS: SiteCms = {
   banners: {
@@ -133,6 +218,7 @@ const DEFAULT_CMS: SiteCms = {
     qrSize: 22,
     cards: defaultCards(),
   },
+  valueProposition: DEFAULT_VALUE_PROPOSITION,
 };
 
 async function ensureStore(): Promise<SiteCms> {
@@ -162,6 +248,14 @@ async function ensureStore(): Promise<SiteCms> {
         cards: parsed.featuredCards?.cards?.length
           ? parsed.featuredCards.cards
           : DEFAULT_CMS.featuredCards.cards,
+      },
+      valueProposition: {
+        ...DEFAULT_VALUE_PROPOSITION,
+        ...(parsed as SiteCms).valueProposition,
+        items:
+          (parsed as SiteCms).valueProposition?.items?.length
+            ? (parsed as SiteCms).valueProposition!.items
+            : DEFAULT_VALUE_PROPOSITION.items,
       },
     };
   } catch {
@@ -244,4 +338,26 @@ export async function removeBannerImage(id: BannerSlot, imagePath: string) {
   return cms.banners[id];
 }
 
-export { DEFAULT_FEATURES };
+export async function updateValueProposition(patch: Partial<ValuePropositionStrip>) {
+  const cms = await ensureStore();
+  cms.valueProposition = {
+    ...cms.valueProposition,
+    ...patch,
+    items: patch.items ?? cms.valueProposition.items,
+    updatedAt: new Date().toISOString(),
+  };
+  await saveStore(cms);
+  return cms.valueProposition;
+}
+
+export async function restoreDefaultValueProposition() {
+  const cms = await ensureStore();
+  cms.valueProposition = {
+    ...structuredClone(DEFAULT_VALUE_PROPOSITION),
+    updatedAt: new Date().toISOString(),
+  };
+  await saveStore(cms);
+  return cms.valueProposition;
+}
+
+export { DEFAULT_FEATURES, DEFAULT_VALUE_PROPOSITION };
