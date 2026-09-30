@@ -1,27 +1,11 @@
 import { PrismaClient, PlanTier, SocialPlatform } from "@prisma/client";
-import { PLAN_ENTITLEMENTS } from "../src/lib/entitlements";
+import { ensureLaunchEntitlements } from "../src/lib/entitlements-db";
 import { SEED_CREATORS, SPECIALTY_TAXONOMY } from "../src/lib/seed-data";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  for (const [code, limits] of Object.entries(PLAN_ENTITLEMENTS)) {
-    await prisma.entitlementPlan.upsert({
-      where: { code: code as PlanTier },
-      update: {
-        name: code.charAt(0) + code.slice(1).toLowerCase(),
-        limitsJson: limits,
-        featuresJson: limits,
-      },
-      create: {
-        code: code as PlanTier,
-        name: code.charAt(0) + code.slice(1).toLowerCase(),
-        description: `Launch defaults for ${code}`,
-        limitsJson: limits,
-        featuresJson: limits,
-      },
-    });
-  }
+  await ensureLaunchEntitlements();
 
   const specialtyIds = new Map<string, string>();
 
@@ -142,5 +126,7 @@ main()
     process.exit(1);
   })
   .finally(async () => {
+    const { prisma: appPrisma } = await import("../src/lib/db");
     await prisma.$disconnect();
+    await appPrisma.$disconnect();
   });

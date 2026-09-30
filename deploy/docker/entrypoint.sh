@@ -13,10 +13,16 @@ until node -e "require('net').connect(5432,'postgres',()=>process.exit(0)).on('e
 done
 echo "OK: Postgres port open"
 
+mkdir -p /app/data /app/public/uploads/banners
+chown -R nextjs:nodejs /app/data /app/public/uploads
+
 if [ -f ./prisma/schema.prisma ] && [ -x ./node_modules/.bin/prisma ]; then
-  echo "==> prisma db push"
-  ./node_modules/.bin/prisma db push --skip-generate || echo "WARN: prisma db push failed (continuing)"
+  echo "==> prisma migrate deploy"
+  if ! ./node_modules/.bin/prisma migrate deploy; then
+    echo "WARN: migrate deploy failed (existing db push databases hit this). Syncing with db push."
+    ./node_modules/.bin/prisma db push --skip-generate || echo "WARN: prisma db push failed (continuing)"
+  fi
 fi
 
 echo "==> Starting Next.js (standalone) on :${PORT:-3000}"
-exec node server.js
+exec su-exec nextjs node server.js

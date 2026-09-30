@@ -1,6 +1,7 @@
 # Influrios — Implementation Plan
 
-**Status:** Build sequence after reviewing the repo on `main` against Technical Development Specification v2.2 and the attached design templates.  
+**Status:** Phase A (entitlement kernel + card seam) is implemented. Later phases in this document are still ahead.  
+**Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
 **Does not replace:** Product Strategy / Spec v2.2 (behavior), or `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md` (later collaboration-fee compliance).

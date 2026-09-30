@@ -10,6 +10,7 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
   { href: "/admin/matching", label: "Managed Matching", module: "matching" },
   { href: "/admin/intelligence", label: "Intelligence", module: "intelligence" },
   { href: "/admin/billing", label: "Billing", module: "billing" },
+  { href: "/admin/plans", label: "Plan entitlements", module: "plans" },
   { href: "/admin/payments", label: "Protected Payments", module: "payments" },
   { href: "/admin/fees", label: "Collaboration fees", module: "commerce" },
   { href: "/admin/trust", label: "Trust & Disputes", module: "trust" },

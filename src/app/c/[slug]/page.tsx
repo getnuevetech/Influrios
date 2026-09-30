@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { InfluencerCardView } from "@/components/influencer-card-view";
+import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { getPublishedCreatorBySlug } from "@/lib/claim";
 import { getCreatorBySlug } from "@/lib/seed-data";
 
@@ -24,7 +24,7 @@ export default async function PublicCardPage({ params }: Props) {
 
   return (
     <div className="min-h-[80vh] bg-[radial-gradient(ellipse_at_top,_#EAE4FF,_#F7FAFF_55%,_#D9E8FF)] px-4 py-12">
-      <InfluencerCardView creator={creator} qrDisplay="large" />
+      <PublicInfluencerCard creator={creator} qrDisplay="large" />
     </div>
   );
 }

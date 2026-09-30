@@ -20,6 +20,8 @@ export const ADMIN_PERMISSIONS = [
   "intelligence.view",
   "intelligence.export",
   "billing.view",
+  "plans.view",
+  "plans.edit",
   "payments.view",
   "payments.manage",
   "trust.view",
@@ -40,6 +42,7 @@ export type AdminModule =
   | "matching"
   | "intelligence"
   | "billing"
+  | "plans"
   | "payments"
   | "trust"
   | "agency"
@@ -96,6 +99,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     description: "Plan catalog and checkout session history",
     permissions: [
       { id: "billing.view", label: "View billing", hint: "Open billing ops console" },
+    ],
+  },
+  {
+    module: "plans",
+    label: "Plan entitlements",
+    description: "Database-backed card limits. These values drive the live card.",
+    permissions: [
+      { id: "plans.view", label: "View plan limits", hint: "Open the entitlement matrix" },
+      { id: "plans.edit", label: "Edit plan limits", hint: "Change feature limits and record an audit entry" },
     ],
   },
   {

@@ -15,7 +15,8 @@ import {
   specialtyLabel,
   type SeedCreator,
 } from "@/lib/seed-data";
-import { getEntitlements, type PlanCode } from "@/lib/entitlements";
+import { cardChrome } from "@/lib/entitlements";
+import { entitlementsForPlan } from "@/lib/entitlements-db";
 
 const BADGE_STYLES: Record<string, string> = {
   "Top Creator": "bg-[#2979FF] text-white",
@@ -56,7 +57,7 @@ export type CreatorCardProps = {
   qrOpensPopup?: boolean;
 };
 
-export function CreatorCard({
+export async function CreatorCard({
   creator,
   widthPx,
   socialIconSize = 22,
@@ -68,8 +69,8 @@ export function CreatorCard({
   qrOpensPopup = false,
 }: CreatorCardProps) {
   const features = { ...DEFAULT_FEATURES, ...featureOverrides };
-  const entitlements = getEntitlements(creator.planTier as PlanCode);
-  const canQr = entitlements.standardQr || entitlements.dynamicQr;
+  const entitlements = await entitlementsForPlan(creator.planTier);
+  const canQr = cardChrome(entitlements).showQr;
   const showQr = features.showQr && canQr;
   const badgeClass = BADGE_STYLES[creator.badge] ?? "bg-white text-violet";
 
@@ -77,7 +78,7 @@ export function CreatorCard({
     features.visiblePlatforms.length
       ? features.visiblePlatforms.includes(s.platform)
       : true,
-  ).slice(0, 4);
+  ).slice(0, entitlements.socialLinksMax);
 
   return (
     <article
@@ -127,7 +128,7 @@ export function CreatorCard({
 
         {features.showSpecialties ? (
           <div className="flex flex-wrap gap-1.5">
-            {creator.specialties.slice(0, 3).map((s) => (
+            {creator.specialties.slice(0, Math.min(3, entitlements.specialtiesMax)).map((s) => (
               <span
                 key={s}
                 className="rounded-full bg-lavender px-2 py-0.5 text-[10px] font-semibold text-violet"
@@ -161,7 +162,12 @@ export function CreatorCard({
           )}
 
           {features.showQr && qrOpensPopup ? (
-            <CreatorCardQrButton creator={creator} qrSize={qrSize} hasQr={showQr} />
+            <CreatorCardQrButton
+              creator={creator}
+              entitlements={entitlements}
+              qrSize={qrSize}
+              hasQr={showQr}
+            />
           ) : showQr ? (
             <Link
               href={`/c/${creator.slug}`}
@@ -212,8 +218,11 @@ export function CreatorCard({
 }
 
 /** Horizontal marketing Influencer Card matching the design template. */
-export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
-  const socials = creator.socials.slice(0, 3);
+export async function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
+  const entitlements = await entitlementsForPlan(creator.planTier);
+  const chrome = cardChrome(entitlements);
+  const socials = creator.socials.slice(0, entitlements.socialLinksMax);
+  const allowedPlatforms = new Set(socials.map((s) => s.platform));
   const stripPlatforms = ["INSTAGRAM", "TIKTOK", "YOUTUBE", "X"] as const;
 
   function platformLabel(platform: string) {
@@ -281,7 +290,7 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
 
           {/* Specialty tags — under photo + identity */}
           <div className="mt-3.5 flex flex-wrap gap-1.5">
-            {creator.specialties.slice(0, 4).map((s) => (
+            {creator.specialties.slice(0, entitlements.specialtiesMax).map((s) => (
               <span
                 key={s}
                 className="rounded-full bg-[#EAE4FF] px-2.5 py-1 text-[10px] font-semibold text-[#633CFF]"
@@ -292,7 +301,7 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
           </div>
         </div>
 
-        {/* QR panel */}
+        {chrome.showQr ? (
         <div className="flex w-[108px] shrink-0 flex-col items-center justify-center rounded-xl bg-[#F5F6FA] px-2.5 py-3 sm:w-[120px]">
           <div className="h-[80px] w-[80px] overflow-hidden rounded-md bg-white p-1 sm:h-[88px] sm:w-[88px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -310,12 +319,15 @@ export function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
             full profile
           </p>
         </div>
+        ) : null}
       </div>
 
       {/* Bottom social strip — icons evenly across full card width */}
       <div className="flex w-full items-center justify-between border-t border-[#EEF1FA] bg-white px-5 py-3.5 sm:px-6">
         {stripPlatforms.map((platform) => {
-          const linked = creator.socials.find((s) => s.platform === platform);
+          const linked = allowedPlatforms.has(platform)
+            ? creator.socials.find((s) => s.platform === platform)
+            : undefined;
           const icon = <SocialIcon platform={platform} size={26} />;
           return linked ? (
             <a

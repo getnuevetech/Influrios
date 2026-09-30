@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { actionPublishDraft } from "@/app/claim/actions";
-import { InfluencerCardView } from "@/components/influencer-card-view";
+import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { draftToSeedCreator, getDraft } from "@/lib/claim";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
         </div>
       ) : null}
 
-      <InfluencerCardView creator={creator} qrDisplay="default" />
+      <PublicInfluencerCard creator={creator} qrDisplay="default" />
 
       <div className="mx-auto mt-8 max-w-sm space-y-3">
         {alreadyLive ? (

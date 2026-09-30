@@ -9,6 +9,8 @@ import {
   SPECIALTY_TAXONOMY,
 } from "@/lib/seed-data";
 
+export const dynamic = "force-dynamic";
+
 type Props = {
   searchParams: Promise<{
     q?: string;

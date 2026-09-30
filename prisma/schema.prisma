@@ -68,6 +68,91 @@ model EntitlementPlan {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  features    PlanFeatureEntitlement[]
+}
+
+/// Machine-readable plan limits. Runtime reads these rows, not plan-name branches.
+model PlanFeatureEntitlement {
+  id         String          @id @default(cuid())
+  planId     String
+  featureKey String
+  enabled    Boolean         @default(true)
+  limitInt   Int?
+  valueText  String?
+  plan       EntitlementPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([planId, featureKey])
+}
+
+/// Country or account grants applied after the plan rows.
+model EntitlementOverride {
+  id          String    @id @default(cuid())
+  planCode    PlanTier?
+  countryCode String?
+  subjectId   String?
+  featureKey  String
+  enabled     Boolean?
+  limitInt    Int?
+  valueText   String?
+  active      Boolean   @default(true)
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+/// Frozen entitlement set when a subscription changes.
+model EntitlementSnapshot {
+  id        String   @id @default(cuid())
+  planCode  String
+  subjectId String?
+  reason    String
+  payload   Json
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actor      String
+  action     String
+  objectType String
+  objectId   String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+}
+
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Country {
+  code     String  @id
+  name     String
+  enabled  Boolean @default(true)
+  currency String
+  locale   String  @default("en")
+}
+
+model FeatureFlag {
+  key         String  @id
+  enabled     Boolean @default(false)
+  description String?
+}
+
+model Job {
+  id        String   @id @default(cuid())
+  kind      String
+  status    String   @default("queued")
+  payload   Json?
+  attempts  Int      @default(0)
+  lastError String?
+  runAfter  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Specialty {

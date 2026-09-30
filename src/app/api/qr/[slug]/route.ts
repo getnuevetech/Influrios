@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildBrandedQrSvg } from "@/lib/branded-qr";
 import { getCreatorBySlug } from "@/lib/seed-data";
-import { getEntitlements, type PlanCode } from "@/lib/entitlements";
+import { entitlementsForPlan } from "@/lib/entitlements-db";
 
 /**
  * Dynamic / standard QR for Influencer Cards.
@@ -22,7 +22,7 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const entitlements = getEntitlements(creator.planTier as PlanCode);
+  const entitlements = await entitlementsForPlan(creator.planTier);
   if (!entitlements.standardQr && !entitlements.dynamicQr) {
     return NextResponse.json({ error: "QR not included on Starter" }, { status: 403 });
   }
@@ -42,7 +42,7 @@ export async function GET(
   return new NextResponse(svg, {
     headers: {
       "Content-Type": "image/svg+xml; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "public, max-age=60",
     },
   });
 }
