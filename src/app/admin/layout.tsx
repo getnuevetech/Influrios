@@ -17,6 +17,7 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
   { href: "/admin/stats", label: "Site stats", module: "banners" },
   { href: "/admin/accounts", label: "Member accounts", module: "accounts" },
   { href: "/admin/invitations", label: "Invitations", module: "invitations" },
+  { href: "/admin/collaborations", label: "Collaborations", module: "collaborations" },
   { href: "/admin/payments", label: "Protected Payments", module: "payments" },
   { href: "/admin/fees", label: "Collaboration fees", module: "commerce" },
   { href: "/admin/trust", label: "Trust & Disputes", module: "trust" },

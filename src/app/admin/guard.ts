@@ -22,6 +22,7 @@ const MODULE_PATH: Record<AdminModule, string> = {
   access: "/admin/access",
   accounts: "/admin/accounts",
   invitations: "/admin/invitations",
+  collaborations: "/admin/collaborations",
 };
 
 /** Gate an admin page by module (any feature under that module). */

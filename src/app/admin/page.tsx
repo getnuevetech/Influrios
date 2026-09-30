@@ -144,6 +144,13 @@ const LINKS: {
     meta: () => "Queue, template, do-not-contact",
   },
   {
+    href: "/admin/collaborations",
+    title: "Collaborations",
+    blurb: "Proposal records, the sending window, and commercial options.",
+    module: "collaborations",
+    meta: () => "Draft, sent, accepted",
+  },
+  {
     href: "/admin/accounts",
     title: "Member accounts",
     blurb: "Registered members, verification, suspension, consent, and password length.",

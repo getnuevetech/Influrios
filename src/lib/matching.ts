@@ -251,8 +251,9 @@ export function filterMatches(
   });
 }
 
+/** Launch-default check. Live pages use entitlementsForPlan().proposalsMax. */
 export function canRequestMatch(plan: PlanCode): boolean {
-  return getEntitlements(plan).collabCta;
+  return getEntitlements(plan).proposalsMax > 0;
 }
 
 export const BUSINESS_REQUESTS: BusinessRequest[] = [

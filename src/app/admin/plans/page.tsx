@@ -16,6 +16,7 @@ const LABELS: Record<string, { label: string; kind: "int" | "bool" | "text"; opt
   "card.shortlink.enabled": { label: "Shortlink", kind: "bool" },
   "card.custom_slug.enabled": { label: "Custom slug", kind: "bool" },
   "card.collaboration.enabled": { label: "Collaboration CTA", kind: "bool" },
+  "collaboration.proposals.max": { label: "Proposals per window", kind: "int" },
   "card.media_kit.enabled": { label: "Media kit", kind: "bool" },
   "card.lead_tracking.enabled": { label: "Lead tracking", kind: "bool" },
   "card.contact.level": { label: "Contact", kind: "text", options: ["none", "limited", "full"] },

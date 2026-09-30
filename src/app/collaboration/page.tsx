@@ -17,15 +17,15 @@ import { SaveMatchButton } from "@/components/save-match-button";
 import {
   allCreatorMatches,
   BUSINESS_REQUESTS,
-  canRequestMatch,
   CREATOR_OPPORTUNITIES,
   filterMatches,
   POPULAR_MATCH_CHIPS,
   type BusinessRequest,
   type CreatorMatch,
 } from "@/lib/matching";
+import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { formatFollowers, getCreatorBySlug, SEED_CREATORS, specialtyLabel, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
-import type { PlanCode } from "@/lib/entitlements";
+import { isPlanCode, type PlanCode } from "@/lib/entitlements";
 
 export const metadata = {
   title: "Collaboration Matches",
@@ -82,8 +82,9 @@ export default async function CollaborationPage({ searchParams }: Props) {
   });
   const featured = matches[0] ?? all[0];
   const viewer = params.from ? getCreatorBySlug(params.from) : SEED_CREATORS[0];
-  const viewerPlan = (viewer?.planTier ?? "STARTER") as PlanCode;
-  const canRequest = canRequestMatch(viewerPlan);
+  const viewerPlan: PlanCode = viewer && isPlanCode(viewer.planTier) ? viewer.planTier : "STARTER";
+  const viewerLimits = await entitlementsForPlan(viewerPlan);
+  const canRequest = viewerLimits.proposalsMax > 0;
   const brand = BUSINESS_REQUESTS.find((item) => {
     if (params.goal && !`${item.tags.join(" ")} ${item.summary}`.toLowerCase().includes(params.goal.toLowerCase())) {
       return false;
@@ -533,6 +534,9 @@ function RecommendedMatch({
             Upgrade from {viewerPlan} to request matches
           </Link>
         )}
+        <Link href={`/collaboration/records?from=${viewerSlug}`} className="btn-secondary">
+          View proposals
+        </Link>
         <SaveMatchButton />
       </div>
     </article>
