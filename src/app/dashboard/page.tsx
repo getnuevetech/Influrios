@@ -14,6 +14,9 @@ import {
 } from "@/lib/claim";
 import { socialConnectState } from "@/lib/social-connect";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
+import { actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
+import { formatMoney } from "@/lib/protected-payments";
+import { listFundingsForCreator } from "@/lib/marketplace-ledger";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Creator dashboard" };
@@ -42,6 +45,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
     if (!suggestionRows.has(slug)) suggestionRows.set(slug, { slug, name: slug });
   }
   const specialtyCap = linkLimits?.specialtiesMax ?? 1;
+  const fundings = await listFundingsForCreator(draft.slug).catch(() => []);
 
   const { score, items } = completenessFor(draft);
   const nextAction = items.find((i) => !i.done);
@@ -384,6 +388,49 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
           )}
         </section>
       ) : null}
+
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Protected payments</h2>
+        <p className="mt-1 text-sm text-muted">
+          Submit a milestone after the marketplace provider confirms the prefund. Approval does not release the money.
+        </p>
+        {params.saved === "milestone" ? (
+          <p className="mt-3 text-sm font-semibold text-emerald-700">Milestone submitted for review.</p>
+        ) : null}
+        {fundings.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">No protected payments for this card yet.</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {fundings.map((funding) => (
+              <li key={funding.id} className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-indigo">{funding.title}</p>
+                <p className="text-xs text-muted">
+                  {funding.businessName} · {funding.status.replaceAll("_", " ")} · held{" "}
+                  {formatMoney(funding.ledger.heldCents)}
+                </p>
+                <div className="mt-3 space-y-2">
+                  {funding.milestones.map((milestone) => (
+                    <div key={milestone.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span>
+                        {milestone.title} · {formatMoney(milestone.amountCents)} · {milestone.status}
+                      </span>
+                      {funding.status === "held" && milestone.status === "pending" ? (
+                        <form action={actionSubmitOwnMilestone}>
+                          <input type="hidden" name="fundingId" value={funding.id} />
+                          <input type="hidden" name="milestoneId" value={milestone.id} />
+                          <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                            Submit work
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

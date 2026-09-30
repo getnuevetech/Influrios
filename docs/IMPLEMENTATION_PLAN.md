@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–H are implemented. Provider admin covers AI pipelines, country payment gateways, document signing, SMTP, and the job list. A Stripe event id is stored once; a duplicate delivery does not change the plan again. SMTP is edited in admin, and a test send or invitation is marked delivered only after the server accepts it. Specialty suggestions use the assigned model when it answers and the keyword list otherwise; nothing is saved until the creator confirms. The collaboration page keeps its published explanation. Social account sync stays a real provider path: follower and like counts are saved only when that network returns both. Short links use inflr.me with opaque QR identities. The Legal Center applies documents by role and feature. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. Phase I is the MVP gate: GitHub Actions runs lint, the unit tests, a migration diff, and a ban on the retired brand. The escrow ledger is still ahead. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -232,6 +232,22 @@ Implemented at `/admin/mail`, `/admin/jobs`, and the provider health strip on `/
 Implemented in `.github/workflows/ci.yml`. `src/lib/mvp-gate.test.ts` runs the section 33 checklist against the shipped code. Claim stages, collaboration states, webhook idempotency, entitlements, and the guest gate are unit-tested. CI lints, runs those tests, diffs migrations against the schema, and rejects the retired brand in `src/`.
 
 Only after that gate does the addendum’s Phase 12.3 (marketplace provider, milestone ledger, escrow-term gating) start. Current `protected-payments` and `trust` code stays prototype until it speaks that ledger.
+
+### Phase 12.3 — Marketplace ledger
+
+Implemented in `src/lib/ledger.ts`, `src/lib/marketplace-ledger.ts`, `/admin/marketplace`, and `/api/marketplace/webhook`. `/payments` and the creator dashboard read this ledger. The Phase 9 JSON store remains the demo console at `/admin/payments`.
+
+**Proves:** a prefund is not marked held without a signed provider event; a duplicate event does not post a second hold; a milestone releases only after approval and only for the amount the provider is holding; the escrow label follows the jurisdiction flag.
+
+1. One marketplace provider, admin-edited, ready only when it is enabled and a webhook secret is saved.
+2. Jurisdictions turn protected payments on or off and decide whether the UI may say escrow.
+3. Milestone templates are admin shares that must add up to 100%. Each prefund copies those shares and the review window.
+4. The fee quote is frozen on the funding row. Later fee-rule edits do not change it.
+5. Webhooks are idempotent. Release and refund are ledger entries. The balance is what the provider holds, not an Influrios cash account.
+
+**Exit:** with the provider not ready, requesting a prefund does not create a funded deal. With a signed `funding.held` event, the deal is held once. Approving a milestone does not release it. A signed `payout.released` event releases that milestone once.
+
+Phase 12.4 (milestone disputes and the cancellation engine) is still ahead.
 
 ---
 

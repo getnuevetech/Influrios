@@ -425,8 +425,8 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Deterministic `resolveFee()` + immutable `createFeeSnapshot()` (PA001 / PA002 / PA006)  
 - [x] Jurisdiction gates + “Protected Payment” vs “Escrow” label helper (PA004)  
 - [x] Admin fee matrix, simulator, snapshot freeze (`/admin/fees`, `commerce.*` RBAC)  
-- [ ] Prefunding via approved marketplace provider adapter (12.3)  
-- [ ] Milestone state machine + ledger + idempotent webhooks (12.3)  
+- [x] Prefunding via approved marketplace provider adapter (12.3)  
+- [x] Milestone state machine + ledger + idempotent webhooks (12.3)  
 - [ ] Milestone disputes / cancellation engine (12.4)  
 
 **Defer:** Staged/recurring funding, multi-provider FX, revenue-share splits (P3–P4)  

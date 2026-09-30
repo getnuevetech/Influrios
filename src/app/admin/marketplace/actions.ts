@@ -1,0 +1,90 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { requireAdminAction } from "@/app/admin/guard";
+import {
+  saveJurisdiction,
+  saveMarketplaceProvider,
+  saveMarketplaceSettings,
+  saveMilestoneTemplates,
+} from "@/lib/marketplace-ledger";
+
+function flag(formData: FormData, name: string) {
+  return formData.get(name) === "on";
+}
+
+export async function actionSaveMarketplaceSettings(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  try {
+    await saveMarketplaceSettings({ reviewWindowHours: Number(formData.get("reviewWindowHours")) });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save settings.";
+    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  redirect("/admin/marketplace?saved=settings");
+}
+
+export async function actionSaveJurisdiction(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  try {
+    await saveJurisdiction({
+      code: String(formData.get("code") ?? ""),
+      label: String(formData.get("label") ?? ""),
+      protectedPaymentsEnabled: flag(formData, "protectedPaymentsEnabled"),
+      escrowTermAllowed: flag(formData, "escrowTermAllowed"),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the jurisdiction.";
+    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/payments");
+  redirect("/admin/marketplace?saved=jurisdiction");
+}
+
+export async function actionSaveTemplates(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const titles = formData.getAll("title").map((value) => String(value));
+  const shares = formData.getAll("sharePercent").map((value) => Number(value));
+  const ids = formData.getAll("id").map((value) => String(value));
+  const active = formData.getAll("activeIndex").map((value) => String(value));
+  const rows = titles.map((title, index) => ({
+    id: ids[index] || undefined,
+    title,
+    sharePercent: shares[index] ?? 0,
+    active: active.includes(String(index)),
+  }));
+  const extraTitle = String(formData.get("newTitle") ?? "").trim();
+  const extraShare = Number(formData.get("newSharePercent") ?? 0);
+  if (extraTitle) {
+    rows.push({ id: undefined, title: extraTitle, sharePercent: extraShare, active: flag(formData, "newActive") });
+  }
+  try {
+    await saveMilestoneTemplates(rows);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save milestone templates.";
+    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/payments");
+  redirect("/admin/marketplace?saved=templates");
+}
+
+export async function actionSaveMarketplaceProvider(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  try {
+    await saveMarketplaceProvider({
+      name: String(formData.get("name") ?? ""),
+      enabled: flag(formData, "enabled"),
+      webhook: String(formData.get("webhook") ?? ""),
+      clearWebhook: flag(formData, "clearWebhook"),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the provider.";
+    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  redirect("/admin/marketplace?saved=provider");
+}

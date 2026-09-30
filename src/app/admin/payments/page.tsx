@@ -68,8 +68,11 @@ export default async function AdminPaymentsPage({ searchParams }: Props) {
             Protected Payments
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Phase 9 ops — escrow deals, milestone submit/release, and refunds. Demo store only;
-            connect Stripe Connect / payout rails after volume validates.
+            Phase 9 demo store. Live prefunding, milestone release, and the provider-held ledger are on the{" "}
+            <Link href="/admin/marketplace" className="font-semibold text-violet hover:underline">
+              marketplace ledger
+            </Link>
+            .
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-center text-xs">

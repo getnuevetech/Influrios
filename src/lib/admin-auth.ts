@@ -56,6 +56,8 @@ export const ADMIN_PERMISSIONS = [
   "mail.edit",
   "jobs.view",
   "jobs.retry",
+  "marketplace.view",
+  "marketplace.manage",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -83,7 +85,8 @@ export type AdminModule =
   | "legal"
   | "shortlinks"
   | "mail"
-  | "jobs";
+  | "jobs"
+  | "marketplace";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -189,6 +192,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     permissions: [
       { id: "commerce.view", label: "View fee rules", hint: "Open commission / fee console" },
       { id: "commerce.manage", label: "Manage fee rules", hint: "Edit rules, run simulator, freeze snapshots" },
+    ],
+  },
+  {
+    module: "marketplace",
+    label: "Marketplace ledger",
+    description: "Prefunding, milestone templates, and the provider-held ledger",
+    permissions: [
+      { id: "marketplace.view", label: "View marketplace ledger", hint: "Open prefund and milestone records" },
+      { id: "marketplace.manage", label: "Manage marketplace ledger", hint: "Edit jurisdictions, templates, and the provider" },
     ],
   },
   {
@@ -419,6 +431,8 @@ const DEFAULT_ROLES: AdminRole[] = [
       "mail.edit",
       "jobs.view",
       "jobs.retry",
+      "marketplace.view",
+      "marketplace.manage",
     ],
     system: true,
   },
@@ -433,7 +447,14 @@ const DEFAULT_ROLES: AdminRole[] = [
     id: "role_payments",
     name: "Payments Admin",
     description: "Protected payments escrow console only.",
-    permissions: ["payments.view", "payments.manage", "gateways.view", "gateways.edit"],
+    permissions: [
+      "payments.view",
+      "payments.manage",
+      "gateways.view",
+      "gateways.edit",
+      "marketplace.view",
+      "marketplace.manage",
+    ],
     system: true,
   },
   {
