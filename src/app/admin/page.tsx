@@ -151,6 +151,27 @@ const LINKS: {
     meta: () => "Draft, sent, accepted",
   },
   {
+    href: "/admin/ai",
+    title: "AI pipelines",
+    blurb: "Model providers and the function each pipeline runs. Unassigned functions keep their platform fallback.",
+    module: "ai",
+    meta: () => "Classify, explain, match, extract",
+  },
+  {
+    href: "/admin/gateways",
+    title: "Payment gateways",
+    blurb: "Stripe, Flutterwave, and any other gateway, each assigned to countries.",
+    module: "gateways",
+    meta: () => "Country routes",
+  },
+  {
+    href: "/admin/signing",
+    title: "Document signing",
+    blurb: "Signing API used after a collaboration is accepted.",
+    module: "signing",
+    meta: () => "Queued until the provider confirms",
+  },
+  {
     href: "/admin/accounts",
     title: "Member accounts",
     blurb: "Registered members, verification, suspension, consent, and password length.",

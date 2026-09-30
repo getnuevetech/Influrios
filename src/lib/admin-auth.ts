@@ -40,6 +40,12 @@ export const ADMIN_PERMISSIONS = [
   "invitations.edit",
   "collaborations.view",
   "collaborations.edit",
+  "ai.view",
+  "ai.edit",
+  "gateways.view",
+  "gateways.edit",
+  "signing.view",
+  "signing.edit",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -59,7 +65,10 @@ export type AdminModule =
   | "access"
   | "accounts"
   | "invitations"
-  | "collaborations";
+  | "collaborations"
+  | "ai"
+  | "gateways"
+  | "signing";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -195,6 +204,33 @@ export const ADMIN_PERMISSION_GROUPS: {
     ],
   },
   {
+    module: "ai",
+    label: "AI pipelines",
+    description: "Model providers and which pipeline function each one serves",
+    permissions: [
+      { id: "ai.view", label: "View AI pipelines", hint: "Open providers and function assignments" },
+      { id: "ai.edit", label: "Edit AI pipelines", hint: "Save API details and assign functions" },
+    ],
+  },
+  {
+    module: "gateways",
+    label: "Payment gateways",
+    description: "Gateway credentials and the country each one serves",
+    permissions: [
+      { id: "gateways.view", label: "View gateways", hint: "Open country routes and credentials" },
+      { id: "gateways.edit", label: "Edit gateways", hint: "Save secrets and assign countries" },
+    ],
+  },
+  {
+    module: "signing",
+    label: "Document signing",
+    description: "Signing API used after a collaboration is accepted",
+    permissions: [
+      { id: "signing.view", label: "View signing", hint: "Open the signing API and requests" },
+      { id: "signing.edit", label: "Edit signing", hint: "Save API details" },
+    ],
+  },
+  {
     module: "access",
     label: "Access control",
     description: "Create roles and admin users (typically Super Admin)",
@@ -309,21 +345,25 @@ const DEFAULT_ROLES: AdminRole[] = [
       "invitations.edit",
       "collaborations.view",
       "collaborations.edit",
+      "ai.view",
+      "ai.edit",
+      "signing.view",
+      "signing.edit",
     ],
     system: true,
   },
   {
     id: "role_billing",
     name: "Billing Admin",
-    description: "Billing catalog and checkout sessions only.",
-    permissions: ["billing.view"],
+    description: "Billing catalog, checkout sessions, and country payment gateways.",
+    permissions: ["billing.view", "gateways.view", "gateways.edit"],
     system: true,
   },
   {
     id: "role_payments",
     name: "Payments Admin",
     description: "Protected payments escrow console only.",
-    permissions: ["payments.view", "payments.manage"],
+    permissions: ["payments.view", "payments.manage", "gateways.view", "gateways.edit"],
     system: true,
   },
   {
