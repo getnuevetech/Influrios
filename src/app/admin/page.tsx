@@ -7,6 +7,7 @@ import {
 } from "@/lib/admin-auth";
 import { agencyStats, getAgencyStore } from "@/lib/agency";
 import { getBillingStore, isStripeConfigured } from "@/lib/billing";
+import { providerHealth } from "@/lib/provider-health";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
@@ -144,6 +145,20 @@ const LINKS: {
     meta: () => "Queue, template, do-not-contact",
   },
   {
+    href: "/admin/mail",
+    title: "Email",
+    blurb: "SMTP host and a test of the claim invitation. Sign in again if this page asks for permission.",
+    module: "mail",
+    meta: () => "Sends only when SMTP accepts",
+  },
+  {
+    href: "/admin/jobs",
+    title: "Jobs",
+    blurb: "Failed mail and provider jobs, with retry. Sign in again if this page asks for permission.",
+    module: "jobs",
+    meta: () => "Queue and retry",
+  },
+  {
     href: "/admin/collaborations",
     title: "Collaborations",
     blurb: "Proposal records, the sending window, and commercial options.",
@@ -224,7 +239,7 @@ export default async function AdminHomePage({
   if (!session) redirect("/admin/login");
 
   const params = await searchParams;
-  const [cms, matching, billing, payments, trust, agency, memberAccounts] = await Promise.all([
+  const [cms, matching, billing, payments, trust, agency, memberAccounts, health] = await Promise.all([
     getCms().catch(() => null),
     getManagedMatching().catch(() => null),
     getBillingStore().catch(() => null),
@@ -232,6 +247,7 @@ export default async function AdminHomePage({
     getTrustStore().catch(() => null),
     getAgencyStore().catch(() => null),
     prisma.user.count().catch(() => 0),
+    providerHealth().catch(() => null),
   ]);
   const payStats = payments ? escrowStats(payments) : { active: 0, held: 0 };
   const tStats = trust ? trustStats(trust) : { open: 0, resolved: 0, total: 0, contracts: 0 };
@@ -285,6 +301,18 @@ export default async function AdminHomePage({
           You don’t have permission for that admin feature. Ask a Super Admin to update your access
           level.
         </div>
+      ) : null}
+
+      {health ? (
+        <section className="mt-6 grid gap-3 sm:grid-cols-3" aria-label="Provider health">
+          {health.map((line) => (
+            <div key={line.key} className="rounded-xl border border-[#E4EBFF] bg-white px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-violet">{line.title}</p>
+              <p className="mt-1 text-sm font-semibold text-indigo">{line.label}</p>
+              {line.detail ? <p className="mt-1 text-xs text-amber-800">{line.detail}</p> : null}
+            </div>
+          ))}
+        </section>
       ) : null}
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

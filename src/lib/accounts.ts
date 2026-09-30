@@ -56,6 +56,12 @@ async function issueEmailChallenge(userId: string) {
       expiresAt: new Date(Date.now() + 1000 * 60 * 30),
     },
   });
+  try {
+    const { enqueueVerificationEmail } = await import("@/lib/jobs");
+    await enqueueVerificationEmail(userId, code);
+  } catch (error) {
+    console.error("verification mail skipped", error);
+  }
   return code;
 }
 

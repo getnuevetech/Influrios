@@ -110,6 +110,8 @@ export type CheckoutSessionRecord = {
   mode: "stripe" | "demo";
   status: "open" | "completed" | "canceled";
   customerEmail?: string;
+  userId?: string;
+  creatorSlug?: string;
   stripeSessionId?: string;
   createdAt: string;
   completedAt?: string;
@@ -197,6 +199,7 @@ export async function startCheckout(input: {
   sku: BillingSku;
   customerEmail?: string;
   creatorSlug?: string;
+  userId?: string;
 }): Promise<StartCheckoutResult> {
   const product = getProduct(input.sku);
   if (!product) return { ok: false, error: "Unknown plan SKU" };
@@ -239,6 +242,7 @@ export async function startCheckout(input: {
           sku: product.sku,
           localSessionId: sessionId,
           creatorSlug: input.creatorSlug ?? "",
+          userId: input.userId ?? "",
         },
       });
 
@@ -248,6 +252,8 @@ export async function startCheckout(input: {
         mode: "stripe",
         status: "open",
         customerEmail: input.customerEmail,
+        userId: input.userId,
+        creatorSlug: input.creatorSlug,
         stripeSessionId: session.id,
         createdAt: new Date().toISOString(),
       });
@@ -268,6 +274,8 @@ export async function startCheckout(input: {
     mode: "demo",
     status: "open",
     customerEmail: input.customerEmail,
+    userId: input.userId,
+    creatorSlug: input.creatorSlug,
     createdAt: new Date().toISOString(),
   });
   await saveStore(store);
@@ -301,6 +309,23 @@ export async function completeCheckout(sessionId: string, opts?: {
   const product = getProduct(session.sku);
   if (!product) return { ok: false, error: "Unknown product on session" };
 
+  const slug = opts?.creatorSlug || session.creatorSlug || (product.creatorPlan ? "sofia-martinez" : undefined);
+  try {
+    const { applyPlanOnce, checkoutEventId } = await import("@/lib/webhook-idempotency");
+    await applyPlanOnce({
+      provider: session.mode === "stripe" ? "stripe" : "demo",
+      eventId: checkoutEventId(session.id),
+      eventType: "checkout.session.completed",
+      sku: session.sku,
+      userId: session.userId,
+      creatorSlug: slug,
+      externalId: session.stripeSessionId || session.id,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not record the subscription.";
+    return { ok: false, error: message };
+  }
+
   session.status = "completed";
   session.completedAt = new Date().toISOString();
 
@@ -309,15 +334,15 @@ export async function completeCheckout(sessionId: string, opts?: {
   }
 
   if (product.creatorPlan) {
-    const slug = opts?.creatorSlug || "sofia-martinez";
-    const existing = store.creatorOverrides.find((c) => c.creatorSlug === slug);
+    const creatorSlug = slug || "sofia-martinez";
+    const existing = store.creatorOverrides.find((c) => c.creatorSlug === creatorSlug);
     if (existing) {
       existing.plan = product.creatorPlan;
       existing.updatedAt = new Date().toISOString();
       existing.source = "checkout";
     } else {
       store.creatorOverrides.push({
-        creatorSlug: slug,
+        creatorSlug,
         plan: product.creatorPlan,
         updatedAt: new Date().toISOString(),
         source: "checkout",

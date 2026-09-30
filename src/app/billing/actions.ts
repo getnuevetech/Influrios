@@ -27,7 +27,12 @@ export async function actionStartCheckout(formData: FormData) {
     userId: account.id,
     userRole: "CREATOR",
   });
-  const result = await startCheckout({ sku, customerEmail: email, creatorSlug });
+  const result = await startCheckout({
+    sku,
+    customerEmail: email || account.email,
+    creatorSlug,
+    userId: account.id,
+  });
   if (!result.ok) {
     redirect(`/billing?error=${encodeURIComponent(result.error)}`);
   }

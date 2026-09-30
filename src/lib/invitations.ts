@@ -133,7 +133,8 @@ export async function loadInvitationAdmin() {
     }),
     prisma.outreachSuppression.findMany({ orderBy: { createdAt: "desc" } }),
   ]);
-  return { settings, templates, campaigns, invitations, suppressions, smtp: smtpConfigured() };
+  const { mailReady } = await import("@/lib/mail");
+  return { settings, templates, campaigns, invitations, suppressions, smtp: await mailReady() };
 }
 
 async function suppressed(slug: string, email?: string | null) {
@@ -277,7 +278,8 @@ export async function noteLinkCopied(id: string, actor: string) {
 }
 
 export async function queueInvitationEmail(id: string, actor: string) {
-  if (!smtpConfigured()) {
+  const { mailReady } = await import("@/lib/mail");
+  if (!(await mailReady())) {
     throw new Error("Email send is inactive until SMTP is configured.");
   }
   const invitation = await prisma.creatorInvitation.findUnique({ where: { id } });
@@ -290,4 +292,6 @@ export async function queueInvitationEmail(id: string, actor: string) {
     },
   });
   await recordEvent(invitation.id, "send_queued", actor);
+  const { processDueJobs } = await import("@/lib/jobs");
+  await processDueJobs();
 }

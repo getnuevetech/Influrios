@@ -29,6 +29,8 @@ const MODULE_PATH: Record<AdminModule, string> = {
   social: "/admin/social",
   legal: "/admin/legal",
   shortlinks: "/admin/short-links",
+  mail: "/admin/mail",
+  jobs: "/admin/jobs",
 };
 
 /** Gate an admin page by module (any feature under that module). */

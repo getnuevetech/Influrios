@@ -52,6 +52,10 @@ export const ADMIN_PERMISSIONS = [
   "legal.edit",
   "shortlinks.view",
   "shortlinks.edit",
+  "mail.view",
+  "mail.edit",
+  "jobs.view",
+  "jobs.retry",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -77,7 +81,9 @@ export type AdminModule =
   | "signing"
   | "social"
   | "legal"
-  | "shortlinks";
+  | "shortlinks"
+  | "mail"
+  | "jobs";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -267,6 +273,24 @@ export const ADMIN_PERMISSION_GROUPS: {
     ],
   },
   {
+    module: "mail",
+    label: "Email",
+    description: "SMTP host, from address, and the claim invitation test send",
+    permissions: [
+      { id: "mail.view", label: "View email", hint: "Open SMTP settings" },
+      { id: "mail.edit", label: "Edit email", hint: "Save SMTP and send a test" },
+    ],
+  },
+  {
+    module: "jobs",
+    label: "Jobs",
+    description: "Queued mail and provider jobs, including retry",
+    permissions: [
+      { id: "jobs.view", label: "View jobs", hint: "Open the job list" },
+      { id: "jobs.retry", label: "Retry jobs", hint: "Queue a failed job again" },
+    ],
+  },
+  {
     module: "access",
     label: "Access control",
     description: "Create roles and admin users (typically Super Admin)",
@@ -391,6 +415,10 @@ const DEFAULT_ROLES: AdminRole[] = [
       "legal.edit",
       "shortlinks.view",
       "shortlinks.edit",
+      "mail.view",
+      "mail.edit",
+      "jobs.view",
+      "jobs.retry",
     ],
     system: true,
   },
