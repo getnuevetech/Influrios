@@ -1,9 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
+  businessMatchProviderName,
   getWorkspace,
+  queuedBriefIds,
   rankCreatorsForBrief,
 } from "@/lib/business";
+import { fitRankingLabel } from "@/lib/business-queue";
+import { getManagedPromotionEnabled } from "@/lib/managed-matching";
 import {
   BUSINESS_PLAN_PRICES,
   getBusinessEntitlements,
@@ -14,9 +18,12 @@ import {
   actionAddShortlist,
   actionCreateBrief,
   actionRemoveShortlist,
+  actionRequestManagedMatch,
   actionSendInquiry,
   actionSetPlan,
 } from "./actions";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Business Workspace",
@@ -29,6 +36,7 @@ type Props = {
     brief?: string;
     inquiry?: string;
     plan?: string;
+    queued?: string;
   }>;
 };
 
@@ -38,19 +46,31 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
   try {
     ws = await getWorkspace();
   } catch {
-    ws = {
-      businessId: "demo-business",
-      name: "Luminous Beauty",
-      plan: "BUSINESS_PRO" as const,
-      industry: "Skincare & Wellness",
-      shortlist: [] as Awaited<ReturnType<typeof getWorkspace>>["shortlist"],
-      briefs: [] as Awaited<ReturnType<typeof getWorkspace>>["briefs"],
-      inquiries: [] as Awaited<ReturnType<typeof getWorkspace>>["inquiries"],
-    };
+    return (
+      <div className="bg-[#F7FAFF]">
+        <section className="hero-atmosphere text-white">
+          <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
+            <h1 className="font-display text-4xl font-bold">Business Workspace</h1>
+          </div>
+        </section>
+        <div className="mx-auto max-w-[90rem] px-4 py-8 sm:px-6">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            The business workspace is unavailable. Nothing was saved.
+          </div>
+        </div>
+      </div>
+    );
   }
   const entitlements = getBusinessEntitlements(ws.plan);
   const activeBrief = ws.briefs[0];
   const ranked = activeBrief && entitlements.fitInsights ? rankCreatorsForBrief(activeBrief).slice(0, 5) : [];
+  const [providerName, promotionOn, queuedIds] = await Promise.all([
+    businessMatchProviderName().catch(() => null),
+    getManagedPromotionEnabled().catch(() => false),
+    queuedBriefIds().catch(() => [] as string[]),
+  ]);
+  const fitLabel = fitRankingLabel(providerName);
+  const queued = new Set(queuedIds);
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -88,7 +108,12 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
         ) : null}
         {params.inquiry ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Inquiry sent (demo stored in workspace).
+            Inquiry saved to this workspace.
+          </div>
+        ) : null}
+        {params.queued ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Managed matching requested. It is in the admin queue.
           </div>
         ) : null}
 
@@ -121,6 +146,7 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
                     <li>{e.fitInsights ? "✓" : "–"} Fit insights</li>
                     <li>{e.advancedFilters ? "✓" : "–"} Advanced filters</li>
                     <li>{e.intelligence ? "✓" : "–"} Intelligence</li>
+                    <li>{e.managedMatching ? "✓" : "–"} Managed matching</li>
                     <li>{e.agencyWorkspace ? "✓" : "–"} Agency workspace</li>
                     <li>{e.exports ? "✓" : "–"} Exports</li>
                   </ul>
@@ -241,6 +267,22 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-muted">{b.summary}</p>
+                  {promotionOn && entitlements.managedMatching ? (
+                    queued.has(b.id) ? (
+                      <p className="mt-3 text-xs font-semibold text-violet">In the managed queue.</p>
+                    ) : (
+                      <form action={actionRequestManagedMatch} className="mt-3">
+                        <input type="hidden" name="briefId" value={b.id} />
+                        <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                          Request managed matching
+                        </button>
+                      </form>
+                    )
+                  ) : promotionOn ? (
+                    <p className="mt-3 text-xs text-muted">Managed matching is an Agency feature.</p>
+                  ) : (
+                    <p className="mt-3 text-xs text-muted">Managed promotion is turned off.</p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -298,6 +340,7 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
                 Ranked against your active brief
                 {activeBrief ? `: “${activeBrief.title}”` : ""}.
               </p>
+              <p className="mt-1 text-xs font-semibold text-violet">{fitLabel}</p>
             </div>
             {!entitlements.fitInsights ? (
               <form action={actionSetPlan}>

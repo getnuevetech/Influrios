@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–F are implemented, and provider admin is in place for AI pipelines, country payment gateways, and document signing. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm; until then the platform fallback, an unpaid checkout, and a queued signature stay honest. Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–G are implemented, and provider admin is in place for AI pipelines, country payment gateways, and document signing. Business briefs, shortlists, inquiries, opt-ins, and the managed queue are stored in Postgres. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm; until then the platform fallback, an unpaid checkout, and a queued signature stay honest. Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -61,8 +61,8 @@ Priority is what blocks section 33, not how polished the screen looks.
 | Card / QR | `R052`–`R056`, `IC-008`–`IC-012` | `/c/{slug}`, `/api/qr/[slug]`; `/q/[token]` treats token as slug | Canonical slug, shortlink table, opaque `qr_identity`. Redirect does not require analytics to succeed. |
 | Guest gates | `R015`–`R018`, `R154` | None | Server usage counters. Soft prompt vs hard block on protected actions. |
 | Auth | `R010`–`R014` | Admin HMAC cookie. No end-user accounts. | Email/password accounts, verification, reset, consent versions. One identity, many workspaces later. |
-| Collab | `R062`–`R067` | Records persist draft → sent → accepted. Offers and needs point at a specialty. “Why this match” is stored with the row. Proposal max is `collaboration.proposals.max`. | Keep the explanation text. Business briefs are still Phase G. |
-| Business / managed | `R068`–`R073` | `/business` and `/admin/matching` JSON demos | Persist briefs, shortlists, intro pipeline. Feature-flag automation. |
+| Collab | `R062`–`R067` | Records persist draft → sent → accepted. Offers and needs point at a specialty. “Why this match” is stored with the row. Proposal max is `collaboration.proposals.max`. | Keep the explanation text. Business briefs persist in Phase G. |
+| Business / managed | `R068`–`R073` | Briefs, shortlists, inquiries, opt-ins, and introductions persist. `managed_promotion` is edited on `/admin/matching`. Fit ranking stays the platform rule until `business_creator_match` has a live provider. | Keep the queue honest: a request is not an introduction until admin records one. |
 | Outreach | `R046`–`R051`, `ONB-019`–`ONB-023` | Not built | Invitation records, opaque claim links, pipeline, suppression. |
 | Payments | `R081`–`R088`, section 31 | Stripe Checkout scaffold in `src/lib/billing.ts`; plan not written onto the creator the UI reads | Provider registry. Stripe is provider #1 for **subscriptions**. Do not extend escrow. |
 | Email | `R089`–`R095` | None | Notification service. SMTP settings in admin, secrets encrypted. |
@@ -187,6 +187,8 @@ Implemented at `/collaboration/records` and `/admin/collaborations`. Proposal ma
 **Exit:** two seeded creators complete draft → sent → accepted, and a refresh still shows the record.
 
 ### Phase G — Business briefs and managed work queue
+
+Implemented at `/business` and `/admin/matching`. The `managed_promotion` flag is edited on the matching page.
 
 **Proves:** scenario 4. Moves `/business` and `/admin/matching` off JSON.
 

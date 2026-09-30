@@ -438,6 +438,113 @@ model BusinessProfile {
   updatedAt   DateTime @updatedAt
 }
 
+/// Demo business workspace persisted for briefs, shortlists, and inquiries.
+model BusinessWorkspace {
+  id         String                 @id @default("demo-business")
+  name       String
+  plan       String                 @default("BUSINESS_PRO")
+  industry   String
+  updatedAt  DateTime               @updatedAt
+  briefs     BusinessBrief[]
+  shortlist  BusinessShortlistItem[]
+  inquiries  BusinessInquiry[]
+  matchQueue ManagedMatchRequest[]
+}
+
+model BusinessBrief {
+  id          String               @id @default(cuid())
+  workspaceId String
+  workspace   BusinessWorkspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  goal        String
+  specialty   String
+  budget      String
+  location    String
+  platform    String
+  summary     String
+  status      String               @default("active")
+  createdAt   DateTime             @default(now())
+  inquiries   BusinessInquiry[]
+  matchQueue  ManagedMatchRequest[]
+
+  @@index([workspaceId])
+}
+
+model BusinessShortlistItem {
+  id          String            @id @default(cuid())
+  workspaceId String
+  workspace   BusinessWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creatorSlug String
+  note        String?
+  addedAt     DateTime          @default(now())
+
+  @@unique([workspaceId, creatorSlug])
+}
+
+model BusinessInquiry {
+  id          String            @id @default(cuid())
+  workspaceId String
+  workspace   BusinessWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  briefId     String?
+  brief       BusinessBrief?    @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  creatorSlug String
+  message     String
+  status      String            @default("sent")
+  createdAt   DateTime          @default(now())
+
+  @@index([workspaceId])
+}
+
+model CreatorManagedOptIn {
+  creatorSlug    String   @id
+  openToManaged  Boolean  @default(false)
+  targetingNotes String   @default("")
+  niches         String[] @default([])
+  updatedAt      DateTime @updatedAt
+}
+
+model ManagedIntro {
+  id           String              @id @default(cuid())
+  businessName String
+  businessId   String
+  creatorSlug  String
+  briefTitle   String
+  briefId      String?
+  notes        String              @default("")
+  status       String              @default("draft")
+  feeExpected  String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  events       ManagedIntroEvent[]
+  matchRequest ManagedMatchRequest?
+}
+
+model ManagedIntroEvent {
+  id        String       @id @default(cuid())
+  introId   String
+  intro     ManagedIntro @relation(fields: [introId], references: [id], onDelete: Cascade)
+  status    String
+  note      String?
+  createdAt DateTime     @default(now())
+
+  @@index([introId])
+}
+
+/// A business asked for managed matching. Admin records an introduction from the queue.
+model ManagedMatchRequest {
+  id          String            @id @default(cuid())
+  workspaceId String
+  workspace   BusinessWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  briefId     String
+  brief       BusinessBrief     @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  status      String            @default("queued")
+  introId     String?           @unique
+  intro       ManagedIntro?     @relation(fields: [introId], references: [id], onDelete: SetNull)
+  createdAt   DateTime          @default(now())
+
+  @@index([status])
+}
+
 model QrRedirect {
   id          String   @id @default(cuid())
   token       String   @unique

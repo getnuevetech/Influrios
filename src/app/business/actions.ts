@@ -6,6 +6,7 @@ import {
   addToShortlist,
   createBrief,
   removeFromShortlist,
+  requestManagedMatch,
   sendInquiry,
   setBusinessPlan,
 } from "@/lib/business";
@@ -58,7 +59,27 @@ export async function actionSendInquiry(formData: FormData) {
 
 export async function actionSetPlan(formData: FormData) {
   const plan = String(formData.get("plan") ?? "BUSINESS_FREE") as BusinessPlanCode;
-  await setBusinessPlan(plan);
+  try {
+    await setBusinessPlan(plan);
+  } catch {
+    redirect("/business?error=" + encodeURIComponent("The business workspace is unavailable. Nothing was saved."));
+  }
   revalidatePath("/business");
   redirect(`/business?plan=${plan}`);
+}
+
+export async function actionRequestManagedMatch(formData: FormData) {
+  const briefId = String(formData.get("briefId") ?? "");
+  let result: Awaited<ReturnType<typeof requestManagedMatch>>;
+  try {
+    result = await requestManagedMatch(briefId);
+  } catch {
+    redirect("/business?error=" + encodeURIComponent("The business workspace is unavailable. Nothing was saved."));
+  }
+  revalidatePath("/business");
+  revalidatePath("/admin/matching");
+  if (!result.ok) {
+    redirect(`/business?error=${encodeURIComponent(result.error)}`);
+  }
+  redirect("/business?queued=1");
 }

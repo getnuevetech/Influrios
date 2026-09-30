@@ -9,6 +9,7 @@ import {
 } from "@/lib/intelligence";
 import { getCreatorBySlug } from "@/lib/seed-data";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Business · Intelligence" };
 
 const SIGNAL_COLOR: Record<string, string> = {
