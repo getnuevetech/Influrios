@@ -3,18 +3,15 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CompactInfluencerCard, CreatorCard } from "@/components/creator-card";
 import { FeaturedCarousel } from "@/components/featured-carousel";
+import { HomepageValuePropositionStrip } from "@/components/homepage-value-proposition-strip";
 import {
   CategoryGlyph,
   IconArrowRight,
   IconCheck,
   IconHeart,
-  IconIdCard,
   IconInstagram,
-  IconIntelligence,
-  IconNetwork,
   IconPlus,
   IconSearch,
-  IconShieldPay,
   IconTikTok,
   IconYouTube,
   SocialIcon,
@@ -92,6 +89,7 @@ export default async function HomePage() {
   const sponsored = cms.banners.sponsored;
   const cardPromo = cms.banners.cardPromo;
   const cta = cms.banners.cta;
+  const valueProposition = cms.valueProposition;
 
   const baseCardWidth = 220;
   const widthPx = Math.round(baseCardWidth * cms.featuredCards.widthScale);
@@ -373,76 +371,8 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {/* —— Unique features —— */}
-      <section className="relative w-full overflow-hidden border-y border-border bg-white py-10">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-[radial-gradient(ellipse_at_right,_rgba(99,60,255,0.12),_transparent_70%)]"
-        />
-        <Shell className="relative grid gap-6 md:grid-cols-2 xl:grid-cols-5">
-          {[
-            {
-              title: "Influrios Card",
-              desc: "One professional identity for your socials, specialty, contact details and opportunities.",
-              Icon: IconIdCard,
-              tone: "bg-lavender text-violet",
-              href: "/card",
-            },
-            {
-              title: "Influence Intelligence",
-              desc: "Discover creators by what they truly influence — not just follower count.",
-              Icon: IconIntelligence,
-              tone: "bg-[#D9E8FF] text-blue",
-              href: "/discover",
-            },
-            {
-              title: "Collaboration Network",
-              desc: "Connect creators, complementary specialists and businesses around real opportunities.",
-              Icon: IconNetwork,
-              tone: "bg-[#F3E8FF] text-violet",
-              href: "/collaboration",
-            },
-            {
-              title: "Protected Payments",
-              desc: "Fund collaborations securely and release payments as agreed milestones are completed.",
-              Icon: IconShieldPay,
-              tone: "bg-emerald-50 text-emerald-700",
-              href: "/payments",
-            },
-          ].map((item, i) => (
-            <Link
-              key={item.title}
-              href={item.href}
-              className={`flex flex-col items-center gap-3 text-center transition hover:-translate-y-0.5 ${
-                i < 4 ? "xl:border-r xl:border-[#E8ECF5] xl:pr-5" : ""
-              }`}
-            >
-              <span
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${item.tone}`}
-              >
-                <item.Icon size={22} />
-              </span>
-              <div>
-                <h3 className="font-display text-base font-bold text-indigo">{item.title}</h3>
-                <p className="mt-1 text-sm leading-snug text-muted">{item.desc}</p>
-              </div>
-            </Link>
-          ))}
-
-          <div className="flex flex-col items-center justify-center border-t border-[#E8ECF5] pt-5 text-center md:col-span-2 xl:col-span-1 xl:border-t-0 xl:pl-5 xl:pt-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
-              More than a directory.
-            </p>
-            <p className="mt-2 font-display text-xl font-bold leading-tight brand-gradient-text sm:text-2xl">
-              An ecosystem for influence.
-            </p>
-            <span
-              aria-hidden
-              className="mt-3 h-1 w-12 rounded-full bg-gradient-to-r from-[#633CFF] to-[#2979FF]"
-            />
-          </div>
-        </Shell>
-      </section>
+      {/* —— Value proposition strip (CMS / Phase 12a) —— */}
+      <HomepageValuePropositionStrip strip={valueProposition} />
 
       {/* —— Collaboration Matches —— */}
       <section className="w-full py-12">
