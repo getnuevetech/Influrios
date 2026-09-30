@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { PLAN_ENTITLEMENTS } from "./entitlements";
-import { evaluateCompletion, secondSocialDecision, toPublicProfile } from "./onboarding";
+import { advanceClaimStage, evaluateCompletion, secondSocialDecision, toPublicProfile } from "./onboarding";
 
 describe("onboarding completion", () => {
   it("scores a private draft below a published profile", () => {
@@ -22,6 +22,27 @@ describe("onboarding completion", () => {
     assert.equal(draft.score, 0);
     assert.equal(live.score, 100);
     assert.equal(live.items.find((item) => item.id === "email_verified")?.done, true);
+  });
+});
+
+describe("claim states", () => {
+  it("walks draft to claimed to verified to published", () => {
+    const claimed = advanceClaimStage("draft", "claim");
+    assert.equal(claimed.ok, true);
+    if (!claimed.ok) return;
+    const verified = advanceClaimStage(claimed.stage, "verify");
+    assert.equal(verified.ok, true);
+    if (!verified.ok) return;
+    const published = advanceClaimStage(verified.stage, "publish");
+    assert.equal(published.ok && published.stage, "published");
+  });
+
+  it("refuses to skip verification or reopen a published card", () => {
+    assert.equal(advanceClaimStage("draft", "verify").ok, false);
+    assert.equal(advanceClaimStage("draft", "publish").ok, false);
+    assert.equal(advanceClaimStage("claimed", "publish").ok, false);
+    assert.equal(advanceClaimStage("published", "claim").ok, false);
+    assert.equal(advanceClaimStage("published", "publish").ok, true);
   });
 });
 

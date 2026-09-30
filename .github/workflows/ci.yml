@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: influrios
+          POSTGRES_PASSWORD: influrios
+          POSTGRES_DB: influrios
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U influrios -d influrios"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://influrios:influrios@localhost:5432/influrios
+      SHADOW_DATABASE_URL: postgresql://influrios:influrios@localhost:5432/influrios_shadow
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run check:brand
+      - name: Apply migrations and test
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=influrios psql -h localhost -U influrios -d influrios -c "CREATE DATABASE influrios_shadow;"
+          npx prisma migrate deploy
+          npm test
+          npm run check:migrations

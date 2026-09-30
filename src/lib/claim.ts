@@ -6,7 +6,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { promises as fs } from "fs";
 import { decideCount, isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
+import { advanceClaimStage, evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
 import { cookies } from "next/headers";
 import path from "path";
 import type { SeedCreator, SeedSocial } from "@/lib/seed-data";
@@ -310,7 +310,8 @@ export async function claimDraft(input: {
   const store = await ensureStore();
   const draft = store.drafts.find((d) => d.id === input.draftId);
   if (!draft) throw new Error("Draft not found");
-  if (draft.stage === "published") throw new Error("Already published");
+  const claimed = advanceClaimStage(draft.stage, "claim");
+  if (!claimed.ok) throw new Error(claimed.error);
 
   const email = input.email.trim().toLowerCase();
   const name = input.name.trim();
@@ -319,7 +320,7 @@ export async function claimDraft(input: {
   draft.email = email;
   draft.ownerName = name;
   draft.displayName = name;
-  draft.stage = "claimed";
+  draft.stage = claimed.stage;
   draft.verifyCode = String(100000 + (Math.abs(hash(email + draft.id)) % 900000));
   draft.updatedAt = new Date().toISOString();
   await saveStore(store);
@@ -332,14 +333,15 @@ export async function verifyDraft(draftId: string, code: string): Promise<ClaimD
   const store = await ensureStore();
   const draft = store.drafts.find((d) => d.id === draftId);
   if (!draft) throw new Error("Draft not found");
-  if (draft.stage === "draft") throw new Error("Claim the card before verifying");
+  const verified = advanceClaimStage(draft.stage, "verify");
+  if (!verified.ok) throw new Error(verified.error);
   if (!draft.verifyCode || code.trim() !== draft.verifyCode) {
     await rememberOnboarding(() =>
       recordAttempt(draft, { channel: "EMAIL", success: false, detail: "invalid demo code" }),
     );
     throw new Error("Invalid verification code");
   }
-  draft.stage = "verified";
+  draft.stage = verified.stage;
   draft.verifiedAt = new Date().toISOString();
   draft.updatedAt = draft.verifiedAt;
   // Replace placeholder location once verified
@@ -362,10 +364,9 @@ export async function publishDraft(draftId: string): Promise<ClaimDraft> {
   const store = await ensureStore();
   const draft = store.drafts.find((d) => d.id === draftId);
   if (!draft) throw new Error("Draft not found");
-  if (draft.stage !== "verified" && draft.stage !== "published") {
-    throw new Error("Verify ownership before publishing");
-  }
-  draft.stage = "published";
+  const published = advanceClaimStage(draft.stage, "publish");
+  if (!published.ok) throw new Error(published.error);
+  draft.stage = published.stage;
   draft.publishedAt = new Date().toISOString();
   draft.updatedAt = draft.publishedAt;
   await saveStore(store);

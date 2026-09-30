@@ -49,7 +49,7 @@ export const DEFAULT_HOMEPAGE_SECTIONS: Omit<HomepageSection, "id" | "updatedBy"
   { key: "faq", title: "FAQ", sortOrder: 9, enabled: false, status: "draft" },
 ];
 
-const DEFAULT_MENUS: { menu: string; label: string; href: string; sortOrder: number }[] = [
+export const DEFAULT_MENUS: { menu: string; label: string; href: string; sortOrder: number }[] = [
   { menu: "header", label: "Home", href: "/", sortOrder: 0 },
   { menu: "header", label: "Discover", href: "/discover", sortOrder: 1 },
   { menu: "header", label: "Categories", href: "/categories", sortOrder: 2 },
