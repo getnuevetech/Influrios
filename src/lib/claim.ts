@@ -6,6 +6,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { promises as fs } from "fs";
 import { decideCount } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
+import { evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
 import { cookies } from "next/headers";
 import path from "path";
 import type { SeedCreator, SeedSocial } from "@/lib/seed-data";
@@ -211,6 +212,7 @@ export async function createDraftFromHandle(
 
   store.drafts.unshift(draft);
   await saveStore(store);
+  await rememberOnboarding(() => syncSession(draft));
   return draft;
 }
 
@@ -259,7 +261,6 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     socials: draft.socials,
     openToCollab: true,
     verified: draft.stage === "verified" || draft.stage === "published",
-    email: draft.email,
   };
 }
 
@@ -284,6 +285,7 @@ export async function claimDraft(input: {
   draft.verifyCode = String(100000 + (Math.abs(hash(email + draft.id)) % 900000));
   draft.updatedAt = new Date().toISOString();
   await saveStore(store);
+  await rememberOnboarding(() => recordClaimRow(draft));
   return draft;
 }
 
@@ -293,6 +295,9 @@ export async function verifyDraft(draftId: string, code: string): Promise<ClaimD
   if (!draft) throw new Error("Draft not found");
   if (draft.stage === "draft") throw new Error("Claim the card before verifying");
   if (!draft.verifyCode || code.trim() !== draft.verifyCode) {
+    await rememberOnboarding(() =>
+      recordAttempt(draft, { channel: "EMAIL", success: false, detail: "invalid demo code" }),
+    );
     throw new Error("Invalid verification code");
   }
   draft.stage = "verified";
@@ -304,6 +309,13 @@ export async function verifyDraft(draftId: string, code: string): Promise<ClaimD
     draft.locationCountry = "Nigeria";
   }
   await saveStore(store);
+  await rememberOnboarding(() =>
+    recordAttempt(draft, {
+      channel: "EMAIL",
+      success: true,
+      detail: "demo email code accepted; social account remains unverified",
+    }),
+  );
   return draft;
 }
 
@@ -318,6 +330,34 @@ export async function publishDraft(draftId: string): Promise<ClaimDraft> {
   draft.publishedAt = new Date().toISOString();
   draft.updatedAt = draft.publishedAt;
   await saveStore(store);
+  await rememberOnboarding(async () => {
+    const { persistPublishedClaim } = await import("@/lib/claim-persist");
+    await persistPublishedClaim(draft);
+    const { invalidateDirectoryCache } = await import("@/lib/directory");
+    invalidateDirectoryCache();
+  });
+  return draft;
+}
+
+export async function addDraftSocial(
+  draftId: string,
+  social: SeedSocial,
+): Promise<ClaimDraft> {
+  const store = await ensureStore();
+  const draft = store.drafts.find((item) => item.id === draftId);
+  if (!draft) throw new Error("Draft not found");
+  const limits = await entitlementsForPlan("STARTER");
+  const decision = secondSocialDecision(draft.socials.length, limits, "STARTER");
+  if (!decision.ok) {
+    const upgrade = decision.upgradePlanCode ? ` Upgrade to ${decision.upgradePlanCode}.` : "";
+    throw new Error(
+      `card.social_links.max limit ${decision.limit}.${upgrade} Starter includes ${decision.limit} social ${decision.limit === 1 ? "link" : "links"}.`,
+    );
+  }
+  draft.socials.push(social);
+  draft.updatedAt = new Date().toISOString();
+  await saveStore(store);
+  await rememberOnboarding(() => syncSession(draft));
   return draft;
 }
 
@@ -353,53 +393,33 @@ export function completenessFor(draft: ClaimDraft): {
   score: number;
   items: CompletenessItem[];
 } {
-  const items: CompletenessItem[] = [
-    {
-      id: "claimed",
-      label: "Claim ownership",
-      done: draft.stage !== "draft",
-      weight: 20,
-      hint: "Attach your email and take ownership of this draft",
-    },
-    {
-      id: "verified",
-      label: "Verify a social channel",
-      done: draft.stage === "verified" || draft.stage === "published",
-      weight: 25,
-      hint: "Confirm the demo code sent after claim",
-    },
-    {
-      id: "published",
-      label: "Publish Starter card",
-      done: draft.stage === "published",
-      weight: 25,
-      hint: "Make your card live at /c/{slug}",
-    },
-    {
-      id: "bio",
-      label: "Write a real bio",
-      done: draft.bio.length > 80 && !draft.bio.includes("Draft Influencer Card"),
-      weight: 10,
-      hint: "Replace the draft placeholder bio",
-    },
-    {
-      id: "location",
-      label: "Set real location",
-      done: draft.locationCity !== "Your city" && draft.locationCountry !== "Your country",
-      weight: 10,
-      hint: "City + country help brands find you",
-    },
-    {
-      id: "specialty",
-      label: "Confirm specialty",
-      done: draft.specialties.length > 0 && draft.specialties[0] !== "lifestyle",
-      weight: 10,
-      hint: "Pick the niche you actually influence",
-    },
-  ];
-  const total = items.reduce((s, i) => s + i.weight, 0);
-  const earned = items.reduce((s, i) => s + (i.done ? i.weight : 0), 0);
-  return { score: Math.round((earned / total) * 100), items };
+  return evaluateCompletion(draft);
+}
+
+async function rememberOnboarding(work: () => Promise<void>) {
+  try {
+    await work();
+  } catch (error) {
+    console.error("onboarding persist skipped", error);
+  }
+}
+
+async function syncSession(draft: ClaimDraft) {
+  const { syncOnboardingSession } = await import("@/lib/claim-persist");
+  await syncOnboardingSession(draft);
+}
+
+async function recordClaimRow(draft: ClaimDraft) {
+  const { recordClaim } = await import("@/lib/claim-persist");
+  await recordClaim(draft);
+}
+
+async function recordAttempt(
+  draft: ClaimDraft,
+  input: { channel: "EMAIL" | "SOCIAL"; success: boolean; detail?: string },
+) {
+  const { recordVerificationAttempt } = await import("@/lib/claim-persist");
+  await recordVerificationAttempt({ draft, ...input });
 }
 
 export async function setCreatorSession(draftId: string) {

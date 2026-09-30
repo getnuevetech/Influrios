@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import {
+  addDraftSocial,
   claimDraft,
   createDraftFromHandle,
   publishDraft,
@@ -63,6 +64,24 @@ export async function actionPublishDraft(formData: FormData) {
     redirect(`/claim/publish/${draftId}?error=${encodeURIComponent(message)}`);
   }
   redirect(`/dashboard?published=1`);
+}
+
+export async function actionAddDraftSocial(formData: FormData) {
+  const draftId = String(formData.get("draftId") ?? "");
+  const handle = String(formData.get("handle") ?? "").trim().replace(/^@/, "");
+  if (!handle) redirect(`/claim/publish/${draftId}?error=${encodeURIComponent("Enter a handle")}`);
+  try {
+    await addDraftSocial(draftId, {
+      platform: "TIKTOK",
+      handle: `@${handle}`,
+      url: `https://tiktok.com/@${handle}`,
+      followers: 1000,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not add social";
+    redirect(`/claim/publish/${draftId}?error=${encodeURIComponent(message)}`);
+  }
+  redirect(`/claim/publish/${draftId}?added=1`);
 }
 
 export async function actionUpdateDashboardProfile(formData: FormData) {

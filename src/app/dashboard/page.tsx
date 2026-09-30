@@ -76,7 +76,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 Publish now →
               </button>
             </form>
-          ) : nextAction.id === "verified" ? (
+          ) : nextAction.id === "verified" || nextAction.id === "email_verified" ? (
             <Link href={`/claim/verify/${draft.id}`} className="btn-primary !py-2 text-sm">
               Verify →
             </Link>

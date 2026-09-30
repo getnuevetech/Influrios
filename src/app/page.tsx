@@ -378,7 +378,7 @@ export default async function HomePage() {
                   </div>
                   <Link
                     href={sponsored.ctaHref || "/collaboration"}
-                    className="mt-5 inline-flex min-h-[42px] min-w-[160px] items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#111A5A] shadow-lg"
+                    className="ink-on-light mt-5 inline-flex min-h-[42px] min-w-[160px] items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold shadow-lg"
                   >
                     {sponsored.ctaLabel?.trim() || "View Opportunities"}{" "}
                     <IconArrowRight size={14} />
@@ -600,7 +600,7 @@ export default async function HomePage() {
               <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
                 <Link
                   href={cta.ctaHref || "/claim"}
-                  className="inline-flex min-h-[42px] min-w-[160px] items-center justify-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-[#111A5A]"
+                  className="ink-on-light inline-flex min-h-[42px] min-w-[160px] items-center justify-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold"
                 >
                   {cta.ctaLabel?.trim() || "Join as a Creator"} <IconArrowRight size={14} />
                 </Link>

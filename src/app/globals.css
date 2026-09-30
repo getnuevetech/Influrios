@@ -59,6 +59,23 @@ a {
   text-decoration: none;
 }
 
+/* Unlayered so it wins over `a { color: inherit }` inside light pills on dark banners. */
+a.ink-on-light,
+button.ink-on-light {
+  color: #111a5a;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .brand-gradient {
   background: linear-gradient(120deg, var(--electric-blue), var(--royal-violet));
 }

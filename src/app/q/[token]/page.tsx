@@ -1,14 +1,11 @@
 import { redirect } from "next/navigation";
-import { getDirectoryCreator } from "@/lib/directory";
+import { resolveQrPath } from "@/lib/qr-identity";
 
 type Props = { params: Promise<{ token: string }> };
 
-/** Pro dynamic QR landing — token currently equals creator slug (opaque IDs later). */
+/** Dynamic QR landing. Opaque tokens resolve through qr_identity; older links may still be slugs. */
 export default async function DynamicQrRedirectPage({ params }: Props) {
   const { token } = await params;
-  const creator = await getDirectoryCreator(token);
-  if (!creator) {
-    redirect("/discover");
-  }
-  redirect(`/c/${creator.slug}`);
+  const path = await resolveQrPath(token);
+  redirect(path ?? "/discover");
 }

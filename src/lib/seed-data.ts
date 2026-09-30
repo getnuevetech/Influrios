@@ -423,20 +423,29 @@ export function getCreatorBySlug(slug: string) {
 
 export type CreatorSearchQuery = {
   q?: string;
-  specialty?: string;
+  specialty?: string | string[];
   location?: string;
-  country?: string;
+  country?: string | string[];
   state?: string;
   city?: string;
-  platform?: string;
+  platform?: string | string[];
   language?: string;
   followersMin?: string | number;
   followersMax?: string | number;
   engagementMin?: string | number;
+  engagementMax?: string | number;
+  collabType?: string;
+  rate?: string;
   openToCollab?: string | boolean;
   verified?: string | boolean;
   sort?: string;
 };
+
+function queryList(value?: string | string[] | number | boolean): string[] {
+  if (value == null || typeof value === "number" || typeof value === "boolean") return [];
+  const raw = Array.isArray(value) ? value : [value];
+  return raw.flatMap((item) => String(item).split(",")).map((item) => item.trim()).filter(Boolean);
+}
 
 export function filterCreators(
   creators: SeedCreator[],
@@ -444,16 +453,19 @@ export function filterCreators(
   synonyms: { term: string; slug: string }[] = [],
 ) {
   const q = query.q?.toLowerCase().trim();
-  const specialty = query.specialty?.toLowerCase();
+  const specialties = queryList(query.specialty).map((item) => item.toLowerCase());
   const location = query.location?.toLowerCase();
-  const country = query.country?.toLowerCase();
+  const countries = queryList(query.country).map((item) => item.toLowerCase());
   const state = query.state?.toLowerCase();
   const city = query.city?.toLowerCase();
-  const platform = query.platform?.toUpperCase();
+  const platforms = queryList(query.platform).map((item) => item.toUpperCase());
   const language = query.language?.toLowerCase();
   const followersMin = Number(query.followersMin || 0) || 0;
   const followersMax = Number(query.followersMax || 0) || 0;
   const engagementMin = Number(query.engagementMin || 0) || 0;
+  const engagementMax = Number(query.engagementMax || 0) || 0;
+  const collabType = query.collabType?.toLowerCase().trim();
+  const rate = query.rate?.toLowerCase().trim();
   const openOnly =
     query.openToCollab === true ||
     query.openToCollab === "1" ||
@@ -474,23 +486,36 @@ export function filterCreators(
         `${c.displayName} ${c.title} ${c.bio} ${c.specialties.join(" ")} ${aliasWords} ${c.locationCity} ${c.locationCountry}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
-    if (specialty && !c.specialties.some((s) => s === specialty || s.includes(specialty))) return false;
+    if (
+      specialties.length &&
+      !c.specialties.some((s) => specialties.some((selected) => s === selected || s.includes(selected)))
+    ) {
+      return false;
+    }
     if (location) {
       const loc = `${c.locationCity} ${c.locationState ?? ""} ${c.locationCountry}`.toLowerCase();
       if (!loc.includes(location)) return false;
     }
-    if (country && c.locationCountry.toLowerCase() !== country) return false;
+    if (countries.length && !countries.includes(c.locationCountry.toLowerCase())) return false;
     if (state && (c.locationState ?? "").toLowerCase() !== state) return false;
     if (city && c.locationCity.toLowerCase() !== city) return false;
-    if (platform && !c.socials.some((s) => s.platform === platform)) return false;
+    if (platforms.length && !c.socials.some((s) => platforms.includes(s.platform))) return false;
     if (language && !c.languages.some((l) => l.toLowerCase() === language)) return false;
     const followers = totalFollowers(c);
     if (followersMin && followers < followersMin) return false;
     if (followersMax && followers > followersMax) return false;
-    if (engagementMin) {
-      const rate = parseFloat(c.stats?.engagementRate ?? "0");
-      if (rate < engagementMin) return false;
+    if (engagementMin || engagementMax) {
+      const engagement = parseFloat(c.stats?.engagementRate ?? "0");
+      if (engagementMin && engagement < engagementMin) return false;
+      if (engagementMax && engagement > engagementMax) return false;
     }
+    if (collabType) {
+      const hay = `${(c.collabPrefs ?? []).join(" ")} ${c.offer ?? ""} ${c.need ?? ""} ${c.bio}`.toLowerCase();
+      if (!hay.includes(collabType)) return false;
+    }
+    if (rate === "entry" && c.planTier !== "STARTER") return false;
+    if (rate === "growth" && c.planTier !== "PLUS") return false;
+    if (rate === "premium" && c.planTier !== "PRO") return false;
     if (openOnly && !c.openToCollab) return false;
     if (verifiedOnly && c.verified === false) return false;
     return true;

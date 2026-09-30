@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildBrandedQrSvg } from "@/lib/branded-qr";
 import { getDirectoryCreator } from "@/lib/directory";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
+import { dynamicQrTokenForSlug } from "@/lib/qr-identity";
 
 /**
  * Dynamic / standard QR for Influencer Cards.
@@ -28,8 +29,9 @@ export async function GET(
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
+  const token = entitlements.dynamicQr ? await dynamicQrTokenForSlug(creator.slug) : creator.slug;
   const target = entitlements.dynamicQr
-    ? `${appUrl}/q/${creator.slug}`
+    ? `${appUrl}/q/${token}`
     : `${appUrl}/c/${creator.slug}`;
 
   const sizeRaw = Number(request.nextUrl.searchParams.get("size") || 512);

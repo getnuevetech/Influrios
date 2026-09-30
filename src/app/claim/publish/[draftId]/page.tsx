@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { actionPublishDraft } from "@/app/claim/actions";
+import { actionAddDraftSocial, actionPublishDraft } from "@/app/claim/actions";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { draftToSeedCreator, getDraft } from "@/lib/claim";
 
@@ -62,6 +62,22 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
             </button>
           </form>
         )}
+        <form action={actionAddDraftSocial} className="space-y-2 rounded-2xl border border-border bg-white p-4">
+          <p className="text-sm font-semibold text-indigo">Add another social</p>
+          <p className="text-xs text-muted">
+            Starter includes one social link. A second link returns the upgrade path.
+          </p>
+          <input type="hidden" name="draftId" value={draft.id} />
+          <input
+            name="handle"
+            required
+            placeholder="@anotherhandle"
+            className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+          />
+          <button type="submit" className="btn-secondary w-full !py-2 text-sm">
+            Add social
+          </button>
+        </form>
         <p className="text-center text-xs text-muted">
           Starter cards use a shareable link. Upgrade later for shortlink + QR.
         </p>
