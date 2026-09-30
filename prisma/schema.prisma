@@ -973,3 +973,88 @@ model LegalAcceptance {
   @@index([subjectKey, documentKey])
   @@index([documentId])
 }
+
+/// Review window for milestone auto-approval. Commercial splits live on MilestoneTemplate.
+model MarketplaceSettings {
+  id                String   @id @default("default")
+  reviewWindowHours Int      @default(72)
+  templatesSeeded   Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+}
+
+/// Protected payments and the word "escrow" are jurisdiction flags, not code switches.
+model CollaborationJurisdiction {
+  code                      String   @id
+  label                     String
+  protectedPaymentsEnabled  Boolean  @default(false)
+  escrowTermAllowed         Boolean  @default(false)
+  updatedAt                 DateTime @updatedAt
+}
+
+/// Admin share of a prefund. Active rows must add up to 10000 basis points.
+model MilestoneTemplate {
+  id        String   @id @default(cuid())
+  title     String
+  shareBps  Int
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+/// A prefund intent. Held only after the marketplace provider confirms.
+model CollaborationFunding {
+  id               String   @id @default(cuid())
+  jurisdictionCode String
+  businessName     String
+  creatorSlug      String
+  title            String
+  currency         String   @default("USD")
+  grossCents       Int
+  feeCents         Int      @default(0)
+  feeSnapshotJson  Json
+  serviceLevel     String
+  status           String   @default("awaiting_provider")
+  providerCode     String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  milestones       FundingMilestone[]
+  entries          LedgerEntry[]
+
+  @@index([creatorSlug, status])
+  @@index([status])
+}
+
+model FundingMilestone {
+  id                String               @id @default(cuid())
+  fundingId         String
+  funding           CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  title             String
+  amountCents       Int
+  sortOrder         Int                  @default(0)
+  status            String               @default("pending")
+  reviewWindowHours Int
+  submittedAt       DateTime?
+  autoApproveAt     DateTime?
+  approvedAt        DateTime?
+  updatedAt         DateTime             @updatedAt
+  entries           LedgerEntry[]
+
+  @@index([fundingId, status])
+}
+
+/// Provider-held movements. This is not an Influrios cash balance.
+model LedgerEntry {
+  id          String               @id @default(cuid())
+  fundingId   String
+  funding     CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  milestoneId String?
+  milestone   FundingMilestone?    @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  kind        String
+  amountCents Int
+  provider    String
+  eventId     String
+  createdAt   DateTime             @default(now())
+
+  @@unique([provider, eventId, kind])
+  @@index([fundingId])
+}

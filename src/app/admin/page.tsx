@@ -208,6 +208,13 @@ const LINKS: {
     meta: () => "Phase 12.1",
   },
   {
+    href: "/admin/marketplace",
+    title: "Marketplace ledger",
+    blurb: "Prefund only after the provider confirms. Milestone templates and the escrow term are edited here. Sign in again if this page asks for permission.",
+    module: "marketplace",
+    meta: () => "Phase 12.3",
+  },
+  {
     href: "/admin/legal",
     title: "Legal documents",
     blurb: "Publish split terms and policies, and read the acceptance ledger. Sign in again if this page asks for permission.",
