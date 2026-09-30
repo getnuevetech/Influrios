@@ -9,8 +9,23 @@ export function shortLinkHosts(): string[] {
   return [...new Set([...DEFAULT_SHORT_HOSTS, ...extra])];
 }
 
+/**
+ * First forwarded value, without a trailing dot or port.
+ * "inflr.me, inflr.me" and "INFLR.ME:443" both become "inflr.me".
+ */
+export function normalizeShortHost(host: string | null | undefined): string {
+  if (!host) return "";
+  const first = host.split(",")[0]?.trim().toLowerCase() ?? "";
+  const withoutDot = first.endsWith(".") ? first.slice(0, -1) : first;
+  if (withoutDot.startsWith("[")) {
+    const end = withoutDot.indexOf("]");
+    return end === -1 ? withoutDot : withoutDot.slice(0, end + 1);
+  }
+  return withoutDot.split(":")[0].trim();
+}
+
 export function isShortLinkHost(host: string | null | undefined): boolean {
-  if (!host) return false;
-  const name = host.split(":")[0].trim().toLowerCase();
+  const name = normalizeShortHost(host);
+  if (!name) return false;
   return shortLinkHosts().includes(name);
 }

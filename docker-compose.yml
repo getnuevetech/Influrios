@@ -43,7 +43,8 @@ services:
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-      NEXT_PUBLIC_SHORT_LINK_HOST: ${NEXT_PUBLIC_SHORT_LINK_HOST:-ic.me}
+      NEXT_PUBLIC_SHORT_LINK_HOST: ${NEXT_PUBLIC_SHORT_LINK_HOST:-inflr.me}
+      SHORT_LINK_HOSTS: ${SHORT_LINK_HOSTS:-}
       # Inside Docker network, host is the service name "postgres" (not 127.0.0.1)
       DATABASE_URL: postgresql://${POSTGRES_USER:-influrios}:${POSTGRES_PASSWORD:-influrios}@postgres:5432/${POSTGRES_DB:-influrios}?schema=public
       AUTH_SECRET: ${AUTH_SECRET:-}

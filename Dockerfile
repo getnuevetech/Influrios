@@ -39,15 +39,19 @@ RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
+# Standalone server. Its traced node_modules can omit the Prisma CLI and
+# replace a complete generated client, so Prisma is copied after this.
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
-# Standalone server
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# The CLI bin is a symlink. Recreate it so a traced standalone .bin cannot drop it.
+RUN mkdir -p ./node_modules/.bin \
+  && ln -sf ../prisma/build/index.js ./node_modules/.bin/prisma \
+  && chmod +x ./node_modules/prisma/build/index.js
 
 COPY deploy/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

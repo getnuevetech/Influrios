@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
 import { isPlanCode, type EntitlementLimits } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
+import { isShortLinkHost, normalizeShortHost } from "@/lib/short-link-hosts";
 
 export const LAUNCH_SHORT_HOST = "inflr.me";
 
@@ -253,9 +254,43 @@ async function recordEvent(shortLinkId: string | undefined, eventType: string, m
     .catch(() => undefined);
 }
 
+export function shortLinkRootMessage(canonicalOrigin?: string) {
+  const origin = (canonicalOrigin || process.env.NEXT_PUBLIC_APP_URL || "https://influrios.com").replace(/\/$/, "");
+  return `Creator profiles stay on Influrios. Open ${origin} to browse the directory.`;
+}
+
+/** Known launch hosts can explain themselves when the store is down. Slugs are never invented. */
+export function hitWhenShortStoreUnavailable(host: string, path: string): ResolveHit {
+  const hostname = normalizeShortHost(host);
+  const clean = path.split("?")[0].replace(/\/+$/, "") || "/";
+  if (clean === "/" && isShortLinkHost(hostname)) {
+    return {
+      kind: "page",
+      status: 200,
+      title: "Influrios short links",
+      message: shortLinkRootMessage(),
+    };
+  }
+  return {
+    kind: "page",
+    status: 503,
+    title: "Influrios",
+    message: "This short link could not be resolved right now.",
+  };
+}
+
 export async function resolveShortRequest(host: string, path: string): Promise<ResolveHit> {
+  try {
+    return await resolveShortRequestFromStore(host, path);
+  } catch (error) {
+    console.error("short link resolve", error);
+    return hitWhenShortStoreUnavailable(host, path);
+  }
+}
+
+async function resolveShortRequestFromStore(host: string, path: string): Promise<ResolveHit> {
   await ensureShortLinkDefaults();
-  const hostname = host.split(":")[0].trim().toLowerCase();
+  const hostname = normalizeShortHost(host);
   const domain = await prisma.shortLinkDomain.findUnique({ where: { hostname } });
   if (!domain?.active) {
     return {
@@ -272,7 +307,7 @@ export async function resolveShortRequest(host: string, path: string): Promise<R
       kind: "page",
       status: 200,
       title: "Influrios short links",
-      message: `Creator profiles stay on Influrios. Open ${settings.canonicalOrigin} to browse the directory.`,
+      message: shortLinkRootMessage(settings.canonicalOrigin),
     };
   }
   const settings = await settingsRow();

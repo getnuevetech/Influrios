@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isShortLinkHost } from "@/lib/short-link-hosts";
+import { isShortLinkHost, normalizeShortHost } from "@/lib/short-link-hosts";
 
 /** Cookie name must match ADMIN_COOKIE in admin-auth.ts */
 const ADMIN_COOKIE = "influrios_admin_session";
@@ -17,6 +17,8 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = "/api/short/resolve";
     url.searchParams.set("path", pathname);
+    // The rewrite can replace Host. Pass the host this edge already accepted.
+    url.searchParams.set("host", normalizeShortHost(host));
     return NextResponse.rewrite(url);
   }
   const requestHeaders = new Headers(req.headers);
