@@ -21,6 +21,7 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
   { href: "/admin/ai", label: "AI pipelines", module: "ai" },
   { href: "/admin/gateways", label: "Payment gateways", module: "gateways" },
   { href: "/admin/signing", label: "Document signing", module: "signing" },
+  { href: "/admin/social", label: "Social networks", module: "social" },
   { href: "/admin/payments", label: "Protected Payments", module: "payments" },
   { href: "/admin/fees", label: "Collaboration fees", module: "commerce" },
   { href: "/admin/trust", label: "Trust & Disputes", module: "trust" },

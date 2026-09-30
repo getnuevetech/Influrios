@@ -251,6 +251,7 @@ model Creator {
   card               InfluenceCard?
   collabOffers       CollaborationOffer[]
   collabNeeds        CollaborationNeed[]
+  socialConnections  SocialConnection[]
 }
 
 model CreatorSpecialty {
@@ -272,9 +273,42 @@ model SocialAccount {
   handle       String
   url          String
   followers    Int?
+  likes        Int?
   source       DataSource     @default(CREATOR_CLAIMED)
   refreshedAt  DateTime?
   creator      Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, platform])
+}
+
+/// Admin-edited terms a creator must accept before Influrios connects a social account.
+model SocialConnectPolicy {
+  id         String   @id @default("default")
+  version    String
+  termsText  String
+  policyText String
+  updatedAt  DateTime @updatedAt
+}
+
+/// One creator connection to a social network. Tokens stay encrypted. Counts are not copied here.
+model SocialConnection {
+  id              String         @id @default(cuid())
+  creatorId       String
+  creator         Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  platform        SocialPlatform
+  providerId      String?
+  status          String         @default("needs_consent")
+  consentVersion  String?
+  consentedAt     DateTime?
+  stateToken      String?        @unique
+  externalId      String?
+  tokenCipher     String?
+  refreshCipher   String?
+  tokenExpiresAt  DateTime?
+  lastError       String?
+  lastSyncedAt    DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@unique([creatorId, platform])
 }

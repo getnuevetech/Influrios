@@ -203,7 +203,7 @@ export async function createDraftFromHandle(
         platform,
         handle: `@${handle}`,
         url: platformUrl(platform, handle),
-        followers: 1200 + (Math.abs(hash(handle)) % 8000),
+        followers: 0,
       },
     ],
     image,

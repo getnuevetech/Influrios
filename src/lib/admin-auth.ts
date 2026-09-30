@@ -46,6 +46,8 @@ export const ADMIN_PERMISSIONS = [
   "gateways.edit",
   "signing.view",
   "signing.edit",
+  "social.view",
+  "social.edit",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -68,7 +70,8 @@ export type AdminModule =
   | "collaborations"
   | "ai"
   | "gateways"
-  | "signing";
+  | "signing"
+  | "social";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -231,6 +234,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     ],
   },
   {
+    module: "social",
+    label: "Social networks",
+    description: "Live account connections, follower and like sync, and the creator terms",
+    permissions: [
+      { id: "social.view", label: "View social networks", hint: "Open network connections and the integration terms" },
+      { id: "social.edit", label: "Edit social networks", hint: "Save API details and the terms creators must accept" },
+    ],
+  },
+  {
     module: "access",
     label: "Access control",
     description: "Create roles and admin users (typically Super Admin)",
@@ -349,6 +361,8 @@ const DEFAULT_ROLES: AdminRole[] = [
       "ai.edit",
       "signing.view",
       "signing.edit",
+      "social.view",
+      "social.edit",
     ],
     system: true,
   },
