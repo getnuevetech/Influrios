@@ -21,6 +21,7 @@ const MODULE_PATH: Record<AdminModule, string> = {
   commerce: "/admin/fees",
   access: "/admin/access",
   accounts: "/admin/accounts",
+  invitations: "/admin/invitations",
 };
 
 /** Gate an admin page by module (any feature under that module). */

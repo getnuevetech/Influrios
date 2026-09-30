@@ -35,6 +35,8 @@ export type ClaimDraft = {
   verifiedAt?: string;
   publishedAt?: string;
   attribution: string;
+  /** Kept when the draft is an existing directory profile. New organic drafts stay Starter. */
+  planTier?: SeedCreator["planTier"];
   createdAt: string;
   updatedAt: string;
 };
@@ -222,6 +224,42 @@ function hash(s: string) {
   return h;
 }
 
+/** Private draft of an existing directory profile. Reuses a draft already started for that slug. */
+export async function createDraftFromProfile(
+  creator: SeedCreator,
+  attribution = "ADMIN_INVITE",
+): Promise<ClaimDraft> {
+  const store = await ensureStore();
+  const existing = store.drafts.find((draft) => draft.slug === creator.slug);
+  if (existing) return existing;
+
+  const social = creator.socials[0];
+  const now = new Date().toISOString();
+  const draft: ClaimDraft = {
+    id: `draft_${randomBytes(6).toString("hex")}`,
+    slug: creator.slug,
+    stage: "draft",
+    inputHandle: social?.handle || creator.slug,
+    platform: social?.platform || "INSTAGRAM",
+    displayName: creator.displayName,
+    title: creator.title,
+    bio: creator.bio,
+    locationCity: creator.locationCity,
+    locationCountry: creator.locationCountry,
+    specialties: [...creator.specialties],
+    socials: creator.socials.map((item) => ({ ...item })),
+    image: creator.image,
+    planTier: creator.planTier,
+    attribution,
+    createdAt: now,
+    updatedAt: now,
+  };
+  store.drafts.unshift(draft);
+  await saveStore(store);
+  await rememberOnboarding(() => syncSession(draft));
+  return draft;
+}
+
 export async function getDraft(id: string) {
   const store = await ensureStore();
   return store.drafts.find((d) => d.id === id) ?? null;
@@ -256,7 +294,7 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     image: draft.image,
     badge: draft.stage === "published" ? "Rising Star" : "Draft",
     statusLabel: draft.stage === "published" ? "Open to partnerships" : "Draft — not public",
-    planTier: "STARTER",
+    planTier: draft.planTier ?? "STARTER",
     specialties: draft.specialties,
     socials: draft.socials,
     openToCollab: true,
@@ -286,6 +324,7 @@ export async function claimDraft(input: {
   draft.updatedAt = new Date().toISOString();
   await saveStore(store);
   await rememberOnboarding(() => recordClaimRow(draft));
+  await rememberOnboarding(() => noteInvitation(draft.id, "claimed"));
   return draft;
 }
 
@@ -336,6 +375,7 @@ export async function publishDraft(draftId: string): Promise<ClaimDraft> {
     const { invalidateDirectoryCache } = await import("@/lib/directory");
     invalidateDirectoryCache();
   });
+  await rememberOnboarding(() => noteInvitation(draft.id, "published"));
   return draft;
 }
 
@@ -394,6 +434,11 @@ export function completenessFor(draft: ClaimDraft): {
   items: CompletenessItem[];
 } {
   return evaluateCompletion(draft);
+}
+
+async function noteInvitation(draftId: string, status: "claimed" | "published") {
+  const { advanceInvitationForDraft } = await import("@/lib/invitations");
+  await advanceInvitationForDraft(draftId, status);
 }
 
 async function rememberOnboarding(work: () => Promise<void>) {

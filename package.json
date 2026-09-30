@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test src/lib/entitlements.test.ts src/lib/taxonomy.test.ts src/lib/onboarding.test.ts src/lib/account-policy.test.ts src/lib/site-config.test.ts",
+    "test": "tsx --test src/lib/entitlements.test.ts src/lib/taxonomy.test.ts src/lib/onboarding.test.ts src/lib/account-policy.test.ts src/lib/site-config.test.ts src/lib/invitations.test.ts",
     "db:up": "bash deploy/scripts/db-up.sh",
     "db:down": "bash deploy/scripts/db-down.sh",
     "db:generate": "prisma generate",

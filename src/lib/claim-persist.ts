@@ -133,7 +133,7 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
       avatarUrl: draft.image,
       openToCollab: true,
       claimed: true,
-      planTier: "STARTER",
+      planTier: draft.planTier ?? "STARTER",
       profileState: "VERIFIED",
       identityVerified: "UNVERIFIED",
     },
