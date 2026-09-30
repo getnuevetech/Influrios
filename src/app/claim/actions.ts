@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { safeNextPath } from "@/lib/account-policy";
 import {
   addDraftSocial,
   claimDraft,
@@ -28,6 +29,8 @@ export async function actionCreateDraft(formData: FormData) {
 
 export async function actionClaimDraft(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
+  const nextRaw = String(formData.get("next") ?? "");
+  const next = nextRaw.startsWith("/invite/") ? safeNextPath(nextRaw) : "";
   try {
     const draft = await claimDraft({
       draftId,
@@ -37,7 +40,7 @@ export async function actionClaimDraft(formData: FormData) {
     await setCreatorSession(draft.id);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Claim failed";
-    redirect(`/claim/preview/${draftId}?error=${encodeURIComponent(message)}`);
+    redirect(`${next || `/claim/preview/${draftId}`}?error=${encodeURIComponent(message)}`);
   }
   redirect(`/claim/verify/${draftId}`);
 }

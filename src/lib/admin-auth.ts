@@ -36,6 +36,8 @@ export const ADMIN_PERMISSIONS = [
   "access.manage_users",
   "accounts.view",
   "accounts.edit",
+  "invitations.view",
+  "invitations.edit",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -53,7 +55,8 @@ export type AdminModule =
   | "agency"
   | "commerce"
   | "access"
-  | "accounts";
+  | "accounts"
+  | "invitations";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -171,6 +174,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     ],
   },
   {
+    module: "invitations",
+    label: "Invitations",
+    description: "Claim links, templates, campaigns, and do-not-contact",
+    permissions: [
+      { id: "invitations.view", label: "View invitations", hint: "Open the outreach queue" },
+      { id: "invitations.edit", label: "Edit invitations", hint: "Queue links, edit templates, suppress contacts" },
+    ],
+  },
+  {
     module: "access",
     label: "Access control",
     description: "Create roles and admin users (typically Super Admin)",
@@ -281,6 +293,8 @@ const DEFAULT_ROLES: AdminRole[] = [
       "agency.manage",
       "commerce.view",
       "commerce.manage",
+      "invitations.view",
+      "invitations.edit",
     ],
     system: true,
   },

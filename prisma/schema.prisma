@@ -452,6 +452,76 @@ model VerificationAttempt {
   createdAt DateTime          @default(now())
 }
 
+/// Admin-edited outreach copy. Placeholders: {{name}} {{profile}} {{link}} {{expiry}}.
+model InvitationTemplate {
+  id          String              @id @default(cuid())
+  key         String              @unique
+  name        String
+  subject     String
+  body        String
+  active      Boolean             @default(true)
+  sortOrder   Int                 @default(0)
+  updatedAt   DateTime            @updatedAt
+  invitations CreatorInvitation[]
+}
+
+model InvitationCampaign {
+  id          String              @id @default(cuid())
+  name        String
+  active      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  invitations CreatorInvitation[]
+}
+
+/// Default expiry and follow-up. Email delivery stays off until SMTP exists.
+model InvitationSettings {
+  id                 String   @id @default("default")
+  defaultExpiryDays  Int      @default(14)
+  defaultFollowUpDays Int     @default(7)
+  updatedAt          DateTime @updatedAt
+}
+
+model OutreachSuppression {
+  id        String   @id @default(cuid())
+  kind      String
+  value     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model CreatorInvitation {
+  id          String               @id @default(cuid())
+  token       String               @unique
+  creatorSlug String
+  displayName String
+  email       String?
+  templateId  String
+  template    InvitationTemplate   @relation(fields: [templateId], references: [id])
+  campaignId  String?
+  campaign    InvitationCampaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  status      String               @default("queued")
+  expiresAt   DateTime
+  followUpAt  DateTime?
+  draftId     String?
+  openedAt    DateTime?
+  claimedAt   DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  events      InvitationEvent[]
+}
+
+model InvitationEvent {
+  id           String            @id @default(cuid())
+  invitationId String
+  invitation   CreatorInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  kind         String
+  detail       String?
+  actor        String?
+  createdAt    DateTime          @default(now())
+}
+
 model ProfileCompletionRule {
   id        String   @id @default(cuid())
   key       String   @unique

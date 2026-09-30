@@ -137,6 +137,13 @@ const LINKS: {
     meta: () => "Soft prompt and hard stop",
   },
   {
+    href: "/admin/invitations",
+    title: "Invitations",
+    blurb: "Claim links for directory profiles. Email send stays off until SMTP is configured.",
+    module: "invitations",
+    meta: () => "Queue, template, do-not-contact",
+  },
+  {
     href: "/admin/accounts",
     title: "Member accounts",
     blurb: "Registered members, verification, suspension, consent, and password length.",

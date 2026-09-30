@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–D are implemented (entitlements, directory, claim persistence, accounts and guest gates). Footer stats, guest gates, and member-account policy are edited in admin (`/admin/stats`, `/admin/guests`, `/admin/accounts`). Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–E are implemented (entitlements, directory, claim persistence, accounts and guest gates, invitations). Footer stats, guest gates, member accounts, and invitation templates are edited in admin. Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -159,6 +159,8 @@ Demo modules that spec section 31 defers (escrow, disputes, contract briefs, age
 **Exit:** a guest hits the configured profile-view limit, registers, and lands back on the profile they were opening.
 
 ### Phase E — Invitations and outreach
+
+Implemented at `/admin/invitations` and `/invite/{token}`. SMTP delivery is still Phase H.
 
 **Proves:** spec DoD item 3’s human path (enrichment provider can be “manual/admin” until Phase H).
 
