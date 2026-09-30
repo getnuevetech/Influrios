@@ -16,10 +16,10 @@ import {
 const NAV = [
   { href: "/", label: "Home" },
   { href: "/discover", label: "Discover" },
-  { href: "/#categories", label: "Categories" },
+  { href: "/categories", label: "Categories" },
   { href: "/collaboration", label: "Collaboration" },
   { href: "/business", label: "For Businesses" },
-  { href: "/billing", label: "Pricing" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 const FOOTER_STATS = [

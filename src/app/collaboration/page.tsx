@@ -37,8 +37,8 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const viewer = params.from ? getCreatorBySlug(params.from) : SEED_CREATORS[0];
   const viewerPlan = (viewer?.planTier ?? "STARTER") as PlanCode;
   const canRequest = canRequestMatch(viewerPlan);
-  const agency = await getAgencyStore();
-  const portfolios = listPublishedPortfolios(agency);
+  const agency = await getAgencyStore().catch(() => null);
+  const portfolios = agency ? listPublishedPortfolios(agency) : [];
 
   return (
     <div className="bg-[#F7FAFF]">

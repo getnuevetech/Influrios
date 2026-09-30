@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { actionAdminLogout } from "@/app/admin/actions-auth";
-import { PageShell } from "@/components/page-shell";
 import {
   canAccessModule,
   getAdminSession,
@@ -147,10 +145,10 @@ export default async function AdminHomePage({
   const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));
 
   return (
-    <PageShell className="py-10">
+    <div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Influrios Admin</p>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Dashboard</p>
           <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Content & ops controls</h1>
           <p className="mt-2 max-w-2xl text-muted">
             Signed in as <span className="font-semibold text-indigo">{session.name}</span> (
@@ -158,14 +156,10 @@ export default async function AdminHomePage({
           </p>
           <p className="mt-1 text-xs text-muted">
             {session.permissions.length} feature permission
-            {session.permissions.length === 1 ? "" : "s"} on this access level
+            {session.permissions.length === 1 ? "" : "s"} on this access level · use the sidebar to
+            open modules
           </p>
         </div>
-        <form action={actionAdminLogout}>
-          <button type="submit" className="btn-secondary !py-2 text-sm">
-            Sign out
-          </button>
-        </form>
       </div>
 
       {params.error === "forbidden" ? (
@@ -175,7 +169,7 @@ export default async function AdminHomePage({
         </div>
       ) : null}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {visibleLinks.map((item) => (
           <Link
             key={item.href}
@@ -195,10 +189,6 @@ export default async function AdminHomePage({
           <p className="mt-2 text-sm text-muted">Contact a Super Admin to grant feature access.</p>
         </div>
       ) : null}
-
-      <Link href="/" className="mt-8 inline-block text-sm font-semibold text-violet hover:underline">
-        ← Back to site
-      </Link>
-    </PageShell>
+    </div>
   );
 }
