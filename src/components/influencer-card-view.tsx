@@ -6,15 +6,30 @@ import {
   specialtyLabel,
   type SeedCreator,
 } from "@/lib/seed-data";
-import { getEntitlements, type PlanCode } from "@/lib/entitlements";
+import {
+  cardChrome,
+  getEntitlements,
+  isPlanCode,
+  type EntitlementLimits,
+} from "@/lib/entitlements";
+
+function planBadge(plan: string) {
+  if (plan === "PLUS") return "Plus";
+  if (plan === "PRO") return "Pro";
+  if (plan === "STARTER") return "Starter";
+  return plan;
+}
 
 export function InfluencerCardView({
   creator,
+  entitlements: entitlementOverride,
   qrDisplay = "default",
   compact = false,
   hideCta = false,
 }: {
   creator: SeedCreator;
+  /** Effective entitlements. When omitted, launch defaults for the creator plan are used. */
+  entitlements?: EntitlementLimits;
   /** `large` = phone-scannable QR (popup / share). */
   qrDisplay?: "default" | "large";
   /** Tighter layout so the Discover popup fits without an inner scrollbar. */
@@ -22,25 +37,26 @@ export function InfluencerCardView({
   /** Hide primary CTA (used on profile card preview). */
   hideCta?: boolean;
 }) {
-  const entitlements = getEntitlements(creator.planTier as PlanCode);
+  const entitlements =
+    entitlementOverride ??
+    getEntitlements(isPlanCode(creator.planTier) ? creator.planTier : "STARTER");
+  const chrome = cardChrome(entitlements);
   const specialties = creator.specialties.slice(0, entitlements.specialtiesMax);
   const socials = creator.socials.slice(0, entitlements.socialLinksMax);
-  const isPro = creator.planTier === "PRO";
-  const isPlus = creator.planTier === "PLUS" || isPro;
-  const canQr = entitlements.standardQr || entitlements.dynamicQr;
+  const premium = chrome.premium;
+  const canQr = chrome.showQr;
   const largeQr = qrDisplay === "large";
   // Popup QR: 160px = 200px − 20%
   const qrPx = largeQr ? (compact ? 140 : 168) : 22;
 
-  const cardUrl =
-    entitlements.shortlink && isPlus
-      ? `ic.me/${creator.slug.split("-")[0]}`
-      : `influrios.com/c/${creator.slug}`;
+  const cardUrl = chrome.showShortlink
+    ? `ic.me/${creator.slug.split("-")[0]}`
+    : `influrios.com/c/${creator.slug}`;
 
   return (
     <div
       className={`mx-auto w-full max-w-sm overflow-hidden rounded-[1.75rem] shadow-2xl ${
-        isPro ? "bg-pro text-white ring-1 ring-gold/40" : "bg-white text-indigo"
+        premium ? "bg-pro text-white ring-1 ring-gold/40" : "bg-white text-indigo"
       }`}
     >
       <div className={`relative ${compact ? "h-40" : "h-48"}`}>
@@ -49,15 +65,15 @@ export function InfluencerCardView({
         {!hideCta ? (
           <span
             className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${
-              isPro ? "bg-gold/20 text-[#F6E7B0]" : "bg-white/95 text-violet"
+              premium ? "bg-gold/20 text-[#F6E7B0]" : "bg-white/95 text-violet"
             }`}
           >
-            {creator.planTier === "STARTER" ? "Starter" : creator.planTier === "PLUS" ? "Plus" : "Pro"}
+            {planBadge(creator.planTier)}
           </span>
         ) : null}
       </div>
       <div
-        className={`-mt-6 rounded-t-[1.5rem] ${isPro ? "bg-pro" : "bg-white"} ${
+        className={`-mt-6 rounded-t-[1.5rem] ${premium ? "bg-pro" : "bg-white"} ${
           compact ? "space-y-2.5 px-4 pb-4 pt-6" : "space-y-3.5 px-5 pb-5 pt-7"
         }`}
       >
@@ -70,8 +86,8 @@ export function InfluencerCardView({
             {creator.displayName}
             <IconVerified size={compact ? 18 : 20} />
           </h1>
-          <p className={`mt-0.5 text-sm ${isPro ? "text-white/70" : "text-muted"}`}>{creator.title}</p>
-          <p className={`text-sm ${isPro ? "text-white/70" : "text-muted"}`}>
+          <p className={`mt-0.5 text-sm ${premium ? "text-white/70" : "text-muted"}`}>{creator.title}</p>
+          <p className={`text-sm ${premium ? "text-white/70" : "text-muted"}`}>
             {creator.locationCity}, {creator.locationCountry}
           </p>
         </div>
@@ -80,7 +96,7 @@ export function InfluencerCardView({
             <span
               key={s}
               className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                isPro ? "bg-white/10 text-lavender" : "chip"
+                premium ? "bg-white/10 text-lavender" : "chip"
               }`}
             >
               {specialtyLabel(s)}
@@ -92,12 +108,12 @@ export function InfluencerCardView({
           <div
             className={`flex flex-col items-center rounded-2xl ${
               compact ? "gap-2 px-3 py-3" : "gap-2.5 px-3 py-4"
-            } ${isPro ? "bg-white/5" : "bg-[#EEF4FF]"}`}
+            } ${premium ? "bg-white/5" : "bg-[#EEF4FF]"}`}
           >
             <div
               className={`relative overflow-hidden bg-white shadow-sm ${
                 compact ? "rounded-xl p-2" : "rounded-2xl p-2.5"
-              } ${isPro ? "ring-1 ring-gold/50" : "ring-1 ring-border"}`}
+              } ${premium ? "ring-1 ring-gold/50" : "ring-1 ring-border"}`}
               style={{ width: qrPx + (compact ? 16 : 20), height: qrPx + (compact ? 16 : 20) }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -110,7 +126,7 @@ export function InfluencerCardView({
               />
             </div>
             <div className="min-w-0 text-center">
-              <div className={`text-[11px] font-semibold ${isPro ? "text-white/50" : "text-muted"}`}>
+              <div className={`text-[11px] font-semibold ${premium ? "text-white/50" : "text-muted"}`}>
                 Scan to view my full card
               </div>
               <div className="truncate text-sm font-semibold text-blue">{cardUrl}</div>
@@ -119,17 +135,17 @@ export function InfluencerCardView({
         ) : (
           <div
             className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm ${
-              isPro ? "bg-white/5" : "bg-[#EEF4FF]"
+              premium ? "bg-white/5" : "bg-[#EEF4FF]"
             }`}
           >
             <div className="min-w-0">
               <div className="truncate font-semibold text-blue">{cardUrl}</div>
-              <div className={`text-xs ${isPro ? "text-white/50" : "text-muted"}`}>Share my profile</div>
+              <div className={`text-xs ${premium ? "text-white/50" : "text-muted"}`}>Share my profile</div>
             </div>
             {canQr ? (
               <div
                 className={`relative h-[22px] w-[22px] shrink-0 overflow-hidden rounded-sm ${
-                  isPro ? "ring-1 ring-gold" : "border border-border"
+                  premium ? "ring-1 ring-gold" : "border border-border"
                 }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -142,19 +158,19 @@ export function InfluencerCardView({
                 />
               </div>
             ) : (
-              <div className="text-xs text-muted">No QR on Starter</div>
+              <div className="text-xs text-muted">QR not included</div>
             )}
           </div>
         )}
 
         <div
           className={`rounded-2xl ${compact ? "p-2" : "p-3"} ${
-            isPro ? "bg-white/5" : "border border-border bg-starter-bg"
+            premium ? "bg-white/5" : "border border-border bg-starter-bg"
           }`}
         >
           <p
             className={`mb-2 text-center text-[10px] font-bold uppercase tracking-wide ${
-              isPro ? "text-white/50" : "text-muted"
+              premium ? "text-white/50" : "text-muted"
             }`}
           >
             Connect with me
@@ -170,7 +186,7 @@ export function InfluencerCardView({
               >
                 <SocialIcon platform={s.platform} size={compact ? 18 : 20} />
                 {!hideCta ? (
-                  <span className={`text-xs font-bold ${isPro ? "text-white" : "text-indigo"}`}>
+                  <span className={`text-xs font-bold ${premium ? "text-white" : "text-indigo"}`}>
                     {formatFollowers(s.followers)}
                   </span>
                 ) : null}
@@ -184,12 +200,12 @@ export function InfluencerCardView({
             <Link
               href={`/creators/${creator.slug}`}
               className={`btn-primary w-full ${compact ? "!py-2.5 text-sm" : ""} ${
-                isPro ? "ring-1 ring-gold/50" : ""
+                premium ? "ring-1 ring-gold/50" : ""
               }`}
             >
-              {isPro ? "Work With Me →" : isPlus ? "Contact →" : "View Profile →"}
+              {chrome.ctaLabel}
             </Link>
-            <p className={`text-center text-xs ${isPro ? "text-white/40" : "text-muted"}`}>Influrios</p>
+            <p className={`text-center text-xs ${premium ? "text-white/40" : "text-muted"}`}>Influrios</p>
           </>
         ) : null}
       </div>

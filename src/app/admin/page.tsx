@@ -72,6 +72,13 @@ const LINKS: {
       `${c.completedCheckouts} completed · ${isStripeConfigured() ? "Stripe" : "Demo"} mode`,
   },
   {
+    href: "/admin/plans",
+    title: "Plan entitlements",
+    blurb: "Card limits stored in the database. Changes apply without a deploy.",
+    module: "plans",
+    meta: () => "Social, specialty, and QR limits",
+  },
+  {
     href: "/admin/payments",
     title: "Protected Payments",
     blurb: "Escrow deals, milestone release, and refunds.",

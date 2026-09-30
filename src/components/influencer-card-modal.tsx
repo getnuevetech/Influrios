@@ -3,10 +3,12 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { InfluencerCardView } from "@/components/influencer-card-view";
+import type { EntitlementLimits } from "@/lib/entitlements";
 import type { SeedCreator } from "@/lib/seed-data";
 
 type Props = {
   creator: SeedCreator;
+  entitlements?: EntitlementLimits;
   open: boolean;
   onClose: () => void;
 };
@@ -15,7 +17,7 @@ type Props = {
  * Viewport-level popup. Must portal to document.body so card transforms
  * (e.g. hover:-translate-y-1) do not trap position:fixed inside the grid card.
  */
-export function InfluencerCardModal({ creator, open, onClose }: Props) {
+export function InfluencerCardModal({ creator, entitlements, open, onClose }: Props) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -68,7 +70,7 @@ export function InfluencerCardModal({ creator, open, onClose }: Props) {
         >
           ×
         </button>
-        <InfluencerCardView creator={creator} qrDisplay="large" compact />
+        <InfluencerCardView creator={creator} entitlements={entitlements} qrDisplay="large" compact />
       </div>
     </div>,
     document.body,

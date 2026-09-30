@@ -46,8 +46,16 @@ services:
       NEXT_PUBLIC_SHORT_LINK_HOST: ${NEXT_PUBLIC_SHORT_LINK_HOST:-ic.me}
       # Inside Docker network, host is the service name "postgres" (not 127.0.0.1)
       DATABASE_URL: postgresql://${POSTGRES_USER:-influrios}:${POSTGRES_PASSWORD:-influrios}@postgres:5432/${POSTGRES_DB:-influrios}?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-}
+      ADMIN_SUPER_EMAIL: ${ADMIN_SUPER_EMAIL:-}
+      ADMIN_SUPER_PASSWORD: ${ADMIN_SUPER_PASSWORD:-}
     ports:
       - "127.0.0.1:3000:3000"
+    volumes:
+      # JSON demo stores and banner uploads survive image rebuilds until each module moves to Postgres.
+      - influrios_data:/app/data
+      - influrios_uploads:/app/public/uploads
     networks:
       - influrios
     healthcheck:
@@ -60,6 +68,10 @@ services:
 volumes:
   influrios_pg:
     name: influrios_pg
+  influrios_data:
+    name: influrios_data
+  influrios_uploads:
+    name: influrios_uploads
 
 networks:
   influrios:

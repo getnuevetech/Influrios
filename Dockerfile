@@ -29,7 +29,7 @@ RUN free -h || true \
 
 FROM node:22-alpine AS runner
 WORKDIR /app
-RUN apk add --no-cache libc6-compat openssl curl
+RUN apk add --no-cache libc6-compat openssl curl su-exec
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
@@ -52,6 +52,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY deploy/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-USER nextjs
+# Entrypoint fixes volume ownership, migrates, then drops to nextjs.
+USER root
 EXPOSE 3000
 ENTRYPOINT ["/entrypoint.sh"]

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test src/lib/entitlements.test.ts",
     "db:up": "bash deploy/scripts/db-up.sh",
     "db:down": "bash deploy/scripts/db-down.sh",
     "db:generate": "prisma generate",

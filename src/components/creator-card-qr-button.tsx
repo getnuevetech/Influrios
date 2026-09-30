@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { InfluencerCardModal } from "@/components/influencer-card-modal";
+import type { EntitlementLimits } from "@/lib/entitlements";
 import type { SeedCreator } from "@/lib/seed-data";
 
 type Props = {
   creator: SeedCreator;
+  entitlements?: EntitlementLimits;
   qrSize: number;
   /** When false, show a dashed Card placeholder (no QR entitlement). */
   hasQr: boolean;
 };
 
 /** Discover-grid QR: opens the Influencer Card as a popup (not a new page). */
-export function CreatorCardQrButton({ creator, qrSize, hasQr }: Props) {
+export function CreatorCardQrButton({ creator, entitlements, qrSize, hasQr }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -46,7 +48,12 @@ export function CreatorCardQrButton({ creator, qrSize, hasQr }: Props) {
           "Card"
         )}
       </button>
-      <InfluencerCardModal creator={creator} open={open} onClose={() => setOpen(false)} />
+      <InfluencerCardModal
+        creator={creator}
+        entitlements={entitlements}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
     </>
   );
 }

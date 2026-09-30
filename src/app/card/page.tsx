@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { InfluencerCardView } from "@/components/creator-card";
+import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { getCreatorBySlug } from "@/lib/seed-data";
 
+export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Influencer Card",
 };
@@ -40,7 +41,7 @@ export default function CardMarketingPage() {
           </ul>
         </div>
         <div className="rounded-[2rem] bg-[radial-gradient(circle_at_top,_#EAE4FF,_#D9E8FF)] p-6">
-          <InfluencerCardView creator={demo} />
+          <PublicInfluencerCard creator={demo} />
         </div>
       </section>
 

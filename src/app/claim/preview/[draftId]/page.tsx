@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { actionClaimDraft } from "@/app/claim/actions";
-import { InfluencerCardView } from "@/components/influencer-card-view";
+import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { draftToSeedCreator, getDraft } from "@/lib/claim";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +52,7 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
         </div>
       ) : null}
 
-      <InfluencerCardView creator={creator} qrDisplay="default" />
+      <PublicInfluencerCard creator={creator} qrDisplay="default" />
 
       <div className="mx-auto mt-8 max-w-sm card-surface space-y-4 p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Claim this card</h2>

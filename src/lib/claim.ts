@@ -4,6 +4,8 @@
  */
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { promises as fs } from "fs";
+import { decideCount } from "@/lib/entitlements";
+import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { cookies } from "next/headers";
 import path from "path";
 import type { SeedCreator, SeedSocial } from "@/lib/seed-data";
@@ -326,6 +328,16 @@ export async function updateDraftProfile(
   const store = await ensureStore();
   const draft = store.drafts.find((d) => d.id === draftId);
   if (!draft) throw new Error("Draft not found");
+  if (patch.specialties) {
+    const limits = await entitlementsForPlan("STARTER");
+    const decision = decideCount(limits, "specialtiesMax", patch.specialties.length, "STARTER");
+    if (!decision.ok) {
+      const upgrade = decision.upgradePlanCode ? ` Upgrade to ${decision.upgradePlanCode}.` : "";
+      throw new Error(
+        `This card includes ${decision.limit} ${decision.limit === 1 ? "specialty" : "specialties"}.${upgrade}`,
+      );
+    }
+  }
   Object.assign(draft, patch);
   draft.updatedAt = new Date().toISOString();
   await saveStore(store);

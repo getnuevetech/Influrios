@@ -25,6 +25,8 @@ import {
   getCreatorBySlug,
 } from "@/lib/seed-data";
 
+export const dynamic = "force-dynamic";
+
 const TRENDING = ["Beauty", "Travel", "Fitness", "Home & Interior", "Tech", "Food", "Fashion"];
 
 const HERO_FLOATS = [
