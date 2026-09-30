@@ -118,24 +118,26 @@ export default async function CreatorProfilePage({ params }: Props) {
           <div className="absolute inset-0 bg-gradient-to-r from-[#1a0b3a]/70 via-[#3a1a6a]/35 to-[#1a0b3a]/20" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0b123f]/45 via-transparent to-transparent" />
 
-          {/* Left portrait cutout */}
-          <div
-            className="pointer-events-none absolute bottom-0 left-[3%] hidden h-full w-[250px] sm:block lg:left-[6%] lg:w-[300px]"
-            style={{
-              WebkitMaskImage:
-                "linear-gradient(90deg, transparent 0%, #000 18%, #000 72%, transparent 100%)",
-              maskImage:
-                "linear-gradient(90deg, transparent 0%, #000 18%, #000 72%, transparent 100%)",
-            }}
-          >
-            <Image
-              src={creator.image}
-              alt=""
-              fill
-              className="object-cover object-[center_15%] drop-shadow-2xl"
-              sizes="300px"
-              priority
-            />
+          {/* Left portrait cutout — template hero subject */}
+          <div className="pointer-events-none absolute bottom-0 left-[2%] z-[1] hidden h-[108%] w-[270px] sm:block lg:left-[5%] lg:w-[320px]">
+            <div
+              className="relative h-full w-full"
+              style={{
+                WebkitMaskImage:
+                  "linear-gradient(90deg, transparent 0%, #000 14%, #000 78%, transparent 100%)",
+                maskImage:
+                  "linear-gradient(90deg, transparent 0%, #000 14%, #000 78%, transparent 100%)",
+              }}
+            >
+              <Image
+                src={creator.image}
+                alt=""
+                fill
+                className="object-cover object-[center_12%] brightness-105 contrast-105"
+                sizes="320px"
+                priority
+              />
+            </div>
           </div>
 
           {/* Vertical / stacked script tags */}
@@ -313,8 +315,8 @@ export default async function CreatorProfilePage({ params }: Props) {
               className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-[#E879F9]/25 blur-2xl"
               aria-hidden
             />
-            <InfluencerCardView creator={creator} />
-            <p className="font-script mt-2 text-center text-[1.05rem] font-semibold text-violet">
+            <InfluencerCardView creator={creator} qrDisplay="large" hideCta />
+            <p className="font-script mt-2 text-center text-[1.15rem] font-semibold text-violet">
               One Card. Endless Opportunities.
             </p>
           </div>
