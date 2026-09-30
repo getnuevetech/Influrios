@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getAccountSession } from "@/lib/accounts";
 import { getDirectory } from "@/lib/directory";
 import {
   IconBuilding,
@@ -39,6 +40,7 @@ const FOOTER_PILLARS = [
 
 export async function SiteHeader() {
   const directory = await getDirectory();
+  const account = await getAccountSession().catch(() => null);
   const nav = directory.menus.filter((item) => item.menu === "header" && item.visible);
   const links = nav.length ? nav : NAV;
   return (
@@ -71,6 +73,15 @@ export async function SiteHeader() {
           >
             Admin
           </Link>
+          {account ? (
+            <Link href="/account" className="hidden text-sm font-semibold text-indigo sm:inline">
+              {account.name?.split(" ")[0] || "Account"}
+            </Link>
+          ) : (
+            <Link href="/login" className="hidden text-sm font-semibold text-indigo sm:inline">
+              Log in
+            </Link>
+          )}
           <Link href="/claim" className="btn-primary !px-4 !py-2 text-sm">
             Sign Up →
           </Link>

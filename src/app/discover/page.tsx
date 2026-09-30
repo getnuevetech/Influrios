@@ -1,5 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { GuestGateBanner } from "@/components/guest-gate-banner";
+import { consumeGuestQuota } from "@/lib/guest-usage";
 import { CreatorCard } from "@/components/creator-card";
 import { DiscoverFilters, DiscoverSort } from "@/components/discover-filters";
 import { CategoryGlyph, IconArrowRight, IconSearch } from "@/components/icons";
@@ -104,9 +107,14 @@ export default async function DiscoverPage({ searchParams }: Props) {
   const topMatches = results.slice(0, 5);
   const heroCards = directory.creators.slice(0, 3);
   const activeChip = specialties[0] ?? "";
+  const searchGate = await consumeGuestQuota("search");
+  if (searchGate.decision === "hard") {
+    redirect("/login?next=/discover&gate=search");
+  }
 
   return (
     <div className="bg-[#F4F7FF] pb-16">
+      <GuestGateBanner copy={searchGate.decision === "soft" ? searchGate.copy : ""} next="/discover" />
       <section className="relative overflow-hidden border-b border-[#E4E9F5] bg-[radial-gradient(ellipse_at_top_right,_#E7DEFF_0%,_#F7FAFF_42%,_#EEF3FF_100%)]">
         <div className="pointer-events-none absolute -right-16 top-0 h-72 w-72 rounded-full bg-[#C4B5FD]/40 blur-3xl" />
         <div className="relative mx-auto grid w-full max-w-[90rem] items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-10 lg:py-14">

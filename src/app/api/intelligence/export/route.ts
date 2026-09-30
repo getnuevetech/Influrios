@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAccountSession } from "@/lib/accounts";
 import {
   buildIntelligenceExport,
   intelligenceExportToCsv,
@@ -11,6 +12,13 @@ import { getBusinessEntitlements } from "@/lib/business-entitlements";
  * Gated by demo Business Pro / Agency intelligence entitlement.
  */
 export async function GET(req: NextRequest) {
+  const account = await getAccountSession();
+  if (!account) {
+    return NextResponse.json(
+      { error: "Sign in to export.", login: "/login?next=/business/intelligence&gate=export" },
+      { status: 401 },
+    );
+  }
   const ws = await getWorkspace();
   const entitlements = getBusinessEntitlements(ws.plan);
 
