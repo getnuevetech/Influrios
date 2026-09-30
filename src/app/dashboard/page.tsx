@@ -15,6 +15,7 @@ import {
 import { socialConnectState } from "@/lib/social-connect";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 import { actionOpenOwnDispute, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
+import { readFxSnapshot } from "@/lib/fx-share";
 import { formatMoney } from "@/lib/protected-payments";
 import { listFundingsForCreator } from "@/lib/marketplace-ledger";
 import { scheduleLabel } from "@/lib/schedule";
@@ -418,6 +419,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 <p className="text-xs text-muted">
                   {funding.businessName} · {funding.status.replaceAll("_", " ")} · held{" "}
                   {formatMoney(funding.ledger.heldCents, funding.currency)}
+                  {readFxSnapshot(funding.fxSnapshotJson)?.source === "wise" ? " · Wise user rate" : ""}
                   {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
                   {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
                   {scheduleLabel(funding) ? ` · ${scheduleLabel(funding)}` : ""}

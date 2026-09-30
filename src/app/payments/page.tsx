@@ -201,7 +201,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
               />
             </label>
             <p className="text-xs text-muted sm:col-span-2">
-              Gross is entered in USD. Another currency uses the admin rate for that jurisdiction, not a live quote.
+              Gross is entered in USD. Another currency uses the Wise user rate for that jurisdiction. The rate is saved on the prefund.
               Staged splits this gross into that many prefunds now. Recurring uses the same number of occurrences and
               opens only the first. Each one waits for its own provider confirmation.
             </p>
@@ -248,9 +248,15 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   <span>
                     Total <strong className="text-indigo">{formatMoney(deal.grossCents, deal.currency)}</strong>
                   </span>
+                  {fx?.source === "wise" ? (
+                    <span>
+                      From <strong className="text-indigo">{formatMoney(fx.usdCents)}</strong> at the Wise user rate
+                      {fx.rate != null ? ` (${fx.rate})` : ""}
+                    </span>
+                  ) : null}
                   {fx?.source === "admin" ? (
                     <span>
-                      From <strong className="text-indigo">{formatMoney(fx.usdCents)}</strong> at the admin rate
+                      From <strong className="text-indigo">{formatMoney(fx.usdCents)}</strong> at the saved rate
                     </span>
                   ) : null}
                   <span>

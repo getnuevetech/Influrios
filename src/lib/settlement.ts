@@ -44,29 +44,29 @@ export async function listFxRates() {
   return prisma.fxRate.findMany({ orderBy: { currency: "asc" } });
 }
 
-export async function saveFxRates(rows: { currency: string; minorPerUsd: number; active: boolean }[]) {
+export async function saveFxRates(rows: { currency: string; active: boolean }[]) {
   await ensureSettlementDefaults();
   const cleaned = rows
     .map((row) => ({
       currency: row.currency.trim().toUpperCase(),
-      minorPerUsd: Math.round(row.minorPerUsd),
       active: row.active,
     }))
     .filter((row) => row.currency && row.currency !== "USD");
-  if (cleaned.length === 0) throw new Error("Keep at least one FX rate. USD does not need a row.");
-  if (cleaned.some((row) => !/^[A-Z]{3}$/.test(row.currency) || row.minorPerUsd <= 0 || row.minorPerUsd > 100_000_000)) {
-    throw new Error("Each rate needs a three-letter currency and a positive minor-unit count.");
+  if (cleaned.length === 0) throw new Error("Keep at least one currency. USD does not need a row.");
+  if (cleaned.some((row) => !/^[A-Z]{3}$/.test(row.currency))) {
+    throw new Error("Each currency needs a three-letter code.");
   }
   const seen = new Set<string>();
   await prisma.$transaction(async (tx) => {
     for (const row of cleaned) {
       if (seen.has(row.currency)) continue;
       seen.add(row.currency);
-      await tx.fxRate.upsert({
-        where: { currency: row.currency },
-        update: { minorPerUsd: row.minorPerUsd, active: row.active },
-        create: row,
-      });
+      const existing = await tx.fxRate.findUnique({ where: { currency: row.currency } });
+      if (existing) {
+        await tx.fxRate.update({ where: { currency: row.currency }, data: { active: row.active } });
+      } else {
+        await tx.fxRate.create({ data: { currency: row.currency, minorPerUsd: 1, active: row.active } });
+      }
     }
     await tx.fxRate.deleteMany({ where: { currency: { notIn: [...seen] } } });
   });
