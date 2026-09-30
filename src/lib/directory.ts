@@ -242,11 +242,16 @@ async function ensureDirectory() {
           theme: creator.planTier.toLowerCase(),
         },
       });
+      const primarySpecialtyId = creator.specialties[0] ? specialtyIds.get(creator.specialties[0]) : undefined;
       if (creator.offer) {
-        await prisma.collaborationOffer.create({ data: { creatorId: row.id, summary: creator.offer } });
+        await prisma.collaborationOffer.create({
+          data: { creatorId: row.id, summary: creator.offer, specialtyId: primarySpecialtyId ?? null },
+        });
       }
       if (creator.need) {
-        await prisma.collaborationNeed.create({ data: { creatorId: row.id, summary: creator.need } });
+        await prisma.collaborationNeed.create({
+          data: { creatorId: row.id, summary: creator.need, specialtyId: primarySpecialtyId ?? null },
+        });
       }
     }
   }
@@ -269,6 +274,31 @@ async function ensureDirectory() {
         data: { term: synonym.term, specialtyId: specialty.id },
       });
     }
+  }
+
+  await linkOfferNeedsToPrimarySpecialty();
+}
+
+async function linkOfferNeedsToPrimarySpecialty() {
+  const [offers, needs] = await Promise.all([
+    prisma.collaborationOffer.findMany({
+      where: { specialtyId: null },
+      include: { creator: { include: { specialties: { orderBy: { isPrimary: "desc" }, take: 1 } } } },
+    }),
+    prisma.collaborationNeed.findMany({
+      where: { specialtyId: null },
+      include: { creator: { include: { specialties: { orderBy: { isPrimary: "desc" }, take: 1 } } } },
+    }),
+  ]);
+  for (const offer of offers) {
+    const specialtyId = offer.creator.specialties[0]?.specialtyId;
+    if (!specialtyId) continue;
+    await prisma.collaborationOffer.update({ where: { id: offer.id }, data: { specialtyId } });
+  }
+  for (const need of needs) {
+    const specialtyId = need.creator.specialties[0]?.specialtyId;
+    if (!specialtyId) continue;
+    await prisma.collaborationNeed.update({ where: { id: need.id }, data: { specialtyId } });
   }
 }
 

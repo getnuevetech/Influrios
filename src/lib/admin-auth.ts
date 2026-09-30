@@ -38,6 +38,8 @@ export const ADMIN_PERMISSIONS = [
   "accounts.edit",
   "invitations.view",
   "invitations.edit",
+  "collaborations.view",
+  "collaborations.edit",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -56,7 +58,8 @@ export type AdminModule =
   | "commerce"
   | "access"
   | "accounts"
-  | "invitations";
+  | "invitations"
+  | "collaborations";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -183,6 +186,15 @@ export const ADMIN_PERMISSION_GROUPS: {
     ],
   },
   {
+    module: "collaborations",
+    label: "Collaborations",
+    description: "Proposal records, the rate-limit window, and commercial options",
+    permissions: [
+      { id: "collaborations.view", label: "View collaborations", hint: "Open proposal records" },
+      { id: "collaborations.edit", label: "Edit collaborations", hint: "Change status, window, and commercial options" },
+    ],
+  },
+  {
     module: "access",
     label: "Access control",
     description: "Create roles and admin users (typically Super Admin)",
@@ -295,6 +307,8 @@ const DEFAULT_ROLES: AdminRole[] = [
       "commerce.manage",
       "invitations.view",
       "invitations.edit",
+      "collaborations.view",
+      "collaborations.edit",
     ],
     system: true,
   },

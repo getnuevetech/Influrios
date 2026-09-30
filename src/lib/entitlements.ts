@@ -19,6 +19,7 @@ export type EntitlementLimits = {
   platformBranding: "visible" | "reduced" | "minimal";
   mediaKit: boolean;
   leadTracking: boolean;
+  proposalsMax: number;
 };
 
 export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
@@ -37,6 +38,7 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     platformBranding: "visible",
     mediaKit: false,
     leadTracking: false,
+    proposalsMax: 0,
   },
   PLUS: {
     specialtiesMax: 3,
@@ -53,6 +55,7 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     platformBranding: "reduced",
     mediaKit: false,
     leadTracking: false,
+    proposalsMax: 8,
   },
   PRO: {
     specialtiesMax: 8,
@@ -69,6 +72,7 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     platformBranding: "minimal",
     mediaKit: true,
     leadTracking: true,
+    proposalsMax: 30,
   },
 };
 
@@ -92,6 +96,7 @@ const INT_FIELDS = {
   "card.specialties.max": "specialtiesMax",
   "card.social_links.max": "socialLinksMax",
   "card.portfolio_items.max": "portfolioMax",
+  "collaboration.proposals.max": "proposalsMax",
 } as const satisfies Record<string, keyof EntitlementLimits>;
 
 const BOOL_FIELDS = {
@@ -127,6 +132,7 @@ export const EDITABLE_FEATURE_KEYS = [
   "card.shortlink.enabled",
   "card.custom_slug.enabled",
   "card.collaboration.enabled",
+  "collaboration.proposals.max",
   "card.media_kit.enabled",
   "card.lead_tracking.enabled",
   "card.contact.level",

@@ -78,6 +78,8 @@ model User {
   emailChallenges EmailChallenge[]
   passwordResets  PasswordReset[]
   onboardingSessions OnboardingSession[]
+  collaborationsSent    Collaboration[] @relation("CollaborationInitiator")
+  collaborationsDecided Collaboration[] @relation("CollaborationDecider")
 }
 
 model EntitlementPlan {
@@ -208,6 +210,8 @@ model Specialty {
   children    Specialty[] @relation("SpecialtyTree")
   creators    CreatorSpecialty[]
   synonyms    SpecialtySynonym[]
+  offers      CollaborationOffer[]
+  needs       CollaborationNeed[]
   active      Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
@@ -290,21 +294,80 @@ model InfluenceCard {
 }
 
 model CollaborationOffer {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   creatorId   String
+  specialtyId String?
   summary     String
   details     String?
-  creator     Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  creator     Creator    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  specialty   Specialty? @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+
+  @@index([specialtyId])
 }
 
 model CollaborationNeed {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   creatorId   String
+  specialtyId String?
   summary     String
   details     String?
-  creator     Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  creator     Creator    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  specialty   Specialty? @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+
+  @@index([specialtyId])
+}
+
+/// Admin-edited proposal window and commercial choices. Proposal counts live on plan entitlements.
+model CollaborationSettings {
+  id                String   @id @default("default")
+  windowDays        Int      @default(30)
+  commercialOptions String
+  updatedAt         DateTime @updatedAt
+}
+
+/// A collaboration record (the Opportunity). Status moves draft → sent → accepted | declined, or withdrawn.
+model Collaboration {
+  id              String    @id @default(cuid())
+  initiatorSlug   String
+  recipientSlug   String
+  initiatorUserId String?
+  initiatorUser   User?     @relation("CollaborationInitiator", fields: [initiatorUserId], references: [id], onDelete: SetNull)
+  decidedByUserId String?
+  decidedByUser   User?     @relation("CollaborationDecider", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  title           String
+  scope           String
+  roleInitiator   String
+  roleRecipient   String
+  commercial      String
+  status          String    @default("draft")
+  why             String
+  reasons         Json
+  score           Int
+  offerSpecialty  String?
+  needSpecialty   String?
+  sentAt          DateTime?
+  decidedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  events          CollaborationEvent[]
+
+  @@index([initiatorSlug, status])
+  @@index([recipientSlug, status])
+}
+
+model CollaborationEvent {
+  id              String        @id @default(cuid())
+  collaborationId String
+  collaboration   Collaboration @relation(fields: [collaborationId], references: [id], onDelete: Cascade)
+  fromStatus      String?
+  toStatus        String
+  actorUserId     String?
+  note            String?
+  createdAt       DateTime      @default(now())
+
+  @@index([collaborationId])
 }
 
 model BusinessProfile {
