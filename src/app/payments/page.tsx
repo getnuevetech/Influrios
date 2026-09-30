@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { actionApproveMilestone, actionCreateDeal, actionSubmitMilestone } from "@/app/payments/actions";
+import { actionApproveMilestone, actionCancelPrefund, actionCreateDeal, actionOpenDispute, actionSubmitMilestone } from "@/app/payments/actions";
+import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { fundingTerm } from "@/lib/ledger";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { formatMoney } from "@/lib/protected-payments";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Protected Payments" };
 
 type Props = {
-  searchParams: Promise<{ created?: string; submitted?: string; approved?: string; error?: string }>;
+  searchParams: Promise<{ created?: string; submitted?: string; approved?: string; cancelled?: string; disputed?: string; error?: string }>;
 };
 
 const STATUS_COLOR: Record<string, string> = {
@@ -30,9 +31,10 @@ const MILESTONE_COLOR: Record<string, string> = {
 
 export default async function PaymentsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [config, fundings] = await Promise.all([
+  const [config, fundings, reasons] = await Promise.all([
     marketplaceConfig().catch(() => null),
     listFundings().catch(() => []),
+    listDisputeReasons().catch(() => []),
   ]);
   const jurisdictions = config?.jurisdictions ?? [];
   const homeJurisdiction = jurisdictions.find((row) => row.code === "US") ?? jurisdictions[0];
@@ -77,11 +79,13 @@ export default async function PaymentsPage({ searchParams }: Props) {
         {params.error ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</div>
         ) : null}
-        {params.created || params.submitted || params.approved ? (
+        {params.created || params.submitted || params.approved || params.cancelled || params.disputed ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             {params.created ? `Prefund ${params.created} is waiting for the provider.` : ""}
             {params.submitted ? " Milestone submitted for review." : ""}
             {params.approved ? " Milestone approved. Release still waits for the provider." : ""}
+            {params.cancelled ? " Unconfirmed prefund cancelled. Nothing was held." : ""}
+            {params.disputed ? " Dispute opened. Release waits until it is resolved." : ""}
           </div>
         ) : null}
 
@@ -200,6 +204,14 @@ export default async function PaymentsPage({ searchParams }: Props) {
                     Held by provider <strong className="text-amber-800">{formatMoney(deal.ledger.heldCents)}</strong>
                   </span>
                 </div>
+                {deal.status === "awaiting_provider" ? (
+                  <form action={actionCancelPrefund} className="mt-4">
+                    <input type="hidden" name="dealId" value={deal.id} />
+                    <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                      Cancel prefund
+                    </button>
+                  </form>
+                ) : null}
                 <ul className="mt-5 space-y-3">
                   {deal.milestones.map((milestone) => (
                     <li
@@ -236,6 +248,27 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         ) : null}
                         {milestone.status === "approved" ? (
                           <p className="text-xs text-muted">Release waits for the provider.</p>
+                        ) : null}
+                        {deal.status === "held" && milestone.status !== "released" && milestone.status !== "refunded" ? (
+                          deal.disputes?.some((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null) ? (
+                            <p className="text-xs text-muted">Dispute open. Release waits until it is resolved.</p>
+                          ) : (
+                          <form action={actionOpenDispute} className="flex flex-wrap items-center gap-2">
+                            <input type="hidden" name="dealId" value={deal.id} />
+                            <input type="hidden" name="milestoneId" value={milestone.id} />
+                            <select name="reasonId" className="rounded-lg border border-border px-2 py-1 text-xs" required>
+                              {reasons.filter((reason) => reason.active).map((reason) => (
+                                <option key={reason.id} value={reason.id}>
+                                  {reason.label}
+                                </option>
+                              ))}
+                            </select>
+                            <input name="details" required minLength={8} placeholder="What happened" className="rounded-lg border border-border px-2 py-1 text-xs" />
+                            <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                              Open dispute
+                            </button>
+                          </form>
+                          )
                         ) : null}
                       </div>
                     </li>

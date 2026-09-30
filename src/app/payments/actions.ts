@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCreatorBySlug } from "@/lib/seed-data";
 import { approveFundingMilestone, requestPrefund, submitFundingMilestone } from "@/lib/marketplace-ledger";
+import { cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
 
 function dollarsToCents(raw: string) {
   const amount = Number(String(raw).replace(/[^0-9.]/g, ""));
@@ -52,4 +53,27 @@ export async function actionApproveMilestone(formData: FormData) {
   if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");
   redirect("/payments?approved=1");
+}
+
+export async function actionCancelPrefund(formData: FormData) {
+  const fundingId = String(formData.get("dealId") ?? "");
+  const result = await cancelUnconfirmedFunding(fundingId);
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/payments");
+  redirect("/payments?cancelled=1");
+}
+
+export async function actionOpenDispute(formData: FormData) {
+  const result = await openMilestoneDispute({
+    fundingId: String(formData.get("dealId") ?? ""),
+    milestoneId: String(formData.get("milestoneId") ?? ""),
+    openedBy: "business",
+    reasonId: String(formData.get("reasonId") ?? ""),
+    details: String(formData.get("details") ?? ""),
+  });
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/payments");
+  revalidatePath("/admin/trust");
+  revalidatePath("/trust");
+  redirect("/payments?disputed=1");
 }

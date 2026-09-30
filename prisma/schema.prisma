@@ -976,10 +976,12 @@ model LegalAcceptance {
 
 /// Review window for milestone auto-approval. Commercial splits live on MilestoneTemplate.
 model MarketplaceSettings {
-  id                String   @id @default("default")
-  reviewWindowHours Int      @default(72)
-  templatesSeeded   Boolean  @default(false)
-  updatedAt         DateTime @updatedAt
+  id                 String   @id @default("default")
+  reviewWindowHours  Int      @default(72)
+  templatesSeeded    Boolean  @default(false)
+  cancelUnconfirmed  Boolean  @default(true)
+  reasonsSeeded      Boolean  @default(false)
+  updatedAt          DateTime @updatedAt
 }
 
 /// Protected payments and the word "escrow" are jurisdiction flags, not code switches.
@@ -1019,6 +1021,7 @@ model CollaborationFunding {
   updatedAt        DateTime @updatedAt
   milestones       FundingMilestone[]
   entries          LedgerEntry[]
+  disputes         MilestoneDispute[]
 
   @@index([creatorSlug, status])
   @@index([status])
@@ -1038,6 +1041,7 @@ model FundingMilestone {
   approvedAt        DateTime?
   updatedAt         DateTime             @updatedAt
   entries           LedgerEntry[]
+  disputes          MilestoneDispute[]
 
   @@index([fundingId, status])
 }
@@ -1057,4 +1061,45 @@ model LedgerEntry {
 
   @@unique([provider, eventId, kind])
   @@index([fundingId])
+}
+
+/// Admin-edited reasons. The label is copied onto a dispute when it is opened.
+model DisputeReason {
+  id        String   @id @default(cuid())
+  label     String
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+/// A milestone dispute or a request to cancel money the provider is holding.
+model MilestoneDispute {
+  id                   String                @id @default(cuid())
+  fundingId            String
+  funding              CollaborationFunding  @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  milestoneId          String?
+  milestone            FundingMilestone?     @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  openedBy             String
+  reasonLabel          String
+  details              String
+  status               String                @default("open")
+  requestedRefundCents Int?
+  resolutionNote       String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  notes                DisputeNote[]
+
+  @@index([fundingId, status])
+  @@index([milestoneId, status])
+}
+
+model DisputeNote {
+  id        String           @id @default(cuid())
+  disputeId String
+  dispute   MilestoneDispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  author    String
+  body      String
+  createdAt DateTime         @default(now())
+
+  @@index([disputeId])
 }

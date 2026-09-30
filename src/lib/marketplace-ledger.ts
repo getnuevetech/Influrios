@@ -11,6 +11,7 @@ import {
   splitGross,
   type LedgerMovement,
 } from "@/lib/ledger";
+import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
 
 const PROVIDER_CODE = "primary";
 
@@ -77,6 +78,7 @@ export async function marketplaceConfig() {
   ]);
   return {
     reviewWindowHours: settings?.reviewWindowHours ?? 72,
+    cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
     jurisdictions,
     templates,
     provider: {
@@ -90,13 +92,19 @@ export async function marketplaceConfig() {
   };
 }
 
-export async function saveMarketplaceSettings(input: { reviewWindowHours: number }) {
+export async function saveMarketplaceSettings(input: { reviewWindowHours: number; cancelUnconfirmed?: boolean }) {
   await ensureMarketplaceDefaults();
   const hours = Math.round(input.reviewWindowHours);
   if (!Number.isFinite(hours) || hours < 1 || hours > 24 * 30) {
     throw new Error("Review window must be between 1 and 720 hours.");
   }
-  return prisma.marketplaceSettings.update({ where: { id: "default" }, data: { reviewWindowHours: hours } });
+  return prisma.marketplaceSettings.update({
+    where: { id: "default" },
+    data: {
+      reviewWindowHours: hours,
+      ...(input.cancelUnconfirmed == null ? {} : { cancelUnconfirmed: input.cancelUnconfirmed }),
+    },
+  });
 }
 
 export async function saveJurisdiction(input: {
@@ -286,7 +294,7 @@ export async function listFundings() {
   await sweepAutoApprovals();
   const rows = await prisma.collaborationFunding.findMany({
     orderBy: { createdAt: "desc" },
-    include: { milestones: { orderBy: { sortOrder: "asc" } }, entries: { orderBy: { createdAt: "asc" } } },
+    include: { milestones: { orderBy: { sortOrder: "asc" } }, entries: { orderBy: { createdAt: "asc" } }, disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } }, select: { id: true, milestoneId: true, status: true } } },
     take: 50,
   });
   return rows.map(presentFunding);
@@ -297,7 +305,7 @@ export async function listFundingsForCreator(creatorSlug: string) {
   const rows = await prisma.collaborationFunding.findMany({
     where: { creatorSlug },
     orderBy: { createdAt: "desc" },
-    include: { milestones: { orderBy: { sortOrder: "asc" } }, entries: true },
+    include: { milestones: { orderBy: { sortOrder: "asc" } }, entries: true, disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } }, select: { id: true, milestoneId: true, status: true } } },
     take: 20,
   });
   return rows.map(presentFunding);
@@ -323,6 +331,7 @@ function presentFunding(row: {
     autoApproveAt: Date | null;
   }[];
   entries: { kind: string; amountCents: number }[];
+  disputes?: { id: string; milestoneId: string | null; status: string }[];
 }) {
   const movements: LedgerMovement[] = ledgerMovements(row.entries);
   return { ...row, ledger: reconcileLedger(movements, row.grossCents) };
@@ -387,6 +396,9 @@ export async function applyMarketplaceEvent(input: {
   const milestone = input.milestoneId
     ? funding.milestones.find((row) => row.id === input.milestoneId) ?? null
     : null;
+  const disputeOpen = milestone
+    ? await milestoneHasOpenDispute(funding.id, milestone.id)
+    : false;
   const expectedCents =
     input.eventType === "funding.held" || input.eventType === "funding.failed"
       ? funding.grossCents
@@ -398,6 +410,7 @@ export async function applyMarketplaceEvent(input: {
     expectedCents,
     heldCents: prior.heldCents,
     milestoneStatus: milestone?.status,
+    disputeOpen,
   });
   if (disposition === "reject") return { applied: false, result: "rejected" as const };
 
@@ -448,6 +461,14 @@ export async function applyMarketplaceEvent(input: {
         return;
       }
       if (input.eventType === "payout.released" && milestone) {
+        const blocking = await tx.milestoneDispute.findFirst({
+          where: {
+            fundingId: funding.id,
+            status: { in: ["open", "under_review", "refund_requested"] },
+            OR: [{ milestoneId: milestone.id }, { milestoneId: null }],
+          },
+        });
+        if (blocking) throw new LedgerReject("This milestone is in dispute.");
         const fresh = await tx.ledgerEntry.findMany({ where: { fundingId: funding.id } });
         const held = reconcileLedger(ledgerMovements(fresh), funding.grossCents);
         if (held.heldCents < milestone.amountCents) throw new LedgerReject("The provider is not holding enough.");
@@ -494,12 +515,25 @@ export async function applyMarketplaceEvent(input: {
             data: { status: "refunded" },
           });
         }
+        if (milestone && input.amountCents >= milestone.amountCents) {
+          await tx.fundingMilestone.updateMany({
+            where: { id: milestone.id, status: { notIn: ["released"] } },
+            data: { status: "refunded" },
+          });
+        }
       }
     });
   } catch (error) {
     if (isUnique(error)) return { applied: false, result: "duplicate" as const };
     if (error instanceof LedgerReject) return { applied: false, result: "rejected" as const };
     throw error;
+  }
+  if (input.eventType === "payout.refunded" && disposition === "apply") {
+    await closeDisputesForRefund({
+      fundingId: funding.id,
+      milestoneId: milestone?.id,
+      refundedCents: input.amountCents,
+    }).catch(() => undefined);
   }
   if (disposition === "apply") {
     await prisma.auditLog.create({
