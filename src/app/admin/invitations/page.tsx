@@ -140,7 +140,7 @@ export default async function AdminInvitationsPage({
                     </form>
                   </div>
                   <p className="mt-2 text-xs text-muted">
-                    {data.smtp ? "SMTP is configured. Send queues delivery; it does not mark the invite sent." : "Email send is inactive until SMTP is configured."}
+                    {data.smtp ? "SMTP is configured. The invite is marked delivered only after SMTP accepts the message." : "Email send is inactive until SMTP is configured."}
                   </p>
                   <div className="mt-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted">Claim link</p>

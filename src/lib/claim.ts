@@ -4,7 +4,7 @@
  */
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { promises as fs } from "fs";
-import { decideCount } from "@/lib/entitlements";
+import { decideCount, isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
 import { cookies } from "next/headers";
@@ -414,8 +414,9 @@ export async function updateDraftProfile(
   const draft = store.drafts.find((d) => d.id === draftId);
   if (!draft) throw new Error("Draft not found");
   if (patch.specialties) {
-    const limits = await entitlementsForPlan("STARTER");
-    const decision = decideCount(limits, "specialtiesMax", patch.specialties.length, "STARTER");
+    const plan = draft.planTier && isPlanCode(draft.planTier) ? draft.planTier : "STARTER";
+    const limits = await entitlementsForPlan(plan);
+    const decision = decideCount(limits, "specialtiesMax", patch.specialties.length, plan);
     if (!decision.ok) {
       const upgrade = decision.upgradePlanCode ? ` Upgrade to ${decision.upgradePlanCode}.` : "";
       throw new Error(

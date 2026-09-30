@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { actionPublishDraft, actionUpdateDashboardProfile } from "@/app/claim/actions";
 import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
 import { actionChangeShortSlug } from "@/app/dashboard/short-actions";
+import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
+import { classifyProfileTopics } from "@/lib/ai-runtime";
 import { isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { ensureCreatorShortLink, primaryShortHost } from "@/lib/short-link";
@@ -29,6 +31,17 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
   const linkLimits = await entitlementsForPlan(planCode).catch(() => null);
   const shortLink = draft.stage === "published" ? await ensureCreatorShortLink(draft.slug).catch(() => null) : null;
   const shortHost = await primaryShortHost().catch(() => "inflr.me");
+  const topics = await classifyProfileTopics(`${draft.title}\n${draft.bio}`).catch(() => ({
+    suggestions: [],
+    source: "fallback" as const,
+    providerError: undefined as string | undefined,
+  }));
+  const suggestionRows = new Map<string, { slug: string; name: string; reason?: string }>();
+  for (const item of topics.suggestions) suggestionRows.set(item.slug, item);
+  for (const slug of draft.specialties) {
+    if (!suggestionRows.has(slug)) suggestionRows.set(slug, { slug, name: slug });
+  }
+  const specialtyCap = linkLimits?.specialtiesMax ?? 1;
 
   const { score, items } = completenessFor(draft);
   const nextAction = items.find((i) => !i.done);
@@ -216,6 +229,43 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
           </div>
         </section>
       </div>
+
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Specialty suggestions</h2>
+        <p className="mt-2 text-sm text-muted">
+          {topics.source === "provider"
+            ? "The assigned provider suggested these. They are saved only when you confirm."
+            : "These come from the profile text. They are saved only when you confirm."}
+          {" "}This plan keeps {specialtyCap} {specialtyCap === 1 ? "specialty" : "specialties"}.
+        </p>
+        {topics.providerError ? (
+          <p className="mt-2 text-sm text-amber-800">The provider did not answer. The keyword list is shown instead.</p>
+        ) : null}
+        {suggestionRows.size === 0 ? (
+          <p className="mt-3 text-sm text-muted">No specialty keywords matched this profile yet.</p>
+        ) : (
+          <form action={actionConfirmSpecialties} className="mt-4 space-y-2">
+            <input type="hidden" name="draftId" value={draft.id} />
+            {[...suggestionRows.values()].map((item) => (
+              <label key={item.slug} className="flex items-start gap-2 text-sm text-indigo">
+                <input
+                  type="checkbox"
+                  name="specialty"
+                  value={item.slug}
+                  defaultChecked={draft.specialties.includes(item.slug)}
+                />
+                <span>
+                  <span className="font-semibold">{item.name}</span>
+                  {item.reason ? <span className="mt-0.5 block text-xs text-muted">{item.reason}</span> : null}
+                </span>
+              </label>
+            ))}
+            <button type="submit" className="btn-secondary !py-2 text-sm">
+              Confirm specialties
+            </button>
+          </form>
+        )}
+      </section>
 
       <section className="card-surface p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Your links</h2>

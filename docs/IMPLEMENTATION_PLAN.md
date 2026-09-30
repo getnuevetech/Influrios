@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–G are implemented, and provider admin is in place for AI pipelines, country payment gateways, and document signing. Social account sync is part of the current plan: each network is a real provider, a creator must accept the current integration terms, and follower and like counts are saved only when that network returns both. Short links use inflr.me (admin-configurable) with opaque QR identities. The Legal Center and acceptance ledger apply documents by role and feature, and accepting Social Platform Integration Terms does not authorize a provider login. Public Home, Discover, profile, card, and collaboration layouts stay as designed; a confirmed sync updates the figure already in that slot. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–H are implemented. Provider admin covers AI pipelines, country payment gateways, document signing, SMTP, and the job list. A Stripe event id is stored once; a duplicate delivery does not change the plan again. SMTP is edited in admin, and a test send or invitation is marked delivered only after the server accepts it. Specialty suggestions use the assigned model when it answers and the keyword list otherwise; nothing is saved until the creator confirms. The collaboration page keeps its published explanation. Social account sync stays a real provider path: follower and like counts are saved only when that network returns both. Short links use inflr.me with opaque QR identities. The Legal Center applies documents by role and feature. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. Phase I and the escrow ledger are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -214,6 +214,8 @@ Implemented at `/admin/social` and the creator dashboard. This is a current deve
 **Exit:** with a network’s API details saved, a creator accepts the terms, returns from that network, and the existing follower figure updates from the returned count and likes. Without those API details, the same pages look as they do today.
 
 ### Phase H — Provider platform
+
+Implemented at `/admin/mail`, `/admin/jobs`, and the provider health strip on `/admin`. Checkout writes `User.planTier` through a unique event id. The creator dashboard confirms specialty suggestions; `/collaboration` is unchanged.
 
 **Proves:** spec DoD items 7–12. This is the first time Stripe, email, and AI become real dependencies.
 

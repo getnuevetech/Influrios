@@ -81,6 +81,7 @@ model User {
   collaborationsSent    Collaboration[] @relation("CollaborationInitiator")
   collaborationsDecided Collaboration[] @relation("CollaborationDecider")
   legalAcceptances  LegalAcceptance[]
+  subscriptionStates SubscriptionState[]
 }
 
 model EntitlementPlan {
@@ -783,6 +784,47 @@ model InvitationEvent {
   detail       String?
   actor        String?
   createdAt    DateTime          @default(now())
+}
+
+/// A provider event id is stored once. A duplicate delivery does not change the plan again.
+model ProcessedWebhook {
+  id        String   @id @default(cuid())
+  provider  String
+  eventId   String
+  eventType String
+  result    String
+  createdAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+}
+
+/// Normalized subscription status. Plan changes go through this row and the user record together.
+model SubscriptionState {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  creatorSlug String?
+  sku        String
+  status     String
+  provider   String
+  externalId String
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  @@unique([provider, externalId])
+  @@index([userId])
+}
+
+/// Admin SMTP settings. A blank or disabled row does not send mail.
+model MailSettings {
+  id           String   @id @default("default")
+  host         String   @default("")
+  port         Int      @default(587)
+  username     String   @default("")
+  fromAddress  String   @default("")
+  secretCipher String?
+  enabled      Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
 }
 
 model ProfileCompletionRule {
