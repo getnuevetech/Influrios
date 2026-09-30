@@ -342,6 +342,73 @@ export function CategoryGlyph({ slug, size = 22 }: { slug: string; size?: number
   }
 }
 
+export function IconMail(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m4 7 8 6 8-6" />
+    </svg>
+  );
+}
+
+export function IconShare(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="2.5" />
+      <circle cx="6" cy="12" r="2.5" />
+      <circle cx="18" cy="19" r="2.5" />
+      <path d="m8.2 13.2 7.5 4.1M15.7 6.7l-7.5 4.1" />
+    </svg>
+  );
+}
+
+export function IconUserPlus(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3.5 19c.8-3 2.8-4.5 5.5-4.5s4.7 1.5 5.5 4.5" />
+      <path d="M17 8v6M14 11h6" />
+    </svg>
+  );
+}
+
+export function IconPlay(props: IconProps) {
+  return (
+    <svg {...base(props)} viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="12" cy="12" r="10" fill="rgba(0,0,0,0.45)" />
+      <path d="M10 8.5v7l6-3.5-6-3.5Z" fill="#fff" />
+    </svg>
+  );
+}
+
+export function IconGlobe(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.5 2.8 3.8 5.8 3.8 9S14.5 18.2 12 21c-2.5-2.8-3.8-5.8-3.8-9S9.5 5.8 12 3Z" />
+    </svg>
+  );
+}
+
+export function IconCake(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 4v3M8 8h8v3H8V8Z" />
+      <path d="M5 11h14v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8Z" />
+      <path d="M5 15h14" />
+    </svg>
+  );
+}
+
+export function IconLang(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.2 2.5 3.3 5.2 3.3 9S14.2 18.5 12 21c-2.2-2.5-3.3-5.2-3.3-9S9.8 5.5 12 3Z" />
+    </svg>
+  );
+}
+
 export function SocialIcon({
   platform,
   size = 20,
@@ -362,7 +429,9 @@ export function SocialIcon({
       return <IconX size={size} className={className} />;
     case "LINKEDIN":
       return <IconLinkedIn size={size} className={className} />;
+    case "WEBSITE":
+      return <IconGlobe size={size} className={className} />;
     default:
-      return <IconInstagram size={size} className={className} />;
+      return <IconGlobe size={size} className={className} />;
   }
 }

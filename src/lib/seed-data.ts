@@ -56,6 +56,10 @@ export type SeedCreator = {
   collabPrefs?: string[];
   polaroids?: { image: string; caption: string }[];
   featuredContent?: SeedContent[];
+  linktree?: string;
+  bannerTagline?: string;
+  bannerScriptTags?: string;
+  brands?: { name: string; logo: string }[];
 };
 
 export const CATEGORY_IMAGES: Record<string, string> = {
@@ -84,6 +88,7 @@ export const SPECIALTY_TAXONOMY: {
       { slug: "protective-styles", name: "Protective Styles" },
       { slug: "skincare", name: "Skincare" },
       { slug: "makeup", name: "Makeup" },
+      { slug: "self-care", name: "Self Care" },
     ],
   },
   {
@@ -165,7 +170,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     statusLabel: "Open to Collaborations",
     planTier: "PLUS",
     verified: true,
-    specialties: ["beauty", "lifestyle", "fashion", "travel", "skincare"],
+    specialties: ["beauty", "lifestyle", "fashion", "travel", "self-care"],
     socials: [
       { platform: "INSTAGRAM", handle: "@sofia.m", url: "https://instagram.com/sofia.m", followers: 2_400_000 },
       { platform: "TIKTOK", handle: "@sofiam", url: "https://tiktok.com/@sofiam", followers: 1_800_000 },
@@ -177,7 +182,20 @@ export const SEED_CREATORS: SeedCreator[] = [
     offer: "Beauty tutorials and product education",
     need: "Skincare brands and hair-care specialists",
     age: 27,
-    email: "brand@sofia.demo",
+    email: "sofia@influrios.com",
+    linktree: "linktr.ee/sofiamartinez",
+    bannerTagline: "Create a Brighter You",
+    bannerScriptTags: "Beauty / Lifestyle / Travel / Good Vibes / Always",
+    brands: [
+      { name: "L'Oréal", logo: "/demo/brands/loreal.svg" },
+      { name: "Sephora", logo: "/demo/brands/sephora.svg" },
+      { name: "Laneige", logo: "/demo/brands/laneige.svg" },
+      { name: "Glossier", logo: "/demo/brands/glossier.svg" },
+      { name: "Amazon", logo: "/demo/brands/amazon.svg" },
+      { name: "Airbnb", logo: "/demo/brands/airbnb.svg" },
+      { name: "Samsung", logo: "/demo/brands/samsung.svg" },
+      { name: "eos", logo: "/demo/brands/eos.svg" },
+    ],
     stats: {
       engagementRate: "4.8%",
       engagementDelta: "+12% from last month",
