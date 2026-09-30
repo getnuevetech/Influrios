@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { actionAdminLogin } from "@/app/admin/actions-auth";
 import { PageShell } from "@/components/page-shell";
 import { getAdminSession } from "@/lib/admin-auth";
+import { safeNextPath } from "@/lib/account-policy";
 
 export const metadata = { title: "Admin login" };
 
@@ -11,10 +12,9 @@ type Props = {
 };
 
 export default async function AdminLoginPage({ searchParams }: Props) {
-  const session = await getAdminSession();
-  if (session) redirect("/admin");
-
   const params = await searchParams;
+  const session = await getAdminSession();
+  if (session) redirect(safeNextPath(params.next, "/admin"));
 
   return (
     <div className="bg-[#F7FAFF] py-16">

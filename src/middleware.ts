@@ -27,7 +27,9 @@ export function middleware(req: NextRequest) {
       ? NextResponse.redirect(new URL(`/admin/login?next=${encodeURIComponent(pathname)}`, req.url))
       : NextResponse.next({ request: { headers: requestHeaders } });
 
-  if (minted) {
+  // Do not mint a cookie on /admin. That response is also the login action, and a
+  // second Set-Cookie here was competing with the admin session cookie.
+  if (minted && !pathname.startsWith("/admin")) {
     response.cookies.set(GUEST_COOKIE, guest, {
       httpOnly: true,
       sameSite: "lax",

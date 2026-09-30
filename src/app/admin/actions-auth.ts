@@ -24,13 +24,13 @@ export async function actionAdminLogin(formData: FormData) {
     redirect(`/admin/login?error=${encodeURIComponent(result.error)}&next=${encodeURIComponent(next)}`);
   }
   const jar = await cookies();
-  jar.set(ADMIN_COOKIE, result.token, adminCookieOptions());
+  jar.set(ADMIN_COOKIE, result.token, await adminCookieOptions());
   redirect(next.startsWith("/admin") ? next : "/admin");
 }
 
 export async function actionAdminLogout() {
   const jar = await cookies();
-  jar.set(ADMIN_COOKIE, "", { ...adminCookieOptions(0), maxAge: 0 });
+  jar.set(ADMIN_COOKIE, "", { ...(await adminCookieOptions(0)), maxAge: 0 });
   redirect("/admin/login");
 }
 
