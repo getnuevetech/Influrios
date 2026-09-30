@@ -1,0 +1,86 @@
+5. AI & Automated Processing Policy
+1. Uses
+•
+
+Profile extraction and specialty classification
+
+•
+
+Search, ranking, and explainable matching
+
+•
+
+Drafting outreach or profile copy
+
+•
+
+Content moderation and abuse/fraud signals
+
+•
+
+Support assistance and operational summaries
+
+•
+
+Analytics and quality review
+
+2. Human Responsibility
+AI output is assistive. Users remain responsible for business decisions, campaign claims, contracts, tax/legal obligations, and
+content they publish. Influrios should not present AI-generated legal, nancial, medical, or other regulated advice as
+professional advice.
+
+3. Creator Corrections
+Creators should be able to confirm, edit, or dispute creator-facing specialty classifications and material profile inferences.
+Influrios may maintain internal fraud/security signals that cannot be fully disclosed where disclosure would compromise
+security or legal obligations.
+
+4. Sensitive Traits
+Influrios should not infer or rank creators by sensitive characteristics such as health, religion, sexual orientation, political
+beliefs, immigration status, or similar traits for ordinary commercial discovery unless a specific lawful use case has been
+separately approved with necessary consent/safeguards.
+
+5. Signi cant Decisions
+Influrios will perform required legal review before using automated processing to make decisions that produce legal or
+similarly significant effects. Where applicable, required notices, opt-outs, access rights, human review, risk assessments, and
+appeal mechanisms will be provided.
+
+6. AI Providers and Data
+Influrios may use multiple AI providers configured by function and country. Secrets must be secured and providers
+contractually limited as appropriate. Personal data sent to AI providers should be minimized and governed by the Privacy
+Policy and provider/data-processing terms.
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026

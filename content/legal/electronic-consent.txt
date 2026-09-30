@@ -1,0 +1,100 @@
+2. User Registration & Electronic Consent Agreement
+1. Registration Representations
+•
+
+You are at least 18 and legally capable of contracting, unless a separately approved guardian/minor program applies.
+
+•
+
+Information you provide is accurate and not misleading.
+
+•
+
+You will not register for another person or organization without authority.
+
+•
+
+You will maintain current contact information and protect login credentials.
+
+•
+
+If registering for a business, agency, or creator, you have the authority represented in the account.
+
+2. Electronic Records and Signatures
+You consent to receive agreements, notices, transaction records, collaboration terms, fee disclosures, tax/payment notices, and
+other records electronically. Clicking an acceptance control, checking a box, entering a verification code, or applying an
+electronic signature may constitute your electronic signature where permitted by law.
+
+3. Required Agreements at Registration
+•
+
+Terms of Service
+
+•
+
+Privacy Policy acknowledgment
+
+•
+
+User Registration & Electronic Consent Agreement
+
+•
+
+Role-specific Creator Terms, Business Terms, or Agency Terms when applicable
+
+•
+
+Additional transaction-specific terms when a user activates paid features, Card subscriptions, managed services, or
+collaborations
+
+4. Marketing Communications
+Transactional/account messages may be sent as necessary to operate the service. Marketing email preferences are separate and
+may be changed using available preference or unsubscribe controls. Consent to marketing is not a condition of purchasing a
+paid subscription unless lawfully bundled and clearly disclosed.
+
+5. Consent Ledger
+Influrios may store evidence of consent including agreement version, document hash, account/user ID, timestamp, country, IP
+address or security metadata, and acceptance method. This record is used to prove which terms applied at a given time.
+
+Electronic Acceptance / Signature
+Where this document is accepted electronically, checking the acceptance box, clicking an acceptance button, signing
+electronically, or continuing through a flow that clearly presents this agreement constitutes an electronic signature and
+acceptance to the extent permitted by applicable law.
+
+fi
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026
+
+Party
+
+Signature / Acceptance
+
+Date
+
+User
+
+Name: __________________________
+
+Date: __________________
+
+Influrios
+
+Name: __________________________
+
+Date: __________________
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026

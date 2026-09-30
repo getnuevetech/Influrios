@@ -59,9 +59,29 @@ export async function actionVerifyDraft(formData: FormData) {
 
 export async function actionPublishDraft(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
+  if (formData.get("creatorTerms") !== "on") {
+    redirect(
+      `/claim/publish/${draftId}?error=${encodeURIComponent("Agree to the Creator Terms and Social Platform Integration Terms before publishing.")}`,
+    );
+  }
   try {
     const draft = await publishDraft(draftId);
     await setCreatorSession(draft.id);
+    const { getAccountSession } = await import("@/lib/accounts");
+    const { recordLegalEvent } = await import("@/lib/legal");
+    const { prisma } = await import("@/lib/db");
+    const account = await getAccountSession().catch(() => null);
+    const byEmail = draft.email
+      ? await prisma.user.findUnique({ where: { email: draft.email.trim().toLowerCase() } })
+      : null;
+    await recordLegalEvent({
+      trigger: "creator_claim",
+      context: "creator_claim",
+      userId: account?.id ?? byEmail?.id ?? null,
+      subjectKey: `creator:${draft.slug}`,
+      userRole: "CREATOR",
+      extraKeys: ["terms-of-service", "privacy-policy"],
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Publish failed";
     redirect(`/claim/publish/${draftId}?error=${encodeURIComponent(message)}`);

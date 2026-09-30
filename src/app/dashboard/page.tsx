@@ -2,6 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionPublishDraft, actionUpdateDashboardProfile } from "@/app/claim/actions";
 import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
+import { actionChangeShortSlug } from "@/app/dashboard/short-actions";
+import { isPlanCode } from "@/lib/entitlements";
+import { entitlementsForPlan } from "@/lib/entitlements-db";
+import { ensureCreatorShortLink, primaryShortHost } from "@/lib/short-link";
 import {
   completenessFor,
   getCreatorSessionDraft,
@@ -21,6 +25,10 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
   const draft = await getCreatorSessionDraft();
   if (!draft) redirect("/claim");
   const social = await socialConnectState(draft.slug).catch(() => null);
+  const planCode = isPlanCode(draft.planTier ?? "") ? draft.planTier! : "STARTER";
+  const linkLimits = await entitlementsForPlan(planCode).catch(() => null);
+  const shortLink = draft.stage === "published" ? await ensureCreatorShortLink(draft.slug).catch(() => null) : null;
+  const shortHost = await primaryShortHost().catch(() => "inflr.me");
 
   const { score, items } = completenessFor(draft);
   const nextAction = items.find((i) => !i.done);
@@ -209,6 +217,46 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
         </section>
       </div>
 
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Your links</h2>
+        <p className="mt-2 text-sm text-indigo">
+          Canonical profile: influrios.com/c/{draft.slug}
+        </p>
+        {shortLink && shortLink.status === "active" ? (
+          <div className="mt-3 space-y-3 text-sm text-indigo">
+            <p>
+              Short link: https://{shortHost}/{shortLink.slug}
+            </p>
+            {linkLimits?.standardQr || linkLimits?.dynamicQr ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/api/qr/${draft.slug}?size=160&logo=0`} alt="Influencer Card QR" width={160} height={160} />
+            ) : null}
+            {linkLimits?.customAlias ? (
+              <form action={actionChangeShortSlug} className="space-y-2">
+                <p className="text-xs text-muted">
+                  Changing this name keeps the printed QR and the previous short link. The old name redirects to the
+                  new one.
+                </p>
+                <input
+                  name="slug"
+                  defaultValue={shortLink.slug}
+                  className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
+                />
+                <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                  Update short link
+                </button>
+              </form>
+            ) : (
+              <p className="text-xs text-muted">A custom short name follows the plan entitlement.</p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-muted">
+            This plan uses the canonical profile link. A short link and QR appear when the plan entitlements include them.
+          </p>
+        )}
+      </section>
+
       {social ? (
         <section className="card-surface p-6">
           <h2 className="font-display text-xl font-bold text-indigo">Social accounts</h2>
@@ -227,10 +275,19 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
           ) : (
             <div className="mt-4 space-y-4">
               <div className="rounded-xl bg-lavender/40 p-4 text-sm text-indigo">
-                <p className="font-semibold">Terms {social.policy.version}</p>
-                <p className="mt-2 whitespace-pre-wrap">{social.policy.termsText}</p>
-                <p className="mt-3 font-semibold">Policy</p>
-                <p className="mt-2 whitespace-pre-wrap">{social.policy.policyText}</p>
+                <p className="font-semibold">Before the network login</p>
+                <p className="mt-2">
+                  Accepting the Creator Terms does not authorize a social account. This step explains the permissions
+                  and asks you to acknowledge the{" "}
+                  <Link href="/legal/connected-social-data-policy" className="font-semibold underline" target="_blank">
+                    Connected Social Data & API Policy
+                  </Link>
+                  . The{" "}
+                  <Link href="/legal/social-platform-integration-terms" className="font-semibold underline" target="_blank">
+                    Social Platform Integration Terms
+                  </Link>{" "}
+                  stay a separate agreement.
+                </p>
               </div>
               {social.accounts.map((account) => (
                 <div key={account.platform} className="rounded-xl border border-border p-4">
@@ -249,7 +306,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                     <input type="hidden" name="platform" value={account.platform} />
                     <label className="flex items-start gap-2 text-xs text-indigo">
                       <input type="checkbox" name="acceptTerms" className="mt-0.5 accent-violet" required />
-                      I agree to the Influrios social integration terms and policy ({social.policy.version}).
+                      <span>
+                        I acknowledge the Connected Social Data & API Policy and authorize Influrios to start the{" "}
+                        {account.name} login
+                        {account.scopes ? ` for: ${account.scopes}` : ""}. This is not granted by the Creator Terms.
+                      </span>
                     </label>
                     <button type="submit" className="btn-primary !py-1.5 text-xs">
                       Connect {account.name}

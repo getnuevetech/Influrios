@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionRegister } from "@/app/account/actions";
 import { safeNextPath } from "@/lib/account-policy";
+import { currentLegalDocument } from "@/lib/legal";
 import { getSiteConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,11 @@ export default async function RegisterPage({ searchParams }: Props) {
   const params = await searchParams;
   const next = safeNextPath(params.next);
   const policy = await getSiteConfig();
+  const [terms, consent, privacy] = await Promise.all([
+    currentLegalDocument("terms-of-service").catch(() => null),
+    currentLegalDocument("electronic-consent").catch(() => null),
+    currentLegalDocument("privacy-policy").catch(() => null),
+  ]);
   return (
     <div className="mx-auto max-w-md px-4 py-14">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>
@@ -41,7 +47,19 @@ export default async function RegisterPage({ searchParams }: Props) {
         <label className="flex items-start gap-2 text-sm text-indigo">
           <input type="checkbox" name="consent" required className="mt-1 accent-[#633CFF]" />
           <span>
-            {policy.consentCopy} (consent version {policy.consentVersion}).
+            By creating an account, I agree to the{" "}
+            <Link href="/legal/terms-of-service" className="font-semibold text-violet underline" target="_blank">
+              {terms?.title ?? "Terms of Service"}
+            </Link>{" "}
+            and the{" "}
+            <Link href="/legal/electronic-consent" className="font-semibold text-violet underline" target="_blank">
+              {consent?.title ?? "User Registration & Electronic Consent Agreement"}
+            </Link>
+            , and I acknowledge the{" "}
+            <Link href="/legal/privacy-policy" className="font-semibold text-violet underline" target="_blank">
+              {privacy?.title ?? "Privacy Policy"}
+            </Link>
+            .
           </span>
         </label>
         <button type="submit" className="btn-primary w-full">

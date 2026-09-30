@@ -1,0 +1,91 @@
+8. Identity, Image, Impersonation & Veri cation Policy
+1. Veri cation Labels
+Label
+
+Meaning
+
+Does NOT mean
+
+Identity Veri ed
+
+Influrios/provider verified the account holder’s
+identity to the configured standard
+
+Endorsement, quality, solvency, or campaign
+suitability
+
+Social Account Connected
+
+The user authenticated control/authorized
+access to that social account
+
+Every metric or post is verified
+
+Creator Con rmed
+
+The creator approved specified profile
+information
+
+Influrios independently audited every claim
+
+Platform Data Veri ed
+
+Speci ed metric/data came through a trusted
+integration/source
+
+Future performance or authenticity of all
+audience activity
+
+2. Impersonation
+Users may not falsely represent another creator, brand, agency, employee, or public gure. Influrios may require evidence, lock
+disputed accounts, remove misleading profiles, or preserve logs for investigation.
+
+3. Image and Likeness
+Users must have the right to upload and commercially use profile photos, logos, brand marks, and likenesses. A collaboration
+license does not authorize AI cloning, synthetic voice/image generation, or perpetual publicity use unless expressly granted.
+
+4. Badge Misuse
+Badges may not be copied, altered, or displayed outside approved contexts to imply a verification or status that Influrios did not
+grant.
+
+fl
+
+fl
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026

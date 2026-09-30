@@ -80,6 +80,7 @@ model User {
   onboardingSessions OnboardingSession[]
   collaborationsSent    Collaboration[] @relation("CollaborationInitiator")
   collaborationsDecided Collaboration[] @relation("CollaborationDecider")
+  legalAcceptances  LegalAcceptance[]
 }
 
 model EntitlementPlan {
@@ -252,6 +253,7 @@ model Creator {
   collabOffers       CollaborationOffer[]
   collabNeeds        CollaborationNeed[]
   socialConnections  SocialConnection[]
+  shortLinks         ShortLink[]
 }
 
 model CreatorSpecialty {
@@ -791,4 +793,139 @@ model ProfileCompletionRule {
   weight    Int
   active    Boolean  @default(true)
   sortOrder Int      @default(0)
+}
+
+/// Hostname that serves inflr.me-style redirects. The primary row is the QR payload host.
+model ShortLinkDomain {
+  id        String   @id @default(cuid())
+  hostname  String   @unique
+  label     String
+  isPrimary Boolean  @default(false)
+  active    Boolean  @default(true)
+  fallback  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Canonical app origin and https hosts a short link may redirect to.
+model ShortLinkSettings {
+  id               String   @id @default("default")
+  canonicalOrigin  String
+  allowedHosts     String
+  updatedAt        DateTime @updatedAt
+}
+
+model ReservedSlug {
+  slug      String   @id
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model ShortLink {
+  id              String   @id @default(cuid())
+  creatorId       String?
+  creator         Creator? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  slug            String   @unique
+  destinationKind String   @default("profile")
+  destination     String
+  status          String   @default("active")
+  dynamic         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  aliases         ShortLinkAlias[]
+  qrIdentities    QrIdentity[]
+  events          ShortLinkEvent[]
+  abuseCases      ShortLinkAbuseCase[]
+}
+
+model ShortLinkAlias {
+  id          String    @id @default(cuid())
+  shortLinkId String
+  shortLink   ShortLink @relation(fields: [shortLinkId], references: [id], onDelete: Cascade)
+  slug        String    @unique
+  redirect    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
+
+/// Opaque QR payload. The token is not a slug and not the canonical profile URL.
+model QrIdentity {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  shortLinkId String
+  shortLink   ShortLink @relation(fields: [shortLinkId], references: [id], onDelete: Cascade)
+  status      String    @default("active")
+  createdAt   DateTime  @default(now())
+}
+
+model ShortLinkEvent {
+  id          String     @id @default(cuid())
+  shortLinkId String?
+  shortLink   ShortLink? @relation(fields: [shortLinkId], references: [id], onDelete: SetNull)
+  eventType   String
+  metaJson    Json?
+  createdAt   DateTime   @default(now())
+
+  @@index([shortLinkId, createdAt])
+}
+
+model ShortLinkAbuseCase {
+  id          String     @id @default(cuid())
+  shortLinkId String?
+  shortLink   ShortLink? @relation(fields: [shortLinkId], references: [id], onDelete: SetNull)
+  slug        String?
+  status      String     @default("open")
+  note        String
+  createdAt   DateTime   @default(now())
+}
+
+/// One published version of a split legal document. Old versions stay in this table.
+model LegalDocument {
+  id                   String   @id @default(cuid())
+  documentKey          String
+  title                String
+  version              String
+  effectiveDate        DateTime
+  jurisdiction         String   @default("global")
+  roleScope            String   @default("all")
+  featureTrigger       String
+  requiresAcceptance   Boolean  @default(false)
+  requiresReacceptance Boolean  @default(false)
+  acknowledgementOnly  Boolean  @default(false)
+  publishedStatus      String   @default("draft")
+  bodyText             String
+  documentHash         String
+  supersedesId         String?
+  category             String
+  createdBy            String?
+  createdAt            DateTime @default(now())
+  publishedAt          DateTime?
+  acceptances          LegalAcceptance[]
+
+  @@unique([documentKey, version])
+  @@index([featureTrigger, publishedStatus])
+  @@index([category, publishedStatus])
+}
+
+/// Append-only acceptance or acknowledgement. Never overwrite a prior row.
+model LegalAcceptance {
+  id                String        @id @default(cuid())
+  userId            String?
+  user              User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  subjectKey        String?
+  documentId        String
+  document          LegalDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  documentKey       String
+  documentVersion   String
+  documentHash      String
+  acceptedAt        DateTime      @default(now())
+  acceptanceType    String
+  acceptanceContext String
+  userRole          String?
+  country           String?
+  ip                String?
+  sessionMeta       String?
+
+  @@index([userId, documentKey])
+  @@index([subjectKey, documentKey])
+  @@index([documentId])
 }

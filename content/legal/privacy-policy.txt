@@ -1,0 +1,256 @@
+INFLURIOS
+
+Privacy Policy
+How Influrios collects, uses, shares, and protects personal data
+Draft for Counsel Review | Version 1.1 | September 30, 2026
+IMPORTANT: This is a business/legal drafting template, not a substitute for advice from licensed counsel. Complete all bracketed
+deployment fields, confirm the operating entity and jurisdictions, and obtain counsel review before publication or user acceptance.
+
+1. Scope
+This Privacy Policy applies to Influrios services operated by [OPERATING LEGAL ENTITY], including websites, apps,
+Influencer Cards, public profiles, business tools, collaboration workflows, managed services, communications, and related
+support. It does not replace privacy notices of third-party social networks, payment processors, or other integrated services.
+
+2. Data We Collect
+We may collect account and identity data; creator/business profile data; social account identifiers and authorized metrics;
+public or licensed creator information used for unclaimed profiles; content/portfolio data; contact and inquiry data;
+collaboration proposals, agreements, milestones and evidence; subscription and transaction metadata; device/log/security data;
+approximate location derived from IP or user choice; communication preferences; support records; and AI-generated
+classifications or recommendations. We aim to avoid collecting sensitive personal information unless required for a specific
+lawful feature or provider process.
+
+3. Sources
+Sources may include you; users acting with authority for an organization; connected social/platform APIs; payment/KYC
+providers; publicly available sources; licensed data providers; brand/agency submissions; cookies and analytics technologies;
+security/fraud systems; and AI tools processing permitted inputs.
+
+4. How We Use Data
+We use data to provide and secure accounts; create and maintain profiles/Cards; verify identity or social ownership; power
+search and matching; route inquiries; administer subscriptions; support collaboration agreements, funding, milestones and
+disputes; personalize features; measure performance; detect abuse; communicate; comply with law/provider obligations;
+conduct product analytics; and improve or develop features. Where required, we identify an appropriate legal basis such as
+contract, consent, legitimate interests, or legal obligation.
+
+5. AI, Profiling, and Automated Processing
+Influrios may classify specialties, generate profile summaries, recommend matches, detect anomalies, prioritize moderation, or
+assist search using automated systems. Creator-facing inferences should be editable or reviewable where practicable. Influrios
+
+fi
+
+fl
+
+fi
+
+fi
+
+fl
+
+fi
+
+fi
+
+fi
+
+fl
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft Legal Pack v1.0 | September 29, 2026
+
+does not intend to make significant legal or similarly consequential decisions solely by automation without the notices, rights,
+assessments, and safeguards required by applicable law.
+
+6. How We Share Data
+We may share data with service providers/processors; payment and KYC providers; AI and analytics vendors; cloud/email/
+security providers; counterparties in a collaboration where you direct or reasonably expect sharing; public visitors for profile
+information you make public or information lawfully displayed on an unclaimed public profile; professional advisers;
+authorities where legally required; and a successor in a corporate transaction. We do not sell private contact details as a
+directory product merely because they are stored in an account.
+
+7. Public Profiles and Cards
+Information you choose to publish, or limited information displayed on a lawfully created unclaimed profile, may be publicly
+accessible and indexed by search engines. Creators should use professional contact routes rather than private personal
+information. Claim/correction/removal rights are described in separate policies.
+
+8. Cookies and Tracking
+Influrios uses necessary cookies and may use analytics, preference, advertising, or similar technologies subject to the Cookie
+Policy and applicable consent/opt-out requirements. Where required, non-essential technologies are not activated until valid
+consent is obtained.
+
+9. Data Retention
+We retain data for the period reasonably necessary for the purposes described, including account operation, collaboration/
+payment records, fraud prevention, legal claims, tax/accounting, provider obligations, and consent evidence. Retention periods
+vary by data type and jurisdiction. Deleted data may remain in backups for a limited period and in records we must retain by
+law.
+
+10. Security
+Influrios uses administrative, technical, and organizational measures appropriate to the nature of the data, including access
+controls, encryption in transit, secure secret storage, audit logging, and provider delegation for sensitive payment/KYC data
+where possible. No system is completely secure.
+
+11. Your Rights
+Depending on location, you may have rights to access, correct, delete, obtain a copy/port data, restrict or object to processing,
+opt out of certain sale/sharing/targeted advertising/profiling, withdraw consent, appeal a privacy decision, or complain to a
+regulator. We will not discriminate against you for exercising applicable rights. Identity verification may be required.
+
+12. California and U.S. State Privacy
+Where applicable, Influrios will provide required notices about categories, purposes, sharing, rights, appeal procedures,
+sensitive data, targeted advertising, and profiling. If Influrios is determined to be a data broker in any jurisdiction, it will
+address applicable registration and deletion-platform obligations before operating that model there.
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft Legal Pack v1.0 | September 29, 2026
+
+13. EEA/UK and International Transfers
+Where GDPR/UK GDPR applies, Influrios will identify applicable legal bases, honor data-subject rights, and use an
+appropriate transfer mechanism for international transfers when required, such as adequacy decisions or approved contractual
+safeguards. Users may contact the privacy address below for more information.
+
+14. Children
+Commercial account registration is intended for adults 18+. Influrios does not knowingly operate a general commercial
+creator-account service for children under 13. If we learn that personal information from a child was collected in violation of
+applicable law, we will take appropriate steps to delete or otherwise address it.
+
+15. Changes
+We may update this Policy. Material changes will be communicated as required. The effective version and date will be
+displayed.
+
+16. Contact
+Privacy inquiries and rights requests: [PRIVACY@INFLURIOS.COM]. Legal entity: [OPERATING LEGAL ENTITY].
+Address: [REGISTERED BUSINESS ADDRESS].
+
+17. Connected Social Accounts and API Data
+When you connect a supported Social Platform account, Influrios may receive data made available by that platform within the
+permissions/scopes you authorize. Depending on the platform and feature, this may include account identifiers, handles,
+display name, profile image, bio, public content or content metadata, follower/subscriber counts, engagement and reach
+metrics, audience or performance insights, connected business/ad account identifiers, campaign/reporting data, and
+authorization metadata.
+•
+
+Influrios does not treat acceptance of Creator Terms as permission to access a third-party social account. Access is
+initiated only through the applicable platform authorization or another lawful authorized connection method.
+
+•
+
+Influrios uses connected Social Platform data to provide requested features such as verification, Card/profile enrichment,
+Influence Intelligence, search/matching, analytics, collaboration reporting, campaign administration, security/fraud
+controls, and support.
+
+•
+
+Influrios seeks to request only permissions reasonably necessary for the enabled feature and may require reauthorization if
+scopes or platform rules change.
+
+•
+
+Authentication/access tokens are treated as security credentials, are not displayed publicly, and should be stored with
+appropriate encryption/secret-management controls. Influrios does not ask users to provide a Social Platform password
+when an authorized OAuth or equivalent connection method exists.
+
+•
+
+Users may disconnect integrations or revoke platform permissions. Disconnection may stop future synchronization and
+may remove or deprecate connected metrics, while historical collaboration, legal, security, consent, and accounting
+records may be retained as permitted by law.
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft Legal Pack v1.0 | September 29, 2026
+
+•
+
+Connected Social Platform data is not automatically made public. The fields shown publicly depend on the creator’s
+settings, plan features, the relevant platform rules, and Influrios product design.
+
+•
+
+Influrios does not use connected Social Platform API data to train a general-purpose third-party AI model for that
+provider’s independent purposes unless that use is separately permitted by the platform rules, applicable law, and any
+required user authorization.
+
+•
+
+Business social/ad integrations are optional and ordinarily activated only for a collaboration, campaign, reporting feature,
+or other business-selected function.
+
+Additional details, including disconnection, deletion, platform-specific restrictions, and handling of derived metrics, are
+described in the Connected Social Data & API Policy.
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft Legal Pack v1.0 | September 29, 2026

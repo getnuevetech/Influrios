@@ -1,0 +1,57 @@
+5. Influrios Card Terms
+1. Product
+The Influrios Card is a vertical digital creator business card linked to a public online profile. It may include creator identity,
+image, specialty, location, social links, contact routes, shortlinks, QR codes, analytics, media-kit indicators, and collaboration
+actions according to plan entitlements.
+
+2. Plan Entitlements
+Feature availability is determined by the live admin-managed entitlement matrix, not by hard-coded plan names. Current
+launch defaults may include Starter with a standard public link and limited social presence, Plus with expanded social links/
+standard QR/shortlink, and Pro with dynamic QR and advanced professional features. Influrios may modify future entitlements
+with applicable notice.
+
+3. QR and Shortlinks
+A QR or shortlink is a routing tool, not a certi cation of the linked person. Dynamic QR destinations may be updated without
+changing the printed code. Influrios may suspend or reroute links for security, legal, impersonation, or policy reasons. Users
+must not use Cards to redirect visitors to malicious, deceptive, illegal, or unrelated content.
+
+4. Branding
+Starter and other tiers may display Influrios branding. Where a plan permits customization, creator themes must preserve
+required verification, safety, legal, and accessibility elements. A creator cannot alter a badge or interface to falsely imply
+endorsement, verified metrics, or a higher subscription tier.
+
+5. Analytics
+Card views, QR scans, clicks, and approximate location analytics are estimates subject to technical limitations, privacy
+controls, bot ltering, and platform settings. They are not audited advertising measurements unless expressly identified as such.
+
+6. Public Information
+Creators should publish professional information only. Do not place sensitive personal information, private addresses,
+authentication credentials, nancial account information, or other high-risk data on a public Card.
+
+fi
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026

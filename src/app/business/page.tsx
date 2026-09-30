@@ -14,7 +14,10 @@ import {
   type BusinessPlanCode,
 } from "@/lib/business-entitlements";
 import { getCreatorBySlug, SPECIALTY_TAXONOMY, specialtyLabel } from "@/lib/seed-data";
+import { getAccountSession } from "@/lib/accounts";
+import { hasCurrentLegalRecord } from "@/lib/legal";
 import {
+  actionAcceptBusinessTerms,
   actionAddShortlist,
   actionCreateBrief,
   actionRemoveShortlist,
@@ -71,6 +74,10 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
   ]);
   const fitLabel = fitRankingLabel(providerName);
   const queued = new Set(queuedIds);
+  const account = await getAccountSession().catch(() => null);
+  const businessTermsAccepted = account
+    ? await hasCurrentLegalRecord({ documentKey: "business-terms", userId: account.id }).catch(() => false)
+    : true;
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -115,6 +122,33 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             Managed matching requested. It is in the admin queue.
           </div>
+        ) : null}
+
+        {account && !businessTermsAccepted ? (
+          <form action={actionAcceptBusinessTerms} className="card-surface space-y-3 p-5">
+            <p className="text-sm font-semibold text-indigo">Business terms</p>
+            <label className="flex items-start gap-2 text-sm text-indigo">
+              <input type="checkbox" name="acceptBusiness" required className="mt-1 accent-violet" />
+              <span>
+                I agree to the{" "}
+                <Link href="/legal/terms-of-service" className="font-semibold underline" target="_blank">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href="/legal/business-terms" className="font-semibold underline" target="_blank">
+                  Business / Brand Terms
+                </Link>{" "}
+                and acknowledge the{" "}
+                <Link href="/legal/privacy-policy" className="font-semibold underline" target="_blank">
+                  Privacy Policy
+                </Link>
+                . Connecting a social account is separate and is not required to register.
+              </span>
+            </label>
+            <button type="submit" className="btn-primary !py-2 text-sm">
+              Accept business terms
+            </button>
+          </form>
         ) : null}
 
         {/* Plan switcher (demo — Stripe checkout on /billing) */}

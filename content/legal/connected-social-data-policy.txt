@@ -1,0 +1,141 @@
+INFLURIOS
+Connected Social Data & API Policy
+How Influrios handles data obtained through authorized social-platform integrations
+Draft for Counsel Review | Version 1.1 | September 30, 2026
+
+1. Purpose
+This Policy explains how Influrios handles information obtained through an authorized connection to a Social Platform. It
+supplements the Privacy Policy. It does not govern public-profile information collected independently from lawful public/licensed
+sources except where those datasets are combined in a permitted Influrios feature.
+
+2. Connected Data Categories
+Depending on the Social Platform, approved product feature, and scopes authorized by the user, connected data may include account
+IDs; usernames/handles; display names; profile images; bios; public profile links; content and content metadata; follower/subscriber
+counts; reach, impressions, views, watch time, engagement and other performance metrics; audience insights; channel/page/account
+analytics; business/ad/campaign identifiers; campaign reporting data; authorization scopes; token metadata; and connection status.
+
+3. Authorization and Choice
+Influrios obtains connected data through provider-approved APIs/SDKs or another lawful authorized method. A creator’s acceptance
+of Influrios Creator Terms is not a substitute for Social Platform authorization. Users may be able to grant only a subset of requested
+scopes and may revoke access later, depending on provider functionality.
+
+4. Purposes
+Connected data may be used for identity/account verification; creator profile/Card enrichment; Influence Intelligence; search and
+matching; collaboration recommendations; agreed campaign measurement/reporting; creator analytics; fraud/security; support;
+troubleshooting; and other user-requested functions described at collection.
+
+5. Data Minimization and Scope Control
+Influrios should request and process only data reasonably necessary for the enabled feature. New or materially broader data uses
+should trigger appropriate product, privacy, and provider review and any additional consent required by law or provider policy.
+
+6. Token and Credential Security
+
+fl
+
+fi
+
+fi
+
+fl
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+Influrios should store Social Platform access/refresh tokens using secure secret-management or encrypted storage, restrict staff access
+by role, log privileged actions, and never display access tokens in public/admin interfaces unnecessarily. Users should never be asked
+to send Social Platform passwords by email, chat, or support ticket where an authorized connection method exists.
+
+7. Public vs. Private Fields
+Only data designated for public display by Influrios product settings and permitted by the Social Platform is shown on a public
+profile/Card. Restricted insights, private campaign data, access tokens, private messages, and non-public business/ad data are not
+treated as public profile fields.
+
+8. Sharing
+Influrios may share connected data with service providers that help operate the feature; with collaboration counterparties when the
+user directs or reasonably expects the specific sharing; with authorities where legally required; or as otherwise described in the
+Privacy Policy. Connected data is not made broadly available to unrelated businesses simply because the creator is searchable on
+Influrios.
+
+9. AI Processing
+Influrios may submit minimized connected data to approved AI systems for permitted functions such as specialty analysis,
+summaries, matching, reporting, fraud/security or support. Connected Social Platform API data should not be used to train a generalpurpose third-party AI model for the AI provider’s independent benefit unless the Social Platform rules, law, and any required user
+authorization permit that use.
+
+10. Retention and Refresh
+Retention depends on the data type, feature, provider rules, legal obligations, and user settings. Influrios may refresh connected
+metrics while authorization remains active. Where a Social Platform requires periodic refresh, deletion, reauthorization, or restricted
+caching, Influrios will design the integration to comply with those requirements.
+
+11. Disconnection and Deletion
+When a user disconnects or revokes an integration, Influrios should stop future data collection from that connection after technical
+processing completes. Influrios may delete, de-identify, expire, or retain existing data according to provider rules, the Privacy Policy,
+legal obligations, contracts, fraud/security needs, and accounting/payment retention requirements. Users may submit deletion
+requests through [PRIVACY@INFLURIOS.COM] or an available self-service control.
+
+12. Business Integrations
+Business Social Platform integrations are optional by default and ordinarily enabled for specific collaboration, campaign, reporting,
+advertising, or analytics functions. Private business/ad account data is compartmentalized according to account permissions and
+collaboration access rules.
+
+13. Platform Changes and Availability
+Social Platforms control their APIs and may modify scopes, quotas, terms, app-review requirements, retention rules, or data
+availability. Influrios may adjust or discontinue an integration to remain compliant or operational.
+
+14. Your Rights
+
+fl
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fi
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+Depending on applicable law and provider functionality, users may request access, correction, deletion, portability, restriction/
+objection, consent withdrawal, or disconnection. Influrios may need to verify identity before ful lling a request.
+
+15. Contact
+Privacy and connected-data requests: [PRIVACY@INFLURIOS.COM]. Integration support: [SUPPORT@INFLURIOS.COM].

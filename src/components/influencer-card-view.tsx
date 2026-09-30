@@ -26,6 +26,7 @@ export function InfluencerCardView({
   qrDisplay = "default",
   compact = false,
   hideCta = false,
+  linkLabel = null,
 }: {
   creator: SeedCreator;
   /** Effective entitlements. When omitted, launch defaults for the creator plan are used. */
@@ -36,6 +37,7 @@ export function InfluencerCardView({
   compact?: boolean;
   /** Hide primary CTA (used on profile card preview). */
   hideCta?: boolean;
+  linkLabel?: string | null;
 }) {
   const entitlements =
     entitlementOverride ??
@@ -49,9 +51,11 @@ export function InfluencerCardView({
   // Popup QR: 160px = 200px − 20%
   const qrPx = largeQr ? (compact ? 140 : 168) : 22;
 
-  const cardUrl = chrome.showShortlink
-    ? `ic.me/${creator.slug.split("-")[0]}`
-    : `influrios.com/c/${creator.slug}`;
+  const cardUrl =
+    linkLabel ||
+    (chrome.showShortlink
+      ? `inflr.me/${creator.slug.split("-")[0]}`
+      : `influrios.com/c/${creator.slug}`);
 
   return (
     <div

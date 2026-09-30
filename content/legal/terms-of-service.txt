@@ -1,0 +1,319 @@
+INFLURIOS
+
+Terms of Service
+Master terms governing access to and use of Influrios
+Draft for Counsel Review | Version 1.1 | September 30, 2026
+IMPORTANT: This is a business/legal drafting template, not a substitute for advice from licensed counsel. Complete all bracketed
+deployment fields, confirm the operating entity and jurisdictions, and obtain counsel review before publication or user acceptance.
+
+1. Agreement to These Terms
+These Terms of Service (“Terms”) are a contract between you and [OPERATING LEGAL ENTITY], doing business as
+Influrios (“Influrios,” “we,” “us,” or “our”). By accessing or using the Services, creating an account, claiming a profile,
+purchasing a subscription, or accepting a collaboration, you agree to these Terms and incorporated policies. If you use Influrios
+for an organization, you represent that you have authority to bind it.
+
+2. Eligibility
+Registered and commercial users must be at least 18 years old and legally capable of entering contracts, unless Influrios has
+activated a separately approved minor/guardian program in the applicable jurisdiction. You may not use the Services if
+prohibited by law, sanctions, payment-provider rules, or these Terms.
+
+3. The Services
+Influrios provides creator discovery, public profiles, Influencer Cards, QR/shortlink tools, collaboration matching, business
+inquiry routing, analytics, AI-assisted classification, subscription features, managed services where enabled, and collaboration
+workflow/payment tools. Features vary by plan, country, account type, entitlement, legal status, and provider capability.
+
+4. Accounts and Security
+You must provide accurate account information, safeguard credentials, use only accounts you are authorized to control, and
+promptly notify Influrios of unauthorized access. Influrios may require identity, business, social-account, payment, or other
+verification.
+
+5. Public and Unclaimed Profiles
+Influrios may create unclaimed creator profiles from information that is public, licensed, creator-authorized, or otherwise
+lawfully available. Unclaimed profiles must be presented as unclaimed/not creator-verified. A person shown may claim,
+correct, dispute, or request removal of a profile under the applicable policy. Influrios does not guarantee that public or inferred
+profile information is complete or current.
+
+fl
+
+fi
+
+fl
+
+fi
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fi
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft Legal Pack v1.0 | September 29, 2026
+
+6. User Content and License
+You retain ownership of content you own. You grant Influrios a non-exclusive, worldwide, royalty-free license to host,
+reproduce, format, display, transmit, and technically process content you submit as reasonably necessary to operate, secure,
+promote, and improve the Services and to provide features you request. This license does not transfer ownership. Separate
+collaboration agreements control brand/creator content licenses.
+
+7. AI and Automated Features
+Influrios may use automated tools to extract, classify, summarize, recommend, moderate, detect fraud, or match accounts and
+opportunities. Outputs may be inaccurate and are not guarantees. Where applicable, users may edit creator-facing
+classifications, request review, or exercise rights under privacy law. Influrios will not represent sensitive-trait inferences as
+verified facts merely because an automated system produced them.
+
+8. Collaborations and Platform Role
+Unless a separate signed managed-services agreement says otherwise, Influrios is a technology platform and facilitator, not the
+employer, partner, joint venturer, duciary, exclusive agent, or legal representative of a creator or business. Users are
+responsible for evaluating counterparties, campaign claims, taxes, licenses, intellectual-property rights, advertising
+disclosures, and business decisions. Influrios does not guarantee a deal, payment, audience result, campaign performance, or
+legal compliance by another user.
+
+9. Fees and Payments
+Influrios may charge subscriptions, platform/service fees, collaboration fees, managed-service fees, payment/FX fees,
+advertising fees, or other charges disclosed before acceptance. Actual percentages or amounts may vary by live adminconfigured rules. Once a collaboration is accepted, the fee snapshot for that deal is frozen unless the affected parties accept a
+valid change order. Payment services may be provided by third-party processors under their terms.
+
+10. Protected Collaboration Payments
+Where enabled, a brand may fund a collaboration through an approved provider before release to the creator based on agreed
+milestones. Influrios may describe this as protected or milestone-based payment unless an approved jurisdiction/provider
+expressly permits the term “escrow.” Funding, holds, releases, refunds, chargebacks, KYC, and payout timing remain subject
+to provider rules and the applicable collaboration/payment policy.
+
+11. Subscriptions
+Paid plans renew, change, or terminate according to the Subscription, Billing, Cancellation & Refund Terms displayed at
+checkout. Entitlements may differ by plan and country. Influrios may change future pricing or plan features with appropriate
+notice, but will not retroactively rewrite an already accepted collaboration fee snapshot.
+
+12. Acceptable Use
+You must comply with the Community Guidelines and may not impersonate others, commit fraud, buy/sell fake social
+in uence indicators, abuse outreach, scrape or harvest data in prohibited ways, infringe intellectual property, circumvent
+access controls, publish unlawful content, or use Influrios to violate advertising, privacy, employment/talent, payment,
+sanctions, or other laws.
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+fi
+
+fl
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft Legal Pack v1.0 | September 29, 2026
+
+13. Veri cation and Metrics
+Badges and metrics have the limited meanings stated in the Veri cation Policy. A verification badge is not an endorsement or
+warranty of quality, character, solvency, legal compliance, or future performance. Users must not manipulate metrics or
+knowingly present fake followers/views/engagement as genuine.
+
+14. Third-Party Services
+Influrios may integrate social networks, payment providers, analytics, AI providers, email/SMS tools, and other third parties.
+Their availability and terms are outside Influrios’ control. You authorize Influrios to exchange data with them as needed for
+requested features and as described in the Privacy Policy.
+
+15. Suspension and Termination
+Influrios may restrict, suspend, or terminate accounts, listings, profiles, payouts, or features when reasonably necessary for
+security, fraud prevention, legal compliance, provider requirements, nonpayment, serious policy violations, or protection of
+users. Where appropriate, Influrios will provide notice and an appeal path.
+
+16. Disclaimers
+THE SERVICES ARE PROVIDED “AS IS” AND “AS AVAILABLE” TO THE MAXIMUM EXTENT PERMITTED BY
+LAW. INFLURIOS DOES NOT WARRANT THAT DATA, AI OUTPUTS, MATCHES, METRICS, THIRD-PARTY
+CONTENT, OR COLLABORATIONS ARE ERROR-FREE OR SUITABLE FOR A PARTICULAR BUSINESS PURPOSE.
+NOTHING ON INFLURIOS IS LEGAL, TAX, FINANCIAL, EMPLOYMENT, OR TALENT-AGENCY ADVICE.
+
+17. Limitation of Liability
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, INFLURIOS AND ITS AFFILIATES, OWNERS, OFFICERS,
+EMPLOYEES, CONTRACTORS, AND PROVIDERS WILL NOT BE LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL,
+CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, LOST PROFITS, LOST OPPORTUNITIES, OR LOSS
+OF DATA. EXCEPT WHERE LAW REQUIRES OTHERWISE, AGGREGATE LIABILITY ARISING FROM THE
+SERVICES WILL NOT EXCEED THE GREATER OF (A) FEES YOU PAID DIRECTLY TO INFLURIOS FOR THE
+RELEVANT SERVICE DURING THE 12 MONTHS BEFORE THE CLAIM OR (B) US$100. THESE LIMITATIONS DO
+NOT EXCLUDE LIABILITY THAT CANNOT LAWFULLY BE LIMITED.
+
+18. Indemni cation
+To the extent permitted by law, you will defend, indemnify, and hold harmless Influrios and its protected parties from thirdparty claims arising from your content, campaigns, products, endorsements, misuse of another person’s rights, violation of law,
+breach of these Terms, or your contractual relationship with another user. Influrios will provide reasonable notice and
+cooperation. Consumer rights that cannot lawfully be waived remain unaffected.
+
+19. Disputes and Governing Law
+These Terms are governed by [GOVERNING LAW / VENUE TO BE CONFIRMED BY COUNSEL], subject to mandatory
+consumer/privacy laws that apply regardless of contractual choice. Any optional U.S. arbitration/class-action waiver must be
+separately activated only after counsel approval and clear user notice. Before litigation, the parties should attempt good-faith
+informal resolution through [LEGAL@INFLURIOS.COM].
+
+fi
+
+fl
+
+fl
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft Legal Pack v1.0 | September 29, 2026
+
+20. Changes to Terms
+Influrios may update these Terms for legal, security, provider, or product reasons. Material changes will be communicated as
+required by law. A new version does not retroactively alter a collaboration-specific commercial snapshot unless the parties
+accept a valid amendment.
+
+21. Contact
+Legal notices: [LEGAL@INFLURIOS.COM]. Business address: [REGISTERED BUSINESS ADDRESS]. Privacy requests:
+[PRIVACY@INFLURIOS.COM]. Support: [SUPPORT@INFLURIOS.COM].
+
+22. Social Platform Integrations and Connected Accounts
+Influrios may offer integrations with third-party social networks, creator platforms, business/ad accounts, analytics services,
+and related APIs (“Social Platforms”). These integrations are governed by these Terms, the role-specific terms, the Social
+Platform Integration & Connected Accounts Terms, the Connected Social Data & API Policy, and the applicable Social
+Platform’s own terms and policies.
+•
+
+Creator applicability. Every creator/in uencer account accepts the Social Platform Integration & Connected Accounts
+Terms as part of creator onboarding or profile claiming, whether or not the creator immediately connects a Social Platform
+account. Acceptance establishes the rules that will apply if/when a connection is made; it does not itself grant Influrios
+access to a third-party account.
+
+•
+
+Platform authorization. Actual access to connected-account data requires the authorization, OAuth consent, scope grant,
+or other approval required by the applicable Social Platform. Influrios will not request a creator’s or business’s Social
+Platform password where the platform provides an authorized connection method.
+
+•
+
+Business applicability. Business/brand Social Platform integration is optional by default and applies when a business
+chooses or is required for a collaboration to connect an authorized business, social, advertising, analytics, or campaign
+account.
+
+•
+
+Authorized use. Influrios may use connected-account data only for enabled and disclosed purposes such as account
+verification, Card/profile enrichment, permitted metrics, Influence Intelligence, collaboration matching, campaign
+reporting, fraud/security review, and other features the user requests or authorizes.
+
+•
+
+Control and revocation. A user may disconnect a supported integration or revoke permissions through Influrios and/or the
+Social Platform, subject to retention of transaction, consent, security, legal, or collaboration records that Influrios is
+permitted or required to retain.
+
+•
+
+Third-party dependency. Social Platforms may change APIs, permissions, quotas, data availability, review requirements,
+or terms at any time. Influrios does not guarantee uninterrupted access to any third-party integration.
+
+•
+
+No unauthorized account use. You may connect only accounts you own, control, or are legally authorized to administer,
+and you must not use Influrios to circumvent platform access controls, scrape private data, or misuse access tokens.
+
+fl
+
+fl
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+fi
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft Legal Pack v1.0 | September 29, 2026

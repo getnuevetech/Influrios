@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isShortLinkHost } from "@/lib/short-link-hosts";
 
 /** Cookie name must match ADMIN_COOKIE in admin-auth.ts */
 const ADMIN_COOKIE = "influrios_admin_session";
@@ -10,6 +11,14 @@ const GUEST_COOKIE = "influrios_guest";
  */
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  if (isShortLinkHost(host)) {
+    if (pathname === "/api/short/resolve") return NextResponse.next();
+    const url = req.nextUrl.clone();
+    url.pathname = "/api/short/resolve";
+    url.searchParams.set("path", pathname);
+    return NextResponse.rewrite(url);
+  }
   const requestHeaders = new Headers(req.headers);
   let guest = req.cookies.get(GUEST_COOKIE)?.value;
   const minted = !guest;

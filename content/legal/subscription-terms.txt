@@ -1,0 +1,53 @@
+6. Subscription, Billing, Cancellation & Refund Terms
+1. Plans and Pricing
+Subscription prices, billing periods, entitlements, taxes, and promotional terms are displayed at checkout and may vary by
+country, currency, account type, or plan. The checkout disclosure controls the purchased term unless a signed order form says
+otherwise.
+
+2. Automatic Renewal
+If a subscription is sold on an automatically renewing basis, Influrios will disclose the recurring nature, amount/frequency, and
+cancellation method before purchase as required by applicable law. By accepting the recurring subscription, you authorize
+recurring charges until cancellation becomes effective.
+
+3. Upgrades and Downgrades
+Upgrades may take effect immediately or at the next billing period as disclosed. Downgrades may take effect at the end of the
+current paid period unless law or the checkout flow provides otherwise. Loss of an entitlement may disable future use of a
+feature without deleting historical records that Influrios must retain.
+
+4. Cancellation
+You may cancel through the account control provided for the subscription or other legally required method. Cancellation stops
+future renewal but does not automatically reverse completed charges. Influrios should not require materially more burdensome
+cancellation steps than the purchase channel permits.
+
+5. Refunds
+Except where law, a promotional guarantee, or a specific order form provides otherwise, subscription fees are generally nonrefundable after the service period begins. Influrios may issue discretionary credits. Collaboration funds, advertising orders,
+and managed-service fees follow their separate terms.
+
+6. Failed Payments
+Influrios may retry failed charges, suspend paid features, downgrade access, or terminate a paid plan after reasonable notice.
+Failed subscription payment does not alter a collaboration payment obligation already accepted under a separate collaboration
+agreement.
+
+7. Taxes
+Prices may exclude applicable sales, use, VAT, GST, or similar taxes unless checkout states otherwise. Users are responsible for
+taxes not collected by Influrios.
+
+fl
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026

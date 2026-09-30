@@ -64,6 +64,7 @@ export async function registerAccount(input: {
   name: string;
   password: string;
   source: string;
+  ip?: string | null;
 }) {
   const email = input.email.trim().toLowerCase();
   const name = input.name.trim();
@@ -90,6 +91,14 @@ export async function registerAccount(input: {
 
   await prisma.consentRecord.create({
     data: { userId: user.id, version: policy.consentVersion, source: input.source },
+  });
+  const { recordLegalEvent } = await import("@/lib/legal");
+  await recordLegalEvent({
+    trigger: "registration",
+    context: "registration",
+    userId: user.id,
+    userRole: user.role,
+    ip: input.ip,
   });
   await issueEmailChallenge(user.id);
   return user;
