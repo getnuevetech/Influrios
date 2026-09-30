@@ -142,10 +142,12 @@ export default async function AdminInvitationsPage({
                   <p className="mt-2 text-xs text-muted">
                     {data.smtp ? "SMTP is configured. Send queues delivery; it does not mark the invite sent." : "Email send is inactive until SMTP is configured."}
                   </p>
-                  <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-muted">
-                    Claim link
-                    <input readOnly value={link} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-mono text-xs font-normal text-indigo" />
-                  </label>
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted">Claim link</p>
+                    <a href={link} className="mt-1 block break-all text-sm font-semibold text-violet">
+                      {link}
+                    </a>
+                  </div>
                   {canEdit ? (
                     <form action={actionCopyInvitationLink} className="mt-2">
                       <input type="hidden" name="id" value={invitation.id} />
