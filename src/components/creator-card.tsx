@@ -26,6 +26,14 @@ const BADGE_STYLES: Record<string, string> = {
   "High Engagement": "bg-[#633CFF] text-white",
 };
 
+const DISCOVER_BADGES: Record<string, { label: string; className: string }> = {
+  "Top Creator": { label: "Top Match", className: "bg-[#2979FF] text-white" },
+  "Rising Star": { label: "Rising Star", className: "bg-[#E879F9] text-white" },
+  "Business Friendly": { label: "Brand Friendly", className: "bg-[#7C4DFF] text-white" },
+  "Fast Growing": { label: "Fast Growing", className: "bg-[#14B8A6] text-white" },
+  "High Engagement": { label: "High Engagement", className: "bg-[#F97316] text-white" },
+};
+
 const DEFAULT_FEATURES: CardFeatureFlags = {
   showBadge: true,
   showHeart: true,
@@ -55,6 +63,8 @@ export type CreatorCardProps = {
    * View Profile CTA still navigates to the full profile page.
    */
   qrOpensPopup?: boolean;
+  /** Discover template: badge names, bio, and View Profile beside the QR. */
+  layout?: "grid" | "discover";
 };
 
 export async function CreatorCard({
@@ -67,12 +77,18 @@ export async function CreatorCard({
   showBio = false,
   showViewProfile = false,
   qrOpensPopup = false,
+  layout = "grid",
 }: CreatorCardProps) {
+  const discover = layout === "discover";
   const features = { ...DEFAULT_FEATURES, ...featureOverrides };
   const entitlements = await entitlementsForPlan(creator.planTier);
   const canQr = cardChrome(entitlements).showQr;
   const showQr = features.showQr && canQr;
-  const badgeClass = BADGE_STYLES[creator.badge] ?? "bg-white text-violet";
+  const discoverBadge = DISCOVER_BADGES[creator.badge];
+  const badgeClass = discover
+    ? (discoverBadge?.className ?? "bg-[#633CFF] text-white")
+    : (BADGE_STYLES[creator.badge] ?? "bg-white text-violet");
+  const badgeLabel = discover ? (discoverBadge?.label ?? creator.badge) : creator.badge;
 
   const socials = creator.socials.filter((s) =>
     features.visiblePlatforms.length
@@ -85,7 +101,7 @@ export async function CreatorCard({
       style={widthPx ? { width: widthPx, minWidth: widthPx } : undefined}
       className={`group flex ${widthPx ? "shrink-0" : "w-full"} flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-[0_12px_32px_rgba(17,26,90,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-xl`}
     >
-      <div className="relative h-52 overflow-hidden">
+      <div className={`relative overflow-hidden ${discover ? "h-48 sm:h-52" : "h-52"}`}>
         <Image
           src={creator.image}
           alt={creator.displayName}
@@ -98,7 +114,7 @@ export async function CreatorCard({
           <span
             className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold shadow ${badgeClass}`}
           >
-            {creator.badge}
+            {badgeLabel}
           </span>
         ) : null}
         {features.showHeart ? <ShortlistHeartButton slug={creator.slug} /> : null}
@@ -161,7 +177,7 @@ export async function CreatorCard({
             <span />
           )}
 
-          {features.showQr && qrOpensPopup ? (
+          {discover ? null : features.showQr && qrOpensPopup ? (
             <CreatorCardQrButton
               creator={creator}
               entitlements={entitlements}
@@ -196,12 +212,22 @@ export async function CreatorCard({
         </div>
 
         {showViewProfile ? (
-          <Link
-            href={`/creators/${creator.slug}`}
-            className="btn-primary mt-1 mb-1 w-full !py-2 text-center text-xs"
-          >
-            View Profile →
-          </Link>
+          <div className={`mt-1 flex items-center gap-2 ${discover ? "pb-3" : "mb-1"}`}>
+            <Link
+              href={`/creators/${creator.slug}`}
+              className="btn-primary min-w-0 flex-1 !py-2 text-center text-xs"
+            >
+              View Profile →
+            </Link>
+            {discover && features.showQr && qrOpensPopup ? (
+              <CreatorCardQrButton
+                creator={creator}
+                entitlements={entitlements}
+                qrSize={36}
+                hasQr={showQr}
+              />
+            ) : null}
+          </div>
         ) : null}
       </div>
 

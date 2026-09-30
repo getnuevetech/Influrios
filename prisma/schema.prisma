@@ -43,6 +43,13 @@ enum ProfileState {
   RESTRICTED
 }
 
+enum OnboardingState {
+  DRAFT
+  CLAIMED
+  EMAIL_VERIFIED
+  PUBLISHED
+}
+
 enum SocialPlatform {
   INSTAGRAM
   TIKTOK
@@ -321,4 +328,55 @@ model AnalyticsEvent {
   cardId      String?
   metaJson    Json?
   createdAt   DateTime @default(now())
+}
+
+/// Claim funnel session. Email verification is separate from social verification.
+model OnboardingSession {
+  id               String           @id
+  state            OnboardingState  @default(DRAFT)
+  inputHandle      String
+  platform         String
+  draftSlug        String           @unique
+  email            String?
+  ownerName        String?
+  emailVerifiedAt  DateTime?
+  socialVerifiedAt DateTime?
+  publishedAt      DateTime?
+  verifyMethod     String           @default("DEMO_CODE")
+  payload          Json
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  claims           ProfileClaim[]
+  attempts         VerificationAttempt[]
+}
+
+model ProfileClaim {
+  id        String             @id @default(cuid())
+  sessionId String
+  session   OnboardingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  creatorId String?
+  email     String
+  status    String
+  createdAt DateTime           @default(now())
+}
+
+model VerificationAttempt {
+  id        String            @id @default(cuid())
+  sessionId String
+  session   OnboardingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  method    String
+  channel   String
+  success   Boolean           @default(false)
+  detail    String?
+  createdAt DateTime          @default(now())
+}
+
+model ProfileCompletionRule {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  label     String
+  hint      String
+  weight    Int
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
 }

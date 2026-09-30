@@ -1,5 +1,6 @@
 import type { PlanTier, Prisma, SocialPlatform } from "@prisma/client";
 import { listPublishedClaimCreators } from "@/lib/claim";
+import { toPublicProfile } from "@/lib/onboarding";
 import { prisma } from "@/lib/db";
 import { isPlanCode } from "@/lib/entitlements";
 import {
@@ -126,8 +127,9 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
     followers: social.followers ?? 0,
   }));
   const planTier = isCreatorPlan(row.planTier) ? row.planTier : "STARTER";
+  const publicBase = toPublicProfile(base);
   return {
-    ...base,
+    ...publicBase,
     slug: row.slug,
     displayName: row.displayName,
     title: row.title || base.title,
@@ -153,7 +155,7 @@ function fallbackSnapshot(): Cache {
   }));
   return {
     at: Date.now(),
-    creators: SEED_CREATORS,
+    creators: SEED_CREATORS.map((creator) => toPublicProfile(creator)),
     taxonomy,
     synonyms: DEFAULT_SYNONYMS,
     sections: DEFAULT_HOMEPAGE_SECTIONS.map((section, index) => ({
@@ -352,12 +354,16 @@ export async function getDirectoryCreator(slug: string): Promise<SeedCreator | n
 
 export async function searchDirectory(query: CreatorSearchQuery) {
   const directory = await getDirectory();
-  const specialty = canonicalSpecialty(query.specialty, directory.synonyms);
+  const specialtyValues = query.specialty
+    ? (Array.isArray(query.specialty) ? query.specialty : [query.specialty]).map(
+        (value) => canonicalSpecialty(value, directory.synonyms) ?? value,
+      )
+    : undefined;
   const q = canonicalSpecialty(query.q, directory.synonyms);
   const textQuery = query.q && q !== query.q.toLowerCase().trim() ? q : query.q;
   return filterCreators(
     directory.creators,
-    { ...query, specialty, q: textQuery },
+    { ...query, specialty: specialtyValues, q: textQuery },
     directory.synonyms,
   );
 }

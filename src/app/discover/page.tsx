@@ -1,40 +1,40 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CreatorCard } from "@/components/creator-card";
-import { PageShell } from "@/components/page-shell";
+import { DiscoverFilters, DiscoverSort } from "@/components/discover-filters";
+import { CategoryGlyph, IconArrowRight, IconSearch } from "@/components/icons";
 import { getDirectory, recordDirectoryEvent } from "@/lib/directory";
-import { filterCreators, languageOptionsFor, locationOptionsFor } from "@/lib/seed-data";
+import { filterCreators, formatFollowers, languageOptionsFor, totalFollowers } from "@/lib/seed-data";
 import { canonicalSpecialty } from "@/lib/taxonomy";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: Promise<{
-    q?: string;
-    specialty?: string;
-    country?: string;
-    state?: string;
-    city?: string;
-    platform?: string;
-    language?: string;
-    followersMin?: string;
-    followersMax?: string;
-    engagementMin?: string;
-    openToCollab?: string;
-    verified?: string;
-    sort?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export const metadata = {
-  title: "Discover",
+  title: "Discover Influencers",
 };
+
+const CHIP_ORDER = ["beauty", "travel", "fitness", "home-interior", "hair", "food", "tech", "lifestyle"];
 
 const PLATFORMS = [
   { value: "INSTAGRAM", label: "Instagram" },
   { value: "TIKTOK", label: "TikTok" },
   { value: "YOUTUBE", label: "YouTube" },
   { value: "X", label: "X" },
+  { value: "PINTEREST", label: "Pinterest" },
 ] as const;
+
+function list(value: string | string[] | undefined): string[] {
+  if (!value) return [];
+  return (Array.isArray(value) ? value : [value]).flatMap((item) => item.split(",")).filter(Boolean);
+}
+
+function first(value: string | string[] | undefined): string {
+  return list(value)[0] ?? "";
+}
 
 export default async function DiscoverPage({ searchParams }: Props) {
   const params = await searchParams;
@@ -42,321 +42,256 @@ export default async function DiscoverPage({ searchParams }: Props) {
   const taxonomy = directory.taxonomy
     .filter((node) => node.active)
     .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
+  const specialties = list(params.specialty).map((slug) => canonicalSpecialty(slug, directory.synonyms) || slug);
+  const countries = list(params.country);
+  const platforms = list(params.platform);
+  const q = first(params.q);
+  const sort = first(params.sort) || "relevant";
   const results = filterCreators(
     directory.creators,
-    { ...params, specialty: canonicalSpecialty(params.specialty, directory.synonyms) },
+    {
+      q,
+      specialty: specialties,
+      country: countries,
+      state: first(params.state),
+      city: first(params.city),
+      platform: platforms,
+      language: first(params.language),
+      followersMin: first(params.followersMin),
+      followersMax: first(params.followersMax),
+      engagementMin: first(params.engagementMin),
+      engagementMax: first(params.engagementMax),
+      collabType: first(params.collabType),
+      rate: first(params.rate),
+      openToCollab: first(params.openToCollab),
+      verified: first(params.verified),
+      sort,
+    },
     directory.synonyms,
   );
-  const locations = locationOptionsFor(directory.creators);
-  const languages = languageOptionsFor(directory.creators);
   await recordDirectoryEvent("search_submitted", {
-    q: params.q ?? "",
-    specialty: params.specialty ?? "",
-    country: params.country ?? "",
-    platform: params.platform ?? "",
+    q,
+    specialty: specialties.join(","),
+    country: countries.join(","),
+    platform: platforms.join(","),
     resultCount: results.length,
     authenticated: false,
   });
-  const selectedCountry = locations.find((c) => c.country === params.country);
-  const selectedState = selectedCountry?.states.find((s) => s.state === params.state);
-  const specialtyCounts = Object.fromEntries(
-    taxonomy.map((s) => [
-      s.slug,
-      directory.creators.filter((c) => c.specialties.includes(s.slug)).length,
-    ]),
-  );
+
+  const categories = [...taxonomy].sort((a, b) => {
+    const ai = CHIP_ORDER.indexOf(a.slug);
+    const bi = CHIP_ORDER.indexOf(b.slug);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+  const chipCategories = CHIP_ORDER.flatMap((slug) => categories.filter((item) => item.slug === slug)).slice(0, 8);
+  const categoryOptions = categories.map((item) => ({
+    value: item.slug,
+    label: item.name,
+    count: directory.creators.filter((creator) => creator.specialties.includes(item.slug)).length,
+  }));
+  const countryNames = [...new Set(directory.creators.map((creator) => creator.locationCountry))].sort();
+  const locationOptions = countryNames.map((country) => ({
+    value: country,
+    label: country,
+    count: directory.creators.filter((creator) => creator.locationCountry === country).length,
+  }));
+  const platformOptions = PLATFORMS.map((platform) => ({
+    value: platform.value,
+    label: platform.label,
+    count: directory.creators.filter((creator) => creator.socials.some((social) => social.platform === platform.value)).length,
+  }));
+  const languages = languageOptionsFor(directory.creators);
+  const topMatches = results.slice(0, 5);
+  const heroCards = directory.creators.slice(0, 3);
+  const activeChip = specialties[0] ?? "";
 
   return (
-    <div className="bg-[#F7FAFF] pb-16">
-      {/* Hero search */}
-      <section className="border-b border-border/70 bg-white">
-        <PageShell className="py-10">
-          <div className="grid items-end gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <div>
-              <h1 className="font-display text-3xl font-bold text-indigo sm:text-4xl lg:text-5xl">
-                Discover influencers
-              </h1>
-              <p className="mt-3 max-w-2xl text-muted">
-                Find creators by specialty, location, and platform — organized around what they
-                actually influence. Tap ♡ to shortlist for your{" "}
-                <Link href="/business" className="font-semibold text-violet hover:underline">
-                  Business workspace
-                </Link>
-                .
-              </p>
-              <form className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <input type="hidden" name="specialty" value={params.specialty ?? ""} />
-                <input type="hidden" name="country" value={params.country ?? ""} />
-                <input type="hidden" name="state" value={params.state ?? ""} />
-                <input type="hidden" name="city" value={params.city ?? ""} />
-                <input type="hidden" name="platform" value={params.platform ?? ""} />
-                <input
-                  name="q"
-                  defaultValue={params.q}
-                  placeholder="Search influencers by name, niche, keyword, or location…"
-                  className="flex-1 rounded-full border border-border bg-white px-5 py-3.5 text-sm outline-none focus:ring-2 focus:ring-violet"
-                />
-                <button type="submit" className="btn-primary shrink-0 !px-8">
-                  Search →
-                </button>
-              </form>
-            </div>
-            <p className="hidden text-right font-display text-lg italic text-violet/80 lg:block">
-              Find amazing creators for your next campaign
+    <div className="bg-[#F4F7FF] pb-16">
+      <section className="relative overflow-hidden border-b border-[#E4E9F5] bg-[radial-gradient(ellipse_at_top_right,_#E7DEFF_0%,_#F7FAFF_42%,_#EEF3FF_100%)]">
+        <div className="pointer-events-none absolute -right-16 top-0 h-72 w-72 rounded-full bg-[#C4B5FD]/40 blur-3xl" />
+        <div className="relative mx-auto grid w-full max-w-[90rem] items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-10 lg:py-14">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-violet">
+              Home <span className="text-muted">/</span> Discover
             </p>
+            <h1 className="mt-3 font-display text-4xl font-bold text-indigo sm:text-5xl">Discover Influencers</h1>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
+              Find the perfect creators for your brand. Search by niche, location, audience and more to
+              build meaningful collaborations.
+            </p>
+            <form action="/discover" className="mt-6 flex max-w-2xl items-center gap-2 rounded-full bg-white p-1.5 shadow-[0_16px_40px_rgba(99,60,255,0.12)] ring-1 ring-[#E4E9F5]">
+              {specialties.map((value) => (
+                <input key={value} type="hidden" name="specialty" value={value} />
+              ))}
+              {countries.map((value) => (
+                <input key={value} type="hidden" name="country" value={value} />
+              ))}
+              {platforms.map((value) => (
+                <input key={value} type="hidden" name="platform" value={value} />
+              ))}
+              <input type="hidden" name="language" value={first(params.language)} />
+              <input type="hidden" name="sort" value={sort} />
+              <span className="pl-3 text-violet">
+                <IconSearch size={18} />
+              </span>
+              <input
+                name="q"
+                defaultValue={q}
+                placeholder="Search influencers by name, niche, keyword, or location…"
+                className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-sm text-indigo outline-none"
+              />
+              <button type="submit" className="btn-primary shrink-0 !px-6 !py-2.5 text-sm">
+                Search <IconArrowRight size={14} />
+              </button>
+            </form>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            {taxonomy.slice(0, 8).map((s) => (
+          <div className="relative hidden h-64 lg:block">
+            <p className="absolute left-6 top-2 z-10 max-w-[12rem] font-script text-2xl leading-tight text-violet">
+              Find Amazing Creators For Your Next Campaign
+            </p>
+            {heroCards.map((creator, index) => (
               <Link
-                key={s.slug}
-                href={`/discover?specialty=${s.slug}`}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-                  params.specialty === s.slug
-                    ? "bg-violet text-white"
-                    : "bg-lavender text-violet hover:bg-violet/15"
+                key={creator.slug}
+                href={`/creators/${creator.slug}`}
+                className={`absolute overflow-hidden rounded-2xl shadow-xl ring-2 ring-white ${
+                  index === 0
+                    ? "left-0 top-16 h-40 w-28 rotate-[-8deg]"
+                    : index === 1
+                      ? "left-24 top-6 h-44 w-32 rotate-[4deg]"
+                      : "right-2 top-14 h-40 w-28 rotate-[8deg]"
                 }`}
               >
-                {s.name}
+                <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="140px" />
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-8 text-[10px] font-bold uppercase tracking-wide text-white">
+                  {creator.specialties[0]?.replace("-", " ") ?? "Creator"}
+                </span>
               </Link>
             ))}
-            <Link href="/discover" className="ml-auto text-xs font-bold text-violet hover:underline">
-              View all categories →
-            </Link>
+            <p className="absolute bottom-2 right-4 max-w-[10rem] text-right font-script text-xl text-indigo">
+              Great Collaborations. Brighter Brands Together.
+            </p>
           </div>
-        </PageShell>
+        </div>
+
+        <div className="relative mx-auto flex w-full max-w-[90rem] items-center gap-2 overflow-x-auto px-4 pb-5 sm:px-6 lg:px-10">
+          <div className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto">
+            {chipCategories.map((item) => {
+              const active = activeChip === item.slug;
+              return (
+                <Link
+                  key={item.slug}
+                  href={active ? "/discover" : `/discover?specialty=${item.slug}`}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${
+                    active ? "bg-violet text-white" : "bg-white text-indigo ring-1 ring-[#E4E9F5]"
+                  }`}
+                >
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-full ${active ? "bg-white/20" : "bg-gradient-to-br from-[#2979FF] to-[#633CFF]"}`}>
+                    <CategoryGlyph slug={item.slug} size={14} />
+                  </span>
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+          <Link href="/categories" className="shrink-0 text-sm font-bold text-violet">
+            View All Categories →
+          </Link>
+        </div>
       </section>
 
-      <PageShell className="mt-8">
-        <div className="grid gap-8 lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]">
-          {/* Sidebar filters */}
-          <aside className="h-fit rounded-2xl border border-border bg-white p-5 shadow-sm lg:sticky lg:top-24">
-            <form className="space-y-5">
+      <div className="mx-auto mt-8 grid w-full max-w-[90rem] gap-6 px-4 sm:px-6 lg:grid-cols-[280px_1fr] lg:px-10">
+        <aside className="h-fit rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm lg:sticky lg:top-24">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold text-indigo">Filters</h2>
+            <Link href="/discover" className="text-xs font-bold text-violet">
+              Clear All
+            </Link>
+          </div>
+          <DiscoverFilters
+            categories={categoryOptions}
+            locations={locationOptions}
+            platforms={platformOptions}
+            languages={languages}
+            selected={{
+              specialties,
+              countries,
+              platforms,
+              followersMin: Number(first(params.followersMin) || 0),
+              followersMax: Number(first(params.followersMax) || 0),
+              engagementMin: Number(first(params.engagementMin) || 0),
+              engagementMax: Number(first(params.engagementMax) || 0),
+              language: first(params.language),
+              collabType: first(params.collabType),
+              rate: first(params.rate),
+              verified: first(params.verified) === "1",
+              openToCollab: first(params.openToCollab) === "1",
+              sort,
+              q,
+            }}
+          />
+        </aside>
+
+        <div className="min-w-0 space-y-6">
+          {topMatches.length > 0 ? (
+            <section>
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-xl font-bold text-indigo">Top Matches For You</h2>
+                  <p className="text-xs text-muted">Based on your search criteria</p>
+                </div>
+                <a href="#discover-results" className="text-sm font-bold text-violet">
+                  View More Recommendations →
+                </a>
+              </div>
+              <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
+                {topMatches.map((creator) => (
+                  <Link
+                    key={creator.slug}
+                    href={`/creators/${creator.slug}`}
+                    className="w-40 shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-[#E4E9F5]"
+                  >
+                    <span className="relative block h-28">
+                      <Image src={creator.image} alt="" fill className="object-cover" sizes="160px" />
+                    </span>
+                    <span className="block px-3 py-2.5">
+                      <span className="block truncate text-sm font-bold text-indigo">{creator.displayName}</span>
+                      <span className="block truncate text-[11px] text-muted">{creator.title}</span>
+                      <span className="mt-1 block text-[11px] font-semibold text-violet">
+                        {formatFollowers(totalFollowers(creator))} followers
+                      </span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section id="discover-results">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-display text-sm font-bold text-indigo">Filters</h2>
-                <p className="mt-0.5 text-[11px] text-muted">Country, state, city & more</p>
+                <p className="text-sm text-indigo">
+                  Showing <strong>{results.length.toLocaleString()}</strong> influencers
+                </p>
+                <p className="text-xs text-muted">Results based on your filters and search criteria</p>
               </div>
-
-              <label className="block text-xs font-bold uppercase tracking-wide text-muted">
-                Search
-                <input
-                  name="q"
-                  defaultValue={params.q}
-                  placeholder="Name, niche, keyword…"
-                  className="mt-1.5 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium text-indigo outline-none focus:ring-2 focus:ring-violet"
-                />
-              </label>
-
-              <fieldset>
-                <legend className="text-xs font-bold uppercase tracking-wide text-muted">
-                  Category / niche
-                </legend>
-                <select
-                  name="specialty"
-                  defaultValue={params.specialty ?? ""}
-                  className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
-                >
-                  <option value="">All specialties</option>
-                  {taxonomy.map((s) => (
-                    <option key={s.slug} value={s.slug}>
-                      {s.name} ({specialtyCounts[s.slug] ?? 0})
-                    </option>
-                  ))}
-                </select>
-              </fieldset>
-
-              <fieldset className="space-y-2">
-                <legend className="text-xs font-bold uppercase tracking-wide text-muted">
-                  Location
-                </legend>
-                <select
-                  name="country"
-                  defaultValue={params.country ?? ""}
-                  className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
-                >
-                  <option value="">All countries</option>
-                  {locations.map((c) => (
-                    <option key={c.country} value={c.country}>
-                      {c.country}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="state"
-                  defaultValue={params.state ?? ""}
-                  className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
-                >
-                  <option value="">All states / regions</option>
-                  {(selectedCountry?.states ?? locations.flatMap((c) => c.states)).map((s) => (
-                    <option key={`${s.state}`} value={s.state === "—" ? "" : s.state}>
-                      {s.state}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="city"
-                  defaultValue={params.city ?? ""}
-                  className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
-                >
-                  <option value="">All cities</option>
-                  {(
-                    selectedState?.cities ??
-                    selectedCountry?.states.flatMap((s) => s.cities) ??
-                    locations.flatMap((c) => c.states.flatMap((s) => s.cities))
-                  ).map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </fieldset>
-
-              <fieldset>
-                <legend className="text-xs font-bold uppercase tracking-wide text-muted">
-                  Platform
-                </legend>
-                <select
-                  name="platform"
-                  defaultValue={params.platform ?? ""}
-                  className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
-                >
-                  <option value="">All platforms</option>
-                  {PLATFORMS.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-              </fieldset>
-
-              <fieldset className="grid grid-cols-2 gap-2">
-                <legend className="col-span-2 text-xs font-bold uppercase tracking-wide text-muted">
-                  Follower range
-                </legend>
-                <input
-                  name="followersMin"
-                  type="number"
-                  min={0}
-                  step={1000}
-                  defaultValue={params.followersMin ?? ""}
-                  placeholder="Min"
-                  className="rounded-xl border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
-                />
-                <input
-                  name="followersMax"
-                  type="number"
-                  min={0}
-                  step={1000}
-                  defaultValue={params.followersMax ?? ""}
-                  placeholder="Max"
-                  className="rounded-xl border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
-                />
-              </fieldset>
-
-              <label className="block text-xs font-bold uppercase tracking-wide text-muted">
-                Min engagement %
-                <input
-                  name="engagementMin"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  defaultValue={params.engagementMin ?? ""}
-                  placeholder="e.g. 3"
-                  className="mt-1.5 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-violet"
-                />
-              </label>
-
-              <label className="block text-xs font-bold uppercase tracking-wide text-muted">
-                Language
-                <select
-                  name="language"
-                  defaultValue={params.language ?? ""}
-                  className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-violet"
-                >
-                  <option value="">Any language</option>
-                  {languages.map((l) => (
-                    <option key={l} value={l}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block text-xs font-bold uppercase tracking-wide text-muted">
-                Sort by
-                <select
-                  name="sort"
-                  defaultValue={params.sort ?? "relevant"}
-                  className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-violet"
-                >
-                  <option value="relevant">Most relevant</option>
-                  <option value="followers">Followers</option>
-                  <option value="engagement">Engagement</option>
-                  <option value="name">Name</option>
-                </select>
-              </label>
-
-              <div className="space-y-2 border-t border-border pt-3">
-                <label className="flex items-center justify-between gap-3 text-sm font-medium text-indigo">
-                  Verified only
-                  <input
-                    type="checkbox"
-                    name="verified"
-                    value="1"
-                    defaultChecked={params.verified === "1" || params.verified === "true"}
-                    className="h-4 w-4 accent-[#633CFF]"
-                  />
-                </label>
-                <label className="flex items-center justify-between gap-3 text-sm font-medium text-indigo">
-                  Open to collaborations
-                  <input
-                    type="checkbox"
-                    name="openToCollab"
-                    value="1"
-                    defaultChecked={params.openToCollab === "1" || params.openToCollab === "true"}
-                    className="h-4 w-4 accent-[#633CFF]"
-                  />
-                </label>
-              </div>
-
-              <button type="submit" className="btn-primary w-full">
-                Apply filters
-              </button>
-              <Link
-                href="/discover"
-                className="block text-center text-xs font-semibold text-violet hover:underline"
-              >
-                Clear all filters
-              </Link>
-            </form>
-          </aside>
-
-          {/* Results */}
-          <div>
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted">
-                Showing <strong className="text-indigo">{results.length}</strong> influencers
-                {params.specialty ? ` in ${params.specialty}` : ""}
-                {params.country ? ` · ${params.country}` : ""}
-                {params.state ? ` · ${params.state}` : ""}
-                {params.city ? ` · ${params.city}` : ""}
-              </p>
+              <DiscoverSort defaultValue={sort} />
             </div>
 
             {results.length === 0 ? (
-              <div className="card-surface p-10 text-center">
+              <div className="rounded-2xl border border-[#E4E9F5] bg-white p-10 text-center">
                 <p className="font-semibold text-indigo">No creators matched those filters.</p>
                 <Link href="/discover" className="mt-4 inline-block text-sm font-semibold text-violet">
                   Clear filters
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {results.map((c) => (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {results.map((creator) => (
                   <CreatorCard
-                    key={c.slug}
-                    creator={c}
+                    key={creator.slug}
+                    creator={creator}
+                    layout="discover"
                     showTitle
                     showBio
                     showViewProfile
@@ -366,9 +301,46 @@ export default async function DiscoverPage({ searchParams }: Props) {
                 ))}
               </div>
             )}
-          </div>
+          </section>
+
+          <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-r from-[#1B1464] via-[#3D2E9E] to-[#633CFF] text-white shadow-xl">
+            <div className="grid items-center gap-6 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr]">
+              <div>
+                <h2 className="font-display text-2xl font-bold sm:text-3xl">Partner with Amazing Creators</h2>
+                <p className="mt-2 max-w-lg text-sm text-white/75">
+                  Launch a brand campaign with creators who match your audience, niche, and goals.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {[
+                    [directory.creators.length.toLocaleString(), "Creators in directory"],
+                    [countryNames.length.toLocaleString(), "Countries represented"],
+                    [taxonomy.length.toLocaleString(), "Active niches"],
+                    [results.filter((creator) => creator.openToCollab).length.toLocaleString(), "Open to collaborate"],
+                  ].map(([value, label]) => (
+                    <span key={label} className="rounded-2xl bg-white/10 px-3 py-2 text-center backdrop-blur">
+                      <span className="block font-display text-sm font-bold">{value}</span>
+                      <span className="block text-[10px] text-white/70">{label}</span>
+                    </span>
+                  ))}
+                </div>
+                <Link href="/business" className="ink-on-light mt-6 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold">
+                  Create a Campaign
+                </Link>
+              </div>
+              <div className="relative hidden h-48 lg:block">
+                {directory.creators[0] ? (
+                  <div className="absolute right-6 top-0 h-44 w-36 overflow-hidden rounded-2xl ring-2 ring-white/30">
+                    <Image src={directory.creators[0].image} alt="" fill className="object-cover" sizes="144px" />
+                  </div>
+                ) : null}
+                <p className="absolute bottom-2 left-0 max-w-[12rem] font-script text-2xl leading-tight text-white">
+                  Bigger Creators. Brighter Brands. Together.
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
-      </PageShell>
+      </div>
     </div>
   );
 }

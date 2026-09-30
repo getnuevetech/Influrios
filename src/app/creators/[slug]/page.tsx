@@ -460,14 +460,6 @@ export default async function CreatorProfilePage({ params }: Props) {
                   <IconLang size={13} className="text-blue" />
                   <span className="font-semibold text-indigo">{creator.languages.join(", ")}</span>
                 </li>
-                {creator.email ? (
-                  <li className="flex items-center gap-2">
-                    <IconMail size={13} className="text-violet" />
-                    <a href={`mailto:${creator.email}`} className="font-semibold text-indigo hover:underline">
-                      {creator.email}
-                    </a>
-                  </li>
-                ) : null}
                 {creator.linktree ? (
                   <li className="flex items-center gap-2">
                     <IconGlobe size={13} className="text-blue" />
@@ -516,7 +508,7 @@ export default async function CreatorProfilePage({ params }: Props) {
             </div>
           </div>
 
-          <div className="flex w-full gap-3 overflow-x-auto px-4 pb-2 sm:px-6 lg:px-10 [-ms-overflow-style:auto] [scrollbar-width:thin]">
+          <div className="no-scrollbar flex w-full gap-3 overflow-x-auto px-4 pb-2 sm:px-6 lg:px-10">
             {content.map((item) => (
               <article
                 key={item.id}
@@ -749,7 +741,7 @@ export default async function CreatorProfilePage({ params }: Props) {
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
             <Link
               href="/claim"
-              className="rounded-full bg-white px-5 py-2 text-[12px] font-semibold text-violet shadow"
+              className="ink-on-light rounded-full bg-white px-5 py-2 text-[12px] font-semibold shadow"
             >
               Join as a Creator
             </Link>

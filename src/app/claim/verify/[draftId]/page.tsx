@@ -24,12 +24,10 @@ export default async function ClaimVerifyPage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-lg px-4 py-14 sm:px-6">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Step 3 · Verify</p>
-      <h1 className="mt-2 font-display text-3xl font-bold text-indigo">
-        Prove you control @{draft.socials[0]?.handle.replace(/^@/, "")}
-      </h1>
+      <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Verify your email</h1>
       <p className="mt-3 text-sm text-muted">
-        Live social OAuth comes later. For this Phase 8 demo, enter the verification code issued when
-        you claimed the card.
+        This demo code confirms the email on the claim. It does not verify @{draft.socials[0]?.handle.replace(/^@/, "")}{" "}
+        — social verification stays unverified until the platform connects.
       </p>
 
       {q.error ? (
@@ -45,7 +43,7 @@ export default async function ClaimVerifyPage({ params, searchParams }: Props) {
             {draft.verifyCode}
           </p>
           <p className="mt-1 text-xs text-muted">
-            In production this would be a DM / email / OAuth challenge on {draft.platform}.
+            Demo email method only. A social challenge on {draft.platform} is a separate verification.
           </p>
         </div>
 
@@ -62,7 +60,7 @@ export default async function ClaimVerifyPage({ params, searchParams }: Props) {
             />
           </label>
           <button type="submit" className="btn-primary w-full">
-            Verify channel →
+            Verify email →
           </button>
         </form>
       </div>
