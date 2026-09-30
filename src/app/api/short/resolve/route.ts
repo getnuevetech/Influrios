@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isShortLinkHost } from "@/lib/short-link-hosts";
 import { brandedFallbackHtml, resolveShortRequest } from "@/lib/short-link";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,9 @@ export const runtime = "nodejs";
  * Destination redirects are 302 + no-store. Alias-to-current-slug redirects are 301.
  */
 export async function GET(request: NextRequest) {
-  const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  const hinted = request.nextUrl.searchParams.get("host") || "";
+  const headerHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  const host = isShortLinkHost(hinted) ? hinted : headerHost;
   const path = request.nextUrl.searchParams.get("path") || "/";
   try {
     const hit = await resolveShortRequest(host, path);
