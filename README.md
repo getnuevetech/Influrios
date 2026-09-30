@@ -38,6 +38,7 @@ bash deploy/scripts/deploy.sh            # docker compose up --build
 
 ## Docs
 
+- [Implementation plan (current)](./docs/IMPLEMENTATION_PLAN.md)
 - [Recommendations & Execution Plan](./docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md)
 - [Strategy notes](./docs/strategy/)
 - [Design references](./docs/design-references/)
