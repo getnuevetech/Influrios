@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Phase 12.6 can split a prefund into stages or open a recurring series. Each tranche stays unfunded until its own signed webhook. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -273,7 +273,20 @@ Implemented in `src/lib/attribution.ts`, `src/lib/deal-attribution.ts`, `/paymen
 
 **Exit:** with the provider not ready, a repeat request creates no funding row. With the provider ready, the new row is `awaiting_provider`, its attribution label stays after the source is renamed, and the prior fee snapshot is unchanged.
 
-Staged and recurring funding is still ahead.
+### Phase 12.6 — Staged and recurring funding
+
+Implemented in `src/lib/schedule.ts`, `src/lib/marketplace-ledger.ts`, `/payments`, the creator dashboard, and `/admin/marketplace`.
+
+**Proves:** a staged request creates one unfunded prefund per stage and no ledger rows; a provider hold on one stage does not hold the others; a recurring request creates only the first prefund; the next prefund appears after that hold and the frozen interval, still unfunded.
+
+1. Staged funding, recurring funding, the stage cap, the interval, and the occurrence cap are admin settings.
+2. The interval and the occurrence count are copied onto the series. A later interval edit does not move a series already requested.
+3. Turning the switches off blocks new schedules. It does not delete a series already opened.
+4. Each tranche still waits for its own signed `funding.held` event.
+
+**Exit:** with the provider not ready, a staged request creates no rows. With the provider ready, three stages of a gross add back to that gross and stay `awaiting_provider` until each webhook. A second recurring prefund is not created the day after the hold.
+
+Multi-provider FX and revenue-share splits are still ahead.
 
 ---
 

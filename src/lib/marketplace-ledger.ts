@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { resolveFee } from "@/lib/collaboration-fees";
 import {
@@ -12,6 +13,7 @@ import {
   type LedgerMovement,
 } from "@/lib/ledger";
 import { resolveDealAttribution } from "@/lib/deal-attribution";
+import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
 
 const PROVIDER_CODE = "primary";
@@ -82,6 +84,11 @@ export async function marketplaceConfig() {
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
+    stagedFundingEnabled: settings?.stagedFundingEnabled ?? true,
+    recurringFundingEnabled: settings?.recurringFundingEnabled ?? true,
+    maxStages: settings?.maxStages ?? 4,
+    recurringIntervalDays: settings?.recurringIntervalDays ?? 30,
+    maxRecurrences: settings?.maxRecurrences ?? 6,
     jurisdictions,
     templates,
     provider: {
@@ -197,6 +204,38 @@ export async function saveMarketplaceProvider(input: {
   });
 }
 
+export async function saveFundingSchedule(input: {
+  stagedFundingEnabled: boolean;
+  recurringFundingEnabled: boolean;
+  maxStages: number;
+  recurringIntervalDays: number;
+  maxRecurrences: number;
+}) {
+  await ensureMarketplaceDefaults();
+  const maxStages = Math.round(input.maxStages);
+  const intervalDays = Math.round(input.recurringIntervalDays);
+  const maxRecurrences = Math.round(input.maxRecurrences);
+  if (!Number.isFinite(maxStages) || maxStages < 2 || maxStages > 12) {
+    throw new Error("Staged deals must allow between 2 and 12 stages.");
+  }
+  if (!Number.isFinite(intervalDays) || intervalDays < 1 || intervalDays > 365) {
+    throw new Error("Recurring interval must be between 1 and 365 days.");
+  }
+  if (!Number.isFinite(maxRecurrences) || maxRecurrences < 2 || maxRecurrences > 24) {
+    throw new Error("Recurring deals must allow between 2 and 24 occurrences.");
+  }
+  return prisma.marketplaceSettings.update({
+    where: { id: "default" },
+    data: {
+      stagedFundingEnabled: input.stagedFundingEnabled,
+      recurringFundingEnabled: input.recurringFundingEnabled,
+      maxStages,
+      recurringIntervalDays: intervalDays,
+      maxRecurrences,
+    },
+  });
+}
+
 export async function requestPrefund(input: {
   jurisdictionCode: string;
   businessName: string;
@@ -206,6 +245,9 @@ export async function requestPrefund(input: {
   serviceLevel?: string;
   sourceId?: string | null;
   repeatOfId?: string | null;
+  scheduleKind?: string;
+  stageCount?: number;
+  occurrenceCount?: number;
 }) {
   await ensureMarketplaceDefaults();
   const code = input.jurisdictionCode.trim().toUpperCase();
@@ -230,69 +272,189 @@ export async function requestPrefund(input: {
     repeatOfId: input.repeatOfId,
   });
   if (!attribution.ok) return attribution;
-  const amounts = splitGross(
-    input.grossCents,
-    templates.map((row) => row.shareBps),
-  );
-  if (!amounts) return { ok: false as const, error: "Milestone templates must add up to 100%." };
+  const schedule = planSchedule({
+    kind: input.scheduleKind ?? "once",
+    grossCents: input.grossCents,
+    stageCount: input.stageCount,
+    occurrenceCount: input.occurrenceCount,
+    stagedEnabled: settings?.stagedFundingEnabled ?? true,
+    recurringEnabled: settings?.recurringFundingEnabled ?? true,
+    maxStages: settings?.maxStages ?? 4,
+    maxRecurrences: settings?.maxRecurrences ?? 6,
+    intervalDays: settings?.recurringIntervalDays ?? 30,
+  });
+  if (!schedule.ok) return schedule;
+  const shares = templates.map((row) => row.shareBps);
   const serviceLevel = (input.serviceLevel || "contracted").slice(0, 40);
-  const quote = await resolveFee({
-    jurisdiction: code,
-    serviceLevel,
-    grossValueCents: input.grossCents,
-  }).catch(() => null);
-  const feeCents = quote?.feeCents ?? 0;
   const windowHours = settings?.reviewWindowHours ?? 72;
-  const funding = await prisma.collaborationFunding.create({
-    data: {
-      jurisdictionCode: code,
-      businessName: input.businessName.trim().slice(0, 120),
-      creatorSlug: input.creatorSlug.trim().slice(0, 80),
-      title: input.title.trim().slice(0, 160),
-      grossCents: input.grossCents,
-      feeCents,
+  const businessName = input.businessName.trim().slice(0, 120);
+  const creatorSlug = input.creatorSlug.trim().slice(0, 80);
+  const baseTitle = input.title.trim().slice(0, 140);
+  const prepared: {
+    gross: number;
+    milestoneAmounts: number[];
+    quote: Awaited<ReturnType<typeof resolveFee>> | null;
+  }[] = [];
+  for (let index = 0; index < schedule.parts.length; index += 1) {
+    const gross = schedule.parts[index];
+    const milestoneAmounts = splitGross(gross, shares);
+    if (!milestoneAmounts) return { ok: false as const, error: "Milestone templates must add up to 100%." };
+    const quote = await resolveFee({
+      jurisdiction: code,
       serviceLevel,
-      feeSnapshotJson: {
-        ruleId: quote?.rule?.id ?? null,
-        ruleName: quote?.rule?.name ?? null,
-        ruleVersion: quote?.rule?.version ?? null,
-        percentBps: quote?.rule?.percentBps ?? null,
-        fixedCents: quote?.rule?.fixedCents ?? null,
-        feeCents,
-        explanation: quote?.explanation ?? "Fee rules were unavailable.",
-        capturedAt: new Date().toISOString(),
-      },
-      status: "awaiting_provider",
-      providerCode: provider!.code,
-      attributionLabel: attribution.attributionLabel,
-      repeatOfId: attribution.repeatOfId,
-      milestones: {
-        create: templates.map((template, index) => ({
-          title: template.title,
-          amountCents: amounts[index],
-          sortOrder: template.sortOrder,
-          status: "pending",
-          reviewWindowHours: windowHours,
-        })),
-      },
-    },
+      grossValueCents: gross,
+    }).catch(() => null);
+    prepared.push({ gross, milestoneAmounts, quote });
+  }
+  const scheduleId = schedule.kind === "once" ? null : randomUUID();
+  const created = await prisma.$transaction(async (tx) => {
+    const ids: string[] = [];
+    for (let index = 0; index < prepared.length; index += 1) {
+      const part = prepared[index];
+      const quote = part.quote;
+      const feeCents = quote?.feeCents ?? 0;
+      const suffix =
+        schedule.kind === "staged"
+          ? ` · stage ${index + 1} of ${schedule.trancheCount}`
+          : schedule.kind === "recurring"
+            ? ` · ${index + 1} of ${schedule.trancheCount}`
+            : "";
+      const row = await tx.collaborationFunding.create({
+        data: {
+          jurisdictionCode: code,
+          businessName,
+          creatorSlug,
+          title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
+          grossCents: part.gross,
+          feeCents,
+          serviceLevel,
+          feeSnapshotJson: {
+            ruleId: quote?.rule?.id ?? null,
+            ruleName: quote?.rule?.name ?? null,
+            ruleVersion: quote?.rule?.version ?? null,
+            percentBps: quote?.rule?.percentBps ?? null,
+            fixedCents: quote?.rule?.fixedCents ?? null,
+            feeCents,
+            explanation: quote?.explanation ?? "Fee rules were unavailable.",
+            capturedAt: new Date().toISOString(),
+          },
+          status: "awaiting_provider",
+          providerCode: provider!.code,
+          attributionLabel: attribution.attributionLabel,
+          repeatOfId: attribution.repeatOfId,
+          scheduleId,
+          scheduleKind: schedule.kind,
+          trancheIndex: index + 1,
+          trancheCount: schedule.trancheCount,
+          intervalDays: schedule.intervalDays,
+          milestones: {
+            create: templates.map((template, milestoneIndex) => ({
+              title: template.title,
+              amountCents: part.milestoneAmounts[milestoneIndex],
+              sortOrder: template.sortOrder,
+              status: "pending",
+              reviewWindowHours: windowHours,
+            })),
+          },
+        },
+      });
+      ids.push(row.id);
+    }
+    return ids;
   });
   await prisma.auditLog.create({
     data: {
       actor: "marketplace",
       action: "prefund_requested",
       objectType: "CollaborationFunding",
-      objectId: funding.id,
+      objectId: created[0],
       after: {
-        status: funding.status,
-        grossCents: funding.grossCents,
-        feeCents,
+        status: "awaiting_provider",
+        scheduleKind: schedule.kind,
+        trancheCount: schedule.trancheCount,
+        grossCents: input.grossCents,
         attributionLabel: attribution.attributionLabel,
         repeatOfId: attribution.repeatOfId,
       },
     },
   }).catch(() => undefined);
-  return { ok: true as const, id: funding.id, status: funding.status as "awaiting_provider" };
+  return { ok: true as const, id: created[0], status: "awaiting_provider" as const };
+}
+
+export async function sweepDueRecurrences(now = new Date()) {
+  const confirmed = await prisma.collaborationFunding.findMany({
+    where: { scheduleKind: "recurring", status: { in: ["held", "completed", "refunded"] } },
+    include: { entries: { where: { kind: "hold" }, orderBy: { createdAt: "asc" }, take: 1 } },
+  });
+  const [templates, settings] = await Promise.all([
+    prisma.milestoneTemplate.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.marketplaceSettings.findUnique({ where: { id: "default" } }),
+  ]);
+  const shares = templates.map((row) => row.shareBps);
+  const windowHours = settings?.reviewWindowHours ?? 72;
+  for (const row of confirmed) {
+    if (!row.scheduleId || row.trancheIndex >= row.trancheCount) continue;
+    const holdAt = row.entries[0]?.createdAt ?? null;
+    if (!recurrenceIsDue({ holdAt, intervalDays: row.intervalDays, now })) continue;
+    const nextIndex = row.trancheIndex + 1;
+    const existing = await prisma.collaborationFunding.findFirst({
+      where: { scheduleId: row.scheduleId, trancheIndex: nextIndex },
+    });
+    if (existing) continue;
+    const milestoneAmounts = splitGross(row.grossCents, shares);
+    if (!milestoneAmounts) continue;
+    const quote = await resolveFee({
+      jurisdiction: row.jurisdictionCode,
+      serviceLevel: row.serviceLevel,
+      grossValueCents: row.grossCents,
+    }).catch(() => null);
+    const feeCents = quote?.feeCents ?? 0;
+    const suffix = ` · ${nextIndex} of ${row.trancheCount}`;
+    const baseTitle = row.title.replace(/ · \d+ of \d+$/, "");
+    try {
+      await prisma.collaborationFunding.create({
+        data: {
+          jurisdictionCode: row.jurisdictionCode,
+          businessName: row.businessName,
+          creatorSlug: row.creatorSlug,
+          title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
+          grossCents: row.grossCents,
+          feeCents,
+          serviceLevel: row.serviceLevel,
+          feeSnapshotJson: {
+            ruleId: quote?.rule?.id ?? null,
+            ruleName: quote?.rule?.name ?? null,
+            ruleVersion: quote?.rule?.version ?? null,
+            percentBps: quote?.rule?.percentBps ?? null,
+            fixedCents: quote?.rule?.fixedCents ?? null,
+            feeCents,
+            explanation: quote?.explanation ?? "Fee rules were unavailable.",
+            capturedAt: now.toISOString(),
+          },
+          status: "awaiting_provider",
+          providerCode: row.providerCode,
+          attributionLabel: row.attributionLabel,
+          repeatOfId: row.repeatOfId,
+          scheduleId: row.scheduleId,
+          scheduleKind: "recurring",
+          trancheIndex: nextIndex,
+          trancheCount: row.trancheCount,
+          intervalDays: row.intervalDays,
+          milestones: {
+            create: templates.map((template, index) => ({
+              title: template.title,
+              amountCents: milestoneAmounts[index],
+              sortOrder: template.sortOrder,
+              status: "pending",
+              reviewWindowHours: windowHours,
+            })),
+          },
+        },
+      });
+    } catch (error) {
+      if (!isUnique(error)) throw error;
+    }
+  }
 }
 
 async function sweepAutoApprovals() {
@@ -312,6 +474,7 @@ async function sweepAutoApprovals() {
 
 export async function listFundings() {
   await sweepAutoApprovals();
+  await sweepDueRecurrences();
   const rows = await prisma.collaborationFunding.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -327,6 +490,7 @@ export async function listFundings() {
 
 export async function listFundingsForCreator(creatorSlug: string) {
   await sweepAutoApprovals();
+  await sweepDueRecurrences();
   const rows = await prisma.collaborationFunding.findMany({
     where: { creatorSlug },
     orderBy: { createdAt: "desc" },
@@ -364,6 +528,10 @@ function presentFunding(row: {
   disputes?: { id: string; milestoneId: string | null; status: string }[];
   attributionLabel: string;
   repeatOf: { id: string; title: string } | null;
+  scheduleKind: string;
+  trancheIndex: number;
+  trancheCount: number;
+  intervalDays: number;
 }) {
   const movements: LedgerMovement[] = ledgerMovements(row.entries);
   return { ...row, ledger: reconcileLedger(movements, row.grossCents) };

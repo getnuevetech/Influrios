@@ -17,6 +17,7 @@ import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 import { actionOpenOwnDispute, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
 import { formatMoney } from "@/lib/protected-payments";
 import { listFundingsForCreator } from "@/lib/marketplace-ledger";
+import { scheduleLabel } from "@/lib/schedule";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 
 export const dynamic = "force-dynamic";
@@ -419,6 +420,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                   {formatMoney(funding.ledger.heldCents)}
                   {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
                   {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
+                  {scheduleLabel(funding) ? ` · ${scheduleLabel(funding)}` : ""}
                 </p>
                 <div className="mt-3 space-y-2">
                   {funding.milestones.map((milestone) => (

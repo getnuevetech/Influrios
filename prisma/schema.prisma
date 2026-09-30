@@ -981,10 +981,15 @@ model MarketplaceSettings {
   templatesSeeded    Boolean  @default(false)
   cancelUnconfirmed      Boolean  @default(true)
   reasonsSeeded          Boolean  @default(false)
-  attributionWindowDays  Int      @default(90)
-  repeatMinGrossCents    Int      @default(0)
-  sourcesSeeded          Boolean  @default(false)
-  updatedAt              DateTime @updatedAt
+  attributionWindowDays    Int      @default(90)
+  repeatMinGrossCents      Int      @default(0)
+  sourcesSeeded            Boolean  @default(false)
+  stagedFundingEnabled     Boolean  @default(true)
+  recurringFundingEnabled  Boolean  @default(true)
+  maxStages                Int      @default(4)
+  recurringIntervalDays    Int      @default(30)
+  maxRecurrences           Int      @default(6)
+  updatedAt                DateTime @updatedAt
 }
 
 /// Protected payments and the word "escrow" are jurisdiction flags, not code switches.
@@ -1021,6 +1026,11 @@ model CollaborationFunding {
   status            String   @default("awaiting_provider")
   providerCode      String
   attributionLabel  String   @default("")
+  scheduleId        String?
+  scheduleKind      String   @default("once")
+  trancheIndex      Int      @default(1)
+  trancheCount      Int      @default(1)
+  intervalDays      Int      @default(0)
   repeatOfId        String?
   repeatOf          CollaborationFunding?  @relation("FundingRepeat", fields: [repeatOfId], references: [id], onDelete: SetNull)
   repeats           CollaborationFunding[] @relation("FundingRepeat")
@@ -1030,9 +1040,11 @@ model CollaborationFunding {
   entries           LedgerEntry[]
   disputes          MilestoneDispute[]
 
+  @@unique([scheduleId, trancheIndex])
   @@index([creatorSlug, status])
   @@index([status])
   @@index([repeatOfId])
+  @@index([scheduleId])
 }
 
 model FundingMilestone {
