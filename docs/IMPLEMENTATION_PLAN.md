@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Phase 12.6 can split a prefund into stages or open a recurring series. Each tranche stays unfunded until its own signed webhook. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Phase 12.6 can split a prefund into stages or open a recurring series. Each tranche stays unfunded until its own signed webhook. Phase 12.7 converts a non-USD prefund with an admin FX rate, routes the jurisdiction to one marketplace provider, and writes revenue-share lines when that provider releases a milestone. Those lines are not cash. A missing rate or a provider that is not ready creates no funding row. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -286,7 +286,18 @@ Implemented in `src/lib/schedule.ts`, `src/lib/marketplace-ledger.ts`, `/payment
 
 **Exit:** with the provider not ready, a staged request creates no rows. With the provider ready, three stages of a gross add back to that gross and stay `awaiting_provider` until each webhook. A second recurring prefund is not created the day after the hold.
 
-Multi-provider FX and revenue-share splits are still ahead.
+### Phase 12.7 — Admin FX and revenue-share splits
+
+Implemented in `src/lib/fx-share.ts`, `src/lib/settlement.ts`, `src/lib/marketplace-ledger.ts`, `/payments`, the creator dashboard, and `/admin/marketplace`.
+
+**Proves:** a GB prefund stores the converted minor units and a frozen admin rate; a later rate edit does not rewrite that snapshot; `funding.held` must match the converted amount; a signed release writes share lines that sum to the milestone and do not change the held balance; a jurisdiction whose provider is not ready creates no row; a webhook is checked with that provider’s secret.
+
+1. FX rates and revenue parties are admin settings, seeded once. USD needs no rate row. A missing or inactive rate refuses the prefund.
+2. The jurisdiction chooses one marketplace provider. The prefund uses that provider. An unknown webhook code is rejected. A known provider that is not ready does not move the ledger.
+3. The fee is quoted on the USD amount, then converted with the same admin rate. The ledger amounts are in the jurisdiction currency.
+4. Share lines are written only inside a successful `payout.released`. Reconcile ignores them. A funding with no share snapshot still releases.
+
+**Exit:** a 100.00 USD brief for GB at 75 minor units per 1.00 USD is stored as 75.00 GBP. Changing the rate afterward leaves that snapshot at 75. A hold for 100.00 is rejected. The release posts share lines and the held amount drops only by the release.
 
 ---
 

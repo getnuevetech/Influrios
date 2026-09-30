@@ -24,10 +24,15 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
   }
-  const ready = await marketplaceWebhookSecret().catch(() => null);
-  if (!ready) return NextResponse.json({ error: "Marketplace provider is not ready." }, { status: 503 });
-  if (payload.provider && payload.provider !== ready.code) {
-    return NextResponse.json({ error: "Unknown marketplace provider." }, { status: 404 });
+  const headerProvider = request.headers.get("x-influrios-provider")?.trim().toLowerCase() ?? "";
+  const code = (payload.provider || headerProvider || "primary").trim().toLowerCase();
+  const ready = await marketplaceWebhookSecret(code).catch(() => ({ error: "not_ready" as const }));
+  if ("error" in ready) {
+    const missing = ready.error === "missing";
+    return NextResponse.json(
+      { error: missing ? "Unknown marketplace provider." : "Marketplace provider is not ready." },
+      { status: missing ? 404 : 503 },
+    );
   }
   const signature = request.headers.get("x-influrios-signature");
   if (!verifyMarketplaceSignature(body, ready.secret, signature)) {
