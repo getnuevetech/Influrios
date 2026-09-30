@@ -48,6 +48,14 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+# @prisma/config requires these from node_modules root at CLI startup.
+# Copying only @prisma and prisma leaves `effect` missing, so migrate deploy
+# and db push exit before they can touch the database.
+COPY --from=builder /app/node_modules/effect ./node_modules/effect
+COPY --from=builder /app/node_modules/fast-check ./node_modules/fast-check
+COPY --from=builder /app/node_modules/pure-rand ./node_modules/pure-rand
+COPY --from=builder /app/node_modules/empathic ./node_modules/empathic
+COPY --from=builder /app/node_modules/@standard-schema ./node_modules/@standard-schema
 # The CLI bin is a symlink. Recreate it so a traced standalone .bin cannot drop it.
 RUN mkdir -p ./node_modules/.bin \
   && ln -sf ../prisma/build/index.js ./node_modules/.bin/prisma \
