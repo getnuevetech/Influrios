@@ -306,7 +306,7 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Business Intelligence UI (`/business/intelligence`) gated by Business Pro / Agency  
 - [x] Admin Intelligence ops view (`/admin/intelligence`)  
 - [x] Export API (`/api/intelligence/export` JSON + CSV)  
-- [ ] Live social / first-party sync (OAuth) after demand validates  
+- [x] Live social sync is in the current implementation plan (`/admin/social`, creator consent, official OAuth). Counts update the existing profile figure only after the network returns followers and likes. Public layouts stay.  
 - [ ] Persist intelligence store to Prisma  
 
 **Defer:** Full analytics warehouse, precise geo, scrape-dependent metrics  
@@ -352,7 +352,7 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Publish Starter card → live `/c/{slug}`  
 - [x] Creator dashboard lite with completeness score + next-best actions (`/dashboard`)  
 - [ ] Production auth (Clerk / Auth.js) replacing demo creator cookie  
-- [ ] Real social OAuth / DM verification challenges  
+- [x] Real social OAuth is the current connection path. The creator accepts the Influrios integration terms before any network login. A sync that does not return followers and likes does not write a count.  
 - [ ] Persist claims to Prisma `Creator` + `User`  
 
 **Defer:** Escrow / Protected Payments until claim + share loops show signal  

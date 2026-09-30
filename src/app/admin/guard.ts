@@ -26,6 +26,7 @@ const MODULE_PATH: Record<AdminModule, string> = {
   ai: "/admin/ai",
   gateways: "/admin/gateways",
   signing: "/admin/signing",
+  social: "/admin/social",
 };
 
 /** Gate an admin page by module (any feature under that module). */

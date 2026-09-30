@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–G are implemented, and provider admin is in place for AI pipelines, country payment gateways, and document signing. Business briefs, shortlists, inquiries, opt-ins, and the managed queue are stored in Postgres. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm; until then the platform fallback, an unpaid checkout, and a queued signature stay honest. Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–G are implemented, and provider admin is in place for AI pipelines, country payment gateways, and document signing. Social account sync is part of the current plan: each network is a real provider, a creator must accept the current integration terms, and follower and like counts are saved only when that network returns both. Public Home, Discover, profile, card, and collaboration layouts stay as designed; a confirmed sync updates the figure already in that slot. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. Later phases in this document are still ahead. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -198,6 +198,20 @@ Implemented at `/business` and `/admin/matching`. The `managed_promotion` flag i
 4. Feature flag `managed_promotion` (`R133`).
 
 **Exit:** a business brief returns matches; “request managed matching” becomes an admin queue item; admin records an introduction.
+
+### Social account sync — current
+
+Implemented at `/admin/social` and the creator dashboard. This is a current development path, not a later optional add-on.
+
+**Proves:** a creator connects their own social account and the profile shows that network’s follower count and likes.
+
+1. One admin provider per network: Instagram, TikTok, YouTube, X, Facebook, LinkedIn, and Pinterest. Each stays off until its client id and secret are saved. Authorize, token, and profile URLs must stay on that network’s official https host.
+2. The integration terms and policy are edited in admin, with a version. Every connection requires the creator to accept the current version. Changing the text requires a new version, and the next sync waits for that agreement.
+3. OAuth starts only after that agreement and only when the provider is ready. The callback exchanges the code and reads the profile. Followers and likes are written, and the source becomes `PROVIDER_SYNCED`, only when both numbers are present. A missing field, a disabled provider, or a failed call does not invent a count and does not mark the account live.
+4. Public templates are unchanged. Home, Discover, the profile, the Influencer Card, and collaboration keep their current layout. A confirmed sync replaces the follower figure already rendered for that account. Likes are stored with it and shown on the creator’s connection panel.
+5. Disconnect stops further sync and clears the synced counts. The page layout stays.
+
+**Exit:** with a network’s API details saved, a creator accepts the terms, returns from that network, and the existing follower figure updates from the returned count and likes. Without those API details, the same pages look as they do today.
 
 ### Phase H — Provider platform
 

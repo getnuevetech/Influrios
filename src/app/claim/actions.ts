@@ -78,7 +78,7 @@ export async function actionAddDraftSocial(formData: FormData) {
       platform: "TIKTOK",
       handle: `@${handle}`,
       url: `https://tiktok.com/@${handle}`,
-      followers: 1000,
+      followers: 0,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not add social";

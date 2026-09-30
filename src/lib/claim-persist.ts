@@ -158,7 +158,8 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
         platform: asPlatform(social.platform),
         handle: social.handle,
         url: social.url,
-        followers: social.followers,
+        followers: social.followers > 0 ? social.followers : null,
+        likes: null,
         source: "CREATOR_CLAIMED",
       },
     });

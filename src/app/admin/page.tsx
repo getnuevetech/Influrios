@@ -172,6 +172,13 @@ const LINKS: {
     meta: () => "Queued until the provider confirms",
   },
   {
+    href: "/admin/social",
+    title: "Social networks",
+    blurb: "Live follower and like sync. Creators accept the terms before a network connects.",
+    module: "social",
+    meta: () => "Terms required",
+  },
+  {
     href: "/admin/accounts",
     title: "Member accounts",
     blurb: "Registered members, verification, suspension, consent, and password length.",
