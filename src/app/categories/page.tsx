@@ -1,23 +1,29 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CategoryGlyph, IconArrowRight, IconHeart } from "@/components/icons";
-import {
-  CATEGORY_IMAGES,
-  SEED_CREATORS,
-  SPECIALTY_TAXONOMY,
-} from "@/lib/seed-data";
+import { getDirectory } from "@/lib/directory";
+import { CATEGORY_IMAGES, type SeedCreator } from "@/lib/seed-data";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Categories · Influrios" };
 
-function creatorsInCategory(slug: string, children?: { slug: string }[]) {
-  return SEED_CREATORS.filter(
+function creatorsInCategory(
+  creators: SeedCreator[],
+  slug: string,
+  children?: { slug: string }[],
+) {
+  return creators.filter(
     (c) =>
       c.specialties.includes(slug) ||
       children?.some((ch) => c.specialties.includes(ch.slug)),
   );
 }
 
-export default function CategoriesPage() {
+export default async function CategoriesPage() {
+  const directory = await getDirectory();
+  const taxonomy = directory.taxonomy
+    .filter((node) => node.active)
+    .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
   return (
     <div className="bg-[#F7FAFF]">
       <section className="border-b border-[#E4EBFF] bg-gradient-to-br from-[#EEF2FF] via-[#F7FAFF] to-[#E8F4FF]">
@@ -43,8 +49,8 @@ export default function CategoriesPage() {
 
       <section className="mx-auto max-w-[90rem] px-4 py-10 sm:px-6 lg:px-10">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {SPECIALTY_TAXONOMY.map((parent) => {
-            const creators = creatorsInCategory(parent.slug, parent.children);
+          {taxonomy.map((parent) => {
+            const creators = creatorsInCategory(directory.creators, parent.slug, parent.children);
             const count = creators.length;
             return (
               <article

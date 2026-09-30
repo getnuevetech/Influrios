@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildBrandedQrSvg } from "@/lib/branded-qr";
-import { getCreatorBySlug } from "@/lib/seed-data";
+import { getDirectoryCreator } from "@/lib/directory";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 
 /**
@@ -17,7 +17,7 @@ export async function GET(
   context: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await context.params;
-  const creator = getCreatorBySlug(slug);
+  const creator = await getDirectoryCreator(slug);
   if (!creator) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

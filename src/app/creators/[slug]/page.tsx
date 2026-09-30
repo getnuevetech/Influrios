@@ -23,13 +23,11 @@ import {
   IconVerified,
   SocialIcon,
 } from "@/components/icons";
-import { getPublishedCreatorBySlug } from "@/lib/claim";
 import {
   formatFollowers,
-  getCreatorBySlug,
-  SEED_CREATORS,
   specialtyLabel,
 } from "@/lib/seed-data";
+import { getDirectory, getDirectoryCreator, recordDirectoryEvent } from "@/lib/directory";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -37,7 +35,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const creator = getCreatorBySlug(slug) ?? (await getPublishedCreatorBySlug(slug));
+  const creator = await getDirectoryCreator(slug);
   if (!creator) return { title: "Creator not found" };
   return { title: creator.displayName, description: creator.bio };
 }
@@ -59,10 +57,12 @@ const COLLAB_ICON_MAP: Record<string, typeof IconCamera> = {
 
 export default async function CreatorProfilePage({ params }: Props) {
   const { slug } = await params;
-  const creator = getCreatorBySlug(slug) ?? (await getPublishedCreatorBySlug(slug));
+  const creator = await getDirectoryCreator(slug);
   if (!creator) notFound();
+  await recordDirectoryEvent("profile_viewed", { slug, surface: "profile" });
 
-  const related = SEED_CREATORS.filter((c) => c.slug !== creator.slug).slice(0, 4);
+  const directory = await getDirectory();
+  const related = directory.creators.filter((c) => c.slug !== creator.slug).slice(0, 4);
   const content = creator.featuredContent ?? [];
   const stats = creator.stats;
   const demo = creator.demographics;

@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
-import { getCreatorBySlug } from "@/lib/seed-data";
+import { getDirectoryCreator } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Influencer Card",
 };
 
-export default function CardMarketingPage() {
-  const demo = getCreatorBySlug("sofia-martinez")!;
+export default async function CardMarketingPage() {
+  const demo = (await getDirectoryCreator("sofia-martinez"))!;
 
   return (
     <>

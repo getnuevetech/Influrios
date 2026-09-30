@@ -1,13 +1,9 @@
 import Link from "next/link";
 import { CreatorCard } from "@/components/creator-card";
 import { PageShell } from "@/components/page-shell";
-import {
-  getLanguageOptions,
-  getLocationOptions,
-  searchCreators,
-  SEED_CREATORS,
-  SPECIALTY_TAXONOMY,
-} from "@/lib/seed-data";
+import { getDirectory, recordDirectoryEvent } from "@/lib/directory";
+import { filterCreators, languageOptionsFor, locationOptionsFor } from "@/lib/seed-data";
+import { canonicalSpecialty } from "@/lib/taxonomy";
 
 export const dynamic = "force-dynamic";
 
@@ -42,15 +38,31 @@ const PLATFORMS = [
 
 export default async function DiscoverPage({ searchParams }: Props) {
   const params = await searchParams;
-  const results = searchCreators(params);
-  const locations = getLocationOptions();
-  const languages = getLanguageOptions();
+  const directory = await getDirectory();
+  const taxonomy = directory.taxonomy
+    .filter((node) => node.active)
+    .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
+  const results = filterCreators(
+    directory.creators,
+    { ...params, specialty: canonicalSpecialty(params.specialty, directory.synonyms) },
+    directory.synonyms,
+  );
+  const locations = locationOptionsFor(directory.creators);
+  const languages = languageOptionsFor(directory.creators);
+  await recordDirectoryEvent("search_submitted", {
+    q: params.q ?? "",
+    specialty: params.specialty ?? "",
+    country: params.country ?? "",
+    platform: params.platform ?? "",
+    resultCount: results.length,
+    authenticated: false,
+  });
   const selectedCountry = locations.find((c) => c.country === params.country);
   const selectedState = selectedCountry?.states.find((s) => s.state === params.state);
   const specialtyCounts = Object.fromEntries(
-    SPECIALTY_TAXONOMY.map((s) => [
+    taxonomy.map((s) => [
       s.slug,
-      SEED_CREATORS.filter((c) => c.specialties.includes(s.slug)).length,
+      directory.creators.filter((c) => c.specialties.includes(s.slug)).length,
     ]),
   );
 
@@ -95,7 +107,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-2">
-            {SPECIALTY_TAXONOMY.slice(0, 8).map((s) => (
+            {taxonomy.slice(0, 8).map((s) => (
               <Link
                 key={s.slug}
                 href={`/discover?specialty=${s.slug}`}
@@ -145,7 +157,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
                   className="mt-1.5 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
                 >
                   <option value="">All specialties</option>
-                  {SPECIALTY_TAXONOMY.map((s) => (
+                  {taxonomy.map((s) => (
                     <option key={s.slug} value={s.slug}>
                       {s.name} ({specialtyCounts[s.slug] ?? 0})
                     </option>

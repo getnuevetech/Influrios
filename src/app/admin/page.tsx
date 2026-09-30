@@ -79,6 +79,20 @@ const LINKS: {
     meta: () => "Social, specialty, and QR limits",
   },
   {
+    href: "/admin/taxonomy",
+    title: "Taxonomy",
+    blurb: "Enable specialties and add search synonyms.",
+    module: "taxonomy",
+    meta: () => "Synonyms drive Discover",
+  },
+  {
+    href: "/admin/homepage",
+    title: "Homepage",
+    blurb: "Reorder landing sections and header links.",
+    module: "banners",
+    meta: () => "Draft or publish sections",
+  },
+  {
     href: "/admin/payments",
     title: "Protected Payments",
     blurb: "Escrow deals, milestone release, and refunds.",

@@ -17,12 +17,11 @@ import {
   SocialIcon,
 } from "@/components/icons";
 import { getCms } from "@/lib/cms";
+import { getDirectory } from "@/lib/directory";
 import {
   CATEGORY_IMAGES,
   COLLAB_MATCH_PRESETS,
-  SEED_CREATORS,
-  SPECIALTY_TAXONOMY,
-  getCreatorBySlug,
+  type SeedCreator,
 } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -31,42 +30,42 @@ const TRENDING = ["Beauty", "Travel", "Fitness", "Home & Interior", "Tech", "Foo
 
 const HERO_FLOATS = [
   {
-    creator: SEED_CREATORS[0],
+    slug: "sofia-martinez",
     label: "Beauty",
     followers: "2.4M",
     platform: "INSTAGRAM" as const,
     className: "left-[2%] top-[6%] hidden w-36 rotate-[-8deg] lg:block xl:w-40",
   },
   {
-    creator: SEED_CREATORS[2],
+    slug: "priya-sharma",
     label: "Tech",
     followers: "3.1M",
     platform: "YOUTUBE" as const,
     className: "right-[0%] top-[2%] hidden w-36 rotate-[7deg] md:block xl:w-40",
   },
   {
-    creator: SEED_CREATORS[5],
+    slug: "jordan-blake",
     label: "Travel",
     followers: "1.6M",
     platform: "TIKTOK" as const,
     className: "bottom-[4%] left-[8%] hidden w-32 rotate-[4deg] lg:block",
   },
   {
-    creator: SEED_CREATORS[3],
+    slug: "marcus-lee",
     label: "Lifestyle",
     followers: "980K",
     platform: "INSTAGRAM" as const,
     className: "bottom-[8%] right-[6%] hidden w-32 rotate-[-5deg] md:block",
   },
   {
-    creator: SEED_CREATORS[4],
+    slug: "amara-okonkwo",
     label: "Fashion",
     followers: "1.2M",
     platform: "TIKTOK" as const,
     className: "right-[18%] top-[38%] hidden w-28 rotate-[10deg] xl:block",
   },
   {
-    creator: SEED_CREATORS[1],
+    slug: "daniel-kim",
     label: "Home & DIY",
     followers: "740K",
     platform: "YOUTUBE" as const,
@@ -86,7 +85,23 @@ function Shell({
 }
 
 export default async function HomePage() {
-  const cms = await getCms();
+  const [cms, directory] = await Promise.all([getCms(), getDirectory()]);
+  const taxonomy = directory.taxonomy
+    .filter((node) => node.active)
+    .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
+  const bySlug = new Map(directory.creators.map((creator) => [creator.slug, creator]));
+  const creatorBySlug = (slug: string) => bySlug.get(slug);
+  const heroFloats = HERO_FLOATS.flatMap((item) => {
+    const creator = creatorBySlug(item.slug);
+    return creator ? [{ ...item, creator }] : [];
+  });
+  const sections = [...directory.sections].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sectionOn = (key: string) => {
+    const section = sections.find((item) => item.key === key);
+    if (!section) return true;
+    return section.enabled && section.status === "published";
+  };
+  const sectionRank = (key: string) => sections.find((item) => item.key === key)?.sortOrder ?? 50;
   const hero = cms.banners.hero;
   const sponsored = cms.banners.sponsored;
   const cardPromo = cms.banners.cardPromo;
@@ -100,16 +115,16 @@ export default async function HomePage() {
     .filter((c) => c.visible)
     .sort((a, b) => a.order - b.order)
     .map((c) => {
-      const creator = getCreatorBySlug(c.slug);
+      const creator = creatorBySlug(c.slug);
       return creator ? { creator, features: c.features } : null;
     })
-    .filter(Boolean) as { creator: (typeof SEED_CREATORS)[0]; features: (typeof cms.featuredCards.cards)[0]["features"] }[];
+    .filter(Boolean) as { creator: SeedCreator; features: (typeof cms.featuredCards.cards)[0]["features"] }[];
 
   // Prefer Plus/Pro first if CMS hasn't ordered yet
   const featured =
     featuredItems.length > 0
       ? featuredItems
-      : SEED_CREATORS.filter((c) => c.planTier !== "STARTER")
+      : directory.creators.filter((c) => c.planTier !== "STARTER")
           .slice(0, 5)
           .map((creator) => ({
             creator,
@@ -127,13 +142,14 @@ export default async function HomePage() {
             },
           }));
 
-  const proofAvatars = SEED_CREATORS.slice(0, 5);
+  const proofAvatars = directory.creators.slice(0, 5);
+  const featuredCreator = creatorBySlug("sofia-martinez") ?? directory.creators[0];
   const heroPadY = `${Math.round(4 * hero.heightScale)}rem`;
   const ctaPadY = `${Math.round(4 * cta.heightScale)}rem`;
 
   return (
-    <>
-      {/* —— Hero —— */}
+    <div className="flex flex-col">
+      <div style={{ order: sectionRank("hero") }} className={sectionOn("hero") ? undefined : "hidden"}>
       {hero.enabled ? (
         <section className="hero-atmosphere relative w-full overflow-hidden text-white">
           {hero.images[0] ? (
@@ -150,7 +166,7 @@ export default async function HomePage() {
             <IconYouTube className="absolute bottom-[28%] left-[28%] opacity-20" size={30} />
           </div>
 
-          {HERO_FLOATS.map((item) => (
+          {heroFloats.map((item) => (
             <Link
               key={item.label + item.creator.slug}
               href={`/creators/${item.creator.slug}`}
@@ -233,7 +249,7 @@ export default async function HomePage() {
               <span className="text-xs font-semibold text-white/55">Trending:</span>
               {TRENDING.map((name) => {
                 const slug =
-                  SPECIALTY_TAXONOMY.find((s) => s.name === name)?.slug ??
+                  taxonomy.find((s) => s.name === name)?.slug ??
                   name.toLowerCase().replace(/\s+&\s+/g, "-").replace(/\s+/g, "-");
                 return (
                   <Link
@@ -249,7 +265,9 @@ export default async function HomePage() {
           </div>
         </section>
       ) : null}
+      </div>
 
+      <div style={{ order: sectionRank("categories") }} className={sectionOn("categories") ? undefined : "hidden"}>
       {/* —— Categories —— */}
       <section id="categories" className="w-full py-12">
         <Shell>
@@ -265,7 +283,7 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10">
-            {SPECIALTY_TAXONOMY.map((s) => (
+            {taxonomy.map((s) => (
               <Link
                 key={s.slug}
                 href={`/discover?specialty=${s.slug}`}
@@ -297,7 +315,9 @@ export default async function HomePage() {
           </div>
         </Shell>
       </section>
+      </div>
 
+      <div style={{ order: sectionRank("featured") }} className={sectionOn("featured") ? undefined : "hidden"}>
       {/* —— Featured (manual horizontal scroll) —— */}
       <section className="w-full bg-gradient-to-b from-[#F7FAFF] to-lavender/40 py-12">
         <Shell>
@@ -326,7 +346,9 @@ export default async function HomePage() {
           </FeaturedCarousel>
         </Shell>
       </section>
+      </div>
 
+      <div style={{ order: sectionRank("sponsored") }} className={sectionOn("sponsored") ? undefined : "hidden"}>
       {/* —— Sponsored —— */}
       {sponsored.enabled ? (
         <section className="w-full py-8">
@@ -372,10 +394,13 @@ export default async function HomePage() {
           </Shell>
         </section>
       ) : null}
+      </div>
 
-      {/* —— Value proposition strip (CMS / Phase 12a) —— */}
+      <div style={{ order: sectionRank("value_proposition") }} className={sectionOn("value_proposition") ? undefined : "hidden"}>
       <HomepageValuePropositionStrip strip={valueProposition} />
+      </div>
 
+      <div style={{ order: sectionRank("collaboration") }} className={sectionOn("collaboration") ? undefined : "hidden"}>
       {/* —— Collaboration Matches —— */}
       <section className="w-full py-12">
         <Shell>
@@ -395,8 +420,8 @@ export default async function HomePage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {COLLAB_MATCH_PRESETS.map((m) => {
-              const left = getCreatorBySlug(m.leftSlug);
-              const right = getCreatorBySlug(m.rightSlug);
+              const left = creatorBySlug(m.leftSlug);
+              const right = creatorBySlug(m.rightSlug);
               return (
                 <Link
                   key={m.title}
@@ -446,7 +471,9 @@ export default async function HomePage() {
           </div>
         </Shell>
       </section>
+      </div>
 
+      <div style={{ order: sectionRank("card_promo") }} className={sectionOn("card_promo") ? undefined : "hidden"}>
       {/* —— Influencer Card promo (template horizontal card) —— */}
       {cardPromo.enabled ? (
         <section className="w-full bg-gradient-to-br from-[#EEF2FF] via-[#F7FAFF] to-lavender/70 py-10">
@@ -486,7 +513,7 @@ export default async function HomePage() {
             </div>
 
             <div className="flex justify-center">
-              <CompactInfluencerCard creator={SEED_CREATORS[0]} />
+              {featuredCreator ? <CompactInfluencerCard creator={featuredCreator} /> : null}
             </div>
 
             <div className="relative mx-auto hidden max-w-[200px] lg:block">
@@ -494,7 +521,7 @@ export default async function HomePage() {
                 <div className="overflow-hidden rounded-[1.15rem] bg-white">
                   <div className="relative h-28">
                     <Image
-                      src={SEED_CREATORS[0].image}
+                      src={featuredCreator?.image ?? "/demo/creators/creator-sofia.jpg"}
                       alt=""
                       fill
                       className="object-cover"
@@ -503,9 +530,9 @@ export default async function HomePage() {
                   </div>
                   <div className="space-y-1.5 px-3 py-3 text-center">
                     <p className="font-display text-sm font-bold text-indigo">
-                      {SEED_CREATORS[0].displayName}
+                      {featuredCreator?.displayName ?? "Creator"}
                     </p>
-                    {SEED_CREATORS[0].socials.slice(0, 2).map((s) => (
+                    {(featuredCreator?.socials ?? []).slice(0, 2).map((s) => (
                       <div
                         key={s.platform}
                         className="flex items-center justify-center gap-1.5 rounded-full bg-lavender/70 py-1.5 text-[10px] font-semibold text-violet"
@@ -533,7 +560,9 @@ export default async function HomePage() {
           </Shell>
         </section>
       ) : null}
+      </div>
 
+      <div style={{ order: sectionRank("cta") }} className={sectionOn("cta") ? undefined : "hidden"}>
       {/* —— Bottom CTA (−20% height via CMS) —— */}
       {cta.enabled ? (
         <section className="relative w-full overflow-hidden">
@@ -553,7 +582,7 @@ export default async function HomePage() {
           >
             <div className="hidden shrink-0 lg:block">
               <div className="flex -space-x-4">
-                {SEED_CREATORS.slice(0, 3).map((c, i) => (
+                {directory.creators.slice(0, 3).map((c, i) => (
                   <span
                     key={c.slug}
                     className={`relative h-20 w-20 overflow-hidden rounded-2xl ring-4 ring-white/20 ${
@@ -585,7 +614,7 @@ export default async function HomePage() {
             </div>
             <div className="hidden shrink-0 lg:block">
               <div className="flex -space-x-4">
-                {SEED_CREATORS.slice(3, 6).map((c, i) => (
+                {directory.creators.slice(3, 6).map((c, i) => (
                   <span
                     key={c.slug}
                     className={`relative h-20 w-20 overflow-hidden rounded-2xl ring-4 ring-white/20 ${
@@ -600,6 +629,7 @@ export default async function HomePage() {
           </div>
         </section>
       ) : null}
-    </>
+      </div>
+    </div>
   );
 }

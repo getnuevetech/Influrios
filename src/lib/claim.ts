@@ -230,6 +230,11 @@ export async function getDraftBySlug(slug: string) {
   return store.drafts.find((d) => d.slug === slug) ?? null;
 }
 
+export async function listPublishedClaimCreators(): Promise<SeedCreator[]> {
+  const store = await ensureStore();
+  return store.drafts.filter((draft) => draft.stage === "published").map(draftToSeedCreator);
+}
+
 export async function getPublishedCreatorBySlug(slug: string): Promise<SeedCreator | null> {
   const draft = await getDraftBySlug(slug);
   if (!draft || draft.stage !== "published") return null;

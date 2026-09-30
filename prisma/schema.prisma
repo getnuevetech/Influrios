@@ -36,6 +36,13 @@ enum VerificationStatus {
   REJECTED
 }
 
+enum ProfileState {
+  UNCLAIMED
+  CLAIMED
+  VERIFIED
+  RESTRICTED
+}
+
 enum SocialPlatform {
   INSTAGRAM
   TIKTOK
@@ -143,6 +150,28 @@ model FeatureFlag {
   description String?
 }
 
+model CmsSection {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  title     String
+  sortOrder Int      @default(0)
+  enabled   Boolean  @default(true)
+  status    String   @default("published")
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SiteMenuItem {
+  id        String   @id @default(cuid())
+  menu      String
+  label     String
+  href      String
+  sortOrder Int      @default(0)
+  visible   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
 model Job {
   id        String   @id @default(cuid())
   kind      String
@@ -163,8 +192,18 @@ model Specialty {
   parent      Specialty?  @relation("SpecialtyTree", fields: [parentId], references: [id])
   children    Specialty[] @relation("SpecialtyTree")
   creators    CreatorSpecialty[]
+  synonyms    SpecialtySynonym[]
+  active      Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
+}
+
+model SpecialtySynonym {
+  id          String    @id @default(cuid())
+  specialtyId String
+  term        String    @unique
+  specialty   Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
 }
 
 model Creator {
@@ -183,6 +222,7 @@ model Creator {
   openToCollab       Boolean            @default(true)
   availability       String             @default("OPEN_TO_PARTNERSHIPS")
   identityVerified   VerificationStatus @default(UNVERIFIED)
+  profileState       ProfileState       @default(UNCLAIMED)
   claimed            Boolean            @default(false)
   planTier           PlanTier           @default(STARTER)
   createdAt          DateTime           @default(now())

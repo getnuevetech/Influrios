@@ -421,7 +421,7 @@ export function getCreatorBySlug(slug: string) {
   return SEED_CREATORS.find((c) => c.slug === slug);
 }
 
-export function searchCreators(query: {
+export type CreatorSearchQuery = {
   q?: string;
   specialty?: string;
   location?: string;
@@ -436,7 +436,13 @@ export function searchCreators(query: {
   openToCollab?: string | boolean;
   verified?: string | boolean;
   sort?: string;
-}) {
+};
+
+export function filterCreators(
+  creators: SeedCreator[],
+  query: CreatorSearchQuery,
+  synonyms: { term: string; slug: string }[] = [],
+) {
   const q = query.q?.toLowerCase().trim();
   const specialty = query.specialty?.toLowerCase();
   const location = query.location?.toLowerCase();
@@ -459,10 +465,13 @@ export function searchCreators(query: {
     query.verified === "true" ||
     query.verified === "on";
 
-  let results = SEED_CREATORS.filter((c) => {
+  let results = creators.filter((c) => {
     if (q) {
+      const aliasWords = c.specialties
+        .flatMap((slug) => synonyms.filter((row) => row.slug === slug).map((row) => row.term))
+        .join(" ");
       const hay =
-        `${c.displayName} ${c.title} ${c.bio} ${c.specialties.join(" ")} ${c.locationCity} ${c.locationCountry}`.toLowerCase();
+        `${c.displayName} ${c.title} ${c.bio} ${c.specialties.join(" ")} ${aliasWords} ${c.locationCity} ${c.locationCountry}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     if (specialty && !c.specialties.some((s) => s === specialty || s.includes(specialty))) return false;
@@ -501,9 +510,13 @@ export function searchCreators(query: {
   return results;
 }
 
-export function getLocationOptions() {
+export function searchCreators(query: CreatorSearchQuery) {
+  return filterCreators(SEED_CREATORS, query);
+}
+
+export function locationOptionsFor(creators: SeedCreator[]) {
   const countries = new Map<string, Map<string, Set<string>>>();
-  for (const c of SEED_CREATORS) {
+  for (const c of creators) {
     const country = c.locationCountry;
     const state = c.locationState || "—";
     if (!countries.has(country)) countries.set(country, new Map());
@@ -524,10 +537,18 @@ export function getLocationOptions() {
     }));
 }
 
-export function getLanguageOptions() {
+export function getLocationOptions() {
+  return locationOptionsFor(SEED_CREATORS);
+}
+
+export function languageOptionsFor(creators: SeedCreator[]) {
   const set = new Set<string>();
-  for (const c of SEED_CREATORS) for (const l of c.languages) set.add(l);
+  for (const c of creators) for (const l of c.languages) set.add(l);
   return [...set].sort();
+}
+
+export function getLanguageOptions() {
+  return languageOptionsFor(SEED_CREATORS);
 }
 
 export function specialtyLabel(slug: string): string {
