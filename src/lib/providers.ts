@@ -159,13 +159,32 @@ const GATEWAY_SHELLS = [
   { code: "flutterwave", name: "Flutterwave" },
 ] as const;
 
-export async function ensureIntegrationCatalog() {
-  for (const shell of GATEWAY_SHELLS) {
-    await prisma.integrationProvider.upsert({
-      where: { kind_code: { kind: "payment", code: shell.code } },
-      update: {},
-      create: { kind: "payment", code: shell.code, name: shell.name, enabled: false },
+let catalogTask: Promise<void> | null = null;
+
+export function ensureIntegrationCatalog() {
+  if (!catalogTask) {
+    catalogTask = seedIntegrationCatalog().catch((error) => {
+      catalogTask = null;
+      throw error;
     });
+  }
+  return catalogTask;
+}
+
+async function seedIntegrationCatalog() {
+  for (const shell of GATEWAY_SHELLS) {
+    const existing = await prisma.integrationProvider.findUnique({
+      where: { kind_code: { kind: "payment", code: shell.code } },
+    });
+    if (existing) continue;
+    try {
+      await prisma.integrationProvider.create({
+        data: { kind: "payment", code: shell.code, name: shell.name, enabled: false },
+      });
+    } catch (error) {
+      const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+      if (code !== "P2002") throw error;
+    }
   }
   const gateways = await prisma.integrationProvider.findMany({ where: { kind: "payment" } });
   const byCode = new Map(gateways.map((row) => [row.code, row]));
@@ -179,9 +198,14 @@ export async function ensureIntegrationCatalog() {
     if (!provider) continue;
     const existing = await prisma.paymentCountryRoute.findUnique({ where: { countryCode: country.countryCode } });
     if (existing) continue;
-    await prisma.paymentCountryRoute.create({
-      data: { countryCode: country.countryCode, providerId: provider.id, active: true },
-    });
+    try {
+      await prisma.paymentCountryRoute.create({
+        data: { countryCode: country.countryCode, providerId: provider.id, active: true },
+      });
+    } catch (error) {
+      const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+      if (code !== "P2002") throw error;
+    }
   }
   for (const fn of AI_FUNCTIONS) {
     await prisma.aiFunctionRoute.upsert({
