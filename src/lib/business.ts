@@ -76,15 +76,23 @@ async function ensureStore(): Promise<BusinessWorkspace> {
     const raw = await fs.readFile(STORE_PATH, "utf8");
     return JSON.parse(raw) as BusinessWorkspace;
   } catch {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_WORKSPACE, null, 2));
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_WORKSPACE, null, 2));
+    } catch {
+      /* read-only FS — serve in-memory defaults */
+    }
     return structuredClone(DEFAULT_WORKSPACE);
   }
 }
 
 async function saveStore(ws: BusinessWorkspace) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(STORE_PATH, JSON.stringify(ws, null, 2));
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(STORE_PATH, JSON.stringify(ws, null, 2));
+  } catch {
+    /* ignore write failures in read-only environments */
+  }
 }
 
 export async function getWorkspace(): Promise<BusinessWorkspace> {

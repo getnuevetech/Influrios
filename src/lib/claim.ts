@@ -76,15 +76,23 @@ async function ensureStore(): Promise<ClaimStore> {
     return JSON.parse(raw) as ClaimStore;
   } catch {
     const store: ClaimStore = { drafts: [] };
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+    } catch {
+      /* read-only FS — serve in-memory defaults */
+    }
     return store;
   }
 }
 
 async function saveStore(store: ClaimStore) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+  } catch {
+    /* ignore write failures in read-only environments */
+  }
 }
 
 export async function getClaimStore() {

@@ -270,8 +270,12 @@ async function ensureStore(): Promise<SiteCms> {
 }
 
 async function saveStore(cms: SiteCms) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(STORE_PATH, JSON.stringify(cms, null, 2));
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(STORE_PATH, JSON.stringify(cms, null, 2));
+  } catch {
+    /* ignore write failures in read-only environments */
+  }
 }
 
 export async function getCms(): Promise<SiteCms> {

@@ -124,25 +124,27 @@ export default async function AdminHomePage({
   if (!session) redirect("/admin/login");
 
   const params = await searchParams;
-  const cms = await getCms();
-  const matching = await getManagedMatching();
-  const billing = await getBillingStore();
-  const payments = await getProtectedPaymentsStore();
-  const payStats = escrowStats(payments);
-  const trust = await getTrustStore();
-  const tStats = trustStats(trust);
-  const agency = await getAgencyStore();
-  const aStats = agencyStats(agency);
-  const visibleCards = cms.featuredCards.cards.filter((c) => c.visible).length;
-  const optIns = matching.optIns.filter((o) => o.openToManaged).length;
+  const [cms, matching, billing, payments, trust, agency] = await Promise.all([
+    getCms().catch(() => null),
+    getManagedMatching().catch(() => null),
+    getBillingStore().catch(() => null),
+    getProtectedPaymentsStore().catch(() => null),
+    getTrustStore().catch(() => null),
+    getAgencyStore().catch(() => null),
+  ]);
+  const payStats = payments ? escrowStats(payments) : { active: 0, held: 0 };
+  const tStats = trust ? trustStats(trust) : { open: 0, resolved: 0, total: 0, contracts: 0 };
+  const aStats = agency ? agencyStats(agency) : { roster: 0, campaigns: 0, live: 0, portfolios: 0, published: 0 };
+  const visibleCards = cms?.featuredCards.cards.filter((c) => c.visible).length ?? 0;
+  const optIns = matching?.optIns.filter((o) => o.openToManaged).length ?? 0;
   const snapshots = getAllAudienceSnapshots().length;
   const rising = getNicheTrends().filter((t) => t.signal === "rising").length;
-  const completedCheckouts = billing.sessions.filter((s) => s.status === "completed").length;
+  const completedCheckouts = billing?.sessions.filter((s) => s.status === "completed").length ?? 0;
   const ctx = {
     visibleCards,
-    bannersEnabled: Object.values(cms.banners).filter((b) => b.enabled).length,
+    bannersEnabled: cms ? Object.values(cms.banners).filter((b) => b.enabled).length : 0,
     optIns,
-    intros: matching.intros.length,
+    intros: matching?.intros.length ?? 0,
     snapshots,
     rising,
     completedCheckouts,
