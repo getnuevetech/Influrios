@@ -1,7 +1,8 @@
 import { getBusinessEntitlements, type BusinessPlanCode } from "@/lib/business-entitlements";
+import { managedMatchGate } from "@/lib/business-queue";
+import { prisma } from "@/lib/db";
+import { getManagedPromotionEnabled } from "@/lib/managed-matching";
 import { SEED_CREATORS, specialtyLabel, type SeedCreator } from "@/lib/seed-data";
-import { promises as fs } from "fs";
-import path from "path";
 
 export type ShortlistItem = {
   creatorSlug: string;
@@ -41,75 +42,145 @@ export type BusinessWorkspace = {
   inquiries: Inquiry[];
 };
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_PATH = path.join(DATA_DIR, "business-workspace.json");
+const WORKSPACE_ID = "demo-business";
 
-const DEFAULT_WORKSPACE: BusinessWorkspace = {
-  businessId: "demo-business",
-  name: "Luminous Beauty",
-  plan: "BUSINESS_PRO",
-  industry: "Skincare & Wellness",
-  shortlist: [
-    { creatorSlug: "sofia-martinez", addedAt: new Date().toISOString(), note: "Top beauty fit" },
-    { creatorSlug: "amara-okonkwo", addedAt: new Date().toISOString(), note: "Natural-hair angle" },
-  ],
-  briefs: [
-    {
-      id: "brief-clean-launch",
-      title: "Clean Skincare Launch",
-      goal: "Product Launch",
-      specialty: "beauty",
-      budget: "$5K – $10K",
-      location: "USA",
-      platform: "INSTAGRAM",
-      summary: "Seeking beauty educators for a 3-post launch series with honest routine content.",
-      createdAt: new Date().toISOString(),
-      status: "active",
+const BRIEF_STATUSES = ["draft", "active", "closed"] as const;
+const INQUIRY_STATUSES = ["sent", "replied", "declined"] as const;
+const PLAN_CODES: BusinessPlanCode[] = ["BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];
+
+function asPlan(value: string): BusinessPlanCode {
+  return PLAN_CODES.includes(value as BusinessPlanCode) ? (value as BusinessPlanCode) : "BUSINESS_PRO";
+}
+
+function asBriefStatus(value: string): CampaignBrief["status"] {
+  return BRIEF_STATUSES.includes(value as CampaignBrief["status"]) ? (value as CampaignBrief["status"]) : "active";
+}
+
+function asInquiryStatus(value: string): Inquiry["status"] {
+  return INQUIRY_STATUSES.includes(value as Inquiry["status"]) ? (value as Inquiry["status"]) : "sent";
+}
+
+function isUnique(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && String(error.code) === "P2002";
+}
+
+type WorkspaceRow = NonNullable<Awaited<ReturnType<typeof loadRow>>>;
+
+async function loadRow() {
+  return prisma.businessWorkspace.findUnique({
+    where: { id: WORKSPACE_ID },
+    include: {
+      briefs: { orderBy: { createdAt: "desc" } },
+      shortlist: { orderBy: { addedAt: "desc" } },
+      inquiries: { orderBy: { createdAt: "desc" } },
     },
-  ],
-  inquiries: [],
-};
+  });
+}
 
-async function ensureStore(): Promise<BusinessWorkspace> {
+function mapWorkspace(row: WorkspaceRow): BusinessWorkspace {
+  return {
+    businessId: row.id,
+    name: row.name,
+    plan: asPlan(row.plan),
+    industry: row.industry,
+    shortlist: row.shortlist.map((item) => ({
+      creatorSlug: item.creatorSlug,
+      addedAt: item.addedAt.toISOString(),
+      note: item.note ?? undefined,
+    })),
+    briefs: row.briefs.map((brief) => ({
+      id: brief.id,
+      title: brief.title,
+      goal: brief.goal,
+      specialty: brief.specialty,
+      budget: brief.budget,
+      location: brief.location,
+      platform: brief.platform,
+      summary: brief.summary,
+      createdAt: brief.createdAt.toISOString(),
+      status: asBriefStatus(brief.status),
+    })),
+    inquiries: row.inquiries.map((inquiry) => ({
+      id: inquiry.id,
+      creatorSlug: inquiry.creatorSlug,
+      briefId: inquiry.briefId ?? undefined,
+      message: inquiry.message,
+      status: asInquiryStatus(inquiry.status),
+      createdAt: inquiry.createdAt.toISOString(),
+    })),
+  };
+}
+
+let workspaceSeed: Promise<void> | null = null;
+
+async function seedWorkspace() {
+  const existing = await prisma.businessWorkspace.findUnique({ where: { id: WORKSPACE_ID } });
+  if (existing) return;
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    return JSON.parse(raw) as BusinessWorkspace;
-  } catch {
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_WORKSPACE, null, 2));
-    } catch {
-      /* read-only FS — serve in-memory defaults */
-    }
-    return structuredClone(DEFAULT_WORKSPACE);
+    await prisma.businessWorkspace.create({
+      data: {
+        id: WORKSPACE_ID,
+        name: "Luminous Beauty",
+        plan: "BUSINESS_PRO",
+        industry: "Skincare & Wellness",
+        briefs: {
+          create: {
+            id: "brief-clean-launch",
+            title: "Clean Skincare Launch",
+            goal: "Product Launch",
+            specialty: "beauty",
+            budget: "$5K – $10K",
+            location: "USA",
+            platform: "INSTAGRAM",
+            summary: "Seeking beauty educators for a 3-post launch series with honest routine content.",
+            status: "active",
+          },
+        },
+        shortlist: {
+          create: [
+            { creatorSlug: "sofia-martinez", note: "Top beauty fit" },
+            { creatorSlug: "amara-okonkwo", note: "Natural-hair angle" },
+          ],
+        },
+      },
+    });
+  } catch (error) {
+    if (!isUnique(error)) throw error;
   }
 }
 
-async function saveStore(ws: BusinessWorkspace) {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(ws, null, 2));
-  } catch {
-    /* ignore write failures in read-only environments */
+function ensureWorkspace() {
+  if (!workspaceSeed) {
+    workspaceSeed = seedWorkspace().catch((error) => {
+      workspaceSeed = null;
+      throw error;
+    });
   }
+  return workspaceSeed;
+}
+
+async function readWorkspace() {
+  await ensureWorkspace();
+  const row = await loadRow();
+  if (!row) throw new Error("Business workspace is unavailable.");
+  return mapWorkspace(row);
 }
 
 export async function getWorkspace(): Promise<BusinessWorkspace> {
-  return ensureStore();
+  return readWorkspace();
 }
 
 export async function setBusinessPlan(plan: BusinessPlanCode) {
-  const ws = await ensureStore();
-  ws.plan = plan;
-  await saveStore(ws);
-  return ws;
+  if (!PLAN_CODES.includes(plan)) throw new Error("Unknown business plan.");
+  await ensureWorkspace();
+  await prisma.businessWorkspace.update({ where: { id: WORKSPACE_ID }, data: { plan } });
+  return readWorkspace();
 }
 
 export async function addToShortlist(creatorSlug: string, note?: string) {
-  const ws = await ensureStore();
+  const ws = await readWorkspace();
   const limits = getBusinessEntitlements(ws.plan);
-  if (ws.shortlist.some((s) => s.creatorSlug === creatorSlug)) return { ok: true as const, ws };
+  if (ws.shortlist.some((item) => item.creatorSlug === creatorSlug)) return { ok: true as const, ws };
   if (ws.shortlist.length >= limits.shortlistMax) {
     return {
       ok: false as const,
@@ -117,36 +188,54 @@ export async function addToShortlist(creatorSlug: string, note?: string) {
       ws,
     };
   }
-  if (!SEED_CREATORS.some((c) => c.slug === creatorSlug)) {
+  if (!SEED_CREATORS.some((creator) => creator.slug === creatorSlug)) {
     return { ok: false as const, error: "Creator not found", ws };
   }
-  ws.shortlist.unshift({
-    creatorSlug,
-    addedAt: new Date().toISOString(),
-    note,
-  });
-  await saveStore(ws);
-  return { ok: true as const, ws };
+  try {
+    await prisma.businessShortlistItem.create({
+      data: { workspaceId: WORKSPACE_ID, creatorSlug, note },
+    });
+  } catch (error) {
+    if (!isUnique(error)) throw error;
+  }
+  return { ok: true as const, ws: await readWorkspace() };
 }
 
 export async function removeFromShortlist(creatorSlug: string) {
-  const ws = await ensureStore();
-  ws.shortlist = ws.shortlist.filter((s) => s.creatorSlug !== creatorSlug);
-  await saveStore(ws);
-  return ws;
+  await ensureWorkspace();
+  await prisma.businessShortlistItem.deleteMany({
+    where: { workspaceId: WORKSPACE_ID, creatorSlug },
+  });
+  return readWorkspace();
 }
 
 export async function createBrief(input: Omit<CampaignBrief, "id" | "createdAt" | "status">) {
-  const ws = await ensureStore();
-  const brief: CampaignBrief = {
-    ...input,
-    id: `brief-${Date.now()}`,
-    createdAt: new Date().toISOString(),
-    status: "active",
-  };
-  ws.briefs.unshift(brief);
-  await saveStore(ws);
-  return brief;
+  await ensureWorkspace();
+  const brief = await prisma.businessBrief.create({
+    data: {
+      workspaceId: WORKSPACE_ID,
+      title: input.title,
+      goal: input.goal,
+      specialty: input.specialty,
+      budget: input.budget,
+      location: input.location,
+      platform: input.platform,
+      summary: input.summary,
+      status: "active",
+    },
+  });
+  return {
+    id: brief.id,
+    title: brief.title,
+    goal: brief.goal,
+    specialty: brief.specialty,
+    budget: brief.budget,
+    location: brief.location,
+    platform: brief.platform,
+    summary: brief.summary,
+    createdAt: brief.createdAt.toISOString(),
+    status: asBriefStatus(brief.status),
+  } satisfies CampaignBrief;
 }
 
 export async function sendInquiry(input: {
@@ -154,27 +243,74 @@ export async function sendInquiry(input: {
   message: string;
   briefId?: string;
 }) {
-  const ws = await ensureStore();
+  const ws = await readWorkspace();
   const limits = getBusinessEntitlements(ws.plan);
   const month = new Date().toISOString().slice(0, 7);
-  const sentThisMonth = ws.inquiries.filter((i) => i.createdAt.startsWith(month)).length;
+  const sentThisMonth = ws.inquiries.filter((inquiry) => inquiry.createdAt.startsWith(month)).length;
   if (sentThisMonth >= limits.inquiryMaxPerMonth) {
     return {
       ok: false as const,
       error: `Monthly inquiry limit reached (${limits.inquiryMaxPerMonth}). Upgrade for higher limits.`,
     };
   }
-  const inquiry: Inquiry = {
-    id: `inq-${Date.now()}`,
-    creatorSlug: input.creatorSlug,
-    briefId: input.briefId,
-    message: input.message,
-    status: "sent",
-    createdAt: new Date().toISOString(),
+  const brief =
+    input.briefId && ws.briefs.some((item) => item.id === input.briefId) ? input.briefId : undefined;
+  const inquiry = await prisma.businessInquiry.create({
+    data: {
+      workspaceId: WORKSPACE_ID,
+      briefId: brief,
+      creatorSlug: input.creatorSlug,
+      message: input.message,
+      status: "sent",
+    },
+  });
+  return {
+    ok: true as const,
+    inquiry: {
+      id: inquiry.id,
+      creatorSlug: inquiry.creatorSlug,
+      briefId: inquiry.briefId ?? undefined,
+      message: inquiry.message,
+      status: asInquiryStatus(inquiry.status),
+      createdAt: inquiry.createdAt.toISOString(),
+    } satisfies Inquiry,
   };
-  ws.inquiries.unshift(inquiry);
-  await saveStore(ws);
-  return { ok: true as const, inquiry };
+}
+
+export async function queuedBriefIds() {
+  await ensureWorkspace();
+  const rows = await prisma.managedMatchRequest.findMany({
+    where: { workspaceId: WORKSPACE_ID, status: "queued" },
+    select: { briefId: true },
+  });
+  return rows.map((row) => row.briefId);
+}
+
+/** Name of a live AI provider assigned to business_creator_match, or null for the platform rule. */
+export async function businessMatchProviderName(): Promise<string | null> {
+  const route = await prisma.aiFunctionRoute.findUnique({
+    where: { functionKey: "business_creator_match" },
+    include: { provider: true },
+  });
+  if (!route?.enabled || !route.provider?.enabled || !route.provider.secretCipher) return null;
+  return route.provider.name;
+}
+
+export async function requestManagedMatch(briefId: string) {
+  const ws = await readWorkspace();
+  const brief = ws.briefs.find((item) => item.id === briefId);
+  if (!brief) return { ok: false as const, error: "Brief not found." };
+  const [flagEnabled, queued] = await Promise.all([getManagedPromotionEnabled(), queuedBriefIds()]);
+  const gate = managedMatchGate({
+    flagEnabled,
+    planAllows: getBusinessEntitlements(ws.plan).managedMatching,
+    alreadyQueued: queued.includes(briefId),
+  });
+  if (!gate.ok) return gate;
+  await prisma.managedMatchRequest.create({
+    data: { workspaceId: WORKSPACE_ID, briefId, status: "queued" },
+  });
+  return { ok: true as const };
 }
 
 export type CreatorFit = {
@@ -189,7 +325,7 @@ export type CreatorFit = {
   };
 };
 
-/** Explainable business → creator fit for a brief. */
+/** Explainable business → creator fit for a brief. This is a platform rule. */
 export function fitCreatorToBrief(creator: SeedCreator, brief: CampaignBrief): CreatorFit {
   const specialtyHit =
     creator.specialties.includes(brief.specialty) ||

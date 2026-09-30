@@ -1,5 +1,4 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { prisma } from "@/lib/db";
 import { SEED_CREATORS } from "@/lib/seed-data";
 
 export type IntroStatus =
@@ -38,85 +37,201 @@ export type ManagedMatchingStore = {
   optIns: CreatorOptIn[];
 };
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_PATH = path.join(DATA_DIR, "managed-matching.json");
-
-const DEFAULT_STORE: ManagedMatchingStore = {
-  intros: [
-    {
-      id: "intro-demo-1",
-      businessName: "Luminous Beauty",
-      businessId: "demo-business",
-      creatorSlug: "sofia-martinez",
-      briefTitle: "Clean Skincare Launch",
-      notes: "Manual intro — beauty educator fit for 3-post series.",
-      status: "introduced",
-      feeExpected: "15% success fee",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      timeline: [
-        { at: new Date().toISOString(), status: "draft", note: "Shortlist delivered" },
-        { at: new Date().toISOString(), status: "outreach", note: "Creator contacted" },
-        { at: new Date().toISOString(), status: "introduced", note: "Both parties connected" },
-      ],
-    },
-  ],
-  optIns: SEED_CREATORS.map((c) => ({
-    creatorSlug: c.slug,
-    openToManaged: c.openToCollab && c.planTier !== "STARTER",
-    targetingNotes: c.offer ?? "",
-    niches: c.specialties.slice(0, 3),
-    updatedAt: new Date().toISOString(),
-  })),
+export type MatchQueueItem = {
+  id: string;
+  briefId: string;
+  briefTitle: string;
+  businessName: string;
+  status: string;
+  createdAt: string;
 };
 
-async function ensureStore(): Promise<ManagedMatchingStore> {
+const INTRO_STATUS_CODES: IntroStatus[] = [
+  "draft",
+  "outreach",
+  "introduced",
+  "in_conversation",
+  "paid",
+  "declined",
+  "closed",
+];
+
+const FLAG_KEY = "managed_promotion";
+
+function asIntroStatus(value: string): IntroStatus {
+  return INTRO_STATUS_CODES.includes(value as IntroStatus) ? (value as IntroStatus) : "draft";
+}
+
+function isUnique(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && String(error.code) === "P2002";
+}
+
+type IntroRow = {
+  id: string;
+  businessName: string;
+  businessId: string;
+  creatorSlug: string;
+  briefTitle: string;
+  notes: string;
+  status: string;
+  feeExpected: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  events: { status: string; note: string | null; createdAt: Date }[];
+};
+
+function mapIntro(row: IntroRow): ManagedIntro {
+  return {
+    id: row.id,
+    businessName: row.businessName,
+    businessId: row.businessId,
+    creatorSlug: row.creatorSlug,
+    briefTitle: row.briefTitle,
+    notes: row.notes,
+    status: asIntroStatus(row.status),
+    feeExpected: row.feeExpected ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    timeline: [...row.events]
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .map((event) => ({
+        at: event.createdAt.toISOString(),
+        status: asIntroStatus(event.status),
+        note: event.note ?? undefined,
+      })),
+  };
+}
+
+let managedSeed: Promise<void> | null = null;
+
+async function seedManaged() {
+  const optCount = await prisma.creatorManagedOptIn.count();
+  if (optCount === 0) {
+    await prisma.creatorManagedOptIn.createMany({
+      data: SEED_CREATORS.map((creator) => ({
+        creatorSlug: creator.slug,
+        openToManaged: creator.openToCollab && creator.planTier !== "STARTER",
+        targetingNotes: creator.offer ?? "",
+        niches: creator.specialties.slice(0, 3),
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  const intro = await prisma.managedIntro.findUnique({ where: { id: "intro-demo-1" } });
+  const introCount = await prisma.managedIntro.count();
+  if (intro || introCount > 0) return;
+  const base = Date.now();
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    return JSON.parse(raw) as ManagedMatchingStore;
-  } catch {
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_STORE, null, 2));
-    } catch {
-      /* read-only build context */
-    }
-    return structuredClone(DEFAULT_STORE);
+    await prisma.managedIntro.create({
+      data: {
+        id: "intro-demo-1",
+        businessName: "Luminous Beauty",
+        businessId: "demo-business",
+        creatorSlug: "sofia-martinez",
+        briefTitle: "Clean Skincare Launch",
+        briefId: "brief-clean-launch",
+        notes: "Manual intro — beauty educator fit for 3-post series.",
+        status: "introduced",
+        feeExpected: "15% success fee",
+        events: {
+          create: [
+            { status: "draft", note: "Shortlist delivered", createdAt: new Date(base) },
+            { status: "outreach", note: "Creator contacted", createdAt: new Date(base + 1000) },
+            { status: "introduced", note: "Both parties connected", createdAt: new Date(base + 2000) },
+          ],
+        },
+      },
+    });
+  } catch (error) {
+    if (!isUnique(error)) throw error;
   }
 }
 
-async function saveStore(store: ManagedMatchingStore) {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2));
-  } catch {
-    /* ignore write failures in read-only environments */
+function ensureManaged() {
+  if (!managedSeed) {
+    managedSeed = seedManaged().catch((error) => {
+      managedSeed = null;
+      throw error;
+    });
   }
+  return managedSeed;
+}
+
+export async function getManagedPromotionEnabled() {
+  const row = await prisma.featureFlag.upsert({
+    where: { key: FLAG_KEY },
+    update: {},
+    create: {
+      key: FLAG_KEY,
+      enabled: true,
+      description: "Agency workspaces can ask for managed matching. Turn this off to stop new requests.",
+    },
+  });
+  return row.enabled;
+}
+
+export async function setManagedPromotionEnabled(enabled: boolean) {
+  await prisma.featureFlag.upsert({
+    where: { key: FLAG_KEY },
+    update: { enabled },
+    create: {
+      key: FLAG_KEY,
+      enabled,
+      description: "Agency workspaces can ask for managed matching. Turn this off to stop new requests.",
+    },
+  });
+  return enabled;
 }
 
 export async function getManagedMatching(): Promise<ManagedMatchingStore> {
-  return ensureStore();
+  await ensureManaged();
+  const [intros, optIns] = await Promise.all([
+    prisma.managedIntro.findMany({
+      include: { events: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.creatorManagedOptIn.findMany({ orderBy: { creatorSlug: "asc" } }),
+  ]);
+  return {
+    intros: intros.map(mapIntro),
+    optIns: optIns.map((row) => ({
+      creatorSlug: row.creatorSlug,
+      openToManaged: row.openToManaged,
+      targetingNotes: row.targetingNotes,
+      niches: row.niches,
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+  };
 }
 
 export async function setCreatorOptIn(
   creatorSlug: string,
   patch: Partial<Omit<CreatorOptIn, "creatorSlug">>,
 ) {
-  const store = await ensureStore();
-  const idx = store.optIns.findIndex((o) => o.creatorSlug === creatorSlug);
-  const prev = idx >= 0 ? store.optIns[idx] : null;
-  const next: CreatorOptIn = {
-    creatorSlug,
-    openToManaged: patch.openToManaged ?? prev?.openToManaged ?? false,
-    targetingNotes: patch.targetingNotes ?? prev?.targetingNotes ?? "",
-    niches: patch.niches ?? prev?.niches ?? [],
-    updatedAt: new Date().toISOString(),
-  };
-  if (idx >= 0) store.optIns[idx] = next;
-  else store.optIns.push(next);
-  await saveStore(store);
-  return next;
+  await ensureManaged();
+  const prev = await prisma.creatorManagedOptIn.findUnique({ where: { creatorSlug } });
+  const row = await prisma.creatorManagedOptIn.upsert({
+    where: { creatorSlug },
+    update: {
+      openToManaged: patch.openToManaged ?? prev?.openToManaged ?? false,
+      targetingNotes: patch.targetingNotes ?? prev?.targetingNotes ?? "",
+      niches: patch.niches ?? prev?.niches ?? [],
+    },
+    create: {
+      creatorSlug,
+      openToManaged: patch.openToManaged ?? false,
+      targetingNotes: patch.targetingNotes ?? "",
+      niches: patch.niches ?? [],
+    },
+  });
+  return {
+    creatorSlug: row.creatorSlug,
+    openToManaged: row.openToManaged,
+    targetingNotes: row.targetingNotes,
+    niches: row.niches,
+    updatedAt: row.updatedAt.toISOString(),
+  } satisfies CreatorOptIn;
 }
 
 export async function createIntro(input: {
@@ -124,39 +239,105 @@ export async function createIntro(input: {
   businessId?: string;
   creatorSlug: string;
   briefTitle: string;
+  briefId?: string;
   notes?: string;
   feeExpected?: string;
 }) {
-  const store = await ensureStore();
-  const now = new Date().toISOString();
-  const intro: ManagedIntro = {
-    id: `intro-${Date.now()}`,
-    businessName: input.businessName,
-    businessId: input.businessId ?? "demo-business",
-    creatorSlug: input.creatorSlug,
-    briefTitle: input.briefTitle,
-    notes: input.notes ?? "",
-    status: "draft",
-    feeExpected: input.feeExpected,
-    createdAt: now,
-    updatedAt: now,
-    timeline: [{ at: now, status: "draft", note: "Intro created from shortlist" }],
-  };
-  store.intros.unshift(intro);
-  await saveStore(store);
-  return intro;
+  await ensureManaged();
+  const now = new Date();
+  const row = await prisma.managedIntro.create({
+    data: {
+      businessName: input.businessName,
+      businessId: input.businessId ?? "demo-business",
+      creatorSlug: input.creatorSlug,
+      briefTitle: input.briefTitle,
+      briefId: input.briefId,
+      notes: input.notes ?? "",
+      status: "draft",
+      feeExpected: input.feeExpected,
+      events: {
+        create: { status: "draft", note: "Intro created from shortlist", createdAt: now },
+      },
+    },
+    include: { events: true },
+  });
+  return mapIntro(row);
 }
 
 export async function advanceIntro(id: string, status: IntroStatus, note?: string) {
-  const store = await ensureStore();
-  const intro = store.intros.find((i) => i.id === id);
-  if (!intro) return null;
-  const now = new Date().toISOString();
-  intro.status = status;
-  intro.updatedAt = now;
-  intro.timeline.push({ at: now, status, note });
-  await saveStore(store);
-  return intro;
+  await ensureManaged();
+  const existing = await prisma.managedIntro.findUnique({ where: { id } });
+  if (!existing) return null;
+  const now = new Date();
+  const row = await prisma.managedIntro.update({
+    where: { id },
+    data: {
+      status,
+      events: { create: { status, note, createdAt: now } },
+    },
+    include: { events: true },
+  });
+  return mapIntro(row);
+}
+
+export async function listQueuedMatchRequests(): Promise<MatchQueueItem[]> {
+  const rows = await prisma.managedMatchRequest.findMany({
+    where: { status: "queued" },
+    include: { brief: true, workspace: true },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    briefId: row.briefId,
+    briefTitle: row.brief.title,
+    businessName: row.workspace.name,
+    status: row.status,
+    createdAt: row.createdAt.toISOString(),
+  }));
+}
+
+export async function recordIntroFromRequest(input: {
+  requestId: string;
+  creatorSlug: string;
+  notes?: string;
+  feeExpected?: string;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const request = await tx.managedMatchRequest.findUnique({
+      where: { id: input.requestId },
+      include: { brief: true, workspace: true },
+    });
+    if (!request || request.status !== "queued") {
+      return { ok: false as const, error: "This request is no longer in the queue." };
+    }
+    if (!input.creatorSlug) {
+      return { ok: false as const, error: "Choose a creator for the introduction." };
+    }
+    const now = new Date();
+    const intro = await tx.managedIntro.create({
+      data: {
+        businessName: request.workspace.name,
+        businessId: request.workspaceId,
+        creatorSlug: input.creatorSlug,
+        briefTitle: request.brief.title,
+        briefId: request.briefId,
+        notes: input.notes ?? "",
+        status: "draft",
+        feeExpected: input.feeExpected,
+        events: {
+          create: { status: "draft", note: "Recorded from the managed queue", createdAt: now },
+        },
+      },
+    });
+    const updated = await tx.managedMatchRequest.updateMany({
+      where: { id: request.id, status: "queued" },
+      data: { status: "intro_recorded", introId: intro.id },
+    });
+    if (updated.count !== 1) {
+      throw new Error("This request is no longer in the queue.");
+    }
+    return { ok: true as const, introId: intro.id };
+  });
 }
 
 export const INTRO_STATUSES: { code: IntroStatus; label: string }[] = [

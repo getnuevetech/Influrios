@@ -6,7 +6,9 @@ import { requireAdminAction } from "@/app/admin/guard";
 import {
   advanceIntro,
   createIntro,
+  recordIntroFromRequest,
   setCreatorOptIn,
+  setManagedPromotionEnabled,
   type IntroStatus,
 } from "@/lib/managed-matching";
 
@@ -33,6 +35,39 @@ export async function actionAdvanceIntro(formData: FormData) {
   revalidatePath("/admin/matching");
   revalidatePath("/business");
   redirect(`/admin/matching?advanced=${id}`);
+}
+
+export async function actionSetManagedPromotion(formData: FormData) {
+  await requireAdminAction("matching.manage_optins");
+  try {
+    await setManagedPromotionEnabled(formData.get("enabled") === "on");
+  } catch {
+    redirect("/admin/matching?error=" + encodeURIComponent("Matching records are unavailable. Nothing was saved."));
+  }
+  revalidatePath("/admin/matching");
+  revalidatePath("/business");
+  redirect("/admin/matching?flag=1");
+}
+
+export async function actionRecordIntroduction(formData: FormData) {
+  await requireAdminAction("matching.create_intros");
+  let result: Awaited<ReturnType<typeof recordIntroFromRequest>>;
+  try {
+    result = await recordIntroFromRequest({
+      requestId: String(formData.get("requestId") ?? ""),
+      creatorSlug: String(formData.get("creatorSlug") ?? ""),
+      notes: String(formData.get("notes") ?? ""),
+      feeExpected: String(formData.get("feeExpected") ?? "") || undefined,
+    });
+  } catch {
+    redirect("/admin/matching?error=" + encodeURIComponent("Matching records are unavailable. Nothing was saved."));
+  }
+  revalidatePath("/admin/matching");
+  revalidatePath("/business");
+  if (!result.ok) {
+    redirect(`/admin/matching?error=${encodeURIComponent(result.error)}`);
+  }
+  redirect("/admin/matching?recorded=1");
 }
 
 export async function actionSetOptIn(formData: FormData) {

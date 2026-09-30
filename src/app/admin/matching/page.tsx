@@ -3,20 +3,32 @@ import Link from "next/link";
 import {
   actionAdvanceIntro,
   actionCreateIntro,
+  actionRecordIntroduction,
+  actionSetManagedPromotion,
   actionSetOptIn,
 } from "@/app/admin/matching/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import {
   getManagedMatching,
+  getManagedPromotionEnabled,
   INTRO_STATUSES,
+  listQueuedMatchRequests,
 } from "@/lib/managed-matching";
 import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Managed Matching" };
 
 type Props = {
-  searchParams: Promise<{ created?: string; advanced?: string; optin?: string }>;
+  searchParams: Promise<{
+    created?: string;
+    advanced?: string;
+    optin?: string;
+    flag?: string;
+    recorded?: string;
+    error?: string;
+  }>;
 };
 
 const STATUS_COLOR: Record<string, string> = {
@@ -35,7 +47,25 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
   const canAdvanceIntros = hasPermission(session, "matching.advance_intros");
   const canManageOptins = hasPermission(session, "matching.manage_optins");
   const params = await searchParams;
-  const store = await getManagedMatching();
+  let store;
+  let queue;
+  let promotionOn = false;
+  try {
+    [store, queue, promotionOn] = await Promise.all([
+      getManagedMatching(),
+      listQueuedMatchRequests(),
+      getManagedPromotionEnabled(),
+    ]);
+  } catch {
+    return (
+      <div className="mx-auto max-w-[90rem] px-4 py-10 sm:px-6">
+        <h1 className="font-display text-3xl font-bold text-indigo">Managed Matching</h1>
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Matching records are unavailable. Nothing was saved.
+        </p>
+      </div>
+    );
+  }
   const optInCount = store.optIns.filter((o) => o.openToManaged).length;
   const paidCount = store.intros.filter((i) => i.status === "paid").length;
 
@@ -70,14 +100,108 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
         </div>
       </div>
 
-      {params.created || params.advanced || params.optin ? (
+      {params.error ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {params.error}
+        </div>
+      ) : null}
+      {params.created || params.advanced || params.optin || params.flag || params.recorded ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Saved
           {params.created ? " · intro created" : ""}
           {params.advanced ? " · status advanced" : ""}
-          {params.optin ? ` · opt-in updated (${params.optin})` : ""}.
+          {params.optin ? ` · opt-in updated (${params.optin})` : ""}
+          {params.flag ? " · managed promotion updated" : ""}
+          {params.recorded ? " · introduction recorded" : ""}.
         </div>
       ) : null}
+
+      {canManageOptins ? (
+        <section className="card-surface p-6">
+          <h2 className="font-display text-xl font-bold text-indigo">Managed promotion</h2>
+          <p className="mt-1 text-sm text-muted">
+            When this is off, businesses cannot request managed matching. Agency is still required when it is on.
+          </p>
+          <form action={actionSetManagedPromotion} className="mt-4 flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+              <input type="checkbox" name="enabled" defaultChecked={promotionOn} className="accent-violet" />
+              managed_promotion
+            </label>
+            <button type="submit" className="btn-secondary !py-1.5 text-xs">
+              Save flag
+            </button>
+            <span className="text-xs text-muted">{promotionOn ? "On" : "Off"}</span>
+          </form>
+        </section>
+      ) : (
+        <section className="card-surface p-6">
+          <h2 className="font-display text-xl font-bold text-indigo">Managed promotion</h2>
+          <p className="mt-1 text-sm text-muted">
+            managed_promotion is {promotionOn ? "on" : "off"}. Your role cannot change it.
+          </p>
+        </section>
+      )}
+
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Managed queue</h2>
+        <p className="mt-1 text-sm text-muted">
+          Requests from business briefs. Recording an introduction moves the item out of the queue.
+        </p>
+        {queue.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">No briefs are waiting.</p>
+        ) : (
+          <ul className="mt-4 space-y-4">
+            {queue.map((item) => (
+              <li key={item.id} className="rounded-2xl border border-border bg-starter-bg p-4">
+                <p className="font-bold text-indigo">{item.briefTitle}</p>
+                <p className="text-sm text-muted">
+                  {item.businessName} · requested {new Date(item.createdAt).toLocaleString()}
+                </p>
+                {canCreateIntros ? (
+                  <form action={actionRecordIntroduction} className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <input type="hidden" name="requestId" value={item.id} />
+                    <label className="text-sm">
+                      <span className="font-semibold text-indigo">Creator</span>
+                      <select name="creatorSlug" required className="mt-1 w-full rounded-xl border border-border px-3 py-2">
+                        {store.optIns
+                          .filter((opt) => opt.openToManaged)
+                          .map((opt) => (
+                            <option key={opt.creatorSlug} value={opt.creatorSlug}>
+                              {getCreatorBySlug(opt.creatorSlug)?.displayName ?? opt.creatorSlug}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <label className="text-sm">
+                      <span className="font-semibold text-indigo">Expected fee</span>
+                      <input
+                        name="feeExpected"
+                        defaultValue="15% success fee"
+                        className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                      />
+                    </label>
+                    <label className="text-sm sm:col-span-2">
+                      <span className="font-semibold text-indigo">Notes</span>
+                      <input
+                        name="notes"
+                        placeholder="Why this introduction"
+                        className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                      />
+                    </label>
+                    <div className="sm:col-span-2">
+                      <button type="submit" className="btn-primary !py-2 text-sm">
+                        Record introduction
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <p className="mt-2 text-xs text-muted">View-only — your role cannot record introductions.</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Create intro from shortlist delivery */}
       {canCreateIntros ? (
