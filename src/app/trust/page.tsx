@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { actionOpenDispute } from "@/app/trust/actions";
+import { listMilestoneDisputes } from "@/lib/milestone-disputes";
 import {
   formatMoney,
   getProtectedPaymentsStore,
@@ -33,6 +34,7 @@ export default async function TrustPage({ searchParams }: Props) {
   const payments = await getProtectedPaymentsStore();
   const stats = trustStats(trust);
   const enriched = await Promise.all(trust.disputes.map((d) => enrichDispute(d)));
+  const ledgerDisputes = await listMilestoneDisputes().catch(() => []);
 
   const disputable = payments.deals.flatMap((deal) =>
     deal.milestones
@@ -49,8 +51,8 @@ export default async function TrustPage({ searchParams }: Props) {
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold">Mediation &amp; briefs</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Open a dispute on an escrow milestone, track mediation, and review lightweight collab
-            contract briefs — demo rails, not legal counsel.
+            Open a dispute on a provider-held milestone from Protected Payments. A decision records
+            what should happen next and does not move the money. The queue below is the earlier demo.
           </p>
         </div>
       </section>
@@ -83,13 +85,40 @@ export default async function TrustPage({ searchParams }: Props) {
         ) : null}
 
         <section className="card-surface p-6">
-          <h2 className="font-display text-xl font-bold text-indigo">Open a dispute</h2>
+          <h2 className="font-display text-xl font-bold text-indigo">Provider-held disputes</h2>
           <p className="mt-1 text-sm text-muted">
-            Flags the milestone in{" "}
+            These cases block a release until they close. A refund still waits for the marketplace provider.
+            Open one from{" "}
             <Link href="/payments" className="font-semibold text-violet hover:underline">
               Protected Payments
-            </Link>{" "}
-            and queues it for mediation.
+            </Link>
+            .
+          </p>
+          {ledgerDisputes.length === 0 ? (
+            <p className="mt-4 text-sm text-muted">No provider-held disputes yet.</p>
+          ) : (
+            <ul className="mt-4 space-y-2 text-sm">
+              {ledgerDisputes.map((dispute) => (
+                <li key={dispute.id} className="rounded-xl border border-border px-4 py-3">
+                  <p className="font-semibold text-indigo">
+                    {dispute.funding.title} · {dispute.milestone?.title ?? "Milestone"}
+                  </p>
+                  <p className="text-muted">
+                    {dispute.reasonLabel} · {dispute.status.replaceAll("_", " ")}
+                    {dispute.requestedRefundCents
+                      ? ` · refund requested ${formatMoney(dispute.requestedRefundCents)}`
+                      : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="card-surface p-6">
+          <h2 className="font-display text-xl font-bold text-indigo">Earlier demo queue</h2>
+          <p className="mt-1 text-sm text-muted">
+            This form still writes the demo store. It does not open a provider-held dispute.
           </p>
           {disputable.length === 0 ? (
             <p className="mt-4 text-sm text-muted">No funded, unreleased milestones available.</p>

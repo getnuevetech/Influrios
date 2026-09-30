@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -247,14 +247,27 @@ Implemented in `src/lib/ledger.ts`, `src/lib/marketplace-ledger.ts`, `/admin/mar
 
 **Exit:** with the provider not ready, requesting a prefund does not create a funded deal. With a signed `funding.held` event, the deal is held once. Approving a milestone does not release it. A signed `payout.released` event releases that milestone once.
 
-Phase 12.4 (milestone disputes and the cancellation engine) is still ahead.
+### Phase 12.4 — Milestone disputes and cancellation
+
+Implemented in `src/lib/disputes.ts`, `src/lib/milestone-disputes.ts`, `/payments`, the creator dashboard, `/admin/marketplace`, and `/admin/trust`. The Phase 10 JSON trust store stays the demo queue.
+
+**Proves:** an unconfirmed prefund can be cancelled without a ledger hold; an open dispute blocks `payout.released`; asking for a refund does not change the held balance; a signed `payout.refunded` event is what reduces the hold and closes the request.
+
+1. Dispute reasons and the cancel-unconfirmed policy are admin settings. The reason label is copied onto the dispute.
+2. A business or the matching creator can open a dispute only after the provider confirms the prefund, and only on a milestone that is not already released or refunded.
+3. Ops decisions (`trust.mediate`) are review, allow release, request refund, request partial refund, or withdraw. None of them post cash.
+4. `payout.released` is rejected while a dispute on that milestone is open. `payout.refunded` still applies when the amount is within what the provider holds, and it closes a matching refund request.
+
+**Exit:** cancelling `awaiting_provider` leaves zero ledger rows. An open dispute makes a signed release fail. A refund decision leaves the held cents unchanged until `payout.refunded`.
+
+Phase 12.5 (attribution and repeat deals) is still ahead.
 
 ---
 
 ## 6. Do not build next
 
 - Another JSON store or another admin page that does not read the configuration kernel.
-- Stripe Connect, escrow holds, dispute mediation, e-sign, or fee-engine wiring into `/payments`.
+- Stripe Connect, e-sign, or marking a refund complete without a signed provider webhook.
 - M-Pesa or a second live acquirer. The route table is enough.
 - Meilisearch, Redis, a separate AI service, or native apps.
 - A universal influencer score (`R034`, section 31).

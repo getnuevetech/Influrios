@@ -2,11 +2,13 @@ import Link from "next/link";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import {
+  actionSaveDisputeReasons,
   actionSaveJurisdiction,
   actionSaveMarketplaceProvider,
   actionSaveMarketplaceSettings,
   actionSaveTemplates,
 } from "@/app/admin/marketplace/actions";
+import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { fundingTerm } from "@/lib/ledger";
 import { formatMoney } from "@/lib/protected-payments";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
@@ -20,7 +22,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, fundings] = await Promise.all([marketplaceConfig(), listFundings()]);
+  const [config, fundings, reasons] = await Promise.all([marketplaceConfig(), listFundings(), listDisputeReasons()]);
 
   return (
     <div className="space-y-6">
@@ -30,8 +32,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Marketplace ledger</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Phase 12.3. A prefund stays unfunded until a signed provider webhook confirms it. The ledger records what the
-          provider holds. Influrios does not keep that balance. Sign in again if this page asks for permission.
+          A prefund stays unfunded until a signed provider webhook confirms it. Cancelling before that confirmation
+          posts no ledger entry. Dispute decisions do not move the money the provider is holding.
         </p>
       </div>
 
@@ -104,6 +106,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 defaultValue={config.reviewWindowHours}
                 className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
+              Allow cancelling a prefund before the provider confirms it
             </label>
             <button type="submit" className="btn-primary !py-2 text-sm">
               Save window
@@ -229,6 +235,47 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             {config.templates.map((template) => (
               <li key={template.id}>
                 {template.title} · {template.shareBps / 100}%{template.active ? "" : " · inactive"}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card-surface p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Dispute reasons</h2>
+        <p className="mt-1 text-xs text-muted">
+          The label is copied onto a dispute when it opens. Later edits do not rename open cases. A decision does not
+          move money; the provider webhook does.
+        </p>
+        {canManage ? (
+          <form action={actionSaveDisputeReasons} className="mt-4 space-y-3">
+            {reasons.map((reason, index) => (
+              <div key={reason.id} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <input type="hidden" name="id" value={reason.id} />
+                <input name="label" defaultValue={reason.label} className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+                <label className="flex items-center gap-2 text-sm text-indigo">
+                  <input type="checkbox" name="activeIndex" value={String(index)} defaultChecked={reason.active} className="accent-violet" />
+                  Active
+                </label>
+              </div>
+            ))}
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input name="newLabel" placeholder="Add a reason" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <label className="flex items-center gap-2 text-sm text-indigo">
+                <input type="checkbox" name="newActive" defaultChecked className="accent-violet" />
+                Active
+              </label>
+            </div>
+            <button type="submit" className="btn-primary !py-2 text-sm">
+              Save reasons
+            </button>
+          </form>
+        ) : (
+          <ul className="mt-3 space-y-1 text-sm text-indigo">
+            {reasons.map((reason) => (
+              <li key={reason.id}>
+                {reason.label}
+                {reason.active ? "" : " · inactive"}
               </li>
             ))}
           </ul>

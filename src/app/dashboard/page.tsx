@@ -14,9 +14,10 @@ import {
 } from "@/lib/claim";
 import { socialConnectState } from "@/lib/social-connect";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
-import { actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
+import { actionOpenOwnDispute, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
 import { formatMoney } from "@/lib/protected-payments";
 import { listFundingsForCreator } from "@/lib/marketplace-ledger";
+import { listDisputeReasons } from "@/lib/milestone-disputes";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Creator dashboard" };
@@ -45,7 +46,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
     if (!suggestionRows.has(slug)) suggestionRows.set(slug, { slug, name: slug });
   }
   const specialtyCap = linkLimits?.specialtiesMax ?? 1;
-  const fundings = await listFundingsForCreator(draft.slug).catch(() => []);
+  const [fundings, disputeReasons] = await Promise.all([
+    listFundingsForCreator(draft.slug).catch(() => []),
+    listDisputeReasons().catch(() => []),
+  ]);
+  const activeReasons = disputeReasons.filter((reason) => reason.active);
 
   const { score, items } = completenessFor(draft);
   const nextAction = items.find((i) => !i.done);
@@ -79,7 +84,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
           .
         </div>
       ) : null}
-      {params.saved ? (
+      {params.saved === "1" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Profile saved.
         </div>
@@ -397,6 +402,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
         {params.saved === "milestone" ? (
           <p className="mt-3 text-sm font-semibold text-emerald-700">Milestone submitted for review.</p>
         ) : null}
+        {params.saved === "dispute" ? (
+          <p className="mt-3 text-sm font-semibold text-emerald-700">
+            Dispute opened. Release waits until it is resolved.
+          </p>
+        ) : null}
         {fundings.length === 0 ? (
           <p className="mt-4 text-sm text-muted">No protected payments for this card yet.</p>
         ) : (
@@ -410,18 +420,50 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 </p>
                 <div className="mt-3 space-y-2">
                   {funding.milestones.map((milestone) => (
-                    <div key={milestone.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                      <span>
-                        {milestone.title} · {formatMoney(milestone.amountCents)} · {milestone.status}
-                      </span>
-                      {funding.status === "held" && milestone.status === "pending" ? (
-                        <form action={actionSubmitOwnMilestone}>
+                    <div key={milestone.id} className="rounded-lg border border-border px-3 py-2 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span>
+                          {milestone.title} · {formatMoney(milestone.amountCents)} · {milestone.status}
+                        </span>
+                        {funding.status === "held" && milestone.status === "pending" ? (
+                          <form action={actionSubmitOwnMilestone}>
+                            <input type="hidden" name="fundingId" value={funding.id} />
+                            <input type="hidden" name="milestoneId" value={milestone.id} />
+                            <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                              Submit work
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                      {funding.status === "held" &&
+                      milestone.status !== "released" &&
+                      milestone.status !== "refunded" &&
+                      activeReasons.length > 0 ? (
+                        funding.disputes?.some((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null) ? (
+                          <p className="mt-2 text-xs text-muted">Dispute open. Release waits until it is resolved.</p>
+                        ) : (
+                        <form action={actionOpenOwnDispute} className="mt-2 flex flex-wrap items-center gap-2">
                           <input type="hidden" name="fundingId" value={funding.id} />
                           <input type="hidden" name="milestoneId" value={milestone.id} />
+                          <select name="reasonId" className="rounded-lg border border-border px-2 py-1 text-xs" required>
+                            {activeReasons.map((reason) => (
+                              <option key={reason.id} value={reason.id}>
+                                {reason.label}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            name="details"
+                            required
+                            minLength={8}
+                            placeholder="What happened"
+                            className="rounded-lg border border-border px-2 py-1 text-xs"
+                          />
                           <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                            Submit work
+                            Open dispute
                           </button>
                         </form>
+                        )
                       ) : null}
                     </div>
                   ))}

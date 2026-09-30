@@ -91,6 +91,7 @@ export function marketplaceDisposition(input: {
   expectedCents: number;
   heldCents: number;
   milestoneStatus?: string | null;
+  disputeOpen?: boolean;
 }): MarketplaceDisposition {
   if (input.eventType === "funding.held") {
     if (input.fundingStatus === "awaiting_provider" && input.amountCents === input.expectedCents) return "apply";
@@ -100,6 +101,7 @@ export function marketplaceDisposition(input: {
     return input.fundingStatus === "awaiting_provider" ? "apply" : "reject";
   }
   if (input.eventType === "payout.released") {
+    if (input.disputeOpen) return "reject";
     if (
       input.milestoneStatus === "approved" &&
       input.amountCents === input.expectedCents &&

@@ -6,7 +6,9 @@ import {
 } from "@/app/admin/trust/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { getProtectedPaymentsStore } from "@/lib/protected-payments";
+import { actionDecideLedgerDispute } from "@/app/admin/trust/ledger-actions";
+import { listMilestoneDisputes } from "@/lib/milestone-disputes";
+import { formatMoney, getProtectedPaymentsStore } from "@/lib/protected-payments";
 import {
   enrichDispute,
   getTrustStore,
@@ -41,6 +43,7 @@ export default async function AdminTrustPage({ searchParams }: Props) {
   const params = await searchParams;
   const trust = await getTrustStore();
   const payments = await getProtectedPaymentsStore();
+  const ledgerDisputes = await listMilestoneDisputes().catch(() => []);
   const stats = trustStats(trust);
   const enriched = await Promise.all(trust.disputes.map((d) => enrichDispute(d)));
 
@@ -55,8 +58,8 @@ export default async function AdminTrustPage({ searchParams }: Props) {
             Trust &amp; Disputes
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Phase 10 ops — mediate escrow disputes (release / refund / partial) and manage collab
-            contract briefs. Demo only; not legal advice.
+            Ledger disputes block a provider release until ops record a decision. That decision does not move money.
+            The section below is the earlier demo queue.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-center text-xs">
@@ -74,6 +77,55 @@ export default async function AdminTrustPage({ searchParams }: Props) {
           </div>
         </div>
       </div>
+
+      <section className="card-surface space-y-4 p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Ledger disputes</h2>
+        {ledgerDisputes.length === 0 ? <p className="text-sm text-muted">No ledger disputes yet.</p> : null}
+        {ledgerDisputes.map((dispute) => (
+          <article key={dispute.id} className="rounded-xl border border-border p-4 text-sm">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold text-indigo">
+                  {dispute.funding.businessName} → {dispute.funding.creatorSlug}
+                </p>
+                <p className="text-muted">
+                  {dispute.milestone?.title ?? "Milestone"} · {dispute.reasonLabel} · {dispute.status.replaceAll("_", " ")}
+                </p>
+                <p className="mt-1 text-indigo">{dispute.details}</p>
+                {dispute.requestedRefundCents ? (
+                  <p className="mt-1 text-xs text-muted">Refund requested {formatMoney(dispute.requestedRefundCents)}. Waiting for the provider.</p>
+                ) : null}
+              </div>
+            </div>
+            {canMediate && ["open", "under_review", "refund_requested"].includes(dispute.status) ? (
+              <form action={actionDecideLedgerDispute} className="mt-3 flex flex-wrap items-end gap-2">
+                <input type="hidden" name="disputeId" value={dispute.id} />
+                <label className="text-xs font-semibold text-muted">
+                  Decision
+                  <select name="decision" className="mt-1 rounded-lg border border-border px-2 py-1.5 text-sm text-indigo">
+                    <option value="review">Mark under review</option>
+                    <option value="release">Allow release</option>
+                    <option value="refund">Request full refund</option>
+                    <option value="partial">Request partial refund</option>
+                    <option value="withdraw">Withdraw</option>
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-muted">
+                  Partial USD
+                  <input name="requestedUsd" type="number" min={1} step={1} className="mt-1 w-28 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                </label>
+                <label className="text-xs font-semibold text-muted">
+                  Note
+                  <input name="note" className="mt-1 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                </label>
+                <button type="submit" className="btn-primary !py-1.5 text-xs">
+                  Record decision
+                </button>
+              </form>
+            ) : null}
+          </article>
+        ))}
+      </section>
 
       {params.error ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
