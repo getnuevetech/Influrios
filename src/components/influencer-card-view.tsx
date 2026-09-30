@@ -114,7 +114,7 @@ export function InfluencerCardView({
             <div className="min-w-0 text-center">
               <div className="truncate text-sm font-semibold text-blue">{cardUrl}</div>
               <div className={`text-[11px] ${isPro ? "text-white/50" : "text-muted"}`}>
-                Scan with your phone · Share my profile
+                Scan to view my full card
               </div>
             </div>
             <div

@@ -409,6 +409,24 @@ export function IconLang(props: IconProps) {
   );
 }
 
+export function IconEye(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </svg>
+  );
+}
+
+/** Solid play glyph for stat tiles (no dark circle). */
+export function IconPlaySolid(props: IconProps) {
+  return (
+    <svg {...base(props)} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M8.5 5.8v12.4L19 12 8.5 5.8Z" />
+    </svg>
+  );
+}
+
 export function SocialIcon({
   platform,
   size = 20,
