@@ -54,7 +54,7 @@ Mockups remain valid for **layout hierarchy and tier feel**. Production must div
 | “Influence Connect” wordmarks | Replace with **Influrios** everywhere in production |
 | Starter cards with QR / multi-social | Strip QR; one social; one specialty; profile URL only |
 | Plus cards | Shortlink + **standard** QR; up to 3 specialties / 4 socials |
-| Pro cards | Dynamic QR (`ic.me/q/{opaqueId}`); gold accents only on badge/border/highlights |
+| Pro cards | Dynamic QR (`inflr.me/q/{opaqueId}`); gold accents only on badge/border/highlights |
 | Horizontal “card” website modules | Allowed as **previews only**; canonical card is **portrait ~4:5** |
 | Baked-in follower counts / QR bitmaps | Live UI components + server-rendered QR; no rasterized live data |
 | Brand logos (Nike, Samsung, etc.) | Placeholders / partners only |
@@ -111,8 +111,8 @@ Commercial rule: table = **launch defaults**. Admin must change limits per plan/
 
 ```
 Starter  →  influrios.com/c/{slug}          (no QR)
-Plus     →  ic.me/{alias}  +  static QR → card URL
-Pro      →  ic.me/q/{opaqueToken}  (redirect table; content changes without reprinting QR)
+Plus     →  inflr.me/{alias}  +  QR → https://inflr.me/q/{opaqueToken}
+Pro      →  same opaque QR, plus a dynamic destination that can change without reprinting
 ```
 
 Pro analytics (privacy-permitted): scan count, time, campaign/source, device class, **coarse** geo — not precise location.
@@ -515,7 +515,7 @@ Existing comps cover marketing, Discover, Profile, Collab, Card marketing, and t
 |----------|--------|
 | Hosting | **Locked: AWS Lightsail** (Ubuntu + Nginx + PM2 + managed Postgres). See `docs/deploy/AWS_LIGHTSAIL.md`. |
 | Phase 0–1 kickoff | **Started** on branch `cursor/phase-0-1-mvp-lightsail-0127` |
-| Short domain | Open: own `ic.me` vs path-only `/c/{slug}` + `/q/{token}` on primary domain |
+| Short domain | **Decided:** `inflr.me` (admin can add fallbacks such as `links.influrios.com`). QR payload is `https://inflr.me/q/{opaque}` |
 | Auth | Open: **Clerk** / Auth.js / other |
 | Phase 1 Pro dynamic QR | **Shipped in Phase 3** (`/api/qr` + `/q/{token}`) |
 | Stripe billing | **Phase 6 started** — demo checkout + Stripe scaffold (`/billing`, `/api/billing/webhook`) |

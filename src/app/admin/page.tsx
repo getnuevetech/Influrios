@@ -193,6 +193,20 @@ const LINKS: {
     meta: () => "Phase 12.1",
   },
   {
+    href: "/admin/legal",
+    title: "Legal documents",
+    blurb: "Publish split terms and policies, and read the acceptance ledger. Sign in again if this page asks for permission.",
+    module: "legal",
+    meta: () => "Versioned",
+  },
+  {
+    href: "/admin/short-links",
+    title: "Short links",
+    blurb: "inflr.me domains, reserved names, suspensions, and QR identities. Sign in again if this page asks for permission.",
+    module: "shortlinks",
+    meta: () => "inflr.me",
+  },
+  {
     href: "/admin/access",
     title: "Access levels",
     blurb: "Create roles from granular features and assign admin users.",

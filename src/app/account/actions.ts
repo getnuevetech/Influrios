@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { safeNextPath } from "@/lib/account-policy";
 import {
@@ -25,11 +26,13 @@ export async function actionRegister(formData: FormData) {
     back("/register", "Consent is required to create an account.", next);
   }
   try {
+    const headerStore = await headers();
     await registerAccount({
       email,
       name: String(formData.get("name") ?? ""),
       password: String(formData.get("password") ?? ""),
       source: "register",
+      ip: headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
     });
   } catch (error) {
     back("/register", error instanceof Error ? error.message : "Could not register.", next);

@@ -1,0 +1,40 @@
+13. Security & Responsible Disclosure Policy
+1. Reporting
+Security researchers may report suspected vulnerabilities to [SECURITY@INFLURIOS.COM]. Include reproduction steps,
+affected endpoint, impact, and any evidence needed to validate the issue.
+
+2. Safe Research Expectations
+•
+
+Do not access, modify, or ex ltrate data beyond what is necessary to demonstrate the issue.
+
+•
+
+Do not use social engineering, denial of service, malware, physical attacks, or credential theft.
+
+•
+
+Do not publicly disclose an unremediated issue before Influrios has a reasonable opportunity to investigate and x it.
+
+•
+
+Use test accounts/data where possible.
+
+3. Good-Faith Handling
+Influrios intends to evaluate good-faith reports, acknowledge valid ndings, and coordinate remediation. Any formal safeharbor commitment must be approved by counsel and re ected in the published version.
+
+fi
+
+fi
+
+fl
+
+fl
+
+fi
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026

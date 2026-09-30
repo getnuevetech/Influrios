@@ -55,8 +55,30 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
             </Link>
           </>
         ) : (
-          <form action={actionPublishDraft}>
+          <form action={actionPublishDraft} className="space-y-3">
             <input type="hidden" name="draftId" value={draft.id} />
+            <label className="flex items-start gap-2 text-left text-xs text-indigo">
+              <input type="checkbox" name="creatorTerms" required className="mt-0.5 accent-violet" />
+              <span>
+                By creating a Creator account, I agree to the{" "}
+                <Link href="/legal/terms-of-service" className="font-semibold underline" target="_blank">
+                  Terms of Service
+                </Link>
+                ,{" "}
+                <Link href="/legal/creator-terms" className="font-semibold underline" target="_blank">
+                  Creator Terms
+                </Link>
+                , and{" "}
+                <Link href="/legal/social-platform-integration-terms" className="font-semibold underline" target="_blank">
+                  Social Platform Integration & Connected Accounts Terms
+                </Link>
+                , and I acknowledge the{" "}
+                <Link href="/legal/privacy-policy" className="font-semibold underline" target="_blank">
+                  Privacy Policy
+                </Link>
+                . This does not connect a social account.
+              </span>
+            </label>
             <button type="submit" className="btn-primary w-full">
               Publish Starter card →
             </button>

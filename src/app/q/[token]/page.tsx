@@ -1,11 +1,12 @@
-import { redirect } from "next/navigation";
-import { resolveQrPath } from "@/lib/qr-identity";
+import { notFound, redirect } from "next/navigation";
+import { resolveQrToken } from "@/lib/short-link";
 
 type Props = { params: Promise<{ token: string }> };
 
-/** Dynamic QR landing. Opaque tokens resolve through qr_identity; older links may still be slugs. */
+/** Opaque QR landing on the app host. The token is never resolved as a creator slug. */
 export default async function DynamicQrRedirectPage({ params }: Props) {
   const { token } = await params;
-  const path = await resolveQrPath(token);
-  redirect(path ?? "/discover");
+  const hit = await resolveQrToken(token).catch(() => null);
+  if (hit?.kind === "redirect") redirect(hit.location);
+  notFound();
 }

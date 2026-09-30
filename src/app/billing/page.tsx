@@ -113,6 +113,16 @@ export default async function BillingPage({ searchParams }: Props) {
                     className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-indigo"
                   />
                 </label>
+                <label className="mt-4 flex items-start gap-2 text-xs text-indigo">
+                  <input type="checkbox" name="acceptSubscription" required className="mt-0.5 accent-violet" />
+                  <span>
+                    I agree to the{" "}
+                    <Link href="/legal/subscription-terms" className="font-semibold underline" target="_blank">
+                      Subscription, Billing, Cancellation & Refund Terms
+                    </Link>
+                    . {p.priceLabel} renews until cancelled. Refund rules are in those terms.
+                  </span>
+                </label>
                 <button type="submit" className="btn-primary mt-4 w-full !py-2.5 text-sm">
                   {stripeLive ? "Checkout with Stripe →" : "Demo upgrade →"}
                 </button>
@@ -146,6 +156,16 @@ export default async function BillingPage({ searchParams }: Props) {
                     placeholder="brand@company.demo"
                     className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-indigo"
                   />
+                </label>
+                <label className="mt-4 flex items-start gap-2 text-xs text-indigo">
+                  <input type="checkbox" name="acceptSubscription" required className="mt-0.5 accent-violet" />
+                  <span>
+                    I agree to the{" "}
+                    <Link href="/legal/subscription-terms" className="font-semibold underline" target="_blank">
+                      Subscription, Billing, Cancellation & Refund Terms
+                    </Link>
+                    . {p.priceLabel} renews until cancelled. Refund rules are in those terms.
+                  </span>
                 </label>
                 <button type="submit" className="btn-primary mt-4 w-full !py-2.5 text-sm">
                   {stripeLive ? "Checkout with Stripe →" : "Demo upgrade →"}

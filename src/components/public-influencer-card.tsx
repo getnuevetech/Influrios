@@ -1,5 +1,6 @@
 import { InfluencerCardView } from "@/components/influencer-card-view";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
+import { shortLinkPublicLabel } from "@/lib/short-link";
 import type { SeedCreator } from "@/lib/seed-data";
 
 /** Server wrapper: resolves plan limits from the database before rendering the card. */
@@ -15,6 +16,7 @@ export async function PublicInfluencerCard({
   hideCta?: boolean;
 }) {
   const entitlements = await entitlementsForPlan(creator.planTier);
+  const linkLabel = await shortLinkPublicLabel(creator.slug).catch(() => null);
   return (
     <InfluencerCardView
       creator={creator}
@@ -22,6 +24,7 @@ export async function PublicInfluencerCard({
       qrDisplay={qrDisplay}
       compact={compact}
       hideCta={hideCta}
+      linkLabel={linkLabel}
     />
   );
 }

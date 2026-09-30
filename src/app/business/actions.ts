@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getAccountSession } from "@/lib/accounts";
+import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import {
   addToShortlist,
   createBrief,
@@ -12,7 +14,39 @@ import {
 } from "@/lib/business";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 
+async function requireBusinessTerms() {
+  const account = await getAccountSession().catch(() => null);
+  if (!account) return;
+  const accepted = await hasCurrentLegalRecord({
+    documentKey: "business-terms",
+    userId: account.id,
+  }).catch(() => true);
+  if (!accepted) {
+    redirect("/business?error=" + encodeURIComponent("Agree to the Business / Brand Terms before using the workspace."));
+  }
+}
+
+export async function actionAcceptBusinessTerms(formData: FormData) {
+  if (formData.get("acceptBusiness") !== "on") {
+    redirect("/business?error=" + encodeURIComponent("Agree to the Business / Brand Terms to continue."));
+  }
+  const account = await getAccountSession();
+  if (!account) redirect("/login?next=/business");
+  if (await hasCurrentLegalRecord({ documentKey: "business-terms", userId: account.id })) {
+    redirect("/business?terms=1");
+  }
+  await recordLegalEvent({
+    trigger: "business_registration",
+    context: "business_registration",
+    userId: account.id,
+    userRole: "BUSINESS",
+    extraKeys: ["terms-of-service", "privacy-policy"],
+  });
+  redirect("/business?terms=1");
+}
+
 export async function actionAddShortlist(formData: FormData) {
+  await requireBusinessTerms();
   const slug = String(formData.get("slug") ?? "");
   const note = String(formData.get("note") ?? "") || undefined;
   const result = await addToShortlist(slug, note);
@@ -25,6 +59,7 @@ export async function actionAddShortlist(formData: FormData) {
 }
 
 export async function actionRemoveShortlist(formData: FormData) {
+  await requireBusinessTerms();
   const slug = String(formData.get("slug") ?? "");
   await removeFromShortlist(slug);
   revalidatePath("/business");
@@ -32,6 +67,7 @@ export async function actionRemoveShortlist(formData: FormData) {
 }
 
 export async function actionCreateBrief(formData: FormData) {
+  await requireBusinessTerms();
   await createBrief({
     title: String(formData.get("title") ?? "Untitled brief"),
     goal: String(formData.get("goal") ?? "Brand Awareness"),
@@ -46,6 +82,7 @@ export async function actionCreateBrief(formData: FormData) {
 }
 
 export async function actionSendInquiry(formData: FormData) {
+  await requireBusinessTerms();
   const creatorSlug = String(formData.get("creatorSlug") ?? "");
   const message = String(formData.get("message") ?? "");
   const briefId = String(formData.get("briefId") ?? "") || undefined;
@@ -58,6 +95,7 @@ export async function actionSendInquiry(formData: FormData) {
 }
 
 export async function actionSetPlan(formData: FormData) {
+  await requireBusinessTerms();
   const plan = String(formData.get("plan") ?? "BUSINESS_FREE") as BusinessPlanCode;
   try {
     await setBusinessPlan(plan);
@@ -69,6 +107,7 @@ export async function actionSetPlan(formData: FormData) {
 }
 
 export async function actionRequestManagedMatch(formData: FormData) {
+  await requireBusinessTerms();
   const briefId = String(formData.get("briefId") ?? "");
   let result: Awaited<ReturnType<typeof requestManagedMatch>>;
   try {

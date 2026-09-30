@@ -48,6 +48,10 @@ export const ADMIN_PERMISSIONS = [
   "signing.edit",
   "social.view",
   "social.edit",
+  "legal.view",
+  "legal.edit",
+  "shortlinks.view",
+  "shortlinks.edit",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -71,7 +75,9 @@ export type AdminModule =
   | "ai"
   | "gateways"
   | "signing"
-  | "social";
+  | "social"
+  | "legal"
+  | "shortlinks";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -243,6 +249,24 @@ export const ADMIN_PERMISSION_GROUPS: {
     ],
   },
   {
+    module: "legal",
+    label: "Legal documents",
+    description: "Versioned terms and policies, publication, and the acceptance ledger",
+    permissions: [
+      { id: "legal.view", label: "View legal documents", hint: "Open the legal document manager" },
+      { id: "legal.edit", label: "Edit legal documents", hint: "Draft, publish, supersede, and require re-acceptance" },
+    ],
+  },
+  {
+    module: "shortlinks",
+    label: "Short links",
+    description: "inflr.me domains, reserved slugs, suspensions, and abuse",
+    permissions: [
+      { id: "shortlinks.view", label: "View short links", hint: "Open domains, slugs, and audit events" },
+      { id: "shortlinks.edit", label: "Edit short links", hint: "Reserve, suspend, and update domains" },
+    ],
+  },
+  {
     module: "access",
     label: "Access control",
     description: "Create roles and admin users (typically Super Admin)",
@@ -363,6 +387,10 @@ const DEFAULT_ROLES: AdminRole[] = [
       "signing.edit",
       "social.view",
       "social.edit",
+      "legal.view",
+      "legal.edit",
+      "shortlinks.view",
+      "shortlinks.edit",
     ],
     system: true,
   },

@@ -1,0 +1,198 @@
+INFLURIOS
+Social Platform Integration & Connected Accounts
+Terms
+Terms governing creator and business connections to third-party social platforms
+Draft for Counsel Review | Version 1.1 | September 30, 2026
+
+1. Scope and Incorporation
+These Social Platform Integration & Connected Accounts Terms (“Integration Terms”) supplement the Influrios Terms of Service,
+Creator Terms, Business Terms, Privacy Policy, and other applicable agreements. They govern any feature that connects Influrios to a
+third-party social network, creator platform, advertising/business manager, analytics service, or related API (“Social Platform”).
+
+2. Creator Acceptance
+Every creator/in uencer who registers or claims a creator profile on Influrios accepts these Integration Terms as part of the creator
+legal framework, even if the creator does not immediately connect a Social Platform account. This establishes the rules for future
+connections. It does not itself grant Influrios access to a third-party account.
+
+3. Business Acceptance
+Businesses and brands are not required to connect Social Platform accounts merely to register, search, or use ordinary business
+features. These Integration Terms apply to a business when it elects or is required for a collaboration to connect an authorized social,
+advertising, analytics, business-manager, or campaign account.
+
+4. Separate Platform Authorization
+A Social Platform connection is created only after the user completes the authorization method required by that Social Platform or
+another approved lawful process. Where OAuth/scoped permissions are available, Influrios will rely on that mechanism rather than
+asking the user to disclose the Social Platform password. The Social Platform may allow the user to grant, decline, or revoke
+particular permissions.
+
+5. Authority to Connect
+You represent that you own, control, or are authorized to administer every Social Platform account you connect. You may not connect
+another person’s or organization’s account without authority. Agencies/managers may be required to obtain creator confirmation.
+
+6. Permissions and Scopes
+
+fi
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+Influrios may request only permissions reasonably related to an enabled feature. Requested scopes may include access to profile
+identity, public content/content metadata, audience/performance metrics, channel/account statistics, campaign/ad reporting, or other
+data supported by the Social Platform. The specific scopes available depend on the provider and may change.
+
+7. Permitted Uses
+Influrios may use connected-account data to verify account ownership/control; populate or refresh an Influrios Card/profile; calculate
+or display permitted metrics; provide Influence Intelligence; improve search/matching; administer collaborations; produce agreed
+campaign reports; detect fraud/security issues; provide support; and perform other functions disclosed in the connection flow or
+Privacy Policy.
+
+8. Public Display
+Connection does not make all imported data public. Influrios will determine public display according to the creator’s settings, plan
+entitlements, product design, applicable Social Platform rules, and law. Access tokens, private account credentials, and restricted
+analytics are not public profile fields.
+
+9. Creator Collaboration Reporting
+If a collaboration requires creator-side Social Platform reporting, the collaboration should identify the material reporting expectations
+before acceptance. Influrios may use connected metrics to verify or summarize agreed deliverables and performance where
+permitted.
+
+10. Business Collaboration Integration
+A business may connect authorized business/ad/campaign accounts for campaign creation, ownership verification, reporting, or
+measurement. Influrios will not expose one business’s private connected-account information to another business merely because
+both express interest in the same creator or opportunity.
+
+11. Revocation, Disconnection, and Expiration
+Users may disconnect supported integrations or revoke access through Influrios and/or the Social Platform. Revocation generally
+stops future synchronization after processing completes, but does not require deletion of records Influrios must or may retain for
+contracts, payments, disputes, fraud prevention, consent evidence, tax/accounting, security, or legal obligations. Some features may
+become unavailable after disconnection.
+
+12. Metrics and Availability
+Third-party metrics may be delayed, estimated, rounded, incomplete, changed, or unavailable. Influrios may show data-source and
+freshness indicators. Social Platforms may change APIs, scopes, quotas, review rules, or access at any time, and Influrios does not
+guarantee continuous availability.
+
+13. Tokens and Security
+Influrios treats access/refresh tokens, app credentials, and similar connection secrets as sensitive credentials. Users must not publish
+or share them. Influrios may invalidate a connection, require reauthorization, or suspend integrations where compromise or
+unauthorized access is suspected.
+
+14. Content and Intellectual Property
+
+fl
+
+fi
+
+fl
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+fl
+
+Connecting a Social Platform does not transfer ownership of creator or business content to Influrios. You grant Influrios the limited
+rights necessary to retrieve, cache where permitted, transform, display, and process authorized content/data for the requested features.
+Social Platform content remains subject to the rights of its owners and the applicable platform rules.
+
+15. AI and Derived Insights
+Influrios may use connected data to generate permitted classifications, summaries, match explanations, performance insights, or
+fraud/security signals. Such use remains subject to the AI Policy, Privacy Policy, platform restrictions, and user rights. Influrios will
+not use connected Social Platform API data to train a general-purpose third-party AI model for the provider’s independent purposes
+unless separately permitted and authorized.
+
+16. Prohibited Conduct
+You may not use Influrios integrations to scrape or harvest restricted data, obtain private messages without authorization, circumvent
+access controls, impersonate others, misuse platform data, automate prohibited actions, or violate a Social Platform’s terms or
+applicable law.
+
+17. Third-Party Terms
+Your use of a Social Platform remains governed by that provider’s own terms and privacy practices. Influrios is not responsible for a
+Social Platform’s independent acts, outages, account restrictions, changes, or data practices. If a provider requirement con icts with
+an Influrios feature, Influrios may modify, suspend, or discontinue that integration.
+
+18. Deletion and Data Controls
+Influrios will provide available mechanisms to disconnect accounts and request deletion/correction of personal data, subject to legal
+and provider-specific exceptions. Some providers impose specific refresh, deletion, retention, or revocation rules that Influrios must
+follow.
+
+19. Suspension and Termination
+Influrios may suspend a connection for suspected compromise, lack of authority, policy violations, provider instructions, security
+risk, or legal requirements. Account termination may result in disconnection and deletion/de-identification according to the Privacy
+Policy and retention schedule.
+
+20. Contact
+
+fl
+
+fl
+
+fl
+
+fl
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+Questions about connected-account permissions, data use, or deletion may be sent to [PRIVACY@INFLURIOS.COM] or
+[SUPPORT@INFLURIOS.COM].

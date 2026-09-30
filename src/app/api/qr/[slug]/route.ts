@@ -2,16 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildBrandedQrSvg } from "@/lib/branded-qr";
 import { getDirectoryCreator } from "@/lib/directory";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { dynamicQrTokenForSlug } from "@/lib/qr-identity";
+import { qrPayloadForSlug } from "@/lib/short-link";
 
 /**
- * Dynamic / standard QR for Influencer Cards.
- * Pro: opaque token-style URL (/q/{slug}) — content can change without reprinting.
- * Plus: direct card URL.
- * Starter: 403 — no QR entitlement.
- *
- * Query: size (px, default 512), logo=0 to omit center Influrios mark.
- * Response: SVG in primary electric blue (#2979FF).
+ * QR image for an Influencer Card.
+ * The payload is always the opaque short-domain identity (https://inflr.me/q/{token}
+ * or the admin-selected primary domain). It is never the canonical profile URL.
  */
 export async function GET(
   request: NextRequest,
@@ -28,11 +24,10 @@ export async function GET(
     return NextResponse.json({ error: "QR not included on Starter" }, { status: 403 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
-  const token = entitlements.dynamicQr ? await dynamicQrTokenForSlug(creator.slug) : creator.slug;
-  const target = entitlements.dynamicQr
-    ? `${appUrl}/q/${token}`
-    : `${appUrl}/c/${creator.slug}`;
+  const target = await qrPayloadForSlug(creator.slug);
+  if (!target) {
+    return NextResponse.json({ error: "QR identity is not available for this card" }, { status: 404 });
+  }
 
   const sizeRaw = Number(request.nextUrl.searchParams.get("size") || 512);
   const size = Number.isFinite(sizeRaw) ? Math.min(1024, Math.max(64, Math.round(sizeRaw))) : 512;

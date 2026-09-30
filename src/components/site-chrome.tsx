@@ -228,10 +228,13 @@ export async function SiteFooter() {
               <a href="mailto:hello@influrios.com">About</a>
             </li>
             <li>
-              <a href="mailto:hello@influrios.com">Privacy</a>
+              <Link href="/legal/privacy-policy">Privacy</Link>
             </li>
             <li>
-              <a href="mailto:hello@influrios.com">Terms</a>
+              <Link href="/legal/terms-of-service">Terms</Link>
+            </li>
+            <li>
+              <Link href="/legal">Legal Center</Link>
             </li>
           </ul>
         </div>

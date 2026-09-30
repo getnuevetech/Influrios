@@ -1,0 +1,80 @@
+10. Protected Collaboration Payments, Fees, Payouts & Disputes
+Policy
+1. Protected Payment Model
+Where enabled, a brand funds an approved collaboration through a licensed/approved payment provider before creator funds
+are released according to accepted milestones. Influrios may call the feature “Protected Collaboration Payment,” “funded
+milestone,” or similar. Influrios will not represent itself as an escrow provider unless the exact jurisdiction/provider structure
+permits that representation.
+
+2. Funding
+A deal may require full prefunding or staged funding. The creator should not be shown a “Fully Funded” or equivalent
+protected status until the provider has confirmed the required amount and Influrios has reconciled the transaction. Provider
+settlement delays or reversals may affect status.
+
+3. Milestones
+Each milestone records amount, deliverable, due date, review period, revision limit, acceptance criteria, and release condition.
+The accepted snapshot controls even if later admin settings change.
+
+4. Fees
+Influrios may charge platform service fees, collaboration fees, managed-introduction fees, managed-campaign fees, success
+fees, processing/FX fees, cancellation fees, or other disclosed charges. Fee type, payer, basis, percentage/amount, minimum/
+maximum, and rule version must be shown before acceptance. No hidden or retroactive fee may be added to an accepted deal
+except a party-approved amendment or legally required charge.
+
+5. Release
+Creator payouts are initiated only after the applicable milestone is approved, auto-approved, or otherwise resolved in Creator’s
+favor, subject to provider KYC/sanctions/risk rules. Influrios does not guarantee a bank settlement time once funds leave the
+platform/provider workflow.
+
+6. Auto-Approval
+If enabled, the brand must approve, request an allowed revision, or open a good-faith dispute within the displayed review
+window. Failure to act may result in auto-approval. A valid dispute pauses only the affected milestone where practical.
+
+7. Disputes
+Parties may submit briefs, les, messages, drafts, publication links, and other evidence. Influrios may administer a platform
+decision or recommendation as permitted by provider rules and law, but is not a court or arbitration tribunal unless separately
+agreed. Fraud, chargebacks, intellectual-property claims, or legal orders may require separate handling.
+
+fl
+
+fl
+
+fl
+
+fl
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026
+
+8. Refunds and Cancellations
+Completed approved milestones generally remain payable. Work-in-progress may be subject to a disclosed kill fee. Future
+unused funded amounts may be returned to the brand after applicable fees, disputes, provider restrictions, and legally required
+reserves. A refund to the brand does not necessarily reverse a platform fee that was already earned under the accepted rules.
+
+9. Chargebacks and Reversals
+Card/bank/payment-provider reversals may cause a negative balance, payout delay, account restriction, or recovery action
+where law and provider rules permit. Users must cooperate with evidence requests.
+
+10. Taxes, KYC, and Sanctions
+Creators/businesses must provide information required by the payment provider or law. Influrios may block funding or payout
+when KYC, sanctions, tax, or risk checks are incomplete. Users are responsible for their own taxes except amounts Influrios/
+provider is legally required to collect, withhold, or report.
+
+fl
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026

@@ -14,6 +14,7 @@ const LABELS: Record<string, { label: string; kind: "int" | "bool" | "text"; opt
   "card.qr.enabled": { label: "QR code", kind: "bool" },
   "card.qr.dynamic": { label: "Dynamic QR", kind: "bool" },
   "card.shortlink.enabled": { label: "Shortlink", kind: "bool" },
+  "card.shortlink.max": { label: "Short links", kind: "int" },
   "card.custom_slug.enabled": { label: "Custom slug", kind: "bool" },
   "card.collaboration.enabled": { label: "Collaboration CTA", kind: "bool" },
   "collaboration.proposals.max": { label: "Proposals per window", kind: "int" },

@@ -1,0 +1,90 @@
+3. Public Profile & Data Collection Policy
+1. Why Influrios Creates Public Profiles
+Influrios may create limited public creator profiles before a creator registers so businesses and users can discover creators by
+specialty and so creators can later claim and enhance their professional presence.
+
+2. Permitted Sources
+•
+
+Publicly available professional/creator information that may lawfully be used for this purpose
+
+•
+
+Of cial or authorized social APIs
+
+•
+
+Licensed data providers
+
+•
+
+Information submitted by the creator or an authorized manager/agency
+
+•
+
+Information supplied by a business or user where Influrios has a lawful basis to process it
+
+Influrios should not design its core data model around circumventing access controls, violating platform terms, or collecting
+private/sensitive information merely because it may be technically accessible.
+
+3. What an Unclaimed Profile May Show
+An unclaimed profile may show public creator name/handle, public profile image, professional location/market where
+available, social links, public metrics, high-level specialties inferred from public content, and data-source/freshness indicators.
+Private contact information should not be published without authorization.
+
+4. AI Enrichment
+Automated systems may propose specialties, topic concentration, content style, or match categories. These are inferences and
+should be labeled or presented in a way that does not misstate them as creator-verified facts. Sensitive personal traits should not
+be inferred for ordinary creator discovery.
+
+5. Claim, Correction, and Removal
+Creators may claim a profile, correct inaccurate data, dispute a profile, or request removal/opt-out under the applicable policy
+and privacy law. Influrios may preserve limited suppression, fraud, legal, or audit records after removal where lawful.
+
+6. Data Broker Review
+Because laws can regulate businesses that collect and make available personal information about people with whom they lack a
+direct relationship, Influrios must complete jurisdiction-specific legal review before activating the unclaimed-profile model in a
+new market. Where registration or centralized deletion obligations apply, Influrios will not rely on this Policy as a substitute for
+compliance.
+
+fi
+
+fi
+
+fl
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fi
+
+fi
+
+fi
+
+fi
+
+fl
+
+fl
+
+fl
+
+fi
+
+fl
+
+fi
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026

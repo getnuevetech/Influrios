@@ -1,0 +1,69 @@
+2. Cookie & Tracking Technologies Policy
+1. Types of Technologies
+Category
+
+Examples
+
+Typical purpose
+
+Strictly necessary
+
+Session, authentication, security, consent state
+
+Account access, fraud prevention, core
+operation
+
+Preferences
+
+Language, UI choices
+
+Remember user-selected settings
+
+Analytics
+
+First/third-party analytics identifiers
+
+Understand product use and performance
+
+Advertising/measurement
+
+Campaign pixels, attribution technologies
+
+Measure or personalize permitted advertising
+and sponsored acquisition
+
+2. Consent and Controls
+Where law requires consent, Influrios will request it before activating non-essential technologies. Users may use the cookie/
+settings interface to change available choices. Browser or device settings may provide additional controls.
+
+3. Global Privacy Signals
+Where legally required, Influrios will honor recognized opt-out preference signals for covered processing and will maintain
+region-appropriate controls for targeted advertising, sale/sharing, or similar activities.
+
+4. Third Parties
+Third-party providers may set or receive identifiers under their own privacy terms. Influrios will maintain an internal inventory
+of approved trackers and should not deploy new non-essential trackers outside the consent/configuration framework.
+
+5. Retention
+Cookie duration and related retention depend on purpose. Necessary security/session technologies should be limited to the
+period needed; analytics/advertising identifiers should follow configured retention and regional requirements.
+
+fi
+
+fl
+
+fi
+
+fi
+
+fi
+
+fl
+
+fi
+
+fl
+
+fl
+
+Influrios | Draft for Counsel Review | September 2026

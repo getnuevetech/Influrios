@@ -256,6 +256,18 @@ export async function beginSocialConnect(input: {
       data: { userId: creator.userId, version: policy.version, source: `social:${network.code}` },
     });
   }
+  try {
+    const { recordLegalEvent } = await import("@/lib/legal");
+    await recordLegalEvent({
+      trigger: "social_connect",
+      context: `social_connect:${network.code}`,
+      userId: creator.userId,
+      subjectKey: `creator:${creator.slug}`,
+      userRole: "CREATOR",
+    });
+  } catch {
+    return { ok: false as const, error: "The connected-account policy could not be recorded. Try again." };
+  }
   const authorizeUrl = buildAuthorizeUrl({
     authorizeUrl: provider!.authorizeUrl,
     authorizeHosts: network.authorizeHosts,
@@ -506,6 +518,13 @@ export async function refreshSocialConnection(input: { slug: string; platform: s
     where: { creatorId_platform: { creatorId: creator.id, platform: network.platform } },
   });
   const policy = await getSocialPolicy();
+  const { legalFeatureBlock } = await import("@/lib/legal");
+  const legalBlock = await legalFeatureBlock({
+    trigger: "social_connect",
+    userId: creator.userId,
+    subjectKey: `creator:${creator.slug}`,
+  }).catch(() => null);
+  if (legalBlock) return { ok: false as const, error: legalBlock };
   if (!connection?.consentedAt || connection.consentVersion !== policy.version) {
     return { ok: false as const, error: "Agree to the current Influrios social integration terms and policy before syncing." };
   }

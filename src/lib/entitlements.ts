@@ -9,6 +9,7 @@ export type EntitlementLimits = {
   socialLinksMax: number;
   portfolioMax: number;
   shortlink: boolean;
+  shortlinkMax: number;
   customAlias: boolean;
   standardQr: boolean;
   dynamicQr: boolean;
@@ -28,6 +29,7 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     socialLinksMax: 1,
     portfolioMax: 0,
     shortlink: false,
+    shortlinkMax: 0,
     customAlias: false,
     standardQr: false,
     dynamicQr: false,
@@ -45,7 +47,8 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     socialLinksMax: 4,
     portfolioMax: 6,
     shortlink: true,
-    customAlias: false,
+    shortlinkMax: 1,
+    customAlias: true,
     standardQr: true,
     dynamicQr: false,
     contactInquiry: "full",
@@ -62,6 +65,7 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     socialLinksMax: 8,
     portfolioMax: 24,
     shortlink: true,
+    shortlinkMax: 5,
     customAlias: true,
     standardQr: true,
     dynamicQr: true,
@@ -96,6 +100,7 @@ const INT_FIELDS = {
   "card.specialties.max": "specialtiesMax",
   "card.social_links.max": "socialLinksMax",
   "card.portfolio_items.max": "portfolioMax",
+  "card.shortlink.max": "shortlinkMax",
   "collaboration.proposals.max": "proposalsMax",
 } as const satisfies Record<string, keyof EntitlementLimits>;
 
@@ -130,6 +135,7 @@ export const EDITABLE_FEATURE_KEYS = [
   "card.qr.enabled",
   "card.qr.dynamic",
   "card.shortlink.enabled",
+  "card.shortlink.max",
   "card.custom_slug.enabled",
   "card.collaboration.enabled",
   "collaboration.proposals.max",
