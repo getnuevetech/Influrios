@@ -62,14 +62,21 @@ enum SocialPlatform {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  role          UserRole @default(CREATOR)
-  planTier      PlanTier @default(STARTER)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  creator       Creator?
-  business      BusinessProfile?
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  passwordHash    String?
+  emailVerifiedAt DateTime?
+  role            UserRole  @default(CREATOR)
+  planTier        PlanTier  @default(STARTER)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  creator         Creator?
+  business        BusinessProfile?
+  consents        ConsentRecord[]
+  emailChallenges EmailChallenge[]
+  passwordResets  PasswordReset[]
+  onboardingSessions OnboardingSession[]
 }
 
 model EntitlementPlan {
@@ -344,10 +351,60 @@ model OnboardingSession {
   publishedAt      DateTime?
   verifyMethod     String           @default("DEMO_CODE")
   payload          Json
+  userId           String?
+  user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   claims           ProfileClaim[]
   attempts         VerificationAttempt[]
+}
+
+model ConsentRecord {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  version    String
+  source     String
+  acceptedAt DateTime @default(now())
+}
+
+/// Demo email code until SMTP exists. The plaintext is shown once on the verify screen.
+model EmailChallenge {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  demoCode  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model GuestUsagePolicy {
+  id              String   @id @default("default")
+  profileViewSoft Int      @default(3)
+  profileViewHard Int      @default(5)
+  searchSoft      Int      @default(10)
+  searchHard      Int      @default(20)
+  softCopy        String
+  hardCopy        String
+  updatedAt       DateTime @updatedAt
+}
+
+model GuestUsage {
+  id           String   @id
+  profileViews Int      @default(0)
+  searches     Int      @default(0)
+  updatedAt    DateTime @updatedAt
 }
 
 model ProfileClaim {

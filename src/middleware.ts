@@ -2,25 +2,42 @@ import { NextRequest, NextResponse } from "next/server";
 
 /** Cookie name must match ADMIN_COOKIE in admin-auth.ts */
 const ADMIN_COOKIE = "influrios_admin_session";
+const GUEST_COOKIE = "influrios_guest";
 
 /**
  * Edge-safe gate: require an admin session cookie for /admin/* except login.
- * Signature verification happens in Node via getAdminSession / requireAdminPage.
+ * Also mint a guest id so profile and search limits can be counted in Node.
  */
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (!pathname.startsWith("/admin")) return NextResponse.next();
-  if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
-    return NextResponse.next();
+  const requestHeaders = new Headers(req.headers);
+  let guest = req.cookies.get(GUEST_COOKIE)?.value;
+  const minted = !guest;
+  if (!guest) {
+    guest = crypto.randomUUID();
+    requestHeaders.set("x-influrios-guest", guest);
   }
-  if (!req.cookies.get(ADMIN_COOKIE)?.value) {
-    const login = new URL("/admin/login", req.url);
-    login.searchParams.set("next", pathname);
-    return NextResponse.redirect(login);
+
+  const needsAdmin =
+    pathname.startsWith("/admin") &&
+    pathname !== "/admin/login" &&
+    !pathname.startsWith("/admin/login/");
+  const response =
+    needsAdmin && !req.cookies.get(ADMIN_COOKIE)?.value
+      ? NextResponse.redirect(new URL(`/admin/login?next=${encodeURIComponent(pathname)}`, req.url))
+      : NextResponse.next({ request: { headers: requestHeaders } });
+
+  if (minted) {
+    response.cookies.set(GUEST_COOKIE, guest, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 180,
+    });
   }
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

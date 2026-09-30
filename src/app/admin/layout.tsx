@@ -11,6 +11,7 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
   { href: "/admin/intelligence", label: "Intelligence", module: "intelligence" },
   { href: "/admin/billing", label: "Billing", module: "billing" },
   { href: "/admin/plans", label: "Plan entitlements", module: "plans" },
+  { href: "/admin/guests", label: "Guest gates", module: "plans" },
   { href: "/admin/taxonomy", label: "Taxonomy", module: "taxonomy" },
   { href: "/admin/homepage", label: "Homepage", module: "banners" },
   { href: "/admin/payments", label: "Protected Payments", module: "payments" },

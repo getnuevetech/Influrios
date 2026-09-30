@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getAccountSession } from "@/lib/accounts";
 import { scoreCreatorPair } from "@/lib/matching";
 import { getCreatorBySlug, specialtyLabel } from "@/lib/seed-data";
 import { canRequestMatch } from "@/lib/matching";
@@ -19,6 +20,9 @@ async function submitProposal(formData: FormData) {
   const a = String(formData.get("a") ?? "");
   const b = String(formData.get("b") ?? "");
   const from = String(formData.get("from") ?? "");
+  const account = await getAccountSession();
+  const returnTo = `/collaboration/propose?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}&from=${encodeURIComponent(from)}`;
+  if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=proposal`);
   // Demo persistence: redirect with confirmation flag (Phase 3 will store Opportunity rows)
   redirect(
     `/collaboration?from=${encodeURIComponent(from)}&requested=${encodeURIComponent(`${a}+${b}`)}`,

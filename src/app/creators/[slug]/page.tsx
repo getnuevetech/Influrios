@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { GuestGateBanner } from "@/components/guest-gate-banner";
+import { consumeGuestQuota } from "@/lib/guest-usage";
 import {
   IconBag,
   IconCake,
@@ -59,6 +61,10 @@ export default async function CreatorProfilePage({ params }: Props) {
   const { slug } = await params;
   const creator = await getDirectoryCreator(slug);
   if (!creator) notFound();
+  const gate = await consumeGuestQuota("profile");
+  if (gate.decision === "hard") {
+    redirect(`/login?next=${encodeURIComponent(`/creators/${slug}`)}&gate=profile`);
+  }
   await recordDirectoryEvent("profile_viewed", { slug, surface: "profile" });
 
   const directory = await getDirectory();
@@ -121,6 +127,7 @@ export default async function CreatorProfilePage({ params }: Props) {
 
   return (
     <div className="bg-[#F5F8FF]">
+      <GuestGateBanner copy={gate.decision === "soft" ? gate.copy : ""} next={`/creators/${slug}`} />
       {/* —— Hero banner —— */}
       <section className="relative">
         <div className="relative h-[220px] overflow-hidden sm:h-[280px] lg:h-[340px]">
