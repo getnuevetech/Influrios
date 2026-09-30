@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
+import { saveAttributionPolicy, saveAttributionSources } from "@/lib/deal-attribution";
 import { saveDisputeReasons } from "@/lib/milestone-disputes";
 import {
   saveJurisdiction,
@@ -114,4 +115,43 @@ export async function actionSaveDisputeReasons(formData: FormData) {
   revalidatePath("/admin/marketplace");
   revalidatePath("/trust");
   redirect("/admin/marketplace?saved=reasons");
+}
+
+export async function actionSaveAttributionPolicy(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  try {
+    await saveAttributionPolicy({
+      windowDays: Number(formData.get("attributionWindowDays")),
+      minGrossCents: Math.round(Number(formData.get("repeatMinUsd") ?? 0) * 100),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save attribution settings.";
+    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/payments");
+  redirect("/admin/marketplace?saved=attribution");
+}
+
+export async function actionSaveAttributionSources(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const labels = formData.getAll("label").map((value) => String(value));
+  const ids = formData.getAll("id").map((value) => String(value));
+  const active = formData.getAll("activeIndex").map((value) => String(value));
+  const rows = labels.map((label, index) => ({
+    id: ids[index] || undefined,
+    label,
+    active: active.includes(String(index)),
+  }));
+  const extra = String(formData.get("newLabel") ?? "").trim();
+  if (extra) rows.push({ id: undefined, label: extra, active: formData.get("newActive") === "on" });
+  try {
+    await saveAttributionSources(rows);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save attribution sources.";
+    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/payments");
+  redirect("/admin/marketplace?saved=sources");
 }

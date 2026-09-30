@@ -417,6 +417,8 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 <p className="text-xs text-muted">
                   {funding.businessName} · {funding.status.replaceAll("_", " ")} · held{" "}
                   {formatMoney(funding.ledger.heldCents)}
+                  {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
+                  {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
                 </p>
                 <div className="mt-3 space-y-2">
                   {funding.milestones.map((milestone) => (

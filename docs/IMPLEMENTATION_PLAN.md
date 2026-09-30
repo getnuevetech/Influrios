@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -260,7 +260,20 @@ Implemented in `src/lib/disputes.ts`, `src/lib/milestone-disputes.ts`, `/payment
 
 **Exit:** cancelling `awaiting_provider` leaves zero ledger rows. An open dispute makes a signed release fail. A refund decision leaves the held cents unchanged until `payout.refunded`.
 
-Phase 12.5 (attribution and repeat deals) is still ahead.
+### Phase 12.5 — Attribution and repeat deals
+
+Implemented in `src/lib/attribution.ts`, `src/lib/deal-attribution.ts`, `/payments`, the creator dashboard, and `/admin/marketplace`.
+
+**Proves:** a prefund copies the attribution source in use at request time; a later rename of that source does not rewrite the funding; a repeat is a new unfunded prefund for the same business and creator; the prior fee snapshot and ledger stay put.
+
+1. Attribution sources, the window in days, and the repeat minimum are admin settings. The source label is copied onto the funding.
+2. A repeat is allowed only after the provider has confirmed the prior deal, inside the current window, at or above the minimum gross.
+3. The new prefund still waits for a signed `funding.held` event. It does not inherit the prior hold.
+4. Narrowing the window after a repeat was requested does not clear that repeat link.
+
+**Exit:** with the provider not ready, a repeat request creates no funding row. With the provider ready, the new row is `awaiting_provider`, its attribution label stays after the source is renamed, and the prior fee snapshot is unchanged.
+
+Staged and recurring funding is still ahead.
 
 ---
 
