@@ -40,6 +40,7 @@
   --color-pro: var(--pro-deep-base);
   --font-sans: var(--font-plus-jakarta);
   --font-display: var(--font-sora);
+  --font-script: var(--font-caveat);
 }
 
 * {
@@ -114,16 +115,19 @@ a {
   border: 1px solid var(--border);
 }
 
-.chip {
+.font-script {
+  font-family: var(--font-caveat), "Segoe Script", cursive;
+}
+
+.profile-tag {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.75rem;
+  padding: 0.28rem 0.7rem;
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  background: var(--soft-lavender);
-  color: var(--royal-violet);
+  background: #e8f0ff;
+  color: #2f5fd0;
 }
 
 .line-clamp-2 {

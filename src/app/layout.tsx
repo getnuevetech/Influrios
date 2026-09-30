@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Sora } from "next/font/google";
+import { Caveat, Plus_Jakarta_Sans, Sora } from "next/font/google";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import "./globals.css";
 
@@ -15,6 +15,12 @@ const sora = Sora({
   weight: ["600", "700"],
 });
 
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: {
     default: "Influrios — Find the right influence",
@@ -27,7 +33,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${plusJakarta.variable} ${sora.variable} antialiased`}>
+      <body className={`${plusJakarta.variable} ${sora.variable} ${caveat.variable} antialiased`}>
         <SiteHeader />
         <main>{children}</main>
         <SiteFooter />
