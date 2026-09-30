@@ -3,6 +3,7 @@ import { actionApproveMilestone, actionCancelPrefund, actionCreateDeal, actionOp
 import { listAttributionSources, listRepeatCandidates } from "@/lib/deal-attribution";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { fundingTerm } from "@/lib/ledger";
+import { scheduleLabel } from "@/lib/schedule";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { formatMoney } from "@/lib/protected-payments";
 import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
@@ -177,6 +178,29 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 ))}
               </select>
             </label>
+            <label className="text-sm">
+              <span className="font-semibold text-indigo">Schedule</span>
+              <select name="scheduleKind" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2" defaultValue="once">
+                <option value="once">One prefund</option>
+                {config?.stagedFundingEnabled ? <option value="staged">Staged</option> : null}
+                {config?.recurringFundingEnabled ? <option value="recurring">Recurring</option> : null}
+              </select>
+            </label>
+            <label className="text-sm">
+              <span className="font-semibold text-indigo">Stages or occurrences</span>
+              <input
+                name="scheduleCount"
+                type="number"
+                min={2}
+                max={Math.max(config?.maxStages ?? 4, config?.maxRecurrences ?? 6)}
+                defaultValue={2}
+                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+              />
+            </label>
+            <p className="text-xs text-muted sm:col-span-2">
+              Staged splits this gross into that many prefunds now. Recurring uses the same number of occurrences and
+              opens only the first. Each one waits for its own provider confirmation.
+            </p>
             <label className="text-sm sm:col-span-2">
               <span className="font-semibold text-indigo">Brief / campaign</span>
               <input
@@ -235,6 +259,11 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   {deal.repeatOf ? (
                     <span>
                       Repeat of <strong className="text-indigo">{deal.repeatOf.title}</strong>
+                    </span>
+                  ) : null}
+                  {scheduleLabel(deal) ? (
+                    <span>
+                      <strong className="text-indigo">{scheduleLabel(deal)}</strong>
                     </span>
                   ) : null}
                 </div>

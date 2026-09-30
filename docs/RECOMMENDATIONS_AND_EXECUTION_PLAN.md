@@ -429,8 +429,9 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Milestone state machine + ledger + idempotent webhooks (12.3)  
 - [x] Milestone disputes / cancellation engine (12.4)  
 - [x] Attribution / repeat deals (12.5)  
+- [x] Staged / recurring funding (12.6)  
 
-**Defer:** Staged/recurring funding, multi-provider FX, revenue-share splits (P3–P4)  
+**Defer:** Multi-provider FX, revenue-share splits (P3–P4)  
 
 See also: `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md`
 

@@ -31,6 +31,9 @@ export async function actionCreateDeal(formData: FormData) {
     serviceLevel: "contracted",
     sourceId: String(formData.get("sourceId") ?? ""),
     repeatOfId: String(formData.get("repeatOfId") ?? ""),
+    scheduleKind: String(formData.get("scheduleKind") ?? "once"),
+    stageCount: Number(formData.get("scheduleCount") ?? 0),
+    occurrenceCount: Number(formData.get("scheduleCount") ?? 0),
   });
   if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");

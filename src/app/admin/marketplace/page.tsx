@@ -3,6 +3,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import {
   actionSaveAttributionPolicy,
+  actionSaveFundingSchedule,
   actionSaveAttributionSources,
   actionSaveDisputeReasons,
   actionSaveJurisdiction,
@@ -13,6 +14,7 @@ import {
 import { listAttributionSources } from "@/lib/deal-attribution";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { fundingTerm } from "@/lib/ledger";
+import { scheduleLabel } from "@/lib/schedule";
 import { formatMoney } from "@/lib/protected-payments";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 
@@ -42,7 +44,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         <p className="mt-1 max-w-2xl text-sm text-muted">
           A prefund stays unfunded until a signed provider webhook confirms it. Cancelling before that confirmation
           posts no ledger entry. Dispute decisions do not move the money the provider is holding. Attribution is
-          copied onto the prefund and is not rewritten when the source list changes.
+          copied onto the prefund and is not rewritten when the source list changes. A staged or recurring
+          prefund stays unfunded until each tranche has its own signed webhook.
         </p>
       </div>
 
@@ -365,6 +368,70 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         )}
       </section>
 
+      <section className="card-surface p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Funding schedule</h2>
+        <p className="mt-1 text-xs text-muted">
+          Staged deals split the gross into prefunds now. Recurring deals open only the first prefund. The next one
+          is created after the provider confirms the current one and the interval has passed. Neither posts a hold.
+        </p>
+        {canManage ? (
+          <form action={actionSaveFundingSchedule} className="mt-4 flex flex-wrap items-end gap-3">
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="stagedFundingEnabled" defaultChecked={config.stagedFundingEnabled} className="accent-violet" />
+              Staged
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Max stages
+              <input
+                name="maxStages"
+                type="number"
+                min={2}
+                max={12}
+                defaultValue={config.maxStages}
+                className="mt-1 w-24 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="recurringFundingEnabled" defaultChecked={config.recurringFundingEnabled} className="accent-violet" />
+              Recurring
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Interval days
+              <input
+                name="recurringIntervalDays"
+                type="number"
+                min={1}
+                max={365}
+                defaultValue={config.recurringIntervalDays}
+                className="mt-1 w-28 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Max occurrences
+              <input
+                name="maxRecurrences"
+                type="number"
+                min={2}
+                max={24}
+                defaultValue={config.maxRecurrences}
+                className="mt-1 w-28 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <button type="submit" className="btn-primary !py-2 text-sm">
+              Save schedule
+            </button>
+          </form>
+        ) : (
+          <p className="mt-3 text-sm text-indigo">
+            {config.stagedFundingEnabled ? `Staged up to ${config.maxStages}` : "Staged off"}
+            {" · "}
+            {config.recurringFundingEnabled
+              ? `Recurring every ${config.recurringIntervalDays} days, up to ${config.maxRecurrences}`
+              : "Recurring off"}
+          </p>
+        )}
+      </section>
+
       <section className="space-y-3">
         <h2 className="font-display text-lg font-bold text-indigo">Funding records</h2>
         {fundings.length === 0 ? <p className="text-sm text-muted">No prefunds yet.</p> : null}
@@ -384,6 +451,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               {formatMoney(funding.ledger.heldCents)} · released {formatMoney(funding.ledger.releasedCents)}
               {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
               {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
+              {scheduleLabel(funding) ? ` · ${scheduleLabel(funding)}` : ""}
             </p>
             <ul className="mt-2 space-y-1 text-indigo">
               {funding.milestones.map((milestone) => (
