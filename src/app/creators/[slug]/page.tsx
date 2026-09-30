@@ -301,7 +301,7 @@ export default async function CreatorProfilePage({ params }: Props) {
       <div className="mx-auto mt-5 grid max-w-[90rem] gap-5 px-4 sm:px-6 lg:mt-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-6 lg:px-10">
         {/* Horizontal glass Influencer Card */}
         <aside>
-          <div className="overflow-hidden rounded-[1.35rem] bg-gradient-to-br from-[#F3E8FF] via-[#E8F0FF] to-[#FCE7F3] p-4 shadow-[0_16px_40px_rgba(99,60,255,0.12)] ring-1 ring-[#E0D4FF] sm:p-5">
+          <div className="overflow-hidden rounded-[1.35rem] bg-gradient-to-br from-[#FFE4F1] via-[#E8F0FF] to-[#DCE8FF] p-4 shadow-[0_16px_40px_rgba(99,60,255,0.12)] ring-1 ring-[#E8D4FF] sm:p-5">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <h3 className="font-display text-[1rem] font-bold text-indigo">Influencer Card</h3>
