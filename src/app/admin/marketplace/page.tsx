@@ -6,15 +6,19 @@ import {
   actionSaveFundingSchedule,
   actionSaveAttributionSources,
   actionSaveDisputeReasons,
+  actionSaveFxRates,
   actionSaveJurisdiction,
   actionSaveMarketplaceProvider,
   actionSaveMarketplaceSettings,
+  actionSaveRevenueParties,
   actionSaveTemplates,
 } from "@/app/admin/marketplace/actions";
 import { listAttributionSources } from "@/lib/deal-attribution";
+import { readShareSnapshot } from "@/lib/fx-share";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
+import { listFxRates, listRevenueParties } from "@/lib/settlement";
 import { formatMoney } from "@/lib/protected-payments";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 
@@ -27,11 +31,13 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, fundings, reasons, sources] = await Promise.all([
+  const [config, fundings, reasons, sources, rates, parties] = await Promise.all([
     marketplaceConfig(),
     listFundings(),
     listDisputeReasons(),
     listAttributionSources(),
+    listFxRates(),
+    listRevenueParties(),
   ]);
 
   return (
@@ -45,7 +51,9 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           A prefund stays unfunded until a signed provider webhook confirms it. Cancelling before that confirmation
           posts no ledger entry. Dispute decisions do not move the money the provider is holding. Attribution is
           copied onto the prefund and is not rewritten when the source list changes. A staged or recurring
-          prefund stays unfunded until each tranche has its own signed webhook.
+          prefund stays unfunded until each tranche has its own signed webhook. Gross is entered in USD. Another
+          currency uses the admin rate for that jurisdiction. Revenue-share lines are written when the provider
+          releases a milestone. They are not cash.
         </p>
       </div>
 
@@ -68,6 +76,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         </p>
         {canManage ? (
           <form action={actionSaveMarketplaceProvider} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <input type="hidden" name="code" value={config.provider.code} />
             <label className="text-xs font-semibold text-muted">
               Name
               <input
@@ -96,6 +105,70 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             </label>
             <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
               Save provider
+            </button>
+          </form>
+        ) : null}
+        {config.providers.filter((row) => row.code !== config.provider.code).map((row) => (
+          <form key={row.code} action={actionSaveMarketplaceProvider} className="mt-4 grid gap-3 rounded-xl border border-border p-4 sm:grid-cols-2">
+            <input type="hidden" name="code" value={row.code} />
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet sm:col-span-2">
+              {row.code} · {row.ready ? "ready" : "not ready"} · webhook {row.webhook}
+            </p>
+            <label className="text-xs font-semibold text-muted">
+              Name
+              <input
+                name="name"
+                defaultValue={row.name}
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Webhook secret
+              <input
+                name="webhook"
+                type="password"
+                autoComplete="off"
+                placeholder={row.webhook === "saved" ? "Saved — leave blank to keep" : "Not saved"}
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="enabled" defaultChecked={row.enabled} disabled={!canManage} className="accent-violet" />
+              Enabled
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="clearWebhook" disabled={!canManage} className="accent-violet" />
+              Clear webhook secret
+            </label>
+            {canManage ? (
+              <button type="submit" className="btn-secondary sm:col-span-2 !py-2 text-sm">
+                Save {row.code}
+              </button>
+            ) : null}
+          </form>
+        ))}
+        {canManage ? (
+          <form action={actionSaveMarketplaceProvider} className="mt-4 grid gap-3 rounded-xl border border-dashed border-border p-4 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-muted">
+              New code
+              <input name="code" placeholder="eu-provider" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Name
+              <input name="name" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Webhook secret
+              <input name="webhook" type="password" autoComplete="off" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="enabled" className="accent-violet" />
+              Enabled
+            </label>
+            <button type="submit" className="btn-secondary sm:col-span-2 !py-2 text-sm">
+              Add provider
             </button>
           </form>
         ) : null}
@@ -170,6 +243,31 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               />
               Allow the word escrow
             </label>
+            <label className="text-xs font-semibold text-muted">
+              Currency
+              <input
+                name="currency"
+                maxLength={3}
+                defaultValue={row.currency}
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Provider
+              <select
+                name="providerCode"
+                defaultValue={row.providerCode}
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              >
+                {config.providers.map((provider) => (
+                  <option key={provider.code} value={provider.code}>
+                    {provider.name} ({provider.code})
+                  </option>
+                ))}
+              </select>
+            </label>
             <p className="text-sm text-muted sm:col-span-2">Shown as {fundingTerm(row.escrowTermAllowed)}.</p>
             {canManage ? (
               <button type="submit" className="btn-secondary !py-2 text-sm sm:col-span-4">
@@ -196,11 +294,126 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               <input type="checkbox" name="escrowTermAllowed" className="accent-violet" />
               Allow the word escrow
             </label>
+            <label className="text-xs font-semibold text-muted">
+              Currency
+              <input name="currency" maxLength={3} defaultValue="USD" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Provider
+              <select name="providerCode" defaultValue="primary" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
+                {config.providers.map((provider) => (
+                  <option key={provider.code} value={provider.code}>
+                    {provider.name} ({provider.code})
+                  </option>
+                ))}
+              </select>
+            </label>
             <button type="submit" className="btn-secondary !py-2 text-sm sm:col-span-4">
               Add jurisdiction
             </button>
           </form>
         ) : null}
+      </section>
+
+      <section className="card-surface p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Admin FX rates</h2>
+        <p className="mt-1 text-xs text-muted">
+          Minor units per 1.00 USD. This is an admin rate, not a live quote. USD stays 1.00 and does not need a row.
+          A missing rate refuses the prefund. Later edits do not rewrite a rate already copied onto a funding.
+        </p>
+        {canManage ? (
+          <form action={actionSaveFxRates} className="mt-4 space-y-3">
+            {rates.map((rate, index) => (
+              <div key={rate.currency} className="grid gap-2 sm:grid-cols-[8rem_1fr_auto]">
+                <input
+                  name="currency"
+                  defaultValue={rate.currency}
+                  maxLength={3}
+                  className="rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo"
+                />
+                <input
+                  name="minorPerUsd"
+                  type="number"
+                  min={1}
+                  defaultValue={rate.minorPerUsd}
+                  className="rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                />
+                <label className="flex items-center gap-2 text-sm text-indigo">
+                  <input type="checkbox" name="activeIndex" value={String(index)} defaultChecked={rate.active} className="accent-violet" />
+                  Active
+                </label>
+              </div>
+            ))}
+            <div className="grid gap-2 sm:grid-cols-[8rem_1fr_auto]">
+              <input name="newCurrency" maxLength={3} placeholder="EUR" className="rounded-lg border border-border px-3 py-2 text-sm uppercase" />
+              <input name="newMinorPerUsd" type="number" min={1} placeholder="Minor units" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <label className="flex items-center gap-2 text-sm text-indigo">
+                <input type="checkbox" name="newActive" defaultChecked className="accent-violet" />
+                Active
+              </label>
+            </div>
+            <button type="submit" className="btn-primary !py-2 text-sm">
+              Save FX rates
+            </button>
+          </form>
+        ) : (
+          <ul className="mt-3 space-y-1 text-sm text-indigo">
+            {rates.map((rate) => (
+              <li key={rate.currency}>
+                {rate.currency} · {rate.minorPerUsd} minor units per 1.00 USD{rate.active ? "" : " · inactive"}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card-surface p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Revenue shares</h2>
+        <p className="mt-1 text-xs text-muted">
+          Active shares must add up to 100%. The split is copied onto a prefund and written as share lines only when
+          the provider releases a milestone. Those lines are not cash, and a later edit does not rewrite a frozen split.
+        </p>
+        {canManage ? (
+          <form action={actionSaveRevenueParties} className="mt-4 space-y-3">
+            {parties.map((party, index) => (
+              <div key={party.id} className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]">
+                <input type="hidden" name="id" value={party.id} />
+                <input name="label" defaultValue={party.label} className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+                <input
+                  name="sharePercent"
+                  type="number"
+                  min={1}
+                  max={100}
+                  defaultValue={party.shareBps / 100}
+                  className="rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                />
+                <label className="flex items-center gap-2 text-sm text-indigo">
+                  <input type="checkbox" name="activeIndex" value={String(index)} defaultChecked={party.active} className="accent-violet" />
+                  Active
+                </label>
+              </div>
+            ))}
+            <div className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]">
+              <input name="newLabel" placeholder="Add a party" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <input name="newSharePercent" type="number" min={1} max={100} placeholder="%" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <label className="flex items-center gap-2 text-sm text-indigo">
+                <input type="checkbox" name="newActive" className="accent-violet" />
+                Active
+              </label>
+            </div>
+            <button type="submit" className="btn-primary !py-2 text-sm">
+              Save revenue shares
+            </button>
+          </form>
+        ) : (
+          <ul className="mt-3 space-y-1 text-sm text-indigo">
+            {parties.map((party) => (
+              <li key={party.id}>
+                {party.label} · {party.shareBps / 100}%{party.active ? "" : " · inactive"}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="card-surface p-5">
@@ -435,7 +648,9 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="space-y-3">
         <h2 className="font-display text-lg font-bold text-indigo">Funding records</h2>
         {fundings.length === 0 ? <p className="text-sm text-muted">No prefunds yet.</p> : null}
-        {fundings.map((funding) => (
+        {fundings.map((funding) => {
+          const shares = readShareSnapshot(funding.shareSnapshotJson);
+          return (
           <article key={funding.id} className="card-surface p-4 text-sm">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
@@ -447,21 +662,25 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               <p className="text-xs font-semibold uppercase tracking-wide text-violet">{funding.status.replaceAll("_", " ")}</p>
             </div>
             <p className="mt-2 text-muted">
-              Gross {formatMoney(funding.grossCents)} · fee snapshot {formatMoney(funding.feeCents)} · held by provider{" "}
-              {formatMoney(funding.ledger.heldCents)} · released {formatMoney(funding.ledger.releasedCents)}
+              Gross {formatMoney(funding.grossCents, funding.currency)} · {funding.currency} · provider {funding.providerCode} · fee snapshot{" "}
+              {formatMoney(funding.feeCents, funding.currency)} · held by provider{" "}
+              {formatMoney(funding.ledger.heldCents, funding.currency)} · released{" "}
+              {formatMoney(funding.ledger.releasedCents, funding.currency)}
               {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
               {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
               {scheduleLabel(funding) ? ` · ${scheduleLabel(funding)}` : ""}
+              {shares ? ` · share ${shares.map((party) => `${party.label} ${party.shareBps / 100}%`).join(", ")}` : ""}
             </p>
             <ul className="mt-2 space-y-1 text-indigo">
               {funding.milestones.map((milestone) => (
                 <li key={milestone.id}>
-                  {milestone.title} · {formatMoney(milestone.amountCents)} · {milestone.status}
+                  {milestone.title} · {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status}
                 </li>
               ))}
             </ul>
           </article>
-        ))}
+          );
+        })}
       </section>
     </div>
   );

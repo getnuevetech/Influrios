@@ -2,6 +2,7 @@ import Link from "next/link";
 import { actionApproveMilestone, actionCancelPrefund, actionCreateDeal, actionOpenDispute, actionSubmitMilestone } from "@/app/payments/actions";
 import { listAttributionSources, listRepeatCandidates } from "@/lib/deal-attribution";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
+import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
 import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
@@ -43,8 +44,10 @@ export default async function PaymentsPage({ searchParams }: Props) {
   const jurisdictions = config?.jurisdictions ?? [];
   const homeJurisdiction = jurisdictions.find((row) => row.code === "US") ?? jurisdictions[0];
   const term = fundingTerm(Boolean(homeJurisdiction?.escrowTermAllowed));
-  const held = fundings.reduce((sum, row) => sum + row.ledger.heldCents, 0);
-  const released = fundings.reduce((sum, row) => sum + row.ledger.releasedCents, 0);
+  const usdFundings = fundings.filter((row) => row.currency === "USD");
+  const mixedCurrency = fundings.some((row) => row.currency !== "USD");
+  const held = usdFundings.reduce((sum, row) => sum + row.ledger.heldCents, 0);
+  const released = usdFundings.reduce((sum, row) => sum + row.ledger.releasedCents, 0);
   const confirmed = fundings.filter((row) => row.status === "held" || row.status === "completed").length;
 
   return (
@@ -76,7 +79,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
           </div>
           <div className="rounded-xl bg-amber-100 px-4 py-2">
             <p className="font-display text-lg font-bold text-amber-800">{formatMoney(held)}</p>
-            <p className="text-muted">Held by provider</p>
+            <p className="text-muted">{mixedCurrency ? "Held by provider (USD)" : "Held by provider"}</p>
           </div>
         </div>
 
@@ -140,7 +143,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
               >
                 {jurisdictions.map((row) => (
                   <option key={row.code} value={row.code}>
-                    {row.label} · {fundingTerm(row.escrowTermAllowed)}
+                    {row.label} · {row.currency} · {fundingTerm(row.escrowTermAllowed)}
                   </option>
                 ))}
               </select>
@@ -198,6 +201,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
               />
             </label>
             <p className="text-xs text-muted sm:col-span-2">
+              Gross is entered in USD. Another currency uses the admin rate for that jurisdiction, not a live quote.
               Staged splits this gross into that many prefunds now. Recurring uses the same number of occurrences and
               opens only the first. Each one waits for its own provider confirmation.
             </p>
@@ -222,6 +226,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
           {fundings.map((deal) => {
             const creator = getCreatorBySlug(deal.creatorSlug);
             const jurisdiction = jurisdictions.find((row) => row.code === deal.jurisdictionCode);
+            const fx = readFxSnapshot(deal.fxSnapshotJson);
+            const shares = readShareSnapshot(deal.shareSnapshotJson);
             return (
               <article key={deal.id} className="card-surface p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -240,17 +246,33 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 </div>
                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted">
                   <span>
-                    Total <strong className="text-indigo">{formatMoney(deal.grossCents)}</strong>
+                    Total <strong className="text-indigo">{formatMoney(deal.grossCents, deal.currency)}</strong>
+                  </span>
+                  {fx?.source === "admin" ? (
+                    <span>
+                      From <strong className="text-indigo">{formatMoney(fx.usdCents)}</strong> at the admin rate
+                    </span>
+                  ) : null}
+                  <span>
+                    Fee snapshot <strong className="text-indigo">{formatMoney(deal.feeCents, deal.currency)}</strong>
                   </span>
                   <span>
-                    Fee snapshot <strong className="text-indigo">{formatMoney(deal.feeCents)}</strong>
+                    Released <strong className="text-emerald-700">{formatMoney(deal.ledger.releasedCents, deal.currency)}</strong>
                   </span>
                   <span>
-                    Released <strong className="text-emerald-700">{formatMoney(deal.ledger.releasedCents)}</strong>
+                    Held by provider <strong className="text-amber-800">{formatMoney(deal.ledger.heldCents, deal.currency)}</strong>
                   </span>
                   <span>
-                    Held by provider <strong className="text-amber-800">{formatMoney(deal.ledger.heldCents)}</strong>
+                    Provider <strong className="text-indigo">{deal.providerCode}</strong>
                   </span>
+                  {shares ? (
+                    <span>
+                      Revenue share{" "}
+                      <strong className="text-indigo">
+                        {shares.map((party) => `${party.label} ${party.shareBps / 100}%`).join(", ")}
+                      </strong>
+                    </span>
+                  ) : null}
                   {deal.attributionLabel ? (
                     <span>
                       Attribution <strong className="text-indigo">{deal.attributionLabel}</strong>
@@ -288,7 +310,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                             {milestone.status}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-xs text-muted">{formatMoney(milestone.amountCents)}</p>
+                        <p className="mt-0.5 text-xs text-muted">{formatMoney(milestone.amountCents, deal.currency)}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {deal.status === "held" && milestone.status === "pending" ? (

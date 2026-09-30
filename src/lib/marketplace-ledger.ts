@@ -14,6 +14,8 @@ import {
 } from "@/lib/ledger";
 import { resolveDealAttribution } from "@/lib/deal-attribution";
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
+import { convertFee, quoteFx, readFxSnapshot, readShareSnapshot, shareLines } from "@/lib/fx-share";
+import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
 
 const PROVIDER_CODE = "primary";
@@ -29,6 +31,22 @@ function isUnique(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && String(error.code) === "P2002";
 }
 
+function fxRecord(fx: {
+  usdCents: number;
+  minorPerUsd: number;
+  currency: string;
+  source: "admin" | "identity";
+  convertedMinor: number;
+}) {
+  return {
+    usdCents: fx.usdCents,
+    minorPerUsd: fx.minorPerUsd,
+    currency: fx.currency,
+    source: fx.source,
+    convertedMinor: fx.convertedMinor,
+  };
+}
+
 export async function ensureMarketplaceDefaults() {
   await prisma.marketplaceSettings.upsert({
     where: { id: "default" },
@@ -36,9 +54,9 @@ export async function ensureMarketplaceDefaults() {
     create: { id: "default", reviewWindowHours: 72 },
   });
   const jurisdictions = [
-    { code: "US", label: "United States", protectedPaymentsEnabled: true, escrowTermAllowed: false },
-    { code: "GB", label: "United Kingdom", protectedPaymentsEnabled: true, escrowTermAllowed: false },
-    { code: "NG", label: "Nigeria", protectedPaymentsEnabled: false, escrowTermAllowed: false },
+    { code: "US", label: "United States", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "USD", providerCode: "primary" },
+    { code: "GB", label: "United Kingdom", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "GBP", providerCode: "primary" },
+    { code: "NG", label: "Nigeria", protectedPaymentsEnabled: false, escrowTermAllowed: false, currency: "NGN", providerCode: "primary" },
   ];
   for (const row of jurisdictions) {
     await prisma.collaborationJurisdiction.upsert({
@@ -73,12 +91,13 @@ export async function ensureMarketplaceDefaults() {
 
 export async function marketplaceConfig() {
   await ensureMarketplaceDefaults();
-  const [settings, jurisdictions, templates, provider] = await Promise.all([
+  const [settings, jurisdictions, templates, providers] = await Promise.all([
     prisma.marketplaceSettings.findUnique({ where: { id: "default" } }),
     prisma.collaborationJurisdiction.findMany({ orderBy: { code: "asc" } }),
     prisma.milestoneTemplate.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.integrationProvider.findUnique({ where: { kind_code: { kind: "marketplace", code: PROVIDER_CODE } } }),
+    prisma.integrationProvider.findMany({ where: { kind: "marketplace" }, orderBy: { code: "asc" } }),
   ]);
+  const provider = providers.find((row) => row.code === PROVIDER_CODE) ?? null;
   return {
     reviewWindowHours: settings?.reviewWindowHours ?? 72,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
@@ -99,6 +118,13 @@ export async function marketplaceConfig() {
       webhook: provider?.webhookCipher ? ("saved" as const) : ("missing" as const),
       ready: Boolean(provider?.enabled && provider.webhookCipher),
     },
+    providers: providers.map((row) => ({
+      code: row.code,
+      name: row.name,
+      enabled: row.enabled,
+      webhook: row.webhookCipher ? ("saved" as const) : ("missing" as const),
+      ready: Boolean(row.enabled && row.webhookCipher),
+    })),
   };
 }
 
@@ -122,24 +148,37 @@ export async function saveJurisdiction(input: {
   label: string;
   protectedPaymentsEnabled: boolean;
   escrowTermAllowed: boolean;
+  currency: string;
+  providerCode: string;
 }) {
   await ensureMarketplaceDefaults();
   const code = input.code.trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(code)) throw new Error("Use a two-letter jurisdiction code.");
   const label = input.label.trim().slice(0, 80);
   if (!label) throw new Error("A jurisdiction label is required.");
+  const currency = input.currency.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) throw new Error("Use a three-letter currency.");
+  const providerCode = input.providerCode.trim().toLowerCase();
+  const assigned = await prisma.integrationProvider.findUnique({
+    where: { kind_code: { kind: "marketplace", code: providerCode } },
+  });
+  if (!assigned) throw new Error("Choose a marketplace provider.");
   return prisma.collaborationJurisdiction.upsert({
     where: { code },
     update: {
       label,
       protectedPaymentsEnabled: input.protectedPaymentsEnabled,
       escrowTermAllowed: input.escrowTermAllowed && input.protectedPaymentsEnabled,
+      currency,
+      providerCode,
     },
     create: {
       code,
       label,
       protectedPaymentsEnabled: input.protectedPaymentsEnabled,
       escrowTermAllowed: input.escrowTermAllowed && input.protectedPaymentsEnabled,
+      currency,
+      providerCode,
     },
   });
 }
@@ -181,17 +220,30 @@ export async function saveMilestoneTemplates(rows: { id?: string; title: string;
 }
 
 export async function saveMarketplaceProvider(input: {
+  code?: string;
   name: string;
   enabled: boolean;
   webhook: string;
   clearWebhook?: boolean;
 }) {
   await ensureMarketplaceDefaults();
+  const code = (input.code || PROVIDER_CODE).trim().toLowerCase();
+  if (!/^[a-z][a-z0-9-]{1,31}$/.test(code)) throw new Error("Use a short provider code.");
   const name = input.name.trim().slice(0, 80);
   if (!name) throw new Error("A provider name is required.");
   const existing = await prisma.integrationProvider.findUnique({
-    where: { kind_code: { kind: "marketplace", code: PROVIDER_CODE } },
+    where: { kind_code: { kind: "marketplace", code } },
   });
+  if (!existing) {
+    let webhookCipher: string | null = null;
+    if (input.webhook.trim()) {
+      const { encryptSecret } = await import("@/lib/provider-secrets");
+      webhookCipher = encryptSecret(input.webhook.trim());
+    }
+    return prisma.integrationProvider.create({
+      data: { kind: "marketplace", code, name, enabled: input.enabled, webhookCipher },
+    });
+  }
   let webhookCipher = existing?.webhookCipher ?? null;
   if (input.clearWebhook) webhookCipher = null;
   if (input.webhook.trim()) {
@@ -199,7 +251,7 @@ export async function saveMarketplaceProvider(input: {
     webhookCipher = encryptSecret(input.webhook.trim());
   }
   return prisma.integrationProvider.update({
-    where: { kind_code: { kind: "marketplace", code: PROVIDER_CODE } },
+    where: { kind_code: { kind: "marketplace", code } },
     data: { name, enabled: input.enabled, webhookCipher },
   });
 }
@@ -250,12 +302,16 @@ export async function requestPrefund(input: {
   occurrenceCount?: number;
 }) {
   await ensureMarketplaceDefaults();
+  await ensureSettlementDefaults();
   const code = input.jurisdictionCode.trim().toUpperCase();
-  const [jurisdiction, provider, settings, templates] = await Promise.all([
-    prisma.collaborationJurisdiction.findUnique({ where: { code } }),
-    prisma.integrationProvider.findUnique({ where: { kind_code: { kind: "marketplace", code: PROVIDER_CODE } } }),
+  const jurisdiction = await prisma.collaborationJurisdiction.findUnique({ where: { code } });
+  const assignedCode = jurisdiction?.providerCode || PROVIDER_CODE;
+  const currency = (jurisdiction?.currency || "USD").toUpperCase();
+  const [provider, settings, templates, fxRate] = await Promise.all([
+    prisma.integrationProvider.findUnique({ where: { kind_code: { kind: "marketplace", code: assignedCode } } }),
     prisma.marketplaceSettings.findUnique({ where: { id: "default" } }),
     prisma.milestoneTemplate.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
+    currency === "USD" ? Promise.resolve(null) : prisma.fxRate.findUnique({ where: { currency } }),
   ]);
   const gate = canRequestPrefund({
     jurisdictionEnabled: Boolean(jurisdiction?.protectedPaymentsEnabled),
@@ -290,21 +346,26 @@ export async function requestPrefund(input: {
   const businessName = input.businessName.trim().slice(0, 120);
   const creatorSlug = input.creatorSlug.trim().slice(0, 80);
   const baseTitle = input.title.trim().slice(0, 140);
+  const minorPerUsd = currency === "USD" || !fxRate?.active ? null : fxRate.minorPerUsd;
+  const shareSnapshot = await activeShareSnapshot();
   const prepared: {
     gross: number;
+    fx: Extract<ReturnType<typeof quoteFx>, { ok: true }>;
     milestoneAmounts: number[];
     quote: Awaited<ReturnType<typeof resolveFee>> | null;
   }[] = [];
   for (let index = 0; index < schedule.parts.length; index += 1) {
-    const gross = schedule.parts[index];
-    const milestoneAmounts = splitGross(gross, shares);
+    const usdCents = schedule.parts[index];
+    const fx = quoteFx({ usdCents, currency, minorPerUsd });
+    if (!fx.ok) return fx;
+    const milestoneAmounts = splitGross(fx.convertedMinor, shares);
     if (!milestoneAmounts) return { ok: false as const, error: "Milestone templates must add up to 100%." };
     const quote = await resolveFee({
       jurisdiction: code,
       serviceLevel,
-      grossValueCents: gross,
+      grossValueCents: usdCents,
     }).catch(() => null);
-    prepared.push({ gross, milestoneAmounts, quote });
+    prepared.push({ gross: fx.convertedMinor, fx, milestoneAmounts, quote });
   }
   const scheduleId = schedule.kind === "once" ? null : randomUUID();
   const created = await prisma.$transaction(async (tx) => {
@@ -312,7 +373,7 @@ export async function requestPrefund(input: {
     for (let index = 0; index < prepared.length; index += 1) {
       const part = prepared[index];
       const quote = part.quote;
-      const feeCents = quote?.feeCents ?? 0;
+      const feeCents = convertFee(quote?.feeCents ?? 0, part.fx);
       const suffix =
         schedule.kind === "staged"
           ? ` · stage ${index + 1} of ${schedule.trancheCount}`
@@ -325,6 +386,7 @@ export async function requestPrefund(input: {
           businessName,
           creatorSlug,
           title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
+          currency: part.fx.currency,
           grossCents: part.gross,
           feeCents,
           serviceLevel,
@@ -338,6 +400,8 @@ export async function requestPrefund(input: {
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: new Date().toISOString(),
           },
+          fxSnapshotJson: fxRecord(part.fx),
+          shareSnapshotJson: shareSnapshot,
           status: "awaiting_provider",
           providerCode: provider!.code,
           attributionLabel: attribution.attributionLabel,
@@ -373,6 +437,7 @@ export async function requestPrefund(input: {
         scheduleKind: schedule.kind,
         trancheCount: schedule.trancheCount,
         grossCents: input.grossCents,
+        currency,
         attributionLabel: attribution.attributionLabel,
         repeatOfId: attribution.repeatOfId,
       },
@@ -392,6 +457,7 @@ export async function sweepDueRecurrences(now = new Date()) {
   ]);
   const shares = templates.map((row) => row.shareBps);
   const windowHours = settings?.reviewWindowHours ?? 72;
+  const shareSnapshot = await activeShareSnapshot();
   for (const row of confirmed) {
     if (!row.scheduleId || row.trancheIndex >= row.trancheCount) continue;
     const holdAt = row.entries[0]?.createdAt ?? null;
@@ -401,14 +467,24 @@ export async function sweepDueRecurrences(now = new Date()) {
       where: { scheduleId: row.scheduleId, trancheIndex: nextIndex },
     });
     if (existing) continue;
-    const milestoneAmounts = splitGross(row.grossCents, shares);
+    const snapshot = readFxSnapshot(row.fxSnapshotJson);
+    const usdCents = snapshot?.usdCents ?? row.grossCents;
+    const currency = (row.currency || "USD").toUpperCase();
+    const rate = currency === "USD" ? null : await prisma.fxRate.findUnique({ where: { currency } });
+    const fx = quoteFx({
+      usdCents,
+      currency,
+      minorPerUsd: currency === "USD" || !rate?.active ? null : rate.minorPerUsd,
+    });
+    if (!fx.ok) continue;
+    const milestoneAmounts = splitGross(fx.convertedMinor, shares);
     if (!milestoneAmounts) continue;
     const quote = await resolveFee({
       jurisdiction: row.jurisdictionCode,
       serviceLevel: row.serviceLevel,
-      grossValueCents: row.grossCents,
+      grossValueCents: usdCents,
     }).catch(() => null);
-    const feeCents = quote?.feeCents ?? 0;
+    const feeCents = convertFee(quote?.feeCents ?? 0, fx);
     const suffix = ` · ${nextIndex} of ${row.trancheCount}`;
     const baseTitle = row.title.replace(/ · \d+ of \d+$/, "");
     try {
@@ -418,7 +494,8 @@ export async function sweepDueRecurrences(now = new Date()) {
           businessName: row.businessName,
           creatorSlug: row.creatorSlug,
           title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
-          grossCents: row.grossCents,
+          currency: fx.currency,
+          grossCents: fx.convertedMinor,
           feeCents,
           serviceLevel: row.serviceLevel,
           feeSnapshotJson: {
@@ -431,6 +508,8 @@ export async function sweepDueRecurrences(now = new Date()) {
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: now.toISOString(),
           },
+          fxSnapshotJson: fxRecord(fx),
+          shareSnapshotJson: shareSnapshot,
           status: "awaiting_provider",
           providerCode: row.providerCode,
           attributionLabel: row.attributionLabel,
@@ -514,6 +593,8 @@ function presentFunding(row: {
   currency: string;
   grossCents: number;
   feeCents: number;
+  fxSnapshotJson: unknown;
+  shareSnapshotJson: unknown;
   status: string;
   providerCode: string;
   milestones: {
@@ -687,6 +768,23 @@ export async function applyMarketplaceEvent(input: {
             eventId,
           },
         });
+        const parties = readShareSnapshot(funding.shareSnapshotJson);
+        const lines = parties ? shareLines(milestone.amountCents, parties) : null;
+        if (lines) {
+          for (const line of lines) {
+            await tx.ledgerEntry.create({
+              data: {
+                fundingId: funding.id,
+                milestoneId: milestone.id,
+                kind: "share",
+                party: line.party,
+                amountCents: line.amountCents,
+                provider: providerKey,
+                eventId,
+              },
+            });
+          }
+        }
         const open = await tx.fundingMilestone.count({
           where: { fundingId: funding.id, status: { not: "released" } },
         });
@@ -749,14 +847,15 @@ export async function applyMarketplaceEvent(input: {
   return { applied: disposition === "apply", result: disposition };
 }
 
-export async function marketplaceWebhookSecret() {
+export async function marketplaceWebhookSecret(code = PROVIDER_CODE) {
   await ensureMarketplaceDefaults();
   const provider = await prisma.integrationProvider.findUnique({
-    where: { kind_code: { kind: "marketplace", code: PROVIDER_CODE } },
+    where: { kind_code: { kind: "marketplace", code } },
   });
-  if (!provider?.enabled || !provider.webhookCipher) return null;
+  if (!provider) return { error: "missing" as const };
+  if (!provider.enabled || !provider.webhookCipher) return { error: "not_ready" as const };
   const { decryptSecret } = await import("@/lib/provider-secrets");
   const secret = decryptSecret(provider.webhookCipher);
-  if (!secret) return null;
+  if (!secret) return { error: "not_ready" as const };
   return { code: provider.code, secret };
 }

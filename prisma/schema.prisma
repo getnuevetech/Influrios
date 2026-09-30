@@ -989,6 +989,8 @@ model MarketplaceSettings {
   maxStages                Int      @default(4)
   recurringIntervalDays    Int      @default(30)
   maxRecurrences           Int      @default(6)
+  fxSeeded                 Boolean  @default(false)
+  sharesSeeded             Boolean  @default(false)
   updatedAt                DateTime @updatedAt
 }
 
@@ -998,6 +1000,8 @@ model CollaborationJurisdiction {
   label                     String
   protectedPaymentsEnabled  Boolean  @default(false)
   escrowTermAllowed         Boolean  @default(false)
+  currency                  String   @default("USD")
+  providerCode              String   @default("primary")
   updatedAt                 DateTime @updatedAt
 }
 
@@ -1022,6 +1026,8 @@ model CollaborationFunding {
   grossCents       Int
   feeCents         Int      @default(0)
   feeSnapshotJson  Json
+  fxSnapshotJson   Json?
+  shareSnapshotJson Json?
   serviceLevel     String
   status            String   @default("awaiting_provider")
   providerCode      String
@@ -1075,12 +1081,31 @@ model LedgerEntry {
   milestone   FundingMilestone?    @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   kind        String
   amountCents Int
+  party       String               @default("")
   provider    String
   eventId     String
   createdAt   DateTime             @default(now())
 
-  @@unique([provider, eventId, kind])
+  @@unique([provider, eventId, kind, party])
   @@index([fundingId])
+}
+
+/// Admin FX rate. Minor units of this currency per 1.00 USD. Not a live quote.
+model FxRate {
+  currency    String   @id
+  minorPerUsd Int
+  active      Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+/// Admin split of a provider release. Active rows must add up to 10000 basis points.
+model RevenueParty {
+  id        String   @id @default(cuid())
+  label     String
+  shareBps  Int
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  updatedAt DateTime @updatedAt
 }
 
 /// Admin-edited sources. The label is copied onto a funding when the prefund is requested.

@@ -417,7 +417,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 <p className="font-semibold text-indigo">{funding.title}</p>
                 <p className="text-xs text-muted">
                   {funding.businessName} · {funding.status.replaceAll("_", " ")} · held{" "}
-                  {formatMoney(funding.ledger.heldCents)}
+                  {formatMoney(funding.ledger.heldCents, funding.currency)}
                   {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
                   {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
                   {scheduleLabel(funding) ? ` · ${scheduleLabel(funding)}` : ""}
@@ -427,7 +427,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                     <div key={milestone.id} className="rounded-lg border border-border px-3 py-2 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span>
-                          {milestone.title} · {formatMoney(milestone.amountCents)} · {milestone.status}
+                          {milestone.title} · {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status}
                         </span>
                         {funding.status === "held" && milestone.status === "pending" ? (
                           <form action={actionSubmitOwnMilestone}>
