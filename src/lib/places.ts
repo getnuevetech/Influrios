@@ -36,23 +36,33 @@ export function searchCountries(query: string, limit = 8): PlaceHit[] {
   return hits.map((country) => ({ name: country.name, country: country.name }));
 }
 
+function rankName(name: string, query: string) {
+  const key = name.toLowerCase();
+  if (key === query) return 0;
+  if (key.startsWith(query)) return 1;
+  return 2;
+}
+
 export function searchCities(query: string, country = "", limit = 8): PlaceHit[] {
   const q = query.trim().toLowerCase();
   if (q.length < 1) return [];
   if (!country && q.length < 2) return [];
-  const starts: PlaceHit[] = [];
-  const contains: PlaceHit[] = [];
   const seen = new Set<string>();
+  const hits: PlaceHit[] = [];
   for (const city of cities()) {
     if (country && !samePlace(city.country, country)) continue;
     if (!city.key.includes(q)) continue;
     const id = `${city.key}|${canonicalPlaceName(city.country)}`;
     if (seen.has(id)) continue;
     seen.add(id);
-    const hit = { name: city.name, country: city.country };
-    if (city.key.startsWith(q)) starts.push(hit);
-    else contains.push(hit);
-    if (starts.length >= limit) break;
+    hits.push({ name: city.name, country: city.country });
   }
-  return [...starts, ...contains].slice(0, limit);
+  hits.sort(
+    (a, b) =>
+      rankName(a.name, q) - rankName(b.name, q) ||
+      a.name.length - b.name.length ||
+      a.name.localeCompare(b.name) ||
+      a.country.localeCompare(b.country),
+  );
+  return hits.slice(0, limit);
 }

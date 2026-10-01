@@ -22,7 +22,9 @@ describe("place search", () => {
     const lagosInFrance = searchCities("lag", "France");
     assert.equal(lagosInFrance.some((hit) => hit.name === "Lagos" && hit.country === "Nigeria"), false);
     const paris = searchCities("paris");
+    assert.equal(paris[0]?.name, "Paris");
     assert.ok(paris.some((hit) => hit.name === "Paris" && hit.country === "France"));
+    assert.ok(paris.findIndex((hit) => hit.name === "Paris") < paris.findIndex((hit) => hit.name === "Parisi"));
   });
 
   it("matches a United States filter to a profile stored as USA", () => {
