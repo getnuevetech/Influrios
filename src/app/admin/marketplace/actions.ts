@@ -26,6 +26,7 @@ export async function actionSaveMarketplaceSettings(formData: FormData) {
       reviewWindowHours: Number(formData.get("reviewWindowHours")),
       maxRevisions: Number(formData.get("maxRevisions")),
       maxEvidence: Number(formData.get("maxEvidence")),
+      maxGrossCents: Math.round(Number(formData.get("maxGrossUsd") ?? 0) * 100),
       cancelUnconfirmed: formData.get("cancelUnconfirmed") === "on",
     });
   } catch (error) {

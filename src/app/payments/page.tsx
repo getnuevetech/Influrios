@@ -127,6 +127,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   .map((row) => `${row.title} ${row.shareBps / 100}%`)
                   .join(", ")}.`
               : ""}
+            {config && config.maxGrossCents > 0 ? ` The admin cap on a new prefund is ${formatMoney(config.maxGrossCents)}.` : ""}
           </p>
           <form action={actionCreateDeal} className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="text-sm">

@@ -23,7 +23,7 @@ import { scheduleLabel } from "@/lib/schedule";
 import { listFxRates, listRevenueParties } from "@/lib/settlement";
 import { wiseFxConfig } from "@/lib/wise-quote";
 import { formatMoney } from "@/lib/protected-payments";
-import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
+import { ledgerTotals, listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };
@@ -34,9 +34,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, fundings, reasons, sources, rates, parties, wise] = await Promise.all([
+  const [config, fundings, totals, reasons, sources, rates, parties, wise] = await Promise.all([
     marketplaceConfig(),
     listFundings(),
+    ledgerTotals(),
     listDisputeReasons(),
     listAttributionSources(),
     listFxRates(),
@@ -180,7 +181,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Review window</h2>
         <p className="mt-1 text-xs text-muted">
-          A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute.
+          A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested.
         </p>
         {canManage ? (
           <form action={actionSaveMarketplaceSettings} className="mt-4 flex flex-wrap items-end gap-3">
@@ -217,6 +218,18 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               />
             </label>
+            <label className="text-xs font-semibold text-muted">
+              Gross cap USD
+              <input
+                name="maxGrossUsd"
+                type="number"
+                min={0}
+                max={1000000}
+                step={1}
+                defaultValue={config.maxGrossCents / 100}
+                className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
               Allow cancelling a prefund before the provider confirms it
@@ -227,7 +240,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           </form>
         ) : (
           <p className="mt-3 text-sm text-indigo">
-            {config.reviewWindowHours} hours · {config.maxRevisions} revisions · {config.maxEvidence} evidence
+            {config.reviewWindowHours} hours · {config.maxRevisions} revisions · {config.maxEvidence} evidence · cap{" "}
+            {config.maxGrossCents > 0 ? formatMoney(config.maxGrossCents) : "off"}
           </p>
         )}
       </section>
@@ -745,6 +759,23 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               : "Recurring off"}
           </p>
         )}
+      </section>
+
+      <section className="card-surface p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Ledger totals</h2>
+        <p className="mt-1 text-xs text-muted">
+          These figures are what the provider is holding, released, or refunded. Fees are quoted separately. Revenue shares are not cash.
+        </p>
+        {totals.length === 0 ? <p className="mt-3 text-sm text-muted">No prefunds yet.</p> : null}
+        <ul className="mt-3 space-y-2 text-sm text-indigo">
+          {totals.map((row) => (
+            <li key={row.currency}>
+              {row.currency} · held {formatMoney(row.heldCents, row.currency)} · released {formatMoney(row.releasedCents, row.currency)} · refunded{" "}
+              {formatMoney(row.refundedCents, row.currency)} · fees {formatMoney(row.feeCents, row.currency)}
+              {row.unbalanced > 0 ? ` · ${row.unbalanced} unbalanced` : ""}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="space-y-3">

@@ -434,6 +434,7 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Wise user-rate quotes (12.8)  
 - [x] Limited milestone revisions (12.9)  
 - [x] Dispute evidence (12.10)  
+- [x] Gross cap and ledger totals (12.11)  
 
 See also: `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md`
 

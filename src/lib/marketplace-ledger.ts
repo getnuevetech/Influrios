@@ -5,8 +5,10 @@ import {
   advanceMilestone,
   autoApproveDeadline,
   canRequestPrefund,
+  grossWithinCap,
   marketplaceDisposition,
   reconcileLedger,
+  summarizeLedger,
   ledgerMovements,
   requestRevision,
   shouldAutoApprove,
@@ -21,6 +23,17 @@ import { quoteWiseUserRate } from "@/lib/wise-quote";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
 
 const PROVIDER_CODE = "primary";
+
+let grossCapForTests: number | null = null;
+
+/** Tests pin the USD cap without writing the shared settings row. */
+export function setGrossCapForTests(cents: number | null) {
+  grossCapForTests = cents;
+}
+
+function activeGrossCap(stored: number | null | undefined) {
+  return grossCapForTests ?? stored ?? 0;
+}
 
 class LedgerReject extends Error {
   constructor(message: string) {
@@ -112,6 +125,7 @@ export async function marketplaceConfig() {
     reviewWindowHours: settings?.reviewWindowHours ?? 72,
     maxRevisions: settings?.maxRevisions ?? 2,
     maxEvidence: settings?.maxEvidence ?? 5,
+    maxGrossCents: settings?.maxGrossCents ?? 0,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
@@ -144,6 +158,7 @@ export async function saveMarketplaceSettings(input: {
   reviewWindowHours: number;
   maxRevisions?: number;
   maxEvidence?: number;
+  maxGrossCents?: number;
   cancelUnconfirmed?: boolean;
 }) {
   await ensureMarketplaceDefaults();
@@ -159,12 +174,17 @@ export async function saveMarketplaceSettings(input: {
   if (maxEvidence != null && (!Number.isInteger(maxEvidence) || maxEvidence < 0 || maxEvidence > 20)) {
     throw new Error("Evidence limit must be from 0 to 20.");
   }
+  const maxGrossCents = input.maxGrossCents == null ? null : Math.round(input.maxGrossCents);
+  if (maxGrossCents != null && (!Number.isInteger(maxGrossCents) || maxGrossCents < 0 || maxGrossCents > 100_000_000)) {
+    throw new Error("Gross cap must be from 0 to 1,000,000 USD.");
+  }
   return prisma.marketplaceSettings.update({
     where: { id: "default" },
     data: {
       reviewWindowHours: hours,
       ...(maxRevisions == null ? {} : { maxRevisions }),
       ...(maxEvidence == null ? {} : { maxEvidence }),
+      ...(maxGrossCents == null ? {} : { maxGrossCents }),
       ...(input.cancelUnconfirmed == null ? {} : { cancelUnconfirmed: input.cancelUnconfirmed }),
     },
   });
@@ -348,14 +368,16 @@ export async function requestPrefund(input: {
     prisma.milestoneTemplate.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
     currency === "USD" ? Promise.resolve(null) : prisma.fxRate.findUnique({ where: { currency } }),
   ]);
+  if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) {
+    return { ok: false as const, error: "Enter a gross amount greater than zero." };
+  }
+  const cap = grossWithinCap({ grossCents: input.grossCents, maxGrossCents: activeGrossCap(settings?.maxGrossCents) });
+  if (!cap.ok) return cap;
   const gate = canRequestPrefund({
     jurisdictionEnabled: Boolean(jurisdiction?.protectedPaymentsEnabled),
     providerReady: Boolean(provider?.enabled && provider.webhookCipher),
   });
   if (!gate.ok) return gate;
-  if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) {
-    return { ok: false as const, error: "Enter a gross amount greater than zero." };
-  }
   const attribution = await resolveDealAttribution({
     businessName: input.businessName,
     creatorSlug: input.creatorSlug,
@@ -509,6 +531,8 @@ export async function sweepDueRecurrences(now = new Date()) {
     if (existing) continue;
     const snapshot = readFxSnapshot(row.fxSnapshotJson);
     const usdCents = snapshot?.usdCents ?? row.grossCents;
+    const cap = grossWithinCap({ grossCents: usdCents, maxGrossCents: activeGrossCap(settings?.maxGrossCents) });
+    if (!cap.ok) continue;
     const currency = (row.currency || "USD").toUpperCase();
     if (currency !== "USD") {
       const allowed = await prisma.fxRate.findUnique({ where: { currency } });
@@ -596,6 +620,17 @@ async function sweepAutoApprovals() {
       data: { status: next.status, approvedAt: new Date() },
     });
   }
+}
+
+export async function ledgerTotals() {
+  const fundings = await prisma.collaborationFunding.findMany({
+    select: {
+      currency: true,
+      grossCents: true,
+      entries: { select: { kind: true, amountCents: true } },
+    },
+  });
+  return summarizeLedger(fundings);
 }
 
 export async function listFundings() {
