@@ -43,7 +43,8 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
         Connect more than one gateway, then assign each country to one of them. The starter routes put Flutterwave on
         the listed African countries and Stripe on the others. M-Pesa is listed and stays off until you enable it and
         save a secret. Checkout does not mark Flutterwave or M-Pesa paid. A gateway is ready only when it is enabled
-        and its secret is saved. Stripe Connect account links stay closed until you turn that switch on.
+        and its secret is saved. The Stripe gateway accepts a sandbox key (sk_test_ or rkcs_test_). A live key
+        saved there is refused. Stripe Connect account links stay closed until you turn that switch on.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}

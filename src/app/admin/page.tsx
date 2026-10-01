@@ -6,7 +6,8 @@ import {
   type AdminModule,
 } from "@/lib/admin-auth";
 import { agencyStats, getAgencyStore } from "@/lib/agency";
-import { getBillingStore, isStripeConfigured } from "@/lib/billing";
+import { getBillingStore } from "@/lib/billing";
+import { stripeBillingMode } from "@/lib/stripe-admin";
 import { providerHealth } from "@/lib/provider-health";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
@@ -36,6 +37,7 @@ const LINKS: {
     trustOpen: number;
     agencyRoster: number;
     memberAccounts: number;
+    stripeMode: "sandbox" | "live" | "demo" | "rejected";
   }) => string;
 }[] = [
   {
@@ -72,7 +74,7 @@ const LINKS: {
     blurb: "Plan catalog, checkout sessions, Stripe readiness.",
     module: "billing",
     meta: (c) =>
-      `${c.completedCheckouts} completed · ${isStripeConfigured() ? "Stripe" : "Demo"} mode`,
+      `${c.completedCheckouts} completed · ${c.stripeMode === "sandbox" ? "Sandbox" : c.stripeMode === "live" ? "Live" : "Demo"} mode`,
   },
   {
     href: "/admin/plans",
@@ -246,7 +248,7 @@ export default async function AdminHomePage({
   if (!session) redirect("/admin/login");
 
   const params = await searchParams;
-  const [cms, matching, billing, payments, trust, agency, memberAccounts, health] = await Promise.all([
+  const [cms, matching, billing, payments, trust, agency, memberAccounts, health, stripeMode] = await Promise.all([
     getCms().catch(() => null),
     getManagedMatching().catch(() => null),
     getBillingStore().catch(() => null),
@@ -255,6 +257,7 @@ export default async function AdminHomePage({
     getAgencyStore().catch(() => null),
     prisma.user.count().catch(() => 0),
     providerHealth().catch(() => null),
+    stripeBillingMode().catch(() => "demo" as const),
   ]);
   const payStats = payments ? escrowStats(payments) : { active: 0, held: 0 };
   const tStats = trust ? trustStats(trust) : { open: 0, resolved: 0, total: 0, contracts: 0 };
@@ -281,6 +284,7 @@ export default async function AdminHomePage({
     trustOpen: tStats.open,
     agencyRoster: aStats.roster,
     memberAccounts,
+    stripeMode,
   };
 
   const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));

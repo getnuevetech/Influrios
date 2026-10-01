@@ -3,8 +3,8 @@ import { actionOpenConnect, actionOpenPortal, actionStartCheckout } from "@/app/
 import {
   BILLING_CATALOG,
   getBillingStore,
-  isStripeConfigured,
 } from "@/lib/billing";
+import { stripeBillingMode } from "@/lib/stripe-admin";
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { productSwitch } from "@/lib/product-switches";
@@ -19,7 +19,8 @@ type Props = {
 
 export default async function BillingPage({ searchParams }: Props) {
   const params = await searchParams;
-  const stripeLive = isStripeConfigured();
+  const stripeMode = await stripeBillingMode();
+  const stripeLive = stripeMode === "sandbox" || stripeMode === "live";
   const ws = await getWorkspace();
   const be = getBusinessEntitlements(ws.plan);
   const store = await getBillingStore();
@@ -44,7 +45,7 @@ export default async function BillingPage({ searchParams }: Props) {
             upgrade flow otherwise.
           </p>
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-            Mode: {stripeLive ? "Stripe live keys detected" : "Demo checkout (no STRIPE_SECRET_KEY)"}
+            Mode: {stripeMode === "sandbox" ? "Stripe sandbox" : stripeMode === "live" ? "Stripe live" : stripeMode === "rejected" ? "Stripe sandbox key required" : "Demo checkout"}
           </p>
         </div>
       </section>
@@ -170,7 +171,7 @@ export default async function BillingPage({ searchParams }: Props) {
                   </span>
                 </label>
                 <button type="submit" className="btn-primary mt-4 w-full !py-2.5 text-sm">
-                  {stripeLive ? "Checkout with Stripe →" : "Demo upgrade →"}
+                  {stripeMode === "sandbox" ? "Checkout with Stripe sandbox →" : stripeLive ? "Checkout with Stripe →" : "Demo upgrade →"}
                 </button>
               </form>
             ))}
@@ -214,7 +215,7 @@ export default async function BillingPage({ searchParams }: Props) {
                   </span>
                 </label>
                 <button type="submit" className="btn-primary mt-4 w-full !py-2.5 text-sm">
-                  {stripeLive ? "Checkout with Stripe →" : "Demo upgrade →"}
+                  {stripeMode === "sandbox" ? "Checkout with Stripe sandbox →" : stripeLive ? "Checkout with Stripe →" : "Demo upgrade →"}
                 </button>
               </form>
             ))}
