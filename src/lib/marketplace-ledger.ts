@@ -5,8 +5,10 @@ import {
   advanceMilestone,
   autoApproveDeadline,
   releasableCents,
+  canRequestChangeOrder,
   canRequestPrefund,
   grossWithinCap,
+  sharesFromAmounts,
   marketplaceDisposition,
   reconcileLedger,
   summarizeLedger,
@@ -26,10 +28,16 @@ import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone
 const PROVIDER_CODE = "primary";
 
 let grossCapForTests: number | null = null;
+let changeOrdersForTests: boolean | null = null;
 
 /** Tests pin the USD cap without writing the shared settings row. */
 export function setGrossCapForTests(cents: number | null) {
   grossCapForTests = cents;
+}
+
+/** Tests pin the change-order switch without writing the shared settings row. */
+export function setChangeOrdersForTests(enabled: boolean | null) {
+  changeOrdersForTests = enabled;
 }
 
 function activeGrossCap(stored: number | null | undefined) {
@@ -128,6 +136,8 @@ export async function marketplaceConfig() {
     maxEvidence: settings?.maxEvidence ?? 5,
     maxGrossCents: settings?.maxGrossCents ?? 0,
     partialRefundsEnabled: settings?.partialRefundsEnabled ?? true,
+    changeOrdersEnabled: settings?.changeOrdersEnabled ?? true,
+    maxChangeOrders: settings?.maxChangeOrders ?? 2,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
@@ -162,6 +172,8 @@ export async function saveMarketplaceSettings(input: {
   maxEvidence?: number;
   maxGrossCents?: number;
   partialRefundsEnabled?: boolean;
+  changeOrdersEnabled?: boolean;
+  maxChangeOrders?: number;
   cancelUnconfirmed?: boolean;
 }) {
   await ensureMarketplaceDefaults();
@@ -181,6 +193,10 @@ export async function saveMarketplaceSettings(input: {
   if (maxGrossCents != null && (!Number.isInteger(maxGrossCents) || maxGrossCents < 0 || maxGrossCents > 100_000_000)) {
     throw new Error("Gross cap must be from 0 to 1,000,000 USD.");
   }
+  const maxChangeOrders = input.maxChangeOrders == null ? null : Math.round(input.maxChangeOrders);
+  if (maxChangeOrders != null && (!Number.isInteger(maxChangeOrders) || maxChangeOrders < 0 || maxChangeOrders > 20)) {
+    throw new Error("Change order limit must be from 0 to 20.");
+  }
   return prisma.marketplaceSettings.update({
     where: { id: "default" },
     data: {
@@ -189,6 +205,8 @@ export async function saveMarketplaceSettings(input: {
       ...(maxEvidence == null ? {} : { maxEvidence }),
       ...(maxGrossCents == null ? {} : { maxGrossCents }),
       ...(input.partialRefundsEnabled == null ? {} : { partialRefundsEnabled: input.partialRefundsEnabled }),
+      ...(input.changeOrdersEnabled == null ? {} : { changeOrdersEnabled: input.changeOrdersEnabled }),
+      ...(maxChangeOrders == null ? {} : { maxChangeOrders }),
       ...(input.cancelUnconfirmed == null ? {} : { cancelUnconfirmed: input.cancelUnconfirmed }),
     },
   });
@@ -405,6 +423,7 @@ export async function requestPrefund(input: {
   const serviceLevel = (input.serviceLevel || "contracted").slice(0, 40);
   const windowHours = settings?.reviewWindowHours ?? 72;
   const revisionLimit = settings?.maxRevisions ?? 2;
+  const changeOrderLimit = settings?.maxChangeOrders ?? 2;
   const businessName = input.businessName.trim().slice(0, 120);
   const creatorSlug = input.creatorSlug.trim().slice(0, 80);
   const baseTitle = input.title.trim().slice(0, 140);
@@ -470,6 +489,7 @@ export async function requestPrefund(input: {
           providerCode: provider!.code,
           attributionLabel: attribution.attributionLabel,
           repeatOfId: attribution.repeatOfId,
+          changeOrderLimit,
           scheduleId,
           scheduleKind: schedule.kind,
           trancheIndex: index + 1,
@@ -523,6 +543,7 @@ export async function sweepDueRecurrences(now = new Date()) {
   const shares = templates.map((row) => row.shareBps);
   const windowHours = settings?.reviewWindowHours ?? 72;
   const revisionLimit = settings?.maxRevisions ?? 2;
+  const changeOrderLimit = settings?.maxChangeOrders ?? 2;
   const shareSnapshot = await activeShareSnapshot();
   for (const row of confirmed) {
     if (!row.scheduleId || row.trancheIndex >= row.trancheCount) continue;
@@ -588,6 +609,7 @@ export async function sweepDueRecurrences(now = new Date()) {
           providerCode: row.providerCode,
           attributionLabel: row.attributionLabel,
           repeatOfId: row.repeatOfId,
+          changeOrderLimit,
           scheduleId: row.scheduleId,
           scheduleKind: "recurring",
           trancheIndex: nextIndex,
@@ -626,6 +648,110 @@ async function sweepAutoApprovals() {
   }
 }
 
+export async function requestChangeOrder(input: { fundingId: string; grossCents: number; note: string }) {
+  const note = input.note.trim().slice(0, 500);
+  if (note.length < 8) return { ok: false as const, error: "Describe what changed. Nothing was changed." };
+  if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) {
+    return { ok: false as const, error: "Enter a gross amount greater than zero. Nothing was changed." };
+  }
+  const funding = await prisma.collaborationFunding.findUnique({
+    where: { id: input.fundingId },
+    include: {
+      milestones: { orderBy: { sortOrder: "asc" } },
+      entries: { where: { kind: "hold" }, take: 1 },
+    },
+  });
+  if (!funding) return { ok: false as const, error: "Prefund not found." };
+  const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
+  const enabled = changeOrdersForTests ?? settings?.changeOrdersEnabled ?? true;
+  const gate = canRequestChangeOrder({
+    enabled,
+    fundingStatus: funding.status,
+    changeOrderCount: funding.changeOrderCount,
+    changeOrderLimit: funding.changeOrderLimit,
+    hasHold: funding.entries.length > 0,
+  });
+  if (!gate.ok) return gate;
+  const snapshot = readFxSnapshot(funding.fxSnapshotJson);
+  const currentUsd = snapshot?.usdCents ?? (funding.currency === "USD" ? funding.grossCents : 0);
+  if (currentUsd === input.grossCents) {
+    return { ok: false as const, error: "Enter a different gross. Nothing was changed." };
+  }
+  const cap = grossWithinCap({ grossCents: input.grossCents, maxGrossCents: activeGrossCap(settings?.maxGrossCents) });
+  if (!cap.ok) return { ok: false as const, error: "That gross is above the admin cap. Nothing was changed." };
+  const currency = (funding.currency || "USD").toUpperCase();
+  if (currency !== "USD") {
+    const allowed = await prisma.fxRate.findUnique({ where: { currency } });
+    if (!allowed?.active) {
+      return { ok: false as const, error: `No Wise currency is saved for ${currency}. Nothing was changed.` };
+    }
+  }
+  const jurisdiction = await prisma.collaborationJurisdiction.findUnique({ where: { code: funding.jurisdictionCode } });
+  const fx = await quoteWiseUserRate({
+    currency,
+    usdCents: input.grossCents,
+    minorDigits: jurisdiction?.minorDigits ?? 2,
+  });
+  if (!fx.ok) return { ok: false as const, error: fx.error.replaceAll("Nothing was funded.", "Nothing was changed.") };
+  const pending = funding.milestones.every((milestone) => milestone.status === "pending" && milestone.refundedCents === 0);
+  const shares = sharesFromAmounts(funding.milestones.map((milestone) => milestone.amountCents));
+  const milestoneAmounts = pending && shares ? splitGross(fx.convertedMinor, shares) : null;
+  if (!milestoneAmounts) return { ok: false as const, error: "This prefund cannot be changed. Nothing was changed." };
+  const quote = await resolveFee({
+    jurisdiction: funding.jurisdictionCode,
+    serviceLevel: funding.serviceLevel,
+    grossValueCents: input.grossCents,
+  }).catch(() => null);
+  const feeCents = convertFee(quote?.feeCents ?? 0, fx);
+  const nextFee = {
+    ruleId: quote?.rule?.id ?? null,
+    ruleName: quote?.rule?.name ?? null,
+    ruleVersion: quote?.rule?.version ?? null,
+    percentBps: quote?.rule?.percentBps ?? null,
+    fixedCents: quote?.rule?.fixedCents ?? null,
+    feeCents,
+    explanation: quote?.explanation ?? "Fee rules were unavailable.",
+    capturedAt: new Date().toISOString(),
+  };
+  try {
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.collaborationFunding.updateMany({
+        where: { id: funding.id, status: "awaiting_provider", changeOrderCount: funding.changeOrderCount },
+        data: {
+          grossCents: fx.convertedMinor,
+          feeCents,
+          feeSnapshotJson: nextFee,
+          fxSnapshotJson: fxRecord(fx),
+          changeOrderCount: { increment: 1 },
+        },
+      });
+      if (updated.count !== 1) throw new Error("This prefund has used its change orders. Nothing was changed.");
+      for (let index = 0; index < funding.milestones.length; index += 1) {
+        await tx.fundingMilestone.update({
+          where: { id: funding.milestones[index].id },
+          data: { amountCents: milestoneAmounts[index] },
+        });
+      }
+      await tx.fundingChangeOrder.create({
+        data: {
+          fundingId: funding.id,
+          note,
+          previousGrossCents: funding.grossCents,
+          nextGrossCents: fx.convertedMinor,
+          previousUsdCents: currentUsd,
+          nextUsdCents: input.grossCents,
+          previousFeeSnapshotJson: funding.feeSnapshotJson ?? {},
+        },
+      });
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("Nothing was changed")) return { ok: false as const, error: message };
+    throw error;
+  }
+  return { ok: true as const };
+}
+
 export async function ledgerTotals() {
   const fundings = await prisma.collaborationFunding.findMany({
     select: {
@@ -656,6 +782,10 @@ export async function listFundings() {
         },
       },
       repeatOf: { select: { id: true, title: true } },
+      changeOrders: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, note: true, previousUsdCents: true, nextUsdCents: true },
+      },
     },
     take: 50,
   });
@@ -682,6 +812,10 @@ export async function listFundingsForCreator(creatorSlug: string) {
         },
       },
       repeatOf: { select: { id: true, title: true } },
+      changeOrders: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, note: true, previousUsdCents: true, nextUsdCents: true },
+      },
     },
     take: 20,
   });
@@ -723,6 +857,9 @@ function presentFunding(row: {
   }[];
   attributionLabel: string;
   repeatOf: { id: string; title: string } | null;
+  changeOrderLimit: number;
+  changeOrderCount: number;
+  changeOrders: { id: string; note: string; previousUsdCents: number; nextUsdCents: number }[];
   scheduleKind: string;
   trancheIndex: number;
   trancheCount: number;

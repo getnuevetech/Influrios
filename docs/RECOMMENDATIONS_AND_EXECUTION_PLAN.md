@@ -436,6 +436,7 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Dispute evidence (12.10)  
 - [x] Gross cap and ledger totals (12.11)  
 - [x] Partial refund remainder (12.12)  
+- [x] Change orders (12.13)  
 
 See also: `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md`
 

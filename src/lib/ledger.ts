@@ -34,6 +34,54 @@ export function canRequestPrefund(input: { jurisdictionEnabled: boolean; provide
   return { ok: true as const };
 }
 
+/** Basis points from the amounts already on a prefund. The last share absorbs rounding. */
+export function sharesFromAmounts(amounts: number[]): number[] | null {
+  if (amounts.length === 0) return null;
+  if (amounts.some((amount) => !Number.isInteger(amount) || amount <= 0)) return null;
+  const total = amounts.reduce((sum, amount) => sum + amount, 0);
+  if (total <= 0) return null;
+  const shares: number[] = [];
+  let used = 0;
+  for (let index = 0; index < amounts.length; index += 1) {
+    if (index === amounts.length - 1) {
+      shares.push(10_000 - used);
+      continue;
+    }
+    const share = Math.floor((amounts[index] * 10_000) / total);
+    shares.push(share);
+    used += share;
+  }
+  if (shares.some((share) => share <= 0)) return null;
+  if (shares.reduce((sum, share) => sum + share, 0) !== 10_000) return null;
+  return shares;
+}
+
+/** A change order amends an unconfirmed prefund. It does not hold, release, or refund. */
+export function canRequestChangeOrder(input: {
+  enabled: boolean;
+  fundingStatus: string;
+  changeOrderCount: number;
+  changeOrderLimit: number;
+  hasHold: boolean;
+}): { ok: true } | { ok: false; error: string } {
+  if (!input.enabled) {
+    return { ok: false, error: "Change orders are turned off. Nothing was changed." };
+  }
+  if (input.hasHold || input.fundingStatus !== "awaiting_provider") {
+    return { ok: false, error: "This prefund is already with the provider. Nothing was changed." };
+  }
+  if (
+    !Number.isInteger(input.changeOrderCount) ||
+    input.changeOrderCount < 0 ||
+    !Number.isInteger(input.changeOrderLimit) ||
+    input.changeOrderLimit < 0 ||
+    input.changeOrderCount >= input.changeOrderLimit
+  ) {
+    return { ok: false, error: "This prefund has used its change orders. Nothing was changed." };
+  }
+  return { ok: true };
+}
+
 /** Last share absorbs rounding so the parts still add up to the gross. */
 export function splitGross(grossCents: number, sharesBps: number[]): number[] | null {
   if (!Number.isInteger(grossCents) || grossCents <= 0) return null;

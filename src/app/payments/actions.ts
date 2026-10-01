@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getCreatorBySlug } from "@/lib/seed-data";
 import {
   approveFundingMilestone,
+  requestChangeOrder,
   requestFundingRevision,
   requestPrefund,
   submitFundingMilestone,
@@ -44,6 +45,21 @@ export async function actionCreateDeal(formData: FormData) {
   revalidatePath("/payments");
   revalidatePath("/admin/marketplace");
   redirect(`/payments?created=${result.id}`);
+}
+
+export async function actionRequestChangeOrder(formData: FormData) {
+  const fundingId = String(formData.get("dealId") ?? "");
+  const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
+  const result = await requestChangeOrder({
+    fundingId,
+    grossCents,
+    note: String(formData.get("note") ?? ""),
+  });
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/payments");
+  revalidatePath("/dashboard");
+  revalidatePath("/admin/marketplace");
+  redirect("/payments?changed=1");
 }
 
 export async function actionSubmitMilestone(formData: FormData) {

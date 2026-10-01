@@ -181,7 +181,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Review window</h2>
         <p className="mt-1 text-xs text-muted">
-          A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested. Turning partial refunds off blocks a new request. A request already recorded still waits for the provider, and the rest of that milestone can be released.
+          A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested. Turning partial refunds off blocks a new request. A request already recorded still waits for the provider, and the rest of that milestone can be released. A change order amends the gross while the prefund is still waiting for the provider. The limit is copied onto that prefund. Zero means none. Turning change orders off blocks a new amendment and leaves one already recorded in place. The earlier fee snapshot stays on the change order.
         </p>
         {canManage ? (
           <form action={actionSaveMarketplaceSettings} className="mt-4 flex flex-wrap items-end gap-3">
@@ -230,9 +230,24 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               />
             </label>
+            <label className="text-xs font-semibold text-muted">
+              Change orders
+              <input
+                name="maxChangeOrders"
+                type="number"
+                min={0}
+                max={20}
+                defaultValue={config.maxChangeOrders}
+                className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="partialRefundsEnabled" defaultChecked={config.partialRefundsEnabled} className="accent-violet" />
               Allow a partial refund request
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="changeOrdersEnabled" defaultChecked={config.changeOrdersEnabled} className="accent-violet" />
+              Allow a change order before the provider confirms
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
@@ -246,7 +261,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           <p className="mt-3 text-sm text-indigo">
             {config.reviewWindowHours} hours · {config.maxRevisions} revisions · {config.maxEvidence} evidence · cap{" "}
             {config.maxGrossCents > 0 ? formatMoney(config.maxGrossCents) : "off"} · partial refunds{" "}
-            {config.partialRefundsEnabled ? "on" : "off"}
+            {config.partialRefundsEnabled ? "on" : "off"} · change orders{" "}
+            {config.changeOrdersEnabled ? config.maxChangeOrders : "off"}
           </p>
         )}
       </section>
@@ -807,8 +823,14 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
               {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
               {scheduleLabel(funding) ? ` · ${scheduleLabel(funding)}` : ""}
+              {funding.changeOrderCount > 0 ? ` · change orders ${funding.changeOrderCount} of ${funding.changeOrderLimit}` : ""}
               {shares ? ` · share ${shares.map((party) => `${party.label} ${party.shareBps / 100}%`).join(", ")}` : ""}
             </p>
+            {funding.changeOrders.map((order) => (
+              <p key={order.id} className="mt-1 text-xs text-indigo">
+                Change order {formatMoney(order.previousUsdCents)} → {formatMoney(order.nextUsdCents)}. {order.note}
+              </p>
+            ))}
             <ul className="mt-2 space-y-1 text-indigo">
               {funding.milestones.map((milestone) => (
                 <li key={milestone.id}>

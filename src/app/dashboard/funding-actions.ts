@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { prisma } from "@/lib/db";
-import { submitFundingMilestone } from "@/lib/marketplace-ledger";
+import { requestChangeOrder, submitFundingMilestone } from "@/lib/marketplace-ledger";
 import { addDisputeEvidence, openMilestoneDispute } from "@/lib/milestone-disputes";
 
 export async function actionSubmitOwnMilestone(formData: FormData) {
@@ -21,6 +21,32 @@ export async function actionSubmitOwnMilestone(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/payments");
   redirect("/dashboard?saved=milestone");
+}
+
+function dollarsToCents(raw: string) {
+  const amount = Number(String(raw).replace(/[^0-9.]/g, ""));
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  return Math.round(amount * 100);
+}
+
+export async function actionRequestOwnChangeOrder(formData: FormData) {
+  const draft = await getCreatorSessionDraft();
+  if (!draft) redirect("/claim");
+  const fundingId = String(formData.get("fundingId") ?? "");
+  const funding = await prisma.collaborationFunding.findUnique({ where: { id: fundingId } });
+  if (!funding || funding.creatorSlug !== draft.slug) {
+    redirect("/dashboard?error=That prefund is not on your card.");
+  }
+  const result = await requestChangeOrder({
+    fundingId,
+    grossCents: dollarsToCents(String(formData.get("grossUsd") ?? "")),
+    note: String(formData.get("note") ?? ""),
+  });
+  if (!result.ok) redirect(`/dashboard?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/payments");
+  revalidatePath("/admin/marketplace");
+  redirect("/dashboard?saved=change");
 }
 
 export async function actionAddOwnEvidence(formData: FormData) {
