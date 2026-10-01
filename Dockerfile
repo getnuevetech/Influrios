@@ -16,8 +16,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-# Modest heap — oversized heaps get killed on 1–2GB Lightsail boxes
-ENV NODE_OPTIONS="--max-old-space-size=1536"
+# One Node process (see next.config webpackBuildWorker: false).
+# 1536 plus a second webpack worker exceeds a 2 GB Lightsail box and the
+# kernel kills the build. 768 leaves room for Postgres and the OS; swap
+# from deploy/scripts/ensure-swap.sh covers the rest.
+ENV NODE_OPTIONS="--max-old-space-size=768"
 # Dummy URL so Prisma generate succeeds during image build
 ENV DATABASE_URL="postgresql://influrios:influrios@postgres:5432/influrios?schema=public"
 RUN npx prisma generate
