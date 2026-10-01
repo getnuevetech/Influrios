@@ -16,6 +16,24 @@ set -a
 source .env
 set +a
 
+# One key for every image build. Server action ids are a hash of this key, so a
+# fresh random key on each deploy makes Save post an id the new server rejects.
+if [[ -z "${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-}" ]]; then
+  action_key="$(openssl rand -base64 32 | tr -d '\n')"
+  tmp_env="$(mktemp)"
+  if grep -q '^NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=' .env; then
+    awk -v k="$action_key" 'BEGIN{done=0} /^NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=/ && !done { print "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=" k; done=1; next } { print }' .env > "$tmp_env"
+  else
+    cat .env > "$tmp_env"
+    printf '\n# Keeps server action ids stable across image rebuilds.\nNEXT_SERVER_ACTIONS_ENCRYPTION_KEY=%s\n' "$action_key" >> "$tmp_env"
+  fi
+  mv "$tmp_env" .env
+  chmod 600 .env
+  export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$action_key"
+  unset action_key tmp_env
+  echo "==> Wrote NEXT_SERVER_ACTIONS_ENCRYPTION_KEY into .env"
+fi
+
 if ! command -v docker >/dev/null 2>&1; then
   echo "ERROR: docker not found. Run bash deploy/scripts/setup-lightsail.sh first."
   exit 1

@@ -33,6 +33,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-}
     container_name: influrios-web
     restart: unless-stopped
     depends_on:
@@ -51,6 +53,7 @@ services:
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-}
       ADMIN_SUPER_EMAIL: ${ADMIN_SUPER_EMAIL:-}
       ADMIN_SUPER_PASSWORD: ${ADMIN_SUPER_PASSWORD:-}
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-}
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
