@@ -993,6 +993,7 @@ model MarketplaceSettings {
   sharesSeeded             Boolean  @default(false)
   maxRevisions             Int      @default(2)
   maxEvidence              Int      @default(5)
+  maxGrossCents            Int      @default(0)
   updatedAt                DateTime @updatedAt
 }
 

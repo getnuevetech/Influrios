@@ -12,6 +12,18 @@ export function fundingTerm(escrowTermAllowed: boolean) {
   return escrowTermAllowed ? "Escrow" : "Protected Payment";
 }
 
+/** Zero means the admin has not set a cap. The check uses the USD amount, before conversion. */
+export function grossWithinCap(input: { grossCents: number; maxGrossCents: number }) {
+  if (!Number.isInteger(input.maxGrossCents) || input.maxGrossCents < 0) {
+    return { ok: false as const, error: "That gross is above the admin cap. Nothing was funded." };
+  }
+  if (input.maxGrossCents === 0) return { ok: true as const };
+  if (!Number.isInteger(input.grossCents) || input.grossCents > input.maxGrossCents) {
+    return { ok: false as const, error: "That gross is above the admin cap. Nothing was funded." };
+  }
+  return { ok: true as const };
+}
+
 export function canRequestPrefund(input: { jurisdictionEnabled: boolean; providerReady: boolean }) {
   if (!input.jurisdictionEnabled) {
     return { ok: false as const, error: "Protected payments are off for this jurisdiction." };
@@ -98,6 +110,43 @@ export function ledgerMovements(entries: { kind: string; amountCents: number }[]
       ? [{ kind: entry.kind, amountCents: entry.amountCents }]
       : [],
   );
+}
+
+export type LedgerCurrencyTotal = {
+  currency: string;
+  heldCents: number;
+  releasedCents: number;
+  refundedCents: number;
+  feeCents: number;
+  unbalanced: number;
+};
+
+/** Fees and share lines are not added into the held amount. Currencies stay separate. */
+export function summarizeLedger(
+  fundings: { currency: string; grossCents: number; entries: { kind: string; amountCents: number }[] }[],
+): LedgerCurrencyTotal[] {
+  const totals = new Map<string, LedgerCurrencyTotal>();
+  for (const funding of fundings) {
+    const currency = (funding.currency || "USD").toUpperCase();
+    const row = totals.get(currency) ?? {
+      currency,
+      heldCents: 0,
+      releasedCents: 0,
+      refundedCents: 0,
+      feeCents: 0,
+      unbalanced: 0,
+    };
+    const reconciled = reconcileLedger(ledgerMovements(funding.entries), funding.grossCents);
+    row.heldCents += reconciled.heldCents;
+    row.releasedCents += reconciled.releasedCents;
+    row.refundedCents += reconciled.refundedCents;
+    row.feeCents += funding.entries
+      .filter((entry) => entry.kind === "fee")
+      .reduce((sum, entry) => sum + entry.amountCents, 0);
+    if (!reconciled.balanced) row.unbalanced += 1;
+    totals.set(currency, row);
+  }
+  return [...totals.values()].sort((a, b) => a.currency.localeCompare(b.currency));
 }
 
 export function reconcileLedger(entries: LedgerMovement[], grossCents: number) {
