@@ -13,6 +13,8 @@ import {
   getBusinessEntitlements,
   type BusinessPlanCode,
 } from "@/lib/business-entitlements";
+import { PlaceFields } from "@/components/place-fields";
+import { getDirectory } from "@/lib/directory";
 import { getCreatorBySlug, SPECIALTY_TAXONOMY, specialtyLabel } from "@/lib/seed-data";
 import { getAccountSession } from "@/lib/accounts";
 import { hasCurrentLegalRecord } from "@/lib/legal";
@@ -65,6 +67,13 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
     );
   }
   const entitlements = getBusinessEntitlements(ws.plan);
+  const directory = await getDirectory().catch(() => null);
+  const specialtyGroups = (directory?.taxonomy ?? SPECIALTY_TAXONOMY.map((parent) => ({
+    slug: parent.slug,
+    name: parent.name,
+    active: true,
+    children: (parent.children ?? []).map((child) => ({ ...child, active: true })),
+  }))).filter((parent) => parent.active);
   const activeBrief = ws.briefs[0];
   const ranked = activeBrief && entitlements.fitInsights ? rankCreatorsForBrief(activeBrief).slice(0, 5) : [];
   const [providerName, promotionOn, queuedIds] = await Promise.all([
@@ -338,10 +347,15 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
               />
               <div className="grid grid-cols-2 gap-2">
                 <select name="specialty" className="rounded-xl border border-border px-3 py-2 text-sm">
-                  {SPECIALTY_TAXONOMY.map((s) => (
-                    <option key={s.slug} value={s.slug}>
-                      {s.name}
-                    </option>
+                  {specialtyGroups.map((group) => (
+                    <optgroup key={group.slug} label={group.name}>
+                      <option value={group.slug}>{group.name}</option>
+                      {group.children.filter((child) => child.active).map((child) => (
+                        <option key={child.slug} value={child.slug}>
+                          {child.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
                 <select name="goal" className="rounded-xl border border-border px-3 py-2 text-sm">
@@ -351,7 +365,11 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
                   <option>Affiliate</option>
                 </select>
                 <input name="budget" defaultValue="$5K – $10K" className="rounded-xl border border-border px-3 py-2 text-sm" />
-                <input name="location" defaultValue="USA" className="rounded-xl border border-border px-3 py-2 text-sm" />
+                <PlaceFields
+                  countryName="locationCountry"
+                  cityName="locationCity"
+                  className="col-span-2 grid grid-cols-2 gap-2"
+                />
                 <select name="platform" className="col-span-2 rounded-xl border border-border px-3 py-2 text-sm">
                   <option value="INSTAGRAM">Instagram</option>
                   <option value="TIKTOK">TikTok</option>

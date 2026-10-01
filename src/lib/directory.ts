@@ -168,30 +168,36 @@ function fallbackSnapshot(): Cache {
   };
 }
 
-async function ensureDirectory() {
-  const specialtyCount = await prisma.specialty.count();
-  if (specialtyCount === 0) {
-    for (const [index, parent] of SPECIALTY_TAXONOMY.entries()) {
-      const created = await prisma.specialty.upsert({
-        where: { slug: parent.slug },
-        update: {},
-        create: { slug: parent.slug, name: parent.name, sortOrder: index, active: true },
+async function ensureSpecialties() {
+  const rows = await prisma.specialty.findMany({ select: { id: true, slug: true } });
+  const bySlug = new Map(rows.map((row) => [row.slug, row.id]));
+  for (const [index, parent] of SPECIALTY_TAXONOMY.entries()) {
+    let parentId = bySlug.get(parent.slug);
+    if (!parentId) {
+      const created = await prisma.specialty.create({
+        data: { slug: parent.slug, name: parent.name, sortOrder: index, active: true },
       });
-      for (const [childIndex, child] of (parent.children ?? []).entries()) {
-        await prisma.specialty.upsert({
-          where: { slug: child.slug },
-          update: {},
-          create: {
-            slug: child.slug,
-            name: child.name,
-            parentId: created.id,
-            sortOrder: childIndex,
-            active: true,
-          },
-        });
-      }
+      parentId = created.id;
+      bySlug.set(parent.slug, parentId);
+    }
+    for (const [childIndex, child] of (parent.children ?? []).entries()) {
+      if (bySlug.has(child.slug)) continue;
+      const created = await prisma.specialty.create({
+        data: {
+          slug: child.slug,
+          name: child.name,
+          parentId,
+          sortOrder: childIndex,
+          active: true,
+        },
+      });
+      bySlug.set(child.slug, created.id);
     }
   }
+}
+
+async function ensureDirectory() {
+  await ensureSpecialties();
 
   if ((await prisma.creator.count()) === 0) {
     const specialties = await prisma.specialty.findMany();

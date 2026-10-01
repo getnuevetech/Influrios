@@ -73,7 +73,10 @@ export async function actionCreateBrief(formData: FormData) {
     goal: String(formData.get("goal") ?? "Brand Awareness"),
     specialty: String(formData.get("specialty") ?? "beauty"),
     budget: String(formData.get("budget") ?? "$1K – $5K"),
-    location: String(formData.get("location") ?? "USA"),
+    location: [String(formData.get("locationCity") ?? ""), String(formData.get("locationCountry") ?? "")]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(", ") || String(formData.get("location") ?? "USA"),
     platform: String(formData.get("platform") ?? "INSTAGRAM"),
     summary: String(formData.get("summary") ?? ""),
   });

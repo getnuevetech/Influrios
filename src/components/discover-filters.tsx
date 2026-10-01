@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { SocialIcon } from "@/components/icons";
+import { PlaceFields } from "@/components/place-fields";
 import { formatFollowers } from "@/lib/seed-data";
 
 export type FilterOption = { value: string; label: string; count: number };
 
 type Selected = {
   specialties: string[];
-  countries: string[];
+  country: string;
+  city: string;
   platforms: string[];
   followersMin: number;
   followersMax: number;
@@ -70,21 +72,17 @@ function Toggle({
 
 export function DiscoverFilters({
   categories,
-  locations,
   platforms,
   languages,
   selected,
 }: {
   categories: FilterOption[];
-  locations: FilterOption[];
   platforms: FilterOption[];
   languages: string[];
   selected: Selected;
 }) {
   const [categoryQuery, setCategoryQuery] = useState("");
-  const [locationQuery, setLocationQuery] = useState("");
   const [showCategories, setShowCategories] = useState(false);
-  const [showLocations, setShowLocations] = useState(false);
   const [followersMin, setFollowersMin] = useState(selected.followersMin);
   const [followersMax, setFollowersMax] = useState(selected.followersMax || FOLLOWER_MAX);
   const [engagementMin, setEngagementMin] = useState(selected.engagementMin);
@@ -95,12 +93,6 @@ export function DiscoverFilters({
     const matched = q ? categories.filter((item) => item.label.toLowerCase().includes(q)) : categories;
     return showCategories ? matched : matched.slice(0, 6);
   }, [categories, categoryQuery, showCategories]);
-
-  const visibleLocations = useMemo(() => {
-    const q = locationQuery.trim().toLowerCase();
-    const matched = q ? locations.filter((item) => item.label.toLowerCase().includes(q)) : locations;
-    return showLocations ? matched : matched.slice(0, 4);
-  }, [locations, locationQuery, showLocations]);
 
   return (
     <form id="discover-filters" action="/discover" className="space-y-5">
@@ -146,40 +138,16 @@ export function DiscoverFilters({
 
       <div>
         <p className="text-xs font-bold text-indigo">Location</p>
-        <input
-          value={locationQuery}
-          onChange={(event) => setLocationQuery(event.target.value)}
-          placeholder="Search countries or cities…"
-          className="mt-2 w-full rounded-xl border border-border bg-[#F7FAFF] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
+        <p className="mt-1 text-[11px] leading-relaxed text-muted">
+          Choose a country to limit cities. A city picked on its own fills the country.
+        </p>
+        <PlaceFields
+          countryName="country"
+          cityName="city"
+          defaultCountry={selected.country}
+          defaultCity={selected.city}
+          className="mt-2 space-y-3"
         />
-        <ul className="mt-3 space-y-2">
-          {visibleLocations.map((item) => (
-            <li key={item.value}>
-              <label className="flex items-center justify-between gap-2 text-sm text-indigo">
-                <span className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="country"
-                    value={item.value}
-                    defaultChecked={selected.countries.includes(item.value)}
-                    className="h-4 w-4 rounded accent-[#633CFF]"
-                  />
-                  {item.label}
-                </span>
-                <span className="text-xs text-muted">{item.count.toLocaleString()}</span>
-              </label>
-            </li>
-          ))}
-        </ul>
-        {locations.length > 4 ? (
-          <button
-            type="button"
-            onClick={() => setShowLocations((value) => !value)}
-            className="mt-2 text-xs font-bold text-violet"
-          >
-            {showLocations ? "Show less" : "Show more"}
-          </button>
-        ) : null}
       </div>
 
       <div>

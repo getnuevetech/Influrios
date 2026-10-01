@@ -86,8 +86,11 @@ export function completionItemDone(rule: CompletionRule, subject: CompletionSubj
       return subject.stage === "published";
     case "bio":
       return subject.bio.length > 80 && !subject.bio.includes("Draft Influencer Card");
-    case "location":
-      return subject.locationCity !== "Your city" && subject.locationCountry !== "Your country";
+    case "location": {
+      const city = subject.locationCity.trim();
+      const country = subject.locationCountry.trim();
+      return city.length > 0 && country.length > 0 && city !== "Your city" && country !== "Your country";
+    }
     case "specialty":
       return subject.specialties.length > 0 && subject.specialties[0] !== "lifestyle";
     default:

@@ -93,11 +93,6 @@ export default async function DiscoverPage({ searchParams }: Props) {
     count: directory.creators.filter((creator) => creator.specialties.includes(item.slug)).length,
   }));
   const countryNames = [...new Set(directory.creators.map((creator) => creator.locationCountry))].sort();
-  const locationOptions = countryNames.map((country) => ({
-    value: country,
-    label: country,
-    count: directory.creators.filter((creator) => creator.locationCountry === country).length,
-  }));
   const platformOptions = PLATFORMS.map((platform) => ({
     value: platform.value,
     label: platform.label,
@@ -131,9 +126,8 @@ export default async function DiscoverPage({ searchParams }: Props) {
               {specialties.map((value) => (
                 <input key={value} type="hidden" name="specialty" value={value} />
               ))}
-              {countries.map((value) => (
-                <input key={value} type="hidden" name="country" value={value} />
-              ))}
+              {first(params.country) ? <input type="hidden" name="country" value={first(params.country)} /> : null}
+              {first(params.city) ? <input type="hidden" name="city" value={first(params.city)} /> : null}
               {platforms.map((value) => (
                 <input key={value} type="hidden" name="platform" value={value} />
               ))}
@@ -218,12 +212,12 @@ export default async function DiscoverPage({ searchParams }: Props) {
           </div>
           <DiscoverFilters
             categories={categoryOptions}
-            locations={locationOptions}
             platforms={platformOptions}
             languages={languages}
             selected={{
               specialties,
-              countries,
+              country: first(params.country),
+              city: first(params.city),
               platforms,
               followersMin: Number(first(params.followersMin) || 0),
               followersMax: Number(first(params.followersMax) || 0),

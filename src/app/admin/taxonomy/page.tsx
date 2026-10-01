@@ -33,8 +33,9 @@ export default async function AdminTaxonomyPage({ searchParams }: Props) {
     <div className="mx-auto max-w-4xl">
       <h1 className="font-display text-2xl font-bold text-indigo">Taxonomy</h1>
       <p className="mt-2 text-sm text-muted">
-        Inactive specialties drop out of Discover and Categories. Synonyms such as woodwork resolve
-        to the canonical specialty without a deploy.
+        Inactive specialties drop out of Discover and Categories. New catalog specialties appear here
+        and stay hidden after you turn them off. Synonyms such as woodwork resolve to the canonical
+        specialty without a deploy.
       </p>
       {query.saved ? (
         <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Saved.</p>
