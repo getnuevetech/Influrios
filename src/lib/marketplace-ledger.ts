@@ -7,8 +7,10 @@ import {
   releasableCents,
   canRequestChangeOrder,
   canRequestPrefund,
+  disputeLoadAllowsPrefund,
   grossWithinCap,
   sharesFromAmounts,
+  summarizeLedgerReport,
   marketplaceDisposition,
   reconcileLedger,
   summarizeLedger,
@@ -138,6 +140,8 @@ export async function marketplaceConfig() {
     partialRefundsEnabled: settings?.partialRefundsEnabled ?? true,
     changeOrdersEnabled: settings?.changeOrdersEnabled ?? true,
     maxChangeOrders: settings?.maxChangeOrders ?? 2,
+    riskControlsEnabled: settings?.riskControlsEnabled ?? true,
+    maxOpenDisputes: settings?.maxOpenDisputes ?? 0,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
@@ -174,6 +178,8 @@ export async function saveMarketplaceSettings(input: {
   partialRefundsEnabled?: boolean;
   changeOrdersEnabled?: boolean;
   maxChangeOrders?: number;
+  riskControlsEnabled?: boolean;
+  maxOpenDisputes?: number;
   cancelUnconfirmed?: boolean;
 }) {
   await ensureMarketplaceDefaults();
@@ -197,6 +203,10 @@ export async function saveMarketplaceSettings(input: {
   if (maxChangeOrders != null && (!Number.isInteger(maxChangeOrders) || maxChangeOrders < 0 || maxChangeOrders > 20)) {
     throw new Error("Change order limit must be from 0 to 20.");
   }
+  const maxOpenDisputes = input.maxOpenDisputes == null ? null : Math.round(input.maxOpenDisputes);
+  if (maxOpenDisputes != null && (!Number.isInteger(maxOpenDisputes) || maxOpenDisputes < 0 || maxOpenDisputes > 1000)) {
+    throw new Error("Open-dispute limit must be from 0 to 1000.");
+  }
   return prisma.marketplaceSettings.update({
     where: { id: "default" },
     data: {
@@ -207,6 +217,8 @@ export async function saveMarketplaceSettings(input: {
       ...(input.partialRefundsEnabled == null ? {} : { partialRefundsEnabled: input.partialRefundsEnabled }),
       ...(input.changeOrdersEnabled == null ? {} : { changeOrdersEnabled: input.changeOrdersEnabled }),
       ...(maxChangeOrders == null ? {} : { maxChangeOrders }),
+      ...(input.riskControlsEnabled == null ? {} : { riskControlsEnabled: input.riskControlsEnabled }),
+      ...(maxOpenDisputes == null ? {} : { maxOpenDisputes }),
       ...(input.cancelUnconfirmed == null ? {} : { cancelUnconfirmed: input.cancelUnconfirmed }),
     },
   });
@@ -395,6 +407,19 @@ export async function requestPrefund(input: {
   }
   const cap = grossWithinCap({ grossCents: input.grossCents, maxGrossCents: activeGrossCap(settings?.maxGrossCents) });
   if (!cap.ok) return cap;
+  const businessNameForRisk = input.businessName.trim().slice(0, 120);
+  const openDisputes = await prisma.milestoneDispute.count({
+    where: {
+      status: { in: ["open", "under_review", "refund_requested"] },
+      funding: { businessName: businessNameForRisk },
+    },
+  });
+  const risk = disputeLoadAllowsPrefund({
+    enabled: settings?.riskControlsEnabled ?? true,
+    openDisputes,
+    maxOpenDisputes: settings?.maxOpenDisputes ?? 0,
+  });
+  if (!risk.ok) return risk;
   const gate = canRequestPrefund({
     jurisdictionEnabled: Boolean(jurisdiction?.protectedPaymentsEnabled),
     providerReady: Boolean(provider?.enabled && provider.webhookCipher),
@@ -750,6 +775,22 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     throw error;
   }
   return { ok: true as const };
+}
+
+export async function ledgerMonthlyReport() {
+  const entries = await prisma.ledgerEntry.findMany({
+    select: { kind: true, amountCents: true, createdAt: true, funding: { select: { currency: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 5000,
+  });
+  return summarizeLedgerReport(
+    entries.map((entry) => ({
+      currency: entry.funding.currency,
+      kind: entry.kind,
+      amountCents: entry.amountCents,
+      createdAt: entry.createdAt,
+    })),
+  );
 }
 
 export async function ledgerTotals() {

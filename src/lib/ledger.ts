@@ -12,6 +12,49 @@ export function fundingTerm(escrowTermAllowed: boolean) {
   return escrowTermAllowed ? "Escrow" : "Protected Payment";
 }
 
+/** Zero means no extra dispute limit. The gross cap is a separate check. */
+export function disputeLoadAllowsPrefund(input: {
+  enabled: boolean;
+  openDisputes: number;
+  maxOpenDisputes: number;
+}): { ok: true } | { ok: false; error: string } {
+  if (!input.enabled) return { ok: true };
+  if (!Number.isInteger(input.maxOpenDisputes) || input.maxOpenDisputes <= 0) return { ok: true };
+  if (!Number.isInteger(input.openDisputes) || input.openDisputes >= input.maxOpenDisputes) {
+    return { ok: false, error: "This business is over the open-dispute limit. Nothing was funded." };
+  }
+  return { ok: true };
+}
+
+export type LedgerMonthTotal = {
+  currency: string;
+  month: string;
+  heldCents: number;
+  releasedCents: number;
+  refundedCents: number;
+  feeCents: number;
+};
+
+/** Monthly sums of recorded movements. A share line is not included. */
+export function summarizeLedgerReport(
+  rows: { currency: string; kind: string; amountCents: number; createdAt: Date }[],
+): LedgerMonthTotal[] {
+  const map = new Map<string, LedgerMonthTotal>();
+  for (const row of rows) {
+    if (row.kind !== "hold" && row.kind !== "release" && row.kind !== "refund" && row.kind !== "fee") continue;
+    const month = row.createdAt.toISOString().slice(0, 7);
+    const currency = (row.currency || "USD").toUpperCase();
+    const key = `${currency}|${month}`;
+    const current = map.get(key) ?? { currency, month, heldCents: 0, releasedCents: 0, refundedCents: 0, feeCents: 0 };
+    if (row.kind === "hold") current.heldCents += row.amountCents;
+    if (row.kind === "release") current.releasedCents += row.amountCents;
+    if (row.kind === "refund") current.refundedCents += row.amountCents;
+    if (row.kind === "fee") current.feeCents += row.amountCents;
+    map.set(key, current);
+  }
+  return [...map.values()].sort((a, b) => b.month.localeCompare(a.month) || a.currency.localeCompare(b.currency));
+}
+
 /** Zero means the admin has not set a cap. The check uses the USD amount, before conversion. */
 export function grossWithinCap(input: { grossCents: number; maxGrossCents: number }) {
   if (!Number.isInteger(input.maxGrossCents) || input.maxGrossCents < 0) {

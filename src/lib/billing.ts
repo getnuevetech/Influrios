@@ -6,6 +6,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { setBusinessPlan } from "@/lib/business";
+import { prisma } from "@/lib/db";
+import { productSwitch } from "@/lib/product-switches";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import type { PlanCode } from "@/lib/entitlements";
 
@@ -178,6 +180,39 @@ export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
 
+const PRICE_ID = /^price_[A-Za-z0-9]+$/;
+
+export async function billingPriceId(sku: BillingSku, envName: string) {
+  const row = await prisma.platformSetting.findUnique({ where: { key: "billing.prices" } }).catch(() => null);
+  const stored =
+    row?.value && typeof row.value === "object" && !Array.isArray(row.value)
+      ? (row.value as Record<string, unknown>)[sku]
+      : "";
+  if (typeof stored === "string" && PRICE_ID.test(stored)) return stored;
+  const fromEnv = process.env[envName] ?? "";
+  return PRICE_ID.test(fromEnv) ? fromEnv : "";
+}
+
+export async function listBillingPriceIds() {
+  const row = await prisma.platformSetting.findUnique({ where: { key: "billing.prices" } }).catch(() => null);
+  const value = row?.value && typeof row.value === "object" && !Array.isArray(row.value) ? (row.value as Record<string, unknown>) : {};
+  return Object.fromEntries(BILLING_CATALOG.map((product) => [product.sku, typeof value[product.sku] === "string" ? value[product.sku] : ""]));
+}
+
+export async function saveBillingPriceIds(prices: Partial<Record<BillingSku, string>>) {
+  const next: Record<string, string> = {};
+  for (const product of BILLING_CATALOG) {
+    const trimmed = (prices[product.sku] ?? "").trim();
+    if (trimmed && !PRICE_ID.test(trimmed)) throw new Error("A Stripe price id starts with price_.");
+    if (trimmed) next[product.sku] = trimmed;
+  }
+  await prisma.platformSetting.upsert({
+    where: { key: "billing.prices" },
+    update: { value: next },
+    create: { key: "billing.prices", value: next },
+  });
+}
+
 export function getAppOrigin(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
@@ -204,6 +239,11 @@ export async function startCheckout(input: {
   const product = getProduct(input.sku);
   if (!product) return { ok: false, error: "Unknown plan SKU" };
 
+  if (!isStripeConfigured()) {
+    const demo = await productSwitch("demo_checkout");
+    if (!demo) return { ok: false, error: "Checkout is turned off. Nothing was charged." };
+  }
+
   const store = await ensureStore();
   const sessionId = newId("cs");
 
@@ -213,7 +253,7 @@ export async function startCheckout(input: {
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
         apiVersion: "2025-02-24.acacia",
       });
-      const priceId = process.env[product.stripePriceEnv];
+      const priceId = await billingPriceId(product.sku, product.stripePriceEnv);
       const origin = getAppOrigin();
       const lineItems = priceId
         ? [{ price: priceId, quantity: 1 }]

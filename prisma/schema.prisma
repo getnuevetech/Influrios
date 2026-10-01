@@ -446,6 +446,7 @@ model SignatureRequest {
   provider        IntegrationProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
   status          String               @default("queued")
   title           String
+  externalId      String               @default("")
   lastError       String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -997,6 +998,8 @@ model MarketplaceSettings {
   partialRefundsEnabled    Boolean  @default(true)
   changeOrdersEnabled      Boolean  @default(true)
   maxChangeOrders          Int      @default(2)
+  riskControlsEnabled      Boolean  @default(true)
+  maxOpenDisputes          Int      @default(0)
   updatedAt                DateTime @updatedAt
 }
 
@@ -1188,4 +1191,78 @@ model DisputeNote {
   createdAt DateTime         @default(now())
 
   @@index([disputeId])
+}
+
+/// Agency roster, campaigns, portfolios, and named seats. Seats stay closed until admin turns them on.
+model AgencyWorkspace {
+  id         String               @id
+  name       String
+  plan       String               @default("AGENCY")
+  notes      String               @default("")
+  updatedAt  DateTime             @updatedAt
+  roster     AgencyRosterMember[]
+  campaigns  AgencyCampaign[]
+  portfolios AgencyPortfolio[]
+  seats      AgencySeat[]
+}
+
+model AgencyRosterMember {
+  id            String          @id @default(cuid())
+  workspaceId   String
+  workspace     AgencyWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creatorSlug   String
+  role          String          @default("talent")
+  retainerLabel String          @default("Project")
+  notes         String          @default("")
+  addedAt       DateTime        @default(now())
+
+  @@unique([workspaceId, creatorSlug])
+}
+
+model AgencyCampaign {
+  id           String          @id
+  workspaceId  String
+  workspace    AgencyWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title        String
+  clientName   String
+  status       String          @default("briefing")
+  specialty    String
+  budgetLabel  String
+  creatorSlugs Json
+  summary      String          @default("")
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([workspaceId, status])
+}
+
+model AgencyPortfolio {
+  id          String          @id
+  workspaceId String
+  workspace   AgencyWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  tagline     String          @default("")
+  leftSlug    String
+  rightSlug   String
+  specialty   String
+  outcome     String          @default("")
+  metricsJson Json
+  campaignId  String?
+  published   Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([workspaceId, published])
+}
+
+model AgencySeat {
+  id          String          @id @default(cuid())
+  workspaceId String
+  workspace   AgencyWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email       String
+  role        String          @default("member")
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+
+  @@unique([workspaceId, email])
 }

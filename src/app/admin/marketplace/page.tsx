@@ -23,7 +23,8 @@ import { scheduleLabel } from "@/lib/schedule";
 import { listFxRates, listRevenueParties } from "@/lib/settlement";
 import { wiseFxConfig } from "@/lib/wise-quote";
 import { formatMoney } from "@/lib/protected-payments";
-import { ledgerTotals, listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
+import { ledgerMonthlyReport, ledgerTotals, listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
+import { productSwitch } from "@/lib/product-switches";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };
@@ -34,7 +35,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, fundings, totals, reasons, sources, rates, parties, wise] = await Promise.all([
+  const [config, fundings, totals, reasons, sources, rates, parties, wise, reportsOn] = await Promise.all([
     marketplaceConfig(),
     listFundings(),
     ledgerTotals(),
@@ -43,7 +44,9 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
     listFxRates(),
     listRevenueParties(),
     wiseFxConfig(),
+    productSwitch("financial_reports"),
   ]);
+  const monthly = reportsOn ? await ledgerMonthlyReport() : [];
 
   return (
     <div className="space-y-6">
@@ -181,7 +184,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Review window</h2>
         <p className="mt-1 text-xs text-muted">
-          A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested. Turning partial refunds off blocks a new request. A request already recorded still waits for the provider, and the rest of that milestone can be released. A change order amends the gross while the prefund is still waiting for the provider. The limit is copied onto that prefund. Zero means none. Turning change orders off blocks a new amendment and leaves one already recorded in place. The earlier fee snapshot stays on the change order.
+          A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested. Turning partial refunds off blocks a new request. A request already recorded still waits for the provider, and the rest of that milestone can be released. A change order amends the gross while the prefund is still waiting for the provider. The limit is copied onto that prefund. Zero means none. Turning change orders off blocks a new amendment and leaves one already recorded in place. The earlier fee snapshot stays on the change order. An open-dispute limit of 0 means no extra limit. Turning risk controls off skips that check and leaves the gross cap in place. The monthly report lists amounts recorded that month. Turning it off hides the report and does not delete ledger rows.
         </p>
         {canManage ? (
           <form action={actionSaveMarketplaceSettings} className="mt-4 flex flex-wrap items-end gap-3">
@@ -249,6 +252,25 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               <input type="checkbox" name="changeOrdersEnabled" defaultChecked={config.changeOrdersEnabled} className="accent-violet" />
               Allow a change order before the provider confirms
             </label>
+            <label className="text-xs font-semibold text-muted">
+              Open disputes
+              <input
+                name="maxOpenDisputes"
+                type="number"
+                min={0}
+                max={1000}
+                defaultValue={config.maxOpenDisputes}
+                className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="riskControlsEnabled" defaultChecked={config.riskControlsEnabled} className="accent-violet" />
+              Limit new prefunds when a business has too many open disputes
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="financialReports" defaultChecked={reportsOn} className="accent-violet" />
+              Show the monthly ledger report
+            </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
               Allow cancelling a prefund before the provider confirms it
@@ -262,7 +284,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             {config.reviewWindowHours} hours · {config.maxRevisions} revisions · {config.maxEvidence} evidence · cap{" "}
             {config.maxGrossCents > 0 ? formatMoney(config.maxGrossCents) : "off"} · partial refunds{" "}
             {config.partialRefundsEnabled ? "on" : "off"} · change orders{" "}
-            {config.changeOrdersEnabled ? config.maxChangeOrders : "off"}
+            {config.changeOrdersEnabled ? config.maxChangeOrders : "off"} · open disputes{" "}
+            {config.riskControlsEnabled ? config.maxOpenDisputes : "off"} · monthly report {reportsOn ? "on" : "off"}
           </p>
         )}
       </section>
@@ -798,6 +821,30 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           ))}
         </ul>
       </section>
+
+      {reportsOn ? (
+        <section className="card-surface p-5">
+          <h2 className="font-display text-lg font-bold text-indigo">Monthly ledger report</h2>
+          <p className="mt-1 text-xs text-muted">
+            Amounts recorded in each month. This is not the current held balance. Revenue shares are left out.
+          </p>
+          {monthly.length === 0 ? <p className="mt-3 text-sm text-muted">No ledger rows yet.</p> : null}
+          <ul className="mt-3 space-y-2 text-sm text-indigo">
+            {monthly.map((row) => (
+              <li key={`${row.currency}-${row.month}`}>
+                {row.month} · {row.currency} · holds {formatMoney(row.heldCents, row.currency)} · releases{" "}
+                {formatMoney(row.releasedCents, row.currency)} · refunds {formatMoney(row.refundedCents, row.currency)} · fees{" "}
+                {formatMoney(row.feeCents, row.currency)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <section className="card-surface p-5">
+          <h2 className="font-display text-lg font-bold text-indigo">Monthly ledger report</h2>
+          <p className="mt-1 text-sm text-muted">The monthly report is turned off.</p>
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="font-display text-lg font-bold text-indigo">Funding records</h2>

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { encryptSecret, secretStatus } from "@/lib/provider-secrets";
+import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
 
 export const AI_FUNCTIONS = [
   {
@@ -144,6 +144,16 @@ export function providerCode(value: string): string | null {
   return code || null;
 }
 
+export function signingEndpointAllowed(baseUrl: string | null | undefined) {
+  if (!baseUrl) return false;
+  try {
+    const url = new URL(baseUrl);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 export function signingCanQueue(input: { enabled: boolean; hasSecret: boolean; collaborationStatus: string }): { ok: true } | { ok: false; error: string } {
   if (input.collaborationStatus !== "accepted") {
     return { ok: false, error: "A proposal can be sent for signature after it is accepted." };
@@ -157,6 +167,7 @@ export function signingCanQueue(input: { enabled: boolean; hasSecret: boolean; c
 const GATEWAY_SHELLS = [
   { code: "stripe", name: "Stripe" },
   { code: "flutterwave", name: "Flutterwave" },
+  { code: "mpesa", name: "M-Pesa" },
 ] as const;
 
 let catalogTask: Promise<void> | null = null;
@@ -172,6 +183,19 @@ export function ensureIntegrationCatalog() {
 }
 
 async function seedIntegrationCatalog() {
+  const connect = await prisma.integrationProvider.findUnique({
+    where: { kind_code: { kind: "connect", code: "stripe" } },
+  });
+  if (!connect) {
+    try {
+      await prisma.integrationProvider.create({
+        data: { kind: "connect", code: "stripe", name: "Stripe Connect", enabled: false },
+      });
+    } catch (error) {
+      const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+      if (code !== "P2002") throw error;
+    }
+  }
   for (const shell of GATEWAY_SHELLS) {
     const existing = await prisma.integrationProvider.findUnique({
       where: { kind_code: { kind: "payment", code: shell.code } },
@@ -216,7 +240,7 @@ async function seedIntegrationCatalog() {
   }
 }
 
-export async function listProviders(kind: "ai" | "payment" | "signing") {
+export async function listProviders(kind: "ai" | "payment" | "signing" | "connect") {
   await ensureIntegrationCatalog();
   const rows = await prisma.integrationProvider.findMany({ where: { kind }, orderBy: { name: "asc" } });
   return rows.map((row) => ({
@@ -235,7 +259,7 @@ export async function listProviders(kind: "ai" | "payment" | "signing") {
 
 export async function saveProvider(input: {
   id?: string;
-  kind: "ai" | "payment" | "signing";
+  kind: "ai" | "payment" | "signing" | "connect";
   code: string;
   name: string;
   enabled: boolean;
@@ -369,7 +393,37 @@ export async function activeSigningProvider() {
     code: provider.code,
     hasSecret: Boolean(provider.secretCipher),
     enabled: provider.enabled,
+    baseUrl: provider.baseUrl ?? "",
+    secretCipher: provider.secretCipher,
   };
+}
+
+async function askSigningProvider(input: { baseUrl: string; secret: string; title: string; collaborationId: string }) {
+  if (!input.baseUrl) return { ok: true as const, externalId: "" };
+  if (!signingEndpointAllowed(input.baseUrl)) {
+    return { ok: false as const, error: "The signing API must be https. Nothing was signed." };
+  }
+  try {
+    const response = await fetch(input.baseUrl, {
+      method: "POST",
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        Authorization: `Bearer ${input.secret}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: input.title, collaborationId: input.collaborationId }),
+    });
+    if (response.status < 200 || response.status >= 300) {
+      return { ok: false as const, error: "The signing API did not accept the request. Nothing was signed." };
+    }
+    const payload = (await response.json().catch(() => null)) as { id?: unknown } | null;
+    const externalId = payload && typeof payload.id === "string" ? payload.id.slice(0, 120) : "";
+    return { ok: true as const, externalId };
+  } catch {
+    return { ok: false as const, error: "The signing API did not accept the request. Nothing was signed." };
+  }
 }
 
 export async function queueSignatureRequest(input: { collaborationId: string; title: string; collaborationStatus: string }) {
@@ -380,12 +434,21 @@ export async function queueSignatureRequest(input: { collaborationId: string; ti
     collaborationStatus: input.collaborationStatus,
   });
   if (!gate.ok) return gate;
+  const secret = provider!.secretCipher ? decryptSecret(provider!.secretCipher) : null;
+  const asked = await askSigningProvider({
+    baseUrl: provider!.baseUrl,
+    secret: secret ?? "",
+    title: input.title.slice(0, 160),
+    collaborationId: input.collaborationId,
+  });
+  if (!asked.ok) return asked;
   const row = await prisma.signatureRequest.create({
     data: {
       collaborationId: input.collaborationId,
       providerId: provider!.id,
       status: "queued",
       title: input.title.slice(0, 160),
+      externalId: asked.externalId,
       lastError: null,
     },
   });

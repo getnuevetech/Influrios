@@ -1,15 +1,19 @@
 import Link from "next/link";
 import {
   actionAdminAddRoster,
+  actionAdminAddSeat,
   actionAdminCreateCampaign,
   actionAdminCreatePortfolio,
   actionAdminRemoveRoster,
   actionAdminSetCampaignStatus,
+  actionAdminSetSeat,
   actionAdminTogglePortfolio,
+  actionSaveAgencySeats,
 } from "@/app/admin/agency/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { agencyStats, getAgencyStore } from "@/lib/agency";
+import { agencyStats, getAgencyStore, listAgencySeats } from "@/lib/agency";
+import { productSwitch } from "@/lib/product-switches";
 import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +22,8 @@ export const metadata = { title: "Admin · Agency" };
 type Props = {
   searchParams: Promise<{
     error?: string;
+    seats?: string;
+    seat?: string;
     roster?: string;
     removed?: string;
     campaign?: string;
@@ -31,7 +37,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
   const session = await requireAdminPage("agency");
   const canManage = hasPermission(session, "agency.manage");
   const params = await searchParams;
-  const store = await getAgencyStore();
+  const [store, seats, seatsOn] = await Promise.all([getAgencyStore(), listAgencySeats(), productSwitch("agency_seats")]);
   const stats = agencyStats(store);
 
   return (
@@ -43,8 +49,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
           </Link>
           <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Agency</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Phase 11 ops — roster, multi-creator campaigns, and joint portfolio case studies for{" "}
-            {store.name}.
+            Roster, campaigns, and joint portfolios for {store.name} are stored with the workspace. Named seats stay
+            off until you turn them on. Turning seats off leaves the roster in place and refuses a new seat.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-center text-xs">
@@ -68,7 +74,9 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
           {params.error}
         </div>
       ) : null}
-      {params.roster ||
+      {params.seats ||
+      params.seat ||
+      params.roster ||
       params.removed ||
       params.campaign ||
       params.portfolio ||
@@ -78,6 +86,64 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
           Saved.
         </div>
       ) : null}
+
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Seats</h2>
+        <p className="mt-1 text-sm text-muted">
+          {seatsOn
+            ? "New seats can be added. A seat does not sign in on its own."
+            : "Agency seats are turned off. The roster below stays available."}
+        </p>
+        {canManage ? (
+          <form action={actionSaveAgencySeats} className="mt-4 flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="agency_seats" defaultChecked={seatsOn} className="accent-violet" />
+              Allow named seats
+            </label>
+            <button type="submit" className="btn-secondary !py-2 text-sm">
+              Save seat switch
+            </button>
+          </form>
+        ) : null}
+        <ul className="mt-4 divide-y divide-border text-sm">
+          {seats.length === 0 ? <li className="py-2 text-muted">No seats yet.</li> : null}
+          {seats.map((seat) => (
+            <li key={seat.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+              <span className="font-semibold text-indigo">
+                {seat.email} · {seat.role} · {seat.active ? "active" : "inactive"}
+              </span>
+              {canManage ? (
+                <form action={actionAdminSetSeat}>
+                  <input type="hidden" name="email" value={seat.email} />
+                  <input type="hidden" name="active" value={seat.active ? "0" : "1"} />
+                  <button type="submit" className="text-xs font-semibold text-violet">
+                    {seat.active ? "Deactivate" : "Activate"}
+                  </button>
+                </form>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+        {canManage ? (
+          <form action={actionAdminAddSeat} className="mt-4 grid gap-3 sm:grid-cols-3">
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder="seat@agency.demo"
+              className="rounded-xl border border-border px-3 py-2 text-sm"
+            />
+            <select name="role" defaultValue="member" className="rounded-xl border border-border px-3 py-2 text-sm">
+              <option value="owner">Owner</option>
+              <option value="manager">Manager</option>
+              <option value="member">Member</option>
+            </select>
+            <button type="submit" className="btn-primary !py-2 text-sm">
+              Add seat
+            </button>
+          </form>
+        ) : null}
+      </section>
 
       <section className="card-surface overflow-x-auto p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Roster</h2>

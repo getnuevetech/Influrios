@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
-import { startCheckout, type BillingSku } from "@/lib/billing";
+import { getAppOrigin, startCheckout, type BillingSku } from "@/lib/billing";
+import { openConnectLink, openCustomerPortal } from "@/lib/stripe-admin";
 
 const SKUS: BillingSku[] = ["creator_plus", "creator_pro", "business_pro", "agency"];
 
@@ -36,5 +37,30 @@ export async function actionStartCheckout(formData: FormData) {
   if (!result.ok) {
     redirect(`/billing?error=${encodeURIComponent(result.error)}`);
   }
+  redirect(result.url);
+}
+
+export async function actionOpenPortal(formData: FormData) {
+  const account = await getAccountSession();
+  if (!account) redirect("/login?next=/billing&gate=portal");
+  const origin = getAppOrigin();
+  const result = await openCustomerPortal({
+    customerId: String(formData.get("customerId") ?? ""),
+    returnUrl: `${origin}/billing`,
+  });
+  if (!result.ok) redirect(`/billing?error=${encodeURIComponent(result.error)}`);
+  redirect(result.url);
+}
+
+export async function actionOpenConnect(formData: FormData) {
+  const account = await getAccountSession();
+  if (!account) redirect("/login?next=/billing&gate=connect");
+  const origin = getAppOrigin();
+  const result = await openConnectLink({
+    accountId: String(formData.get("accountId") ?? ""),
+    refreshUrl: `${origin}/billing`,
+    returnUrl: `${origin}/billing`,
+  });
+  if (!result.ok) redirect(`/billing?error=${encodeURIComponent(result.error)}`);
   redirect(result.url);
 }

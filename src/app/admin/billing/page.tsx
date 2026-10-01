@@ -1,20 +1,33 @@
 import Link from "next/link";
+import { actionSaveBillingPrices, actionSaveBillingSwitches } from "@/app/admin/billing/actions";
 import { requireAdminPage } from "@/app/admin/guard";
+import { hasPermission } from "@/lib/admin-auth";
 import {
   BILLING_CATALOG,
   getBillingStore,
   isStripeConfigured,
+  listBillingPriceIds,
 } from "@/lib/billing";
 import { getWorkspace } from "@/lib/business";
+import { productSwitch } from "@/lib/product-switches";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Billing" };
 
-export default async function AdminBillingPage() {
-  await requireAdminPage("billing");
+type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
+
+export default async function AdminBillingPage({ searchParams }: Props) {
+  const session = await requireAdminPage("billing");
+  const canEdit = hasPermission(session, "gateways.edit");
+  const params = await searchParams;
   const store = await getBillingStore();
   const ws = await getWorkspace();
   const stripeLive = isStripeConfigured();
+  const [demoOn, portalOn, prices] = await Promise.all([
+    productSwitch("demo_checkout"),
+    productSwitch("customer_portal"),
+    listBillingPriceIds(),
+  ]);
   const completed = store.sessions.filter((s) => s.status === "completed").length;
   const open = store.sessions.filter((s) => s.status === "open").length;
 
@@ -26,10 +39,64 @@ export default async function AdminBillingPage() {
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Billing</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Phase 6 monetization ops — catalog, checkout sessions, and plan overrides. Wire live Stripe
-          Price IDs via env when ready.
+          Demo checkout stays on until you turn it off. The billing portal stays closed until you turn it on.
+          A saved Stripe price id is used before the environment variable. Checkout still does not mark a plan
+          paid until Stripe confirms it.
         </p>
       </div>
+
+      {params.saved ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Saved.
+        </div>
+      ) : null}
+      {params.error ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {params.error}
+        </div>
+      ) : null}
+
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Checkout switches</h2>
+        <p className="mt-1 text-sm text-muted">
+          Demo checkout is {demoOn ? "on" : "off"}. Billing portal is {portalOn ? "on" : "off"}.
+          {!canEdit ? " Saving these needs the gateways edit permission." : ""}
+        </p>
+        {canEdit ? (
+          <form action={actionSaveBillingSwitches} className="mt-4 space-y-3">
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="demo_checkout" defaultChecked={demoOn} className="accent-violet" />
+              Allow checkout to finish without Stripe
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="customer_portal" defaultChecked={portalOn} className="accent-violet" />
+              Allow the Stripe billing portal
+            </label>
+            <button type="submit" className="btn-primary !py-2 text-sm">
+              Save switches
+            </button>
+          </form>
+        ) : null}
+        <form action={canEdit ? actionSaveBillingPrices : undefined} className="mt-6 grid gap-3 sm:grid-cols-2">
+          {BILLING_CATALOG.map((product) => (
+            <label key={product.sku} className="text-xs font-semibold text-muted">
+              {product.name} price id
+              <input
+                name={product.sku}
+                defaultValue={prices[product.sku] ?? ""}
+                placeholder={product.stripePriceEnv}
+                disabled={!canEdit}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+          ))}
+          {canEdit ? (
+            <button type="submit" className="btn-secondary sm:col-span-2 w-fit !py-2 text-sm">
+              Save price ids
+            </button>
+          ) : null}
+        </form>
+      </section>
 
       <div className="flex flex-wrap gap-3 text-center text-xs">
         <div className="rounded-xl bg-lavender px-4 py-2">
