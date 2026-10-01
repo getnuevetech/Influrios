@@ -432,6 +432,7 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Staged / recurring funding (12.6)  
 - [x] Multi-provider FX and revenue-share splits (12.7)  
 - [x] Wise user-rate quotes (12.8)  
+- [x] Limited milestone revisions (12.9)  
 
 See also: `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md`
 

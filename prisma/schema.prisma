@@ -991,6 +991,7 @@ model MarketplaceSettings {
   maxRecurrences           Int      @default(6)
   fxSeeded                 Boolean  @default(false)
   sharesSeeded             Boolean  @default(false)
+  maxRevisions             Int      @default(2)
   updatedAt                DateTime @updatedAt
 }
 
@@ -1063,6 +1064,9 @@ model FundingMilestone {
   sortOrder         Int                  @default(0)
   status            String               @default("pending")
   reviewWindowHours Int
+  revisionLimit     Int                  @default(2)
+  revisionCount     Int                  @default(0)
+  revisionNote      String               @default("")
   submittedAt       DateTime?
   autoApproveAt     DateTime?
   approvedAt        DateTime?

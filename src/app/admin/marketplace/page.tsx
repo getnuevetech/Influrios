@@ -180,7 +180,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Review window</h2>
         <p className="mt-1 text-xs text-muted">
-          A submitted milestone auto-approves after this many hours. The window is copied onto each new prefund.
+          A submitted milestone auto-approves after this many hours. The window and the revision limit are copied onto each new prefund.
         </p>
         {canManage ? (
           <form action={actionSaveMarketplaceSettings} className="mt-4 flex flex-wrap items-end gap-3">
@@ -195,6 +195,17 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               />
             </label>
+            <label className="text-xs font-semibold text-muted">
+              Revisions
+              <input
+                name="maxRevisions"
+                type="number"
+                min={0}
+                max={20}
+                defaultValue={config.maxRevisions}
+                className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
               Allow cancelling a prefund before the provider confirms it
@@ -204,7 +215,9 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             </button>
           </form>
         ) : (
-          <p className="mt-3 text-sm text-indigo">{config.reviewWindowHours} hours</p>
+          <p className="mt-3 text-sm text-indigo">
+            {config.reviewWindowHours} hours · {config.maxRevisions} revisions
+          </p>
         )}
       </section>
 
@@ -753,6 +766,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               {funding.milestones.map((milestone) => (
                 <li key={milestone.id}>
                   {milestone.title} · {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status}
+                  {milestone.revisionLimit > 0 ? ` · revisions ${milestone.revisionCount} of ${milestone.revisionLimit}` : " · no revisions"}
                 </li>
               ))}
             </ul>

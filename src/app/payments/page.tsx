@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { actionApproveMilestone, actionCancelPrefund, actionCreateDeal, actionOpenDispute, actionSubmitMilestone } from "@/app/payments/actions";
+import {
+  actionApproveMilestone,
+  actionCancelPrefund,
+  actionCreateDeal,
+  actionOpenDispute,
+  actionRequestRevision,
+  actionSubmitMilestone,
+} from "@/app/payments/actions";
 import { listAttributionSources, listRepeatCandidates } from "@/lib/deal-attribution";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
@@ -13,7 +20,15 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Protected Payments" };
 
 type Props = {
-  searchParams: Promise<{ created?: string; submitted?: string; approved?: string; cancelled?: string; disputed?: string; error?: string }>;
+  searchParams: Promise<{
+    created?: string;
+    submitted?: string;
+    approved?: string;
+    revised?: string;
+    cancelled?: string;
+    disputed?: string;
+    error?: string;
+  }>;
 };
 
 const STATUS_COLOR: Record<string, string> = {
@@ -86,11 +101,12 @@ export default async function PaymentsPage({ searchParams }: Props) {
         {params.error ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</div>
         ) : null}
-        {params.created || params.submitted || params.approved || params.cancelled || params.disputed ? (
+        {params.created || params.submitted || params.approved || params.revised || params.cancelled || params.disputed ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             {params.created ? `Prefund ${params.created} is waiting for the provider.` : ""}
             {params.submitted ? " Milestone submitted for review." : ""}
             {params.approved ? " Milestone approved. Release still waits for the provider." : ""}
+            {params.revised ? " Revision requested. The milestone is back with the creator. Nothing was released." : ""}
             {params.cancelled ? " Unconfirmed prefund cancelled. Nothing was held." : ""}
             {params.disputed ? " Dispute opened. Release waits until it is resolved." : ""}
           </div>
@@ -316,7 +332,15 @@ export default async function PaymentsPage({ searchParams }: Props) {
                             {milestone.status}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-xs text-muted">{formatMoney(milestone.amountCents, deal.currency)}</p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          {formatMoney(milestone.amountCents, deal.currency)}
+                          {milestone.revisionLimit > 0
+                            ? ` · revisions ${milestone.revisionCount} of ${milestone.revisionLimit}`
+                            : " · no revisions"}
+                        </p>
+                        {milestone.revisionNote && milestone.status === "pending" ? (
+                          <p className="mt-1 text-xs text-indigo">Revision: {milestone.revisionNote}</p>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {deal.status === "held" && milestone.status === "pending" ? (
@@ -334,6 +358,22 @@ export default async function PaymentsPage({ searchParams }: Props) {
                             <input type="hidden" name="milestoneId" value={milestone.id} />
                             <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
                               Approve work
+                            </button>
+                          </form>
+                        ) : null}
+                        {deal.status === "held" && milestone.status === "submitted" && milestone.revisionCount < milestone.revisionLimit ? (
+                          <form action={actionRequestRevision} className="flex flex-wrap items-center gap-2">
+                            <input type="hidden" name="dealId" value={deal.id} />
+                            <input type="hidden" name="milestoneId" value={milestone.id} />
+                            <input
+                              name="note"
+                              required
+                              minLength={8}
+                              placeholder="What should change"
+                              className="rounded-lg border border-border px-2 py-1 text-xs"
+                            />
+                            <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                              Request revision
                             </button>
                           </form>
                         ) : null}
