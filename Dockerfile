@@ -23,6 +23,11 @@ ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=768"
 # Dummy URL so Prisma generate succeeds during image build
 ENV DATABASE_URL="postgresql://influrios:influrios@postgres:5432/influrios?schema=public"
+# Next hashes server action ids with this key. A new random key on every
+# image build makes an open admin tab post an id the new server rejects.
+# deploy.sh writes one key into .env and passes it here on later builds.
+ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
 RUN npx prisma generate
 # Repeat the end of the build log on failure. Docker shows that tail, so a
 # type error is visible instead of only the SWC directory listing.
@@ -38,6 +43,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
 
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs

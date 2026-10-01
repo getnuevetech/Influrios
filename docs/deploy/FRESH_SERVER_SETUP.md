@@ -306,6 +306,7 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 | Postgres not ready | `docker compose logs postgres` · check password match in `.env` |
 | Prisma can't connect | Confirm `DATABASE_URL` uses `127.0.0.1` and container is healthy |
 | `Cannot find package 'c12'` or `effect` during migrate | Pull main and rebuild the web image. The runner copies the Prisma CLI loader packages; an older image stops before it can migrate |
+| Admin save says a Server Action was not found | The open page is from an older image. Reload the page and enter the details again. `deploy.sh` keeps one `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` so the next image build does not change those ids |
 
 ---
 
