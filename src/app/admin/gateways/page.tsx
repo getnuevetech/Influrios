@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { actionAssignCountryGateway, actionSaveGateway } from "@/app/admin/gateways/actions";
+import { actionAssignCountryGateway, actionSaveConnect, actionSaveGateway } from "@/app/admin/gateways/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
+import { productSwitch } from "@/lib/product-switches";
 import { listProviders, paymentRoutes } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +17,17 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
   const canEdit = hasPermission(session, "gateways.edit");
   const params = await searchParams;
   let providers: Awaited<ReturnType<typeof listProviders>> = [];
+  let connectProviders: Awaited<ReturnType<typeof listProviders>> = [];
   let routes: Awaited<ReturnType<typeof paymentRoutes>> = [];
+  let connectOn = false;
   let dbError = false;
   try {
-    [providers, routes] = await Promise.all([listProviders("payment"), paymentRoutes()]);
+    [providers, connectProviders, routes, connectOn] = await Promise.all([
+      listProviders("payment"),
+      listProviders("connect"),
+      paymentRoutes(),
+      productSwitch("stripe_connect"),
+    ]);
   } catch (error) {
     console.error("admin gateways", error);
     dbError = true;
@@ -33,8 +41,9 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Payment gateways</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
         Connect more than one gateway, then assign each country to one of them. The starter routes put Flutterwave on
-        the listed African countries and Stripe on the others. A gateway is ready only when it is enabled and its
-        secret is saved. Checkout does not mark a plan paid until that gateway confirms payment.
+        the listed African countries and Stripe on the others. M-Pesa is listed and stays off until you enable it and
+        save a secret. Checkout does not mark Flutterwave or M-Pesa paid. A gateway is ready only when it is enabled
+        and its secret is saved. Stripe Connect account links stay closed until you turn that switch on.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
@@ -92,6 +101,37 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
           <button type="submit" className="btn-secondary">Assign country</button>
         </form>
       ) : null}
+
+      <section className="mt-8 space-y-4">
+        <h2 className="font-display text-lg font-bold text-indigo">Stripe Connect</h2>
+        <p className="text-sm text-muted">
+          Account links open only when this switch is on and the Connect secret is saved. Nothing is paid out from
+          this page.
+        </p>
+        {connectProviders.map((provider) => (
+          <form key={provider.id} action={actionSaveConnect} className="grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4 sm:grid-cols-2">
+            <input type="hidden" name="id" value={provider.id} />
+            <input type="hidden" name="code" value={provider.code} />
+            <label className="block text-sm font-semibold text-indigo">
+              Name
+              <input name="name" defaultValue={provider.name} disabled={!canEdit} className={inputClass} />
+            </label>
+            <label className="block text-sm font-semibold text-indigo">
+              Secret ({provider.secret})
+              <input name="secret" type="password" placeholder="Leave blank to keep" disabled={!canEdit} className={inputClass} />
+            </label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+              <input type="checkbox" name="enabled" value="1" defaultChecked={provider.enabled} disabled={!canEdit} />
+              Provider enabled
+            </label>
+            <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+              <input type="checkbox" name="stripe_connect" defaultChecked={connectOn} disabled={!canEdit} />
+              Allow account links
+            </label>
+            {canEdit ? <button type="submit" className="btn-primary w-fit">Save Stripe Connect</button> : null}
+          </form>
+        ))}
+      </section>
 
       <section className="mt-8 space-y-4">
         <h2 className="font-display text-lg font-bold text-indigo">Gateway credentials</h2>

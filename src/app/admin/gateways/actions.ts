@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
+import { setProductSwitch } from "@/lib/product-switches";
 import { saveProvider, setCountryGateway } from "@/lib/providers";
 
 function clean(value: FormDataEntryValue | null) {
@@ -30,6 +31,30 @@ export async function actionSaveGateway(formData: FormData) {
     redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
   }
   redirect("/admin/gateways?saved=gateway");
+}
+
+export async function actionSaveConnect(formData: FormData) {
+  await requireAdminAction("gateways.edit");
+  try {
+    await saveProvider({
+      id: clean(formData.get("id")) || undefined,
+      kind: "connect",
+      code: clean(formData.get("code")) || "stripe",
+      name: clean(formData.get("name")) || "Stripe Connect",
+      enabled: formData.get("enabled") === "1",
+      baseUrl: "",
+      publicKey: "",
+      secret: clean(formData.get("secret")),
+      webhook: "",
+      model: "",
+      clearSecret: formData.get("clearSecret") === "1",
+    });
+    await setProductSwitch("stripe_connect", formData.get("stripe_connect") === "on");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save Stripe Connect.";
+    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/gateways?saved=connect");
 }
 
 export async function actionAssignCountryGateway(formData: FormData) {

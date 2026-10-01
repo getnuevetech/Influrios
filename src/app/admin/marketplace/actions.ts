@@ -13,6 +13,7 @@ import {
   saveMilestoneTemplates,
 } from "@/lib/marketplace-ledger";
 import { saveFxRates, saveRevenueParties } from "@/lib/settlement";
+import { setProductSwitch } from "@/lib/product-switches";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
 
 function flag(formData: FormData, name: string) {
@@ -30,8 +31,11 @@ export async function actionSaveMarketplaceSettings(formData: FormData) {
       partialRefundsEnabled: formData.get("partialRefundsEnabled") === "on",
       changeOrdersEnabled: formData.get("changeOrdersEnabled") === "on",
       maxChangeOrders: Number(formData.get("maxChangeOrders")),
+      riskControlsEnabled: formData.get("riskControlsEnabled") === "on",
+      maxOpenDisputes: Number(formData.get("maxOpenDisputes")),
       cancelUnconfirmed: formData.get("cancelUnconfirmed") === "on",
     });
+    await setProductSwitch("financial_reports", formData.get("financialReports") === "on");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save settings.";
     redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);

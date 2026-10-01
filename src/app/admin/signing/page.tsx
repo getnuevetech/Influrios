@@ -45,8 +45,9 @@ export default async function AdminSigningPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Document signing</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        Connect the signing API used after a collaboration is accepted. A queued request is not a signed document.
-        It stays queued until the provider confirms the signature.
+        Connect the signing API used after a collaboration is accepted. A saved https address is called when a
+        request is queued. A request stays queued until the provider confirms the signature. A refused call stores
+        nothing.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}

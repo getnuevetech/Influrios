@@ -437,6 +437,7 @@ UI and API both check **effective entitlements**. Locked actions show contextual
 - [x] Gross cap and ledger totals (12.11)  
 - [x] Partial refund remainder (12.12)  
 - [x] Change orders (12.13)  
+- [x] Admin on/off switches for demo checkout, billing portal, Stripe Connect, financial reports, risk limits, agency seats, and the M-Pesa gateway shell
 
 See also: `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md`
 

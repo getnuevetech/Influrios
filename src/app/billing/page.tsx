@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { actionStartCheckout } from "@/app/billing/actions";
+import { actionOpenConnect, actionOpenPortal, actionStartCheckout } from "@/app/billing/actions";
 import {
   BILLING_CATALOG,
   getBillingStore,
@@ -7,6 +7,7 @@ import {
 } from "@/lib/billing";
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { productSwitch } from "@/lib/product-switches";
 import { paymentRoutes } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,11 @@ export default async function BillingPage({ searchParams }: Props) {
   const ws = await getWorkspace();
   const be = getBusinessEntitlements(ws.plan);
   const store = await getBillingStore();
-  const routes = await paymentRoutes().catch(() => []);
+  const [routes, portalOn, connectOn] = await Promise.all([
+    paymentRoutes().catch(() => []),
+    productSwitch("customer_portal"),
+    productSwitch("stripe_connect"),
+  ]);
   const creatorPlans = BILLING_CATALOG.filter((p) => p.audience === "creator");
   const businessPlans = BILLING_CATALOG.filter((p) => p.audience === "business");
 
@@ -56,7 +61,7 @@ export default async function BillingPage({ searchParams }: Props) {
             <h2 className="font-display text-xl font-bold text-indigo">Country gateways</h2>
             <p className="mt-1 text-sm text-muted">
               Each country uses the gateway assigned in admin. A route is ready only after that gateway is enabled and
-              its secret is saved. This checkout does not mark Flutterwave or another gateway as paid on its own.
+              its secret is saved. This checkout does not mark Flutterwave or M-Pesa as paid on its own.
             </p>
             <ul className="mt-3 grid gap-1 text-sm text-muted sm:grid-cols-2">
               {routes.map((route) => (
@@ -67,6 +72,47 @@ export default async function BillingPage({ searchParams }: Props) {
             </ul>
           </section>
         ) : null}
+
+        <section className="card-surface grid gap-6 p-6 md:grid-cols-2">
+          <form action={actionOpenPortal} className="space-y-3">
+            <h2 className="font-display text-xl font-bold text-indigo">Billing portal</h2>
+            <p className="text-sm text-muted">
+              {portalOn
+                ? "Opens only after Stripe returns a billing portal link."
+                : "The billing portal is turned off. Nothing is opened."}
+            </p>
+            <label className="block text-xs font-semibold text-muted">
+              Stripe customer id
+              <input
+                name="customerId"
+                placeholder="cus_"
+                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <button type="submit" className="btn-secondary !py-2 text-sm">
+              Open billing portal
+            </button>
+          </form>
+          <form action={actionOpenConnect} className="space-y-3">
+            <h2 className="font-display text-xl font-bold text-indigo">Payout account</h2>
+            <p className="text-sm text-muted">
+              {connectOn
+                ? "Opens only after Stripe returns an account link. This does not move a payout."
+                : "Stripe Connect is turned off. Nothing is opened."}
+            </p>
+            <label className="block text-xs font-semibold text-muted">
+              Stripe account id
+              <input
+                name="accountId"
+                placeholder="acct_"
+                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <button type="submit" className="btn-secondary !py-2 text-sm">
+              Open account link
+            </button>
+          </form>
+        </section>
 
         <section className="card-surface p-6">
           <h2 className="font-display text-xl font-bold text-indigo">Current demo entitlements</h2>

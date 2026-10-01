@@ -4,14 +4,51 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import {
+  addAgencySeat,
   addRosterMember,
   createAgencyCampaign,
   createJointPortfolio,
   removeRosterMember,
+  setAgencySeatActive,
   setCampaignStatus,
   setPortfolioPublished,
   type AgencyCampaign,
 } from "@/lib/agency";
+import { setProductSwitch } from "@/lib/product-switches";
+
+export async function actionSaveAgencySeats(formData: FormData) {
+  await requireAdminAction("agency.manage");
+  await setProductSwitch("agency_seats", formData.get("agency_seats") === "on");
+  revalidatePath("/admin/agency");
+  redirect("/admin/agency?seats=1");
+}
+
+export async function actionAdminAddSeat(formData: FormData) {
+  await requireAdminAction("agency.manage");
+  try {
+    await addAgencySeat({
+      email: String(formData.get("email") ?? ""),
+      role: String(formData.get("role") ?? "member"),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "seat_failed";
+    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+  }
+  revalidatePath("/admin/agency");
+  redirect("/admin/agency?seat=1");
+}
+
+export async function actionAdminSetSeat(formData: FormData) {
+  await requireAdminAction("agency.manage");
+  try {
+    await setAgencySeatActive(String(formData.get("email") ?? ""), formData.get("active") === "1");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "seat_failed";
+    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+  }
+  revalidatePath("/admin/agency");
+  redirect("/admin/agency?seat=1");
+}
 
 export async function actionAdminAddRoster(formData: FormData) {
   await requireAdminAction("agency.manage");
