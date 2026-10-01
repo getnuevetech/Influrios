@@ -6,7 +6,7 @@ import {
 } from "@/app/admin/trust/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { actionDecideLedgerDispute } from "@/app/admin/trust/ledger-actions";
+import { actionAddLedgerEvidence, actionDecideLedgerDispute } from "@/app/admin/trust/ledger-actions";
 import { listMilestoneDisputes } from "@/lib/milestone-disputes";
 import { formatMoney, getProtectedPaymentsStore } from "@/lib/protected-payments";
 import {
@@ -24,6 +24,7 @@ type Props = {
     advanced?: string;
     contract?: string;
     attached?: string;
+    evidence?: string;
     error?: string;
   }>;
 };
@@ -92,11 +93,47 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                   {dispute.milestone?.title ?? "Milestone"} · {dispute.reasonLabel} · {dispute.status.replaceAll("_", " ")}
                 </p>
                 <p className="mt-1 text-indigo">{dispute.details}</p>
+                <p className="mt-1 text-xs text-muted">
+                  {dispute.evidenceLimit > 0
+                    ? `Evidence ${dispute.notes.length} of ${dispute.evidenceLimit}. A note does not move money.`
+                    : "No further evidence on this dispute."}
+                </p>
+                {dispute.notes.map((note) => (
+                  <p key={note.id} className="mt-1 text-xs text-indigo">
+                    {note.author}: {note.body}
+                    {note.url ? (
+                      <>
+                        {" "}
+                        <a href={note.url} className="font-semibold text-violet hover:underline" rel="noreferrer" target="_blank">
+                          Link
+                        </a>
+                      </>
+                    ) : null}
+                  </p>
+                ))}
                 {dispute.requestedRefundCents ? (
                   <p className="mt-1 text-xs text-muted">Refund requested {formatMoney(dispute.requestedRefundCents)}. Waiting for the provider.</p>
                 ) : null}
               </div>
             </div>
+            {canMediate &&
+            ["open", "under_review", "refund_requested"].includes(dispute.status) &&
+            dispute.notes.length < dispute.evidenceLimit ? (
+              <form action={actionAddLedgerEvidence} className="mt-3 flex flex-wrap items-end gap-2">
+                <input type="hidden" name="disputeId" value={dispute.id} />
+                <label className="text-xs font-semibold text-muted">
+                  Evidence
+                  <input name="body" required minLength={8} className="mt-1 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                </label>
+                <label className="text-xs font-semibold text-muted">
+                  https link
+                  <input name="url" placeholder="https://" className="mt-1 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                </label>
+                <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                  Add evidence
+                </button>
+              </form>
+            ) : null}
             {canMediate && ["open", "under_review", "refund_requested"].includes(dispute.status) ? (
               <form action={actionDecideLedgerDispute} className="mt-3 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="disputeId" value={dispute.id} />
@@ -132,12 +169,13 @@ export default async function AdminTrustPage({ searchParams }: Props) {
           {params.error}
         </div>
       ) : null}
-      {params.advanced || params.contract || params.attached ? (
+      {params.advanced || params.contract || params.attached || params.evidence ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Saved
           {params.advanced ? ` · dispute ${params.advanced} updated` : ""}
           {params.contract ? " · contract created" : ""}
-          {params.attached ? " · contract attached" : ""}.
+          {params.attached ? " · contract attached" : ""}
+          {params.evidence ? " · evidence saved" : ""}.
         </div>
       ) : null}
 

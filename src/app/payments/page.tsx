@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  actionAddEvidence,
   actionApproveMilestone,
   actionCancelPrefund,
   actionCreateDeal,
@@ -25,6 +26,7 @@ type Props = {
     submitted?: string;
     approved?: string;
     revised?: string;
+    evidence?: string;
     cancelled?: string;
     disputed?: string;
     error?: string;
@@ -101,12 +103,13 @@ export default async function PaymentsPage({ searchParams }: Props) {
         {params.error ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</div>
         ) : null}
-        {params.created || params.submitted || params.approved || params.revised || params.cancelled || params.disputed ? (
+        {params.created || params.submitted || params.approved || params.revised || params.evidence || params.cancelled || params.disputed ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             {params.created ? `Prefund ${params.created} is waiting for the provider.` : ""}
             {params.submitted ? " Milestone submitted for review." : ""}
             {params.approved ? " Milestone approved. Release still waits for the provider." : ""}
             {params.revised ? " Revision requested. The milestone is back with the creator. Nothing was released." : ""}
+            {params.evidence ? " Evidence saved. Nothing was released or refunded." : ""}
             {params.cancelled ? " Unconfirmed prefund cancelled. Nothing was held." : ""}
             {params.disputed ? " Dispute opened. Release waits until it is resolved." : ""}
           </div>
@@ -381,8 +384,45 @@ export default async function PaymentsPage({ searchParams }: Props) {
                           <p className="text-xs text-muted">Release waits for the provider.</p>
                         ) : null}
                         {deal.status === "held" && milestone.status !== "released" && milestone.status !== "refunded" ? (
-                          deal.disputes?.some((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null) ? (
-                            <p className="text-xs text-muted">Dispute open. Release waits until it is resolved.</p>
+                          deal.disputes?.find((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null) ? (
+                            <div className="space-y-2">
+                              {deal.disputes
+                                .filter((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null)
+                                .map((dispute) => (
+                                  <div key={dispute.id} className="space-y-2">
+                                    <p className="text-xs text-muted">
+                                      Dispute open. Release waits until it is resolved.
+                                      {dispute.evidenceLimit > 0
+                                        ? ` Evidence ${dispute.notes.length} of ${dispute.evidenceLimit}.`
+                                        : " No further evidence."}
+                                    </p>
+                                    {dispute.notes.map((note) => (
+                                      <p key={note.id} className="text-xs text-indigo">
+                                        {note.author}: {note.body}
+                                        {note.url ? (
+                                          <>
+                                            {" "}
+                                            <a href={note.url} className="font-semibold text-violet hover:underline" rel="noreferrer" target="_blank">
+                                              Link
+                                            </a>
+                                          </>
+                                        ) : null}
+                                      </p>
+                                    ))}
+                                    {dispute.notes.length < dispute.evidenceLimit ? (
+                                      <form action={actionAddEvidence} className="flex flex-wrap items-center gap-2">
+                                        <input type="hidden" name="dealId" value={deal.id} />
+                                        <input type="hidden" name="disputeId" value={dispute.id} />
+                                        <input name="body" required minLength={8} placeholder="Evidence" className="rounded-lg border border-border px-2 py-1 text-xs" />
+                                        <input name="url" placeholder="https link" className="rounded-lg border border-border px-2 py-1 text-xs" />
+                                        <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                                          Add evidence
+                                        </button>
+                                      </form>
+                                    ) : null}
+                                  </div>
+                                ))}
+                            </div>
                           ) : (
                           <form action={actionOpenDispute} className="flex flex-wrap items-center gap-2">
                             <input type="hidden" name="dealId" value={deal.id} />

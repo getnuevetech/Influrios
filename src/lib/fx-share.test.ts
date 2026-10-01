@@ -82,7 +82,8 @@ describe("marketplace FX prefund", () => {
         update: { enabled: false },
         create: { kind: "fx", code: "wise", name: "Wise", enabled: false, baseUrl: "https://api.wise.com" },
       });
-      const beforeReady = await prisma.collaborationFunding.count();
+      const titled = { title: { startsWith: "GB rate missing" } };
+      const beforeReady = await prisma.collaborationFunding.count({ where: titled });
       const notReady = await requestPrefund({
         jurisdictionCode: "GB",
         businessName: "Harbor Co",
@@ -93,7 +94,7 @@ describe("marketplace FX prefund", () => {
       });
       assert.equal(notReady.ok, false);
       if (!notReady.ok) assert.match(notReady.error, /Wise is not ready/);
-      assert.equal(await prisma.collaborationFunding.count(), beforeReady);
+      assert.equal(await prisma.collaborationFunding.count({ where: titled }), beforeReady);
 
       await prisma.fxRate.update({ where: { currency: "GBP" }, data: { active: false } });
       await prisma.integrationProvider.upsert({
@@ -114,7 +115,7 @@ describe("marketplace FX prefund", () => {
           extraJson: { profileId: "101", apiVersion: "v3" },
         },
       });
-      const beforeInactive = await prisma.collaborationFunding.count();
+      const beforeInactive = await prisma.collaborationFunding.count({ where: titled });
       const inactive = await requestPrefund({
         jurisdictionCode: "GB",
         businessName: "Harbor Co",
@@ -125,7 +126,7 @@ describe("marketplace FX prefund", () => {
       });
       assert.equal(inactive.ok, false);
       if (!inactive.ok) assert.match(inactive.error, /No Wise currency/);
-      assert.equal(await prisma.collaborationFunding.count(), beforeInactive);
+      assert.equal(await prisma.collaborationFunding.count({ where: titled }), beforeInactive);
       await prisma.fxRate.update({ where: { currency: "GBP" }, data: { active: true, minorPerUsd: 75 } });
 
       let wiseCalls = 0;
@@ -324,7 +325,8 @@ describe("marketplace FX prefund", () => {
           providerCode: "harbor",
         },
       });
-      const before = await prisma.collaborationFunding.count();
+      const harborTitle = { title: { startsWith: "Harbor while off" } };
+      const before = await prisma.collaborationFunding.count({ where: harborTitle });
       const refused = await requestPrefund({
         jurisdictionCode: "ZZ",
         businessName: "Harbor Co",
@@ -335,7 +337,7 @@ describe("marketplace FX prefund", () => {
       });
       assert.equal(refused.ok, false);
       if (!refused.ok) assert.match(refused.error, /not ready/);
-      assert.equal(await prisma.collaborationFunding.count(), before);
+      assert.equal(await prisma.collaborationFunding.count({ where: harborTitle }), before);
 
       await prisma.integrationProvider.update({
         where: { kind_code: { kind: "marketplace", code: "harbor" } },

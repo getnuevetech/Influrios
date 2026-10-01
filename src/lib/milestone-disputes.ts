@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/db";
 import {
+  canAddEvidence,
   canCancelUnconfirmed,
   canOpenMilestoneDispute,
   decideDispute,
-  disputeIsOpen,
   disputeStatusAfterRefund,
+  evidenceLink,
   type DisputeDecision,
 } from "@/lib/disputes";
 
@@ -104,6 +105,7 @@ async function openDisputeOnMilestone(input: { fundingId: string; milestoneId: s
   if (!gate.ok) return gate;
   const details = input.details.trim().slice(0, 2000);
   if (details.length < 8) return { ok: false as const, error: "Describe the dispute in a sentence." };
+  const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
   const dispute = await prisma.milestoneDispute.create({
     data: {
       fundingId: funding!.id,
@@ -112,6 +114,7 @@ async function openDisputeOnMilestone(input: { fundingId: string; milestoneId: s
       reasonLabel: reason!.label,
       details,
       status: "open",
+      evidenceLimit: settings?.maxEvidence ?? 5,
     },
   });
   await prisma.auditLog.create({
@@ -224,12 +227,54 @@ export async function decideMilestoneDispute(input: {
   return { ok: true as const, status: decision.status };
 }
 
-export async function addDisputeNote(disputeId: string, author: string, body: string) {
-  const text = body.trim().slice(0, 2000);
-  if (text.length < 2) return { ok: false as const, error: "Add a note." };
-  const dispute = await prisma.milestoneDispute.findUnique({ where: { id: disputeId } });
-  if (!dispute || !disputeIsOpen(dispute.status)) return { ok: false as const, error: "That dispute is closed." };
-  await prisma.disputeNote.create({ data: { disputeId, author: author.slice(0, 40), body: text } });
+export async function addDisputeEvidence(input: {
+  disputeId: string;
+  fundingId?: string;
+  author: "business" | "creator" | "ops";
+  body: string;
+  url?: string;
+}) {
+  const text = input.body.trim().slice(0, 2000);
+  if (text.length < 8) return { ok: false as const, error: "Add a sentence of evidence." };
+  const link = evidenceLink(input.url ?? "");
+  if (!link.ok) return link;
+  const stored = await prisma.$transaction(async (tx) => {
+    const dispute = await tx.milestoneDispute.findUnique({
+      where: { id: input.disputeId },
+      include: { _count: { select: { notes: true } }, funding: { select: { id: true } } },
+    });
+    if (!dispute) return { ok: false as const, error: "Dispute not found." };
+    if (input.fundingId && dispute.fundingId !== input.fundingId) {
+      return { ok: false as const, error: "That dispute is not on this prefund." };
+    }
+    const gate = canAddEvidence({
+      status: dispute.status,
+      evidenceCount: dispute._count.notes,
+      evidenceLimit: dispute.evidenceLimit,
+    });
+    if (!gate.ok) return gate;
+    await tx.disputeNote.create({
+      data: {
+        disputeId: dispute.id,
+        author: input.author,
+        body: text,
+        url: link.url,
+      },
+    });
+    return { ok: true as const, evidenceLimit: dispute.evidenceLimit };
+  });
+  if (!stored.ok) return stored;
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: input.author,
+        action: "dispute_evidence",
+        objectType: "MilestoneDispute",
+        objectId: input.disputeId,
+        after: { evidenceLimit: stored.evidenceLimit, hasLink: Boolean(link.url) },
+      },
+    })
+    .catch(() => undefined);
   return { ok: true as const };
 }
 

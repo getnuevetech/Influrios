@@ -1,6 +1,6 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Phase 12.6 can split a prefund into stages or open a recurring series. Each tranche stays unfunded until its own signed webhook. Phase 12.7 converts a non-USD prefund, routes the jurisdiction to one marketplace provider, and writes revenue-share lines when that provider releases a milestone. Those lines are not cash. A missing rate or a provider that is not ready creates no funding row. Phase 12.8 pulls that rate from the Wise user quote for the saved profile. A typed minor-unit figure is not used. If Wise is not ready or does not return a rate, nothing is funded. Phase 12.9 copies a revision limit onto each milestone. Asking for a revision sends submitted work back to the creator and does not move the ledger. A later limit edit does not raise the count already saved on that milestone. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Phase 12.6 can split a prefund into stages or open a recurring series. Each tranche stays unfunded until its own signed webhook. Phase 12.7 converts a non-USD prefund, routes the jurisdiction to one marketplace provider, and writes revenue-share lines when that provider releases a milestone. Those lines are not cash. A missing rate or a provider that is not ready creates no funding row. Phase 12.8 pulls that rate from the Wise user quote for the saved profile. A typed minor-unit figure is not used. If Wise is not ready or does not return a rate, nothing is funded. Phase 12.9 copies a revision limit onto each milestone. Asking for a revision sends submitted work back to the creator and does not move the ledger. A later limit edit does not raise the count already saved on that milestone. Phase 12.10 copies an evidence cap onto each dispute. A business, creator, or ops note can include an https link. The note does not release or refund, and a later cap edit does not raise the limit already saved on that dispute. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30  
 **Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
@@ -324,6 +324,19 @@ Implemented in `src/lib/ledger.ts`, `src/lib/marketplace-ledger.ts`, `/payments`
 4. The request does not post a hold, release, refund, or share line. Approval and release stay on their existing path.
 
 **Exit:** a milestone saved with a limit of 1 accepts one revision and refuses the next after the admin limit is raised. The provider hold is still the only ledger row.
+
+### Phase 12.10 — Dispute evidence
+
+Implemented in `src/lib/disputes.ts`, `src/lib/milestone-disputes.ts`, `/payments`, the creator dashboard, `/admin/marketplace`, and `/admin/trust`.
+
+**Proves:** an open dispute accepts evidence until the cap copied onto that dispute; a later admin cap does not raise it; a closed dispute accepts nothing; an https link is stored and other schemes are refused; the ledger is unchanged.
+
+1. The evidence cap is an admin setting, seeded at 5. Zero means the opening statement is the only record.
+2. The cap is copied onto the dispute when it is opened. A later edit does not rewrite disputes already saved.
+3. A business, the matching creator, or ops can add a sentence. An optional link must be https. The server does not fetch it.
+4. Evidence is allowed only while the dispute is open. It does not post a hold, release, refund, or share line.
+
+**Exit:** a dispute saved with a cap of 1 accepts one note and refuses the next after the admin cap is raised. The provider hold is still the only ledger row.
 
 ---
 

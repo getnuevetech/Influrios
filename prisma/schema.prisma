@@ -992,6 +992,7 @@ model MarketplaceSettings {
   fxSeeded                 Boolean  @default(false)
   sharesSeeded             Boolean  @default(false)
   maxRevisions             Int      @default(2)
+  maxEvidence              Int      @default(5)
   updatedAt                DateTime @updatedAt
 }
 
@@ -1143,6 +1144,7 @@ model MilestoneDispute {
   details              String
   status               String                @default("open")
   requestedRefundCents Int?
+  evidenceLimit        Int                   @default(5)
   resolutionNote       String?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
@@ -1158,6 +1160,7 @@ model DisputeNote {
   dispute   MilestoneDispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
   author    String
   body      String
+  url       String           @default("")
   createdAt DateTime         @default(now())
 
   @@index([disputeId])

@@ -103,7 +103,8 @@ describe("repeat prefund attribution", () => {
     const source = sources.find((row) => row.active);
     if (!source) throw new Error("expected an attribution source");
     try {
-      const before = await prisma.collaborationFunding.count();
+      const titled = { title: { startsWith: "Repeat while provider is off" } };
+      const before = await prisma.collaborationFunding.count({ where: titled });
       const result = await requestPrefund({
         jurisdictionCode: "US",
         businessName: "Harbor Co",
@@ -115,7 +116,7 @@ describe("repeat prefund attribution", () => {
       });
       assert.equal(result.ok, false);
       if (!result.ok) assert.match(result.error, /not ready/);
-      assert.equal(await prisma.collaborationFunding.count(), before);
+      assert.equal(await prisma.collaborationFunding.count({ where: titled }), before);
     } finally {
       await prisma.collaborationFunding.delete({ where: { id: prior.id } }).catch(() => undefined);
     }

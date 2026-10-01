@@ -25,6 +25,7 @@ export async function actionSaveMarketplaceSettings(formData: FormData) {
     await saveMarketplaceSettings({
       reviewWindowHours: Number(formData.get("reviewWindowHours")),
       maxRevisions: Number(formData.get("maxRevisions")),
+      maxEvidence: Number(formData.get("maxEvidence")),
       cancelUnconfirmed: formData.get("cancelUnconfirmed") === "on",
     });
   } catch (error) {

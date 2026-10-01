@@ -14,7 +14,7 @@ import {
 } from "@/lib/claim";
 import { socialConnectState } from "@/lib/social-connect";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
-import { actionOpenOwnDispute, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
+import { actionAddOwnEvidence, actionOpenOwnDispute, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
 import { readFxSnapshot } from "@/lib/fx-share";
 import { formatMoney } from "@/lib/protected-payments";
 import { listFundingsForCreator } from "@/lib/marketplace-ledger";
@@ -404,6 +404,9 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
         {params.saved === "milestone" ? (
           <p className="mt-3 text-sm font-semibold text-emerald-700">Milestone submitted for review.</p>
         ) : null}
+        {params.saved === "evidence" ? (
+          <p className="mt-3 text-sm font-semibold text-emerald-700">Evidence saved. Nothing was released or refunded.</p>
+        ) : null}
         {params.saved === "dispute" ? (
           <p className="mt-3 text-sm font-semibold text-emerald-700">
             Dispute opened. Release waits until it is resolved.
@@ -449,8 +452,45 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                       milestone.status !== "released" &&
                       milestone.status !== "refunded" &&
                       activeReasons.length > 0 ? (
-                        funding.disputes?.some((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null) ? (
-                          <p className="mt-2 text-xs text-muted">Dispute open. Release waits until it is resolved.</p>
+                        funding.disputes?.find((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null) ? (
+                          <div className="mt-2 space-y-2">
+                            {funding.disputes
+                              .filter((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null)
+                              .map((dispute) => (
+                                <div key={dispute.id} className="space-y-2">
+                                  <p className="text-xs text-muted">
+                                    Dispute open. Release waits until it is resolved.
+                                    {dispute.evidenceLimit > 0
+                                      ? ` Evidence ${dispute.notes.length} of ${dispute.evidenceLimit}.`
+                                      : " No further evidence."}
+                                  </p>
+                                  {dispute.notes.map((note) => (
+                                    <p key={note.id} className="text-xs text-indigo">
+                                      {note.author}: {note.body}
+                                      {note.url ? (
+                                        <>
+                                          {" "}
+                                          <a href={note.url} className="font-semibold text-violet hover:underline" rel="noreferrer" target="_blank">
+                                            Link
+                                          </a>
+                                        </>
+                                      ) : null}
+                                    </p>
+                                  ))}
+                                  {dispute.notes.length < dispute.evidenceLimit ? (
+                                    <form action={actionAddOwnEvidence} className="flex flex-wrap items-center gap-2">
+                                      <input type="hidden" name="fundingId" value={funding.id} />
+                                      <input type="hidden" name="disputeId" value={dispute.id} />
+                                      <input name="body" required minLength={8} placeholder="Evidence" className="rounded-lg border border-border px-2 py-1 text-xs" />
+                                      <input name="url" placeholder="https link" className="rounded-lg border border-border px-2 py-1 text-xs" />
+                                      <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                                        Add evidence
+                                      </button>
+                                    </form>
+                                  ) : null}
+                                </div>
+                              ))}
+                          </div>
                         ) : (
                         <form action={actionOpenOwnDispute} className="mt-2 flex flex-wrap items-center gap-2">
                           <input type="hidden" name="fundingId" value={funding.id} />

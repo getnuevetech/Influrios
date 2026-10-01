@@ -9,7 +9,7 @@ import {
   requestPrefund,
   submitFundingMilestone,
 } from "@/lib/marketplace-ledger";
-import { cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
+import { addDisputeEvidence, cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
 
 function dollarsToCents(raw: string) {
   const amount = Number(String(raw).replace(/[^0-9.]/g, ""));
@@ -81,6 +81,21 @@ export async function actionCancelPrefund(formData: FormData) {
   if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");
   redirect("/payments?cancelled=1");
+}
+
+export async function actionAddEvidence(formData: FormData) {
+  const result = await addDisputeEvidence({
+    disputeId: String(formData.get("disputeId") ?? ""),
+    fundingId: String(formData.get("dealId") ?? ""),
+    author: "business",
+    body: String(formData.get("body") ?? ""),
+    url: String(formData.get("url") ?? ""),
+  });
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/payments");
+  revalidatePath("/dashboard");
+  revalidatePath("/admin/trust");
+  redirect("/payments?evidence=1");
 }
 
 export async function actionOpenDispute(formData: FormData) {
