@@ -5,6 +5,7 @@ import {
   actionCancelPrefund,
   actionCreateDeal,
   actionOpenDispute,
+  actionRequestChangeOrder,
   actionRequestRevision,
   actionSubmitMilestone,
 } from "@/app/payments/actions";
@@ -23,6 +24,7 @@ export const metadata = { title: "Protected Payments" };
 type Props = {
   searchParams: Promise<{
     created?: string;
+    changed?: string;
     submitted?: string;
     approved?: string;
     revised?: string;
@@ -103,9 +105,10 @@ export default async function PaymentsPage({ searchParams }: Props) {
         {params.error ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</div>
         ) : null}
-        {params.created || params.submitted || params.approved || params.revised || params.evidence || params.cancelled || params.disputed ? (
+        {params.created || params.changed || params.submitted || params.approved || params.revised || params.evidence || params.cancelled || params.disputed ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             {params.created ? `Prefund ${params.created} is waiting for the provider.` : ""}
+            {params.changed ? " Change order recorded. The earlier fee snapshot stays on that record. Nothing was held." : ""}
             {params.submitted ? " Milestone submitted for review." : ""}
             {params.approved ? " Milestone approved. Release still waits for the provider." : ""}
             {params.revised ? " Revision requested. The milestone is back with the creator. Nothing was released." : ""}
@@ -316,12 +319,52 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   ) : null}
                 </div>
                 {deal.status === "awaiting_provider" ? (
-                  <form action={actionCancelPrefund} className="mt-4">
-                    <input type="hidden" name="dealId" value={deal.id} />
-                    <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
-                      Cancel prefund
-                    </button>
-                  </form>
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs text-muted">
+                      Change orders {deal.changeOrderCount} of {deal.changeOrderLimit}.
+                      {config?.changeOrdersEnabled === false ? " Change orders are turned off." : ""}
+                    </p>
+                    {deal.changeOrders.map((order) => (
+                      <p key={order.id} className="text-xs text-indigo">
+                        Change order {formatMoney(order.previousUsdCents)} → {formatMoney(order.nextUsdCents)}. {order.note}
+                      </p>
+                    ))}
+                    {config?.changeOrdersEnabled !== false && deal.changeOrderCount < deal.changeOrderLimit ? (
+                      <form action={actionRequestChangeOrder} className="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="dealId" value={deal.id} />
+                        <label className="text-xs font-semibold text-muted">
+                          New gross USD
+                          <input
+                            name="grossUsd"
+                            type="number"
+                            min={1}
+                            step={1}
+                            required
+                            className="mt-1 w-32 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-muted">
+                          What changed
+                          <input
+                            name="note"
+                            required
+                            minLength={8}
+                            placeholder="What the amendment covers"
+                            className="mt-1 w-64 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
+                          />
+                        </label>
+                        <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                          Record change order
+                        </button>
+                      </form>
+                    ) : null}
+                    <form action={actionCancelPrefund}>
+                      <input type="hidden" name="dealId" value={deal.id} />
+                      <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                        Cancel prefund
+                      </button>
+                    </form>
+                  </div>
                 ) : null}
                 <ul className="mt-5 space-y-3">
                   {deal.milestones.map((milestone) => (

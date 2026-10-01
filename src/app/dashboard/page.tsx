@@ -16,10 +16,10 @@ import { socialConnectState } from "@/lib/social-connect";
 import { PlaceFields } from "@/components/place-fields";
 import { getDirectory } from "@/lib/directory";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
-import { actionAddOwnEvidence, actionOpenOwnDispute, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
+import { actionAddOwnEvidence, actionOpenOwnDispute, actionRequestOwnChangeOrder, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
 import { readFxSnapshot } from "@/lib/fx-share";
 import { formatMoney } from "@/lib/protected-payments";
-import { listFundingsForCreator } from "@/lib/marketplace-ledger";
+import { listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 
@@ -57,9 +57,10 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
     if (!suggestionRows.has(slug)) suggestionRows.set(slug, { slug, name: slug });
   }
   const specialtyCap = linkLimits?.specialtiesMax ?? 1;
-  const [fundings, disputeReasons] = await Promise.all([
+  const [fundings, disputeReasons, marketplace] = await Promise.all([
     listFundingsForCreator(draft.slug).catch(() => []),
     listDisputeReasons().catch(() => []),
+    marketplaceConfig().catch(() => null),
   ]);
   const activeReasons = disputeReasons.filter((reason) => reason.active);
 
@@ -404,7 +405,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       <section className="card-surface p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Protected payments</h2>
         <p className="mt-1 text-sm text-muted">
-          Submit a milestone after the marketplace provider confirms the prefund. A revision sends it back to you. Approval does not release the money.
+          Submit a milestone after the marketplace provider confirms the prefund. A revision sends it back to you. Approval does not release the money. A change order amends the gross only while the prefund is still waiting for the provider.
         </p>
         {params.saved === "milestone" ? (
           <p className="mt-3 text-sm font-semibold text-emerald-700">Milestone submitted for review.</p>
@@ -415,6 +416,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
         {params.saved === "dispute" ? (
           <p className="mt-3 text-sm font-semibold text-emerald-700">
             Dispute opened. Release waits until it is resolved.
+          </p>
+        ) : null}
+        {params.saved === "change" ? (
+          <p className="mt-3 text-sm font-semibold text-emerald-700">
+            Change order recorded. The earlier fee snapshot stays on that record. Nothing was held.
           </p>
         ) : null}
         {fundings.length === 0 ? (
@@ -431,7 +437,46 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                   {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
                   {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
                   {scheduleLabel(funding) ? ` · ${scheduleLabel(funding)}` : ""}
+                  {funding.status === "awaiting_provider"
+                    ? ` · change orders ${funding.changeOrderCount} of ${funding.changeOrderLimit}`
+                    : ""}
                 </p>
+                {funding.changeOrders.map((order) => (
+                  <p key={order.id} className="mt-1 text-xs text-indigo">
+                    Change order {formatMoney(order.previousUsdCents)} → {formatMoney(order.nextUsdCents)}. {order.note}
+                  </p>
+                ))}
+                {funding.status === "awaiting_provider" &&
+                marketplace?.changeOrdersEnabled !== false &&
+                funding.changeOrderCount < funding.changeOrderLimit ? (
+                  <form action={actionRequestOwnChangeOrder} className="mt-3 flex flex-wrap items-end gap-2">
+                    <input type="hidden" name="fundingId" value={funding.id} />
+                    <label className="text-xs font-semibold text-muted">
+                      New gross USD
+                      <input
+                        name="grossUsd"
+                        type="number"
+                        min={1}
+                        step={1}
+                        required
+                        className="mt-1 w-32 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-muted">
+                      What changed
+                      <input
+                        name="note"
+                        required
+                        minLength={8}
+                        placeholder="What the amendment covers"
+                        className="mt-1 w-56 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
+                      />
+                    </label>
+                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                      Record change order
+                    </button>
+                  </form>
+                ) : null}
                 <div className="mt-3 space-y-2">
                   {funding.milestones.map((milestone) => (
                     <div key={milestone.id} className="rounded-lg border border-border px-3 py-2 text-sm">

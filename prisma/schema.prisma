@@ -995,6 +995,8 @@ model MarketplaceSettings {
   maxEvidence              Int      @default(5)
   maxGrossCents            Int      @default(0)
   partialRefundsEnabled    Boolean  @default(true)
+  changeOrdersEnabled      Boolean  @default(true)
+  maxChangeOrders          Int      @default(2)
   updatedAt                DateTime @updatedAt
 }
 
@@ -1047,9 +1049,12 @@ model CollaborationFunding {
   repeats           CollaborationFunding[] @relation("FundingRepeat")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  changeOrderLimit  Int      @default(2)
+  changeOrderCount  Int      @default(0)
   milestones        FundingMilestone[]
   entries           LedgerEntry[]
   disputes          MilestoneDispute[]
+  changeOrders      FundingChangeOrder[]
 
   @@unique([scheduleId, trancheIndex])
   @@index([creatorSlug, status])
@@ -1133,6 +1138,22 @@ model DisputeReason {
   active    Boolean  @default(true)
   sortOrder Int      @default(0)
   updatedAt DateTime @updatedAt
+}
+
+/// A documented amendment while the prefund is still waiting for the provider.
+model FundingChangeOrder {
+  id                      String               @id @default(cuid())
+  fundingId               String
+  funding                 CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  note                    String
+  previousGrossCents      Int
+  nextGrossCents          Int
+  previousUsdCents        Int
+  nextUsdCents            Int
+  previousFeeSnapshotJson Json
+  createdAt               DateTime             @default(now())
+
+  @@index([fundingId])
 }
 
 /// A milestone dispute or a request to cancel money the provider is holding.
