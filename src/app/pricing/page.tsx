@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionStartCheckout } from "@/app/billing/actions";
-import { BILLING_CATALOG, isStripeConfigured, type BillingProduct } from "@/lib/billing";
+import { BILLING_CATALOG, type BillingProduct } from "@/lib/billing";
+import { stripeBillingMode } from "@/lib/stripe-admin";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pricing" };
@@ -15,7 +16,7 @@ const STARTER = {
 };
 
 export default async function PricingPage() {
-  const stripeLive = isStripeConfigured();
+  const stripeMode = await stripeBillingMode();
   const creatorPaid = BILLING_CATALOG.filter((p) => p.audience === "creator");
   const businessPlans = BILLING_CATALOG.filter((p) => p.audience === "business");
 
@@ -32,7 +33,7 @@ export default async function PricingPage() {
             configured, demo flow otherwise.
           </p>
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-            Mode: {stripeLive ? "Stripe live keys detected" : "Demo checkout"}
+            Mode: {stripeMode === "sandbox" ? "Stripe sandbox" : stripeMode === "live" ? "Stripe live" : stripeMode === "rejected" ? "Stripe sandbox key required" : "Demo checkout"}
           </p>
         </div>
       </section>

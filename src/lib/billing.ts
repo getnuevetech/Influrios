@@ -8,6 +8,7 @@ import path from "path";
 import { setBusinessPlan } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { productSwitch } from "@/lib/product-switches";
+import { confirmStripeCheckout, openStripeCheckout, stripeCredentials } from "@/lib/stripe-admin";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import type { PlanCode } from "@/lib/entitlements";
 
@@ -239,7 +240,11 @@ export async function startCheckout(input: {
   const product = getProduct(input.sku);
   if (!product) return { ok: false, error: "Unknown plan SKU" };
 
-  if (!isStripeConfigured()) {
+  const creds = await stripeCredentials();
+  if (!creds.ok && creds.reason === "rejected") {
+    return { ok: false, error: "Use a Stripe sandbox key. Nothing was charged." };
+  }
+  if (!creds.ok) {
     const demo = await productSwitch("demo_checkout");
     if (!demo) return { ok: false, error: "Checkout is turned off. Nothing was charged." };
   }
@@ -247,64 +252,40 @@ export async function startCheckout(input: {
   const store = await ensureStore();
   const sessionId = newId("cs");
 
-  if (isStripeConfigured()) {
-    try {
-      const Stripe = (await import("stripe")).default;
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-        apiVersion: "2025-02-24.acacia",
-      });
-      const priceId = await billingPriceId(product.sku, product.stripePriceEnv);
-      const origin = getAppOrigin();
-      const lineItems = priceId
-        ? [{ price: priceId, quantity: 1 }]
-        : [
-            {
-              price_data: {
-                currency: "usd",
-                unit_amount: product.amountCents,
-                recurring: { interval: "month" as const },
-                product_data: {
-                  name: product.name,
-                  description: product.description,
-                },
-              },
-              quantity: 1,
-            },
-          ];
-
-      const session = await stripe.checkout.sessions.create({
-        mode: "subscription",
-        line_items: lineItems,
-        success_url: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}&local=${sessionId}`,
-        cancel_url: `${origin}/billing/cancel?local=${sessionId}`,
-        customer_email: input.customerEmail || undefined,
-        metadata: {
-          sku: product.sku,
-          localSessionId: sessionId,
-          creatorSlug: input.creatorSlug ?? "",
-          userId: input.userId ?? "",
-        },
-      });
-
-      store.sessions.unshift({
-        id: sessionId,
+  if (creds.ok) {
+    const priceId = await billingPriceId(product.sku, product.stripePriceEnv);
+    const origin = getAppOrigin();
+    const opened = await openStripeCheckout({
+      secret: creds.secret,
+      mode: creds.mode,
+      priceId,
+      amountCents: product.amountCents,
+      name: product.name,
+      description: product.description,
+      successUrl: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}&local=${sessionId}`,
+      cancelUrl: `${origin}/billing/cancel?local=${sessionId}`,
+      customerEmail: input.customerEmail,
+      metadata: {
         sku: product.sku,
-        mode: "stripe",
-        status: "open",
-        customerEmail: input.customerEmail,
-        userId: input.userId,
-        creatorSlug: input.creatorSlug,
-        stripeSessionId: session.id,
-        createdAt: new Date().toISOString(),
-      });
-      await saveStore(store);
-
-      if (!session.url) return { ok: false, error: "Stripe session missing URL" };
-      return { ok: true, mode: "stripe", url: session.url, sessionId };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Stripe checkout failed";
-      return { ok: false, error: message };
-    }
+        localSessionId: sessionId,
+        creatorSlug: input.creatorSlug ?? "",
+        userId: input.userId ?? "",
+      },
+    });
+    if (!opened.ok) return opened;
+    store.sessions.unshift({
+      id: sessionId,
+      sku: product.sku,
+      mode: "stripe",
+      status: "open",
+      customerEmail: input.customerEmail,
+      userId: input.userId,
+      creatorSlug: input.creatorSlug,
+      stripeSessionId: opened.id,
+      createdAt: new Date().toISOString(),
+    });
+    await saveStore(store);
+    return { ok: true, mode: "stripe", url: opened.url, sessionId };
   }
 
   // Demo checkout — no Stripe keys required
@@ -348,6 +329,20 @@ export async function completeCheckout(sessionId: string, opts?: {
 
   const product = getProduct(session.sku);
   if (!product) return { ok: false, error: "Unknown product on session" };
+
+  if (session.mode === "stripe") {
+    const creds = await stripeCredentials();
+    if (!creds.ok || !session.stripeSessionId) {
+      return { ok: false, error: "Stripe has not confirmed this payment. Nothing was changed." };
+    }
+    const confirmed = await confirmStripeCheckout({
+      secret: creds.secret,
+      mode: creds.mode,
+      checkoutSessionId: session.stripeSessionId,
+      localId: session.id,
+    });
+    if (!confirmed.ok) return confirmed;
+  }
 
   const slug = opts?.creatorSlug || session.creatorSlug || (product.creatorPlan ? "sofia-martinez" : undefined);
   try {

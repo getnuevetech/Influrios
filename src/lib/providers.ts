@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
+import { classifyStripeKey } from "@/lib/stripe-admin";
 
 export const AI_FUNCTIONS = [
   {
@@ -273,6 +274,9 @@ export async function saveProvider(input: {
 }) {
   const code = providerCode(input.code);
   if (!code) throw new Error("A provider code is required.");
+  if (input.kind === "payment" && code === "stripe" && input.secret.trim() && classifyStripeKey(input.secret) !== "sandbox") {
+    throw new Error("Save a Stripe sandbox key. Nothing was charged.");
+  }
   const name = input.name.trim().slice(0, 80);
   if (!name) throw new Error("A provider name is required.");
   const baseUrl = input.baseUrl.trim().slice(0, 200);

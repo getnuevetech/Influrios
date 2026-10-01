@@ -3,9 +3,9 @@ import { prisma } from "@/lib/db";
 import {
   completeCheckout,
   getBillingStore,
-  isStripeConfigured,
   markWebhookReceived,
 } from "@/lib/billing";
+import { stripeCredentials, stripeWebhookSecret } from "@/lib/stripe-admin";
 import { applyPlanOnce, noteWebhook, webhookDisposition } from "@/lib/webhook-idempotency";
 
 type StripeObject = {
@@ -28,24 +28,27 @@ function subscriptionId(object: StripeObject, eventType: string) {
  * checkout.session.completed without a local session is not stored, so a later delivery can apply.
  */
 export async function POST(req: NextRequest) {
-  if (!isStripeConfigured()) {
+  const creds = await stripeCredentials();
+  if (!creds.ok) {
     return NextResponse.json(
       {
         ok: false,
         message:
-          "Stripe not configured. Set STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET for live webhooks. Demo checkout completes via /billing/success.",
+          creds.reason === "rejected"
+            ? "Use a Stripe sandbox key. Nothing was charged."
+            : "Stripe is not ready. Nothing was charged.",
       },
       { status: 501 },
     );
   }
 
   const Stripe = (await import("stripe")).default;
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  const stripe = new Stripe(creds.secret, {
     apiVersion: "2025-02-24.acacia",
   });
 
   const sig = req.headers.get("stripe-signature");
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const secret = await stripeWebhookSecret();
   if (!sig || !secret) {
     return NextResponse.json({ error: "Missing webhook signature or secret" }, { status: 400 });
   }
