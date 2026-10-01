@@ -1,3 +1,5 @@
+import { samePlace } from "@/lib/place-names";
+
 export type SeedSocial = {
   platform: "INSTAGRAM" | "TIKTOK" | "YOUTUBE" | "X" | "WEBSITE";
   handle: string;
@@ -89,6 +91,8 @@ export const SPECIALTY_TAXONOMY: {
       { slug: "skincare", name: "Skincare" },
       { slug: "makeup", name: "Makeup" },
       { slug: "self-care", name: "Self Care" },
+      { slug: "nails", name: "Nails" },
+      { slug: "fragrance", name: "Fragrance" },
     ],
   },
   {
@@ -97,6 +101,8 @@ export const SPECIALTY_TAXONOMY: {
     children: [
       { slug: "streetwear", name: "Streetwear" },
       { slug: "sustainable-fashion", name: "Sustainable Fashion" },
+      { slug: "menswear", name: "Menswear" },
+      { slug: "modest-fashion", name: "Modest Fashion" },
     ],
   },
   {
@@ -105,6 +111,8 @@ export const SPECIALTY_TAXONOMY: {
     children: [
       { slug: "recipes", name: "Recipes" },
       { slug: "restaurant-reviews", name: "Restaurant Reviews" },
+      { slug: "baking", name: "Baking" },
+      { slug: "vegan", name: "Vegan" },
     ],
   },
   {
@@ -130,6 +138,8 @@ export const SPECIALTY_TAXONOMY: {
     children: [
       { slug: "budget-travel", name: "Budget Travel" },
       { slug: "luxury-travel", name: "Luxury Travel" },
+      { slug: "adventure-travel", name: "Adventure Travel" },
+      { slug: "solo-travel", name: "Solo Travel" },
     ],
   },
   {
@@ -138,6 +148,8 @@ export const SPECIALTY_TAXONOMY: {
     children: [
       { slug: "training", name: "Training" },
       { slug: "nutrition", name: "Nutrition" },
+      { slug: "yoga", name: "Yoga" },
+      { slug: "running", name: "Running" },
     ],
   },
   {
@@ -147,10 +159,211 @@ export const SPECIALTY_TAXONOMY: {
       { slug: "consumer-tech", name: "Consumer Tech" },
       { slug: "smart-home", name: "Smart Home" },
       { slug: "cybersecurity", name: "Cybersecurity" },
+      { slug: "apps", name: "Apps" },
+      { slug: "ai-tools", name: "AI Tools" },
     ],
   },
-  { slug: "lifestyle", name: "Lifestyle" },
+  {
+    slug: "lifestyle",
+    name: "Lifestyle",
+    children: [
+      { slug: "relationships", name: "Relationships" },
+      { slug: "productivity", name: "Productivity" },
+    ],
+  },
   { slug: "suppliers", name: "Suppliers" },
+  {
+    slug: "parenting",
+    name: "Parenting",
+    children: [
+      { slug: "family", name: "Family" },
+      { slug: "kids-activities", name: "Kids Activities" },
+      { slug: "pregnancy", name: "Pregnancy" },
+    ],
+  },
+  {
+    slug: "finance",
+    name: "Finance",
+    children: [
+      { slug: "personal-finance", name: "Personal Finance" },
+      { slug: "investing", name: "Investing" },
+      { slug: "crypto", name: "Crypto" },
+    ],
+  },
+  {
+    slug: "gaming",
+    name: "Gaming",
+    children: [
+      { slug: "esports", name: "Esports" },
+      { slug: "game-reviews", name: "Game Reviews" },
+      { slug: "streaming", name: "Streaming" },
+    ],
+  },
+  {
+    slug: "music",
+    name: "Music",
+    children: [
+      { slug: "singing", name: "Singing" },
+      { slug: "music-production", name: "Music Production" },
+      { slug: "dj", name: "DJ" },
+    ],
+  },
+  {
+    slug: "comedy",
+    name: "Comedy",
+    children: [
+      { slug: "sketch", name: "Sketch" },
+      { slug: "standup", name: "Stand-up" },
+    ],
+  },
+  {
+    slug: "education",
+    name: "Education",
+    children: [
+      { slug: "study-tips", name: "Study Tips" },
+      { slug: "language-learning", name: "Language Learning" },
+      { slug: "career-advice", name: "Career Advice" },
+    ],
+  },
+  {
+    slug: "sports",
+    name: "Sports",
+    children: [
+      { slug: "football", name: "Football" },
+      { slug: "basketball", name: "Basketball" },
+      { slug: "soccer", name: "Soccer" },
+    ],
+  },
+  {
+    slug: "automotive",
+    name: "Automotive",
+    children: [
+      { slug: "cars", name: "Cars" },
+      { slug: "motorcycles", name: "Motorcycles" },
+    ],
+  },
+  {
+    slug: "pets",
+    name: "Pets",
+    children: [
+      { slug: "dogs", name: "Dogs" },
+      { slug: "cats", name: "Cats" },
+    ],
+  },
+  {
+    slug: "photography",
+    name: "Photography",
+    children: [
+      { slug: "portrait", name: "Portrait" },
+      { slug: "photo-editing", name: "Photo Editing" },
+    ],
+  },
+  {
+    slug: "art",
+    name: "Art",
+    children: [
+      { slug: "illustration", name: "Illustration" },
+      { slug: "design", name: "Design" },
+    ],
+  },
+  {
+    slug: "business",
+    name: "Business",
+    children: [
+      { slug: "entrepreneurship", name: "Entrepreneurship" },
+      { slug: "marketing", name: "Marketing" },
+    ],
+  },
+  {
+    slug: "health",
+    name: "Health",
+    children: [
+      { slug: "mental-health", name: "Mental Health" },
+      { slug: "wellness", name: "Wellness" },
+    ],
+  },
+  {
+    slug: "outdoors",
+    name: "Outdoors",
+    children: [
+      { slug: "hiking", name: "Hiking" },
+      { slug: "camping", name: "Camping" },
+    ],
+  },
+  {
+    slug: "sustainability",
+    name: "Sustainability",
+    children: [
+      { slug: "climate", name: "Climate" },
+      { slug: "zero-waste", name: "Zero Waste" },
+    ],
+  },
+  {
+    slug: "entertainment",
+    name: "Entertainment",
+    children: [
+      { slug: "movies", name: "Movies" },
+      { slug: "tv", name: "TV" },
+      { slug: "celebrity", name: "Celebrity" },
+    ],
+  },
+  {
+    slug: "dance",
+    name: "Dance",
+    children: [{ slug: "choreography", name: "Choreography" }],
+  },
+  {
+    slug: "books",
+    name: "Books",
+    children: [{ slug: "book-reviews", name: "Book Reviews" }],
+  },
+  {
+    slug: "diy",
+    name: "DIY",
+    children: [
+      { slug: "crafts", name: "Crafts" },
+      { slug: "home-projects", name: "Home Projects" },
+    ],
+  },
+  {
+    slug: "weddings",
+    name: "Weddings",
+    children: [
+      { slug: "bridal", name: "Bridal" },
+      { slug: "event-planning", name: "Event Planning" },
+    ],
+  },
+  {
+    slug: "real-estate",
+    name: "Real Estate",
+    children: [{ slug: "home-tours", name: "Home Tours" }],
+  },
+  {
+    slug: "luxury",
+    name: "Luxury",
+    children: [
+      { slug: "watches", name: "Watches" },
+      { slug: "fine-living", name: "Fine Living" },
+    ],
+  },
+  {
+    slug: "science",
+    name: "Science",
+    children: [
+      { slug: "space", name: "Space" },
+      { slug: "explainers", name: "Explainers" },
+    ],
+  },
+  {
+    slug: "news",
+    name: "News",
+    children: [{ slug: "commentary", name: "Commentary" }],
+  },
+  {
+    slug: "spirituality",
+    name: "Spirituality",
+    children: [{ slug: "mindfulness", name: "Mindfulness" }],
+  },
 ];
 
 export const SEED_CREATORS: SeedCreator[] = [
@@ -496,7 +709,7 @@ export function filterCreators(
       const loc = `${c.locationCity} ${c.locationState ?? ""} ${c.locationCountry}`.toLowerCase();
       if (!loc.includes(location)) return false;
     }
-    if (countries.length && !countries.includes(c.locationCountry.toLowerCase())) return false;
+    if (countries.length && !countries.some((selected) => samePlace(selected, c.locationCountry))) return false;
     if (state && (c.locationState ?? "").toLowerCase() !== state) return false;
     if (city && c.locationCity.toLowerCase() !== city) return false;
     if (platforms.length && !c.socials.some((s) => platforms.includes(s.platform))) return false;

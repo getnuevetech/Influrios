@@ -13,6 +13,8 @@ import {
   getCreatorSessionDraft,
 } from "@/lib/claim";
 import { socialConnectState } from "@/lib/social-connect";
+import { PlaceFields } from "@/components/place-fields";
+import { getDirectory } from "@/lib/directory";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 import { actionAddOwnEvidence, actionOpenOwnDispute, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
 import { readFxSnapshot } from "@/lib/fx-share";
@@ -32,6 +34,13 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const draft = await getCreatorSessionDraft();
   if (!draft) redirect("/claim");
+  const directory = await getDirectory().catch(() => null);
+  const specialtyGroups = (directory?.taxonomy ?? SPECIALTY_TAXONOMY.map((parent) => ({
+    slug: parent.slug,
+    name: parent.name,
+    active: true,
+    children: (parent.children ?? []).map((child) => ({ ...child, active: true })),
+  }))).filter((parent) => parent.active);
   const social = await socialConnectState(draft.slug).catch(() => null);
   const planCode = isPlanCode(draft.planTier ?? "") ? draft.planTier! : "STARTER";
   const linkLimits = await entitlementsForPlan(planCode).catch(() => null);
@@ -169,22 +178,13 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2"
               />
             </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">City</span>
-              <input
-                name="locationCity"
-                defaultValue={draft.locationCity}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Country</span>
-              <input
-                name="locationCountry"
-                defaultValue={draft.locationCountry}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-              />
-            </label>
+            <PlaceFields
+              cityName="locationCity"
+              countryName="locationCountry"
+              defaultCity={draft.locationCity}
+              defaultCountry={draft.locationCountry}
+              className="contents"
+            />
             <label className="text-sm sm:col-span-2">
               <span className="font-semibold text-indigo">Primary specialty</span>
               <select
@@ -192,10 +192,15 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 defaultValue={draft.specialties[0] ?? "lifestyle"}
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2"
               >
-                {SPECIALTY_TAXONOMY.map((s) => (
-                  <option key={s.slug} value={s.slug}>
-                    {s.name}
-                  </option>
+                {specialtyGroups.map((group) => (
+                  <optgroup key={group.slug} label={group.name}>
+                    <option value={group.slug}>{group.name}</option>
+                    {group.children.filter((child) => child.active).map((child) => (
+                      <option key={child.slug} value={child.slug}>
+                        {child.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </label>

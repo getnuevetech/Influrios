@@ -2,6 +2,7 @@ import { getBusinessEntitlements, type BusinessPlanCode } from "@/lib/business-e
 import { managedMatchGate } from "@/lib/business-queue";
 import { prisma } from "@/lib/db";
 import { getManagedPromotionEnabled } from "@/lib/managed-matching";
+import { samePlace } from "@/lib/place-names";
 import { SEED_CREATORS, specialtyLabel, type SeedCreator } from "@/lib/seed-data";
 
 export type ShortlistItem = {
@@ -325,6 +326,17 @@ export type CreatorFit = {
   };
 };
 
+function geographyFits(creator: { locationCity: string; locationCountry: string }, location: string) {
+  const parts = location
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return false;
+  return parts.some(
+    (part) => samePlace(part, creator.locationCity) || samePlace(part, creator.locationCountry),
+  );
+}
+
 /** Explainable business → creator fit for a brief. This is a platform rule. */
 export function fitCreatorToBrief(creator: SeedCreator, brief: CampaignBrief): CreatorFit {
   const specialtyHit =
@@ -332,8 +344,8 @@ export function fitCreatorToBrief(creator: SeedCreator, brief: CampaignBrief): C
     creator.specialties.some((s) => s.includes(brief.specialty) || brief.specialty.includes(s));
   const specialtyFit = specialtyHit ? 94 : creator.specialties.length ? 62 : 40;
 
-  const geoHay = `${creator.locationCity} ${creator.locationCountry}`.toLowerCase();
-  const audienceGeo = brief.location && geoHay.includes(brief.location.toLowerCase()) ? 90 : 70;
+  const geoHit = geographyFits(creator, brief.location);
+  const audienceGeo = geoHit ? 90 : 70;
 
   const platformFit = creator.socials.some((s) => s.platform === brief.platform)
     ? 92
@@ -364,7 +376,7 @@ export function fitCreatorToBrief(creator: SeedCreator, brief: CampaignBrief): C
   } else {
     reasons.push(`Partial specialty overlap — consider adjacent niches on ${creator.displayName}'s profile`);
   }
-  if (brief.location && geoHay.includes(brief.location.toLowerCase())) {
+  if (geoHit) {
     reasons.push(`Geography fit for ${brief.location}`);
   }
   if (creator.socials.some((s) => s.platform === brief.platform)) {
