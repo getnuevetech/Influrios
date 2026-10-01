@@ -194,10 +194,15 @@ export async function billingPriceId(sku: BillingSku, envName: string) {
   return PRICE_ID.test(fromEnv) ? fromEnv : "";
 }
 
-export async function listBillingPriceIds() {
+export async function listBillingPriceIds(): Promise<Record<BillingSku, string>> {
   const row = await prisma.platformSetting.findUnique({ where: { key: "billing.prices" } }).catch(() => null);
   const value = row?.value && typeof row.value === "object" && !Array.isArray(row.value) ? (row.value as Record<string, unknown>) : {};
-  return Object.fromEntries(BILLING_CATALOG.map((product) => [product.sku, typeof value[product.sku] === "string" ? value[product.sku] : ""]));
+  const prices = {} as Record<BillingSku, string>;
+  for (const product of BILLING_CATALOG) {
+    const stored = value[product.sku];
+    prices[product.sku] = typeof stored === "string" ? stored : "";
+  }
+  return prices;
 }
 
 export async function saveBillingPriceIds(prices: Partial<Record<BillingSku, string>>) {

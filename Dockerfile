@@ -24,11 +24,12 @@ ENV NODE_OPTIONS="--max-old-space-size=768"
 # Dummy URL so Prisma generate succeeds during image build
 ENV DATABASE_URL="postgresql://influrios:influrios@postgres:5432/influrios?schema=public"
 RUN npx prisma generate
-# Surface memory + SWC diagnostics if webpack fails
+# Repeat the end of the build log on failure. Docker shows that tail, so a
+# type error is visible instead of only the SWC directory listing.
 RUN free -h || true \
   && node -e "require('@next/swc-linux-x64-musl'); console.log('OK: SWC musl')" \
-  && npm run build \
-  || (echo "==== BUILD FAILED — diagnostics ===="; free -h || true; ls -la node_modules/@next 2>/dev/null || true; exit 1)
+  && (set -o pipefail; npm run build 2>&1 | tee /tmp/next-build.log) \
+  || (echo "==== BUILD FAILED — diagnostics ===="; tail -n 80 /tmp/next-build.log || true; free -h || true; exit 1)
 
 FROM node:22-alpine AS runner
 WORKDIR /app

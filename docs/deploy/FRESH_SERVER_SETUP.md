@@ -299,6 +299,7 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 | `Permission denied (publickey)` to GitHub | Deploy key not added, or wrong `IdentityFile` in `~/.ssh/config` |
 | `Repository not found` | Deploy key is on wrong repo, or no access to private repo |
 | `npm run build` killed / OOM | `bash deploy/scripts/deploy.sh` adds 2 GB swap before the image build. The image uses one webpack process and a 768 MB heap. If the build is still killed, move to a 4 GB instance |
+| Dockerfile build exits 1 after `OK: SWC musl` | The native compiler loaded. The failure is the Next build, usually a type error printed just above `BUILD FAILED`. Pull main and rebuild |
 | Site 502 Bad Gateway | App not running: `pm2 status` / `pm2 logs influrios` |
 | Cannot SSH to Lightsail | Check Lightsail networking port 22 + correct `.pem` |
 | `permission denied` for docker | Run `newgrp docker` or re-SSH after `usermod -aG docker` |
