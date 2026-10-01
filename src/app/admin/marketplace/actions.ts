@@ -27,6 +27,7 @@ export async function actionSaveMarketplaceSettings(formData: FormData) {
       maxRevisions: Number(formData.get("maxRevisions")),
       maxEvidence: Number(formData.get("maxEvidence")),
       maxGrossCents: Math.round(Number(formData.get("maxGrossUsd") ?? 0) * 100),
+      partialRefundsEnabled: formData.get("partialRefundsEnabled") === "on",
       cancelUnconfirmed: formData.get("cancelUnconfirmed") === "on",
     });
   } catch (error) {

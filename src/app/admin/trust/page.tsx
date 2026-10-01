@@ -7,6 +7,7 @@ import {
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { actionAddLedgerEvidence, actionDecideLedgerDispute } from "@/app/admin/trust/ledger-actions";
+import { marketplaceConfig } from "@/lib/marketplace-ledger";
 import { listMilestoneDisputes } from "@/lib/milestone-disputes";
 import { formatMoney, getProtectedPaymentsStore } from "@/lib/protected-payments";
 import {
@@ -44,7 +45,11 @@ export default async function AdminTrustPage({ searchParams }: Props) {
   const params = await searchParams;
   const trust = await getTrustStore();
   const payments = await getProtectedPaymentsStore();
-  const ledgerDisputes = await listMilestoneDisputes().catch(() => []);
+  const [ledgerDisputes, marketplace] = await Promise.all([
+    listMilestoneDisputes().catch(() => []),
+    marketplaceConfig().catch(() => null),
+  ]);
+  const partialRefunds = marketplace?.partialRefundsEnabled ?? true;
   const stats = trustStats(trust);
   const enriched = await Promise.all(trust.disputes.map((d) => enrichDispute(d)));
 
@@ -81,6 +86,11 @@ export default async function AdminTrustPage({ searchParams }: Props) {
 
       <section className="card-surface space-y-4 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Ledger disputes</h2>
+        <p className="text-xs text-muted">
+          {partialRefunds
+            ? "A partial refund request waits for a signed provider refund of that amount. The rest of the milestone can be released after approval."
+            : "Partial refunds are off. A request already recorded still waits for the provider."}
+        </p>
         {ledgerDisputes.length === 0 ? <p className="text-sm text-muted">No ledger disputes yet.</p> : null}
         {ledgerDisputes.map((dispute) => (
           <article key={dispute.id} className="rounded-xl border border-border p-4 text-sm">
@@ -112,7 +122,13 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                   </p>
                 ))}
                 {dispute.requestedRefundCents ? (
-                  <p className="mt-1 text-xs text-muted">Refund requested {formatMoney(dispute.requestedRefundCents)}. Waiting for the provider.</p>
+                  <p className="mt-1 text-xs text-muted">Refund requested {formatMoney(dispute.requestedRefundCents, dispute.funding.currency)}. Waiting for the provider.</p>
+                ) : null}
+                {dispute.milestone && dispute.milestone.refundedCents > 0 ? (
+                  <p className="mt-1 text-xs text-muted">
+                    Provider refunded {formatMoney(dispute.milestone.refundedCents, dispute.funding.currency)}.{" "}
+                    {formatMoney(dispute.milestone.amountCents - dispute.milestone.refundedCents, dispute.funding.currency)} left on this milestone.
+                  </p>
                 ) : null}
               </div>
             </div>
@@ -143,14 +159,16 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                     <option value="review">Mark under review</option>
                     <option value="release">Allow release</option>
                     <option value="refund">Request full refund</option>
-                    <option value="partial">Request partial refund</option>
+                    {partialRefunds ? <option value="partial">Request partial refund</option> : null}
                     <option value="withdraw">Withdraw</option>
                   </select>
                 </label>
-                <label className="text-xs font-semibold text-muted">
-                  Partial USD
-                  <input name="requestedUsd" type="number" min={1} step={1} className="mt-1 w-28 rounded-lg border border-border px-2 py-1.5 text-sm" />
-                </label>
+                {partialRefunds ? (
+                  <label className="text-xs font-semibold text-muted">
+                    Partial USD
+                    <input name="requestedUsd" type="number" min={1} step={1} className="mt-1 w-28 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                  </label>
+                ) : null}
                 <label className="text-xs font-semibold text-muted">
                   Note
                   <input name="note" className="mt-1 rounded-lg border border-border px-2 py-1.5 text-sm" />

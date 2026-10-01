@@ -4,6 +4,7 @@ import { resolveFee } from "@/lib/collaboration-fees";
 import {
   advanceMilestone,
   autoApproveDeadline,
+  releasableCents,
   canRequestPrefund,
   grossWithinCap,
   marketplaceDisposition,
@@ -126,6 +127,7 @@ export async function marketplaceConfig() {
     maxRevisions: settings?.maxRevisions ?? 2,
     maxEvidence: settings?.maxEvidence ?? 5,
     maxGrossCents: settings?.maxGrossCents ?? 0,
+    partialRefundsEnabled: settings?.partialRefundsEnabled ?? true,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
@@ -159,6 +161,7 @@ export async function saveMarketplaceSettings(input: {
   maxRevisions?: number;
   maxEvidence?: number;
   maxGrossCents?: number;
+  partialRefundsEnabled?: boolean;
   cancelUnconfirmed?: boolean;
 }) {
   await ensureMarketplaceDefaults();
@@ -185,6 +188,7 @@ export async function saveMarketplaceSettings(input: {
       ...(maxRevisions == null ? {} : { maxRevisions }),
       ...(maxEvidence == null ? {} : { maxEvidence }),
       ...(maxGrossCents == null ? {} : { maxGrossCents }),
+      ...(input.partialRefundsEnabled == null ? {} : { partialRefundsEnabled: input.partialRefundsEnabled }),
       ...(input.cancelUnconfirmed == null ? {} : { cancelUnconfirmed: input.cancelUnconfirmed }),
     },
   });
@@ -701,6 +705,7 @@ function presentFunding(row: {
     id: string;
     title: string;
     amountCents: number;
+    refundedCents: number;
     status: string;
     sortOrder: number;
     autoApproveAt: Date | null;
@@ -831,10 +836,22 @@ export async function applyMarketplaceEvent(input: {
   const disputeOpen = milestone
     ? await milestoneHasOpenDispute(funding.id, milestone.id)
     : false;
+  const left = milestone ? releasableCents(milestone.amountCents, milestone.refundedCents) : 0;
+  const refundRequest =
+    milestone && input.eventType === "payout.refunded"
+      ? await prisma.milestoneDispute.findFirst({
+          where: { fundingId: funding.id, milestoneId: milestone.id, status: "refund_requested" },
+          select: { requestedRefundCents: true },
+        })
+      : null;
   const expectedCents =
     input.eventType === "funding.held" || input.eventType === "funding.failed"
       ? funding.grossCents
-      : (milestone?.amountCents ?? -1);
+      : input.eventType === "payout.released"
+        ? left > 0
+          ? left
+          : -1
+        : (milestone?.amountCents ?? -1);
   const disposition = marketplaceDisposition({
     eventType: input.eventType,
     fundingStatus: funding.status,
@@ -843,6 +860,8 @@ export async function applyMarketplaceEvent(input: {
     heldCents: prior.heldCents,
     milestoneStatus: milestone?.status,
     disputeOpen,
+    requestedRefundCents: refundRequest ? (refundRequest.requestedRefundCents ?? -1) : null,
+    milestoneRemainingCents: milestone && input.eventType === "payout.refunded" ? left : null,
   });
   if (disposition === "reject") return { applied: false, result: "rejected" as const };
 
@@ -903,9 +922,9 @@ export async function applyMarketplaceEvent(input: {
         if (blocking) throw new LedgerReject("This milestone is in dispute.");
         const fresh = await tx.ledgerEntry.findMany({ where: { fundingId: funding.id } });
         const held = reconcileLedger(ledgerMovements(fresh), funding.grossCents);
-        if (held.heldCents < milestone.amountCents) throw new LedgerReject("The provider is not holding enough.");
+        if (left <= 0 || held.heldCents < left) throw new LedgerReject("The provider is not holding enough.");
         const released = await tx.fundingMilestone.updateMany({
-          where: { id: milestone.id, status: "approved" },
+          where: { id: milestone.id, status: "approved", refundedCents: milestone.refundedCents },
           data: { status: "released" },
         });
         if (released.count !== 1) throw new LedgerReject("Milestone is not approved.");
@@ -914,13 +933,13 @@ export async function applyMarketplaceEvent(input: {
             fundingId: funding.id,
             milestoneId: milestone.id,
             kind: "release",
-            amountCents: milestone.amountCents,
+            amountCents: left,
             provider: providerKey,
             eventId,
           },
         });
         const parties = readShareSnapshot(funding.shareSnapshotJson);
-        const lines = parties ? shareLines(milestone.amountCents, parties) : null;
+        const lines = parties ? shareLines(left, parties) : null;
         if (lines) {
           for (const line of lines) {
             await tx.ledgerEntry.create({
@@ -964,11 +983,20 @@ export async function applyMarketplaceEvent(input: {
             data: { status: "refunded" },
           });
         }
-        if (milestone && input.amountCents >= milestone.amountCents) {
-          await tx.fundingMilestone.updateMany({
-            where: { id: milestone.id, status: { notIn: ["released"] } },
-            data: { status: "refunded" },
+        if (milestone) {
+          const nextRefunded = milestone.refundedCents + input.amountCents;
+          const settles = nextRefunded >= milestone.amountCents;
+          const updated = await tx.fundingMilestone.updateMany({
+            where: {
+              id: milestone.id,
+              refundedCents: milestone.refundedCents,
+              status: { not: "released" },
+            },
+            data: settles
+              ? { status: "refunded", refundedCents: milestone.amountCents }
+              : { refundedCents: nextRefunded },
           });
+          if (updated.count !== 1) throw new LedgerReject("That milestone cannot take this refund.");
         }
       }
     });

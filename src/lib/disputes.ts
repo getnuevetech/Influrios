@@ -43,6 +43,7 @@ export function decideDispute(input: {
   requestedCents: number;
   heldCents: number;
   milestoneCents: number;
+  partialAllowed?: boolean;
 }):
   | { ok: true; status: string; requestedRefundCents: number | null }
   | { ok: false; error: string } {
@@ -64,6 +65,9 @@ export function decideDispute(input: {
   if (input.action === "refund") {
     if (cap <= 0) return { ok: false, error: "Nothing is held for a refund." };
     return { ok: true, status: "refund_requested", requestedRefundCents: cap };
+  }
+  if (input.partialAllowed === false) {
+    return { ok: false, error: "Partial refunds are turned off. Nothing was refunded." };
   }
   if (input.requestedCents <= 0 || input.requestedCents > cap) {
     return { ok: false, error: "A partial refund must be greater than zero and within the held milestone amount." };

@@ -181,7 +181,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Review window</h2>
         <p className="mt-1 text-xs text-muted">
-          A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested.
+          A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested. Turning partial refunds off blocks a new request. A request already recorded still waits for the provider, and the rest of that milestone can be released.
         </p>
         {canManage ? (
           <form action={actionSaveMarketplaceSettings} className="mt-4 flex flex-wrap items-end gap-3">
@@ -231,6 +231,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               />
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="partialRefundsEnabled" defaultChecked={config.partialRefundsEnabled} className="accent-violet" />
+              Allow a partial refund request
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
               Allow cancelling a prefund before the provider confirms it
             </label>
@@ -241,7 +245,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         ) : (
           <p className="mt-3 text-sm text-indigo">
             {config.reviewWindowHours} hours · {config.maxRevisions} revisions · {config.maxEvidence} evidence · cap{" "}
-            {config.maxGrossCents > 0 ? formatMoney(config.maxGrossCents) : "off"}
+            {config.maxGrossCents > 0 ? formatMoney(config.maxGrossCents) : "off"} · partial refunds{" "}
+            {config.partialRefundsEnabled ? "on" : "off"}
           </p>
         )}
       </section>
@@ -808,6 +813,9 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               {funding.milestones.map((milestone) => (
                 <li key={milestone.id}>
                   {milestone.title} · {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status}
+                  {milestone.refundedCents > 0
+                    ? ` · refunded ${formatMoney(milestone.refundedCents, funding.currency)} · ${formatMoney(milestone.amountCents - milestone.refundedCents, funding.currency)} left`
+                    : ""}
                   {milestone.revisionLimit > 0 ? ` · revisions ${milestone.revisionCount} of ${milestone.revisionLimit}` : " · no revisions"}
                 </li>
               ))}
