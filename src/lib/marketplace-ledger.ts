@@ -111,6 +111,7 @@ export async function marketplaceConfig() {
   return {
     reviewWindowHours: settings?.reviewWindowHours ?? 72,
     maxRevisions: settings?.maxRevisions ?? 2,
+    maxEvidence: settings?.maxEvidence ?? 5,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
@@ -142,6 +143,7 @@ export async function marketplaceConfig() {
 export async function saveMarketplaceSettings(input: {
   reviewWindowHours: number;
   maxRevisions?: number;
+  maxEvidence?: number;
   cancelUnconfirmed?: boolean;
 }) {
   await ensureMarketplaceDefaults();
@@ -153,11 +155,16 @@ export async function saveMarketplaceSettings(input: {
   if (maxRevisions != null && (!Number.isInteger(maxRevisions) || maxRevisions < 0 || maxRevisions > 20)) {
     throw new Error("Revision limit must be from 0 to 20.");
   }
+  const maxEvidence = input.maxEvidence == null ? null : Math.round(input.maxEvidence);
+  if (maxEvidence != null && (!Number.isInteger(maxEvidence) || maxEvidence < 0 || maxEvidence > 20)) {
+    throw new Error("Evidence limit must be from 0 to 20.");
+  }
   return prisma.marketplaceSettings.update({
     where: { id: "default" },
     data: {
       reviewWindowHours: hours,
       ...(maxRevisions == null ? {} : { maxRevisions }),
+      ...(maxEvidence == null ? {} : { maxEvidence }),
       ...(input.cancelUnconfirmed == null ? {} : { cancelUnconfirmed: input.cancelUnconfirmed }),
     },
   });
@@ -599,7 +606,16 @@ export async function listFundings() {
     include: {
       milestones: { orderBy: { sortOrder: "asc" } },
       entries: { orderBy: { createdAt: "asc" } },
-      disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } }, select: { id: true, milestoneId: true, status: true } },
+      disputes: {
+        where: { status: { in: ["open", "under_review", "refund_requested"] } },
+        select: {
+          id: true,
+          milestoneId: true,
+          status: true,
+          evidenceLimit: true,
+          notes: { orderBy: { createdAt: "asc" }, select: { id: true, author: true, body: true, url: true } },
+        },
+      },
       repeatOf: { select: { id: true, title: true } },
     },
     take: 50,
@@ -616,7 +632,16 @@ export async function listFundingsForCreator(creatorSlug: string) {
     include: {
       milestones: { orderBy: { sortOrder: "asc" } },
       entries: true,
-      disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } }, select: { id: true, milestoneId: true, status: true } },
+      disputes: {
+        where: { status: { in: ["open", "under_review", "refund_requested"] } },
+        select: {
+          id: true,
+          milestoneId: true,
+          status: true,
+          evidenceLimit: true,
+          notes: { orderBy: { createdAt: "asc" }, select: { id: true, author: true, body: true, url: true } },
+        },
+      },
       repeatOf: { select: { id: true, title: true } },
     },
     take: 20,
@@ -649,7 +674,13 @@ function presentFunding(row: {
     revisionNote: string;
   }[];
   entries: { kind: string; amountCents: number }[];
-  disputes?: { id: string; milestoneId: string | null; status: string }[];
+  disputes?: {
+    id: string;
+    milestoneId: string | null;
+    status: string;
+    evidenceLimit: number;
+    notes: { id: string; author: string; body: string; url: string }[];
+  }[];
   attributionLabel: string;
   repeatOf: { id: string; title: string } | null;
   scheduleKind: string;

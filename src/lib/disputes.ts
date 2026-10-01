@@ -71,6 +71,38 @@ export function decideDispute(input: {
   return { ok: true, status: "refund_requested", requestedRefundCents: input.requestedCents };
 }
 
+/** Extra evidence is allowed only while the dispute is open and under the copied cap. */
+export function canAddEvidence(input: { status: string; evidenceCount: number; evidenceLimit: number }) {
+  if (!disputeIsOpen(input.status)) return { ok: false as const, error: "That dispute is closed." };
+  if (!Number.isInteger(input.evidenceCount) || input.evidenceCount < 0) {
+    return { ok: false as const, error: "That dispute cannot take more evidence." };
+  }
+  if (!Number.isInteger(input.evidenceLimit) || input.evidenceLimit < 0) {
+    return { ok: false as const, error: "That dispute cannot take more evidence." };
+  }
+  if (input.evidenceCount >= input.evidenceLimit) {
+    return { ok: false as const, error: "This dispute has used its evidence limit." };
+  }
+  return { ok: true as const };
+}
+
+/** A stored link is https only. An empty value means the note has no link. The server does not fetch it. */
+export function evidenceLink(raw: string): { ok: true; url: string } | { ok: false; error: string } {
+  const text = raw.trim();
+  if (!text) return { ok: true, url: "" };
+  if (text.length > 300) return { ok: false, error: "That link is too long." };
+  let parsed: URL;
+  try {
+    parsed = new URL(text);
+  } catch {
+    return { ok: false, error: "Use an https link." };
+  }
+  if (parsed.protocol !== "https:" || parsed.username || parsed.password || !parsed.hostname) {
+    return { ok: false, error: "Use an https link." };
+  }
+  return { ok: true, url: parsed.toString() };
+}
+
 export function disputeStatusAfterRefund(input: { requestedCents: number | null; refundedCents: number; milestoneCents: number }) {
   if (input.requestedCents == null || input.refundedCents <= 0 || input.refundedCents > input.requestedCents) return null;
   if (input.refundedCents >= input.milestoneCents) return "resolved_refund" as const;

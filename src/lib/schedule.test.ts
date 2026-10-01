@@ -82,7 +82,8 @@ describe("staged and recurring prefunds", () => {
     const sources = await listAttributionSources();
     const source = sources.find((row) => row.active);
     if (!source) throw new Error("expected an attribution source");
-    const before = await prisma.collaborationFunding.count();
+    const titled = { title: { startsWith: "Staged while provider is off" } };
+    const before = await prisma.collaborationFunding.count({ where: titled });
     const result = await requestPrefund({
       jurisdictionCode: "US",
       businessName: "Harbor Co",
@@ -95,7 +96,7 @@ describe("staged and recurring prefunds", () => {
     });
     assert.equal(result.ok, false);
     if (!result.ok) assert.match(result.error, /not ready/);
-    assert.equal(await prisma.collaborationFunding.count(), before);
+    assert.equal(await prisma.collaborationFunding.count({ where: titled }), before);
   });
 
   it("splits a staged gross into unfunded prefunds and opens the next recurrence only after the interval", async () => {
