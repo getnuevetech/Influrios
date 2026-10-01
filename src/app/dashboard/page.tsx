@@ -433,6 +433,9 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span>
                           {milestone.title} · {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status}
+                          {milestone.refundedCents > 0
+                            ? ` · refunded ${formatMoney(milestone.refundedCents, funding.currency)} · ${formatMoney(milestone.amountCents - milestone.refundedCents, funding.currency)} left`
+                            : ""}
                           {milestone.revisionCount > 0 ? ` · revision ${milestone.revisionCount} of ${milestone.revisionLimit}` : ""}
                         </span>
                         {funding.status === "held" && milestone.status === "pending" ? (

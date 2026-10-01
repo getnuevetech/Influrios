@@ -10,9 +10,16 @@ import {
 } from "@/lib/disputes";
 
 export type { DisputeDecision };
-import { ledgerMovements, reconcileLedger } from "@/lib/ledger";
+import { ledgerMovements, reconcileLedger, releasableCents } from "@/lib/ledger";
 
 const OPEN = ["open", "under_review", "refund_requested"];
+
+let partialRefundsForTests: boolean | null = null;
+
+/** Pins the partial-refund switch for one test without writing the shared settings row. */
+export function setPartialRefundsForTests(enabled: boolean | null) {
+  partialRefundsForTests = enabled;
+}
 
 export async function ensureDisputeReasons() {
   await prisma.marketplaceSettings.upsert({
@@ -198,13 +205,15 @@ export async function decideMilestoneDispute(input: {
     include: { funding: { include: { entries: true } }, milestone: true },
   });
   if (!dispute || !dispute.milestone) return { ok: false as const, error: "Dispute not found." };
+  const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
   const held = reconcileLedger(ledgerMovements(dispute.funding.entries), dispute.funding.grossCents);
   const decision = decideDispute({
     status: dispute.status,
     action: input.action,
     requestedCents: input.requestedCents ?? 0,
     heldCents: held.heldCents,
-    milestoneCents: dispute.milestone.amountCents,
+    milestoneCents: releasableCents(dispute.milestone.amountCents, dispute.milestone.refundedCents),
+    partialAllowed: partialRefundsForTests ?? settings?.partialRefundsEnabled ?? true,
   });
   if (!decision.ok) return decision;
   await prisma.milestoneDispute.update({

@@ -338,6 +338,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         </div>
                         <p className="mt-0.5 text-xs text-muted">
                           {formatMoney(milestone.amountCents, deal.currency)}
+                          {milestone.refundedCents > 0
+                            ? ` · refunded ${formatMoney(milestone.refundedCents, deal.currency)} · ${formatMoney(milestone.amountCents - milestone.refundedCents, deal.currency)} left`
+                            : ""}
                           {milestone.revisionLimit > 0
                             ? ` · revisions ${milestone.revisionCount} of ${milestone.revisionLimit}`
                             : " · no revisions"}

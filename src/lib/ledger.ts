@@ -160,6 +160,13 @@ export function reconcileLedger(entries: LedgerMovement[], grossCents: number) {
   return { heldCents: held, releasedCents: released, refundedCents: refunded, heldInCents: heldIn, balanced };
 }
 
+/** What is still owed on a milestone after signed refunds. The original amount stays. */
+export function releasableCents(amountCents: number, refundedCents: number) {
+  if (!Number.isInteger(amountCents) || amountCents <= 0) return 0;
+  const refunded = Number.isInteger(refundedCents) && refundedCents > 0 ? refundedCents : 0;
+  return Math.max(amountCents - refunded, 0);
+}
+
 export type MarketplaceDisposition = "apply" | "ignore" | "reject";
 
 export function marketplaceDisposition(input: {
@@ -170,6 +177,10 @@ export function marketplaceDisposition(input: {
   heldCents: number;
   milestoneStatus?: string | null;
   disputeOpen?: boolean;
+  /** Set when this milestone has a refund request. The webhook must match it. */
+  requestedRefundCents?: number | null;
+  /** Set for a milestone refund. The webhook cannot exceed what that milestone has left. */
+  milestoneRemainingCents?: number | null;
 }): MarketplaceDisposition {
   if (input.eventType === "funding.held") {
     if (input.fundingStatus === "awaiting_provider" && input.amountCents === input.expectedCents) return "apply";
@@ -190,8 +201,10 @@ export function marketplaceDisposition(input: {
     return "reject";
   }
   if (input.eventType === "payout.refunded") {
-    if (input.amountCents > 0 && input.amountCents <= input.heldCents && input.heldCents > 0) return "apply";
-    return "reject";
+    if (!(input.amountCents > 0 && input.amountCents <= input.heldCents && input.heldCents > 0)) return "reject";
+    if (input.milestoneRemainingCents != null && input.amountCents > input.milestoneRemainingCents) return "reject";
+    if (input.requestedRefundCents != null && input.amountCents !== input.requestedRefundCents) return "reject";
+    return "apply";
   }
   return "ignore";
 }

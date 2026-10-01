@@ -994,6 +994,7 @@ model MarketplaceSettings {
   maxRevisions             Int      @default(2)
   maxEvidence              Int      @default(5)
   maxGrossCents            Int      @default(0)
+  partialRefundsEnabled    Boolean  @default(true)
   updatedAt                DateTime @updatedAt
 }
 
@@ -1063,6 +1064,7 @@ model FundingMilestone {
   funding           CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
   title             String
   amountCents       Int
+  refundedCents     Int                  @default(0)
   sortOrder         Int                  @default(0)
   status            String               @default("pending")
   reviewWindowHours Int

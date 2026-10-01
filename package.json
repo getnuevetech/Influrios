@@ -9,7 +9,7 @@
     "lint": "eslint",
     "check:brand": "tsx scripts/check-banned-strings.ts",
     "check:migrations": "prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url \"$SHADOW_DATABASE_URL\" --exit-code",
-    "test": "tsx --test src/lib/entitlements.test.ts src/lib/taxonomy.test.ts src/lib/onboarding.test.ts src/lib/account-policy.test.ts src/lib/site-config.test.ts src/lib/invitations.test.ts src/lib/collaborations.test.ts src/lib/providers.test.ts src/lib/business-queue.test.ts src/lib/social-sync.test.ts src/lib/legal.test.ts src/lib/short-link.test.ts src/lib/phase-h.test.ts src/lib/mvp-gate.test.ts src/lib/ledger.test.ts src/lib/disputes.test.ts src/lib/attribution.test.ts src/lib/schedule.test.ts src/lib/fx-share.test.ts src/lib/wise-fx.test.ts src/lib/revisions.test.ts src/lib/evidence.test.ts src/lib/risk.test.ts",
+    "test": "tsx --test src/lib/entitlements.test.ts src/lib/taxonomy.test.ts src/lib/onboarding.test.ts src/lib/account-policy.test.ts src/lib/site-config.test.ts src/lib/invitations.test.ts src/lib/collaborations.test.ts src/lib/providers.test.ts src/lib/business-queue.test.ts src/lib/social-sync.test.ts src/lib/legal.test.ts src/lib/short-link.test.ts src/lib/phase-h.test.ts src/lib/mvp-gate.test.ts src/lib/ledger.test.ts src/lib/disputes.test.ts src/lib/attribution.test.ts src/lib/schedule.test.ts src/lib/fx-share.test.ts src/lib/wise-fx.test.ts src/lib/revisions.test.ts src/lib/evidence.test.ts src/lib/risk.test.ts src/lib/partial-refund.test.ts",
     "db:up": "bash deploy/scripts/db-up.sh",
     "db:down": "bash deploy/scripts/db-down.sh",
     "db:generate": "prisma generate",
