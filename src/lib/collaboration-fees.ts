@@ -1,11 +1,13 @@
 /**
- * Phase 12.1 — Collaboration Fee Rules Engine (addendum-aligned demo).
+ * Phase 12.1 / Phase O — Collaboration Fee Rules Engine.
  * Fee % / fixed amounts are admin-configured, never hard-coded in UI flows.
- * Accepted quotes produce an immutable fee snapshot.
+ * Accepted quotes produce an immutable fee snapshot (admin simulator freezes here;
+ * marketplace prefunds freeze on CollaborationFunding.feeSnapshotJson).
  */
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { prisma } from "@/lib/db";
 
 export type FeeMethod = "percent" | "fixed" | "percent_plus_fixed";
 export type FeePayer = "brand" | "creator" | "split";
@@ -53,138 +55,358 @@ export type FeeResolveContext = {
   asOf?: string;
 };
 
+export type FeeJurisdiction = {
+  code: string;
+  label: string;
+  protectedPaymentsEnabled: boolean;
+  escrowTermAllowed: boolean;
+};
+
 export type FeeStore = {
   rules: CollaborationFeeRule[];
   snapshots: FeeSnapshot[];
-  jurisdictions: {
-    code: string;
-    label: string;
-    protectedPaymentsEnabled: boolean;
-    escrowTermAllowed: boolean;
-  }[];
+  jurisdictions: FeeJurisdiction[];
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_PATH = path.join(DATA_DIR, "collaboration-fees.json");
+const LEGACY_STORE_PATH = path.join(DATA_DIR, "collaboration-fees.json");
+const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "collaboration-fees.json.migrated");
+const SNAPSHOT_CAP = 100;
 const now = () => new Date().toISOString();
 const id = (p: string) => `${p}_${randomBytes(4).toString("hex")}`;
 
-const DEFAULT_STORE: FeeStore = {
-  jurisdictions: [
-    {
-      code: "US",
-      label: "United States",
-      protectedPaymentsEnabled: true,
-      escrowTermAllowed: false,
-    },
-    {
-      code: "GB",
-      label: "United Kingdom",
-      protectedPaymentsEnabled: true,
-      escrowTermAllowed: false,
-    },
-    {
-      code: "NG",
-      label: "Nigeria",
-      protectedPaymentsEnabled: false,
-      escrowTermAllowed: false,
-    },
-  ],
-  rules: [
-    {
-      id: "rule_default_contracted",
-      name: "Default contracted collaboration fee",
-      version: 1,
-      active: true,
-      priority: 100,
-      jurisdiction: "*",
-      serviceLevel: "contracted",
-      method: "percent",
-      percentBps: 1000,
-      fixedCents: 0,
-      minFeeCents: 500,
-      maxFeeCents: null,
-      payer: "brand",
-      effectiveFrom: "2026-01-01T00:00:00.000Z",
-      notes: "Launch default — 10% of gross, min $5. Admin-editable.",
-    },
-    {
-      id: "rule_us_managed",
-      name: "US managed introduction",
-      version: 1,
-      active: true,
-      priority: 200,
-      jurisdiction: "US",
-      serviceLevel: "managed_intro",
-      method: "percent_plus_fixed",
-      percentBps: 1500,
-      fixedCents: 2500,
-      minFeeCents: 2500,
-      maxFeeCents: 50000,
-      payer: "brand",
-      effectiveFrom: "2026-01-01T00:00:00.000Z",
-      notes: "Higher touch managed intro — 15% + $25, capped.",
-    },
-    {
-      id: "rule_discovery",
-      name: "Discovery-only (no transaction fee)",
-      version: 1,
-      active: true,
-      priority: 50,
-      jurisdiction: "*",
-      serviceLevel: "discovery",
-      method: "fixed",
-      percentBps: 0,
-      fixedCents: 0,
-      minFeeCents: 0,
-      maxFeeCents: 0,
-      payer: "brand",
-      effectiveFrom: "2026-01-01T00:00:00.000Z",
-      notes: "Subscription-covered discovery connects — $0 transaction fee.",
-    },
-  ],
-  snapshots: [],
-};
+const DEFAULT_JURISDICTIONS: FeeJurisdiction[] = [
+  {
+    code: "US",
+    label: "United States",
+    protectedPaymentsEnabled: true,
+    escrowTermAllowed: false,
+  },
+  {
+    code: "GB",
+    label: "United Kingdom",
+    protectedPaymentsEnabled: true,
+    escrowTermAllowed: false,
+  },
+  {
+    code: "NG",
+    label: "Nigeria",
+    protectedPaymentsEnabled: false,
+    escrowTermAllowed: false,
+  },
+];
 
-async function ensureStore(): Promise<FeeStore> {
+const DEFAULT_RULES: CollaborationFeeRule[] = [
+  {
+    id: "rule_default_contracted",
+    name: "Default contracted collaboration fee",
+    version: 1,
+    active: true,
+    priority: 100,
+    jurisdiction: "*",
+    serviceLevel: "contracted",
+    method: "percent",
+    percentBps: 1000,
+    fixedCents: 0,
+    minFeeCents: 500,
+    maxFeeCents: null,
+    payer: "brand",
+    effectiveFrom: "2026-01-01T00:00:00.000Z",
+    notes: "Launch default — 10% of gross, min $5. Admin-editable.",
+  },
+  {
+    id: "rule_us_managed",
+    name: "US managed introduction",
+    version: 1,
+    active: true,
+    priority: 200,
+    jurisdiction: "US",
+    serviceLevel: "managed_intro",
+    method: "percent_plus_fixed",
+    percentBps: 1500,
+    fixedCents: 2500,
+    minFeeCents: 2500,
+    maxFeeCents: 50000,
+    payer: "brand",
+    effectiveFrom: "2026-01-01T00:00:00.000Z",
+    notes: "Higher touch managed intro — 15% + $25, capped.",
+  },
+  {
+    id: "rule_discovery",
+    name: "Discovery-only (no transaction fee)",
+    version: 1,
+    active: true,
+    priority: 50,
+    jurisdiction: "*",
+    serviceLevel: "discovery",
+    method: "fixed",
+    percentBps: 0,
+    fixedCents: 0,
+    minFeeCents: 0,
+    maxFeeCents: 0,
+    payer: "brand",
+    effectiveFrom: "2026-01-01T00:00:00.000Z",
+    notes: "Subscription-covered discovery connects — $0 transaction fee.",
+  },
+];
+
+function asFeeMethod(value: string): FeeMethod {
+  if (value === "fixed" || value === "percent_plus_fixed") return value;
+  return "percent";
+}
+
+function asFeePayer(value: string): FeePayer {
+  if (value === "creator" || value === "split") return value;
+  return "brand";
+}
+
+function ruleFromRow(row: {
+  id: string;
+  name: string;
+  version: number;
+  active: boolean;
+  priority: number;
+  jurisdiction: string;
+  serviceLevel: string;
+  minGrossCents: number | null;
+  maxGrossCents: number | null;
+  method: string;
+  percentBps: number;
+  fixedCents: number;
+  minFeeCents: number;
+  maxFeeCents: number | null;
+  payer: string;
+  effectiveFrom: Date;
+  notes: string;
+}): CollaborationFeeRule {
+  return {
+    id: row.id,
+    name: row.name,
+    version: row.version,
+    active: row.active,
+    priority: row.priority,
+    jurisdiction: row.jurisdiction,
+    serviceLevel: row.serviceLevel,
+    minGrossCents: row.minGrossCents ?? undefined,
+    maxGrossCents: row.maxGrossCents ?? undefined,
+    method: asFeeMethod(row.method),
+    percentBps: row.percentBps,
+    fixedCents: row.fixedCents,
+    minFeeCents: row.minFeeCents,
+    maxFeeCents: row.maxFeeCents,
+    payer: asFeePayer(row.payer),
+    effectiveFrom: row.effectiveFrom.toISOString(),
+    notes: row.notes,
+  };
+}
+
+function snapshotFromRow(row: {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  ruleVersion: number;
+  method: string;
+  payer: string;
+  basisCents: number;
+  percentBps: number;
+  fixedCents: number;
+  calculatedFeeCents: number;
+  jurisdiction: string;
+  serviceLevel: string;
+  createdAt: Date;
+}): FeeSnapshot {
+  return {
+    id: row.id,
+    ruleId: row.ruleId,
+    ruleName: row.ruleName,
+    ruleVersion: row.ruleVersion,
+    method: asFeeMethod(row.method),
+    payer: asFeePayer(row.payer),
+    basisCents: row.basisCents,
+    percentBps: row.percentBps,
+    fixedCents: row.fixedCents,
+    calculatedFeeCents: row.calculatedFeeCents,
+    jurisdiction: row.jurisdiction,
+    serviceLevel: row.serviceLevel,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function ruleCreateData(rule: CollaborationFeeRule) {
+  return {
+    id: rule.id,
+    name: rule.name,
+    version: rule.version,
+    active: rule.active,
+    priority: rule.priority,
+    jurisdiction: rule.jurisdiction,
+    serviceLevel: rule.serviceLevel,
+    minGrossCents: rule.minGrossCents ?? null,
+    maxGrossCents: rule.maxGrossCents ?? null,
+    method: rule.method,
+    percentBps: rule.percentBps,
+    fixedCents: rule.fixedCents,
+    minFeeCents: rule.minFeeCents,
+    maxFeeCents: rule.maxFeeCents,
+    payer: rule.payer,
+    effectiveFrom: new Date(rule.effectiveFrom),
+    notes: rule.notes,
+  };
+}
+
+async function readLegacyStore(): Promise<{
+  rules: CollaborationFeeRule[];
+  snapshots: FeeSnapshot[];
+  jurisdictions: FeeJurisdiction[];
+} | null> {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as FeeStore;
-    return {
-      ...DEFAULT_STORE,
-      ...parsed,
-      rules: parsed.rules?.length ? parsed.rules : DEFAULT_STORE.rules,
-      jurisdictions: parsed.jurisdictions?.length
-        ? parsed.jurisdictions
-        : DEFAULT_STORE.jurisdictions,
-      snapshots: parsed.snapshots ?? [],
-    };
+    const raw = await fs.readFile(LEGACY_STORE_PATH, "utf8");
+    const parsed = JSON.parse(raw) as Partial<FeeStore>;
+    const rules = (parsed.rules ?? [])
+      .filter((rule): rule is CollaborationFeeRule => Boolean(rule?.id && rule?.name))
+      .map((rule) => ({
+        ...rule,
+        method: asFeeMethod(rule.method),
+        payer: asFeePayer(rule.payer),
+        version: Number(rule.version) || 1,
+        active: Boolean(rule.active),
+        priority: Number(rule.priority) || 100,
+        jurisdiction: rule.jurisdiction || "*",
+        serviceLevel: rule.serviceLevel || "contracted",
+        percentBps: Number(rule.percentBps) || 0,
+        fixedCents: Number(rule.fixedCents) || 0,
+        minFeeCents: Number(rule.minFeeCents) || 0,
+        maxFeeCents: rule.maxFeeCents == null ? null : Number(rule.maxFeeCents),
+        effectiveFrom: rule.effectiveFrom || "2026-01-01T00:00:00.000Z",
+        notes: rule.notes || "",
+      }));
+    const snapshots = (parsed.snapshots ?? [])
+      .filter((snap): snap is FeeSnapshot => Boolean(snap?.id && snap?.ruleId))
+      .map((snap) => ({
+        ...snap,
+        method: asFeeMethod(snap.method),
+        payer: asFeePayer(snap.payer),
+        ruleVersion: Number(snap.ruleVersion) || 1,
+        basisCents: Number(snap.basisCents) || 0,
+        percentBps: Number(snap.percentBps) || 0,
+        fixedCents: Number(snap.fixedCents) || 0,
+        calculatedFeeCents: Number(snap.calculatedFeeCents) || 0,
+        jurisdiction: snap.jurisdiction || "*",
+        serviceLevel: snap.serviceLevel || "contracted",
+        createdAt: snap.createdAt || now(),
+      }));
+    const jurisdictions = (parsed.jurisdictions ?? [])
+      .filter((row): row is FeeJurisdiction => Boolean(row?.code && row?.label))
+      .map((row) => ({
+        code: row.code,
+        label: row.label,
+        protectedPaymentsEnabled: Boolean(row.protectedPaymentsEnabled),
+        escrowTermAllowed: Boolean(row.escrowTermAllowed),
+      }));
+    return { rules, snapshots, jurisdictions };
+  } catch {
+    return null;
+  }
+}
+
+async function markLegacyMigrated() {
+  try {
+    await fs.rename(LEGACY_STORE_PATH, LEGACY_MIGRATED_PATH);
   } catch {
     try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_STORE, null, 2));
+      await fs.unlink(LEGACY_STORE_PATH);
     } catch {
-      // read-only build contexts
+      /* ignore */
     }
-    return structuredClone(DEFAULT_STORE);
   }
 }
 
-async function saveStore(store: FeeStore) {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2));
-  } catch {
-    /* ignore write failures in read-only environments */
+async function ensureJurisdictions(seed?: FeeJurisdiction[]) {
+  const existing = await prisma.collaborationJurisdiction.count();
+  if (existing > 0) return;
+  const rows = seed?.length ? seed : DEFAULT_JURISDICTIONS;
+  for (const row of rows) {
+    await prisma.collaborationJurisdiction.upsert({
+      where: { code: row.code },
+      update: {},
+      create: {
+        code: row.code,
+        label: row.label,
+        protectedPaymentsEnabled: row.protectedPaymentsEnabled,
+        escrowTermAllowed: row.escrowTermAllowed,
+        currency: row.code === "GB" ? "GBP" : row.code === "NG" ? "NGN" : "USD",
+        minorDigits: 2,
+        providerCode: "primary",
+      },
+    });
   }
 }
 
-export async function getFeeStore() {
-  return ensureStore();
+async function ensureFeeDefaults() {
+  const ruleCount = await prisma.collaborationFeeRule.count();
+  if (ruleCount > 0) {
+    await ensureJurisdictions();
+    return;
+  }
+
+  const legacy = await readLegacyStore();
+  const rules = legacy?.rules?.length ? legacy.rules : DEFAULT_RULES;
+  const snapshots = legacy?.snapshots ?? [];
+
+  await prisma.$transaction(async (tx) => {
+    const stillEmpty = await tx.collaborationFeeRule.count();
+    if (stillEmpty > 0) return;
+    for (const rule of rules) {
+      await tx.collaborationFeeRule.create({ data: ruleCreateData(rule) });
+    }
+    for (const snap of snapshots.slice(0, SNAPSHOT_CAP)) {
+      await tx.collaborationFeeSnapshot.create({
+        data: {
+          id: snap.id,
+          ruleId: snap.ruleId,
+          ruleName: snap.ruleName,
+          ruleVersion: snap.ruleVersion,
+          method: snap.method,
+          payer: snap.payer,
+          basisCents: snap.basisCents,
+          percentBps: snap.percentBps,
+          fixedCents: snap.fixedCents,
+          calculatedFeeCents: snap.calculatedFeeCents,
+          jurisdiction: snap.jurisdiction,
+          serviceLevel: snap.serviceLevel,
+          createdAt: new Date(snap.createdAt),
+        },
+      });
+    }
+  });
+
+  await ensureJurisdictions(legacy?.jurisdictions);
+  if (legacy) await markLegacyMigrated();
 }
 
-function matchesRule(rule: CollaborationFeeRule, ctx: FeeResolveContext, asOf: string) {
+export async function getFeeStore(): Promise<FeeStore> {
+  await ensureFeeDefaults();
+  const [rules, snapshots, jurisdictions] = await Promise.all([
+    prisma.collaborationFeeRule.findMany({ orderBy: [{ priority: "desc" }, { id: "asc" }] }),
+    prisma.collaborationFeeSnapshot.findMany({
+      orderBy: { createdAt: "desc" },
+      take: SNAPSHOT_CAP,
+    }),
+    prisma.collaborationJurisdiction.findMany({ orderBy: { code: "asc" } }),
+  ]);
+  return {
+    rules: rules.map(ruleFromRow),
+    snapshots: snapshots.map(snapshotFromRow),
+    jurisdictions: jurisdictions.map((row) => ({
+      code: row.code,
+      label: row.label,
+      protectedPaymentsEnabled: row.protectedPaymentsEnabled,
+      escrowTermAllowed: row.escrowTermAllowed,
+    })),
+  };
+}
+
+export function matchesRule(rule: CollaborationFeeRule, ctx: FeeResolveContext, asOf: string) {
   if (!rule.active) return false;
   if (rule.effectiveFrom > asOf) return false;
   if (rule.jurisdiction !== "*" && rule.jurisdiction !== ctx.jurisdiction) return false;
@@ -194,7 +416,7 @@ function matchesRule(rule: CollaborationFeeRule, ctx: FeeResolveContext, asOf: s
   return true;
 }
 
-function calculateFeeCents(rule: CollaborationFeeRule, basisCents: number) {
+export function calculateFeeCents(rule: CollaborationFeeRule, basisCents: number) {
   let fee = 0;
   if (rule.method === "percent" || rule.method === "percent_plus_fixed") {
     fee += Math.round((basisCents * rule.percentBps) / 10_000);
@@ -207,11 +429,8 @@ function calculateFeeCents(rule: CollaborationFeeRule, basisCents: number) {
   return fee;
 }
 
-/** Deterministic fee resolution — highest priority, then most specific jurisdiction/service. */
-export async function resolveFee(ctx: FeeResolveContext) {
-  const store = await ensureStore();
-  const asOf = ctx.asOf ?? now();
-  const candidates = store.rules
+export function pickWinningRule(rules: CollaborationFeeRule[], ctx: FeeResolveContext, asOf: string) {
+  return rules
     .filter((r) => matchesRule(r, ctx, asOf))
     .sort((a, b) => {
       if (b.priority !== a.priority) return b.priority - a.priority;
@@ -221,6 +440,14 @@ export async function resolveFee(ctx: FeeResolveContext) {
         (b.jurisdiction === "*" ? 0 : 1) + (b.serviceLevel === "*" ? 0 : 1);
       return bSpec - aSpec;
     });
+}
+
+/** Deterministic fee resolution — highest priority, then most specific jurisdiction/service. */
+export async function resolveFee(ctx: FeeResolveContext) {
+  await ensureFeeDefaults();
+  const asOf = ctx.asOf ?? now();
+  const rows = await prisma.collaborationFeeRule.findMany();
+  const candidates = pickWinningRule(rows.map(ruleFromRow), ctx, asOf);
 
   const winner = candidates[0] ?? null;
   if (!winner) {
@@ -246,46 +473,77 @@ export async function createFeeSnapshot(ctx: FeeResolveContext) {
   const { rule, feeCents, explanation } = await resolveFee(ctx);
   if (!rule) throw new Error(explanation);
 
-  const snapshot: FeeSnapshot = {
-    id: id("feesnap"),
-    ruleId: rule.id,
-    ruleName: rule.name,
-    ruleVersion: rule.version,
-    method: rule.method,
-    payer: rule.payer,
-    basisCents: ctx.grossValueCents,
-    percentBps: rule.percentBps,
-    fixedCents: rule.fixedCents,
-    calculatedFeeCents: feeCents,
-    jurisdiction: ctx.jurisdiction,
-    serviceLevel: ctx.serviceLevel,
-    createdAt: now(),
-  };
+  const snapshotId = id("feesnap");
+  const created = await prisma.collaborationFeeSnapshot.create({
+    data: {
+      id: snapshotId,
+      ruleId: rule.id,
+      ruleName: rule.name,
+      ruleVersion: rule.version,
+      method: rule.method,
+      payer: rule.payer,
+      basisCents: ctx.grossValueCents,
+      percentBps: rule.percentBps,
+      fixedCents: rule.fixedCents,
+      calculatedFeeCents: feeCents,
+      jurisdiction: ctx.jurisdiction,
+      serviceLevel: ctx.serviceLevel,
+    },
+  });
 
-  const store = await ensureStore();
-  store.snapshots = [snapshot, ...store.snapshots].slice(0, 100);
-  await saveStore(store);
-  return snapshot;
+  const excess = await prisma.collaborationFeeSnapshot.findMany({
+    orderBy: { createdAt: "desc" },
+    skip: SNAPSHOT_CAP,
+    select: { id: true },
+  });
+  if (excess.length) {
+    await prisma.collaborationFeeSnapshot.deleteMany({
+      where: { id: { in: excess.map((row) => row.id) } },
+    });
+  }
+
+  return snapshotFromRow(created);
 }
 
 export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { name: string }) {
-  const store = await ensureStore();
+  await ensureFeeDefaults();
   if (input.id) {
-    const idx = store.rules.findIndex((r) => r.id === input.id);
-    if (idx >= 0) {
-      const prev = store.rules[idx];
-      store.rules[idx] = {
-        ...prev,
-        ...input,
-        version: prev.version + (input.active !== undefined || input.percentBps !== undefined || input.fixedCents !== undefined ? 1 : 0),
-        id: prev.id,
-      };
-      await saveStore(store);
-      return store.rules[idx];
+    const prev = await prisma.collaborationFeeRule.findUnique({ where: { id: input.id } });
+    if (prev) {
+      const bumpVersion =
+        input.active !== undefined ||
+        input.percentBps !== undefined ||
+        input.fixedCents !== undefined;
+      const updated = await prisma.collaborationFeeRule.update({
+        where: { id: prev.id },
+        data: {
+          name: input.name ?? prev.name,
+          active: input.active ?? prev.active,
+          priority: input.priority ?? prev.priority,
+          jurisdiction: input.jurisdiction ?? prev.jurisdiction,
+          serviceLevel: input.serviceLevel ?? prev.serviceLevel,
+          minGrossCents:
+            input.minGrossCents !== undefined ? input.minGrossCents ?? null : prev.minGrossCents,
+          maxGrossCents:
+            input.maxGrossCents !== undefined ? input.maxGrossCents ?? null : prev.maxGrossCents,
+          method: input.method ?? prev.method,
+          percentBps: input.percentBps ?? prev.percentBps,
+          fixedCents: input.fixedCents ?? prev.fixedCents,
+          minFeeCents: input.minFeeCents ?? prev.minFeeCents,
+          maxFeeCents:
+            input.maxFeeCents !== undefined ? input.maxFeeCents : prev.maxFeeCents,
+          payer: input.payer ?? prev.payer,
+          effectiveFrom: input.effectiveFrom ? new Date(input.effectiveFrom) : prev.effectiveFrom,
+          notes: input.notes ?? prev.notes,
+          version: bumpVersion ? prev.version + 1 : prev.version,
+        },
+      });
+      return ruleFromRow(updated);
     }
   }
+
   const rule: CollaborationFeeRule = {
-    id: id("rule"),
+    id: input.id || id("rule"),
     name: input.name,
     version: 1,
     active: input.active ?? true,
@@ -303,14 +561,20 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
     effectiveFrom: input.effectiveFrom ?? now(),
     notes: input.notes ?? "",
   };
-  store.rules.push(rule);
-  await saveStore(store);
-  return rule;
+  const created = await prisma.collaborationFeeRule.create({ data: ruleCreateData(rule) });
+  return ruleFromRow(created);
 }
 
 export async function getJurisdiction(code: string) {
-  const store = await ensureStore();
-  return store.jurisdictions.find((j) => j.code === code) ?? null;
+  await ensureFeeDefaults();
+  const row = await prisma.collaborationJurisdiction.findUnique({ where: { code } });
+  if (!row) return null;
+  return {
+    code: row.code,
+    label: row.label,
+    protectedPaymentsEnabled: row.protectedPaymentsEnabled,
+    escrowTermAllowed: row.escrowTermAllowed,
+  };
 }
 
 export function formatCents(cents: number) {

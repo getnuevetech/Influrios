@@ -1044,6 +1044,52 @@ model CollaborationJurisdiction {
   updatedAt                 DateTime @updatedAt
 }
 
+/// Versioned collaboration fee rules (Phase O). Replaces data/collaboration-fees.json rules[].
+/// Funding immutability stays on CollaborationFunding.feeSnapshotJson — this table is the live matrix.
+model CollaborationFeeRule {
+  id            String   @id
+  name          String
+  version       Int      @default(1)
+  active        Boolean  @default(true)
+  priority      Int      @default(100)
+  jurisdiction  String   @default("*")
+  serviceLevel  String   @default("contracted")
+  minGrossCents Int?
+  maxGrossCents Int?
+  method        String   @default("percent")
+  percentBps    Int      @default(0)
+  fixedCents    Int      @default(0)
+  minFeeCents   Int      @default(0)
+  maxFeeCents   Int?
+  payer         String   @default("brand")
+  effectiveFrom DateTime
+  notes         String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([active, priority])
+  @@index([jurisdiction, serviceLevel])
+}
+
+/// Admin fee-simulator freezes only. Prefund fee history lives on CollaborationFunding.feeSnapshotJson.
+model CollaborationFeeSnapshot {
+  id                 String   @id
+  ruleId             String
+  ruleName           String
+  ruleVersion        Int
+  method             String
+  payer              String
+  basisCents         Int
+  percentBps         Int
+  fixedCents         Int
+  calculatedFeeCents Int
+  jurisdiction       String
+  serviceLevel       String
+  createdAt          DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 /// Admin share of a prefund. Active rows must add up to 10000 basis points.
 model MilestoneTemplate {
   id        String   @id @default(cuid())
