@@ -57,7 +57,9 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
-      # JSON demo stores and banner uploads survive image rebuilds until each module moves to Postgres.
+      # Banner/media uploads are required (CMS files live here).
+      # /app/data is optional after Phase L admin RBAC: remaining JSON demos
+      # (cms/billing/payments/trust/intelligence) still use it until migrated.
       - influrios_data:/app/data
       - influrios_uploads:/app/public/uploads
     networks:

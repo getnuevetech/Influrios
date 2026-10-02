@@ -113,7 +113,22 @@ POSTGRES_USER=influrios
 POSTGRES_PASSWORD=pick-a-strong-password
 POSTGRES_DB=influrios
 DATABASE_URL="postgresql://influrios:pick-a-strong-password@127.0.0.1:5432/influrios?schema=public"
+
+AUTH_SECRET=generate-a-long-random-string
+ADMIN_SESSION_SECRET=generate-another-long-random-string
+ADMIN_SUPER_EMAIL=admin@your-domain.com
+ADMIN_SUPER_PASSWORD=pick-a-strong-admin-password
 ```
+
+Compose volumes:
+
+| Volume | Mount | Required? |
+|---|---|---|
+| `influrios_pg` | Postgres data | **Yes** |
+| `influrios_uploads` | `/app/public/uploads` (banner/media files) | **Yes** |
+| `influrios_data` | `/app/data` (remaining JSON demos: cms, billing, …) | Optional once those modules move to Postgres; admin login no longer needs it |
+
+`legacy_demo_payments` stays **off** by default — do not force it on in production.
 
 ```bash
 bash deploy/scripts/db-up.sh      # starts postgres container
