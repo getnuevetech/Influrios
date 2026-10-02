@@ -5,7 +5,8 @@
 
 > **New server?** Start here first → **[FRESH_SERVER_SETUP.md](./FRESH_SERVER_SETUP.md)**  
 > (OS update, GitHub deploy key, Docker + Nginx, then clone + deploy)  
-> **Current sequencing / maturity:** [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md)
+> **Current sequencing / maturity:** [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md)  
+> **Staging SMTP / Stripe / social / marketplace drills:** [`STAGING_LAUNCH_INTEGRATIONS.md`](./STAGING_LAUNCH_INTEGRATIONS.md)
 
 PM2 was an earlier host process manager for Next.js. **Do not use PM2 for the app.** The web process and Postgres both run in Docker Compose; Nginx proxies to `127.0.0.1:3000`.
 
