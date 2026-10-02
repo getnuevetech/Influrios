@@ -321,9 +321,11 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 6. git clone → /var/www/influrios
 7. bash deploy/scripts/setup-lightsail.sh   # installs Docker + Node + Nginx + PM2
 8. newgrp docker
-9. .env with POSTGRES_* + DATABASE_URL
-10. bash deploy/scripts/db-up.sh && bash deploy/scripts/deploy.sh
+9. `.env` with `POSTGRES_*`, `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_SESSION_SECRET`, `ADMIN_SUPER_EMAIL`, `ADMIN_SUPER_PASSWORD`
+10. `bash deploy/scripts/db-up.sh && bash deploy/scripts/deploy.sh`
 11. DNS + certbot
+
+Admin login uses Postgres (`AdminUser`); volumes: `influrios_uploads` required for banners, `influrios_data` only for remaining JSON demos.
 ```
 
 Full app architecture notes: [AWS_LIGHTSAIL.md](./AWS_LIGHTSAIL.md)

@@ -1,11 +1,13 @@
 /**
- * Admin access control — cookie sessions + file-backed roles/permissions.
+ * Admin access control — cookie sessions + Postgres roles/permissions.
  * Super admin can create access levels from granular feature permissions.
+ * One-time import from data/admin-auth.json when the DB tables are empty.
  */
 import { createHmac, timingSafeEqual, randomBytes, scryptSync } from "crypto";
 import { promises as fs } from "fs";
 import { cookies, headers } from "next/headers";
 import path from "path";
+import { prisma } from "@/lib/db";
 
 /** Granular feature permissions selectable when creating an access level. */
 export const ADMIN_PERMISSIONS = [
@@ -349,7 +351,8 @@ export type AdminSession = {
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_PATH = path.join(DATA_DIR, "admin-auth.json");
+const LEGACY_STORE_PATH = path.join(DATA_DIR, "admin-auth.json");
+const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "admin-auth.json.migrated");
 const COOKIE_NAME = "influrios_admin_session";
 const SESSION_DAYS = 7;
 
@@ -528,30 +531,6 @@ function normalizeStore(store: AdminAuthStore): AdminAuthStore {
   };
 }
 
-/** Keep system roles in sync with DEFAULT_ROLES (new modules/permissions). */
-function syncSystemRoles(store: AdminAuthStore): AdminAuthStore {
-  const defaults = new Map(DEFAULT_ROLES.map((r) => [r.id, r]));
-  const roles = store.roles.map((role) => {
-    const def = defaults.get(role.id);
-    if (def && role.system) {
-      return {
-        ...role,
-        name: def.name,
-        description: def.description,
-        permissions: [...def.permissions],
-        system: true,
-      };
-    }
-    return role;
-  });
-  for (const def of DEFAULT_ROLES) {
-    if (!roles.some((r) => r.id === def.id)) {
-      roles.push(structuredClone(def));
-    }
-  }
-  return { ...store, roles };
-}
-
 function defaultStore(): AdminAuthStore {
   const salt = randomBytes(16).toString("hex");
   const password = process.env.ADMIN_SUPER_PASSWORD || "InfluriosAdmin!2026";
@@ -574,36 +553,171 @@ function defaultStore(): AdminAuthStore {
   };
 }
 
-async function ensureStore(): Promise<AdminAuthStore> {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as AdminAuthStore;
-    if (!parsed.roles?.length || !parsed.users?.length) return defaultStore();
-    const normalized = syncSystemRoles(normalizeStore(parsed));
-    // Persist when coarse perms expanded or system roles gained new features
-    const changed = JSON.stringify(parsed) !== JSON.stringify(normalized);
-    if (changed) await saveStore(normalized);
-    return normalized;
-  } catch {
-    const store = defaultStore();
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
-    } catch {
-      /* read-only */
+function roleFromDb(row: {
+  id: string;
+  name: string;
+  description: string;
+  system: boolean;
+  permissions: string[];
+}): AdminRole {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    system: row.system,
+    permissions: expandPermissions(row.permissions),
+  };
+}
+
+function userFromDb(row: {
+  id: string;
+  email: string;
+  name: string;
+  roleId: string;
+  passwordHash: string;
+  passwordSalt: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): AdminUser {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    roleId: row.roleId,
+    passwordHash: row.passwordHash,
+    passwordSalt: row.passwordSalt,
+    active: row.active,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+async function loadStoreFromDb(): Promise<AdminAuthStore> {
+  const [roles, users] = await Promise.all([
+    prisma.adminRole.findMany({ orderBy: { name: "asc" } }),
+    prisma.adminUser.findMany({ orderBy: { createdAt: "asc" } }),
+  ]);
+  return normalizeStore({
+    roles: roles.map(roleFromDb),
+    users: users.map(userFromDb),
+  });
+}
+
+async function writeStoreToDb(store: AdminAuthStore) {
+  const normalized = normalizeStore(store);
+  await prisma.$transaction(async (tx) => {
+    for (const role of normalized.roles) {
+      await tx.adminRole.upsert({
+        where: { id: role.id },
+        create: {
+          id: role.id,
+          name: role.name,
+          description: role.description,
+          system: Boolean(role.system),
+          permissions: role.permissions,
+        },
+        update: {
+          name: role.name,
+          description: role.description,
+          system: Boolean(role.system),
+          permissions: role.permissions,
+        },
+      });
     }
-    return store;
+    for (const user of normalized.users) {
+      await tx.adminUser.upsert({
+        where: { id: user.id },
+        create: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          roleId: user.roleId,
+          passwordHash: user.passwordHash,
+          passwordSalt: user.passwordSalt,
+          active: user.active,
+          createdAt: new Date(user.createdAt),
+          updatedAt: new Date(user.updatedAt),
+        },
+        update: {
+          email: user.email,
+          name: user.name,
+          roleId: user.roleId,
+          passwordHash: user.passwordHash,
+          passwordSalt: user.passwordSalt,
+          active: user.active,
+          updatedAt: new Date(user.updatedAt),
+        },
+      });
+    }
+  });
+}
+
+async function syncSystemRolesDb() {
+  for (const def of DEFAULT_ROLES) {
+    await prisma.adminRole.upsert({
+      where: { id: def.id },
+      create: {
+        id: def.id,
+        name: def.name,
+        description: def.description,
+        system: true,
+        permissions: [...def.permissions],
+      },
+      update: {
+        name: def.name,
+        description: def.description,
+        system: true,
+        permissions: [...def.permissions],
+      },
+    });
   }
 }
 
-async function saveStore(store: AdminAuthStore) {
+async function readLegacyJsonStore(): Promise<AdminAuthStore | null> {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+    const raw = await fs.readFile(LEGACY_STORE_PATH, "utf8");
+    const parsed = JSON.parse(raw) as AdminAuthStore;
+    if (!parsed.roles?.length || !parsed.users?.length) return null;
+    return normalizeStore(parsed);
   } catch {
-    /* ignore */
+    return null;
   }
+}
+
+async function markLegacyMigrated() {
+  try {
+    await fs.rename(LEGACY_STORE_PATH, LEGACY_MIGRATED_PATH);
+  } catch {
+    try {
+      await fs.unlink(LEGACY_STORE_PATH);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/**
+ * DB is authoritative. Empty tables import admin-auth.json once, else bootstrap
+ * from ADMIN_SUPER_EMAIL / ADMIN_SUPER_PASSWORD (and DEFAULT_ROLES).
+ */
+async function ensureStore(): Promise<AdminAuthStore> {
+  const userCount = await prisma.adminUser.count();
+  if (userCount === 0) {
+    const legacy = await readLegacyJsonStore();
+    if (legacy) {
+      await writeStoreToDb(legacy);
+      await markLegacyMigrated();
+    } else {
+      await writeStoreToDb(defaultStore());
+    }
+  }
+  await syncSystemRolesDb();
+  return loadStoreFromDb();
+}
+
+async function saveStore(store: AdminAuthStore) {
+  await writeStoreToDb(store);
 }
 
 export async function getAdminAuthStore() {
