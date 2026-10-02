@@ -308,7 +308,7 @@ Phases J–N code/docs are on `main` (or this PR). Remaining:
 
 **Admin:** access, accounts, agency, ai, banners, billing, cards, collaborations, fees, gateways, guests, homepage, intelligence, invitations, jobs, legal, mail, marketplace, matching, payments, plans, short-links, signing, social, stats, taxonomy, trust, value-prop
 
-**API:** billing webhook, marketplace webhook, social callback, short resolve, QR, places, intelligence export
+**API:** health, billing webhook, marketplace webhook, social callback, short resolve, QR, places, intelligence export
 
 **Prisma:** 88 models; migrations through admin switches / change orders (Oct 2026)
 
