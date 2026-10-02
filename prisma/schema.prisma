@@ -173,7 +173,7 @@ model FeatureFlag {
 
 /// Ops intelligence prefs (Phase O). Replaces data/intelligence.json.
 model IntelligenceSettings {
-  id                 String    @id @default("default")
+  id                 String    @id
   notes              String    @default("Phase 5 demo intelligence — synthetic trends + seed demographics.")
   watchedSpecialties String[]  @default(["beauty", "travel", "home-interior", "fashion"])
   lastExportAt       DateTime?
