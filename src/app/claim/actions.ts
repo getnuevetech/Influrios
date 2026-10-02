@@ -1,7 +1,14 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { safeNextPath } from "@/lib/account-policy";
+import {
+  AUTH_LOCKOUT_GENERIC_MESSAGE,
+  lockoutMessage,
+  recordAuthFailure,
+  recordAuthSuccess,
+} from "@/lib/auth-lockout";
 import {
   addDraftSocial,
   claimDraft,
@@ -11,6 +18,10 @@ import {
   updateDraftProfile,
   verifyDraft,
 } from "@/lib/claim";
+
+function clientIp(headerStore: Headers) {
+  return headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
 
 export async function actionCreateDraft(formData: FormData) {
   const handle = String(formData.get("handle") ?? "").trim();
@@ -47,10 +58,18 @@ export async function actionClaimDraft(formData: FormData) {
 
 export async function actionVerifyDraft(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
+  const headerStore = await headers();
+  const ip = clientIp(headerStore);
+  const locked = lockoutMessage("claim-verify", ip, draftId);
+  if (locked) {
+    redirect(`/claim/verify/${draftId}?error=${encodeURIComponent(AUTH_LOCKOUT_GENERIC_MESSAGE)}`);
+  }
   try {
     await verifyDraft(draftId, String(formData.get("code") ?? ""));
     await setCreatorSession(draftId);
+    recordAuthSuccess("claim-verify", ip, draftId);
   } catch (err) {
+    recordAuthFailure("claim-verify", ip, draftId);
     const message = err instanceof Error ? err.message : "Verification failed";
     redirect(`/claim/verify/${draftId}?error=${encodeURIComponent(message)}`);
   }

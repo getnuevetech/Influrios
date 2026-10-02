@@ -161,33 +161,24 @@ Prefer SSH deploy keys for servers.
 
 ---
 
-## 6. Install app runtime (Node, Nginx, PM2)
+## 6. Install host tooling (Node optional, Nginx required)
 
-Still on the server:
+Still on the server. **The Next.js app runs in Docker Compose — do not install or use PM2 for Influrios.**
 
 ```bash
-# Node.js 22
+# Node.js 22 (optional — useful for host-side prisma/tsx tooling)
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt-get install -y nodejs
 node -v   # should show v22.x
 npm -v
 
-# Process manager
-sudo npm install -g pm2
-
-# Web server
+# Web server (proxies to Compose web on 127.0.0.1:3000)
 sudo apt-get install -y nginx
 sudo systemctl enable nginx
 sudo systemctl start nginx
 ```
 
-Enable PM2 on reboot (run the command `pm2 startup` prints):
-
-```bash
-pm2 startup systemd -u ubuntu --hp /home/ubuntu
-# Then paste/run the sudo env PATH=... line it outputs
-```
-
+Docker is installed by `deploy/scripts/setup-lightsail.sh` in §8.
 ---
 
 ## 7. Clone the Influrios repo
@@ -253,17 +244,24 @@ DATABASE_URL="postgresql://influrios:pick-a-strong-password@127.0.0.1:5432/influ
 (`127.0.0.1` is for host tools. The web container uses Docker hostname `postgres` automatically.)
 
 ```bash
-pm2 delete influrios 2>/dev/null || true   # stop legacy PM2 if present
+# Optional: remove a leftover host PM2 process from older installs
+# pm2 delete influrios 2>/dev/null || true
 bash deploy/scripts/deploy.sh              # docker compose up -d --build
 ```
 
 ```bash
 docker compose ps
 docker compose logs -f web
-curl -I http://127.0.0.1:3000
+curl -fsS http://127.0.0.1:3000/api/health
 curl -I http://STATIC_IP
 ```
 
+### Backups
+
+```bash
+bash deploy/scripts/backup-postgres.sh
+# Restore drill (stops web): bash deploy/scripts/restore-postgres.sh /var/backups/influrios/influrios-….sql.gz
+```
 ---
 
 ## 10. Ongoing updates from GitHub
@@ -288,7 +286,8 @@ sudo apt-get install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ```
 
-5. Set `NEXT_PUBLIC_APP_URL=https://your-domain.com` in `.env` → `docker compose up -d --build web`
+5. Set `NEXT_PUBLIC_APP_URL=https://your-domain.com` in `.env` → `bash deploy/scripts/deploy.sh`  
+6. Confirm `curl -fsS https://your-domain.com/api/health` returns `"ok": true`
 
 ---
 
@@ -300,7 +299,8 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 | `Repository not found` | Deploy key is on wrong repo, or no access to private repo |
 | `npm run build` killed / OOM | `bash deploy/scripts/deploy.sh` adds 2 GB swap before the image build. The image uses one webpack process and a 768 MB heap. If the build is still killed, move to a 4 GB instance |
 | Dockerfile build exits 1 after `OK: SWC musl` | The native compiler loaded. The failure is the Next build, usually a type error printed just above `BUILD FAILED`. Pull main and rebuild |
-| Site 502 Bad Gateway | App not running: `pm2 status` / `pm2 logs influrios` |
+| Site 502 Bad Gateway | App not running: `docker compose ps` / `docker compose logs web` · `bash deploy/scripts/diagnose-502.sh` |
+| Health not green | `curl -fsS http://127.0.0.1:3000/api/health` · check Postgres: `docker compose logs postgres` |
 | Cannot SSH to Lightsail | Check Lightsail networking port 22 + correct `.pem` |
 | `permission denied` for docker | Run `newgrp docker` or re-SSH after `usermod -aG docker` |
 | Postgres not ready | `docker compose logs postgres` · check password match in `.env` |
@@ -319,11 +319,12 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 4. ssh-keygen deploy key → add to GitHub Deploy keys
 5. ssh -T git@github.com   (confirm)
 6. git clone → /var/www/influrios
-7. bash deploy/scripts/setup-lightsail.sh   # installs Docker + Node + Nginx + PM2
+7. bash deploy/scripts/setup-lightsail.sh   # Docker + Nginx (Compose runs the app)
 8. newgrp docker
 9. `.env` with `POSTGRES_*`, `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_SESSION_SECRET`, `ADMIN_SUPER_EMAIL`, `ADMIN_SUPER_PASSWORD`
 10. `bash deploy/scripts/db-up.sh && bash deploy/scripts/deploy.sh`
-11. DNS + certbot
+11. DNS + certbot → set `NEXT_PUBLIC_APP_URL=https://…` → redeploy
+12. `curl -fsS https://your-domain.com/api/health`
 
 Admin login uses Postgres (`AdminUser`); volumes: `influrios_uploads` required for banners, `influrios_data` only for remaining JSON demos.
 ```
