@@ -21,13 +21,16 @@ export default async function ClaimVerifyPage({ params, searchParams }: Props) {
     redirect(`/claim/publish/${draft.id}`);
   }
 
+  const mailed = draft.verificationDelivery === "email";
+
   return (
     <div className="mx-auto max-w-lg px-4 py-14 sm:px-6">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Step 3 · Verify</p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Verify your email</h1>
       <p className="mt-3 text-sm text-muted">
-        This demo code confirms the email on the claim. It does not verify @{draft.socials[0]?.handle.replace(/^@/, "")}{" "}
-        — social verification stays unverified until the platform connects.
+        Confirm the email on this claim. This does not verify @
+        {draft.socials[0]?.handle.replace(/^@/, "")} — social verification stays separate until the network
+        connects.
       </p>
 
       {q.error ? (
@@ -37,15 +40,25 @@ export default async function ClaimVerifyPage({ params, searchParams }: Props) {
       ) : null}
 
       <div className="card-surface mt-8 space-y-4 p-6">
-        <div className="rounded-xl bg-[#EEF4FF] px-4 py-3 text-sm text-indigo">
-          <p className="font-semibold">Demo code for {draft.email}</p>
-          <p className="mt-1 font-display text-2xl font-bold tracking-[0.2em] text-violet">
-            {draft.verifyCode}
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            Demo email method only. A social challenge on {draft.platform} is a separate verification.
-          </p>
-        </div>
+        {mailed ? (
+          <div className="rounded-xl bg-[#EEF4FF] px-4 py-3 text-sm text-indigo">
+            <p className="font-semibold">Check {draft.email}</p>
+            <p className="mt-1 text-xs text-muted">
+              We sent a verification code to that address. Enter it below to continue.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl bg-[#EEF4FF] px-4 py-3 text-sm text-indigo">
+            <p className="font-semibold">Demo code for {draft.email}</p>
+            <p className="mt-1 font-display text-2xl font-bold tracking-[0.2em] text-violet">
+              {draft.verifyCode}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              SMTP is not configured, so the code is shown here and labeled demo. A social challenge on{" "}
+              {draft.platform} stays a separate verification.
+            </p>
+          </div>
+        )}
 
         <form action={actionVerifyDraft} className="space-y-3">
           <input type="hidden" name="draftId" value={draft.id} />

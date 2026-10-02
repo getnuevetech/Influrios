@@ -57,6 +57,16 @@ async function runJob(kind: string, payload: unknown) {
     if (!result.ok) throw new Error(result.error);
     return;
   }
+  if (kind === "claim_verification_email") {
+    if (!data.email || !data.code) throw new Error("Claim verification job is missing an address or code.");
+    const result = await sendMail({
+      to: data.email,
+      subject: "Verify your Influrios Influencer Card",
+      text: `Your Influrios claim verification code is ${data.code}. Enter it to continue publishing your Influencer Card. This code does not verify your social account.`,
+    });
+    if (!result.ok) throw new Error(result.error);
+    return;
+  }
   if (kind === "mail_test") {
     const { sendInvitationTest } = await import("@/lib/mail");
     if (!data.to) throw new Error("Test send is missing a recipient.");
@@ -115,6 +125,21 @@ export async function enqueueVerificationEmail(userId: string, code: string) {
       kind: "verification_email",
       status: "queued",
       payload: { userId, email: user.email, code },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
+}
+
+/** Claim funnel email before a User row exists. */
+export async function enqueueClaimVerificationEmail(email: string, code: string) {
+  const { mailReady } = await import("@/lib/mail");
+  if (!(await mailReady())) return { queued: false };
+  await prisma.job.create({
+    data: {
+      kind: "claim_verification_email",
+      status: "queued",
+      payload: { email: email.trim().toLowerCase(), code },
     },
   });
   await processDueJobs();

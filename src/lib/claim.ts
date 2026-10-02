@@ -1,14 +1,14 @@
 /**
- * Phase 8 — Creator Claim & Activation
- * Draft → claim → verify → publish (value before signup), file-backed demo store.
+ * Phase 8 / Phase K — Creator Claim & Activation
+ * Draft → claim → verify → publish. OnboardingSession in Postgres is authoritative.
  */
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
-import { promises as fs } from "fs";
 import { decideCount, isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
+import { prisma } from "@/lib/db";
 import { advanceClaimStage, evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
 import { cookies } from "next/headers";
-import path from "path";
+import type { OnboardingSession, OnboardingState, Prisma } from "@prisma/client";
 import type { SeedCreator, SeedSocial } from "@/lib/seed-data";
 import { SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 
@@ -30,19 +30,16 @@ export type ClaimDraft = {
   image: string;
   email?: string;
   ownerName?: string;
-  /** Demo verification code shown after claim — enter to verify */
+  /** Verification code — shown only when SMTP is not ready (demo path). */
   verifyCode?: string;
+  /** How the claim verification code was delivered. */
+  verificationDelivery?: "demo" | "email";
   verifiedAt?: string;
   publishedAt?: string;
   attribution: string;
-  /** Kept when the draft is an existing directory profile. New organic drafts stay Starter. */
   planTier?: SeedCreator["planTier"];
   createdAt: string;
   updatedAt: string;
-};
-
-export type ClaimStore = {
-  drafts: ClaimDraft[];
 };
 
 export type CompletenessItem = {
@@ -53,8 +50,22 @@ export type CompletenessItem = {
   hint: string;
 };
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_PATH = path.join(DATA_DIR, "claim-funnel.json");
+type SessionPayload = {
+  displayName: string;
+  title: string;
+  bio: string;
+  locationCity: string;
+  locationCountry: string;
+  specialties: string[];
+  socials: SeedSocial[];
+  image: string;
+  stage: ClaimStage;
+  attribution: string;
+  verifyCode?: string;
+  verificationDelivery?: "demo" | "email";
+  planTier?: SeedCreator["planTier"];
+};
+
 const COOKIE_NAME = "influrios_creator_session";
 const SESSION_DAYS = 14;
 const DEMO_IMAGES = [
@@ -66,6 +77,17 @@ const DEMO_IMAGES = [
   "/demo/creators/creator-daniel.jpg",
 ];
 
+const PLATFORMS = new Set([
+  "INSTAGRAM",
+  "TIKTOK",
+  "YOUTUBE",
+  "X",
+  "FACEBOOK",
+  "LINKEDIN",
+  "PINTEREST",
+  "WEBSITE",
+]);
+
 function secret() {
   return process.env.CREATOR_SESSION_SECRET || process.env.ADMIN_SESSION_SECRET || "influrios-creator-demo";
 }
@@ -74,34 +96,10 @@ function sign(payload: string) {
   return createHmac("sha256", secret()).update(payload).digest("hex");
 }
 
-async function ensureStore(): Promise<ClaimStore> {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    return JSON.parse(raw) as ClaimStore;
-  } catch {
-    const store: ClaimStore = { drafts: [] };
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
-    } catch {
-      /* read-only FS — serve in-memory defaults */
-    }
-    return store;
-  }
-}
-
-async function saveStore(store: ClaimStore) {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
-  } catch {
-    /* ignore write failures in read-only environments */
-  }
-}
-
-export async function getClaimStore() {
-  return ensureStore();
+function hash(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
 }
 
 function slugify(input: string) {
@@ -161,21 +159,178 @@ function guessSpecialty(handle: string, platform: string): string[] {
   return ["lifestyle"];
 }
 
+function stageFromState(state: OnboardingState): ClaimStage {
+  if (state === "CLAIMED") return "claimed";
+  if (state === "EMAIL_VERIFIED") return "verified";
+  if (state === "PUBLISHED") return "published";
+  return "draft";
+}
+
+function stateFromStage(stage: ClaimStage): OnboardingState {
+  if (stage === "claimed") return "CLAIMED";
+  if (stage === "verified") return "EMAIL_VERIFIED";
+  if (stage === "published") return "PUBLISHED";
+  return "DRAFT";
+}
+
+function asPlatform(value: string): SeedSocial["platform"] {
+  return (PLATFORMS.has(value) ? value : "INSTAGRAM") as SeedSocial["platform"];
+}
+
+function readPayload(raw: Prisma.JsonValue): SessionPayload {
+  const value = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const socials = Array.isArray(value.socials) ? (value.socials as SeedSocial[]) : [];
+  const specialties = Array.isArray(value.specialties)
+    ? value.specialties.filter((item): item is string => typeof item === "string")
+    : [];
+  const stage =
+    value.stage === "claimed" || value.stage === "verified" || value.stage === "published" || value.stage === "draft"
+      ? value.stage
+      : "draft";
+  return {
+    displayName: typeof value.displayName === "string" ? value.displayName : "",
+    title: typeof value.title === "string" ? value.title : "",
+    bio: typeof value.bio === "string" ? value.bio : "",
+    locationCity: typeof value.locationCity === "string" ? value.locationCity : "",
+    locationCountry: typeof value.locationCountry === "string" ? value.locationCountry : "",
+    specialties,
+    socials,
+    image: typeof value.image === "string" ? value.image : DEMO_IMAGES[0]!,
+    stage,
+    attribution: typeof value.attribution === "string" ? value.attribution : "ORGANIC_SIGNUP",
+    verifyCode: typeof value.verifyCode === "string" ? value.verifyCode : undefined,
+    verificationDelivery: value.verificationDelivery === "email" ? "email" : "demo",
+    planTier:
+      value.planTier === "STARTER" || value.planTier === "PLUS" || value.planTier === "PRO"
+        ? value.planTier
+        : undefined,
+  };
+}
+
+function sessionPayload(draft: ClaimDraft): SessionPayload {
+  return {
+    displayName: draft.displayName,
+    title: draft.title,
+    bio: draft.bio,
+    locationCity: draft.locationCity,
+    locationCountry: draft.locationCountry,
+    specialties: draft.specialties,
+    socials: draft.socials,
+    image: draft.image,
+    stage: draft.stage,
+    attribution: draft.attribution,
+    verifyCode: draft.verifyCode,
+    verificationDelivery: draft.verificationDelivery ?? "demo",
+    planTier: draft.planTier,
+  };
+}
+
+/** Public audit/DTO payload — never includes email or verifyCode. */
+export function publicClaimPayload(draft: ClaimDraft) {
+  return {
+    slug: draft.slug,
+    displayName: draft.displayName,
+    title: draft.title,
+    bio: draft.bio,
+    locationCity: draft.locationCity,
+    locationCountry: draft.locationCountry,
+    specialties: draft.specialties,
+    socials: draft.socials.map((social) => ({
+      platform: social.platform,
+      handle: social.handle,
+      url: social.url,
+      followers: social.followers,
+    })),
+    image: draft.image,
+    stage: draft.stage,
+    attribution: draft.attribution,
+  };
+}
+
+export function draftFromSession(row: OnboardingSession): ClaimDraft {
+  const payload = readPayload(row.payload);
+  return {
+    id: row.id,
+    slug: row.draftSlug,
+    stage: stageFromState(row.state),
+    inputHandle: row.inputHandle,
+    platform: asPlatform(row.platform),
+    displayName: payload.displayName || row.ownerName || row.draftSlug,
+    title: payload.title,
+    bio: payload.bio,
+    locationCity: payload.locationCity,
+    locationCountry: payload.locationCountry,
+    specialties: payload.specialties,
+    socials: payload.socials,
+    image: payload.image,
+    email: row.email ?? undefined,
+    ownerName: row.ownerName ?? undefined,
+    verifyCode: payload.verifyCode,
+    verificationDelivery: row.verifyMethod === "EMAIL" || payload.verificationDelivery === "email" ? "email" : "demo",
+    verifiedAt: row.emailVerifiedAt?.toISOString(),
+    publishedAt: row.publishedAt?.toISOString(),
+    attribution: payload.attribution,
+    planTier: payload.planTier,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+async function writeDraft(draft: ClaimDraft, userId?: string | null) {
+  const verifyMethod =
+    draft.verificationDelivery === "email" ? "EMAIL" : draft.verifyCode ? "DEMO_CODE" : "DEMO_CODE";
+  await prisma.onboardingSession.upsert({
+    where: { id: draft.id },
+    create: {
+      id: draft.id,
+      state: stateFromStage(draft.stage),
+      inputHandle: draft.inputHandle,
+      platform: draft.platform,
+      draftSlug: draft.slug,
+      email: draft.email,
+      ownerName: draft.ownerName,
+      emailVerifiedAt: draft.verifiedAt ? new Date(draft.verifiedAt) : null,
+      publishedAt: draft.publishedAt ? new Date(draft.publishedAt) : null,
+      verifyMethod,
+      payload: sessionPayload(draft) as Prisma.InputJsonValue,
+      userId: userId ?? undefined,
+    },
+    update: {
+      state: stateFromStage(draft.stage),
+      inputHandle: draft.inputHandle,
+      platform: draft.platform,
+      draftSlug: draft.slug,
+      email: draft.email,
+      ownerName: draft.ownerName,
+      emailVerifiedAt: draft.verifiedAt ? new Date(draft.verifiedAt) : null,
+      publishedAt: draft.publishedAt ? new Date(draft.publishedAt) : null,
+      verifyMethod,
+      payload: sessionPayload(draft) as Prisma.InputJsonValue,
+      ...(userId ? { userId } : {}),
+    },
+  });
+}
+
+async function slugTaken(slug: string, exceptId?: string) {
+  const [session, creator] = await Promise.all([
+    prisma.onboardingSession.findUnique({ where: { draftSlug: slug }, select: { id: true } }),
+    prisma.creator.findUnique({ where: { slug }, select: { id: true } }),
+  ]);
+  if (session && session.id !== exceptId) return true;
+  if (creator) return true;
+  return false;
+}
+
 /** Build a private draft card from one social URL/handle — no signup required. */
 export async function createDraftFromHandle(
   input: string,
   attribution = "ORGANIC_SIGNUP",
 ): Promise<ClaimDraft> {
-  const store = await ensureStore();
   const { platform, handle } = detectPlatform(input);
   const baseSlug = slugify(handle) || `creator-${randomBytes(3).toString("hex")}`;
   let slug = baseSlug;
   let n = 2;
-  while (
-    store.drafts.some((d) => d.slug === slug) ||
-    // avoid colliding with common seed names lightly
-    ["sofia-martinez", "priya-sharma", "marcus-lee"].includes(slug)
-  ) {
+  while (await slugTaken(slug)) {
     slug = `${baseSlug}-${n++}`;
   }
 
@@ -212,16 +367,8 @@ export async function createDraftFromHandle(
     updatedAt: now,
   };
 
-  store.drafts.unshift(draft);
-  await saveStore(store);
-  await rememberOnboarding(() => syncSession(draft));
+  await writeDraft(draft);
   return draft;
-}
-
-function hash(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return h;
 }
 
 /** Private draft of an existing directory profile. Reuses a draft already started for that slug. */
@@ -229,9 +376,8 @@ export async function createDraftFromProfile(
   creator: SeedCreator,
   attribution = "ADMIN_INVITE",
 ): Promise<ClaimDraft> {
-  const store = await ensureStore();
-  const existing = store.drafts.find((draft) => draft.slug === creator.slug);
-  if (existing) return existing;
+  const existing = await prisma.onboardingSession.findUnique({ where: { draftSlug: creator.slug } });
+  if (existing) return draftFromSession(existing);
 
   const social = creator.socials[0];
   const now = new Date().toISOString();
@@ -254,25 +400,26 @@ export async function createDraftFromProfile(
     createdAt: now,
     updatedAt: now,
   };
-  store.drafts.unshift(draft);
-  await saveStore(store);
-  await rememberOnboarding(() => syncSession(draft));
+  await writeDraft(draft);
   return draft;
 }
 
 export async function getDraft(id: string) {
-  const store = await ensureStore();
-  return store.drafts.find((d) => d.id === id) ?? null;
+  const row = await prisma.onboardingSession.findUnique({ where: { id } });
+  return row ? draftFromSession(row) : null;
 }
 
 export async function getDraftBySlug(slug: string) {
-  const store = await ensureStore();
-  return store.drafts.find((d) => d.slug === slug) ?? null;
+  const row = await prisma.onboardingSession.findUnique({ where: { draftSlug: slug } });
+  return row ? draftFromSession(row) : null;
 }
 
+/**
+ * Published claims live on Creator rows after persistPublishedClaim.
+ * Directory reads Postgres; this stays empty so Discover does not double-count JSON leftovers.
+ */
 export async function listPublishedClaimCreators(): Promise<SeedCreator[]> {
-  const store = await ensureStore();
-  return store.drafts.filter((draft) => draft.stage === "published").map(draftToSeedCreator);
+  return [];
 }
 
 export async function getPublishedCreatorBySlug(slug: string): Promise<SeedCreator | null> {
@@ -307,8 +454,7 @@ export async function claimDraft(input: {
   email: string;
   name: string;
 }): Promise<ClaimDraft> {
-  const store = await ensureStore();
-  const draft = store.drafts.find((d) => d.id === input.draftId);
+  const draft = await getDraft(input.draftId);
   if (!draft) throw new Error("Draft not found");
   const claimed = advanceClaimStage(draft.stage, "claim");
   if (!claimed.ok) throw new Error(claimed.error);
@@ -323,69 +469,80 @@ export async function claimDraft(input: {
   draft.stage = claimed.stage;
   draft.verifyCode = String(100000 + (Math.abs(hash(email + draft.id)) % 900000));
   draft.updatedAt = new Date().toISOString();
-  await saveStore(store);
-  await rememberOnboarding(() => recordClaimRow(draft));
-  await rememberOnboarding(() => noteInvitation(draft.id, "claimed"));
+
+  const { mailReady } = await import("@/lib/mail");
+  const canMail = await mailReady();
+  draft.verificationDelivery = canMail ? "email" : "demo";
+  await writeDraft(draft);
+
+  const { recordClaim } = await import("@/lib/claim-persist");
+  await recordClaim(draft);
+
+  if (canMail && draft.verifyCode) {
+    const { enqueueClaimVerificationEmail } = await import("@/lib/jobs");
+    await enqueueClaimVerificationEmail(email, draft.verifyCode);
+  }
+
+  await noteInvitation(draft.id, "claimed");
   return draft;
 }
 
 export async function verifyDraft(draftId: string, code: string): Promise<ClaimDraft> {
-  const store = await ensureStore();
-  const draft = store.drafts.find((d) => d.id === draftId);
+  const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
   const verified = advanceClaimStage(draft.stage, "verify");
   if (!verified.ok) throw new Error(verified.error);
   if (!draft.verifyCode || code.trim() !== draft.verifyCode) {
-    await rememberOnboarding(() =>
-      recordAttempt(draft, { channel: "EMAIL", success: false, detail: "invalid demo code" }),
-    );
+    const { recordVerificationAttempt } = await import("@/lib/claim-persist");
+    await recordVerificationAttempt({
+      draft,
+      channel: "EMAIL",
+      success: false,
+      detail: "invalid verification code",
+    });
     throw new Error("Invalid verification code");
   }
   draft.stage = verified.stage;
   draft.verifiedAt = new Date().toISOString();
   draft.updatedAt = draft.verifiedAt;
-  // Replace placeholder location once verified
   if (draft.locationCity === "Your city") {
     draft.locationCity = "Lagos";
     draft.locationCountry = "Nigeria";
   }
-  await saveStore(store);
-  await rememberOnboarding(() =>
-    recordAttempt(draft, {
-      channel: "EMAIL",
-      success: true,
-      detail: "demo email code accepted; social account remains unverified",
-    }),
-  );
+  await writeDraft(draft);
+  const { recordVerificationAttempt } = await import("@/lib/claim-persist");
+  await recordVerificationAttempt({
+    draft,
+    channel: "EMAIL",
+    success: true,
+    detail:
+      draft.verificationDelivery === "email"
+        ? "email code accepted; social account remains unverified"
+        : "demo email code accepted; social account remains unverified",
+  });
   return draft;
 }
 
 export async function publishDraft(draftId: string): Promise<ClaimDraft> {
-  const store = await ensureStore();
-  const draft = store.drafts.find((d) => d.id === draftId);
+  const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
   const published = advanceClaimStage(draft.stage, "publish");
   if (!published.ok) throw new Error(published.error);
   draft.stage = published.stage;
   draft.publishedAt = new Date().toISOString();
   draft.updatedAt = draft.publishedAt;
-  await saveStore(store);
-  await rememberOnboarding(async () => {
-    const { persistPublishedClaim } = await import("@/lib/claim-persist");
-    await persistPublishedClaim(draft);
-    const { invalidateDirectoryCache } = await import("@/lib/directory");
-    invalidateDirectoryCache();
-  });
-  await rememberOnboarding(() => noteInvitation(draft.id, "published"));
+  await writeDraft(draft);
+
+  const { persistPublishedClaim } = await import("@/lib/claim-persist");
+  await persistPublishedClaim(draft);
+  const { invalidateDirectoryCache } = await import("@/lib/directory");
+  invalidateDirectoryCache();
+  await noteInvitation(draft.id, "published");
   return draft;
 }
 
-export async function addDraftSocial(
-  draftId: string,
-  social: SeedSocial,
-): Promise<ClaimDraft> {
-  const store = await ensureStore();
-  const draft = store.drafts.find((item) => item.id === draftId);
+export async function addDraftSocial(draftId: string, social: SeedSocial): Promise<ClaimDraft> {
+  const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
   const limits = await entitlementsForPlan("STARTER");
   const decision = secondSocialDecision(draft.socials.length, limits, "STARTER");
@@ -397,8 +554,7 @@ export async function addDraftSocial(
   }
   draft.socials.push(social);
   draft.updatedAt = new Date().toISOString();
-  await saveStore(store);
-  await rememberOnboarding(() => syncSession(draft));
+  await writeDraft(draft);
   return draft;
 }
 
@@ -411,8 +567,7 @@ export async function updateDraftProfile(
     >
   >,
 ): Promise<ClaimDraft> {
-  const store = await ensureStore();
-  const draft = store.drafts.find((d) => d.id === draftId);
+  const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
   if (patch.specialties) {
     const plan = draft.planTier && isPlanCode(draft.planTier) ? draft.planTier : "STARTER";
@@ -427,8 +582,45 @@ export async function updateDraftProfile(
   }
   Object.assign(draft, patch);
   draft.updatedAt = new Date().toISOString();
-  await saveStore(store);
+  await writeDraft(draft);
+
+  if (draft.stage === "published") {
+    await syncPublishedCreatorProfile(draft);
+  }
   return draft;
+}
+
+async function syncPublishedCreatorProfile(draft: ClaimDraft) {
+  const creator = await prisma.creator.findUnique({ where: { slug: draft.slug } });
+  if (!creator) return;
+  await prisma.creator.update({
+    where: { id: creator.id },
+    data: {
+      displayName: draft.displayName,
+      title: draft.title,
+      bio: draft.bio,
+      locationCity: draft.locationCity,
+      locationCountry: draft.locationCountry,
+      avatarUrl: draft.image,
+    },
+  });
+  if (draft.specialties) {
+    await prisma.creatorSpecialty.deleteMany({ where: { creatorId: creator.id } });
+    for (const [index, slug] of draft.specialties.entries()) {
+      const specialty = await prisma.specialty.findUnique({ where: { slug } });
+      if (!specialty) continue;
+      await prisma.creatorSpecialty.create({
+        data: {
+          creatorId: creator.id,
+          specialtyId: specialty.id,
+          isPrimary: index === 0,
+          source: "CREATOR_CLAIMED",
+        },
+      });
+    }
+  }
+  const { invalidateDirectoryCache } = await import("@/lib/directory");
+  invalidateDirectoryCache();
 }
 
 export function completenessFor(draft: ClaimDraft): {
@@ -439,34 +631,12 @@ export function completenessFor(draft: ClaimDraft): {
 }
 
 async function noteInvitation(draftId: string, status: "claimed" | "published") {
-  const { advanceInvitationForDraft } = await import("@/lib/invitations");
-  await advanceInvitationForDraft(draftId, status);
-}
-
-async function rememberOnboarding(work: () => Promise<void>) {
   try {
-    await work();
+    const { advanceInvitationForDraft } = await import("@/lib/invitations");
+    await advanceInvitationForDraft(draftId, status);
   } catch (error) {
-    console.error("onboarding persist skipped", error);
+    console.error("invitation advance skipped", error);
   }
-}
-
-async function syncSession(draft: ClaimDraft) {
-  const { syncOnboardingSession } = await import("@/lib/claim-persist");
-  await syncOnboardingSession(draft);
-}
-
-async function recordClaimRow(draft: ClaimDraft) {
-  const { recordClaim } = await import("@/lib/claim-persist");
-  await recordClaim(draft);
-}
-
-async function recordAttempt(
-  draft: ClaimDraft,
-  input: { channel: "EMAIL" | "SOCIAL"; success: boolean; detail?: string },
-) {
-  const { recordVerificationAttempt } = await import("@/lib/claim-persist");
-  await recordVerificationAttempt({ draft, ...input });
 }
 
 export async function setCreatorSession(draftId: string) {
@@ -487,7 +657,65 @@ export async function clearCreatorSession() {
   jar.set(COOKIE_NAME, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
 }
 
+async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> {
+  const open = await prisma.onboardingSession.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (open) return draftFromSession(open);
+
+  const creator = await prisma.creator.findFirst({
+    where: { userId },
+    include: { specialties: { include: { specialty: true } }, socialAccounts: true },
+  });
+  if (!creator) return null;
+
+  const session = await prisma.onboardingSession.findUnique({ where: { draftSlug: creator.slug } });
+  if (session) return draftFromSession(session);
+
+  // Published creator without a surviving session row — synthesize a published draft for the dashboard.
+  const now = new Date().toISOString();
+  return {
+    id: `creator_${creator.id}`,
+    slug: creator.slug,
+    stage: "published",
+    inputHandle: creator.socialAccounts[0]?.handle ?? creator.slug,
+    platform: asPlatform(creator.socialAccounts[0]?.platform ?? "INSTAGRAM"),
+    displayName: creator.displayName,
+    title: creator.title ?? "",
+    bio: creator.bio ?? "",
+    locationCity: creator.locationCity ?? "",
+    locationCountry: creator.locationCountry ?? "",
+    specialties: creator.specialties.map((row) => row.specialty.slug),
+    socials: creator.socialAccounts.map((row) => ({
+      platform: asPlatform(row.platform),
+      handle: row.handle,
+      url: row.url ?? "",
+      followers: row.followers ?? 0,
+    })),
+    image: creator.avatarUrl ?? DEMO_IMAGES[0]!,
+    email: undefined,
+    ownerName: creator.displayName,
+    publishedAt: creator.updatedAt.toISOString(),
+    attribution: "PROFILE_CLAIM",
+    planTier: creator.planTier === "PLUS" || creator.planTier === "PRO" ? creator.planTier : "STARTER",
+    createdAt: creator.createdAt.toISOString(),
+    updatedAt: now,
+  };
+}
+
 export async function getCreatorSessionDraft(): Promise<ClaimDraft | null> {
+  try {
+    const { getAccountSession } = await import("@/lib/accounts");
+    const account = await getAccountSession();
+    if (account) {
+      const fromAccount = await draftFromAccountUser(account.id);
+      if (fromAccount) return fromAccount;
+    }
+  } catch {
+    /* account module unavailable in some scripts */
+  }
+
   const jar = await cookies();
   const raw = jar.get(COOKIE_NAME)?.value;
   if (!raw) return null;
@@ -506,6 +734,40 @@ export async function getCreatorSessionDraft(): Promise<ClaimDraft | null> {
     return getDraft(parsed.draftId);
   } catch {
     return null;
+  }
+}
+
+/** Link the open claim draft cookie to a registered member and keep the creator session. */
+export async function attachClaimToUser(userId: string) {
+  const jar = await cookies();
+  const raw = jar.get(COOKIE_NAME)?.value;
+  if (!raw) {
+    const latest = await prisma.onboardingSession.findFirst({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+    });
+    if (latest) await setCreatorSession(latest.id);
+    return;
+  }
+  const [body, sig] = raw.split(".");
+  if (!body || !sig) return;
+  const expected = sign(body);
+  try {
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return;
+    const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as {
+      draftId: string;
+      exp: number;
+    };
+    if (parsed.exp < Date.now()) return;
+    await prisma.onboardingSession.update({
+      where: { id: parsed.draftId },
+      data: { userId },
+    });
+    await setCreatorSession(parsed.draftId);
+  } catch {
+    /* draft may already be linked or missing */
   }
 }
 
