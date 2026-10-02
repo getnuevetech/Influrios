@@ -35,7 +35,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, fundings, totals, reasons, sources, rates, parties, wise, reportsOn] = await Promise.all([
+  const [config, fundings, totals, reasons, sources, rates, parties, wise, reportsOn, legacyDemoOn] = await Promise.all([
     marketplaceConfig(),
     listFundings(),
     ledgerTotals(),
@@ -45,6 +45,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
     listRevenueParties(),
     wiseFxConfig(),
     productSwitch("financial_reports"),
+    productSwitch("legacy_demo_payments"),
   ]);
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
 
@@ -272,6 +273,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Show the monthly ledger report
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="legacyDemoPayments" defaultChecked={legacyDemoOn} className="accent-violet" />
+              Show Phase 9/10 JSON payment and trust demos
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
               Allow cancelling a prefund before the provider confirms it
             </label>
@@ -285,7 +290,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             {config.maxGrossCents > 0 ? formatMoney(config.maxGrossCents) : "off"} · partial refunds{" "}
             {config.partialRefundsEnabled ? "on" : "off"} · change orders{" "}
             {config.changeOrdersEnabled ? config.maxChangeOrders : "off"} · open disputes{" "}
-            {config.riskControlsEnabled ? config.maxOpenDisputes : "off"} · monthly report {reportsOn ? "on" : "off"}
+            {config.riskControlsEnabled ? config.maxOpenDisputes : "off"} · monthly report {reportsOn ? "on" : "off"} · legacy demos {legacyDemoOn ? "on" : "off"}
           </p>
         )}
       </section>

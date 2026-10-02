@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getDirectoryCreator } from "@/lib/directory";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import {
   PLAN_ENTITLEMENTS,
@@ -7,7 +8,6 @@ import {
   type EntitlementLimits,
   type PlanCode,
 } from "@/lib/entitlements";
-import { getCreatorBySlug } from "@/lib/seed-data";
 
 export const COLLABORATION_STATUSES = ["draft", "sent", "accepted", "declined", "withdrawn"] as const;
 export type CollaborationStatus = (typeof COLLABORATION_STATUSES)[number];
@@ -179,8 +179,8 @@ export async function createCollaboration(input: {
   needSpecialty: string | null;
   plan: PlanCode;
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  const initiator = getCreatorBySlug(input.initiatorSlug);
-  const recipient = getCreatorBySlug(input.recipientSlug);
+  const initiator = await getDirectoryCreator(input.initiatorSlug);
+  const recipient = await getDirectoryCreator(input.recipientSlug);
   if (!initiator || !recipient || initiator.slug === recipient.slug) {
     return { ok: false, error: "Choose two different creators." };
   }
@@ -253,8 +253,8 @@ export async function advanceCollaboration(input: {
     if (!gate.ok) return gate;
 
     if (input.to === "sent" && input.enforceLimit !== false) {
-      const creator = getCreatorBySlug(row.initiatorSlug);
-      const plan = input.plan ?? creator?.planTier ?? "STARTER";
+      const creator = await getDirectoryCreator(row.initiatorSlug);
+      const plan = input.plan ?? (creator?.planTier as PlanCode | undefined) ?? "STARTER";
       const usage = await proposalUsage(row.initiatorSlug, plan);
       if (!usage.decision.ok) {
         return { ok: false, error: proposalDenialMessage(usage.decision, usage.settings.windowDays) };

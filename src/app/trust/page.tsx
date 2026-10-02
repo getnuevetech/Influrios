@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionOpenDispute } from "@/app/trust/actions";
 import { listMilestoneDisputes } from "@/lib/milestone-disputes";
+import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
 import {
   formatMoney,
   getProtectedPaymentsStore,
@@ -30,17 +31,22 @@ const STATUS_COLOR: Record<DisputeStatus, string> = {
 
 export default async function TrustPage({ searchParams }: Props) {
   const params = await searchParams;
-  const trust = await getTrustStore();
-  const payments = await getProtectedPaymentsStore();
-  const stats = trustStats(trust);
-  const enriched = await Promise.all(trust.disputes.map((d) => enrichDispute(d)));
+  const legacyOn = await legacyDemoPaymentsEnabled();
+  const trust = legacyOn ? await getTrustStore() : null;
+  const payments = legacyOn ? await getProtectedPaymentsStore() : null;
+  const stats = trust
+    ? trustStats(trust)
+    : { open: 0, resolved: 0, total: 0, contracts: 0 };
+  const enriched = trust ? await Promise.all(trust.disputes.map((d) => enrichDispute(d))) : [];
   const ledgerDisputes = await listMilestoneDisputes().catch(() => []);
 
-  const disputable = payments.deals.flatMap((deal) =>
-    deal.milestones
-      .filter((m) => m.status !== "released" && deal.fundedCents > 0)
-      .map((m) => ({ deal, milestone: m })),
-  );
+  const disputable = payments
+    ? payments.deals.flatMap((deal) =>
+        deal.milestones
+          .filter((m) => m.status !== "released" && deal.fundedCents > 0)
+          .map((m) => ({ deal, milestone: m })),
+      )
+    : [];
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -115,6 +121,8 @@ export default async function TrustPage({ searchParams }: Props) {
           )}
         </section>
 
+        {legacyOn && trust ? (
+          <>
         <section className="card-surface p-6">
           <h2 className="font-display text-xl font-bold text-indigo">Earlier demo queue</h2>
           <p className="mt-1 text-sm text-muted">
@@ -246,6 +254,8 @@ export default async function TrustPage({ searchParams }: Props) {
             ))}
           </div>
         </section>
+          </>
+        ) : null}
 
         <p className="text-center text-sm text-muted">
           Admin mediation:{" "}

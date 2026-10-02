@@ -15,7 +15,7 @@ import {
 } from "@/lib/agency";
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Agency Workspace" };
@@ -47,6 +47,8 @@ export default async function AgencyPage({ searchParams }: Props) {
   const store = await getAgencyStore();
   const stats = agencyStats(store);
   const published = listPublishedPortfolios(store);
+  const directoryCreators = await listDirectoryCreators();
+  const bySlug = indexCreatorsBySlug(directoryCreators);
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -135,7 +137,7 @@ export default async function AgencyPage({ searchParams }: Props) {
           <h2 className="font-display text-2xl font-bold text-indigo">Talent roster</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {store.roster.map((m) => {
-              const c = getCreatorBySlug(m.creatorSlug);
+              const c = bySlug.get(m.creatorSlug);
               return (
                 <article key={m.creatorSlug} className="card-surface flex gap-3 p-4">
                   {c?.image ? (
@@ -181,7 +183,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                   required
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 >
-                  {SEED_CREATORS.filter(
+                  {directoryCreators.filter(
                     (c) => !store.roster.some((r) => r.creatorSlug === c.slug),
                   ).map((c) => (
                     <option key={c.slug} value={c.slug}>
@@ -241,7 +243,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                   <p className="mt-2 text-xs text-muted">
                     Cast:{" "}
                     {camp.creatorSlugs
-                      .map((s) => getCreatorBySlug(s)?.displayName ?? s)
+                      .map((s) => bySlug.get(s)?.displayName ?? s)
                       .join(", ")}
                   </p>
                 </div>
@@ -358,8 +360,8 @@ export default async function AgencyPage({ searchParams }: Props) {
 
           <div className="grid gap-4 md:grid-cols-2">
             {store.portfolios.map((p) => {
-              const left = getCreatorBySlug(p.leftSlug);
-              const right = getCreatorBySlug(p.rightSlug);
+              const left = bySlug.get(p.leftSlug);
+              const right = bySlug.get(p.rightSlug);
               return (
                 <article key={p.id} className="card-surface p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -438,7 +440,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                   defaultValue={store.roster[0]?.creatorSlug}
                 >
-                  {SEED_CREATORS.map((c) => (
+                  {directoryCreators.map((c) => (
                     <option key={c.slug} value={c.slug}>
                       {c.displayName}
                     </option>
@@ -451,9 +453,9 @@ export default async function AgencyPage({ searchParams }: Props) {
                   name="rightSlug"
                   required
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                  defaultValue={store.roster[1]?.creatorSlug ?? SEED_CREATORS[1]?.slug}
+                  defaultValue={store.roster[1]?.creatorSlug ?? directoryCreators[1]?.slug}
                 >
-                  {SEED_CREATORS.map((c) => (
+                  {directoryCreators.map((c) => (
                     <option key={c.slug} value={c.slug}>
                       {c.displayName}
                     </option>

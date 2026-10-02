@@ -631,7 +631,12 @@ export function formatFollowers(n: number): string {
 }
 
 export function getCreatorBySlug(slug: string) {
+  /** Seed/fixture lookup only. Product pages should use getDirectoryCreator / listDirectoryCreators. */
   return SEED_CREATORS.find((c) => c.slug === slug);
+}
+
+export function indexCreatorsBySlug<T extends { slug: string }>(creators: readonly T[]): Map<string, T> {
+  return new Map(creators.map((creator) => [creator.slug, creator]));
 }
 
 export type CreatorSearchQuery = {

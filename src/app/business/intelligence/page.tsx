@@ -7,7 +7,7 @@ import {
   getNicheTrends,
   getRelationshipSignals,
 } from "@/lib/intelligence";
-import { getCreatorBySlug } from "@/lib/seed-data";
+import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business · Intelligence" };
@@ -23,9 +23,11 @@ export default async function BusinessIntelligencePage() {
   const entitlements = getBusinessEntitlements(ws.plan);
   const locked = !entitlements.intelligence;
 
-  const snapshots = locked ? [] : getAllAudienceSnapshots().slice(0, 6);
-  const trends = locked ? [] : getNicheTrends();
+  const snapshots = locked ? [] : (await getAllAudienceSnapshots()).slice(0, 6);
+  const trends = locked ? [] : await getNicheTrends();
   const signals = locked ? [] : await getRelationshipSignals();
+  const directory = await getDirectory().catch(() => null);
+  const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -119,7 +121,7 @@ export default async function BusinessIntelligencePage() {
               </p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 {snapshots.map((s) => {
-                  const creator = getCreatorBySlug(s.creatorSlug);
+                  const creator = bySlug.get(s.creatorSlug);
                   return (
                     <div
                       key={s.creatorSlug}

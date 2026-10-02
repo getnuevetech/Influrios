@@ -15,7 +15,7 @@ import {
   INTRO_STATUSES,
   listQueuedMatchRequests,
 } from "@/lib/managed-matching";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Managed Matching" };
@@ -68,6 +68,9 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
   }
   const optInCount = store.optIns.filter((o) => o.openToManaged).length;
   const paidCount = store.intros.filter((i) => i.status === "paid").length;
+
+  const directoryCreators = await listDirectoryCreators();
+  const bySlug = indexCreatorsBySlug(directoryCreators);
 
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
@@ -167,7 +170,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                           .filter((opt) => opt.openToManaged)
                           .map((opt) => (
                             <option key={opt.creatorSlug} value={opt.creatorSlug}>
-                              {getCreatorBySlug(opt.creatorSlug)?.displayName ?? opt.creatorSlug}
+                              {bySlug.get(opt.creatorSlug)?.displayName ?? opt.creatorSlug}
                             </option>
                           ))}
                       </select>
@@ -227,7 +230,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                   .filter((o) => o.openToManaged)
                   .map((o) => (
                     <option key={o.creatorSlug} value={o.creatorSlug}>
-                      {getCreatorBySlug(o.creatorSlug)?.displayName ?? o.creatorSlug}
+                      {bySlug.get(o.creatorSlug)?.displayName ?? o.creatorSlug}
                     </option>
                   ))}
               </select>
@@ -272,7 +275,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
         <h2 className="font-display text-xl font-bold text-indigo">Intro pipeline</h2>
         <ul className="mt-4 space-y-4">
           {store.intros.map((intro) => {
-            const creator = getCreatorBySlug(intro.creatorSlug);
+            const creator = bySlug.get(intro.creatorSlug);
             return (
               <li
                 key={intro.id}
@@ -358,7 +361,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
           {!canManageOptins ? " View-only — your role cannot change opt-ins." : ""}
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {SEED_CREATORS.map((c) => {
+          {directoryCreators.map((c) => {
             const opt = store.optIns.find((o) => o.creatorSlug === c.slug);
             if (!canManageOptins) {
               return (

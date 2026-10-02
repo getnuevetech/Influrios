@@ -14,8 +14,8 @@ export default async function AdminIntelligencePage() {
   const session = await requireAdminPage("intelligence");
   const canExport = hasPermission(session, "intelligence.export");
   const store = await getIntelligenceStore();
-  const snapshots = getAllAudienceSnapshots();
-  const trends = getNicheTrends();
+  const snapshots = await getAllAudienceSnapshots();
+  const trends = await getNicheTrends();
   const signals = await getRelationshipSignals();
   const rising = trends.filter((t) => t.signal === "rising").length;
 

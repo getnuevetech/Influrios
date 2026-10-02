@@ -15,7 +15,7 @@ import {
 } from "@/components/icons";
 import { SaveMatchButton } from "@/components/save-match-button";
 import {
-  allCreatorMatches,
+  allDirectoryMatches,
   BUSINESS_REQUESTS,
   CREATOR_OPPORTUNITIES,
   filterMatches,
@@ -24,7 +24,8 @@ import {
   type CreatorMatch,
 } from "@/lib/matching";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { formatFollowers, getCreatorBySlug, SEED_CREATORS, specialtyLabel, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
+import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
+import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { isPlanCode, type PlanCode } from "@/lib/entitlements";
 
 export const metadata = {
@@ -69,7 +70,9 @@ function list(value?: string | string[]) {
 export default async function CollaborationPage({ searchParams }: Props) {
   const params = await searchParams;
   const collabTypes = list(params.collabType);
-  const all = allCreatorMatches();
+  const directory = await getDirectory();
+  const bySlug = indexCreatorsBySlug(directory.creators);
+  const all = await allDirectoryMatches();
   const matches = filterMatches(all, {
     specialty: params.specialty,
     location: params.location,
@@ -81,7 +84,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
     return hay.includes(params.audience.toLowerCase());
   });
   const featured = matches[0] ?? all[0];
-  const viewer = params.from ? getCreatorBySlug(params.from) : SEED_CREATORS[0];
+  const viewer = params.from ? bySlug.get(params.from) : directory.creators[0];
   const viewerPlan: PlanCode = viewer && isPlanCode(viewer.planTier) ? viewer.planTier : "STARTER";
   const viewerLimits = await entitlementsForPlan(viewerPlan);
   const canRequest = viewerLimits.proposalsMax > 0;
@@ -104,10 +107,11 @@ export default async function CollaborationPage({ searchParams }: Props) {
   });
   const opportunities = CREATOR_OPPORTUNITIES.filter((item) => {
     if (!params.specialty) return true;
-    const creator = getCreatorBySlug(item.creatorSlug);
+    const creator = bySlug.get(item.creatorSlug);
     return creator?.specialties.some((slug) => slug.includes(params.specialty!)) ?? false;
   });
-  const heroFaces = SEED_CREATORS.slice(0, 4);
+  const heroFaces = directory.creators.slice(0, 4);
+  const taxonomy = directory.taxonomy;
 
   return (
     <div className="bg-[#F4F7FF]">
@@ -212,7 +216,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
                 className="mt-1.5 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium text-indigo outline-none focus:ring-2 focus:ring-violet"
               >
                 <option value="">Select industry</option>
-                {SPECIALTY_TAXONOMY.map((item) => (
+                {taxonomy.map((item) => (
                   <option key={item.slug} value={item.slug}>
                     {item.name}
                   </option>
@@ -393,7 +397,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
               </div>
               <ul className="space-y-3">
                 {opportunities.map((item) => {
-                  const creator = getCreatorBySlug(item.creatorSlug);
+                  const creator = bySlug.get(item.creatorSlug);
                   if (!creator) return null;
                   return (
                     <li key={item.id} className="flex gap-3 rounded-2xl border border-[#E8EDF8] p-3">

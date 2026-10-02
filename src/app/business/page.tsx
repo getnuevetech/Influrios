@@ -4,7 +4,7 @@ import {
   businessMatchProviderName,
   getWorkspace,
   queuedBriefIds,
-  rankCreatorsForBrief,
+  rankDirectoryCreatorsForBrief,
 } from "@/lib/business";
 import { fitRankingLabel } from "@/lib/business-queue";
 import { getManagedPromotionEnabled } from "@/lib/managed-matching";
@@ -14,8 +14,8 @@ import {
   type BusinessPlanCode,
 } from "@/lib/business-entitlements";
 import { PlaceFields } from "@/components/place-fields";
-import { getDirectory } from "@/lib/directory";
-import { getCreatorBySlug, SPECIALTY_TAXONOMY, specialtyLabel } from "@/lib/seed-data";
+import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
+import { SPECIALTY_TAXONOMY, specialtyLabel } from "@/lib/seed-data";
 import { getAccountSession } from "@/lib/accounts";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import {
@@ -68,6 +68,7 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
   }
   const entitlements = getBusinessEntitlements(ws.plan);
   const directory = await getDirectory().catch(() => null);
+  const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
   const specialtyGroups = (directory?.taxonomy ?? SPECIALTY_TAXONOMY.map((parent) => ({
     slug: parent.slug,
     name: parent.name,
@@ -75,7 +76,10 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
     children: (parent.children ?? []).map((child) => ({ ...child, active: true })),
   }))).filter((parent) => parent.active);
   const activeBrief = ws.briefs[0];
-  const ranked = activeBrief && entitlements.fitInsights ? rankCreatorsForBrief(activeBrief).slice(0, 5) : [];
+  const ranked =
+    activeBrief && entitlements.fitInsights
+      ? (await rankDirectoryCreatorsForBrief(activeBrief)).slice(0, 5)
+      : [];
   const [providerName, promotionOn, queuedIds] = await Promise.all([
     businessMatchProviderName().catch(() => null),
     getManagedPromotionEnabled().catch(() => false),
@@ -245,7 +249,7 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
                 </li>
               ) : (
                 ws.shortlist.map((item) => {
-                  const c = getCreatorBySlug(item.creatorSlug);
+                  const c = bySlug.get(item.creatorSlug);
                   if (!c) return null;
                   return (
                     <li key={item.creatorSlug} className="flex items-center gap-3 rounded-xl border border-border bg-starter-bg p-3">
@@ -281,7 +285,7 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
                 {["sofia-martinez", "daniel-kim", "priya-sharma", "marcus-lee", "amara-okonkwo", "jordan-blake"].map(
                   (slug) => (
                     <option key={slug} value={slug}>
-                      {getCreatorBySlug(slug)?.displayName}
+                      {bySlug.get(slug)?.displayName}
                     </option>
                   ),
                 )}
@@ -477,7 +481,7 @@ export default async function BusinessWorkspacePage({ searchParams }: Props) {
           ) : (
             <ul className="mt-4 space-y-3">
               {ws.inquiries.map((inq) => {
-                const c = getCreatorBySlug(inq.creatorSlug);
+                const c = bySlug.get(inq.creatorSlug);
                 return (
                   <li key={inq.id} className="rounded-xl border border-border bg-white p-4 text-sm">
                     <div className="flex justify-between gap-2">
