@@ -1273,7 +1273,7 @@ model AdminRole {
   name        String
   description String      @default("")
   system      Boolean     @default(false)
-  permissions String[]
+  permissions String[]  @default([])
   users       AdminUser[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
