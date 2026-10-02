@@ -1,10 +1,13 @@
 # AWS Lightsail — Server Preparation & Deploy Guide
 
-**Target:** Influrios Phase 0/1 (Next.js + PostgreSQL + Nginx + PM2)  
-**Instance recommendation:** Ubuntu 22.04 or 24.04 LTS, **$10–20/mo** (2 GB RAM minimum; 4 GB preferred for `next build` on-box)
+**Target:** Influrios (Next.js + PostgreSQL via Docker Compose + Nginx on the host)  
+**Instance recommendation:** Ubuntu 22.04 or 24.04 LTS, **$10–20/mo** (2 GB RAM minimum; **4 GB preferred** for on-box `docker compose build`)
 
 > **New server?** Start here first → **[FRESH_SERVER_SETUP.md](./FRESH_SERVER_SETUP.md)**  
-> (OS update, GitHub deploy key, Node/Nginx/PM2, then clone + deploy)
+> (OS update, GitHub deploy key, Docker + Nginx, then clone + deploy)  
+> **Current sequencing / maturity:** [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md)
+
+PM2 was an earlier host process manager for Next.js. **Do not use PM2 for the app.** The web process and Postgres both run in Docker Compose; Nginx proxies to `127.0.0.1:3000`.
 
 ---
 
@@ -15,12 +18,12 @@ Internet → Lightsail static IP
               ↓
          Nginx (:80/:443)
               ↓
-         Next.js via PM2 (:3000)
+         Docker Compose web (:3000 on 127.0.0.1)
               ↓
-    Docker PostgreSQL on 127.0.0.1:5432  ← recommended
+         Docker Compose postgres (internal network; host port 127.0.0.1:5432 for tooling)
 ```
 
-Postgres runs in Docker on the **same instance**, bound to localhost only (not opened in Lightsail networking).
+Postgres stays on the same instance, published only on localhost for Prisma/seed tooling (not opened in Lightsail networking).
 
 ---
 
@@ -83,9 +86,9 @@ What `setup-lightsail.sh` installs:
 
 1. `apt` updates + build tools  
 2. UFW firewall (SSH + Nginx)  
-3. **Docker Engine + Compose** (for PostgreSQL)  
-4. **Node.js 22**  
-5. **PM2** + systemd startup  
+3. **Docker Engine + Compose** (Postgres **and** the Next.js web app)  
+4. **Node.js 22** (optional host tooling: Prisma / seed)  
+5. Removes a legacy PM2 `influrios` process if present (PM2 is not used for the app)  
 6. `/var/www/influrios` ownership  
 7. **Nginx** reverse proxy to `127.0.0.1:3000`
 
@@ -114,17 +117,16 @@ DATABASE_URL="postgresql://influrios:pick-a-strong-password@127.0.0.1:5432/influ
 
 ```bash
 bash deploy/scripts/db-up.sh      # starts postgres container
-bash deploy/scripts/deploy.sh     # migrate, seed, build, PM2 (also ensures DB is up)
+bash deploy/scripts/deploy.sh     # docker compose up --build (postgres + web)
 ```
 
 Useful commands:
 
 ```bash
-docker compose ps postgres
+docker compose ps
+docker compose logs -f web
 docker compose logs -f postgres
 npm run db:down                   # stop DB (keeps volume)
-pm2 status
-pm2 logs influrios
 ```
 
 Visit `http://STATIC_IP` — you should see the Influrios home page.
@@ -152,7 +154,11 @@ sudo apt-get install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ```
 
-5. Update `.env` `NEXT_PUBLIC_APP_URL` to `https://your-domain.com` and `pm2 restart influrios`
+5. Update `.env` `NEXT_PUBLIC_APP_URL` to `https://your-domain.com` and redeploy:
+
+```bash
+bash deploy/scripts/deploy.sh
+```
 
 ---
 
