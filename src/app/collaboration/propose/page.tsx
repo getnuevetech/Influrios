@@ -11,7 +11,8 @@ import {
 import { isPlanCode, type PlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { scoreCreatorPair } from "@/lib/matching";
-import { getCreatorBySlug, specialtyLabel } from "@/lib/seed-data";
+import { getDirectoryCreator } from "@/lib/directory";
+import { specialtyLabel } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -31,9 +32,9 @@ async function submitProposal(formData: FormData) {
   const account = await getAccountSession();
   if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=proposal`);
 
-  const creatorA = getCreatorBySlug(a);
-  const creatorB = getCreatorBySlug(b);
-  const viewer = getCreatorBySlug(from);
+  const creatorA = await getDirectoryCreator(a);
+  const creatorB = await getDirectoryCreator(b);
+  const viewer = await getDirectoryCreator(from);
   const initiator = viewer?.slug === creatorB?.slug ? creatorB : creatorA;
   const recipient = initiator?.slug === creatorA?.slug ? creatorB : creatorA;
   const plan: PlanCode = initiator && isPlanCode(initiator.planTier) ? initiator.planTier : "STARTER";
@@ -75,9 +76,9 @@ async function submitProposal(formData: FormData) {
 
 export default async function ProposeCollaborationPage({ searchParams }: Props) {
   const params = await searchParams;
-  const creatorA = params.a ? getCreatorBySlug(params.a) : undefined;
-  const creatorB = params.b ? getCreatorBySlug(params.b) : undefined;
-  const from = params.from ? getCreatorBySlug(params.from) : creatorA;
+  const creatorA = params.a ? await getDirectoryCreator(params.a) : undefined;
+  const creatorB = params.b ? await getDirectoryCreator(params.b) : undefined;
+  const from = params.from ? await getDirectoryCreator(params.from) : creatorA;
 
   if (!creatorA || !creatorB || !from) {
     return (

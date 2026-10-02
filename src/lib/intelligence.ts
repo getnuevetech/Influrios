@@ -1,16 +1,13 @@
 /**
- * Phase 5 — Intelligence (demo, file-backed).
- * Audience snapshots, niche trends, relationship signals, and export payloads.
+ * Phase 5 — Intelligence (demo, file-backed notes store).
+ * Audience snapshots and trends read the Postgres directory; notes stay in JSON.
  * Labeled as demo / synthetic where data is not platform-verified.
  */
 import { promises as fs } from "fs";
 import path from "path";
+import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
 import { getManagedMatching } from "@/lib/managed-matching";
-import {
-  SEED_CREATORS,
-  specialtyLabel,
-  type SeedCreator,
-} from "@/lib/seed-data";
+import { specialtyLabel, type SeedCreator } from "@/lib/seed-data";
 
 export type AudienceSnapshot = {
   creatorSlug: string;
@@ -136,19 +133,19 @@ function formatRoughReach(creator: SeedCreator): string {
   return String(total);
 }
 
-export function getAllAudienceSnapshots(): AudienceSnapshot[] {
-  return SEED_CREATORS.map(buildAudienceSnapshot);
+export async function getAllAudienceSnapshots(): Promise<AudienceSnapshot[]> {
+  return (await listDirectoryCreators()).map(buildAudienceSnapshot);
 }
 
-export function getAudienceSnapshot(slug: string): AudienceSnapshot | null {
-  const creator = SEED_CREATORS.find((c) => c.slug === slug);
+export async function getAudienceSnapshot(slug: string): Promise<AudienceSnapshot | null> {
+  const creator = await getDirectoryCreator(slug);
   return creator ? buildAudienceSnapshot(creator) : null;
 }
 
 /** Synthetic niche demand vs supply — demo only. */
-export function getNicheTrends(): NicheTrend[] {
+export async function getNicheTrends(): Promise<NicheTrend[]> {
   const counts = new Map<string, number>();
-  for (const c of SEED_CREATORS) {
+  for (const c of await listDirectoryCreators()) {
     for (const s of c.specialties) {
       counts.set(s, (counts.get(s) ?? 0) + 1);
     }
@@ -183,10 +180,12 @@ export function getNicheTrends(): NicheTrend[] {
 
 export async function getRelationshipSignals(): Promise<RelationshipSignal[]> {
   const matching = await getManagedMatching();
+  const creators = await listDirectoryCreators();
+  const bySlug = new Map(creators.map((c) => [c.slug, c]));
   const signals: RelationshipSignal[] = [];
 
   for (const intro of matching.intros) {
-    const creator = SEED_CREATORS.find((c) => c.slug === intro.creatorSlug);
+    const creator = bySlug.get(intro.creatorSlug);
     signals.push({
       id: `intro-${intro.id}`,
       kind: "intro_pipeline",
@@ -199,9 +198,9 @@ export async function getRelationshipSignals(): Promise<RelationshipSignal[]> {
   }
 
   // Complementary offer/need pairs as collab-fit signals
-  for (const a of SEED_CREATORS) {
+  for (const a of creators) {
     if (!a.offer || !a.need) continue;
-    for (const b of SEED_CREATORS) {
+    for (const b of creators) {
       if (a.slug === b.slug || !b.offer) continue;
       const aNeed = a.need.toLowerCase();
       const bOffer = b.offer.toLowerCase();
@@ -237,15 +236,15 @@ export async function buildIntelligenceExport(opts?: {
   slug?: string;
 }): Promise<IntelligenceExport> {
   const snapshots = opts?.slug
-    ? ([getAudienceSnapshot(opts.slug)].filter(Boolean) as AudienceSnapshot[])
-    : getAllAudienceSnapshots();
+    ? ([await getAudienceSnapshot(opts.slug)].filter(Boolean) as AudienceSnapshot[])
+    : await getAllAudienceSnapshots();
   const signals = await getRelationshipSignals();
   await markIntelligenceExport();
   return {
     exportedAt: new Date().toISOString(),
     source: "influrios-intelligence-demo",
     snapshots,
-    trends: getNicheTrends(),
+    trends: await getNicheTrends(),
     signals,
   };
 }

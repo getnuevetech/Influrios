@@ -9,6 +9,7 @@ import { hasPermission } from "@/lib/admin-auth";
 import { actionAddLedgerEvidence, actionDecideLedgerDispute } from "@/app/admin/trust/ledger-actions";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
 import { listMilestoneDisputes } from "@/lib/milestone-disputes";
+import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
 import { formatMoney, getProtectedPaymentsStore } from "@/lib/protected-payments";
 import {
   enrichDispute,
@@ -43,15 +44,18 @@ export default async function AdminTrustPage({ searchParams }: Props) {
   const session = await requireAdminPage("trust");
   const canMediate = hasPermission(session, "trust.mediate");
   const params = await searchParams;
-  const trust = await getTrustStore();
-  const payments = await getProtectedPaymentsStore();
+  const legacyOn = await legacyDemoPaymentsEnabled();
+  const trust = legacyOn ? await getTrustStore() : null;
+  const payments = legacyOn ? await getProtectedPaymentsStore() : null;
   const [ledgerDisputes, marketplace] = await Promise.all([
     listMilestoneDisputes().catch(() => []),
     marketplaceConfig().catch(() => null),
   ]);
   const partialRefunds = marketplace?.partialRefundsEnabled ?? true;
-  const stats = trustStats(trust);
-  const enriched = await Promise.all(trust.disputes.map((d) => enrichDispute(d)));
+  const stats = trust
+    ? trustStats(trust)
+    : { open: 0, resolved: 0, total: 0, contracts: 0 };
+  const enriched = trust ? await Promise.all(trust.disputes.map((d) => enrichDispute(d))) : [];
 
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
@@ -65,7 +69,9 @@ export default async function AdminTrustPage({ searchParams }: Props) {
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
             Ledger disputes block a provider release until ops record a decision. That decision does not move money.
-            The section below is the earlier demo queue.
+            {legacyOn
+              ? "The Phase 9/10 demo mediation queue stays available while legacy demo payments is on."
+              : "The Phase 9/10 demo queue is off. Turn on legacy demo payments in marketplace settings to restore it."}
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-center text-xs">
@@ -197,6 +203,8 @@ export default async function AdminTrustPage({ searchParams }: Props) {
         </div>
       ) : null}
 
+      {legacyOn && trust && payments ? (
+        <>
       <section className="space-y-4">
         <h2 className="font-display text-xl font-bold text-indigo">Mediation queue</h2>
         {enriched.length === 0 ? (
@@ -390,13 +398,24 @@ export default async function AdminTrustPage({ searchParams }: Props) {
           </article>
         ))}
       </section>
+        </>
+      ) : null}
 
-      <p className="text-xs text-muted">
-        {trust.notes} · Public view:{" "}
-        <Link href="/trust" className="font-semibold text-violet hover:underline">
-          /trust
-        </Link>
-      </p>
+      {legacyOn && trust ? (
+        <p className="text-xs text-muted">
+          {trust.notes} · Public view:{" "}
+          <Link href="/trust" className="font-semibold text-violet hover:underline">
+            /trust
+          </Link>
+        </p>
+      ) : (
+        <p className="text-xs text-muted">
+          Public view:{" "}
+          <Link href="/trust" className="font-semibold text-violet hover:underline">
+            /trust
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

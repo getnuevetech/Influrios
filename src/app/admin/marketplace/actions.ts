@@ -36,6 +36,7 @@ export async function actionSaveMarketplaceSettings(formData: FormData) {
       cancelUnconfirmed: formData.get("cancelUnconfirmed") === "on",
     });
     await setProductSwitch("financial_reports", formData.get("financialReports") === "on");
+    await setProductSwitch("legacy_demo_payments", formData.get("legacyDemoPayments") === "on");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save settings.";
     redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);

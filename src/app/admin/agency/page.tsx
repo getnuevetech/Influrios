@@ -14,7 +14,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { agencyStats, getAgencyStore, listAgencySeats } from "@/lib/agency";
 import { productSwitch } from "@/lib/product-switches";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Agency" };
@@ -39,6 +39,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
   const params = await searchParams;
   const [store, seats, seatsOn] = await Promise.all([getAgencyStore(), listAgencySeats(), productSwitch("agency_seats")]);
   const stats = agencyStats(store);
+  const directoryCreators = await listDirectoryCreators();
+  const bySlug = indexCreatorsBySlug(directoryCreators);
 
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
@@ -160,7 +162,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
             {store.roster.map((m) => (
               <tr key={m.creatorSlug} className="border-t border-border">
                 <td className="py-2.5 pr-3 font-semibold text-indigo">
-                  {getCreatorBySlug(m.creatorSlug)?.displayName ?? m.creatorSlug}
+                  {bySlug.get(m.creatorSlug)?.displayName ?? m.creatorSlug}
                   {canManage ? (
                     <form action={actionAdminRemoveRoster} className="mt-1">
                       <input type="hidden" name="creatorSlug" value={m.creatorSlug} />
@@ -181,7 +183,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         {canManage ? (
           <form action={actionAdminAddRoster} className="mt-4 grid gap-3 sm:grid-cols-4">
             <select name="creatorSlug" className="rounded-xl border border-border px-3 py-2 text-sm" required>
-              {SEED_CREATORS.filter((c) => !store.roster.some((r) => r.creatorSlug === c.slug)).map(
+              {directoryCreators.filter((c) => !store.roster.some((r) => r.creatorSlug === c.slug)).map(
                 (c) => (
                   <option key={c.slug} value={c.slug}>
                     {c.displayName}
@@ -270,8 +272,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
             <div>
               <h3 className="font-display text-lg font-bold text-indigo">{p.title}</h3>
               <p className="text-sm text-muted">
-                {getCreatorBySlug(p.leftSlug)?.displayName} ×{" "}
-                {getCreatorBySlug(p.rightSlug)?.displayName}
+                {bySlug.get(p.leftSlug)?.displayName} ×{" "}
+                {bySlug.get(p.rightSlug)?.displayName}
                 {p.published ? " · published" : " · draft"}
               </p>
               <p className="mt-1 text-sm text-muted">{p.outcome}</p>
@@ -291,13 +293,13 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
           <form action={actionAdminCreatePortfolio} className="card-surface grid gap-3 p-5 sm:grid-cols-2">
             <input name="title" required defaultValue="Ops case study" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
             <input name="tagline" defaultValue="Complementary collab proof" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
-            <select name="leftSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={SEED_CREATORS[0]?.slug}>
-              {SEED_CREATORS.map((c) => (
+            <select name="leftSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={directoryCreators[0]?.slug}>
+              {directoryCreators.map((c) => (
                 <option key={c.slug} value={c.slug}>{c.displayName}</option>
               ))}
             </select>
-            <select name="rightSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={SEED_CREATORS[1]?.slug}>
-              {SEED_CREATORS.map((c) => (
+            <select name="rightSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={directoryCreators[1]?.slug}>
+              {directoryCreators.map((c) => (
                 <option key={c.slug} value={c.slug}>{c.displayName}</option>
               ))}
             </select>

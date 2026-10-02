@@ -388,6 +388,18 @@ export async function getDirectoryCreator(slug: string): Promise<SeedCreator | n
   return directory.creators.find((creator) => creator.slug === slug) ?? null;
 }
 
+/** Product read API — every match, picker, and ranking path should use this (or getDirectoryCreator). */
+export async function listDirectoryCreators(): Promise<SeedCreator[]> {
+  const directory = await getDirectory();
+  return directory.creators;
+}
+
+export async function directoryHasCreator(slug: string): Promise<boolean> {
+  return Boolean(await getDirectoryCreator(slug));
+}
+
+export { indexCreatorsBySlug } from "@/lib/seed-data";
+
 export async function searchDirectory(query: CreatorSearchQuery) {
   const directory = await getDirectory();
   const specialtyValues = query.specialty

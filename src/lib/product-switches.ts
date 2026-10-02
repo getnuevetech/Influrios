@@ -26,6 +26,12 @@ export const PRODUCT_SWITCHES = [
     enabled: false,
     description: "Named seats on the agency workspace. Turned off, the roster stays and new seats are refused.",
   },
+  {
+    key: "legacy_demo_payments",
+    enabled: false,
+    description:
+      "Phase 9/10 JSON escrow and trust demo consoles. Turned off, product CTAs stay on the marketplace ledger.",
+  },
 ] as const;
 
 export type ProductSwitchKey = (typeof PRODUCT_SWITCHES)[number]["key"];

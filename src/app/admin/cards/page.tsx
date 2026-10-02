@@ -3,7 +3,7 @@ import { actionUpdateCard, actionUpdateFeaturedGlobals } from "@/app/admin/actio
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getCms } from "@/lib/cms";
-import { getCreatorBySlug } from "@/lib/seed-data";
+import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 
 export const metadata = { title: "Admin · Cards" };
 
@@ -27,6 +27,9 @@ export default async function AdminCardsPage({ searchParams }: Props) {
   const params = await searchParams;
   const cms = await getCms();
   const cards = [...cms.featuredCards.cards].sort((a, b) => a.order - b.order);
+
+  const directory = await getDirectory().catch(() => null);
+  const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
 
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
@@ -111,7 +114,7 @@ export default async function AdminCardsPage({ searchParams }: Props) {
       </section>
 
       {cards.map((card) => {
-        const creator = getCreatorBySlug(card.slug);
+        const creator = bySlug.get(card.slug);
         return (
           <section key={card.slug} className="card-surface p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">

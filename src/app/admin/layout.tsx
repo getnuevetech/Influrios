@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionAdminLogout } from "@/app/admin/actions-auth";
 import { canAccessModule, getAdminSession, type AdminModule } from "@/lib/admin-auth";
+import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
 
 const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboard" }[] = [
   { href: "/admin", label: "Dashboard", module: "dashboard" },
@@ -37,14 +38,16 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
 /** Signed-in admin chrome with left sidebar (login page stays clean when no session). */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
+  const legacyDemoOn = session ? await legacyDemoPaymentsEnabled() : false;
 
   if (!session) {
     return <div>{children}</div>;
   }
 
-  const links = SIDE_LINKS.filter((l) =>
-    l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule),
-  );
+  const links = SIDE_LINKS.filter((l) => {
+    if (!legacyDemoOn && l.href === "/admin/payments") return false;
+    return l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule);
+  });
 
   return (
     <div className="min-h-screen bg-[#F5F8FF]">

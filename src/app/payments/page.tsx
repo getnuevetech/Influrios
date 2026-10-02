@@ -16,7 +16,7 @@ import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { formatMoney } from "@/lib/protected-payments";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Protected Payments" };
@@ -68,6 +68,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
   const held = usdFundings.reduce((sum, row) => sum + row.ledger.heldCents, 0);
   const released = usdFundings.reduce((sum, row) => sum + row.ledger.releasedCents, 0);
   const confirmed = fundings.filter((row) => row.status === "held" || row.status === "completed").length;
+  const directoryCreators = await listDirectoryCreators().catch(() => []);
+  const bySlug = indexCreatorsBySlug(directoryCreators);
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -150,7 +152,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 defaultValue="sofia-martinez"
               >
-                {SEED_CREATORS.slice(0, 12).map((creator) => (
+                {directoryCreators.slice(0, 12).map((creator) => (
                   <option key={creator.slug} value={creator.slug}>
                     {creator.displayName}
                   </option>
@@ -247,7 +249,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
           <h2 className="font-display text-2xl font-bold text-indigo">Active deals</h2>
           {fundings.length === 0 ? <p className="text-sm text-muted">No deals yet — request a prefund above.</p> : null}
           {fundings.map((deal) => {
-            const creator = getCreatorBySlug(deal.creatorSlug);
+            const creator = bySlug.get(deal.creatorSlug);
             const jurisdiction = jurisdictions.find((row) => row.code === deal.jurisdictionCode);
             const fx = readFxSnapshot(deal.fxSnapshotJson);
             const shares = readShareSnapshot(deal.shareSnapshotJson);

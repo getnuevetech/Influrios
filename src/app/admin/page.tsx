@@ -15,6 +15,7 @@ import { getManagedMatching } from "@/lib/managed-matching";
 import { escrowStats, getProtectedPaymentsStore } from "@/lib/protected-payments";
 import { getTrustStore, trustStats } from "@/lib/trust";
 import { prisma } from "@/lib/db";
+import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -248,24 +249,28 @@ export default async function AdminHomePage({
   if (!session) redirect("/admin/login");
 
   const params = await searchParams;
-  const [cms, matching, billing, payments, trust, agency, memberAccounts, health, stripeMode] = await Promise.all([
-    getCms().catch(() => null),
-    getManagedMatching().catch(() => null),
-    getBillingStore().catch(() => null),
-    getProtectedPaymentsStore().catch(() => null),
-    getTrustStore().catch(() => null),
-    getAgencyStore().catch(() => null),
-    prisma.user.count().catch(() => 0),
-    providerHealth().catch(() => null),
-    stripeBillingMode().catch(() => "demo" as const),
-  ]);
+  const [cms, matching, billing, payments, trust, agency, memberAccounts, health, stripeMode, snapshotsList, trends, legacyDemoOn] =
+    await Promise.all([
+      getCms().catch(() => null),
+      getManagedMatching().catch(() => null),
+      getBillingStore().catch(() => null),
+      getProtectedPaymentsStore().catch(() => null),
+      getTrustStore().catch(() => null),
+      getAgencyStore().catch(() => null),
+      prisma.user.count().catch(() => 0),
+      providerHealth().catch(() => null),
+      stripeBillingMode().catch(() => "demo" as const),
+      getAllAudienceSnapshots().catch(() => []),
+      getNicheTrends().catch(() => []),
+      legacyDemoPaymentsEnabled().catch(() => false),
+    ]);
   const payStats = payments ? escrowStats(payments) : { active: 0, held: 0 };
   const tStats = trust ? trustStats(trust) : { open: 0, resolved: 0, total: 0, contracts: 0 };
   const aStats = agency ? agencyStats(agency) : { roster: 0, campaigns: 0, live: 0, portfolios: 0, published: 0 };
   const visibleCards = cms?.featuredCards.cards.filter((c) => c.visible).length ?? 0;
   const optIns = matching?.optIns.filter((o) => o.openToManaged).length ?? 0;
-  const snapshots = getAllAudienceSnapshots().length;
-  const rising = getNicheTrends().filter((t) => t.signal === "rising").length;
+  const snapshots = snapshotsList.length;
+  const rising = trends.filter((t) => t.signal === "rising").length;
   const completedCheckouts = billing?.sessions.filter((s) => s.status === "completed").length ?? 0;
   const ctx = {
     visibleCards,
@@ -287,7 +292,9 @@ export default async function AdminHomePage({
     stripeMode,
   };
 
-  const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));
+  const visibleLinks = LINKS.filter(
+    (l) => (legacyDemoOn || l.href !== "/admin/payments") && canAccessModule(session, l.module),
+  );
 
   return (
     <div>

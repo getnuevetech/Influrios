@@ -1,9 +1,10 @@
 import { getBusinessEntitlements, type BusinessPlanCode } from "@/lib/business-entitlements";
 import { managedMatchGate } from "@/lib/business-queue";
+import { directoryHasCreator, listDirectoryCreators } from "@/lib/directory";
 import { prisma } from "@/lib/db";
 import { getManagedPromotionEnabled } from "@/lib/managed-matching";
 import { samePlace } from "@/lib/place-names";
-import { SEED_CREATORS, specialtyLabel, type SeedCreator } from "@/lib/seed-data";
+import { specialtyLabel, type SeedCreator } from "@/lib/seed-data";
 
 export type ShortlistItem = {
   creatorSlug: string;
@@ -189,7 +190,7 @@ export async function addToShortlist(creatorSlug: string, note?: string) {
       ws,
     };
   }
-  if (!SEED_CREATORS.some((creator) => creator.slug === creatorSlug)) {
+  if (!(await directoryHasCreator(creatorSlug))) {
     return { ok: false as const, error: "Creator not found", ws };
   }
   try {
@@ -393,6 +394,13 @@ export function fitCreatorToBrief(creator: SeedCreator, brief: CampaignBrief): C
   };
 }
 
-export function rankCreatorsForBrief(brief: CampaignBrief): CreatorFit[] {
-  return SEED_CREATORS.map((c) => fitCreatorToBrief(c, brief)).sort((a, b) => b.score - a.score);
+export function rankCreatorsForBrief(
+  brief: CampaignBrief,
+  creators: readonly SeedCreator[],
+): CreatorFit[] {
+  return creators.map((c) => fitCreatorToBrief(c, brief)).sort((a, b) => b.score - a.score);
+}
+
+export async function rankDirectoryCreatorsForBrief(brief: CampaignBrief): Promise<CreatorFit[]> {
+  return rankCreatorsForBrief(brief, await listDirectoryCreators());
 }

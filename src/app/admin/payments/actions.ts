@@ -10,7 +10,8 @@ import {
   releaseMilestone,
   submitMilestone,
 } from "@/lib/protected-payments";
-import { getCreatorBySlug } from "@/lib/seed-data";
+import { getDirectoryCreator } from "@/lib/directory";
+import { assertLegacyDemoPayments } from "@/lib/legacy-demo-payments";
 
 function dollarsToCents(raw: string) {
   const n = Number(String(raw).replace(/[^0-9.]/g, ""));
@@ -32,13 +33,14 @@ function parseMilestones(formData: FormData) {
 }
 
 export async function actionAdminCreateDeal(formData: FormData) {
+  await assertLegacyDemoPayments();
   await requireAdminAction("payments.manage");
   const businessName = String(formData.get("businessName") ?? "").trim();
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
   const briefTitle = String(formData.get("briefTitle") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const introId = String(formData.get("introId") ?? "").trim() || undefined;
-  const creator = getCreatorBySlug(creatorSlug);
+  const creator = await getDirectoryCreator(creatorSlug);
   const milestones = parseMilestones(formData);
 
   if (!businessName || !creatorSlug || !briefTitle || milestones.length === 0) {
@@ -66,6 +68,7 @@ export async function actionAdminCreateDeal(formData: FormData) {
 }
 
 export async function actionAdminFundDeal(formData: FormData) {
+  await assertLegacyDemoPayments();
   await requireAdminAction("payments.manage");
   const dealId = String(formData.get("dealId") ?? "");
   try {
@@ -80,6 +83,7 @@ export async function actionAdminFundDeal(formData: FormData) {
 }
 
 export async function actionAdminSubmitMilestone(formData: FormData) {
+  await assertLegacyDemoPayments();
   await requireAdminAction("payments.manage");
   const dealId = String(formData.get("dealId") ?? "");
   const milestoneId = String(formData.get("milestoneId") ?? "");
@@ -96,6 +100,7 @@ export async function actionAdminSubmitMilestone(formData: FormData) {
 }
 
 export async function actionAdminReleaseMilestone(formData: FormData) {
+  await assertLegacyDemoPayments();
   await requireAdminAction("payments.manage");
   const dealId = String(formData.get("dealId") ?? "");
   const milestoneId = String(formData.get("milestoneId") ?? "");
@@ -112,6 +117,7 @@ export async function actionAdminReleaseMilestone(formData: FormData) {
 }
 
 export async function actionAdminRefundDeal(formData: FormData) {
+  await assertLegacyDemoPayments();
   await requireAdminAction("payments.manage");
   const dealId = String(formData.get("dealId") ?? "");
   const note = String(formData.get("note") ?? "") || undefined;

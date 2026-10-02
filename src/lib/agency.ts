@@ -4,8 +4,8 @@
  */
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
+import { directoryHasCreator } from "@/lib/directory";
 import { productSwitch } from "@/lib/product-switches";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
 
 export type RosterMember = {
   creatorSlug: string;
@@ -264,7 +264,7 @@ export async function addRosterMember(input: {
   notes?: string;
 }) {
   const store = await ensureStore();
-  if (!getCreatorBySlug(input.creatorSlug) && !SEED_CREATORS.some((c) => c.slug === input.creatorSlug)) {
+  if (!(await directoryHasCreator(input.creatorSlug))) {
     throw new Error("Unknown creator");
   }
   if (store.roster.some((r) => r.creatorSlug === input.creatorSlug)) {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listCollaborations } from "@/lib/collaborations";
-import { getCreatorBySlug } from "@/lib/seed-data";
+import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Collaboration proposals" };
@@ -17,6 +17,8 @@ export default async function CollaborationRecordsPage({ searchParams }: Props) 
     console.error("collaboration list", error);
     dbError = true;
   }
+  const directory = await getDirectory().catch(() => null);
+  const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
@@ -35,8 +37,8 @@ export default async function CollaborationRecordsPage({ searchParams }: Props) 
       ) : null}
       <ul className="mt-6 space-y-3">
         {records.map((record) => {
-          const initiator = getCreatorBySlug(record.initiatorSlug);
-          const recipient = getCreatorBySlug(record.recipientSlug);
+          const initiator = bySlug.get(record.initiatorSlug);
+          const recipient = bySlug.get(record.recipientSlug);
           return (
             <li key={record.id}>
               <Link href={`/collaboration/records/${record.id}`} className="card-surface block p-4 hover:border-violet">
