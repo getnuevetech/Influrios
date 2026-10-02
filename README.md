@@ -38,23 +38,28 @@ bash deploy/scripts/deploy.sh            # docker compose up --build
 
 ## Docs
 
-- [Implementation plan (current)](./docs/IMPLEMENTATION_PLAN.md)
-- [Recommendations & Execution Plan](./docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md)
+- [Development state & next plan (current sequencing)](./docs/DEVELOPMENT_STATE_AND_NEXT_PLAN.md)
+- [Implementation plan (Phases A–I + 12.x log)](./docs/IMPLEMENTATION_PLAN.md)
+- [Recommendations & Execution Plan (historical)](./docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md)
 - [Strategy notes](./docs/strategy/)
 - [Design references](./docs/design-references/)
 - [Lightsail guide](./docs/deploy/AWS_LIGHTSAIL.md)
 
-## Phase 1 surfaces (this branch)
+## Current surfaces
 
 | Route | Purpose |
 |-------|---------|
 | `/` | Home / search hero |
-| `/discover` | Specialty search |
+| `/discover` | Specialty search (Postgres directory) |
 | `/creators/[slug]` | Influence profile |
 | `/c/[slug]` | Vertical Influencer Card (tier-aware) |
 | `/card` | Card marketing |
-| `/claim` | Draft → claim → verify → publish (Phase 8) |
-| `/dashboard` | Creator completeness dashboard (Phase 8) |
-| `/collaboration` | Match preview (Phase 2 stub) |
+| `/claim` | Draft → claim → verify → publish |
+| `/dashboard` | Creator completeness dashboard |
+| `/collaboration` | Creator↔creator matching & proposals |
+| `/business` | Business briefs / shortlists |
+| `/billing` | Plan checkout (Stripe or demo) |
+| `/payments` | Marketplace prefund / milestones |
+| `/admin` | Ops console (plans, CMS, providers, ledger, …) |
 
 Production branding: **Influrios** only.

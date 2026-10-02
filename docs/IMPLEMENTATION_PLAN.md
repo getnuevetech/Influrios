@@ -1,20 +1,21 @@
 # Influrios — Implementation Plan
 
-**Status:** Phases A–I are implemented, and the short-link resolver boots only when its tables are readable. Phase 12.3 is the marketplace ledger: a prefund stays unfunded until a signed provider webhook confirms it, milestone release is a ledger entry, and the word escrow appears only when that jurisdiction allows it. Phase 12.4 records a milestone dispute and can cancel an unconfirmed prefund. A dispute decision does not post a ledger entry, and a refund still waits for a signed provider webhook. Phase 12.5 freezes an attribution source on each prefund and can repeat a provider-confirmed deal without copying its ledger or its fee snapshot. Phase 12.6 can split a prefund into stages or open a recurring series. Each tranche stays unfunded until its own signed webhook. Phase 12.7 converts a non-USD prefund, routes the jurisdiction to one marketplace provider, and writes revenue-share lines when that provider releases a milestone. Those lines are not cash. A missing rate or a provider that is not ready creates no funding row. Phase 12.8 pulls that rate from the Wise user quote for the saved profile. A typed minor-unit figure is not used. If Wise is not ready or does not return a rate, nothing is funded. Phase 12.9 copies a revision limit onto each milestone. Asking for a revision sends submitted work back to the creator and does not move the ledger. A later limit edit does not raise the count already saved on that milestone. Phase 12.10 copies an evidence cap onto each dispute. A business, creator, or ops note can include an https link. The note does not release or refund, and a later cap edit does not raise the limit already saved on that dispute. Phase 12.11 checks an admin USD gross cap when a prefund is created. Zero means no cap. A later change does not cancel a prefund already requested. The marketplace page totals holds, releases, refunds, and fees by currency. Fees and revenue shares are not added into the held amount. Phase 12.12 applies a signed partial refund to the milestone and leaves the rest releasable. The original milestone amount stays. A refund that does not match the recorded request is refused. Turning partial refunds off blocks a new request and does not cancel one already recorded. Phase 12.13 records a change order on a prefund that is still waiting for the provider. The new gross is checked against the USD cap, and a non-USD amount asks Wise again. The earlier fee snapshot stays on the change order. The limit copied onto that prefund is what counts. A later limit edit does not add room, and turning change orders off does not undo an amendment already recorded. A provider-confirmed prefund cannot be amended. Demo checkout, the monthly ledger report, and the open-dispute limit stay on until an admin turns them off. The Stripe billing portal, Stripe Connect account links, and agency seats stay off until an admin turns them on. M-Pesa is a payment gateway that stays disabled until it is enabled with a secret. A signing request with an https address is sent to that provider and stays queued. None of these report success when the switch is off or the provider does not confirm. A Stripe sandbox key opens Checkout and leaves the plan unpaid until Stripe reports the session complete. A live key saved on the gateway is refused. The agency roster now lives in Postgres. Public Home, Discover, profile, card, and collaboration layouts stay as designed. Live charges, live model replies, and a signed envelope still wait for the assigned provider to confirm. New product behavior must be editable in admin, not left only as a source constant.  
+**Status:** Phases A–I and Phase 12.3–12.13 are implemented on `main` (ledger, disputes, attribution, schedules, FX/shares, Wise, revisions, evidence, gross cap, partial refunds, change orders, admin product switches, Stripe sandbox). Short-link resolver boots only when its tables are readable. Public layouts stay as designed. Live charges, mail, social sync, and marketplace holds still wait on configured providers.  
+**Sequencing for new work:** [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md) (2026-10-02) — directory purity, claim consolidation, JSON quarantine, launch integrations. Do not extend Phase 12 further before that plan.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
-**Date:** 2026-09-30  
-**Supersedes for sequencing:** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, and any impulse to keep extending JSON demo modules.  
-**Does not replace:** Product Strategy / Spec v2.2 (behavior), or `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md` (later collaboration-fee compliance).
+**Date:** 2026-09-30 · **Status line updated:** 2026-10-02  
+**Supersedes for sequencing (historical):** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`.  
+**Does not replace:** Product Strategy / Spec v2.2 (behavior), or `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md` (collaboration-fee compliance).
 
 ---
 
 ## 1. Verdict
 
-The app is a wide, branded demo. Public pages for Home, Discover, Categories, creator profile, Influencer Card, Collaboration, claim, and admin already exist and follow the template hierarchy closely enough that another visual rewrite is not the critical path.
+> **Historical snapshot (2026-09-30).** Phases A–I and 12.3–12.13 have since landed. For the October 2026 repo state, remaining gaps, and next build order, use [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md).
 
-Spec v2.2’s MVP (section 33) is a **configurable platform**. That baseline is not met.
+At the time this plan was written, the app was a wide branded demo: public pages existed, but Spec v2.2’s MVP (section 33) — a **configurable platform** on Postgres — was not met. The gap table below is retained as the original diagnostic; it is **not** current.
 
-| Spec expects | Repo today |
+| Spec expects | Repo as of 2026-09-30 (historical) |
 |---|---|
 | Admin-managed plans, limits, CMS sections, country rules, providers | Launch defaults hard-coded in `src/lib/entitlements.ts`. CMS is four banners + featured cards + one value-proposition strip in `data/cms.json`. |
 | Postgres as the directory | Prisma schema is pushed on boot and never read. `src/` has no Prisma client. Search, cards, and matching use `SEED_CREATORS`. |
@@ -23,9 +24,7 @@ Spec v2.2’s MVP (section 33) is a **configurable platform**. That baseline is 
 | Guest gates, audit, queues, provider adapters | Absent. Admin RBAC is the only real access-control surface, and it is file-backed. |
 | Versioned migrations and tests | `prisma db push` only. No tests, no CI. |
 
-Existing Phase 2–12 screens (collaboration scoring, business workspace, billing demo, escrow, trust, agency, fee simulator) are useful prototypes. Spec section 31 lists full escrow, contract lifecycle, and e-sign as **non-goals** for the initial build. The addendum still applies later, behind the provider and ledger work. Do not add another demo store before the configuration model exists.
-
-**Next build:** make the directory, entitlements, claim, and CMS actually configurable and durable. Keep the current UI. Rebind it.
+**Original next build (completed via Phases A–I):** make the directory, entitlements, claim, and CMS configurable and durable; keep the UI; rebind it.
 
 ---
 
@@ -408,7 +407,9 @@ Implemented on the existing marketplace, billing, gateway, signing, and agency a
 
 ## 7. First coding slice (Phase A + the card seam)
 
-This is the smallest change that makes later phases cheaper.
+> **Completed.** For the next coding slice after Phase 12.13, see Phase J in [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md).
+
+Historical first slice (Phase A):
 
 1. Branch from `main`. Add an initial migration matching `prisma/schema.prisma`, then the entitlement and audit tables.
 2. Seed plans from `PLAN_ENTITLEMENTS` and taxonomy from `SPECIALTY_TAXONOMY`.
