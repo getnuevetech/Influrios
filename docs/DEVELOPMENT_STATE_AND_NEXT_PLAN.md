@@ -83,7 +83,7 @@ These modules read/write Prisma and match the implementation plan’s “Impleme
 | ~~Claim funnel~~ | ~~`data/claim-funnel.json`~~ | **Retired in Phase K.** `OnboardingSession` + Creator via `claim.ts` / `claim-persist.ts` are authoritative. |
 | CMS banners / value prop content | `CmsSection.payload` via `cms.ts` | Banner image **files** stay on `uploads`; one-time import from `cms.json` |
 | Billing sessions | Postgres `CheckoutAttempt` via `billing.ts` | Plan apply hits `User` / `Creator` / `SubscriptionState`; one-time import from `billing.json` |
-| Fee matrix simulator | `data/collaboration-fees.json` | Admin fee rules UI (ledger fee snapshot is separate / immutable on funding) |
+| Fee matrix simulator | Postgres `CollaborationFeeRule` / `CollaborationFeeSnapshot` via `collaboration-fees.ts` | Admin fee rules UI; one-time import from `collaboration-fees.json`; ledger fee snapshot stays immutable on funding |
 | Phase 9 protected payments | `data/protected-payments.json` | Explicit demo console (`/admin/payments`, parts of `/payments`) |
 | Phase 10 trust | `data/trust.json` | Explicit demo queue (`/admin/trust`, “Earlier demo queue” on `/trust`) |
 | Intelligence | Postgres `IntelligenceSettings` via `intelligence.ts` | Trends/signals stay computed from directory; one-time import from `intelligence.json` |
@@ -224,7 +224,7 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 4. ~~Billing: persist checkout attempts in Prisma or stop writing `billing.json` when Stripe confirms.~~ **Done (`CheckoutAttempt`).**  
 5. ~~Document volume mounts: `uploads` required; `data/` optional after migration.~~ **Done.**
 
-**Exit met for admin + CMS + billing + intelligence:** fresh Compose with empty `data/` boots those paths from Postgres. Remaining JSON demos (`protected-payments`, `trust`, `collaboration-fees`) stay quarantined / optional.
+**Exit met for admin + CMS + billing + intelligence + fee rules:** fresh Compose with empty `data/` boots those paths from Postgres. Remaining JSON demos (`protected-payments`, `trust`) stay quarantined / optional.
 
 ### Phase M — Launch integrations — RUNBOOK SHIPPED (evidence pending)
 
@@ -261,7 +261,7 @@ Pick from product backlog once loops are honest:
 - Meilisearch when Discover latency/filter load hurts  
 - Customer Portal / Connect when paid volume exists  
 - ~~Intelligence persistence~~ **Done (`IntelligenceSettings`).**  
-- Fee simulator → versioned Prisma rules (if still JSON)  
+- ~~Fee simulator → versioned Prisma rules~~ **Done (`CollaborationFeeRule` / `CollaborationFeeSnapshot`).**  
 - Agency multi-seat auth when `agency_seats` turns on  
 - E-sign / formal contracts (still non-goal until counsel + volume)
 
@@ -269,10 +269,10 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-Phases J–N plus intelligence persistence are on `main` (or this PR). Remaining:
+Phases J–N plus intelligence + fee-rules persistence are on `main` (or this PR). Remaining:
 
 1. Fill **Phase M** staging evidence on a real host.  
-2. Optional: fee simulator → Prisma, or leave Phase 9/10 JSON quarantined.  
+2. Optional: leave Phase 9/10 JSON (`protected-payments`, `trust`) quarantined.  
 3. Do **not** start Meilisearch / Connect / e-sign without product asking.
 
 ---
@@ -310,6 +310,6 @@ Phases J–N plus intelligence persistence are on `main` (or this PR). Remaining
 
 **API:** health, billing webhook, marketplace webhook, social callback, short resolve, QR, places, intelligence export
 
-**Prisma:** 88 models; migrations through admin switches / change orders (Oct 2026)
+**Prisma:** 90 models; migrations through collaboration fee rules (Oct 2026)
 
-**JSON under `data/`:** `collaboration-fees`, `protected-payments`, `trust` (claim-funnel, admin-auth, cms, billing, intelligence retired)
+**JSON under `data/`:** `protected-payments`, `trust` (claim-funnel, admin-auth, cms, billing, intelligence, collaboration-fees retired)
