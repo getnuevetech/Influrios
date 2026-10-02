@@ -15,7 +15,7 @@ Influrios is past the branded-demo stage and into a **hybrid production platform
 |---|---|
 | Product surface | Wide: Home, Discover, profiles, cards, claim, dashboard, collaboration, business, agency, billing, payments/trust, legal, large admin |
 | Data durability | Strong for Phases A–I + 12.3–12.13 (88 Prisma models, versioned migrations) |
-| Dual architecture | Still real for ops/demo JSON (`cms`, billing, payments, trust, intelligence); claim + admin RBAC + directory are Postgres |
+| Dual architecture | Still real for ops/demo JSON (`billing`, payments, trust, intelligence, fee simulator); claim + admin RBAC + CMS + directory are Postgres |
 | Spec MVP (section 33) | Structurally met (unit gate + CI); not yet proven with live SMTP, Stripe, and social credentials |
 | Ops / deploy | Docker Compose on Lightsail is the intended path; docs still mix older PM2 language |
 | Next risk | Building more Phase 12 depth before retiring dual stores and hard-wiring launch integrations |
@@ -81,7 +81,7 @@ These modules read/write Prisma and match the implementation plan’s “Impleme
 | Store | Path | Role today |
 |---|---|---|
 | ~~Claim funnel~~ | ~~`data/claim-funnel.json`~~ | **Retired in Phase K.** `OnboardingSession` + Creator via `claim.ts` / `claim-persist.ts` are authoritative. |
-| CMS banners / value prop content | `data/cms.json` via `cms.ts` | Banner uploads + strip copy; homepage *order* is Postgres sections |
+| CMS banners / value prop content | `CmsSection.payload` via `cms.ts` | Banner image **files** stay on `uploads`; one-time import from `cms.json` |
 | Billing sessions | `data/billing.json` via `billing.ts` | Demo checkout history; plan apply also hits Prisma `User` / subscription state |
 | Fee matrix simulator | `data/collaboration-fees.json` | Admin fee rules UI (ledger fee snapshot is separate / immutable on funding) |
 | Phase 9 protected payments | `data/protected-payments.json` | Explicit demo console (`/admin/payments`, parts of `/payments`) |
@@ -136,6 +136,7 @@ Do not add staged-funding variants, extra providers, or new ledger product surfa
 ### R3 — Finish claim dual-write retirement
 
 1. ~~Make `OnboardingSession` / `ProfileClaim` / publish path authoritative; stop requiring `claim-funnel.json` for publish.~~ **Done (Phase K).**  
+2. ~~Move CMS banner/value-prop payloads into `CmsSection` content JSON or dedicated tables.~~ **Done (Phase L.2).**  
 2. Link published claim to `User` (already partially present in accounts) and drop long-lived demo creator cookie as the ownership proof.  
 3. Keep DEMO_CODE verify only when mail is not ready; once SMTP is ready, email challenge is the default path.
 
@@ -218,12 +219,12 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 **Proves:** production admin survives without JSON files except uploads.
 
 1. ~~Prisma models for admin users/roles/permissions; migrate `admin-auth.json` once; keep HMAC cookie.~~ **Done.**  
-2. Fold CMS JSON fields into section payloads; keep upload volume for banners.  
+2. ~~Fold CMS JSON fields into section payloads; keep upload volume for banners.~~ **Done.**  
 3. ~~Feature flag `legacy_demo_payments` (default off): gate `/admin/payments` Phase 9 UI and trust demo forms.~~ **Done (Phase J + confirmed).**  
 4. Billing: persist checkout attempts in Prisma or stop writing `billing.json` when Stripe confirms.  
-5. ~~Document volume mounts: `uploads` required; `data/` optional after migration.~~ **Done for admin path.**
+5. ~~Document volume mounts: `uploads` required; `data/` optional after migration.~~ **Done for admin + CMS path.**
 
-**Exit (partial):** fresh Compose up with empty `data/` volume boots admin via `ADMIN_SUPER_*` env. CMS/billing JSON remain until L.2 / L.4.
+**Exit (partial):** fresh Compose up with empty `data/` boots admin + CMS from Postgres. Billing/payments/trust/intelligence JSON remain until L.4 / quarantine.
 
 ### Phase M — Launch integrations
 
@@ -266,11 +267,10 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-Phases J–K and L.1/L.3/L.5 (admin RBAC) are on `main` (or this PR). Next:
+Phases J–K and L.1–L.3 / L.5 (admin + CMS) are on `main` (or this PR). Next:
 
-1. **Phase L.2** — fold CMS JSON into `CmsSection` payloads; keep uploads volume.  
-2. **Phase L.4** — stop writing billing session JSON once Stripe confirms, or persist attempts in Prisma.  
-3. Do **not** start another marketplace capability in the same window.
+1. **Phase L.4** — stop writing billing session JSON once Stripe confirms, or persist attempts in Prisma.  
+2. Do **not** start another marketplace capability in the same window.
 
 ---
 
@@ -309,4 +309,4 @@ Phases J–K and L.1/L.3/L.5 (admin RBAC) are on `main` (or this PR). Next:
 
 **Prisma:** 88 models; migrations through admin switches / change orders (Oct 2026)
 
-**JSON under `data/`:** `cms`, `billing`, `collaboration-fees`, `protected-payments`, `trust`, `intelligence` (claim-funnel + admin-auth retired)
+**JSON under `data/`:** `billing`, `collaboration-fees`, `protected-payments`, `trust`, `intelligence` (claim-funnel, admin-auth, cms retired)

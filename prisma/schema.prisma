@@ -179,6 +179,8 @@ model CmsSection {
   enabled   Boolean  @default(true)
   status    String   @default("published")
   updatedBy String?
+  /// Banner / featured / value-prop content (Phase L.2). Layout-only sections stay null.
+  payload   Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
