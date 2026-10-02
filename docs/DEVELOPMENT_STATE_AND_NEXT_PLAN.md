@@ -241,18 +241,18 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 
 **Exit:** staging operator fills the green evidence tables in that runbook; production switches match the policy table. **Not complete until evidence is signed — CI alone does not finish Phase M.**
 
-### Phase N — Hardening & observability
+### Phase N — Hardening & observability — DONE (code + docs)
 
 **Proves:** Lightsail instance can be rebuilt from docs alone.
 
-1. Rewrite Lightsail guide to Compose-only; remove PM2 app path.  
-2. HTTPS (Let’s Encrypt) + `NEXT_PUBLIC_APP_URL` https.  
-3. Backup script + restore drill.  
-4. `/api/health` (web + DB).  
-5. Basic rate limits / lockout on auth endpoints.  
-6. Optional: Sentry or structured logs — only if ops asks.
+1. ~~Rewrite Lightsail guide to Compose-only; remove PM2 app path.~~ **Done.**  
+2. ~~HTTPS (Let’s Encrypt) + `NEXT_PUBLIC_APP_URL` https.~~ **Documented + health curl.**  
+3. ~~Backup script + restore drill.~~ **`deploy/scripts/backup-postgres.sh` / `restore-postgres.sh`.**  
+4. ~~`/api/health` (web + DB).~~ **Done.**  
+5. ~~Basic rate limits / lockout on auth endpoints.~~ **In-memory lockout on admin/account/claim verify.**  
+6. Optional: Sentry or structured logs — only if ops asks. **Skipped.**
 
-**Exit:** new Lightsail host reaches healthy homepage + admin login using only `FRESH_SERVER_SETUP` + `.env`.
+**Exit:** follow `FRESH_SERVER_SETUP` + `.env` → homepage + admin login; `curl /api/health` returns ok.
 
 ### Phase O — Product polish (only after J–M)
 
@@ -269,11 +269,11 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-Phases J–L are on `main`. Phase M runbook + checklist scripts are shipped; **ops must fill staging evidence**.
+Phases J–N code/docs are on `main` (or this PR). Remaining:
 
-1. Run staging drills from [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md).  
-2. **Phase N** — Compose-only Lightsail polish, HTTPS, `/api/health`, backups (after M evidence or in parallel for docs-only hardening).  
-3. Do **not** start another marketplace capability in the same window.
+1. Fill **Phase M** staging evidence on a real host (`STAGING_LAUNCH_INTEGRATIONS.md`).  
+2. **Phase O** polish only after M evidence (or product asks).  
+3. Do **not** start another marketplace capability without an explicit request.
 
 ---
 
@@ -308,7 +308,7 @@ Phases J–L are on `main`. Phase M runbook + checklist scripts are shipped; **o
 
 **Admin:** access, accounts, agency, ai, banners, billing, cards, collaborations, fees, gateways, guests, homepage, intelligence, invitations, jobs, legal, mail, marketplace, matching, payments, plans, short-links, signing, social, stats, taxonomy, trust, value-prop
 
-**API:** billing webhook, marketplace webhook, social callback, short resolve, QR, places, intelligence export
+**API:** health, billing webhook, marketplace webhook, social callback, short resolve, QR, places, intelligence export
 
 **Prisma:** 88 models; migrations through admin switches / change orders (Oct 2026)
 

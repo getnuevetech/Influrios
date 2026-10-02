@@ -150,12 +150,20 @@ Visit `http://STATIC_IP` — you should see the Influrios home page.
 ### Back up Docker Postgres data
 
 ```bash
-# Logical dump
-docker compose exec -T postgres pg_dump -U influrios influrios > backup-$(date +%F).sql
+bash deploy/scripts/backup-postgres.sh
+# Writes /var/backups/influrios/influrios-YYYYMMDD-HHMMSS.sql.gz (keeps ~14 days)
 
-# Or snapshot the Lightsail instance periodically (includes Docker volume disk)
+# Restore drill (stops web, recreates DB, migrates, starts web, curls /api/health):
+# bash deploy/scripts/restore-postgres.sh /var/backups/influrios/influrios-….sql.gz
+
+# Optional: Lightsail instance snapshots (includes Docker volume disk + uploads)
 ```
 
+Cron example (daily 03:15 UTC):
+
+```cron
+15 3 * * * cd /var/www/influrios && bash deploy/scripts/backup-postgres.sh >> /var/log/influrios-backup.log 2>&1
+```
 ---
 
 ## D. Domain + HTTPS
@@ -174,8 +182,10 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 
 ```bash
 bash deploy/scripts/deploy.sh
+curl -fsS https://your-domain.com/api/health
 ```
 
+Stripe, social callbacks, and marketplace webhooks must use the same https origin.
 ---
 
 ## E. Ongoing deploy (after first setup)
@@ -212,10 +222,10 @@ Open http://localhost:3000
 |------|----------|
 | RAM | Prefer 4 GB if building on the instance (Node build + Postgres share RAM) |
 | Swap | If on 2 GB: add 2 GB swapfile |
-| DB backups | `pg_dump` on a schedule + Lightsail instance snapshots |
+| DB backups | `bash deploy/scripts/backup-postgres.sh` on a schedule + Lightsail instance snapshots (covers uploads) |
 | Updates | `sudo apt-get update && sudo apt-get upgrade` monthly |
-| Logs | `pm2 logs` · `docker compose logs postgres` · `/var/log/nginx/` |
-| Health | `curl -I https://your-domain.com` · `docker compose ps` |
+| Logs | `docker compose logs -f web` · `docker compose logs postgres` · `/var/log/nginx/` |
+| Health | `curl -fsS https://your-domain.com/api/health` · `docker compose ps` |
 
 ---
 

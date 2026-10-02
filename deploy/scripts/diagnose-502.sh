@@ -21,9 +21,7 @@ echo "========== Fix =========="
 cat <<EOF
 cd ${APP_DIR}
 git pull origin main
-# stop legacy PM2 if still running
-pm2 delete influrios 2>/dev/null || true
 bash deploy/scripts/deploy.sh
-curl -I http://127.0.0.1:3000
+curl -fsS http://127.0.0.1:3000/api/health
 curl -I http://127.0.0.1/
 EOF
