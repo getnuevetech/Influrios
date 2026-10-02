@@ -328,4 +328,5 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 Admin login uses Postgres (`AdminUser`); volumes: `influrios_uploads` required for banners, `influrios_data` only for remaining JSON demos.
 ```
 
-Full app architecture notes: [AWS_LIGHTSAIL.md](./AWS_LIGHTSAIL.md)
+Full app architecture notes: [AWS_LIGHTSAIL.md](./AWS_LIGHTSAIL.md)  
+Staging launch integrations (SMTP / Stripe / social / marketplace): [STAGING_LAUNCH_INTEGRATIONS.md](./STAGING_LAUNCH_INTEGRATIONS.md)

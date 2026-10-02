@@ -226,7 +226,7 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 
 **Exit met for admin + CMS + billing:** fresh Compose with empty `data/` boots those paths from Postgres. Remaining JSON demos (`protected-payments`, `trust`, `intelligence`, `collaboration-fees`) stay quarantined / optional.
 
-### Phase M — Launch integrations
+### Phase M — Launch integrations — RUNBOOK SHIPPED (evidence pending)
 
 **Proves:** Spec §33 items 8–10 with real providers in a staging environment.
 
@@ -237,7 +237,9 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 5. Turn `demo_checkout` off on staging once Stripe path is green.  
 6. Marketplace: one jurisdiction + provider webhook fixture through hold → release.
 
-**Exit:** written runbook in `docs/deploy/` with “green” evidence; production switches match policy.
+**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/marketplace-webhook-fixture.ts`.
+
+**Exit:** staging operator fills the green evidence tables in that runbook; production switches match the policy table. **Not complete until evidence is signed — CI alone does not finish Phase M.**
 
 ### Phase N — Hardening & observability
 
@@ -267,10 +269,10 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-Phases J–L (directory, claim, admin RBAC, CMS, billing attempts) are on `main` (or this PR). Next:
+Phases J–L are on `main`. Phase M runbook + checklist scripts are shipped; **ops must fill staging evidence**.
 
-1. **Phase M** — staging SMTP + Stripe sandbox + one social OAuth runbook.  
-2. Or quarantine remaining JSON demos (`intelligence`, fee simulator) only if they block ops.  
+1. Run staging drills from [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md).  
+2. **Phase N** — Compose-only Lightsail polish, HTTPS, `/api/health`, backups (after M evidence or in parallel for docs-only hardening).  
 3. Do **not** start another marketplace capability in the same window.
 
 ---
