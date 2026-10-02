@@ -58,8 +58,8 @@ services:
       - "127.0.0.1:3000:3000"
     volumes:
       # Banner/media uploads are required (CMS files live here).
-      # /app/data holds remaining JSON demos (billing, payments, trust, intelligence, fees)
-      # until those modules move to Postgres. Admin RBAC and CMS content no longer need it.
+      # /app/data holds remaining JSON demos (payments, trust, intelligence, fees)
+      # until those modules move to Postgres. Admin, CMS, and billing no longer need it.
       - influrios_data:/app/data
       - influrios_uploads:/app/public/uploads
     networks:
