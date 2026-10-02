@@ -145,7 +145,7 @@ Do not add staged-funding variants, extra providers, or new ledger product surfa
 | Action | Target |
 |---|---|
 | Move | Admin RBAC → Postgres (`AdminUser` / `AdminRole` models or equivalent) |
-| Move | CMS banner/value-prop payloads into `CmsSection` content JSON or dedicated tables |
+| ~~Move~~ | ~~CMS banner/value-prop payloads into `CmsSection` content JSON~~ **Done (L.2)** |
 | Move or drop | Billing session log → Prisma (or Stripe Dashboard only) |
 | Quarantine | Phase 9/10 JSON consoles: hide behind admin flag `legacy_demo_payments` default **off** in production; point all product CTAs at marketplace ledger |
 | Move later | Intelligence store + fee simulator (after directory purification) |
