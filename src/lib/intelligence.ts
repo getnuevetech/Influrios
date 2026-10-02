@@ -1,10 +1,11 @@
 /**
- * Phase 5 — Intelligence (demo, file-backed notes store).
- * Audience snapshots and trends read the Postgres directory; notes stay in JSON.
- * Labeled as demo / synthetic where data is not platform-verified.
+ * Phase 5 / Phase O — Intelligence.
+ * Audience snapshots and trends read the Postgres directory.
+ * Ops notes / watched specialties / last export live in IntelligenceSettings.
  */
 import { promises as fs } from "fs";
 import path from "path";
+import { prisma } from "@/lib/db";
 import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
 import { getManagedMatching } from "@/lib/managed-matching";
 import { specialtyLabel, type SeedCreator } from "@/lib/seed-data";
@@ -49,27 +50,73 @@ export type IntelligenceStore = {
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_PATH = path.join(DATA_DIR, "intelligence.json");
+const LEGACY_STORE_PATH = path.join(DATA_DIR, "intelligence.json");
+const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "intelligence.json.migrated");
+const SETTINGS_ID = "default";
 
 const DEFAULT_STORE: IntelligenceStore = {
   notes: "Phase 5 demo intelligence — synthetic trends + seed demographics.",
   watchedSpecialties: ["beauty", "travel", "home-interior", "fashion"],
 };
 
-async function ensureStore(): Promise<IntelligenceStore> {
+function storeFromRow(row: {
+  notes: string;
+  watchedSpecialties: string[];
+  lastExportAt: Date | null;
+}): IntelligenceStore {
+  return {
+    notes: row.notes || DEFAULT_STORE.notes,
+    watchedSpecialties: row.watchedSpecialties.length
+      ? row.watchedSpecialties
+      : [...DEFAULT_STORE.watchedSpecialties],
+    lastExportAt: row.lastExportAt?.toISOString(),
+  };
+}
+
+async function readLegacyStore(): Promise<IntelligenceStore | null> {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    return { ...DEFAULT_STORE, ...(JSON.parse(raw) as IntelligenceStore) };
+    const raw = await fs.readFile(LEGACY_STORE_PATH, "utf8");
+    const parsed = JSON.parse(raw) as Partial<IntelligenceStore>;
+    return {
+      notes: typeof parsed.notes === "string" ? parsed.notes : DEFAULT_STORE.notes,
+      watchedSpecialties: Array.isArray(parsed.watchedSpecialties)
+        ? parsed.watchedSpecialties.filter((item): item is string => typeof item === "string")
+        : [...DEFAULT_STORE.watchedSpecialties],
+      lastExportAt: typeof parsed.lastExportAt === "string" ? parsed.lastExportAt : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function markLegacyMigrated() {
+  try {
+    await fs.rename(LEGACY_STORE_PATH, LEGACY_MIGRATED_PATH);
   } catch {
     try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
+      await fs.unlink(LEGACY_STORE_PATH);
     } catch {
-      /* read-only fs — in-memory fallback */
+      /* ignore */
     }
-    return { ...DEFAULT_STORE };
   }
+}
+
+async function ensureStore(): Promise<IntelligenceStore> {
+  const existing = await prisma.intelligenceSettings.findUnique({ where: { id: SETTINGS_ID } });
+  if (existing) return storeFromRow(existing);
+
+  const legacy = await readLegacyStore();
+  const seed = legacy ?? DEFAULT_STORE;
+  const row = await prisma.intelligenceSettings.create({
+    data: {
+      id: SETTINGS_ID,
+      notes: seed.notes,
+      watchedSpecialties: seed.watchedSpecialties,
+      lastExportAt: seed.lastExportAt ? new Date(seed.lastExportAt) : null,
+    },
+  });
+  if (legacy) await markLegacyMigrated();
+  return storeFromRow(row);
 }
 
 export async function getIntelligenceStore(): Promise<IntelligenceStore> {
@@ -77,14 +124,17 @@ export async function getIntelligenceStore(): Promise<IntelligenceStore> {
 }
 
 export async function markIntelligenceExport(): Promise<void> {
-  const store = await ensureStore();
-  store.lastExportAt = new Date().toISOString();
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
-  } catch {
-    /* ignore write failures in read-only environments */
-  }
+  const at = new Date();
+  await prisma.intelligenceSettings.upsert({
+    where: { id: SETTINGS_ID },
+    create: {
+      id: SETTINGS_ID,
+      notes: DEFAULT_STORE.notes,
+      watchedSpecialties: DEFAULT_STORE.watchedSpecialties,
+      lastExportAt: at,
+    },
+    update: { lastExportAt: at },
+  });
 }
 
 function fallbackDemographics(creator: SeedCreator) {
