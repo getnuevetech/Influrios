@@ -15,7 +15,7 @@ Influrios is past the branded-demo stage and into a **hybrid production platform
 |---|---|
 | Product surface | Wide: Home, Discover, profiles, cards, claim, dashboard, collaboration, business, agency, billing, payments/trust, legal, large admin |
 | Data durability | Strong for Phases A–I + 12.3–12.13 (88 Prisma models, versioned migrations) |
-| Dual architecture | Remaining JSON demos: payments, trust, intelligence, fee simulator; claim + admin + CMS + billing attempts + directory are Postgres |
+| Dual architecture | Remaining JSON demos: payments, trust, fee simulator; claim + admin + CMS + billing + intelligence + directory are Postgres |
 | Spec MVP (section 33) | Structurally met (unit gate + CI); not yet proven with live SMTP, Stripe, and social credentials |
 | Ops / deploy | Docker Compose on Lightsail is the intended path; docs still mix older PM2 language |
 | Next risk | Building more Phase 12 depth before retiring dual stores and hard-wiring launch integrations |
@@ -86,7 +86,7 @@ These modules read/write Prisma and match the implementation plan’s “Impleme
 | Fee matrix simulator | `data/collaboration-fees.json` | Admin fee rules UI (ledger fee snapshot is separate / immutable on funding) |
 | Phase 9 protected payments | `data/protected-payments.json` | Explicit demo console (`/admin/payments`, parts of `/payments`) |
 | Phase 10 trust | `data/trust.json` | Explicit demo queue (`/admin/trust`, “Earlier demo queue” on `/trust`) |
-| Intelligence | `data/intelligence.json` | Trends / export still file-backed; uses `SEED_CREATORS` |
+| Intelligence | Postgres `IntelligenceSettings` via `intelligence.ts` | Trends/signals stay computed from directory; one-time import from `intelligence.json` |
 | Admin RBAC | Postgres `AdminUser` / `AdminRole` | HMAC cookie unchanged; one-time import from `admin-auth.json` then rename to `.migrated` |
 
 Docker Compose mounts `influrios_data` → `/app/data` so rebuilds do not wipe these, but they are **not** first-class migrations.
@@ -148,7 +148,7 @@ Do not add staged-funding variants, extra providers, or new ledger product surfa
 | ~~Move~~ | ~~CMS banner/value-prop payloads into `CmsSection` content JSON~~ **Done (L.2)** |
 | ~~Move or drop~~ | ~~Billing session log → Prisma~~ **Done (`CheckoutAttempt`, L.4)** |
 | Quarantine | Phase 9/10 JSON consoles: hide behind admin flag `legacy_demo_payments` default **off** in production; point all product CTAs at marketplace ledger |
-| Move later | Intelligence store + fee simulator (after directory purification) |
+| Move later | Fee simulator (after directory purification); Phase 9/10 payments/trust stay quarantined |
 
 ### R5 — Launch-integration sprint (credentials + honesty)
 
@@ -224,7 +224,7 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 4. ~~Billing: persist checkout attempts in Prisma or stop writing `billing.json` when Stripe confirms.~~ **Done (`CheckoutAttempt`).**  
 5. ~~Document volume mounts: `uploads` required; `data/` optional after migration.~~ **Done.**
 
-**Exit met for admin + CMS + billing:** fresh Compose with empty `data/` boots those paths from Postgres. Remaining JSON demos (`protected-payments`, `trust`, `intelligence`, `collaboration-fees`) stay quarantined / optional.
+**Exit met for admin + CMS + billing + intelligence:** fresh Compose with empty `data/` boots those paths from Postgres. Remaining JSON demos (`protected-payments`, `trust`, `collaboration-fees`) stay quarantined / optional.
 
 ### Phase M — Launch integrations — RUNBOOK SHIPPED (evidence pending)
 
@@ -254,13 +254,13 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 
 **Exit:** follow `FRESH_SERVER_SETUP` + `.env` → homepage + admin login; `curl /api/health` returns ok.
 
-### Phase O — Product polish (only after J–M)
+### Phase O — Product polish (started)
 
 Pick from product backlog once loops are honest:
 
 - Meilisearch when Discover latency/filter load hurts  
 - Customer Portal / Connect when paid volume exists  
-- Intelligence persistence  
+- ~~Intelligence persistence~~ **Done (`IntelligenceSettings`).**  
 - Fee simulator → versioned Prisma rules (if still JSON)  
 - Agency multi-seat auth when `agency_seats` turns on  
 - E-sign / formal contracts (still non-goal until counsel + volume)
@@ -269,11 +269,11 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-Phases J–N code/docs are on `main` (or this PR). Remaining:
+Phases J–N plus intelligence persistence are on `main` (or this PR). Remaining:
 
-1. Fill **Phase M** staging evidence on a real host (`STAGING_LAUNCH_INTEGRATIONS.md`).  
-2. **Phase O** polish only after M evidence (or product asks).  
-3. Do **not** start another marketplace capability without an explicit request.
+1. Fill **Phase M** staging evidence on a real host.  
+2. Optional: fee simulator → Prisma, or leave Phase 9/10 JSON quarantined.  
+3. Do **not** start Meilisearch / Connect / e-sign without product asking.
 
 ---
 
@@ -312,4 +312,4 @@ Phases J–N code/docs are on `main` (or this PR). Remaining:
 
 **Prisma:** 88 models; migrations through admin switches / change orders (Oct 2026)
 
-**JSON under `data/`:** `collaboration-fees`, `protected-payments`, `trust`, `intelligence` (claim-funnel, admin-auth, cms, billing retired)
+**JSON under `data/`:** `collaboration-fees`, `protected-payments`, `trust` (claim-funnel, admin-auth, cms, billing, intelligence retired)
