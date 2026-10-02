@@ -1,7 +1,7 @@
 # Influrios — Implementation Plan
 
 **Status:** Phases A–I and Phase 12.3–12.13 are implemented on `main` (ledger, disputes, attribution, schedules, FX/shares, Wise, revisions, evidence, gross cap, partial refunds, change orders, admin product switches, Stripe sandbox). Short-link resolver boots only when its tables are readable. Public layouts stay as designed. Live charges, mail, social sync, and marketplace holds still wait on configured providers.  
-**Sequencing for new work:** [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md) (2026-10-02) — Phases J–K done; next is ops JSON quarantine (L), launch integrations (M), hardening (N). Do not extend Phase 12 further before that plan.  
+**Sequencing for new work:** [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md) (2026-10-02) — Phases J–L done on the critical path; next is launch integrations (M) and hardening (N). Do not extend Phase 12 further before that plan.  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30 · **Status line updated:** 2026-10-02  
 **Supersedes for sequencing (historical):** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`.  
