@@ -1,5 +1,12 @@
+/**
+ * Site CMS — banners, featured cards, value proposition.
+ * Content lives on CmsSection.payload (Postgres). Banner image bytes stay under
+ * public/uploads/banners. One-time import from data/cms.json when present.
+ */
 import { promises as fs } from "fs";
 import path from "path";
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/db";
 import { SEED_CREATORS } from "@/lib/seed-data";
 
 export type BannerSlot = "hero" | "sponsored" | "cta" | "cardPromo";
@@ -78,8 +85,32 @@ export type ValuePropositionStrip = {
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_PATH = path.join(DATA_DIR, "cms.json");
+const LEGACY_STORE_PATH = path.join(DATA_DIR, "cms.json");
+const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "cms.json.migrated");
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "banners");
+
+const BANNER_SECTION_KEYS: Record<BannerSlot, string> = {
+  hero: "hero",
+  sponsored: "sponsored",
+  cta: "cta",
+  cardPromo: "card_promo",
+};
+
+const FEATURED_SECTION_KEY = "featured";
+const VALUE_PROP_SECTION_KEY = "value_proposition";
+
+const SECTION_META: Record<string, { title: string; sortOrder: number; enabled: boolean; status: string }> = {
+  hero: { title: "Hero", sortOrder: 0, enabled: true, status: "published" },
+  categories: { title: "Categories", sortOrder: 1, enabled: true, status: "published" },
+  featured: { title: "Featured influencers", sortOrder: 2, enabled: true, status: "published" },
+  sponsored: { title: "Sponsored", sortOrder: 3, enabled: true, status: "published" },
+  value_proposition: { title: "Value proposition", sortOrder: 4, enabled: true, status: "published" },
+  collaboration: { title: "Collaboration matches", sortOrder: 5, enabled: true, status: "published" },
+  card_promo: { title: "Influencer Card", sortOrder: 6, enabled: true, status: "published" },
+  cta: { title: "Closing call to action", sortOrder: 7, enabled: true, status: "published" },
+  statistics: { title: "Statistics", sortOrder: 8, enabled: false, status: "draft" },
+  faq: { title: "FAQ", sortOrder: 9, enabled: false, status: "draft" },
+};
 
 const DEFAULT_FEATURES: CardFeatureFlags = {
   showBadge: true,
@@ -221,83 +252,266 @@ const DEFAULT_CMS: SiteCms = {
   valueProposition: DEFAULT_VALUE_PROPOSITION,
 };
 
-async function ensureStore(): Promise<SiteCms> {
+/** Merge a stored banner with defaults so empty admin fields do not blank the public CTA. */
+export function mergeBannerConfig(slot: BannerSlot, incoming?: Partial<BannerConfig> | null): BannerConfig {
+  const base = DEFAULT_CMS.banners[slot];
+  if (!incoming) return { ...base, images: [...base.images] };
+  const merged: BannerConfig = {
+    ...base,
+    ...incoming,
+    id: slot,
+    images: Array.isArray(incoming.images) ? [...incoming.images] : [...base.images],
+  };
+  for (const field of ["title", "subtitle", "ctaLabel", "ctaHref"] as const) {
+    const val = merged[field];
+    if (typeof val !== "string" || !val.trim()) merged[field] = base[field];
+  }
+  return merged;
+}
+
+export function mergeFeaturedCards(incoming?: Partial<FeaturedCardsConfig> | null): FeaturedCardsConfig {
+  const base = DEFAULT_CMS.featuredCards;
+  return {
+    ...base,
+    ...incoming,
+    cards: incoming?.cards?.length ? incoming.cards : structuredClone(base.cards),
+  };
+}
+
+export function mergeValueProposition(incoming?: Partial<ValuePropositionStrip> | null): ValuePropositionStrip {
+  return {
+    ...DEFAULT_VALUE_PROPOSITION,
+    ...incoming,
+    items: incoming?.items?.length ? incoming.items : structuredClone(DEFAULT_VALUE_PROPOSITION.items),
+  };
+}
+
+export function assembleSiteCms(input: {
+  banners?: Partial<Record<BannerSlot, Partial<BannerConfig> | null>>;
+  featuredCards?: Partial<FeaturedCardsConfig> | null;
+  valueProposition?: Partial<ValuePropositionStrip> | null;
+}): SiteCms {
+  const banners = {} as SiteCms["banners"];
+  for (const slot of Object.keys(DEFAULT_CMS.banners) as BannerSlot[]) {
+    banners[slot] = mergeBannerConfig(slot, input.banners?.[slot]);
+  }
+  return {
+    banners,
+    featuredCards: mergeFeaturedCards(input.featuredCards),
+    valueProposition: mergeValueProposition(input.valueProposition),
+  };
+}
+
+function asObject(value: Prisma.JsonValue | null | undefined): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function bannerFromPayload(slot: BannerSlot, raw: Prisma.JsonValue | null | undefined): BannerConfig {
+  const obj = asObject(raw);
+  if (!obj) return mergeBannerConfig(slot);
+  return mergeBannerConfig(slot, {
+    label: typeof obj.label === "string" ? obj.label : undefined,
+    enabled: typeof obj.enabled === "boolean" ? obj.enabled : undefined,
+    heightScale: typeof obj.heightScale === "number" ? obj.heightScale : undefined,
+    title: typeof obj.title === "string" ? obj.title : undefined,
+    subtitle: typeof obj.subtitle === "string" ? obj.subtitle : undefined,
+    ctaLabel: typeof obj.ctaLabel === "string" ? obj.ctaLabel : undefined,
+    ctaHref: typeof obj.ctaHref === "string" ? obj.ctaHref : undefined,
+    images: Array.isArray(obj.images) ? obj.images.filter((item): item is string => typeof item === "string") : undefined,
+  });
+}
+
+function featuredFromPayload(raw: Prisma.JsonValue | null | undefined): FeaturedCardsConfig {
+  const obj = asObject(raw);
+  if (!obj) return mergeFeaturedCards();
+  return mergeFeaturedCards({
+    widthScale: typeof obj.widthScale === "number" ? obj.widthScale : undefined,
+    socialIconSize: typeof obj.socialIconSize === "number" ? obj.socialIconSize : undefined,
+    qrSize: typeof obj.qrSize === "number" ? obj.qrSize : undefined,
+    cards: Array.isArray(obj.cards) ? (obj.cards as ManagedCard[]) : undefined,
+  });
+}
+
+function valuePropFromPayload(raw: Prisma.JsonValue | null | undefined): ValuePropositionStrip {
+  const obj = asObject(raw);
+  if (!obj) return mergeValueProposition();
+  return mergeValueProposition(obj as Partial<ValuePropositionStrip>);
+}
+
+function bannerPayload(banner: BannerConfig): Prisma.InputJsonValue {
+  return {
+    kind: "banner",
+    label: banner.label,
+    enabled: banner.enabled,
+    heightScale: banner.heightScale,
+    title: banner.title,
+    subtitle: banner.subtitle,
+    ctaLabel: banner.ctaLabel,
+    ctaHref: banner.ctaHref,
+    images: banner.images,
+  };
+}
+
+function featuredPayload(config: FeaturedCardsConfig): Prisma.InputJsonValue {
+  return {
+    kind: "featured",
+    widthScale: config.widthScale,
+    socialIconSize: config.socialIconSize,
+    qrSize: config.qrSize,
+    cards: config.cards,
+  };
+}
+
+function valuePropPayload(strip: ValuePropositionStrip): Prisma.InputJsonValue {
+  return {
+    kind: "value_proposition",
+    ...strip,
+  };
+}
+
+async function upsertSectionPayload(key: string, payload: Prisma.InputJsonValue) {
+  const meta = SECTION_META[key] ?? { title: key, sortOrder: 99, enabled: true, status: "published" };
+  await prisma.cmsSection.upsert({
+    where: { key },
+    create: {
+      key,
+      title: meta.title,
+      sortOrder: meta.sortOrder,
+      enabled: meta.enabled,
+      status: meta.status,
+      payload,
+    },
+    update: { payload },
+  });
+}
+
+async function readLegacyCms(): Promise<SiteCms | null> {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as SiteCms;
-    const banners = { ...DEFAULT_CMS.banners } as SiteCms["banners"];
-    for (const key of Object.keys(DEFAULT_CMS.banners) as BannerSlot[]) {
-      const incoming = parsed.banners?.[key];
-      if (!incoming) continue;
-      const merged = { ...DEFAULT_CMS.banners[key], ...incoming, id: key };
-      // Empty admin fields must not blank the public CTA / titles.
-      for (const field of ["title", "subtitle", "ctaLabel", "ctaHref"] as const) {
-        const val = merged[field];
-        if (typeof val !== "string" || !val.trim()) {
-          merged[field] = DEFAULT_CMS.banners[key][field];
-        }
-      }
-      banners[key] = merged;
-    }
-    return {
-      banners,
-      featuredCards: {
-        ...DEFAULT_CMS.featuredCards,
-        ...parsed.featuredCards,
-        cards: parsed.featuredCards?.cards?.length
-          ? parsed.featuredCards.cards
-          : DEFAULT_CMS.featuredCards.cards,
-      },
-      valueProposition: {
-        ...DEFAULT_VALUE_PROPOSITION,
-        ...(parsed as SiteCms).valueProposition,
-        items:
-          (parsed as SiteCms).valueProposition?.items?.length
-            ? (parsed as SiteCms).valueProposition!.items
-            : DEFAULT_VALUE_PROPOSITION.items,
-      },
-    };
+    const raw = await fs.readFile(LEGACY_STORE_PATH, "utf8");
+    const parsed = JSON.parse(raw) as Partial<SiteCms>;
+    return assembleSiteCms({
+      banners: parsed.banners,
+      featuredCards: parsed.featuredCards,
+      valueProposition: parsed.valueProposition,
+    });
   } catch {
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_CMS, null, 2));
-    } catch {
-      // Read-only FS during some build contexts — fall back to defaults in memory
-    }
-    return structuredClone(DEFAULT_CMS);
+    return null;
   }
 }
 
-async function saveStore(cms: SiteCms) {
+async function markLegacyMigrated() {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(cms, null, 2));
+    await fs.rename(LEGACY_STORE_PATH, LEGACY_MIGRATED_PATH);
   } catch {
-    /* ignore write failures in read-only environments */
+    try {
+      await fs.unlink(LEGACY_STORE_PATH);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+async function writeCmsToDb(cms: SiteCms) {
+  for (const slot of Object.keys(cms.banners) as BannerSlot[]) {
+    await upsertSectionPayload(BANNER_SECTION_KEYS[slot], bannerPayload(cms.banners[slot]));
+  }
+  await upsertSectionPayload(FEATURED_SECTION_KEY, featuredPayload(cms.featuredCards));
+  await upsertSectionPayload(VALUE_PROP_SECTION_KEY, valuePropPayload(cms.valueProposition));
+}
+
+async function contentPayloadCount() {
+  return prisma.cmsSection.count({
+    where: {
+      key: {
+        in: [
+          ...Object.values(BANNER_SECTION_KEYS),
+          FEATURED_SECTION_KEY,
+          VALUE_PROP_SECTION_KEY,
+        ],
+      },
+      payload: { not: Prisma.DbNull },
+    },
+  });
+}
+
+async function ensureCmsStore(): Promise<SiteCms> {
+  const filled = await contentPayloadCount();
+  if (filled === 0) {
+    const legacy = await readLegacyCms();
+    if (legacy) {
+      await writeCmsToDb(legacy);
+      await markLegacyMigrated();
+    } else {
+      await writeCmsToDb(structuredClone(DEFAULT_CMS));
+    }
+  } else {
+    for (const slot of Object.keys(DEFAULT_CMS.banners) as BannerSlot[]) {
+      const key = BANNER_SECTION_KEYS[slot];
+      const row = await prisma.cmsSection.findUnique({ where: { key }, select: { payload: true } });
+      if (!row || row.payload == null) {
+        await upsertSectionPayload(key, bannerPayload(DEFAULT_CMS.banners[slot]));
+      }
+    }
+    for (const [key, payload] of [
+      [FEATURED_SECTION_KEY, featuredPayload(DEFAULT_CMS.featuredCards)],
+      [VALUE_PROP_SECTION_KEY, valuePropPayload(DEFAULT_CMS.valueProposition)],
+    ] as const) {
+      const row = await prisma.cmsSection.findUnique({ where: { key }, select: { payload: true } });
+      if (!row || row.payload == null) await upsertSectionPayload(key, payload);
+    }
+  }
+
+  const keys = [
+    ...Object.values(BANNER_SECTION_KEYS),
+    FEATURED_SECTION_KEY,
+    VALUE_PROP_SECTION_KEY,
+  ];
+  const rows = await prisma.cmsSection.findMany({ where: { key: { in: keys } } });
+  const byKey = new Map(rows.map((row) => [row.key, row.payload]));
+
+  return assembleSiteCms({
+    banners: {
+      hero: bannerFromPayload("hero", byKey.get("hero")),
+      sponsored: bannerFromPayload("sponsored", byKey.get("sponsored")),
+      cta: bannerFromPayload("cta", byKey.get("cta")),
+      cardPromo: bannerFromPayload("cardPromo", byKey.get("card_promo")),
+    },
+    featuredCards: featuredFromPayload(byKey.get(FEATURED_SECTION_KEY)),
+    valueProposition: valuePropFromPayload(byKey.get(VALUE_PROP_SECTION_KEY)),
+  });
+}
+
+async function persistCms(cms: SiteCms) {
+  await writeCmsToDb(cms);
+  try {
+    const { invalidateDirectoryCache } = await import("@/lib/directory");
+    invalidateDirectoryCache();
+  } catch {
+    /* scripts without directory module */
   }
 }
 
 export async function getCms(): Promise<SiteCms> {
-  return ensureStore();
+  return ensureCmsStore();
 }
 
 export async function updateBanner(id: BannerSlot, patch: Partial<BannerConfig>) {
-  const cms = await ensureStore();
-  cms.banners[id] = { ...cms.banners[id], ...patch, id };
-  await saveStore(cms);
+  const cms = await ensureCmsStore();
+  cms.banners[id] = mergeBannerConfig(id, { ...cms.banners[id], ...patch, id });
+  await persistCms(cms);
   return cms.banners[id];
 }
 
 export async function updateFeaturedCardsConfig(patch: Partial<FeaturedCardsConfig>) {
-  const cms = await ensureStore();
-  cms.featuredCards = { ...cms.featuredCards, ...patch };
-  await saveStore(cms);
+  const cms = await ensureCmsStore();
+  cms.featuredCards = mergeFeaturedCards({ ...cms.featuredCards, ...patch });
+  await persistCms(cms);
   return cms.featuredCards;
 }
 
 export async function updateManagedCard(slug: string, patch: Partial<ManagedCard>) {
-  const cms = await ensureStore();
+  const cms = await ensureCmsStore();
   const idx = cms.featuredCards.cards.findIndex((c) => c.slug === slug);
   if (idx < 0) {
     cms.featuredCards.cards.push({
@@ -315,7 +529,7 @@ export async function updateManagedCard(slug: string, patch: Partial<ManagedCard
       features: { ...prev.features, ...(patch.features ?? {}) },
     };
   }
-  await saveStore(cms);
+  await persistCms(cms);
   return cms.featuredCards.cards.find((c) => c.slug === slug)!;
 }
 
@@ -329,39 +543,39 @@ export async function saveBannerUpload(filename: string, bytes: Buffer) {
 }
 
 export async function addBannerImage(id: BannerSlot, imagePath: string) {
-  const cms = await ensureStore();
+  const cms = await ensureCmsStore();
   cms.banners[id].images = [...cms.banners[id].images, imagePath];
-  await saveStore(cms);
+  await persistCms(cms);
   return cms.banners[id];
 }
 
 export async function removeBannerImage(id: BannerSlot, imagePath: string) {
-  const cms = await ensureStore();
+  const cms = await ensureCmsStore();
   cms.banners[id].images = cms.banners[id].images.filter((i) => i !== imagePath);
-  await saveStore(cms);
+  await persistCms(cms);
   return cms.banners[id];
 }
 
 export async function updateValueProposition(patch: Partial<ValuePropositionStrip>) {
-  const cms = await ensureStore();
-  cms.valueProposition = {
+  const cms = await ensureCmsStore();
+  cms.valueProposition = mergeValueProposition({
     ...cms.valueProposition,
     ...patch,
     items: patch.items ?? cms.valueProposition.items,
     updatedAt: new Date().toISOString(),
-  };
-  await saveStore(cms);
+  });
+  await persistCms(cms);
   return cms.valueProposition;
 }
 
 export async function restoreDefaultValueProposition() {
-  const cms = await ensureStore();
+  const cms = await ensureCmsStore();
   cms.valueProposition = {
     ...structuredClone(DEFAULT_VALUE_PROPOSITION),
     updatedAt: new Date().toISOString(),
   };
-  await saveStore(cms);
+  await persistCms(cms);
   return cms.valueProposition;
 }
 
-export { DEFAULT_FEATURES, DEFAULT_VALUE_PROPOSITION };
+export { DEFAULT_FEATURES, DEFAULT_VALUE_PROPOSITION, DEFAULT_CMS, BANNER_SECTION_KEYS };

@@ -126,7 +126,7 @@ Compose volumes:
 |---|---|---|
 | `influrios_pg` | Postgres data | **Yes** |
 | `influrios_uploads` | `/app/public/uploads` (banner/media files) | **Yes** |
-| `influrios_data` | `/app/data` (remaining JSON demos: cms, billing, …) | Optional once those modules move to Postgres; admin login no longer needs it |
+| `influrios_data` | `/app/data` (remaining JSON demos: billing, payments, trust, …) | Optional for admin + CMS; still used until billing/demo stores migrate |
 
 `legacy_demo_payments` stays **off** by default — do not force it on in production.
 
