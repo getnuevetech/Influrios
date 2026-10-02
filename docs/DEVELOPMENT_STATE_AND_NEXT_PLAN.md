@@ -91,17 +91,9 @@ These modules read/write Prisma and match the implementation plan’s “Impleme
 
 Docker Compose mounts `influrios_data` → `/app/data` so rebuilds do not wipe these, but they are **not** first-class migrations.
 
-### 4.3 Seed-array runtime debt
+### 4.3 Seed-array residual use
 
-`SEED_CREATORS` in `src/lib/seed-data.ts` is still used for:
-
-- Collaboration explorer scoring defaults (`matching.ts`, `/collaboration`)
-- Business fit ranking over seed list (`business.ts`)
-- Agency / payments / matching admin picker options
-- Intelligence audience snapshots
-- Directory cold-start seed + fallback when DB is empty
-
-Directory *does* load Postgres creators and unions published claims, but several product paths still behave as if the six seed rows are the network.
+`SEED_CREATORS` remains for **cold-start seed** and empty-DB fallback in `directory.ts`. Product matching, collaboration, business fit, agency/payments pickers, and intelligence were rewired in Phase J to directory helpers. Do not add new product reads against the seed array.
 
 ### 4.4 Integrations: code ready, credentials optional
 
