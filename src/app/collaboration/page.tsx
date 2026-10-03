@@ -62,6 +62,7 @@ type Props = {
     save?: string;
     saved?: string;
     error?: string;
+    landing?: string;
   }>;
 };
 
@@ -101,6 +102,20 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const featured = matches[0] ?? all[0];
   const account = await getAccountSession().catch(() => null);
   const draft = account ? await getCreatorSessionDraft().catch(() => null) : null;
+
+  // Signed-in creators land on Figure 2 hub; guests keep Figure 1. Opt out with ?landing=1.
+  if (account && draft?.slug && params.landing !== "1" && !params.save) {
+    const hubQuery = new URLSearchParams();
+    if (params.goal) hubQuery.set("category", params.goal);
+    if (params.q) hubQuery.set("q", params.q);
+    if (params.budget) hubQuery.set("budget", params.budget);
+    if (params.location) hubQuery.set("location", params.location);
+    if (params.specialty) hubQuery.set("category", params.specialty);
+    if (params.saved) hubQuery.set("saved", params.saved);
+    const qs = hubQuery.toString();
+    redirect(qs ? `/collaboration/hub?${qs}` : "/collaboration/hub");
+  }
+
   const viewerFromParam = params.from ? bySlug.get(params.from) ?? null : null;
   const viewerFromSession = draft?.slug ? bySlug.get(draft.slug) ?? null : null;
   const viewer = viewerFromParam ?? (account ? viewerFromSession : null);
@@ -112,7 +127,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
     ? "/business"
     : `/login?next=${encodeURIComponent("/business")}&gate=business`;
   const suggestionsHref = signedIn
-    ? "/collaboration?goal=awareness"
+    ? "/collaboration/hub?category=awareness"
     : `/login?next=${encodeURIComponent("/collaboration?goal=awareness")}&gate=suggestions`;
 
   if (params.save && account) {
@@ -126,7 +141,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
       if (match) {
         await saveMatchForUser({ match, userId: account.id }).catch(() => null);
       }
-      redirect("/collaboration?saved=1");
+      redirect(draft?.slug ? "/collaboration/hub?saved=1" : "/collaboration?landing=1&saved=1");
     }
   }
   if (params.save && !account) {
@@ -712,6 +727,7 @@ function RecommendedMatch({
           partyASlug={match.a.slug}
           partyBSlug={match.b.slug}
           signedIn={signedIn}
+          returnTo={viewerSlug ? "/collaboration/hub?saved=1" : "/collaboration?landing=1&saved=1"}
         />
       </div>
     </article>
