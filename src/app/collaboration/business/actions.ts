@@ -12,6 +12,7 @@ import {
   requestManagedMatch,
   sendInquiry,
   setBusinessPlan,
+  updateInquiryStatus,
 } from "@/lib/business";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import { upsertBusinessRequest } from "@/lib/marketplace-listings";
@@ -139,6 +140,41 @@ export async function actionSendInquiry(formData: FormData) {
     redirect(`${HUB}?error=${encodeURIComponent(result.error)}`);
   }
   redirect(`${HUB}?inquiry=1#applicants`);
+}
+
+export async function actionReplyInquiry(formData: FormData) {
+  await requireBusinessTerms();
+  const id = String(formData.get("inquiryId") ?? "");
+  const result = await updateInquiryStatus(id, "replied");
+  revalidateHub();
+  if (!result.ok) {
+    redirect(`${HUB}?error=${encodeURIComponent(result.error)}#applicants`);
+  }
+  redirect(`${HUB}?replied=1#applicants`);
+}
+
+export async function actionDeclineInquiry(formData: FormData) {
+  await requireBusinessTerms();
+  const id = String(formData.get("inquiryId") ?? "");
+  const result = await updateInquiryStatus(id, "declined");
+  revalidateHub();
+  if (!result.ok) {
+    redirect(`${HUB}?error=${encodeURIComponent(result.error)}#applicants`);
+  }
+  redirect(`${HUB}?declined=1#applicants`);
+}
+
+export async function actionShortlistFromInquiry(formData: FormData) {
+  await requireBusinessTerms();
+  const slug = String(formData.get("creatorSlug") ?? "");
+  const note = String(formData.get("note") ?? "") || "Shortlisted from inquiry";
+  const result = await addToShortlist(slug, note);
+  revalidateHub();
+  revalidatePath(`/creators/${slug}`);
+  if (!result.ok) {
+    redirect(`${HUB}?error=${encodeURIComponent(result.error)}#applicants`);
+  }
+  redirect(`${HUB}?added=${encodeURIComponent(slug)}#shortlist`);
 }
 
 export async function actionSetPlan(formData: FormData) {

@@ -9,6 +9,7 @@ import {
   type HomepageCollabMatch,
 } from "@/lib/cms";
 import { updateHomepageSection, updateMenuItem } from "@/lib/directory";
+import { normalizeInfluencerRoleTitle } from "@/lib/terminology-copy";
 
 export async function actionUpdateSection(formData: FormData) {
   const session = await requireAdminAction("banners.edit");
@@ -79,7 +80,7 @@ export async function actionSaveHomepageCollaboration(formData: FormData) {
   const images = formData.getAll("matchImage").map(String);
   const matches: HomepageCollabMatch[] = titles
     .map((title, index) => ({
-      title: title.trim(),
+      title: normalizeInfluencerRoleTitle(title.trim()),
       leftSlug: (leftSlugs[index] ?? "").trim(),
       rightSlug: (rightSlugs[index] ?? "").trim(),
       tags: (tagsRaw[index] ?? "")

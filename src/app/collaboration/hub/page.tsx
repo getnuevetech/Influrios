@@ -44,7 +44,7 @@ const SIDE_LINKS = [
   { href: "/collaboration/hub#saved", label: "Saved Matches", anchor: "saved" },
   { href: "/collaboration/records", label: "Contracts & Agreements", anchor: null },
   { href: "/payments", label: "Payments & Wallet", anchor: null },
-  { href: "/dashboard", label: "Analytics", anchor: null },
+  { href: "/dashboard", label: "Influencer Profile", anchor: null },
   { href: "/claim", label: "My Content Kit", anchor: null },
   { href: "/account", label: "Settings", anchor: null },
   { href: "/mentorship", label: "Mentorship", anchor: null },
@@ -263,10 +263,15 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             ))}
             <div className="rounded-2xl border border-[#E4E9F5] bg-gradient-to-br from-[#633CFF] to-[#2979FF] p-4 text-white shadow-sm">
               <p className="text-[11px] font-bold uppercase tracking-wide text-white/80">Available Earnings</p>
-              <p className="mt-1 font-display text-2xl font-bold">{formatMoney(availableCents)}</p>
+              <p className="mt-1 font-display text-2xl font-bold">
+                {hub.earnings.ready ? formatMoney(availableCents) : "—"}
+              </p>
               <Link href="/payments" className="mt-2 inline-flex text-xs font-bold text-white underline">
-                View Wallet
+                {hub.earnings.ready ? "View Wallet" : "Protected payments"}
               </Link>
+              {!hub.earnings.ready ? (
+                <p className="mt-2 text-[11px] text-white/75">No released earnings yet. Payout readiness ships with corridor setup.</p>
+              ) : null}
             </div>
           </div>
 
@@ -412,16 +417,30 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 <IconShieldPay size={16} />
                 <h2 className="font-display text-base font-bold text-indigo">Payout & Earnings</h2>
               </div>
-              <p className="mt-3 font-display text-2xl font-bold text-indigo">{formatMoney(availableCents)}</p>
-              <p className="text-xs text-muted">
-                Released to you · {formatMoney(hub.earnings.heldCents)} still held in protected payments
-              </p>
-              <Link href="/payments" className="btn-primary mt-4 w-full !py-2 text-center text-sm">
-                {hub.earnings.ready ? "Request Payout" : "Open Wallet"}
-              </Link>
-              <p className="mt-2 text-[11px] text-muted">
-                {hub.earnings.ready ? "Payout routes from protected payments when ready." : "No released balance yet."}
-              </p>
+              {hub.earnings.ready ? (
+                <>
+                  <p className="mt-3 font-display text-2xl font-bold text-indigo">{formatMoney(availableCents)}</p>
+                  <p className="text-xs text-muted">
+                    Released to you · {formatMoney(hub.earnings.heldCents)} still held in protected payments
+                  </p>
+                  <Link href="/payments" className="btn-primary mt-4 w-full !py-2 text-center text-sm">
+                    Open protected payments
+                  </Link>
+                  <p className="mt-2 text-[11px] text-muted">
+                    Payout routes and Global Payout Ready status arrive with corridor setup (P5). This panel shows ledger totals only.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 font-display text-lg font-bold text-indigo">Not ready</p>
+                  <p className="mt-1 text-xs text-muted">
+                    No released collaboration balance yet. When deals fund and milestones release, amounts appear here — not estimated earnings.
+                  </p>
+                  <Link href="/payments" className="btn-secondary mt-4 w-full !py-2 text-center text-sm">
+                    Open protected payments
+                  </Link>
+                </>
+              )}
             </section>
           </div>
 
