@@ -269,9 +269,9 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-**Collaboration OS** remains active — P2 influencer hub shipped. Public UX pass (signup temp card, INFLR.me, social avatar preview, `/business` marketing redesign, collaboration landing polish, Admin CTA removal, Influencer terminology) is in flight on this track.
+**Collaboration OS** — P2 influencer hub + P2b business hub shipped.
 
-1. **P2b** Business Collaboration Hub (workspace UX aligned to business design).  
+1. **P3** Contract & milestone wizard.  
 2. Continue terminology migration (Creator → Influencer) on remaining surfaces.  
 3. Parallel: fill **Phase M** staging evidence when credentials are available.  
 4. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
@@ -279,6 +279,8 @@ Pick from product backlog once loops are honest:
 Terminology source of truth: [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1_dab3.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1_dab3.pdf).
 
 Design references: [`docs/design-references/business/for-businesses.png`](./design-references/business/for-businesses.png), [`docs/design-references/collaboration/public-landing-v2.png`](./design-references/collaboration/public-landing-v2.png).
+
+Business hub: `/collaboration/business` (legacy `/business/workspace` redirects).
 
 ---
 

@@ -211,7 +211,9 @@ export async function removeFromShortlist(creatorSlug: string) {
   return readWorkspace();
 }
 
-export async function createBrief(input: Omit<CampaignBrief, "id" | "createdAt" | "status">) {
+export async function createBrief(
+  input: Omit<CampaignBrief, "id" | "createdAt" | "status"> & { status?: CampaignBrief["status"] },
+) {
   await ensureWorkspace();
   const brief = await prisma.businessBrief.create({
     data: {
@@ -223,7 +225,7 @@ export async function createBrief(input: Omit<CampaignBrief, "id" | "createdAt" 
       location: input.location,
       platform: input.platform,
       summary: input.summary,
-      status: "active",
+      status: input.status ?? "active",
     },
   });
   return {

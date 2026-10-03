@@ -863,6 +863,39 @@ export async function listFundingsForCreator(creatorSlug: string) {
   return rows.map(presentFunding);
 }
 
+/** Spend view for a business — matches on funding.businessName (case-insensitive contains). */
+export async function listFundingsForBusiness(businessName: string) {
+  await sweepAutoApprovals();
+  await sweepDueRecurrences();
+  const needle = businessName.trim();
+  if (!needle) return [];
+  const rows = await prisma.collaborationFunding.findMany({
+    where: { businessName: { contains: needle, mode: "insensitive" } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      milestones: { orderBy: { sortOrder: "asc" } },
+      entries: true,
+      disputes: {
+        where: { status: { in: ["open", "under_review", "refund_requested"] } },
+        select: {
+          id: true,
+          milestoneId: true,
+          status: true,
+          evidenceLimit: true,
+          notes: { orderBy: { createdAt: "asc" }, select: { id: true, author: true, body: true, url: true } },
+        },
+      },
+      repeatOf: { select: { id: true, title: true } },
+      changeOrders: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, note: true, previousUsdCents: true, nextUsdCents: true },
+      },
+    },
+    take: 40,
+  });
+  return rows.map(presentFunding);
+}
+
 function presentFunding(row: {
   id: string;
   jurisdictionCode: string;
