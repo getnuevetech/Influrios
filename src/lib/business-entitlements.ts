@@ -17,6 +17,8 @@ export type BusinessEntitlements = {
   intelligence: boolean;
   /** Phase 11 — multi-creator roster, agency campaigns, joint portfolios */
   agencyWorkspace: boolean;
+  /** Collab OS P3 — custom milestone schedules (requires influencer accept) */
+  customMilestones: boolean;
 };
 
 export const BUSINESS_ENTITLEMENTS: Record<BusinessPlanCode, BusinessEntitlements> = {
@@ -31,6 +33,7 @@ export const BUSINESS_ENTITLEMENTS: Record<BusinessPlanCode, BusinessEntitlement
     managedMatching: false,
     intelligence: false,
     agencyWorkspace: false,
+    customMilestones: false,
   },
   BUSINESS_PRO: {
     shortlistMax: 100,
@@ -43,6 +46,7 @@ export const BUSINESS_ENTITLEMENTS: Record<BusinessPlanCode, BusinessEntitlement
     managedMatching: false,
     intelligence: true,
     agencyWorkspace: false,
+    customMilestones: true,
   },
   AGENCY: {
     shortlistMax: 500,
@@ -55,6 +59,7 @@ export const BUSINESS_ENTITLEMENTS: Record<BusinessPlanCode, BusinessEntitlement
     managedMatching: true,
     intelligence: true,
     agencyWorkspace: true,
+    customMilestones: true,
   },
 };
 

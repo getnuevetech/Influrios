@@ -81,7 +81,7 @@ export const BILLING_CATALOG: BillingProduct[] = [
     highlights: [
       "100 shortlist · 50 inquiries/mo",
       "Fit insights + Intelligence",
-      "JSON/CSV exports",
+      "Custom milestone schedules",
     ],
     businessPlan: "BUSINESS_PRO",
     stripePriceEnv: "STRIPE_PRICE_BUSINESS_PRO",
@@ -96,7 +96,7 @@ export const BILLING_CATALOG: BillingProduct[] = [
     description: "Team seats, managed matching, and higher limits.",
     highlights: [
       "500 shortlist · 200 inquiries/mo",
-      "Managed matching entitlement",
+      "Managed matching + custom milestones",
       "15 team seats",
     ],
     businessPlan: "AGENCY",

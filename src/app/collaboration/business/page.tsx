@@ -49,6 +49,7 @@ const SIDE_LINKS = [
   { href: "/collaboration/business#applicants", label: "Applicants & Inquiries" },
   { href: "/collaboration/business#shortlist", label: "Shortlist" },
   { href: "/collaboration/business#spend", label: "Spend & Fees" },
+  { href: "/collaboration/contract", label: "Contract Wizard" },
   { href: "/payments", label: "Protected Payments" },
   { href: "/business/intelligence", label: "Intelligence" },
   { href: "/discover", label: "Find Influencers" },
@@ -113,6 +114,9 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             <a href="#suggestions" className="btn-secondary !py-2 text-sm">
               Get Suggestions
             </a>
+            <Link href="/collaboration/contract" className="btn-secondary !py-2 text-sm">
+              Start Contract
+            </Link>
           </div>
         </div>
       </section>
@@ -458,12 +462,20 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                         </Link>
                         <p className="truncate text-[11px] text-muted">{item.note ?? creator.title}</p>
                       </div>
-                      <form action={actionRemoveShortlist}>
-                        <input type="hidden" name="slug" value={creator.slug} />
-                        <button type="submit" className="text-[11px] font-semibold text-muted hover:text-violet">
-                          Remove
-                        </button>
-                      </form>
+                      <div className="flex flex-col items-end gap-1">
+                        <Link
+                          href={`/collaboration/contract?creator=${encodeURIComponent(creator.slug)}`}
+                          className="text-[11px] font-bold text-violet hover:underline"
+                        >
+                          Contract
+                        </Link>
+                        <form action={actionRemoveShortlist}>
+                          <input type="hidden" name="slug" value={creator.slug} />
+                          <button type="submit" className="text-[11px] font-semibold text-muted hover:text-violet">
+                            Remove
+                          </button>
+                        </form>
+                      </div>
                     </li>
                   );
                 })
