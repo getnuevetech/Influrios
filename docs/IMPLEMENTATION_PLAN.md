@@ -1,7 +1,7 @@
 # Influrios — Implementation Plan
 
 **Status:** Phases A–I and Phase 12.3–12.13 are implemented on `main` (ledger, disputes, attribution, schedules, FX/shares, Wise, revisions, evidence, gross cap, partial refunds, change orders, admin product switches, Stripe sandbox). Short-link resolver boots only when its tables are readable. Public layouts stay as designed. Live charges, mail, social sync, and marketplace holds still wait on configured providers.  
-**Sequencing for new work:** [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md) — Phases J–N shipped; Phase O polish (intelligence, fee rules, Phase 9/10 quarantine, docs/loops) on `main`; Phase M staging evidence still needs a live host.  
+**Sequencing for new work:** [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md) — Phases J–O on `main` (homepage UX included); Phase M staging evidence still needs operator sign-off on a live host (`npm run staging:evidence-probe`).  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
 **Date:** 2026-09-30 · **Status line updated:** 2026-10-03  
 **Supersedes for sequencing (historical):** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`.  

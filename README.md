@@ -44,7 +44,7 @@ bash deploy/scripts/deploy.sh            # docker compose up --build
 - [Strategy notes](./docs/strategy/)
 - [Design references](./docs/design-references/)
 - [Lightsail guide](./docs/deploy/AWS_LIGHTSAIL.md)
-- [Staging launch integrations (Phase M)](./docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md)
+- [Staging launch integrations (Phase M)](./docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md) — `npm run staging:checklist` / `npm run staging:evidence-probe`
 
 ## Current surfaces
 

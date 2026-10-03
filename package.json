@@ -19,6 +19,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "staging:checklist": "tsx scripts/staging-checklist.ts",
+    "staging:evidence-probe": "tsx scripts/staging-evidence-probe.ts",
     "staging:marketplace-fixture": "tsx scripts/marketplace-webhook-fixture.ts",
     "postinstall": "prisma generate"
   },
