@@ -274,7 +274,7 @@ const DEFAULT_CMS: SiteCms = {
       label: "Sponsored opportunity banner",
       enabled: true,
       heightScale: 1,
-      title: "Partner with Innovative Brands That Value Creators.",
+      title: "Partner with Innovative Brands That Value Influencers.",
       subtitle: "Exclusive collaboration opportunities with leading global brands.",
       ctaLabel: "View Opportunities",
       ctaHref: "/collaboration",
@@ -296,7 +296,7 @@ const DEFAULT_CMS: SiteCms = {
       label: "Bottom community CTA banner",
       enabled: true,
       heightScale: 0.8,
-      title: "Join a Global Community of Creators and Businesses",
+      title: "Join a Global Community of Influencers and Businesses",
       subtitle:
         "Whether you're an influencer looking for opportunities or a business ready to collaborate, Influrios is your hub.",
       ctaLabel: "Join as an Influencer",

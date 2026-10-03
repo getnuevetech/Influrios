@@ -319,7 +319,7 @@ export const CREATOR_OPPORTUNITIES: CreatorOpportunity[] = [
 export const POPULAR_MATCH_CHIPS = [
   {
     title: "Interior Designer",
-    subtitle: "+ Woodwork Creator",
+    subtitle: "+ Woodwork Influencer",
     specialty: "home-interior",
     image: "/demo/categories/cat-home.jpg",
   },
@@ -330,7 +330,7 @@ export const POPULAR_MATCH_CHIPS = [
     image: "/demo/categories/cat-hair.jpg",
   },
   {
-    title: "Food Creator",
+    title: "Food Influencer",
     subtitle: "+ Kitchen Brand",
     specialty: "food",
     image: "/demo/categories/cat-food.jpg",
@@ -342,13 +342,13 @@ export const POPULAR_MATCH_CHIPS = [
     image: "/demo/categories/cat-travel.jpg",
   },
   {
-    title: "Fitness Creator",
+    title: "Fitness Influencer",
     subtitle: "+ Wellness Brand",
     specialty: "fitness",
     image: "/demo/categories/cat-fitness.jpg",
   },
   {
-    title: "Beauty Creator",
+    title: "Beauty Influencer",
     subtitle: "+ Skincare Brand",
     specialty: "beauty",
     image: "/demo/categories/cat-beauty.jpg",
