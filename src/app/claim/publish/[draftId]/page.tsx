@@ -45,7 +45,7 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
         </div>
       ) : null}
 
-      <PublicInfluencerCard creator={creator} qrDisplay="default" />
+      <PublicInfluencerCard creator={creator} qrDisplay="default" hideCta />
 
       <div className="mx-auto mt-8 max-w-sm space-y-3">
         {alreadyLive ? (
