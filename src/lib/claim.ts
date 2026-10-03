@@ -7,6 +7,14 @@ import { decideCount, isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { prisma } from "@/lib/db";
 import { advanceClaimStage, evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
+import {
+  defaultAvatarForGender,
+  defaultBannerForSeed,
+  normalizeProfileGender,
+  resolveDefaultAvatar,
+  resolveDefaultBanner,
+  type ProfileGender,
+} from "@/lib/profile-media";
 import { cookies } from "next/headers";
 import type { OnboardingSession, OnboardingState, Prisma } from "@prisma/client";
 import type { SeedCreator, SeedSocial } from "@/lib/seed-data";
@@ -28,6 +36,8 @@ export type ClaimDraft = {
   specialties: string[];
   socials: SeedSocial[];
   image: string;
+  coverImage: string;
+  gender: ProfileGender;
   email?: string;
   ownerName?: string;
   /** Verification code — shown only when SMTP is not ready (demo path). */
@@ -59,6 +69,8 @@ type SessionPayload = {
   specialties: string[];
   socials: SeedSocial[];
   image: string;
+  coverImage: string;
+  gender: ProfileGender;
   stage: ClaimStage;
   attribution: string;
   verifyCode?: string;
@@ -68,14 +80,6 @@ type SessionPayload = {
 
 const COOKIE_NAME = "influrios_creator_session";
 const SESSION_DAYS = 14;
-const DEMO_IMAGES = [
-  "/demo/creators/creator-sofia.jpg",
-  "/demo/creators/creator-priya.jpg",
-  "/demo/creators/creator-marcus.jpg",
-  "/demo/creators/creator-amara.jpg",
-  "/demo/creators/creator-jordan.jpg",
-  "/demo/creators/creator-daniel.jpg",
-];
 
 /** Best-effort avatar from public social avatar proxies (falls back to demo art). */
 export async function resolveSocialAvatar(
@@ -244,7 +248,17 @@ function readPayload(raw: Prisma.JsonValue): SessionPayload {
     locationCountry: typeof value.locationCountry === "string" ? value.locationCountry : "",
     specialties,
     socials,
-    image: typeof value.image === "string" ? value.image : DEMO_IMAGES[0]!,
+    image:
+      typeof value.image === "string" && !value.image.includes("/demo/creators/")
+        ? value.image
+        : defaultAvatarForGender(
+            normalizeProfileGender(typeof value.gender === "string" ? value.gender : "unspecified"),
+          ),
+    coverImage:
+      typeof value.coverImage === "string" && !value.coverImage.includes("/demo/sofia/")
+        ? value.coverImage
+        : defaultBannerForSeed(typeof value.slug === "string" ? value.slug : "draft"),
+    gender: normalizeProfileGender(typeof value.gender === "string" ? value.gender : "unspecified"),
     stage,
     attribution: typeof value.attribution === "string" ? value.attribution : "ORGANIC_SIGNUP",
     verifyCode: typeof value.verifyCode === "string" ? value.verifyCode : undefined,
@@ -266,6 +280,8 @@ function sessionPayload(draft: ClaimDraft): SessionPayload {
     specialties: draft.specialties,
     socials: draft.socials,
     image: draft.image,
+    coverImage: draft.coverImage,
+    gender: draft.gender,
     stage: draft.stage,
     attribution: draft.attribution,
     verifyCode: draft.verifyCode,
@@ -291,6 +307,8 @@ export function publicClaimPayload(draft: ClaimDraft) {
       followers: social.followers,
     })),
     image: draft.image,
+    coverImage: draft.coverImage,
+    gender: draft.gender,
     stage: draft.stage,
     attribution: draft.attribution,
   };
@@ -311,7 +329,15 @@ export function draftFromSession(row: OnboardingSession): ClaimDraft {
     locationCountry: payload.locationCountry,
     specialties: payload.specialties,
     socials: payload.socials,
-    image: payload.image,
+    image:
+      payload.image.includes("/demo/creators/")
+        ? defaultAvatarForGender(payload.gender || "unspecified")
+        : payload.image,
+    coverImage:
+      !payload.coverImage || payload.coverImage.includes("/demo/sofia/")
+        ? defaultBannerForSeed(row.draftSlug)
+        : payload.coverImage,
+    gender: payload.gender || "unspecified",
     email: row.email ?? undefined,
     ownerName: row.ownerName ?? undefined,
     verifyCode: payload.verifyCode,
@@ -390,7 +416,9 @@ export async function createDraftFromHandle(
     SPECIALTY_TAXONOMY.find((s) => s.slug === specialty[0])?.name ?? "Lifestyle";
   const now = new Date().toISOString();
   const socialImage = await resolveSocialAvatar(platform, handle);
-  const image = socialImage ?? DEMO_IMAGES[Math.abs(hash(handle)) % DEMO_IMAGES.length]!;
+  const gender: ProfileGender = "unspecified";
+  const image = resolveDefaultAvatar({ socialImage, gender, seed: slug });
+  const coverImage = resolveDefaultBanner({ seed: slug });
   // Demo preview specialties so the temporary card shows a full-card experience.
   const previewSpecialties = [...new Set([specialty[0], "lifestyle", "travel"].filter(Boolean))].slice(0, 3);
 
@@ -427,6 +455,8 @@ export async function createDraftFromHandle(
       },
     ],
     image,
+    coverImage,
+    gender,
     attribution,
     createdAt: now,
     updatedAt: now,
@@ -459,7 +489,16 @@ export async function createDraftFromProfile(
     locationCountry: creator.locationCountry,
     specialties: [...creator.specialties],
     socials: creator.socials.map((item) => ({ ...item })),
-    image: creator.image,
+    image: resolveDefaultAvatar({
+      socialImage: creator.image,
+      gender: creator.gender,
+      seed: creator.slug,
+    }),
+    coverImage: resolveDefaultBanner({
+      seed: creator.slug,
+      coverImage: creator.coverImage,
+    }),
+    gender: normalizeProfileGender(creator.gender),
     planTier: creator.planTier,
     attribution,
     createdAt: now,
@@ -504,6 +543,8 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     languages: ["English"],
     avatarColor: "#633CFF",
     image: draft.image,
+    coverImage: draft.coverImage,
+    gender: draft.gender,
     badge: draft.stage === "published" ? "Rising Star" : "Draft preview",
     statusLabel: draft.stage === "published" ? "Open to partnerships" : "Draft — not public yet",
     planTier: draft.planTier ?? "STARTER",
@@ -528,6 +569,7 @@ export async function claimDraft(input: {
   draftId: string;
   email: string;
   name: string;
+  gender?: string;
 }): Promise<ClaimDraft> {
   const draft = await getDraft(input.draftId);
   if (!draft) throw new Error("Draft not found");
@@ -538,9 +580,18 @@ export async function claimDraft(input: {
   const name = input.name.trim();
   if (!email.includes("@") || !name) throw new Error("Name and valid email required");
 
+  const nextGender = normalizeProfileGender(input.gender ?? draft.gender);
   draft.email = email;
   draft.ownerName = name;
   draft.displayName = name;
+  draft.gender = nextGender;
+  // When gender becomes known and avatar is still a brand default, swap to the matching set.
+  draft.image = resolveDefaultAvatar({
+    socialImage: draft.image,
+    gender: nextGender,
+    seed: draft.slug,
+  });
+  draft.coverImage = resolveDefaultBanner({ seed: draft.slug, coverImage: draft.coverImage });
   draft.stage = claimed.stage;
   draft.verifyCode = String(100000 + (Math.abs(hash(email + draft.id)) % 900000));
   draft.updatedAt = new Date().toISOString();
@@ -638,7 +689,15 @@ export async function updateDraftProfile(
   patch: Partial<
     Pick<
       ClaimDraft,
-      "displayName" | "title" | "bio" | "locationCity" | "locationCountry" | "specialties"
+      | "displayName"
+      | "title"
+      | "bio"
+      | "locationCity"
+      | "locationCountry"
+      | "specialties"
+      | "image"
+      | "coverImage"
+      | "gender"
     >
   >,
 ): Promise<ClaimDraft> {
@@ -655,7 +714,19 @@ export async function updateDraftProfile(
       );
     }
   }
+  const previousGender = draft.gender;
   Object.assign(draft, patch);
+  if (patch.gender) {
+    draft.gender = normalizeProfileGender(patch.gender);
+    // Auto-refresh default avatar when gender changes and the photo is still a brand default.
+    if (draft.gender !== previousGender) {
+      draft.image = resolveDefaultAvatar({
+        socialImage: patch.image ?? draft.image,
+        gender: draft.gender,
+        seed: draft.slug,
+      });
+    }
+  }
   draft.updatedAt = new Date().toISOString();
   await writeDraft(draft);
 
@@ -677,6 +748,8 @@ async function syncPublishedCreatorProfile(draft: ClaimDraft) {
       locationCity: draft.locationCity,
       locationCountry: draft.locationCountry,
       avatarUrl: draft.image,
+      coverUrl: draft.coverImage,
+      gender: draft.gender,
     },
   });
   if (draft.specialties) {
@@ -768,7 +841,16 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
       url: row.url ?? "",
       followers: row.followers ?? 0,
     })),
-    image: creator.avatarUrl ?? DEMO_IMAGES[0]!,
+    image: resolveDefaultAvatar({
+      socialImage: creator.avatarUrl,
+      gender: normalizeProfileGender(creator.gender),
+      seed: creator.slug,
+    }),
+    coverImage: resolveDefaultBanner({
+      seed: creator.slug,
+      coverImage: creator.coverUrl,
+    }),
+    gender: normalizeProfileGender(creator.gender),
     email: undefined,
     ownerName: creator.displayName,
     publishedAt: creator.updatedAt.toISOString(),

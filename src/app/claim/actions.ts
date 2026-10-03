@@ -18,6 +18,7 @@ import {
   updateDraftProfile,
   verifyDraft,
 } from "@/lib/claim";
+import { normalizeProfileGender } from "@/lib/profile-media";
 
 function clientIp(headerStore: Headers) {
   return headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -48,6 +49,7 @@ export async function actionClaimDraft(formData: FormData) {
       draftId,
       email: String(formData.get("email") ?? ""),
       name: String(formData.get("name") ?? ""),
+      gender: String(formData.get("gender") ?? ""),
     });
     await setCreatorSession(draft.id);
   } catch (err) {
@@ -136,6 +138,10 @@ export async function actionUpdateDashboardProfile(formData: FormData) {
       bio: String(formData.get("bio") ?? "").trim() || undefined,
       locationCity: String(formData.get("locationCity") ?? "").trim() || undefined,
       locationCountry: String(formData.get("locationCountry") ?? "").trim() || undefined,
+      gender: (() => {
+        const raw = String(formData.get("gender") ?? "").trim();
+        return raw ? normalizeProfileGender(raw) : undefined;
+      })(),
       specialties: String(formData.get("specialty") ?? "")
         .split(",")
         .map((s) => s.trim())
@@ -143,6 +149,48 @@ export async function actionUpdateDashboardProfile(formData: FormData) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Save failed";
+    redirect(`/dashboard?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/dashboard?saved=1");
+}
+
+export async function actionUpdateProfileMedia(formData: FormData) {
+  const draftId = String(formData.get("draftId") ?? "");
+  const intent = String(formData.get("intent") ?? "");
+  try {
+    const { nextBrandBanner, defaultAvatarForGender, normalizeProfileGender } = await import(
+      "@/lib/profile-media"
+    );
+    const { saveAvatarUpload, saveCoverUpload } = await import("@/lib/profile-uploads");
+    const { getDraft } = await import("@/lib/claim");
+    const draft = await getDraft(draftId);
+    if (!draft) throw new Error("Draft not found");
+
+    if (intent === "avatar") {
+      const file = formData.get("avatar");
+      if (!(file instanceof File) || file.size <= 0) throw new Error("Choose a profile photo.");
+      const image = await saveAvatarUpload(file);
+      await updateDraftProfile(draftId, { image });
+    } else if (intent === "cover") {
+      const file = formData.get("cover");
+      if (!(file instanceof File) || file.size <= 0) throw new Error("Choose a banner image.");
+      const coverImage = await saveCoverUpload(file);
+      await updateDraftProfile(draftId, { coverImage });
+    } else if (intent === "avatar-default") {
+      const gender = normalizeProfileGender(String(formData.get("gender") ?? draft.gender));
+      await updateDraftProfile(draftId, {
+        gender,
+        image: defaultAvatarForGender(gender),
+      });
+    } else if (intent === "cover-next") {
+      await updateDraftProfile(draftId, {
+        coverImage: nextBrandBanner(draft.coverImage, draft.slug),
+      });
+    } else {
+      throw new Error("Unknown media action.");
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not update images";
     redirect(`/dashboard?error=${encodeURIComponent(message)}`);
   }
   redirect("/dashboard?saved=1");

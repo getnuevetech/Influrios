@@ -72,6 +72,18 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
             />
           </label>
           <label className="block text-sm font-semibold text-indigo">
+            Gender (optional — picks your default avatar)
+            <select
+              name="gender"
+              defaultValue={draft.gender || "unspecified"}
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+            >
+              <option value="unspecified">Prefer not to say</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </select>
+          </label>
+          <label className="block text-sm font-semibold text-indigo">
             Email
             <input
               name="email"

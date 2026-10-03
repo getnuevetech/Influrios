@@ -253,6 +253,8 @@ model Creator {
   languages          String[]           @default([])
   avatarUrl          String?
   coverUrl           String?
+  /// Influencer-facing presentation gender for default avatars: male | female | unspecified
+  gender             String             @default("unspecified")
   openToCollab       Boolean            @default(true)
   availability       String             @default("OPEN_TO_PARTNERSHIPS")
   identityVerified   VerificationStatus @default(UNVERIFIED)
