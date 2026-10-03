@@ -271,8 +271,8 @@ Pick from product backlog once loops are honest:
 
 **Collaboration OS** is the active product track — see [`docs/collaboration/COLLABORATION_OS_PLAN.md`](./collaboration/COLLABORATION_OS_PLAN.md) and approved designs under `docs/design-references/collaboration/`.
 
-1. **P1** Public `/collaboration` landing to Figure 1 (in progress / this track).  
-2. **P1b** Persist business requests, creator opportunities, and match records.  
+1. **P1** Public `/collaboration` landing to Figure 1 — shipped.  
+2. **P1b** Persist business requests, creator opportunities, and match records — shipped.  
 3. **P2** Signed-in creator Collaboration Hub (Figure 2).  
 4. Parallel: fill **Phase M** staging evidence when credentials are available.  
 5. Optional: delete Phase 9/10 JSON paths once ops confirms unused.  

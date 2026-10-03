@@ -478,6 +478,117 @@ model CollaborationEvent {
   @@index([collaborationId])
 }
 
+/// Public marketplace business request (Collab OS P1b). Replaces hardcoded BUSINESS_REQUESTS reads.
+model MarketplaceBusinessRequest {
+  id           String   @id @default(cuid())
+  brand        String
+  category     String
+  budget       String
+  location     String
+  tags         String[] @default([])
+  summary      String
+  lookingFor   String
+  logoUrl      String?
+  imageUrl     String?
+  status       String   @default("published")
+  sortOrder    Int      @default(0)
+  publishedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  applications MarketplaceApplication[]
+
+  @@index([status, sortOrder])
+}
+
+/// Public marketplace creator opportunity (Collab OS P1b).
+model MarketplaceCreatorOpportunity {
+  id           String   @id @default(cuid())
+  creatorSlug  String
+  lookingFor   String
+  summary      String
+  purpose      String?
+  location     String?
+  status       String   @default("published")
+  sortOrder    Int      @default(0)
+  publishedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  applications MarketplaceApplication[]
+
+  @@index([status, sortOrder])
+  @@index([creatorSlug])
+}
+
+/// Persisted match explanation object (Collab OS §3.2).
+model MarketplaceMatchRecord {
+  id                       String    @id @default(cuid())
+  matchType                String    @default("CREATOR_CREATOR")
+  partyASlug               String
+  partyBSlug               String
+  score                    Int
+  breakdownJson            Json
+  reasonsJson              Json
+  why                      String
+  specialtyHits            String[]  @default([])
+  modelVersion             String    @default("rules-v1")
+  expiresAt                DateTime?
+  convertedCollaborationId String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  saves                    MarketplaceMatchSave[]
+
+  @@unique([partyASlug, partyBSlug, matchType])
+  @@index([score])
+}
+
+model MarketplaceMatchSave {
+  id        String                 @id @default(cuid())
+  matchId   String
+  match     MarketplaceMatchRecord @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId    String?
+  guestKey  String?
+  createdAt DateTime               @default(now())
+
+  @@index([matchId])
+  @@index([userId])
+  @@index([guestKey])
+}
+
+/// Invitation/application against a marketplace listing (§4.3 state machine).
+model MarketplaceApplication {
+  id                String                         @id @default(cuid())
+  kind              String
+  businessRequestId String?
+  businessRequest   MarketplaceBusinessRequest?    @relation(fields: [businessRequestId], references: [id], onDelete: Cascade)
+  opportunityId     String?
+  opportunity       MarketplaceCreatorOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  fromUserId        String?
+  fromSlug          String?
+  toSlug            String?
+  status            String                         @default("REQUESTED")
+  note              String?
+  createdAt         DateTime                       @default(now())
+  updatedAt         DateTime                       @updatedAt
+  events            MarketplaceApplicationEvent[]
+
+  @@index([kind, status])
+  @@index([businessRequestId])
+  @@index([opportunityId])
+}
+
+model MarketplaceApplicationEvent {
+  id            String                 @id @default(cuid())
+  applicationId String
+  application   MarketplaceApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStatus    String?
+  toStatus      String
+  actorUserId   String?
+  note          String?
+  createdAt     DateTime               @default(now())
+
+  @@index([applicationId])
+}
+
 model BusinessProfile {
   id          String   @id @default(cuid())
   userId      String   @unique
