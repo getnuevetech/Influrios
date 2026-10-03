@@ -2,10 +2,15 @@
  * Phase 10 — Disputes, Trust & Contract briefs.
  * Mediation queue for escrow milestones + lightweight collab contract templates.
  * Demo store only — not legal advice / not e-sign.
+ * Gated by `legacy_demo_payments` (default off); live disputes use the marketplace ledger.
  */
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import {
+  assertLegacyDemoPayments,
+  legacyDemoPaymentsEnabled,
+} from "@/lib/legacy-demo-payments";
 import {
   getDeal,
   getProtectedPaymentsStore,
@@ -106,12 +111,19 @@ const DEFAULT_STORE: TrustStore = {
   ],
 };
 
+const EMPTY_STORE: TrustStore = {
+  notes: "Phase 10 demo trust queue is off. Use marketplace ledger disputes.",
+  disputes: [],
+  contracts: [],
+};
+
 async function ensureStore(): Promise<TrustStore> {
+  const legacyOn = await legacyDemoPaymentsEnabled();
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
     const raw = await fs.readFile(STORE_PATH, "utf8");
     return JSON.parse(raw) as TrustStore;
   } catch {
+    if (!legacyOn) return structuredClone(EMPTY_STORE);
     try {
       await fs.mkdir(DATA_DIR, { recursive: true });
       await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
@@ -123,6 +135,7 @@ async function ensureStore(): Promise<TrustStore> {
 }
 
 async function saveStore(store: TrustStore) {
+  await assertLegacyDemoPayments();
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");

@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { actionAdminLogout } from "@/app/admin/actions-auth";
 import { canAccessModule, getAdminSession, type AdminModule } from "@/lib/admin-auth";
-import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
+import {
+  isLegacyDemoPaymentsAdminHref,
+  legacyDemoPaymentsEnabled,
+} from "@/lib/legacy-demo-payments";
 
 const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboard" }[] = [
   { href: "/admin", label: "Dashboard", module: "dashboard" },
@@ -45,7 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const links = SIDE_LINKS.filter((l) => {
-    if (!legacyDemoOn && l.href === "/admin/payments") return false;
+    if (!legacyDemoOn && isLegacyDemoPaymentsAdminHref(l.href)) return false;
     return l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule);
   });
 

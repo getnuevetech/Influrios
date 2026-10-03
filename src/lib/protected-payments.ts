@@ -2,10 +2,18 @@
  * Phase 9 — Protected Payments (escrow / milestone demo).
  * Fund collaborations securely and release as milestones complete.
  * Demo store only — no live payout rails yet.
+ * Gated by `legacy_demo_payments` (default off); product money path is the marketplace ledger.
  */
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import {
+  assertLegacyDemoPayments,
+  legacyDemoPaymentsEnabled,
+} from "@/lib/legacy-demo-payments";
+import { formatMoney } from "@/lib/money";
+
+export { formatMoney };
 
 export type MilestoneStatus =
   | "pending"
@@ -111,12 +119,18 @@ const DEFAULT_STORE: ProtectedPaymentsStore = {
   ],
 };
 
+const EMPTY_STORE: ProtectedPaymentsStore = {
+  notes: "Phase 9 demo escrow is off. Use the marketplace ledger.",
+  deals: [],
+};
+
 async function ensureStore(): Promise<ProtectedPaymentsStore> {
+  const legacyOn = await legacyDemoPaymentsEnabled();
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
     const raw = await fs.readFile(STORE_PATH, "utf8");
     return JSON.parse(raw) as ProtectedPaymentsStore;
   } catch {
+    if (!legacyOn) return structuredClone(EMPTY_STORE);
     try {
       await fs.mkdir(DATA_DIR, { recursive: true });
       await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
@@ -128,6 +142,7 @@ async function ensureStore(): Promise<ProtectedPaymentsStore> {
 }
 
 async function saveStore(store: ProtectedPaymentsStore) {
+  await assertLegacyDemoPayments();
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
@@ -138,14 +153,6 @@ async function saveStore(store: ProtectedPaymentsStore) {
 
 export async function getProtectedPaymentsStore() {
   return ensureStore();
-}
-
-export function formatMoney(cents: number, currency: string = "USD") {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
 }
 
 export async function getDeal(id: string) {
