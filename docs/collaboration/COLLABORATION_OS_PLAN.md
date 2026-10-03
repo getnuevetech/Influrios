@@ -111,12 +111,13 @@ Influrios already has durable pieces to **extend**, not replace:
 
 **Exit:** public lists read from DB; admin can publish without deploy.
 
-### P2 — Creator Collaboration Hub (Figure 2)
+### P2 — Creator Collaboration Hub (Figure 2) ✅
 
-- Route: `/collaboration/hub` (or signed-in `/collaboration` when session present).
+- Route: `/collaboration/hub` (signed-in creators with a claimed draft are redirected from `/collaboration`).
 - Profile card, status cards, filters, Recommended Matches carousel, payout panel shell, business requests, creator opportunities, Active Collaboration Pipeline stepper (Match → Contract → Funded → In Progress → Review → Released).
 - Side nav shortcuts per design.
 - Persist Save Match; map pipeline from real `Collaboration` / funding status.
+- Guests keep Figure 1 (`/collaboration?landing=1` to force public landing when signed in).
 
 **Exit:** signed-in creator sees Figure 2; guests still see Figure 1.
 
@@ -192,15 +193,15 @@ Influrios already has durable pieces to **extend**, not replace:
 
 ---
 
-## 6. Immediate next coding slice (P2)
+## 6. Immediate next coding slice (P2b)
 
-P1 + P1b shipped. Next:
+P2 creator hub shipped. Next:
 
-1. Signed-in creator Collaboration Hub (Figure 2) at `/collaboration/hub`.
-2. Persist Save Match; map pipeline from real Collaboration / funding status.
-3. Parallel: fill Phase M staging evidence when credentials are available.
+1. Business Collaboration Hub (role-aware requests, suggestions, spend from ledger).
+2. Parallel: fill Phase M staging evidence when credentials are available.
+3. Then P3 contract & milestone wizard.
 
-Follow-up after hub: P2b business hub, then P3 contract wizard.
+Follow-up after business hub: P3 contract wizard.
 
 ---
 
