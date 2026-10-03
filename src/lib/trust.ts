@@ -88,7 +88,7 @@ const DEFAULT_STORE: TrustStore = {
       clauses: [
         "Deliverables and due dates follow the escrow milestones attached to this deal.",
         "Brand usage rights: organic + paid amplification for 90 days after publish.",
-        "Creator retains ownership of raw footage unless otherwise agreed in writing.",
+        "Influencer retains ownership of raw footage unless otherwise agreed in writing.",
         "Funds held in Influrios escrow until each milestone is accepted or mediated.",
         "Either party may open a dispute; ops mediation is binding for the demo rails.",
       ],
@@ -102,7 +102,7 @@ const DEFAULT_STORE: TrustStore = {
       summary: "Extended paid media license when brands need whitelisting or ads.",
       clauses: [
         "Paid media / whitelisting term: 6 months from first go-live.",
-        "Creator grants non-exclusive worldwide license for the contracted assets.",
+        "Influencer grants non-exclusive worldwide license for the contracted assets.",
         "Edits that change meaning require creator approval before release of final milestone.",
       ],
       createdAt: now(),

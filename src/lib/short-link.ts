@@ -256,7 +256,7 @@ async function recordEvent(shortLinkId: string | undefined, eventType: string, m
 
 export function shortLinkRootMessage(canonicalOrigin?: string) {
   const origin = (canonicalOrigin || process.env.NEXT_PUBLIC_APP_URL || "https://influrios.com").replace(/\/$/, "");
-  return `Creator profiles stay on Influrios. Open ${origin} to browse the directory.`;
+  return `Influencer profiles stay on Influrios. Open ${origin} to browse the directory.`;
 }
 
 /** Known launch hosts can explain themselves when the store is down. Slugs are never invented. */

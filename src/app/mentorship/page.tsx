@@ -2,7 +2,7 @@ import Link from "next/link";
 import { IconArrowRight, IconCheck, IconUsers } from "@/components/icons";
 
 export const metadata = {
-  title: "Mentorship",
+  title: "Influencer Mentorship",
 };
 
 /**
@@ -16,7 +16,7 @@ export default function MentorshipPage() {
         <div className="mx-auto max-w-[90rem] px-4 py-14 sm:px-6 lg:px-10">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-violet">Mentor–Mentee Network</p>
           <h1 className="mt-2 font-display text-4xl font-bold text-indigo sm:text-5xl">
-            Become a Mentor on <span className="brand-gradient-text">Influrios</span>
+            Become an Influrios Influencer Mentor
           </h1>
           <p className="mt-4 max-w-2xl text-sm text-muted sm:text-base">
             Mentorship is how experienced influencers help the next wave grow — and how Influrios
@@ -56,7 +56,7 @@ export default function MentorshipPage() {
           <h2 className="font-display text-xl font-bold text-indigo">What ships next</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted">
             {[
-              "Find a Mentor / Become a Mentor hub with niche and country filters",
+              "Find an Influencer Mentor / Become an Influrios Influencer Mentor hub with niche and country filters",
               "Admin-configurable eligibility (verified identity, history, standing)",
               "Request / accept / decline flows with availability boundaries",
               "Optional paid mentoring (feature-flagged) with separate terms",

@@ -54,7 +54,7 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
               Open live card →
             </Link>
             <Link href="/dashboard" className="btn-secondary flex w-full">
-              Creator dashboard
+              Influencer dashboard
             </Link>
           </>
         ) : (
@@ -63,13 +63,13 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
             <label className="flex items-start gap-2 text-left text-xs text-indigo">
               <input type="checkbox" name="creatorTerms" required className="mt-0.5 accent-violet" />
               <span>
-                By creating a Creator account, I agree to the{" "}
+                By joining as an Influencer, I agree to the{" "}
                 <Link href="/legal/terms-of-service" className="font-semibold underline" target="_blank">
                   Terms of Service
                 </Link>
                 ,{" "}
                 <Link href="/legal/creator-terms" className="font-semibold underline" target="_blank">
-                  Creator Terms
+                  Influencer Terms
                 </Link>
                 , and{" "}
                 <Link href="/legal/social-platform-integration-terms" className="font-semibold underline" target="_blank">

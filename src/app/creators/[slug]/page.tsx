@@ -38,7 +38,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const creator = await getDirectoryCreator(slug);
-  if (!creator) return { title: "Creator not found" };
+  if (!creator) return { title: "Influencer not found" };
   return { title: creator.displayName, description: creator.bio };
 }
 
@@ -698,10 +698,10 @@ export default async function CreatorProfilePage({ params }: Props) {
             <h3 className="font-display text-[1.15rem] font-bold text-indigo">
               You Might Also Like
             </h3>
-            <p className="mt-0.5 text-[11px] text-muted">Discover more amazing creators.</p>
+            <p className="mt-0.5 text-[11px] text-muted">Discover more amazing influencers.</p>
           </div>
           <Link href="/discover" className="text-[11px] font-semibold text-blue hover:underline">
-            View More Creators →
+            View More Influencers →
           </Link>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:thin]">

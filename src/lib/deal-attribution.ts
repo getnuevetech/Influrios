@@ -19,12 +19,16 @@ export async function ensureAttributionSources() {
       await tx.attributionSource.createMany({
         data: [
           { label: "Direct brief", sortOrder: 1, active: true },
-          { label: "Creator card", sortOrder: 2, active: true },
+          { label: "Influencer card", sortOrder: 2, active: true },
           { label: "Returning business", sortOrder: 3, active: true },
         ],
       });
     }
     await tx.marketplaceSettings.update({ where: { id: "default" }, data: { sourcesSeeded: true } });
+  });
+  await prisma.attributionSource.updateMany({
+    where: { label: "Creator card" },
+    data: { label: "Influencer card" },
   });
 }
 

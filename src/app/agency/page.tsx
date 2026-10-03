@@ -177,7 +177,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 Add to roster
               </h3>
               <label className="text-sm">
-                <span className="font-semibold text-indigo">Creator</span>
+                <span className="font-semibold text-indigo">Influencer</span>
                 <select
                   name="creatorSlug"
                   required
@@ -433,7 +433,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 />
               </label>
               <label className="text-sm">
-                <span className="font-semibold text-indigo">Creator A</span>
+                <span className="font-semibold text-indigo">Influencer A</span>
                 <select
                   name="leftSlug"
                   required
@@ -448,7 +448,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 </select>
               </label>
               <label className="text-sm">
-                <span className="font-semibold text-indigo">Creator B</span>
+                <span className="font-semibold text-indigo">Influencer B</span>
                 <select
                   name="rightSlug"
                   required

@@ -184,7 +184,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
 
           <div className="relative hidden h-64 lg:block">
             <p className="absolute left-6 top-2 z-10 max-w-[12rem] font-script text-2xl leading-tight text-violet">
-              Find Amazing Creators For Your Next Campaign
+              Find Amazing Influencers For Your Next Campaign
             </p>
             {heroCards.map((creator, index) => (
               <Link
@@ -200,7 +200,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
               >
                 <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="140px" />
                 <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-8 text-[10px] font-bold uppercase tracking-wide text-white">
-                  {creator.specialties[0]?.replace("-", " ") ?? "Creator"}
+                  {creator.specialties[0]?.replace("-", " ") ?? "Influencer"}
                 </span>
               </Link>
             ))}
@@ -316,7 +316,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
 
             {results.length === 0 ? (
               <div className="rounded-2xl border border-[#E4E9F5] bg-white p-10 text-center">
-                <p className="font-semibold text-indigo">No creators matched those filters.</p>
+                <p className="font-semibold text-indigo">No influencers matched those filters.</p>
                 <Link href="/discover" className="mt-4 inline-block text-sm font-semibold text-violet">
                   Clear filters
                 </Link>
@@ -342,13 +342,13 @@ export default async function DiscoverPage({ searchParams }: Props) {
           <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-r from-[#1B1464] via-[#3D2E9E] to-[#633CFF] text-white shadow-xl">
             <div className="grid items-center gap-6 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr]">
               <div>
-                <h2 className="font-display text-2xl font-bold sm:text-3xl">Partner with Amazing Creators</h2>
+                <h2 className="font-display text-2xl font-bold sm:text-3xl">Partner with Amazing Influencers</h2>
                 <p className="mt-2 max-w-lg text-sm text-white/75">
-                  Launch a brand campaign with creators who match your audience, niche, and goals.
+                  Launch a brand campaign with influencers who match your audience, niche, and goals.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {[
-                    [directory.creators.length.toLocaleString(), "Creators in directory"],
+                    [directory.creators.length.toLocaleString(), "Influencers in directory"],
                     [countryNames.length.toLocaleString(), "Countries represented"],
                     [taxonomy.length.toLocaleString(), "Active niches"],
                     [results.filter((creator) => creator.openToCollab).length.toLocaleString(), "Open to collaborate"],

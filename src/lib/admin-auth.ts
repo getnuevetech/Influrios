@@ -117,10 +117,10 @@ export const ADMIN_PERMISSION_GROUPS: {
   {
     module: "matching",
     label: "Managed matching",
-    description: "Creator opt-in, shortlist intros, and pipeline status",
+    description: "Influencer opt-in, shortlist intros, and pipeline status",
     permissions: [
       { id: "matching.view", label: "View matching", hint: "See opt-ins and intro pipeline" },
-      { id: "matching.manage_optins", label: "Manage opt-ins", hint: "Toggle creator managed opt-in" },
+      { id: "matching.manage_optins", label: "Manage opt-ins", hint: "Toggle influencer managed opt-in" },
       { id: "matching.create_intros", label: "Create intros", hint: "Deliver shortlist → create intro" },
       { id: "matching.advance_intros", label: "Advance intros", hint: "Move intro status / mark paid" },
     ],
@@ -262,10 +262,10 @@ export const ADMIN_PERMISSION_GROUPS: {
   {
     module: "social",
     label: "Social networks",
-    description: "Live account connections, follower and like sync, and the creator terms",
+    description: "Live account connections, follower and like sync, and the influencer terms",
     permissions: [
       { id: "social.view", label: "View social networks", hint: "Open network connections and the integration terms" },
-      { id: "social.edit", label: "Edit social networks", hint: "Save API details and the terms creators must accept" },
+      { id: "social.edit", label: "Edit social networks", hint: "Save API details and the terms influencers must accept" },
     ],
   },
   {

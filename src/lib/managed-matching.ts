@@ -139,7 +139,7 @@ async function seedManaged() {
         events: {
           create: [
             { status: "draft", note: "Shortlist delivered", createdAt: new Date(base) },
-            { status: "outreach", note: "Creator contacted", createdAt: new Date(base + 1000) },
+            { status: "outreach", note: "Influencer contacted", createdAt: new Date(base + 1000) },
             { status: "introduced", note: "Both parties connected", createdAt: new Date(base + 2000) },
           ],
         },

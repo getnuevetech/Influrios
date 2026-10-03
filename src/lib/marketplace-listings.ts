@@ -247,7 +247,7 @@ export async function upsertCreatorOpportunity(input: {
   const lookingFor = input.lookingFor.trim();
   const summary = input.summary.trim();
   if (!creatorSlug || !lookingFor || !summary) {
-    throw new Error("Creator slug, looking-for, and summary are required.");
+    throw new Error("Influencer slug, looking-for, and summary are required.");
   }
   const data = {
     creatorSlug,

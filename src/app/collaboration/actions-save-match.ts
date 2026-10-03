@@ -25,7 +25,7 @@ export async function actionSaveMatch(formData: FormData) {
     getDirectoryCreator(partyBSlug),
   ]);
   if (!creatorA || !creatorB) {
-    redirect(`${next}${next.includes("?") ? "&" : "?"}error=${encodeURIComponent("Creators not found")}`);
+    redirect(`${next}${next.includes("?") ? "&" : "?"}error=${encodeURIComponent("Influencers not found")}`);
   }
 
   const match = scoreCreatorPair(creatorA, creatorB);

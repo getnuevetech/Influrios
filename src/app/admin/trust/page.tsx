@@ -308,7 +308,7 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                 defaultValue="both"
               >
                 <option value="both">Both</option>
-                <option value="creator">Creator</option>
+                <option value="creator">Influencer</option>
                 <option value="business">Business</option>
               </select>
             </label>

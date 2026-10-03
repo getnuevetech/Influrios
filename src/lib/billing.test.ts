@@ -7,7 +7,7 @@ describe("billing catalog", () => {
     assert.equal(isBillingSku("creator_plus"), true);
     assert.equal(isBillingSku("agency"), true);
     assert.equal(isBillingSku("not_a_plan"), false);
-    assert.equal(getProduct("creator_pro")?.name, "Creator Pro");
+    assert.equal(getProduct("creator_pro")?.name, "Influencer Pro");
     assert.equal(getProduct("missing"), undefined);
   });
 

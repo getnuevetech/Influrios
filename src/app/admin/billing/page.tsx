@@ -188,7 +188,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
       </section>
 
       <section className="card-surface p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Creator plan overrides</h2>
+        <h2 className="font-display text-xl font-bold text-indigo">Influencer plan overrides</h2>
         <ul className="mt-3 divide-y divide-border text-sm">
           {store.creatorOverrides.length === 0 ? (
             <li className="py-2 text-muted">None yet</li>

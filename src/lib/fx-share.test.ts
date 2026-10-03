@@ -33,7 +33,7 @@ describe("admin FX and revenue shares", () => {
 
   it("splits a release into share lines that reconcile ignores", () => {
     const lines = shareLines(7_500, [
-      { label: "Creator", shareBps: 8000 },
+      { label: "Influencer", shareBps: 8000 },
       { label: "Platform", shareBps: 2000 },
     ]);
     assert.ok(lines);
@@ -178,7 +178,7 @@ describe("marketplace FX prefund", () => {
       assert.equal(fx?.quoteId, "quote-gb-1");
       assert.equal(wiseCalls, 1);
       const frozenShares = readShareSnapshot(row.shareSnapshotJson);
-      assert.equal(frozenShares?.[0]?.label, "Creator");
+      assert.equal(frozenShares?.[0]?.label, "Influencer");
 
       await prisma.fxRate.update({ where: { currency: "GBP" }, data: { minorPerUsd: 80 } });
       await saveRevenueParties(
@@ -205,7 +205,7 @@ describe("marketplace FX prefund", () => {
       assert.equal(failed.ok, false);
       if (!failed.ok) assert.match(failed.error, /did not return a user rate/);
       assert.equal(await prisma.collaborationFunding.count({ where: { title: "GB quote failed" } }), 0);
-      assert.equal(readShareSnapshot(frozen?.shareSnapshotJson)?.[0]?.label, "Creator");
+      assert.equal(readShareSnapshot(frozen?.shareSnapshotJson)?.[0]?.label, "Influencer");
 
       const wrong = await applyMarketplaceEvent({
         provider: "primary",

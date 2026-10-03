@@ -8,7 +8,7 @@ export const metadata = { title: "Pricing" };
 
 const STARTER = {
   sku: "creator_starter",
-  name: "Creator Starter",
+  name: "Influencer Starter",
   priceLabel: "Free",
   amountCents: 0,
   description: "Claim your Influencer Card and get discovered.",
@@ -29,7 +29,7 @@ export default async function PricingPage() {
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">Pricing</h1>
           <p className="mx-auto mt-3 max-w-2xl text-white/75">
-            Choose a creator or business plan. Upgrade anytime — Stripe Checkout when keys are
+            Choose an influencer or business plan. Upgrade anytime — Stripe Checkout when keys are
             configured, demo flow otherwise.
           </p>
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
@@ -40,7 +40,7 @@ export default async function PricingPage() {
 
       <div className="mx-auto max-w-[90rem] space-y-10 px-4 py-10 sm:px-6 lg:px-10">
         <section>
-          <h2 className="font-display text-2xl font-bold text-indigo">Creator plans</h2>
+          <h2 className="font-display text-2xl font-bold text-indigo">Influencer plans</h2>
           <p className="mt-1 text-sm text-muted">
             Starter free · Plus & Pro unlock QR, shortlinks, and collaboration tools.
           </p>

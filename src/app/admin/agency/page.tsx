@@ -152,7 +152,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         <table className="mt-4 w-full min-w-[640px] text-left text-sm">
           <thead className="text-xs uppercase tracking-wide text-muted">
             <tr>
-              <th className="pb-2 pr-3">Creator</th>
+              <th className="pb-2 pr-3">Influencer</th>
               <th className="pb-2 pr-3">Role</th>
               <th className="pb-2 pr-3">Retainer</th>
               <th className="pb-2">Notes</th>

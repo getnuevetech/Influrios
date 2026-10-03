@@ -154,7 +154,7 @@ const DEFAULT_CATEGORIES: HomepageCategoriesConfig = {
 
 const DEFAULT_COLLABORATION_MATCHES: HomepageCollaborationConfig = {
   title: "Collaboration Matches",
-  subtitle: "Complementary creators who unlock stronger campaigns.",
+  subtitle: "Complementary influencers who unlock stronger campaigns.",
   ctaLabel: "View more matches",
   ctaHref: "/collaboration",
   matches: defaultCollaborationMatches(),
@@ -201,7 +201,7 @@ const DEFAULT_VALUE_PROPOSITION: ValuePropositionStrip = {
   headline: "More than a directory.",
   headlineHighlight: "An ecosystem for influence.",
   subtitle:
-    "Influence. Identity. Opportunity. — Discover the right influence. Build your creator identity. Collaborate with confidence.",
+    "Influence. Identity. Opportunity. — Discover the right influence. Build your influencer identity. Collaborate with confidence.",
   closingTaglineLine1: "More than a directory.",
   closingTaglineLine2: "An ecosystem for influence.",
   items: [
@@ -223,7 +223,7 @@ const DEFAULT_VALUE_PROPOSITION: ValuePropositionStrip = {
       sortOrder: 1,
       iconKey: "intelligence",
       title: "Influence Intelligence",
-      description: "Discover creators by what they truly influence — not just follower count.",
+      description: "Discover influencers by what they truly influence — not just follower count.",
       microLabel: "Find the Right Match",
       linkUrl: "/discover",
       accentToken: "blue",
@@ -235,7 +235,7 @@ const DEFAULT_VALUE_PROPOSITION: ValuePropositionStrip = {
       iconKey: "network",
       title: "Collaboration Network",
       description:
-        "Connect creators, complementary specialists and businesses around real opportunities.",
+        "Connect influencers, complementary specialists and businesses around real opportunities.",
       microLabel: "Create Opportunities",
       linkUrl: "/collaboration",
       accentToken: "rose",
@@ -264,7 +264,7 @@ const DEFAULT_CMS: SiteCms = {
       heightScale: 0.8,
       title: "Find the Right Influencers. Build Powerful Collaborations.",
       subtitle:
-        "Discover creators by specialty, match with collaborators, and connect businesses to the right influence.",
+        "Discover influencers by specialty, match with collaborators, and connect businesses to the right influence.",
       ctaLabel: "Search",
       ctaHref: "/discover",
       images: [],

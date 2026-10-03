@@ -19,7 +19,7 @@ export type LegalCatalogEntry = {
 
 export const LEGAL_CATEGORIES: { id: LegalCatalogEntry["category"]; label: string }[] = [
   { id: "core", label: "Core" },
-  { id: "creators", label: "Creators" },
+  { id: "creators", label: "Influencers" },
   { id: "businesses", label: "Businesses" },
   { id: "safety", label: "Safety & rights" },
   { id: "enterprise", label: "Enterprise" },
@@ -84,7 +84,7 @@ export const LEGAL_CATALOG: LegalCatalogEntry[] = [
   {
     key: "creator-terms",
     file: "creator-terms.txt",
-    title: "Creator / Influencer Terms",
+    title: "Influencer Terms",
     version: V,
     effectiveDate: DAY,
     jurisdiction: "global",
@@ -305,7 +305,7 @@ export const LEGAL_CATALOG: LegalCatalogEntry[] = [
   {
     key: "age-eligibility-policy",
     file: "age-eligibility-policy.txt",
-    title: "Age Eligibility & Minor Creator Policy",
+    title: "Age Eligibility & Minor Influencer Policy",
     version: V,
     effectiveDate: DAY,
     jurisdiction: "global",

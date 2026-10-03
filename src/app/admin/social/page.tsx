@@ -46,7 +46,7 @@ export default async function AdminSocialPage({ searchParams }: Props) {
 
       {policy ? (
         <form action={actionSaveSocialPolicy} className="mt-6 grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <h2 className="font-display text-lg font-bold text-indigo">Creator agreement</h2>
+          <h2 className="font-display text-lg font-bold text-indigo">Influencer agreement</h2>
           <p className="text-sm text-muted">
             Change the version whenever the terms or policy text changes. Existing connections must be accepted again
             before the next sync.

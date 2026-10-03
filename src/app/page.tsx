@@ -218,7 +218,7 @@ export default async function HomePage() {
                 ))}
               </div>
               <p className="text-left text-sm text-white/75">
-                Join thousands of creators and businesses worldwide.
+                Join thousands of influencers and businesses worldwide.
               </p>
             </div>
 
@@ -536,7 +536,7 @@ export default async function HomePage() {
                   </div>
                   <div className="space-y-1.5 px-3 py-3 text-center">
                     <p className="font-display text-sm font-bold text-indigo">
-                      {featuredCreator?.displayName ?? "Creator"}
+                      {featuredCreator?.displayName ?? "Influencer"}
                     </p>
                     {(featuredCreator?.socials ?? []).slice(0, 2).map((s) => (
                       <div

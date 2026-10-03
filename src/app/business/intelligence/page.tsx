@@ -106,7 +106,7 @@ export default async function BusinessIntelligencePage() {
                       {t.growthPct >= 0 ? "+" : ""}
                       {t.growthPct}% growth
                     </p>
-                    <p className="mt-1 text-xs text-muted">{t.creatorSupply} creators in directory</p>
+                    <p className="mt-1 text-xs text-muted">{t.creatorSupply} influencers in directory</p>
                     <p className="mt-2 text-xs text-muted">{t.note}</p>
                   </div>
                 ))}

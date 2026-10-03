@@ -164,7 +164,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                   <form action={actionRecordIntroduction} className="mt-3 grid gap-2 sm:grid-cols-2">
                     <input type="hidden" name="requestId" value={item.id} />
                     <label className="text-sm">
-                      <span className="font-semibold text-indigo">Creator</span>
+                      <span className="font-semibold text-indigo">Influencer</span>
                       <select name="creatorSlug" required className="mt-1 w-full rounded-xl border border-border px-3 py-2">
                         {store.optIns
                           .filter((opt) => opt.openToManaged)
@@ -224,7 +224,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
               />
             </label>
             <label className="text-sm">
-              <span className="font-semibold text-indigo">Creator</span>
+              <span className="font-semibold text-indigo">Influencer</span>
               <select name="creatorSlug" className="mt-1 w-full rounded-xl border border-border px-3 py-2" required>
                 {store.optIns
                   .filter((o) => o.openToManaged)
@@ -353,11 +353,11 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
         </ul>
       </section>
 
-      {/* Creator opt-in targeting */}
+      {/* Influencer opt-in targeting */}
       <section className="card-surface p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Creator opt-in targeting</h2>
+        <h2 className="font-display text-xl font-bold text-indigo">Influencer opt-in targeting</h2>
         <p className="mt-1 text-sm text-muted">
-          Only opted-in creators appear in the intro delivery picker.
+          Only opted-in influencers appear in the intro delivery picker.
           {!canManageOptins ? " View-only — your role cannot change opt-ins." : ""}
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">

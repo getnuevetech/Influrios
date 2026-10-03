@@ -26,7 +26,7 @@ export const DEFAULT_INVITATION_TEMPLATE = {
   body: "Hi {{name}}, we prepared your Influrios profile. Open {{link}} before {{expiry}} to claim {{profile}}.",
 };
 
-export const DEFAULT_INVITATION_CAMPAIGN = "Creator outreach";
+export const DEFAULT_INVITATION_CAMPAIGN = "Influencer outreach";
 
 const RANK: Record<string, number> = { queued: 0, opened: 1, claimed: 2, published: 3 };
 

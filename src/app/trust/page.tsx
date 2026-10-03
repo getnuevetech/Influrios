@@ -157,7 +157,7 @@ export default async function TrustPage({ searchParams }: Props) {
                   defaultValue="business"
                 >
                   <option value="business">Business</option>
-                  <option value="creator">Creator</option>
+                  <option value="creator">Influencer</option>
                   <option value="ops">Ops</option>
                 </select>
               </label>

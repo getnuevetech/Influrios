@@ -57,7 +57,7 @@ describe("short link rules", () => {
       assert.equal(root.status, 200);
       assert.equal(root.title, "Influrios short links");
       assert.equal(root.message, shortLinkRootMessage());
-      assert.match(root.message, /Creator profiles stay on Influrios/);
+      assert.match(root.message, /Influencer profiles stay on Influrios/);
     }
     const slug = hitWhenShortStoreUnavailable("INFLR.ME:443", "/sofia");
     assert.equal(slug.kind, "page");

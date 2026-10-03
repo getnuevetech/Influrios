@@ -83,7 +83,7 @@ export async function actionPublishDraft(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
   if (formData.get("creatorTerms") !== "on") {
     redirect(
-      `/claim/publish/${draftId}?error=${encodeURIComponent("Agree to the Creator Terms and Social Platform Integration Terms before publishing.")}`,
+      `/claim/publish/${draftId}?error=${encodeURIComponent("Agree to the Influencer Terms and Social Platform Integration Terms before publishing.")}`,
     );
   }
   try {

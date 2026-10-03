@@ -29,7 +29,7 @@ export async function ensureSettlementDefaults() {
       if ((await tx.revenueParty.count()) === 0) {
         await tx.revenueParty.createMany({
           data: [
-            { label: "Creator", shareBps: 8000, sortOrder: 1, active: true },
+            { label: "Influencer", shareBps: 8000, sortOrder: 1, active: true },
             { label: "Platform", shareBps: 2000, sortOrder: 2, active: true },
           ],
         });
@@ -37,6 +37,10 @@ export async function ensureSettlementDefaults() {
       await tx.marketplaceSettings.update({ where: { id: "default" }, data: { sharesSeeded: true } });
     });
   }
+  await prisma.revenueParty.updateMany({
+    where: { label: "Creator" },
+    data: { label: "Influencer" },
+  });
 }
 
 export async function listFxRates() {
