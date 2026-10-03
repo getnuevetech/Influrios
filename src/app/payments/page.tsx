@@ -15,7 +15,7 @@ import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
 import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
-import { formatMoney } from "@/lib/protected-payments";
+import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";

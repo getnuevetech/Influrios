@@ -84,8 +84,8 @@ These modules read/write Prisma and match the implementation plan’s “Impleme
 | CMS banners / value prop content | `CmsSection.payload` via `cms.ts` | Banner image **files** stay on `uploads`; one-time import from `cms.json` |
 | Billing sessions | Postgres `CheckoutAttempt` via `billing.ts` | Plan apply hits `User` / `Creator` / `SubscriptionState`; one-time import from `billing.json` |
 | Fee matrix simulator | Postgres `CollaborationFeeRule` / `CollaborationFeeSnapshot` via `collaboration-fees.ts` | Admin fee rules UI; one-time import from `collaboration-fees.json`; ledger fee snapshot stays immutable on funding |
-| Phase 9 protected payments | `data/protected-payments.json` | Explicit demo console (`/admin/payments`, parts of `/payments`) |
-| Phase 10 trust | `data/trust.json` | Explicit demo queue (`/admin/trust`, “Earlier demo queue” on `/trust`) |
+| Phase 9 protected payments | `data/protected-payments.json` (quarantined) | Demo console only when `legacy_demo_payments` is on; no JSON seed write when off |
+| Phase 10 trust | `data/trust.json` (quarantined) | Demo queue only when `legacy_demo_payments` is on; ledger disputes stay on `/admin/trust` |
 | Intelligence | Postgres `IntelligenceSettings` via `intelligence.ts` | Trends/signals stay computed from directory; one-time import from `intelligence.json` |
 | Admin RBAC | Postgres `AdminUser` / `AdminRole` | HMAC cookie unchanged; one-time import from `admin-auth.json` then rename to `.migrated` |
 
@@ -147,8 +147,8 @@ Do not add staged-funding variants, extra providers, or new ledger product surfa
 | Move | Admin RBAC → Postgres (`AdminUser` / `AdminRole` models or equivalent) |
 | ~~Move~~ | ~~CMS banner/value-prop payloads into `CmsSection` content JSON~~ **Done (L.2)** |
 | ~~Move or drop~~ | ~~Billing session log → Prisma~~ **Done (`CheckoutAttempt`, L.4)** |
-| Quarantine | Phase 9/10 JSON consoles: hide behind admin flag `legacy_demo_payments` default **off** in production; point all product CTAs at marketplace ledger |
-| Move later | Fee simulator (after directory purification); Phase 9/10 payments/trust stay quarantined |
+| Quarantine | Phase 9/10 JSON consoles: hide behind admin flag `legacy_demo_payments` default **off**; no JSON seed write when off; point all product CTAs at marketplace ledger |
+| ~~Move later~~ | ~~Fee simulator~~ **Done (`CollaborationFeeRule`)** |
 
 ### R5 — Launch-integration sprint (credentials + honesty)
 
@@ -262,6 +262,7 @@ Pick from product backlog once loops are honest:
 - Customer Portal / Connect when paid volume exists  
 - ~~Intelligence persistence~~ **Done (`IntelligenceSettings`).**  
 - ~~Fee simulator → versioned Prisma rules~~ **Done (`CollaborationFeeRule` / `CollaborationFeeSnapshot`).**  
+- ~~Phase 9/10 quarantine harden~~ **Done** (no JSON seed when switch off; `formatMoney` extracted; admin home skips demo stores).  
 - Agency multi-seat auth when `agency_seats` turns on  
 - E-sign / formal contracts (still non-goal until counsel + volume)
 
@@ -269,10 +270,10 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-Phases J–N plus intelligence + fee-rules persistence are on `main` (or this PR). Remaining:
+Phases J–O (intelligence, fee rules, Phase 9/10 quarantine harden) are on `main` (or this PR). Remaining:
 
 1. Fill **Phase M** staging evidence on a real host.  
-2. Optional: leave Phase 9/10 JSON (`protected-payments`, `trust`) quarantined.  
+2. Optional: delete Phase 9/10 code paths entirely once ops confirms they are unused.  
 3. Do **not** start Meilisearch / Connect / e-sign without product asking.
 
 ---
@@ -312,4 +313,4 @@ Phases J–N plus intelligence + fee-rules persistence are on `main` (or this PR
 
 **Prisma:** 90 models; migrations through collaboration fee rules (Oct 2026)
 
-**JSON under `data/`:** `protected-payments`, `trust` (claim-funnel, admin-auth, cms, billing, intelligence, collaboration-fees retired)
+**JSON under `data/`:** `protected-payments`, `trust` — only seeded when `legacy_demo_payments` is on (claim-funnel, admin-auth, cms, billing, intelligence, collaboration-fees retired)

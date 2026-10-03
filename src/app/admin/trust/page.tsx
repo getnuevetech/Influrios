@@ -10,7 +10,8 @@ import { actionAddLedgerEvidence, actionDecideLedgerDispute } from "@/app/admin/
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
 import { listMilestoneDisputes } from "@/lib/milestone-disputes";
 import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
-import { formatMoney, getProtectedPaymentsStore } from "@/lib/protected-payments";
+import { formatMoney } from "@/lib/money";
+import { getProtectedPaymentsStore } from "@/lib/protected-payments";
 import {
   enrichDispute,
   getTrustStore,

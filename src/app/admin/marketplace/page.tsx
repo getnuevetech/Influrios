@@ -22,7 +22,7 @@ import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFxRates, listRevenueParties } from "@/lib/settlement";
 import { wiseFxConfig } from "@/lib/wise-quote";
-import { formatMoney } from "@/lib/protected-payments";
+import { formatMoney } from "@/lib/money";
 import { ledgerMonthlyReport, ledgerTotals, listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { productSwitch } from "@/lib/product-switches";
 

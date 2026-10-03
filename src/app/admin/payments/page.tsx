@@ -9,15 +9,15 @@ import {
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getManagedMatching } from "@/lib/managed-matching";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
+import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
+import { formatMoney } from "@/lib/money";
 import {
   escrowStats,
-  formatMoney,
   getProtectedPaymentsStore,
   type EscrowStatus,
   type MilestoneStatus,
 } from "@/lib/protected-payments";
-import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
-import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Protected Payments" };

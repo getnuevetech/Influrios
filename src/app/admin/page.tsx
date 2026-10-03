@@ -12,10 +12,14 @@ import { providerHealth } from "@/lib/provider-health";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
+import {
+  isLegacyDemoPaymentsAdminHref,
+  legacyDemoPaymentsEnabled,
+} from "@/lib/legacy-demo-payments";
+import { formatMoney } from "@/lib/money";
 import { escrowStats, getProtectedPaymentsStore } from "@/lib/protected-payments";
 import { getTrustStore, trustStats } from "@/lib/trust";
 import { prisma } from "@/lib/db";
-import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -249,20 +253,20 @@ export default async function AdminHomePage({
   if (!session) redirect("/admin/login");
 
   const params = await searchParams;
-  const [cms, matching, billing, payments, trust, agency, memberAccounts, health, stripeMode, snapshotsList, trends, legacyDemoOn] =
+  const legacyDemoOn = await legacyDemoPaymentsEnabled().catch(() => false);
+  const [cms, matching, billing, payments, trust, agency, memberAccounts, health, stripeMode, snapshotsList, trends] =
     await Promise.all([
       getCms().catch(() => null),
       getManagedMatching().catch(() => null),
       getBillingStore().catch(() => null),
-      getProtectedPaymentsStore().catch(() => null),
-      getTrustStore().catch(() => null),
+      legacyDemoOn ? getProtectedPaymentsStore().catch(() => null) : Promise.resolve(null),
+      legacyDemoOn ? getTrustStore().catch(() => null) : Promise.resolve(null),
       getAgencyStore().catch(() => null),
       prisma.user.count().catch(() => 0),
       providerHealth().catch(() => null),
       stripeBillingMode().catch(() => "demo" as const),
       getAllAudienceSnapshots().catch(() => []),
       getNicheTrends().catch(() => []),
-      legacyDemoPaymentsEnabled().catch(() => false),
     ]);
   const payStats = payments ? escrowStats(payments) : { active: 0, held: 0 };
   const tStats = trust ? trustStats(trust) : { open: 0, resolved: 0, total: 0, contracts: 0 };
@@ -281,11 +285,7 @@ export default async function AdminHomePage({
     rising,
     completedCheckouts,
     escrowActive: payStats.active,
-    escrowHeld: new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(payStats.held / 100),
+    escrowHeld: formatMoney(payStats.held),
     trustOpen: tStats.open,
     agencyRoster: aStats.roster,
     memberAccounts,
@@ -293,7 +293,9 @@ export default async function AdminHomePage({
   };
 
   const visibleLinks = LINKS.filter(
-    (l) => (legacyDemoOn || l.href !== "/admin/payments") && canAccessModule(session, l.module),
+    (l) =>
+      (legacyDemoOn || !isLegacyDemoPaymentsAdminHref(l.href)) &&
+      canAccessModule(session, l.module),
   );
 
   return (

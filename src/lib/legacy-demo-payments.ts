@@ -10,3 +10,8 @@ export async function assertLegacyDemoPayments() {
     throw new Error("The Phase 9/10 payment demos are turned off. Use the marketplace ledger.");
   }
 }
+
+/** Admin nav entries that only exist for the Phase 9 JSON console. Trust stays for ledger disputes. */
+export function isLegacyDemoPaymentsAdminHref(href: string): boolean {
+  return href === "/admin/payments";
+}

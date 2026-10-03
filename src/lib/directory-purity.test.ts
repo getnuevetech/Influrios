@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { allCreatorMatches, findMatchesFor, scoreCreatorPair } from "./matching";
 import { indexCreatorsBySlug, SEED_CREATORS } from "./seed-data";
-import { assertLegacyDemoPayments } from "./legacy-demo-payments";
+import { assertLegacyDemoPayments, isLegacyDemoPaymentsAdminHref } from "./legacy-demo-payments";
 import { setProductSwitchForTests } from "./product-switches";
 
 describe("directory purity helpers", () => {
@@ -41,5 +41,11 @@ describe("legacy demo payments switch", () => {
     setProductSwitchForTests("legacy_demo_payments", true);
     await assertLegacyDemoPayments();
     setProductSwitchForTests("legacy_demo_payments", null);
+  });
+
+  it("only treats /admin/payments as a legacy-only admin href", () => {
+    assert.equal(isLegacyDemoPaymentsAdminHref("/admin/payments"), true);
+    assert.equal(isLegacyDemoPaymentsAdminHref("/admin/trust"), false);
+    assert.equal(isLegacyDemoPaymentsAdminHref("/admin/marketplace"), false);
   });
 });

@@ -18,7 +18,7 @@ import { getDirectory } from "@/lib/directory";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 import { actionAddOwnEvidence, actionOpenOwnDispute, actionRequestOwnChangeOrder, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
 import { readFxSnapshot } from "@/lib/fx-share";
-import { formatMoney } from "@/lib/protected-payments";
+import { formatMoney } from "@/lib/money";
 import { listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
