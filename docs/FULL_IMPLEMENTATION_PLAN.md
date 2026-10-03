@@ -2,10 +2,12 @@
 
 **Date:** 2026-10-03  
 **Version:** 2.0 (detailed — supersedes thin v1 from #83)  
-**Baseline:** `main` after #82 / #83 (landing redesign, public terminology, plan authority)  
+**Baseline:** `main` after #82 / #83 / #84 (landing redesign, public terminology, detailed plan)  
 **Code audit:** 2026-10-03 against Prisma, `src/lib/*`, admin routes, Collab OS plan  
 
 **Money / ledger invariants remain absolute** (Development Spec addendum PA001–PA007; Collab OS §1.3). This plan sequences *remaining* work; it does not reopen completed engines.
+
+**Progress:** W1 inventory + dashboard self-description + `influencer_*` analytics mapping shipped (`docs/collaboration/terminology-inventory.md`).
 
 ---
 
@@ -122,25 +124,20 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 ## 4. PARTIAL — residual backlog (Workstreams W1–W6)
 
-### W1 — Terminology engineering & consistency — PARTIAL
+### W1 — Terminology engineering & consistency — PARTIAL → largely done this PR
 
 **Source:** Terminology Addendum §4–6  
-**Public UI:** DONE (#82). **Engineering migration:** NOT STARTED as a controlled project.
+**Public UI:** DONE (#82). **Engineering inventory + dashboard self-description + event mapping:** DONE (W1 PR). **P8 API rename:** still later.
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Public UI uses Influencer | Written inventory of `creator_*` tables/fields/enums/events/templates/routes | `docs/collaboration/terminology-inventory.md` committed |
-| Self-description on claim (`claim/preview` select from admin list) | Dashboard title is still a **free-text** input — must use the same admin-managed list on published profile/dashboard/card | Designation ≠ platform role everywhere; no free-text drift |
-| Role search synonyms in `filterCreators` | SEO metadata synonyms; admin note on taxonomy | Searching creator / content creator / influencer returns same class of profiles |
-| Legacy badge key `Top Creator` mapped | Analytics event rename for *new* events (`influencer_profile_viewed`, …) | New events use `influencer_*`; legacy mapped in warehouse views |
+| Public UI uses Influencer | ~~Written inventory~~ → `docs/collaboration/terminology-inventory.md` | Done |
+| Self-description on claim + **dashboard select** from admin list | Optional card/profile edit surfaces beyond dashboard | Designation ≠ platform role on claim + dashboard |
+| Role search synonyms + Discover/profile SEO keywords | — | Searching creator/content creator/influencer returns same class |
+| Legacy badge key `Top Creator` mapped | — | — |
+| New events `influencer_profile_viewed` / `influencer_search_submitted` with `legacyEventType` | Additional planned events (`influencer_invited`, …) when those flows instrument | Mapping helper in `terminology-events.ts` |
 | Routes `/creators/` kept | Deprecation plan only (no big-bang rename) | Tracked under P8 |
-| Billing SKUs / legal triggers still `creator_*` | Compatibility aliases + deprecation telemetry before removal | Terminology §4.2 satisfied without breaking clients |
-
-**Immediate slices**
-1. Produce inventory doc (tables, APIs, events, CMS, emails, legal).  
-2. Profile/dashboard self-description edit.  
-3. SEO synonym meta + admin taxonomy note.  
-4. New analytics event names + mapping table.
+| Billing SKUs / legal triggers still `creator_*` | Compatibility aliases + deprecation telemetry before removal | Terminology §4.2 / P8 |
 
 ---
 

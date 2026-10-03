@@ -16,6 +16,7 @@ import {
   completenessFor,
   getCreatorSessionDraft,
 } from "@/lib/claim";
+import { getInfluencerIdentity } from "@/lib/landing-pages";
 import { socialConnectState } from "@/lib/social-connect";
 import { PlaceFields } from "@/components/place-fields";
 import { getDirectory } from "@/lib/directory";
@@ -40,7 +41,14 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const draft = await getCreatorSessionDraft();
   if (!draft) redirect("/claim");
-  const directory = await getDirectory().catch(() => null);
+  const [directory, identity] = await Promise.all([
+    getDirectory().catch(() => null),
+    getInfluencerIdentity().catch(() => null),
+  ]);
+  const selfDescriptions =
+    identity?.selfDescriptions?.length
+      ? identity.selfDescriptions
+      : ["Influencer", "Content Creator", "Other"];
   const specialtyGroups = (directory?.taxonomy ?? SPECIALTY_TAXONOMY.map((parent) => ({
     slug: parent.slug,
     name: parent.name,
@@ -262,12 +270,30 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 />
               </label>
               <label className="text-sm sm:col-span-2">
-                <span className="font-semibold text-indigo">Title</span>
-                <input
+                <span className="font-semibold text-indigo">How do you describe yourself?</span>
+                <select
                   name="title"
-                  defaultValue={draft.title}
+                  defaultValue={
+                    selfDescriptions.includes(draft.title)
+                      ? draft.title
+                      : draft.title
+                        ? draft.title
+                        : "Influencer"
+                  }
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-                />
+                >
+                  {!selfDescriptions.includes(draft.title) && draft.title ? (
+                    <option value={draft.title}>{draft.title} (current)</option>
+                  ) : null}
+                  {selfDescriptions.map((label) => (
+                    <option key={label} value={label}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs font-normal text-muted">
+                  Platform role stays Influencer. Pick a self-description from the admin-managed list.
+                </span>
               </label>
               <label className="text-sm sm:col-span-2">
                 <span className="font-semibold text-indigo">Gender (for default avatar)</span>

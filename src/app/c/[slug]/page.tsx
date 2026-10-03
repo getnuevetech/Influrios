@@ -12,7 +12,10 @@ export async function generateMetadata({ params }: Props) {
   if (!creator) return { title: "Card not found" };
   return {
     title: `${creator.displayName} · Influencer Card`,
-    description: `Influrios Card for ${creator.displayName}`,
+    description: `Influrios Influencer Card for ${creator.displayName}${
+      creator.title ? ` · ${creator.title}` : ""
+    }. Discover influencers and content creators on Influrios.`,
+    keywords: ["influencer", "influencer card", "content creator", "creator", creator.displayName],
   };
 }
 
@@ -20,7 +23,7 @@ export default async function PublicCardPage({ params }: Props) {
   const { slug } = await params;
   const creator = await getDirectoryCreator(slug);
   if (!creator) notFound();
-  await recordDirectoryEvent("profile_viewed", { slug, surface: "card" });
+  await recordDirectoryEvent("influencer_profile_viewed", { slug, surface: "card" });
 
   return (
     <div className="min-h-[80vh] bg-[radial-gradient(ellipse_at_top,_#EAE4FF,_#F7FAFF_55%,_#D9E8FF)] px-4 py-12">

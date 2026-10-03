@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { actionAddSynonym, actionRemoveSynonym, actionToggleSpecialty } from "@/app/admin/taxonomy/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
@@ -36,6 +37,16 @@ export default async function AdminTaxonomyPage({ searchParams }: Props) {
         Inactive specialties drop out of Discover and Categories. New catalog specialties appear here
         and stay hidden after you turn them off. Synonyms such as woodwork resolve to the canonical
         specialty without a deploy.
+      </p>
+      <p className="mt-2 rounded-xl border border-[#E4EBFF] bg-[#F7FAFF] px-4 py-3 text-sm text-indigo">
+        <strong>Role search note:</strong> Discover treats <em>creator</em>, <em>content creator</em>, and{" "}
+        <em>influencer</em> as related platform-role queries (they do not filter by specialty). Specialty
+        synonyms below are separate. Self-description labels (Content Creator as a designation) are managed
+        under{" "}
+        <Link href="/admin/influencer-identity" className="font-semibold text-violet">
+          Influencer identity
+        </Link>
+        .
       </p>
       {query.saved ? (
         <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Saved.</p>

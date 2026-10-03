@@ -781,13 +781,14 @@ export function filterCreators(
   let results = creators.filter((c) => {
     if (q) {
       // Terminology addendum: treat creator / content creator / influencer as related role queries.
+      // Keep list in sync with ROLE_SEARCH_SYNONYMS in landing-pages.ts (avoid circular import).
       const roleOnly = ["creator", "creators", "content creator", "influencer", "influencers"].includes(q);
       if (!roleOnly) {
         const aliasWords = c.specialties
           .flatMap((slug) => synonyms.filter((row) => row.slug === slug).map((row) => row.term))
           .join(" ");
         const hay =
-          `${c.displayName} ${c.title} ${c.bio} ${c.specialties.join(" ")} ${aliasWords} ${c.locationCity} ${c.locationCountry} influencer creator content creator`.toLowerCase();
+          `${c.displayName} ${c.title} ${c.bio} ${c.specialties.join(" ")} ${aliasWords} ${c.locationCity} ${c.locationCountry} influencer influencers creator creators content creator`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
     }
