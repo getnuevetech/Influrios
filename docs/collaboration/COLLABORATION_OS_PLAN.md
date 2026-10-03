@@ -97,17 +97,17 @@ Influrios already has durable pieces to **extend**, not replace:
 **Data (minimal):**
 
 - Wire popular cards from CMS `collaborationMatches` + category images.
-- Keep business requests / opportunities as typed seed until P1b Prisma models (no fabricated claims).
+- Marketplace business requests / opportunities / match records are Prisma-backed (P1b).
 - Extend guest gates to suggestion preview / request-match actions.
 
 **Exit:** `/collaboration` matches Figure 1 layout on desktop + mobile; CI green; no fake stats.
 
-### P1b — Marketplace objects
+### P1b — Marketplace objects ✅
 
-- Prisma: `BusinessRequest`, `CreatorOpportunity`, `MatchRecord` (or equivalent).
+- Prisma: `MarketplaceBusinessRequest`, `MarketplaceCreatorOpportunity`, `MarketplaceMatchRecord`, applications + events.
 - Application/invitation state machine + timeline events.
-- Admin CRUD for requests/opportunities/popular cards.
-- Migrate hardcoded `BUSINESS_REQUESTS` / `CREATOR_OPPORTUNITIES`.
+- Admin CRUD at `/admin/marketplace-listings`.
+- Public `/collaboration` lists read from DB (seeded from former hardcoded arrays when empty).
 
 **Exit:** public lists read from DB; admin can publish without deploy.
 
@@ -192,17 +192,15 @@ Influrios already has durable pieces to **extend**, not replace:
 
 ---
 
-## 6. Immediate next coding slice (P1)
+## 6. Immediate next coding slice (P2)
 
-1. Redesign `src/app/collaboration/page.tsx` to Figure 1 composition (guest-safe).
-2. Reuse `FeaturedCarousel` for Popular Collaboration Matches image cards.
-3. Add Mentor banner → `/mentorship` placeholder page.
-4. Add dual Creator/Business acquisition banners.
-5. Add “Get Collaboration Suggestions” panel (guest-limited stub → claim/login).
-6. Hide fabricated Power-of-Collaboration stats until CMS-backed.
-7. Keep filters + featured match + side lists; polish to design chrome.
+P1 + P1b shipped. Next:
 
-Follow-up PR: P1b Prisma marketplace objects.
+1. Signed-in creator Collaboration Hub (Figure 2) at `/collaboration/hub`.
+2. Persist Save Match; map pipeline from real Collaboration / funding status.
+3. Parallel: fill Phase M staging evidence when credentials are available.
+
+Follow-up after hub: P2b business hub, then P3 contract wizard.
 
 ---
 

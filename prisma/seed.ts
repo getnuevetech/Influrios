@@ -1,5 +1,6 @@
 import { PrismaClient, PlanTier, SocialPlatform } from "@prisma/client";
 import { ensureLaunchEntitlements } from "../src/lib/entitlements-db";
+import { ensureMarketplaceListings } from "../src/lib/marketplace-listings";
 import { SEED_CREATORS, SPECIALTY_TAXONOMY } from "../src/lib/seed-data";
 
 const prisma = new PrismaClient();
@@ -119,6 +120,8 @@ async function main() {
       });
     }
   }
+
+  await ensureMarketplaceListings();
 
   console.log(`Seeded ${SPECIALTY_TAXONOMY.length} specialty trees and ${SEED_CREATORS.length} creators.`);
 }

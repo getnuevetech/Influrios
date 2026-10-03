@@ -24,6 +24,7 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
   { href: "/admin/mail", label: "Email", module: "mail" },
   { href: "/admin/jobs", label: "Jobs", module: "jobs" },
   { href: "/admin/collaborations", label: "Collaborations", module: "collaborations" },
+  { href: "/admin/marketplace-listings", label: "Marketplace listings", module: "collaborations" },
   { href: "/admin/ai", label: "AI pipelines", module: "ai" },
   { href: "/admin/gateways", label: "Payment gateways", module: "gateways" },
   { href: "/admin/signing", label: "Document signing", module: "signing" },
