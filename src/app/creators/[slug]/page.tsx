@@ -743,14 +743,14 @@ export default async function CreatorProfilePage({ params }: Props) {
         <div className="overflow-hidden rounded-[1.4rem] bg-gradient-to-r from-[#1B1464] via-[#3B2B9A] to-[#2979FF] px-6 py-8 text-center text-white sm:px-10 sm:py-9">
           <h3 className="font-display text-[1.35rem] font-bold sm:text-[1.55rem]">Join Influrios</h3>
           <p className="mx-auto mt-1.5 max-w-lg text-[12px] text-white/80">
-            Create your free Influencer Card or find creators for your next campaign.
+            Create your free Influencer Card or find influencers for your next campaign.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
             <Link
               href="/claim"
               className="ink-on-light rounded-full bg-white px-5 py-2 text-[12px] font-semibold shadow"
             >
-              Join as a Creator
+              Join as an Influencer
             </Link>
             <Link
               href="/business"

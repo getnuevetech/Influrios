@@ -269,15 +269,16 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-**Collaboration OS** is the active product track — see [`docs/collaboration/COLLABORATION_OS_PLAN.md`](./collaboration/COLLABORATION_OS_PLAN.md) and approved designs under `docs/design-references/collaboration/`.
+**Collaboration OS** remains active — P2 influencer hub shipped. Public UX pass (signup temp card, INFLR.me, social avatar preview, `/business` marketing redesign, collaboration landing polish, Admin CTA removal, Influencer terminology) is in flight on this track.
 
-1. **P1** Public `/collaboration` landing to Figure 1 — shipped.  
-2. **P1b** Persist business requests, creator opportunities, and match records — shipped.  
-3. **P2** Signed-in creator Collaboration Hub (Figure 2) — shipped.  
-4. **P2b** Business Collaboration Hub.  
-5. Parallel: fill **Phase M** staging evidence when credentials are available.  
-6. Optional: delete Phase 9/10 JSON paths once ops confirms unused.  
-7. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
+1. **P2b** Business Collaboration Hub (workspace UX aligned to business design).  
+2. Continue terminology migration (Creator → Influencer) on remaining surfaces.  
+3. Parallel: fill **Phase M** staging evidence when credentials are available.  
+4. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
+
+Terminology source of truth: [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1_dab3.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1_dab3.pdf).
+
+Design references: [`docs/design-references/business/for-businesses.png`](./design-references/business/for-businesses.png), [`docs/design-references/collaboration/public-landing-v2.png`](./design-references/collaboration/public-landing-v2.png).
 
 ---
 

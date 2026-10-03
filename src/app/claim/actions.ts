@@ -25,11 +25,12 @@ function clientIp(headerStore: Headers) {
 
 export async function actionCreateDraft(formData: FormData) {
   const handle = String(formData.get("handle") ?? "").trim();
+  const platformHint = String(formData.get("platform") ?? "").trim();
   if (!handle) redirect("/claim?error=Enter+a+social+URL+or+handle");
 
   let draftId = "";
   try {
-    const draft = await createDraftFromHandle(handle, "ORGANIC_SIGNUP");
+    const draft = await createDraftFromHandle(handle, "ORGANIC_SIGNUP", platformHint || undefined);
     draftId = draft.id;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not create draft";

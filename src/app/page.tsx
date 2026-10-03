@@ -608,7 +608,7 @@ export default async function HomePage() {
                   href={cta.ctaHref || "/claim"}
                   className="ink-on-light inline-flex min-h-[42px] min-w-[160px] items-center justify-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold"
                 >
-                  {cta.ctaLabel?.trim() || "Join as a Creator"} <IconArrowRight size={14} />
+                  {cta.ctaLabel?.trim() || "Join as an Influencer"} <IconArrowRight size={14} />
                 </Link>
                 <Link
                   href="/business"

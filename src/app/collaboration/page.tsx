@@ -68,7 +68,7 @@ type Props = {
 
 const COLLAB_TYPES = [
   { value: "brand-partnership", label: "Brand Partnership" },
-  { value: "creator", label: "Creator × Creator" },
+  { value: "creator", label: "Influencer × Influencer" },
   { value: "product", label: "Product Collaboration" },
   { value: "content-exchange", label: "Content Exchange" },
   { value: "event", label: "Event / Experience" },
@@ -123,9 +123,8 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const viewerLimits = await entitlementsForPlan(viewerPlan);
   const canRequest = !viewer || viewerLimits.proposalsMax > 0;
   const signedIn = Boolean(account);
-  const businessHref = signedIn
-    ? "/business"
-    : `/login?next=${encodeURIComponent("/business")}&gate=business`;
+  const businessHref = signedIn ? "/business/workspace" : "/business";
+  const joinBusinessHref = "/business";
   const suggestionsHref = signedIn
     ? "/collaboration/hub?category=awareness"
     : `/login?next=${encodeURIComponent("/collaboration?goal=awareness")}&gate=suggestions`;
@@ -197,13 +196,20 @@ export default async function CollaborationPage({ searchParams }: Props) {
         <div className="mx-auto grid w-full max-w-[90rem] items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-10 lg:py-14">
           <div>
             <h1 className="font-display text-4xl font-bold leading-tight text-indigo sm:text-5xl">
-              Find Your Perfect Collaboration on{" "}
-              <span className="brand-gradient-text">Influrios</span>
+              Collaboration Opportunities. Find the Right Collaboration. Build Bigger Opportunities.
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-              Discover creator–brand and creator–creator collaborations that spark real opportunities.
-              Turn shared passions into bigger growth, together.
+              Influrios connects influencers, businesses, and professionals for specialty-fit collaborations —
+              without asking anyone to rebuild their audience on another social network.
             </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a href="#matches" className="btn-primary">
+                Explore Collaborations <IconArrowRight size={14} />
+              </a>
+              <Link href={suggestionsHref} className="btn-secondary">
+                Get Collaboration Suggestions
+              </Link>
+            </div>
             <form action="/collaboration" className="mt-6 flex max-w-xl items-center gap-2 rounded-full bg-white p-1.5 shadow-lg shadow-violet/10 ring-1 ring-[#E4E9F5]">
               <span className="pl-3 text-muted">
                 <IconSearch size={18} />
@@ -211,7 +217,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
               <input
                 name="q"
                 defaultValue={params.q}
-                placeholder="Search creators, brands, niches or collaboration opportunities..."
+                placeholder="Search influencers, businesses, niches or collaboration opportunities..."
                 className="w-full flex-1 border-0 bg-transparent py-2.5 text-sm text-indigo outline-none placeholder:text-muted/70"
               />
               <button type="submit" className="btn-primary shrink-0 !px-5 !py-2.5">
@@ -258,12 +264,12 @@ export default async function CollaborationPage({ searchParams }: Props) {
       </section>
 
       {/* —— Popular Collaboration Matches —— */}
-      <section className="mx-auto w-full max-w-[90rem] px-4 py-10 sm:px-6 lg:px-10">
+      <section id="matches" className="mx-auto w-full max-w-[90rem] px-4 py-10 sm:px-6 lg:px-10">
         <div className="mb-5 flex items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-2xl font-bold text-indigo">Popular Collaboration Matches</h2>
             <p className="mt-1 text-sm text-muted">
-              Explore real examples of creator and brand categories that work great together.
+              Explore real examples of influencer and brand categories that work great together.
             </p>
           </div>
           <Link href="/categories" className="shrink-0 text-sm font-bold text-violet hover:underline">
@@ -301,7 +307,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
       {params.requested ? (
         <div className="mx-auto mb-4 w-full max-w-[90rem] px-4 sm:px-6 lg:px-10">
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Collaboration proposal submitted for review. The other creator will see your structured brief.
+            Collaboration proposal submitted for review. The other influencer will see your structured brief.
           </div>
         </div>
       ) : null}
@@ -489,7 +495,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-violet">Mentorship</p>
                 <h2 className="mt-1 font-display text-2xl font-bold text-indigo">Become a Mentor on Influrios</h2>
                 <ul className="mt-3 space-y-1.5 text-sm text-muted">
-                  {["Share knowledge with rising creators", "Build your professional network", "Make an impact in your niche"].map(
+                  {["Share knowledge with rising influencers", "Build your professional network", "Make an impact in your niche"].map(
                     (item) => (
                       <li key={item} className="flex items-start gap-2">
                         <IconCheck size={14} className="mt-0.5 shrink-0 text-violet" />
@@ -557,9 +563,9 @@ export default async function CollaborationPage({ searchParams }: Props) {
 
           <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-display text-base font-bold text-indigo">Creator Collaboration Opportunities</h2>
+              <h2 className="font-display text-base font-bold text-indigo">Influencer Collaboration Opportunities</h2>
               <Link href="/discover" className="text-[11px] font-bold text-violet">
-                View all →
+                View all opportunities →
               </Link>
             </div>
             <ul className="space-y-3">
@@ -586,49 +592,124 @@ export default async function CollaborationPage({ searchParams }: Props) {
         </div>
       </div>
 
-      {/* —— Dual acquisition banners —— */}
-      <section className="mx-auto w-full max-w-[90rem] px-4 pb-12 sm:px-6 lg:px-10">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-2 text-violet">
-              <IconUsers size={18} />
-              <h2 className="font-display text-xl font-bold text-indigo">Are You a Creator?</h2>
-            </div>
+      {/* —— Choose how / How it works / Protected payments —— */}
+      <section className="mx-auto w-full max-w-[90rem] px-4 py-10 sm:px-6 lg:px-10">
+        <h2 className="font-display text-2xl font-bold text-indigo">Choose How You Want to Collaborate</h2>
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <article className="rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
+            <h3 className="font-display text-xl font-bold text-indigo">Work with the Right Influencers</h3>
             <ul className="mt-3 space-y-1.5 text-sm text-muted">
               {[
-                "Access collaboration opportunities",
-                "Get matched with relevant brands",
-                "Grow your personal brand",
+                "Find influencers by specialty, audience and market",
+                "Get influencer suggestions for your campaign goals",
+                "Post requests and fund collaborations by milestone",
               ].map((item) => (
-                <li key={item} className="flex items-start gap-2">
+                <li key={item} className="flex gap-2">
+                  <IconCheck size={14} className="mt-0.5 shrink-0 text-violet" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <Link href={joinBusinessHref} className="btn-primary mt-5 inline-flex !py-2 text-sm">
+              Create Business Profile <IconArrowRight size={14} />
+            </Link>
+          </article>
+          <article className="rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
+            <h3 className="font-display text-xl font-bold text-indigo">Find Opportunities & Grow</h3>
+            <ul className="mt-3 space-y-1.5 text-sm text-muted">
+              {[
+                "Join Influrios as an Influencer with your existing social presence",
+                "Get discovered for specialty-fit collaborations",
+                "Save matches and manage proposals in one hub",
+              ].map((item) => (
+                <li key={item} className="flex gap-2">
                   <IconCheck size={14} className="mt-0.5 shrink-0 text-violet" />
                   {item}
                 </li>
               ))}
             </ul>
             <Link href="/claim" className="btn-primary mt-5 inline-flex !py-2 text-sm">
-              Join as a Creator <IconArrowRight size={14} />
+              Join as an Influencer <IconArrowRight size={14} />
+            </Link>
+          </article>
+        </div>
+      </section>
+
+      <section className="border-y border-[#E4E9F5] bg-white">
+        <div className="mx-auto w-full max-w-[90rem] px-4 py-10 sm:px-6 lg:px-10">
+          <h2 className="font-display text-2xl font-bold text-indigo">How Influrios Collaboration Works</h2>
+          <ol className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            {[
+              "Discover",
+              "Match",
+              "Agree on Terms",
+              "Fund Collaboration",
+              "Complete Milestones",
+              "Release Payment",
+            ].map((step, index) => (
+              <li key={step} className="rounded-2xl border border-[#E4E9F5] bg-[#F8FAFF] p-4">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-violet text-xs font-bold text-white">
+                  {index + 1}
+                </span>
+                <p className="mt-2 text-sm font-bold text-indigo">{step}</p>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-8 rounded-2xl border border-[#E4E9F5] bg-[#F4F0FF] p-5">
+            <h3 className="font-display text-lg font-bold text-indigo">Protected Collaboration Payments</h3>
+            <p className="mt-1 text-sm text-muted">
+              Business funds the collaboration → milestones completed → milestones approved → payments released → platform commission.
+            </p>
+            <Link href="/payments" className="mt-3 inline-flex text-sm font-bold text-violet">
+              Learn about protected payments →
             </Link>
           </div>
-          <div className="rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-2 text-violet">
-              <IconBuilding size={18} />
-              <h2 className="font-display text-xl font-bold text-indigo">Are You a Business?</h2>
+        </div>
+      </section>
+
+      {/* —— Dual acquisition banners —— */}
+      <section className="mx-auto w-full max-w-[90rem] px-4 py-12 sm:px-6 lg:px-10">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl bg-gradient-to-br from-[#633CFF] to-[#5B4CFF] p-6 text-white shadow-sm">
+            <div className="flex items-center gap-2">
+              <IconUsers size={18} />
+              <h2 className="font-display text-xl font-bold">Join as an Influencer</h2>
             </div>
-            <ul className="mt-3 space-y-1.5 text-sm text-muted">
+            <ul className="mt-3 space-y-1.5 text-sm text-white/85">
               {[
-                "Discover the right creators faster",
-                "Post requests and collaboration briefs",
-                "Fund deals with protected milestones",
+                "Access influencer collaboration opportunities",
+                "Get matched with relevant brands",
+                "Grow with your existing social presence",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
-                  <IconCheck size={14} className="mt-0.5 shrink-0 text-violet" />
+                  <IconCheck size={14} className="mt-0.5 shrink-0" />
                   {item}
                 </li>
               ))}
             </ul>
-            <Link href={businessHref} className="btn-primary mt-5 inline-flex !py-2 text-sm">
-              Join as a Business <IconArrowRight size={14} />
+            <Link href="/claim" className="ink-on-light mt-5 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold">
+              Join as an Influencer <IconArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="rounded-2xl bg-gradient-to-br from-[#2979FF] to-[#633CFF] p-6 text-white shadow-sm">
+            <div className="flex items-center gap-2">
+              <IconBuilding size={18} />
+              <h2 className="font-display text-xl font-bold">Create Business Profile</h2>
+            </div>
+            <ul className="mt-3 space-y-1.5 text-sm text-white/85">
+              {[
+                "Find influencers faster",
+                "Post requests and collaboration briefs",
+                "Fund deals with protected milestones",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <IconCheck size={14} className="mt-0.5 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <Link href={joinBusinessHref} className="ink-on-light mt-5 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold">
+              Create Business Profile <IconArrowRight size={14} />
             </Link>
           </div>
         </div>
@@ -720,7 +801,7 @@ function RecommendedMatch({
           </Link>
         ) : (
           <Link href="/claim" className="btn-secondary">
-            Claim your creator profile
+            Claim your Influencer Profile
           </Link>
         )}
         <SaveMatchButton

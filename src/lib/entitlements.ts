@@ -233,9 +233,10 @@ export type CardChrome = {
 /** Visual system derived from entitlements. Gold and QR follow features, not the plan name. */
 export function cardChrome(entitlements: EntitlementLimits): CardChrome {
   const premium = entitlements.themes === "full";
-  let ctaLabel = "View Profile →";
+  let ctaLabel = "Contact →";
   if (premium && entitlements.collabCta) ctaLabel = "Work With Me →";
   else if (entitlements.contactInquiry === "full") ctaLabel = "Contact →";
+  else if (entitlements.contactInquiry === "limited") ctaLabel = "Contact →";
   return {
     premium,
     gold: premium,
@@ -245,3 +246,9 @@ export function cardChrome(entitlements: EntitlementLimits): CardChrome {
     dynamicQr: entitlements.dynamicQr,
   };
 }
+
+/** Full-card chrome for signup draft previews (demo only — not published entitlements). */
+export const DRAFT_PREVIEW_ENTITLEMENTS: EntitlementLimits = {
+  ...PLAN_ENTITLEMENTS.PRO,
+  // Preview shows the full card experience; publishing still starts on Starter.
+};
