@@ -7,7 +7,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { SEED_CREATORS } from "@/lib/seed-data";
+import { SEED_CREATORS, CATEGORY_IMAGES, COLLAB_MATCH_PRESETS } from "@/lib/seed-data";
 
 export type BannerSlot = "hero" | "sponsored" | "cta" | "cardPromo";
 
@@ -54,10 +54,40 @@ export type FeaturedCardsConfig = {
   cards: ManagedCard[];
 };
 
+export type HomepageCategoryItem = {
+  slug: string;
+  image: string;
+};
+
+export type HomepageCategoriesConfig = {
+  title: string;
+  ctaLabel: string;
+  ctaHref: string;
+  items: HomepageCategoryItem[];
+};
+
+export type HomepageCollabMatch = {
+  title: string;
+  tags: string[];
+  leftSlug: string;
+  rightSlug: string;
+  image?: string;
+};
+
+export type HomepageCollaborationConfig = {
+  title: string;
+  subtitle: string;
+  ctaLabel: string;
+  ctaHref: string;
+  matches: HomepageCollabMatch[];
+};
+
 export type SiteCms = {
   banners: Record<BannerSlot, BannerConfig>;
   featuredCards: FeaturedCardsConfig;
   valueProposition: ValuePropositionStrip;
+  categories: HomepageCategoriesConfig;
+  collaborationMatches: HomepageCollaborationConfig;
 };
 
 export type ValuePropositionItem = {
@@ -98,6 +128,37 @@ const BANNER_SECTION_KEYS: Record<BannerSlot, string> = {
 
 const FEATURED_SECTION_KEY = "featured";
 const VALUE_PROP_SECTION_KEY = "value_proposition";
+const CATEGORIES_SECTION_KEY = "categories";
+const COLLABORATION_SECTION_KEY = "collaboration";
+
+function defaultCategoryItems(): HomepageCategoryItem[] {
+  return Object.entries(CATEGORY_IMAGES).map(([slug, image]) => ({ slug, image }));
+}
+
+function defaultCollaborationMatches(): HomepageCollabMatch[] {
+  return COLLAB_MATCH_PRESETS.map((match) => ({
+    title: match.title,
+    tags: [...match.tags],
+    leftSlug: match.leftSlug,
+    rightSlug: match.rightSlug,
+    image: match.image,
+  }));
+}
+
+const DEFAULT_CATEGORIES: HomepageCategoriesConfig = {
+  title: "Explore Influencer Categories",
+  ctaLabel: "View all categories",
+  ctaHref: "/categories",
+  items: defaultCategoryItems(),
+};
+
+const DEFAULT_COLLABORATION_MATCHES: HomepageCollaborationConfig = {
+  title: "Collaboration Matches",
+  subtitle: "Complementary creators who unlock stronger campaigns.",
+  ctaLabel: "View more matches",
+  ctaHref: "/collaboration",
+  matches: defaultCollaborationMatches(),
+};
 
 const SECTION_META: Record<string, { title: string; sortOrder: number; enabled: boolean; status: string }> = {
   hero: { title: "Hero", sortOrder: 0, enabled: true, status: "published" },
@@ -250,6 +311,8 @@ const DEFAULT_CMS: SiteCms = {
     cards: defaultCards(),
   },
   valueProposition: DEFAULT_VALUE_PROPOSITION,
+  categories: DEFAULT_CATEGORIES,
+  collaborationMatches: DEFAULT_COLLABORATION_MATCHES,
 };
 
 /** Merge a stored banner with defaults so empty admin fields do not blank the public CTA. */
@@ -286,10 +349,34 @@ export function mergeValueProposition(incoming?: Partial<ValuePropositionStrip> 
   };
 }
 
+export function mergeHomepageCategories(
+  incoming?: Partial<HomepageCategoriesConfig> | null,
+): HomepageCategoriesConfig {
+  return {
+    ...DEFAULT_CATEGORIES,
+    ...incoming,
+    items: incoming?.items?.length ? incoming.items : structuredClone(DEFAULT_CATEGORIES.items),
+  };
+}
+
+export function mergeHomepageCollaboration(
+  incoming?: Partial<HomepageCollaborationConfig> | null,
+): HomepageCollaborationConfig {
+  return {
+    ...DEFAULT_COLLABORATION_MATCHES,
+    ...incoming,
+    matches: incoming?.matches?.length
+      ? incoming.matches
+      : structuredClone(DEFAULT_COLLABORATION_MATCHES.matches),
+  };
+}
+
 export function assembleSiteCms(input: {
   banners?: Partial<Record<BannerSlot, Partial<BannerConfig> | null>>;
   featuredCards?: Partial<FeaturedCardsConfig> | null;
   valueProposition?: Partial<ValuePropositionStrip> | null;
+  categories?: Partial<HomepageCategoriesConfig> | null;
+  collaborationMatches?: Partial<HomepageCollaborationConfig> | null;
 }): SiteCms {
   const banners = {} as SiteCms["banners"];
   for (const slot of Object.keys(DEFAULT_CMS.banners) as BannerSlot[]) {
@@ -299,6 +386,8 @@ export function assembleSiteCms(input: {
     banners,
     featuredCards: mergeFeaturedCards(input.featuredCards),
     valueProposition: mergeValueProposition(input.valueProposition),
+    categories: mergeHomepageCategories(input.categories),
+    collaborationMatches: mergeHomepageCollaboration(input.collaborationMatches),
   };
 }
 
@@ -339,6 +428,62 @@ function valuePropFromPayload(raw: Prisma.JsonValue | null | undefined): ValuePr
   return mergeValueProposition(obj as Partial<ValuePropositionStrip>);
 }
 
+function categoriesFromPayload(raw: Prisma.JsonValue | null | undefined): HomepageCategoriesConfig {
+  const obj = asObject(raw);
+  if (!obj) return mergeHomepageCategories();
+  const items = Array.isArray(obj.items)
+    ? obj.items
+        .map((item) => {
+          if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+          const row = item as Record<string, unknown>;
+          if (typeof row.slug !== "string" || typeof row.image !== "string") return null;
+          return { slug: row.slug, image: row.image };
+        })
+        .filter((item): item is HomepageCategoryItem => Boolean(item))
+    : undefined;
+  return mergeHomepageCategories({
+    title: typeof obj.title === "string" ? obj.title : undefined,
+    ctaLabel: typeof obj.ctaLabel === "string" ? obj.ctaLabel : undefined,
+    ctaHref: typeof obj.ctaHref === "string" ? obj.ctaHref : undefined,
+    items,
+  });
+}
+
+function collaborationFromPayload(
+  raw: Prisma.JsonValue | null | undefined,
+): HomepageCollaborationConfig {
+  const obj = asObject(raw);
+  if (!obj) return mergeHomepageCollaboration();
+  const matches = Array.isArray(obj.matches)
+    ? obj.matches
+        .map((item): HomepageCollabMatch | null => {
+          if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+          const row = item as Record<string, unknown>;
+          if (typeof row.title !== "string" || typeof row.leftSlug !== "string" || typeof row.rightSlug !== "string") {
+            return null;
+          }
+          const match: HomepageCollabMatch = {
+            title: row.title,
+            leftSlug: row.leftSlug,
+            rightSlug: row.rightSlug,
+            tags: Array.isArray(row.tags)
+              ? row.tags.filter((tag): tag is string => typeof tag === "string")
+              : [],
+          };
+          if (typeof row.image === "string") match.image = row.image;
+          return match;
+        })
+        .filter((item): item is HomepageCollabMatch => Boolean(item))
+    : undefined;
+  return mergeHomepageCollaboration({
+    title: typeof obj.title === "string" ? obj.title : undefined,
+    subtitle: typeof obj.subtitle === "string" ? obj.subtitle : undefined,
+    ctaLabel: typeof obj.ctaLabel === "string" ? obj.ctaLabel : undefined,
+    ctaHref: typeof obj.ctaHref === "string" ? obj.ctaHref : undefined,
+    matches,
+  });
+}
+
 function bannerPayload(banner: BannerConfig): Prisma.InputJsonValue {
   return {
     kind: "banner",
@@ -370,6 +515,27 @@ function valuePropPayload(strip: ValuePropositionStrip): Prisma.InputJsonValue {
   };
 }
 
+function categoriesPayload(config: HomepageCategoriesConfig): Prisma.InputJsonValue {
+  return {
+    kind: "categories",
+    title: config.title,
+    ctaLabel: config.ctaLabel,
+    ctaHref: config.ctaHref,
+    items: config.items,
+  };
+}
+
+function collaborationPayload(config: HomepageCollaborationConfig): Prisma.InputJsonValue {
+  return {
+    kind: "collaboration",
+    title: config.title,
+    subtitle: config.subtitle,
+    ctaLabel: config.ctaLabel,
+    ctaHref: config.ctaHref,
+    matches: config.matches,
+  };
+}
+
 async function upsertSectionPayload(key: string, payload: Prisma.InputJsonValue) {
   const meta = SECTION_META[key] ?? { title: key, sortOrder: 99, enabled: true, status: "published" };
   await prisma.cmsSection.upsert({
@@ -394,6 +560,8 @@ async function readLegacyCms(): Promise<SiteCms | null> {
       banners: parsed.banners,
       featuredCards: parsed.featuredCards,
       valueProposition: parsed.valueProposition,
+      categories: parsed.categories,
+      collaborationMatches: parsed.collaborationMatches,
     });
   } catch {
     return null;
@@ -418,6 +586,8 @@ async function writeCmsToDb(cms: SiteCms) {
   }
   await upsertSectionPayload(FEATURED_SECTION_KEY, featuredPayload(cms.featuredCards));
   await upsertSectionPayload(VALUE_PROP_SECTION_KEY, valuePropPayload(cms.valueProposition));
+  await upsertSectionPayload(CATEGORIES_SECTION_KEY, categoriesPayload(cms.categories));
+  await upsertSectionPayload(COLLABORATION_SECTION_KEY, collaborationPayload(cms.collaborationMatches));
 }
 
 async function contentPayloadCount() {
@@ -428,6 +598,8 @@ async function contentPayloadCount() {
           ...Object.values(BANNER_SECTION_KEYS),
           FEATURED_SECTION_KEY,
           VALUE_PROP_SECTION_KEY,
+          CATEGORIES_SECTION_KEY,
+          COLLABORATION_SECTION_KEY,
         ],
       },
       payload: { not: Prisma.DbNull },
@@ -456,6 +628,8 @@ async function ensureCmsStore(): Promise<SiteCms> {
     for (const [key, payload] of [
       [FEATURED_SECTION_KEY, featuredPayload(DEFAULT_CMS.featuredCards)],
       [VALUE_PROP_SECTION_KEY, valuePropPayload(DEFAULT_CMS.valueProposition)],
+      [CATEGORIES_SECTION_KEY, categoriesPayload(DEFAULT_CMS.categories)],
+      [COLLABORATION_SECTION_KEY, collaborationPayload(DEFAULT_CMS.collaborationMatches)],
     ] as const) {
       const row = await prisma.cmsSection.findUnique({ where: { key }, select: { payload: true } });
       if (!row || row.payload == null) await upsertSectionPayload(key, payload);
@@ -466,6 +640,8 @@ async function ensureCmsStore(): Promise<SiteCms> {
     ...Object.values(BANNER_SECTION_KEYS),
     FEATURED_SECTION_KEY,
     VALUE_PROP_SECTION_KEY,
+    CATEGORIES_SECTION_KEY,
+    COLLABORATION_SECTION_KEY,
   ];
   const rows = await prisma.cmsSection.findMany({ where: { key: { in: keys } } });
   const byKey = new Map(rows.map((row) => [row.key, row.payload]));
@@ -479,6 +655,8 @@ async function ensureCmsStore(): Promise<SiteCms> {
     },
     featuredCards: featuredFromPayload(byKey.get(FEATURED_SECTION_KEY)),
     valueProposition: valuePropFromPayload(byKey.get(VALUE_PROP_SECTION_KEY)),
+    categories: categoriesFromPayload(byKey.get(CATEGORIES_SECTION_KEY)),
+    collaborationMatches: collaborationFromPayload(byKey.get(COLLABORATION_SECTION_KEY)),
   });
 }
 
@@ -508,6 +686,23 @@ export async function updateFeaturedCardsConfig(patch: Partial<FeaturedCardsConf
   cms.featuredCards = mergeFeaturedCards({ ...cms.featuredCards, ...patch });
   await persistCms(cms);
   return cms.featuredCards;
+}
+
+export async function updateHomepageCategories(patch: Partial<HomepageCategoriesConfig>) {
+  const cms = await ensureCmsStore();
+  cms.categories = mergeHomepageCategories({ ...cms.categories, ...patch });
+  await persistCms(cms);
+  return cms.categories;
+}
+
+export async function updateHomepageCollaboration(patch: Partial<HomepageCollaborationConfig>) {
+  const cms = await ensureCmsStore();
+  cms.collaborationMatches = mergeHomepageCollaboration({
+    ...cms.collaborationMatches,
+    ...patch,
+  });
+  await persistCms(cms);
+  return cms.collaborationMatches;
 }
 
 export async function updateManagedCard(slug: string, patch: Partial<ManagedCard>) {

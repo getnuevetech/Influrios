@@ -98,9 +98,9 @@ const LINKS: {
   {
     href: "/admin/homepage",
     title: "Homepage",
-    blurb: "Reorder landing sections and header links.",
+    blurb: "Section order, category images, collab match cards, menus, and links to banner/card CMS.",
     module: "banners",
-    meta: () => "Draft or publish sections",
+    meta: () => "Full homepage CMS hub",
   },
   {
     href: "/admin/payments",

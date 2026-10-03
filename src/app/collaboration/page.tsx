@@ -14,6 +14,8 @@ import {
   SocialIcon,
 } from "@/components/icons";
 import { SaveMatchButton } from "@/components/save-match-button";
+import { getAccountSession } from "@/lib/accounts";
+import { getCreatorSessionDraft } from "@/lib/claim";
 import {
   allDirectoryMatches,
   BUSINESS_REQUESTS,
@@ -28,6 +30,7 @@ import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { isPlanCode, type PlanCode } from "@/lib/entitlements";
 
+export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Collaboration Matches",
 };
@@ -84,10 +87,16 @@ export default async function CollaborationPage({ searchParams }: Props) {
     return hay.includes(params.audience.toLowerCase());
   });
   const featured = matches[0] ?? all[0];
-  const viewer = params.from ? bySlug.get(params.from) : directory.creators[0];
+  const account = await getAccountSession().catch(() => null);
+  const draft = account ? await getCreatorSessionDraft().catch(() => null) : null;
+  const viewerFromParam = params.from ? bySlug.get(params.from) ?? null : null;
+  const viewerFromSession = draft?.slug ? bySlug.get(draft.slug) ?? null : null;
+  /** Guests must not inherit a demo creator — that made the page look signed-in. */
+  const viewer = viewerFromParam ?? (account ? viewerFromSession : null);
   const viewerPlan: PlanCode = viewer && isPlanCode(viewer.planTier) ? viewer.planTier : "STARTER";
   const viewerLimits = await entitlementsForPlan(viewerPlan);
-  const canRequest = viewerLimits.proposalsMax > 0;
+  const canRequest = Boolean(viewer) && viewerLimits.proposalsMax > 0;
+  const isGuest = !viewer;
   const brand = BUSINESS_REQUESTS.find((item) => {
     if (params.goal && !`${item.tags.join(" ")} ${item.summary}`.toLowerCase().includes(params.goal.toLowerCase())) {
       return false;
@@ -339,7 +348,8 @@ export default async function CollaborationPage({ searchParams }: Props) {
               match={featured}
               brand={brand}
               canRequest={canRequest}
-              viewerSlug={viewer?.slug ?? "sofia-martinez"}
+              isGuest={isGuest}
+              viewerSlug={viewer?.slug}
               viewerPlan={viewerPlan}
             />
           ) : (
@@ -472,13 +482,15 @@ function RecommendedMatch({
   match,
   brand,
   canRequest,
+  isGuest,
   viewerSlug,
   viewerPlan,
 }: {
   match: CreatorMatch;
   brand: BusinessRequest;
   canRequest: boolean;
-  viewerSlug: string;
+  isGuest: boolean;
+  viewerSlug?: string;
   viewerPlan: PlanCode;
 }) {
   const art = BRAND_ART[brand.id];
@@ -488,6 +500,9 @@ function RecommendedMatch({
     ["Goal Synergy", match.breakdown.goalSynergy],
     ["Engagement Potential", match.breakdown.engagementPotential],
   ] as const;
+  const proposeHref = viewerSlug
+    ? `/collaboration/propose?a=${match.a.slug}&b=${match.b.slug}&from=${viewerSlug}`
+    : `/login?next=${encodeURIComponent(`/collaboration/propose?a=${match.a.slug}&b=${match.b.slug}`)}&gate=proposal`;
 
   return (
     <article className="rounded-[1.5rem] border border-[#E4E9F5] bg-white p-5 shadow-sm sm:p-6">
@@ -526,11 +541,20 @@ function RecommendedMatch({
       </div>
 
       <div className="mt-5 flex flex-wrap gap-3">
-        {canRequest ? (
-          <Link
-            href={`/collaboration/propose?a=${match.a.slug}&b=${match.b.slug}&from=${viewerSlug}`}
-            className="btn-primary"
-          >
+        {isGuest ? (
+          <>
+            <Link href="/claim" className="btn-primary">
+              Join to request matches
+            </Link>
+            <Link
+              href={`/login?next=${encodeURIComponent("/collaboration")}`}
+              className="btn-secondary"
+            >
+              Sign in
+            </Link>
+          </>
+        ) : canRequest ? (
+          <Link href={proposeHref} className="btn-primary">
             Request Match
           </Link>
         ) : (
@@ -538,9 +562,11 @@ function RecommendedMatch({
             Upgrade from {viewerPlan} to request matches
           </Link>
         )}
-        <Link href={`/collaboration/records?from=${viewerSlug}`} className="btn-secondary">
-          View proposals
-        </Link>
+        {!isGuest && viewerSlug ? (
+          <Link href={`/collaboration/records?from=${viewerSlug}`} className="btn-secondary">
+            View proposals
+          </Link>
+        ) : null}
         <SaveMatchButton />
       </div>
     </article>

@@ -5,10 +5,8 @@ import { CompactInfluencerCard, CreatorCard } from "@/components/creator-card";
 import { FeaturedCarousel } from "@/components/featured-carousel";
 import { HomepageValuePropositionStrip } from "@/components/homepage-value-proposition-strip";
 import {
-  CategoryGlyph,
   IconArrowRight,
   IconCheck,
-  IconHeart,
   IconInstagram,
   IconPlus,
   IconSearch,
@@ -18,11 +16,7 @@ import {
 } from "@/components/icons";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
-import {
-  CATEGORY_IMAGES,
-  COLLAB_MATCH_PRESETS,
-  type SeedCreator,
-} from "@/lib/seed-data";
+import { categoryImageFor, type SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 
@@ -268,51 +262,61 @@ export default async function HomePage() {
       </div>
 
       <div style={{ order: sectionRank("categories") }} className={sectionOn("categories") ? undefined : "hidden"}>
-      {/* —— Categories —— */}
+      {/* —— Categories (single-row manual horizontal scroll) —— */}
       <section id="categories" className="w-full py-12">
         <Shell>
           <div className="mb-8 flex items-end justify-between gap-4">
             <h2 className="font-display text-2xl font-bold text-indigo sm:text-3xl">
-              Explore Influencer Categories
+              {cms.categories.title}
             </h2>
             <Link
-              href="/categories"
+              href={cms.categories.ctaHref || "/categories"}
               className="inline-flex items-center gap-1 text-sm font-semibold text-violet hover:underline"
             >
-              View all categories <IconArrowRight size={14} />
+              {cms.categories.ctaLabel || "View all categories"} <IconArrowRight size={14} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10">
-            {taxonomy.map((s) => (
+          <FeaturedCarousel stepPx={168}>
+            {(
+              cms.categories.items.length > 0
+                ? cms.categories.items.flatMap((item) => {
+                    const node = taxonomy.find((s) => s.slug === item.slug);
+                    if (!node) return [];
+                    return [
+                      {
+                        slug: node.slug,
+                        name: node.name,
+                        image: item.image || categoryImageFor(node.slug, taxonomy),
+                      },
+                    ];
+                  })
+                : taxonomy.map((s) => ({
+                    slug: s.slug,
+                    name: s.name,
+                    image: categoryImageFor(s.slug, taxonomy),
+                  }))
+            ).map((s) => (
               <Link
                 key={s.slug}
                 href={`/discover?specialty=${s.slug}`}
-                className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_rgba(17,26,90,0.08)] ring-1 ring-border transition hover:-translate-y-0.5 hover:shadow-lg"
+                className="group flex w-[148px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_rgba(17,26,90,0.08)] ring-1 ring-border transition hover:-translate-y-0.5 hover:shadow-lg sm:w-[160px]"
               >
                 <div className="relative aspect-square overflow-hidden">
                   <Image
-                    src={CATEGORY_IMAGES[s.slug] ?? CATEGORY_IMAGES.lifestyle}
+                    src={s.image}
                     alt={s.name}
                     fill
                     className="object-cover transition duration-500 group-hover:scale-110"
-                    sizes="10vw"
+                    sizes="160px"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-indigo/80 via-indigo/25 to-transparent" />
-                  <span className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-violet shadow">
-                    <IconHeart size={13} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-indigo/70 via-transparent to-transparent" />
+                  <span className="absolute bottom-2 left-2 right-2 text-center font-display text-sm font-bold text-white drop-shadow">
+                    {s.name}
                   </span>
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/40 backdrop-blur-sm">
-                      <CategoryGlyph slug={s.slug} size={22} />
-                    </span>
-                  </span>
-                </div>
-                <div className="px-1 py-2.5 text-center">
-                  <span className="font-display text-xs font-bold text-indigo sm:text-sm">{s.name}</span>
                 </div>
               </Link>
             ))}
-          </div>
+          </FeaturedCarousel>
         </Shell>
       </section>
       </div>
@@ -401,32 +405,34 @@ export default async function HomePage() {
       </div>
 
       <div style={{ order: sectionRank("collaboration") }} className={sectionOn("collaboration") ? undefined : "hidden"}>
-      {/* —— Collaboration Matches —— */}
+      {/* —— Collaboration Matches (manual horizontal scroll) —— */}
       <section className="w-full py-12">
         <Shell>
           <div className="mb-8 flex items-end justify-between gap-4">
             <div>
               <h2 className="font-display text-2xl font-bold text-indigo sm:text-3xl">
-                Collaboration Matches
+                {cms.collaborationMatches.title}
               </h2>
-              <p className="mt-2 text-muted">Complementary creators who unlock stronger campaigns.</p>
+              <p className="mt-2 text-muted">
+                {cms.collaborationMatches.subtitle}
+              </p>
             </div>
             <Link
-              href="/collaboration"
+              href={cms.collaborationMatches.ctaHref || "/collaboration"}
               className="inline-flex items-center gap-1 text-sm font-semibold text-violet hover:underline"
             >
-              View more matches <IconArrowRight size={14} />
+              {cms.collaborationMatches.ctaLabel || "View more matches"} <IconArrowRight size={14} />
             </Link>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {COLLAB_MATCH_PRESETS.map((m) => {
+          <FeaturedCarousel stepPx={300}>
+            {cms.collaborationMatches.matches.map((m) => {
               const left = creatorBySlug(m.leftSlug);
               const right = creatorBySlug(m.rightSlug);
               return (
                 <Link
                   key={m.title}
                   href="/collaboration"
-                  className="group rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+                  className="group w-[280px] shrink-0 rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center">
@@ -468,7 +474,7 @@ export default async function HomePage() {
                 </Link>
               );
             })}
-          </div>
+          </FeaturedCarousel>
         </Shell>
       </section>
       </div>
