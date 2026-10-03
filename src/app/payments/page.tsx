@@ -17,6 +17,7 @@ import { scheduleLabel } from "@/lib/schedule";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
+import { FUNDING_BADGE_CLASS, fundingBadge } from "@/lib/funding-badge";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Protected Payments" };
@@ -265,9 +266,32 @@ export default async function PaymentsPage({ searchParams }: Props) {
                       {deal.id} · {fundingTerm(Boolean(jurisdiction?.escrowTermAllowed))}
                     </p>
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_COLOR[deal.status] ?? "bg-slate-100 text-slate-700"}`}>
-                    {deal.status.replaceAll("_", " ")}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        FUNDING_BADGE_CLASS[
+                          fundingBadge({
+                            status: deal.status,
+                            heldCents: deal.ledger.heldCents,
+                            releasedCents: deal.ledger.releasedCents,
+                            fundedCents: deal.grossCents,
+                            protectedPaymentsEnabled: jurisdiction?.protectedPaymentsEnabled,
+                          })
+                        ]
+                      }`}
+                    >
+                      {fundingBadge({
+                        status: deal.status,
+                        heldCents: deal.ledger.heldCents,
+                        releasedCents: deal.ledger.releasedCents,
+                        fundedCents: deal.grossCents,
+                        protectedPaymentsEnabled: jurisdiction?.protectedPaymentsEnabled,
+                      })}
+                    </span>
+                    <span className={`rounded-full px-3 py-1 text-[10px] font-semibold capitalize ${STATUS_COLOR[deal.status] ?? "bg-slate-100 text-slate-700"}`}>
+                      {deal.status.replaceAll("_", " ")}
+                    </span>
+                  </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted">
                   <span>

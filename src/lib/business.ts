@@ -281,6 +281,32 @@ export async function sendInquiry(input: {
   };
 }
 
+export async function updateInquiryStatus(id: string, status: Inquiry["status"]) {
+  if (!INQUIRY_STATUSES.includes(status)) {
+    return { ok: false as const, error: "Invalid inquiry status." };
+  }
+  await ensureWorkspace();
+  const existing = await prisma.businessInquiry.findFirst({
+    where: { id, workspaceId: WORKSPACE_ID },
+  });
+  if (!existing) return { ok: false as const, error: "Inquiry not found." };
+  const updated = await prisma.businessInquiry.update({
+    where: { id },
+    data: { status },
+  });
+  return {
+    ok: true as const,
+    inquiry: {
+      id: updated.id,
+      creatorSlug: updated.creatorSlug,
+      briefId: updated.briefId ?? undefined,
+      message: updated.message,
+      status: asInquiryStatus(updated.status),
+      createdAt: updated.createdAt.toISOString(),
+    } satisfies Inquiry,
+  };
+}
+
 export async function queuedBriefIds() {
   await ensureWorkspace();
   const rows = await prisma.managedMatchRequest.findMany({

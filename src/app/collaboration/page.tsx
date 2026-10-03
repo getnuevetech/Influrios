@@ -36,6 +36,7 @@ import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { getDirectory, getDirectoryCreator, indexCreatorsBySlug } from "@/lib/directory";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { isPlanCode, type PlanCode } from "@/lib/entitlements";
+import { normalizeInfluencerRoleTitle } from "@/lib/terminology-copy";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -160,7 +161,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const popularCards =
     cms.collaborationMatches.matches.length > 0
       ? cms.collaborationMatches.matches.map((match) => {
-          const displayTitle = match.title.replace(/\bCreator\b/g, "Influencer");
+          const displayTitle = normalizeInfluencerRoleTitle(match.title);
           const chip = POPULAR_MATCH_CHIPS.find(
             (row) =>
               `${row.title} ${row.subtitle}`.includes(displayTitle.split(" + ")[0] ?? "") ||

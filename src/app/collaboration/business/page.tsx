@@ -18,11 +18,14 @@ import { SPECIALTY_TAXONOMY, formatFollowers, specialtyLabel } from "@/lib/seed-
 import {
   actionAcceptBusinessTerms,
   actionAddShortlist,
+  actionDeclineInquiry,
   actionPostBusinessRequest,
   actionRemoveShortlist,
+  actionReplyInquiry,
   actionSaveCampaignIntent,
   actionSendInquiry,
   actionSetPlan,
+  actionShortlistFromInquiry,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -400,6 +403,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 ) : (
                   hub.inquiries.map((inquiry) => {
                     const creator = bySlug.get(inquiry.creatorSlug);
+                    const open = inquiry.status === "sent";
                     return (
                       <li key={inquiry.id} className="flex gap-3 rounded-xl border border-[#E8EDF8] p-3">
                         <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#F4F7FF]">
@@ -409,6 +413,35 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                           <p className="text-sm font-bold text-indigo">{creator?.displayName ?? inquiry.creatorSlug}</p>
                           <p className="line-clamp-2 text-xs text-muted">{inquiry.message}</p>
                           <p className="mt-1 text-[10px] font-semibold uppercase text-violet">{inquiry.status}</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {open ? (
+                              <>
+                                <form action={actionReplyInquiry}>
+                                  <input type="hidden" name="inquiryId" value={inquiry.id} />
+                                  <button type="submit" className="rounded-lg bg-violet px-2.5 py-1 text-[11px] font-bold text-white">
+                                    Mark replied
+                                  </button>
+                                </form>
+                                <form action={actionDeclineInquiry}>
+                                  <input type="hidden" name="inquiryId" value={inquiry.id} />
+                                  <button type="submit" className="rounded-lg border border-border px-2.5 py-1 text-[11px] font-semibold text-muted hover:text-indigo">
+                                    Decline
+                                  </button>
+                                </form>
+                              </>
+                            ) : null}
+                            <form action={actionShortlistFromInquiry}>
+                              <input type="hidden" name="creatorSlug" value={inquiry.creatorSlug} />
+                              <input
+                                type="hidden"
+                                name="note"
+                                value={`From inquiry · ${inquiry.status}`}
+                              />
+                              <button type="submit" className="rounded-lg border border-violet/30 px-2.5 py-1 text-[11px] font-bold text-violet">
+                                Shortlist
+                              </button>
+                            </form>
+                          </div>
                         </div>
                       </li>
                     );

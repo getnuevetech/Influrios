@@ -145,12 +145,12 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 **Source:** Collab OS §2; Product Addendum §16; approved designs
 
-#### W2.1 Landing pixel / CMS QA — PARTIAL
+### W2.1 Landing pixel / CMS QA — PARTIAL
 | Exists | Missing | Exit |
 |---|---|---|
-| Section structure matches v3/v2 | Desktop + mobile design QA checklist signed against PNGs | No missing sections; nav/labels match design (“Discover Influencers” where required) |
-| Admin landing editors | Operator E2E: edit → publish → public refresh | Documented smoke in runbook |
-| Match titles remapped | Prevent Creator-as-role reintroduction in CMS | Admin validation or normalize-on-save |
+| Section structure matches v3/v2; checklist doc | Operator sign-off against PNGs | `docs/collaboration/LANDING_QA_CHECKLIST.md` signed |
+| Admin landing editors | Operator E2E still to run in staging | Documented smoke |
+| Match titles remapped + **normalize-on-save** | — | `normalizeInfluencerRoleTitle` on homepage CMS save; Content Creator preserved |
 
 #### W2.2 Influencer hub residuals — PARTIAL
 | Exists | Missing | Exit |
