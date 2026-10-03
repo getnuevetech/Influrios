@@ -26,6 +26,7 @@ import { convertFee, readFxSnapshot, readShareSnapshot, shareLines } from "@/lib
 import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
 import { quoteWiseUserRate } from "@/lib/wise-quote";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
+import { splitMilestoneRelease } from "@/lib/account-purpose";
 
 const PROVIDER_CODE = "primary";
 
@@ -1134,19 +1135,10 @@ export async function applyMarketplaceEvent(input: {
             amountCents: funding.grossCents,
             provider: providerKey,
             eventId,
+            accountPurpose: "COLLABORATION_HOLDING",
           },
         });
-        if (funding.feeCents > 0) {
-          await tx.ledgerEntry.create({
-            data: {
-              fundingId: funding.id,
-              kind: "fee",
-              amountCents: funding.feeCents,
-              provider: providerKey,
-              eventId,
-            },
-          });
-        }
+        // P4: platform fee stays unearned in Holding until milestone release — do not book fee here.
         return;
       }
       if (input.eventType === "funding.failed") {
@@ -1173,18 +1165,54 @@ export async function applyMarketplaceEvent(input: {
           data: { status: "released" },
         });
         if (released.count !== 1) throw new LedgerReject("Milestone is not approved.");
+        const snapshot = funding.feeSnapshotJson as { financialPlan?: unknown } | null;
+        const planMilestones = (snapshot?.financialPlan as { milestones?: unknown[] } | undefined)?.milestones;
+        const milestoneIndex = Array.isArray(planMilestones)
+          ? planMilestones.findIndex(
+              (row) =>
+                row &&
+                typeof row === "object" &&
+                "title" in row &&
+                String((row as { title?: string }).title) === milestone.title,
+            )
+          : -1;
+        const legs = splitMilestoneRelease({
+          releasableCents: left,
+          fundingGrossCents: funding.grossCents,
+          fundingFeeCents: funding.feeCents,
+          financialPlanJson: snapshot?.financialPlan,
+          milestoneTitle: milestone.title,
+          milestoneIndex: milestoneIndex >= 0 ? milestoneIndex : undefined,
+        });
+        // Dual release legs: creator payout from Holding + earned fee to Operations (P4).
         await tx.ledgerEntry.create({
           data: {
             fundingId: funding.id,
             milestoneId: milestone.id,
             kind: "release",
-            amountCents: left,
+            amountCents: legs.creatorCents,
+            party: "Influencer",
+            accountPurpose: "COLLABORATION_HOLDING",
             provider: providerKey,
             eventId,
           },
         });
+        if (legs.feeCents > 0) {
+          await tx.ledgerEntry.create({
+            data: {
+              fundingId: funding.id,
+              milestoneId: milestone.id,
+              kind: "fee",
+              amountCents: legs.feeCents,
+              party: "Platform",
+              accountPurpose: "OPERATIONS",
+              provider: providerKey,
+              eventId,
+            },
+          });
+        }
         const parties = readShareSnapshot(funding.shareSnapshotJson);
-        const lines = parties ? shareLines(left, parties) : null;
+        const lines = parties ? shareLines(legs.creatorCents, parties) : null;
         if (lines) {
           for (const line of lines) {
             await tx.ledgerEntry.create({
@@ -1194,6 +1222,7 @@ export async function applyMarketplaceEvent(input: {
                 kind: "share",
                 party: line.party,
                 amountCents: line.amountCents,
+                accountPurpose: "COLLABORATION_HOLDING",
                 provider: providerKey,
                 eventId,
               },

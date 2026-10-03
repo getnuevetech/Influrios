@@ -1,32 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyMarketplaceSignature } from "@/lib/ledger";
 import { applyMarketplaceEvent, marketplaceWebhookSecret } from "@/lib/marketplace-ledger";
+import { createMarketplaceSignedWebhookAdapter } from "@/lib/payment-provider-adapter";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const adapter = createMarketplaceSignedWebhookAdapter({
+  verifySignature: verifyMarketplaceSignature,
+});
+
 /**
  * Provider confirmation for a prefund or payout. A missing signature or a
  * provider that is not ready does not move the ledger.
+ * Routed through PaymentProviderAdapter (Collab OS P4) so domain rules stay provider-agnostic.
  */
 export async function POST(request: NextRequest) {
   const body = await request.text();
-  let payload: {
-    id?: string;
-    type?: string;
-    fundingId?: string;
-    amountCents?: number;
-    milestoneId?: string;
-    provider?: string;
-  };
-  try {
-    payload = JSON.parse(body) as typeof payload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
-  }
   const headerProvider = request.headers.get("x-influrios-provider")?.trim().toLowerCase() ?? "";
-  const code = (payload.provider || headerProvider || "primary").trim().toLowerCase();
-  const ready = await marketplaceWebhookSecret(code).catch(() => ({ error: "not_ready" as const }));
+  const parsed = adapter.parseWebhook(body, headerProvider);
+  if ("error" in parsed) {
+    const status = parsed.error === "Invalid JSON." ? 400 : 400;
+    return NextResponse.json({ error: parsed.error }, { status });
+  }
+  const ready = await marketplaceWebhookSecret(parsed.provider).catch(() => ({ error: "not_ready" as const }));
   if ("error" in ready) {
     const missing = ready.error === "missing";
     return NextResponse.json(
@@ -35,19 +32,16 @@ export async function POST(request: NextRequest) {
     );
   }
   const signature = request.headers.get("x-influrios-signature");
-  if (!verifyMarketplaceSignature(body, ready.secret, signature)) {
+  if (!adapter.verifyWebhook(body, signature, ready.secret)) {
     return NextResponse.json({ error: "Signature did not match." }, { status: 401 });
-  }
-  if (!payload.id || !payload.type || !payload.fundingId || payload.amountCents == null) {
-    return NextResponse.json({ error: "Event id, type, funding, and amount are required." }, { status: 400 });
   }
   const result = await applyMarketplaceEvent({
     provider: ready.code,
-    eventId: payload.id,
-    eventType: payload.type,
-    fundingId: payload.fundingId,
-    amountCents: payload.amountCents,
-    milestoneId: payload.milestoneId,
+    eventId: parsed.eventId,
+    eventType: parsed.eventType,
+    fundingId: parsed.fundingId,
+    amountCents: parsed.amountCents,
+    milestoneId: parsed.milestoneId,
   });
   return NextResponse.json(result);
 }

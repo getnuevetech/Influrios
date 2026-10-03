@@ -1283,17 +1283,19 @@ model FundingMilestone {
 
 /// Provider-held movements. This is not an Influrios cash balance.
 model LedgerEntry {
-  id          String               @id @default(cuid())
-  fundingId   String
-  funding     CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
-  milestoneId String?
-  milestone   FundingMilestone?    @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
-  kind        String
-  amountCents Int
-  party       String               @default("")
-  provider    String
-  eventId     String
-  createdAt   DateTime             @default(now())
+  id             String               @id @default(cuid())
+  fundingId      String
+  funding        CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  milestoneId    String?
+  milestone      FundingMilestone?    @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  kind           String
+  amountCents    Int
+  party          String               @default("")
+  /// Collab OS P4 logical domain: OPERATIONS | COLLABORATION_HOLDING | …
+  accountPurpose String               @default("")
+  provider       String
+  eventId        String
+  createdAt      DateTime             @default(now())
 
   @@unique([provider, eventId, kind, party])
   @@index([fundingId])

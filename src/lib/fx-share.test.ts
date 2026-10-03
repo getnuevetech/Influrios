@@ -240,10 +240,19 @@ describe("marketplace FX prefund", () => {
         include: { entries: true },
       });
       const shareEntries = finished?.entries.filter((entry) => entry.kind === "share") ?? [];
-      assert.equal(shareEntries.reduce((sum, entry) => sum + entry.amountCents, 0), milestone.amountCents);
+      const releaseEntries = finished?.entries.filter((entry) => entry.kind === "release") ?? [];
+      const feeEntries = finished?.entries.filter((entry) => entry.kind === "fee") ?? [];
+      const departed =
+        releaseEntries.reduce((sum, entry) => sum + entry.amountCents, 0) +
+        feeEntries.reduce((sum, entry) => sum + entry.amountCents, 0);
+      assert.equal(departed, milestone.amountCents);
+      assert.equal(
+        shareEntries.reduce((sum, entry) => sum + entry.amountCents, 0),
+        releaseEntries.reduce((sum, entry) => sum + entry.amountCents, 0),
+      );
       assert.equal(shareEntries.some((entry) => entry.party.includes("later")), false);
       const ledger = reconcileLedger(ledgerMovements(finished?.entries ?? []), 7_500);
-      assert.equal(ledger.releasedCents, milestone.amountCents);
+      assert.equal(ledger.releasedCents + ledger.feeCents, milestone.amountCents);
       assert.equal(ledger.heldCents, 7_500 - milestone.amountCents);
       assert.equal(ledger.balanced, true);
     } finally {

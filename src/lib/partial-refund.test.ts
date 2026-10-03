@@ -214,7 +214,7 @@ describe("partial refund ledger", () => {
       });
       const ledger = reconcileLedger(ledgerMovements(finished?.entries ?? []), 10_000);
       assert.equal(ledger.heldCents, 0);
-      assert.equal(ledger.releasedCents, 7_000);
+      assert.equal(ledger.releasedCents + ledger.feeCents, 7_000);
       assert.equal(ledger.refundedCents, 3_000);
       assert.equal(ledger.balanced, true);
       assert.equal(finished?.milestones[0]?.status, "released");
