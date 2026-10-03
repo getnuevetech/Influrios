@@ -130,7 +130,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Exists | Missing | Exit |
 |---|---|---|
 | Public UI uses Influencer | Written inventory of `creator_*` tables/fields/enums/events/templates/routes | `docs/collaboration/terminology-inventory.md` committed |
-| Self-description on claim | Self-description editable on published profile/dashboard from same admin list | Profile shows designation ≠ platform role |
+| Self-description on claim (`claim/preview` select from admin list) | Dashboard title is still a **free-text** input — must use the same admin-managed list on published profile/dashboard/card | Designation ≠ platform role everywhere; no free-text drift |
 | Role search synonyms in `filterCreators` | SEO metadata synonyms; admin note on taxonomy | Searching creator / content creator / influencer returns same class of profiles |
 | Legacy badge key `Top Creator` mapped | Analytics event rename for *new* events (`influencer_profile_viewed`, …) | New events use `influencer_*`; legacy mapped in warehouse views |
 | Routes `/creators/` kept | Deprecation plan only (no big-bang rename) | Tracked under P8 |
@@ -158,15 +158,16 @@ Comparing thin plan v1 to every attached product/design document found these **m
 #### W2.2 Influencer hub residuals — PARTIAL
 | Exists | Missing | Exit |
 |---|---|---|
-| Status cards, matches, pipeline shell, payout shell | Honest empty states (no fake earnings) | Empty/not-ready copy only until P5 |
-| Side nav shortcuts | Dead-end routes hidden or implemented | Zero 404 nav items |
+| Status cards, matches, pipeline shell, payout shell | Honest empty states (no fake earnings); payout panel is shell → `/payments` only | Empty/not-ready copy only until P5 wires real readiness |
+| Side nav shortcuts | Dead-end routes hidden or implemented — **Messages** has no `/messages` route; Analytics shortcut is `/dashboard` not collab analytics | Zero 404 / misleading nav items |
 | Influencer Opportunities wording | Align any leftover Creator hub strings | Terminology clean |
 
 #### W2.3 Business hub residuals — PARTIAL
 | Exists | Missing | Exit |
 |---|---|---|
-| Requests, suggestions, spend summary, contract link | Applicant status transitions matching design | Ops/business can move applicants without admin-only workarounds |
+| Requests, suggestions, spend summary, contract link | Applicant status transitions: `replied` / `declined` exist in `business.ts` but **unused in hub UI**; shortlist-from-applicant | Business can reply/decline/shortlist without admin-only workarounds |
 | Pipeline chrome | Map every step to real funding/milestone states | No cosmetic-only steps |
+| Campaign Intent + suggestions | Intent refresh as new influencers appear; multi-creator team proposals (Collab OS §3.3) | Suggestion → invite / draft / team proposal paths documented and shipped or deferred with owner |
 
 #### W2.4 Mentorship stub — PARTIAL (full module = P7)
 | Exists | Missing | Exit |
@@ -399,8 +400,10 @@ Much ledger work exists; the following are still incomplete vs addenda.
 2. Feature-flag cutover; freeze legacy writes  
 3. Remove deprecated paths after verification  
 4. Optional `creator_*` → `influencer_*` API deprecation with telemetry  
+5. Delete quarantined JSON demos (`data/protected-payments.json`, `data/trust.json`) after freeze verification  
+6. Decide fate of `/admin/signing` shell vs accept-only wizard (e-sign remains non-goal until counsel; do not claim provider success)
 
-**Exit:** One collaboration money engine; no silent Creator-as-role public strings.
+**Exit:** One collaboration money engine; no silent Creator-as-role public strings; optional demos gone or permanently gated.
 
 ---
 
@@ -414,12 +417,22 @@ Much ledger work exists; the following are still incomplete vs addenda.
 ### L2 — Smoke / integration tests — PARTIAL / thin
 | Exists | Missing | Exit |
 |---|---|---|
-| Broad unit suite (`tsx --test`) | Playwright/HTTP smoke: landings, claim self-description, hub→contract, fee snapshot lock | CI or staging checklist per release |
+| Broad unit suite (`tsx --test`) | Playwright/HTTP smoke: landings, claim self-description, hub→contract, fee snapshot lock, custom-milestone E2E | CI or staging checklist per release |
 
 ### L3 — Agency seats — DONE (CRUD) / PARTIAL (auth)
 | Exists | Missing | Exit |
 |---|---|---|
-| Seat CRUD behind `agency_seats` switch | Multi-seat auth when switch on | Only when product enables |
+| Seat CRUD behind `agency_seats` switch (default **off**) | Invite/accept flow + multi-seat session auth when switch on | Design + ship only when product enables |
+
+### L4 — Collab OS feature flag — NOT STARTED
+| Exists | Missing | Exit |
+|---|---|---|
+| Collab surfaces always on | `collab_os_v1` (or equivalent) in `product-switches.ts` as planned in Collab OS P0 | Ops can disable collab OS surfaces without deploy |
+
+### L5 — Airwallex validation checklist artifact — NOT STARTED
+| Exists | Missing | Exit |
+|---|---|---|
+| Collab OS §8.3 / §22 items listed in specs | Checklist doc under `docs/collaboration/` (or deploy) with sandbox sign-off columns | Signed before any Airwallex adapter hard-wires |
 
 ---
 
