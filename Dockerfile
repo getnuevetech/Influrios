@@ -17,10 +17,10 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 # One Node process (see next.config webpackBuildWorker: false).
-# 1536 plus a second webpack worker exceeds a 2 GB Lightsail box and the
-# kernel kills the build. 768 leaves room for Postgres and the OS; swap
-# from deploy/scripts/ensure-swap.sh covers the rest.
-ENV NODE_OPTIONS="--max-old-space-size=768"
+# Typecheck now needs ~1 GB; 768 OOMs on current main. Keep a single heap
+# under the 2 GB Lightsail budget — deploy/scripts/ensure-swap.sh must run
+# first so Postgres + this build can page instead of getting SIGKILL.
+ENV NODE_OPTIONS="--max-old-space-size=1280"
 # Dummy URL so Prisma generate succeeds during image build
 ENV DATABASE_URL="postgresql://influrios:influrios@postgres:5432/influrios?schema=public"
 # Next hashes server action ids with this key. A new random key on every
@@ -30,11 +30,17 @@ ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
 RUN npx prisma generate
 # Repeat the end of the build log on failure. Docker shows that tail, so a
-# type error is visible instead of only the SWC directory listing.
+# type error or heap OOM is visible instead of only the SWC directory listing.
 RUN free -h || true \
   && node -e "require('@next/swc-linux-x64-musl'); console.log('OK: SWC musl')" \
   && (set -o pipefail; npm run build 2>&1 | tee /tmp/next-build.log) \
-  || (echo "==== BUILD FAILED — diagnostics ===="; tail -n 80 /tmp/next-build.log || true; free -h || true; exit 1)
+  || (echo "==== BUILD FAILED — diagnostics ===="; \
+      if grep -q "heap out of memory\|FATAL ERROR\|JavaScript heap" /tmp/next-build.log 2>/dev/null; then \
+        echo "Hint: Node ran out of heap. Confirm swap is on (deploy/scripts/ensure-swap.sh) and NODE_OPTIONS max-old-space-size in the Dockerfile."; \
+      fi; \
+      tail -n 100 /tmp/next-build.log || true; \
+      free -h || true; \
+      exit 1)
 
 FROM node:22-alpine AS runner
 WORKDIR /app
