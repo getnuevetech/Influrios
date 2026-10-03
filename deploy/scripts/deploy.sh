@@ -52,6 +52,13 @@ else
   sudo bash deploy/scripts/ensure-swap.sh || true
 fi
 
+if command -v git >/dev/null 2>&1 && [[ -d .git ]]; then
+  echo "==> Building from git $(git rev-parse --short HEAD) ($(git rev-parse --abbrev-ref HEAD))"
+  if ! grep -q 'DOCKER_BUILD=1' Dockerfile 2>/dev/null; then
+    echo "WARN: Dockerfile is missing DOCKER_BUILD=1 — pull origin/main before rebuilding."
+  fi
+fi
+
 echo "==> Build & start containers (postgres + web)"
 docker compose up -d --build postgres
 bash deploy/scripts/db-up.sh
