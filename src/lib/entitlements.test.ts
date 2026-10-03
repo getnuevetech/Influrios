@@ -72,7 +72,7 @@ describe("card chrome", () => {
     assert.equal(chrome.showQr, false);
     assert.equal(chrome.gold, false);
     assert.equal(chrome.showShortlink, false);
-    assert.equal(chrome.ctaLabel, "View Profile →");
+    assert.equal(chrome.ctaLabel, "Contact →");
   });
 
   it("shows a standard QR on plus limits without gold", () => {

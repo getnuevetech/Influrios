@@ -47,7 +47,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
       ) : null}
 
       {opened.state === "ready" || opened.state === "claimed" ? (
-        <PublicInfluencerCard creator={draftToSeedCreator(opened.draft)} qrDisplay="default" />
+        <PublicInfluencerCard creator={draftToSeedCreator(opened.draft)} qrDisplay="default" draftPreview />
       ) : null}
 
       <div className="mx-auto mt-8 max-w-md card-surface space-y-4 p-6">

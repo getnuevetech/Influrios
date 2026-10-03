@@ -299,7 +299,7 @@ const DEFAULT_CMS: SiteCms = {
       title: "Join a Global Community of Creators and Businesses",
       subtitle:
         "Whether you're an influencer looking for opportunities or a business ready to collaborate, Influrios is your hub.",
-      ctaLabel: "Join as a Creator",
+      ctaLabel: "Join as an Influencer",
       ctaHref: "/claim",
       images: ["/demo/cta-community.jpg"],
     },

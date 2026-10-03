@@ -153,7 +153,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
             </p>
             <h1 className="mt-3 font-display text-4xl font-bold text-indigo sm:text-5xl">Discover Influencers</h1>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-              Find the perfect creators for your brand. Search by niche, location, audience and more to
+              Find the perfect influencers for your brand. Search by niche, location, audience and more to
               build meaningful collaborations.
             </p>
             <form action="/discover" className="mt-6 flex max-w-2xl items-center gap-2 rounded-full bg-white p-1.5 shadow-[0_16px_40px_rgba(99,60,255,0.12)] ring-1 ring-[#E4E9F5]">
@@ -373,7 +373,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
                   </div>
                 ) : null}
                 <p className="absolute bottom-2 left-0 max-w-[12rem] font-script text-2xl leading-tight text-white">
-                  Bigger Creators. Brighter Brands. Together.
+                  Bigger Influencers. Brighter Brands. Together.
                 </p>
               </div>
             </div>

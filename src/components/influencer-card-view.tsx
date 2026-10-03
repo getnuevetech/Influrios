@@ -54,7 +54,7 @@ export function InfluencerCardView({
   const cardUrl =
     linkLabel ||
     (chrome.showShortlink
-      ? `inflr.me/${creator.slug.split("-")[0]}`
+      ? `INFLR.me/${creator.slug.split("-")[0]}`
       : `influrios.com/c/${creator.slug}`);
 
   return (

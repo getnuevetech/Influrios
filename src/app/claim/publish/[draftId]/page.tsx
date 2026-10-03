@@ -31,7 +31,10 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
           {alreadyLive ? "Your Starter card is live" : "Publish your Starter card"}
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Shareable URL:{" "}
+          Short link after upgrade:{" "}
+          <span className="font-semibold text-blue">INFLR.me/{draft.slug.split("-")[0]}</span>
+          {" · "}
+          Starter URL:{" "}
           <span className="font-semibold text-blue">influrios.com/c/{draft.slug}</span>
         </p>
       </div>

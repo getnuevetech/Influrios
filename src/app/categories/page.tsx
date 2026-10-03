@@ -40,7 +40,7 @@ export default async function CategoriesPage() {
           </h1>
           <p className="mt-3 max-w-2xl text-muted">
             Browse every specialty on Influrios — open a niche to filter Discover, or drill into
-            sub-categories for tighter matches.
+            sub-categories for tighter influencer matches.
           </p>
           <Link
             href="/discover"

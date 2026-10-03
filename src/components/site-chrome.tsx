@@ -18,9 +18,9 @@ import {
 
 const NAV = [
   { href: "/", label: "Home" },
-  { href: "/discover", label: "Discover" },
+  { href: "/discover", label: "Discover Influencers" },
   { href: "/categories", label: "Categories" },
-  { href: "/collaboration", label: "Collaboration" },
+  { href: "/collaboration", label: "Collaborations" },
   { href: "/business", label: "For Businesses" },
   { href: "/pricing", label: "Pricing" },
 ];
@@ -28,7 +28,7 @@ const NAV = [
 const FOOTER_PLATFORM = [
   { href: "/", label: "Home" },
   { href: "/discover", label: "Discover" },
-  { href: "/collaboration", label: "Collaboration" },
+  { href: "/collaboration", label: "Collaborations" },
   { href: "/card", label: "Influencer Card" },
 ];
 
@@ -74,12 +74,6 @@ export async function SiteHeader() {
           >
             <IconSearch size={18} />
           </Link>
-          <Link
-            href="/admin"
-            className="hidden text-sm font-semibold text-muted hover:text-indigo sm:inline"
-          >
-            Admin
-          </Link>
           {account ? (
             <Link href="/account" className="hidden text-sm font-semibold text-indigo sm:inline">
               {account.name?.split(" ")[0] || "Account"}
@@ -90,7 +84,7 @@ export async function SiteHeader() {
             </Link>
           )}
           <Link href="/claim" className="btn-primary !px-4 !py-2 text-sm">
-            Sign Up →
+            Join Influrios →
           </Link>
         </div>
       </div>
@@ -143,7 +137,7 @@ export async function SiteFooter() {
             </span>
             Influrios
           </div>
-          <p className="mt-3 text-sm text-white/70">Creators. Collaborations. Real Opportunities.</p>
+          <p className="mt-3 text-sm text-white/70">Influencers. Collaborations. Real Opportunities.</p>
           <div className="mt-5 flex items-center gap-3 text-white/80">
             <a href="https://instagram.com" aria-label="Instagram" className="hover:text-white">
               <IconInstagram size={18} />
@@ -176,10 +170,12 @@ export async function SiteFooter() {
           <div className="text-sm font-semibold uppercase tracking-wide text-white/50">For businesses</div>
           <ul className="mt-3 space-y-2 text-sm text-white/80">
             <li>
-              <Link href="/discover">Find creators</Link>
+              <Link href="/discover">Find Influencers</Link>
             </li>
             <li>
-              <Link href="/business">Business workspace</Link>
+              <Link href="/business" className="font-semibold text-violet hover:underline">
+                For Businesses
+              </Link>
             </li>
             <li>
               <Link href="/agency">Agency workspace</Link>

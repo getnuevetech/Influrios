@@ -26,11 +26,11 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
       <div className="mx-auto mb-8 max-w-3xl text-center">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Draft preview</p>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">
-          Your card — before you sign up
+          Your Influencer Card — before you sign up
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Generated from <span className="font-semibold text-indigo">{draft.inputHandle}</span>. Nothing
-          is public until you claim, verify, and publish.
+          Generated from <span className="font-semibold text-indigo">{draft.inputHandle}</span>. This is a
+          temporary full-card preview — nothing is public until you claim, verify, and publish.
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
           {STAGES.map((s, i) => (
@@ -52,12 +52,13 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
         </div>
       ) : null}
 
-      <PublicInfluencerCard creator={creator} qrDisplay="default" />
+      <PublicInfluencerCard creator={creator} qrDisplay="large" draftPreview />
 
       <div className="mx-auto mt-8 max-w-sm card-surface space-y-4 p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Claim this card</h2>
+        <h2 className="font-display text-xl font-bold text-indigo">Claim this Influencer Profile</h2>
         <p className="text-sm text-muted">
-          Attach your email to take ownership. Demo auth — no password required in Phase 8.
+          Attach your email to take ownership. Your temporary card shows the full Influrios experience —
+          publishing starts on the Starter plan.
         </p>
         <form action={actionClaimDraft} className="space-y-3">
           <input type="hidden" name="draftId" value={draft.id} />

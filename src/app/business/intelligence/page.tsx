@@ -33,11 +33,11 @@ export default async function BusinessIntelligencePage() {
     <div className="bg-[#F7FAFF]">
       <section className="hero-atmosphere text-white">
         <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
-          <Link href="/business" className="text-sm font-semibold text-lavender/90 hover:underline">
+          <Link href="/business/workspace" className="text-sm font-semibold text-lavender/90 hover:underline">
             ← Business workspace
           </Link>
           <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
-            Phase 5 · Intelligence
+            Business Intelligence
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold">Audience & relationship intelligence</h1>
           <p className="mt-3 max-w-2xl text-white/75">
@@ -55,7 +55,7 @@ export default async function BusinessIntelligencePage() {
               Audience snapshots, niche demand trends, relationship signals, and CSV/JSON exports are
               available on Business Pro and Agency.
             </p>
-            <Link href="/business#pricing" className="btn-primary mt-6 inline-flex">
+            <Link href="/business/workspace#pricing" className="btn-primary mt-6 inline-flex">
               View business plans →
             </Link>
           </div>

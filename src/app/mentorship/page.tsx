@@ -19,14 +19,14 @@ export default function MentorshipPage() {
             Become a Mentor on <span className="brand-gradient-text">Influrios</span>
           </h1>
           <p className="mt-4 max-w-2xl text-sm text-muted sm:text-base">
-            Mentorship is how experienced creators help the next wave grow — and how Influrios
+            Mentorship is how experienced influencers help the next wave grow — and how Influrios
             welcomes new talent into the collaboration marketplace. Community mentoring launches
             first; paid mentoring stays behind a separate feature flag and never mixes into
             collaboration holding funds.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/claim" className="btn-primary">
-              Join as a Creator <IconArrowRight size={14} />
+              Join as an Influencer <IconArrowRight size={14} />
             </Link>
             <Link href="/collaboration" className="btn-secondary">
               Back to Collaborations
@@ -37,7 +37,7 @@ export default function MentorshipPage() {
 
       <section className="mx-auto grid max-w-[90rem] gap-6 px-4 py-10 sm:px-6 lg:grid-cols-3 lg:px-10">
         {[
-          ["Share knowledge", "Guide rising creators in your niche with structured advice and reviews."],
+          ["Share knowledge", "Guide rising influencers in your niche with structured advice and reviews."],
           ["Build your network", "Meet mentees and complementary specialists across markets."],
           ["Make an impact", "Strengthen the Influrios collaboration ecosystem from day one."],
         ].map(([title, detail]) => (

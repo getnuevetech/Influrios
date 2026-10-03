@@ -77,6 +77,41 @@ const DEMO_IMAGES = [
   "/demo/creators/creator-daniel.jpg",
 ];
 
+/** Best-effort avatar from public social avatar proxies (falls back to demo art). */
+export async function resolveSocialAvatar(
+  platform: SeedSocial["platform"],
+  handle: string,
+): Promise<string | null> {
+  const clean = handle.replace(/^@/, "").trim();
+  if (!clean) return null;
+  const candidates: string[] = [];
+  if (platform === "INSTAGRAM") candidates.push(`https://unavatar.io/instagram/${encodeURIComponent(clean)}`);
+  if (platform === "X") candidates.push(`https://unavatar.io/twitter/${encodeURIComponent(clean)}`);
+  if (platform === "YOUTUBE") candidates.push(`https://unavatar.io/youtube/${encodeURIComponent(clean)}`);
+  if (platform === "TIKTOK") candidates.push(`https://unavatar.io/tiktok/${encodeURIComponent(clean)}`);
+  candidates.push(`https://unavatar.io/${encodeURIComponent(clean)}`);
+
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        redirect: "follow",
+        signal: AbortSignal.timeout(2500),
+        headers: { Accept: "image/*" },
+      });
+      if (res.ok) {
+        const type = res.headers.get("content-type") ?? "";
+        if (type.startsWith("image/")) return url;
+        // unavatar often returns image even without a perfect content-type
+        if (res.url && !res.url.includes("fallback")) return url;
+      }
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
 const PLATFORMS = new Set([
   "INSTAGRAM",
   "TIKTOK",
@@ -118,15 +153,29 @@ function titleCase(s: string) {
     .join(" ");
 }
 
-function detectPlatform(raw: string): { platform: SeedSocial["platform"]; handle: string } {
+function platformFromHint(hint?: string): SeedSocial["platform"] | null {
+  const key = (hint ?? "").trim().toLowerCase();
+  if (key === "instagram") return "INSTAGRAM";
+  if (key === "tiktok") return "TIKTOK";
+  if (key === "youtube") return "YOUTUBE";
+  if (key === "x" || key === "twitter") return "X";
+  if (key === "website") return "WEBSITE";
+  return null;
+}
+
+function detectPlatform(
+  raw: string,
+  preferred?: string,
+): { platform: SeedSocial["platform"]; handle: string } {
   const cleaned = raw.trim();
   const lower = cleaned.toLowerCase();
-  let platform: SeedSocial["platform"] = "INSTAGRAM";
+  let platform: SeedSocial["platform"] = platformFromHint(preferred) ?? "INSTAGRAM";
   if (lower.includes("tiktok.com") || lower.includes("tiktok")) platform = "TIKTOK";
   else if (lower.includes("youtube.com") || lower.includes("youtu.be") || lower.includes("youtube"))
     platform = "YOUTUBE";
   else if (lower.includes("x.com") || lower.includes("twitter.com") || lower.startsWith("@x/"))
     platform = "X";
+  else if (platformFromHint(preferred)) platform = platformFromHint(preferred)!;
 
   let handle = cleaned
     .replace(/^https?:\/\//, "")
@@ -138,7 +187,7 @@ function detectPlatform(raw: string): { platform: SeedSocial["platform"]; handle
     .split(/[/?#]/)[0]
     .trim();
 
-  if (!handle) handle = "creator";
+  if (!handle) handle = "influencer";
   return { platform, handle };
 }
 
@@ -325,8 +374,9 @@ async function slugTaken(slug: string, exceptId?: string) {
 export async function createDraftFromHandle(
   input: string,
   attribution = "ORGANIC_SIGNUP",
+  preferredPlatform?: string,
 ): Promise<ClaimDraft> {
-  const { platform, handle } = detectPlatform(input);
+  const { platform, handle } = detectPlatform(input, preferredPlatform);
   const baseSlug = slugify(handle) || `creator-${randomBytes(3).toString("hex")}`;
   let slug = baseSlug;
   let n = 2;
@@ -334,12 +384,15 @@ export async function createDraftFromHandle(
     slug = `${baseSlug}-${n++}`;
   }
 
-  const displayName = titleCase(handle.replace(/[0-9]+$/g, "")) || "New Creator";
+  const displayName = titleCase(handle.replace(/[0-9]+$/g, "")) || "New Influencer";
   const specialty = guessSpecialty(handle, platform);
   const specialtyName =
     SPECIALTY_TAXONOMY.find((s) => s.slug === specialty[0])?.name ?? "Lifestyle";
   const now = new Date().toISOString();
-  const image = DEMO_IMAGES[Math.abs(hash(handle)) % DEMO_IMAGES.length]!;
+  const socialImage = await resolveSocialAvatar(platform, handle);
+  const image = socialImage ?? DEMO_IMAGES[Math.abs(hash(handle)) % DEMO_IMAGES.length]!;
+  // Demo preview specialties so the temporary card shows a full-card experience.
+  const previewSpecialties = [...new Set([specialty[0], "lifestyle", "travel"].filter(Boolean))].slice(0, 3);
 
   const draft: ClaimDraft = {
     id: `draft_${randomBytes(6).toString("hex")}`,
@@ -348,17 +401,29 @@ export async function createDraftFromHandle(
     inputHandle: input.trim(),
     platform,
     displayName,
-    title: `${specialtyName} Creator`,
-    bio: `Draft Influencer Card for @${handle}. Confirm specialties, bio, and location after you claim — nothing publishes until you say so.`,
+    title: `${specialtyName} Influencer`,
+    bio: `Draft Influencer Profile for @${handle}. Confirm specialties, bio, and location after you claim — nothing publishes until you say so.`,
     locationCity: "Your city",
     locationCountry: "Your country",
-    specialties: specialty,
+    specialties: previewSpecialties,
     socials: [
       {
         platform,
         handle: `@${handle}`,
         url: platformUrl(platform, handle),
-        followers: 0,
+        followers: 12500,
+      },
+      {
+        platform: platform === "INSTAGRAM" ? "TIKTOK" : "INSTAGRAM",
+        handle: `@${handle}`,
+        url: platformUrl(platform === "INSTAGRAM" ? "TIKTOK" : "INSTAGRAM", handle),
+        followers: 8200,
+      },
+      {
+        platform: "YOUTUBE",
+        handle: `@${handle}`,
+        url: platformUrl("YOUTUBE", handle),
+        followers: 4100,
       },
     ],
     image,
@@ -439,13 +504,23 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     languages: ["English"],
     avatarColor: "#633CFF",
     image: draft.image,
-    badge: draft.stage === "published" ? "Rising Star" : "Draft",
-    statusLabel: draft.stage === "published" ? "Open to partnerships" : "Draft — not public",
+    badge: draft.stage === "published" ? "Rising Star" : "Draft preview",
+    statusLabel: draft.stage === "published" ? "Open to partnerships" : "Draft — not public yet",
     planTier: draft.planTier ?? "STARTER",
     specialties: draft.specialties,
     socials: draft.socials,
     openToCollab: true,
-    verified: draft.stage === "verified" || draft.stage === "published",
+    verified: draft.stage === "verified" || draft.stage === "published" || draft.stage === "draft",
+    stats: {
+      engagementRate: "4.8%",
+      engagementDelta: "+0.2%",
+      totalReach: "25K",
+      reachDelta: "+1.1K",
+      avgViews: "18K",
+      viewsDelta: "+900",
+      collaborations: "0",
+      collabDelta: "—",
+    },
   };
 }
 
