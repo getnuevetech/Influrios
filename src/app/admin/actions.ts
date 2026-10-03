@@ -160,6 +160,8 @@ export async function actionSimulateFee(formData: FormData) {
     grossUsd: String(formData.get("grossUsd") || "0"),
     feeCents: String(result.feeCents),
     rule: result.rule?.name ?? "none",
+    feeType: result.rule?.feeType ?? "",
+    explanation: result.explanation.slice(0, 400),
   });
   redirect(`/admin/fees?${q.toString()}`);
 }
@@ -189,6 +191,16 @@ export async function actionSaveFeeRule(formData: FormData) {
     priority: Number(formData.get("priority") || 100),
     jurisdiction: String(formData.get("jurisdiction") || "*"),
     serviceLevel: String(formData.get("serviceLevel") || "contracted"),
+    feeType: String(formData.get("feeType") || "collaboration") as
+      | "platform_service"
+      | "collaboration"
+      | "managed_intro"
+      | "managed_campaign"
+      | "success"
+      | "processing"
+      | "fx"
+      | "cancellation_dispute"
+      | "referral",
     method: String(formData.get("method") || "percent") as
       | "percent"
       | "fixed"

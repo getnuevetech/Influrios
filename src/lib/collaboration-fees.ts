@@ -12,6 +12,70 @@ import { prisma } from "@/lib/db";
 export type FeeMethod = "percent" | "fixed" | "percent_plus_fixed";
 export type FeePayer = "brand" | "creator" | "split";
 
+/** Product Addendum §5 — fee types must remain distinct in product/reporting. */
+export const FEE_TYPES = [
+  "platform_service",
+  "collaboration",
+  "managed_intro",
+  "managed_campaign",
+  "success",
+  "processing",
+  "fx",
+  "cancellation_dispute",
+  "referral",
+] as const;
+export type FeeType = (typeof FEE_TYPES)[number];
+
+/** Product Addendum §3 — service levels on every collaboration. */
+export const SERVICE_LEVELS = [
+  "discovery",
+  "platform_match",
+  "contracted",
+  "managed_intro",
+  "managed_campaign",
+] as const;
+export type ServiceLevel = (typeof SERVICE_LEVELS)[number];
+
+export const SERVICE_LEVEL_LABELS: Record<ServiceLevel, string> = {
+  discovery: "Discovery only",
+  platform_match: "Platform match",
+  contracted: "Contracted collaboration",
+  managed_intro: "Managed introduction",
+  managed_campaign: "Managed campaign",
+};
+
+export const FEE_TYPE_LABELS: Record<FeeType, string> = {
+  platform_service: "Platform Service Fee",
+  collaboration: "Collaboration Fee",
+  managed_intro: "Managed Introduction Fee",
+  managed_campaign: "Managed Campaign Fee",
+  success: "Success Fee",
+  processing: "Payment Processing Fee",
+  fx: "FX Fee",
+  cancellation_dispute: "Cancellation/Dispute Fee",
+  referral: "Referral Fee",
+};
+
+export function asFeeType(value: string | undefined | null): FeeType {
+  if (value && (FEE_TYPES as readonly string[]).includes(value)) return value as FeeType;
+  return "collaboration";
+}
+
+export function asServiceLevel(value: string | undefined | null): ServiceLevel | "*" {
+  if (!value || value === "*") return value === "*" ? "*" : "contracted";
+  if ((SERVICE_LEVELS as readonly string[]).includes(value)) return value as ServiceLevel;
+  // Alias from Product Addendum wording
+  if (value === "discovery_only") return "discovery";
+  return "contracted";
+}
+
+export function defaultFeeTypeForServiceLevel(serviceLevel: string): FeeType {
+  if (serviceLevel === "discovery") return "platform_service";
+  if (serviceLevel === "managed_intro") return "managed_intro";
+  if (serviceLevel === "managed_campaign") return "managed_campaign";
+  return "collaboration";
+}
+
 export type CollaborationFeeRule = {
   id: string;
   name: string;
@@ -20,6 +84,7 @@ export type CollaborationFeeRule = {
   priority: number;
   jurisdiction: string; // "*" = all
   serviceLevel: string; // discovery | platform_match | contracted | managed_intro | managed_campaign | *
+  feeType: FeeType;
   minGrossCents?: number;
   maxGrossCents?: number;
   method: FeeMethod;
@@ -39,6 +104,7 @@ export type FeeSnapshot = {
   ruleVersion: number;
   method: FeeMethod;
   payer: FeePayer;
+  feeType: FeeType;
   basisCents: number;
   percentBps: number;
   fixedCents: number;
@@ -105,6 +171,7 @@ const DEFAULT_RULES: CollaborationFeeRule[] = [
     priority: 100,
     jurisdiction: "*",
     serviceLevel: "contracted",
+    feeType: "collaboration",
     method: "percent",
     percentBps: 1000,
     fixedCents: 0,
@@ -122,6 +189,7 @@ const DEFAULT_RULES: CollaborationFeeRule[] = [
     priority: 200,
     jurisdiction: "US",
     serviceLevel: "managed_intro",
+    feeType: "managed_intro",
     method: "percent_plus_fixed",
     percentBps: 1500,
     fixedCents: 2500,
@@ -139,6 +207,7 @@ const DEFAULT_RULES: CollaborationFeeRule[] = [
     priority: 50,
     jurisdiction: "*",
     serviceLevel: "discovery",
+    feeType: "platform_service",
     method: "fixed",
     percentBps: 0,
     fixedCents: 0,
@@ -168,6 +237,7 @@ function ruleFromRow(row: {
   priority: number;
   jurisdiction: string;
   serviceLevel: string;
+  feeType: string;
   minGrossCents: number | null;
   maxGrossCents: number | null;
   method: string;
@@ -187,6 +257,7 @@ function ruleFromRow(row: {
     priority: row.priority,
     jurisdiction: row.jurisdiction,
     serviceLevel: row.serviceLevel,
+    feeType: asFeeType(row.feeType || defaultFeeTypeForServiceLevel(row.serviceLevel)),
     minGrossCents: row.minGrossCents ?? undefined,
     maxGrossCents: row.maxGrossCents ?? undefined,
     method: asFeeMethod(row.method),
@@ -207,6 +278,7 @@ function snapshotFromRow(row: {
   ruleVersion: number;
   method: string;
   payer: string;
+  feeType: string;
   basisCents: number;
   percentBps: number;
   fixedCents: number;
@@ -222,6 +294,7 @@ function snapshotFromRow(row: {
     ruleVersion: row.ruleVersion,
     method: asFeeMethod(row.method),
     payer: asFeePayer(row.payer),
+    feeType: asFeeType(row.feeType || defaultFeeTypeForServiceLevel(row.serviceLevel)),
     basisCents: row.basisCents,
     percentBps: row.percentBps,
     fixedCents: row.fixedCents,
@@ -241,6 +314,7 @@ function ruleCreateData(rule: CollaborationFeeRule) {
     priority: rule.priority,
     jurisdiction: rule.jurisdiction,
     serviceLevel: rule.serviceLevel,
+    feeType: rule.feeType,
     minGrossCents: rule.minGrossCents ?? null,
     maxGrossCents: rule.maxGrossCents ?? null,
     method: rule.method,
@@ -268,6 +342,7 @@ async function readLegacyStore(): Promise<{
         ...rule,
         method: asFeeMethod(rule.method),
         payer: asFeePayer(rule.payer),
+        feeType: asFeeType(rule.feeType || defaultFeeTypeForServiceLevel(rule.serviceLevel || "contracted")),
         version: Number(rule.version) || 1,
         active: Boolean(rule.active),
         priority: Number(rule.priority) || 100,
@@ -286,6 +361,7 @@ async function readLegacyStore(): Promise<{
         ...snap,
         method: asFeeMethod(snap.method),
         payer: asFeePayer(snap.payer),
+        feeType: asFeeType(snap.feeType || defaultFeeTypeForServiceLevel(snap.serviceLevel || "contracted")),
         ruleVersion: Number(snap.ruleVersion) || 1,
         basisCents: Number(snap.basisCents) || 0,
         percentBps: Number(snap.percentBps) || 0,
@@ -368,6 +444,7 @@ async function ensureFeeDefaults() {
           ruleVersion: snap.ruleVersion,
           method: snap.method,
           payer: snap.payer,
+          feeType: snap.feeType,
           basisCents: snap.basisCents,
           percentBps: snap.percentBps,
           fixedCents: snap.fixedCents,
@@ -442,6 +519,29 @@ export function pickWinningRule(rules: CollaborationFeeRule[], ctx: FeeResolveCo
     });
 }
 
+export function ruleSpecificity(rule: CollaborationFeeRule) {
+  return (rule.jurisdiction === "*" ? 0 : 1) + (rule.serviceLevel === "*" ? 0 : 1);
+}
+
+export function explainFeeWinner(
+  winner: CollaborationFeeRule,
+  candidates: CollaborationFeeRule[],
+  feeCents: number,
+) {
+  const runnerUp = candidates[1];
+  const parts = [
+    `Winner “${winner.name}” (${FEE_TYPE_LABELS[winner.feeType]}, priority ${winner.priority}, specificity ${ruleSpecificity(winner)}, v${winner.version}) → ${feeCents}¢.`,
+  ];
+  if (runnerUp) {
+    parts.push(
+      `Next: “${runnerUp.name}” (priority ${runnerUp.priority}, specificity ${ruleSpecificity(runnerUp)}).`,
+    );
+  } else {
+    parts.push("No other matching rules.");
+  }
+  return parts.join(" ");
+}
+
 /** Deterministic fee resolution — highest priority, then most specific jurisdiction/service. */
 export async function resolveFee(ctx: FeeResolveContext) {
   await ensureFeeDefaults();
@@ -463,7 +563,7 @@ export async function resolveFee(ctx: FeeResolveContext) {
   return {
     rule: winner,
     feeCents,
-    explanation: `Matched “${winner.name}” (priority ${winner.priority}, v${winner.version}).`,
+    explanation: explainFeeWinner(winner, candidates, feeCents),
     candidates,
   };
 }
@@ -482,6 +582,7 @@ export async function createFeeSnapshot(ctx: FeeResolveContext) {
       ruleVersion: rule.version,
       method: rule.method,
       payer: rule.payer,
+      feeType: rule.feeType,
       basisCents: ctx.grossValueCents,
       percentBps: rule.percentBps,
       fixedCents: rule.fixedCents,
@@ -522,6 +623,7 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
           priority: input.priority ?? prev.priority,
           jurisdiction: input.jurisdiction ?? prev.jurisdiction,
           serviceLevel: input.serviceLevel ?? prev.serviceLevel,
+          feeType: input.feeType ?? prev.feeType,
           minGrossCents:
             input.minGrossCents !== undefined ? input.minGrossCents ?? null : prev.minGrossCents,
           maxGrossCents:
@@ -550,6 +652,7 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
     priority: input.priority ?? 100,
     jurisdiction: input.jurisdiction ?? "*",
     serviceLevel: input.serviceLevel ?? "contracted",
+    feeType: input.feeType ?? defaultFeeTypeForServiceLevel(input.serviceLevel ?? "contracted"),
     minGrossCents: input.minGrossCents,
     maxGrossCents: input.maxGrossCents,
     method: input.method ?? "percent",

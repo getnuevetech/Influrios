@@ -1167,6 +1167,8 @@ model CollaborationFeeRule {
   priority      Int      @default(100)
   jurisdiction  String   @default("*")
   serviceLevel  String   @default("contracted")
+  /// Distinct commercial fee type (platform_service, collaboration, managed_intro, …) — Product Addendum §5.
+  feeType       String   @default("collaboration")
   minGrossCents Int?
   maxGrossCents Int?
   method        String   @default("percent")
@@ -1192,6 +1194,8 @@ model CollaborationFeeSnapshot {
   ruleVersion        Int
   method             String
   payer              String
+  /// Distinct fee type frozen with the admin simulator snapshot.
+  feeType            String   @default("collaboration")
   basisCents         Int
   percentBps         Int
   fixedCents         Int

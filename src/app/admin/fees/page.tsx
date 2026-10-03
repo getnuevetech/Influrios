@@ -7,9 +7,13 @@ import {
 } from "@/app/admin/actions";
 import { hasPermission } from "@/lib/admin-auth";
 import {
+  FEE_TYPE_LABELS,
+  FEE_TYPES,
   formatCents,
   getFeeStore,
   protectedPaymentLabel,
+  SERVICE_LEVEL_LABELS,
+  SERVICE_LEVELS,
 } from "@/lib/collaboration-fees";
 
 export const metadata = { title: "Admin · Collaboration fees" };
@@ -22,6 +26,8 @@ type Props = {
     grossUsd?: string;
     feeCents?: string;
     rule?: string;
+    feeType?: string;
+    explanation?: string;
     frozen?: string;
     saved?: string;
   }>;
@@ -86,11 +92,11 @@ export default async function AdminFeesPage({ searchParams }: Props) {
               defaultValue={params.serviceLevel || "contracted"}
               className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
             >
-              <option value="discovery">discovery</option>
-              <option value="platform_match">platform_match</option>
-              <option value="contracted">contracted</option>
-              <option value="managed_intro">managed_intro</option>
-              <option value="managed_campaign">managed_campaign</option>
+              {SERVICE_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {SERVICE_LEVEL_LABELS[level]}
+                </option>
+              ))}
             </select>
           </label>
           <label className="text-xs font-semibold text-muted">
@@ -113,11 +119,21 @@ export default async function AdminFeesPage({ searchParams }: Props) {
           <div className="mt-4 rounded-xl bg-[#F0F4FF] px-4 py-3 text-sm text-indigo">
             <p>
               <span className="font-bold">Rule:</span> {params.rule}
+              {params.feeType ? (
+                <>
+                  {" "}
+                  · <span className="font-bold">Type:</span>{" "}
+                  {FEE_TYPE_LABELS[params.feeType as keyof typeof FEE_TYPE_LABELS] ?? params.feeType}
+                </>
+              ) : null}
             </p>
             <p className="mt-1">
               <span className="font-bold">Fee:</span>{" "}
               {formatCents(Number(params.feeCents || 0))}
             </p>
+            {params.explanation ? (
+              <p className="mt-2 text-xs text-muted">{params.explanation}</p>
+            ) : null}
             {canManage ? (
               <form action={actionFreezeFeeSnapshot} className="mt-3">
                 <input type="hidden" name="jurisdiction" value={params.jurisdiction || "US"} />
@@ -194,8 +210,50 @@ export default async function AdminFeesPage({ searchParams }: Props) {
               </label>
               <Field name="priority" label="Priority" defaultValue={String(rule.priority)} disabled={!canManage} />
               <Field name="jurisdiction" label="Jurisdiction" defaultValue={rule.jurisdiction} disabled={!canManage} />
-              <Field name="serviceLevel" label="Service level" defaultValue={rule.serviceLevel} disabled={!canManage} />
-              <Field name="method" label="Method" defaultValue={rule.method} disabled={!canManage} />
+              <label className="text-xs font-semibold text-muted">
+                Service level
+                <select
+                  name="serviceLevel"
+                  defaultValue={rule.serviceLevel}
+                  disabled={!canManage}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  <option value="*">* (any)</option>
+                  {SERVICE_LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      {SERVICE_LEVEL_LABELS[level]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                Fee type
+                <select
+                  name="feeType"
+                  defaultValue={rule.feeType}
+                  disabled={!canManage}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  {FEE_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {FEE_TYPE_LABELS[type]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                Method
+                <select
+                  name="method"
+                  defaultValue={rule.method}
+                  disabled={!canManage}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  <option value="percent">percent</option>
+                  <option value="fixed">fixed</option>
+                  <option value="percent_plus_fixed">percent_plus_fixed</option>
+                </select>
+              </label>
               <Field name="percentBps" label="Percent (bps)" defaultValue={String(rule.percentBps)} disabled={!canManage} />
               <Field
                 name="fixedUsd"
@@ -247,7 +305,8 @@ export default async function AdminFeesPage({ searchParams }: Props) {
             store.snapshots.slice(0, 10).map((s) => (
               <li key={s.id} className="rounded-lg border border-[#E6ECFF] px-3 py-2">
                 <span className="font-semibold text-indigo">{s.id}</span> · {s.ruleName} v
-                {s.ruleVersion} · {formatCents(s.calculatedFeeCents)} on{" "}
+                {s.ruleVersion} · {FEE_TYPE_LABELS[s.feeType] ?? s.feeType} ·{" "}
+                {formatCents(s.calculatedFeeCents)} on{" "}
                 {formatCents(s.basisCents)} ({s.jurisdiction}/{s.serviceLevel})
               </li>
             ))

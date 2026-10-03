@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { getWorkspace } from "@/lib/business";
-import { resolveFee } from "@/lib/collaboration-fees";
+import { asServiceLevel, resolveFee } from "@/lib/collaboration-fees";
 import {
   buildFinancialPlan,
   canFundContract,
@@ -62,6 +62,8 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const scope = String(formData.get("scope") ?? "").trim();
   const commercial = String(formData.get("commercial") ?? "").trim();
   const jurisdictionCode = String(formData.get("jurisdictionCode") ?? "US").trim().toUpperCase() || "US";
+  const serviceLevelRaw = asServiceLevel(String(formData.get("serviceLevel") ?? "contracted"));
+  const serviceLevel = serviceLevelRaw === "*" ? "contracted" : serviceLevelRaw;
   const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
   const usingCustom = formData.get("milestoneMode") === "custom";
   const influencerAccepted = formData.get("influencerAccepted") === "on";
@@ -74,6 +76,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   qs.set("scope", scope);
   qs.set("commercial", commercial);
   qs.set("jurisdiction", jurisdictionCode);
+  qs.set("serviceLevel", serviceLevel);
   qs.set("gross", String(formData.get("grossUsd") ?? ""));
   qs.set("mode", usingCustom ? "custom" : "template");
   if (influencerAccepted) qs.set("influencerAccepted", "1");
@@ -152,7 +155,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   const quote = await resolveFee({
     jurisdiction: jurisdictionCode,
-    serviceLevel: "contracted",
+    serviceLevel,
     grossValueCents: grossCents,
   }).catch(() => null);
 
@@ -181,7 +184,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     title: `${title} · ${scope.slice(0, 40)}`,
     jurisdictionCode,
     grossCents,
-    serviceLevel: "contracted",
+    serviceLevel,
     customMilestones: usingCustom ? drafts : null,
     financialPlan: locked as unknown as Record<string, unknown>,
   });

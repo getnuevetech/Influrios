@@ -23,6 +23,7 @@ export async function actionCreateDeal(formData: FormData) {
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
   const briefTitle = String(formData.get("briefTitle") ?? "").trim();
   const jurisdictionCode = String(formData.get("jurisdictionCode") ?? "US");
+  const serviceLevel = String(formData.get("serviceLevel") ?? "contracted").trim() || "contracted";
   const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
   const creator = await getDirectoryCreator(creatorSlug);
   if (!businessName || !creatorSlug || !briefTitle || !creator || grossCents <= 0) {
@@ -34,7 +35,7 @@ export async function actionCreateDeal(formData: FormData) {
     title: briefTitle,
     jurisdictionCode,
     grossCents,
-    serviceLevel: "contracted",
+    serviceLevel,
     sourceId: String(formData.get("sourceId") ?? ""),
     repeatOfId: String(formData.get("repeatOfId") ?? ""),
     scheduleKind: String(formData.get("scheduleKind") ?? "once"),
