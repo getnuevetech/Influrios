@@ -28,6 +28,8 @@ export type SeedCreator = {
   avatarColor: string;
   image: string;
   coverImage?: string;
+  /** Presentation gender for default avatars — not demographics audience gender. */
+  gender?: "male" | "female" | "unspecified";
   badge: string;
   statusLabel: string;
   planTier: "STARTER" | "PLUS" | "PRO";

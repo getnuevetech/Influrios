@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { actionPublishDraft, actionUpdateDashboardProfile } from "@/app/claim/actions";
+import {
+  actionPublishDraft,
+  actionUpdateDashboardProfile,
+  actionUpdateProfileMedia,
+} from "@/app/claim/actions";
 import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
 import { actionChangeShortSlug } from "@/app/dashboard/short-actions";
 import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
@@ -22,6 +26,8 @@ import { formatMoney } from "@/lib/money";
 import { listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
+import Image from "next/image";
+import { BRAND_AVATARS, BRAND_BANNERS } from "@/lib/profile-media";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Creator dashboard" };
@@ -150,65 +156,171 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <section id="profile" className="card-surface p-6">
-          <h2 className="font-display text-xl font-bold text-indigo">Edit profile</h2>
-          <form action={actionUpdateDashboardProfile} className="mt-4 grid gap-3 sm:grid-cols-2">
-            <input type="hidden" name="draftId" value={draft.id} />
-            <label className="text-sm sm:col-span-2">
-              <span className="font-semibold text-indigo">Display name</span>
-              <input
-                name="displayName"
-                defaultValue={draft.displayName}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+        <section id="profile" className="card-surface space-y-6 p-6">
+          <div>
+            <h2 className="font-display text-xl font-bold text-indigo">Profile photo &amp; banner</h2>
+            <p className="mt-1 text-sm text-muted">
+              New profiles start with Influrios brand art. Set your gender for a matching default avatar, upload your own
+              photos, or cycle branded banners anytime.
+            </p>
+            <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+              <div className="relative h-28 w-full bg-[#EEF2FF]">
+                <Image
+                  src={draft.coverImage || BRAND_BANNERS[0]}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="640px"
+                  unoptimized={draft.coverImage?.endsWith(".svg")}
+                />
+              </div>
+              <div className="flex items-end gap-4 bg-white p-4">
+                <span className="relative -mt-10 h-20 w-20 overflow-hidden rounded-full ring-4 ring-white">
+                  <Image
+                    src={draft.image || BRAND_AVATARS.unspecified}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                    unoptimized={draft.image?.endsWith(".svg")}
+                  />
+                </span>
+                <div className="min-w-0 flex-1 pb-1">
+                  <p className="truncate text-sm font-bold text-indigo">{draft.displayName}</p>
+                  <p className="text-xs text-muted">Gender: {draft.gender}</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <form action={actionUpdateProfileMedia} encType="multipart/form-data" className="space-y-2 rounded-xl border border-border p-3">
+                <input type="hidden" name="draftId" value={draft.id} />
+                <input type="hidden" name="intent" value="avatar" />
+                <p className="text-xs font-bold uppercase tracking-wide text-violet">Profile photo</p>
+                <input
+                  type="file"
+                  name="avatar"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo"
+                />
+                <button type="submit" className="btn-primary w-full !py-2 text-xs">
+                  Upload photo
+                </button>
+              </form>
+              <form action={actionUpdateProfileMedia} encType="multipart/form-data" className="space-y-2 rounded-xl border border-border p-3">
+                <input type="hidden" name="draftId" value={draft.id} />
+                <input type="hidden" name="intent" value="cover" />
+                <p className="text-xs font-bold uppercase tracking-wide text-violet">Banner</p>
+                <input
+                  type="file"
+                  name="cover"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo"
+                />
+                <button type="submit" className="btn-primary w-full !py-2 text-xs">
+                  Upload banner
+                </button>
+              </form>
+              <form action={actionUpdateProfileMedia} className="space-y-2 rounded-xl border border-border p-3">
+                <input type="hidden" name="draftId" value={draft.id} />
+                <input type="hidden" name="intent" value="avatar-default" />
+                <p className="text-xs font-bold uppercase tracking-wide text-violet">Use brand avatar</p>
+                <select
+                  name="gender"
+                  defaultValue={draft.gender}
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                >
+                  <option value="unspecified">Generic Influrios</option>
+                  <option value="female">Female default</option>
+                  <option value="male">Male default</option>
+                </select>
+                <button type="submit" className="btn-secondary w-full !py-2 text-xs">
+                  Apply default avatar
+                </button>
+              </form>
+              <form action={actionUpdateProfileMedia} className="space-y-2 rounded-xl border border-border p-3">
+                <input type="hidden" name="draftId" value={draft.id} />
+                <input type="hidden" name="intent" value="cover-next" />
+                <p className="text-xs font-bold uppercase tracking-wide text-violet">Brand banner</p>
+                <p className="text-xs text-muted">Cycle the Influrios rooftop / lounge banners.</p>
+                <button type="submit" className="btn-secondary w-full !py-2 text-xs">
+                  Next brand banner
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="font-display text-xl font-bold text-indigo">Edit profile</h2>
+            <form action={actionUpdateDashboardProfile} className="mt-4 grid gap-3 sm:grid-cols-2">
+              <input type="hidden" name="draftId" value={draft.id} />
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Display name</span>
+                <input
+                  name="displayName"
+                  defaultValue={draft.displayName}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                />
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Title</span>
+                <input
+                  name="title"
+                  defaultValue={draft.title}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                />
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Gender (for default avatar)</span>
+                <select
+                  name="gender"
+                  defaultValue={draft.gender}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                >
+                  <option value="unspecified">Prefer not to say / unknown</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                </select>
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Bio</span>
+                <textarea
+                  name="bio"
+                  rows={3}
+                  defaultValue={draft.bio}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                />
+              </label>
+              <PlaceFields
+                cityName="locationCity"
+                countryName="locationCountry"
+                defaultCity={draft.locationCity}
+                defaultCountry={draft.locationCountry}
+                className="contents"
               />
-            </label>
-            <label className="text-sm sm:col-span-2">
-              <span className="font-semibold text-indigo">Title</span>
-              <input
-                name="title"
-                defaultValue={draft.title}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-              />
-            </label>
-            <label className="text-sm sm:col-span-2">
-              <span className="font-semibold text-indigo">Bio</span>
-              <textarea
-                name="bio"
-                rows={3}
-                defaultValue={draft.bio}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-              />
-            </label>
-            <PlaceFields
-              cityName="locationCity"
-              countryName="locationCountry"
-              defaultCity={draft.locationCity}
-              defaultCountry={draft.locationCountry}
-              className="contents"
-            />
-            <label className="text-sm sm:col-span-2">
-              <span className="font-semibold text-indigo">Primary specialty</span>
-              <select
-                name="specialty"
-                defaultValue={draft.specialties[0] ?? "lifestyle"}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-              >
-                {specialtyGroups.map((group) => (
-                  <optgroup key={group.slug} label={group.name}>
-                    <option value={group.slug}>{group.name}</option>
-                    {group.children.filter((child) => child.active).map((child) => (
-                      <option key={child.slug} value={child.slug}>
-                        {child.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
-              Save profile
-            </button>
-          </form>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Primary specialty</span>
+                <select
+                  name="specialty"
+                  defaultValue={draft.specialties[0] ?? "lifestyle"}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                >
+                  {specialtyGroups.map((group) => (
+                    <optgroup key={group.slug} label={group.name}>
+                      <option value={group.slug}>{group.name}</option>
+                      {group.children.filter((child) => child.active).map((child) => (
+                        <option key={child.slug} value={child.slug}>
+                          {child.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+              <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
+                Save profile
+              </button>
+            </form>
+          </div>
         </section>
 
         <section className="card-surface p-6">
