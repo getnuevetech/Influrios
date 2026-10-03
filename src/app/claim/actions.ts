@@ -50,6 +50,7 @@ export async function actionClaimDraft(formData: FormData) {
       email: String(formData.get("email") ?? ""),
       name: String(formData.get("name") ?? ""),
       gender: String(formData.get("gender") ?? ""),
+      title: String(formData.get("title") ?? ""),
     });
     await setCreatorSession(draft.id);
   } catch (err) {

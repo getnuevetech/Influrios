@@ -313,7 +313,7 @@ export async function recordIntroFromRequest(input: {
       return { ok: false as const, error: "This request is no longer in the queue." };
     }
     if (!input.creatorSlug) {
-      return { ok: false as const, error: "Choose a creator for the introduction." };
+      return { ok: false as const, error: "Choose an influencer for the introduction." };
     }
     const now = new Date();
     const intro = await tx.managedIntro.create({

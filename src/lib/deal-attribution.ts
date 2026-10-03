@@ -27,7 +27,7 @@ export async function ensureAttributionSources() {
     await tx.marketplaceSettings.update({ where: { id: "default" }, data: { sourcesSeeded: true } });
   });
   await prisma.attributionSource.updateMany({
-    where: { label: "Creator card" },
+    where: { label: "Influencer Card" },
     data: { label: "Influencer card" },
   });
 }

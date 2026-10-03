@@ -20,7 +20,6 @@ import { entitlementsForPlan } from "@/lib/entitlements-db";
 
 const BADGE_STYLES: Record<string, string> = {
   "Top Influencer": "bg-[#2979FF] text-white",
-  "Top Creator": "bg-[#2979FF] text-white",
   "Rising Star": "bg-[#E879F9] text-white",
   "Business Friendly": "bg-emerald-500 text-white",
   "Fast Growing": "bg-[#633CFF] text-white",
@@ -29,7 +28,6 @@ const BADGE_STYLES: Record<string, string> = {
 
 const DISCOVER_BADGES: Record<string, { label: string; className: string }> = {
   "Top Influencer": { label: "Top Match", className: "bg-[#2979FF] text-white" },
-  "Top Creator": { label: "Top Match", className: "bg-[#2979FF] text-white" },
   "Rising Star": { label: "Rising Star", className: "bg-[#E879F9] text-white" },
   "Business Friendly": { label: "Brand Friendly", className: "bg-[#7C4DFF] text-white" },
   "Fast Growing": { label: "Fast Growing", className: "bg-[#14B8A6] text-white" },

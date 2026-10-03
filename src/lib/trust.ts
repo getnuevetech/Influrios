@@ -81,7 +81,7 @@ const DEFAULT_STORE: TrustStore = {
   contracts: [
     {
       id: "contract_std_collab",
-      title: "Standard creator collab brief",
+      title: "Standard influencer collab brief",
       audience: "both",
       summary:
         "Scope, milestones, usage rights, and escrow release rules for a typical sponsored post package.",
