@@ -208,7 +208,7 @@ export async function getNicheTrends(): Promise<NicheTrend[]> {
     { specialty: "fashion", demand: 85, growth: 6, note: "Steady brand lookbook demand." },
     { specialty: "food", demand: 64, growth: 14, note: "Local restaurant collabs rising." },
     { specialty: "fitness", demand: 58, growth: -3, note: "Slight cool-off after Q2 surge." },
-    { specialty: "tech", demand: 52, growth: 21, note: "Creator gadget reviews heating up." },
+    { specialty: "tech", demand: 52, growth: 21, note: "Influencer gadget reviews heating up." },
     { specialty: "hair", demand: 60, growth: 8, note: "Salon + supplier pairings." },
   ];
 

@@ -134,7 +134,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
           <div>
             <h1 className="font-display text-3xl font-bold text-indigo sm:text-4xl">My Collaborations</h1>
             <p className="mt-2 max-w-xl text-sm text-muted sm:text-base">
-              Discover new opportunities, connect with creators and brands, and manage active collaborations in one place.
+              Discover new opportunities, connect with influencers and brands, and manage active collaborations in one place.
             </p>
             <Link href="/collaboration?landing=1" className="mt-3 inline-flex text-xs font-bold text-violet hover:underline">
               View public collaboration landing →
@@ -280,7 +280,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             <input
               name="q"
               defaultValue={params.q}
-              placeholder="Search creators, brands, opportunities…"
+              placeholder="Search influencers, brands, opportunities…"
               className="min-w-[12rem] flex-1 border-0 bg-transparent text-sm text-indigo outline-none"
             />
             <select name="category" defaultValue={params.category ?? ""} className="rounded-xl border border-border px-2 py-1.5 text-xs">
@@ -353,7 +353,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
 
           {hub.creatorMatches.length > 0 ? (
             <section className="space-y-3">
-              <h2 className="font-display text-lg font-bold text-indigo">Creator × Creator matches</h2>
+              <h2 className="font-display text-lg font-bold text-indigo">Influencer × Influencer matches</h2>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {hub.creatorMatches.slice(0, 4).map((match) => {
                   const other = match.a.slug === creator.slug ? match.b : match.a;
@@ -396,9 +396,9 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/80">Mentorship</p>
-                  <h2 className="mt-1 font-display text-xl font-bold">Become a Mentor on Influrios</h2>
+                  <h2 className="mt-1 font-display text-xl font-bold">Become an Influrios Influencer Mentor</h2>
                   <p className="mt-1 max-w-md text-sm text-white/80">
-                    Share what you know with rising creators and grow your professional network.
+                    Share what you know with rising influencers and grow your professional network.
                   </p>
                 </div>
                 <Link href="/mentorship" className="ink-on-light inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold">
@@ -463,7 +463,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 font-display text-base font-bold text-indigo">
-                  <IconUsers size={16} className="text-violet" /> Creator Opportunities
+                  <IconUsers size={16} className="text-violet" /> Influencer Opportunities
                 </h2>
                 <Link href="/discover" className="text-[11px] font-bold text-violet">
                   View all →

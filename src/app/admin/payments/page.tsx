@@ -160,7 +160,7 @@ export default async function AdminPaymentsPage({ searchParams }: Props) {
               />
             </label>
             <label className="text-sm">
-              <span className="font-semibold text-indigo">Creator</span>
+              <span className="font-semibold text-indigo">Influencer</span>
               <select
                 name="creatorSlug"
                 required

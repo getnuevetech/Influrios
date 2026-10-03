@@ -50,6 +50,7 @@ export async function actionClaimDraft(formData: FormData) {
       email: String(formData.get("email") ?? ""),
       name: String(formData.get("name") ?? ""),
       gender: String(formData.get("gender") ?? ""),
+      title: String(formData.get("title") ?? ""),
     });
     await setCreatorSession(draft.id);
   } catch (err) {
@@ -83,7 +84,7 @@ export async function actionPublishDraft(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
   if (formData.get("creatorTerms") !== "on") {
     redirect(
-      `/claim/publish/${draftId}?error=${encodeURIComponent("Agree to the Creator Terms and Social Platform Integration Terms before publishing.")}`,
+      `/claim/publish/${draftId}?error=${encodeURIComponent("Agree to the Influencer Terms and Social Platform Integration Terms before publishing.")}`,
     );
   }
   try {

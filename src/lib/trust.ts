@@ -81,14 +81,14 @@ const DEFAULT_STORE: TrustStore = {
   contracts: [
     {
       id: "contract_std_collab",
-      title: "Standard creator collab brief",
+      title: "Standard influencer collab brief",
       audience: "both",
       summary:
         "Scope, milestones, usage rights, and escrow release rules for a typical sponsored post package.",
       clauses: [
         "Deliverables and due dates follow the escrow milestones attached to this deal.",
         "Brand usage rights: organic + paid amplification for 90 days after publish.",
-        "Creator retains ownership of raw footage unless otherwise agreed in writing.",
+        "Influencer retains ownership of raw footage unless otherwise agreed in writing.",
         "Funds held in Influrios escrow until each milestone is accepted or mediated.",
         "Either party may open a dispute; ops mediation is binding for the demo rails.",
       ],
@@ -102,7 +102,7 @@ const DEFAULT_STORE: TrustStore = {
       summary: "Extended paid media license when brands need whitelisting or ads.",
       clauses: [
         "Paid media / whitelisting term: 6 months from first go-live.",
-        "Creator grants non-exclusive worldwide license for the contracted assets.",
+        "Influencer grants non-exclusive worldwide license for the contracted assets.",
         "Edits that change meaning require creator approval before release of final milestone.",
       ],
       createdAt: now(),

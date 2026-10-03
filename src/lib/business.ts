@@ -191,7 +191,7 @@ export async function addToShortlist(creatorSlug: string, note?: string) {
     };
   }
   if (!(await directoryHasCreator(creatorSlug))) {
-    return { ok: false as const, error: "Creator not found", ws };
+    return { ok: false as const, error: "Influencer not found", ws };
   }
   try {
     await prisma.businessShortlistItem.create({

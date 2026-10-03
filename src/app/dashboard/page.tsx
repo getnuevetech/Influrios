@@ -30,7 +30,7 @@ import Image from "next/image";
 import { BRAND_AVATARS, BRAND_BANNERS } from "@/lib/profile-media";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Creator dashboard" };
+export const metadata = { title: "Influencer dashboard" };
 
 type Props = {
   searchParams: Promise<{ published?: string; saved?: string; error?: string; social?: string }>;
@@ -78,7 +78,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">
-            Phase 8 · Creator dashboard
+            Phase 8 · Influencer dashboard
           </p>
           <h1 className="mt-2 font-display text-3xl font-bold text-indigo">
             Welcome{draft.ownerName ? `, ${draft.ownerName.split(" ")[0]}` : ""}
@@ -456,7 +456,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               <div className="rounded-xl bg-lavender/40 p-4 text-sm text-indigo">
                 <p className="font-semibold">Before the network login</p>
                 <p className="mt-2">
-                  Accepting the Creator Terms does not authorize a social account. This step explains the permissions
+                  Accepting the Influencer Terms does not authorize a social account. This step explains the permissions
                   and asks you to acknowledge the{" "}
                   <Link href="/legal/connected-social-data-policy" className="font-semibold underline" target="_blank">
                     Connected Social Data & API Policy
@@ -488,7 +488,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                       <span>
                         I acknowledge the Connected Social Data & API Policy and authorize Influrios to start the{" "}
                         {account.name} login
-                        {account.scopes ? ` for: ${account.scopes}` : ""}. This is not granted by the Creator Terms.
+                        {account.scopes ? ` for: ${account.scopes}` : ""}. This is not granted by the Influencer Terms.
                       </span>
                     </label>
                     <button type="submit" className="btn-primary !py-1.5 text-xs">

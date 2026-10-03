@@ -315,7 +315,7 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
                       name="matchTitle"
                       defaultValue={match?.title ?? ""}
                       disabled={!canEdit}
-                      placeholder="Beauty Creator + Skincare Partner"
+                      placeholder="Beauty Influencer + Skincare Partner"
                       className="mt-1 block w-full rounded-lg border border-[#E4EBFF] px-2 py-1.5 text-sm text-indigo"
                     />
                   </label>

@@ -269,16 +269,17 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-**Collaboration OS** — P2 / P2b hubs + P3 contract wizard shipped.
+**Collaboration OS** — P1 landing redesign + admin CMS, terminology migration, P2/P2b hubs, and P3 contract wizard shipped.
 
 1. **P4** Finance domains & provider adapter.  
-2. Continue terminology migration (Creator → Influencer) on remaining surfaces.  
-3. Parallel: fill **Phase M** staging evidence when credentials are available.  
-4. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
+2. Parallel: fill **Phase M** staging evidence when credentials are available.  
+3. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
 
-Terminology source of truth: [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1_dab3.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1_dab3.pdf).
+Terminology source of truth (complete for public UI): [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf). Legacy Prisma/`creator_*` technical fields remain for compatibility.
 
-Design references: [`docs/design-references/business/for-businesses.png`](./design-references/business/for-businesses.png), [`docs/design-references/collaboration/public-landing-v2.png`](./design-references/collaboration/public-landing-v2.png).
+Approved landing designs: [`docs/design-references/collaboration/public-landing-v3.png`](./design-references/collaboration/public-landing-v3.png), [`docs/design-references/business/for-businesses-v2.png`](./design-references/business/for-businesses-v2.png).
+
+Admin CMS: `/admin/collaboration-landing`, `/admin/business-landing`, `/admin/influencer-identity`.
 
 Business hub: `/collaboration/business` (legacy `/business/workspace` redirects).
 

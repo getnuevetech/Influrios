@@ -83,7 +83,7 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
   if (!creatorA || !creatorB || !from) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="font-semibold text-indigo">Missing creators for this proposal.</p>
+        <p className="font-semibold text-indigo">Missing influencers for this proposal.</p>
         <Link href="/collaboration" className="mt-4 inline-block text-violet">
           Back to matches
         </Link>
@@ -207,7 +207,7 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
           <input
             name="title"
             required
-            defaultValue={`${specialtyLabel(offerSpecialty || "Creator")} × ${specialtyLabel(needSpecialty || "Creator")} collab`}
+            defaultValue={`${specialtyLabel(offerSpecialty || "Influencer")} × ${specialtyLabel(needSpecialty || "Influencer")} collab`}
             className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
           />
         </label>

@@ -103,6 +103,27 @@ const LINKS: {
     meta: () => "Full homepage CMS hub",
   },
   {
+    href: "/admin/collaboration-landing",
+    title: "Collaboration landing",
+    blurb: "Public /collaboration hero, dual path, features, mentorship, and trust copy.",
+    module: "banners",
+    meta: () => "CMS landing sections",
+  },
+  {
+    href: "/admin/business-landing",
+    title: "Business landing",
+    blurb: "Public /business hero, capabilities, plans, and signup form copy.",
+    module: "banners",
+    meta: () => "CMS landing sections",
+  },
+  {
+    href: "/admin/influencer-identity",
+    title: "Influencer identity",
+    blurb: "Self-description labels (Content Creator, Blogger, …) separate from the Influencer role.",
+    module: "banners",
+    meta: () => "Terminology addendum",
+  },
+  {
     href: "/admin/payments",
     title: "Protected Payments",
     blurb: "Escrow deals, milestone release, and refunds.",
@@ -196,7 +217,7 @@ const LINKS: {
   {
     href: "/admin/social",
     title: "Social networks",
-    blurb: "Live follower and like sync. Creators accept the terms before a network connects.",
+    blurb: "Live follower and like sync. Influencers accept the terms before a network connects.",
     module: "social",
     meta: () => "Terms required",
   },

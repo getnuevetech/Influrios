@@ -277,7 +277,7 @@ export async function releaseMilestone(
   const ms = deal.milestones.find((m) => m.id === milestoneId);
   if (!ms) throw new Error("Milestone not found");
   if (deal.fundedCents < deal.totalCents) throw new Error("Deal must be funded first");
-  if (ms.status === "pending") throw new Error("Creator must submit work first");
+  if (ms.status === "pending") throw new Error("Influencer must submit work first");
   ms.status = "released";
   ms.note = note?.trim() || "Released to creator";
   ms.updatedAt = now();

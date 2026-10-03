@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { actionClaimDraft } from "@/app/claim/actions";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { draftToSeedCreator, getDraft } from "@/lib/claim";
+import { getInfluencerIdentity } from "@/lib/landing-pages";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Preview your Influencer Card" };
@@ -19,7 +20,10 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
   const q = await searchParams;
   const draft = await getDraft(draftId);
   if (!draft) notFound();
-  const creator = draftToSeedCreator(draft);
+  const [creator, identity] = await Promise.all([
+    Promise.resolve(draftToSeedCreator(draft)),
+    getInfluencerIdentity(),
+  ]);
 
   return (
     <div className="min-h-[80vh] bg-[radial-gradient(ellipse_at_top,_#EAE4FF,_#F7FAFF_55%,_#D9E8FF)] px-4 py-10">
@@ -70,6 +74,23 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
               defaultValue={draft.displayName}
               className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
             />
+          </label>
+          <label className="block text-sm font-semibold text-indigo">
+            How do you describe yourself?
+            <select
+              name="title"
+              defaultValue={draft.title || "Influencer"}
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+            >
+              {identity.selfDescriptions.map((label) => (
+                <option key={label} value={label}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-muted">
+              Your platform role is Influencer. This is how you describe your influence.
+            </span>
           </label>
           <label className="block text-sm font-semibold text-indigo">
             Gender (optional — picks your default avatar)

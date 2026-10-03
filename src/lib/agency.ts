@@ -103,7 +103,7 @@ const DEFAULT_STORE: AgencyStore = {
     {
       id: "portfolio_demo_1",
       title: "Clean beauty × texture care",
-      tagline: "Complementary creators, one brand story",
+      tagline: "Complementary influencers, one brand story",
       leftSlug: "sofia-martinez",
       rightSlug: "amara-okonkwo",
       specialty: "beauty",
@@ -268,7 +268,7 @@ export async function addRosterMember(input: {
     throw new Error("Unknown creator");
   }
   if (store.roster.some((r) => r.creatorSlug === input.creatorSlug)) {
-    throw new Error("Creator already on roster");
+    throw new Error("Influencer already on roster");
   }
   await prisma.agencyRosterMember.create({
     data: {
@@ -352,7 +352,7 @@ export async function createJointPortfolio(input: {
   published?: boolean;
 }) {
   await ensureWorkspace();
-  if (input.leftSlug === input.rightSlug) throw new Error("Pick two different creators");
+  if (input.leftSlug === input.rightSlug) throw new Error("Pick two different influencers");
   const ts = now();
   const portfolio: JointPortfolio = {
     id: `portfolio_${randomBytes(4).toString("hex")}`,
@@ -374,7 +374,7 @@ export async function createJointPortfolio(input: {
     updatedAt: ts,
   };
   if (!portfolio.title || !portfolio.leftSlug || !portfolio.rightSlug) {
-    throw new Error("Title and both creators required");
+    throw new Error("Title and both influencers required");
   }
   await prisma.agencyPortfolio.create({
     data: {

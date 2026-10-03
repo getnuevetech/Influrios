@@ -65,7 +65,7 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Short links</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        inflr.me is redirect infrastructure. Creator profiles stay on the canonical Influrios origin. QR codes encode
+        inflr.me is redirect infrastructure. Influencer profiles stay on the canonical Influrios origin. QR codes encode
         an opaque /q token on the primary short domain, so a slug change does not require a reprint. Sign in again if
         this page was forbidden after the permission was added.
       </p>

@@ -3,8 +3,10 @@
 **Date:** 2026-10-03  
 **Source spec:** [`COLLABORATION_OS_SPEC_v1.txt`](./COLLABORATION_OS_SPEC_v1.txt) (Dev AI Collaboration v1, Oct 2026)  
 **Approved designs:**  
-- Public landing — [`../design-references/collaboration/public-landing.png`](../design-references/collaboration/public-landing.png)  
+- Public landing — [`../design-references/collaboration/public-landing-v3.png`](../design-references/collaboration/public-landing-v3.png)  
+- For Businesses — [`../design-references/business/for-businesses-v2.png`](../design-references/business/for-businesses-v2.png)  
 - Creator hub — [`../design-references/collaboration/creator-hub.png`](../design-references/collaboration/creator-hub.png)  
+- Terminology addendum — [`Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./Influrios_Influencer_Terminology_Development_Addendum_v1.pdf)  
 **Sequencing authority:** this document for Collaboration OS work; still subordinate to money invariants in [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md) and the marketplace ledger.
 
 ---
@@ -57,16 +59,18 @@ Influrios already has durable pieces to **extend**, not replace:
 
 | Spec area | Today | Gap |
 |---|---|---|
-| Public landing | Partial demo page | Redesign to Figure 1; CMS category cards; suggestions CTA; mentor banner; dual CTAs; no fake stats |
-| Creator hub | Dashboard + records only | Figure 2 hub: status cards, recommended carousel, payout panel, pipeline, side nav |
-| Business hub | `/business` workspace | Collab-native hub: requests, suggestions, spend, contracts |
-| Match objects | In-memory scores | Persist match + save/dismiss; match_type; blockers |
-| Business requests / creator opportunities | Hardcoded arrays | Prisma marketplace objects + lifecycle |
-| Contract wizard | Thin propose form | Full wizard + financial snapshot gates |
-| Milestones / finance | Strong ledger core | Domain account purposes; fee-earned-on-release; ROUTE_READY |
-| Payout readiness | Missing | Primary/secondary routes; Global Payout Ready |
-| Mentorship | Missing | Banner → landing → hub |
-| Admin control plane | Fees/marketplace/trust | Category cards, corridors, mentorship eligibility, account purposes |
+| Public landing | `/collaboration` + CMS | ✅ Matches approved v3; admin at `/admin/collaboration-landing` |
+| Business marketing | `/business` + CMS | ✅ Matches approved v2; admin at `/admin/business-landing` |
+| Influencer terminology | Public UI migrated | ✅ Role labels Influencer; self-descriptions admin-managed; legacy `creator_*` technical fields kept |
+| Influencer hub | `/collaboration/hub` | ✅ P2 shipped |
+| Business hub | `/collaboration/business` | ✅ P2b shipped |
+| Match objects | Prisma marketplace match records | ✅ P1b |
+| Business requests / influencer opportunities | Prisma marketplace objects | ✅ P1b |
+| Contract wizard | `/collaboration/contract` | ✅ P3 |
+| Milestones / finance | Strong ledger core | Domain account purposes; fee-earned-on-release; ROUTE_READY (P4) |
+| Payout readiness | Missing | Primary/secondary routes; Global Payout Ready (P5) |
+| Mentorship | Public banner + stub landing | Full Mentor–Mentee hub (P7) |
+| Admin control plane | Fees/marketplace/trust + landing CMS | Corridors, mentorship eligibility, account purposes (P6) |
 
 ---
 
@@ -80,27 +84,13 @@ Influrios already has durable pieces to **extend**, not replace:
 
 **Exit:** plan merged; designs in-repo; sequencing clear.
 
-### P1 — Public Collaboration Landing (Figure 1) *(starts in this PR)*
+### P1 — Public Collaboration Landing (Figure 1) ✅
 
-**UX (must match approved design):**
+**UX (must match approved design):** redesigned `/collaboration` to public-landing-v3 — hero, popular matches, dual path, featured matches + side cards, marketplace rails, suggestions banner, how-it-works, feature lists, protected payments, collab types, Influencer Mentorship, trust bar, dual final CTAs. Copy CMS at `/admin/collaboration-landing`. Match cards remain under Homepage CMS; listings under marketplace-listings admin.
 
-1. Hero: headline, search (creators/brands/niches/opportunities), popular tags, collage visuals; stats only if CMS-backed.
-2. Popular Collaboration Matches: single-row horizontal scroller, image cards with icon + title + “+ partner” subtitle (admin-manageable via existing homepage collab CMS + taxonomy images).
-3. Filter Collaborations sidebar (industry, type, location, budget, audience, platform, verified).
-4. Featured Collaboration Match: two parties, score ring, breakdown, Why This Match, Request + Save.
-5. Right rail: Business Requests + Creator Collaboration Opportunities.
-6. “Need Collaboration Ideas?” → Get Collaboration Suggestions (guest-limited).
-7. Become a Mentor banner → `/mentorship` stub.
-8. Dual “Are You a Creator?” / “Are You a Business?” acquisition banners.
-9. Guest CTAs stay honest (Join / Sign in) — never default to a demo creator.
+For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/admin/business-landing`.
 
-**Data (minimal):**
-
-- Wire popular cards from CMS `collaborationMatches` + category images.
-- Marketplace business requests / opportunities / match records are Prisma-backed (P1b).
-- Extend guest gates to suggestion preview / request-match actions.
-
-**Exit:** `/collaboration` matches Figure 1 layout on desktop + mobile; CI green; no fake stats.
+**Exit:** `/collaboration` and `/business` match approved layouts; landing copy admin-editable; CI green; no fake stats.
 
 ### P1b — Marketplace objects ✅
 
@@ -198,11 +188,10 @@ Influrios already has durable pieces to **extend**, not replace:
 
 ## 6. Immediate next coding slice (P4)
 
-P3 Contract & milestone wizard shipped. Next:
+P1 landing redesign (approved v3), Influencer terminology migration, P2/P2b hubs, and P3 contract wizard shipped. Next:
 
 1. **P4** Finance domains & provider adapter.
 2. Parallel: fill Phase M staging evidence when credentials are available.
-3. Continue Influencer terminology on remaining surfaces.
 
 ---
 

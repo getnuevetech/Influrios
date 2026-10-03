@@ -28,7 +28,7 @@ export default async function AccountPage() {
         ) : (
           <p>
             <Link href="/claim" className="font-semibold text-violet">
-              Start a creator claim
+              Claim Your Influrios Profile
             </Link>
           </p>
         )}

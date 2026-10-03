@@ -139,7 +139,7 @@ async function seedManaged() {
         events: {
           create: [
             { status: "draft", note: "Shortlist delivered", createdAt: new Date(base) },
-            { status: "outreach", note: "Creator contacted", createdAt: new Date(base + 1000) },
+            { status: "outreach", note: "Influencer contacted", createdAt: new Date(base + 1000) },
             { status: "introduced", note: "Both parties connected", createdAt: new Date(base + 2000) },
           ],
         },
@@ -313,7 +313,7 @@ export async function recordIntroFromRequest(input: {
       return { ok: false as const, error: "This request is no longer in the queue." };
     }
     if (!input.creatorSlug) {
-      return { ok: false as const, error: "Choose a creator for the introduction." };
+      return { ok: false as const, error: "Choose an influencer for the introduction." };
     }
     const now = new Date();
     const intro = await tx.managedIntro.create({

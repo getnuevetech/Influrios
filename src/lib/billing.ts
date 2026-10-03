@@ -1,6 +1,6 @@
 /**
  * Phase 6 / Phase L.4 — Monetization / billing (Stripe-ready, demo fallback).
- * Catalog covers Creator Plus/Pro and Business Pro/Agency.
+ * Catalog covers Influencer Plus/Pro and Business Pro/Agency.
  * Checkout attempts live in Postgres (CheckoutAttempt). Plan truth is User /
  * Creator / SubscriptionState. One-time import from data/billing.json.
  */
@@ -41,7 +41,7 @@ export const BILLING_CATALOG: BillingProduct[] = [
   {
     sku: "creator_plus",
     audience: "creator",
-    name: "Creator Plus",
+    name: "Influencer Plus",
     priceLabel: "$19/mo",
     amountCents: 1900,
     interval: "month",
@@ -57,7 +57,7 @@ export const BILLING_CATALOG: BillingProduct[] = [
   {
     sku: "creator_pro",
     audience: "creator",
-    name: "Creator Pro",
+    name: "Influencer Pro",
     priceLabel: "$29/mo",
     amountCents: 2900,
     interval: "month",

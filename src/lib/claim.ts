@@ -570,6 +570,7 @@ export async function claimDraft(input: {
   email: string;
   name: string;
   gender?: string;
+  title?: string;
 }): Promise<ClaimDraft> {
   const draft = await getDraft(input.draftId);
   if (!draft) throw new Error("Draft not found");
@@ -584,6 +585,8 @@ export async function claimDraft(input: {
   draft.email = email;
   draft.ownerName = name;
   draft.displayName = name;
+  const title = input.title?.trim();
+  if (title) draft.title = title;
   draft.gender = nextGender;
   // When gender becomes known and avatar is still a brand default, swap to the matching set.
   draft.image = resolveDefaultAvatar({

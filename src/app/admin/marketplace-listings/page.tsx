@@ -148,7 +148,7 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
       </section>
 
       <section className="space-y-4">
-        <h2 className="font-display text-xl font-bold text-indigo">Creator opportunities</h2>
+        <h2 className="font-display text-xl font-bold text-indigo">Influencer opportunities</h2>
         {opportunities.map((row) => (
           <form
             key={row.id}
@@ -157,7 +157,7 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
           >
             <input type="hidden" name="id" value={row.id} />
             <label className="block text-xs font-semibold text-muted">
-              Creator
+              Influencer
               <select name="creatorSlug" defaultValue={row.creatorSlug} disabled={!canEdit} className={inputClass}>
                 {creators.map((creator) => (
                   <option key={creator.slug} value={creator.slug}>
@@ -207,9 +207,9 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
             action={actionSaveCreatorOpportunity}
             className="grid gap-3 rounded-2xl border border-dashed border-[#C9D4F5] bg-[#F8FAFF] p-4 sm:grid-cols-2"
           >
-            <p className="text-sm font-bold text-indigo sm:col-span-2">Add creator opportunity</p>
+            <p className="text-sm font-bold text-indigo sm:col-span-2">Add influencer opportunity</p>
             <label className="block text-xs font-semibold text-muted">
-              Creator
+              Influencer
               <select name="creatorSlug" disabled={!canEdit} className={inputClass} defaultValue="">
                 <option value="">—</option>
                 {creators.map((creator) => (
