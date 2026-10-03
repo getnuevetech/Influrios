@@ -1,8 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CategoryGlyph, IconArrowRight, IconHeart } from "@/components/icons";
+import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
-import { CATEGORY_IMAGES, type SeedCreator } from "@/lib/seed-data";
+import { categoryImageFor, type SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Categories · Influrios" };
@@ -20,10 +21,13 @@ function creatorsInCategory(
 }
 
 export default async function CategoriesPage() {
-  const directory = await getDirectory();
+  const [directory, cms] = await Promise.all([getDirectory(), getCms()]);
   const taxonomy = directory.taxonomy
     .filter((node) => node.active)
     .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
+  const imageFor = (slug: string) =>
+    cms.categories.items.find((item) => item.slug === slug)?.image ||
+    categoryImageFor(slug, taxonomy);
   return (
     <div className="bg-[#F7FAFF]">
       <section className="border-b border-[#E4EBFF] bg-gradient-to-br from-[#EEF2FF] via-[#F7FAFF] to-[#E8F4FF]">
@@ -62,7 +66,7 @@ export default async function CategoriesPage() {
                   className="group relative block aspect-[5/4] overflow-hidden"
                 >
                   <Image
-                    src={CATEGORY_IMAGES[parent.slug] ?? CATEGORY_IMAGES.lifestyle}
+                    src={imageFor(parent.slug)}
                     alt={parent.name}
                     fill
                     className="object-cover transition duration-500 group-hover:scale-105"

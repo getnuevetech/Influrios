@@ -69,6 +69,18 @@ describe("cms payload merge", () => {
       },
       featuredCards: { widthScale: 1.1 },
       valueProposition: { eyebrow: "Why us" },
+      categories: { title: "Niches", items: [{ slug: "beauty", image: "/demo/categories/cat-beauty.jpg" }] },
+      collaborationMatches: {
+        title: "Pairs",
+        matches: [
+          {
+            title: "A + B",
+            leftSlug: "sofia-martinez",
+            rightSlug: "daniel-kim",
+            tags: ["Home"],
+          },
+        ],
+      },
     });
     assert.equal(cms.banners.hero.title, "Hello");
     assert.equal(cms.banners.hero.ctaLabel, DEFAULT_CMS.banners.hero.ctaLabel);
@@ -77,5 +89,9 @@ describe("cms payload merge", () => {
     assert.equal(cms.featuredCards.widthScale, 1.1);
     assert.equal(cms.valueProposition.eyebrow, "Why us");
     assert.ok(cms.valueProposition.items.length >= 4);
+    assert.equal(cms.categories.title, "Niches");
+    assert.equal(cms.categories.items[0]?.slug, "beauty");
+    assert.equal(cms.collaborationMatches.title, "Pairs");
+    assert.equal(cms.collaborationMatches.matches.length, 1);
   });
 });

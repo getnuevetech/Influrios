@@ -622,7 +622,63 @@ export const COLLAB_MATCH_PRESETS = [
     leftSlug: "priya-sharma",
     rightSlug: "sofia-martinez",
   },
+  {
+    title: "Beauty Creator + Skincare Partner",
+    image: "/demo/categories/cat-beauty.jpg",
+    tags: ["Beauty", "Skincare", "Launch"],
+    leftSlug: "sofia-martinez",
+    rightSlug: "amara-okonkwo",
+  },
+  {
+    title: "Fitness Creator + Wellness Brand",
+    image: "/demo/categories/cat-fitness.jpg",
+    tags: ["Fitness", "Wellness"],
+    leftSlug: "jordan-blake",
+    rightSlug: "marcus-lee",
+  },
+  {
+    title: "Tech Reviewer + Gadget Launch",
+    image: "/demo/categories/cat-tech.jpg",
+    tags: ["Tech", "Reviews", "Launch"],
+    leftSlug: "priya-sharma",
+    rightSlug: "daniel-kim",
+  },
+  {
+    title: "Fashion Creator + Streetwear Label",
+    image: "/demo/categories/cat-fashion.jpg",
+    tags: ["Fashion", "Streetwear"],
+    leftSlug: "amara-okonkwo",
+    rightSlug: "jordan-blake",
+  },
+  {
+    title: "Lifestyle Creator + Home Brand",
+    image: "/demo/categories/cat-lifestyle.jpg",
+    tags: ["Lifestyle", "Home"],
+    leftSlug: "marcus-lee",
+    rightSlug: "sofia-martinez",
+  },
+  {
+    title: "Supplier + Stylist Restock Drop",
+    image: "/demo/categories/cat-suppliers.jpg",
+    tags: ["Supply", "Beauty", "Retail"],
+    leftSlug: "daniel-kim",
+    rightSlug: "amara-okonkwo",
+  },
 ];
+
+/** Resolve a specialty slug to the best matching category demo image. */
+export function categoryImageFor(
+  slug: string,
+  taxonomy: { slug: string; children?: { slug: string }[] }[] = SPECIALTY_TAXONOMY,
+): string {
+  if (CATEGORY_IMAGES[slug]) return CATEGORY_IMAGES[slug]!;
+  for (const parent of taxonomy) {
+    if (parent.children?.some((child) => child.slug === slug)) {
+      return CATEGORY_IMAGES[parent.slug] ?? CATEGORY_IMAGES.lifestyle!;
+    }
+  }
+  return CATEGORY_IMAGES.lifestyle!;
+}
 
 export function formatFollowers(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, "")}M`;
