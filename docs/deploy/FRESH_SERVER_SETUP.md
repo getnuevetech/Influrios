@@ -297,7 +297,7 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 |---------|-----|
 | `Permission denied (publickey)` to GitHub | Deploy key not added, or wrong `IdentityFile` in `~/.ssh/config` |
 | `Repository not found` | Deploy key is on wrong repo, or no access to private repo |
-| `npm run build` killed / OOM | `bash deploy/scripts/deploy.sh` adds 2 GB swap before the image build. The image uses one webpack process and a 1280 MB heap. Confirm `swapon --show` before rebuild; if still killed, move to a 4 GB instance |
+| `npm run build` killed / OOM | Pull latest `main` (needs `DOCKER_BUILD=1` in the Dockerfile). `deploy.sh` adds 2 GB swap and skips eslint/tsc inside the image build (CI covers those). Confirm `swapon --show` and `grep DOCKER_BUILD Dockerfile`. If still killed, move to a 4 GB instance |
 | Dockerfile build exits 1 after `OK: SWC musl` | The native compiler loaded. The failure is the Next build, usually a type error printed just above `BUILD FAILED`. Pull main and rebuild |
 | Site 502 Bad Gateway | App not running: `docker compose ps` / `docker compose logs web` · `bash deploy/scripts/diagnose-502.sh` |
 | Health not green | `curl -fsS http://127.0.0.1:3000/api/health` · check Postgres: `docker compose logs postgres` |
