@@ -388,6 +388,10 @@ export async function requestPrefund(input: {
   scheduleKind?: string;
   stageCount?: number;
   occurrenceCount?: number;
+  /** Collab OS P3 — optional custom milestone schedule (must sum to 100%). */
+  customMilestones?: { title: string; shareBps: number }[] | null;
+  /** Immutable financial plan snapshot embedded beside the fee freeze. */
+  financialPlan?: Record<string, unknown> | null;
 }) {
   await ensureMarketplaceDefaults();
   await ensureSettlementDefaults();
@@ -404,6 +408,21 @@ export async function requestPrefund(input: {
   ]);
   if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) {
     return { ok: false as const, error: "Enter a gross amount greater than zero." };
+  }
+  const customRows =
+    input.customMilestones
+      ?.map((row, index) => ({
+        title: String(row.title ?? "").trim().slice(0, 120),
+        shareBps: row.shareBps,
+        sortOrder: index + 1,
+        active: true,
+      }))
+      .filter((row) => row.title) ?? null;
+  if (customRows && customRows.length > 0) {
+    const shareTotal = customRows.reduce((sum, row) => sum + row.shareBps, 0);
+    if (shareTotal !== 10_000 || customRows.some((row) => !Number.isInteger(row.shareBps) || row.shareBps <= 0)) {
+      return { ok: false as const, error: "Custom milestone shares must add up to 100%." };
+    }
   }
   const cap = grossWithinCap({ grossCents: input.grossCents, maxGrossCents: activeGrossCap(settings?.maxGrossCents) });
   if (!cap.ok) return cap;
@@ -444,7 +463,19 @@ export async function requestPrefund(input: {
     intervalDays: settings?.recurringIntervalDays ?? 30,
   });
   if (!schedule.ok) return schedule;
-  const shares = templates.map((row) => row.shareBps);
+  const milestoneDefs =
+    customRows && customRows.length > 0
+      ? customRows
+      : templates.map((row) => ({
+          title: row.title,
+          shareBps: row.shareBps,
+          sortOrder: row.sortOrder,
+          active: row.active,
+        }));
+  if (milestoneDefs.length === 0) {
+    return { ok: false as const, error: "No active milestone templates are configured." };
+  }
+  const shares = milestoneDefs.map((row) => row.shareBps);
   const serviceLevel = (input.serviceLevel || "contracted").slice(0, 40);
   const windowHours = settings?.reviewWindowHours ?? 72;
   const revisionLimit = settings?.maxRevisions ?? 2;
@@ -507,7 +538,9 @@ export async function requestPrefund(input: {
             feeCents,
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: new Date().toISOString(),
-          },
+            ...(input.financialPlan ? { financialPlan: input.financialPlan } : {}),
+            milestoneSource: customRows && customRows.length > 0 ? "custom" : "template",
+          } as object,
           fxSnapshotJson: fxRecord(part.fx),
           shareSnapshotJson: shareSnapshot,
           status: "awaiting_provider",
@@ -521,7 +554,7 @@ export async function requestPrefund(input: {
           trancheCount: schedule.trancheCount,
           intervalDays: schedule.intervalDays,
           milestones: {
-            create: templates.map((template, milestoneIndex) => ({
+            create: milestoneDefs.map((template, milestoneIndex) => ({
               title: template.title,
               amountCents: part.milestoneAmounts[milestoneIndex],
               sortOrder: template.sortOrder,
@@ -550,6 +583,7 @@ export async function requestPrefund(input: {
         currency,
         attributionLabel: attribution.attributionLabel,
         repeatOfId: attribution.repeatOfId,
+        milestoneSource: customRows && customRows.length > 0 ? "custom" : "template",
       },
     },
   }).catch(() => undefined);

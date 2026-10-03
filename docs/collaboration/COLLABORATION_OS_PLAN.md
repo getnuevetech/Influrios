@@ -129,12 +129,14 @@ Influrios already has durable pieces to **extend**, not replace:
 
 **Exit:** business session lands on business hub, not creator chrome.
 
-### P3 — Contract & milestone wizard
+### P3 — Contract & milestone wizard ✅
 
+- Route: `/collaboration/contract` (linked from Business Hub).
 - Wizard: parties → scope → commercial → milestones → payment readiness → preview → accept → funding instruction.
-- Pre-contract gates: identity, ROUTE_READY, payout route known.
-- Entitlement: standard vs custom milestones; custom requires creator accept + 100% validation.
-- Immutable `collaboration_financial_plan` snapshot on accept (fee rule version locked).
+- Pre-contract gates: identity, ROUTE_READY, payout route known (`evaluatePreContractGates`).
+- Entitlement: `customMilestones` on Business Pro/Agency; custom requires influencer accept + 100% validation.
+- Immutable financial plan snapshot embedded in `CollaborationFunding.feeSnapshotJson.financialPlan` on funding (fee rule version locked).
+- `requestPrefund` accepts optional custom milestone schedules.
 
 **Exit:** cannot fund without gates; fee rule change does not alter locked deals.
 
@@ -185,7 +187,7 @@ Influrios already has durable pieces to **extend**, not replace:
 | 1 | Public landing usable logged-out; category cards, search, requests, opportunities, suggestions CTA, mentor banner | P1 |
 | 2 | Creator & business dashboards role-aware, same backend | P2 / P2b |
 | 3 | Business can create request and/or ask for suggestions | P1b / P2b |
-| 4–6 | Admin milestone templates; entitlements; 100% + creator accept | P3 |
+| 4–6 | Admin milestone templates; entitlements; 100% + creator accept | P3 ✅ |
 | 7–10 | Fee snapshots; Operations vs Holding; per-milestone dual release | P4 |
 | 11–12 | Payout routes; ROUTE_READY before fund | P5 |
 | 13–16 | Idempotent webhooks; cancellation math; disputes; corridor suspend | existing ledger + P4–P6 |
@@ -194,15 +196,13 @@ Influrios already has durable pieces to **extend**, not replace:
 
 ---
 
-## 6. Immediate next coding slice (P3)
+## 6. Immediate next coding slice (P4)
 
-P2b Business Collaboration Hub shipped. Next:
+P3 Contract & milestone wizard shipped. Next:
 
-1. **P3** Contract & milestone wizard.
+1. **P4** Finance domains & provider adapter.
 2. Parallel: fill Phase M staging evidence when credentials are available.
 3. Continue Influencer terminology on remaining surfaces.
-
-Follow-up after P3: P4 finance domains / provider adapter.
 
 ---
 

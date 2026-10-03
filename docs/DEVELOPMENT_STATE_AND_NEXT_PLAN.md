@@ -269,9 +269,9 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-**Collaboration OS** — P2 influencer hub + P2b business hub shipped.
+**Collaboration OS** — P2 / P2b hubs + P3 contract wizard shipped.
 
-1. **P3** Contract & milestone wizard.  
+1. **P4** Finance domains & provider adapter.  
 2. Continue terminology migration (Creator → Influencer) on remaining surfaces.  
 3. Parallel: fill **Phase M** staging evidence when credentials are available.  
 4. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
