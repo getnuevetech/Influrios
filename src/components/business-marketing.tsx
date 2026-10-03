@@ -60,7 +60,7 @@ const PLANS = [
     detail: "/month",
     points: ["Post collaboration requests", "3 active collaborations", "Basic shortlist"],
     cta: "Get Started",
-    href: "/register?next=%2Fbusiness%2Fworkspace",
+    href: "/register?next=%2Fcollaboration%2Fbusiness",
   },
   {
     code: "GROWTH",
@@ -69,7 +69,7 @@ const PLANS = [
     detail: "/month",
     points: ["Influencer suggestions", "10 active collaborations", "Fit insights"],
     cta: "Get Started",
-    href: "/register?next=%2Fbusiness%2Fworkspace%3Fplan%3DGROWTH",
+    href: "/register?next=%2Fcollaboration%2Fbusiness%3Fplan%3DGROWTH",
     popular: true,
   },
   {
@@ -79,7 +79,7 @@ const PLANS = [
     detail: "/month",
     points: ["Multi-influencer campaigns", "Priority listing", "Larger shortlists"],
     cta: "Get Started",
-    href: "/register?next=%2Fbusiness%2Fworkspace%3Fplan%3DPRO",
+    href: "/register?next=%2Fcollaboration%2Fbusiness%3Fplan%3DPRO",
   },
   {
     code: "ENTERPRISE",
@@ -88,7 +88,7 @@ const PLANS = [
     detail: "pricing",
     points: ["Unlimited collaborations", "Agency seats", "Tailored solutions"],
     cta: "Contact Sales",
-    href: "/register?next=%2Fbusiness%2Fworkspace",
+    href: "/register?next=%2Fcollaboration%2Fbusiness",
   },
 ] as const;
 
@@ -274,7 +274,7 @@ export function BusinessMarketingPage({
       <section id="create-profile" className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6 lg:px-10">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <form action="/register" method="get" className="rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
-            <input type="hidden" name="next" value="/business/workspace" />
+            <input type="hidden" name="next" value="/collaboration/business" />
             <h2 className="font-display text-2xl font-bold text-indigo">Create Your Business Profile</h2>
             <p className="mt-1 text-sm text-muted">
               Start free. Create your Influrios account, then finish your business workspace setup.
@@ -310,12 +310,12 @@ export function BusinessMarketingPage({
               <input type="checkbox" name="wantSuggestions" defaultChecked className="mt-1 accent-[#633CFF]" />
               I want personalized influencer suggestions based on my business goals.
             </label>
-            <Link href="/register?next=%2Fbusiness%2Fworkspace" className="btn-primary mt-5 flex w-full justify-center">
+            <Link href="/register?next=%2Fcollaboration%2Fbusiness" className="btn-primary mt-5 flex w-full justify-center">
               Create My Business Profile <IconArrowRight size={14} />
             </Link>
             <p className="mt-3 text-center text-sm text-muted">
               Already have an account?{" "}
-              <Link href="/login?next=%2Fbusiness%2Fworkspace&gate=business" className="font-semibold text-violet">
+              <Link href="/login?next=%2Fcollaboration%2Fbusiness&gate=business" className="font-semibold text-violet">
                 Log in
               </Link>
             </p>

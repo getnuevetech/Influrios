@@ -121,10 +121,11 @@ Influrios already has durable pieces to **extend**, not replace:
 
 **Exit:** signed-in creator sees Figure 2; guests still see Figure 1.
 
-### P2b — Business Collaboration Hub
+### P2b — Business Collaboration Hub ✅
 
-- Role-aware hub: status cards, Create Request / Suggestions, applicants, spend summary (funded/held/released/fee) from ledger.
-- Suggestions form → Campaign Intent draft.
+- Route: `/collaboration/business` (signed-in accounts without a creator draft are redirected from `/collaboration`).
+- Status cards, Campaign Intent → suggestions form, Post Request, applicants/inquiries, shortlist, pipeline, spend summary (funded/held/released/refunded/fee) from ledger.
+- Legacy `/business/workspace` redirects to the hub.
 
 **Exit:** business session lands on business hub, not creator chrome.
 
@@ -193,15 +194,15 @@ Influrios already has durable pieces to **extend**, not replace:
 
 ---
 
-## 6. Immediate next coding slice (P2b)
+## 6. Immediate next coding slice (P3)
 
-P2 creator hub shipped. Next:
+P2b Business Collaboration Hub shipped. Next:
 
-1. Business Collaboration Hub (role-aware requests, suggestions, spend from ledger).
+1. **P3** Contract & milestone wizard.
 2. Parallel: fill Phase M staging evidence when credentials are available.
-3. Then P3 contract & milestone wizard.
+3. Continue Influencer terminology on remaining surfaces.
 
-Follow-up after business hub: P3 contract wizard.
+Follow-up after P3: P4 finance domains / provider adapter.
 
 ---
 

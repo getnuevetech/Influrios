@@ -103,7 +103,9 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const account = await getAccountSession().catch(() => null);
   const draft = account ? await getCreatorSessionDraft().catch(() => null) : null;
 
-  // Signed-in creators land on Figure 2 hub; guests keep Figure 1. Opt out with ?landing=1.
+  // Signed-in influencers with a claimed profile land on creator hub.
+  // Signed-in accounts without a creator draft land on the Business Collaboration Hub.
+  // Guests keep Figure 1. Opt out with ?landing=1.
   if (account && draft?.slug && params.landing !== "1" && !params.save) {
     const hubQuery = new URLSearchParams();
     if (params.goal) hubQuery.set("category", params.goal);
@@ -115,6 +117,9 @@ export default async function CollaborationPage({ searchParams }: Props) {
     const qs = hubQuery.toString();
     redirect(qs ? `/collaboration/hub?${qs}` : "/collaboration/hub");
   }
+  if (account && !draft?.slug && params.landing !== "1" && !params.save) {
+    redirect("/collaboration/business");
+  }
 
   const viewerFromParam = params.from ? bySlug.get(params.from) ?? null : null;
   const viewerFromSession = draft?.slug ? bySlug.get(draft.slug) ?? null : null;
@@ -123,10 +128,12 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const viewerLimits = await entitlementsForPlan(viewerPlan);
   const canRequest = !viewer || viewerLimits.proposalsMax > 0;
   const signedIn = Boolean(account);
-  const businessHref = signedIn ? "/business/workspace" : "/business";
-  const joinBusinessHref = "/business";
+  const businessHref = signedIn ? "/collaboration/business" : "/business";
+  const joinBusinessHref = signedIn ? "/collaboration/business" : "/business";
   const suggestionsHref = signedIn
-    ? "/collaboration/hub?category=awareness"
+    ? draft?.slug
+      ? "/collaboration/hub?category=awareness"
+      : "/collaboration/business#suggestions"
     : `/login?next=${encodeURIComponent("/collaboration?goal=awareness")}&gate=suggestions`;
 
   if (params.save && account) {

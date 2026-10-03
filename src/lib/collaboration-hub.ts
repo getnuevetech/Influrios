@@ -1,9 +1,18 @@
 /**
  * Collaboration OS P2 — creator hub data helpers (status counts, pipeline, saved matches).
+ * P2b — business hub loaders (requests, suggestions, spend from ledger).
  */
 import { prisma } from "@/lib/db";
+import {
+  getWorkspace,
+  rankDirectoryCreatorsForBrief,
+  type BusinessWorkspace,
+  type CampaignBrief,
+  type CreatorFit,
+} from "@/lib/business";
+import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { listCollaborations } from "@/lib/collaborations";
-import { listFundingsForCreator } from "@/lib/marketplace-ledger";
+import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketplace-ledger";
 import { findDirectoryMatchesFor, type CreatorMatch, type MatchBreakdown } from "@/lib/matching";
 import {
   listPublishedBusinessRequests,
@@ -58,6 +67,23 @@ export type HubEarnings = {
   ready: boolean;
 };
 
+export type BusinessSpendSummary = {
+  fundedCents: number;
+  heldCents: number;
+  releasedCents: number;
+  refundedCents: number;
+  feeCents: number;
+  currency: string;
+  dealCount: number;
+};
+
+export type BusinessHubStatus = {
+  active: number;
+  draftRequests: number;
+  pendingReview: number;
+  completed: number;
+};
+
 /** Map collaboration + funding state onto the Figure 2 pipeline stepper. */
 export function derivePipelineStage(input: {
   collaborationStatus: string;
@@ -92,6 +118,36 @@ export function scoreBusinessRequestForCreator(
     request.location.toLowerCase().includes(creator.locationCountry.toLowerCase()) ||
     request.location.toLowerCase().includes(creator.locationCity.toLowerCase());
   return Math.min(98, 68 + hits * 8 + (locationHit ? 6 : 0));
+}
+
+export function summarizeBusinessSpend(
+  fundings: Array<{
+    grossCents: number;
+    feeCents: number;
+    currency: string;
+    ledger: { heldCents: number; releasedCents: number; refundedCents: number; heldInCents: number };
+  }>,
+): BusinessSpendSummary {
+  if (fundings.length === 0) {
+    return {
+      fundedCents: 0,
+      heldCents: 0,
+      releasedCents: 0,
+      refundedCents: 0,
+      feeCents: 0,
+      currency: "USD",
+      dealCount: 0,
+    };
+  }
+  return {
+    fundedCents: fundings.reduce((sum, row) => sum + row.ledger.heldInCents, 0),
+    heldCents: fundings.reduce((sum, row) => sum + row.ledger.heldCents, 0),
+    releasedCents: fundings.reduce((sum, row) => sum + row.ledger.releasedCents, 0),
+    refundedCents: fundings.reduce((sum, row) => sum + row.ledger.refundedCents, 0),
+    feeCents: fundings.reduce((sum, row) => sum + row.feeCents, 0),
+    currency: fundings[0]?.currency ?? "USD",
+    dealCount: fundings.length,
+  };
 }
 
 export async function listSavedMatchesForUser(userId: string): Promise<HubSavedMatch[]> {
@@ -198,5 +254,80 @@ export async function loadCreatorHub(input: {
     requests: requests.slice(0, 6),
     opportunities: opportunities.filter((item) => item.creatorSlug !== slug).slice(0, 6),
     collaborations,
+  };
+}
+
+export async function loadBusinessHub(input?: { intentBriefId?: string }) {
+  const ws = await getWorkspace();
+  const entitlements = getBusinessEntitlements(ws.plan);
+  const [fundings, requests, opportunities, collaborations] = await Promise.all([
+    listFundingsForBusiness(ws.name).catch(() => []),
+    listPublishedBusinessRequests().catch(() => [] as MarketplaceBusinessRequestRow[]),
+    listPublishedCreatorOpportunities().catch(() => [] as MarketplaceCreatorOpportunityRow[]),
+    listCollaborations({}).catch(() => []),
+  ]);
+
+  const ownRequests = requests.filter(
+    (row) =>
+      row.brand.toLowerCase() === ws.name.toLowerCase() ||
+      row.brand.toLowerCase().includes(ws.name.toLowerCase().slice(0, 8)),
+  );
+  const draftRequests = ws.briefs.filter((brief) => brief.status === "draft").length;
+  const activeBriefs = ws.briefs.filter((brief) => brief.status === "active").length;
+  const pendingReview = ws.inquiries.filter((inquiry) => inquiry.status === "sent").length;
+  const active = collaborations.filter((row) => row.status === "accepted").length + activeBriefs;
+  const completed = fundings.filter((row) => row.status === "completed").length;
+
+  const status: BusinessHubStatus = {
+    active,
+    draftRequests,
+    pendingReview,
+    completed,
+  };
+
+  const spend = summarizeBusinessSpend(fundings);
+
+  const intentBrief: CampaignBrief | null =
+    (input?.intentBriefId ? ws.briefs.find((brief) => brief.id === input.intentBriefId) : null) ??
+    ws.briefs.find((brief) => brief.status === "draft") ??
+    ws.briefs[0] ??
+    null;
+
+  let suggestions: CreatorFit[] = [];
+  if (intentBrief) {
+    const limit = entitlements.fitInsights ? 8 : 3;
+    suggestions = (await rankDirectoryCreatorsForBrief(intentBrief)).slice(0, limit);
+  }
+
+  const pipeline: HubPipelineItem[] = fundings.slice(0, 6).map((row) => {
+    const stage = derivePipelineStage({
+      collaborationStatus: "accepted",
+      fundingStatus: row.status,
+      milestoneStatuses: row.milestones?.map((m) => m.status) ?? [],
+    });
+    return {
+      id: row.id,
+      title: row.title,
+      counterparty: row.creatorSlug,
+      stage,
+      stageIndex: PIPELINE_STAGES.indexOf(stage),
+      href: `/payments`,
+    };
+  });
+
+  return {
+    workspace: ws as BusinessWorkspace,
+    entitlements,
+    status,
+    spend,
+    suggestions,
+    intentBrief,
+    ownRequests: ownRequests.slice(0, 8),
+    opportunities: opportunities.slice(0, 6),
+    inquiries: ws.inquiries.slice(0, 10),
+    shortlist: ws.shortlist,
+    briefs: ws.briefs,
+    pipeline,
+    fundings: fundings.slice(0, 8),
   };
 }
