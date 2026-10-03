@@ -586,6 +586,8 @@ P8  Legacy teardown + API deprecations
 PARALLEL anytime:
   L1 Phase M evidence (when secrets available)
   L2 smoke tests
+  L4 collab_os_v1 switch (low risk)
+  L5 Airwallex checklist artifact (docs)
   W5 INFLR.me Phase 3 (Pro dynamic self-serve) — do not block P4
   W6 SocialProofStats only with verified data
 
@@ -593,8 +595,9 @@ LATER / gated:
   Dev P3 staged/recurring expansion already sketched in W3.4
   Dev P4 revenue sharing / complex splits
   W5 Phase 4 campaign/NFC/scheduled
-  L3 agency multi-seat auth
-  Airwallex adapter implementation after §8.3 checklist
+  L3 agency multi-seat invite/auth
+  Airwallex adapter implementation after L5 checklist signed
+  Collab Messages / inbox product (Figure 2 nav) — only if product promotes beyond hiding dead nav
 ```
 
 ### Immediate next coding slices (ordered)
@@ -602,15 +605,18 @@ LATER / gated:
 | # | Slice | Streams | Risk |
 |---|---|---|---|
 | 1 | Landing QA checklist + CMS smoke + terminology inventory doc | W1, W2.1 | Low |
-| 2 | Fee-type / service-level enforcement + rule-tester acceptance tests | W3.1–W3.2 | Medium |
-| 3 | Contract residual E2E: custom milestones + immutable fee lock + service-level UX | W3 / P3 residual | Medium |
-| 4 | Funding badges + immutable fee summary in hubs | W2.5 | Low |
-| 5 | **P4** account purposes + provider adapter interface | P4 | High (money) |
-| 6 | Dedicated auto-approval job + kill-fee/cancellation matrix | W3.5–W3.6 | Medium |
-| 7 | Jurisdiction capability depth + managed-mode gates | W3.3 | Medium |
-| 8 | **P5** payout readiness | P5 | High |
-| … | P6 → P7 → P8 | | |
+| 2 | Dashboard/profile self-description from admin list (not free-text) | W1 | Low |
+| 3 | Hub dead-end nav cleanup + honest empty states; business applicant reply/decline | W2.2–W2.3 | Low |
+| 4 | Fee-type / service-level enforcement + rule-tester acceptance tests | W3.1–W3.2 | Medium |
+| 5 | Contract residual E2E: custom milestones + immutable fee lock + service-level UX | W3 / P3 residual | Medium |
+| 6 | Funding badges + immutable fee summary in hubs | W2.5 | Low |
+| 7 | **P4** account purposes + provider adapter interface | P4 | High (money) |
+| 8 | Dedicated auto-approval job + kill-fee/cancellation matrix | W3.5–W3.6 | Medium |
+| 9 | Jurisdiction capability depth + managed-mode gates | W3.3 | Medium |
+| 10 | **P5** payout readiness | P5 | High |
+| … | P6 → P7 → P8 (incl. JSON demo deletion) | | |
 | ∥ | Phase M evidence when secrets available | L1 | Ops |
+| ∥ | `collab_os_v1` switch + Airwallex checklist doc | L4, L5 | Low |
 | ∥ | INFLR.me Pro dynamic self-serve | W5 | Medium |
 
 ---
@@ -653,6 +659,8 @@ From Platform Spec §31, Strategy, Collab OS, Development State, Dev Addendum de
 - Revenue-sharing collaborations / complex split payouts / enterprise negotiated rules (Dev P4)  
 - Campaign/NFC/scheduled INFLR.me routes (INFLR.me Phase 4) before P4–P5 finance  
 - Recurring ambassador funding before base ledger + P4 stable  
+- Full collab **Messages / inbox** product until product promotes it (until then: hide dead hub nav — W2.2)  
+- Claiming e-sign provider success from the contract wizard (`/admin/signing` shell stays non-goal until counsel)  
 
 ---
 
