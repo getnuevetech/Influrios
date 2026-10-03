@@ -73,7 +73,7 @@ export default async function CategoriesPage() {
                     sizes="20vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-indigo/85 via-indigo/30 to-transparent" />
-                  <span className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-violet shadow">
+                  <span className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-violet shadow" aria-hidden>
                     <IconHeart size={13} />
                   </span>
                   <span className="absolute inset-0 flex items-center justify-center">
