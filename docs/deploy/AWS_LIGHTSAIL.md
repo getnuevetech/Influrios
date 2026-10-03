@@ -127,7 +127,7 @@ Compose volumes:
 |---|---|---|
 | `influrios_pg` | Postgres data | **Yes** |
 | `influrios_uploads` | `/app/public/uploads` (banner/media files) | **Yes** |
-| `influrios_data` | `/app/data` (remaining JSON demos: payments, trust, intelligence, fees) | Optional for admin, CMS, and billing; still used until demo stores migrate |
+| `influrios_data` | `/app/data` (optional Phase 9/10 JSON demos when `legacy_demo_payments` is on) | Optional — admin/CMS/billing/intelligence/fees are Postgres |
 
 `legacy_demo_payments` stays **off** by default — do not force it on in production.
 
@@ -194,6 +194,9 @@ Stripe, social callbacks, and marketplace webhooks must use the same https origi
 cd /var/www/influrios
 git pull origin main
 bash deploy/scripts/deploy.sh
+curl -fsS http://127.0.0.1:3000/api/health
+# From a laptop (optional Phase M auto-checks):
+# npm run staging:evidence-probe -- https://your-domain.com
 ```
 
 ---

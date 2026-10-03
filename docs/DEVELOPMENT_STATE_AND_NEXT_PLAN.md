@@ -17,7 +17,7 @@ Influrios is past the branded-demo stage and into a **hybrid production platform
 | Data durability | Strong for Phases A–I + 12.3–12.13 (88 Prisma models, versioned migrations) |
 | Dual architecture | Remaining JSON demos: payments, trust, fee simulator; claim + admin + CMS + billing + intelligence + directory are Postgres |
 | Spec MVP (section 33) | Structurally met (unit gate + CI); not yet proven with live SMTP, Stripe, and social credentials |
-| Ops / deploy | Docker Compose on Lightsail is the intended path; docs still mix older PM2 language |
+| Ops / deploy | Docker Compose on Lightsail; Lightsail guide is Compose-only (legacy PM2 config removed) |
 | Next risk | Building more Phase 12 depth before retiring dual stores and hard-wiring launch integrations |
 
 **Bottom line:** stop extending the transaction engine. Harden the path that creators and ops actually use: single source of truth for profiles, claim → account → Discover, live mail/billing/social, and quarantine or remove the Phase 9/10 JSON consoles.
@@ -112,11 +112,11 @@ Docker Compose mounts `influrios_data` → `/app/data` so rebuilds do not wipe t
 - **Strength:** CI on every PR; migration drift check; brand ban; broad unit coverage of ledger/entitlement/state machines; `mvp-gate` encodes Spec §33 structurally.
 - **Gap:** Almost no HTTP/integration tests, no Playwright smoke of claim → Discover, no webhook contract tests against Stripe fixtures, MVP gate does not assert live DB wiring for CMS/search.
 
-### 4.6 Deploy docs drift
+### 4.6 Deploy docs
 
-- README correctly says **Docker Compose**, not PM2 for the app.
-- `docs/deploy/AWS_LIGHTSAIL.md` still describes Nginx → PM2 → Next.js in places.
-- Prefer aligning deploy docs to Compose + volume mounts before the next server rebuild.
+- README and `docs/deploy/AWS_LIGHTSAIL.md` / `FRESH_SERVER_SETUP.md` are **Compose-only** for the app.
+- Use `npm run staging:evidence-probe -- <url>` to prefill Phase M auto-checks against a live host.
+- Remaining Phase M work is operator credentials (SMTP, Stripe sandbox, social OAuth, marketplace webhook).
 
 ---
 
@@ -224,7 +224,7 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 
 **Exit met for admin + CMS + billing + intelligence + fee rules:** fresh Compose with empty `data/` boots those paths from Postgres. Remaining JSON demos (`protected-payments`, `trust`) stay quarantined / optional.
 
-### Phase M — Launch integrations — RUNBOOK SHIPPED (evidence pending)
+### Phase M — Launch integrations — RUNBOOK + PROBE SHIPPED (evidence pending)
 
 **Proves:** Spec §33 items 8–10 with real providers in a staging environment.
 
@@ -235,9 +235,9 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 5. Turn `demo_checkout` off on staging once Stripe path is green.  
 6. Marketplace: one jurisdiction + provider webhook fixture through hold → release.
 
-**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/marketplace-webhook-fixture.ts`.
+**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/staging-evidence-probe.ts`, `scripts/marketplace-webhook-fixture.ts`.
 
-**Exit:** staging operator fills the green evidence tables in that runbook; production switches match the policy table. **Not complete until evidence is signed — CI alone does not finish Phase M.**
+**Exit:** staging operator fills the green evidence tables in that runbook; production switches match the policy table. **Not complete until evidence is signed — CI alone does not finish Phase M.** Auto-probe covers health / homepage / guest collab CTAs only.
 
 ### Phase N — Hardening & observability — DONE (code + docs)
 
@@ -269,9 +269,10 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-Phases J–O (including loops suite + docs cleanup) are on `main` (or this PR). Remaining:
+Phases J–O (including loops suite, docs cleanup, homepage category/collab UX) are on `main`. Remaining:
 
 1. Fill **Phase M** staging evidence on a real host (`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`).  
+   Start with `npm run staging:evidence-probe -- https://your-staging-host`, then operator SMTP / Stripe / social / marketplace drills.  
 2. Optional: delete Phase 9/10 code paths entirely once ops confirms they are unused.  
 3. Do **not** start Meilisearch / Connect / e-sign without product asking.  
 4. Turn on `agency_seats` only when a real agency needs named seats.
