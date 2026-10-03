@@ -133,9 +133,25 @@ export async function actionAddDraftSocial(formData: FormData) {
 export async function actionUpdateDashboardProfile(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
   try {
+    const { getDraft } = await import("@/lib/claim");
+    const { getInfluencerIdentity } = await import("@/lib/landing-pages");
+    const draft = await getDraft(draftId);
+    if (!draft) throw new Error("Draft not found");
+    const identity = await getInfluencerIdentity();
+    const requestedTitle = String(formData.get("title") ?? "").trim();
+    const allowed = new Set(identity.selfDescriptions);
+    if (draft.title) allowed.add(draft.title);
+    const title =
+      requestedTitle && allowed.has(requestedTitle)
+        ? requestedTitle
+        : identity.selfDescriptions.includes("Influencer")
+          ? "Influencer"
+          : identity.selfDescriptions[0];
+    if (!title) throw new Error("Self-description is required");
+
     await updateDraftProfile(draftId, {
       displayName: String(formData.get("displayName") ?? "").trim() || undefined,
-      title: String(formData.get("title") ?? "").trim() || undefined,
+      title,
       bio: String(formData.get("bio") ?? "").trim() || undefined,
       locationCity: String(formData.get("locationCity") ?? "").trim() || undefined,
       locationCountry: String(formData.get("locationCountry") ?? "").trim() || undefined,

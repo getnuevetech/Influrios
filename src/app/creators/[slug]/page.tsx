@@ -39,7 +39,23 @@ export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const creator = await getDirectoryCreator(slug);
   if (!creator) return { title: "Influencer not found" };
-  return { title: creator.displayName, description: creator.bio };
+  const designation = creator.title?.trim();
+  const description =
+    creator.bio?.trim() ||
+    `${creator.displayName} — Influrios Influencer profile${designation ? ` · ${designation}` : ""}`;
+  return {
+    title: `${creator.displayName} · Influencer`,
+    description,
+    keywords: [
+      "influencer",
+      "influencers",
+      "content creator",
+      "creator",
+      creator.displayName,
+      designation,
+      ...(creator.specialties ?? []),
+    ].filter(Boolean),
+  };
 }
 
 function socialMetricLabel(platform: string) {
@@ -65,7 +81,7 @@ export default async function CreatorProfilePage({ params }: Props) {
   if (gate.decision === "hard") {
     redirect(`/login?next=${encodeURIComponent(`/creators/${slug}`)}&gate=profile`);
   }
-  await recordDirectoryEvent("profile_viewed", { slug, surface: "profile" });
+  await recordDirectoryEvent("influencer_profile_viewed", { slug, surface: "profile" });
 
   const directory = await getDirectory();
   const related = directory.creators.filter((c) => c.slug !== creator.slug).slice(0, 4);

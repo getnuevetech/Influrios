@@ -18,6 +18,16 @@ type Props = {
 
 export const metadata = {
   title: "Discover Influencers",
+  description:
+    "Find influencers and content creators by specialty, location, and platform on Influrios.",
+  keywords: [
+    "influencer",
+    "influencers",
+    "content creator",
+    "creator",
+    "influencer discovery",
+    "Influrios",
+  ],
 };
 
 const CHIP_ORDER = ["beauty", "travel", "fitness", "home-interior", "hair", "food", "tech", "lifestyle"];
@@ -100,7 +110,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
     },
     directory.synonyms,
   );
-  await recordDirectoryEvent("search_submitted", {
+  await recordDirectoryEvent("influencer_search_submitted", {
     q,
     specialty: specialties.join(","),
     country: countries.join(","),

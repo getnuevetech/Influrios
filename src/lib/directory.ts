@@ -464,10 +464,12 @@ export async function recordDirectoryEvent(
   creatorId?: string | null,
 ) {
   try {
+    const { canonicalDirectoryEvent, withLegacyEventMeta } = await import("@/lib/terminology-events");
+    const canonical = canonicalDirectoryEvent(eventType);
     await prisma.analyticsEvent.create({
       data: {
-        eventType,
-        metaJson: meta as Prisma.InputJsonValue,
+        eventType: canonical,
+        metaJson: withLegacyEventMeta(eventType, meta) as Prisma.InputJsonValue,
         creatorId: creatorId ?? undefined,
       },
     });
