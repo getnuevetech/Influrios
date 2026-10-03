@@ -1,9 +1,9 @@
 # Influrios — Development State Review & Next Implementation Plan
 
-**Date:** 2026-10-02  
-**Repo reviewed:** `main` @ `49153de`  
-**Sources:** codebase, `docs/IMPLEMENTATION_PLAN.md`, `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, CI, Prisma schema, deploy scripts  
-**Sequencing authority for new work:** this document (supersedes the “first coding slice” close of `IMPLEMENTATION_PLAN.md` for post–Phase-12 work)
+**Date:** 2026-10-02 (updated 2026-10-03)  
+**Repo reviewed:** `main` after Collab OS P0–P3 + landing/terminology #82  
+**Sources:** codebase, `docs/IMPLEMENTATION_PLAN.md`, `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, `docs/FULL_IMPLEMENTATION_PLAN.md`, CI, Prisma schema, deploy scripts  
+**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) (this doc remains money/invariant authority and maturity inventory)
 
 ---
 
@@ -269,13 +269,18 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-**Collaboration OS** — P1 landing redesign + admin CMS, terminology migration, P2/P2b hubs, and P3 contract wizard shipped.
+**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) (merges all partial residuals + unstarted Collab OS phases).
 
-1. **P4** Finance domains & provider adapter.  
-2. Parallel: fill **Phase M** staging evidence when credentials are available.  
-3. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
+**Collaboration OS** — P0–P3 + landing redesign v3/v2 + public Influencer terminology shipped (#73–#82).
 
-Terminology source of truth (complete for public UI): [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf). Legacy Prisma/`creator_*` technical fields remain for compatibility.
+Immediate order from the full plan:
+
+1. **A1 + A3** — Landing pixel/CMS QA + contract residual tests.  
+2. **P4 (B1)** — Finance domains & provider adapter.  
+3. Parallel: **Phase M (C1)** staging evidence when credentials are available.  
+4. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
+
+Terminology source of truth (public UI complete): [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf). Engineering/API migration tracked as workstream A4 + P8.
 
 Approved landing designs: [`docs/design-references/collaboration/public-landing-v3.png`](./design-references/collaboration/public-landing-v3.png), [`docs/design-references/business/for-businesses-v2.png`](./design-references/business/for-businesses-v2.png).
 
@@ -314,7 +319,7 @@ Business hub: `/collaboration/business` (legacy `/business/workspace` redirects)
 
 **Public / app routes:** `/`, `/discover`, `/categories`, `/creators/[slug]`, `/c/[slug]`, `/card`, `/claim/*`, `/dashboard`, `/collaboration/*`, `/business/*`, `/agency`, `/billing`, `/payments`, `/trust`, `/pricing`, `/register`, `/login`, `/account/*`, `/invite/[token]`, `/legal/*`, `/q/[token]`
 
-**Admin:** access, accounts, agency, ai, banners, billing, cards, collaborations, fees, gateways, guests, homepage, intelligence, invitations, jobs, legal, mail, marketplace, matching, payments, plans, short-links, signing, social, stats, taxonomy, trust, value-prop
+**Admin:** access, accounts, agency, ai, banners, billing, business-landing, cards, collaboration-landing, collaborations, fees, gateways, guests, homepage, influencer-identity, intelligence, invitations, jobs, legal, mail, marketplace, matching, payments, plans, short-links, signing, social, stats, taxonomy, trust, value-prop
 
 **API:** health, billing webhook, marketplace webhook, social callback, short resolve, QR, places, intelligence export
 

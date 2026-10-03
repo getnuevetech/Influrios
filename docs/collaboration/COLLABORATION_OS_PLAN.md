@@ -7,7 +7,7 @@
 - For Businesses — [`../design-references/business/for-businesses-v2.png`](../design-references/business/for-businesses-v2.png)  
 - Creator hub — [`../design-references/collaboration/creator-hub.png`](../design-references/collaboration/creator-hub.png)  
 - Terminology addendum — [`Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./Influrios_Influencer_Terminology_Development_Addendum_v1.pdf)  
-**Sequencing authority:** this document for Collaboration OS work; still subordinate to money invariants in [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md) and the marketplace ledger.
+**Sequencing authority:** [`../FULL_IMPLEMENTATION_PLAN.md`](../FULL_IMPLEMENTATION_PLAN.md) for remaining residuals + P4–P8; this document for Collab OS phase detail. Still subordinate to money invariants in [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md) and the marketplace ledger.
 
 ---
 
@@ -186,12 +186,15 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 
 ---
 
-## 6. Immediate next coding slice (P4)
+## 6. Immediate next coding slice
 
-P1 landing redesign (approved v3), Influencer terminology migration, P2/P2b hubs, and P3 contract wizard shipped. Next:
+**Full remaining backlog:** [`../FULL_IMPLEMENTATION_PLAN.md`](../FULL_IMPLEMENTATION_PLAN.md).
 
-1. **P4** Finance domains & provider adapter.
+P0–P3 + landing redesign + public Influencer terminology shipped. Next:
+
+1. Residual A1/A3 (landing QA + contract tests), then **P4** finance domains & provider adapter.
 2. Parallel: fill Phase M staging evidence when credentials are available.
+3. Terminology engineering inventory (A4) — not public-copy debt.
 
 ---
 
