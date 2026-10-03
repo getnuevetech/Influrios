@@ -50,16 +50,27 @@ describe("marketplace ledger rules", () => {
     assert.equal(shouldAutoApprove("pending", deadline, new Date("2026-10-03T12:00:00.000Z")), false);
   });
 
-  it("reconciles provider holds without counting the fee as cash", () => {
+  it("reconciles holds with earned fee legs leaving Collaboration Holding (P4)", () => {
     const open = reconcileLedger(
       [
         { kind: "hold", amountCents: 10_000 },
-        { kind: "fee", amountCents: 1_000 },
       ],
       10_000,
     );
     assert.equal(open.heldCents, 10_000);
     assert.equal(open.balanced, true);
+    const afterFeeEarned = reconcileLedger(
+      [
+        { kind: "hold", amountCents: 10_000 },
+        { kind: "release", amountCents: 9_000 },
+        { kind: "fee", amountCents: 1_000 },
+      ],
+      10_000,
+    );
+    assert.equal(afterFeeEarned.heldCents, 0);
+    assert.equal(afterFeeEarned.releasedCents, 9_000);
+    assert.equal(afterFeeEarned.feeCents, 1_000);
+    assert.equal(afterFeeEarned.balanced, true);
     const after = reconcileLedger(
       [
         { kind: "hold", amountCents: 10_000 },
@@ -191,7 +202,8 @@ describe("marketplace webhook idempotency", () => {
     assert.equal(secondId.result, "rejected");
     assert.equal(stored?.status, "held");
     assert.equal(stored?.entries.filter((entry) => entry.kind === "hold").length, 1);
-    assert.equal(stored?.entries.filter((entry) => entry.kind === "fee").length, 1);
+    // P4: fee is unearned until milestone release — Operations stays $0 while held.
+    assert.equal(stored?.entries.filter((entry) => entry.kind === "fee").length, 0);
 
     const milestone = funding.milestones[0];
     await prisma.fundingMilestone.update({ where: { id: milestone.id }, data: { status: "approved" } });
@@ -221,7 +233,13 @@ describe("marketplace webhook idempotency", () => {
     assert.equal(finished?.milestones[0]?.status, "released");
     const ledger = reconcileLedger(ledgerMovements(finished?.entries ?? []), 10_000);
     assert.equal(ledger.heldCents, 0);
-    assert.equal(ledger.releasedCents, 10_000);
+    assert.equal(ledger.releasedCents, 9_000);
+    assert.equal(ledger.feeCents, 1_000);
     assert.equal(ledger.balanced, true);
+    assert.equal(finished?.entries.filter((entry) => entry.kind === "fee").length, 1);
+    assert.equal(
+      finished?.entries.find((entry) => entry.kind === "fee")?.accountPurpose,
+      "OPERATIONS",
+    );
   });
 });

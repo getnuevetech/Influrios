@@ -301,7 +301,7 @@ describe("milestone dispute ledger", () => {
       });
       const releasedLedger = reconcileLedger(ledgerMovements(released?.entries ?? []), 10_000);
       assert.equal(releasedLedger.heldCents, 0);
-      assert.equal(releasedLedger.releasedCents, 10_000);
+      assert.equal(releasedLedger.releasedCents + releasedLedger.feeCents, 10_000);
       assert.equal(released?.milestones[0]?.status, "released");
 
       const refundHold = await applyMarketplaceEvent({

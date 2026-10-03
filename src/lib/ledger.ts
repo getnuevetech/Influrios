@@ -246,9 +246,18 @@ export function reconcileLedger(entries: LedgerMovement[], grossCents: number) {
   const heldIn = sum("hold");
   const released = sum("release");
   const refunded = sum("refund");
-  const held = heldIn - released - refunded;
-  const balanced = held >= 0 && heldIn <= grossCents && released + refunded <= heldIn;
-  return { heldCents: held, releasedCents: released, refundedCents: refunded, heldInCents: heldIn, balanced };
+  // P4: earned platform fee legs leave Collaboration Holding (fee booked on release, not on hold).
+  const fees = sum("fee");
+  const held = heldIn - released - refunded - fees;
+  const balanced = held >= 0 && heldIn <= grossCents && released + refunded + fees <= heldIn;
+  return {
+    heldCents: held,
+    releasedCents: released,
+    refundedCents: refunded,
+    feeCents: fees,
+    heldInCents: heldIn,
+    balanced,
+  };
 }
 
 /** What is still owed on a milestone after signed refunds. The original amount stays. */

@@ -323,20 +323,22 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 ## 5. NOT STARTED — Collab OS P4–P8 (Workstream P)
 
-### P4 — Finance domains & provider adapter — NOT STARTED
+### P4 — Finance domains & provider adapter — PARTIAL (core shipped)
 
 **Sources:** Collab OS §7–8; Dev Addendum §1, §10–11; PA003  
 
-**Build**
-1. Account purposes: OPERATIONS, COLLABORATION_HOLDING, PLATFORM_FEE_CLEARING, …  
-2. Fee earned only on milestone release; dual release legs (creator + platform fee)  
-3. `PaymentProviderAdapter` interface: `createFundingIntent`, `getFundingStatus`, `cancelFunding`, `createReleaseOrTransfer`, `createPartialRefund`, `createFullRefund`, `getPayoutStatus`, `verifyWebhook`, `parseWebhook`, `reconcileTransaction`, `getCapabilities`  
-4. Domain tests: Operations $0 until fee earned; webhook idempotency  
-5. Airwallex only after Collab OS §22 / §8.3 checklist signed — never hard-code Airwallex into domain rules  
+**Shipped**
+1. `AccountPurpose` + `LedgerEntry.accountPurpose` (HOLDING on hold; OPERATIONS on earned fee)  
+2. Fee no longer booked on `funding.held`; dual legs on `payout.released` (creator `release` + platform `fee`)  
+3. `PaymentProviderAdapter` + marketplace signed-webhook adapter; webhook route uses adapter  
+4. Domain tests: Operations $0 until release; reconcile subtracts earned fees from Holding  
 
-**Exit:** P4 acceptance from Collab OS criteria 7–10 + adapter swap does not change domain rules.
+**Still open**
+- Full adapter method surface for live provider funding/release (stubs remain)  
+- Airwallex after §8.3 checklist (L5)  
+- Admin account-purpose control plane (P6)
 
-**Depends on:** W3.1–W3.2 fee-type/service-level tests preferred first (low risk); can start P4 in parallel once those tests are green.
+**Exit (core):** $0 Operations until fee earned — met in unit tests. Adapter swap does not change domain rules — marketplace adapter is the boundary.
 
 ---
 

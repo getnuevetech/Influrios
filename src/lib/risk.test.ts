@@ -39,7 +39,7 @@ describe("gross cap and ledger totals", () => {
     ]);
     const usd = totals.find((row) => row.currency === "USD");
     const gbp = totals.find((row) => row.currency === "GBP");
-    assert.equal(usd?.heldCents, 8_000 + 1_500);
+    assert.equal(usd?.heldCents, 7_000 + 1_500);
     assert.equal(usd?.releasedCents, 2_000);
     assert.equal(usd?.feeCents, 1_000);
     assert.equal(usd?.unbalanced, 1);
