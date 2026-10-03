@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { FeaturedCarousel } from "@/components/featured-carousel";
 import {
   CategoryGlyph,
@@ -25,16 +26,18 @@ import {
   allDirectoryMatches,
   filterMatches,
   POPULAR_MATCH_CHIPS,
+  scoreCreatorPair,
   type CreatorMatch,
 } from "@/lib/matching";
 import {
   listPublishedBusinessRequests,
   listPublishedCreatorOpportunities,
   persistTopMatches,
+  saveMatchForUser,
   type MarketplaceBusinessRequestRow,
 } from "@/lib/marketplace-listings";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
+import { getDirectory, getDirectoryCreator, indexCreatorsBySlug } from "@/lib/directory";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { isPlanCode, type PlanCode } from "@/lib/entitlements";
 
@@ -56,6 +59,9 @@ type Props = {
     goal?: string;
     budget?: string;
     verified?: string;
+    save?: string;
+    saved?: string;
+    error?: string;
   }>;
 };
 
@@ -100,8 +106,33 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const viewer = viewerFromParam ?? (account ? viewerFromSession : null);
   const viewerPlan: PlanCode = viewer && isPlanCode(viewer.planTier) ? viewer.planTier : "STARTER";
   const viewerLimits = await entitlementsForPlan(viewerPlan);
-  const canRequest = Boolean(viewer) && viewerLimits.proposalsMax > 0;
-  const isGuest = !viewer;
+  const canRequest = !viewer || viewerLimits.proposalsMax > 0;
+  const signedIn = Boolean(account);
+  const businessHref = signedIn
+    ? "/business"
+    : `/login?next=${encodeURIComponent("/business")}&gate=business`;
+  const suggestionsHref = signedIn
+    ? "/collaboration?goal=awareness"
+    : `/login?next=${encodeURIComponent("/collaboration?goal=awareness")}&gate=suggestions`;
+
+  if (params.save && account) {
+    const [partyASlug, partyBSlug] = params.save.split(":").map((part) => decodeURIComponent(part.trim()));
+    if (partyASlug && partyBSlug) {
+      const [creatorA, creatorB] = await Promise.all([
+        getDirectoryCreator(partyASlug),
+        getDirectoryCreator(partyBSlug),
+      ]);
+      const match = creatorA && creatorB ? scoreCreatorPair(creatorA, creatorB) : null;
+      if (match) {
+        await saveMatchForUser({ match, userId: account.id }).catch(() => null);
+      }
+      redirect("/collaboration?saved=1");
+    }
+  }
+  if (params.save && !account) {
+    redirect(`/login?next=${encodeURIComponent(`/collaboration?save=${params.save}`)}&gate=save`);
+  }
+
   const [requestPool, opportunities] = await Promise.all([
     listPublishedBusinessRequests({ goal: params.goal }),
     listPublishedCreatorOpportunities(),
@@ -396,7 +427,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
               match={featured}
               brand={brand}
               canRequest={canRequest}
-              isGuest={isGuest}
+              signedIn={signedIn}
               viewerSlug={viewer?.slug}
               viewerPlan={viewerPlan}
             />
@@ -409,6 +440,17 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </div>
           )}
 
+          {params.saved ? (
+            <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              Match saved. Open it anytime from your collaboration records after you send a proposal.
+            </p>
+          ) : null}
+          {params.error ? (
+            <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+              {params.error}
+            </p>
+          ) : null}
+
           <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-[#633CFF] via-[#5B4CFF] to-[#2979FF] p-5 text-white shadow-lg sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="max-w-md">
@@ -418,7 +460,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
                 </p>
               </div>
               <Link
-                href={isGuest ? "/login?next=%2Fcollaboration%3Fgoal%3Dawareness&gate=suggestions" : "/business"}
+                href={suggestionsHref}
                 className="ink-on-light inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold"
               >
                 Get Collaboration Suggestions <IconArrowRight size={14} />
@@ -469,7 +511,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
           <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-display text-base font-bold text-indigo">Business Requests</h2>
-              <Link href="/business" className="text-[11px] font-bold text-violet">
+              <Link href={businessHref} className="text-[11px] font-bold text-violet">
                 View all →
               </Link>
             </div>
@@ -488,7 +530,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
                         {item.budget} · {item.location}
                       </p>
                       <p className="mt-1 line-clamp-2 text-xs text-muted">{item.summary}</p>
-                      <Link href="/business" className="mt-2 inline-flex text-[11px] font-bold text-violet">
+                      <Link href={businessHref} className="mt-2 inline-flex text-[11px] font-bold text-violet">
                         View Details
                       </Link>
                     </div>
@@ -570,7 +612,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
                 </li>
               ))}
             </ul>
-            <Link href="/business" className="btn-primary mt-5 inline-flex !py-2 text-sm">
+            <Link href={businessHref} className="btn-primary mt-5 inline-flex !py-2 text-sm">
               Join as a Business <IconArrowRight size={14} />
             </Link>
           </div>
@@ -584,14 +626,14 @@ function RecommendedMatch({
   match,
   brand,
   canRequest,
-  isGuest,
+  signedIn,
   viewerSlug,
   viewerPlan,
 }: {
   match: CreatorMatch;
   brand: MarketplaceBusinessRequestRow;
   canRequest: boolean;
-  isGuest: boolean;
+  signedIn: boolean;
   viewerSlug?: string;
   viewerPlan: PlanCode;
 }) {
@@ -601,9 +643,11 @@ function RecommendedMatch({
     ["Goal Synergy", match.breakdown.goalSynergy],
     ["Engagement Potential", match.breakdown.engagementPotential],
   ] as const;
-  const proposeHref = viewerSlug
-    ? `/collaboration/propose?a=${match.a.slug}&b=${match.b.slug}&from=${viewerSlug}`
-    : `/login?next=${encodeURIComponent(`/collaboration/propose?a=${match.a.slug}&b=${match.b.slug}`)}&gate=proposal`;
+  const proposePath = `/collaboration/propose?a=${encodeURIComponent(match.a.slug)}&b=${encodeURIComponent(match.b.slug)}&from=${encodeURIComponent(viewerSlug ?? match.a.slug)}`;
+  const proposeHref = signedIn
+    ? proposePath
+    : `/login?next=${encodeURIComponent(proposePath)}&gate=proposal`;
+  const registerHref = `/register?next=${encodeURIComponent(proposePath)}`;
 
   return (
     <article className="rounded-[1.5rem] border border-[#E4E9F5] bg-white p-5 shadow-sm sm:p-6">
@@ -642,30 +686,33 @@ function RecommendedMatch({
       </div>
 
       <div className="mt-5 flex flex-wrap gap-3">
-        {isGuest ? (
-          <>
-            <Link href="/claim" className="btn-primary">
-              Request a Collaboration <IconArrowRight size={14} />
-            </Link>
-            <Link href={`/login?next=${encodeURIComponent("/collaboration")}`} className="btn-secondary">
-              Sign in
-            </Link>
-          </>
-        ) : canRequest ? (
-          <Link href={proposeHref} className="btn-primary">
-            Request a Collaboration <IconArrowRight size={14} />
-          </Link>
-        ) : (
+        {signedIn && !canRequest ? (
           <Link href="/card#pricing" className="btn-secondary">
             Upgrade from {viewerPlan} to request matches
           </Link>
+        ) : (
+          <Link href={proposeHref} className="btn-primary">
+            Request a Collaboration <IconArrowRight size={14} />
+          </Link>
         )}
-        {!isGuest && viewerSlug ? (
+        {!signedIn ? (
+          <Link href={registerHref} className="btn-secondary">
+            Create account
+          </Link>
+        ) : viewerSlug ? (
           <Link href={`/collaboration/records?from=${viewerSlug}`} className="btn-secondary">
             View proposals
           </Link>
-        ) : null}
-        <SaveMatchButton />
+        ) : (
+          <Link href="/claim" className="btn-secondary">
+            Claim your creator profile
+          </Link>
+        )}
+        <SaveMatchButton
+          partyASlug={match.a.slug}
+          partyBSlug={match.b.slug}
+          signedIn={signedIn}
+        />
       </div>
     </article>
   );

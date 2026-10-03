@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { filterCreators, type SeedCreator } from "./seed-data";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import {
+  CATEGORY_IMAGES,
+  SPECIALTY_TAXONOMY,
+  categoryImageFor,
+  filterCreators,
+  type SeedCreator,
+} from "./seed-data";
 import { canonicalSpecialty } from "./taxonomy";
 
 const synonyms = [
@@ -40,5 +48,21 @@ describe("taxonomy synonyms", () => {
     const specialty = canonicalSpecialty("woodwork", synonyms);
     const found = filterCreators(creators, { specialty }, synonyms);
     assert.deepEqual(found.map((c) => c.slug), ["ada"]);
+  });
+});
+
+describe("category images", () => {
+  it("maps every parent specialty to a distinct on-disk image", () => {
+    const images = SPECIALTY_TAXONOMY.map((parent) => categoryImageFor(parent.slug));
+    assert.equal(images.length, SPECIALTY_TAXONOMY.length);
+    assert.equal(new Set(images).size, SPECIALTY_TAXONOMY.length);
+    for (const parent of SPECIALTY_TAXONOMY) {
+      assert.ok(CATEGORY_IMAGES[parent.slug], `missing CATEGORY_IMAGES entry for ${parent.slug}`);
+      const relative = CATEGORY_IMAGES[parent.slug]!;
+      assert.ok(
+        existsSync(join(process.cwd(), "public", relative.replace(/^\//, ""))),
+        `missing file for ${parent.slug}: ${relative}`,
+      );
+    }
   });
 });

@@ -399,3 +399,19 @@ export function canTransitionApplication(from: string, to: string): boolean {
   if (!isApplicationStatus(from) || !isApplicationStatus(to)) return false;
   return APPLICATION_TRANSITIONS[from].includes(to);
 }
+
+/** Persist a scored match and attach a per-user save bookmark. */
+export async function saveMatchForUser(input: {
+  match: CreatorMatch;
+  userId: string;
+}) {
+  const record = await upsertMatchRecord(input.match);
+  const existing = await prisma.marketplaceMatchSave.findFirst({
+    where: { matchId: record.id, userId: input.userId },
+  });
+  if (existing) return { matchId: record.id, saveId: existing.id, created: false };
+  const save = await prisma.marketplaceMatchSave.create({
+    data: { matchId: record.id, userId: input.userId },
+  });
+  return { matchId: record.id, saveId: save.id, created: true };
+}

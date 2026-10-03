@@ -39,6 +39,34 @@ function first(value: string | string[] | undefined): string {
   return list(value)[0] ?? "";
 }
 
+function discoverReturnPath(params: Record<string, string | string[] | undefined>): string {
+  const sp = new URLSearchParams();
+  for (const key of [
+    "q",
+    "specialty",
+    "country",
+    "state",
+    "city",
+    "platform",
+    "language",
+    "followersMin",
+    "followersMax",
+    "engagementMin",
+    "engagementMax",
+    "collabType",
+    "rate",
+    "openToCollab",
+    "verified",
+    "sort",
+  ] as const) {
+    for (const value of list(params[key])) {
+      sp.append(key, value);
+    }
+  }
+  const query = sp.toString();
+  return query ? `/discover?${query}` : "/discover";
+}
+
 export default async function DiscoverPage({ searchParams }: Props) {
   const params = await searchParams;
   const directory = await getDirectory();
@@ -102,14 +130,20 @@ export default async function DiscoverPage({ searchParams }: Props) {
   const topMatches = results.slice(0, 5);
   const heroCards = directory.creators.slice(0, 3);
   const activeChip = specialties[0] ?? "";
+  const returnTo = discoverReturnPath({
+    ...params,
+    specialty: specialties,
+    platform: platforms,
+    country: countries,
+  });
   const searchGate = await consumeGuestQuota("search");
   if (searchGate.decision === "hard") {
-    redirect("/login?next=/discover&gate=search");
+    redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=search`);
   }
 
   return (
     <div className="bg-[#F4F7FF] pb-16">
-      <GuestGateBanner copy={searchGate.decision === "soft" ? searchGate.copy : ""} next="/discover" />
+      <GuestGateBanner copy={searchGate.decision === "soft" ? searchGate.copy : ""} next={returnTo} />
       <section className="relative overflow-hidden border-b border-[#E4E9F5] bg-[radial-gradient(ellipse_at_top_right,_#E7DEFF_0%,_#F7FAFF_42%,_#EEF3FF_100%)]">
         <div className="pointer-events-none absolute -right-16 top-0 h-72 w-72 rounded-full bg-[#C4B5FD]/40 blur-3xl" />
         <div className="relative mx-auto grid w-full max-w-[90rem] items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-10 lg:py-14">
@@ -325,7 +359,10 @@ export default async function DiscoverPage({ searchParams }: Props) {
                     </span>
                   ))}
                 </div>
-                <Link href="/business" className="ink-on-light mt-6 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold">
+                <Link
+                  href={`/login?next=${encodeURIComponent("/business")}&gate=business`}
+                  className="ink-on-light mt-6 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold"
+                >
                   Create a Campaign
                 </Link>
               </div>
