@@ -170,22 +170,20 @@ Ship a short ops checklist, not more UI:
 - Rate-limit claim, register, and admin login.  
 - Ensure public profile DTO never leaks email / admin notes (spot-check claim publish + API exports).
 
-### R7 — Test the loops that matter
+### R7 — Test the loops that matter — DONE (thin suite)
 
-Add a thin integration suite (Node test or Playwright) for:
+Thin suite in `src/lib/loops.test.ts` (CI + pure always-on). Deeper coverage remains in dedicated files:
 
-1. Seed creator visible on Discover after migrate+seed  
-2. Claim → verify → publish → appears on Discover  
-3. Guest soft/hard gate  
-4. Stripe webhook idempotency with fixture payloads  
-5. Marketplace `funding.held` → release path with signed fixture  
+1. ~~Seed creator visible on Discover after migrate+seed~~ **`searchDirectory` DB case + `filterCreators` pure**  
+2. ~~Claim → verify → publish → appears on Discover~~ **`persistPublishedClaim` → directory lookup; public DTO strip**  
+3. ~~Guest soft/hard gate~~ **`decideGuestGate` in loops + `account-policy.test.ts`**  
+4. ~~Stripe webhook idempotency~~ **`webhookDisposition` + `phase-h` / `mvp-gate`**  
+5. ~~Marketplace `funding.held` → release~~ **disposition in loops; full path in `ledger` / `fx-share`**
 
-Keep unit tests for ledger math; do not replace them.
+### R8 — Docs cleanup — DONE
 
-### R8 — Docs cleanup
-
-- Mark §3 gap matrix in `IMPLEMENTATION_PLAN.md` as **historical (pre A–I)**.  
-- Point README “current plan” at this document for sequencing.  
+- ~~Mark §3 gap matrix in `IMPLEMENTATION_PLAN.md` as historical (pre A–I).~~  
+- ~~Point README “current plan” at this document for sequencing.~~  
 - Leave strategy / addendum docs as product law; do not duplicate fee rules here.
 
 ---
@@ -263,18 +261,20 @@ Pick from product backlog once loops are honest:
 - ~~Intelligence persistence~~ **Done (`IntelligenceSettings`).**  
 - ~~Fee simulator → versioned Prisma rules~~ **Done (`CollaborationFeeRule` / `CollaborationFeeSnapshot`).**  
 - ~~Phase 9/10 quarantine harden~~ **Done** (no JSON seed when switch off; `formatMoney` extracted; admin home skips demo stores).  
-- Agency multi-seat auth when `agency_seats` turns on  
+- ~~R7 loops suite + R8 docs cleanup~~ **Done.**  
+- Agency multi-seat auth when `agency_seats` turns on (seat CRUD already behind the switch)  
 - E-sign / formal contracts (still non-goal until counsel + volume)
 
 ---
 
 ## 7. Suggested next coding slice
 
-Phases J–O (intelligence, fee rules, Phase 9/10 quarantine harden) are on `main` (or this PR). Remaining:
+Phases J–O (including loops suite + docs cleanup) are on `main` (or this PR). Remaining:
 
-1. Fill **Phase M** staging evidence on a real host.  
+1. Fill **Phase M** staging evidence on a real host (`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`).  
 2. Optional: delete Phase 9/10 code paths entirely once ops confirms they are unused.  
-3. Do **not** start Meilisearch / Connect / e-sign without product asking.
+3. Do **not** start Meilisearch / Connect / e-sign without product asking.  
+4. Turn on `agency_seats` only when a real agency needs named seats.
 
 ---
 

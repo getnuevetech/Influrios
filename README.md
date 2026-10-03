@@ -38,12 +38,13 @@ bash deploy/scripts/deploy.sh            # docker compose up --build
 
 ## Docs
 
-- [Development state & next plan (current sequencing)](./docs/DEVELOPMENT_STATE_AND_NEXT_PLAN.md)
-- [Implementation plan (Phases A–I + 12.x log)](./docs/IMPLEMENTATION_PLAN.md)
-- [Recommendations & Execution Plan (historical)](./docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md)
+- **[Development state & next plan](./docs/DEVELOPMENT_STATE_AND_NEXT_PLAN.md)** — **current sequencing** (Phases J–O, what to build next)
+- [Implementation plan](./docs/IMPLEMENTATION_PLAN.md) — Phases A–I + 12.x log; §3 gap matrix is **historical**
+- [Recommendations & Execution Plan](./docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md) — historical product backlog
 - [Strategy notes](./docs/strategy/)
 - [Design references](./docs/design-references/)
 - [Lightsail guide](./docs/deploy/AWS_LIGHTSAIL.md)
+- [Staging launch integrations (Phase M)](./docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md)
 
 ## Current surfaces
 
