@@ -1,21 +1,26 @@
 import Image from "next/image";
 import Link from "next/link";
+import { FeaturedCarousel } from "@/components/featured-carousel";
 import {
+  CategoryGlyph,
   IconArrowRight,
   IconBuilding,
   IconCheck,
-  IconHandshake,
   IconHeart,
   IconInstagram,
+  IconLinkedIn,
   IconMapPin,
+  IconSearch,
   IconTikTok,
   IconUsers,
+  IconX,
   IconYouTube,
   SocialIcon,
 } from "@/components/icons";
 import { SaveMatchButton } from "@/components/save-match-button";
 import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
+import { getCms } from "@/lib/cms";
 import {
   allDirectoryMatches,
   BUSINESS_REQUESTS,
@@ -32,7 +37,7 @@ import { isPlanCode, type PlanCode } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Collaboration Matches",
+  title: "Collaborations",
 };
 
 type Props = {
@@ -47,6 +52,7 @@ type Props = {
     audience?: string;
     goal?: string;
     budget?: string;
+    verified?: string;
   }>;
 };
 
@@ -54,10 +60,12 @@ const COLLAB_TYPES = [
   { value: "brand-partnership", label: "Brand Partnership" },
   { value: "creator", label: "Creator × Creator" },
   { value: "product", label: "Product Collaboration" },
-  { value: "contest", label: "Contest / Experience" },
+  { value: "content-exchange", label: "Content Exchange" },
   { value: "event", label: "Event / Experience" },
   { value: "long-term", label: "Long-term Partnership" },
 ];
+
+const POPULAR_TAGS = ["Skincare", "Travel", "Fitness", "Food", "Tech", "Home Decor"];
 
 const BRAND_ART: Record<string, { logo: string; image: string }> = {
   "br-sephora": { logo: "/demo/brands/sephora.svg", image: "/demo/categories/cat-beauty.jpg" },
@@ -73,7 +81,7 @@ function list(value?: string | string[]) {
 export default async function CollaborationPage({ searchParams }: Props) {
   const params = await searchParams;
   const collabTypes = list(params.collabType);
-  const directory = await getDirectory();
+  const [directory, cms] = await Promise.all([getDirectory(), getCms()]);
   const bySlug = indexCreatorsBySlug(directory.creators);
   const all = await allDirectoryMatches();
   const matches = filterMatches(all, {
@@ -91,22 +99,26 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const draft = account ? await getCreatorSessionDraft().catch(() => null) : null;
   const viewerFromParam = params.from ? bySlug.get(params.from) ?? null : null;
   const viewerFromSession = draft?.slug ? bySlug.get(draft.slug) ?? null : null;
-  /** Guests must not inherit a demo creator — that made the page look signed-in. */
   const viewer = viewerFromParam ?? (account ? viewerFromSession : null);
   const viewerPlan: PlanCode = viewer && isPlanCode(viewer.planTier) ? viewer.planTier : "STARTER";
   const viewerLimits = await entitlementsForPlan(viewerPlan);
   const canRequest = Boolean(viewer) && viewerLimits.proposalsMax > 0;
   const isGuest = !viewer;
-  const brand = BUSINESS_REQUESTS.find((item) => {
-    if (params.goal && !`${item.tags.join(" ")} ${item.summary}`.toLowerCase().includes(params.goal.toLowerCase())) {
-      return false;
-    }
-    if (params.budget && item.budget !== params.budget) return false;
-    if (params.location && !item.location.toLowerCase().includes(params.location.toLowerCase()) && !item.location.toLowerCase().includes("global")) {
-      return false;
-    }
-    return true;
-  }) ?? BUSINESS_REQUESTS[0];
+  const brand =
+    BUSINESS_REQUESTS.find((item) => {
+      if (params.goal && !`${item.tags.join(" ")} ${item.summary}`.toLowerCase().includes(params.goal.toLowerCase())) {
+        return false;
+      }
+      if (params.budget && item.budget !== params.budget) return false;
+      if (
+        params.location &&
+        !item.location.toLowerCase().includes(params.location.toLowerCase()) &&
+        !item.location.toLowerCase().includes("global")
+      ) {
+        return false;
+      }
+      return true;
+    }) ?? BUSINESS_REQUESTS[0];
   const requests = BUSINESS_REQUESTS.filter((item) => {
     if (params.goal && !`${item.category} ${item.tags.join(" ")} ${item.summary}`.toLowerCase().includes(params.goal.toLowerCase())) {
       return false;
@@ -121,83 +133,128 @@ export default async function CollaborationPage({ searchParams }: Props) {
   });
   const heroFaces = directory.creators.slice(0, 4);
   const taxonomy = directory.taxonomy;
+  const popularCards =
+    cms.collaborationMatches.matches.length > 0
+      ? cms.collaborationMatches.matches.map((match) => {
+          const chip = POPULAR_MATCH_CHIPS.find(
+            (row) => `${row.title} ${row.subtitle}`.includes(match.title.split(" + ")[0] ?? "") || match.title.includes(row.title),
+          );
+          const [left, right] = match.title.split(/\s*\+\s*/);
+          return {
+            title: left?.trim() || match.title,
+            subtitle: right ? `+ ${right.trim()}` : chip?.subtitle || "",
+            specialty: chip?.specialty || match.tags[0]?.toLowerCase() || "lifestyle",
+            image: match.image || chip?.image || "/demo/categories/cat-lifestyle.jpg",
+          };
+        })
+      : POPULAR_MATCH_CHIPS;
 
   return (
     <div className="bg-[#F4F7FF]">
-      <section className="relative overflow-hidden bg-[#120B4A] text-white">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,60,255,0.55),_transparent_55%),radial-gradient(ellipse_at_bottom_left,_rgba(41,121,255,0.28),_transparent_50%)]" />
-        <div className="relative mx-auto grid w-full max-w-[90rem] items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-10 lg:py-16">
+      {/* —— Hero (Figure 1) —— */}
+      <section className="border-b border-[#E4E9F5] bg-gradient-to-br from-[#F7F4FF] via-white to-[#EEF5FF]">
+        <div className="mx-auto grid w-full max-w-[90rem] items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-10 lg:py-14">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/60">
-              Home <span className="px-1">/</span> Collaboration Matches
+            <h1 className="font-display text-4xl font-bold leading-tight text-indigo sm:text-5xl">
+              Find Your Perfect Collaboration on{" "}
+              <span className="brand-gradient-text">Influrios</span>
+            </h1>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
+              Discover creator–brand and creator–creator collaborations that spark real opportunities.
+              Turn shared passions into bigger growth, together.
             </p>
-            <h1 className="mt-3 font-display text-4xl font-bold sm:text-5xl">Collaboration Matches</h1>
-            <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">
-              Connect creators and brands (or creators) with complementary skills, audiences and goals.
-              Discover perfect collaboration opportunities powered by smart matching.
-            </p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              {[
-                [IconHandshake, "Smarter Matches", "AI-powered compatibility"],
-                [IconBuilding, "Real Opportunities", "Brands & creators actively looking"],
-                [IconUsers, "Stronger Results", "Grow together, faster"],
-              ].map(([Icon, title, detail]) => (
-                <div key={String(title)} className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur">
-                  <Icon size={18} className="text-[#C4B5FD]" />
-                  <p className="mt-2 text-sm font-bold">{String(title)}</p>
-                  <p className="mt-1 text-[11px] leading-snug text-white/70">{String(detail)}</p>
-                </div>
-              ))}
+            <form action="/collaboration" className="mt-6 flex max-w-xl items-center gap-2 rounded-full bg-white p-1.5 shadow-lg shadow-violet/10 ring-1 ring-[#E4E9F5]">
+              <span className="pl-3 text-muted">
+                <IconSearch size={18} />
+              </span>
+              <input
+                name="q"
+                defaultValue={params.q}
+                placeholder="Search creators, brands, niches or collaboration opportunities..."
+                className="w-full flex-1 border-0 bg-transparent py-2.5 text-sm text-indigo outline-none placeholder:text-muted/70"
+              />
+              <button type="submit" className="btn-primary shrink-0 !px-5 !py-2.5">
+                Search <IconArrowRight size={14} />
+              </button>
+            </form>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-muted">Popular:</span>
+              {POPULAR_TAGS.map((tag) => {
+                const slug =
+                  taxonomy.find((s) => s.name === tag)?.slug ??
+                  tag.toLowerCase().replace(/\s+&\s+/g, "-").replace(/\s+/g, "-");
+                return (
+                  <Link
+                    key={tag}
+                    href={`/collaboration?specialty=${encodeURIComponent(slug)}`}
+                    className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo ring-1 ring-[#E4E9F5] transition hover:bg-lavender/60"
+                  >
+                    {tag}
+                  </Link>
+                );
+              })}
             </div>
           </div>
-          <div className="relative hidden h-[340px] lg:block">
+          <div className="relative mx-auto hidden h-[320px] w-full max-w-md lg:block">
             {heroFaces.map((creator, index) => (
               <div
                 key={creator.slug}
-                className={`absolute overflow-hidden rounded-2xl shadow-2xl ring-2 ring-white/30 ${
+                className={`absolute overflow-hidden rounded-[1.75rem] shadow-2xl ring-2 ring-white ${
                   index === 0
-                    ? "left-4 top-8 h-36 w-28 rotate-[-8deg]"
+                    ? "left-2 top-6 h-40 w-32 rotate-[-8deg]"
                     : index === 1
-                      ? "left-[38%] top-0 h-40 w-32 rotate-[3deg]"
+                      ? "left-[36%] top-0 h-44 w-36 rotate-[4deg]"
                       : index === 2
-                        ? "right-6 top-10 h-36 w-28 rotate-[8deg]"
-                        : "bottom-4 left-[22%] h-28 w-36 rotate-[-2deg]"
+                        ? "right-2 top-10 h-40 w-32 rotate-[8deg]"
+                        : "bottom-2 left-[28%] h-28 w-40 rotate-[-3deg]"
                 }`}
               >
                 <Image src={creator.image} alt="" fill className="object-cover" sizes="160px" />
               </div>
             ))}
-            <p className="absolute right-2 top-2 max-w-[9rem] text-right font-script text-2xl leading-tight text-[#E7DEFF]">
-              Different Creators. Bigger Possibilities.
-            </p>
-            <p className="absolute bottom-2 right-4 font-script text-xl text-white">Brands & Creators, Ideas Together</p>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-[90rem] px-4 py-8 sm:px-6 lg:px-10">
-        <div className="mb-4 flex items-end justify-between gap-3">
+      {/* —— Popular Collaboration Matches —— */}
+      <section className="mx-auto w-full max-w-[90rem] px-4 py-10 sm:px-6 lg:px-10">
+        <div className="mb-5 flex items-end justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl font-bold text-indigo">Popular Collaboration Matches</h2>
-            <p className="text-sm text-muted">Explore real examples of complementary matches that create amazing results.</p>
+            <h2 className="font-display text-2xl font-bold text-indigo">Popular Collaboration Matches</h2>
+            <p className="mt-1 text-sm text-muted">
+              Explore real examples of creator and brand categories that work great together.
+            </p>
           </div>
-          <Link href="/collaboration" className="shrink-0 text-sm font-bold text-violet">
-            View all matches →
+          <Link href="/categories" className="shrink-0 text-sm font-bold text-violet hover:underline">
+            View all categories <IconArrowRight size={14} className="inline" />
           </Link>
         </div>
-        <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
-          {POPULAR_MATCH_CHIPS.map((chip) => (
+        <FeaturedCarousel stepPx={220}>
+          {popularCards.map((chip) => (
             <Link
-              key={chip.title}
-              href={`/collaboration?specialty=${chip.specialty}`}
-              className="relative h-28 w-52 shrink-0 overflow-hidden rounded-2xl"
+              key={`${chip.title}-${chip.subtitle}`}
+              href={`/collaboration?specialty=${encodeURIComponent(chip.specialty)}`}
+              className="group w-[200px] shrink-0 overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_rgba(17,26,90,0.08)] ring-1 ring-[#E4E9F5] transition hover:-translate-y-0.5 hover:shadow-lg"
             >
-              <Image src={chip.image} alt="" fill className="object-cover" sizes="208px" />
-              <span className="absolute inset-0 bg-gradient-to-t from-[#111A5A]/90 via-[#111A5A]/20 to-transparent" />
-              <span className="absolute bottom-2 left-3 right-3 text-xs font-bold text-white">{chip.title}</span>
+              <div className="relative h-28 overflow-hidden">
+                <Image
+                  src={chip.image}
+                  alt=""
+                  fill
+                  className="object-cover transition duration-500 group-hover:scale-105"
+                  sizes="200px"
+                />
+              </div>
+              <div className="relative px-3 pb-3 pt-5">
+                <span className="absolute -top-4 left-3 flex h-8 w-8 items-center justify-center rounded-lg bg-white text-violet shadow ring-1 ring-[#E4E9F5]">
+                  <CategoryGlyph slug={chip.specialty} size={16} />
+                </span>
+                <p className="font-display text-sm font-bold text-indigo">{chip.title}</p>
+                <p className="mt-0.5 text-xs font-medium text-muted">{chip.subtitle}</p>
+              </div>
             </Link>
           ))}
-        </div>
+        </FeaturedCarousel>
       </section>
 
       {params.requested ? (
@@ -208,10 +265,11 @@ export default async function CollaborationPage({ searchParams }: Props) {
         </div>
       ) : null}
 
-      <div className="mx-auto grid w-full max-w-[90rem] gap-6 px-4 pb-12 sm:px-6 lg:grid-cols-[270px_1fr] lg:px-10">
+      {/* —— Filters + Featured + Rails —— */}
+      <div className="mx-auto grid w-full max-w-[90rem] gap-6 px-4 pb-10 sm:px-6 lg:grid-cols-[250px_minmax(0,1fr)_280px] lg:px-10">
         <aside className="h-fit rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display font-bold text-indigo">Filter Matches</h2>
+            <h2 className="font-display font-bold text-indigo">Filter Collaborations</h2>
             <Link href="/collaboration" className="text-xs font-bold text-violet">
               Reset All
             </Link>
@@ -264,39 +322,6 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </label>
 
             <label className="block text-xs font-bold text-indigo">
-              Audience Type
-              <select
-                name="audience"
-                defaultValue={params.audience ?? ""}
-                className="mt-1.5 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium text-indigo outline-none focus:ring-2 focus:ring-violet"
-              >
-                <option value="">All audiences</option>
-                <option value="beauty">Beauty audiences</option>
-                <option value="travel">Travel audiences</option>
-                <option value="fitness">Fitness audiences</option>
-                <option value="lifestyle">Lifestyle audiences</option>
-              </select>
-            </label>
-
-            <label className="block text-xs font-bold text-indigo">
-              Campaign Goal
-              <select
-                name="goal"
-                defaultValue={params.goal ?? ""}
-                className="mt-1.5 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium text-indigo outline-none focus:ring-2 focus:ring-violet"
-              >
-                <option value="">Any goal</option>
-                <option value="awareness">Brand Awareness</option>
-                <option value="launch">Product Launch</option>
-                <option value="sales">Sales & Conversions</option>
-                <option value="community">Community Growth</option>
-                <option value="beauty">Beauty</option>
-                <option value="travel">Travel</option>
-                <option value="tech">Tech</option>
-              </select>
-            </label>
-
-            <label className="block text-xs font-bold text-indigo">
               Budget Range
               <select
                 name="budget"
@@ -312,6 +337,21 @@ export default async function CollaborationPage({ searchParams }: Props) {
               </select>
             </label>
 
+            <label className="block text-xs font-bold text-indigo">
+              Audience Type
+              <select
+                name="audience"
+                defaultValue={params.audience ?? ""}
+                className="mt-1.5 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium text-indigo outline-none focus:ring-2 focus:ring-violet"
+              >
+                <option value="">All audiences</option>
+                <option value="beauty">Beauty audiences</option>
+                <option value="travel">Travel audiences</option>
+                <option value="fitness">Fitness audiences</option>
+                <option value="lifestyle">Lifestyle audiences</option>
+              </select>
+            </label>
+
             <fieldset>
               <legend className="text-xs font-bold text-indigo">Platform</legend>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -319,6 +359,8 @@ export default async function CollaborationPage({ searchParams }: Props) {
                   ["INSTAGRAM", IconInstagram],
                   ["TIKTOK", IconTikTok],
                   ["YOUTUBE", IconYouTube],
+                  ["X", IconX],
+                  ["LINKEDIN", IconLinkedIn],
                 ].map(([value, Icon]) => {
                   const active = params.platform === value;
                   return (
@@ -336,17 +378,28 @@ export default async function CollaborationPage({ searchParams }: Props) {
               </div>
             </fieldset>
 
+            <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+              <input
+                type="checkbox"
+                name="verified"
+                value="1"
+                defaultChecked={params.verified === "1"}
+                className="h-4 w-4 rounded accent-[#633CFF]"
+              />
+              Verified accounts only
+            </label>
+
             <button type="submit" className="btn-primary w-full !py-2.5 text-sm">
               Apply Filters
             </button>
           </form>
         </aside>
 
-        <div className="min-w-0 space-y-8">
+        <div className="min-w-0 space-y-6">
           {featured ? (
             <RecommendedMatch
               match={featured}
-              brand={brand}
+              brand={brand!}
               canRequest={canRequest}
               isGuest={isGuest}
               viewerSlug={viewer?.slug}
@@ -361,114 +414,169 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </div>
           )}
 
-          <section className="grid gap-5 xl:grid-cols-2">
-            <div className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-display text-lg font-bold text-indigo">Business Requests</h2>
-                <Link href="/business" className="text-xs font-bold text-violet">
-                  View all opportunities →
+          <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-[#633CFF] via-[#5B4CFF] to-[#2979FF] p-5 text-white shadow-lg sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="max-w-md">
+                <h2 className="font-display text-xl font-bold">Need Collaboration Ideas?</h2>
+                <p className="mt-1 text-sm text-white/80">
+                  Tell us your category and campaign goal. Guests get a limited preview — full matches unlock after signup.
+                </p>
+              </div>
+              <Link
+                href={isGuest ? "/login?next=%2Fcollaboration%3Fgoal%3Dawareness&gate=suggestions" : "/business"}
+                className="ink-on-light inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold"
+              >
+                Get Collaboration Suggestions <IconArrowRight size={14} />
+              </Link>
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-2xl border border-[#E4E9F5] bg-white shadow-sm">
+            <div className="grid items-center gap-4 p-5 sm:grid-cols-[1.1fr_0.9fr] sm:p-6">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-violet">Mentorship</p>
+                <h2 className="mt-1 font-display text-2xl font-bold text-indigo">Become a Mentor on Influrios</h2>
+                <ul className="mt-3 space-y-1.5 text-sm text-muted">
+                  {["Share knowledge with rising creators", "Build your professional network", "Make an impact in your niche"].map(
+                    (item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <IconCheck size={14} className="mt-0.5 shrink-0 text-violet" />
+                        {item}
+                      </li>
+                    ),
+                  )}
+                </ul>
+                <Link href="/mentorship" className="btn-primary mt-4 inline-flex !py-2 text-sm">
+                  Learn about Mentorship <IconArrowRight size={14} />
                 </Link>
               </div>
-              <ul className="space-y-3">
-                {requests.length === 0 ? (
-                  <li className="rounded-2xl border border-dashed border-[#E4E9F5] p-4 text-sm text-muted">
-                    No business requests match those filters.
-                  </li>
-                ) : null}
-                {requests.map((item) => {
-                  const art = BRAND_ART[item.id];
-                  return (
-                    <li key={item.id} className="flex gap-3 rounded-2xl border border-[#E8EDF8] p-3">
-                      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#F4F7FF]">
-                        {art ? <Image src={art.logo} alt="" fill className="object-contain p-2" sizes="56px" /> : null}
+              <div className="relative hidden h-40 sm:block">
+                {directory.creators.slice(0, 3).map((creator, index) => (
+                  <span
+                    key={creator.slug}
+                    className={`absolute overflow-hidden rounded-2xl ring-2 ring-white shadow-lg ${
+                      index === 0
+                        ? "left-4 top-2 h-28 w-24"
+                        : index === 1
+                          ? "left-[38%] top-6 h-28 w-24"
+                          : "right-4 top-0 h-32 w-28"
+                    }`}
+                  >
+                    <Image src={creator.image} alt="" fill className="object-cover" sizes="112px" />
+                  </span>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="space-y-5">
+          <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-base font-bold text-indigo">Business Requests</h2>
+              <Link href="/business" className="text-[11px] font-bold text-violet">
+                View all →
+              </Link>
+            </div>
+            <ul className="space-y-3">
+              {requests.map((item) => {
+                const art = BRAND_ART[item.id];
+                return (
+                  <li key={item.id} className="rounded-xl border border-[#E8EDF8] p-3">
+                    <div className="flex gap-3">
+                      <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-[#F4F7FF]">
+                        {art ? <Image src={art.logo} alt="" fill className="object-contain p-1.5" sizes="44px" /> : null}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-indigo">{item.brand}</p>
-                        <p className="text-xs text-muted">
-                          {item.category} · {item.budget} · {item.location}
+                        <p className="text-sm font-bold text-indigo">{item.brand}</p>
+                        <p className="text-[11px] text-muted">
+                          {item.budget} · {item.location}
                         </p>
-                        <p className="mt-1 line-clamp-2 text-sm text-muted">{item.summary}</p>
-                        <Link href="/business" className="mt-2 inline-flex text-xs font-bold text-violet">
+                        <p className="mt-1 line-clamp-2 text-xs text-muted">{item.summary}</p>
+                        <Link href="/business" className="mt-2 inline-flex text-[11px] font-bold text-violet">
                           View Details
                         </Link>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
 
-            <div className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-display text-lg font-bold text-indigo">Creator Collaboration Opportunities</h2>
-                <Link href="/discover" className="text-xs font-bold text-violet">
-                  View all creators →
-                </Link>
-              </div>
-              <ul className="space-y-3">
-                {opportunities.map((item) => {
-                  const creator = bySlug.get(item.creatorSlug);
-                  if (!creator) return null;
-                  return (
-                    <li key={item.id} className="flex gap-3 rounded-2xl border border-[#E8EDF8] p-3">
-                      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full">
-                        <Image src={creator.image} alt="" fill className="object-cover" sizes="56px" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-indigo">{creator.displayName}</p>
-                        <p className="text-xs text-muted">
-                          {creator.title} · Looking for {item.lookingFor}
-                        </p>
-                        <p className="mt-1 line-clamp-2 text-sm text-muted">{item.summary}</p>
-                        <Link href={`/creators/${creator.slug}`} className="btn-primary mt-2 !px-3 !py-1.5 text-xs">
-                          Connect
-                        </Link>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+          <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-base font-bold text-indigo">Creator Collaboration Opportunities</h2>
+              <Link href="/discover" className="text-[11px] font-bold text-violet">
+                View all →
+              </Link>
             </div>
+            <ul className="space-y-3">
+              {opportunities.map((item) => {
+                const creator = bySlug.get(item.creatorSlug);
+                if (!creator) return null;
+                return (
+                  <li key={item.id} className="flex gap-3 rounded-xl border border-[#E8EDF8] p-3">
+                    <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full">
+                      <Image src={creator.image} alt="" fill className="object-cover" sizes="44px" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-indigo">{creator.displayName}</p>
+                      <p className="text-[11px] text-muted">Looking for {item.lookingFor}</p>
+                      <Link href={`/creators/${creator.slug}`} className="btn-primary mt-2 !px-3 !py-1 text-[11px]">
+                        Connect
+                      </Link>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         </div>
       </div>
 
-      <section className="border-y border-[#E4E9F5] bg-white">
-        <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-6 px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-10">
-          <div>
-            <h2 className="font-display text-2xl font-bold text-indigo">The Power of Collaboration</h2>
-            <p className="mt-1 max-w-md text-sm text-muted">
-              Creators and brands who collaborate see bigger growth, higher engagement and long-term success.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {[
-              ["3.5x", "Higher Engagement"],
-              ["2.8x", "Audience Growth"],
-              ["67%", "Successful Partnerships"],
-              ["150K+", "Collaborations Made"],
-            ].map(([value, label]) => (
-              <div key={label} className="text-center sm:text-left">
-                <p className="font-display text-2xl font-bold text-violet">{value}</p>
-                <p className="text-xs text-muted">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden bg-[#120B4A] text-white">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(99,60,255,0.45),_transparent_60%)]" />
-        <div className="relative mx-auto flex w-full max-w-[90rem] flex-col items-start gap-4 px-4 py-12 sm:px-6 lg:px-10">
-          <h2 className="font-display text-3xl font-bold">Ready to Find Your Perfect Match?</h2>
-          <p className="max-w-xl text-sm text-white/75">
-            Join Influrios to discover collaboration opportunities with creators and brands worldwide.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/claim" className="ink-on-light inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold">
+      {/* —— Dual acquisition banners —— */}
+      <section className="mx-auto w-full max-w-[90rem] px-4 pb-12 sm:px-6 lg:px-10">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2 text-violet">
+              <IconUsers size={18} />
+              <h2 className="font-display text-xl font-bold text-indigo">Are You a Creator?</h2>
+            </div>
+            <ul className="mt-3 space-y-1.5 text-sm text-muted">
+              {[
+                "Access collaboration opportunities",
+                "Get matched with relevant brands",
+                "Grow your personal brand",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <IconCheck size={14} className="mt-0.5 shrink-0 text-violet" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <Link href="/claim" className="btn-primary mt-5 inline-flex !py-2 text-sm">
               Join as a Creator <IconArrowRight size={14} />
             </Link>
-            <Link href="/business" className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-3 text-sm font-bold text-white">
+          </div>
+          <div className="rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2 text-violet">
+              <IconBuilding size={18} />
+              <h2 className="font-display text-xl font-bold text-indigo">Are You a Business?</h2>
+            </div>
+            <ul className="mt-3 space-y-1.5 text-sm text-muted">
+              {[
+                "Discover the right creators faster",
+                "Post requests and collaboration briefs",
+                "Fund deals with protected milestones",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <IconCheck size={14} className="mt-0.5 shrink-0 text-violet" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <Link href="/business" className="btn-primary mt-5 inline-flex !py-2 text-sm">
               Join as a Business <IconArrowRight size={14} />
             </Link>
           </div>
@@ -508,7 +616,7 @@ function RecommendedMatch({
     <article className="rounded-[1.5rem] border border-[#E4E9F5] bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-violet">Recommended Match</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-violet">Featured Collaboration Match</p>
           <h2 className="font-display text-xl font-bold text-indigo">A high-potential collaboration</h2>
           <p className="text-sm text-muted">Based on complementary audiences, content style and goals.</p>
         </div>
@@ -544,18 +652,15 @@ function RecommendedMatch({
         {isGuest ? (
           <>
             <Link href="/claim" className="btn-primary">
-              Join to request matches
+              Request a Collaboration <IconArrowRight size={14} />
             </Link>
-            <Link
-              href={`/login?next=${encodeURIComponent("/collaboration")}`}
-              className="btn-secondary"
-            >
+            <Link href={`/login?next=${encodeURIComponent("/collaboration")}`} className="btn-secondary">
               Sign in
             </Link>
           </>
         ) : canRequest ? (
           <Link href={proposeHref} className="btn-primary">
-            Request Match
+            Request a Collaboration <IconArrowRight size={14} />
           </Link>
         ) : (
           <Link href="/card#pricing" className="btn-secondary">

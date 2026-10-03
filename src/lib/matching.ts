@@ -317,10 +317,40 @@ export const CREATOR_OPPORTUNITIES: CreatorOpportunity[] = [
 ];
 
 export const POPULAR_MATCH_CHIPS = [
-  { title: "Interior Designer + Woodwork Creator", specialty: "home-interior", image: "/demo/categories/cat-home.jpg" },
-  { title: "Hair Stylist + Hair Supplier", specialty: "hair", image: "/demo/categories/cat-hair.jpg" },
-  { title: "Food Creator + Kitchen Brand", specialty: "food", image: "/demo/categories/cat-food.jpg" },
-  { title: "Travel Influencer + Tourism Brand", specialty: "travel", image: "/demo/categories/cat-travel.jpg" },
-  { title: "Fitness Creator + Wellness Brand", specialty: "fitness", image: "/demo/categories/cat-fitness.jpg" },
-  { title: "Beauty Creator + Skincare Brand", specialty: "beauty", image: "/demo/categories/cat-beauty.jpg" },
+  {
+    title: "Interior Designer",
+    subtitle: "+ Woodwork Creator",
+    specialty: "home-interior",
+    image: "/demo/categories/cat-home.jpg",
+  },
+  {
+    title: "Hair Stylist",
+    subtitle: "+ Hair Supplier",
+    specialty: "hair",
+    image: "/demo/categories/cat-hair.jpg",
+  },
+  {
+    title: "Food Creator",
+    subtitle: "+ Kitchen Brand",
+    specialty: "food",
+    image: "/demo/categories/cat-food.jpg",
+  },
+  {
+    title: "Travel Influencer",
+    subtitle: "+ Tourism Brand",
+    specialty: "travel",
+    image: "/demo/categories/cat-travel.jpg",
+  },
+  {
+    title: "Fitness Creator",
+    subtitle: "+ Wellness Brand",
+    specialty: "fitness",
+    image: "/demo/categories/cat-fitness.jpg",
+  },
+  {
+    title: "Beauty Creator",
+    subtitle: "+ Skincare Brand",
+    specialty: "beauty",
+    image: "/demo/categories/cat-beauty.jpg",
+  },
 ];
