@@ -75,9 +75,10 @@ async function main() {
   // Health
   try {
     const health = await fetchText(`${app}/api/health`);
-    let parsed: { ok?: boolean; status?: string; checks?: { db?: { ok?: boolean } } } | null = null;
+    type HealthJson = { ok?: boolean; status?: string; checks?: { db?: { ok?: boolean } } };
+    let parsed: HealthJson | null = null;
     try {
-      parsed = JSON.parse(health.body) as typeof parsed;
+      parsed = JSON.parse(health.body) as HealthJson;
     } catch {
       parsed = null;
     }
@@ -126,11 +127,14 @@ async function main() {
   // Guest collaboration CTAs (regression for logged-in-looking guests)
   try {
     const collab = await fetchText(`${app}/collaboration`);
-    const joinCta = includesAny(collab.body, ["Join to request matches"]);
+    const joinCta =
+      includesAny(collab.body, ["Join to request matches"]) ||
+      includesAny(collab.body, ["Request a Collaboration"]);
     const legacyUpgrade =
       includesAny(collab.body, ["Upgrade from STARTER to request matches"]) ||
       /Upgrade from[\s\S]{0,40}STARTER[\s\S]{0,40}to request matches/i.test(collab.body);
     const legacyProposals = /\/collaboration\/records\?from=/.test(collab.body);
+    // Guest OK when join/request CTA is present and legacy demo-viewer CTAs are absent.
     const guestOk = joinCta && !legacyUpgrade && !legacyProposals;
     checks.push({
       id: "collab_guest",

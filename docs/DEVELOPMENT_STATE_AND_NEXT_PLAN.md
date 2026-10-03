@@ -269,13 +269,14 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-Phases J–O (including loops suite, docs cleanup, homepage category/collab UX) are on `main`. Remaining:
+**Collaboration OS** is the active product track — see [`docs/collaboration/COLLABORATION_OS_PLAN.md`](./collaboration/COLLABORATION_OS_PLAN.md) and approved designs under `docs/design-references/collaboration/`.
 
-1. Fill **Phase M** staging evidence on a real host (`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`).  
-   Start with `npm run staging:evidence-probe -- https://your-staging-host`, then operator SMTP / Stripe / social / marketplace drills.  
-2. Optional: delete Phase 9/10 code paths entirely once ops confirms they are unused.  
-3. Do **not** start Meilisearch / Connect / e-sign without product asking.  
-4. Turn on `agency_seats` only when a real agency needs named seats.
+1. **P1** Public `/collaboration` landing to Figure 1 (in progress / this track).  
+2. **P1b** Persist business requests, creator opportunities, and match records.  
+3. **P2** Signed-in creator Collaboration Hub (Figure 2).  
+4. Parallel: fill **Phase M** staging evidence when credentials are available.  
+5. Optional: delete Phase 9/10 JSON paths once ops confirms unused.  
+6. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
 
 ---
 
