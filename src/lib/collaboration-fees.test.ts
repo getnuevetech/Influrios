@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   calculateFeeCents,
+  explainFeeWinner,
   matchesRule,
   pickWinningRule,
   protectedPaymentLabel,
+  ruleSpecificity,
   type CollaborationFeeRule,
   type FeeResolveContext,
 } from "./collaboration-fees";
@@ -18,6 +20,7 @@ function rule(overrides: Partial<CollaborationFeeRule> = {}): CollaborationFeeRu
     priority: 100,
     jurisdiction: "*",
     serviceLevel: "contracted",
+    feeType: "collaboration",
     method: "percent",
     percentBps: 1000,
     fixedCents: 0,
@@ -85,6 +88,46 @@ describe("collaboration fee matching", () => {
     );
     assert.equal(candidates[0]?.id, "high");
     assert.equal(candidates[1]?.id, "mid");
+  });
+
+  it("at equal priority prefers jurisdiction+service over service-only (Dev §22.1)", () => {
+    const candidates = pickWinningRule(
+      [
+        rule({ id: "service_only", priority: 100, jurisdiction: "*", serviceLevel: "contracted" }),
+        rule({ id: "both", priority: 100, jurisdiction: "US", serviceLevel: "contracted" }),
+        rule({ id: "jur_only", priority: 100, jurisdiction: "US", serviceLevel: "*" }),
+      ],
+      { jurisdiction: "US", serviceLevel: "contracted", grossValueCents: 10_000 },
+      asOf,
+    );
+    assert.equal(candidates[0]?.id, "both");
+    assert.equal(ruleSpecificity(candidates[0]!), 2);
+    assert.ok(ruleSpecificity(candidates[0]!) >= ruleSpecificity(candidates[1]!));
+  });
+});
+
+describe("fee winner explanation", () => {
+  it("names fee type and runner-up", () => {
+    const winner = rule({
+      id: "win",
+      name: "US contracted",
+      feeType: "collaboration",
+      priority: 200,
+      jurisdiction: "US",
+      serviceLevel: "contracted",
+    });
+    const next = rule({
+      id: "next",
+      name: "Global contracted",
+      feeType: "collaboration",
+      priority: 100,
+      jurisdiction: "*",
+      serviceLevel: "contracted",
+    });
+    const text = explainFeeWinner(winner, [winner, next], 1_000);
+    assert.match(text, /Collaboration Fee/);
+    assert.match(text, /US contracted/);
+    assert.match(text, /Global contracted/);
   });
 });
 

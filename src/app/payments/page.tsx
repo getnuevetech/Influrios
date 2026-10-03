@@ -18,6 +18,7 @@ import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 import { FUNDING_BADGE_CLASS, fundingBadge } from "@/lib/funding-badge";
+import { SERVICE_LEVEL_LABELS, SERVICE_LEVELS } from "@/lib/collaboration-fees";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Protected Payments" };

@@ -5,7 +5,7 @@ import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions
 import { getAccountSession } from "@/lib/accounts";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { getWorkspace } from "@/lib/business";
-import { resolveFee } from "@/lib/collaboration-fees";
+import { resolveFee, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, asServiceLevel } from "@/lib/collaboration-fees";
 import {
   buildFinancialPlan,
   CONTRACT_WIZARD_STEPS,
@@ -35,6 +35,7 @@ type Props = {
     commercial?: string;
     jurisdiction?: string;
     gross?: string;
+    serviceLevel?: string;
     mode?: string;
     influencerAccepted?: string;
     accepted?: string;
@@ -96,6 +97,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const scope = params.scope ?? "";
   const commercial = params.commercial ?? "Paid brand partnership";
   const jurisdictionCode = (params.jurisdiction ?? "US").toUpperCase();
+  const serviceLevelRaw = asServiceLevel(params.serviceLevel ?? "contracted");
+  const serviceLevel = serviceLevelRaw === "*" ? "contracted" : serviceLevelRaw;
   const grossRaw = params.gross ?? "5000";
   const grossCents = dollarsToCents(grossRaw);
   const usingCustom = params.mode === "custom" && entitlements.customMilestones;
@@ -150,7 +153,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     grossCents > 0
       ? await resolveFee({
           jurisdiction: jurisdictionCode,
-          serviceLevel: "contracted",
+          serviceLevel,
           grossValueCents: grossCents,
         }).catch(() => null)
       : null;
@@ -314,6 +317,23 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 </select>
               </label>
               <label className="block text-sm font-semibold text-indigo sm:col-span-2">
+                Collaboration service level
+                <select
+                  name="serviceLevel"
+                  defaultValue={serviceLevel}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                >
+                  {SERVICE_LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      {SERVICE_LEVEL_LABELS[level]}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs font-normal text-muted">
+                  Affects fee matrix, legal treatment, and jurisdiction availability.
+                </span>
+              </label>
+              <label className="block text-sm font-semibold text-indigo sm:col-span-2">
                 Commercial framing
                 <input
                   name="commercial"
@@ -412,9 +432,17 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             {plan ? (
               <>
                 <p className="mt-1 text-sm text-muted">
-                  Fee rule {plan.feeRuleId ?? "none"} v{plan.feeRuleVersion ?? "—"} · freezes on funding.
+                  Service level <strong>{SERVICE_LEVEL_LABELS[serviceLevel]}</strong>
+                  {quote?.rule?.feeType ? (
+                    <>
+                      {" "}
+                      · fee type <strong>{quote.rule.feeType}</strong>
+                    </>
+                  ) : null}{" "}
+                  · rule {plan.feeRuleId ?? "none"} v{plan.feeRuleVersion ?? "—"} freezes on funding.
                   Later fee rule edits do not change locked deals.
                 </p>
+                {quote?.explanation ? <p className="mt-2 text-xs text-muted">{quote.explanation}</p> : null}
                 <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                   <div>
                     <dt className="text-muted">Gross</dt>

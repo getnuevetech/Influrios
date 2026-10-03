@@ -190,19 +190,19 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 Much ledger work exists; the following are still incomplete vs addenda.
 
-#### W3.1 Fee matrix completeness — PARTIAL
+#### W3.1 Fee matrix completeness — PARTIAL → fee types shipped
 | Exists | Missing | Exit |
 |---|---|---|
-| Versioned `CollaborationFeeRule`, simulator, snapshots on funding (`collaboration-fees.ts`, `/admin/fees`) | Distinct fee **types** enforced in product/reporting (Platform Service / Collaboration / Managed Intro / Managed Campaign / Success / Processing / FX / Cancellation-Dispute / Referral) | Snapshots store fee type; reports separate columns |
-| Conditions include `serviceLevel` | Full condition set: relationship_source, promotion, staged funding_mode, payer allocation UX | Rule tester explains winner (Dev Addendum §5) |
-| Priority/specificity base tests | Overlap acceptance tests from Dev Addendum §22.1 | Test suite asserts documented winner |
-| Fee methods (partial) | Full method set: PERCENTAGE, FLAT, PERCENT_PLUS_FLAT, TIERED, MIN/MAX, WAIVED, CUSTOM_ENTERPRISE + commission basis enum | Matches Dev §4 |
+| Versioned rules, simulator, snapshots; **`feeType` column** + labels | relationship_source / promotion / funding_mode conditions | Snapshots store fee type; reports separate columns still later |
+| Conditions include serviceLevel | Full condition set beyond jurisdiction/service/gross | Rule tester explains winner (**done**) |
+| Priority/specificity + §22.1 overlap test | — | Test asserts documented winner |
+| Fee methods percent/fixed/combo | TIERED/WAIVED/CUSTOM_ENTERPRISE | Deferred |
 
-#### W3.2 Service levels — PARTIAL
+#### W3.2 Service levels — PARTIAL → wizard UX shipped
 | Exists | Missing | Exit |
 |---|---|---|
-| `serviceLevel` field on rules + funding path | First-class UX in wizard + admin; affects fee + legal + availability | Every contracted deal records service level from Product Addendum §3 enum: discovery_only / platform_match / contracted / managed_intro / managed_campaign |
-| Contract path often hard-codes `"contracted"` | Wizard choice + jurisdiction availability gate | No silent default when managed modes disabled |
+| `serviceLevel` on rules + funding; **wizard select** + admin selects | Jurisdiction availability gate for managed modes | Every contracted deal can record Product §3 enum |
+| Hard-coded `"contracted"` removed from wizard/actions | payments console still defaults unless form sends level | No silent managed default when disabled (W3.3) |
 
 #### W3.3 Jurisdiction / terminology gates — DONE (base) / PARTIAL (depth)
 | Exists | Missing | Exit |
