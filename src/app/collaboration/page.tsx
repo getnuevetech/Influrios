@@ -160,14 +160,15 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const popularCards =
     cms.collaborationMatches.matches.length > 0
       ? cms.collaborationMatches.matches.map((match) => {
+          const displayTitle = match.title.replace(/\bCreator\b/g, "Influencer");
           const chip = POPULAR_MATCH_CHIPS.find(
             (row) =>
-              `${row.title} ${row.subtitle}`.includes(match.title.split(" + ")[0] ?? "") ||
-              match.title.includes(row.title),
+              `${row.title} ${row.subtitle}`.includes(displayTitle.split(" + ")[0] ?? "") ||
+              displayTitle.includes(row.title),
           );
-          const [left, right] = match.title.split(/\s*\+\s*/);
+          const [left, right] = displayTitle.split(/\s*\+\s*/);
           return {
-            title: left?.trim() || match.title,
+            title: left?.trim() || displayTitle,
             subtitle: right ? `+ ${right.trim()}` : chip?.subtitle || "",
             specialty: chip?.specialty || match.tags[0]?.toLowerCase() || "lifestyle",
             image: match.image || chip?.image || "/demo/categories/cat-lifestyle.jpg",
