@@ -2,8 +2,8 @@
 
 **Date:** 2026-10-02 (updated 2026-10-03)  
 **Repo reviewed:** `main` after Collab OS P0–P3 + landing/terminology #82  
-**Sources:** codebase, `docs/IMPLEMENTATION_PLAN.md`, `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, `docs/FULL_IMPLEMENTATION_PLAN.md`, CI, Prisma schema, deploy scripts  
-**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) (this doc remains money/invariant authority and maturity inventory)
+**Sources:** codebase, `docs/IMPLEMENTATION_PLAN.md`, `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, `docs/FULL_IMPLEMENTATION_PLAN.md` v2, CI, Prisma schema, deploy scripts, archived product specs in `docs/source-specs/`  
+**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) **v2** (detailed DONE / PARTIAL / NOT STARTED + per-document residual checklists). This doc remains money/invariant authority and maturity inventory.
 
 ---
 
@@ -273,14 +273,15 @@ Pick from product backlog once loops are honest:
 
 **Collaboration OS** — P0–P3 + landing redesign v3/v2 + public Influencer terminology shipped (#73–#82).
 
-Immediate order from the full plan:
+Immediate order from the full plan (W = residual workstreams; P = Collab OS phases):
 
-1. **A1 + A3** — Landing pixel/CMS QA + contract residual tests.  
-2. **P4 (B1)** — Finance domains & provider adapter.  
-3. Parallel: **Phase M (C1)** staging evidence when credentials are available.  
-4. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
+1. **W1 + W2.1** — Terminology inventory + landing pixel/CMS QA.  
+2. **W3.1–W3.2** — Fee-type / service-level completeness + acceptance tests.  
+3. **P4** — Finance domains & provider adapter.  
+4. Parallel: **L1 Phase M** staging evidence when credentials are available.  
+5. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
 
-Terminology source of truth (public UI complete): [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf). Engineering/API migration tracked as workstream A4 + P8.
+Terminology source of truth (public UI complete): [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf) and `docs/source-specs/`. Engineering/API migration tracked as workstream **W1 + P8**.
 
 Approved landing designs: [`docs/design-references/collaboration/public-landing-v3.png`](./design-references/collaboration/public-landing-v3.png), [`docs/design-references/business/for-businesses-v2.png`](./design-references/business/for-businesses-v2.png).
 

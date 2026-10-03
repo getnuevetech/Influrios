@@ -1,0 +1,302 @@
+INFLURIOS INFLUENCE DISCOVERY & COLLABORATION PLATFORM
+Product Strategy, Monetization & MVP Blueprint
+━━━━━━━━━━━━━━━━━━
+Working positioning: “Find the right influence. Build the right collaboration.”
+
+Concept status: Product definition / pre-MVP  |  Version 2.2 adopts the Influrios platform name and incorporates the tiered Influencer Card, visual system, creator onboarding, acquisition and activation strategy.
+Prepared from the current product discussion and refined into a single platform model.
+1. Executive Summary
+The product should not be positioned as another influencer directory. The stronger opportunity is to build a searchable influence network that helps brands discover the right creators, helps creators collaborate with complementary creators, and gives every influencer a portable commercial identity that brings all of their social presence into one place.
+The platform has four connected engines:
+Influence Discovery
+A free-to-access directory organized around what a creator actually influences, not only follower count or a self-selected broad category.
+Creator Collaboration Network
+A matching layer where influencers can find complementary specialists and jointly serve a customer, brand, campaign or project.
+Influence Card + Share Identity
+A portable digital creator identity that aggregates social presence, specialties, location, commercial information and contact actions. Starter launches with a shareable profile link; QR and shortlink capabilities are added according to Plus/Pro entitlements.
+Business Matching + Managed Promotion
+A monetized layer that introduces influencers to relevant businesses, matches businesses to creators, supports outreach and can facilitate longer-term commercial relationships.
+Core thesis: make discovery free enough to create traffic and network density, then monetize intelligence, access, matching, workflow and managed commercial services.
+The value architecture
+
+
+2. Product Positioning
+Recommended category: Influence Discovery & Collaboration Platform.
+Simple promise: “Find the right influence, connect the right people, and turn reach into business relationships.”
+Brand architecture
+Platform brand: Influrios. The creator identity product may be presented publicly as “Influrios Card” or “Influencer Card by Influrios,” while “Influencer Card” remains the descriptive product category. The approved brand meaning is intentionally coined and global rather than tied to one language or geography. Working brand line: “Influence. Identity. Opportunity.”
+Naming rule: product copy, transactional messages, QR landing experiences, card exports and admin labels should use Influrios consistently. Do not revive the former Influence Connect working name in new production assets.
+The problem
+Influencers are fragmented across TikTok, Instagram, YouTube, Facebook, X, LinkedIn and emerging platforms; a business often sees only one account at a time.
+Existing discovery tools frequently lead with follower counts and broad categories, which can hide the creator’s real specialty and practical commercial value.
+Creators who could strengthen one another often have no structured way to discover complementary collaborators.
+Small and mid-sized businesses may know the type of audience they want but do not know which creators are relevant, reachable, available or commercially appropriate.
+Many creators are good at content but weak at packaging themselves for business development, outreach and long-term partnerships.
+The solution
+Create a public influence graph that connects three kinds of information:
+What the influencer is known for and can credibly promote or demonstrate.
+Who the influencer can collaborate with to create a better combined offering.
+Which businesses, audiences and commercial opportunities fit that influence profile.
+What makes the concept different
+
+3. User Groups & Jobs To Be Done
+Influencers / creators
+Create or claim a profile that represents their complete professional influence identity.
+Show all verified social accounts, portfolio, specialties, audience footprint and business contact options.
+Discover complementary creators for collaborations.
+Receive relevant brand and business opportunities instead of generic spam.
+Optionally use the platform to market them to target business categories.
+Businesses / brands
+Find creators by specific area of influence rather than by fame alone.
+Search by location, audience, budget, platform, collaboration type and commercial availability.
+Build shortlists, compare profiles, send opportunities and request introductions.
+Use managed matching when they do not want to research and coordinate creators themselves.
+Agencies / campaign managers
+Use deeper filters, lists, exports, collaboration workspaces and recurring campaign tools.
+Discover creator combinations for multi-skill campaigns.
+Monitor creator relationships across clients and categories.
+Visitors / consumers
+Browse public creator profiles and recommendations.
+Scan an influencer QR card and immediately reach the creator’s complete public social ecosystem.
+4. Core Product Engine: Influence Discovery
+The directory should be public enough to generate search traffic, creator visibility and word-of-mouth. The platform becomes more valuable as profile depth and search precision increase.
+Search dimensions
+
+5. Influence Profile / “Influence DNA”
+The profile should explain the creator’s influence, not merely display statistics. It can combine creator-supplied information with platform-authorized data and clearly label the source of each field.
+Primary specialty and up to several secondary specialties
+Content concentration by topic
+All verified social accounts and channel links
+Followers/subscribers and recent engagement metrics where legitimately available
+Geographic influence and languages
+Portfolio / featured content
+Previous disclosed brand relationships
+Commercial services offered
+Collaboration offers and collaboration needs
+Availability and preferred contact method
+Optional rate card or “request quote” setting
+Verification status and date last refreshed
+Recommendation: avoid a single universal “influencer score.” Show topic-specific strength and fit indicators so a creator can be strong for one use case without being mislabeled overall.
+6. Influencer-to-Influencer Collaboration Network
+This is one of the strongest differentiators. The platform should let creators describe both what they can contribute and what they need from another specialist. Matching then becomes complementary rather than competitive.
+The collaboration model
+1. Declare  Influencer publishes collaboration offers, needs, location, availability and preferred project types.
+2. Match  System recommends complementary creators based on specialty, audience adjacency, geography, platform fit and project goal.
+3. Propose  One creator sends a structured collaboration proposal or a business can invite a pre-built creator team.
+4. Build  Participants agree scope, content, roles, commercial terms and customer ownership.
+5. Showcase  Completed work can become a joint portfolio case study, strengthening both creator profiles.
+Examples
+
+Collaboration profile fields
+I can offer…
+I am looking for…
+Preferred collaboration types
+Location / remote availability
+Audience or customer type
+Paid / barter / cross-promotion / open to discussion
+Minimum requirements
+Example concept / mood board / brief
+7. Matching & Recommendation Logic
+The platform should support two different matching problems: creator-to-creator collaboration and business-to-creator fit. They should use separate logic and explain why a match was suggested.
+
+Matching should be explainable. “Why this match?” becomes a trust feature and prevents the product from feeling like a black-box ranking system.
+8. The Influence Card, Shortlink & QR System
+Every influencer can have a portable digital identity that can be shared in person or online. The canonical Influencer Card is a vertical/portrait digital business card, separate from the richer full Influencer Profile. Starter can use a standard profile link; Plus can add a shortlink and standard QR; Pro can use a platform-controlled dynamic QR and advanced card capabilities. The card and profile stay connected, but serve different jobs: Card = identity and connection; Profile = discovery and intelligence.
+What the card contains
+Creator name / brand name and profile photo or logo
+Primary and secondary specialties
+Location / markets served
+Verified social channels in one place
+Website / portfolio / media kit
+Follower and reach summary where authorized
+Commercial services and collaboration preferences
+Business inquiry button
+Creator-to-creator collaboration button
+Optional rates / request-a-quote
+Platform verification indicator
+QR capability according to plan: no QR at Starter; standard QR at Plus; platform-controlled dynamic QR at Pro
+Recommended card actions
+
+Card analytics that create premium value
+QR scans by time and broad location
+Profile views and traffic source
+Clicks to individual social channels
+Business inquiry conversion
+Most-viewed portfolio content
+Saved-to-list / collaboration-request activity
+Optional downloadable digital contact card (future)
+Wallet pass / NFC card integration (future)
+Privacy principle: the public card should carry professional/public information and creator-selected contact routes, not expose private personal data.
+9. Business Matching & Managed Influencer Marketing
+This is the highest-value monetization layer. The platform can do more than let a business search: it can actively introduce creators to business categories that fit their specialty and help turn introductions into ongoing relationships.
+Managed creator promotion workflow
+Opt in: Influencer selects the industries, business types, geography and partnership formats they want.
+Package: Platform builds or reviews the influencer’s commercial profile, media kit, case studies and positioning.
+Target: Platform identifies relevant businesses and buyer roles using the creator’s specialty and audience fit.
+Introduce: Platform sends permissioned outreach / introductions and routes interest back through the platform.
+Facilitate: Platform helps structure the brief, deliverables, timeline and commercial discussion.
+Retain: Successful one-off campaigns can be converted into recurring brand relationships or ambassador arrangements.
+Business-side managed matching
+Business submits a campaign/customer need rather than searching manually.
+Platform recommends individual creators or a complementary creator team.
+Business receives a short, reasoned shortlist rather than hundreds of profiles.
+Optional platform support covers outreach, scheduling, brief alignment and relationship administration.
+10. Monetization Architecture
+The free product should create density and traffic. Paid products should monetize deeper information, workflow, access and human-assisted commercial outcomes.
+
+Do not sell “verification” as credibility. Verification should be earned through identity/account checks. Premium users can pay for tools and promotion, but sponsored placement must be clearly labeled and should not overwrite relevance-based search.
+11. Recommended Free vs. Paid Boundary
+Influencer Card Starter / entry creator access
+Claim/create profile
+Add/verify social channels subject to the plan limit; launch default for Starter is one public social link
+Creator identity + primary specialty; additional specialties are entitlement-controlled
+Public vertical Influencer Card + standard public profile URL; QR is not included in the Starter launch default
+Minimal or no portfolio according to the Starter entitlement configuration
+Basic business inquiry settings
+Basic collaboration availability
+Appear in organic search results
+Influencer Card Plus / Pro upgrades
+Plus: richer blue-violet card, more social links, shortlink, standard QR and limited themes; Pro: full creator-brand customization, advanced commercial fields and premium visual treatment
+Tiered analytics: basic card views at Starter; scan/click analytics at Plus; advanced QR, channel, inquiry and lead analytics at Pro
+Expanded portfolio, media kit, brand history and case studies according to entitlement
+Collaboration matching controls and proactive recommendations
+Commercial media-kit, brand inquiry and professional “Work With Me” tools at higher tiers
+Pro-level lead tracking, response tools and business inquiry routing
+Optional platform-managed promotion add-on
+Free business access
+Browse public profiles
+Basic search by category, location and platform
+View public creator cards
+Create a small shortlist / send limited inquiries
+Paid business access
+Advanced specialty and audience filters
+Fit insights and comparison views
+Larger shortlists and projects
+Higher inquiry/contact limits
+Team workspaces
+Exports / CRM handoff
+Saved alerts and matching recommendations
+Managed matching option
+12. Core Data Model
+The data model should be designed around relationships, not simply profiles. Each creator is a node connected to specialties, social channels, audiences, businesses, collaborations and opportunities.
+
+13. Trust, Data & Commercial Safeguards
+The platform’s long-term value depends on trusted data and legitimate outreach. These rules should be part of the product design from the beginning.
+Use official APIs, creator authorization and other permitted data sources rather than designing the business around uncontrolled scraping.
+Provide a clear claim, correction and opt-out process for creator profiles created from public information.
+Separate creator-supplied claims from platform-verified fields and show data freshness.
+Do not expose personal email/phone details without creator consent; use platform inquiry routing where appropriate.
+Clearly label sponsored placement and paid promotion.
+Require campaign disclosures and support compliance with applicable advertising/endorsement rules.
+Create creator/business terms covering usage rights, deliverables, cancellation, payments and dispute procedures before facilitating deals.
+If the platform markets a creator on their behalf, obtain explicit authorization defining scope, compensation and whether the relationship is exclusive or non-exclusive.
+Design abuse controls for impersonation, fake metrics, spam, prohibited categories and repeated bad actors.
+14. MVP Scope & Development Sequence
+The first release should prove discovery, identity and collaboration before becoming a full campaign marketplace.
+
+Recommended MVP rule: do not begin with escrow, creator payouts, full contracts, campaign accounting or complex social publishing. First prove that people want the discovery graph, the Influence Card and the collaboration/matching layer.
+15. Initial Product Screens
+Homepage / Search — Search “who influences what?” with examples and location/category shortcuts.
+Search Results — Creator cards, specialties, platform presence, location, availability and relevance explanation.
+Public Influence Profile — Influence DNA, all social links, portfolio, business inquiry, collaboration CTA.
+Influence Card — Compact vertical digital business card with tier-controlled link, shortlink, QR and analytics capabilities.
+Creator Dashboard — Profile/card completeness, views, social clicks, QR scans where entitled, inquiries, collaboration requests and next-best setup actions.
+Collaboration Explorer — “I offer / I need” filters, recommended complementary creators and proposal builder.
+Business Workspace — Search, saved lists, campaign briefs, inquiries and recommended creator teams.
+Managed Promotion Console — For opted-in creators: target industries, outreach activity, introductions and relationship status.
+Admin / Trust — Verification, corrections, data freshness, abuse reports, sponsored placement and account status.
+16. Growth Loops
+Influence Card loop: Creator shares QR/profile → new people visit platform → more businesses/creators discover directory → more profiles claimed.
+Collaboration loop: Creator finds partner → joint content tags both creators + platform profile → shared audience creates new platform traffic.
+Business proof loop: Successful collaboration becomes case study → strengthens creator profile and platform credibility → attracts more business briefs.
+SEO / discovery loop: Public specialty/location pages answer long-tail searches → organic visitors enter directory → creators have an incentive to claim and improve profiles.
+Relationship loop: One-off introduction becomes recurring partnership → platform retains both sides through workflow, analytics and relationship history.
+17. Metrics That Matter
+
+18. Recommended Product Definition
+The product should be built around one connected identity: an influencer is not merely a social account; they are a searchable body of influence, a potential collaborator, and a commercial relationship partner.
+The platform’s initial identity can therefore be summarized as:
+A free influence discovery network where creators bring all of their social presence into one professional profile, discover complementary collaborators, and become reachable by the businesses that need their specific influence. Premium intelligence, workflow, matching and managed business development create the monetization layers.
+Recommended launch priorities
+1. Define the specialty taxonomy and creator profile schema.
+2. Build claimable public profiles and the tier-aware Influencer Card system: Starter link, Plus standard QR, Pro dynamic QR.
+3. Launch free search with strong specialty + geography filters.
+4. Add “I offer / I need” collaboration matching.
+5. Add business briefs, shortlists and qualified inquiries.
+6. Test Creator Pro and Business Pro subscriptions.
+7. Manually pilot managed creator promotion and business matching before automating it.
+8. Only after the above works, consider campaign contracting, payments or broader marketplace infrastructure.
+━━━━━━━━━━━━━━━━━━
+Strategic direction
+Start as the place people go to answer “Who influences this?” and grow into the place where influence becomes collaboration and business relationships.
+19. Influencer Card as a Standalone Product & Monetization System
+The Influencer Card should be treated as a monetizable product in its own right, not merely a visual component of the creator profile. A creator may subscribe to the card product even if they do not actively use the wider marketplace. This makes the card an acquisition funnel into discovery, collaboration and business-matching services.
+Canonical product distinction: Influencer Card = portable identity and connection. Full Influencer Profile = discovery, intelligence, portfolio, audience and commercial depth.
+Vertical card standard
+The canonical Influencer Card is portrait/vertical. Horizontal compositions may be used only as promotional previews or website modules; they are not the card standard.
+The shared visual reference uses an approximately 4:5 portrait canvas. Production should be responsive rather than fixed to raster dimensions.
+Card content is live data. Social links, QR, contact actions, name, specialties, statistics and brand fields must remain interactive UI components.
+The creator photo and optional background art can be raster assets; card structure, text, controls and QR should be generated/rendered dynamically.
+Starter / Plus / Pro card feature model
+
+Commercial rule: the values above are launch defaults, not hard-coded product rules. Admin must be able to change limits and enabled features per plan, country, promotion or bundle without a deployment.
+QR and link strategy
+Starter: canonical Influrios profile/card URL; no QR in the launch default.
+Plus: shortlink (for example ic.me/sofia) plus a standard QR that resolves to the card URL. The QR is useful for sharing but is not independently retargetable.
+Pro: dynamic QR using a platform-controlled opaque redirect identity (for example ic.me/q/7Hd92K). The creator can update social links, contact methods, portfolio and other card content without replacing printed QR artwork.
+Pro QR analytics can include scan count, timestamp, source/campaign, device class and coarse geography where privacy and law permit. Exact precise location is unnecessary.
+Standalone card purchase and upsell path
+The card can be sold independently or bundled with creator-platform subscriptions. A creator may begin with the card for networking and later upgrade into marketplace intelligence, collaboration matching and managed promotion. Conversely, creator-platform plans may include a card tier as a bundle entitlement. Admin controls bundle relationships and prices.
+Brand color system
+Influrios uses blue for trust/platform behavior and purple for creator identity/collaboration. Pink is an accent, not a dominant category signal. Champagne gold is reserved for Pro-level premium accents. This avoids making the platform feel beauty-specific and keeps the identity suitable for technology, fitness, automotive, food, travel, interiors, gaming, finance, suppliers and other creator categories.
+
+Tier visual differentiation
+
+Recommended design tokens by tier:
+
+Current vertical card visual references
+BRAND UPDATE: Influrios is the adopted platform name. Any legacy “Influence Connect” wordmark visible inside previously generated raster mockups is superseded and must not be reproduced in production. Production UI, exports, emails, cards, QR landing views and admin-facing labels must render the Influrios name/wordmark. The underlying visual hierarchy and background artwork remain valid design references.
+These images are visual references for hierarchy, density and tier differentiation. The production UI must be implemented as responsive components; do not bake live data, social links, QR codes or user text into raster artwork.
+
+Reusable tier background assets
+Background art is decorative only. Production cards must render text, creator images, platform icons, QR codes and controls as live UI layers. The raster assets can be used as optional background artwork or visual guidance; CSS/SVG equivalents are preferred where practical for performance and theme adaptability.
+
+Asset filenames: influencer_card_starter_background.png; influencer_card_plus_background.png; influencer_card_pro_background.png.
+Creator-brand customization principle
+Tier color communicates plan status, but Pro should not force every creator into a purple visual identity. Where entitled, creators can select brand colors/backgrounds while the platform retains small system cues such as Pro badge, verified state, QR behavior and Influrios identity. The platform brand stays blue-purple; the creator’s personal brand can vary.
+Accessibility: color must never be the only indicator of plan or state. Maintain WCAG AA contrast for text and controls, use explicit tier labels, and test light/dark creator-customized themes before publication.
+20. Influencer Onboarding, Acquisition & Activation Strategy
+Primary onboarding principle: show the influencer value before asking for a full registration. The strongest creator acquisition message is not “join another influencer marketplace”; it is “create your free Influencer Card — one professional identity for your creator presence.”
+Recommended creator acquisition wedge: “Create Your Free Influencer Card. One Card. All Your Influence.”
+Onboarding experience: value before registration
+1. Start with one social profile URL, handle or creator name. Do not require a full account form before showing value.
+2. Generate a private draft card/profile preview from permitted public data and/or connected provider data. Clearly label inferred data as a draft.
+3. Show the creator the result, then ask them to claim it. The claim action is the natural point to require registration and consent.
+4. Verify identity/control of at least one appropriate channel. Keep identity verification, connected-social verification and data verification as separate statuses.
+5. Use AI to propose specialties, creator title, summary and other low-risk profile fields; let the creator confirm, edit or remove the suggestions.
+6. Publish the effective Starter card/profile immediately after required verification and consent. Give the creator a real shareable asset on day one.
+7. Continue setup progressively through profile-completeness prompts instead of a long mandatory onboarding form.
+Core creator activation funnel
+
+Creator acquisition channels
+
+Progressive profile completion
+Do not front-load every creator field into initial registration. After the Starter card is published, the dashboard should show a completion score and next-best actions tied to a meaningful benefit, for example: “Add collaboration preferences to appear in more business searches.”
+Add/confirm additional specialties.
+Add a business contact method.
+Connect another social account where the current entitlement allows it.
+Add portfolio/featured content.
+Add collaboration preferences and “I offer / I need” information.
+Add brand history/media kit where the plan permits.
+Complete verification steps needed for higher-trust discovery or commercial actions.
+Upgrade behavior should be contextual
+The platform should not force creators into a pricing page before they experience value. When a creator attempts a locked capability, explain the benefit and the entitlement required. Examples: add TikTok, create QR, unlock shortlink, view scan analytics, add media kit, remove platform branding, or use advanced lead tracking. The UI must use effective entitlements, not hard-coded plan-name rules.
+Acquisition attribution and funnel reporting
+Track at minimum: ORGANIC_SIGNUP, PROFILE_CLAIM, ADMIN_EMAIL_INVITE, ADMIN_SOCIAL_OUTREACH, CREATOR_REFERRAL, BRAND_INVITE, CAMPAIGN_INVITE, AGENCY_IMPORT, EVENT_QR, PAID_SOCIAL and SEO. Admin may add campaign/source metadata without code deployment.
+Preserve first-touch and last-touch attribution, invitation/campaign identifiers and referrer where legally/technically available.
+Admin should report Invited → Previewed → Claim Started → Verified → Published → Shared → Engaged → Plus/Pro conversion by source/campaign/category/country.
+Track quality, not only registrations: active cards, completeness, shares, business inquiries, collaboration activity, retention and paid conversion by source.
+Recommended launch campaigns
+
+Recommended launch motion
+Seed useful profiles first, then combine a free Starter Influencer Card, claim invitations and targeted admin outreach. At the same time, allow business/campaign invitations and creator-to-creator invitations to bring creators in around real opportunities. This gives the platform useful supply before relying on organic creator signup alone and turns the Influencer Card into the entry product for the larger network.

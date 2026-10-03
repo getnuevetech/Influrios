@@ -1,0 +1,544 @@
+INFLUENCE DISCOVERY & COLLABORATION PLATFORM
+Technical Development Specification
+Version 2.0  |  Build-ready requirements for development AI / engineering team  |  Includes tiered Influencer Card monetization and design system
+
+
+
+NON-NEGOTIABLE DEVELOPMENT INTERPRETATION: Where this document says MUST, the behavior is mandatory. Development AI must not silently replace configurable platform behavior with hard-coded values. Provider integrations, thresholds, plans, permissions, routing, content blocks and country rules must be data/config driven unless explicitly stated otherwise.
+0. How the Development AI Must Use This Specification
+This document defines required platform behavior and the configuration model. It is intentionally more explicit than a normal product brief so implementation agents can build consistently across frontend, backend, admin, integrations and data architecture.
+R001  Treat the admin portal as a first-class application surface with complete operational control. Admin capabilities are not post-MVP back-office nice-to-haves; they are part of the platform architecture from the beginning.
+R002  Use configuration tables / admin-managed settings for values that may change by country, plan, provider, business rule or growth stage. Do not hard-code subscription limits, AI provider selection, payment provider selection, homepage sections, contact templates, sign-up gates, country availability, feature availability or notification templates.
+R003  All critical automated decisions must be observable. Store provider used, model/version where relevant, input reference, output, status, errors, retries and human overrides.
+R004  Design each integration behind a provider adapter/interface so a provider can be added, disabled, replaced or routed without rewriting business logic.
+R005  Build with progressive enhancement: visitors can receive useful value before registration, but the platform must be able to prompt or require registration when configurable usage thresholds or protected actions are reached.
+R006  Preserve a clean separation between public profile data, private account data, analytics data, commercial relationship data and admin-only operational notes.
+Requirement language
+
+
+1. Product Scope and System Boundaries
+The platform combines public influencer discovery, influencer identity aggregation, creator collaboration, business-to-creator matching, managed promotion, subscription intelligence and admin-led relationship development. The initial system should be implemented as a modular platform rather than independent mini-products.
+Primary application surfaces
+
+
+Recommended architectural shape
+R007  Start as a modular monolith or service-oriented backend with clearly separated domains: Identity, Directory, Profiles, Collaboration, Business Matching, Subscription/Entitlements, Payments, AI Orchestration, Messaging/Notifications, CMS, Admin, Analytics and Integrations. Avoid premature microservice fragmentation.
+R008  Expose business capabilities through versioned APIs. Frontend must not directly embed vendor-specific logic for AI, payment, email or social providers.
+R009  Use background queues for long-running provider operations, profile extraction, AI enrichment, bulk updates, webhook processing and email delivery.
+2. User Types, Roles and Account Model
+User type determines default experience; permissions and entitlements must remain independent so plans can grant or remove capabilities without creating new hard-coded account classes.
+
+
+R010  Support one login identity having more than one organization/workspace role when needed. Example: a creator may also own a business account.
+R011  Use role-based access control (RBAC) plus entitlement checks. Never use frontend-only role hiding as security enforcement.
+R012  Admin users must have granular permissions, not a single all-powerful admin boolean. Permissions must be assignable by role.
+Authentication and registration
+Email/password authentication.
+Email verification.
+Password reset.
+Optional OAuth/social login adapters may be added later.
+Optional phone verification may be enabled per country/feature through admin.
+Session management with revocation and device/session visibility for security-sensitive accounts.
+R013  Registration fields and onboarding steps must be configurable by user type and country where reasonable. Do not require influencer-specific fields from ordinary business users.
+R014  Terms/privacy/marketing consent versions accepted by the user must be stored with timestamp, version and source.
+3. Guest Access, Progressive Registration and Usage Gating
+Anonymous usage is a growth feature. The system should allow meaningful discovery without registration, then convert users when they reach a configurable threshold or attempt a protected/high-value action.
+R015  Implement an entitlement/gating engine that can evaluate: authentication status, user type, subscription plan, country, usage count, time window, feature flag, action type and admin override.
+R016  Guest limits must be admin-managed and plan-aware. Examples: number of searches/day, profiles viewed/day, advanced filters used, QR scans, shortlist saves, profile comparisons or access to contact/business data.
+R017  When a guest reaches a soft threshold, show configurable signup prompts. When a hard threshold or protected action is reached, require registration.
+R018  Protected actions should include at minimum: sending collaboration proposals, sending business inquiries, exporting lists, accessing private contact details, claiming a profile, purchasing a plan, requesting managed matching, and editing a profile.
+Suggested gating model
+
+
+4. Subscription, Plans and Entitlements Engine
+Subscription plans are a dynamic commercial system and MUST be fully managed from admin.
+R019  Admin must create, edit, archive and reorder subscription plans without code deployment.
+R020  Plan configuration must support: name, public/internal description, target user types, billing intervals, country availability, currencies, price per currency, trial rules, feature entitlements, usage limits, overage behavior, tax/fee handling, active dates, visibility and promotional pricing.
+R021  Entitlements must be stored as machine-readable feature keys with optional quantitative limits. Example: feature=advanced_search, enabled=true, limit=200, period=month.
+R022  Support free plans, paid plans, custom/enterprise plans and admin-granted complimentary access.
+R023  Support coupons/promo codes and campaign-specific discounts as an extension point even if not enabled in MVP.
+R024  Plan changes must produce an auditable subscription event history. Never overwrite billing history.
+Example entitlement keys
+search.basic
+search.advanced
+profile.view_detailed
+profile.compare
+profile.export
+contact.reveal
+creator.claim_profile
+card.custom_theme
+card.qr.analytics
+creator.collaboration_send
+business.brief_create
+business.introduction_request
+managed_promotion.request
+analytics.advanced
+api.access
+5. Public Website and Admin-Managed CMS
+The public website must be assembled from admin-managed content sections so branding and landing-page composition can change without developer intervention.
+R025  Admin must manage site identity: logo(s), favicon, brand name, footer identity, social links, default SEO image, color/theme tokens where exposed, and contact details.
+R026  Admin must manage primary and footer menus: label, URL/route, order, parent/child structure, visibility, open-in-new-tab and user-type/plan visibility where needed.
+R027  Hero banner must be admin-manageable: headline, subheadline, CTA labels, CTA destinations, media type, background image/video, overlay, alignment, active dates, target audience and enabled state.
+R028  Landing page sectioning must be data-driven. Admin can add, hide, reorder and configure supported section types without developer changes to page composition.
+Minimum CMS section types
+Hero/banner
+Search/discovery callout
+Featured influencer carousel/grid
+Category/specialty showcase
+How it works
+Creator collaboration showcase
+Business matching section
+Influence Card / QR section
+Testimonials/case studies
+Pricing preview
+Statistics/counters
+CTA band
+FAQ
+Rich text/content block
+Newsletter/waitlist form
+Footer content
+R029  CMS entries must support draft/published state, scheduled publish/unpublish dates, revision history or at minimum updated_by/updated_at, and preview.
+R030  SEO fields must be configurable per page and profile template where appropriate: title, meta description, canonical URL behavior, index/noindex and social preview.
+6. Influencer Profile Data Model and Influence DNA
+A creator profile is a separate domain object from the login account. Profiles may exist before an influencer registers, may be claimed later, and may be enhanced by automated systems or authorized admins.
+R031  Support unclaimed profiles, claimed profiles, verified claimed profiles and restricted/hidden profiles as explicit states.
+R032  Store field-level provenance where practical: creator-supplied, admin-researched, authorized social API, public source extraction, AI-inferred, business-reported. Inferred values must not silently replace verified creator values.
+Core profile fields
+Display name / creator brand
+Handle / public slug
+Profile photo / logo
+Biography / summary
+Primary specialty
+Secondary specialties / topic taxonomy
+Content formats/styles
+Languages
+Country / region / city / markets served
+All social platforms and handles
+Verified social account links and platform IDs where available
+Follower/subscriber metrics by platform
+Engagement metrics where authorized
+Portfolio / featured content
+Commercial services
+Business categories served
+Audience summary where legitimately available
+Collaboration offers: “I can offer”
+Collaboration needs: “I am looking for”
+Collaboration preferences and commercial terms
+Business availability / contact preference
+Rate card or request-quote setting
+Past brand relationships if disclosed
+Verification status
+Data freshness timestamps
+Profile visibility / indexing controls
+R033  Specialty taxonomy must be hierarchical and admin-managed. A creator may belong to multiple specialties with weights/confidence and a primary specialty designation.
+R034  The profile should support topic-level strength indicators but should not depend on a single universal influencer score. Any AI-derived score must store methodology/version and be explainable.
+7. Automated Influencer Discovery, Extraction and Enrichment
+The platform should be able to create useful directory profiles before creators register, using lawful/authorized data sources and a provider-neutral ingestion pipeline.
+R035  Create an ingestion source abstraction. Each source adapter must define source type, authorization requirements, rate limits, raw payload storage policy, normalized fields, refresh schedule and error handling.
+R036  Automated extraction must normalize profile identity, platform handles, bio, public metrics, content topics, languages, general market/location signals where appropriate, content categories and source timestamps.
+R037  Automated extraction must never mark an influencer as identity-verified merely because public data was discovered. Identity/profile claim verification is a separate workflow.
+R038  Store extraction runs with status: queued, running, partial, complete, failed, needs_review. Preserve structured error codes and retry counts.
+R039  If AI is used to classify specialties or summarize influence, store the model route, prompt/template version, output confidence and source content references used.
+R040  Allow admin to manually correct extracted data. Human-verified values should have precedence according to a configurable source-priority policy.
+R041  Support periodic refresh jobs with provider-specific schedules and admin-triggered refresh.
+Profile quality state
+
+
+8. Influencer Claiming, Verification and Enhancement Workflow
+R042  Every eligible unclaimed profile should expose a configurable “Claim this profile” action unless admin disables claiming.
+R043  Claim flow should verify control of at least one linked identity channel using available mechanisms: social OAuth, website/domain proof, email to known business address, or manual review. Do not rely only on name matching.
+R044  When a creator claims a profile, preserve previous data and show the creator editable fields separately from immutable audit/provenance records.
+R045  Admin must be able to approve, reject, request more information, merge duplicate profiles and transfer profile ownership with full audit logs.
+9. Admin Outreach / Influencer Invitation CRM
+Admin-led profile enhancement is a major acquisition workflow. The admin portal must include a lightweight relationship/contact system rather than forcing staff to manage outreach outside the product.
+R046  From an influencer profile, authorized admins must be able to create an outreach contact record and send or queue an invitation email using admin-managed templates.
+R047  Outreach record must store influencer/profile, contact channel, destination, template, subject, message body snapshot, sender identity, admin owner, status, sent time, delivery status, reply/response status, follow-up date, notes and campaign/source.
+R048  Support outreach statuses: not_contacted, queued, sent, delivered, bounced, opened_if_available, replied, interested, claimed, declined, do_not_contact, follow_up, unreachable.
+R049  Admin can schedule follow-up reminders and view an outreach pipeline/queue filtered by category, location, status, owner and date.
+R050  Contact templates must be admin-managed by purpose, language and country. Example purposes: profile invitation, claim request, profile enhancement, partnership opportunity, business introduction, collaboration invitation.
+R051  Respect unsubscribe/do-not-contact flags and suppression lists for marketing outreach.
+10. Influence Card, Digital Badge and Dynamic QR
+R052  Each public creator profile must have a permanent public URL/slug and a dynamic QR code that resolves to a platform-controlled redirect/profile destination. Profile edits must not require changing the QR graphic.
+R053  The creator card should aggregate all active verified social links, specialties, location/markets, portfolio, commercial availability and allowed contact actions.
+R054  Generate downloadable card/badge assets in common digital formats in a later phase; architecture must expose a card renderer endpoint/service so design can evolve.
+R055  QR and card analytics must record scan/view event, timestamp, source/referrer where available, campaign code, device class and coarse geography where legally/privacy appropriate. Do not store unnecessary precise location.
+R056  Admin can regenerate QR targets, disable compromised codes, issue campaign-specific QR codes and review scan analytics.
+11. Directory Search and Discovery
+R057  Search must support full-text and structured filters. Minimum filters: specialty, secondary specialty, platform, follower range, geography, language, creator type, commercial availability, collaboration availability, verification, content style and profile freshness.
+R058  Search ranking must be deterministic enough to explain. Separate relevance from paid sponsorship. Sponsored placement must be labeled and must not silently modify organic relevance scores.
+R059  Support saved searches and saved influencer lists for authenticated users according to plan entitlements.
+R060  Search analytics must capture query, filters, result count, clicked profiles, conversion action and anonymous/authenticated status.
+R061  Admin must manage taxonomy synonyms and search aliases so “woodwork”, “woodworking”, and relevant category terms can map correctly without code changes.
+12. Creator-to-Creator Collaboration Engine
+The collaboration model uses complementary needs/offers rather than generic networking.
+R062  Creator profiles must include structured “I can offer” and “I am looking for” entries tied to taxonomy, geography/remote availability, project types and commercial preferences.
+R063  Matching should consider complementarity, topic adjacency, market overlap, project type, availability, commercial preference, platform fit and optional audience overlap signals.
+R064  Every recommendation should provide a human-readable “Why this match” explanation based on match factors; do not expose hidden chain-of-thought.
+R065  Creators can send structured collaboration proposals containing objective, requested contribution, offered contribution, timing, location, commercial model, attachments and message.
+R066  Collaboration lifecycle states: draft, sent, viewed, accepted, declined, negotiating, active, completed, cancelled, archived, reported.
+R067  Support block/report controls, spam throttling and plan-based proposal limits.
+13. Business-to-Influencer Matching and Managed Promotion
+R068  Business users must be able to create a structured brief containing target market, geography, industry/category, campaign objective, required creator specialties, preferred platforms, audience parameters, budget/range, timing, deliverables and notes.
+R069  System may return self-service creator matches and/or allow the business to request managed matching.
+R070  Managed matching requests become admin work items. Admin can build a shortlist, add rationale, contact creators, track responses, and return the approved shortlist to the business.
+R071  Creators may opt into managed promotion. Their target business categories, markets, preferred offer, minimum commercial expectations and exclusions must be stored.
+R072  Admin can create promotion/outreach campaigns for a creator or creator category, target specific business segments, track introductions and record resulting relationship status.
+R073  The platform must distinguish lead generation/introduction from actual campaign contracting. Later payment/escrow functionality should be a separate module, not assumed in MVP.
+Business relationship pipeline
+lead_created -> qualified -> creator_shortlisted -> intro_requested -> creator_contacted -> business_contacted -> intro_made -> discussion -> opportunity -> won | lost | dormant
+14. Multi-AI Provider Orchestration
+AI must be a configurable orchestration layer, not a single hard-coded API call.
+R074  Admin must manage AI providers and model definitions. Each provider record should support name, base URL/provider type, credential reference, enabled state, allowed environments, models, token/cost metadata if used, timeout, retry policy and health status.
+R075  API keys/secrets entered in admin must be encrypted at rest and masked after save. Admin UI must never display the full stored key again.
+R076  Define AI function keys independent of provider/model. Example: profile_topic_classification, profile_summary, collaboration_match_explanation, business_creator_match, outreach_draft, moderation_assist, duplicate_detection, data_quality_review.
+R077  Admin must map each AI function to a primary provider/model and optional fallback chain. Mapping may differ by country, plan, environment or workload if needed.
+R078  Support function-level controls: temperature/creativity where applicable, max output, timeout, retry count, fallback order, enabled state, prompt template version and structured-output schema.
+R079  AI calls must log function key, provider, model, prompt version, input reference, output reference, latency, token/cost metadata if returned, status and error. Sensitive content must follow privacy/minimization policy.
+R080  AI output must not directly publish high-impact profile claims without validation policy. Inferred specialties, summaries and matches should be reviewable and source-aware.
+AI routing example
+{
+  "function": "profile_topic_classification",
+  "primary": "openai:model_x",
+  "fallbacks": ["anthropic:model_y", "google:model_z"],
+  "output_schema": "topic_classification_v2",
+  "confidence_review_threshold": 0.72,
+  "enabled": true
+}
+15. Payment Orchestration and Country-Specific Provider Routing
+Subscription payments must support multiple payment engines/APIs and explicit market allocation. Payment logic must be provider-agnostic.
+R081  Create a payment provider registry managed from admin. Provider configuration includes provider type, display name, enabled state, supported countries, supported currencies, credential references, webhook secret, environment, capabilities and priority.
+R082  Admin must be able to allocate one or more payment providers to a country and define routing priority. Example: Kenya may route mobile-money payments to M-Pesa while cards may route through another provider.
+R083  Payment selection can consider country, currency, plan, payment method, amount and provider availability. Routing rules must be data-driven.
+R084  Support fallback only where payment semantics permit it. Never automatically duplicate-charge by sending the same completed charge to another provider after an ambiguous timeout.
+R085  Use idempotency keys for all charge/subscription creation operations. Store provider transaction IDs, request status, webhook events and reconciliation state.
+R086  Subscription state must be platform-owned and synchronized from provider events: pending, trialing, active, past_due, grace, suspended, cancelled, expired, refunded where applicable.
+R087  Admin must be able to view payment attempts, subscriptions, invoices/receipts metadata, provider events, failed webhooks and reconciliation mismatches.
+R088  Country/provider credentials must be stored securely. Super Admin only for key entry/update; finance/operations admins may view masked status but not secrets.
+Payment provider examples
+Stripe or equivalent card provider
+M-Pesa for Kenya where commercially/technically appropriate
+Paystack / Flutterwave or other regional processors where selected
+Future bank transfer / ACH adapters
+Manual/offline invoice mode for enterprise accounts if enabled
+16. Email, Messaging and Notification System
+R089  Build a notification service with provider adapters. Initial email configuration should support Google SMTP / Gmail SMTP settings entered through admin, while preserving the ability to add transactional email APIs later.
+R090  Admin email settings should include SMTP host, port, security mode, username/sender account, encrypted app password/credential, from name, reply-to, enabled state and test-send action.
+R091  Do not hard-code Gmail-only logic into business workflows. Business logic calls a notification service; the service chooses the configured provider.
+R092  Email templates must be admin-managed with purpose, locale, subject, HTML/text body, variables, active state and preview/test send.
+R093  Notification event types should include registration verification, password reset, profile claim, outreach invitation, collaboration proposal/status, business introduction, subscription/payment events, admin alerts and system notices.
+R094  Store notification delivery attempts, provider response, status, retry count, bounce/failure and user notification preference where applicable.
+R095  Architecture should support future in-app, SMS, push and WhatsApp channels without changing event-producing business logic.
+17. Admin Portal: Mandatory Functional Modules
+The admin portal must manage every major operational area of the web app. It should use a consistent permission model, filters, bulk actions, audit history and record-level notes.
+
+
+R096  Admin list screens must support pagination, search, filters, sortable columns, export where appropriate, bulk actions where safe and deep-linkable record views.
+R097  Sensitive admin actions must require explicit confirmation and be audit logged. Examples: user suspension, profile deletion/restriction, subscription cancellation, provider key change, payment routing change, impersonation.
+R098  Admin may feature influencers/categories on landing pages through CMS references without duplicating profile data.
+18. Country, Currency and Localization Framework
+R099  Maintain a country configuration table with ISO country code, enabled state, default currency, supported currencies, timezone default, locale/language defaults, payment routes, subscription plan availability, feature restrictions and legal/content notices.
+R100  Do not infer payment country only from IP. Prefer account/billing country and provider requirements; IP may be a supporting signal.
+R101  Prices must support country/currency-specific values rather than naive real-time conversion only.
+R102  Localization architecture must support translatable CMS content, notification templates and UI strings even if English is the initial language.
+19. Core Data Entities
+Names are conceptual; development AI may adapt naming conventions but must preserve the domain separation.
+
+
+20. API and Backend Contract Principles
+R103  Version external/public APIs from first release, e.g. /api/v1/.
+R104  Use consistent response envelopes/error codes or a documented error contract. Errors must be machine-readable and user-safe.
+R105  Protect all write endpoints with authorization and server-side entitlement checks.
+R106  Use cursor or stable pagination for large directory/admin datasets.
+R107  Implement webhook endpoints with signature validation, replay protection/idempotency and raw event archival where appropriate.
+Representative endpoint groups
+/api/v1/auth/*
+/api/v1/public/search
+/api/v1/public/influencers/{slug}
+/api/v1/profiles/{id}/*
+/api/v1/collaborations/*
+/api/v1/business-briefs/*
+/api/v1/matches/*
+/api/v1/influence-cards/*
+/api/v1/subscriptions/*
+/api/v1/payments/*
+/api/v1/admin/cms/*
+/api/v1/admin/profiles/*
+/api/v1/admin/outreach/*
+/api/v1/admin/plans/*
+/api/v1/admin/payment-providers/*
+/api/v1/admin/ai/*
+/api/v1/admin/notifications/*
+/api/v1/webhooks/{provider}
+21. Background Jobs, Schedulers and Queues
+R108  Use a job queue for profile extraction, metric refresh, AI enrichment, outreach delivery, notification retries, payment webhook processing, QR analytics rollup, data export and large admin bulk actions.
+R109  Jobs must be idempotent where possible and include status, attempt count, next retry, dead-letter/failure state and trace/correlation ID.
+R110  Admin needs visibility into failed critical jobs and the ability to retry safe jobs.
+R111  Schedules such as profile refresh frequency should be configurable by source/provider and plan/priority class.
+22. Analytics and Event Tracking
+R112  Implement a first-party event taxonomy before launch so anonymous-to-registered conversion and directory behavior can be measured consistently.
+Minimum events
+page_view
+search_submitted
+filter_applied
+profile_viewed
+profile_contact_clicked
+signup_prompt_shown
+signup_started
+signup_completed
+profile_claim_started
+profile_claim_completed
+qr_scanned
+social_link_clicked
+collaboration_match_viewed
+collaboration_proposal_sent
+business_brief_created
+managed_match_requested
+introduction_created
+plan_viewed
+checkout_started
+subscription_activated
+payment_failed
+R113  Events must support anonymous_session_id and user_id linkage after registration where privacy policy allows so conversion funnels can be analyzed.
+R114  Admin analytics should report acquisition, directory usage, creator activation, collaboration funnel, business funnel, subscription conversion, payment failures, AI usage and outreach performance.
+23. Security, Privacy and Trust Controls
+R115  Encrypt secrets at rest; use a proper secret/encryption mechanism rather than plaintext database fields.
+R116  Apply least-privilege access to provider keys, financial settings, private contact data and admin functions.
+R117  Use secure password hashing, CSRF protection where relevant, rate limiting, input validation, output encoding and protection against common OWASP web risks.
+R118  Admin audit log must capture actor, action, object, before/after summary where feasible, timestamp, IP/session metadata and reason for sensitive overrides.
+R119  Support account suspension, deletion/anonymization workflow, export/request workflow and profile correction/takedown handling according to final legal policy.
+R120  Public profile extraction must have source/legal policy controls, opt-out/restriction handling and correction mechanisms. The system should not assume all public data is freely reusable.
+R121  Do not expose private influencer contact data publicly unless the influencer explicitly configures it as public or the plan/permission model permits access under documented policy.
+R122  Use coarse location for analytics unless precise location is required and expressly permitted. QR analytics should not become covert precise tracking.
+24. Moderation, Abuse Prevention and Data Quality
+R123  Support user reports for impersonation, incorrect profile, spam, harassment, prohibited content and fraudulent business requests.
+R124  Support duplicate influencer detection and admin merge workflow with redirect preservation for old slugs where possible.
+R125  Use rate limits and anti-spam quotas on outreach, collaboration proposals and contact reveal actions.
+R126  Maintain source freshness indicators. Stale metrics should display as stale rather than appearing current.
+R127  Admin can suppress a profile from search without deleting the underlying record, preserving audit history.
+25. Media, Files and Asset Management
+R128  Use object storage/CDN-compatible architecture for profile photos, portfolio media, CMS media, downloadable cards and attachments.
+R129  Validate MIME type, file size and safe filenames; scan uploads if supported. Do not trust user-provided extensions.
+R130  Separate public assets from private attachments with access-controlled URLs or signed links for private content.
+R131  Admin media library should allow reuse of site assets and show where critical CMS assets are referenced before deletion.
+26. Feature Flags and Runtime Configuration
+R132  Feature flags must allow controlled rollout by environment, user type, country, percentage/cohort or specific accounts where supported.
+R133  Use feature flags for unfinished or risky modules such as managed promotion, new payment provider, AI enrichment version, advanced analytics and public API access.
+R134  Critical configuration changes should validate compatibility before activation. Example: do not enable a country plan with no active payment route unless free/manual billing is explicitly allowed.
+27. Failure Handling, Observability and Operational Resilience
+R135  Every provider integration must define timeout, retry policy, circuit-breaker/degraded behavior where appropriate and error translation.
+R136  User-facing workflows should fail gracefully. Example: if AI enrichment is unavailable, the profile should remain accessible with existing data rather than fail entirely.
+R137  If a payment provider is unavailable, only offer an alternative provider when routing rules and payment state make it safe; otherwise show a retry/status message.
+R138  Centralize structured logs and include correlation IDs across API request, background job and provider call.
+R139  Admin dashboard should surface integration health and recent failure counts for AI, payment, email and extraction providers.
+28. Environment, Secrets and Deployment Configuration
+R140  Separate development, staging and production environments with independent credentials and databases.
+R141  Never store production provider secrets in source control. Admin-entered secrets must be encrypted and environment-scoped.
+R142  Configuration changes that affect production providers should support validation/test actions before save/activate when provider permits.
+R143  Database migrations must be versioned and reversible where reasonably possible. Seed data should initialize roles, base entitlement keys, default taxonomy roots and system settings without embedding business pricing.
+29. Testing Requirements
+Automated testing
+Unit tests for entitlement evaluation, payment routing, AI routing, profile state transitions and collaboration state transitions.
+Integration tests for payment webhooks, email provider, AI provider adapters, profile extraction adapters and storage.
+Authorization tests covering role/permission boundaries.
+API contract tests for public and admin APIs.
+Migration tests for critical schema changes.
+End-to-end acceptance scenarios
+1.  Guest searches creators, views allowed number of detailed profiles, receives signup prompt, registers and continues without losing intended context.
+2.  Admin creates a seed influencer profile, automated enrichment runs, admin reviews the data, sends a claim invitation, influencer registers and claims the existing profile.
+3.  Creator configures “I can offer” and “I need”; system produces complementary matches; creator sends proposal; recipient accepts.
+4.  Business creates a brief and receives matched creators; business requests managed matching; admin produces shortlist and records introduction.
+5.  Super Admin adds/configures an AI provider, maps a function to a model, tests it, disables it, and the system routes to configured fallback.
+6.  Super Admin configures Kenya with an M-Pesa adapter and a separate card provider; checkout displays valid methods according to route rules.
+7.  Admin changes hero banner, menu order and landing section order; public site reflects changes without deployment.
+8.  Admin edits plan limits; entitlement behavior changes for subsequent requests without code deployment.
+9.  Payment webhook updates subscription state exactly once under duplicate webhook delivery.
+10.  Email provider is configured through admin; test send works; invitation template is edited and used by outreach workflow.
+30. Phased Build Plan
+
+
+R144  Phase boundaries must not be used to omit foundational admin/configuration structures. Provider registries, entitlements, audit and CMS architecture should be established early even if some screens are activated later.
+31. Explicit Non-Goals for the Initial Build
+These items should not accidentally consume MVP scope unless the owner explicitly promotes them:
+Full escrow/marketplace settlement between businesses and creators
+Complex campaign contract lifecycle and legal e-signature
+Native mobile apps before the responsive web experience is proven
+Universal influencer ranking/score as the core discovery model
+Uncontrolled scraping as the only data source
+Hard-coded single-country billing
+Hard-coded single AI vendor
+Direct-message replacement for every social network
+Large enterprise API program before core product usage is validated
+32. Development AI Build Rules / Guardrails
+R145  Before implementing any feature, identify its admin-managed configuration points and persist them in the data/configuration model.
+R146  Do not create dead-end admin screens. Every setting shown in admin must drive actual runtime behavior or be clearly labeled not active.
+R147  Do not store provider API keys in frontend code, logs or browser-accessible configuration.
+R148  Do not treat social follower count as the primary definition of influence. Preserve specialty, context, geography, collaboration and business fit as first-class searchable data.
+R149  Do not publish AI-generated profile facts without provenance/confidence policy. AI enhancement supplements source data; it does not erase source truth.
+R150  Do not merge business, creator and admin notes into the public profile record. Separate public data from private CRM/operational data.
+R151  Do not couple payment provider webhooks directly to UI state. Normalize provider events into platform subscription/payment state.
+R152  Do not couple application features directly to specific model names. Use AI function routing.
+R153  Do not couple application email events directly to Gmail SMTP. Use notification provider abstraction.
+R154  Do not implement guest limits only in the frontend. Server-side usage and entitlement enforcement is mandatory.
+33. MVP Definition of Done
+The MVP is considered architecturally complete only when the following baseline is demonstrated end to end:
+1.  Admin can change logo/menu/hero/landing sections and public site reflects those changes.
+2.  Admin can create/edit taxonomy and directory search uses it.
+3.  Admin can create/import a seed influencer profile, run automated enrichment, review it and invite the influencer.
+4.  An influencer can register, claim the seeded profile, manage social links, specialties, collaboration fields and public visibility.
+5.  A guest can search/view creators under a configurable usage policy and is prompted/required to register according to admin rules.
+6.  A creator has a stable public profile URL plus dynamic QR destination.
+7.  Admin can define subscription plans and entitlement limits and the backend enforces them.
+8.  At least one payment provider works through the provider abstraction; architecture supports country routing and a second provider without redesign.
+9.  At least one AI provider works through function routing; a fallback provider/model can be configured without changing business logic.
+10.  Google SMTP can be configured in admin and used through the notification service for invitations and system email.
+11.  Admin audit records exist for sensitive operational changes.
+12.  Critical provider/job failures are visible and retryable where safe.
+34. Initial Admin Permission Groups
+
+
+35. Suggested Configuration Objects
+These examples are implementation guidance; field names may change, but the behavior must remain configurable.
+Guest usage policy
+{
+  "policy_key": "guest_default",
+  "limits": {
+    "basic_search_per_day": 20,
+    "detailed_profile_views_per_day": 5,
+    "advanced_search_per_day": 2
+  },
+  "soft_gate_after": {"advanced_search": 1},
+  "hard_gate_actions": ["contact_creator", "save_list", "export", "claim_profile"],
+  "enabled": true
+}
+Country payment routing
+{
+  "country": "KE",
+  "currency": "KES",
+  "routes": [
+    {"method": "mobile_money", "provider": "mpesa_primary", "priority": 1},
+    {"method": "card", "provider": "regional_card_gateway", "priority": 1}
+  ]
+}
+AI function routing
+{
+  "function": "business_creator_match",
+  "primary_model": "provider_a:model_1",
+  "fallback_models": ["provider_b:model_2"],
+  "prompt_version": "match_v3",
+  "structured_schema": "creator_match_v2",
+  "timeout_ms": 30000,
+  "enabled": true
+}
+36. Open Design Decisions to Resolve During Implementation
+These are implementation choices, not missing product requirements. The development AI should choose sensible defaults and keep them replaceable:
+Exact web/backend framework and deployment platform
+Search engine implementation at small scale (database search vs dedicated search service) while preserving future migration path
+Queue/worker technology
+Object storage vendor
+Analytics warehouse/product analytics vendor
+Exact initial social data providers/APIs and per-platform capabilities
+Exact first payment provider(s) beyond the country-routing abstraction
+Exact AI providers/models configured at launch
+Exact visual design system and brand tokens
+Exact claim verification methods available per social platform
+37. Final Architecture Principle
+The product should behave as a configurable platform, not a collection of fixed screens. The owner must be able to operate, localize, monetize and evolve the system through the admin portal: change public content, modify plans, manage user access, route payments by country, change AI providers, update email delivery, enrich profiles, contact influencers, adjust discovery rules and turn features on or off without requiring a code deployment for ordinary business operations.
+This requirement is the central technical interpretation of the product strategy. Future development should extend the configuration model rather than bypass it with one-off hard-coded logic.
+38. Influencer Card Subscription, Entitlement & Rendering System
+This section is authoritative for current Influencer Card behavior and supersedes any earlier generic assumption that every creator automatically receives every card feature. The card is a standalone monetizable product that can also be bundled with broader creator subscriptions.
+IC-001  Treat the Influencer Card as its own product domain with independent plans/entitlements, while allowing the same entitlements to be bundled into broader creator subscriptions.
+IC-002  Never implement card behavior using direct checks such as if plan_name == "pro". The runtime must evaluate machine-readable entitlement keys and quantitative limits.
+IC-003  Admin must be able to create/reorder/archive card plans, set per-country pricing/currency, assign features, set limits, create promotions, and bundle a card plan with another subscription without code changes.
+IC-004  Canonical card layout is portrait/vertical. Target the visual proportions of an approximately 4:5 share/preview canvas while keeping the web component responsive. Horizontal card UI is allowed only as a preview/listing/promo component.
+IC-005  Separate Card and Full Profile routes. Card route is optimized for identity/connection and fast load; Full Profile provides discovery intelligence, portfolio, audience, brand history and deeper commercial context.
+Required entitlement keys
+card.enabled
+card.social_links.max
+card.specialties.max
+card.shortlink.enabled
+card.custom_slug.enabled
+card.qr.enabled
+card.qr.dynamic
+card.qr.analytics
+card.analytics.level
+card.social_click_analytics.enabled
+card.contact.enabled
+card.collaboration.enabled
+card.website_links.max
+card.portfolio_items.max
+card.brand_logos.max
+card.media_kit.enabled
+card.lead_tracking.enabled
+card.custom_theme.enabled
+card.theme_options.max
+card.remove_platform_branding
+card.download.enabled
+card.nfc.enabled
+card.priority_discovery.enabled
+IC-006  Entitlements must support boolean, integer/decimal limit, enum level and optional period/window. Store effective entitlement snapshots on subscription changes for auditability.
+IC-007  Feature usage counters must be enforced server-side, not only hidden in the client. Client UI should explain locked capabilities and route to upgrade when appropriate.
+Starter / Plus / Pro card feature model
+
+Commercial rule: the values above are launch defaults, not hard-coded product rules. Admin must be able to change limits and enabled features per plan, country, promotion or bundle without a deployment.
+Launch-default entitlement intent
+Starter: social_links.max=1; specialties.max=1; qr.enabled=false; shortlink.enabled=false; analytics.level=BASIC; platform_branding=VISIBLE
+Plus: social_links.max=4; specialties.max=3; qr.enabled=true; qr.dynamic=false; shortlink.enabled=true; analytics.level=STANDARD; custom_theme=LIMITED
+Pro: social_links.max=ADMIN_LIMIT; specialties.max=ADMIN_LIMIT; qr.enabled=true; qr.dynamic=true; shortlink.enabled=true; analytics.level=ADVANCED; custom_theme=FULL
+Launch defaults are seed configuration only. Do not encode these values as constants in business logic.
+URL, shortlink and QR architecture
+IC-008  Create a permanent canonical card URL per creator, for example /@handle or /card/{slug}. Slug changes must preserve redirect history to prevent broken shared links.
+IC-009  Shortlinks must use a redirect mapping table, allow uniqueness validation, support reserved words, and retain audit/history. Example public form: ic.me/sofia or the selected production short domain.
+IC-010  Standard QR encodes the canonical/short card URL and does not require a mutable redirect identity beyond normal URL redirects.
+IC-011  Dynamic QR must use an opaque QR identity mapped server-side to a target/card route. Updating card content or allowed destination must not change the QR graphic. Track status, created_at, disabled_at, reason, owner, campaign code and analytics policy.
+IC-012  QR scans must pass through a fast redirect endpoint with rate limiting, abuse controls, event capture and graceful fallback if analytics/event infrastructure is unavailable.
+Suggested card-domain entities
+card_plan
+card_feature
+plan_feature_entitlement
+influencer_card
+card_social_link
+card_specialty
+card_theme
+card_shortlink
+qr_identity
+qr_redirect_target
+card_view_event
+qr_scan_event
+card_click_event
+card_contact_event
+card_lead
+Admin portal: card product management
+Plans & pricing: create/edit/archive plans, country pricing, billing interval, promotional price, visibility and bundle relationships.
+Feature matrix: toggle each card feature and set numeric limits or analytics levels per plan.
+Theme system: manage platform themes, tier defaults, approved color tokens and whether creator custom branding is allowed.
+QR management: view code status, owner, target, scans, disable/reissue dynamic codes, and manage campaign codes.
+Shortlinks: reserve words, review collisions/abuse, redirect history and disabled aliases.
+Analytics: card views, QR scans, social clicks, contacts/inquiries, conversion funnel and plan-level usage.
+Preview: admin must be able to preview Starter/Plus/Pro cards using the exact effective entitlements before publishing a plan change.
+39. Influencer Card Design System & Development Assets
+Brand color system
+Influence Connect uses blue for trust/platform behavior and purple for creator identity/collaboration. Pink is an accent, not a dominant category signal. Champagne gold is reserved for Pro-level premium accents. This avoids making the platform feel beauty-specific and keeps the identity suitable for technology, fitness, automotive, food, travel, interiors, gaming, finance, suppliers and other creator categories.
+
+Tier visual differentiation
+
+Recommended design tokens by tier:
+
+UI-IC-001  Tier styling is a visual system, not authorization. Server entitlements determine capability; color only communicates the state.
+UI-IC-002  Starter uses primarily white/light surfaces with soft blue/lavender accents and minimal glow. Plus uses the signature electric-blue/royal-violet treatment. Pro uses deep indigo/violet with restrained champagne-gold highlights.
+UI-IC-003  Do not make pink a dominant platform color. Pink can be a limited energy accent so the product remains credible across beauty, technology, finance, food, fitness, interiors, automotive, travel, gaming and other specialties.
+UI-IC-004  Gold/champagne is Pro-only by default and must be used sparingly for crown/badge/edge/QR highlight accents. Do not use gold as long-form body text on light surfaces.
+UI-IC-005  Creator custom branding, when entitled, may override card background/accent choices but must preserve readable system status, verification, QR and accessibility. Creator brand colors must not change underlying entitlements.
+UI-IC-006  Meet WCAG AA contrast for text and controls. Plan/tier must always be conveyed by text/badge in addition to color.
+Approved card reference designs
+These images are visual references for hierarchy, density and tier differentiation. The production UI must be implemented as responsive components; do not bake live data, social links, QR codes or user text into raster artwork.
+
+Reusable tier background assets
+Background art is decorative only. Production cards must render text, creator images, platform icons, QR codes and controls as live UI layers. The raster assets can be used as optional background artwork or visual guidance; CSS/SVG equivalents are preferred where practical for performance and theme adaptability.
+
+Asset filenames: influencer_card_starter_background.png; influencer_card_plus_background.png; influencer_card_pro_background.png.
+Asset implementation guidance
+Reference card images are design targets only and must not be shipped as functional cards.
+Background PNGs may be used as optional decorative assets. Prefer CSS gradients/SVG where practical to reduce download size and allow theming.
+Keep creator image, text, icons, QR, shortlink, contact controls and analytics-driven values as separate live UI layers.
+Use responsive image sizing and modern image formats in production; generate optimized variants through the media pipeline.
+Do not embed private contact details into cached public images when a live controlled contact action can be used instead.
