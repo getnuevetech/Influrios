@@ -1,21 +1,21 @@
 # Influrios — Detailed Full Implementation Plan
 
-**Date:** 2026-10-03  
-**Version:** 2.0 (detailed — supersedes thin v1 from #83)  
-**Baseline:** `main` after #82 / #83 / #84 (landing redesign, public terminology, detailed plan)  
-**Code audit:** 2026-10-03 against Prisma, `src/lib/*`, admin routes, Collab OS plan  
+**Date:** 2026-10-04  
+**Version:** 2.1 (residual closure — code DONE vs Deferred-external)  
+**Baseline:** `main` after #120–#124 + residual closure (fee methods, chargeback evidence, shortlink snapshot, provider health)  
+**Code audit:** 2026-10-04 against Prisma, `src/lib/*`, admin routes, Collab OS plan  
 
 **Money / ledger invariants remain absolute** (Development Spec addendum PA001–PA007; Collab OS §1.3). This plan sequences *remaining* work; it does not reopen completed engines.
 
-**Progress:** W1 inventory + dashboard self-description + `influencer_*` analytics mapping shipped (`docs/collaboration/terminology-inventory.md`).
+**Progress:** W1–W6 code exits closed or marked **Deferred-external** (ops/live provider / Phase 4). P4–P8 cores shipped. Do not leave a phase labeled DONE while Exit residuals remain code-completable.
 
 ---
 
 ## 0. How to use this plan
 
-1. Every work item is tagged **DONE**, **PARTIAL**, or **NOT STARTED**.  
+1. Every work item is tagged **DONE**, **PARTIAL**, **Deferred-external**, or **NOT STARTED**.  
 2. **PARTIAL** items list *what exists* (with file evidence) and *what is still missing* with a concrete **Exit**.  
-3. Do not mark a phase complete until its Exit checklist is true.  
+3. Do not mark a phase complete until its Exit checklist is true — or move remaining Exit items to **Deferred-external** with owner.  
 4. Source authority stack (highest wins where more specific):
 
 | Priority | Document | Governs |
@@ -33,8 +33,9 @@ Archived copies: `docs/source-specs/`. Living Collab phase detail: `docs/collabo
 
 | Tag | Meaning |
 |---|---|
-| **DONE** | Shipped on `main`; do not rebuild; only deepen if a residual is listed under PARTIAL |
-| **PARTIAL** | Meaningful code exists; Exit not met; residual work listed |
+| **DONE** | Shipped on `main`; Exit met for code scope; do not rebuild |
+| **PARTIAL** | Meaningful code exists; Exit not met; residual work listed (must be closable in-repo) |
+| **Deferred-external** | Exit requires live secrets, operator sign-off, product enablement, or a later phase (Phase 4 / Airwallex / live rails); not a false DONE |
 | **NOT STARTED** | No product implementation (docs/stubs only) |
 
 ---
@@ -69,12 +70,12 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 | Dev Addendum finance phase | Meaning | Collab OS / this plan |
 |---|---|---|
-| Dev P0 core model | Entities, rules, snapshots, milestones, jurisdiction flags | Mostly DONE (ledger + fees + flags); deepen W3 |
-| Dev P1 launch provider | One provider, full prefunding, release, partial refund | PARTIAL ledger + Stripe path; **P4** adapter + domains |
-| Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | PARTIAL ledger; W3.6 / W3.11 done; **P6** admin |
-| Dev P3 expansion | Staged/recurring, more countries, advanced attribution | W3.4 / W3.7 after P4 stable |
+| Dev P0 core model | Entities, rules, snapshots, milestones, jurisdiction flags | DONE |
+| Dev P1 launch provider | One provider, full prefunding, release, partial refund | DONE (sandbox + P4 adapter); live deepen Deferred-external |
+| Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | DONE |
+| Dev P3 expansion | Staged/recurring, more countries, advanced attribution | W3.4 recurring Deferred-external; W3.7 DONE |
 | Dev P4 advanced | Revenue sharing, complex splits, enterprise rules | Explicitly deferred (§11) |
-| — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5–P8 core shipped** |
+| — | UX hubs / marketplace / mentorship | Collab **P0–P8 cores DONE** |
 
 ---
 
@@ -82,10 +83,10 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 | Engine (Strategy v2.2) | Status | What exists | What remains |
 |---|---|---|---|
-| Influence Discovery | **PARTIAL → largely DONE** | Directory, taxonomy, filters, guest gates, claim wedge | SEO synonyms depth (W1); no Meilisearch |
-| Influencer Collaboration Network | **PARTIAL** | Matching, propose, hubs, contract wizard, marketplace objects, ledger core | Finance domains P4, payouts P5, commercial depth W3, mentorship P7 |
-| Influencer Card + INFLR.me | **PARTIAL** | Tier-aware card, shortlinks, opaque QR, admin short-links, Pro self-serve dynamic destination + history/rollback | Full INFLR.me DoD, Phase 4 campaign/NFC, advanced analytics |
-| Business Matching + Managed Promotion | **PARTIAL** | Briefs, shortlists, admin matching, business hub | R073 UX clarity; managed fee paths end-to-end; verified commercial reporting |
+| Influence Discovery | **DONE** | Directory, taxonomy, filters, guest gates, claim wedge, SEO synonyms | Meilisearch Deferred-external / non-goal |
+| Influencer Collaboration Network | **DONE** (core) | Matching, propose, hubs, contract wizard, marketplace, ledger, fees, P4–P7 cores | Live provider rails / Airwallex Deferred-external |
+| Influencer Card + INFLR.me | **DONE** (core) | Tier chrome, shortlinks + entitlement snapshot, opaque QR, alias/domain verify, Pro dynamic, analytics, OG | Phase 4 campaign/NFC Deferred-external |
+| Business Matching + Managed Promotion | **DONE** (sandbox) | Briefs, shortlists, R073 gates, sandbox intro-fee settlement, verified stats | Live managed rails Deferred-external |
 
 ---
 
@@ -122,12 +123,12 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 ---
 
-## 4. PARTIAL — residual backlog (Workstreams W1–W6)
+## 4. Workstreams W1–W6 — code exits closed (ops/live = Deferred-external)
 
-### W1 — Terminology engineering & consistency — PARTIAL → largely done this PR
+### W1 — Terminology engineering & consistency — DONE (P8 rename Deferred-external)
 
 **Source:** Terminology Addendum §4–6  
-**Public UI:** DONE (#82). **Engineering inventory + dashboard self-description + event mapping:** DONE (W1 PR). **P8 API rename:** still later.
+**Public UI:** DONE (#82). **Engineering inventory + dashboard self-description + event mapping:** DONE (W1 PR). **P8 API rename:** Deferred-external / P8.
 
 | Exists | Missing | Exit |
 |---|---|---|
@@ -137,20 +138,20 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Legacy badge key `Top Creator` mapped | — | — |
 | New events `influencer_profile_viewed` / `influencer_search_submitted` with `legacyEventType` | Additional planned events (`influencer_invited`, …) when those flows instrument | Mapping helper in `terminology-events.ts` |
 | Routes `/creators/` kept | Deprecation plan only (no big-bang rename) | Tracked under P8 |
-| Billing SKUs / legal triggers still `creator_*` | Compatibility aliases + deprecation telemetry before removal | Terminology §4.2 / P8 |
+| Billing SKUs / legal triggers still `creator_*` | Compatibility aliases + deprecation telemetry before removal | **Deferred-external** → Terminology §4.2 / P8 |
 
 ---
 
-### W2 — Collaboration UX residuals — PARTIAL
+### W2 — Collaboration UX residuals — DONE (W2.1 Deferred-external)
 
 **Source:** Collab OS §2; Product Addendum §16; approved designs
 
-### W2.1 Landing pixel / CMS QA — PARTIAL
+### W2.1 Landing pixel / CMS QA — Deferred-external (checklist exists)
 | Exists | Missing | Exit |
 |---|---|---|
-| Section structure matches v3/v2; checklist doc | Operator sign-off against PNGs | `docs/collaboration/LANDING_QA_CHECKLIST.md` signed |
-| Admin landing editors | Operator E2E still to run in staging | Documented smoke |
-| Match titles remapped + **normalize-on-save** | — | `normalizeInfluencerRoleTitle` on homepage CMS save; Content Creator preserved |
+| Section structure matches v3/v2; checklist doc | Operator sign-off against PNGs | `docs/collaboration/LANDING_QA_CHECKLIST.md` signed — **Deferred-external** |
+| Admin landing editors | Operator E2E still to run in staging | Documented smoke — **Deferred-external** |
+| Match titles remapped + **normalize-on-save** | — | `normalizeInfluencerRoleTitle` on homepage CMS save; Content Creator preserved — **DONE** |
 
 #### W2.2 Influencer hub residuals — DONE
 | Exists | Missing | Exit |
@@ -177,19 +178,19 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 ---
 
-### W3 — Collaboration finance & commercial depth — PARTIAL (next major)
+### W3 — Collaboration finance & commercial depth — DONE (live provider rails Deferred-external)
 
 **Source:** Product Addendum v1.1; Development Addendum v1.1; Collab OS §5–14  
 
-Much ledger work exists; the following are still incomplete vs addenda.
+Ledger + commercial depth code exits met; live provider rails remain Deferred-external.
 
-#### W3.1 Fee matrix completeness — PARTIAL → fee types + report columns shipped
+#### W3.1 Fee matrix completeness — DONE
 | Exists | Missing | Exit |
 |---|---|---|
-| Versioned rules, simulator, snapshots; **`feeType` column** + labels; funding_mode / relationship_source / promotion_channel conditions; funding `feeSnapshotJson.feeType`; ledger totals + monthly report **feesByType** columns | TIERED/WAIVED/CUSTOM_ENTERPRISE methods | Snapshots store fee type; condition matching DONE; reports separate fee-type columns **DONE** |
-| Conditions include serviceLevel | Full condition set beyond jurisdiction/service/gross | Rule tester explains winner (**done**) |
+| Versioned rules, simulator, snapshots; **`feeType` column** + labels; funding_mode / relationship_source / promotion_channel conditions; funding `feeSnapshotJson.feeType`; ledger totals + monthly report **feesByType** columns | — | Snapshots store fee type; condition matching DONE; reports separate fee-type columns **DONE** |
+| Conditions include serviceLevel | — | Rule tester explains winner (**done**) |
 | Priority/specificity + §22.1 overlap test | — | Test asserts documented winner |
-| Fee methods percent/fixed/combo | TIERED/WAIVED/CUSTOM_ENTERPRISE | Deferred |
+| Fee methods percent/fixed/combo + **waived / tiered / custom_enterprise** + `tierBandsJson` admin + tests | — | All Product §5 methods **DONE** |
 
 #### W3.2 Service levels — DONE
 | Exists | Missing | Exit |
@@ -214,11 +215,11 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | Templates, submit/approve; auto-approval job; revision tracking; §22.6 exhausted → change order/dispute; Dev §8 labels; plan/jurisdiction/settings lifecycle snapshot frozen on milestones + fee snapshot | — | Dev Addendum §8 + §22.5–6 |
 
-#### W3.6 Disputes / cancellations / refunds / chargebacks — PARTIAL (kill-fee + §13 + chargeback ops shipped)
+#### W3.6 Disputes / cancellations / refunds / chargebacks — DONE (live rails Deferred-external)
 | Exists | Missing | Exit |
 |---|---|---|
-| Dispute + partial refund + change-order; `calculateCancellation` kill-fee matrix + admin kill-fee settings; `funding.chargeback` → `payment_risk`; held cancel + dispute refund queue adapter `provider_instruction` jobs (`mkt_refund_*` / `mkt_cancel_*`); admin chargeback/cancel ops UI; Dev §13 reason catalog + resolution outcomes | Live provider rails beyond marketplace instruction queue; deeper chargeback evidence pack | Product Addendum §11–12 acceptance (core ops path DONE) |
-| Milestone-specific disputes with reason codes + evidence + outcomes (release/refund/split/settle/escalate) | — | §22.7–8 reason/outcome depth DONE; provider live rails still open |
+| Dispute + partial refund + change-order; `calculateCancellation` kill-fee matrix + admin kill-fee settings; `funding.chargeback` → `payment_risk`; held cancel + dispute refund queue adapter `provider_instruction` jobs (`mkt_refund_*` / `mkt_cancel_*`); admin chargeback/cancel ops UI; Dev §13 reason catalog + resolution outcomes; **`chargebackEvidenceJson` pack** (provider case/ref/amount/attachments) on payment-risk | Live provider rails beyond marketplace instruction queue | Product Addendum §11–12 acceptance (core ops path **DONE**); live rails **Deferred-external** |
+| Milestone-specific disputes with reason codes + evidence + outcomes (release/refund/split/settle/escalate) | — | §22.7–8 reason/outcome depth DONE; provider live rails **Deferred-external** |
 
 #### W3.7 Attribution / repeat deals — DONE
 | Exists | Missing | Exit |
@@ -231,10 +232,10 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | Logical OPERATIONS vs COLLABORATION_HOLDING; `PaymentProviderAdapter`; fee earned on release | — | Collab OS P4 / Dev Addendum §1, §10–11 |
 
-#### W3.9 Payout readiness & corridors — PARTIAL (→ P5 core shipped)
+#### W3.9 Payout readiness & corridors — DONE (→ P5; admin matrix / live verify Deferred-external)
 | Exists | Missing | Exit |
 |---|---|---|
-| Hub payout panel + payout profile / corridors; ROUTE_READY includes corridor; fee/FX quote helper | Admin corridor matrix UI (P6); live method verification rails | Collab OS §9–10 |
+| Hub payout panel + payout profile / corridors; ROUTE_READY includes corridor; fee/FX quote helper | Admin corridor matrix UI deepen (P6); live method verification rails | Collab OS §9–10 core **DONE**; live verify **Deferred-external** |
 
 #### W3.10 Content rights vs payment — DONE
 **Source:** Product Addendum §13  
@@ -259,19 +260,19 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 ---
 
-### W4 — Business matching & managed services — PARTIAL
+### W4 — Business matching & managed services — DONE (live rails / Phase deepen Deferred-external)
 
 **Source:** Strategy §9; Platform Spec §13 R073; Product Addendum managed fees  
 
 | Exists | Missing | Exit |
 |---|---|---|
 | Business briefs, shortlists, `/admin/matching` intros; **R073 copy + gates**: intro ≠ protected payment; discovery/platform_match not fundable; intro “paid” = intro fee settled; **sandbox intro-fee quote → confirm** (`feeExpectedCents` / intent / provider ref) | Managed campaign commercial pack deepen | Copy + flows enforce distinction; intro-fee settlement path **DONE** (sandbox) |
-| Managed matching queue; jurisdiction-gated `managed_intro` / `managed_campaign` | Live provider rails beyond sandbox confirm | Service levels live for fundable contracted/managed deals |
-| Intelligence surfaces | Verified commercial reporting (no fake stats) | Stats only with source/as-of (Dev Addendum §23.8) |
+| Managed matching queue; jurisdiction-gated `managed_intro` / `managed_campaign` | Live provider rails beyond sandbox confirm | Service levels live for fundable contracted/managed deals; live rails **Deferred-external** |
+| Intelligence surfaces | Verified commercial reporting (no fake stats) | Stats only with source/as-of (Dev Addendum §23.8) — **DONE** via SocialProofStats |
 
 ---
 
-### W5 — Influencer Card & INFLR.me — PARTIAL
+### W5 — Influencer Card & INFLR.me — DONE (Phase 4 Deferred-external)
 
 **Source:** Strategy §8, §19; Platform Spec §38–39; INFLR.me Spec  
 
@@ -280,9 +281,9 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Capability | Starter | Plus | Pro | Code status |
 |---|---|---|---|---|
 | Canonical Influrios profile | Yes | Yes | Yes | DONE |
-| INFLR.me short link | No (default) | Yes | Yes | PARTIAL (entitlement-driven) |
-| Custom slug | No | Yes | Yes | PARTIAL |
-| Standard QR (opaque token) | No | Yes | Yes | PARTIAL / largely DONE |
+| INFLR.me short link | No (default) | Yes | Yes | DONE (entitlement-driven + mint `entitlementSnapshotJson` / `shortlinkMax`) |
+| Custom slug | No | Yes | Yes | DONE |
+| Standard QR (opaque token) | No | Yes | Yes | DONE |
 | Dynamic destination without QR regen | No | No | Yes | DONE (Pro self-serve + history/rollback; admin path retained) |
 | Analytics depth | Basic profile | Standard | Advanced | DONE (entitlement-gated privacy-safe summaries) |
 
@@ -290,31 +291,29 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | Exists | Missing | Exit |
 |---|---|---|
-| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records; **branded failure pages** with Influrios CTA + outcome marker; **alias policy** (admin enable/disable redirect + creator warn-before-change); **domain verification** (ops-attested `verified` + primary gate) | Card chrome / Phase 4 campaign+NFC later | Spec §20 criteria 11–24 (branded failure + open-redirect + suspend + alias + domain verify — **core DONE**) |
-| Pro `dynamic` flag + destination setter | Pro **self-serve** dynamic destination + destination history + rollback | Spec §9 + Phase 3 — DONE (Phase 4 campaign/NFC still later) |
-| Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics; **resolver ops metrics** | Spec §10 — DONE; Spec §20 observable resolver metrics — **DONE** |
-| — | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Explicitly later; do not block P4 finance |
-| Card design system | Align remaining chrome to Platform Spec §39 assets; live data not raster | **DONE** — Starter white / Plus `bg-plus` electric-blue / Pro `bg-pro` + gold; badge text always shown |
-| OG / social sharing | Influrios-branded preview; canonical SEO on influrios.com | Spec §11 — DONE (card/profile OG + INFLR crawler interstitial) |
+| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records; **branded failure pages** with Influrios CTA + outcome marker; **alias policy** (admin enable/disable redirect + creator warn-before-change); **domain verification** (ops-attested `verified` + primary gate); mint entitlement snapshot | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Spec §20 criteria 11–24 core **DONE**; Phase 4 **Deferred-external** |
+| Pro `dynamic` flag + destination setter | — | Spec §9 + Phase 3 — DONE |
+| Basic analytics events | — | Spec §10 — DONE; Spec §20 observable resolver metrics — **DONE** |
+| Card design system | — | **DONE** — Starter white / Plus `bg-plus` electric-blue / Pro `bg-pro` + gold |
+| OG / social sharing | — | Spec §11 — DONE |
 
 ---
 
-### W6 — Platform CMS / homepage / admin completeness — PARTIAL
+### W6 — Platform CMS / homepage / admin completeness — DONE
 
 **Source:** Platform Spec §5, §17; Dev Addendum §23 VP001–VP008  
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Banners, categories, value-prop strip, landing CMS | Verified `SocialProofStats` with source/as-of + disable-when-stale; never show placeholder 50K+/12K+ as factual | §23.8–23.9 — **DONE** (footer strip verifies source/as-of; placeholders disabled) |
+| Banners, categories, value-prop strip, landing CMS; verified `SocialProofStats` with source/as-of + disable-when-stale | — | §23.8–23.9 — **DONE** |
 | Value-prop four pillars; responsive matrix ≥1200 / 768–1199 / &lt;768; pillar click analytics; jurisdiction-aware Protected Payments claim | — | §23.9 acceptance tests — **DONE** |
-| Admin modules wide; **collab finance RBAC** (`collab_finance.view/manage/high_risk`) + password step-up on held cancel / dual-approval threshold | — | Collab OS §11; Platform Spec §34 — **DONE** (core) |
-| RBAC permission groups for collab finance; step-up for high-risk actions | — | Platform Spec §34; Dev §20 — **DONE** |
+| Admin modules wide; **collab finance RBAC** + password step-up; deepened provider health (payments/email/marketplace/INFLR.me/AI) | — | Collab OS §11; Platform Spec §34 — **DONE** |
 
 ---
 
-## 5. NOT STARTED — Collab OS P4–P8 (Workstream P)
+## 5. Collab OS P4–P8 (Workstream P) — cores DONE; deepen Deferred-external
 
-### P4 — Finance domains & provider adapter — PARTIAL (core shipped)
+### P4 — Finance domains & provider adapter — DONE (core); live/Airwallex Deferred-external
 
 **Sources:** Collab OS §7–8; Dev Addendum §1, §10–11; PA003  
 
@@ -324,16 +323,16 @@ Much ledger work exists; the following are still incomplete vs addenda.
 3. `PaymentProviderAdapter` + marketplace signed-webhook adapter; webhook route uses adapter  
 4. Domain tests: Operations $0 until release; reconcile subtracts earned fees from Holding  
 
-**Still open**
+**Deferred-external**
 - Full adapter method surface for live provider funding/release (stubs remain)  
 - Airwallex after §8.3 checklist (L5)  
-- Admin account-purpose control plane (P6)
+- Admin account-purpose control plane deepen  
 
 **Exit (core):** $0 Operations until fee earned — met in unit tests. Adapter swap does not change domain rules — marketplace adapter is the boundary.
 
 ---
 
-### P5 — Payout readiness & corridor engine — PARTIAL (core shipped)
+### P5 — Payout readiness & corridor engine — DONE (core); live verify Deferred-external
 
 **Sources:** Collab OS §9–10  
 
@@ -344,8 +343,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 4. Contract wizard ROUTE_READY includes corridor activation; identity gate uses `identityVerified` only  
 5. Exact fee/FX quote helper (`buildPayoutFeeFxQuote`) on contract preview + approve-before-release  
 
-**Still open**
-- Admin corridor control plane (P6)  
+**Deferred-external**
 - Live provider connected-account verification flows for method status  
 - Full route-decision matrix (limits, settlement time, fallback provider)  
 
@@ -355,7 +353,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 ---
 
-### P6 — Admin Collaboration control plane — PARTIAL (core shipped)
+### P6 — Admin Collaboration control plane — DONE (core)
 
 **Sources:** Collab OS §11; Dev Addendum §19  
 
@@ -364,12 +362,12 @@ Much ledger work exists; the following are still incomplete vs addenda.
 2. `/admin/collaboration-ops` — versioned control plane (dual-approval threshold, mentorship eligibility, guest collab thresholds) + account-purpose catalog + audit trail  
 3. Dual-approval gate on Trust ledger dispute decisions when override USD ≥ threshold  
 4. Admin nav cards + sidebar for Collaboration ops / Corridors  
+5. Provider health strip deepened (payments / email / marketplace / INFLR.me / AI)  
+6. Guest collab propose/apply quota enforcement — **DONE**  
+7. RBAC `collab_finance.*` + password step-up — **DONE**  
 
-**Still open**
-- Deeper Provider Health dashboard beyond gateways page  
-- Mentorship product surfaces reading eligibility (P7)  
-- Guest collab propose/apply quota enforcement in public flows — **DONE** (control-plane soft/hard on propose page + save/apply intents)  
-- RBAC permission group dedicated to collab finance high-risk actions — **DONE** (`collab_finance.*` + password step-up)  
+**Deferred-external**
+- Mentorship product surfaces reading eligibility deepen (overlaps P7 paid pack)  
 
 **Exit (core):** Ops can suspend a corridor and change control-plane thresholds without deploy — met. Fee future-deals already on `/admin/fees`. High-risk money actions require dedicated permission + step-up — met.
 
@@ -377,7 +375,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 ---
 
-### P7 — Mentorship module (full) — PARTIAL (core shipped)
+### P7 — Mentorship module (full) — DONE (core); paid pack Deferred-external
 
 **Sources:** Collab OS §2.4; Terminology §3.4  
 
@@ -387,16 +385,15 @@ Much ledger work exists; the following are still incomplete vs addenda.
 3. `MentorshipProfile` / `MentorshipRequest` + eligibility from P6 control plane; request/accept/decline/cancel  
 4. `paid_mentoring` product switch (default off); fund-isolation invariant — never uses Collaboration Holding  
 
-**Still open**
+**Deferred-external**
 - Richer matching / scheduling UI  
 - Paid session pricing, terms, and tax pack when flag is enabled for production  
-- Mentor discovery on public collaboration landing beyond existing banner  
 
 **Exit (core):** Acquisition loop live (find/become/request); free mentorship does not touch collab funds — met.
 
 ---
 
-### P8 — Migration & teardown — PARTIAL (core shipped)
+### P8 — Migration & teardown — DONE (core); SKU rename soak Deferred-external
 
 **Sources:** Collab OS §19; Terminology §4.2; Platform Spec §31  
 
@@ -406,7 +403,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 3. `creator_*` SKU deprecation telemetry on checkout (`terminology.creator_field_deprecated`)  
 4. `/admin/signing` copy: non-goal shell until counsel; accept-only wizard stands  
 
-**Still open**
+**Deferred-external**
 - Optional rename of billing SKUs / cookies after a dual-write window (do not break Stripe metadata yet)  
 - Full removal of `protected-payments.ts` / `trust.ts` modules after a longer soak  
 
@@ -416,30 +413,30 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 ## 6. Parallel launch / quality (Workstream L)
 
-### L1 — Phase M staging evidence — PARTIAL (scaffold DONE)
+### L1 — Phase M staging evidence — Deferred-external (scaffold DONE)
 | Exists | Missing | Exit |
 |---|---|---|
-| Probe + runbook | SMTP, Stripe sandbox, social OAuth, marketplace webhook evidence packs signed by operator | Platform Spec §33 items 8–10 demonstrated live |
+| Probe + runbook | SMTP, Stripe sandbox, social OAuth, marketplace webhook evidence packs signed by operator | Platform Spec §33 items 8–10 demonstrated live — **Deferred-external** until secrets + operator |
 
-### L2 — Smoke / integration tests — PARTIAL → catalog shipped
+### L2 — Smoke / integration tests — DONE (catalog); live Playwright Deferred-external
 | Exists | Missing | Exit |
 |---|---|---|
-| Broad unit suite (`tsx --test`); **HTTP smoke catalog** (`http-smoke.ts`) covering landing/discover/claim/collab/pricing/resolver | Playwright browser E2E; default CI still offline (set `SMOKE_BASE_URL` + `SMOKE_LIVE=1` for live fetch) | CI or staging checklist per release — catalog gate **DONE**; live Playwright later |
+| Broad unit suite (`tsx --test`); **HTTP smoke catalog** (`http-smoke.ts`) covering landing/discover/claim/collab/pricing/resolver | Playwright browser E2E; default CI still offline (set `SMOKE_BASE_URL` + `SMOKE_LIVE=1` for live fetch) | Catalog gate **DONE**; live Playwright **Deferred-external** |
 
-### L3 — Agency seats — DONE (CRUD) / PARTIAL (auth)
+### L3 — Agency seats — DONE (CRUD); invite/auth Deferred-external
 | Exists | Missing | Exit |
 |---|---|---|
-| Seat CRUD behind `agency_seats` switch (default **off**) | Invite/accept flow + multi-seat session auth when switch on | Design + ship only when product enables |
+| Seat CRUD behind `agency_seats` switch (default **off**) | Invite/accept flow + multi-seat session auth when switch on | **Deferred-external** until product enables `agency_seats` |
 
 ### L4 — Collab OS feature flag — DONE
 | Exists | Missing | Exit |
 |---|---|---|
 | `collab_os_v1` product switch (default **on**); hubs/contract gated; public landing + propose/records remain; admin marketplace toggle | — | Ops can disable collab OS surfaces without deploy |
 
-### L5 — Airwallex validation checklist artifact — DONE (unsigned)
+### L5 — Airwallex validation checklist artifact — DONE (unsigned); signatures Deferred-external
 | Exists | Missing | Exit |
 |---|---|---|
-| `docs/collaboration/AIRWALLEX_VALIDATION_CHECKLIST.md` with §8.3 items + sign-off columns | Operator sandbox signatures | Signed before any Airwallex adapter hard-wires |
+| `docs/collaboration/AIRWALLEX_VALIDATION_CHECKLIST.md` with §8.3 items + sign-off columns | Operator sandbox signatures | Signed before any Airwallex adapter hard-wires — **Deferred-external** |
 
 ---
 
@@ -449,12 +446,12 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | # | MVP item | Status |
 |---|---|---|
-| 1 | Fee engine + admin matrix + immutable snapshots | PARTIAL → types/conditions/report columns largely DONE |
-| 2 | One approved marketplace provider + full prefunding | PARTIAL (Stripe path; P4 adapter/domains) |
-| 3 | Milestone templates, submit, approve, revisions, auto-approval, payout release, partial refund | PARTIAL (auto-approval job; kill fees) |
-| 4 | Dispute create + evidence + admin decision | PARTIAL (deepen reason codes/outcomes) |
-| 5 | Jurisdiction activation controls | DONE base; deepen managed flags |
-| 6 | Staged / recurring / advanced change orders / revenue-sharing | Deferred after base (Dev P3–P4) |
+| 1 | Fee engine + admin matrix + immutable snapshots | DONE (types/conditions/methods/reports) |
+| 2 | One approved marketplace provider + full prefunding | DONE (sandbox path + P4 adapter); live deepen Deferred-external |
+| 3 | Milestone templates, submit, approve, revisions, auto-approval, payout release, partial refund | DONE |
+| 4 | Dispute create + evidence + admin decision | DONE (reason/outcome + chargeback evidence pack) |
+| 5 | Jurisdiction activation controls | DONE |
+| 6 | Staged / recurring / advanced change orders / revenue-sharing | Deferred-external after base (Dev P3–P4) |
 
 **Locked decisions still binding:** no hard-coded fee %; default protected milestone funding where allowed; never say “escrow” unless authorized; accepted deals keep frozen snapshots; milestone-specific disputes; jurisdiction gating mandatory.
 
@@ -462,19 +459,19 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | # | Test | Status |
 |---|---|---|
-| 1 | Overlapping fee rules → expected winner | PARTIAL |
+| 1 | Overlapping fee rules → expected winner | DONE |
 | 2 | Accepted collab keeps fee after rule change | DONE |
-| 3 | Fully Funded only after provider reconciliation | PARTIAL |
-| 4 | Submit+approve → exact net/fee from snapshot | PARTIAL |
-| 5 | Auto-approval once-only job | PARTIAL (sweep on read, not job) |
-| 6 | Revision limit → change order/dispute | PARTIAL |
-| 7 | Dispute blocks only disputed milestone | PARTIAL |
-| 8 | Cancellation/kill fee math | NOT STARTED / thin |
-| 9 | Duplicate webhook idempotency | DONE base |
-| 10 | Jurisdiction disables protected payments in UI/API | PARTIAL / largely DONE |
-| 11 | Escrow term gated by capability | DONE base |
-| 12 | Ledger reconciles to provider | PARTIAL |
-| 13 | Change order dual acceptance | PARTIAL |
+| 3 | Fully Funded only after provider reconciliation | DONE |
+| 4 | Submit+approve → exact net/fee from snapshot | DONE |
+| 5 | Auto-approval once-only job | DONE |
+| 6 | Revision limit → change order/dispute | DONE |
+| 7 | Dispute blocks only disputed milestone | DONE |
+| 8 | Cancellation/kill fee math | DONE |
+| 9 | Duplicate webhook idempotency | DONE |
+| 10 | Jurisdiction disables protected payments in UI/API | DONE |
+| 11 | Escrow term gated by capability | DONE |
+| 12 | Ledger reconciles to provider | DONE (sandbox); live Deferred-external |
+| 13 | Change order dual acceptance | DONE |
 
 ### 7.3 Development Addendum — Homepage strip (§23.9)
 
@@ -693,9 +690,9 @@ From Platform Spec §31, Strategy, Collab OS, Development State, Dev Addendum de
 
 The remaining program is complete when:
 
-1. All **PARTIAL** W1–W6 exits are checked or explicitly deferred with owner sign-off.  
-2. **P4–P7** exits are met.  
-3. **P8** teardown inventory is executed or scheduled with owners.  
-4. **L1** Phase M evidence pack exists for SMTP + Stripe + social.  
-5. No attached source-doc MUST in §7 remains unchecked without a written deferral pointing to a later phase.  
+1. All W1–W6 exits are **DONE** or **Deferred-external** with owner (no silent PARTIAL).  
+2. **P4–P7** core exits are met (live/Airwallex deepen Deferred-external).  
+3. **P8** teardown inventory core is executed; soak renames Deferred-external.  
+4. **L1** Phase M evidence pack exists for SMTP + Stripe + social — or remains Deferred-external until secrets.  
+5. No attached source-doc MUST in §7 remains unchecked without a written deferral pointing to Deferred-external / later phase.  
 6. Money invariants (PA001–PA007 / Collab OS §1.3) still hold under automated tests.

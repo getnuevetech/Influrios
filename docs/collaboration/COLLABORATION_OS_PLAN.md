@@ -70,7 +70,7 @@ Influrios already has durable pieces to **extend**, not replace:
 | Milestones / finance | Strong ledger core | Domain account purposes; fee-earned-on-release; ROUTE_READY (P4) |
 | Payout readiness | P5 core: profile + corridors + hub panel + ROUTE_READY corridor gate | Admin corridor ops (P6); live method verification |
 | Mentorship | P7 core: find/become hub, eligibility, request lifecycle, paid flag isolated | Paid session commercial pack; richer scheduling |
-| Admin control plane | P6 core: corridors suspend, versioned thresholds, ops hub, dual-approval gate | Deeper provider health; guest collab quota enforcement; P7 mentorship surfaces |
+| Admin control plane | P6 core: corridors suspend, versioned thresholds, ops hub, dual-approval gate, deepened provider health | Guest collab quota DONE; P7 paid mentorship surfaces Deferred-external |
 
 ---
 

@@ -413,6 +413,23 @@ export async function actionExecuteHeldCancellation(formData: FormData) {
     acceptedPartialCents,
     actor: "admin",
     note,
+    evidence: {
+      providerCaseId: String(formData.get("providerCaseId") ?? "").trim() || null,
+      providerReference: String(formData.get("providerReference") ?? "").trim() || null,
+      amountCents: (() => {
+        const raw = String(formData.get("evidenceAmountUsd") ?? "").trim();
+        if (!raw) return null;
+        const cents = Math.round(Number(raw) * 100);
+        return Number.isFinite(cents) && cents >= 0 ? cents : null;
+      })(),
+      reasonCode: String(formData.get("evidenceReasonCode") ?? "").trim() || null,
+      receivedAt: String(formData.get("evidenceReceivedAt") ?? "").trim() || null,
+      attachmentUrls: String(formData.get("evidenceAttachmentUrls") ?? "")
+        .split(/[\n,]+/)
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .slice(0, 10),
+    },
   });
   if (!result.ok) {
     redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);

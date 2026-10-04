@@ -39,6 +39,12 @@ export function buildFeeDisclosureSummary(input: FeeDisclosureInput): string {
     parts.push(
       `${((input.percentBps ?? 0) / 100).toFixed(2)}% + ${input.fixedCents ?? 0}¢`,
     );
+  } else if (input.method === "waived") {
+    parts.push("waived");
+  } else if (input.method === "tiered") {
+    parts.push("tiered");
+  } else if (input.method === "custom_enterprise" && input.fixedCents != null) {
+    parts.push(`enterprise ${input.fixedCents}¢`);
   }
   parts.push(`fee ${input.feeCents}¢`);
   if (input.ruleId) parts.push(`rule ${input.ruleId} v${input.ruleVersion ?? "?"}`);

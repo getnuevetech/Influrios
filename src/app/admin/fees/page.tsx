@@ -7,6 +7,8 @@ import {
 } from "@/app/admin/actions";
 import { hasPermission } from "@/lib/admin-auth";
 import {
+  FEE_METHOD_LABELS,
+  FEE_METHODS,
   FEE_TYPE_LABELS,
   FEE_TYPES,
   FUNDING_MODE_CONDITIONS,
@@ -297,15 +299,17 @@ export default async function AdminFeesPage({ searchParams }: Props) {
                   disabled={!canManage}
                   className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                 >
-                  <option value="percent">percent</option>
-                  <option value="fixed">fixed</option>
-                  <option value="percent_plus_fixed">percent_plus_fixed</option>
+                  {FEE_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {FEE_METHOD_LABELS[method]}
+                    </option>
+                  ))}
                 </select>
               </label>
               <Field name="percentBps" label="Percent (bps)" defaultValue={String(rule.percentBps)} disabled={!canManage} />
               <Field
                 name="fixedUsd"
-                label="Fixed USD"
+                label="Fixed / enterprise USD"
                 defaultValue={String(rule.fixedCents / 100)}
                 disabled={!canManage}
               />
@@ -321,6 +325,19 @@ export default async function AdminFeesPage({ searchParams }: Props) {
                 defaultValue={rule.maxFeeCents != null ? String(rule.maxFeeCents / 100) : ""}
                 disabled={!canManage}
               />
+              <label className="text-xs font-semibold text-muted sm:col-span-3">
+                Tier bands JSON (tiered method)
+                <textarea
+                  name="tierBandsJson"
+                  defaultValue={
+                    rule.tierBands.length ? JSON.stringify(rule.tierBands) : ""
+                  }
+                  disabled={!canManage}
+                  rows={2}
+                  placeholder='[{"upToCents":100000,"percentBps":800},{"upToCents":null,"percentBps":1200}]'
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 font-mono text-xs text-indigo disabled:bg-[#F3F4F6]"
+                />
+              </label>
               <Field name="payer" label="Payer" defaultValue={rule.payer} disabled={!canManage} />
               <label className="text-xs font-semibold text-muted sm:col-span-3">
                 Notes

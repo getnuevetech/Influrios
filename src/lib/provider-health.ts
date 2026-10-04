@@ -9,14 +9,41 @@ export type HealthLine = { key: string; title: string; label: string; detail?: s
 
 /** Admin-only status. A disabled AI provider does not take profiles down. */
 export async function providerHealth(): Promise<HealthLine[]> {
-  const [mail, lastWebhook, lastAi, billing, stripeMode, marketplace, demoCheckout] = await Promise.all([
+  const [
+    mail,
+    lastWebhook,
+    lastAi,
+    lastProviderInstruction,
+    billing,
+    stripeMode,
+    marketplace,
+    demoCheckout,
+    collabOs,
+    shortDomain,
+    paymentRiskCount,
+  ] = await Promise.all([
     mailReady().catch(() => false),
-    prisma.job.findFirst({ where: { kind: "provider_webhook", status: "failed" }, orderBy: { createdAt: "desc" } }).catch(() => null),
-    prisma.job.findFirst({ where: { kind: "ai_provider", status: "failed" }, orderBy: { createdAt: "desc" } }).catch(() => null),
+    prisma.job
+      .findFirst({ where: { kind: "provider_webhook", status: "failed" }, orderBy: { createdAt: "desc" } })
+      .catch(() => null),
+    prisma.job
+      .findFirst({ where: { kind: "ai_provider", status: "failed" }, orderBy: { createdAt: "desc" } })
+      .catch(() => null),
+    prisma.job
+      .findFirst({
+        where: { kind: "provider_instruction", status: "failed" },
+        orderBy: { createdAt: "desc" },
+      })
+      .catch(() => null),
     getBillingStore().catch(() => null),
     stripeBillingMode().catch(() => "demo" as const),
     marketplaceWebhookSecret("primary").catch(() => ({ error: "not_ready" as const })),
     productSwitch("demo_checkout").catch(() => true),
+    productSwitch("collab_os_v1").catch(() => true),
+    prisma.shortLinkDomain
+      .findFirst({ where: { isPrimary: true }, select: { hostname: true, verified: true, active: true } })
+      .catch(() => null),
+    prisma.collaborationFunding.count({ where: { status: "payment_risk" } }).catch(() => 0),
   ]);
   const paymentDetail = lastWebhook?.lastError
     ? lastWebhook.lastError
@@ -24,6 +51,11 @@ export async function providerHealth(): Promise<HealthLine[]> {
       ? `Last webhook ${billing.lastWebhookAt}`
       : undefined;
   const marketplaceReady = !("error" in marketplace);
+  const shortLabel = !shortDomain
+    ? "No primary short-link domain configured."
+    : shortDomain.verified && shortDomain.active
+      ? `Primary ${shortDomain.hostname} verified and active.`
+      : `Primary ${shortDomain.hostname} needs ops verification${shortDomain.active ? "" : " (inactive)"}.`;
   return [
     {
       key: "payment",
@@ -36,12 +68,7 @@ export async function providerHealth(): Promise<HealthLine[]> {
             : stripeMode === "rejected"
               ? "The saved Stripe key is not a sandbox key. Nothing is charged."
               : "Stripe secret is not set. Demo checkout still completes locally.",
-      detail: [
-        paymentDetail,
-        `demo_checkout is ${demoCheckout ? "on" : "off"}`,
-      ]
-        .filter(Boolean)
-        .join(" · "),
+      detail: [paymentDetail, `demo_checkout is ${demoCheckout ? "on" : "off"}`].filter(Boolean).join(" · "),
     },
     {
       key: "email",
@@ -54,6 +81,20 @@ export async function providerHealth(): Promise<HealthLine[]> {
       label: marketplaceReady
         ? "Primary marketplace provider has a webhook secret."
         : "Primary marketplace provider is not ready for signed webhooks.",
+      detail: [
+        `collab_os_v1 is ${collabOs ? "on" : "off"}`,
+        paymentRiskCount > 0 ? `${paymentRiskCount} payment-risk funding(s)` : null,
+        lastProviderInstruction?.lastError
+          ? `Last provider instruction error: ${lastProviderInstruction.lastError}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    },
+    {
+      key: "shortlinks",
+      title: "INFLR.me domain",
+      label: shortLabel,
     },
     {
       key: "ai",

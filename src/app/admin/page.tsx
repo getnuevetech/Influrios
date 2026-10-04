@@ -359,7 +359,7 @@ export default async function AdminHomePage({
       ) : null}
 
       {health ? (
-        <section className="mt-6 grid gap-3 sm:grid-cols-3" aria-label="Provider health">
+        <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Provider health">
           {health.map((line) => (
             <div key={line.key} className="rounded-xl border border-[#E4EBFF] bg-white px-4 py-3">
               <p className="text-xs font-bold uppercase tracking-wide text-violet">{line.title}</p>
