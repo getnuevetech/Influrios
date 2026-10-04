@@ -10,6 +10,7 @@ import {
 } from "@/lib/jurisdiction-capabilities";
 import { resolveFundingMode, stagedPhaseCanStart } from "@/lib/funding-modes";
 import { rightsAfterAcceptance, rightsAfterPaymentRelease } from "@/lib/content-rights";
+import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   advanceMilestone,
   autoApproveDeadline,
@@ -319,6 +320,8 @@ export async function saveJurisdiction(input: {
   capabilityNotes?: string;
   capabilitiesEffectiveFrom?: string | null;
   capabilitiesEffectiveTo?: string | null;
+  reviewWindowHours?: number | string | null;
+  maxRevisions?: number | string | null;
   currency: string;
   minorDigits: number;
   providerCode: string;
@@ -357,6 +360,16 @@ export async function saveJurisdiction(input: {
   ) {
     throw new Error("Capability end date must be on or after the start date.");
   }
+  const parseOptionalInt = (raw: number | string | null | undefined, label: string, max: number) => {
+    if (raw == null || String(raw).trim() === "") return null;
+    const n = Math.round(Number(raw));
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > max) {
+      throw new Error(`${label} must be from 0 to ${max}, or blank for marketplace default.`);
+    }
+    return n;
+  };
+  const reviewWindowHours = parseOptionalInt(input.reviewWindowHours, "Review window hours", 8760);
+  const maxRevisions = parseOptionalInt(input.maxRevisions, "Max revisions", 20);
   const protectedPaymentsEnabled = input.protectedPaymentsEnabled;
   const data = {
     label,
@@ -372,6 +385,8 @@ export async function saveJurisdiction(input: {
     capabilityNotes,
     capabilitiesEffectiveFrom,
     capabilitiesEffectiveTo,
+    reviewWindowHours,
+    maxRevisions,
     currency,
     minorDigits,
     providerCode,
@@ -626,8 +641,20 @@ export async function requestPrefund(input: {
     scheduleKind,
     protectedPaymentsEnabled: caps?.protectedPaymentsEnabled ?? Boolean(jurisdiction?.protectedPaymentsEnabled),
   });
-  const windowHours = settings?.reviewWindowHours ?? 72;
-  const revisionLimit = settings?.maxRevisions ?? 2;
+  const planLifecycle = input.financialPlan as
+    | { reviewWindowHours?: number | null; revisionLimit?: number | null }
+    | null
+    | undefined;
+  const lifecycle = resolveLifecycleSnapshot({
+    planReviewWindowHours: planLifecycle?.reviewWindowHours,
+    planRevisionLimit: planLifecycle?.revisionLimit,
+    jurisdictionReviewWindowHours: jurisdiction?.reviewWindowHours,
+    jurisdictionMaxRevisions: jurisdiction?.maxRevisions,
+    settingsReviewWindowHours: settings?.reviewWindowHours ?? 72,
+    settingsMaxRevisions: settings?.maxRevisions ?? 2,
+  });
+  const windowHours = lifecycle.reviewWindowHours;
+  const revisionLimit = lifecycle.revisionLimit;
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;
   const businessName = input.businessName.trim().slice(0, 120);
   const creatorSlug = input.creatorSlug.trim().slice(0, 80);
@@ -692,6 +719,11 @@ export async function requestPrefund(input: {
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: new Date().toISOString(),
             ...(input.financialPlan ? { financialPlan: input.financialPlan } : {}),
+            lifecycleSnapshot: {
+              reviewWindowHours: windowHours,
+              revisionLimit,
+              source: lifecycle.source,
+            },
             milestoneSource: customRows && customRows.length > 0 ? "custom" : "template",
           } as object,
           fxSnapshotJson: fxRecord(part.fx),
@@ -766,8 +798,6 @@ export async function sweepDueRecurrences(now = new Date()) {
     prisma.marketplaceSettings.findUnique({ where: { id: "default" } }),
   ]);
   const shares = templates.map((row) => row.shareBps);
-  const windowHours = settings?.reviewWindowHours ?? 72;
-  const revisionLimit = settings?.maxRevisions ?? 2;
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;
   const shareSnapshot = await activeShareSnapshot();
   for (const row of confirmed) {
@@ -791,6 +821,19 @@ export async function sweepDueRecurrences(now = new Date()) {
     const jurisdiction = await prisma.collaborationJurisdiction.findUnique({
       where: { code: row.jurisdictionCode },
     });
+    const planLifecycle = row.feeSnapshotJson as
+      | { financialPlan?: { reviewWindowHours?: number | null; revisionLimit?: number | null } }
+      | null;
+    const lifecycle = resolveLifecycleSnapshot({
+      planReviewWindowHours: planLifecycle?.financialPlan?.reviewWindowHours,
+      planRevisionLimit: planLifecycle?.financialPlan?.revisionLimit,
+      jurisdictionReviewWindowHours: jurisdiction?.reviewWindowHours,
+      jurisdictionMaxRevisions: jurisdiction?.maxRevisions,
+      settingsReviewWindowHours: settings?.reviewWindowHours ?? 72,
+      settingsMaxRevisions: settings?.maxRevisions ?? 2,
+    });
+    const windowHours = lifecycle.reviewWindowHours;
+    const revisionLimit = lifecycle.revisionLimit;
     const fx = await quoteWiseUserRate({
       currency,
       usdCents,

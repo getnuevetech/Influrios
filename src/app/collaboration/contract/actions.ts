@@ -7,6 +7,7 @@ import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { getWorkspace } from "@/lib/business";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { asServiceLevel, resolveFee } from "@/lib/collaboration-fees";
+import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   buildFinancialPlan,
   canFundContract,
@@ -217,6 +218,12 @@ export async function actionSubmitContractWizard(formData: FormData) {
     extraKeys: [...FEE_DISCLOSURE_LEGAL_KEYS],
   }).catch(() => null);
 
+  const lifecycle = resolveLifecycleSnapshot({
+    jurisdictionReviewWindowHours: jurisdiction?.reviewWindowHours,
+    jurisdictionMaxRevisions: jurisdiction?.maxRevisions,
+    settingsReviewWindowHours: config.reviewWindowHours,
+    settingsMaxRevisions: config.maxRevisions,
+  });
   const plan = buildFinancialPlan({
     grossCents,
     currency: jurisdiction?.currency ?? "USD",
@@ -232,6 +239,8 @@ export async function actionSubmitContractWizard(formData: FormData) {
     payoutCurrency: jurisdiction?.currency ?? "USD",
     milestones: drafts,
     milestoneSource: usingCustom ? "custom" : "template",
+    reviewWindowHours: lifecycle.reviewWindowHours,
+    revisionLimit: lifecycle.revisionLimit,
   });
   if (!plan) redirectError("Could not build a financial plan for those milestones.", qs);
 

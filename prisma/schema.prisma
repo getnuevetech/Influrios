@@ -1247,6 +1247,10 @@ model CollaborationJurisdiction {
   capabilityNotes              String    @default("")
   capabilitiesEffectiveFrom    DateTime?
   capabilitiesEffectiveTo      DateTime?
+  /// W3.5 — optional review window override (hours); null = marketplace settings default.
+  reviewWindowHours            Int?
+  /// W3.5 — optional max revisions override; null = marketplace settings default.
+  maxRevisions                 Int?
   currency                     String    @default("USD")
   minorDigits                  Int       @default(2)
   providerCode                 String    @default("primary")

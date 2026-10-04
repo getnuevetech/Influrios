@@ -515,6 +515,32 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               />
             </label>
             <label className="text-xs font-semibold text-muted">
+              Review window hours (blank = marketplace default)
+              <input
+                name="reviewWindowHours"
+                type="number"
+                min={0}
+                max={8760}
+                defaultValue={row.reviewWindowHours ?? ""}
+                disabled={!canManage}
+                placeholder={String(config.reviewWindowHours)}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Max revisions (blank = marketplace default)
+              <input
+                name="maxRevisions"
+                type="number"
+                min={0}
+                max={20}
+                defaultValue={row.maxRevisions ?? ""}
+                disabled={!canManage}
+                placeholder={String(config.maxRevisions)}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
               Currency
               <input
                 name="currency"

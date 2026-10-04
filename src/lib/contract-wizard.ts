@@ -53,6 +53,9 @@ export type CollaborationFinancialPlan = {
   rightsActivateOn: "release" | "acceptance" | "custom";
   /** W3.12 — timestamped fee disclosure accepted before funding. */
   feeDisclosure?: Record<string, unknown> | null;
+  /** W3.5 — optional lifecycle snapshot (hours / revision cap) frozen at accept. */
+  reviewWindowHours?: number | null;
+  revisionLimit?: number | null;
   milestones: FinancialPlanMilestone[];
   milestoneSource: "template" | "custom";
 };
@@ -195,6 +198,8 @@ export function buildFinancialPlan(input: {
   createdAt?: string;
   lockedAt?: string | null;
   rightsActivateOn?: "release" | "acceptance" | "custom";
+  reviewWindowHours?: number | null;
+  revisionLimit?: number | null;
 }): CollaborationFinancialPlan | null {
   if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) return null;
   if (!Number.isInteger(input.totalPlatformFeeCents) || input.totalPlatformFeeCents < 0) return null;
@@ -250,6 +255,8 @@ export function buildFinancialPlan(input: {
     createdAt: input.createdAt ?? new Date().toISOString(),
     lockedAt: input.lockedAt ?? null,
     rightsActivateOn,
+    reviewWindowHours: input.reviewWindowHours ?? null,
+    revisionLimit: input.revisionLimit ?? null,
     milestones,
     milestoneSource: input.milestoneSource,
   };
