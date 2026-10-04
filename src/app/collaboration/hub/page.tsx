@@ -17,6 +17,7 @@ import {
 import { SaveMatchButton } from "@/components/save-match-button";
 import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
+import { collabOsV1Enabled } from "@/lib/collab-os";
 import { loadCreatorHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
 import { getCms } from "@/lib/cms";
 import { getDirectoryCreator, indexCreatorsBySlug, getDirectory } from "@/lib/directory";
@@ -52,6 +53,9 @@ const SIDE_LINKS = [
 ] as const;
 
 export default async function CollaborationHubPage({ searchParams }: Props) {
+  if (!(await collabOsV1Enabled().catch(() => true))) {
+    redirect("/collaboration/propose?notice=collab_os_off");
+  }
   const params = await searchParams;
   const account = await getAccountSession().catch(() => null);
   if (!account) {

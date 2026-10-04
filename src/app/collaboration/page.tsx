@@ -16,6 +16,7 @@ import {
 import { SaveMatchButton } from "@/components/save-match-button";
 import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
+import { collabOsV1Enabled } from "@/lib/collab-os";
 import { getCms } from "@/lib/cms";
 import { getCollaborationLanding } from "@/lib/landing-pages";
 import {
@@ -64,10 +65,11 @@ type Props = {
 
 export default async function CollaborationPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [directory, cms, landing] = await Promise.all([
+  const [directory, cms, landing, collabOsOn] = await Promise.all([
     getDirectory(),
     getCms(),
     getCollaborationLanding(),
+    collabOsV1Enabled().catch(() => true),
   ]);
   const bySlug = indexCreatorsBySlug(directory.creators);
   const all = await allDirectoryMatches();
@@ -83,7 +85,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const account = await getAccountSession().catch(() => null);
   const draft = account ? await getCreatorSessionDraft().catch(() => null) : null;
 
-  if (account && draft?.slug && params.landing !== "1" && !params.save) {
+  if (collabOsOn && account && draft?.slug && params.landing !== "1" && !params.save) {
     const hubQuery = new URLSearchParams();
     if (params.goal) hubQuery.set("category", params.goal);
     if (params.q) hubQuery.set("q", params.q);
@@ -94,7 +96,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
     const qs = hubQuery.toString();
     redirect(qs ? `/collaboration/hub?${qs}` : "/collaboration/hub");
   }
-  if (account && !draft?.slug && params.landing !== "1" && !params.save) {
+  if (collabOsOn && account && !draft?.slug && params.landing !== "1" && !params.save) {
     redirect("/collaboration/business");
   }
 
@@ -105,12 +107,24 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const viewerLimits = await entitlementsForPlan(viewerPlan);
   const canRequest = !viewer || viewerLimits.proposalsMax > 0;
   const signedIn = Boolean(account);
-  const businessHref = signedIn ? "/collaboration/business" : "/business";
-  const joinBusinessHref = signedIn ? "/collaboration/business" : "/business";
+  const businessHref = signedIn
+    ? collabOsOn
+      ? "/collaboration/business"
+      : "/collaboration/propose"
+    : "/business";
+  const joinBusinessHref = signedIn
+    ? collabOsOn
+      ? "/collaboration/business"
+      : "/collaboration/propose"
+    : "/business";
   const suggestionsHref = signedIn
     ? draft?.slug
-      ? "/collaboration/hub?category=awareness"
-      : "/collaboration/business#suggestions"
+      ? collabOsOn
+        ? "/collaboration/hub?category=awareness"
+        : "/collaboration/propose"
+      : collabOsOn
+        ? "/collaboration/business#suggestions"
+        : "/collaboration/propose"
     : `/login?next=${encodeURIComponent("/collaboration?goal=awareness")}&gate=suggestions`;
 
   if (params.save && account) {
@@ -124,7 +138,11 @@ export default async function CollaborationPage({ searchParams }: Props) {
       if (match) {
         await saveMatchForUser({ match, userId: account.id }).catch(() => null);
       }
-      redirect(draft?.slug ? "/collaboration/hub?saved=1" : "/collaboration?landing=1&saved=1");
+      redirect(
+        draft?.slug && collabOsOn
+          ? "/collaboration/hub?saved=1"
+          : "/collaboration?landing=1&saved=1",
+      );
     }
   }
   if (params.save && !account) {
@@ -786,7 +804,11 @@ function FeaturedMatchCard({
           partyASlug={match.a.slug}
           partyBSlug={match.b.slug}
           signedIn={signedIn}
-          returnTo={viewerSlug ? "/collaboration/hub?saved=1" : "/collaboration?landing=1&saved=1"}
+          returnTo={
+            viewerSlug && collabOsOn
+              ? "/collaboration/hub?saved=1"
+              : "/collaboration?landing=1&saved=1"
+          }
         />
       </div>
     </article>

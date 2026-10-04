@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
+import { assertCollabOsV1 } from "@/lib/collab-os";
 import {
   addToShortlist,
   createBrief,
@@ -20,6 +21,7 @@ import { upsertBusinessRequest } from "@/lib/marketplace-listings";
 const HUB = "/collaboration/business";
 
 async function requireBusinessTerms() {
+  await assertCollabOsV1();
   const account = await getAccountSession().catch(() => null);
   if (!account) return;
   const accepted = await hasCurrentLegalRecord({

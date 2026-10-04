@@ -80,7 +80,7 @@ Influrios already has durable pieces to **extend**, not replace:
 
 - Archive spec + approved PNGs under `docs/collaboration/` and `docs/design-references/collaboration/`.
 - Publish this plan; link from Development State.
-- Add product switch `collab_os_v1` (default **on** for new landing chrome once shipped).
+- Add product switch `collab_os_v1` (default **on** for new landing chrome once shipped). ✅
 
 **Exit:** plan merged; designs in-repo; sequencing clear.
 

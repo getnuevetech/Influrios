@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { collabOsV1Enabled } from "@/lib/collab-os";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -11,6 +12,9 @@ type Props = {
 
 /** Legacy workspace URL — Collaboration OS P2b hub lives at /collaboration/business. */
 export default async function BusinessWorkspaceRedirect({ searchParams }: Props) {
+  if (!(await collabOsV1Enabled().catch(() => true))) {
+    redirect("/collaboration/propose?notice=collab_os_off");
+  }
   const params = await searchParams;
   const qs = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
