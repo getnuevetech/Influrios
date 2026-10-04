@@ -22,7 +22,12 @@ import {
   capabilitiesFromJurisdictionRow,
   serviceLevelAllowedByJurisdiction,
 } from "@/lib/jurisdiction-capabilities";
-import { hasCurrentLegalRecord } from "@/lib/legal";
+import {
+  buildFeeDisclosureSummary,
+  FEE_DISCLOSURE_LEGAL_KEYS,
+  requireFeeDisclosureAccepted,
+} from "@/lib/fee-disclosure";
+import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import { ensureMarketplaceDefaults, marketplaceConfig, requestPrefund } from "@/lib/marketplace-ledger";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
 import { paymentRoutes } from "@/lib/providers";
@@ -73,6 +78,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const usingCustom = formData.get("milestoneMode") === "custom";
   const influencerAccepted = formData.get("influencerAccepted") === "on";
   const partyAccepted = formData.get("partyAccepted") === "on";
+  const feeDisclosureAccepted = formData.get("feeDisclosureAccepted") === "on";
   const intent = String(formData.get("intent") ?? "preview");
 
   const qs = new URLSearchParams();
@@ -86,6 +92,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   qs.set("mode", usingCustom ? "custom" : "template");
   if (influencerAccepted) qs.set("influencerAccepted", "1");
   if (partyAccepted) qs.set("accepted", "1");
+  if (feeDisclosureAccepted) qs.set("feeDisclosure", "1");
 
   if (!creatorSlug || !title || !scope || grossCents <= 0) {
     redirectError("Add the influencer, title, scope, and a gross amount.", qs);
@@ -175,6 +182,39 @@ export async function actionSubmitContractWizard(formData: FormData) {
     grossValueCents: grossCents,
   }).catch(() => null);
 
+  const disclosureGate = requireFeeDisclosureAccepted({
+    accepted: feeDisclosureAccepted,
+    disclosure: quote
+      ? {
+          feeCents: quote.feeCents,
+          ruleId: quote.rule?.id ?? null,
+          ruleName: quote.rule?.name ?? null,
+          ruleVersion: quote.rule?.version ?? null,
+          feeType: quote.rule?.feeType ?? null,
+          method: quote.rule?.method ?? null,
+          percentBps: quote.rule?.percentBps ?? null,
+          fixedCents: quote.rule?.fixedCents ?? null,
+          payer: quote.rule?.payer ?? null,
+          jurisdiction: jurisdictionCode,
+          serviceLevel,
+          grossCents,
+          explanation: quote.explanation,
+        }
+      : null,
+  });
+  if (!disclosureGate.ok) {
+    qs.set("step", "accept");
+    redirectError(disclosureGate.error, qs);
+  }
+
+  await recordLegalEvent({
+    trigger: "collaboration",
+    context: `contract_fee_disclosure:${creatorSlug}:${jurisdictionCode}`,
+    userId: account.id,
+    userRole: "business",
+    extraKeys: [...FEE_DISCLOSURE_LEGAL_KEYS],
+  }).catch(() => null);
+
   const plan = buildFinancialPlan({
     grossCents,
     currency: jurisdiction?.currency ?? "USD",
@@ -193,7 +233,14 @@ export async function actionSubmitContractWizard(formData: FormData) {
   });
   if (!plan) redirectError("Could not build a financial plan for those milestones.", qs);
 
-  const locked = lockFinancialPlan(plan);
+  const locked = lockFinancialPlan({
+    ...plan,
+    feeDisclosure: {
+      ...disclosureGate.record,
+      summary: buildFeeDisclosureSummary(disclosureGate.record),
+      acceptedByUserId: account.id,
+    },
+  });
   const result = await requestPrefund({
     businessName,
     creatorSlug,
