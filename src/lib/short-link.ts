@@ -108,7 +108,7 @@ export async function primaryShortHost(): Promise<string> {
   if (hostCache && Date.now() - hostCache.at < 30_000) return hostCache.host;
   try {
     const row = await prisma.shortLinkDomain.findFirst({
-      where: { isPrimary: true, active: true },
+      where: { isPrimary: true, active: true, verified: true },
       orderBy: { hostname: "asc" },
     });
     const host = row?.hostname || LAUNCH_SHORT_HOST;
@@ -121,6 +121,15 @@ export async function primaryShortHost(): Promise<string> {
 
 export function clearShortHostCache() {
   hostCache = null;
+}
+
+/** Spec §20.24 — only verified+active domains serve short links / become primary. */
+export function domainCanServe(domain: { verified: boolean; active: boolean }) {
+  return Boolean(domain.verified && domain.active);
+}
+
+export function domainCanBePrimary(domain: { verified: boolean; active: boolean }) {
+  return domainCanServe(domain);
 }
 
 async function settingsRow() {
@@ -153,7 +162,13 @@ export async function ensureShortLinkDefaults() {
     await prisma.shortLinkDomain.upsert({
       where: { hostname: domain.hostname },
       update: {},
-      create: { ...domain, active: true },
+      create: {
+        ...domain,
+        active: true,
+        verified: true,
+        verifiedAt: new Date(),
+        verifiedBy: "system",
+      },
     });
   }
   for (const slug of RESERVED_SLUGS) {
@@ -322,12 +337,14 @@ async function resolveShortRequestFromStore(
   await ensureShortLinkDefaults();
   const hostname = normalizeShortHost(host);
   const domain = await prisma.shortLinkDomain.findUnique({ where: { hostname } });
-  if (!domain?.active) {
+  if (!domain || !domainCanServe(domain)) {
     return {
       kind: "page",
       status: 404,
       title: "Unknown short domain",
-      message: "This hostname is not an active Influrios short-link domain.",
+      message: domain && domain.active && !domain.verified
+        ? "This short-link domain is not verified yet."
+        : "This hostname is not an active Influrios short-link domain.",
     };
   }
   const clean = path.split("?")[0].replace(/\/+$/, "") || "/";
@@ -544,6 +561,45 @@ export async function setAliasRedirect(aliasId: string, redirect: boolean) {
     data: { redirect },
   });
   if (updated.count !== 1) return { ok: false as const, error: "Alias not found." };
+  return { ok: true as const };
+}
+
+/** Ops-attested domain ownership — Spec §16 / §20.24 (no DNS challenge). */
+export async function setDomainVerification(
+  domainId: string,
+  verified: boolean,
+  actorId?: string | null,
+) {
+  const id = domainId.trim();
+  if (!id) return { ok: false as const, error: "Missing domain." };
+  const domain = await prisma.shortLinkDomain.findUnique({ where: { id } });
+  if (!domain) return { ok: false as const, error: "Domain not found." };
+  if (!verified && domain.isPrimary) {
+    return { ok: false as const, error: "Make another verified domain primary before unverifying this one." };
+  }
+  await prisma.shortLinkDomain.update({
+    where: { id },
+    data: verified
+      ? { verified: true, verifiedAt: new Date(), verifiedBy: actorId?.trim() || "admin" }
+      : { verified: false, verifiedAt: null, verifiedBy: null },
+  });
+  clearShortHostCache();
+  return { ok: true as const };
+}
+
+export async function makePrimaryDomain(domainId: string) {
+  const id = domainId.trim();
+  if (!id) return { ok: false as const, error: "Missing domain." };
+  const domain = await prisma.shortLinkDomain.findUnique({ where: { id } });
+  if (!domain) return { ok: false as const, error: "Domain not found." };
+  if (!domainCanBePrimary(domain)) {
+    return { ok: false as const, error: "Verify the domain before making it primary." };
+  }
+  await prisma.$transaction([
+    prisma.shortLinkDomain.updateMany({ data: { isPrimary: false } }),
+    prisma.shortLinkDomain.update({ where: { id }, data: { isPrimary: true, active: true } }),
+  ]);
+  clearShortHostCache();
   return { ok: true as const };
 }
 

@@ -290,7 +290,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | Exists | Missing | Exit |
 |---|---|---|
-| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records; **branded failure pages** with Influrios CTA + outcome marker; **alias policy** (admin enable/disable redirect + creator warn-before-change) | Domain verification admin UX deepen | Spec §20 criteria 11–24 (branded failure + open-redirect + suspend + alias policy — **core DONE**) |
+| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records; **branded failure pages** with Influrios CTA + outcome marker; **alias policy** (admin enable/disable redirect + creator warn-before-change); **domain verification** (ops-attested `verified` + primary gate) | Card chrome / Phase 4 campaign+NFC later | Spec §20 criteria 11–24 (branded failure + open-redirect + suspend + alias + domain verify — **core DONE**) |
 | Pro `dynamic` flag + destination setter | Pro **self-serve** dynamic destination + destination history + rollback | Spec §9 + Phase 3 — DONE (Phase 4 campaign/NFC still later) |
 | Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics; **resolver ops metrics** | Spec §10 — DONE; Spec §20 observable resolver metrics — **DONE** |
 | — | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Explicitly later; do not block P4 finance |
@@ -548,7 +548,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Open-redirect protection | DONE (`safeRedirectTarget` allow-list) |
 | Analytics privacy + entitlements complete | DONE (views/standard/advanced + bot filter; no precise geo) |
 | Canonical SEO on Influrios profile | DONE (OG alternates.canonical → /creators/{slug}) |
-| Domain config change without code | PARTIAL |
+| Domain config change without code | DONE (admin add/verify/primary without deploy) |
 | Observable resolver metrics | DONE (outcome + latency on every resolve; admin 24h rollup; `x-influrios-resolve-outcome`) |
 
 ### 7.8 Product Strategy v2.2 — still binding product rules

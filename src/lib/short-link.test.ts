@@ -8,6 +8,8 @@ import {
   aliasShouldRedirect,
   canChangeDynamicDestination,
   destinationKindFor,
+  domainCanBePrimary,
+  domainCanServe,
   priorDestinationFromHistory,
   redirectCacheFor,
   safeRedirectTarget,
@@ -37,6 +39,14 @@ describe("short link rules", () => {
     assert.equal(aliasShouldRedirect({ redirect: true, shortLink: { status: "active" } }), true);
     assert.equal(aliasShouldRedirect({ redirect: false, shortLink: { status: "active" } }), false);
     assert.equal(aliasShouldRedirect({ redirect: true, shortLink: { status: "suspended" } }), false);
+  });
+
+  it("serves and promotes only verified active domains (§20.24)", () => {
+    assert.equal(domainCanServe({ verified: true, active: true }), true);
+    assert.equal(domainCanServe({ verified: false, active: true }), false);
+    assert.equal(domainCanServe({ verified: true, active: false }), false);
+    assert.equal(domainCanBePrimary({ verified: true, active: true }), true);
+    assert.equal(domainCanBePrimary({ verified: false, active: true }), false);
   });
 
   it("warns before a slug change that keeps the old name as a redirect", () => {

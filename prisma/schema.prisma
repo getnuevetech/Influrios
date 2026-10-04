@@ -1076,14 +1076,18 @@ model ProfileCompletionRule {
 
 /// Hostname that serves inflr.me-style redirects. The primary row is the QR payload host.
 model ShortLinkDomain {
-  id        String   @id @default(cuid())
-  hostname  String   @unique
-  label     String
-  isPrimary Boolean  @default(false)
-  active    Boolean  @default(true)
-  fallback  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(cuid())
+  hostname   String    @unique
+  label      String
+  isPrimary  Boolean   @default(false)
+  active     Boolean   @default(true)
+  fallback   Boolean   @default(false)
+  /// Ops-attested ownership (INFLR.me Spec §16 / §20.24). No DNS challenge protocol.
+  verified   Boolean   @default(false)
+  verifiedAt DateTime?
+  verifiedBy String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 /// Canonical app origin and https hosts a short link may redirect to.
