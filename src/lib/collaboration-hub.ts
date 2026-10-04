@@ -270,19 +270,20 @@ export async function loadCreatorHub(input: {
     payout = { readiness };
   }
 
+  const fundingByCollab = new Map(
+    fundings
+      .filter((row) => row.collaborationId)
+      .map((row) => [row.collaborationId as string, row]),
+  );
   const fundingByTitle = new Map(fundings.map((row) => [row.title.toLowerCase(), row]));
   const pipeline: HubPipelineItem[] = collaborations
     .filter((row) => row.status === "accepted" || row.status === "sent" || row.status === "draft")
     .slice(0, 6)
     .map((row) => {
       const funding =
+        fundingByCollab.get(row.id) ??
         fundingByTitle.get(row.title.toLowerCase()) ??
-        fundings.find(
-          (f) =>
-            f.creatorSlug === slug &&
-            (f.businessName?.toLowerCase().includes(row.recipientSlug) ||
-              f.businessName?.toLowerCase().includes(row.initiatorSlug)),
-        );
+        fundings.find((f) => f.creatorSlug === slug && f.title.toLowerCase().includes(row.title.toLowerCase().slice(0, 24)));
       const stage = derivePipelineStage({
         collaborationStatus: row.status,
         fundingStatus: funding?.status ?? null,

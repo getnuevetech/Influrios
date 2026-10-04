@@ -70,6 +70,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const ws = await getWorkspace(account.id);
   const entitlements = getBusinessEntitlements(ws.plan);
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
+  const collaborationId = String(formData.get("collaborationId") ?? "").trim() || undefined;
   const businessName = String(formData.get("businessName") ?? ws.name).trim() || ws.name;
   const title = String(formData.get("title") ?? "").trim();
   const scope = String(formData.get("scope") ?? "").trim();
@@ -86,6 +87,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   const qs = new URLSearchParams();
   qs.set("creator", creatorSlug);
+  if (collaborationId) qs.set("collaboration", collaborationId);
   qs.set("title", title);
   qs.set("scope", scope);
   qs.set("commercial", commercial);
@@ -103,6 +105,16 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   const creator = await getDirectoryCreator(creatorSlug);
   if (!creator) redirectError("That influencer was not found in the directory.", qs);
+
+  let linkedCollaborationId: string | null = null;
+  if (collaborationId) {
+    const collab = await prisma.collaboration.findUnique({ where: { id: collaborationId } });
+    if (!collab) redirectError("That collaboration record was not found.", qs);
+    if (collab.initiatorSlug !== creatorSlug && collab.recipientSlug !== creatorSlug) {
+      redirectError("The selected influencer is not a party on that collaboration.", qs);
+    }
+    linkedCollaborationId = collab.id;
+  }
 
   await ensureMarketplaceDefaults();
   const config = await marketplaceConfig();
@@ -262,6 +274,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     customMilestones: usingCustom ? drafts : null,
     financialPlan: locked as unknown as Record<string, unknown>,
     workspaceId: ws.businessId,
+    collaborationId: linkedCollaborationId,
   });
   if (!result.ok) {
     qs.set("step", "funding");

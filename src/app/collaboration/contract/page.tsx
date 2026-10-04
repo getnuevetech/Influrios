@@ -42,6 +42,7 @@ type Props = {
   searchParams: Promise<{
     step?: string;
     creator?: string;
+    collaboration?: string;
     title?: string;
     scope?: string;
     commercial?: string;
@@ -107,11 +108,20 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     paymentRoutes().catch(() => []),
   ]);
 
-  const creatorSlug = (params.creator ?? "").trim();
+  const collaborationId = (params.collaboration ?? "").trim();
+  const linkedCollab = collaborationId
+    ? await prisma.collaboration.findUnique({ where: { id: collaborationId } }).catch(() => null)
+    : null;
+
+  const creatorSlug =
+    (params.creator ?? "").trim() ||
+    linkedCollab?.recipientSlug ||
+    linkedCollab?.initiatorSlug ||
+    "";
   const creator = creatorSlug ? await getDirectoryCreator(creatorSlug) : null;
-  const title = params.title ?? "";
-  const scope = params.scope ?? "";
-  const commercial = params.commercial ?? "Paid brand partnership";
+  const title = (params.title ?? linkedCollab?.title ?? "").trim();
+  const scope = (params.scope ?? linkedCollab?.scope ?? "").trim();
+  const commercial = params.commercial ?? linkedCollab?.commercial ?? "Paid brand partnership";
   const jurisdictionCode = (params.jurisdiction ?? "US").toUpperCase();
   const serviceLevelRaw = asServiceLevel(params.serviceLevel ?? "contracted");
   const serviceLevel = serviceLevelRaw === "*" ? "contracted" : serviceLevelRaw;
@@ -270,6 +280,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
 
         <form action={actionSubmitContractWizard} className="space-y-8 rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
           <input type="hidden" name="businessName" value={ws.name} />
+          {linkedCollab ? <input type="hidden" name="collaborationId" value={linkedCollab.id} /> : null}
 
           <section id="parties">
             <h2 className="font-display text-xl font-bold text-indigo">1. Parties</h2>

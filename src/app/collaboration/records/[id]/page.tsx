@@ -123,6 +123,17 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
           ))}
         </div>
       ) : null}
+
+      {account && status === "accepted" ? (
+        <p className="mt-6">
+          <Link
+            href={`/collaboration/contract?collaboration=${encodeURIComponent(record.id)}&creator=${encodeURIComponent(record.recipientSlug)}&title=${encodeURIComponent(record.title)}&scope=${encodeURIComponent(record.scope.slice(0, 200))}&commercial=${encodeURIComponent(record.commercial)}`}
+            className="btn-primary"
+          >
+            Open contract & fund
+          </Link>
+        </p>
+      ) : null}
       <section className="card-surface mt-6 p-6 text-sm">
         <h2 className="font-semibold text-indigo">Document signing</h2>
         <p className="mt-2 text-muted">
