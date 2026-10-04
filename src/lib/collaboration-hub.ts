@@ -21,6 +21,10 @@ import {
   type MarketplaceBusinessRequestRow,
   type MarketplaceCreatorOpportunityRow,
 } from "@/lib/marketplace-listings";
+import {
+  computePayoutReadiness,
+  type PayoutReadiness,
+} from "@/lib/payout-readiness";
 import type { SeedCreator } from "@/lib/seed-data";
 
 export const PIPELINE_STAGES = [
@@ -65,6 +69,10 @@ export type HubEarnings = {
   releasedCents: number;
   currency: string;
   ready: boolean;
+};
+
+export type HubPayoutPanel = {
+  readiness: PayoutReadiness | null;
 };
 
 export type BusinessSpendSummary = {
@@ -207,6 +215,17 @@ export async function loadCreatorHub(input: {
     ready: heldCents > 0 || releasedCents > 0,
   };
 
+  const dbCreator = await prisma.creator.findUnique({ where: { slug } }).catch(() => null);
+  let payout: HubPayoutPanel = { readiness: null };
+  if (dbCreator) {
+    const readiness = await computePayoutReadiness({
+      creatorId: dbCreator.id,
+      identityVerified: dbCreator.identityVerified === "VERIFIED",
+      locationCountry: dbCreator.locationCountry,
+    }).catch(() => null);
+    payout = { readiness };
+  }
+
   const fundingByTitle = new Map(fundings.map((row) => [row.title.toLowerCase(), row]));
   const pipeline: HubPipelineItem[] = collaborations
     .filter((row) => row.status === "accepted" || row.status === "sent" || row.status === "draft")
@@ -247,6 +266,7 @@ export async function loadCreatorHub(input: {
   return {
     status,
     earnings,
+    payout,
     pipeline,
     saved,
     creatorMatches: creatorMatches.slice(0, 8),

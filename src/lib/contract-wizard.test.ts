@@ -107,6 +107,7 @@ describe("pre-contract ROUTE_READY gates", () => {
       creatorSlug: "ada",
       identityVerified: false,
       creatorCountryKnown: true,
+      corridorActive: true,
       paymentRouteReady: true,
       jurisdictionProtectedPayments: true,
       marketplaceProviderReady: true,
@@ -115,11 +116,25 @@ describe("pre-contract ROUTE_READY gates", () => {
     assert.equal(blocked.status, "ROUTE_BLOCKED");
     assert.match(blocked.blockers[0] ?? "", /identity/i);
 
+    const corridorBlocked = evaluatePreContractGates({
+      businessName: "Acme",
+      creatorSlug: "ada",
+      identityVerified: true,
+      creatorCountryKnown: true,
+      corridorActive: false,
+      paymentRouteReady: true,
+      jurisdictionProtectedPayments: true,
+      marketplaceProviderReady: true,
+    });
+    assert.equal(corridorBlocked.ok, false);
+    assert.match(corridorBlocked.blockers.join(" "), /corridor/i);
+
     const ready = evaluatePreContractGates({
       businessName: "Acme",
       creatorSlug: "ada",
       identityVerified: true,
       creatorCountryKnown: true,
+      corridorActive: true,
       paymentRouteReady: true,
       jurisdictionProtectedPayments: true,
       marketplaceProviderReady: true,
@@ -173,6 +188,7 @@ describe("financial plan snapshot", () => {
       creatorSlug: "ada",
       identityVerified: true,
       creatorCountryKnown: true,
+      corridorActive: true,
       paymentRouteReady: true,
       jurisdictionProtectedPayments: true,
       marketplaceProviderReady: true,

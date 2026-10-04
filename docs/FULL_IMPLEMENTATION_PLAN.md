@@ -74,7 +74,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | PARTIAL ledger; deepen W3.6 / W3.11; **P6** admin |
 | Dev P3 expansion | Staged/recurring, more countries, advanced attribution | W3.4 / W3.7 after P4 stable |
 | Dev P4 advanced | Revenue sharing, complex splits, enterprise rules | Explicitly deferred (§11) |
-| — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5–P8** remaining |
+| — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5 core shipped**; **P6–P8** remaining |
 
 ---
 
@@ -155,7 +155,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 #### W2.2 Influencer hub residuals — PARTIAL
 | Exists | Missing | Exit |
 |---|---|---|
-| Status cards, matches, pipeline shell, payout shell | Honest empty states (no fake earnings); payout panel is shell → `/payments` only | Empty/not-ready copy only until P5 wires real readiness |
+| Status cards, matches, pipeline shell, payout panel | Honest empty states (no fake earnings); payout panel shows Global Payout Ready + corridor | Empty/not-ready copy only until method verified |
 | Side nav shortcuts | Dead-end routes hidden or implemented — **Messages** has no `/messages` route; Analytics shortcut is `/dashboard` not collab analytics | Zero 404 / misleading nav items |
 | Influencer Opportunities wording | Align any leftover Creator hub strings | Terminology clean |
 
@@ -239,10 +239,10 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | Strong ledger | Logical OPERATIONS vs COLLABORATION_HOLDING vs FEE_CLEARING; `PaymentProviderAdapter`; $0 Operations until fee earned | Collab OS P4 / Dev Addendum §1, §10–11 |
 
-#### W3.9 Payout readiness & corridors — PARTIAL thin / NOT STARTED product (→ P5)
+#### W3.9 Payout readiness & corridors — PARTIAL (→ P5 core shipped)
 | Exists | Missing | Exit |
 |---|---|---|
-| Hub payout shell; thin `paymentRoutes()` / `ROUTE_READY` gates in contract wizard | Primary/secondary methods; Global Payout Ready = KYC + ≥1 verified route; Country Activation Matrix; exact fee/FX quote before confirm | Collab OS §9–10 |
+| Hub payout panel + payout profile / corridors; ROUTE_READY includes corridor; fee/FX quote helper | Admin corridor matrix UI (P6); live method verification rails | Collab OS §9–10 |
 
 #### W3.10 Content rights vs payment — NOT STARTED
 **Source:** Product Addendum §13  
@@ -342,18 +342,23 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 ---
 
-### P5 — Payout readiness & corridor engine — NOT STARTED (thin gates exist)
+### P5 — Payout readiness & corridor engine — PARTIAL (core shipped)
 
 **Sources:** Collab OS §9–10  
 
-**Build**
-1. Influencer payout profile (primary/secondary friendly methods)  
-2. Global Payout Ready = KYC + ≥1 verified route  
-3. Country Activation Matrix + route decision  
-4. Replace hub payout shell with real panel  
-5. Exact fee/FX quote before confirm  
+**Shipped**
+1. `InfluencerPayoutProfile` (primary/secondary methods + statuses) + `CountryActivationCorridor` matrix  
+2. `computePayoutReadiness` → Global Payout Ready = identityVerified + active corridor + ready gateway + ≥1 verified method  
+3. Hub payout panel shows Global Payout Ready, method, corridor, blockers (not a shell)  
+4. Contract wizard ROUTE_READY includes corridor activation; identity gate uses `identityVerified` only  
+5. Exact fee/FX quote helper (`buildPayoutFeeFxQuote`) on contract preview + approve-before-release  
 
-**Exit:** Fundable only when ROUTE_READY; hub UI real.
+**Still open**
+- Admin corridor control plane (P6)  
+- Live provider connected-account verification flows for method status  
+- Full route-decision matrix (limits, settlement time, fallback provider)  
+
+**Exit (core):** Fundable only when ROUTE_READY (corridor + route + identity) — met. Hub UI real — met.
 
 **Depends on:** P4 domains stable.
 

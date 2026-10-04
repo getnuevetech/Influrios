@@ -270,6 +270,41 @@ model Creator {
   collabNeeds        CollaborationNeed[]
   socialConnections  SocialConnection[]
   shortLinks         ShortLink[]
+  payoutProfile      InfluencerPayoutProfile?
+}
+
+/// Collab OS P5 — influencer payout methods + Global Payout Ready.
+model InfluencerPayoutProfile {
+  id                     String   @id @default(cuid())
+  creatorId              String   @unique
+  creator                Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  primaryMethod          String   @default("local_bank")
+  primaryLabel           String   @default("Local bank")
+  primaryStatus          String   @default("UNVERIFIED")
+  primaryCountryCode     String?
+  primaryCurrency        String?
+  secondaryMethod        String?
+  secondaryLabel         String?
+  secondaryStatus        String   @default("UNVERIFIED")
+  secondaryCountryCode   String?
+  secondaryCurrency      String?
+  globalPayoutReady      Boolean  @default(false)
+  updatedAt              DateTime @updatedAt
+  createdAt              DateTime @default(now())
+}
+
+/// Collab OS P5 — Country Activation Matrix for collaboration corridors.
+model CountryActivationCorridor {
+  countryCode            String   @id
+  active                 Boolean  @default(true)
+  currency               String   @default("USD")
+  collectionProviderCode String?
+  payoutMethodsJson      Json     @default("[]")
+  holdingEnabled         Boolean  @default(true)
+  fxEnabled              Boolean  @default(false)
+  kycModel               String   @default("identity_light")
+  notes                  String   @default("")
+  updatedAt              DateTime @updatedAt
 }
 
 model CreatorSpecialty {

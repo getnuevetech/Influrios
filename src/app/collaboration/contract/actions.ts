@@ -20,6 +20,7 @@ import { prisma } from "@/lib/db";
 import { getDirectoryCreator } from "@/lib/directory";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { ensureMarketplaceDefaults, marketplaceConfig, requestPrefund } from "@/lib/marketplace-ledger";
+import { computePayoutReadiness } from "@/lib/payout-readiness";
 import { paymentRoutes } from "@/lib/providers";
 
 const BASE = "/collaboration/contract";
@@ -113,10 +114,14 @@ export async function actionSubmitContractWizard(formData: FormData) {
     : undefined;
 
   const dbCreator = await prisma.creator.findUnique({ where: { slug: creatorSlug } }).catch(() => null);
-  const identityVerified =
-    dbCreator?.identityVerified === "VERIFIED" ||
-    dbCreator?.profileState === "VERIFIED" ||
-    Boolean(creator.verified);
+  const identityVerified = dbCreator?.identityVerified === "VERIFIED";
+  const payoutReadiness = dbCreator
+    ? await computePayoutReadiness({
+        creatorId: dbCreator.id,
+        identityVerified,
+        locationCountry: dbCreator.locationCountry ?? creator.locationCountry,
+      }).catch(() => null)
+    : null;
 
   const jurisdiction = config.jurisdictions.find((row) => row.code === jurisdictionCode);
   const provider =
@@ -127,6 +132,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     creatorSlug,
     identityVerified,
     creatorCountryKnown: Boolean(creatorCountry),
+    corridorActive: payoutReadiness ? payoutReadiness.corridorActive : Boolean(creatorCountry),
     paymentRouteReady: Boolean(route?.ready),
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
     marketplaceProviderReady: Boolean(provider?.ready),

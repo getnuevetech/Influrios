@@ -21,7 +21,13 @@ import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
-import { paymentRoutes } from "@/lib/providers";
+import {
+  buildPayoutFeeFxQuote,
+  computePayoutReadiness,
+  PAYOUT_METHOD_LABELS,
+  type PayoutMethod,
+} from "@/lib/payout-readiness";
+import { DEFAULT_PAYMENT_ROUTES, paymentRoutes } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contract & Milestone Wizard · Influrios" };
@@ -123,10 +129,14 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const dbCreator = creatorSlug
     ? await prisma.creator.findUnique({ where: { slug: creatorSlug } }).catch(() => null)
     : null;
-  const identityVerified =
-    dbCreator?.identityVerified === "VERIFIED" ||
-    dbCreator?.profileState === "VERIFIED" ||
-    Boolean(creator?.verified);
+  const identityVerified = dbCreator?.identityVerified === "VERIFIED";
+  const payoutReadiness = dbCreator
+    ? await computePayoutReadiness({
+        creatorId: dbCreator.id,
+        identityVerified,
+        locationCountry: dbCreator.locationCountry ?? creator?.locationCountry,
+      }).catch(() => null)
+    : null;
 
   const jurisdiction = config.jurisdictions.find((row) => row.code === jurisdictionCode);
   const provider =
@@ -137,6 +147,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     creatorSlug: creatorSlug || "",
     identityVerified: creatorSlug ? identityVerified : false,
     creatorCountryKnown: Boolean(creatorCountry),
+    corridorActive: payoutReadiness ? payoutReadiness.corridorActive : Boolean(creatorCountry),
     paymentRouteReady: Boolean(route?.ready),
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
     marketplaceProviderReady: Boolean(provider?.ready),
@@ -177,6 +188,22 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           milestoneSource: usingCustom ? "custom" : "template",
         })
       : null;
+
+  const payoutCurrency =
+    (payoutReadiness?.countryCode
+      ? DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === payoutReadiness.countryCode)?.currency
+      : null) ??
+    plan?.payoutCurrency ??
+    jurisdiction?.currency ??
+    "USD";
+  const feeFxQuote = plan
+    ? buildPayoutFeeFxQuote({
+        creatorGrossCents: plan.grossContractValueCents,
+        platformFeeCents: plan.totalPlatformFeeCents,
+        fundingCurrency: plan.contractCurrency,
+        payoutCurrency,
+      })
+    : null;
 
   const shortlisted = ws.shortlist
     .map((item) => creators.find((c) => c.slug === item.creatorSlug))
@@ -405,13 +432,38 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             <p className="mt-1 text-sm text-muted">
               Status:{" "}
               <strong className={gates.ok ? "text-emerald-700" : "text-amber-800"}>{gates.status}</strong>
+              {payoutReadiness ? (
+                <>
+                  {" "}
+                  · Global Payout Ready:{" "}
+                  <strong className={payoutReadiness.globalPayoutReady ? "text-emerald-700" : "text-amber-800"}>
+                    {payoutReadiness.globalPayoutReady ? "yes" : "not yet"}
+                  </strong>
+                </>
+              ) : null}
             </p>
             <ul className="mt-3 space-y-1 text-sm text-muted">
               <li>Identity: {creatorSlug ? (identityVerified ? "verified" : "not verified") : "select influencer"}</li>
               <li>Payout country: {creatorCountry ?? "unknown"}</li>
               <li>
+                Corridor:{" "}
+                {payoutReadiness
+                  ? payoutReadiness.corridorActive
+                    ? "activated"
+                    : "not activated"
+                  : creatorCountry
+                    ? "checking…"
+                    : "unknown"}
+              </li>
+              <li>
                 Payment route:{" "}
                 {route?.ready ? `ready (${route.providerName})` : route ? route.reason.replace(/_/g, " ") : "no route"}
+              </li>
+              <li>
+                Payout method:{" "}
+                {payoutReadiness?.primaryMethod
+                  ? `${PAYOUT_METHOD_LABELS[payoutReadiness.primaryMethod as PayoutMethod] ?? payoutReadiness.primaryMethod} (${payoutReadiness.primaryStatus})`
+                  : "—"}
               </li>
               <li>Jurisdiction protected payments: {jurisdiction?.protectedPaymentsEnabled ? "on" : "off"}</li>
               <li>Marketplace provider: {provider?.ready ? "ready" : "not ready"}</li>
@@ -425,6 +477,12 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             ) : (
               <p className="mt-3 text-sm font-semibold text-emerald-800">ROUTE_READY — funding is allowed.</p>
             )}
+            {payoutReadiness && !payoutReadiness.globalPayoutReady ? (
+              <p className="mt-2 text-xs text-muted">
+                Funding can proceed when ROUTE_READY. Global Payout Ready still needs a verified payout method
+                before the influencer can withdraw released balance.
+              </p>
+            ) : null}
           </section>
 
           <section id="preview">
@@ -463,10 +521,24 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-muted">Milestone source</dt>
-                    <dd className="font-bold text-indigo">{plan.milestoneSource}</dd>
+                    <dt className="text-muted">Expected payout currency</dt>
+                    <dd className="font-bold text-indigo">{payoutCurrency}</dd>
                   </div>
                 </dl>
+                {feeFxQuote?.ok ? (
+                  <p className="mt-3 rounded-xl bg-[#F4F7FF] px-3 py-2 text-xs text-indigo">
+                    Fee/FX before confirm: net{" "}
+                    {formatMoney(feeFxQuote.quote.creatorNetCents, feeFxQuote.quote.fundingCurrency)}
+                    {feeFxQuote.quote.fxApplied
+                      ? ` → ≈ ${feeFxQuote.quote.payoutMinor} ${feeFxQuote.quote.payoutCurrency} minor (${feeFxQuote.quote.fxSource} FX)`
+                      : " (no FX)"}
+                    . Exact quote is shown again at payout.
+                  </p>
+                ) : feeFxQuote && !feeFxQuote.ok ? (
+                  <p className="mt-3 text-xs text-amber-800">
+                    Fee/FX estimate unavailable: {feeFxQuote.error}
+                  </p>
+                ) : null}
                 <ul className="mt-4 space-y-2">
                   {plan.milestones.map((m) => (
                     <li
