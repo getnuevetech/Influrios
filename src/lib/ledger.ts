@@ -179,7 +179,11 @@ export function requestRevision(input: {
     return { ok: false, error: "That milestone cannot take this step." };
   }
   if (input.revisionCount >= input.revisionLimit) {
-    return { ok: false, error: "This milestone has used its revision limit." };
+    return {
+      ok: false,
+      error:
+        "This milestone has used its revision limit. Open a dispute or request a change order — revisions cannot silently expand scope.",
+    };
   }
   return { ok: true, revisionCount: input.revisionCount + 1 };
 }

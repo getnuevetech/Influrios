@@ -68,6 +68,8 @@ export async function actionSaveJurisdiction(formData: FormData) {
       capabilityNotes: String(formData.get("capabilityNotes") ?? ""),
       capabilitiesEffectiveFrom: String(formData.get("capabilitiesEffectiveFrom") ?? "") || null,
       capabilitiesEffectiveTo: String(formData.get("capabilitiesEffectiveTo") ?? "") || null,
+      reviewWindowHours: String(formData.get("reviewWindowHours") ?? ""),
+      maxRevisions: String(formData.get("maxRevisions") ?? ""),
       currency: String(formData.get("currency") ?? "USD"),
       minorDigits: Number(formData.get("minorDigits") ?? 2),
       providerCode: String(formData.get("providerCode") ?? "primary"),

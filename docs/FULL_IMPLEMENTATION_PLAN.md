@@ -216,12 +216,10 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Explicit `fundingMode` FULL / STAGED / NONE on funding; badges + staged phase start gate; UI labels | Recurring/ambassador as a fourth product mode | Staged: later phases cannot start unfunded; NONE never shows Fully Funded |
 | Schedule kinds still support `recurring` | Product-mode expansion for ambassador cycles | Deferred until Dev P3 — do not block |
 
-#### W3.5 Milestone lifecycle depth — PARTIAL (auto-approval job shipped)
+#### W3.5 Milestone lifecycle depth — DONE
 | Exists | Missing | Exit |
 |---|---|---|
-| Templates, submit/approve; `runAutoApprovalSweep` + `milestone_auto_approval` job (skips open disputes); admin toggle | Per-jurisdiction/service-level review window snapshots | Dev Addendum §8 + §22.5–6 |
-| Revision tracking | Revision limits → change order or dispute only | §22.6 |
-| — | Full milestone state machine labels aligned to Dev §8 / Collab §6.4 | State names + transitions audited |
+| Templates, submit/approve; auto-approval job; revision tracking; §22.6 exhausted → change order/dispute; Dev §8 labels; plan/jurisdiction/settings lifecycle snapshot frozen on milestones + fee snapshot | — | Dev Addendum §8 + §22.5–6 |
 
 #### W3.6 Disputes / cancellations / refunds / chargebacks — PARTIAL (kill-fee matrix shipped)
 | Exists | Missing | Exit |
@@ -235,10 +233,10 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Attribution sources + expiry window; `AttributionClaim` contest workflow; funding `attributionStatus` / `attributionExpiresAt`; fee resolution remaps managed levels for pre-existing | — | Dev Addendum §15 |
 | Admin marketplace contest UI (file / uphold / reject) | — | Contested pre-existing claims resolvable |
 
-#### W3.8 Financial domains & provider adapter — NOT STARTED (→ P4)
+#### W3.8 Financial domains & provider adapter — DONE (→ P4)
 | Exists | Missing | Exit |
 |---|---|---|
-| Strong ledger | Logical OPERATIONS vs COLLABORATION_HOLDING vs FEE_CLEARING; `PaymentProviderAdapter`; $0 Operations until fee earned | Collab OS P4 / Dev Addendum §1, §10–11 |
+| Logical OPERATIONS vs COLLABORATION_HOLDING; `PaymentProviderAdapter`; fee earned on release | — | Collab OS P4 / Dev Addendum §1, §10–11 |
 
 #### W3.9 Payout readiness & corridors — PARTIAL (→ P5 core shipped)
 | Exists | Missing | Exit |
@@ -644,7 +642,7 @@ LATER / gated:
 | Job | Status |
 |---|---|
 | Funding reconciliation | PARTIAL |
-| Milestone review deadline / auto-approval | PARTIAL (read-path sweep) |
+| Milestone review deadline / auto-approval | DONE (job + review-deadline sweep + frozen window) |
 | Scheduled release / payout reconciliation | PARTIAL |
 | Provider hold-period warnings | NOT STARTED |
 | Failed payout retry | PARTIAL |
