@@ -14,6 +14,10 @@ import { ledgerMovements, reconcileLedger, releasableCents } from "@/lib/ledger"
 
 const OPEN = ["open", "under_review", "refund_requested"];
 
+function fireCollabNotify(run: () => Promise<unknown>) {
+  void run().catch(() => undefined);
+}
+
 let partialRefundsForTests: boolean | null = null;
 
 /** Pins the partial-refund switch for one test without writing the shared settings row. */
@@ -133,6 +137,15 @@ async function openDisputeOnMilestone(input: { fundingId: string; milestoneId: s
       after: { fundingId: funding!.id, milestoneId: milestone!.id, reason: reason!.label },
     },
   }).catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId: funding!.id,
+      kind: "dispute_opened",
+      milestone: milestone!.title,
+      detail: reason!.label,
+    });
+  });
   return { ok: true as const, id: dispute.id };
 }
 
@@ -170,6 +183,14 @@ export async function cancelUnconfirmedFunding(fundingId: string) {
       after: { status: "cancelled" },
     },
   }).catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId,
+      kind: "collaboration_cancelled",
+      detail: "Unconfirmed prefund cancelled before provider hold.",
+    });
+  });
   return { ok: true as const };
 }
 
@@ -233,6 +254,20 @@ export async function decideMilestoneDispute(input: {
       after: { status: decision.status, requestedRefundCents: decision.requestedRefundCents },
     },
   }).catch(() => undefined);
+  if (
+    decision.status === "resolved_release" ||
+    decision.status === "withdrawn"
+  ) {
+    fireCollabNotify(async () => {
+      const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+      await notifyCollabFundingEvent({
+        fundingId: dispute.fundingId,
+        kind: "dispute_resolved",
+        milestone: dispute.milestone.title,
+        detail: input.note?.trim() || decision.status,
+      });
+    });
+  }
   return { ok: true as const, status: decision.status };
 }
 
@@ -308,5 +343,14 @@ export async function closeDisputesForRefund(input: {
     });
     if (!next) continue;
     await prisma.milestoneDispute.update({ where: { id: dispute.id }, data: { status: next } });
+    fireCollabNotify(async () => {
+      const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+      await notifyCollabFundingEvent({
+        fundingId: input.fundingId,
+        kind: "dispute_resolved",
+        milestone: dispute.milestone?.title,
+        detail: next,
+      });
+    });
   }
 }

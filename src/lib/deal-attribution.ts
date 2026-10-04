@@ -244,6 +244,24 @@ export async function fileAttributionClaim(input: {
       data: { attributionStatus: "contested" },
     });
   }
+  void import("@/lib/jobs")
+    .then(async ({ notifyCollabFundingEvent, notifyCollabParties }) => {
+      if (input.fundingId) {
+        await notifyCollabFundingEvent({
+          fundingId: input.fundingId,
+          kind: "preexisting_relationship_claimed",
+          detail: evidence.slice(0, 200),
+        });
+        return;
+      }
+      await notifyCollabParties({
+        kind: "preexisting_relationship_claimed",
+        businessName,
+        creatorSlug,
+        detail: evidence.slice(0, 200),
+      });
+    })
+    .catch(() => undefined);
   return { ok: true as const, id: claim.id };
 }
 

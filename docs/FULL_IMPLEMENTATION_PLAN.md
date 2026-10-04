@@ -52,7 +52,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Review, revisions, auto-approval, kill fees, chargebacks | Product Addendum §9–12; Dev Addendum §8–14 | W3.5–W3.6 |
 | Relationship attribution / repeat deals | Product Addendum §14; Dev Addendum §15 | W3.7 |
 | Content rights separate from payment release | Product Addendum §13 | W3.10 |
-| Funding/milestone notifications | Dev Addendum §18 | W3.11 |
+| Funding/milestone notifications | Dev Addendum §18 | W3.11 **DONE** |
 | Legal pack updates referencing live fee snapshots | Product Addendum §17 | W3.12 |
 | Product UX: funding badges, fee preview, revision counter, admin transaction view | Product Addendum §16 | W2 / W3 |
 | INFLR.me phases 1–4, Pro dynamic destinations, OG, domain admin | INFLR.me Spec | W5 |
@@ -71,7 +71,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 |---|---|---|
 | Dev P0 core model | Entities, rules, snapshots, milestones, jurisdiction flags | Mostly DONE (ledger + fees + flags); deepen W3 |
 | Dev P1 launch provider | One provider, full prefunding, release, partial refund | PARTIAL ledger + Stripe path; **P4** adapter + domains |
-| Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | PARTIAL ledger; deepen W3.6 / W3.11; **P6** admin |
+| Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | PARTIAL ledger; W3.6 / W3.11 done; **P6** admin |
 | Dev P3 expansion | Staged/recurring, more countries, advanced attribution | W3.4 / W3.7 after P4 stable |
 | Dev P4 advanced | Revenue sharing, complex splits, enterprise rules | Explicitly deferred (§11) |
 | — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5–P8 core shipped** |
@@ -252,12 +252,12 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | `rightsStatus` / `rightsActivateOn` / `rightsActivatedAt` on milestones; activate on release (default) or acceptance; financial plan snapshot; payments UI separates rights from acceptance | — | Rights state separate from milestone acceptance |
 
-#### W3.11 Notifications — NOT STARTED
+#### W3.11 Notifications — DONE
 **Source:** Dev Addendum §18  
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Jobs mail for invitations/verification | Notify on funding, milestones, review deadlines, revisions, approvals, payouts, disputes, cancellations/refunds, provider/jurisdiction limitations | Event kinds + templates use Influencer terminology |
+| Event kinds + Influencer templates; `collab_notification` jobs; hooks on funding/milestones/revisions/approvals/payouts/disputes/cancel/refund/change-order/attribution/jurisdiction limits; review-deadline sweep | — | Event kinds + templates use Influencer terminology |
 
 #### W3.12 Legal pack commercial sync — DONE
 **Source:** Product Addendum §17  

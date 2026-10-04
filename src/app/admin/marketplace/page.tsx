@@ -17,6 +17,7 @@ import {
   actionSaveRevenueParties,
   actionSaveTemplates,
   actionEnqueueAutoApproval,
+  actionEnqueueReviewDeadlineSweep,
 } from "@/app/admin/marketplace/actions";
 import { listAttributionClaims, listAttributionSources } from "@/lib/deal-attribution";
 import { readShareSnapshot } from "@/lib/fx-share";
@@ -332,11 +333,18 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           </p>
         )}
         {canManage ? (
-          <form action={actionEnqueueAutoApproval} className="mt-3">
-            <button type="submit" className="btn-secondary !py-1.5 text-xs">
-              Queue auto-approval sweep now
-            </button>
-          </form>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <form action={actionEnqueueAutoApproval}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue auto-approval sweep now
+              </button>
+            </form>
+            <form action={actionEnqueueReviewDeadlineSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue review-deadline notices now
+              </button>
+            </form>
+          </div>
         ) : null}
       </section>
 

@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/db";
 import { getAppOrigin } from "@/lib/billing";
+import {
+  COLLAB_NOTIFICATION_TEMPLATES,
+  type CollabNotificationKind,
+  type CollabNotificationVars,
+  renderCollabNotification,
+  shouldNotifyReviewDeadline,
+} from "@/lib/collab-notifications";
 import { renderInvitationCopy } from "@/lib/invitations";
 import { sendMail } from "@/lib/mail";
 
@@ -78,6 +85,22 @@ async function runJob(kind: string, payload: unknown) {
     const { runAutoApprovalSweep } = await import("@/lib/marketplace-ledger");
     const result = await runAutoApprovalSweep();
     if (result.disabled) return;
+    return;
+  }
+  if (kind === "review_deadline_sweep") {
+    await runReviewDeadlineSweep();
+    return;
+  }
+  if (kind === "collab_notification") {
+    if (!data.to || !data.subject || !data.text) {
+      throw new Error("Collaboration notification job is missing a recipient or copy.");
+    }
+    const result = await sendMail({
+      to: data.to,
+      subject: data.subject,
+      text: data.text,
+    });
+    if (!result.ok) throw new Error(result.error);
     return;
   }
   if (kind === "provider_webhook" || kind === "ai_provider") {
@@ -170,6 +193,250 @@ export async function enqueueAutoApprovalSweep() {
   await prisma.job.create({
     data: {
       kind: "milestone_auto_approval",
+      status: "queued",
+      payload: { enqueuedAt: new Date().toISOString() },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
+}
+
+async function resolveCollabRecipients(input: {
+  audience: (typeof COLLAB_NOTIFICATION_TEMPLATES)[CollabNotificationKind]["audience"];
+  businessName: string;
+  creatorSlug: string;
+}): Promise<string[]> {
+  const emails = new Set<string>();
+  const needBusiness = input.audience === "business" || input.audience === "both";
+  const needInfluencer = input.audience === "influencer" || input.audience === "both";
+  const needAdmin = input.audience === "admin";
+
+  if (needBusiness) {
+    const business = await prisma.businessProfile.findFirst({
+      where: { name: { equals: input.businessName, mode: "insensitive" } },
+      include: { user: { select: { email: true } } },
+    });
+    if (business?.user.email) emails.add(business.user.email.trim().toLowerCase());
+  }
+  if (needInfluencer) {
+    const creator = await prisma.creator.findUnique({
+      where: { slug: input.creatorSlug },
+      include: { user: { select: { email: true } } },
+    });
+    if (creator?.user?.email) emails.add(creator.user.email.trim().toLowerCase());
+  }
+  if (needAdmin) {
+    const admins = await prisma.adminUser.findMany({
+      where: { active: true },
+      select: { email: true },
+      take: 5,
+      orderBy: { createdAt: "asc" },
+    });
+    for (const admin of admins) {
+      if (admin.email.trim()) emails.add(admin.email.trim().toLowerCase());
+    }
+  }
+  return [...emails].filter(Boolean);
+}
+
+/**
+ * W3.11 — enqueue Influencer-terminology collaboration emails for a funding event.
+ * No-ops when SMTP is unset or no party emails resolve (tests stay quiet).
+ */
+export async function notifyCollabFundingEvent(input: {
+  fundingId: string;
+  kind: CollabNotificationKind;
+  milestone?: string;
+  detail?: string;
+  /** Extra recipients (e.g. admin on payout failure). */
+  extraEmails?: string[];
+  processNow?: boolean;
+}) {
+  const { mailReady } = await import("@/lib/mail");
+  if (!(await mailReady())) return { queued: false, count: 0 };
+
+  const funding = await prisma.collaborationFunding.findUnique({ where: { id: input.fundingId } });
+  if (!funding) return { queued: false, count: 0 };
+
+  const creator = await prisma.creator.findUnique({
+    where: { slug: funding.creatorSlug },
+    select: { displayName: true },
+  });
+  const template = COLLAB_NOTIFICATION_TEMPLATES[input.kind];
+  const vars: CollabNotificationVars = {
+    business: funding.businessName,
+    influencer: creator?.displayName || funding.creatorSlug,
+    title: funding.title,
+    milestone: input.milestone,
+    detail: input.detail,
+  };
+  const rendered = renderCollabNotification(input.kind, vars);
+  const recipients = await resolveCollabRecipients({
+    audience: template.audience,
+    businessName: funding.businessName,
+    creatorSlug: funding.creatorSlug,
+  });
+  for (const email of input.extraEmails ?? []) {
+    const cleaned = email.trim().toLowerCase();
+    if (cleaned && !recipients.includes(cleaned)) recipients.push(cleaned);
+  }
+  // Dev §18: dispute / payout_failed / provider limitation also reach admin.
+  if (
+    input.kind === "dispute_opened" ||
+    input.kind === "dispute_resolved" ||
+    input.kind === "payout_failed" ||
+    input.kind === "provider_jurisdiction_limitation" ||
+    input.kind === "preexisting_relationship_claimed"
+  ) {
+    const admins = await prisma.adminUser.findMany({
+      where: { active: true },
+      select: { email: true },
+      take: 5,
+      orderBy: { createdAt: "asc" },
+    });
+    for (const admin of admins) {
+      const cleaned = admin.email.trim().toLowerCase();
+      if (cleaned && !recipients.includes(cleaned)) recipients.push(cleaned);
+    }
+  }
+
+  for (const to of recipients) {
+    await prisma.job.create({
+      data: {
+        kind: "collab_notification",
+        status: "queued",
+        payload: {
+          to,
+          subject: rendered.subject,
+          text: rendered.text,
+          notificationKind: input.kind,
+          fundingId: funding.id,
+        },
+      },
+    });
+  }
+  if (recipients.length > 0 && input.processNow !== false) await processDueJobs();
+  return { queued: recipients.length > 0, count: recipients.length };
+}
+
+/** Notify without a funding row (pre-existing claim, jurisdiction block before create). */
+export async function notifyCollabParties(input: {
+  kind: CollabNotificationKind;
+  businessName: string;
+  creatorSlug: string;
+  title?: string;
+  milestone?: string;
+  detail?: string;
+  processNow?: boolean;
+}) {
+  const { mailReady } = await import("@/lib/mail");
+  if (!(await mailReady())) return { queued: false, count: 0 };
+
+  const creator = await prisma.creator.findUnique({
+    where: { slug: input.creatorSlug },
+    select: { displayName: true },
+  });
+  const template = COLLAB_NOTIFICATION_TEMPLATES[input.kind];
+  const rendered = renderCollabNotification(input.kind, {
+    business: input.businessName,
+    influencer: creator?.displayName || input.creatorSlug,
+    title: input.title,
+    milestone: input.milestone,
+    detail: input.detail,
+  });
+  const recipients = await resolveCollabRecipients({
+    audience: template.audience,
+    businessName: input.businessName,
+    creatorSlug: input.creatorSlug,
+  });
+  if (
+    input.kind === "preexisting_relationship_claimed" ||
+    input.kind === "provider_jurisdiction_limitation"
+  ) {
+    const admins = await prisma.adminUser.findMany({
+      where: { active: true },
+      select: { email: true },
+      take: 5,
+      orderBy: { createdAt: "asc" },
+    });
+    for (const admin of admins) {
+      const cleaned = admin.email.trim().toLowerCase();
+      if (cleaned && !recipients.includes(cleaned)) recipients.push(cleaned);
+    }
+  }
+  for (const to of recipients) {
+    await prisma.job.create({
+      data: {
+        kind: "collab_notification",
+        status: "queued",
+        payload: {
+          to,
+          subject: rendered.subject,
+          text: rendered.text,
+          notificationKind: input.kind,
+        },
+      },
+    });
+  }
+  if (recipients.length > 0 && input.processNow !== false) await processDueJobs();
+  return { queued: recipients.length > 0, count: recipients.length };
+}
+
+/** W3.11 — remind businesses when a review window is about to close. */
+export async function runReviewDeadlineSweep(now = new Date()) {
+  const due = await prisma.fundingMilestone.findMany({
+    where: { status: "submitted", autoApproveAt: { not: null, gt: now } },
+    include: { funding: true },
+    take: 100,
+  });
+  let notified = 0;
+  for (const milestone of due) {
+    if (
+      !shouldNotifyReviewDeadline({
+        milestoneStatus: milestone.status,
+        autoApproveAt: milestone.autoApproveAt,
+        now,
+      })
+    ) {
+      continue;
+    }
+    const already = await prisma.auditLog.findFirst({
+      where: {
+        action: "review_deadline_notified",
+        objectType: "FundingMilestone",
+        objectId: milestone.id,
+      },
+    });
+    if (already) continue;
+    const result = await notifyCollabFundingEvent({
+      fundingId: milestone.fundingId,
+      kind: "review_deadline_approaching",
+      milestone: milestone.title,
+      processNow: false,
+    });
+    if (result.count > 0) {
+      notified += 1;
+      await prisma.auditLog
+        .create({
+          data: {
+            actor: "system",
+            action: "review_deadline_notified",
+            objectType: "FundingMilestone",
+            objectId: milestone.id,
+            after: { fundingId: milestone.fundingId, at: now.toISOString() },
+          },
+        })
+        .catch(() => undefined);
+    }
+  }
+  if (notified > 0) await processDueJobs();
+  return { scanned: due.length, notified };
+}
+
+export async function enqueueReviewDeadlineSweep() {
+  await prisma.job.create({
+    data: {
+      kind: "review_deadline_sweep",
       status: "queued",
       payload: { enqueuedAt: new Date().toISOString() },
     },

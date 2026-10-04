@@ -42,6 +42,11 @@ const PROVIDER_CODE = "primary";
 let grossCapForTests: number | null = null;
 let changeOrdersForTests: boolean | null = null;
 
+/** W3.11 — never block money paths on notification delivery. */
+function fireCollabNotify(run: () => Promise<unknown>) {
+  void run().catch(() => undefined);
+}
+
 /** Tests pin the USD cap without writing the shared settings row. */
 export function setGrossCapForTests(cents: number | null) {
   grossCapForTests = cents;
@@ -555,12 +560,36 @@ export async function requestPrefund(input: {
     scheduleKind,
     providerCode: assignedCode,
   });
-  if (!capabilityGate.ok) return capabilityGate;
+  if (!capabilityGate.ok) {
+    fireCollabNotify(async () => {
+      const { notifyCollabParties } = await import("@/lib/jobs");
+      await notifyCollabParties({
+        kind: "provider_jurisdiction_limitation",
+        businessName: input.businessName,
+        creatorSlug: input.creatorSlug,
+        title: input.title,
+        detail: capabilityGate.error,
+      });
+    });
+    return capabilityGate;
+  }
   const gate = canRequestPrefund({
     jurisdictionEnabled: Boolean(jurisdiction?.protectedPaymentsEnabled),
     providerReady: Boolean(provider?.enabled && provider.webhookCipher),
   });
-  if (!gate.ok) return gate;
+  if (!gate.ok) {
+    fireCollabNotify(async () => {
+      const { notifyCollabParties } = await import("@/lib/jobs");
+      await notifyCollabParties({
+        kind: "provider_jurisdiction_limitation",
+        businessName: input.businessName,
+        creatorSlug: input.creatorSlug,
+        title: input.title,
+        detail: gate.error,
+      });
+    });
+    return gate;
+  }
   const attribution = await resolveDealAttribution({
     businessName: input.businessName,
     creatorSlug: input.creatorSlug,
@@ -720,6 +749,10 @@ export async function requestPrefund(input: {
       },
     },
   }).catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({ fundingId: created[0], kind: "funding_required" });
+  });
   return { ok: true as const, id: created[0], status: "awaiting_provider" as const };
 }
 
@@ -873,6 +906,14 @@ export async function runAutoApprovalSweep(now = new Date()) {
           after: { fundingId: milestone.fundingId, at: now.toISOString() },
         },
       }).catch(() => null);
+      fireCollabNotify(async () => {
+        const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+        await notifyCollabFundingEvent({
+          fundingId: milestone.fundingId,
+          kind: "milestone_auto_approved",
+          milestone: milestone.title,
+        });
+      });
     }
   }
   return { scanned: due.length, approved, skippedDispute, disabled: false as const };
@@ -979,6 +1020,14 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     if (message.includes("Nothing was changed")) return { ok: false as const, error: message };
     throw error;
   }
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId: funding.id,
+      kind: "change_order_accepted",
+      detail: note,
+    });
+  });
   return { ok: true as const };
 }
 
@@ -1177,6 +1226,14 @@ export async function submitFundingMilestone(fundingId: string, milestoneId: str
       autoApproveAt: autoApproveDeadline(submittedAt, milestone.reviewWindowHours),
     },
   });
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId,
+      kind: "milestone_submitted",
+      milestone: milestone.title,
+    });
+  });
   return { ok: true as const };
 }
 
@@ -1219,6 +1276,15 @@ export async function requestFundingRevision(fundingId: string, milestoneId: str
       },
     })
     .catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId,
+      kind: "revision_requested",
+      milestone: milestone.title,
+      detail: text,
+    });
+  });
   return { ok: true as const, revisionCount: gate.revisionCount };
 }
 
@@ -1244,6 +1310,14 @@ export async function approveFundingMilestone(fundingId: string, milestoneId: st
           }
         : {}),
     },
+  });
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId,
+      kind: "milestone_approved",
+      milestone: milestone.title,
+    });
   });
   return { ok: true as const };
 }
@@ -1498,6 +1572,24 @@ export async function applyMarketplaceEvent(input: {
         after: { eventId, amountCents: input.amountCents },
       },
     }).catch(() => undefined);
+    const { collabKindForMarketplaceEvent } = await import("@/lib/collab-notifications");
+    const kind = collabKindForMarketplaceEvent(input.eventType);
+    if (kind) {
+      fireCollabNotify(async () => {
+        const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+        await notifyCollabFundingEvent({
+          fundingId: funding.id,
+          kind,
+          milestone: milestone?.title,
+          detail:
+            input.eventType === "funding.failed"
+              ? "Provider rejected or failed the funding hold."
+              : input.eventType === "payout.refunded"
+                ? `Refunded ${input.amountCents}¢`
+                : undefined,
+        });
+      });
+    }
   }
   return { applied: disposition === "apply", result: disposition };
 }
