@@ -15,6 +15,7 @@ import {
 import { saveFxRates, saveRevenueParties } from "@/lib/settlement";
 import { setProductSwitch } from "@/lib/product-switches";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
+import { enqueueAutoApprovalSweep } from "@/lib/jobs";
 
 function flag(formData: FormData, name: string) {
   return formData.get(name) === "on";
@@ -34,6 +35,9 @@ export async function actionSaveMarketplaceSettings(formData: FormData) {
       riskControlsEnabled: formData.get("riskControlsEnabled") === "on",
       maxOpenDisputes: Number(formData.get("maxOpenDisputes")),
       cancelUnconfirmed: formData.get("cancelUnconfirmed") === "on",
+      autoApprovalEnabled: formData.get("autoApprovalEnabled") === "on",
+      killFeeBps: Math.round(Number(formData.get("killFeePercent") ?? 0) * 100),
+      killFeeFixedCents: Math.round(Number(formData.get("killFeeFixedUsd") ?? 0) * 100),
     });
     await setProductSwitch("financial_reports", formData.get("financialReports") === "on");
     await setProductSwitch("legacy_demo_payments", formData.get("legacyDemoPayments") === "on");
@@ -280,4 +284,12 @@ export async function actionSaveAttributionSources(formData: FormData) {
   revalidatePath("/admin/marketplace");
   revalidatePath("/payments");
   redirect("/admin/marketplace?saved=sources");
+}
+
+export async function actionEnqueueAutoApproval() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueAutoApprovalSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=auto_approval");
 }

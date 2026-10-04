@@ -14,6 +14,7 @@ import {
   actionSaveMarketplaceSettings,
   actionSaveRevenueParties,
   actionSaveTemplates,
+  actionEnqueueAutoApproval,
 } from "@/app/admin/marketplace/actions";
 import { listAttributionSources } from "@/lib/deal-attribution";
 import { readShareSnapshot } from "@/lib/fx-share";
@@ -280,6 +281,38 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
               Allow cancelling a prefund before the provider confirms it
             </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="autoApprovalEnabled"
+                defaultChecked={config.autoApprovalEnabled}
+                className="accent-violet"
+              />
+              Run milestone auto-approval job when the review window expires
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Kill fee % (current milestone after work begins)
+              <input
+                name="killFeePercent"
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                defaultValue={Math.round((config.killFeeBps ?? 2500) / 100)}
+                className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Kill fee fixed USD
+              <input
+                name="killFeeFixedUsd"
+                type="number"
+                min={0}
+                step={0.01}
+                defaultValue={((config.killFeeFixedCents ?? 0) / 100).toFixed(2)}
+                className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
             <button type="submit" className="btn-primary !py-2 text-sm">
               Save window
             </button>
@@ -291,8 +324,17 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             {config.partialRefundsEnabled ? "on" : "off"} · change orders{" "}
             {config.changeOrdersEnabled ? config.maxChangeOrders : "off"} · open disputes{" "}
             {config.riskControlsEnabled ? config.maxOpenDisputes : "off"} · monthly report {reportsOn ? "on" : "off"} · legacy demos {legacyDemoOn ? "on" : "off"}
+            · auto-approval {config.autoApprovalEnabled ? "on" : "off"} · kill fee{" "}
+            {((config.killFeeBps ?? 0) / 100).toFixed(0)}% + {formatMoney(config.killFeeFixedCents ?? 0)}
           </p>
         )}
+        {canManage ? (
+          <form action={actionEnqueueAutoApproval} className="mt-3">
+            <button type="submit" className="btn-secondary !py-1.5 text-xs">
+              Queue auto-approval sweep now
+            </button>
+          </form>
+        ) : null}
       </section>
 
       <section className="card-surface space-y-4 p-5">
