@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     referrer: request.headers.get("referer"),
   };
   const started = Date.now();
+  const canonicalOrigin = (process.env.NEXT_PUBLIC_APP_URL || "https://influrios.com").replace(/\/$/, "");
   try {
     const hit = await resolveShortRequest(host, path, hints);
     const outcome = await recordResolverMetric({
@@ -68,14 +69,21 @@ export async function GET(request: NextRequest) {
         headers: { "Cache-Control": hit.cacheControl, ...metricHeaders },
       });
     }
-    return new NextResponse(brandedFallbackHtml(hit.title, hit.message), {
-      status: hit.status,
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-store",
-        ...metricHeaders,
+    return new NextResponse(
+      brandedFallbackHtml(hit.title, hit.message, {
+        canonicalOrigin,
+        outcome,
+        ctaLabel: outcome === "root" ? "Browse influencers on Influrios" : "Open Influrios",
+      }),
+      {
+        status: hit.status,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+          ...metricHeaders,
+        },
       },
-    });
+    );
   } catch (error) {
     console.error("short link resolve", error);
     const outcome = await recordResolverMetric({
@@ -84,7 +92,10 @@ export async function GET(request: NextRequest) {
       path,
     });
     return new NextResponse(
-      brandedFallbackHtml("Influrios", "This short link could not be resolved right now."),
+      brandedFallbackHtml("Influrios", "This short link could not be resolved right now.", {
+        canonicalOrigin,
+        outcome,
+      }),
       {
         status: 500,
         headers: {

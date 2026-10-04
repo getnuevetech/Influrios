@@ -157,11 +157,11 @@ Comparing thin plan v1 to every attached product/design document found these **m
 |---|---|---|
 | Status cards, matches, pipeline, payout panel with Global Payout Ready; Messages dead nav removed; honest empty earnings copy | — | Zero 404 / misleading nav; empty/not-ready copy only |
 
-#### W2.3 Business hub residuals — PARTIAL
+#### W2.3 Business hub residuals — DONE (intent refresh deferred)
 | Exists | Missing | Exit |
 |---|---|---|
 | Requests, suggestions, spend summary, contract link; applicant reply/decline/shortlist in hub UI | Intent refresh / multi-creator team proposals (Collab OS §3.3) deferred | Reply/decline/shortlist without admin workarounds |
-| Pipeline chrome mapped to funding/milestone states | — | No cosmetic-only steps |
+| Pipeline chrome mapped to funding/milestone states via `derivePipelineStage` + funding badges | — | No cosmetic-only steps — **DONE** |
 
 #### W2.4 Mentorship stub — DONE (full module = P7 core shipped)
 | Exists | Missing | Exit |
@@ -290,7 +290,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | Exists | Missing | Exit |
 |---|---|---|
-| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records | Phase 1–2 DoD fully evidenced (domain verification admin UX, alias policy, branded failure pages) | Spec §20 criteria 11–24 |
+| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records; **branded failure pages** with Influrios CTA + outcome marker | Domain verification admin UX deepen; alias policy polish | Spec §20 criteria 11–24 (branded failure + open-redirect + suspend — **core DONE**) |
 | Pro `dynamic` flag + destination setter | Pro **self-serve** dynamic destination + destination history + rollback | Spec §9 + Phase 3 — DONE (Phase 4 campaign/NFC still later) |
 | Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics; **resolver ops metrics** | Spec §10 — DONE; Spec §20 observable resolver metrics — **DONE** |
 | — | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Explicitly later; do not block P4 finance |
@@ -421,10 +421,10 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | Probe + runbook | SMTP, Stripe sandbox, social OAuth, marketplace webhook evidence packs signed by operator | Platform Spec §33 items 8–10 demonstrated live |
 
-### L2 — Smoke / integration tests — PARTIAL / thin
+### L2 — Smoke / integration tests — PARTIAL → catalog shipped
 | Exists | Missing | Exit |
 |---|---|---|
-| Broad unit suite (`tsx --test`) | Playwright/HTTP smoke: landings, claim self-description, hub→contract, fee snapshot lock, custom-milestone E2E | CI or staging checklist per release |
+| Broad unit suite (`tsx --test`); **HTTP smoke catalog** (`http-smoke.ts`) covering landing/discover/claim/collab/pricing/resolver | Playwright browser E2E; default CI still offline (set `SMOKE_BASE_URL` + `SMOKE_LIVE=1` for live fetch) | CI or staging checklist per release — catalog gate **DONE**; live Playwright later |
 
 ### L3 — Agency seats — DONE (CRUD) / PARTIAL (auth)
 | Exists | Missing | Exit |
@@ -541,11 +541,11 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Alias after slug change | PARTIAL |
 | Permanent QR survives slug change | PARTIAL / largely DONE |
 | Pro dynamic destination without QR regen | DONE (Pro self-serve + history/rollback) |
-| Suspended link blocked | PARTIAL |
+| Suspended link blocked | DONE (`finishSlug` / QR path return 403 branded page) |
 | Entitlement-driven behavior | PARTIAL |
 | Admin reserve/suspend/audit | PARTIAL |
-| Branded failure UX | PARTIAL |
-| Open-redirect protection | PARTIAL |
+| Branded failure UX | DONE (CTA + outcome marker on resolver fallbacks) |
+| Open-redirect protection | DONE (`safeRedirectTarget` allow-list) |
 | Analytics privacy + entitlements complete | DONE (views/standard/advanced + bot filter; no precise geo) |
 | Canonical SEO on Influrios profile | DONE (OG alternates.canonical → /creators/{slug}) |
 | Domain config change without code | PARTIAL |
