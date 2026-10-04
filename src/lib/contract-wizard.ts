@@ -56,6 +56,8 @@ export type PreContractGateInput = {
   creatorSlug: string;
   identityVerified: boolean;
   creatorCountryKnown: boolean;
+  /** Country Activation Corridor is active for the influencer country (P5). */
+  corridorActive: boolean;
   paymentRouteReady: boolean;
   jurisdictionProtectedPayments: boolean;
   marketplaceProviderReady: boolean;
@@ -143,6 +145,7 @@ export function evaluatePreContractGates(input: PreContractGateInput): {
   if (!input.creatorSlug.trim()) blockers.push("Influencer party is missing.");
   if (!input.identityVerified) blockers.push("Influencer identity is not verified.");
   if (!input.creatorCountryKnown) blockers.push("Influencer payout country is unknown.");
+  if (!input.corridorActive) blockers.push("Country corridor is not activated.");
   if (!input.paymentRouteReady) blockers.push("No ready payment route for the influencer country.");
   if (!input.jurisdictionProtectedPayments) blockers.push("Protected payments are off for this jurisdiction.");
   if (!input.marketplaceProviderReady) blockers.push("The marketplace provider is not ready.");

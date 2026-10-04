@@ -19,6 +19,7 @@ import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 import { FUNDING_BADGE_CLASS, fundingBadge } from "@/lib/funding-badge";
 import { SERVICE_LEVEL_LABELS, SERVICE_LEVELS } from "@/lib/collaboration-fees";
+import { buildPayoutFeeFxQuote } from "@/lib/payout-readiness";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Protected Payments" };
@@ -430,9 +431,28 @@ export default async function PaymentsPage({ searchParams }: Props) {
                           </form>
                         ) : null}
                         {milestone.status === "submitted" ? (
-                          <form action={actionApproveMilestone}>
+                          <form action={actionApproveMilestone} className="space-y-2">
                             <input type="hidden" name="dealId" value={deal.id} />
                             <input type="hidden" name="milestoneId" value={milestone.id} />
+                            {(() => {
+                              const feeCents = Math.round(
+                                (deal.feeCents * (milestone.amountCents || 0)) / Math.max(deal.grossCents, 1),
+                              );
+                              const quote = buildPayoutFeeFxQuote({
+                                creatorGrossCents: milestone.amountCents,
+                                platformFeeCents: Math.min(feeCents, milestone.amountCents),
+                                fundingCurrency: deal.currency,
+                                payoutCurrency: deal.currency,
+                              });
+                              return quote.ok ? (
+                                <p className="text-[11px] text-muted">
+                                  Exact fee/FX before confirm: net{" "}
+                                  {formatMoney(quote.quote.creatorNetCents, deal.currency)} after{" "}
+                                  {formatMoney(quote.quote.platformFeeCents, deal.currency)} fee
+                                  {quote.quote.fxApplied ? ` · FX → ${quote.quote.payoutCurrency}` : ""}.
+                                </p>
+                              ) : null;
+                            })()}
                             <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
                               Approve work
                             </button>

@@ -68,7 +68,7 @@ Influrios already has durable pieces to **extend**, not replace:
 | Business requests / influencer opportunities | Prisma marketplace objects | ✅ P1b |
 | Contract wizard | `/collaboration/contract` | ✅ P3 |
 | Milestones / finance | Strong ledger core | Domain account purposes; fee-earned-on-release; ROUTE_READY (P4) |
-| Payout readiness | Missing | Primary/secondary routes; Global Payout Ready (P5) |
+| Payout readiness | P5 core: profile + corridors + hub panel + ROUTE_READY corridor gate | Admin corridor ops (P6); live method verification |
 | Mentorship | Public banner + stub landing | Full Mentor–Mentee hub (P7) |
 | Admin control plane | Fees/marketplace/trust + landing CMS | Corridors, mentorship eligibility, account purposes (P6) |
 
@@ -139,14 +139,14 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 
 **Exit:** domain tests prove $0 Operations until fee earned; adapter swap does not change domain rules.
 
-### P5 — Payout readiness & corridor engine
+### P5 — Payout readiness & corridor engine — PARTIAL (core shipped)
 
-- Creator primary/secondary payout methods (friendly labels).
-- Global Payout Ready = KYC + ≥1 verified route.
-- Country Activation Matrix + Route decision before funding.
-- Payout status machine; exact fee/FX quote before confirm.
+- Creator primary/secondary payout methods (friendly labels) + `InfluencerPayoutProfile`.
+- Global Payout Ready = identityVerified + corridor + gateway + ≥1 verified route.
+- Country Activation Matrix; ROUTE_READY includes corridor before funding.
+- Exact fee/FX quote helper before confirm (contract preview + approve).
 
-**Exit:** fundable only when ROUTE_READY; creator UI matches payout panel design.
+**Exit (core):** fundable only when ROUTE_READY; creator hub payout panel real — met. Admin corridor ops → P6.
 
 ### P6 — Admin Collaboration control plane
 

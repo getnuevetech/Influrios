@@ -22,6 +22,7 @@ import { getCms } from "@/lib/cms";
 import { getDirectoryCreator, indexCreatorsBySlug, getDirectory } from "@/lib/directory";
 import { formatMoney } from "@/lib/money";
 import { POPULAR_MATCH_CHIPS } from "@/lib/matching";
+import { PAYOUT_METHOD_LABELS, type PayoutMethod } from "@/lib/payout-readiness";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -270,7 +271,11 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 {hub.earnings.ready ? "View Wallet" : "Protected payments"}
               </Link>
               {!hub.earnings.ready ? (
-                <p className="mt-2 text-[11px] text-white/75">No released earnings yet. Payout readiness ships with corridor setup.</p>
+                <p className="mt-2 text-[11px] text-white/75">
+                  {hub.payout.readiness?.globalPayoutReady
+                    ? "Payout ready — balance appears after milestone release."
+                    : "No released earnings yet. Finish payout readiness to withdraw."}
+                </p>
               ) : null}
             </div>
           </div>
@@ -417,30 +422,71 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 <IconShieldPay size={16} />
                 <h2 className="font-display text-base font-bold text-indigo">Payout & Earnings</h2>
               </div>
-              {hub.earnings.ready ? (
-                <>
-                  <p className="mt-3 font-display text-2xl font-bold text-indigo">{formatMoney(availableCents)}</p>
-                  <p className="text-xs text-muted">
-                    Released to you · {formatMoney(hub.earnings.heldCents)} still held in protected payments
-                  </p>
-                  <Link href="/payments" className="btn-primary mt-4 w-full !py-2 text-center text-sm">
-                    Open protected payments
-                  </Link>
-                  <p className="mt-2 text-[11px] text-muted">
-                    Payout routes and Global Payout Ready status arrive with corridor setup (P5). This panel shows ledger totals only.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="mt-3 font-display text-lg font-bold text-indigo">Not ready</p>
-                  <p className="mt-1 text-xs text-muted">
-                    No released collaboration balance yet. When deals fund and milestones release, amounts appear here — not estimated earnings.
-                  </p>
-                  <Link href="/payments" className="btn-secondary mt-4 w-full !py-2 text-center text-sm">
-                    Open protected payments
-                  </Link>
-                </>
-              )}
+              {(() => {
+                const readiness = hub.payout.readiness;
+                const primaryLabel =
+                  readiness?.primaryMethod &&
+                  PAYOUT_METHOD_LABELS[readiness.primaryMethod as PayoutMethod]
+                    ? PAYOUT_METHOD_LABELS[readiness.primaryMethod as PayoutMethod]
+                    : readiness?.primaryMethod ?? "—";
+                return (
+                  <>
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                      Global Payout Ready
+                    </p>
+                    <p
+                      className={`mt-1 font-display text-lg font-bold ${
+                        readiness?.globalPayoutReady ? "text-emerald-700" : "text-amber-800"
+                      }`}
+                    >
+                      {readiness?.globalPayoutReady ? "Ready" : "Not ready"}
+                    </p>
+                    <ul className="mt-3 space-y-1 text-xs text-muted">
+                      <li>
+                        Primary: {primaryLabel} · {readiness?.primaryStatus ?? "—"}
+                      </li>
+                      <li>
+                        Corridor:{" "}
+                        {readiness?.countryCode
+                          ? readiness.corridorActive
+                            ? `${readiness.countryCode} active`
+                            : `${readiness.countryCode} inactive`
+                          : "country unknown"}
+                      </li>
+                      <li>
+                        Identity: {readiness?.identityVerified ? "verified" : "not verified"}
+                      </li>
+                    </ul>
+                    {readiness && !readiness.globalPayoutReady && readiness.blockers.length > 0 ? (
+                      <ul className="mt-2 list-disc space-y-0.5 pl-4 text-[11px] text-amber-900">
+                        {readiness.blockers.slice(0, 3).map((blocker) => (
+                          <li key={blocker}>{blocker}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {hub.earnings.ready ? (
+                      <>
+                        <p className="mt-4 font-display text-2xl font-bold text-indigo">
+                          {formatMoney(availableCents)}
+                        </p>
+                        <p className="text-xs text-muted">
+                          Released to you · {formatMoney(hub.earnings.heldCents)} still held
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-4 text-xs text-muted">
+                        Ledger totals appear here after milestones release — not estimated earnings.
+                      </p>
+                    )}
+                    <Link
+                      href="/payments"
+                      className={`${hub.earnings.ready ? "btn-primary" : "btn-secondary"} mt-4 w-full !py-2 text-center text-sm`}
+                    >
+                      Open protected payments
+                    </Link>
+                  </>
+                );
+              })()}
             </section>
           </div>
 
