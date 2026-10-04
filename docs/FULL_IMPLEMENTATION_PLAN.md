@@ -71,7 +71,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 |---|---|---|
 | Dev P0 core model | Entities, rules, snapshots, milestones, jurisdiction flags | Mostly DONE (ledger + fees + flags); deepen W3 |
 | Dev P1 launch provider | One provider, full prefunding, release, partial refund | PARTIAL ledger + Stripe path; **P4** adapter + domains |
-| Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | PARTIAL ledger; deepen W3.6 / W3.11; **P6** admin |
+| Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | PARTIAL ledger; W3.6 / W3.11 done; **P6** admin |
 | Dev P3 expansion | Staged/recurring, more countries, advanced attribution | W3.4 / W3.7 after P4 stable |
 | Dev P4 advanced | Revenue sharing, complex splits, enterprise rules | Explicitly deferred (§11) |
 | — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5–P8 core shipped** |
