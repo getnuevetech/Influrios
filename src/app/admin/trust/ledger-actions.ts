@@ -5,7 +5,16 @@ import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { addDisputeEvidence, decideMilestoneDispute, type DisputeDecision } from "@/lib/milestone-disputes";
 
-const ACTIONS: DisputeDecision[] = ["review", "release", "refund", "partial", "withdraw"];
+const ACTIONS: DisputeDecision[] = [
+  "review",
+  "release",
+  "refund",
+  "partial",
+  "withdraw",
+  "settle",
+  "escalate_provider",
+  "escalate_legal",
+];
 
 export async function actionAddLedgerEvidence(formData: FormData) {
   await requireAdminAction("trust.mediate");
