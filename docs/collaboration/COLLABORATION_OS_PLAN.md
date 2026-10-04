@@ -1,13 +1,13 @@
 # Influrios Collaboration OS — Recommendations & Implementation Plan
 
-**Date:** 2026-10-03  
+**Date:** 2026-10-04  
 **Source spec:** [`COLLABORATION_OS_SPEC_v1.txt`](./COLLABORATION_OS_SPEC_v1.txt) (Dev AI Collaboration v1, Oct 2026)  
 **Approved designs:**  
 - Public landing — [`../design-references/collaboration/public-landing-v3.png`](../design-references/collaboration/public-landing-v3.png)  
 - For Businesses — [`../design-references/business/for-businesses-v2.png`](../design-references/business/for-businesses-v2.png)  
 - Creator hub — [`../design-references/collaboration/creator-hub.png`](../design-references/collaboration/creator-hub.png)  
 - Terminology addendum — [`Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./Influrios_Influencer_Terminology_Development_Addendum_v1.pdf)  
-**Sequencing authority:** [`../FULL_IMPLEMENTATION_PLAN.md`](../FULL_IMPLEMENTATION_PLAN.md) for remaining residuals + P4–P8; this document for Collab OS phase detail. Still subordinate to money invariants in [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md) and the marketplace ledger.
+**Sequencing authority:** [`../FULL_IMPLEMENTATION_PLAN.md`](../FULL_IMPLEMENTATION_PLAN.md) for DONE vs Deferred-external; this document for Collab OS phase detail. Still subordinate to money invariants in [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md) and the marketplace ledger.
 
 ---
 
@@ -67,9 +67,9 @@ Influrios already has durable pieces to **extend**, not replace:
 | Match objects | Prisma marketplace match records | ✅ P1b |
 | Business requests / influencer opportunities | Prisma marketplace objects | ✅ P1b |
 | Contract wizard | `/collaboration/contract` | ✅ P3 |
-| Milestones / finance | Strong ledger core | Domain account purposes; fee-earned-on-release; ROUTE_READY (P4) |
-| Payout readiness | P5 core: profile + corridors + hub panel + ROUTE_READY corridor gate | Admin corridor ops (P6); live method verification |
-| Mentorship | P7 core: find/become hub, eligibility, request lifecycle, paid flag isolated | Paid session commercial pack; richer scheduling |
+| Milestones / finance | Strong ledger core + P4 domains | Live provider rails Deferred-external |
+| Payout readiness | P5 core: profile + corridors + hub panel + ROUTE_READY corridor gate | Live method verification Deferred-external |
+| Mentorship | P7 core: find/become hub, eligibility, request lifecycle, paid flag isolated | Paid session commercial pack Deferred-external |
 | Admin control plane | P6 core: corridors suspend, versioned thresholds, ops hub, dual-approval gate, deepened provider health | Guest collab quota DONE; P7 paid mentorship surfaces Deferred-external |
 
 ---
@@ -130,76 +130,79 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 
 **Exit:** cannot fund without gates; fee rule change does not alter locked deals.
 
-### P4 — Finance domains & provider adapter
+### P4 — Finance domains & provider adapter — DONE (core); Airwallex / live rails Deferred-external
 
 - Logical account purposes: OPERATIONS, COLLABORATION_HOLDING, PLATFORM_FEE_CLEARING, …
 - Fee earned only when milestone release condition met; linked creator + fee release legs.
-- `PaymentProviderAdapter` interface; move marketplace webhook mapping behind it.
-- Airwallex adapter **only after** §22 sandbox validation checklist is signed.
+- `PaymentProviderAdapter` interface; marketplace webhook mapping behind it.
+- Airwallex adapter **only after** §22 sandbox validation checklist is signed (L5 Deferred-external).
 
-**Exit:** domain tests prove $0 Operations until fee earned; adapter swap does not change domain rules.
+**Exit (core):** domain tests prove $0 Operations until fee earned; adapter swap does not change domain rules — **met**.
 
-### P5 — Payout readiness & corridor engine — PARTIAL (core shipped)
+### P5 — Payout readiness & corridor engine — DONE (core); live verify Deferred-external
 
 - Creator primary/secondary payout methods (friendly labels) + `InfluencerPayoutProfile`.
 - Global Payout Ready = identityVerified + corridor + gateway + ≥1 verified route.
 - Country Activation Matrix; ROUTE_READY includes corridor before funding.
 - Exact fee/FX quote helper before confirm (contract preview + approve).
+- Admin corridor ops at `/admin/corridors` (P6).
 
-**Exit (core):** fundable only when ROUTE_READY; creator hub payout panel real — met. Admin corridor ops → P6.
+**Exit (core):** fundable only when ROUTE_READY; creator hub payout panel real — **met**. Live method verification — Deferred-external.
 
-### P6 — Admin Collaboration control plane — PARTIAL (core shipped)
+### P6 — Admin Collaboration control plane — DONE (core)
 
 - Nav: Collaboration ops + Corridors; fees/gateways/marketplace/trust linked from ops hub.
 - Versioned control plane + audit for dual-approval, mentorship eligibility, guest collab thresholds.
 - Corridor suspend/activate without deploy; account-purpose catalog.
+- Deepened provider health; guest collab quota; `collab_finance.*` RBAC + step-up.
 
-**Exit (core):** ops can suspend a corridor / change fee future-deals without code deploy — met.
+**Exit (core):** ops can suspend a corridor / change fee future-deals without code deploy — **met**.
 
-### P7 — Mentorship module — PARTIAL (core shipped)
+### P7 — Mentorship module — DONE (core); paid pack Deferred-external
 
 - Public mentor landing; Find a Mentor / Become a Mentor hub with Emerging/Experienced language.
 - Eligibility rules (admin control plane); request/accept/decline; availability.
 - Paid mentoring behind `paid_mentoring` feature flag; never mixes into collab holding.
 
-**Exit (core):** acquisition loop live; free mentorship does not touch collaboration funds — met.
+**Exit (core):** acquisition loop live; free mentorship does not touch collaboration funds — **met**. Paid commercial pack — Deferred-external.
 
-### P8 — Migration & teardown — PARTIAL (core shipped)
+### P8 — Migration & teardown — DONE (core); SKU soak Deferred-external
 
 - Inventory: `docs/collaboration/legacy-inventory-p8.md`
 - Feature-flag cutover + freeze: `legacy_demo_payments` off purges JSON demos and blocks writes
 - Signing: keep `/admin/signing` shell; e-sign non-goal until counsel
 - `creator_*` SKU deprecation telemetry on checkout
 
-**Exit (core):** one collaboration money engine when demos are off; demos purged/gated — met.
+**Exit (core):** one collaboration money engine when demos are off; demos purged/gated — **met**. SKU/cookie rename soak — Deferred-external.
 
 ---
 
 ## 5. Acceptance criteria (from spec §21) — tracking
 
-| # | Criterion | Phase |
-|---|---|---|
-| 1 | Public landing usable logged-out; category cards, search, requests, opportunities, suggestions CTA, mentor banner | P1 |
-| 2 | Creator & business dashboards role-aware, same backend | P2 / P2b |
-| 3 | Business can create request and/or ask for suggestions | P1b / P2b |
-| 4–6 | Admin milestone templates; entitlements; 100% + creator accept | P3 ✅ |
-| 7–10 | Fee snapshots; Operations vs Holding; per-milestone dual release | P4 |
-| 11–12 | Payout routes; ROUTE_READY before fund | P5 |
-| 13–16 | Idempotent webhooks; cancellation math; disputes; corridor suspend | existing ledger + P4–P6 |
-| 17 | Airwallex only in adapter | P4 |
-| 18 | Auditable financial actions | existing + P4/P6 |
+| # | Criterion | Phase | Status |
+|---|---|---|---|
+| 1 | Public landing usable logged-out; category cards, search, requests, opportunities, suggestions CTA, mentor banner | P1 | DONE |
+| 2 | Creator & business dashboards role-aware, same backend | P2 / P2b | DONE |
+| 3 | Business can create request and/or ask for suggestions | P1b / P2b | DONE |
+| 4–6 | Admin milestone templates; entitlements; 100% + creator accept | P3 | DONE |
+| 7–10 | Fee snapshots; Operations vs Holding; per-milestone dual release | P4 | DONE (core) |
+| 11–12 | Payout routes; ROUTE_READY before fund | P5 | DONE (core) |
+| 13–16 | Idempotent webhooks; cancellation math; disputes; corridor suspend | ledger + W3 + P6 | DONE |
+| 17 | Airwallex only in adapter | P4 / L5 | Adapter boundary DONE; Airwallex impl Deferred-external |
+| 18 | Auditable financial actions | P4 / P6 | DONE |
 
 ---
 
-## 6. Immediate next coding slice
+## 6. Immediate next
 
-**Full remaining backlog:** [`../FULL_IMPLEMENTATION_PLAN.md`](../FULL_IMPLEMENTATION_PLAN.md).
+**Authority:** [`../FULL_IMPLEMENTATION_PLAN.md`](../FULL_IMPLEMENTATION_PLAN.md) §8.
 
-P0–P3 + landing redesign + public Influencer terminology shipped. Next:
+P0–P8 **code cores shipped**. Next work is Deferred-external only:
 
-1. Residual A1/A3 (landing QA + contract tests), then **P4** finance domains & provider adapter.
-2. Parallel: fill Phase M staging evidence when credentials are available.
-3. Terminology engineering inventory (A4) — not public-copy debt.
+1. Phase M staging evidence when credentials are available (L1).
+2. Landing QA operator sign-off (W2.1).
+3. Airwallex checklist signatures before any adapter hard-wire (L5).
+4. Live provider rails / paid mentorship pack / Phase 4 INFLR.me — only when product asks.
 
 ---
 

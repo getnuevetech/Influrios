@@ -79,7 +79,7 @@ Mapping helper: `src/lib/terminology-events.ts`. Dashboards should display Influ
 | Collaboration / business landing CMS | Public copy migrated; guard against Creator-as-role reintroduction (W2.1) |
 | Homepage value-prop | Influencer Card / Collaboration Network pillars |
 | Match titles | Display-time `Creator`→`Influencer` on `/collaboration`; prefer normalize-on-save |
-| Notification/email templates | Audit remaining (W1 residual / ops checklist) |
+| Notification/email templates | DONE for collab notification kinds (Influencer terminology + `usesInfluencerTerminology` tests); ops may still review marketing mail copy separately |
 | Legal document bodies | Prefer Influencer in public text; keep internal trigger keys stable |
 
 ---
