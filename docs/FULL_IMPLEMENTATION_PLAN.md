@@ -229,10 +229,11 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Dispute + partial refund + change-order; `calculateCancellation` kill-fee matrix + admin kill-fee settings; chargeback → payment-risk flag | Provider-executed cancel/refund wiring; full chargeback ops UI | Product Addendum §11–12 acceptance |
 | Milestone-specific disputes (base) | Reason codes + evidence + outcomes fully matching Dev §13 | §22.7–8 |
 
-#### W3.7 Attribution / repeat deals — PARTIAL
+#### W3.7 Attribution / repeat deals — DONE
 | Exists | Missing | Exit |
 |---|---|---|
-| Attribution lib/tests (`deal-attribution.ts`) wired into ledger/payments | Admin contest workflow; fee resolution uses attribution status; configurable `attribution_expiry` (never forever) | Dev Addendum §15 |
+| Attribution sources + expiry window; `AttributionClaim` contest workflow; funding `attributionStatus` / `attributionExpiresAt`; fee resolution remaps managed levels for pre-existing | — | Dev Addendum §15 |
+| Admin marketplace contest UI (file / uphold / reject) | — | Contested pre-existing claims resolvable |
 
 #### W3.8 Financial domains & provider adapter — NOT STARTED (→ P4)
 | Exists | Missing | Exit |

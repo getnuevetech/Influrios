@@ -1330,6 +1330,9 @@ model CollaborationFunding {
   status            String   @default("awaiting_provider")
   providerCode      String
   attributionLabel  String   @default("")
+  /// W3.7 — active | expired | contested | pre_existing
+  attributionStatus String   @default("active")
+  attributionExpiresAt DateTime?
   scheduleId        String?
   scheduleKind      String   @default("once")
   /// Product Addendum §7 mode: FULL | STAGED | NONE (recurring deferred as schedule kind only).
@@ -1424,6 +1427,27 @@ model AttributionSource {
   active    Boolean  @default(true)
   sortOrder Int      @default(0)
   updatedAt DateTime @updatedAt
+}
+
+/// W3.7 — contested pre-existing relationship claims (Dev Addendum §15).
+model AttributionClaim {
+  id           String    @id @default(cuid())
+  businessName String
+  creatorSlug  String
+  fundingId    String?
+  claimType    String    @default("PRE_EXISTING_RELATIONSHIP")
+  status       String    @default("open")
+  evidence     String    @default("")
+  adminNote    String    @default("")
+  filedBy      String    @default("business")
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@index([businessName, creatorSlug])
+  @@index([fundingId])
 }
 
 /// Admin-edited reasons. The label is copied onto a dispute when it is opened.

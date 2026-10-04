@@ -7,6 +7,7 @@
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { serviceLevelForFeeResolution } from "@/lib/attribution";
 import { prisma } from "@/lib/db";
 
 export type FeeMethod = "percent" | "fixed" | "percent_plus_fixed";
@@ -119,6 +120,8 @@ export type FeeResolveContext = {
   serviceLevel: string;
   grossValueCents: number;
   asOf?: string;
+  /** W3.7 — active | expired | contested | pre_existing */
+  attributionStatus?: string;
 };
 
 export type FeeJurisdiction = {
@@ -546,8 +549,13 @@ export function explainFeeWinner(
 export async function resolveFee(ctx: FeeResolveContext) {
   await ensureFeeDefaults();
   const asOf = ctx.asOf ?? now();
+  const resolvedLevel = serviceLevelForFeeResolution({
+    requestedServiceLevel: ctx.serviceLevel,
+    attributionStatus: ctx.attributionStatus,
+  });
+  const effectiveCtx: FeeResolveContext = { ...ctx, serviceLevel: resolvedLevel };
   const rows = await prisma.collaborationFeeRule.findMany();
-  const candidates = pickWinningRule(rows.map(ruleFromRow), ctx, asOf);
+  const candidates = pickWinningRule(rows.map(ruleFromRow), effectiveCtx, asOf);
 
   const winner = candidates[0] ?? null;
   if (!winner) {
@@ -559,7 +567,7 @@ export async function resolveFee(ctx: FeeResolveContext) {
     };
   }
 
-  const feeCents = calculateFeeCents(winner, ctx.grossValueCents);
+  const feeCents = calculateFeeCents(winner, effectiveCtx.grossValueCents);
   return {
     rule: winner,
     feeCents,
