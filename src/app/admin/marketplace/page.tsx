@@ -49,6 +49,7 @@ const CANCEL_REASONS = Object.keys(CANCELLATION_REASON_LABELS) as CancellationRe
 export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
+  const canHighRiskCancel = hasPermission(session, "collab_finance.high_risk");
   const params = await searchParams;
   const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, legacyDemoOn, collabOsOn, paymentRisk] =
     await Promise.all([
@@ -999,7 +1000,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         ) : (
           <p className="mt-3 text-sm text-muted">No payment-risk fundings right now.</p>
         )}
-        {canManage && cancellable.length > 0 ? (
+        {canHighRiskCancel && cancellable.length > 0 ? (
           <form action={actionExecuteHeldCancellation} className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-muted sm:col-span-2">
               Funding
@@ -1045,14 +1046,29 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Note
               <input name="note" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
             </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Confirm password (high-risk)
+              <input
+                name="stepUpPassword"
+                type="password"
+                autoComplete="current-password"
+                required
+                placeholder="Re-enter your admin password"
+                className="mt-1 w-full max-w-md rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
             <div className="sm:col-span-2">
               <button type="submit" className="btn-secondary !py-2 text-sm">
                 Queue cancellation / mark payment-risk
               </button>
             </div>
           </form>
-        ) : canManage ? (
+        ) : canHighRiskCancel ? (
           <p className="mt-3 text-sm text-muted">No held fundings available to cancel.</p>
+        ) : canManage ? (
+          <p className="mt-3 text-sm text-muted">
+            Held cancel / payment-risk needs Collab finance · High-risk plus password step-up.
+          </p>
         ) : null}
       </section>
 

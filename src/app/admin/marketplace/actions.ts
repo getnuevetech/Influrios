@@ -382,7 +382,15 @@ export async function actionEnqueueFundingReconciliationSweep() {
 }
 
 export async function actionExecuteHeldCancellation(formData: FormData) {
-  await requireAdminAction("marketplace.manage");
+  const session = await requireAdminAction("collab_finance.high_risk");
+  const { requireCollabFinanceHighRisk } = await import("@/lib/admin-auth");
+  const stepUp = await requireCollabFinanceHighRisk(
+    session,
+    String(formData.get("stepUpPassword") ?? ""),
+  );
+  if (!stepUp.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(stepUp.error)}`);
+  }
   const { executeHeldCancellation, isCancellationReason } = await import("@/lib/collaboration-cancellation");
   const fundingId = String(formData.get("fundingId") ?? "").trim();
   const reasonRaw = String(formData.get("reason") ?? "").trim();

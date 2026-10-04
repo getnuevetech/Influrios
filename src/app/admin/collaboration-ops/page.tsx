@@ -17,8 +17,9 @@ export const metadata = { title: "Collaboration operations · Admin" };
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function AdminCollaborationOpsPage({ searchParams }: Props) {
-  const session = await requireAdminPage("marketplace");
-  const canManage = hasPermission(session, "marketplace.manage");
+  const session = await requireAdminPage("collab_finance");
+  const canManage = hasPermission(session, "collab_finance.manage");
+  const canHighRisk = hasPermission(session, "collab_finance.high_risk");
   const params = await searchParams;
   const [plane, corridors, purposes, totals, recentAudits] = await Promise.all([
     getCollabControlPlane(),
@@ -189,8 +190,25 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
           ))}
 
           {canManage ? (
-            <div className="sm:col-span-2">
-              <button type="submit" className="btn-primary !px-4 !py-2 text-sm">
+            <div className="sm:col-span-2 space-y-3">
+              <label className="block text-xs font-semibold text-muted">
+                Confirm password (required — high-risk threshold change)
+                <input
+                  name="stepUpPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  required={canHighRisk}
+                  disabled={!canHighRisk}
+                  placeholder={canHighRisk ? "Re-enter your admin password" : "High-risk permission required"}
+                  className="mt-1 w-full max-w-md rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                />
+              </label>
+              {!canHighRisk ? (
+                <p className="text-xs text-amber-800">
+                  Saving needs Collab finance · High-risk plus password step-up. Ask a Super or Collab Finance admin.
+                </p>
+              ) : null}
+              <button type="submit" className="btn-primary !px-4 !py-2 text-sm" disabled={!canHighRisk}>
                 Save control plane (bump version)
               </button>
             </div>

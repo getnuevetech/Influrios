@@ -307,8 +307,8 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | Banners, categories, value-prop strip, landing CMS | Verified `SocialProofStats` with source/as-of + disable-when-stale; never show placeholder 50K+/12K+ as factual | §23.8–23.9 — **DONE** (footer strip verifies source/as-of; placeholders disabled) |
 | Value-prop four pillars; responsive matrix ≥1200 / 768–1199 / &lt;768; pillar click analytics; jurisdiction-aware Protected Payments claim | — | §23.9 acceptance tests — **DONE** |
-| Admin modules wide | Collab control plane corridors/account purposes (P6) | Collab OS §11 |
-| RBAC | Permission groups for new collab finance modules; step-up for high-risk actions | Platform Spec §34; Dev §20 |
+| Admin modules wide; **collab finance RBAC** (`collab_finance.view/manage/high_risk`) + password step-up on held cancel / dual-approval threshold | — | Collab OS §11; Platform Spec §34 — **DONE** (core) |
+| RBAC permission groups for collab finance; step-up for high-risk actions | — | Platform Spec §34; Dev §20 — **DONE** |
 
 ---
 
@@ -369,9 +369,9 @@ Much ledger work exists; the following are still incomplete vs addenda.
 - Deeper Provider Health dashboard beyond gateways page  
 - Mentorship product surfaces reading eligibility (P7)  
 - Guest collab propose/apply quota enforcement in public flows — **DONE** (control-plane soft/hard on propose page + save/apply intents)  
-- RBAC permission group dedicated to collab finance high-risk actions  
+- RBAC permission group dedicated to collab finance high-risk actions — **DONE** (`collab_finance.*` + password step-up)  
 
-**Exit (core):** Ops can suspend a corridor and change control-plane thresholds without deploy — met. Fee future-deals already on `/admin/fees`.
+**Exit (core):** Ops can suspend a corridor and change control-plane thresholds without deploy — met. Fee future-deals already on `/admin/fees`. High-risk money actions require dedicated permission + step-up — met.
 
 **Depends on:** P4–P5 concepts exist to configure.
 

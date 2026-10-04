@@ -60,6 +60,9 @@ export const ADMIN_PERMISSIONS = [
   "jobs.retry",
   "marketplace.view",
   "marketplace.manage",
+  "collab_finance.view",
+  "collab_finance.manage",
+  "collab_finance.high_risk",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -88,7 +91,8 @@ export type AdminModule =
   | "shortlinks"
   | "mail"
   | "jobs"
-  | "marketplace";
+  | "marketplace"
+  | "collab_finance";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -203,6 +207,28 @@ export const ADMIN_PERMISSION_GROUPS: {
     permissions: [
       { id: "marketplace.view", label: "View marketplace ledger", hint: "Open prefund and milestone records" },
       { id: "marketplace.manage", label: "Manage marketplace ledger", hint: "Edit jurisdictions, templates, and the provider" },
+    ],
+  },
+  {
+    module: "collab_finance",
+    label: "Collab finance",
+    description: "Corridors, control plane, held cancel / chargeback — high-risk money ops",
+    permissions: [
+      {
+        id: "collab_finance.view",
+        label: "View collab finance",
+        hint: "Open collaboration ops and corridors",
+      },
+      {
+        id: "collab_finance.manage",
+        label: "Manage collab finance",
+        hint: "Edit corridors and non-threshold control-plane settings",
+      },
+      {
+        id: "collab_finance.high_risk",
+        label: "High-risk collab finance",
+        hint: "Held cancel, chargeback disposition, dual-approval threshold — requires password step-up",
+      },
     ],
   },
   {
@@ -436,6 +462,9 @@ const DEFAULT_ROLES: AdminRole[] = [
       "jobs.retry",
       "marketplace.view",
       "marketplace.manage",
+      "collab_finance.view",
+      "collab_finance.manage",
+      "collab_finance.high_risk",
     ],
     system: true,
   },
@@ -457,6 +486,9 @@ const DEFAULT_ROLES: AdminRole[] = [
       "gateways.edit",
       "marketplace.view",
       "marketplace.manage",
+      "collab_finance.view",
+      "collab_finance.manage",
+      "collab_finance.high_risk",
     ],
     system: true,
   },
@@ -465,6 +497,20 @@ const DEFAULT_ROLES: AdminRole[] = [
     name: "Trust Admin",
     description: "Dispute mediation and contract briefs only.",
     permissions: ["trust.view", "trust.mediate"],
+    system: true,
+  },
+  {
+    id: "role_collab_finance",
+    name: "Collab Finance Admin",
+    description: "Corridors, collaboration ops, and high-risk money actions (with step-up).",
+    permissions: [
+      "collab_finance.view",
+      "collab_finance.manage",
+      "collab_finance.high_risk",
+      "marketplace.view",
+      "commerce.view",
+      "trust.view",
+    ],
     system: true,
   },
   {
@@ -791,6 +837,40 @@ export function canAccessModule(
   if (!session) return false;
   const prefix = `${module}.`;
   return session.permissions.some((p) => p.startsWith(prefix));
+}
+
+/** Re-enter password for high-risk collab finance actions (Platform Spec §34 / Dev §20). */
+export async function verifyAdminStepUp(
+  session: AdminSession,
+  password: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const store = await ensureStore();
+  const user = store.users.find((u) => u.id === session.userId && u.active);
+  if (!user) return { ok: false, error: "Admin session is no longer valid. Sign in again." };
+  if (!password.trim()) {
+    return { ok: false, error: "Re-enter your admin password to confirm this high-risk action." };
+  }
+  if (!verifyPassword(password, user.passwordSalt, user.passwordHash)) {
+    return { ok: false, error: "Password confirmation failed. Nothing was changed." };
+  }
+  return { ok: true };
+}
+
+/**
+ * High-risk collab finance gate: requires `collab_finance.high_risk` + password step-up.
+ * Super/payments roles that carry the permission can proceed after confirming password.
+ */
+export async function requireCollabFinanceHighRisk(
+  session: AdminSession,
+  password: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!hasPermission(session, "collab_finance.high_risk")) {
+    return {
+      ok: false,
+      error: "This action needs the Collab finance · High-risk permission.",
+    };
+  }
+  return verifyAdminStepUp(session, password);
 }
 
 export async function requireAdminSession(

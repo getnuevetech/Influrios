@@ -13,8 +13,8 @@ export const metadata = { title: "Country corridors · Admin" };
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function AdminCorridorsPage({ searchParams }: Props) {
-  const session = await requireAdminPage("marketplace");
-  const canManage = hasPermission(session, "marketplace.manage");
+  const session = await requireAdminPage("collab_finance");
+  const canManage = hasPermission(session, "collab_finance.manage");
   const params = await searchParams;
   const corridors = await listCorridorsForAdmin().catch(() => []);
   const methods = payoutMethodOptions();
