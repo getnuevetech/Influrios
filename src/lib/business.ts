@@ -228,6 +228,47 @@ export async function createBrief(
       status: input.status ?? "active",
     },
   });
+  return presentBrief(brief);
+}
+
+/** W2.3 — update an owned Campaign Intent in place (no duplicate brief rows). */
+export async function updateBrief(
+  id: string,
+  input: Omit<CampaignBrief, "id" | "createdAt" | "status"> & { status?: CampaignBrief["status"] },
+) {
+  await ensureWorkspace();
+  const existing = await prisma.businessBrief.findFirst({
+    where: { id, workspaceId: WORKSPACE_ID },
+  });
+  if (!existing) throw new Error("Campaign intent not found.");
+  const brief = await prisma.businessBrief.update({
+    where: { id: existing.id },
+    data: {
+      title: input.title,
+      goal: input.goal,
+      specialty: input.specialty,
+      budget: input.budget,
+      location: input.location,
+      platform: input.platform,
+      summary: input.summary,
+      status: input.status ?? existing.status,
+    },
+  });
+  return presentBrief(brief);
+}
+
+function presentBrief(brief: {
+  id: string;
+  title: string;
+  goal: string;
+  specialty: string;
+  budget: string;
+  location: string;
+  platform: string;
+  summary: string;
+  createdAt: Date;
+  status: string;
+}): CampaignBrief {
   return {
     id: brief.id,
     title: brief.title,
@@ -239,7 +280,48 @@ export async function createBrief(
     summary: brief.summary,
     createdAt: brief.createdAt.toISOString(),
     status: asBriefStatus(brief.status),
-  } satisfies CampaignBrief;
+  };
+}
+
+/** Pure — reuse existing brief when the id is owned by this workspace. */
+export function resolveCampaignIntentSaveMode(input: {
+  briefId?: string | null;
+  ownedBriefIds: string[];
+}): "create" | "update" {
+  const id = input.briefId?.trim();
+  if (id && input.ownedBriefIds.includes(id)) return "update";
+  return "create";
+}
+
+export function buildCampaignIntentFields(input: {
+  title?: string;
+  goal?: string;
+  specialty?: string;
+  budget?: string;
+  location?: string;
+  platform?: string;
+  audience?: string;
+  collabType?: string;
+  timeframe?: string;
+  summary?: string;
+}) {
+  const goal = (input.goal ?? "Brand Awareness").trim() || "Brand Awareness";
+  const specialty = (input.specialty ?? "beauty").trim() || "beauty";
+  const title =
+    (input.title ?? "").trim() || `Campaign intent · ${goal} · ${specialty}`;
+  return {
+    title,
+    goal,
+    specialty,
+    budget: (input.budget ?? "$1K – $5K").trim() || "$1K – $5K",
+    location: (input.location ?? "Global").trim() || "Global",
+    platform: (input.platform ?? "INSTAGRAM").trim() || "INSTAGRAM",
+    summary: [input.audience, input.collabType, input.timeframe, input.summary]
+      .map((part) => (part ?? "").trim())
+      .filter(Boolean)
+      .join(" · "),
+    status: "draft" as const,
+  };
 }
 
 export async function sendInquiry(input: {
