@@ -184,7 +184,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Funding badges on payments + hub pipelines; immutable fee snapshot on funding + hub fee locked line; revision counters on payments + hub; review deadline on submitted milestones; **unified admin transaction detail** `/admin/marketplace/[fundingId]`; business spend/pipeline lists by **funding.workspaceId** (not brand contains) | — | Badges + timeline + fee + revisions visible to both sides; admin unified txn view **DONE**; durable business funding ownership **DONE** |
+| Funding badges on payments + hub pipelines; immutable fee snapshot on funding + hub fee locked line; revision counters on payments + hub; review deadline on submitted milestones; **unified admin transaction detail** `/admin/marketplace/[fundingId]`; business spend/pipeline lists by **funding.workspaceId** (not brand contains); **funding.collaborationId** FK for creator pipeline (records → contract fund CTA) | — | Badges + timeline + fee + revisions visible to both sides; admin unified txn view **DONE**; durable business funding ownership **DONE**; durable collab↔funding link **DONE** |
 
 ---
 

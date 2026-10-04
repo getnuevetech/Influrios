@@ -481,6 +481,7 @@ model Collaboration {
   updatedAt       DateTime  @updatedAt
   events          CollaborationEvent[]
   signatures      SignatureRequest[]
+  fundings        CollaborationFunding[]
 
   @@index([initiatorSlug, status])
   @@index([recipientSlug, status])
@@ -1384,6 +1385,9 @@ model CollaborationFunding {
   /// Owning business workspace when funded from the hub/wizard; null for legacy/admin rows.
   workspaceId      String?
   workspace        BusinessWorkspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  /// Optional durable link to a Collaboration proposal/record (hub pipeline join).
+  collaborationId  String?
+  collaboration    Collaboration? @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
   creatorSlug      String
   title            String
   currency         String   @default("USD")
@@ -1426,6 +1430,7 @@ model CollaborationFunding {
   @@index([repeatOfId])
   @@index([scheduleId])
   @@index([workspaceId])
+  @@index([collaborationId])
 }
 
 model FundingMilestone {

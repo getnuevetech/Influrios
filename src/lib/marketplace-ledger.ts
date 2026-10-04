@@ -524,6 +524,8 @@ export async function requestPrefund(input: {
   financialPlan?: Record<string, unknown> | null;
   /** Owning business workspace — durable spend/pipeline ownership (not brand name). */
   workspaceId?: string | null;
+  /** Optional proposal/record link for creator hub pipeline (not title fuzzy match). */
+  collaborationId?: string | null;
 }) {
   await ensureMarketplaceDefaults();
   await ensureSettlementDefaults();
@@ -666,6 +668,7 @@ export async function requestPrefund(input: {
   const businessName = input.businessName.trim().slice(0, 120);
   const creatorSlug = input.creatorSlug.trim().slice(0, 80);
   const workspaceId = input.workspaceId?.trim() || null;
+  const collaborationId = input.collaborationId?.trim() || null;
   const baseTitle = input.title.trim().slice(0, 140);
   if (currency !== "USD" && !fxRate?.active) {
     return { ok: false as const, error: `No Wise currency is saved for ${currency}. Nothing was funded.` };
@@ -716,6 +719,7 @@ export async function requestPrefund(input: {
           jurisdictionCode: code,
           businessName,
           workspaceId,
+          collaborationId,
           creatorSlug,
           title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
           currency: part.fx.currency,
@@ -1235,6 +1239,7 @@ function presentFunding(row: {
   jurisdictionCode: string;
   businessName: string;
   workspaceId?: string | null;
+  collaborationId?: string | null;
   creatorSlug: string;
   title: string;
   currency: string;
