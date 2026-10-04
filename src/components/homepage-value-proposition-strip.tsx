@@ -1,11 +1,16 @@
-import Link from "next/link";
 import {
   IconIdCard,
   IconIntelligence,
   IconNetwork,
   IconShieldPay,
 } from "@/components/icons";
+import { ValuePropPillarLink } from "@/components/value-prop-pillar-link";
 import type { ValuePropositionStrip } from "@/lib/cms";
+import {
+  applyMarketAwareProtectedPaymentsClaim,
+  enabledValuePropItems,
+  valuePropPillarGridClass,
+} from "@/lib/value-proposition";
 
 const ICONS = {
   card: IconIdCard,
@@ -23,21 +28,32 @@ const ACCENT: Record<string, string> = {
 
 export function HomepageValuePropositionStrip({
   strip,
+  protectedPaymentsEnabled = true,
+  escrowTermAllowed = false,
 }: {
   strip: ValuePropositionStrip;
+  /** Home-market jurisdiction gate for the Protected Payments pillar (§23.9). */
+  protectedPaymentsEnabled?: boolean;
+  escrowTermAllowed?: boolean;
 }) {
   if (!strip.enabled) return null;
 
-  const items = [...strip.items]
-    .filter((i) => i.enabled)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const items = enabledValuePropItems(
+    applyMarketAwareProtectedPaymentsClaim(strip.items, {
+      protectedPaymentsEnabled,
+      escrowTermAllowed,
+    }),
+  );
 
   if (!items.length) return null;
+
+  const pillarGrid = valuePropPillarGridClass(items.length);
 
   return (
     <section
       className="relative w-full overflow-hidden border-y border-border bg-white py-10"
       data-analytics="homepage_value_proposition_strip"
+      data-pillar-count={items.length}
     >
       <div
         aria-hidden
@@ -59,39 +75,39 @@ export function HomepageValuePropositionStrip({
           ) : null}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
-          {items.map((item, i) => {
-            const Icon = ICONS[item.iconKey] ?? IconIdCard;
-            const tone = ACCENT[item.accentToken] ?? ACCENT.violet;
-            return (
-              <Link
-                key={item.key}
-                href={item.linkUrl || "/"}
-                className={`flex flex-col items-center gap-3 text-center transition hover:-translate-y-0.5 ${
-                  i < items.length - 1 || items.length < 4
-                    ? "xl:border-r xl:border-[#E8ECF5] xl:pr-5"
-                    : ""
-                }`}
-              >
-                <span
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tone}`}
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(10rem,14rem)] xl:items-stretch">
+          <div className={pillarGrid}>
+            {items.map((item) => {
+              const Icon = ICONS[item.iconKey] ?? IconIdCard;
+              const tone = ACCENT[item.accentToken] ?? ACCENT.violet;
+              return (
+                <ValuePropPillarLink
+                  key={item.key}
+                  href={item.linkUrl || "/"}
+                  pillarKey={item.key}
+                  title={item.title}
+                  className="flex flex-col items-center gap-3 text-center transition hover:-translate-y-0.5"
                 >
-                  <Icon size={22} />
-                </span>
-                <div>
-                  <h3 className="font-display text-base font-bold text-indigo">{item.title}</h3>
-                  <p className="mt-1 text-sm leading-snug text-muted">{item.description}</p>
-                  {item.microLabel ? (
-                    <p className="mt-2 text-[10px] font-bold uppercase tracking-wide text-violet">
-                      {item.microLabel}
-                    </p>
-                  ) : null}
-                </div>
-              </Link>
-            );
-          })}
+                  <span
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tone}`}
+                  >
+                    <Icon size={22} />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-base font-bold text-indigo">{item.title}</h3>
+                    <p className="mt-1 text-sm leading-snug text-muted">{item.description}</p>
+                    {item.microLabel ? (
+                      <p className="mt-2 text-[10px] font-bold uppercase tracking-wide text-violet">
+                        {item.microLabel}
+                      </p>
+                    ) : null}
+                  </div>
+                </ValuePropPillarLink>
+              );
+            })}
+          </div>
 
-          <div className="flex flex-col items-center justify-center border-t border-[#E8ECF5] pt-5 text-center md:col-span-2 xl:col-span-1 xl:border-t-0 xl:pl-5 xl:pt-0">
+          <div className="flex flex-col items-center justify-center border-t border-[#E8ECF5] pt-5 text-center xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
               {strip.closingTaglineLine1}
             </p>

@@ -306,7 +306,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Exists | Missing | Exit |
 |---|---|---|
 | Banners, categories, value-prop strip, landing CMS | Verified `SocialProofStats` with source/as-of + disable-when-stale; never show placeholder 50K+/12K+ as factual | §23.8–23.9 — **DONE** (footer strip verifies source/as-of; placeholders disabled) |
-| Value-prop four pillars | Responsive matrix ≥1200 / 768–1199 / &lt;768; pillar analytics events; jurisdiction-aware Protected Payments claim | §23.9 acceptance tests |
+| Value-prop four pillars; responsive matrix ≥1200 / 768–1199 / &lt;768; pillar click analytics; jurisdiction-aware Protected Payments claim | — | §23.9 acceptance tests — **DONE** |
 | Admin modules wide | Collab control plane corridors/account purposes (P6) | Collab OS §11 |
 | RBAC | Permission groups for new collab finance modules; step-up for high-risk actions | Platform Spec §34; Dev §20 |
 
@@ -481,12 +481,12 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | # | Test | Status |
 |---|---|---|
 | 1 | No placeholder 50K+/12K+ as factual scale | DONE (footer requires source/as-of; placeholders disabled) |
-| 2 | Four default pillars exact copy + accessible icons | PARTIAL / largely DONE |
+| 2 | Four default pillars exact copy + accessible icons | DONE |
 | 3 | Admin edit/reorder without deploy | DONE |
-| 4 | Disable pillar → balanced layout | Needs QA |
-| 5 | Protected Payments claim market-aware | PARTIAL |
-| 6 | Mobile accessible, no overflow | Needs QA |
-| 7 | Analytics pillar events | NOT STARTED / thin |
+| 4 | Disable pillar → balanced layout | DONE (`valuePropPillarGridClass` 1–4) |
+| 5 | Protected Payments claim market-aware | DONE (home jurisdiction gate + fundingTerm title) |
+| 6 | Mobile accessible, no overflow | DONE (1-col &lt;768 / 2-col tablet / 4-col ≥1200) |
+| 7 | Analytics pillar events | DONE (`homepage_value_prop_pillar_click` via beacon API) |
 | 8 | Live text/SVG not raster | DONE (component) |
 
 ### 7.4 Terminology Addendum §6
