@@ -503,12 +503,12 @@ export default async function CollaborationPage({ searchParams }: Props) {
                         </button>
                       </form>
                     ) : (
-                      <Link
-                        href={`/login?next=${encodeURIComponent("/collaboration/hub#business-requests")}&gate=apply`}
-                        className="mt-2 inline-flex text-[11px] font-bold text-violet"
-                      >
-                        Sign in to apply →
-                      </Link>
+                      <form action={actionApplyToBusinessRequest} className="mt-2">
+                        <input type="hidden" name="requestId" value={item.id} />
+                        <button type="submit" className="inline-flex text-[11px] font-bold text-violet">
+                          Sign in to apply →
+                        </button>
+                      </form>
                     )}
                   </div>
                 </div>
