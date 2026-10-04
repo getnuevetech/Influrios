@@ -181,7 +181,7 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 
 | # | Criterion | Phase | Status |
 |---|---|---|---|
-| 1 | Public landing usable logged-out; category cards, search, requests, opportunities, suggestions CTA, mentor banner | P1 | DONE |
+| 1 | Public landing usable logged-out; category cards, search, requests, opportunities, suggestions CTA + **guest anonymized sample**, mentor banner | P1 | DONE |
 | 2 | Creator & business dashboards role-aware, same backend | P2 / P2b | DONE |
 | 3 | Business can create request and/or ask for suggestions | P1b / P2b | DONE |
 | 4–6 | Admin milestone templates; entitlements; 100% + creator accept | P3 | DONE |

@@ -164,6 +164,11 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Requests, suggestions, spend summary, contract link; applicant reply/decline/shortlist in hub UI; **Campaign Intent upsert** (`updateBrief` + hidden `briefId`) + **Refresh suggestions** CTA (re-rank without new brief) | Multi-creator team proposals (Collab OS §3.3) | Reply/decline/shortlist without admin workarounds — **DONE**; intent save/refresh — **DONE**; multi-creator team proposals **Deferred-external** |
 | Pipeline chrome mapped to funding/milestone states via `derivePipelineStage` + funding badges | — | No cosmetic-only steps — **DONE** |
 
+#### W2.3b Guest suggestion sample — DONE
+| Exists | Missing | Exit |
+|---|---|---|
+| Public `/collaboration` guest form ranks directory creators and shows **2–3 anonymized / partially revealed** cards (`guest-suggestions.ts`); signup unlocks full hub reveal | — | Collab OS §3.3 guest sample — **DONE** |
+
 #### W2.4 Mentorship stub — DONE (full module = P7 core shipped)
 | Exists | Missing | Exit |
 |---|---|---|
@@ -583,7 +588,7 @@ DEFERRED-EXTERNAL (ops / product / later phase)
  ├─ P7 paid mentorship commercial pack
  ├─ P8 SKU/cookie rename soak
  ├─ W2.3 multi-creator team proposals
- └─ (W2.5 unified admin txn view — DONE; W2.3 intent refresh — DONE)
+ └─ (W2.5 unified admin txn view — DONE; W2.3 intent refresh — DONE; W2.3b guest sample — DONE)
 
 NON-GOALS until product asks:
   Meilisearch · Stripe Connect hard-enable · Collab Messages inbox product
