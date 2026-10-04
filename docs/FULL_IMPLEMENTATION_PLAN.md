@@ -183,10 +183,10 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 Much ledger work exists; the following are still incomplete vs addenda.
 
-#### W3.1 Fee matrix completeness — PARTIAL → fee types shipped
+#### W3.1 Fee matrix completeness — PARTIAL → fee types + report columns shipped
 | Exists | Missing | Exit |
 |---|---|---|
-| Versioned rules, simulator, snapshots; **`feeType` column** + labels; funding_mode / relationship_source / promotion_channel conditions | Reports separate columns still later | Snapshots store fee type; condition matching DONE |
+| Versioned rules, simulator, snapshots; **`feeType` column** + labels; funding_mode / relationship_source / promotion_channel conditions; funding `feeSnapshotJson.feeType`; ledger totals + monthly report **feesByType** columns | TIERED/WAIVED/CUSTOM_ENTERPRISE methods | Snapshots store fee type; condition matching DONE; reports separate fee-type columns **DONE** |
 | Conditions include serviceLevel | Full condition set beyond jurisdiction/service/gross | Rule tester explains winner (**done**) |
 | Priority/specificity + §22.1 overlap test | — | Test asserts documented winner |
 | Fee methods percent/fixed/combo | TIERED/WAIVED/CUSTOM_ENTERPRISE | Deferred |
@@ -449,7 +449,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | # | MVP item | Status |
 |---|---|---|
-| 1 | Fee engine + admin matrix + immutable snapshots | PARTIAL (types/conditions/explain-winner missing) |
+| 1 | Fee engine + admin matrix + immutable snapshots | PARTIAL → types/conditions/report columns largely DONE |
 | 2 | One approved marketplace provider + full prefunding | PARTIAL (Stripe path; P4 adapter/domains) |
 | 3 | Milestone templates, submit, approve, revisions, auto-approval, payout release, partial refund | PARTIAL (auto-approval job; kill fees) |
 | 4 | Dispute create + evidence + admin decision | PARTIAL (deepen reason codes/outcomes) |

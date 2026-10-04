@@ -27,9 +27,42 @@ describe("admin product switches", () => {
     assert.equal(rows[0]?.currency, "USD");
     assert.equal(rows[0]?.heldCents, 1000);
     assert.equal(rows[0]?.feeCents, 100);
+    assert.deepEqual(rows[0]?.feesByType, [{ feeType: "collaboration", amountCents: 100 }]);
     assert.equal(rows[0]?.releasedCents, 0);
     assert.equal(rows[1]?.month, "2026-02");
     assert.equal(rows[1]?.releasedCents, 50);
+  });
+
+  it("breaks monthly fee totals into separate feeType columns", () => {
+    const rows = summarizeLedgerReport([
+      {
+        currency: "USD",
+        kind: "fee",
+        amountCents: 150,
+        feeType: "collaboration",
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+      },
+      {
+        currency: "USD",
+        kind: "fee",
+        amountCents: 75,
+        feeType: "managed_intro",
+        createdAt: new Date("2026-04-15T00:00:00.000Z"),
+      },
+      {
+        currency: "USD",
+        kind: "fee",
+        amountCents: 25,
+        feeType: "collaboration",
+        createdAt: new Date("2026-04-20T00:00:00.000Z"),
+      },
+    ]);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.feeCents, 250);
+    assert.deepEqual(rows[0]?.feesByType, [
+      { feeType: "collaboration", amountCents: 175 },
+      { feeType: "managed_intro", amountCents: 75 },
+    ]);
   });
 
   it("accepts only an https signing URL with no userinfo", () => {

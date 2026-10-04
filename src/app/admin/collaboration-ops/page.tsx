@@ -10,11 +10,27 @@ import {
 import { formatMoney } from "@/lib/money";
 import { ledgerTotals } from "@/lib/marketplace-ledger";
 import { prisma } from "@/lib/db";
+import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
+import type { FeeTypeAmount } from "@/lib/ledger";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Collaboration operations · Admin" };
 
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
+
+function formatFeesByType(feesByType: FeeTypeAmount[], currency: string, totalCents: number) {
+  if (feesByType.length === 0) return formatMoney(totalCents, currency);
+  if (feesByType.length === 1) {
+    const only = feesByType[0];
+    const label = FEE_TYPE_LABELS[only.feeType as FeeType] ?? only.feeType;
+    return `${label} ${formatMoney(only.amountCents, currency)}`;
+  }
+  const parts = feesByType.map((row) => {
+    const label = FEE_TYPE_LABELS[row.feeType as FeeType] ?? row.feeType;
+    return `${label} ${formatMoney(row.amountCents, currency)}`;
+  });
+  return `${formatMoney(totalCents, currency)} (${parts.join("; ")})`;
+}
 
 export default async function AdminCollaborationOpsPage({ searchParams }: Props) {
   const session = await requireAdminPage("collab_finance");
@@ -249,7 +265,7 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
                 {row.currency}: held {formatMoney(row.heldCents, row.currency)} · released{" "}
                 {formatMoney(row.releasedCents, row.currency)} · refunded{" "}
                 {formatMoney(row.refundedCents, row.currency)} · fees{" "}
-                {formatMoney(row.feeCents, row.currency)}
+                {formatFeesByType(row.feesByType, row.currency, row.feeCents)}
               </li>
             ))}
           </ul>
