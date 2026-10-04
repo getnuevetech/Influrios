@@ -105,10 +105,11 @@ Mapping helper: `src/lib/terminology-events.ts`. Dashboards should display Influ
 
 ---
 
-## 9. P8 cutover checklist (later)
+## 9. P8 cutover checklist
 
 1. Dual-write or alias any external API fields.  
-2. Deprecation telemetry on `creator_*` request fields.  
+2. ~~Deprecation telemetry on `creator_*` request fields.~~ **Done (checkout SKUs → audit).**  
 3. Optional route redirects `/creators/` → chosen Influencer URL scheme.  
-4. Remove quarantined JSON demos.  
+4. ~~Remove quarantined JSON demos.~~ **Done when `legacy_demo_payments` is off (purge on read).**  
 5. Do **not** reset longitudinal analytics — keep mapping table.
+6. Signing fate: keep admin shell; accept-only wizard; no provider-success claims until counsel.

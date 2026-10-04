@@ -164,9 +164,14 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 
 **Exit (core):** acquisition loop live; free mentorship does not touch collaboration funds — met.
 
-### P8 — Migration & teardown
+### P8 — Migration & teardown — PARTIAL (core shipped)
 
-- Inventory legacy endpoints; dry-run migration; feature-flag cutover; freeze legacy writes; remove deprecated paths after verification (§19).
+- Inventory: `docs/collaboration/legacy-inventory-p8.md`
+- Feature-flag cutover + freeze: `legacy_demo_payments` off purges JSON demos and blocks writes
+- Signing: keep `/admin/signing` shell; e-sign non-goal until counsel
+- `creator_*` SKU deprecation telemetry on checkout
+
+**Exit (core):** one collaboration money engine when demos are off; demos purged/gated — met.
 
 ---
 

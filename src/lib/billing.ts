@@ -385,6 +385,16 @@ export async function startCheckout(input: {
   const product = getProduct(input.sku);
   if (!product) return { ok: false, error: "Unknown plan SKU" };
 
+  // P8: telemetry only — SKUs stay creator_* for Stripe metadata compatibility.
+  if (product.sku.startsWith("creator_")) {
+    const { recordCreatorFieldDeprecation } = await import("@/lib/legacy-teardown");
+    await recordCreatorFieldDeprecation({
+      field: product.sku,
+      source: "billing.startCheckout",
+      actor: input.customerEmail ?? input.userId ?? "checkout",
+    }).catch(() => null);
+  }
+
   const creds = await stripeCredentials();
   if (!creds.ok && creds.reason === "rejected") {
     return { ok: false, error: "Use a Stripe sandbox key. Nothing was charged." };
