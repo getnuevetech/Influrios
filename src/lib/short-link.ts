@@ -3,6 +3,15 @@ import { prisma } from "@/lib/db";
 import { isPlanCode, type EntitlementLimits } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { isShortLinkHost, normalizeShortHost } from "@/lib/short-link-hosts";
+import {
+  privacyMetaFromHints,
+  summarizeAdminShortLinkRollup,
+  summarizeShortLinkAnalytics,
+  type CreatorShortLinkAnalytics,
+  type ShortLinkPrivacyHints,
+} from "@/lib/short-link-analytics";
+
+export type { ShortLinkPrivacyHints } from "@/lib/short-link-analytics";
 
 export const LAUNCH_SHORT_HOST = "inflr.me";
 
@@ -247,10 +256,23 @@ type ResolveHit =
   | { kind: "redirect"; status: 301 | 302; location: string; cacheControl: string; shortLinkId: string; eventType: string }
   | { kind: "page"; status: number; title: string; message: string };
 
-async function recordEvent(shortLinkId: string | undefined, eventType: string, meta: Record<string, string>) {
+async function recordEvent(
+  shortLinkId: string | undefined,
+  eventType: string,
+  meta: Record<string, string>,
+  hints?: ShortLinkPrivacyHints | null,
+) {
   if (!shortLinkId) return;
+  const privacy = privacyMetaFromHints(hints);
+  if (privacy.bot) return;
   await prisma.shortLinkEvent
-    .create({ data: { shortLinkId, eventType, metaJson: meta } })
+    .create({
+      data: {
+        shortLinkId,
+        eventType,
+        metaJson: { ...meta, ...privacy.public },
+      },
+    })
     .catch(() => undefined);
 }
 
@@ -279,16 +301,24 @@ export function hitWhenShortStoreUnavailable(host: string, path: string): Resolv
   };
 }
 
-export async function resolveShortRequest(host: string, path: string): Promise<ResolveHit> {
+export async function resolveShortRequest(
+  host: string,
+  path: string,
+  hints?: ShortLinkPrivacyHints | null,
+): Promise<ResolveHit> {
   try {
-    return await resolveShortRequestFromStore(host, path);
+    return await resolveShortRequestFromStore(host, path, hints);
   } catch (error) {
     console.error("short link resolve", error);
     return hitWhenShortStoreUnavailable(host, path);
   }
 }
 
-async function resolveShortRequestFromStore(host: string, path: string): Promise<ResolveHit> {
+async function resolveShortRequestFromStore(
+  host: string,
+  path: string,
+  hints?: ShortLinkPrivacyHints | null,
+): Promise<ResolveHit> {
   await ensureShortLinkDefaults();
   const hostname = normalizeShortHost(host);
   const domain = await prisma.shortLinkDomain.findUnique({ where: { hostname } });
@@ -314,7 +344,7 @@ async function resolveShortRequestFromStore(host: string, path: string): Promise
   const allowed = hostsFrom(settings);
 
   const qr = clean.match(/^\/q\/([A-Za-z0-9_-]{4,80})$/);
-  if (qr) return resolveQrToken(qr[1], allowed, settings.canonicalOrigin);
+  if (qr) return resolveQrToken(qr[1], allowed, settings.canonicalOrigin, hints);
 
   const slugMatch = clean.match(/^\/([a-z0-9][a-z0-9-]{1,30})$/);
   if (!slugMatch) {
@@ -326,7 +356,7 @@ async function resolveShortRequestFromStore(host: string, path: string): Promise
   }
 
   const direct = await prisma.shortLink.findUnique({ where: { slug } });
-  if (direct) return finishSlug(direct, allowed, settings.canonicalOrigin, "destination");
+  if (direct) return finishSlug(direct, allowed, settings.canonicalOrigin, "destination", hints);
 
   const alias = await prisma.shortLinkAlias.findUnique({
     where: { slug },
@@ -335,7 +365,7 @@ async function resolveShortRequestFromStore(host: string, path: string): Promise
   if (alias?.redirect && alias.shortLink.status === "active") {
     const hostName = domain.hostname;
     const cache = redirectCacheFor("alias");
-    void recordEvent(alias.shortLinkId, "alias_redirect", { slug });
+    void recordEvent(alias.shortLinkId, "alias_redirect", { slug }, hints);
     return {
       kind: "redirect",
       ...cache,
@@ -346,7 +376,7 @@ async function resolveShortRequestFromStore(host: string, path: string): Promise
   }
 
   const provisioned = await provisionByPublicSlug(slug);
-  if (provisioned) return finishSlug(provisioned, allowed, settings.canonicalOrigin, "destination");
+  if (provisioned) return finishSlug(provisioned, allowed, settings.canonicalOrigin, "destination", hints);
 
   return { kind: "page", status: 404, title: "Link not found", message: "That Influrios short link does not exist." };
 }
@@ -355,6 +385,7 @@ export async function resolveQrToken(
   token: string,
   allowedHosts?: string[],
   canonicalOrigin?: string,
+  hints?: ShortLinkPrivacyHints | null,
 ): Promise<ResolveHit> {
   await ensureShortLinkDefaults();
   const settings = await settingsRow();
@@ -375,7 +406,7 @@ export async function resolveQrToken(
         ? safeRedirectTarget(link.destination, allowed, origin)
         : safeRedirectTarget(`/c/${legacy.creator.slug}`, allowed, origin);
       if (location && link?.status === "active") {
-        void recordEvent(link.id, "qr_scan", { token, legacy: "card" });
+        void recordEvent(link.id, "qr_scan", { token, legacy: "card" }, hints);
         const cache = redirectCacheFor("destination");
         return { kind: "redirect", ...cache, location, shortLinkId: link.id, eventType: "qr_scan" };
       }
@@ -405,7 +436,7 @@ export async function resolveQrToken(
     };
   }
   const cache = redirectCacheFor("destination");
-  void recordEvent(identity.shortLinkId, "qr_scan", { token: identity.token });
+  void recordEvent(identity.shortLinkId, "qr_scan", { token: identity.token }, hints);
   return { kind: "redirect", ...cache, location, shortLinkId: identity.shortLinkId, eventType: "qr_scan" };
 }
 
@@ -414,6 +445,7 @@ async function finishSlug(
   allowed: string[],
   canonicalOrigin: string,
   kind: "alias" | "destination",
+  hints?: ShortLinkPrivacyHints | null,
 ): Promise<ResolveHit> {
   if (link.status !== "active") {
     return {
@@ -433,7 +465,7 @@ async function finishSlug(
     };
   }
   const cache = redirectCacheFor(kind);
-  void recordEvent(link.id, "resolve", { destination: location });
+  void recordEvent(link.id, "resolve", { destination: location }, hints);
   return { kind: "redirect", ...cache, location, shortLinkId: link.id, eventType: "resolve" };
 }
 
@@ -638,6 +670,73 @@ export async function rollbackCreatorDynamicDestination(creatorSlug: string) {
   });
   if (!gate.ok) return gate;
   return rollbackShortLinkDestination(link.id, { type: "creator", id: creator.id });
+}
+
+/** Entitlement-aware creator analytics — never returns another creator's traffic. */
+export async function getCreatorShortLinkAnalytics(
+  creatorSlug: string,
+): Promise<{ ok: true; analytics: CreatorShortLinkAnalytics; shortLinkId: string } | { ok: false; error: string }> {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  if (!creator) return { ok: false, error: "Publish your card before viewing link analytics." };
+  const link = creator.shortLinks[0];
+  if (!link) return { ok: false, error: "This plan does not include a short link." };
+  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const entitlements = await entitlementsForPlan(plan);
+  const events = await prisma.shortLinkEvent.findMany({
+    where: { shortLinkId: link.id },
+    orderBy: { createdAt: "desc" },
+    take: 2_000,
+    select: { eventType: true, metaJson: true, createdAt: true },
+  });
+  return {
+    ok: true,
+    shortLinkId: link.id,
+    analytics: summarizeShortLinkAnalytics(events, entitlements.analytics),
+  };
+}
+
+export async function getAdminShortLinkAnalyticsRollup() {
+  const [events, abuseOpen] = await Promise.all([
+    prisma.shortLinkEvent.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5_000,
+      select: { eventType: true, metaJson: true },
+    }),
+    prisma.shortLinkAbuseCase.count({ where: { status: "open" } }),
+  ]);
+  return summarizeAdminShortLinkRollup(events, abuseOpen);
+}
+
+/** Record a card CTA click against the creator's short link (privacy-safe). */
+export async function recordCreatorCtaClick(
+  creatorSlug: string,
+  hints?: ShortLinkPrivacyHints | null,
+) {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  const link = creator?.shortLinks[0];
+  if (!link || link.status !== "active") return { ok: false as const };
+  void recordEvent(link.id, "cta_click", { source: "influencer_card" }, hints);
+  return { ok: true as const };
+}
+
+export async function recordCreatorInquiryConversion(
+  creatorSlug: string,
+  hints?: ShortLinkPrivacyHints | null,
+) {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  const link = creator?.shortLinks[0];
+  if (!link || link.status !== "active") return { ok: false as const };
+  void recordEvent(link.id, "inquiry_conversion", { source: "contact_inquiry" }, hints);
+  return { ok: true as const };
 }
 
 export function brandedFallbackHtml(title: string, message: string) {

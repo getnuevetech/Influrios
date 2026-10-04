@@ -12,7 +12,7 @@ import {
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
-import { ensureShortLinkDefaults, getShortLinkSettings } from "@/lib/short-link";
+import { ensureShortLinkDefaults, getAdminShortLinkAnalyticsRollup, getShortLinkSettings } from "@/lib/short-link";
 import { shortLinkHosts } from "@/lib/short-link-hosts";
 
 export const dynamic = "force-dynamic";
@@ -38,15 +38,17 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
   let events: Awaited<ReturnType<typeof prisma.shortLinkEvent.findMany>> = [];
   let cases: Awaited<ReturnType<typeof prisma.shortLinkAbuseCase.findMany>> = [];
   let settings: Awaited<ReturnType<typeof getShortLinkSettings>> | null = null;
+  let rollup: Awaited<ReturnType<typeof getAdminShortLinkAnalyticsRollup>> | null = null;
   let dbError = false;
   try {
     await ensureShortLinkDefaults();
-    [domains, reserved, events, cases, settings] = await Promise.all([
+    [domains, reserved, events, cases, settings, rollup] = await Promise.all([
       prisma.shortLinkDomain.findMany({ orderBy: { hostname: "asc" } }),
       prisma.reservedSlug.findMany({ orderBy: { slug: "asc" } }),
       prisma.shortLinkEvent.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
       prisma.shortLinkAbuseCase.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
       getShortLinkSettings(),
+      getAdminShortLinkAnalyticsRollup(),
     ]);
     links = await prisma.shortLink.findMany({
       include: { creator: true, qrIdentities: { where: { status: "active" }, take: 1 } },
@@ -76,6 +78,31 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm text-amber-800">{params.error}</p> : null}
       {dbError ? <p className="mt-4 text-sm text-amber-800">Short links are unavailable.</p> : null}
+
+      {rollup ? (
+        <section className="card-surface mt-6 grid gap-3 p-5 sm:grid-cols-5">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">Visits</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.visits}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">QR scans</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.qrScans}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">CTA clicks</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.ctaClicks}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">Destination changes</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.destinationChanges}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">Open abuse</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.abuseOpen}</p>
+          </div>
+        </section>
+      ) : null}
 
       <section className="card-surface mt-6 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Domains</h2>

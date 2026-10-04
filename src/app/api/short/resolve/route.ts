@@ -14,8 +14,12 @@ export async function GET(request: NextRequest) {
   const headerHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
   const host = isShortLinkHost(hinted) ? hinted : headerHost;
   const path = request.nextUrl.searchParams.get("path") || "/";
+  const hints = {
+    userAgent: request.headers.get("user-agent"),
+    referrer: request.headers.get("referer"),
+  };
   try {
-    const hit = await resolveShortRequest(host, path);
+    const hit = await resolveShortRequest(host, path, hints);
     if (hit.kind === "redirect") {
       return NextResponse.redirect(hit.location, {
         status: hit.status,

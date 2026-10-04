@@ -11,7 +11,7 @@ import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
 import { classifyProfileTopics } from "@/lib/ai-runtime";
 import { isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { ensureCreatorShortLink, listShortLinkDestinationHistory, primaryShortHost } from "@/lib/short-link";
+import { ensureCreatorShortLink, getCreatorShortLinkAnalytics, listShortLinkDestinationHistory, primaryShortHost } from "@/lib/short-link";
 import {
   completenessFor,
   getCreatorSessionDraft,
@@ -64,6 +64,10 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
     shortLink && linkLimits?.dynamicQr
       ? await listShortLinkDestinationHistory(shortLink.id, 5).catch(() => [])
       : [];
+  const linkAnalytics =
+    shortLink && shortLink.status === "active"
+      ? await getCreatorShortLinkAnalytics(draft.slug).catch(() => null)
+      : null;
   const topics = await classifyProfileTopics(`${draft.title}\n${draft.bio}`).catch(() => ({
     suggestions: [],
     source: "fallback" as const,
@@ -513,6 +517,76 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
           </p>
         )}
       </section>
+
+      {linkAnalytics?.ok ? (
+        <section className="card-surface p-6">
+          <h2 className="font-display text-xl font-bold text-indigo">Link analytics</h2>
+          <p className="mt-2 text-sm text-muted">
+            Privacy-safe totals for your short link and QR. Depth follows your plan entitlement (
+            {linkAnalytics.analytics.level}). Precise location is never stored.
+          </p>
+          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted">Total visits</dt>
+              <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.totalVisits}</dd>
+            </div>
+            {linkAnalytics.analytics.qrScans != null ? (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">QR scans</dt>
+                <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.qrScans}</dd>
+              </div>
+            ) : null}
+            {linkAnalytics.analytics.directVisits != null ? (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">Direct short-link visits</dt>
+                <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.directVisits}</dd>
+              </div>
+            ) : null}
+            {linkAnalytics.analytics.ctaClicks != null ? (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">Card CTA clicks</dt>
+                <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.ctaClicks}</dd>
+              </div>
+            ) : null}
+            {linkAnalytics.analytics.inquiryConversions != null ? (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">Inquiry conversions</dt>
+                <dd className="font-display text-2xl font-bold text-indigo">
+                  {linkAnalytics.analytics.inquiryConversions}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          {linkAnalytics.analytics.deviceClasses || linkAnalytics.analytics.referrerClasses ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 text-sm text-indigo">
+              {linkAnalytics.analytics.deviceClasses ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Device class</p>
+                  <ul className="mt-1 space-y-1">
+                    {Object.entries(linkAnalytics.analytics.deviceClasses).map(([key, count]) => (
+                      <li key={key}>
+                        {key}: {count}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {linkAnalytics.analytics.referrerClasses ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Referrer class</p>
+                  <ul className="mt-1 space-y-1">
+                    {Object.entries(linkAnalytics.analytics.referrerClasses).map(([key, count]) => (
+                      <li key={key}>
+                        {key}: {count}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {social ? (
         <section className="card-surface p-6">
