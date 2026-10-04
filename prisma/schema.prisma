@@ -1408,11 +1408,15 @@ model FundingMilestone {
   submittedAt       DateTime?
   autoApproveAt     DateTime?
   approvedAt        DateTime?
+  /// Dev §16 — set when provider reports payout.failed; cleared on successful release or retry reset.
+  payoutFailedAt    DateTime?
+  payoutRetryCount  Int                  @default(0)
   updatedAt         DateTime             @updatedAt
   entries           LedgerEntry[]
   disputes          MilestoneDispute[]
 
   @@index([fundingId, status])
+  @@index([status, payoutFailedAt])
 }
 
 /// Provider-held movements. This is not an Influrios cash balance.

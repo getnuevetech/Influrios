@@ -634,14 +634,14 @@ LATER / gated:
 
 | Job | Status |
 |---|---|
-| Funding reconciliation | PARTIAL |
+| Funding reconciliation | DONE (stale awaiting_provider + unbalanced held/payment_risk ledger flags; admin queue) |
 | Milestone review deadline / auto-approval | DONE (job + review-deadline sweep + frozen window) |
-| Scheduled release / payout reconciliation | PARTIAL |
+| Scheduled release / payout reconciliation | PARTIAL (payout.failed → payout_failed + provider-safe retry DONE; scheduled release still open) |
 | Provider hold-period warnings | DONE (sweep + admin queue; 7d default) |
-| Failed payout retry | PARTIAL |
+| Failed payout retry | DONE (backoff + max attempts; no retry if release ledger exists; admin queue) |
 | Dispute SLA reminders | DONE (sweep + admin queue; 72h default) |
 | Recurring funding-cycle creation | Deferred |
-| Financial reconciliation / mismatch alerts | PARTIAL |
+| Financial reconciliation / mismatch alerts | DONE (funding_recon_mismatch audit + notify; admin queue) |
 
 ### APIs still incomplete vs Dev §16
 

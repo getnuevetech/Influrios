@@ -1421,7 +1421,7 @@ export async function applyMarketplaceEvent(input: {
   const expectedCents =
     input.eventType === "funding.held" || input.eventType === "funding.failed"
       ? funding.grossCents
-      : input.eventType === "payout.released"
+      : input.eventType === "payout.released" || input.eventType === "payout.failed"
         ? left > 0
           ? left
           : -1
@@ -1476,11 +1476,22 @@ export async function applyMarketplaceEvent(input: {
         });
         return;
       }
+      if (input.eventType === "payout.failed" && milestone) {
+        const failed = await tx.fundingMilestone.updateMany({
+          where: { id: milestone.id, status: "approved" },
+          data: {
+            status: "payout_failed",
+            payoutFailedAt: new Date(),
+          },
+        });
+        if (failed.count !== 1) throw new LedgerReject("Milestone is not approved for payout failure.");
+        return;
+      }
       if (input.eventType === "payout.released" && milestone) {
         const blocking = await tx.milestoneDispute.findFirst({
           where: {
             fundingId: funding.id,
-            status: { in: ["open", "under_review", "refund_requested"] },
+            status: { in: ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"] },
             OR: [{ milestoneId: milestone.id }, { milestoneId: null }],
           },
         });
@@ -1493,9 +1504,14 @@ export async function applyMarketplaceEvent(input: {
           currentStatus: milestone.rightsStatus,
         });
         const released = await tx.fundingMilestone.updateMany({
-          where: { id: milestone.id, status: "approved", refundedCents: milestone.refundedCents },
+          where: {
+            id: milestone.id,
+            status: { in: ["approved", "payout_failed"] },
+            refundedCents: milestone.refundedCents,
+          },
           data: {
             status: "released",
+            payoutFailedAt: null,
             ...(rights.shouldActivate
               ? { rightsStatus: rights.status, rightsActivatedAt: new Date() }
               : {}),

@@ -20,6 +20,8 @@ import {
   actionEnqueueReviewDeadlineSweep,
   actionEnqueueDisputeSlaSweep,
   actionEnqueueProviderHoldWarnSweep,
+  actionEnqueueFailedPayoutRetrySweep,
+  actionEnqueueFundingReconciliationSweep,
 } from "@/app/admin/marketplace/actions";
 import { listAttributionClaims, listAttributionSources } from "@/lib/deal-attribution";
 import { readShareSnapshot } from "@/lib/fx-share";
@@ -359,6 +361,16 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             <form action={actionEnqueueProviderHoldWarnSweep}>
               <button type="submit" className="btn-secondary !py-1.5 text-xs">
                 Queue provider hold warnings now
+              </button>
+            </form>
+            <form action={actionEnqueueFailedPayoutRetrySweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue failed payout retries now
+              </button>
+            </form>
+            <form action={actionEnqueueFundingReconciliationSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue funding reconciliation now
               </button>
             </form>
           </div>

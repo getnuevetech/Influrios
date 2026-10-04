@@ -15,7 +15,7 @@ import {
 import { saveFxRates, saveRevenueParties } from "@/lib/settlement";
 import { setProductSwitch } from "@/lib/product-switches";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
-import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep } from "@/lib/jobs";
+import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep } from "@/lib/jobs";
 
 function flag(formData: FormData, name: string) {
   return formData.get(name) === "on";
@@ -362,4 +362,20 @@ export async function actionEnqueueProviderHoldWarnSweep() {
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin/jobs");
   redirect("/admin/marketplace?saved=hold_warnings");
+}
+
+export async function actionEnqueueFailedPayoutRetrySweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueFailedPayoutRetrySweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=payout_retry");
+}
+
+export async function actionEnqueueFundingReconciliationSweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueFundingReconciliationSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=funding_recon");
 }
