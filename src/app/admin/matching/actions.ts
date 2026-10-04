@@ -5,8 +5,11 @@ import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import {
   advanceIntro,
+  confirmIntroFeeSettlement,
   createIntro,
   recordIntroFromRequest,
+  requestIntroFeeSettlement,
+  sandboxIntroFeeProviderRef,
   setCreatorOptIn,
   setManagedPromotionEnabled,
   type IntroStatus,
@@ -35,6 +38,34 @@ export async function actionAdvanceIntro(formData: FormData) {
   revalidatePath("/admin/matching");
   revalidatePath("/business");
   redirect(`/admin/matching?advanced=${id}`);
+}
+
+export async function actionRequestIntroFeeSettlement(formData: FormData) {
+  await requireAdminAction("matching.advance_intros");
+  const id = String(formData.get("id") ?? "");
+  const grossRaw = String(formData.get("grossCents") ?? "").trim();
+  const grossValueCents = grossRaw ? Number.parseInt(grossRaw, 10) : undefined;
+  const result = await requestIntroFeeSettlement(id, {
+    grossValueCents: Number.isFinite(grossValueCents) ? grossValueCents : undefined,
+  });
+  revalidatePath("/admin/matching");
+  revalidatePath("/business");
+  if (!result.ok) redirect(`/admin/matching?error=${encodeURIComponent(result.error)}`);
+  redirect(`/admin/matching?feeQuoted=${id}`);
+}
+
+export async function actionConfirmIntroFeeSettlement(formData: FormData) {
+  await requireAdminAction("matching.advance_intros");
+  const id = String(formData.get("id") ?? "");
+  const intentRef = String(formData.get("intentRef") ?? "").trim();
+  const providerRef =
+    String(formData.get("providerRef") ?? "").trim() ||
+    (intentRef ? sandboxIntroFeeProviderRef(intentRef) : "");
+  const result = await confirmIntroFeeSettlement(id, providerRef);
+  revalidatePath("/admin/matching");
+  revalidatePath("/business");
+  if (!result.ok) redirect(`/admin/matching?error=${encodeURIComponent(result.error)}`);
+  redirect(`/admin/matching?feeSettled=${id}`);
 }
 
 export async function actionSetManagedPromotion(formData: FormData) {

@@ -2,8 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   actionAdvanceIntro,
+  actionConfirmIntroFeeSettlement,
   actionCreateIntro,
   actionRecordIntroduction,
+  actionRequestIntroFeeSettlement,
   actionSetManagedPromotion,
   actionSetOptIn,
 } from "@/app/admin/matching/actions";
@@ -15,7 +17,8 @@ import {
   INTRO_STATUSES,
   listQueuedMatchRequests,
 } from "@/lib/managed-matching";
-import { MATCHING_PRODUCT_BOUNDARY } from "@/lib/matching-product-boundary";
+import { introStatusDisplayLabel, MATCHING_PRODUCT_BOUNDARY } from "@/lib/matching-product-boundary";
+import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +31,8 @@ type Props = {
     optin?: string;
     flag?: string;
     recorded?: string;
+    feeQuoted?: string;
+    feeSettled?: string;
     error?: string;
   }>;
 };
@@ -113,14 +118,16 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
           {params.error}
         </div>
       ) : null}
-      {params.created || params.advanced || params.optin || params.flag || params.recorded ? (
+      {params.created || params.advanced || params.optin || params.flag || params.recorded || params.feeQuoted || params.feeSettled ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Saved
           {params.created ? " · intro created" : ""}
           {params.advanced ? " · status advanced" : ""}
+          {params.feeQuoted ? " · intro fee quote requested" : ""}
+          {params.feeSettled ? " · intro fee settled (sandbox)" : ""}
+          {params.recorded ? " · introduction recorded" : ""}
           {params.optin ? ` · opt-in updated (${params.optin})` : ""}
-          {params.flag ? " · managed promotion updated" : ""}
-          {params.recorded ? " · introduction recorded" : ""}.
+          {params.flag ? " · managed promotion updated" : ""}.
         </div>
       ) : null}
 
@@ -300,18 +307,23 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${STATUS_COLOR[intro.status]}`}
                       >
-                        {intro.status.replace("_", " ")}
+                        {introStatusDisplayLabel(intro.status)}
                       </span>
                     </div>
                     <p className="text-sm text-muted">
                       {intro.briefTitle}
                       {intro.feeExpected ? ` · ${intro.feeExpected}` : ""}
+                      {intro.feeExpectedCents != null
+                        ? ` · quoted ${formatMoney(intro.feeExpectedCents)}`
+                        : ""}
+                      {intro.feeIntentRef ? ` · intent ${intro.feeIntentRef}` : ""}
+                      {intro.feeProviderRef ? ` · settled ${intro.feeProviderRef}` : ""}
                     </p>
                     {intro.notes ? <p className="mt-1 text-xs text-muted">{intro.notes}</p> : null}
                     <ol className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold text-muted">
                       {intro.timeline.map((t, i) => (
                         <li key={`${t.at}-${i}`} className="rounded bg-white px-2 py-0.5 ring-1 ring-border">
-                          {t.status}
+                          {introStatusDisplayLabel(t.status)}
                           {t.note ? ` — ${t.note}` : ""}
                         </li>
                       ))}
@@ -319,38 +331,70 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                   </div>
                 </div>
                 {canAdvanceIntros ? (
-                  <form action={actionAdvanceIntro} className="mt-3 flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="id" value={intro.id} />
-                    <label className="text-xs">
-                      <span className="font-semibold text-indigo">Advance to</span>
-                      <select
-                        name="status"
-                        defaultValue={
-                          INTRO_STATUSES[
-                            Math.min(
-                              INTRO_STATUSES.findIndex((s) => s.code === intro.status) + 1,
-                              INTRO_STATUSES.length - 1,
-                            )
-                          ]?.code ?? "outreach"
-                        }
-                        className="ml-2 rounded-lg border border-border px-2 py-1"
-                      >
-                        {INTRO_STATUSES.map((s) => (
-                          <option key={s.code} value={s.code}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <input
-                      name="note"
-                      placeholder="Note (optional)"
-                      className="min-w-[10rem] flex-1 rounded-lg border border-border px-2 py-1 text-sm"
-                    />
-                    <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
-                      Update status
-                    </button>
-                  </form>
+                  <div className="mt-3 space-y-2">
+                    {intro.status !== "paid" && intro.status !== "declined" && intro.status !== "closed" ? (
+                      <div className="flex flex-wrap gap-2">
+                        <form action={actionRequestIntroFeeSettlement} className="flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="id" value={intro.id} />
+                          <label className="text-xs">
+                            <span className="font-semibold text-indigo">Deal basis (¢)</span>
+                            <input
+                              name="grossCents"
+                              type="number"
+                              min={100}
+                              placeholder="10000"
+                              className="ml-2 w-28 rounded-lg border border-border px-2 py-1 text-sm"
+                            />
+                          </label>
+                          <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
+                            {intro.feeIntentRef ? "Refresh fee quote" : "Request fee quote"}
+                          </button>
+                        </form>
+                        {intro.feeIntentRef && intro.feeExpectedCents != null ? (
+                          <form action={actionConfirmIntroFeeSettlement}>
+                            <input type="hidden" name="id" value={intro.id} />
+                            <input type="hidden" name="intentRef" value={intro.feeIntentRef} />
+                            <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
+                              Confirm sandbox fee
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <p className="text-[10px] text-muted">{MATCHING_PRODUCT_BOUNDARY.introFeePaidHint}</p>
+                    <form action={actionAdvanceIntro} className="flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="id" value={intro.id} />
+                      <label className="text-xs">
+                        <span className="font-semibold text-indigo">Advance to</span>
+                        <select
+                          name="status"
+                          defaultValue={
+                            INTRO_STATUSES[
+                              Math.min(
+                                INTRO_STATUSES.findIndex((s) => s.code === intro.status) + 1,
+                                INTRO_STATUSES.length - 1,
+                              )
+                            ]?.code ?? "outreach"
+                          }
+                          className="ml-2 rounded-lg border border-border px-2 py-1"
+                        >
+                          {INTRO_STATUSES.map((s) => (
+                            <option key={s.code} value={s.code}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <input
+                        name="note"
+                        placeholder="Note (optional)"
+                        className="min-w-[10rem] flex-1 rounded-lg border border-border px-2 py-1 text-sm"
+                      />
+                      <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
+                        Update status
+                      </button>
+                    </form>
+                  </div>
                 ) : null}
               </li>
             );

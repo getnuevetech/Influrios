@@ -743,19 +743,28 @@ model CreatorManagedOptIn {
 }
 
 model ManagedIntro {
-  id           String              @id @default(cuid())
-  businessName String
-  businessId   String
-  creatorSlug  String
-  briefTitle   String
-  briefId      String?
-  notes        String              @default("")
-  status       String              @default("draft")
-  feeExpected  String?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  events       ManagedIntroEvent[]
-  matchRequest ManagedMatchRequest?
+  id                String              @id @default(cuid())
+  businessName      String
+  businessId        String
+  creatorSlug       String
+  briefTitle        String
+  briefId           String?
+  notes             String              @default("")
+  status            String              @default("draft")
+  feeExpected       String?
+  /// Quoted intro fee in cents (sandbox / provider settlement path).
+  feeExpectedCents  Int?
+  /// Immutable resolveFee snapshot for the intro fee quote.
+  feeQuoteJson      Json?
+  /// In-app settlement intent id (e.g. intro_fee_<id>).
+  feeIntentRef      String?
+  /// Provider / sandbox confirmation reference after settlement.
+  feeProviderRef    String?
+  feeSettlementAt   DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  events            ManagedIntroEvent[]
+  matchRequest      ManagedMatchRequest?
 }
 
 model ManagedIntroEvent {
