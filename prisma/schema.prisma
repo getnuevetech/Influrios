@@ -1368,6 +1368,11 @@ model FundingMilestone {
   refundedCents     Int                  @default(0)
   sortOrder         Int                  @default(0)
   status            String               @default("pending")
+  /// W3.10 — usage rights are separate from milestone acceptance (Product §13).
+  rightsStatus      String               @default("pending")
+  /// release (default) | acceptance | custom
+  rightsActivateOn  String               @default("release")
+  rightsActivatedAt DateTime?
   reviewWindowHours Int
   revisionLimit     Int                  @default(2)
   revisionCount     Int                  @default(0)

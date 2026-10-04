@@ -245,12 +245,12 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | Hub payout panel + payout profile / corridors; ROUTE_READY includes corridor; fee/FX quote helper | Admin corridor matrix UI (P6); live method verification rails | Collab OS §9–10 |
 
-#### W3.10 Content rights vs payment — NOT STARTED
+#### W3.10 Content rights vs payment — DONE
 **Source:** Product Addendum §13  
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Usage/rights fields in wizard scope (partial) | Explicit rule: usage rights activate when corresponding payment released unless parties agree otherwise | Rights state separate from milestone acceptance in UI + snapshot |
+| `rightsStatus` / `rightsActivateOn` / `rightsActivatedAt` on milestones; activate on release (default) or acceptance; financial plan snapshot; payments UI separates rights from acceptance | — | Rights state separate from milestone acceptance |
 
 #### W3.11 Notifications — NOT STARTED
 **Source:** Dev Addendum §18  

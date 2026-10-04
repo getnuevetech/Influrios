@@ -26,6 +26,8 @@ export type FinancialPlanMilestone = MilestoneDraft & {
   grossCents: number;
   creatorCents: number;
   platformFeeCents: number;
+  /** W3.10 — when usage rights activate (default: on payment release). */
+  rightsActivateOn?: "release" | "acceptance" | "custom";
 };
 
 export type CollaborationFinancialPlan = {
@@ -47,6 +49,8 @@ export type CollaborationFinancialPlan = {
   contractVersion: number;
   createdAt: string;
   lockedAt: string | null;
+  /** Default rights activation rule for the deal (Product §13). */
+  rightsActivateOn: "release" | "acceptance" | "custom";
   milestones: FinancialPlanMilestone[];
   milestoneSource: "template" | "custom";
 };
@@ -188,6 +192,7 @@ export function buildFinancialPlan(input: {
   contractVersion?: number;
   createdAt?: string;
   lockedAt?: string | null;
+  rightsActivateOn?: "release" | "acceptance" | "custom";
 }): CollaborationFinancialPlan | null {
   if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) return null;
   if (!Number.isInteger(input.totalPlatformFeeCents) || input.totalPlatformFeeCents < 0) return null;
@@ -206,6 +211,7 @@ export function buildFinancialPlan(input: {
       : feeParts;
   if (!platformParts) return null;
 
+  const rightsActivateOn = input.rightsActivateOn ?? "release";
   const milestones: FinancialPlanMilestone[] = input.milestones.map((row, index) => {
     const grossCents = grossParts[index];
     const platformFeeCents = platformParts[index];
@@ -215,6 +221,7 @@ export function buildFinancialPlan(input: {
       grossCents,
       platformFeeCents,
       creatorCents: Math.max(0, grossCents - platformFeeCents),
+      rightsActivateOn,
     };
   });
 
@@ -240,6 +247,7 @@ export function buildFinancialPlan(input: {
     contractVersion: input.contractVersion ?? 1,
     createdAt: input.createdAt ?? new Date().toISOString(),
     lockedAt: input.lockedAt ?? null,
+    rightsActivateOn,
     milestones,
     milestoneSource: input.milestoneSource,
   };
