@@ -22,10 +22,13 @@ import {
   actionEnqueueProviderHoldWarnSweep,
   actionEnqueueFailedPayoutRetrySweep,
   actionEnqueueFundingReconciliationSweep,
+  actionExecuteHeldCancellation,
 } from "@/app/admin/marketplace/actions";
 import { listAttributionClaims, listAttributionSources } from "@/lib/deal-attribution";
 import { readShareSnapshot } from "@/lib/fx-share";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
+import { CANCELLATION_REASON_LABELS, type CancellationReason } from "@/lib/cancellation-matrix";
+import { listPaymentRiskFundings } from "@/lib/collaboration-cancellation";
 import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFxRates, listRevenueParties } from "@/lib/settlement";
@@ -39,25 +42,30 @@ export const metadata = { title: "Admin · Marketplace ledger" };
 
 type Props = { searchParams: Promise<{ saved?: string; error?: string; wiseRate?: string; wiseCurrency?: string }> };
 
+const CANCEL_REASONS = Object.keys(CANCELLATION_REASON_LABELS) as CancellationReason[];
+
 export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, legacyDemoOn, collabOsOn] = await Promise.all([
-    marketplaceConfig(),
-    listFundings(),
-    ledgerTotals(),
-    listDisputeReasons(),
-    listAttributionSources(),
-    listAttributionClaims(),
-    listFxRates(),
-    listRevenueParties(),
-    wiseFxConfig(),
-    productSwitch("financial_reports"),
-    productSwitch("legacy_demo_payments"),
-    productSwitch("collab_os_v1"),
-  ]);
+  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, legacyDemoOn, collabOsOn, paymentRisk] =
+    await Promise.all([
+      marketplaceConfig(),
+      listFundings(),
+      ledgerTotals(),
+      listDisputeReasons(),
+      listAttributionSources(),
+      listAttributionClaims(),
+      listFxRates(),
+      listRevenueParties(),
+      wiseFxConfig(),
+      productSwitch("financial_reports"),
+      productSwitch("legacy_demo_payments"),
+      productSwitch("collab_os_v1"),
+      listPaymentRiskFundings(),
+    ]);
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
+  const cancellable = fundings.filter((f) => f.status === "held" || f.status === "payment_risk");
 
   return (
     <div className="space-y-6">
@@ -904,6 +912,84 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="card-surface p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Chargebacks &amp; held cancellations</h2>
+        <p className="mt-1 text-xs text-muted">
+          Chargebacks move a held prefund into payment-risk with no automatic refund. Other cancel reasons and
+          dispute refund decisions queue a durable provider instruction (
+          <code className="text-[11px]">mkt_refund_*</code> / <code className="text-[11px]">mkt_cancel_*</code>
+          ); ledger balances still change only on signed{" "}
+          <code className="text-[11px]">payout.refunded</code>. Releases stay blocked while status is payment-risk.
+        </p>
+        {paymentRisk.length > 0 ? (
+          <ul className="mt-3 space-y-2 text-sm text-indigo">
+            {paymentRisk.map((funding) => (
+              <li key={funding.id} className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+                <span className="font-semibold">Payment risk</span> · {funding.businessName} → {funding.creatorSlug} ·{" "}
+                {funding.title} · held {formatMoney(funding.ledger.heldCents, funding.currency)}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-muted">No payment-risk fundings right now.</p>
+        )}
+        {canManage && cancellable.length > 0 ? (
+          <form action={actionExecuteHeldCancellation} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Funding
+              <select name="fundingId" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+                <option value="">Select held or payment-risk prefund</option>
+                {cancellable.map((funding) => (
+                  <option key={funding.id} value={funding.id}>
+                    {funding.status} · {funding.businessName} → {funding.creatorSlug} · {funding.title} ·{" "}
+                    {formatMoney(funding.grossCents, funding.currency)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Reason
+              <select name="reason" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+                {CANCEL_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {CANCELLATION_REASON_LABELS[reason]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Current milestone id (optional)
+              <input
+                name="currentMilestoneId"
+                placeholder="cuid"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Accepted partial USD (optional)
+              <input
+                name="acceptedPartialUsd"
+                type="number"
+                min={0}
+                step={0.01}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Note
+              <input name="note" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+            </label>
+            <div className="sm:col-span-2">
+              <button type="submit" className="btn-secondary !py-2 text-sm">
+                Queue cancellation / mark payment-risk
+              </button>
+            </div>
+          </form>
+        ) : canManage ? (
+          <p className="mt-3 text-sm text-muted">No held fundings available to cancel.</p>
+        ) : null}
       </section>
 
       <section className="card-surface p-5">

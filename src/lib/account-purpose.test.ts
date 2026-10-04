@@ -67,4 +67,33 @@ describe("PaymentProviderAdapter marketplace", () => {
       assert.equal(parsed.eventType, "funding.held");
     }
   });
+
+  it("queues refund and cancel instructions without moving ledger money", async () => {
+    const { queueProviderInstruction } = await import("./payment-provider-adapter");
+    const partial = await queueProviderInstruction({
+      instruction: "partial_refund",
+      fundingId: "fund_test_partial",
+      amountCents: 2500,
+      milestoneId: "ms_1",
+    });
+    assert.equal(partial.ok, true);
+    if (!partial.ok) return;
+    assert.match(partial.reference, /^mkt_refund_/);
+
+    const cancel = await queueProviderInstruction({
+      instruction: "cancel",
+      fundingId: "fund_test_cancel",
+    });
+    assert.equal(cancel.ok, true);
+    if (!cancel.ok) return;
+    assert.match(cancel.reference, /^mkt_cancel_/);
+
+    const adapter = createMarketplaceSignedWebhookAdapter({
+      verifySignature: verifyMarketplaceSignature,
+    });
+    const full = await adapter.createFullRefund({ fundingId: "fund_test_full" });
+    assert.equal(full.ok, true);
+    if (!full.ok) return;
+    assert.match(full.reference, /^mkt_refund_full_/);
+  });
 });

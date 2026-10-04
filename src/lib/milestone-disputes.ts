@@ -312,6 +312,43 @@ export async function decideMilestoneDispute(input: {
       });
     });
   }
+  // Queue provider refund instruction after refund/partial decisions — cash still waits for payout.refunded.
+  if (input.action === "refund" || input.action === "partial") {
+    const { createMarketplaceSignedWebhookAdapter } = await import("@/lib/payment-provider-adapter");
+    const { verifyMarketplaceSignature } = await import("@/lib/ledger");
+    const adapter = createMarketplaceSignedWebhookAdapter({
+      verifySignature: verifyMarketplaceSignature,
+    });
+    const amount =
+      input.action === "partial"
+        ? (decision.requestedRefundCents ?? input.requestedCents ?? 0)
+        : releasableCents(dispute.milestone.amountCents, dispute.milestone.refundedCents);
+    const instruction =
+      input.action === "partial"
+        ? await adapter.createPartialRefund({
+            fundingId: dispute.fundingId,
+            amountCents: amount,
+            milestoneId: dispute.milestoneId ?? undefined,
+          })
+        : amount >= held.heldCents && held.heldCents > 0
+          ? await adapter.createFullRefund({ fundingId: dispute.fundingId })
+          : await adapter.createPartialRefund({
+              fundingId: dispute.fundingId,
+              amountCents: amount,
+              milestoneId: dispute.milestoneId ?? undefined,
+            });
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: input.actor,
+          action: "dispute_provider_refund_instruction",
+          objectType: "MilestoneDispute",
+          objectId: dispute.id,
+          after: { instruction, amountCents: amount },
+        },
+      })
+      .catch(() => undefined);
+  }
   return { ok: true as const, status: decision.status, outcome: decision.outcome };
 }
 

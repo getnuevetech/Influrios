@@ -54,6 +54,7 @@ describe("collab notifications (W3.11)", () => {
   it("maps marketplace events to notification kinds", () => {
     assert.equal(collabKindForMarketplaceEvent("funding.held"), "funding_successful");
     assert.equal(collabKindForMarketplaceEvent("funding.failed"), "funding_failed");
+    assert.equal(collabKindForMarketplaceEvent("funding.chargeback"), "payment_risk");
     assert.equal(collabKindForMarketplaceEvent("payout.released"), "payout_completed");
     assert.equal(collabKindForMarketplaceEvent("payout.refunded"), "refund_completed");
     assert.equal(collabKindForMarketplaceEvent("unknown"), null);
