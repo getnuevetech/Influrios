@@ -440,15 +440,15 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | Seat CRUD behind `agency_seats` switch (default **off**) | Invite/accept flow + multi-seat session auth when switch on | Design + ship only when product enables |
 
-### L4 — Collab OS feature flag — NOT STARTED
+### L4 — Collab OS feature flag — DONE
 | Exists | Missing | Exit |
 |---|---|---|
-| Collab surfaces always on | `collab_os_v1` (or equivalent) in `product-switches.ts` as planned in Collab OS P0 | Ops can disable collab OS surfaces without deploy |
+| `collab_os_v1` product switch (default **on**); hubs/contract gated; public landing + propose/records remain; admin marketplace toggle | — | Ops can disable collab OS surfaces without deploy |
 
-### L5 — Airwallex validation checklist artifact — NOT STARTED
+### L5 — Airwallex validation checklist artifact — DONE (unsigned)
 | Exists | Missing | Exit |
 |---|---|---|
-| Collab OS §8.3 / §22 items listed in specs | Checklist doc under `docs/collaboration/` (or deploy) with sandbox sign-off columns | Signed before any Airwallex adapter hard-wires |
+| `docs/collaboration/AIRWALLEX_VALIDATION_CHECKLIST.md` with §8.3 items + sign-off columns | Operator sandbox signatures | Signed before any Airwallex adapter hard-wires |
 
 ---
 
@@ -602,8 +602,8 @@ P8  Legacy teardown + API deprecations
 PARALLEL anytime:
   L1 Phase M evidence (when secrets available)
   L2 smoke tests
-  L4 collab_os_v1 switch (low risk)
-  L5 Airwallex checklist artifact (docs)
+  L4 collab_os_v1 switch — DONE
+  L5 Airwallex checklist artifact — DONE (awaiting operator sign-off)
   W5 INFLR.me Phase 3 (Pro dynamic self-serve) — do not block P4
   W6 SocialProofStats only with verified data
 
@@ -632,7 +632,7 @@ LATER / gated:
 | 10 | **P5** payout readiness | P5 | High |
 | … | P6 → P7 → P8 (incl. JSON demo deletion) | | |
 | ∥ | Phase M evidence when secrets available | L1 | Ops |
-| ∥ | `collab_os_v1` switch + Airwallex checklist doc | L4, L5 | Low |
+| ∥ | `collab_os_v1` switch + Airwallex checklist doc | L4, L5 **DONE** | Low |
 | ∥ | INFLR.me Pro dynamic self-serve | W5 | Medium |
 
 ---

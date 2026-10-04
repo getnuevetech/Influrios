@@ -20,7 +20,7 @@ export const metadata = {
 };
 
 type Props = {
-  searchParams: Promise<{ a?: string; b?: string; from?: string; error?: string }>;
+  searchParams: Promise<{ a?: string; b?: string; from?: string; error?: string; notice?: string }>;
 };
 
 async function submitProposal(formData: FormData) {
@@ -76,6 +76,7 @@ async function submitProposal(formData: FormData) {
 
 export default async function ProposeCollaborationPage({ searchParams }: Props) {
   const params = await searchParams;
+  const collabOsOffNotice = params.notice === "collab_os_off";
   const creatorA = params.a ? await getDirectoryCreator(params.a) : undefined;
   const creatorB = params.b ? await getDirectoryCreator(params.b) : undefined;
   const from = params.from ? await getDirectoryCreator(params.from) : creatorA;
@@ -83,10 +84,23 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
   if (!creatorA || !creatorB || !from) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        {collabOsOffNotice ? (
+          <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Collaboration OS hubs are turned off. Propose and records stay available.
+          </p>
+        ) : null}
         <p className="font-semibold text-indigo">Missing influencers for this proposal.</p>
         <Link href="/collaboration" className="mt-4 inline-block text-violet">
           Back to matches
         </Link>
+        <div className="mt-6 flex justify-center gap-4 text-sm">
+          <Link href="/collaboration/records" className="font-semibold text-violet hover:underline">
+            Contracts &amp; records
+          </Link>
+          <Link href="/collaboration?landing=1" className="font-semibold text-violet hover:underline">
+            Public matches
+          </Link>
+        </div>
       </div>
     );
   }

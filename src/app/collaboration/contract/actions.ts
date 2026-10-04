@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { getWorkspace } from "@/lib/business";
+import { assertCollabOsV1 } from "@/lib/collab-os";
 import { asServiceLevel, resolveFee } from "@/lib/collaboration-fees";
 import {
   buildFinancialPlan,
@@ -53,6 +54,7 @@ function readDrafts(formData: FormData, usingCustom: boolean, templates: Milesto
 }
 
 export async function actionSubmitContractWizard(formData: FormData) {
+  await assertCollabOsV1();
   const account = await getAccountSession().catch(() => null);
   if (!account) redirect(`/login?next=${encodeURIComponent(BASE)}&gate=business`);
 

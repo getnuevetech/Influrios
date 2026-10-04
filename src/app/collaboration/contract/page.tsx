@@ -5,6 +5,7 @@ import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions
 import { getAccountSession } from "@/lib/accounts";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { getWorkspace } from "@/lib/business";
+import { collabOsV1Enabled } from "@/lib/collab-os";
 import { resolveFee, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, asServiceLevel } from "@/lib/collaboration-fees";
 import {
   buildFinancialPlan,
@@ -73,6 +74,9 @@ function dollarsToCents(raw: string) {
 }
 
 export default async function ContractWizardPage({ searchParams }: Props) {
+  if (!(await collabOsV1Enabled().catch(() => true))) {
+    redirect("/collaboration/propose?notice=collab_os_off");
+  }
   const params = await searchParams;
   const account = await getAccountSession().catch(() => null);
   if (!account) {

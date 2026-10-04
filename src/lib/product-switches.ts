@@ -38,6 +38,12 @@ export const PRODUCT_SWITCHES = [
     description:
       "Paid Influencer Mentorship sessions. Off = community mentoring only; never mixes into Collaboration Holding.",
   },
+  {
+    key: "collab_os_v1",
+    enabled: true,
+    description:
+      "Collaboration OS hubs and contract wizard. Turned off, signed-in users stay on the public landing plus propose/records.",
+  },
 ] as const;
 
 export type ProductSwitchKey = (typeof PRODUCT_SWITCHES)[number]["key"];

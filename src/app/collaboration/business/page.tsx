@@ -9,6 +9,7 @@ import {
 } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
+import { collabOsV1Enabled } from "@/lib/collab-os";
 import { loadBusinessHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
 import { BUSINESS_PLAN_PRICES, type BusinessPlanCode } from "@/lib/business-entitlements";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
@@ -60,6 +61,9 @@ const SIDE_LINKS = [
 ] as const;
 
 export default async function BusinessCollaborationHubPage({ searchParams }: Props) {
+  if (!(await collabOsV1Enabled().catch(() => true))) {
+    redirect("/collaboration/propose?notice=collab_os_off");
+  }
   const params = await searchParams;
   const account = await getAccountSession().catch(() => null);
   if (!account) {

@@ -39,7 +39,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, legacyDemoOn] = await Promise.all([
+  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, legacyDemoOn, collabOsOn] = await Promise.all([
     marketplaceConfig(),
     listFundings(),
     ledgerTotals(),
@@ -51,6 +51,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
     wiseFxConfig(),
     productSwitch("financial_reports"),
     productSwitch("legacy_demo_payments"),
+    productSwitch("collab_os_v1"),
   ]);
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
 
@@ -282,6 +283,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Show Phase 9/10 JSON payment and trust demos
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="collabOsV1" defaultChecked={collabOsOn} className="accent-violet" />
+              Collaboration OS hubs and contract wizard (`collab_os_v1`)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
               Allow cancelling a prefund before the provider confirms it
             </label>
@@ -328,7 +333,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             {config.partialRefundsEnabled ? "on" : "off"} · change orders{" "}
             {config.changeOrdersEnabled ? config.maxChangeOrders : "off"} · open disputes{" "}
             {config.riskControlsEnabled ? config.maxOpenDisputes : "off"} · monthly report {reportsOn ? "on" : "off"} · legacy demos {legacyDemoOn ? "on" : "off"}
-            · auto-approval {config.autoApprovalEnabled ? "on" : "off"} · kill fee{" "}
+            · collab OS {collabOsOn ? "on" : "off"} · auto-approval {config.autoApprovalEnabled ? "on" : "off"} · kill fee{" "}
             {((config.killFeeBps ?? 0) / 100).toFixed(0)}% + {formatMoney(config.killFeeFixedCents ?? 0)}
           </p>
         )}
