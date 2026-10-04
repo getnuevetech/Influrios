@@ -12,6 +12,11 @@ export type FooterStatView = {
   tone: FooterTone;
   sortOrder: number;
   enabled: boolean;
+  source: string;
+  asOf: string | null;
+  maxAgeDays: number;
+  /** True when source + as-of are present and not past maxAgeDays. */
+  verified: boolean;
 };
 
 export type SiteConfigView = {
@@ -24,6 +29,10 @@ export type SiteConfigView = {
 
 export const DEFAULT_FOOTER_TAGLINE = "A growing creator economy together.";
 
+/**
+ * Template rows for admin restore only — never published without source/as-of (Dev §23.8).
+ * Placeholders stay disabled so 50K+/12K+ cannot appear as factual scale.
+ */
 export const DEFAULT_FOOTER_STATS: FooterStatView[] = [
   {
     key: "influencers",
@@ -32,7 +41,11 @@ export const DEFAULT_FOOTER_STATS: FooterStatView[] = [
     iconKey: "user",
     tone: "violet",
     sortOrder: 0,
-    enabled: true,
+    enabled: false,
+    source: "",
+    asOf: null,
+    maxAgeDays: 90,
+    verified: false,
   },
   {
     key: "categories",
@@ -41,7 +54,11 @@ export const DEFAULT_FOOTER_STATS: FooterStatView[] = [
     iconKey: "users",
     tone: "sky",
     sortOrder: 1,
-    enabled: true,
+    enabled: false,
+    source: "",
+    asOf: null,
+    maxAgeDays: 90,
+    verified: false,
   },
   {
     key: "collaborations",
@@ -50,7 +67,11 @@ export const DEFAULT_FOOTER_STATS: FooterStatView[] = [
     iconKey: "handshake",
     tone: "violet",
     sortOrder: 2,
-    enabled: true,
+    enabled: false,
+    source: "",
+    asOf: null,
+    maxAgeDays: 90,
+    verified: false,
   },
   {
     key: "matches",
@@ -59,7 +80,11 @@ export const DEFAULT_FOOTER_STATS: FooterStatView[] = [
     iconKey: "building",
     tone: "blue",
     sortOrder: 3,
-    enabled: true,
+    enabled: false,
+    source: "",
+    asOf: null,
+    maxAgeDays: 90,
+    verified: false,
   },
 ];
 
@@ -92,10 +117,75 @@ function asTone(value: string): FooterTone {
   return TONES.has(value as FooterTone) ? (value as FooterTone) : "violet";
 }
 
+/** Dev §23.8 — public strip only when enabled, sourced, dated, and not stale. */
+export function isVerifiedFooterStat(
+  input: {
+    enabled: boolean;
+    source: string;
+    asOf: Date | string | null | undefined;
+    maxAgeDays?: number;
+  },
+  now: Date = new Date(),
+): boolean {
+  if (!input.enabled) return false;
+  if (!String(input.source ?? "").trim()) return false;
+  if (!input.asOf) return false;
+  const asOf = input.asOf instanceof Date ? input.asOf : new Date(input.asOf);
+  if (Number.isNaN(asOf.getTime())) return false;
+  const maxAge = Number.isFinite(input.maxAgeDays) ? Math.max(1, Math.floor(input.maxAgeDays!)) : 90;
+  const ageMs = now.getTime() - asOf.getTime();
+  if (ageMs < 0) return true; // future as-of still counts as dated
+  return ageMs <= maxAge * 24 * 60 * 60 * 1000;
+}
+
+function toStatView(
+  stat: {
+    key: string;
+    value: string;
+    label: string;
+    iconKey: string;
+    tone: string;
+    sortOrder: number;
+    enabled: boolean;
+    source?: string | null;
+    asOf?: Date | string | null;
+    maxAgeDays?: number | null;
+  },
+  now = new Date(),
+): FooterStatView {
+  const source = String(stat.source ?? "").trim();
+  const asOf =
+    stat.asOf instanceof Date
+      ? stat.asOf.toISOString()
+      : typeof stat.asOf === "string" && stat.asOf
+        ? new Date(stat.asOf).toISOString()
+        : null;
+  const maxAgeDays =
+    Number.isFinite(stat.maxAgeDays) && stat.maxAgeDays != null ? Math.max(1, Math.floor(stat.maxAgeDays)) : 90;
+  const verified = isVerifiedFooterStat(
+    { enabled: stat.enabled, source, asOf, maxAgeDays },
+    now,
+  );
+  return {
+    key: stat.key,
+    value: stat.value,
+    label: stat.label,
+    iconKey: asIcon(stat.iconKey),
+    tone: asTone(stat.tone),
+    sortOrder: stat.sortOrder,
+    enabled: stat.enabled,
+    source,
+    asOf: asOf && !Number.isNaN(new Date(asOf).getTime()) ? asOf : null,
+    maxAgeDays,
+    verified,
+  };
+}
+
 function fallback(): SiteConfigView {
+  // Never publish placeholder 50K+/12K+ as factual when DB is unavailable.
   return {
     ...DEFAULT_SITE_CONFIG,
-    stats: DEFAULT_FOOTER_STATS.map((stat) => ({ ...stat })),
+    stats: [],
   };
 }
 
@@ -109,8 +199,20 @@ export async function getSiteConfig(): Promise<SiteConfigView> {
 
     let stats = rows;
     if (stats.length === 0) {
+      // Seed disabled templates only — public strip stays empty until verified.
       await prisma.footerStat.createMany({
-        data: DEFAULT_FOOTER_STATS.map((stat) => ({ ...stat })),
+        data: DEFAULT_FOOTER_STATS.map((stat) => ({
+          key: stat.key,
+          value: stat.value,
+          label: stat.label,
+          iconKey: stat.iconKey,
+          tone: stat.tone,
+          sortOrder: stat.sortOrder,
+          enabled: false,
+          source: "",
+          asOf: null,
+          maxAgeDays: 90,
+        })),
         skipDuplicates: true,
       });
       stats = await prisma.footerStat.findMany({ orderBy: [{ sortOrder: "asc" }, { key: "asc" }] });
@@ -122,20 +224,13 @@ export async function getSiteConfig(): Promise<SiteConfigView> {
         data: { id: "default", ...DEFAULT_SITE_CONFIG },
       }));
 
+    const now = new Date();
     const value: SiteConfigView = {
       footerTagline: row.footerTagline || DEFAULT_FOOTER_TAGLINE,
       consentVersion: row.consentVersion || CONSENT_VERSION,
       consentCopy: row.consentCopy || DEFAULT_SITE_CONFIG.consentCopy,
       passwordMinLength: clampPasswordMin(row.passwordMinLength),
-      stats: (stats.length ? stats : DEFAULT_FOOTER_STATS).map((stat) => ({
-        key: stat.key,
-        value: stat.value,
-        label: stat.label,
-        iconKey: asIcon(stat.iconKey),
-        tone: asTone(stat.tone),
-        sortOrder: stat.sortOrder,
-        enabled: stat.enabled,
-      })),
+      stats: stats.map((stat) => toStatView(stat, now)),
     };
     cache = { at: Date.now(), value };
     return value;
@@ -149,7 +244,7 @@ export async function getFooterStrip() {
   const config = await getSiteConfig();
   return {
     tagline: config.footerTagline,
-    stats: config.stats.filter((stat) => stat.enabled),
+    stats: config.stats.filter((stat) => stat.verified),
   };
 }
 
@@ -160,4 +255,19 @@ export function statKeyFromLabel(label: string) {
     .replace(/^-|-$/g, "")
     .slice(0, 40);
   return key || `stat-${Date.now()}`;
+}
+
+export function footerStatCreateData(stat: FooterStatView) {
+  return {
+    key: stat.key,
+    value: stat.value,
+    label: stat.label,
+    iconKey: stat.iconKey,
+    tone: stat.tone,
+    sortOrder: stat.sortOrder,
+    enabled: false,
+    source: "",
+    asOf: null as Date | null,
+    maxAgeDays: 90,
+  };
 }

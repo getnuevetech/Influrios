@@ -856,17 +856,22 @@ model PasswordReset {
   createdAt DateTime  @default(now())
 }
 
-/// Marketing counters on the public footer strip. Admins edit these; the page does not hardcode them.
+/// Marketing counters on the public footer strip. Public only when verified (source + as-of).
 model FooterStat {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  label     String
-  iconKey   String
-  tone      String
-  sortOrder Int      @default(0)
-  enabled   Boolean  @default(true)
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(cuid())
+  key        String    @unique
+  value      String
+  label      String
+  iconKey    String
+  tone       String
+  sortOrder  Int       @default(0)
+  enabled    Boolean   @default(false)
+  /// Dev Addendum §23.8 — required for public display.
+  source     String    @default("")
+  asOf       DateTime?
+  /// Days after asOf before the strip auto-hides (stale).
+  maxAgeDays Int       @default(90)
+  updatedAt  DateTime  @updatedAt
 }
 
 /// Consent text, password rule, and the footer tagline. One row, edited in admin.
