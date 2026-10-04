@@ -8,6 +8,7 @@ import {
 } from "@/lib/seed-data";
 import {
   cardChrome,
+  cardShellClasses,
   getEntitlements,
   isPlanCode,
   type EntitlementLimits,
@@ -43,9 +44,10 @@ export function InfluencerCardView({
     entitlementOverride ??
     getEntitlements(isPlanCode(creator.planTier) ? creator.planTier : "STARTER");
   const chrome = cardChrome(entitlements);
+  const shell = cardShellClasses(chrome);
   const specialties = creator.specialties.slice(0, entitlements.specialtiesMax);
   const socials = creator.socials.slice(0, entitlements.socialLinksMax);
-  const premium = chrome.premium;
+  const elevated = chrome.elevated;
   const canQr = chrome.showQr;
   const largeQr = qrDisplay === "large";
   // Popup QR: 160px = 200px − 20%
@@ -58,26 +60,18 @@ export function InfluencerCardView({
       : `influrios.com/c/${creator.slug}`);
 
   return (
-    <div
-      className={`mx-auto w-full max-w-sm overflow-hidden rounded-[1.75rem] shadow-2xl ${
-        premium ? "bg-pro text-white ring-1 ring-gold/40" : "bg-white text-indigo"
-      }`}
-    >
+    <div className={`mx-auto w-full max-w-sm overflow-hidden rounded-[1.75rem] shadow-2xl ${shell.root}`}>
       <div className={`relative ${compact ? "h-40" : "h-48"}`}>
         <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="400px" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         {!hideCta ? (
-          <span
-            className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${
-              premium ? "bg-gold/20 text-[#F6E7B0]" : "bg-white/95 text-violet"
-            }`}
-          >
+          <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${shell.badge}`}>
             {planBadge(creator.planTier)}
           </span>
         ) : null}
       </div>
       <div
-        className={`-mt-6 rounded-t-[1.5rem] ${premium ? "bg-pro" : "bg-white"} ${
+        className={`-mt-6 rounded-t-[1.5rem] ${shell.panel} ${
           compact ? "space-y-2.5 px-4 pb-4 pt-6" : "space-y-3.5 px-5 pb-5 pt-7"
         }`}
       >
@@ -90,19 +84,14 @@ export function InfluencerCardView({
             {creator.displayName}
             <IconVerified size={compact ? 18 : 20} />
           </h1>
-          <p className={`mt-0.5 text-sm ${premium ? "text-white/70" : "text-muted"}`}>{creator.title}</p>
-          <p className={`text-sm ${premium ? "text-white/70" : "text-muted"}`}>
+          <p className={`mt-0.5 text-sm ${shell.muted}`}>{creator.title}</p>
+          <p className={`text-sm ${shell.muted}`}>
             {creator.locationCity}, {creator.locationCountry}
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-1.5">
           {specialties.map((s) => (
-            <span
-              key={s}
-              className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                premium ? "bg-white/10 text-lavender" : "chip"
-              }`}
-            >
+            <span key={s} className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${shell.chip}`}>
               {specialtyLabel(s)}
             </span>
           ))}
@@ -112,12 +101,12 @@ export function InfluencerCardView({
           <div
             className={`flex flex-col items-center rounded-2xl ${
               compact ? "gap-2 px-3 py-3" : "gap-2.5 px-3 py-4"
-            } ${premium ? "bg-white/5" : "bg-[#EEF4FF]"}`}
+            } ${shell.panelSoft}`}
           >
             <div
               className={`relative overflow-hidden bg-white shadow-sm ${
                 compact ? "rounded-xl p-2" : "rounded-2xl p-2.5"
-              } ${premium ? "ring-1 ring-gold/50" : "ring-1 ring-border"}`}
+              } ${shell.qrRing}`}
               style={{ width: qrPx + (compact ? 16 : 20), height: qrPx + (compact ? 16 : 20) }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -130,28 +119,20 @@ export function InfluencerCardView({
               />
             </div>
             <div className="min-w-0 text-center">
-              <div className={`text-[11px] font-semibold ${premium ? "text-white/50" : "text-muted"}`}>
-                Scan to view my full card
+              <div className={`text-[11px] font-semibold ${shell.mutedSoft}`}>Scan to view my full card</div>
+              <div className="truncate text-sm font-semibold text-blue">
+                {elevated ? <span className="text-[#B8D4FF]">{cardUrl}</span> : cardUrl}
               </div>
-              <div className="truncate text-sm font-semibold text-blue">{cardUrl}</div>
             </div>
           </div>
         ) : (
-          <div
-            className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm ${
-              premium ? "bg-white/5" : "bg-[#EEF4FF]"
-            }`}
-          >
+          <div className={`flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm ${shell.panelSoft}`}>
             <div className="min-w-0">
-              <div className="truncate font-semibold text-blue">{cardUrl}</div>
-              <div className={`text-xs ${premium ? "text-white/50" : "text-muted"}`}>Share my profile</div>
+              <div className={`truncate font-semibold ${elevated ? "text-[#B8D4FF]" : "text-blue"}`}>{cardUrl}</div>
+              <div className={`text-xs ${shell.mutedSoft}`}>Share my profile</div>
             </div>
             {canQr ? (
-              <div
-                className={`relative h-[22px] w-[22px] shrink-0 overflow-hidden rounded-sm ${
-                  premium ? "ring-1 ring-gold" : "border border-border"
-                }`}
-              >
+              <div className={`relative h-[22px] w-[22px] shrink-0 overflow-hidden rounded-sm ${shell.qrMini}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={`/api/qr/${creator.slug}?size=64&logo=0`}
@@ -162,20 +143,14 @@ export function InfluencerCardView({
                 />
               </div>
             ) : (
-              <div className="text-xs text-muted">QR not included</div>
+              <div className={`text-xs ${shell.mutedSoft}`}>QR not included</div>
             )}
           </div>
         )}
 
-        <div
-          className={`rounded-2xl ${compact ? "p-2" : "p-3"} ${
-            premium ? "bg-white/5" : "border border-border bg-starter-bg"
-          }`}
-        >
+        <div className={`rounded-2xl ${compact ? "p-2" : "p-3"} ${shell.panelBordered}`}>
           <p
-            className={`mb-2 text-center text-[10px] font-bold uppercase tracking-wide ${
-              premium ? "text-white/50" : "text-muted"
-            }`}
+            className={`mb-2 text-center text-[10px] font-bold uppercase tracking-wide ${shell.mutedSoft}`}
           >
             Connect with me
           </p>
@@ -190,7 +165,7 @@ export function InfluencerCardView({
               >
                 <SocialIcon platform={s.platform} size={compact ? 18 : 20} />
                 {!hideCta ? (
-                  <span className={`text-xs font-bold ${premium ? "text-white" : "text-indigo"}`}>
+                  <span className={`text-xs font-bold ${elevated ? "text-white" : "text-indigo"}`}>
                     {formatFollowers(s.followers)}
                   </span>
                 ) : null}
@@ -205,14 +180,12 @@ export function InfluencerCardView({
               <input type="hidden" name="slug" value={creator.slug} />
               <button
                 type="submit"
-                className={`btn-primary w-full ${compact ? "!py-2.5 text-sm" : ""} ${
-                  premium ? "ring-1 ring-gold/50" : ""
-                }`}
+                className={`btn-primary w-full ${compact ? "!py-2.5 text-sm" : ""} ${shell.ctaRing}`}
               >
                 {chrome.ctaLabel}
               </button>
             </form>
-            <p className={`text-center text-xs ${premium ? "text-white/40" : "text-muted"}`}>Influrios</p>
+            <p className={`text-center text-xs ${shell.mutedFaint}`}>Influrios</p>
           </>
         ) : null}
       </div>
