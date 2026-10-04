@@ -84,7 +84,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 |---|---|---|---|
 | Influence Discovery | **PARTIAL → largely DONE** | Directory, taxonomy, filters, guest gates, claim wedge | SEO synonyms depth (W1); no Meilisearch |
 | Influencer Collaboration Network | **PARTIAL** | Matching, propose, hubs, contract wizard, marketplace objects, ledger core | Finance domains P4, payouts P5, commercial depth W3, mentorship P7 |
-| Influencer Card + INFLR.me | **PARTIAL** | Tier-aware card, shortlinks, opaque QR, admin short-links | Pro self-serve dynamic destination, full INFLR.me DoD, Phase 4 campaign/NFC |
+| Influencer Card + INFLR.me | **PARTIAL** | Tier-aware card, shortlinks, opaque QR, admin short-links, Pro self-serve dynamic destination + history/rollback | Full INFLR.me DoD, Phase 4 campaign/NFC, advanced analytics |
 | Business Matching + Managed Promotion | **PARTIAL** | Briefs, shortlists, admin matching, business hub | R073 UX clarity; managed fee paths end-to-end; verified commercial reporting |
 
 ---
@@ -283,7 +283,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | INFLR.me short link | No (default) | Yes | Yes | PARTIAL (entitlement-driven) |
 | Custom slug | No | Yes | Yes | PARTIAL |
 | Standard QR (opaque token) | No | Yes | Yes | PARTIAL / largely DONE |
-| Dynamic destination without QR regen | No | No | Yes | PARTIAL (admin `setShortLinkDestination`; not full Pro self-serve UX) |
+| Dynamic destination without QR regen | No | No | Yes | DONE (Pro self-serve + history/rollback; admin path retained) |
 | Analytics depth | Basic profile | Standard | Advanced | PARTIAL |
 
 #### INFLR.me residuals
@@ -291,7 +291,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Exists | Missing | Exit |
 |---|---|---|
 | `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records | Phase 1–2 DoD fully evidenced (domain verification admin UX, alias policy, branded failure pages) | Spec §20 criteria 11–24 |
-| Pro `dynamic` flag + destination setter | Pro **self-serve** dynamic destination + destination history + rollback | Spec §9 + Phase 3 |
+| Pro `dynamic` flag + destination setter | Pro **self-serve** dynamic destination + destination history + rollback | Spec §9 + Phase 3 — DONE (Phase 4 campaign/NFC still later) |
 | Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics | Spec §10 |
 | — | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Explicitly later; do not block P4 finance |
 | Card design system | Align remaining chrome to Platform Spec §39 assets; live data not raster | Card matches approved vertical standard |
@@ -540,7 +540,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Valid slug resolves | PARTIAL / largely DONE |
 | Alias after slug change | PARTIAL |
 | Permanent QR survives slug change | PARTIAL / largely DONE |
-| Pro dynamic destination without QR regen | PARTIAL (admin path; self-serve UX open) |
+| Pro dynamic destination without QR regen | DONE (Pro self-serve + history/rollback) |
 | Suspended link blocked | PARTIAL |
 | Entitlement-driven behavior | PARTIAL |
 | Admin reserve/suspend/audit | PARTIAL |

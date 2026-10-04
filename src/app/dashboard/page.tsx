@@ -6,12 +6,12 @@ import {
   actionUpdateProfileMedia,
 } from "@/app/claim/actions";
 import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
-import { actionChangeShortSlug } from "@/app/dashboard/short-actions";
+import { actionChangeShortSlug, actionRollbackDynamicDestination, actionSetDynamicDestination } from "@/app/dashboard/short-actions";
 import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
 import { classifyProfileTopics } from "@/lib/ai-runtime";
 import { isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { ensureCreatorShortLink, primaryShortHost } from "@/lib/short-link";
+import { ensureCreatorShortLink, listShortLinkDestinationHistory, primaryShortHost } from "@/lib/short-link";
 import {
   completenessFor,
   getCreatorSessionDraft,
@@ -60,6 +60,10 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
   const linkLimits = await entitlementsForPlan(planCode).catch(() => null);
   const shortLink = draft.stage === "published" ? await ensureCreatorShortLink(draft.slug).catch(() => null) : null;
   const shortHost = await primaryShortHost().catch(() => "inflr.me");
+  const destinationHistory =
+    shortLink && linkLimits?.dynamicQr
+      ? await listShortLinkDestinationHistory(shortLink.id, 5).catch(() => [])
+      : [];
   const topics = await classifyProfileTopics(`${draft.title}\n${draft.bio}`).catch(() => ({
     suggestions: [],
     source: "fallback" as const,
@@ -113,6 +117,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       {params.saved === "1" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Profile saved.
+        </div>
+      ) : null}
+      {params.saved === "destination" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Short-link destination updated. The printed QR is unchanged.
         </div>
       ) : null}
       {params.error ? (
@@ -454,6 +463,49 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
             ) : (
               <p className="text-xs text-muted">A custom short name follows the plan entitlement.</p>
             )}
+            {linkLimits?.dynamicQr && shortLink.dynamic ? (
+              <div className="space-y-3 border-t border-border pt-3">
+                <div>
+                  <p className="font-semibold text-indigo">Dynamic destination</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Pro can change where the short link and QR resolve without reprinting the QR. Paths stay on
+                    Influrios; https hosts must be allow-listed by admin.
+                  </p>
+                </div>
+                <p className="text-xs text-muted">
+                  Current: <span className="font-semibold text-indigo">{shortLink.destination}</span>
+                </p>
+                <form action={actionSetDynamicDestination} className="space-y-2">
+                  <input
+                    name="destination"
+                    defaultValue={shortLink.destination}
+                    placeholder={`/c/${draft.slug} or https://influrios.com/...`}
+                    className="w-full max-w-md rounded-xl border border-border px-3 py-2"
+                  />
+                  <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                    Update destination
+                  </button>
+                </form>
+                {destinationHistory.length ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-indigo">Recent changes</p>
+                    <ul className="space-y-1 text-xs text-muted">
+                      {destinationHistory.map((row) => (
+                        <li key={row.id}>
+                          {row.createdAt.toISOString().slice(0, 16).replace("T", " ")} · {row.reason} ·{" "}
+                          {row.previousDestination} → {row.destination}
+                        </li>
+                      ))}
+                    </ul>
+                    <form action={actionRollbackDynamicDestination}>
+                      <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                        Roll back to prior destination
+                      </button>
+                    </form>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : (
           <p className="mt-2 text-sm text-muted">

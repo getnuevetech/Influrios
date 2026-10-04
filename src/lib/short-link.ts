@@ -488,18 +488,156 @@ export async function changeCreatorSlug(creatorSlug: string, nextSlug: string) {
   return { ok: true as const, slug };
 }
 
-export async function setShortLinkDestination(shortLinkId: string, destination: string, dynamic: boolean) {
-  if (!dynamic) return { ok: false as const, error: "Only a dynamic short link can change destination." };
+export type DestinationActorType = "creator" | "admin" | "system";
+
+export type DestinationChangeActor = {
+  type: DestinationActorType;
+  id?: string | null;
+};
+
+/** Gate for Pro dynamic destination changes (INFLR.me Spec §9). */
+export function canChangeDynamicDestination(input: {
+  dynamic: boolean;
+  status: string;
+  requireEntitlement?: boolean;
+  entitlementsDynamicQr?: boolean;
+}): { ok: true } | { ok: false; error: string } {
+  if (!input.dynamic) return { ok: false, error: "Only a dynamic short link can change destination." };
+  if (input.status !== "active") {
+    return { ok: false, error: "Suspended short links cannot change destination." };
+  }
+  if (input.requireEntitlement && !input.entitlementsDynamicQr) {
+    return { ok: false, error: "Dynamic destinations are included on the Pro plan." };
+  }
+  return { ok: true };
+}
+
+export function storeDestinationValue(destination: string, resolvedHttps: string): string {
+  const trimmed = destination.trim();
+  return trimmed.startsWith("/") ? trimmed : resolvedHttps;
+}
+
+export function destinationKindFor(stored: string): "path" | "https" {
+  return stored.startsWith("/") ? "path" : "https";
+}
+
+/** Most recent history row is the prior safe destination for immediate rollback. */
+export function priorDestinationFromHistory(
+  entries: Array<{ previousDestination: string; previousKind: string }>,
+): { destination: string; destinationKind: string } | null {
+  const latest = entries[0];
+  if (!latest?.previousDestination) return null;
+  return { destination: latest.previousDestination, destinationKind: latest.previousKind };
+}
+
+export async function setShortLinkDestination(
+  shortLinkId: string,
+  destination: string,
+  dynamic: boolean,
+  actor: DestinationChangeActor = { type: "system" },
+  reason: "update" | "rollback" = "update",
+) {
+  const link = await prisma.shortLink.findUnique({ where: { id: shortLinkId } });
+  if (!link) return { ok: false as const, error: "Missing short link." };
+  const gate = canChangeDynamicDestination({
+    dynamic: dynamic && link.dynamic,
+    status: link.status,
+  });
+  if (!gate.ok) return gate;
+
   const settings = await getShortLinkSettings();
   const location = safeRedirectTarget(destination, hostsFrom(settings), settings.canonicalOrigin);
-  if (!location) return { ok: false as const, error: "Destination must be an Influrios path or an allow-listed https host." };
-  const stored = destination.trim().startsWith("/") ? destination.trim() : location;
-  await prisma.shortLink.update({
-    where: { id: shortLinkId },
-    data: { destination: stored, destinationKind: stored.startsWith("/") ? "path" : "https" },
+  if (!location) {
+    return { ok: false as const, error: "Destination must be an Influrios path or an allow-listed https host." };
+  }
+  const stored = storeDestinationValue(destination, location);
+  const kind = destinationKindFor(stored);
+  if (stored === link.destination) return { ok: true as const, destination: stored, unchanged: true as const };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.shortLinkDestinationHistory.create({
+      data: {
+        shortLinkId,
+        previousDestination: link.destination,
+        previousKind: link.destinationKind,
+        destination: stored,
+        destinationKind: kind,
+        actorType: actor.type,
+        actorId: actor.id ?? null,
+        reason,
+      },
+    });
+    await tx.shortLink.update({
+      where: { id: shortLinkId },
+      data: { destination: stored, destinationKind: kind },
+    });
   });
-  void recordEvent(shortLinkId, "destination_change", { destination: stored });
-  return { ok: true as const };
+  // Opaque QR identities are untouched — Pro destination changes must not require QR regeneration.
+  void recordEvent(shortLinkId, "destination_change", {
+    destination: stored,
+    reason,
+    actorType: actor.type,
+  });
+  return { ok: true as const, destination: stored, unchanged: false as const };
+}
+
+export async function listShortLinkDestinationHistory(shortLinkId: string, limit = 20) {
+  return prisma.shortLinkDestinationHistory.findMany({
+    where: { shortLinkId },
+    orderBy: { createdAt: "desc" },
+    take: Math.min(Math.max(limit, 1), 50),
+  });
+}
+
+export async function rollbackShortLinkDestination(
+  shortLinkId: string,
+  actor: DestinationChangeActor = { type: "system" },
+) {
+  const history = await listShortLinkDestinationHistory(shortLinkId, 1);
+  const prior = priorDestinationFromHistory(history);
+  if (!prior) return { ok: false as const, error: "No prior destination to restore." };
+  return setShortLinkDestination(shortLinkId, prior.destination, true, actor, "rollback");
+}
+
+/** Pro self-serve destination update — ownership + dynamicQr entitlement gated. */
+export async function setCreatorDynamicDestination(creatorSlug: string, destination: string) {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  if (!creator) return { ok: false as const, error: "Publish your card before changing the destination." };
+  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const entitlements = await entitlementsForPlan(plan);
+  const link = creator.shortLinks[0];
+  if (!link) return { ok: false as const, error: "This plan does not include a short link." };
+  const gate = canChangeDynamicDestination({
+    dynamic: link.dynamic,
+    status: link.status,
+    requireEntitlement: true,
+    entitlementsDynamicQr: entitlements.dynamicQr,
+  });
+  if (!gate.ok) return gate;
+  return setShortLinkDestination(link.id, destination, true, { type: "creator", id: creator.id }, "update");
+}
+
+export async function rollbackCreatorDynamicDestination(creatorSlug: string) {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  if (!creator) return { ok: false as const, error: "Publish your card before changing the destination." };
+  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const entitlements = await entitlementsForPlan(plan);
+  const link = creator.shortLinks[0];
+  if (!link) return { ok: false as const, error: "This plan does not include a short link." };
+  const gate = canChangeDynamicDestination({
+    dynamic: link.dynamic,
+    status: link.status,
+    requireEntitlement: true,
+    entitlementsDynamicQr: entitlements.dynamicQr,
+  });
+  if (!gate.ok) return gate;
+  return rollbackShortLinkDestination(link.id, { type: "creator", id: creator.id });
 }
 
 export function brandedFallbackHtml(title: string, message: string) {
