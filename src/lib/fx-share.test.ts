@@ -90,6 +90,7 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "GB rate missing",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(notReady.ok, false);
@@ -122,6 +123,7 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "GB rate missing",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(inactive.ok, false);
@@ -154,6 +156,7 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "GB launch",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(created.ok, true);
@@ -200,6 +203,7 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "GB quote failed",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(failed.ok, false);
@@ -342,6 +346,7 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "Harbor while off",
         grossCents: 5_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(refused.ok, false);

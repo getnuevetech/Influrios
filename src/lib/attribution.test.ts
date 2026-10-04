@@ -212,6 +212,7 @@ describe("repeat prefund attribution", () => {
         creatorSlug: "sofia-martinez",
         title: "Repeat while provider is off",
         grossCents: 20_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
         repeatOfId: prior.id,
       });
@@ -264,6 +265,7 @@ describe("repeat prefund attribution", () => {
         creatorSlug: "sofia-martinez",
         title: "Spring repeat",
         grossCents: 25_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
         repeatOfId: prior.id,
       });
@@ -300,6 +302,7 @@ describe("repeat prefund attribution", () => {
         creatorSlug: "sofia-martinez",
         title: "Too late to repeat",
         grossCents: 25_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
         repeatOfId: prior.id,
       });

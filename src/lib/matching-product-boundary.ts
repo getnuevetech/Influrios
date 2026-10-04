@@ -4,7 +4,7 @@
  * collaboration with a fundable service level (typically contracted / managed_campaign).
  */
 
-import { asServiceLevel } from "@/lib/collaboration-fees";
+import { SERVICE_LEVELS, asServiceLevel, type ServiceLevel } from "@/lib/collaboration-fees";
 
 export const MATCHING_PRODUCT_BOUNDARY = {
   introLabel: "Managed introduction",
@@ -25,9 +25,43 @@ export const FUNDABLE_SERVICE_LEVELS = [
   "managed_intro",
 ] as const;
 
+export type FundableServiceLevel = (typeof FUNDABLE_SERVICE_LEVELS)[number];
+
 export function isFundableServiceLevel(level: string): boolean {
   const normalized = asServiceLevel(level);
   return (FUNDABLE_SERVICE_LEVELS as readonly string[]).includes(normalized);
+}
+
+/**
+ * W3.2 — refuse silent `"contracted"` defaults on protected-payment entry points.
+ * Empty / unknown / discovery-only values must fail closed instead of inventing a level.
+ */
+export function requireFundableServiceLevel(
+  value: string | null | undefined,
+): { ok: true; serviceLevel: FundableServiceLevel } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw) {
+    return { ok: false, error: "Choose a service level for this protected payment." };
+  }
+  const alias = raw === "discovery_only" ? "discovery" : raw;
+  if (!(SERVICE_LEVELS as readonly string[]).includes(alias)) {
+    return { ok: false, error: "That service level is not recognized." };
+  }
+  if (!(FUNDABLE_SERVICE_LEVELS as readonly string[]).includes(alias)) {
+    return {
+      ok: false,
+      error:
+        "Discovery and platform-match introductions are not fundable. Use a contracted or managed service level for protected payments.",
+    };
+  }
+  return { ok: true, serviceLevel: alias as FundableServiceLevel };
+}
+
+/** Payments console / prefund UI — only fundable levels the jurisdiction currently offers. */
+export function fundableServiceLevelsForUi(allowed: readonly string[]): ServiceLevel[] {
+  return allowed.filter((level): level is FundableServiceLevel =>
+    (FUNDABLE_SERVICE_LEVELS as readonly string[]).includes(level),
+  ) as ServiceLevel[];
 }
 
 /**

@@ -8,7 +8,7 @@ import {
   serializeApprovedProviderIds,
   parseApprovedProviderIds,
 } from "@/lib/jurisdiction-capabilities";
-import { isFundableServiceLevel } from "@/lib/matching-product-boundary";
+import { requireFundableServiceLevel } from "@/lib/matching-product-boundary";
 import { resolveFundingMode, stagedPhaseCanStart } from "@/lib/funding-modes";
 import { rightsAfterAcceptance, rightsAfterPaymentRelease } from "@/lib/content-rights";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
@@ -510,7 +510,8 @@ export async function requestPrefund(input: {
   creatorSlug: string;
   title: string;
   grossCents: number;
-  serviceLevel?: string;
+  /** Required — never silently default to contracted (W3.2). */
+  serviceLevel: string;
   sourceId?: string | null;
   repeatOfId?: string | null;
   scheduleKind?: string;
@@ -568,7 +569,9 @@ export async function requestPrefund(input: {
   });
   if (!risk.ok) return risk;
   const caps = jurisdiction ? capabilitiesFromJurisdictionRow(jurisdiction) : null;
-  const serviceLevel = (input.serviceLevel || "contracted").slice(0, 40);
+  const serviceLevelGate = requireFundableServiceLevel(input.serviceLevel);
+  if (!serviceLevelGate.ok) return serviceLevelGate;
+  const serviceLevel = serviceLevelGate.serviceLevel.slice(0, 40);
   const scheduleKind = (input.scheduleKind ?? "once").slice(0, 40);
   const capabilityGate = evaluatePrefundCapabilities({
     caps,
@@ -588,13 +591,6 @@ export async function requestPrefund(input: {
       });
     });
     return capabilityGate;
-  }
-  if (!isFundableServiceLevel(serviceLevel)) {
-    return {
-      ok: false as const,
-      error:
-        "Discovery and platform-match introductions are not fundable. Use a contracted or managed service level for protected payments.",
-    };
   }
   const gate = canRequestPrefund({
     jurisdictionEnabled: Boolean(jurisdiction?.protectedPaymentsEnabled),

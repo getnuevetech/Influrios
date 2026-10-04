@@ -191,11 +191,11 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Priority/specificity + §22.1 overlap test | — | Test asserts documented winner |
 | Fee methods percent/fixed/combo | TIERED/WAIVED/CUSTOM_ENTERPRISE | Deferred |
 
-#### W3.2 Service levels — PARTIAL → wizard UX shipped
+#### W3.2 Service levels — DONE
 | Exists | Missing | Exit |
 |---|---|---|
-| `serviceLevel` on rules + funding; **wizard select** + admin selects | Jurisdiction availability gate for managed modes | Every contracted deal can record Product §3 enum |
-| Hard-coded `"contracted"` removed from wizard/actions | payments console still defaults unless form sends level | No silent managed default when disabled (W3.3) |
+| `serviceLevel` on rules + funding; **wizard select** + admin selects; payments console select uses jurisdiction-allowed **fundable** levels only | — | Every contracted deal can record Product §3 enum |
+| Hard-coded `"contracted"` removed from wizard/actions **and** payments/`requestPrefund` (require explicit fundable level via `requireFundableServiceLevel`) | — | No silent contracted / managed default when form omits level (W3.3 gates still refuse disabled managed modes) |
 
 #### W3.3 Jurisdiction / terminology gates — DONE
 | Exists | Missing | Exit |
