@@ -917,8 +917,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Chargebacks &amp; held cancellations</h2>
         <p className="mt-1 text-xs text-muted">
-          Chargebacks move a held prefund into payment-risk with no automatic refund. Other cancel reasons queue a
-          provider refund/cancel intent via the adapter; ledger balances still change only on signed{" "}
+          Chargebacks move a held prefund into payment-risk with no automatic refund. Other cancel reasons and
+          dispute refund decisions queue a durable provider instruction (
+          <code className="text-[11px]">mkt_refund_*</code> / <code className="text-[11px]">mkt_cancel_*</code>
+          ); ledger balances still change only on signed{" "}
           <code className="text-[11px]">payout.refunded</code>. Releases stay blocked while status is payment-risk.
         </p>
         {paymentRisk.length > 0 ? (

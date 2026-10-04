@@ -217,7 +217,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 #### W3.6 Disputes / cancellations / refunds / chargebacks — PARTIAL (kill-fee + §13 + chargeback ops shipped)
 | Exists | Missing | Exit |
 |---|---|---|
-| Dispute + partial refund + change-order; `calculateCancellation` kill-fee matrix + admin kill-fee settings; `funding.chargeback` → `payment_risk`; held cancel queues provider refund/cancel intent; admin chargeback/cancel ops UI; Dev §13 reason catalog + resolution outcomes | Live provider rails beyond marketplace adapter stubs; deeper chargeback evidence pack | Product Addendum §11–12 acceptance (core ops path DONE) |
+| Dispute + partial refund + change-order; `calculateCancellation` kill-fee matrix + admin kill-fee settings; `funding.chargeback` → `payment_risk`; held cancel + dispute refund queue adapter `provider_instruction` jobs (`mkt_refund_*` / `mkt_cancel_*`); admin chargeback/cancel ops UI; Dev §13 reason catalog + resolution outcomes | Live provider rails beyond marketplace instruction queue; deeper chargeback evidence pack | Product Addendum §11–12 acceptance (core ops path DONE) |
 | Milestone-specific disputes with reason codes + evidence + outcomes (release/refund/split/settle/escalate) | — | §22.7–8 reason/outcome depth DONE; provider live rails still open |
 
 #### W3.7 Attribution / repeat deals — DONE
