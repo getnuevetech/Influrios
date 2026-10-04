@@ -114,7 +114,7 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 ### P2b — Business Collaboration Hub ✅
 
 - Route: `/collaboration/business` (signed-in accounts without a creator draft are redirected from `/collaboration`).
-- Status cards, Campaign Intent → suggestions form, Post Request, applicants/inquiries, shortlist, pipeline, spend summary (funded/held/released/refunded/fee) from ledger.
+- Status cards, Campaign Intent → suggestions form (**upsert + Refresh suggestions**), Post Request, applicants/inquiries, shortlist, pipeline, spend summary (funded/held/released/refunded/fee) from ledger.
 - Legacy `/business/workspace` redirects to the hub.
 
 **Exit:** business session lands on business hub, not creator chrome.

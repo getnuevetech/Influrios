@@ -158,10 +158,10 @@ Comparing thin plan v1 to every attached product/design document found these **m
 |---|---|---|
 | Status cards, matches, pipeline, payout panel with Global Payout Ready; Messages dead nav removed; honest empty earnings copy | — | Zero 404 / misleading nav; empty/not-ready copy only |
 
-#### W2.3 Business hub residuals — DONE (intent refresh Deferred-external)
+#### W2.3 Business hub residuals — DONE (multi-creator team proposals Deferred-external)
 | Exists | Missing | Exit |
 |---|---|---|
-| Requests, suggestions, spend summary, contract link; applicant reply/decline/shortlist in hub UI | Intent refresh / multi-creator team proposals (Collab OS §3.3) | Reply/decline/shortlist without admin workarounds — **DONE**; intent refresh **Deferred-external** |
+| Requests, suggestions, spend summary, contract link; applicant reply/decline/shortlist in hub UI; **Campaign Intent upsert** (`updateBrief` + hidden `briefId`) + **Refresh suggestions** CTA (re-rank without new brief) | Multi-creator team proposals (Collab OS §3.3) | Reply/decline/shortlist without admin workarounds — **DONE**; intent save/refresh — **DONE**; multi-creator team proposals **Deferred-external** |
 | Pipeline chrome mapped to funding/milestone states via `derivePipelineStage` + funding badges | — | No cosmetic-only steps — **DONE** |
 
 #### W2.4 Mentorship stub — DONE (full module = P7 core shipped)
@@ -582,8 +582,8 @@ DEFERRED-EXTERNAL (ops / product / later phase)
  ├─ W5 Phase 4 campaign/NFC/scheduled destinations
  ├─ P7 paid mentorship commercial pack
  ├─ P8 SKU/cookie rename soak
- ├─ W2.3 intent refresh / multi-creator team proposals
- └─ (W2.5 unified admin txn view — DONE)
+ ├─ W2.3 multi-creator team proposals
+ └─ (W2.5 unified admin txn view — DONE; W2.3 intent refresh — DONE)
 
 NON-GOALS until product asks:
   Meilisearch · Stripe Connect hard-enable · Collab Messages inbox product

@@ -22,6 +22,7 @@ import {
   actionAddShortlist,
   actionDeclineInquiry,
   actionPostBusinessRequest,
+  actionRefreshCampaignSuggestions,
   actionRemoveShortlist,
   actionReplyInquiry,
   actionSaveCampaignIntent,
@@ -38,6 +39,8 @@ type Props = {
     error?: string;
     intent?: string;
     suggestions?: string;
+    refreshed?: string;
+    mode?: string;
     posted?: string;
     added?: string;
     inquiry?: string;
@@ -174,9 +177,15 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
           {params.error ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</p>
           ) : null}
-          {params.suggestions ? (
+          {params.refreshed ? (
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-              Campaign intent saved. Suggestions refreshed below.
+              Suggestions refreshed for your saved Campaign Intent.
+            </p>
+          ) : null}
+          {params.suggestions && !params.refreshed ? (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              Campaign intent {params.mode === "update" ? "updated" : "saved"}. Suggestions refreshed
+              below.
             </p>
           ) : null}
           {params.posted ? (
@@ -244,14 +253,34 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               <div>
                 <h2 className="font-display text-xl font-bold text-indigo">Get Collaboration Suggestions</h2>
                 <p className="text-sm text-muted">
-                  Save a Campaign Intent, then refresh influencer matches for your brief.
+                  {hub.intentBrief
+                    ? "Update your Campaign Intent or refresh matches as new influencers become available."
+                    : "Save a Campaign Intent, then refresh influencer matches for your brief."}
                 </p>
+                {hub.intentBrief ? (
+                  <p className="mt-1 text-[11px] font-semibold text-violet">
+                    Editing · {hub.intentBrief.title}
+                  </p>
+                ) : null}
               </div>
+              {hub.intentBrief ? (
+                <form action={actionRefreshCampaignSuggestions}>
+                  <input type="hidden" name="briefId" value={hub.intentBrief.id} />
+                  <button type="submit" className="btn-secondary !py-2 text-sm">
+                    Refresh suggestions
+                  </button>
+                </form>
+              ) : null}
             </div>
             <form action={actionSaveCampaignIntent} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {hub.intentBrief ? <input type="hidden" name="briefId" value={hub.intentBrief.id} /> : null}
               <label className="block text-xs font-bold text-indigo">
                 Campaign objective
-                <select name="goal" className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium">
+                <select
+                  name="goal"
+                  defaultValue={hub.intentBrief?.goal ?? "Brand Awareness"}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium"
+                >
                   <option>Brand Awareness</option>
                   <option>Product Launch</option>
                   <option>Content Series</option>
@@ -292,7 +321,12 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               </label>
               <label className="block text-xs font-bold text-indigo sm:col-span-2 lg:col-span-3">
                 Audience / notes
-                <input name="audience" placeholder="Who should this reach?" className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
+                <input
+                  name="audience"
+                  placeholder="Who should this reach?"
+                  defaultValue={hub.intentBrief?.summary ?? ""}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
+                />
               </label>
               <label className="block text-xs font-bold text-indigo sm:col-span-2 lg:col-span-2">
                 Timeframe
@@ -300,7 +334,8 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               </label>
               <div className="flex items-end">
                 <button type="submit" className="btn-primary w-full !py-2.5 text-sm">
-                  Save intent & suggest <IconArrowRight size={14} />
+                  {hub.intentBrief ? "Update intent & suggest" : "Save intent & suggest"}{" "}
+                  <IconArrowRight size={14} />
                 </button>
               </div>
             </form>

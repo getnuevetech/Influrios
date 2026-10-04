@@ -7,12 +7,15 @@ import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import {
   addToShortlist,
+  buildCampaignIntentFields,
   createBrief,
   getWorkspace,
   removeFromShortlist,
   requestManagedMatch,
+  resolveCampaignIntentSaveMode,
   sendInquiry,
   setBusinessPlan,
+  updateBrief,
   updateInquiryStatus,
 } from "@/lib/business";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
@@ -61,30 +64,45 @@ export async function actionAcceptBusinessTerms(formData: FormData) {
 
 export async function actionSaveCampaignIntent(formData: FormData) {
   await requireBusinessTerms();
-  const goal = String(formData.get("goal") ?? "Brand Awareness").trim() || "Brand Awareness";
-  const specialty = String(formData.get("specialty") ?? "beauty").trim() || "beauty";
-  const title =
-    String(formData.get("title") ?? "").trim() ||
-    `Campaign intent · ${goal} · ${specialty}`;
-  const brief = await createBrief({
-    title,
-    goal,
-    specialty,
-    budget: String(formData.get("budget") ?? "$1K – $5K").trim() || "$1K – $5K",
-    location: String(formData.get("location") ?? "Global").trim() || "Global",
-    platform: String(formData.get("platform") ?? "INSTAGRAM").trim() || "INSTAGRAM",
-    summary: [
-      String(formData.get("audience") ?? "").trim(),
-      String(formData.get("collabType") ?? "").trim(),
-      String(formData.get("timeframe") ?? "").trim(),
-      String(formData.get("summary") ?? "").trim(),
-    ]
-      .filter(Boolean)
-      .join(" · "),
-    status: "draft",
+  const ws = await getWorkspace();
+  const fields = buildCampaignIntentFields({
+    title: String(formData.get("title") ?? ""),
+    goal: String(formData.get("goal") ?? ""),
+    specialty: String(formData.get("specialty") ?? ""),
+    budget: String(formData.get("budget") ?? ""),
+    location: String(formData.get("location") ?? ""),
+    platform: String(formData.get("platform") ?? ""),
+    audience: String(formData.get("audience") ?? ""),
+    collabType: String(formData.get("collabType") ?? ""),
+    timeframe: String(formData.get("timeframe") ?? ""),
+    summary: String(formData.get("summary") ?? ""),
   });
+  const briefId = String(formData.get("briefId") ?? "").trim();
+  const mode = resolveCampaignIntentSaveMode({
+    briefId,
+    ownedBriefIds: ws.briefs.map((brief) => brief.id),
+  });
+  const brief =
+    mode === "update"
+      ? await updateBrief(briefId, fields)
+      : await createBrief(fields);
   revalidateHub();
-  redirect(`${HUB}?intent=${encodeURIComponent(brief.id)}&suggestions=1#suggestions`);
+  redirect(
+    `${HUB}?intent=${encodeURIComponent(brief.id)}&suggestions=1&mode=${mode}#suggestions`,
+  );
+}
+
+/** W2.3 — re-rank suggestions for an existing Campaign Intent without creating a new brief. */
+export async function actionRefreshCampaignSuggestions(formData: FormData) {
+  await requireBusinessTerms();
+  const ws = await getWorkspace();
+  const briefId = String(formData.get("briefId") ?? "").trim();
+  const brief = ws.briefs.find((item) => item.id === briefId);
+  if (!brief) {
+    redirect(`${HUB}?error=${encodeURIComponent("Save a campaign intent before refreshing suggestions.")}`);
+  }
+  revalidateHub();
+  redirect(`${HUB}?intent=${encodeURIComponent(brief.id)}&suggestions=1&refreshed=1#suggestions`);
 }
 
 export async function actionPostBusinessRequest(formData: FormData) {
