@@ -78,25 +78,56 @@ describe("funding schedule rules", () => {
 });
 
 describe("staged and recurring prefunds", () => {
+  async function enableUsScheduleCapabilities() {
+    const before = await prisma.collaborationJurisdiction.findUnique({ where: { code: "US" } });
+    await prisma.collaborationJurisdiction.update({
+      where: { code: "US" },
+      data: {
+        protectedPaymentsEnabled: true,
+        fullPrefundingEnabled: true,
+        stagedPrefundingEnabled: true,
+        recurringFundingEnabled: true,
+        legalReviewStatus: "APPROVED",
+      },
+    });
+    return before;
+  }
+
   it("creates no rows when the provider is not ready", async () => {
+    const jurisdiction = await enableUsScheduleCapabilities();
     const sources = await listAttributionSources();
     const source = sources.find((row) => row.active);
     if (!source) throw new Error("expected an attribution source");
     const titled = { title: { startsWith: "Staged while provider is off" } };
     const before = await prisma.collaborationFunding.count({ where: titled });
-    const result = await requestPrefund({
-      jurisdictionCode: "US",
-      businessName: "Harbor Co",
-      creatorSlug: "sofia-martinez",
-      title: "Staged while provider is off",
-      grossCents: 30_000,
-      sourceId: source.id,
-      scheduleKind: "staged",
-      stageCount: 3,
-    });
-    assert.equal(result.ok, false);
-    if (!result.ok) assert.match(result.error, /not ready/);
-    assert.equal(await prisma.collaborationFunding.count({ where: titled }), before);
+    try {
+      const result = await requestPrefund({
+        jurisdictionCode: "US",
+        businessName: "Harbor Co",
+        creatorSlug: "sofia-martinez",
+        title: "Staged while provider is off",
+        grossCents: 30_000,
+        sourceId: source.id,
+        scheduleKind: "staged",
+        stageCount: 3,
+      });
+      assert.equal(result.ok, false);
+      if (!result.ok) assert.match(result.error, /not ready/);
+      assert.equal(await prisma.collaborationFunding.count({ where: titled }), before);
+    } finally {
+      if (jurisdiction) {
+        await prisma.collaborationJurisdiction.update({
+          where: { code: "US" },
+          data: {
+            protectedPaymentsEnabled: jurisdiction.protectedPaymentsEnabled,
+            fullPrefundingEnabled: jurisdiction.fullPrefundingEnabled,
+            stagedPrefundingEnabled: jurisdiction.stagedPrefundingEnabled,
+            recurringFundingEnabled: jurisdiction.recurringFundingEnabled,
+            legalReviewStatus: jurisdiction.legalReviewStatus,
+          },
+        });
+      }
+    }
   });
 
   it("splits a staged gross into unfunded prefunds and opens the next recurrence only after the interval", async () => {
@@ -107,6 +138,7 @@ describe("staged and recurring prefunds", () => {
     const sources = await listAttributionSources();
     const source = sources.find((row) => row.active);
     if (!source || !settings) throw new Error("marketplace settings are missing");
+    const jurisdiction = await enableUsScheduleCapabilities();
     const ids: string[] = [];
     try {
       await prisma.integrationProvider.update({
@@ -255,6 +287,18 @@ describe("staged and recurring prefunds", () => {
         await prisma.integrationProvider.update({
           where: { id: provider.id },
           data: { enabled: provider.enabled, webhookCipher: provider.webhookCipher, name: provider.name },
+        });
+      }
+      if (jurisdiction) {
+        await prisma.collaborationJurisdiction.update({
+          where: { code: "US" },
+          data: {
+            protectedPaymentsEnabled: jurisdiction.protectedPaymentsEnabled,
+            fullPrefundingEnabled: jurisdiction.fullPrefundingEnabled,
+            stagedPrefundingEnabled: jurisdiction.stagedPrefundingEnabled,
+            recurringFundingEnabled: jurisdiction.recurringFundingEnabled,
+            legalReviewStatus: jurisdiction.legalReviewStatus,
+          },
         });
       }
     }

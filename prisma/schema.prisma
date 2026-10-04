@@ -1226,15 +1226,31 @@ model MarketplaceSettings {
 }
 
 /// Protected payments and the word "escrow" are jurisdiction flags, not code switches.
+/// W3.3 / Dev Addendum §6 — full capability matrix; flags override features (PA007).
 model CollaborationJurisdiction {
-  code                      String   @id
-  label                     String
-  protectedPaymentsEnabled  Boolean  @default(false)
-  escrowTermAllowed         Boolean  @default(false)
-  currency                  String   @default("USD")
-  minorDigits               Int      @default(2)
-  providerCode              String   @default("primary")
-  updatedAt                 DateTime @updatedAt
+  code                         String    @id
+  label                        String
+  protectedPaymentsEnabled     Boolean   @default(false)
+  escrowTermAllowed            Boolean   @default(false)
+  /// Full one-shot prefunding (schedule kind "once").
+  fullPrefundingEnabled        Boolean   @default(true)
+  stagedPrefundingEnabled      Boolean   @default(false)
+  recurringFundingEnabled      Boolean   @default(false)
+  /// Managed introduction service level (managed_intro). Fee rules alone never authorize.
+  managedIntroductionEnabled   Boolean   @default(false)
+  /// Managed negotiation / campaign service level (managed_campaign).
+  managedNegotiationEnabled    Boolean   @default(false)
+  /// JSON string array of approved marketplace provider codes; empty = any assigned provider.
+  approvedProviderIds          String    @default("[]")
+  /// APPROVED | PENDING | BLOCKED — Dev Addendum §24.
+  legalReviewStatus            String    @default("APPROVED")
+  capabilityNotes              String    @default("")
+  capabilitiesEffectiveFrom    DateTime?
+  capabilitiesEffectiveTo      DateTime?
+  currency                     String    @default("USD")
+  minorDigits                  Int       @default(2)
+  providerCode                 String    @default("primary")
+  updatedAt                    DateTime  @updatedAt
 }
 
 /// Versioned collaboration fee rules (Phase O). Replaces data/collaboration-fees.json rules[].

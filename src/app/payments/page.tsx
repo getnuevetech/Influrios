@@ -19,6 +19,10 @@ import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 import { FUNDING_BADGE_CLASS, fundingBadge } from "@/lib/funding-badge";
 import { SERVICE_LEVEL_LABELS, SERVICE_LEVELS } from "@/lib/collaboration-fees";
+import {
+  allowedServiceLevels,
+  capabilitiesFromJurisdictionRow,
+} from "@/lib/jurisdiction-capabilities";
 import { buildPayoutFeeFxQuote } from "@/lib/payout-readiness";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +69,12 @@ export default async function PaymentsPage({ searchParams }: Props) {
   ]);
   const jurisdictions = config?.jurisdictions ?? [];
   const homeJurisdiction = jurisdictions.find((row) => row.code === "US") ?? jurisdictions[0];
+  const homeCaps = homeJurisdiction ? capabilitiesFromJurisdictionRow(homeJurisdiction) : null;
+  const paymentServiceLevels = homeCaps
+    ? (allowedServiceLevels(homeCaps, SERVICE_LEVELS) as (typeof SERVICE_LEVELS)[number][])
+    : (["contracted"] as (typeof SERVICE_LEVELS)[number][]);
+  const stagedAllowed = Boolean(config?.stagedFundingEnabled && homeCaps?.stagedPrefundingEnabled);
+  const recurringAllowed = Boolean(config?.recurringFundingEnabled && homeCaps?.recurringFundingEnabled);
   const term = fundingTerm(Boolean(homeJurisdiction?.escrowTermAllowed));
   const usdFundings = fundings.filter((row) => row.currency === "USD");
   const mixedCurrency = fundings.some((row) => row.currency !== "USD");
@@ -189,6 +199,20 @@ export default async function PaymentsPage({ searchParams }: Props) {
               />
             </label>
             <label className="text-sm">
+              <span className="font-semibold text-indigo">Service level</span>
+              <select
+                name="serviceLevel"
+                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                defaultValue={paymentServiceLevels.includes("contracted") ? "contracted" : paymentServiceLevels[0]}
+              >
+                {paymentServiceLevels.map((level) => (
+                  <option key={level} value={level}>
+                    {SERVICE_LEVEL_LABELS[level]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
               <span className="font-semibold text-indigo">Attribution</span>
               <select name="sourceId" required className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2">
                 {sources.filter((source) => source.active).map((source) => (
@@ -212,9 +236,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
             <label className="text-sm">
               <span className="font-semibold text-indigo">Schedule</span>
               <select name="scheduleKind" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2" defaultValue="once">
-                <option value="once">One prefund</option>
-                {config?.stagedFundingEnabled ? <option value="staged">Staged</option> : null}
-                {config?.recurringFundingEnabled ? <option value="recurring">Recurring</option> : null}
+                {homeCaps?.fullPrefundingEnabled !== false ? <option value="once">One prefund</option> : null}
+                {stagedAllowed ? <option value="staged">Staged</option> : null}
+                {recurringAllowed ? <option value="recurring">Recurring</option> : null}
               </select>
             </label>
             <label className="text-sm">

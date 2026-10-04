@@ -339,6 +339,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
 
       <section className="card-surface space-y-4 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Jurisdictions</h2>
+        <p className="text-xs text-muted">
+          Capability flags override features even when a fee rule or provider adapter exists (PA007 / Dev §24).
+          Managed introduction and managed campaign stay off until legal review is APPROVED and the matching toggle is on.
+        </p>
         {config.jurisdictions.map((row) => (
           <form key={row.code} action={actionSaveJurisdiction} className="grid gap-3 rounded-xl border border-border p-4 sm:grid-cols-4">
             <input type="hidden" name="code" value={row.code} />
@@ -374,6 +378,125 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 className="accent-violet"
               />
               Allow the word escrow
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="fullPrefundingEnabled"
+                defaultChecked={row.fullPrefundingEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Full prefunding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="stagedPrefundingEnabled"
+                defaultChecked={row.stagedPrefundingEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Staged prefunding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="recurringFundingEnabled"
+                defaultChecked={row.recurringFundingEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Recurring funding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="managedIntroductionEnabled"
+                defaultChecked={row.managedIntroductionEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Managed introduction
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="managedNegotiationEnabled"
+                defaultChecked={row.managedNegotiationEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Managed negotiation / campaign
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Legal review
+              <select
+                name="legalReviewStatus"
+                defaultValue={row.legalReviewStatus}
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              >
+                <option value="APPROVED">APPROVED</option>
+                <option value="PENDING">PENDING</option>
+                <option value="BLOCKED">BLOCKED</option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-3">
+              Approved provider ids (comma or JSON; empty = any assigned)
+              <input
+                name="approvedProviderIds"
+                defaultValue={
+                  (() => {
+                    try {
+                      const parsed = JSON.parse(row.approvedProviderIds || "[]") as unknown;
+                      return Array.isArray(parsed) ? parsed.join(", ") : row.approvedProviderIds;
+                    } catch {
+                      return row.approvedProviderIds;
+                    }
+                  })()
+                }
+                disabled={!canManage}
+                placeholder="primary, airwallex"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Effective from
+              <input
+                name="capabilitiesEffectiveFrom"
+                type="date"
+                defaultValue={
+                  row.capabilitiesEffectiveFrom
+                    ? new Date(row.capabilitiesEffectiveFrom).toISOString().slice(0, 10)
+                    : ""
+                }
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Effective to
+              <input
+                name="capabilitiesEffectiveTo"
+                type="date"
+                defaultValue={
+                  row.capabilitiesEffectiveTo
+                    ? new Date(row.capabilitiesEffectiveTo).toISOString().slice(0, 10)
+                    : ""
+                }
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Capability notes
+              <input
+                name="capabilityNotes"
+                defaultValue={row.capabilityNotes}
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
             </label>
             <label className="text-xs font-semibold text-muted">
               Currency
@@ -437,6 +560,50 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="escrowTermAllowed" className="accent-violet" />
               Allow the word escrow
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="fullPrefundingEnabled" defaultChecked className="accent-violet" />
+              Full prefunding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="stagedPrefundingEnabled" className="accent-violet" />
+              Staged prefunding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="recurringFundingEnabled" className="accent-violet" />
+              Recurring funding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="managedIntroductionEnabled" className="accent-violet" />
+              Managed introduction
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="managedNegotiationEnabled" className="accent-violet" />
+              Managed negotiation / campaign
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Legal review
+              <select name="legalReviewStatus" defaultValue="PENDING" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+                <option value="APPROVED">APPROVED</option>
+                <option value="PENDING">PENDING</option>
+                <option value="BLOCKED">BLOCKED</option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-3">
+              Approved provider ids
+              <input name="approvedProviderIds" placeholder="primary" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Effective from
+              <input name="capabilitiesEffectiveFrom" type="date" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Effective to
+              <input name="capabilitiesEffectiveTo" type="date" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Capability notes
+              <input name="capabilityNotes" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
             </label>
             <label className="text-xs font-semibold text-muted">
               Currency

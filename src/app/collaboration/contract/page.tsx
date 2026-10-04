@@ -18,6 +18,10 @@ import {
 } from "@/lib/contract-wizard";
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
+import {
+  allowedServiceLevels,
+  capabilitiesFromJurisdictionRow,
+} from "@/lib/jurisdiction-capabilities";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
@@ -141,6 +145,13 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const jurisdiction = config.jurisdictions.find((row) => row.code === jurisdictionCode);
   const provider =
     config.providers.find((row) => row.code === (jurisdiction?.providerCode || "primary")) ?? config.provider;
+  const jurisdictionCaps = jurisdiction ? capabilitiesFromJurisdictionRow(jurisdiction) : null;
+  const availableServiceLevels = jurisdictionCaps
+    ? (allowedServiceLevels(jurisdictionCaps, SERVICE_LEVELS) as typeof SERVICE_LEVELS[number][])
+    : [...SERVICE_LEVELS];
+  const effectiveServiceLevel = availableServiceLevels.includes(serviceLevel)
+    ? serviceLevel
+    : availableServiceLevels[0] ?? "contracted";
 
   const gates = evaluatePreContractGates({
     businessName: ws.name,
@@ -164,7 +175,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     grossCents > 0
       ? await resolveFee({
           jurisdiction: jurisdictionCode,
-          serviceLevel,
+          serviceLevel: effectiveServiceLevel,
           grossValueCents: grossCents,
         }).catch(() => null)
       : null;
@@ -347,10 +358,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 Collaboration service level
                 <select
                   name="serviceLevel"
-                  defaultValue={serviceLevel}
+                  defaultValue={effectiveServiceLevel}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
                 >
-                  {SERVICE_LEVELS.map((level) => (
+                  {availableServiceLevels.map((level) => (
                     <option key={level} value={level}>
                       {SERVICE_LEVEL_LABELS[level]}
                     </option>
@@ -358,6 +369,12 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 </select>
                 <span className="mt-1 block text-xs font-normal text-muted">
                   Affects fee matrix, legal treatment, and jurisdiction availability.
+                  {jurisdictionCaps?.legalReviewStatus && jurisdictionCaps.legalReviewStatus !== "APPROVED"
+                    ? ` Legal review: ${jurisdictionCaps.legalReviewStatus}.`
+                    : ""}
+                  {jurisdictionCaps && !jurisdictionCaps.managedIntroductionEnabled
+                    ? " Managed introduction is off until admin enables it."
+                    : ""}
                 </span>
               </label>
               <label className="block text-sm font-semibold text-indigo sm:col-span-2">
@@ -466,6 +483,12 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   : "—"}
               </li>
               <li>Jurisdiction protected payments: {jurisdiction?.protectedPaymentsEnabled ? "on" : "off"}</li>
+              <li>
+                Legal review: {jurisdictionCaps?.legalReviewStatus ?? "—"}
+                {jurisdictionCaps?.fullPrefundingEnabled ? " · full funding" : ""}
+                {jurisdictionCaps?.managedIntroductionEnabled ? " · managed intro" : ""}
+                {jurisdictionCaps?.managedNegotiationEnabled ? " · managed campaign" : ""}
+              </li>
               <li>Marketplace provider: {provider?.ready ? "ready" : "not ready"}</li>
             </ul>
             {!gates.ok ? (
@@ -490,7 +513,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             {plan ? (
               <>
                 <p className="mt-1 text-sm text-muted">
-                  Service level <strong>{SERVICE_LEVEL_LABELS[serviceLevel]}</strong>
+                  Service level <strong>{SERVICE_LEVEL_LABELS[effectiveServiceLevel]}</strong>
                   {quote?.rule?.feeType ? (
                     <>
                       {" "}
