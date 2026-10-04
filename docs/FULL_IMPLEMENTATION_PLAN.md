@@ -368,7 +368,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 **Still open**
 - Deeper Provider Health dashboard beyond gateways page  
 - Mentorship product surfaces reading eligibility (P7)  
-- Guest collab propose/apply quota enforcement in public flows  
+- Guest collab propose/apply quota enforcement in public flows — **DONE** (control-plane soft/hard on propose page + save/apply intents)  
 - RBAC permission group dedicated to collab finance high-risk actions  
 
 **Exit (core):** Ops can suspend a corridor and change control-plane thresholds without deploy — met. Fee future-deals already on `/admin/fees`.
