@@ -1408,6 +1408,8 @@ model FundingMilestone {
   submittedAt       DateTime?
   autoApproveAt     DateTime?
   approvedAt        DateTime?
+  /// Dev §8 / §16 — set when release is authorized; sweep queues provider release when due.
+  releaseScheduledAt DateTime?
   /// Dev §16 — set when provider reports payout.failed; cleared on successful release or retry reset.
   payoutFailedAt    DateTime?
   payoutRetryCount  Int                  @default(0)
@@ -1417,6 +1419,7 @@ model FundingMilestone {
 
   @@index([fundingId, status])
   @@index([status, payoutFailedAt])
+  @@index([status, releaseScheduledAt])
 }
 
 /// Provider-held movements. This is not an Influrios cash balance.

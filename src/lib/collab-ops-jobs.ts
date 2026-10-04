@@ -1,6 +1,6 @@
 /**
  * Dev Addendum §16–17 — dispute SLA reminders, provider hold-period warnings,
- * failed payout retry eligibility, and funding reconciliation flags.
+ * failed payout retry eligibility, funding reconciliation flags, and scheduled release.
  * Pure eligibility helpers; sweeps live in jobs.ts and notify via W3.11 templates.
  */
 
@@ -9,6 +9,8 @@ export const DEFAULT_PROVIDER_HOLD_WARN_HOURS = 168; // 7 days
 export const DEFAULT_FAILED_PAYOUT_BACKOFF_HOURS = [1, 6, 24, 72] as const;
 export const DEFAULT_FAILED_PAYOUT_MAX_ATTEMPTS = 4;
 export const DEFAULT_STALE_FUNDING_HOURS = 48;
+
+export const RELEASE_READY_STATUSES = ["approved", "release_scheduled", "release_requested", "payout_failed"] as const;
 
 export function shouldRemindDisputeSla(input: {
   status: string;
@@ -91,4 +93,44 @@ export function shouldFlagLedgerMismatch(input: {
 }): boolean {
   if (!["held", "payment_risk"].includes(input.fundingStatus)) return false;
   return !input.balanced;
+}
+
+/** Dev §8 — approve → release_scheduled when authorized and not disputed. */
+export function canScheduleMilestoneRelease(input: {
+  milestoneStatus: string;
+  fundingStatus: string;
+  disputeOpen?: boolean;
+}): { ok: true } | { ok: false; error: string } {
+  if (input.disputeOpen) return { ok: false, error: "Resolve the open dispute before authorizing release." };
+  if (input.fundingStatus === "payment_risk") {
+    return { ok: false, error: "Payment-risk fundings cannot schedule a release." };
+  }
+  if (input.fundingStatus !== "held") {
+    return { ok: false, error: "Release can be scheduled only while the provider is holding funds." };
+  }
+  if (input.milestoneStatus !== "approved" && input.milestoneStatus !== "payout_failed") {
+    return { ok: false, error: "Only approved milestones can be scheduled for release." };
+  }
+  return { ok: true };
+}
+
+/** True when a release_scheduled milestone is due for provider request. */
+export function shouldRequestScheduledRelease(input: {
+  milestoneStatus: string;
+  releaseScheduledAt: Date | string | null | undefined;
+  now?: Date;
+}): boolean {
+  if (input.milestoneStatus !== "release_scheduled") return false;
+  if (!input.releaseScheduledAt) return false;
+  const at =
+    input.releaseScheduledAt instanceof Date
+      ? input.releaseScheduledAt
+      : new Date(input.releaseScheduledAt);
+  if (Number.isNaN(at.getTime())) return false;
+  const now = input.now ?? new Date();
+  return now.getTime() >= at.getTime();
+}
+
+export function isReleaseReadyMilestoneStatus(status: string) {
+  return (RELEASE_READY_STATUSES as readonly string[]).includes(status);
 }

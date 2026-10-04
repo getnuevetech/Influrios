@@ -6,6 +6,9 @@ import {
   shouldRetryFailedPayout,
   shouldFlagStaleFundingIntent,
   shouldFlagLedgerMismatch,
+  canScheduleMilestoneRelease,
+  shouldRequestScheduledRelease,
+  isReleaseReadyMilestoneStatus,
   DEFAULT_DISPUTE_SLA_HOURS,
   DEFAULT_PROVIDER_HOLD_WARN_HOURS,
   DEFAULT_FAILED_PAYOUT_BACKOFF_HOURS,
@@ -184,6 +187,94 @@ describe("failed payout retry + funding recon (Dev §16)", () => {
         expectedCents: 5_000,
         heldCents: 10_000,
         milestoneStatus: "payout_failed",
+      }),
+      "apply",
+    );
+  });
+});
+
+describe("scheduled release (Dev §8 / §16)", () => {
+  it("schedules only approved held milestones without open disputes", () => {
+    assert.equal(
+      canScheduleMilestoneRelease({
+        milestoneStatus: "approved",
+        fundingStatus: "held",
+      }).ok,
+      true,
+    );
+    assert.equal(
+      canScheduleMilestoneRelease({
+        milestoneStatus: "submitted",
+        fundingStatus: "held",
+      }).ok,
+      false,
+    );
+    assert.equal(
+      canScheduleMilestoneRelease({
+        milestoneStatus: "approved",
+        fundingStatus: "payment_risk",
+      }).ok,
+      false,
+    );
+    assert.equal(
+      canScheduleMilestoneRelease({
+        milestoneStatus: "approved",
+        fundingStatus: "held",
+        disputeOpen: true,
+      }).ok,
+      false,
+    );
+  });
+
+  it("requests provider release only when release_scheduled is due", () => {
+    const now = new Date("2026-10-04T12:00:00.000Z");
+    assert.equal(
+      shouldRequestScheduledRelease({
+        milestoneStatus: "release_scheduled",
+        releaseScheduledAt: new Date("2026-10-04T11:00:00.000Z"),
+        now,
+      }),
+      true,
+    );
+    assert.equal(
+      shouldRequestScheduledRelease({
+        milestoneStatus: "release_scheduled",
+        releaseScheduledAt: new Date("2026-10-04T13:00:00.000Z"),
+        now,
+      }),
+      false,
+    );
+    assert.equal(
+      shouldRequestScheduledRelease({
+        milestoneStatus: "approved",
+        releaseScheduledAt: new Date("2026-10-04T11:00:00.000Z"),
+        now,
+      }),
+      false,
+    );
+  });
+
+  it("accepts payout.released for release_scheduled and release_requested", () => {
+    assert.ok(isReleaseReadyMilestoneStatus("release_requested"));
+    assert.equal(
+      marketplaceDisposition({
+        eventType: "payout.released",
+        fundingStatus: "held",
+        amountCents: 5_000,
+        expectedCents: 5_000,
+        heldCents: 5_000,
+        milestoneStatus: "release_requested",
+      }),
+      "apply",
+    );
+    assert.equal(
+      marketplaceDisposition({
+        eventType: "payout.failed",
+        fundingStatus: "held",
+        amountCents: 5_000,
+        expectedCents: 5_000,
+        heldCents: 5_000,
+        milestoneStatus: "release_scheduled",
       }),
       "apply",
     );

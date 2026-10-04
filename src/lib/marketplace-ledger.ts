@@ -1383,6 +1383,72 @@ export async function approveFundingMilestone(fundingId: string, milestoneId: st
   return { ok: true as const };
 }
 
+/**
+ * Dev §8 — APPROVED → RELEASE_AUTHORIZED (release_scheduled).
+ * Does not move money; scheduled_release_sweep queues the provider instruction.
+ */
+export async function scheduleMilestoneRelease(input: {
+  fundingId: string;
+  milestoneId: string;
+  releaseAt?: Date | null;
+  actor?: string;
+}) {
+  const { canScheduleMilestoneRelease } = await import("@/lib/collab-ops-jobs");
+  const funding = await prisma.collaborationFunding.findUnique({
+    where: { id: input.fundingId },
+    include: {
+      milestones: { where: { id: input.milestoneId }, take: 1 },
+      disputes: {
+        where: {
+          status: { in: ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"] },
+          OR: [{ milestoneId: input.milestoneId }, { milestoneId: null }],
+        },
+        take: 1,
+      },
+    },
+  });
+  if (!funding) return { ok: false as const, error: "Prefund not found." };
+  const milestone = funding.milestones[0];
+  if (!milestone) return { ok: false as const, error: "Milestone not found." };
+  const gate = canScheduleMilestoneRelease({
+    milestoneStatus: milestone.status,
+    fundingStatus: funding.status,
+    disputeOpen: funding.disputes.length > 0,
+  });
+  if (!gate.ok) return gate;
+  const releaseAt = input.releaseAt && !Number.isNaN(input.releaseAt.getTime()) ? input.releaseAt : new Date();
+  const updated = await prisma.fundingMilestone.updateMany({
+    where: { id: milestone.id, status: { in: ["approved", "payout_failed"] } },
+    data: {
+      status: "release_scheduled",
+      releaseScheduledAt: releaseAt,
+      payoutFailedAt: null,
+    },
+  });
+  if (updated.count !== 1) return { ok: false as const, error: "That milestone cannot be scheduled for release." };
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: input.actor ?? "ops",
+        action: "milestone_release_scheduled",
+        objectType: "FundingMilestone",
+        objectId: milestone.id,
+        after: { fundingId: funding.id, releaseScheduledAt: releaseAt.toISOString() },
+      },
+    })
+    .catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId: funding.id,
+      kind: "milestone_approved",
+      milestone: milestone.title,
+      detail: `Release authorized for ${releaseAt.toISOString()}. Provider request queues when due.`,
+    });
+  });
+  return { ok: true as const, releaseScheduledAt: releaseAt };
+}
+
 export async function applyMarketplaceEvent(input: {
   provider: string;
   eventId: string;
@@ -1488,10 +1554,14 @@ export async function applyMarketplaceEvent(input: {
       }
       if (input.eventType === "payout.failed" && milestone) {
         const failed = await tx.fundingMilestone.updateMany({
-          where: { id: milestone.id, status: "approved" },
+          where: {
+            id: milestone.id,
+            status: { in: ["approved", "release_scheduled", "release_requested"] },
+          },
           data: {
             status: "payout_failed",
             payoutFailedAt: new Date(),
+            releaseScheduledAt: null,
           },
         });
         if (failed.count !== 1) throw new LedgerReject("Milestone is not approved for payout failure.");
@@ -1516,12 +1586,13 @@ export async function applyMarketplaceEvent(input: {
         const released = await tx.fundingMilestone.updateMany({
           where: {
             id: milestone.id,
-            status: { in: ["approved", "payout_failed"] },
+            status: { in: ["approved", "release_scheduled", "release_requested", "payout_failed"] },
             refundedCents: milestone.refundedCents,
           },
           data: {
             status: "released",
             payoutFailedAt: null,
+            releaseScheduledAt: null,
             ...(rights.shouldActivate
               ? { rightsStatus: rights.status, rightsActivatedAt: new Date() }
               : {}),

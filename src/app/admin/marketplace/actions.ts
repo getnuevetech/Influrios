@@ -15,7 +15,8 @@ import {
 import { saveFxRates, saveRevenueParties } from "@/lib/settlement";
 import { setProductSwitch } from "@/lib/product-switches";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
-import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep } from "@/lib/jobs";
+import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep, enqueueScheduledReleaseSweep } from "@/lib/jobs";
+import { scheduleMilestoneRelease } from "@/lib/marketplace-ledger";
 
 function flag(formData: FormData, name: string) {
   return formData.get(name) === "on";
@@ -415,4 +416,39 @@ export async function actionExecuteHeldCancellation(formData: FormData) {
       ? "/admin/marketplace?saved=payment_risk"
       : "/admin/marketplace?saved=cancellation_queued",
   );
+}
+
+export async function actionEnqueueScheduledReleaseSweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueScheduledReleaseSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=scheduled_release");
+}
+
+export async function actionScheduleMilestoneRelease(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const pick = String(formData.get("milestonePick") ?? "").trim();
+  const [fundingId, milestoneId] = pick.split("::");
+  const delayHoursRaw = String(formData.get("delayHours") ?? "0").trim();
+  const delayHours = Number(delayHoursRaw);
+  if (!fundingId || !milestoneId) {
+    redirect("/admin/marketplace?error=" + encodeURIComponent("Choose funding and milestone."));
+  }
+  if (!Number.isFinite(delayHours) || delayHours < 0 || delayHours > 720) {
+    redirect("/admin/marketplace?error=" + encodeURIComponent("Delay hours must be 0–720."));
+  }
+  const releaseAt = new Date(Date.now() + delayHours * 60 * 60 * 1000);
+  const result = await scheduleMilestoneRelease({
+    fundingId,
+    milestoneId,
+    releaseAt,
+    actor: "admin",
+  });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=release_scheduled");
 }

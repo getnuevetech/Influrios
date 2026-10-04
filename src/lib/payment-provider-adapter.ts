@@ -32,7 +32,7 @@ export type ProviderCapabilities = {
   webhook: boolean;
 };
 
-export type ProviderInstructionKind = "cancel" | "partial_refund" | "full_refund";
+export type ProviderInstructionKind = "cancel" | "partial_refund" | "full_refund" | "release";
 
 export interface PaymentProviderAdapter {
   getCapabilities(): Promise<ProviderCapabilities>;
@@ -67,10 +67,16 @@ export async function queueProviderInstruction(input: {
   const fundingId = input.fundingId.trim();
   if (!fundingId) return { ok: false, error: "Funding id is required." };
   if (
-    input.instruction === "partial_refund" &&
+    (input.instruction === "partial_refund" || input.instruction === "release") &&
     (input.amountCents == null || !Number.isInteger(input.amountCents) || input.amountCents <= 0)
   ) {
-    return { ok: false, error: "Partial refund needs a positive integer amount." };
+    return {
+      ok: false,
+      error:
+        input.instruction === "release"
+          ? "Release needs a positive integer amount."
+          : "Partial refund needs a positive integer amount.",
+    };
   }
 
   const prefix =
@@ -78,7 +84,9 @@ export async function queueProviderInstruction(input: {
       ? "mkt_cancel"
       : input.instruction === "full_refund"
         ? "mkt_refund_full"
-        : "mkt_refund";
+        : input.instruction === "release"
+          ? "mkt_release"
+          : "mkt_refund";
   const job = await prisma.job.create({
     data: {
       kind: "provider_instruction",
@@ -133,8 +141,16 @@ export function createMarketplaceSignedWebhookAdapter(deps: {
         fundingId: reference,
       });
     },
-    async createReleaseOrTransfer() {
-      return { ok: false, error: "Releases are authorized in-app; provider confirms via webhook." };
+    async createReleaseOrTransfer(input) {
+      if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+        return { ok: false, error: "Release needs a positive integer amount." };
+      }
+      return queueProviderInstruction({
+        instruction: "release",
+        fundingId: input.fundingId,
+        amountCents: input.amountCents,
+        milestoneId: input.milestoneId,
+      });
     },
     async createPartialRefund(input) {
       return queueProviderInstruction({
