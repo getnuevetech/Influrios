@@ -347,7 +347,7 @@ export const INTRO_STATUSES: { code: IntroStatus; label: string }[] = [
   { code: "outreach", label: "Outreach" },
   { code: "introduced", label: "Introduced" },
   { code: "in_conversation", label: "In conversation" },
-  { code: "paid", label: "Paid relationship" },
+  { code: "paid", label: "Intro fee settled" },
   { code: "declined", label: "Declined" },
   { code: "closed", label: "Closed" },
 ];

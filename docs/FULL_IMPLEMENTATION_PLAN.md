@@ -265,8 +265,8 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Business briefs, shortlists, `/admin/matching` intros | Clear product separation: intro ≠ contracted protected payment (R073) | Copy + flows enforce distinction |
-| Managed matching queue | Managed introduction/campaign fee paths via fee matrix + jurisdiction enablement | Service levels `managed_intro` / `managed_campaign` live end-to-end |
+| Business briefs, shortlists, `/admin/matching` intros; **R073 copy + gates**: intro ≠ protected payment; discovery/platform_match not fundable; intro “paid” = intro fee settled | Managed campaign commercial pack deepen; verified stats | Copy + flows enforce distinction |
+| Managed matching queue; jurisdiction-gated `managed_intro` / `managed_campaign` | End-to-end intro-fee settlement provider path | Service levels live for fundable contracted/managed deals |
 | Intelligence surfaces | Verified commercial reporting (no fake stats) | Stats only with source/as-of (Dev Addendum §23.8) |
 
 ---
