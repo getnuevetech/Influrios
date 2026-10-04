@@ -141,6 +141,8 @@ export async function actionSendInquiry(formData: FormData) {
   if (!result.ok) {
     redirect(`${HUB}?error=${encodeURIComponent(result.error)}`);
   }
+  const { recordCreatorInquiryConversion } = await import("@/lib/short-link");
+  void recordCreatorInquiryConversion(creatorSlug).catch(() => undefined);
   redirect(`${HUB}?inquiry=1#applicants`);
 }
 

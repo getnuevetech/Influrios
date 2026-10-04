@@ -284,7 +284,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Custom slug | No | Yes | Yes | PARTIAL |
 | Standard QR (opaque token) | No | Yes | Yes | PARTIAL / largely DONE |
 | Dynamic destination without QR regen | No | No | Yes | DONE (Pro self-serve + history/rollback; admin path retained) |
-| Analytics depth | Basic profile | Standard | Advanced | PARTIAL |
+| Analytics depth | Basic profile | Standard | Advanced | DONE (entitlement-gated privacy-safe summaries) |
 
 #### INFLR.me residuals
 
@@ -292,7 +292,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records | Phase 1–2 DoD fully evidenced (domain verification admin UX, alias policy, branded failure pages) | Spec §20 criteria 11–24 |
 | Pro `dynamic` flag + destination setter | Pro **self-serve** dynamic destination + destination history + rollback | Spec §9 + Phase 3 — DONE (Phase 4 campaign/NFC still later) |
-| Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics | Spec §10 |
+| Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics | Spec §10 — DONE (resolver metrics / Phase 4 still later) |
 | — | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Explicitly later; do not block P4 finance |
 | Card design system | Align remaining chrome to Platform Spec §39 assets; live data not raster | Card matches approved vertical standard |
 | OG / social sharing | Influrios-branded preview; canonical SEO on influrios.com | Spec §11 |
@@ -546,7 +546,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Admin reserve/suspend/audit | PARTIAL |
 | Branded failure UX | PARTIAL |
 | Open-redirect protection | PARTIAL |
-| Analytics privacy + entitlements complete | NOT STARTED / thin |
+| Analytics privacy + entitlements complete | DONE (views/standard/advanced + bot filter; no precise geo) |
 | Canonical SEO on Influrios profile | PARTIAL |
 | Domain config change without code | PARTIAL |
 | Observable resolver metrics | NOT STARTED |

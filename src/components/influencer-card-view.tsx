@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { actionRecordCardCta } from "@/app/card-cta-actions";
 import { IconVerified, SocialIcon } from "@/components/icons";
 import {
   formatFollowers,
@@ -201,14 +201,17 @@ export function InfluencerCardView({
 
         {!hideCta ? (
           <>
-            <Link
-              href={`/creators/${creator.slug}`}
-              className={`btn-primary w-full ${compact ? "!py-2.5 text-sm" : ""} ${
-                premium ? "ring-1 ring-gold/50" : ""
-              }`}
-            >
-              {chrome.ctaLabel}
-            </Link>
+            <form action={actionRecordCardCta} className="w-full">
+              <input type="hidden" name="slug" value={creator.slug} />
+              <button
+                type="submit"
+                className={`btn-primary w-full ${compact ? "!py-2.5 text-sm" : ""} ${
+                  premium ? "ring-1 ring-gold/50" : ""
+                }`}
+              >
+                {chrome.ctaLabel}
+              </button>
+            </form>
             <p className={`text-center text-xs ${premium ? "text-white/40" : "text-muted"}`}>Influrios</p>
           </>
         ) : null}
