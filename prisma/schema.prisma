@@ -1332,6 +1332,8 @@ model CollaborationFunding {
   attributionLabel  String   @default("")
   scheduleId        String?
   scheduleKind      String   @default("once")
+  /// Product Addendum §7 mode: FULL | STAGED | NONE (recurring deferred as schedule kind only).
+  fundingMode       String   @default("FULL")
   trancheIndex      Int      @default(1)
   trancheCount      Int      @default(1)
   intervalDays      Int      @default(0)

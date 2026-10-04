@@ -210,11 +210,11 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Full capability set on `CollaborationJurisdiction`: protected/escrow + full/staged/recurring funding, managed_introduction/negotiation, `approvedProviderIds`, `legalReviewStatus`, effective dates; admin marketplace toggles; `jurisdiction-capabilities.ts` gates | — | Capability flags override features (PA007) end-to-end |
 | `requestPrefund` + contract wizard refuse managed modes / schedule kinds until jurisdiction enables (even if fee rule exists) | — | Dev Addendum §24 managed-service gate |
 
-#### W3.4 Funding modes — PARTIAL
+#### W3.4 Funding modes — DONE (recurring deferred)
 | Exists | Missing | Exit |
 |---|---|---|
-| Prefund / ledger funding; schedule kinds `once` \| `staged` \| `recurring` (`schedule.ts`); `stagedFundingEnabled` setting | Explicit product modes FULL vs STAGED vs NONE with clear “outside protected coverage” marking for NONE | Staged: later phases cannot start unfunded; NONE never shows Fully Funded badge |
-| — | Recurring/ambassador funding | Deferred until Dev P3 (after base ledger stable) — do not block P4 |
+| Explicit `fundingMode` FULL / STAGED / NONE on funding; badges + staged phase start gate; UI labels | Recurring/ambassador as a fourth product mode | Staged: later phases cannot start unfunded; NONE never shows Fully Funded |
+| Schedule kinds still support `recurring` | Product-mode expansion for ambassador cycles | Deferred until Dev P3 — do not block |
 
 #### W3.5 Milestone lifecycle depth — PARTIAL (auto-approval job shipped)
 | Exists | Missing | Exit |

@@ -8,6 +8,7 @@ import {
   serializeApprovedProviderIds,
   parseApprovedProviderIds,
 } from "@/lib/jurisdiction-capabilities";
+import { resolveFundingMode, stagedPhaseCanStart } from "@/lib/funding-modes";
 import {
   advanceMilestone,
   autoApproveDeadline,
@@ -591,6 +592,10 @@ export async function requestPrefund(input: {
     return { ok: false as const, error: "No active milestone templates are configured." };
   }
   const shares = milestoneDefs.map((row) => row.shareBps);
+  const fundingMode = resolveFundingMode({
+    scheduleKind,
+    protectedPaymentsEnabled: caps?.protectedPaymentsEnabled ?? Boolean(jurisdiction?.protectedPaymentsEnabled),
+  });
   const windowHours = settings?.reviewWindowHours ?? 72;
   const revisionLimit = settings?.maxRevisions ?? 2;
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;
@@ -664,6 +669,7 @@ export async function requestPrefund(input: {
           changeOrderLimit,
           scheduleId,
           scheduleKind: schedule.kind,
+          fundingMode,
           trancheIndex: index + 1,
           trancheCount: schedule.trancheCount,
           intervalDays: schedule.intervalDays,
@@ -785,6 +791,10 @@ export async function sweepDueRecurrences(now = new Date()) {
           changeOrderLimit,
           scheduleId: row.scheduleId,
           scheduleKind: "recurring",
+          fundingMode: resolveFundingMode({
+            scheduleKind: "recurring",
+            protectedPaymentsEnabled: true,
+          }),
           trancheIndex: nextIndex,
           trancheCount: row.trancheCount,
           intervalDays: row.intervalDays,
@@ -1114,7 +1124,9 @@ function presentFunding(row: {
   changeOrderLimit: number;
   changeOrderCount: number;
   changeOrders: { id: string; note: string; previousUsdCents: number; nextUsdCents: number }[];
+  scheduleId?: string | null;
   scheduleKind: string;
+  fundingMode: string;
   trancheIndex: number;
   trancheCount: number;
   intervalDays: number;
@@ -1129,9 +1141,13 @@ export async function submitFundingMilestone(fundingId: string, milestoneId: str
     include: { funding: true },
   });
   if (!milestone) return { ok: false as const, error: "Milestone not found." };
-  if (milestone.funding.status !== "held") {
-    return { ok: false as const, error: "Submit work after the provider confirms the prefund." };
-  }
+  const phaseGate = stagedPhaseCanStart({
+    fundingMode: milestone.funding.fundingMode,
+    fundingStatus: milestone.funding.status,
+    trancheIndex: milestone.funding.trancheIndex,
+    scheduleKind: milestone.funding.scheduleKind,
+  });
+  if (!phaseGate.ok) return phaseGate;
   const next = advanceMilestone(milestone.status as "pending", "submit");
   if (!next.ok) return next;
   const submittedAt = new Date();
