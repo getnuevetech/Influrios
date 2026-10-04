@@ -1098,6 +1098,24 @@ model ShortLink {
   qrIdentities    QrIdentity[]
   events          ShortLinkEvent[]
   abuseCases      ShortLinkAbuseCase[]
+  destinationHistory ShortLinkDestinationHistory[]
+}
+
+/// Auditable destination changes for Pro dynamic short links (INFLR.me §9).
+model ShortLinkDestinationHistory {
+  id                  String    @id @default(cuid())
+  shortLinkId         String
+  shortLink           ShortLink @relation(fields: [shortLinkId], references: [id], onDelete: Cascade)
+  previousDestination String
+  previousKind        String
+  destination         String
+  destinationKind     String
+  actorType           String
+  actorId             String?
+  reason              String    @default("update")
+  createdAt           DateTime  @default(now())
+
+  @@index([shortLinkId, createdAt])
 }
 
 model ShortLinkAlias {

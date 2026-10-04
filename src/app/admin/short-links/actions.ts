@@ -89,11 +89,16 @@ export async function actionSetLinkStatus(formData: FormData) {
 }
 
 export async function actionAdminDestination(formData: FormData) {
-  await requireAdminAction("shortlinks.edit");
+  const admin = await requireAdminAction("shortlinks.edit");
   const id = clean(formData.get("id"), 80);
   const link = await prisma.shortLink.findUnique({ where: { id } });
   if (!link) redirect("/admin/short-links?error=Missing%20link");
-  const result = await setShortLinkDestination(id, clean(formData.get("destination"), 400), link.dynamic);
+  const result = await setShortLinkDestination(
+    id,
+    clean(formData.get("destination"), 400),
+    link.dynamic,
+    { type: "admin", id: admin.userId },
+  );
   if (!result.ok) redirect(`/admin/short-links?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/admin/short-links");
   redirect("/admin/short-links?saved=1");

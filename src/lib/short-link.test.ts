@@ -5,9 +5,13 @@ import {
   hitWhenShortStoreUnavailable,
   isReservedSlug,
   normalizeSlug,
+  canChangeDynamicDestination,
+  destinationKindFor,
+  priorDestinationFromHistory,
   redirectCacheFor,
   safeRedirectTarget,
   shortLinkRootMessage,
+  storeDestinationValue,
 } from "./short-link";
 
 describe("short link rules", () => {
@@ -66,5 +70,50 @@ describe("short link rules", () => {
       assert.equal(slug.message, "This short link could not be resolved right now.");
       assert.equal("location" in slug, false);
     }
+  });
+});
+
+describe("Pro dynamic destination (W5 / INFLR.me §9)", () => {
+  it("allows only active dynamic links with Pro entitlement when required", () => {
+    assert.equal(canChangeDynamicDestination({ dynamic: true, status: "active" }).ok, true);
+    assert.equal(canChangeDynamicDestination({ dynamic: false, status: "active" }).ok, false);
+    assert.equal(canChangeDynamicDestination({ dynamic: true, status: "suspended" }).ok, false);
+    assert.equal(
+      canChangeDynamicDestination({
+        dynamic: true,
+        status: "active",
+        requireEntitlement: true,
+        entitlementsDynamicQr: false,
+      }).ok,
+      false,
+    );
+    assert.equal(
+      canChangeDynamicDestination({
+        dynamic: true,
+        status: "active",
+        requireEntitlement: true,
+        entitlementsDynamicQr: true,
+      }).ok,
+      true,
+    );
+  });
+
+  it("stores relative paths as paths and absolute allow-listed urls as https", () => {
+    assert.equal(storeDestinationValue("/c/sofia", "https://influrios.com/c/sofia"), "/c/sofia");
+    assert.equal(
+      storeDestinationValue("https://influrios.com/c/sofia", "https://influrios.com/c/sofia"),
+      "https://influrios.com/c/sofia",
+    );
+    assert.equal(destinationKindFor("/c/sofia"), "path");
+    assert.equal(destinationKindFor("https://influrios.com/c/sofia"), "https");
+  });
+
+  it("rolls back to the previous destination from the latest history row", () => {
+    const prior = priorDestinationFromHistory([
+      { previousDestination: "/c/sofia", previousKind: "profile" },
+      { previousDestination: "/c/old", previousKind: "path" },
+    ]);
+    assert.deepEqual(prior, { destination: "/c/sofia", destinationKind: "profile" });
+    assert.equal(priorDestinationFromHistory([]), null);
   });
 });
