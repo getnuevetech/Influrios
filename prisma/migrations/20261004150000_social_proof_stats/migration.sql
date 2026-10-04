@@ -2,6 +2,7 @@
 ALTER TABLE "FooterStat" ADD COLUMN IF NOT EXISTS "source" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "FooterStat" ADD COLUMN IF NOT EXISTS "asOf" TIMESTAMP(3);
 ALTER TABLE "FooterStat" ADD COLUMN IF NOT EXISTS "maxAgeDays" INTEGER NOT NULL DEFAULT 90;
+ALTER TABLE "FooterStat" ALTER COLUMN "enabled" SET DEFAULT false;
 -- Existing placeholder strips must not publish as factual until ops supplies source/as-of.
 UPDATE "FooterStat"
 SET "enabled" = false
