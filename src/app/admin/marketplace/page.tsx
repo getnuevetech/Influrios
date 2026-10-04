@@ -38,6 +38,8 @@ import { wiseFxConfig } from "@/lib/wise-quote";
 import { formatMoney } from "@/lib/money";
 import { ledgerMonthlyReport, ledgerTotals, listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { productSwitch } from "@/lib/product-switches";
+import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
+import { feeTypeFromFundingSnapshot, type FeeTypeAmount } from "@/lib/ledger";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };
@@ -45,6 +47,20 @@ export const metadata = { title: "Admin · Marketplace ledger" };
 type Props = { searchParams: Promise<{ saved?: string; error?: string; wiseRate?: string; wiseCurrency?: string }> };
 
 const CANCEL_REASONS = Object.keys(CANCELLATION_REASON_LABELS) as CancellationReason[];
+
+function formatFeesByType(feesByType: FeeTypeAmount[], currency: string, totalCents: number) {
+  if (feesByType.length === 0) return formatMoney(totalCents, currency);
+  if (feesByType.length === 1) {
+    const only = feesByType[0];
+    const label = FEE_TYPE_LABELS[only.feeType as FeeType] ?? only.feeType;
+    return `${label} ${formatMoney(only.amountCents, currency)}`;
+  }
+  const parts = feesByType.map((row) => {
+    const label = FEE_TYPE_LABELS[row.feeType as FeeType] ?? row.feeType;
+    return `${label} ${formatMoney(row.amountCents, currency)}`;
+  });
+  return `${formatMoney(totalCents, currency)} (${parts.join("; ")})`;
+}
 
 export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
@@ -1312,14 +1328,16 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Ledger totals</h2>
         <p className="mt-1 text-xs text-muted">
-          These figures are what the provider is holding, released, or refunded. Fees are quoted separately. Revenue shares are not cash.
+          These figures are what the provider is holding, released, or refunded. Fees are quoted separately by fee type
+          (Product §5). Revenue shares are not cash.
         </p>
         {totals.length === 0 ? <p className="mt-3 text-sm text-muted">No prefunds yet.</p> : null}
         <ul className="mt-3 space-y-2 text-sm text-indigo">
           {totals.map((row) => (
             <li key={row.currency}>
               {row.currency} · held {formatMoney(row.heldCents, row.currency)} · released {formatMoney(row.releasedCents, row.currency)} · refunded{" "}
-              {formatMoney(row.refundedCents, row.currency)} · fees {formatMoney(row.feeCents, row.currency)}
+              {formatMoney(row.refundedCents, row.currency)} · fees{" "}
+              {formatFeesByType(row.feesByType, row.currency, row.feeCents)}
               {row.unbalanced > 0 ? ` · ${row.unbalanced} unbalanced` : ""}
             </li>
           ))}
@@ -1330,7 +1348,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         <section className="card-surface p-5">
           <h2 className="font-display text-lg font-bold text-indigo">Monthly ledger report</h2>
           <p className="mt-1 text-xs text-muted">
-            Amounts recorded in each month. This is not the current held balance. Revenue shares are left out.
+            Amounts recorded in each month. Fees show as separate columns by fee type. Revenue shares are left out.
           </p>
           {monthly.length === 0 ? <p className="mt-3 text-sm text-muted">No ledger rows yet.</p> : null}
           <ul className="mt-3 space-y-2 text-sm text-indigo">
@@ -1338,7 +1356,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               <li key={`${row.currency}-${row.month}`}>
                 {row.month} · {row.currency} · holds {formatMoney(row.heldCents, row.currency)} · releases{" "}
                 {formatMoney(row.releasedCents, row.currency)} · refunds {formatMoney(row.refundedCents, row.currency)} · fees{" "}
-                {formatMoney(row.feeCents, row.currency)}
+                {formatFeesByType(row.feesByType, row.currency, row.feeCents)}
               </li>
             ))}
           </ul>
@@ -1355,6 +1373,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         {fundings.length === 0 ? <p className="text-sm text-muted">No prefunds yet.</p> : null}
         {fundings.map((funding) => {
           const shares = readShareSnapshot(funding.shareSnapshotJson);
+          const feeType = feeTypeFromFundingSnapshot(funding.feeSnapshotJson, funding.serviceLevel);
+          const feeTypeLabel = FEE_TYPE_LABELS[feeType as FeeType] ?? feeType;
           return (
           <article key={funding.id} className="card-surface p-4 text-sm">
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1368,7 +1388,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             </div>
             <p className="mt-2 text-muted">
               Gross {formatMoney(funding.grossCents, funding.currency)} · {funding.currency} · provider {funding.providerCode} · fee snapshot{" "}
-              {formatMoney(funding.feeCents, funding.currency)} · held by provider{" "}
+              {formatMoney(funding.feeCents, funding.currency)} ({feeTypeLabel}) · held by provider{" "}
               {formatMoney(funding.ledger.heldCents, funding.currency)} · released{" "}
               {formatMoney(funding.ledger.releasedCents, funding.currency)}
               {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}

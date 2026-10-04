@@ -4,6 +4,7 @@ import {
   advanceMilestone,
   autoApproveDeadline,
   canRequestPrefund,
+  feeTypeFromFundingSnapshot,
   fundingTerm,
   ledgerMovements,
   marketplaceDisposition,
@@ -20,6 +21,13 @@ describe("marketplace ledger rules", () => {
   it("uses Protected Payment until the jurisdiction allows the escrow term", () => {
     assert.equal(fundingTerm(false), "Protected Payment");
     assert.equal(fundingTerm(true), "Escrow");
+  });
+
+  it("reads feeType from funding snapshots and defaults legacy rows by service level", () => {
+    assert.equal(feeTypeFromFundingSnapshot({ feeType: "managed_intro" }), "managed_intro");
+    assert.equal(feeTypeFromFundingSnapshot({ feeCents: 100 }, "managed_campaign"), "managed_campaign");
+    assert.equal(feeTypeFromFundingSnapshot(null, "discovery"), "platform_service");
+    assert.equal(feeTypeFromFundingSnapshot({}), "collaboration");
   });
 
   it("refuses a prefund when the jurisdiction or the provider is not ready", () => {

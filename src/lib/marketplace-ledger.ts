@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
-import { resolveFee } from "@/lib/collaboration-fees";
+import { defaultFeeTypeForServiceLevel, resolveFee } from "@/lib/collaboration-fees";
 import {
   asLegalReviewStatus,
   capabilitiesFromJurisdictionRow,
@@ -19,6 +19,7 @@ import {
   canRequestChangeOrder,
   canRequestPrefund,
   disputeLoadAllowsPrefund,
+  feeTypeFromFundingSnapshot,
   grossWithinCap,
   sharesFromAmounts,
   summarizeLedgerReport,
@@ -724,6 +725,7 @@ export async function requestPrefund(input: {
             percentBps: quote?.rule?.percentBps ?? null,
             fixedCents: quote?.rule?.fixedCents ?? null,
             feeCents,
+            feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(serviceLevel),
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: new Date().toISOString(),
             ...(input.financialPlan ? { financialPlan: input.financialPlan } : {}),
@@ -879,6 +881,7 @@ export async function sweepDueRecurrences(now = new Date()) {
             percentBps: quote?.rule?.percentBps ?? null,
             fixedCents: quote?.rule?.fixedCents ?? null,
             feeCents,
+            feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(row.serviceLevel),
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: now.toISOString(),
           },
@@ -1038,6 +1041,7 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     percentBps: quote?.rule?.percentBps ?? null,
     fixedCents: quote?.rule?.fixedCents ?? null,
     feeCents,
+    feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(funding.serviceLevel),
     explanation: quote?.explanation ?? "Fee rules were unavailable.",
     capturedAt: new Date().toISOString(),
   };
@@ -1090,7 +1094,12 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
 
 export async function ledgerMonthlyReport() {
   const entries = await prisma.ledgerEntry.findMany({
-    select: { kind: true, amountCents: true, createdAt: true, funding: { select: { currency: true } } },
+    select: {
+      kind: true,
+      amountCents: true,
+      createdAt: true,
+      funding: { select: { currency: true, serviceLevel: true, feeSnapshotJson: true } },
+    },
     orderBy: { createdAt: "desc" },
     take: 5000,
   });
@@ -1100,6 +1109,7 @@ export async function ledgerMonthlyReport() {
       kind: entry.kind,
       amountCents: entry.amountCents,
       createdAt: entry.createdAt,
+      feeType: feeTypeFromFundingSnapshot(entry.funding.feeSnapshotJson, entry.funding.serviceLevel),
     })),
   );
 }
@@ -1109,10 +1119,19 @@ export async function ledgerTotals() {
     select: {
       currency: true,
       grossCents: true,
+      serviceLevel: true,
+      feeSnapshotJson: true,
       entries: { select: { kind: true, amountCents: true } },
     },
   });
-  return summarizeLedger(fundings);
+  return summarizeLedger(
+    fundings.map((funding) => ({
+      currency: funding.currency,
+      grossCents: funding.grossCents,
+      feeType: feeTypeFromFundingSnapshot(funding.feeSnapshotJson, funding.serviceLevel),
+      entries: funding.entries,
+    })),
+  );
 }
 
 export async function listFundings() {
