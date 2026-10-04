@@ -519,17 +519,14 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                           {application.status}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {application.nextStatuses
-                            .filter((status) => !["EXPIRED"].includes(status))
-                            .slice(0, 4)
-                            .map((status) => (
+                          {application.nextStatuses.map((status) => (
                               <form key={status} action={actionTransitionMarketplaceApplication}>
                                 <input type="hidden" name="applicationId" value={application.id} />
                                 <input type="hidden" name="toStatus" value={status} />
                                 <button
                                   type="submit"
                                   className={`rounded-lg px-2.5 py-1 text-[11px] font-bold ${
-                                    status === "DECLINED" || status === "WITHDRAWN"
+                                    status === "DECLINED" || status === "WITHDRAWN" || status === "EXPIRED"
                                       ? "border border-border text-muted"
                                       : status === "COLLABORATION_DRAFTED" || status === "ACCEPTED"
                                         ? "bg-violet text-white"
@@ -549,6 +546,21 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             </Link>
                           ) : null}
                         </div>
+                        {application.events.length > 0 ? (
+                          <ol className="mt-2 space-y-1 border-t border-[#E8EDF8] pt-2">
+                            {application.events.map((event) => (
+                              <li key={event.id} className="text-[10px] text-muted">
+                                <span className="font-semibold text-indigo">
+                                  {event.fromStatus ? `${event.fromStatus} → ` : ""}
+                                  {event.toStatus}
+                                </span>
+                                {event.note ? ` · ${event.note}` : ""}
+                                {" · "}
+                                {new Date(event.createdAt).toLocaleString()}
+                              </li>
+                            ))}
+                          </ol>
+                        ) : null}
                       </div>
                     </li>
                   );
@@ -653,6 +665,16 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                         >
                           Contract
                         </Link>
+                        {hub.ownRequests[0] ? (
+                          <form action={actionInviteCreatorToRequest}>
+                            <input type="hidden" name="creatorSlug" value={creator.slug} />
+                            <input type="hidden" name="requestId" value={hub.ownRequests[0].id} />
+                            <input type="hidden" name="note" value={`Invited from shortlist`} />
+                            <button type="submit" className="text-[11px] font-bold text-violet hover:underline">
+                              Invite
+                            </button>
+                          </form>
+                        ) : null}
                         <form action={actionRemoveShortlist}>
                           <input type="hidden" name="slug" value={creator.slug} />
                           <button type="submit" className="text-[11px] font-semibold text-muted hover:text-violet">

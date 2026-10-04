@@ -338,6 +338,24 @@ export async function createMarketplaceApplication(input: {
   if (input.kind === "creator_opportunity" && !input.opportunityId) {
     throw new Error("opportunityId is required.");
   }
+  if (input.kind === "business_request" && input.businessRequestId) {
+    const request = await prisma.marketplaceBusinessRequest.findUnique({
+      where: { id: input.businessRequestId },
+      select: { status: true },
+    });
+    if (!request || request.status !== "published") {
+      throw new Error("Business request must be published before applying or inviting.");
+    }
+  }
+  if (input.kind === "creator_opportunity" && input.opportunityId) {
+    const opportunity = await prisma.marketplaceCreatorOpportunity.findUnique({
+      where: { id: input.opportunityId },
+      select: { status: true },
+    });
+    if (!opportunity || opportunity.status !== "published") {
+      throw new Error("Creator opportunity must be published before connecting.");
+    }
+  }
   return prisma.$transaction(async (tx) => {
     const row = await tx.marketplaceApplication.create({
       data: {
@@ -406,6 +424,43 @@ export function nextApplicationStatuses(from: string): MarketplaceApplicationSta
   return [...APPLICATION_TRANSITIONS[from]];
 }
 
+/** Pure — workspace owns a marketplace request row by brand match. */
+export function isWorkspaceOwnedRequestBrand(brand: string, workspaceName: string): boolean {
+  const b = brand.trim().toLowerCase();
+  const w = workspaceName.trim().toLowerCase();
+  if (!b || !w) return false;
+  return b === w || b.includes(w.slice(0, Math.min(8, w.length)));
+}
+
+/** Pure — creator party on either side of the application. */
+export function creatorOwnsApplication(
+  application: { fromSlug?: string | null; toSlug?: string | null },
+  creatorSlug: string,
+): boolean {
+  const slug = creatorSlug.trim();
+  if (!slug) return false;
+  return application.fromSlug === slug || application.toSlug === slug;
+}
+
+/** Pure — business may manage when the application sits on an owned request id. */
+export function businessOwnsApplication(
+  application: { businessRequestId?: string | null },
+  ownedRequestIds: string[],
+): boolean {
+  const id = application.businessRequestId?.trim();
+  if (!id) return false;
+  return ownedRequestIds.includes(id);
+}
+
+export type MarketplaceApplicationEventRow = {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  actorUserId: string | null;
+  note: string | null;
+  createdAt: string;
+};
+
 export type MarketplaceApplicationRow = {
   id: string;
   kind: string;
@@ -420,7 +475,9 @@ export type MarketplaceApplicationRow = {
   /** Creator slug on either side of the application. */
   creatorSlug: string | null;
   requestBrand: string | null;
+  opportunityLookingFor: string | null;
   nextStatuses: MarketplaceApplicationStatus[];
+  events: MarketplaceApplicationEventRow[];
 };
 
 function mapApplication(row: {
@@ -435,6 +492,15 @@ function mapApplication(row: {
   note: string | null;
   createdAt: Date;
   businessRequest?: { brand: string } | null;
+  opportunity?: { lookingFor: string } | null;
+  events?: {
+    id: string;
+    fromStatus: string | null;
+    toStatus: string;
+    actorUserId: string | null;
+    note: string | null;
+    createdAt: Date;
+  }[];
 }): MarketplaceApplicationRow {
   const status = isApplicationStatus(row.status) ? row.status : "REQUESTED";
   const creatorSlug = row.fromSlug || row.toSlug || null;
@@ -451,34 +517,57 @@ function mapApplication(row: {
     createdAt: row.createdAt.toISOString(),
     creatorSlug,
     requestBrand: row.businessRequest?.brand ?? null,
+    opportunityLookingFor: row.opportunity?.lookingFor ?? null,
     nextStatuses: nextApplicationStatuses(status),
+    events: (row.events ?? []).map((event) => ({
+      id: event.id,
+      fromStatus: event.fromStatus,
+      toStatus: event.toStatus,
+      actorUserId: event.actorUserId,
+      note: event.note,
+      createdAt: event.createdAt.toISOString(),
+    })),
   };
+}
+
+export async function getMarketplaceApplication(id: string): Promise<MarketplaceApplicationRow | null> {
+  const row = await prisma.marketplaceApplication.findUnique({
+    where: { id },
+    include: {
+      businessRequest: { select: { brand: true } },
+      opportunity: { select: { lookingFor: true } },
+      events: { orderBy: { createdAt: "asc" } },
+    },
+  });
+  return row ? mapApplication(row) : null;
 }
 
 export async function listMarketplaceApplications(input?: {
   businessRequestIds?: string[];
   creatorSlug?: string;
+  opportunityIds?: string[];
   limit?: number;
 }): Promise<MarketplaceApplicationRow[]> {
   await ensureMarketplaceListings();
-  const where =
-    input?.businessRequestIds?.length || input?.creatorSlug
-      ? {
-          AND: [
-            input.businessRequestIds?.length
-              ? { businessRequestId: { in: input.businessRequestIds } }
-              : {},
-            input.creatorSlug
-              ? {
-                  OR: [{ fromSlug: input.creatorSlug }, { toSlug: input.creatorSlug }],
-                }
-              : {},
-          ],
-        }
-      : undefined;
+  const clauses: Record<string, unknown>[] = [];
+  if (input?.businessRequestIds?.length) {
+    clauses.push({ businessRequestId: { in: input.businessRequestIds } });
+  }
+  if (input?.opportunityIds?.length) {
+    clauses.push({ opportunityId: { in: input.opportunityIds } });
+  }
+  if (input?.creatorSlug) {
+    clauses.push({
+      OR: [{ fromSlug: input.creatorSlug }, { toSlug: input.creatorSlug }],
+    });
+  }
   const rows = await prisma.marketplaceApplication.findMany({
-    where,
-    include: { businessRequest: { select: { brand: true } } },
+    where: clauses.length ? { AND: clauses } : undefined,
+    include: {
+      businessRequest: { select: { brand: true } },
+      opportunity: { select: { lookingFor: true } },
+      events: { orderBy: { createdAt: "asc" } },
+    },
     orderBy: { createdAt: "desc" },
     take: input?.limit ?? 40,
   });
@@ -501,7 +590,7 @@ export function applicationTransitionLabel(status: MarketplaceApplicationStatus)
     case "DECLINED":
       return "Decline";
     case "EXPIRED":
-      return "Expire";
+      return "Mark expired";
     case "WITHDRAWN":
       return "Withdraw";
     default:

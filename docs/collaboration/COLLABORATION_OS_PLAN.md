@@ -95,7 +95,7 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 ### P1b — Marketplace objects ✅
 
 - Prisma: `MarketplaceBusinessRequest`, `MarketplaceCreatorOpportunity`, `MarketplaceMatchRecord`, applications + events.
-- Application/invitation state machine + timeline events **wired to hubs** (creator Apply, business Invite, status transitions → contract draft).
+- Application/invitation state machine + timeline events **wired to hubs** (creator Apply, business Invite, status transitions with **visible event timeline** → contract draft; ownership guards; opportunity Connect/Apply).
 - Admin CRUD at `/admin/marketplace-listings`.
 - Public `/collaboration` lists read from DB (seeded from former hardcoded arrays when empty).
 
