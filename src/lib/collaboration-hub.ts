@@ -12,6 +12,7 @@ import {
 } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { listCollaborations } from "@/lib/collaborations";
+import { fundingBadge, type FundingBadge } from "@/lib/funding-badge";
 import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketplace-ledger";
 import { findDirectoryMatchesFor, type CreatorMatch, type MatchBreakdown } from "@/lib/matching";
 import {
@@ -45,6 +46,12 @@ export type HubPipelineItem = {
   stage: PipelineStage;
   stageIndex: number;
   href: string;
+  /** W2.5 — Product §16 funding badge when a ledger row is linked. */
+  fundingBadge?: FundingBadge | null;
+  feeCents?: number | null;
+  currency?: string | null;
+  /** e.g. "1/2 revisions used on Delivery" */
+  revisionSummary?: string | null;
 };
 
 export type HubStatusCounts = {
@@ -109,6 +116,40 @@ export function derivePipelineStage(input: {
   }
   if (input.collaborationStatus === "accepted") return "Contract";
   return "Match";
+}
+
+/** W2.5 — Product §16 badge + fee + revision summary for a funding-linked pipeline row. */
+export function pipelineFundingSurface(input: {
+  status: string;
+  feeCents: number;
+  currency: string;
+  grossCents: number;
+  fundingMode?: string | null;
+  protectedPaymentsEnabled?: boolean;
+  heldCents?: number;
+  releasedCents?: number;
+  milestones?: Array<{ title: string; revisionCount: number; revisionLimit: number; status: string }>;
+}): Pick<HubPipelineItem, "fundingBadge" | "feeCents" | "currency" | "revisionSummary"> {
+  const badge = fundingBadge({
+    status: input.status,
+    heldCents: input.heldCents,
+    releasedCents: input.releasedCents,
+    fundedCents: input.grossCents,
+    protectedPaymentsEnabled: input.protectedPaymentsEnabled,
+    fundingMode: input.fundingMode ?? undefined,
+  });
+  const hot = (input.milestones ?? []).find(
+    (m) => m.revisionLimit > 0 && (m.status === "submitted" || m.status === "pending" || m.revisionCount > 0),
+  );
+  const revisionSummary = hot
+    ? `${hot.revisionCount}/${hot.revisionLimit} revisions · ${hot.title}`
+    : null;
+  return {
+    fundingBadge: badge,
+    feeCents: input.feeCents,
+    currency: input.currency,
+    revisionSummary,
+  };
 }
 
 export function scoreBusinessRequestForCreator(
@@ -245,13 +286,26 @@ export async function loadCreatorHub(input: {
         milestoneStatuses: funding?.milestones?.map((m) => m.status) ?? [],
       });
       const counterparty = row.initiatorSlug === slug ? row.recipientSlug : row.initiatorSlug;
+      const surface = funding
+        ? pipelineFundingSurface({
+            status: funding.status,
+            feeCents: funding.feeCents,
+            currency: funding.currency,
+            grossCents: funding.grossCents,
+            fundingMode: funding.fundingMode,
+            heldCents: funding.ledger?.heldCents,
+            releasedCents: funding.ledger?.releasedCents,
+            milestones: funding.milestones,
+          })
+        : { fundingBadge: null, feeCents: null, currency: null, revisionSummary: null };
       return {
         id: row.id,
         title: row.title,
         counterparty,
         stage,
         stageIndex: PIPELINE_STAGES.indexOf(stage),
-        href: `/collaboration/records/${row.id}`,
+        href: funding ? `/payments` : `/collaboration/records/${row.id}`,
+        ...surface,
       };
     });
 
@@ -325,6 +379,16 @@ export async function loadBusinessHub(input?: { intentBriefId?: string }) {
       fundingStatus: row.status,
       milestoneStatuses: row.milestones?.map((m) => m.status) ?? [],
     });
+    const surface = pipelineFundingSurface({
+      status: row.status,
+      feeCents: row.feeCents,
+      currency: row.currency,
+      grossCents: row.grossCents,
+      fundingMode: row.fundingMode,
+      heldCents: row.ledger?.heldCents,
+      releasedCents: row.ledger?.releasedCents,
+      milestones: row.milestones,
+    });
     return {
       id: row.id,
       title: row.title,
@@ -332,6 +396,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string }) {
       stage,
       stageIndex: PIPELINE_STAGES.indexOf(stage),
       href: `/payments`,
+      ...surface,
     };
   });
 

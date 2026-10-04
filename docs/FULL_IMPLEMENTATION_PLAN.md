@@ -152,35 +152,28 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Admin landing editors | Operator E2E still to run in staging | Documented smoke |
 | Match titles remapped + **normalize-on-save** | — | `normalizeInfluencerRoleTitle` on homepage CMS save; Content Creator preserved |
 
-#### W2.2 Influencer hub residuals — PARTIAL
+#### W2.2 Influencer hub residuals — DONE
 | Exists | Missing | Exit |
 |---|---|---|
-| Status cards, matches, pipeline shell, payout panel | Honest empty states (no fake earnings); payout panel shows Global Payout Ready + corridor | Empty/not-ready copy only until method verified |
-| Side nav shortcuts | Dead-end routes hidden or implemented — **Messages** has no `/messages` route; Analytics shortcut is `/dashboard` not collab analytics | Zero 404 / misleading nav items |
-| Influencer Opportunities wording | Align any leftover Creator hub strings | Terminology clean |
+| Status cards, matches, pipeline, payout panel with Global Payout Ready; Messages dead nav removed; honest empty earnings copy | — | Zero 404 / misleading nav; empty/not-ready copy only |
 
 #### W2.3 Business hub residuals — PARTIAL
 | Exists | Missing | Exit |
 |---|---|---|
-| Requests, suggestions, spend summary, contract link | Applicant status transitions: `replied` / `declined` exist in `business.ts` but **unused in hub UI**; shortlist-from-applicant | Business can reply/decline/shortlist without admin-only workarounds |
-| Pipeline chrome | Map every step to real funding/milestone states | No cosmetic-only steps |
-| Campaign Intent + suggestions | Intent refresh as new influencers appear; multi-creator team proposals (Collab OS §3.3) | Suggestion → invite / draft / team proposal paths documented and shipped or deferred with owner |
+| Requests, suggestions, spend summary, contract link; applicant reply/decline/shortlist in hub UI | Intent refresh / multi-creator team proposals (Collab OS §3.3) deferred | Reply/decline/shortlist without admin workarounds |
+| Pipeline chrome mapped to funding/milestone states | — | No cosmetic-only steps |
 
 #### W2.4 Mentorship stub — DONE (full module = P7 core shipped)
 | Exists | Missing | Exit |
 |---|---|---|
 | Banner + `/mentorship` find/become hub + eligibility + request flow | Paid commercial pack; richer scheduling | Residuals under **P7 still open** |
 
-#### W2.5 Product UX funding surfaces — PARTIAL
+#### W2.5 Product UX funding surfaces — DONE (hub + payments)
 **Source:** Product Addendum §16  
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Prefund / payments UI, fee snapshot on funding | Funding badges: Fully Funded / Partially Funded / Awaiting Funding / Protected Payment Unavailable | Badges driven by reconciled ledger + jurisdiction |
-| Milestone timeline pieces | Amount, due date, submission status, review deadline, payout status in one timeline | Product §16 timeline complete |
-| Fee preview before accept | Immutable fee summary after accept (hub + contract) | Visible both sides |
-| — | Revision counter + change-order action in hub UI | UX matches §16 |
-| Admin ledger/trust views | Unified admin transaction view: collab, milestones, provider, fee rule, funds status, audit | Dev Addendum §19 Collaboration Operations |
+| Funding badges on payments + hub pipelines; immutable fee snapshot on funding + hub fee locked line; revision counters on payments + hub; review deadline on submitted milestones | Unified admin transaction view (Dev §19) remains under P6 deepen | Badges + timeline + fee + revisions visible to both sides |
 
 ---
 
