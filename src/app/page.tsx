@@ -16,6 +16,7 @@ import {
 } from "@/components/icons";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
+import { marketplaceConfig } from "@/lib/marketplace-ledger";
 import { categoryImageFor, type SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -79,7 +80,15 @@ function Shell({
 }
 
 export default async function HomePage() {
-  const [cms, directory] = await Promise.all([getCms(), getDirectory()]);
+  const [cms, directory, marketplace] = await Promise.all([
+    getCms(),
+    getDirectory(),
+    marketplaceConfig().catch(() => null),
+  ]);
+  const homeJurisdiction =
+    marketplace?.jurisdictions.find((row) => row.code === "US") ?? marketplace?.jurisdictions[0];
+  const protectedPaymentsEnabled = homeJurisdiction?.protectedPaymentsEnabled !== false;
+  const escrowTermAllowed = Boolean(homeJurisdiction?.escrowTermAllowed);
   const taxonomy = directory.taxonomy
     .filter((node) => node.active)
     .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
@@ -401,7 +410,11 @@ export default async function HomePage() {
       </div>
 
       <div style={{ order: sectionRank("value_proposition") }} className={sectionOn("value_proposition") ? undefined : "hidden"}>
-      <HomepageValuePropositionStrip strip={valueProposition} />
+      <HomepageValuePropositionStrip
+        strip={valueProposition}
+        protectedPaymentsEnabled={protectedPaymentsEnabled}
+        escrowTermAllowed={escrowTermAllowed}
+      />
       </div>
 
       <div style={{ order: sectionRank("collaboration") }} className={sectionOn("collaboration") ? undefined : "hidden"}>
