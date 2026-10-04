@@ -294,7 +294,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Pro `dynamic` flag + destination setter | Pro **self-serve** dynamic destination + destination history + rollback | Spec §9 + Phase 3 — DONE (Phase 4 campaign/NFC still later) |
 | Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics; **resolver ops metrics** | Spec §10 — DONE; Spec §20 observable resolver metrics — **DONE** |
 | — | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Explicitly later; do not block P4 finance |
-| Card design system | Align remaining chrome to Platform Spec §39 assets; live data not raster | Card matches approved vertical standard |
+| Card design system | Align remaining chrome to Platform Spec §39 assets; live data not raster | **DONE** — Starter white / Plus `bg-plus` electric-blue / Pro `bg-pro` + gold; badge text always shown |
 | OG / social sharing | Influrios-branded preview; canonical SEO on influrios.com | Spec §11 — DONE (card/profile OG + INFLR crawler interstitial) |
 
 ---
