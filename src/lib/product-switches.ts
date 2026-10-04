@@ -32,6 +32,12 @@ export const PRODUCT_SWITCHES = [
     description:
       "Phase 9/10 JSON escrow and trust demo consoles. Turned off, product CTAs stay on the marketplace ledger.",
   },
+  {
+    key: "paid_mentoring",
+    enabled: false,
+    description:
+      "Paid Influencer Mentorship sessions. Off = community mentoring only; never mixes into Collaboration Holding.",
+  },
 ] as const;
 
 export type ProductSwitchKey = (typeof PRODUCT_SWITCHES)[number]["key"];

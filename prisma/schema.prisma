@@ -271,6 +271,46 @@ model Creator {
   socialConnections  SocialConnection[]
   shortLinks         ShortLink[]
   payoutProfile      InfluencerPayoutProfile?
+  mentorshipProfile  MentorshipProfile?
+  mentorshipAsMentor MentorshipRequest[] @relation("MentorshipMentor")
+  mentorshipAsMentee MentorshipRequest[] @relation("MentorshipMentee")
+}
+
+/// Collab OS P7 — influencer opt-in to mentor others (community mentoring by default).
+model MentorshipProfile {
+  id              String   @id @default(cuid())
+  creatorId       String   @unique
+  creator         Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  /// open | paused | closed
+  availability    String   @default("open")
+  headline        String   @default("")
+  boundaries      String   @default("")
+  nichesJson      Json     @default("[]")
+  maxActiveMentees Int      @default(5)
+  /// Set only when admin eligibility passed at apply time.
+  eligible        Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+}
+
+/// Collab OS P7 — mentee → mentor request lifecycle.
+model MentorshipRequest {
+  id              String   @id @default(cuid())
+  mentorCreatorId String
+  menteeCreatorId String
+  mentor          Creator  @relation("MentorshipMentor", fields: [mentorCreatorId], references: [id], onDelete: Cascade)
+  mentee          Creator  @relation("MentorshipMentee", fields: [menteeCreatorId], references: [id], onDelete: Cascade)
+  /// pending | accepted | declined | cancelled
+  status          String   @default("pending")
+  message         String   @default("")
+  responseNote    String   @default("")
+  /// Always false unless paid_mentoring product switch is on — never touches collab holding.
+  paidRequested   Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@index([mentorCreatorId, status])
+  @@index([menteeCreatorId, status])
 }
 
 /// Collab OS P5 — influencer payout methods + Global Payout Ready.
