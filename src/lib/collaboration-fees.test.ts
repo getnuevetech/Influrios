@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 import {
   calculateFeeCents,
   explainFeeWinner,
+  feeFromTier,
   matchesRule,
+  parseTierBands,
   pickWinningRule,
   protectedPaymentLabel,
   ruleSpecificity,
@@ -29,6 +31,7 @@ function rule(overrides: Partial<CollaborationFeeRule> = {}): CollaborationFeeRu
     fixedCents: 0,
     minFeeCents: 0,
     maxFeeCents: null,
+    tierBands: [],
     payer: "brand",
     effectiveFrom: "2026-01-01T00:00:00.000Z",
     notes: "",
@@ -58,6 +61,57 @@ describe("collaboration fee calculation", () => {
       ),
       2_000,
     );
+  });
+
+  it("supports waived, tiered, and custom_enterprise methods", () => {
+    assert.equal(calculateFeeCents(rule({ method: "waived", percentBps: 1000, minFeeCents: 500 }), 10_000), 0);
+    assert.equal(
+      calculateFeeCents(
+        rule({
+          method: "tiered",
+          tierBands: [
+            { upToCents: 10_000, percentBps: 800 },
+            { upToCents: null, percentBps: 1200 },
+          ],
+        }),
+        5_000,
+      ),
+      400,
+    );
+    assert.equal(
+      calculateFeeCents(
+        rule({
+          method: "tiered",
+          tierBands: [
+            { upToCents: 10_000, percentBps: 800 },
+            { upToCents: null, percentBps: 1200 },
+          ],
+        }),
+        20_000,
+      ),
+      2_400,
+    );
+    assert.equal(
+      calculateFeeCents(rule({ method: "custom_enterprise", fixedCents: 75_000 }), 1_000_000),
+      75_000,
+    );
+  });
+});
+
+describe("tier band parsing", () => {
+  it("keeps ordered catch-all bands and drops invalid rows", () => {
+    assert.deepEqual(
+      parseTierBands([
+        { upToCents: 5000, percentBps: 500 },
+        { upToCents: null, percentBps: 900 },
+        { upToCents: "x", percentBps: 100 },
+      ]),
+      [
+        { upToCents: 5000, percentBps: 500 },
+        { upToCents: null, percentBps: 900 },
+      ],
+    );
+    assert.equal(feeFromTier(4_000, [{ upToCents: 5000, percentBps: 1000 }]), 400);
   });
 });
 

@@ -183,7 +183,16 @@ export async function actionFreezeFeeSnapshot(formData: FormData) {
 
 export async function actionSaveFeeRule(formData: FormData) {
   await requireAdminAction("commerce.manage");
-  const { upsertFeeRule } = await import("@/lib/collaboration-fees");
+  const { parseTierBands, upsertFeeRule } = await import("@/lib/collaboration-fees");
+  let tierBands: ReturnType<typeof parseTierBands> = [];
+  const rawBands = String(formData.get("tierBandsJson") || "").trim();
+  if (rawBands) {
+    try {
+      tierBands = parseTierBands(JSON.parse(rawBands));
+    } catch {
+      tierBands = [];
+    }
+  }
   await upsertFeeRule({
     id: String(formData.get("id") || "") || undefined,
     name: String(formData.get("name") || "Untitled rule"),
@@ -207,13 +216,17 @@ export async function actionSaveFeeRule(formData: FormData) {
     method: String(formData.get("method") || "percent") as
       | "percent"
       | "fixed"
-      | "percent_plus_fixed",
+      | "percent_plus_fixed"
+      | "waived"
+      | "tiered"
+      | "custom_enterprise",
     percentBps: Number(formData.get("percentBps") || 0),
     fixedCents: Math.round(Number(formData.get("fixedUsd") || 0) * 100),
     minFeeCents: Math.round(Number(formData.get("minFeeUsd") || 0) * 100),
     maxFeeCents: formData.get("maxFeeUsd")
       ? Math.round(Number(formData.get("maxFeeUsd")) * 100)
       : null,
+    tierBands,
     payer: String(formData.get("payer") || "brand") as "brand" | "creator" | "split",
     notes: String(formData.get("notes") || ""),
   });

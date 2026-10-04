@@ -1010,6 +1010,23 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               <li key={funding.id} className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
                 <span className="font-semibold">Payment risk</span> · {funding.businessName} → {funding.creatorSlug} ·{" "}
                 {funding.title} · held {formatMoney(funding.ledger.heldCents, funding.currency)}
+                {funding.evidence ? (
+                  <p className="mt-1 text-xs text-rose-900">
+                    Evidence:{" "}
+                    {[
+                      funding.evidence.providerCaseId ? `case ${funding.evidence.providerCaseId}` : null,
+                      funding.evidence.providerReference
+                        ? `ref ${funding.evidence.providerReference}`
+                        : null,
+                      funding.evidence.reasonCode ? `code ${funding.evidence.reasonCode}` : null,
+                      funding.evidence.amountCents != null
+                        ? `${formatMoney(funding.evidence.amountCents, funding.evidence.currency)}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "pack recorded"}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -1061,6 +1078,53 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             <label className="text-xs font-semibold text-muted">
               Note
               <input name="note" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Provider case id (chargeback evidence)
+              <input
+                name="providerCaseId"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Provider reference
+              <input
+                name="providerReference"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Evidence amount USD
+              <input
+                name="evidenceAmountUsd"
+                type="number"
+                min={0}
+                step={0.01}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Evidence reason code
+              <input
+                name="evidenceReasonCode"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Evidence received at (ISO)
+              <input
+                name="evidenceReceivedAt"
+                placeholder="2026-10-04T12:00:00.000Z"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Evidence attachment URLs (comma or newline)
+              <textarea
+                name="evidenceAttachmentUrls"
+                rows={2}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
             </label>
             <label className="text-xs font-semibold text-muted sm:col-span-2">
               Confirm password (high-risk)

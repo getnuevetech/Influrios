@@ -1113,6 +1113,8 @@ model ShortLink {
   destination     String
   status          String   @default("active")
   dynamic         Boolean  @default(false)
+  /// Entitlement snapshot frozen at mint (plan tier + shortlink/QR caps).
+  entitlementSnapshotJson Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   aliases         ShortLinkAlias[]
@@ -1321,6 +1323,8 @@ model CollaborationFeeRule {
   fixedCents    Int      @default(0)
   minFeeCents   Int      @default(0)
   maxFeeCents   Int?
+  /// Tiered fee bands JSON: [{ "upToCents": 10000, "percentBps": 800 }, { "upToCents": null, "percentBps": 1200 }]
+  tierBandsJson Json?
   payer         String   @default("brand")
   effectiveFrom DateTime
   notes         String   @default("")
@@ -1375,6 +1379,8 @@ model CollaborationFunding {
   feeSnapshotJson  Json
   fxSnapshotJson   Json?
   shareSnapshotJson Json?
+  /// W3.6 durable chargeback / payment-risk evidence pack (provider refs, amounts, attachments).
+  chargebackEvidenceJson Json?
   serviceLevel     String
   status            String   @default("awaiting_provider")
   providerCode      String

@@ -209,22 +209,24 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
   const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
   const entitlements = await entitlementsForPlan(plan);
   if (!entitlements.shortlink || entitlements.shortlinkMax < 1) return null;
+  const snapshot = entitlementSnapshotForMint(plan, entitlements);
   const current = creator.shortLinks[0];
   if (current) {
     if ((entitlements.standardQr || entitlements.dynamicQr) && current.status === "active") {
       await createQr(current.id);
     }
-    if (current.dynamic !== entitlements.dynamicQr) {
-      await prisma.shortLink.update({
-        where: { id: current.id },
-        data: { dynamic: entitlements.dynamicQr },
-      });
+    const patch: { dynamic?: boolean; entitlementSnapshotJson?: object } = {};
+    if (current.dynamic !== entitlements.dynamicQr) patch.dynamic = entitlements.dynamicQr;
+    if (current.entitlementSnapshotJson == null) patch.entitlementSnapshotJson = snapshot;
+    if (Object.keys(patch).length) {
+      await prisma.shortLink.update({ where: { id: current.id }, data: patch });
     }
     return prisma.shortLink.findUnique({
       where: { id: current.id },
       include: { qrIdentities: { where: { status: "active" }, take: 1 } },
     });
   }
+  if (!canCreateAnotherShortLink(creator.shortLinks.length, entitlements)) return null;
   const slug = normalizeSlug(creator.card?.shortAlias || creator.slug.split("-")[0] || "");
   if (!slug || isReservedSlug(slug)) return null;
   const taken = await prisma.shortLink.findUnique({ where: { slug } });
@@ -239,6 +241,7 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
         destination: `/c/${creator.slug}`,
         status: "active",
         dynamic: entitlements.dynamicQr,
+        entitlementSnapshotJson: snapshot,
       },
     });
     if (entitlements.standardQr || entitlements.dynamicQr) await createQr(link.id);
@@ -250,6 +253,40 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
     if (typeof error === "object" && error && "code" in error && error.code === "P2002") return null;
     throw error;
   }
+}
+
+export type ShortLinkEntitlementSnapshot = {
+  plan: string;
+  shortlink: boolean;
+  shortlinkMax: number;
+  customAlias: boolean;
+  standardQr: boolean;
+  dynamicQr: boolean;
+  frozenAt: string;
+};
+
+export function entitlementSnapshotForMint(
+  plan: string,
+  entitlements: EntitlementLimits,
+): ShortLinkEntitlementSnapshot {
+  return {
+    plan,
+    shortlink: entitlements.shortlink,
+    shortlinkMax: entitlements.shortlinkMax,
+    customAlias: entitlements.customAlias,
+    standardQr: entitlements.standardQr,
+    dynamicQr: entitlements.dynamicQr,
+    frozenAt: new Date().toISOString(),
+  };
+}
+
+export function canCreateAnotherShortLink(existingActiveCount: number, entitlements: EntitlementLimits) {
+  if (!canMintShortLink(entitlements)) return false;
+  return existingActiveCount < entitlements.shortlinkMax;
+}
+
+export function canMintShortLink(entitlements: EntitlementLimits) {
+  return entitlements.shortlink && entitlements.shortlinkMax > 0;
 }
 
 export async function shortLinkPublicLabel(creatorSlug: string): Promise<string | null> {
@@ -510,10 +547,6 @@ async function provisionByPublicSlug(slug: string) {
   const entitlements = await entitlementsForPlan(plan);
   if (!canMintShortLink(entitlements)) return null;
   return ensureCreatorShortLink(creators[0].slug);
-}
-
-export function canMintShortLink(entitlements: EntitlementLimits) {
-  return entitlements.shortlink && entitlements.shortlinkMax > 0;
 }
 
 export async function changeCreatorSlug(creatorSlug: string, nextSlug: string) {
