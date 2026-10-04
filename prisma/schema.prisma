@@ -1642,15 +1642,24 @@ model AgencyPortfolio {
 }
 
 model AgencySeat {
-  id          String          @id @default(cuid())
-  workspaceId String
-  workspace   AgencyWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  email       String
-  role        String          @default("member")
-  active      Boolean         @default(true)
-  createdAt   DateTime        @default(now())
+  id             String          @id @default(cuid())
+  workspaceId    String
+  workspace      AgencyWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email          String
+  role           String          @default("member")
+  active         Boolean         @default(true)
+  /// pending | accepted | revoked — invite/accept lifecycle (L3).
+  inviteStatus   String          @default("pending")
+  inviteToken    String?         @unique
+  invitedAt      DateTime        @default(now())
+  expiresAt      DateTime?
+  acceptedAt     DateTime?
+  acceptedUserId String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@unique([workspaceId, email])
+  @@index([inviteStatus, active])
 }
 
 /// Ops console RBAC (Phase L). Replaces data/admin-auth.json.

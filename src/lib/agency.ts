@@ -409,17 +409,11 @@ export async function listAgencySeats() {
   return prisma.agencySeat.findMany({ where: { workspaceId: WORKSPACE_ID }, orderBy: { createdAt: "asc" } });
 }
 
+/** @deprecated Prefer inviteAgencySeat — kept for switch-off refusal tests and admin redirect. */
 export async function addAgencySeat(input: { email: string; role?: string }) {
-  if (!(await productSwitch("agency_seats"))) throw new Error("Agency seats are turned off.");
-  const email = input.email.trim().toLowerCase().slice(0, 160);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a seat email.");
-  const role = input.role === "owner" || input.role === "manager" ? input.role : "member";
-  await ensureWorkspace();
-  await prisma.agencySeat.upsert({
-    where: { workspaceId_email: { workspaceId: WORKSPACE_ID, email } },
-    update: { role, active: true },
-    create: { workspaceId: WORKSPACE_ID, email, role, active: true },
-  });
+  const { inviteAgencySeat } = await import("@/lib/agency-seats");
+  const result = await inviteAgencySeat(input);
+  return result.seat;
 }
 
 export async function setAgencySeatActive(email: string, active: boolean) {

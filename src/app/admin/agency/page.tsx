@@ -24,6 +24,7 @@ type Props = {
     error?: string;
     seats?: string;
     seat?: string;
+    invite?: string;
     roster?: string;
     removed?: string;
     campaign?: string;
@@ -89,12 +90,18 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         </div>
       ) : null}
 
+      {params.invite ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Seat invite created. Copy link:{" "}
+          <code className="rounded bg-white px-1.5 py-0.5 text-xs text-indigo">{params.invite}</code>
+        </div>
+      ) : null}
       <section className="card-surface p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Seats</h2>
         <p className="mt-1 text-sm text-muted">
           {seatsOn
-            ? "New seats can be added. A seat does not sign in on its own."
-            : "Agency seats are turned off. The roster below stays available."}
+            ? "Invite a teammate by email. They accept via copy-link (SMTP optional). Only accepted active seats can mutate /agency when seats are on."
+            : "Agency seats are turned off. The roster below stays available; plan entitlement gates /agency."}
         </p>
         {canManage ? (
           <form action={actionSaveAgencySeats} className="mt-4 flex flex-wrap items-center gap-3">
@@ -112,7 +119,15 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
           {seats.map((seat) => (
             <li key={seat.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
               <span className="font-semibold text-indigo">
-                {seat.email} · {seat.role} · {seat.active ? "active" : "inactive"}
+                {seat.email} · {seat.role} · {seat.inviteStatus}
+                {seat.active ? " · active" : " · inactive"}
+                {seat.inviteToken && seat.inviteStatus === "pending" ? (
+                  <>
+                    {" "}
+                    · invite{" "}
+                    <code className="rounded bg-[#F0F4FF] px-1 text-[11px]">/agency/invite/{seat.inviteToken}</code>
+                  </>
+                ) : null}
               </span>
               {canManage ? (
                 <form action={actionAdminSetSeat}>
@@ -140,8 +155,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
               <option value="manager">Manager</option>
               <option value="member">Member</option>
             </select>
-            <button type="submit" className="btn-primary !py-2 text-sm">
-              Add seat
+            <button type="submit" className="btn-primary !py-2 text-sm" disabled={!seatsOn}>
+              Invite seat
             </button>
           </form>
         ) : null}

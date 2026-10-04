@@ -10,16 +10,14 @@ import {
   setPortfolioPublished,
   type AgencyCampaign,
 } from "@/lib/agency";
-import { getWorkspace } from "@/lib/business";
-import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { resolveAgencyAccess } from "@/lib/agency-auth";
 
 async function requireAgencyAccess() {
-  const ws = await getWorkspace();
-  const e = getBusinessEntitlements(ws.plan);
-  if (!e.agencyWorkspace) {
-    redirect("/agency?error=agency_plan_required");
+  const access = await resolveAgencyAccess();
+  if (!access.ok) {
+    redirect(`/agency?error=${encodeURIComponent(access.error)}`);
   }
-  return ws;
+  return access;
 }
 
 export async function actionAddRoster(formData: FormData) {
