@@ -69,7 +69,7 @@ Influrios already has durable pieces to **extend**, not replace:
 | Contract wizard | `/collaboration/contract` | ✅ P3 |
 | Milestones / finance | Strong ledger core | Domain account purposes; fee-earned-on-release; ROUTE_READY (P4) |
 | Payout readiness | P5 core: profile + corridors + hub panel + ROUTE_READY corridor gate | Admin corridor ops (P6); live method verification |
-| Mentorship | Public banner + stub landing | Full Mentor–Mentee hub (P7) |
+| Mentorship | P7 core: find/become hub, eligibility, request lifecycle, paid flag isolated | Paid session commercial pack; richer scheduling |
 | Admin control plane | P6 core: corridors suspend, versioned thresholds, ops hub, dual-approval gate | Deeper provider health; guest collab quota enforcement; P7 mentorship surfaces |
 
 ---
@@ -156,13 +156,13 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 
 **Exit (core):** ops can suspend a corridor / change fee future-deals without code deploy — met.
 
-### P7 — Mentorship module
+### P7 — Mentorship module — PARTIAL (core shipped)
 
-- Public mentor landing; Find a Mentor / Become a Mentor hub.
-- Eligibility rules (admin); request/accept/decline; availability.
-- Paid mentoring behind feature flag; never mix into collab holding unless enabled.
+- Public mentor landing; Find a Mentor / Become a Mentor hub with Emerging/Experienced language.
+- Eligibility rules (admin control plane); request/accept/decline; availability.
+- Paid mentoring behind `paid_mentoring` feature flag; never mixes into collab holding.
 
-**Exit:** acquisition loop live; free mentorship does not touch collaboration funds.
+**Exit (core):** acquisition loop live; free mentorship does not touch collaboration funds — met.
 
 ### P8 — Migration & teardown
 

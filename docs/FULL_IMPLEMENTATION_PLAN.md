@@ -74,7 +74,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | PARTIAL ledger; deepen W3.6 / W3.11; **P6** admin |
 | Dev P3 expansion | Staged/recurring, more countries, advanced attribution | W3.4 / W3.7 after P4 stable |
 | Dev P4 advanced | Revenue sharing, complex splits, enterprise rules | Explicitly deferred (§11) |
-| — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5–P6 core shipped**; **P7–P8** remaining |
+| — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5–P7 core shipped**; **P8** remaining |
 
 ---
 
@@ -166,10 +166,10 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Pipeline chrome | Map every step to real funding/milestone states | No cosmetic-only steps |
 | Campaign Intent + suggestions | Intent refresh as new influencers appear; multi-creator team proposals (Collab OS §3.3) | Suggestion → invite / draft / team proposal paths documented and shipped or deferred with owner |
 
-#### W2.4 Mentorship stub — PARTIAL (full module = P7)
+#### W2.4 Mentorship stub — DONE (full module = P7 core shipped)
 | Exists | Missing | Exit |
 |---|---|---|
-| Banner + `/mentorship` stub + Influencer Mentor CTAs | Full Find/Become hub, eligibility, request flow, Prisma models | Moved to **P7** |
+| Banner + `/mentorship` find/become hub + eligibility + request flow | Paid commercial pack; richer scheduling | Residuals under **P7 still open** |
 
 #### W2.5 Product UX funding surfaces — PARTIAL
 **Source:** Product Addendum §16  
@@ -386,17 +386,22 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 ---
 
-### P7 — Mentorship module (full) — NOT STARTED
+### P7 — Mentorship module (full) — PARTIAL (core shipped)
 
 **Sources:** Collab OS §2.4; Terminology §3.4  
 
-**Build**
-1. Find an Influencer Mentor / Become an Influrios Influencer Mentor hubs  
-2. Emerging vs Experienced Influencer language  
-3. Eligibility (admin-configurable), request/accept/decline, availability  
-4. Paid mentoring behind flag; never mix into collab holding unless enabled  
+**Shipped**
+1. `/mentorship` dual hub: Find an Influencer Mentor + Become an Influrios Influencer Mentor  
+2. Emerging vs Experienced Influencer language (follower band)  
+3. `MentorshipProfile` / `MentorshipRequest` + eligibility from P6 control plane; request/accept/decline/cancel  
+4. `paid_mentoring` product switch (default off); fund-isolation invariant — never uses Collaboration Holding  
 
-**Exit:** Acquisition loop live; funds isolated.
+**Still open**
+- Richer matching / scheduling UI  
+- Paid session pricing, terms, and tax pack when flag is enabled for production  
+- Mentor discovery on public collaboration landing beyond existing banner  
+
+**Exit (core):** Acquisition loop live (find/become/request); free mentorship does not touch collab funds — met.
 
 ---
 

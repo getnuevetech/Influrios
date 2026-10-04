@@ -411,7 +411,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                     Share what you know with rising influencers and grow your professional network.
                   </p>
                 </div>
-                <Link href="/mentorship" className="ink-on-light inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold">
+                <Link href="/mentorship#become" className="ink-on-light inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold">
                   Apply to be a Mentor <IconArrowRight size={14} />
                 </Link>
               </div>
