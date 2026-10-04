@@ -74,7 +74,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | PARTIAL ledger; deepen W3.6 / W3.11; **P6** admin |
 | Dev P3 expansion | Staged/recurring, more countries, advanced attribution | W3.4 / W3.7 after P4 stable |
 | Dev P4 advanced | Revenue sharing, complex splits, enterprise rules | Explicitly deferred (§11) |
-| — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5–P7 core shipped**; **P8** remaining |
+| — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5–P8 core shipped** |
 
 ---
 
@@ -405,19 +405,21 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 ---
 
-### P8 — Migration & teardown — NOT STARTED
+### P8 — Migration & teardown — PARTIAL (core shipped)
 
 **Sources:** Collab OS §19; Terminology §4.2; Platform Spec §31  
 
-**Build**
-1. Inventory legacy endpoints + JSON demos (`protected-payments`, `trust`)  
-2. Feature-flag cutover; freeze legacy writes  
-3. Remove deprecated paths after verification  
-4. Optional `creator_*` → `influencer_*` API deprecation with telemetry  
-5. Delete quarantined JSON demos (`data/protected-payments.json`, `data/trust.json`) after freeze verification  
-6. Decide fate of `/admin/signing` shell vs accept-only wizard (e-sign remains non-goal until counsel; do not claim provider success)
+**Shipped**
+1. Legacy inventory doc (`docs/collaboration/legacy-inventory-p8.md`)  
+2. Freeze hardened: when `legacy_demo_payments` is off, demo stores never rehydrate/seed JSON and **purge** existing `protected-payments.json` / `trust.json`  
+3. `creator_*` SKU deprecation telemetry on checkout (`terminology.creator_field_deprecated`)  
+4. `/admin/signing` copy: non-goal shell until counsel; accept-only wizard stands  
 
-**Exit:** One collaboration money engine; no silent Creator-as-role public strings; optional demos gone or permanently gated.
+**Still open**
+- Optional rename of billing SKUs / cookies after a dual-write window (do not break Stripe metadata yet)  
+- Full removal of `protected-payments.ts` / `trust.ts` modules after a longer soak  
+
+**Exit (core):** One collaboration money engine when demos are off; no silent Creator-as-role public strings; demos purged/gated — met.
 
 ---
 

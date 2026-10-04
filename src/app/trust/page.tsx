@@ -51,12 +51,13 @@ export default async function TrustPage({ searchParams }: Props) {
       <section className="hero-atmosphere text-white">
         <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
-            Phase 10 · Trust &amp; Disputes
+            Trust &amp; Disputes
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold">Mediation &amp; briefs</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Open a dispute on a provider-held milestone from Protected Payments. A decision records
-            what should happen next and does not move the money. The queue below is the earlier demo.
+            {legacyOn
+              ? "Demo queue is on for ops testing. Product disputes use the marketplace ledger; a decision records what should happen next and does not move the money."
+              : "Ledger disputes for provider-held milestones. Phase 9/10 JSON demos stay frozen off — open disputes from Protected Payments on the marketplace path."}
           </p>
         </div>
       </section>

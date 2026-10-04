@@ -119,11 +119,16 @@ const EMPTY_STORE: TrustStore = {
 
 async function ensureStore(): Promise<TrustStore> {
   const legacyOn = await legacyDemoPaymentsEnabled();
+  if (!legacyOn) {
+    // P8: frozen — never seed or rehydrate demo JSON when the switch is off.
+    const { purgeLegacyDemoJsonFiles } = await import("@/lib/legacy-teardown");
+    await purgeLegacyDemoJsonFiles().catch(() => null);
+    return structuredClone(EMPTY_STORE);
+  }
   try {
     const raw = await fs.readFile(STORE_PATH, "utf8");
     return JSON.parse(raw) as TrustStore;
   } catch {
-    if (!legacyOn) return structuredClone(EMPTY_STORE);
     try {
       await fs.mkdir(DATA_DIR, { recursive: true });
       await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
