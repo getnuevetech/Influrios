@@ -13,6 +13,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { ensureShortLinkDefaults, getAdminShortLinkAnalyticsRollup, getShortLinkSettings } from "@/lib/short-link";
+import { getResolverMetricsRollup } from "@/lib/short-link-resolver-metrics";
 import { shortLinkHosts } from "@/lib/short-link-hosts";
 
 export const dynamic = "force-dynamic";
@@ -39,16 +40,18 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
   let cases: Awaited<ReturnType<typeof prisma.shortLinkAbuseCase.findMany>> = [];
   let settings: Awaited<ReturnType<typeof getShortLinkSettings>> | null = null;
   let rollup: Awaited<ReturnType<typeof getAdminShortLinkAnalyticsRollup>> | null = null;
+  let resolverMetrics: Awaited<ReturnType<typeof getResolverMetricsRollup>> | null = null;
   let dbError = false;
   try {
     await ensureShortLinkDefaults();
-    [domains, reserved, events, cases, settings, rollup] = await Promise.all([
+    [domains, reserved, events, cases, settings, rollup, resolverMetrics] = await Promise.all([
       prisma.shortLinkDomain.findMany({ orderBy: { hostname: "asc" } }),
       prisma.reservedSlug.findMany({ orderBy: { slug: "asc" } }),
       prisma.shortLinkEvent.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
       prisma.shortLinkAbuseCase.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
       getShortLinkSettings(),
       getAdminShortLinkAnalyticsRollup(),
+      getResolverMetricsRollup(24),
     ]);
     links = await prisma.shortLink.findMany({
       include: { creator: true, qrIdentities: { where: { status: "active" }, take: 1 } },
@@ -101,6 +104,51 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
             <p className="text-xs uppercase tracking-wide text-muted">Open abuse</p>
             <p className="font-display text-2xl font-bold text-indigo">{rollup.abuseOpen}</p>
           </div>
+        </section>
+      ) : null}
+
+      {resolverMetrics ? (
+        <section className="card-surface mt-6 p-5">
+          <h2 className="font-display text-lg font-bold text-indigo">Resolver metrics (last {resolverMetrics.windowHours}h)</h2>
+          <p className="mt-1 text-xs text-muted">
+            Ops outcomes from every resolve — including misses and errors (INFLR.me Spec §20). Response header{" "}
+            <code className="rounded bg-[#F4F7FF] px-1">x-influrios-resolve-outcome</code>.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">Resolves</p>
+              <p className="font-display text-2xl font-bold text-indigo">{resolverMetrics.total}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">Redirects</p>
+              <p className="font-display text-2xl font-bold text-indigo">{resolverMetrics.redirects}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">Failures</p>
+              <p className="font-display text-2xl font-bold text-indigo">{resolverMetrics.failures}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">p50 / p95 latency</p>
+              <p className="font-display text-2xl font-bold text-indigo">
+                {resolverMetrics.p50LatencyMs ?? "—"}
+                <span className="text-sm font-semibold text-muted"> / </span>
+                {resolverMetrics.p95LatencyMs ?? "—"}
+                <span className="text-sm font-semibold text-muted"> ms</span>
+              </p>
+            </div>
+          </div>
+          <ul className="mt-4 flex flex-wrap gap-2 text-xs">
+            {Object.entries(resolverMetrics.byOutcome)
+              .filter(([, count]) => count > 0)
+              .map(([outcome, count]) => (
+                <li key={outcome} className="rounded-full bg-[#F4F7FF] px-2.5 py-1 font-semibold text-indigo">
+                  {outcome.replaceAll("_", " ")} · {count}
+                </li>
+              ))}
+            {resolverMetrics.total === 0 ? (
+              <li className="text-muted">No resolver traffic in this window yet.</li>
+            ) : null}
+          </ul>
         </section>
       ) : null}
 
