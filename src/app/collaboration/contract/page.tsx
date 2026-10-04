@@ -98,7 +98,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     : "parties";
   const stepIndex = CONTRACT_WIZARD_STEPS.indexOf(step);
 
-  const ws = await getWorkspace();
+  const ws = await getWorkspace(account.id);
   const entitlements = getBusinessEntitlements(ws.plan);
   await ensureMarketplaceDefaults();
   const [config, creators, routes] = await Promise.all([

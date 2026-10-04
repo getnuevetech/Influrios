@@ -36,6 +36,7 @@ export type Inquiry = {
 
 export type BusinessWorkspace = {
   businessId: string;
+  ownerUserId?: string | null;
   name: string;
   plan: BusinessPlanCode;
   industry: string;
@@ -46,7 +47,7 @@ export type BusinessWorkspace = {
 
 const WORKSPACE_ID = "demo-business";
 
-/** Stable demo business workspace id used by hub ownership links. */
+/** Stable demo business workspace id used by seeds and unauthenticated paths. */
 export const DEMO_BUSINESS_WORKSPACE_ID = WORKSPACE_ID;
 
 const BRIEF_STATUSES = ["draft", "active", "closed"] as const;
@@ -71,9 +72,9 @@ function isUnique(error: unknown) {
 
 type WorkspaceRow = NonNullable<Awaited<ReturnType<typeof loadRow>>>;
 
-async function loadRow() {
+async function loadRow(workspaceId: string) {
   return prisma.businessWorkspace.findUnique({
-    where: { id: WORKSPACE_ID },
+    where: { id: workspaceId },
     include: {
       briefs: { orderBy: { createdAt: "desc" } },
       shortlist: { orderBy: { addedAt: "desc" } },
@@ -85,6 +86,7 @@ async function loadRow() {
 function mapWorkspace(row: WorkspaceRow): BusinessWorkspace {
   return {
     businessId: row.id,
+    ownerUserId: row.ownerUserId ?? null,
     name: row.name,
     plan: asPlan(row.plan),
     industry: row.industry,
@@ -118,7 +120,7 @@ function mapWorkspace(row: WorkspaceRow): BusinessWorkspace {
 
 let workspaceSeed: Promise<void> | null = null;
 
-async function seedWorkspace() {
+async function seedDemoWorkspace() {
   const existing = await prisma.businessWorkspace.findUnique({ where: { id: WORKSPACE_ID } });
   if (existing) return;
   try {
@@ -154,9 +156,9 @@ async function seedWorkspace() {
   }
 }
 
-function ensureWorkspace() {
+function ensureDemoWorkspace() {
   if (!workspaceSeed) {
-    workspaceSeed = seedWorkspace().catch((error) => {
+    workspaceSeed = seedDemoWorkspace().catch((error) => {
       workspaceSeed = null;
       throw error;
     });
@@ -164,26 +166,91 @@ function ensureWorkspace() {
   return workspaceSeed;
 }
 
-async function readWorkspace() {
-  await ensureWorkspace();
-  const row = await loadRow();
+async function readWorkspace(workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
+  if (workspaceId === DEMO_BUSINESS_WORKSPACE_ID) await ensureDemoWorkspace();
+  const row = await loadRow(workspaceId);
   if (!row) throw new Error("Business workspace is unavailable.");
   return mapWorkspace(row);
 }
 
-export async function getWorkspace(): Promise<BusinessWorkspace> {
-  return readWorkspace();
+/**
+ * Resolve the business workspace for a signed-in user (creates + upserts BusinessProfile),
+ * or the demo seed workspace when no userId is provided.
+ */
+export async function getWorkspace(userId?: string | null): Promise<BusinessWorkspace> {
+  const id = userId?.trim();
+  if (id) return ensureOwnedBusinessWorkspace(id);
+  return readWorkspace(DEMO_BUSINESS_WORKSPACE_ID);
 }
 
-export async function setBusinessPlan(plan: BusinessPlanCode) {
+/** Ensure BusinessProfile + owned BusinessWorkspace for a user (W2.3 tenancy). */
+export async function ensureOwnedBusinessWorkspace(
+  userId: string,
+  opts?: { name?: string; industry?: string },
+): Promise<BusinessWorkspace> {
+  const uid = userId.trim();
+  if (!uid) throw new Error("userId is required.");
+  const existing = await prisma.businessWorkspace.findUnique({ where: { ownerUserId: uid } });
+  if (existing) {
+    await prisma.businessProfile.upsert({
+      where: { userId: uid },
+      create: {
+        userId: uid,
+        name: (opts?.name || existing.name).trim().slice(0, 120) || existing.name,
+        industry: (opts?.industry || existing.industry || null)?.toString().slice(0, 120) || null,
+      },
+      update: {
+        ...(opts?.name ? { name: opts.name.trim().slice(0, 120) } : {}),
+        ...(opts?.industry ? { industry: opts.industry.trim().slice(0, 120) } : {}),
+      },
+    });
+    return readWorkspace(existing.id);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: uid },
+    select: { name: true, email: true },
+  });
+  const name =
+    (opts?.name || user?.name || user?.email?.split("@")[0] || "Business").trim().slice(0, 120) ||
+    "Business";
+  const industry = (opts?.industry || "General").trim().slice(0, 120) || "General";
+  await prisma.businessProfile.upsert({
+    where: { userId: uid },
+    create: { userId: uid, name, industry },
+    update: { name, industry },
+  });
+  try {
+    const created = await prisma.businessWorkspace.create({
+      data: {
+        ownerUserId: uid,
+        name,
+        plan: "BUSINESS_PRO",
+        industry,
+      },
+    });
+    return readWorkspace(created.id);
+  } catch (error) {
+    if (!isUnique(error)) throw error;
+    const raced = await prisma.businessWorkspace.findUnique({ where: { ownerUserId: uid } });
+    if (!raced) throw error;
+    return readWorkspace(raced.id);
+  }
+}
+
+export async function setBusinessPlan(plan: BusinessPlanCode, workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
   if (!PLAN_CODES.includes(plan)) throw new Error("Unknown business plan.");
-  await ensureWorkspace();
-  await prisma.businessWorkspace.update({ where: { id: WORKSPACE_ID }, data: { plan } });
-  return readWorkspace();
+  await readWorkspace(workspaceId);
+  await prisma.businessWorkspace.update({ where: { id: workspaceId }, data: { plan } });
+  return readWorkspace(workspaceId);
 }
 
-export async function addToShortlist(creatorSlug: string, note?: string) {
-  const ws = await readWorkspace();
+export async function addToShortlist(
+  creatorSlug: string,
+  note?: string,
+  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
+) {
+  const ws = await readWorkspace(workspaceId);
   const limits = getBusinessEntitlements(ws.plan);
   if (ws.shortlist.some((item) => item.creatorSlug === creatorSlug)) return { ok: true as const, ws };
   if (ws.shortlist.length >= limits.shortlistMax) {
@@ -198,29 +265,30 @@ export async function addToShortlist(creatorSlug: string, note?: string) {
   }
   try {
     await prisma.businessShortlistItem.create({
-      data: { workspaceId: WORKSPACE_ID, creatorSlug, note },
+      data: { workspaceId, creatorSlug, note },
     });
   } catch (error) {
     if (!isUnique(error)) throw error;
   }
-  return { ok: true as const, ws: await readWorkspace() };
+  return { ok: true as const, ws: await readWorkspace(workspaceId) };
 }
 
-export async function removeFromShortlist(creatorSlug: string) {
-  await ensureWorkspace();
+export async function removeFromShortlist(creatorSlug: string, workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
+  await readWorkspace(workspaceId);
   await prisma.businessShortlistItem.deleteMany({
-    where: { workspaceId: WORKSPACE_ID, creatorSlug },
+    where: { workspaceId, creatorSlug },
   });
-  return readWorkspace();
+  return readWorkspace(workspaceId);
 }
 
 export async function createBrief(
   input: Omit<CampaignBrief, "id" | "createdAt" | "status"> & { status?: CampaignBrief["status"] },
+  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
 ) {
-  await ensureWorkspace();
+  await readWorkspace(workspaceId);
   const brief = await prisma.businessBrief.create({
     data: {
-      workspaceId: WORKSPACE_ID,
+      workspaceId,
       title: input.title,
       goal: input.goal,
       specialty: input.specialty,
@@ -238,10 +306,11 @@ export async function createBrief(
 export async function updateBrief(
   id: string,
   input: Omit<CampaignBrief, "id" | "createdAt" | "status"> & { status?: CampaignBrief["status"] },
+  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
 ) {
-  await ensureWorkspace();
+  await readWorkspace(workspaceId);
   const existing = await prisma.businessBrief.findFirst({
-    where: { id, workspaceId: WORKSPACE_ID },
+    where: { id, workspaceId },
   });
   if (!existing) throw new Error("Campaign intent not found.");
   const brief = await prisma.businessBrief.update({
@@ -327,12 +396,15 @@ export function buildCampaignIntentFields(input: {
   };
 }
 
-export async function sendInquiry(input: {
-  creatorSlug: string;
-  message: string;
-  briefId?: string;
-}) {
-  const ws = await readWorkspace();
+export async function sendInquiry(
+  input: {
+    creatorSlug: string;
+    message: string;
+    briefId?: string;
+  },
+  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
+) {
+  const ws = await readWorkspace(workspaceId);
   const limits = getBusinessEntitlements(ws.plan);
   const month = new Date().toISOString().slice(0, 7);
   const sentThisMonth = ws.inquiries.filter((inquiry) => inquiry.createdAt.startsWith(month)).length;
@@ -346,7 +418,7 @@ export async function sendInquiry(input: {
     input.briefId && ws.briefs.some((item) => item.id === input.briefId) ? input.briefId : undefined;
   const inquiry = await prisma.businessInquiry.create({
     data: {
-      workspaceId: WORKSPACE_ID,
+      workspaceId,
       briefId: brief,
       creatorSlug: input.creatorSlug,
       message: input.message,
@@ -366,13 +438,17 @@ export async function sendInquiry(input: {
   };
 }
 
-export async function updateInquiryStatus(id: string, status: Inquiry["status"]) {
+export async function updateInquiryStatus(
+  id: string,
+  status: Inquiry["status"],
+  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
+) {
   if (!INQUIRY_STATUSES.includes(status)) {
     return { ok: false as const, error: "Invalid inquiry status." };
   }
-  await ensureWorkspace();
+  await readWorkspace(workspaceId);
   const existing = await prisma.businessInquiry.findFirst({
-    where: { id, workspaceId: WORKSPACE_ID },
+    where: { id, workspaceId },
   });
   if (!existing) return { ok: false as const, error: "Inquiry not found." };
   const updated = await prisma.businessInquiry.update({
@@ -392,10 +468,10 @@ export async function updateInquiryStatus(id: string, status: Inquiry["status"])
   };
 }
 
-export async function queuedBriefIds() {
-  await ensureWorkspace();
+export async function queuedBriefIds(workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
+  await readWorkspace(workspaceId);
   const rows = await prisma.managedMatchRequest.findMany({
-    where: { workspaceId: WORKSPACE_ID, status: "queued" },
+    where: { workspaceId, status: "queued" },
     select: { briefId: true },
   });
   return rows.map((row) => row.briefId);
@@ -411,11 +487,14 @@ export async function businessMatchProviderName(): Promise<string | null> {
   return route.provider.name;
 }
 
-export async function requestManagedMatch(briefId: string) {
-  const ws = await readWorkspace();
+export async function requestManagedMatch(briefId: string, workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
+  const ws = await readWorkspace(workspaceId);
   const brief = ws.briefs.find((item) => item.id === briefId);
   if (!brief) return { ok: false as const, error: "Brief not found." };
-  const [flagEnabled, queued] = await Promise.all([getManagedPromotionEnabled(), queuedBriefIds()]);
+  const [flagEnabled, queued] = await Promise.all([
+    getManagedPromotionEnabled(),
+    queuedBriefIds(workspaceId),
+  ]);
   const gate = managedMatchGate({
     flagEnabled,
     planAllows: getBusinessEntitlements(ws.plan).managedMatching,
@@ -423,7 +502,7 @@ export async function requestManagedMatch(briefId: string) {
   });
   if (!gate.ok) return gate;
   await prisma.managedMatchRequest.create({
-    data: { workspaceId: WORKSPACE_ID, briefId, status: "queued" },
+    data: { workspaceId, briefId, status: "queued" },
   });
   return { ok: true as const };
 }

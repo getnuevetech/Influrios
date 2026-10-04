@@ -83,7 +83,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
   const draft = await getCreatorSessionDraft().catch(() => null);
   let hub;
   try {
-    hub = await loadBusinessHub({ intentBriefId: params.intent });
+  hub = await loadBusinessHub({ intentBriefId: params.intent, userId: account.id });
   } catch {
     return (
       <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">

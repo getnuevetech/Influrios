@@ -25,7 +25,6 @@ import {
   type MarketplaceBusinessRequestRow,
   type MarketplaceCreatorOpportunityRow,
 } from "@/lib/marketplace-listings";
-import { DEMO_BUSINESS_WORKSPACE_ID } from "@/lib/business";
 import {
   computePayoutReadiness,
   type PayoutReadiness,
@@ -341,17 +340,17 @@ export async function loadCreatorHub(input: {
   };
 }
 
-export async function loadBusinessHub(input?: { intentBriefId?: string }) {
-  const ws = await getWorkspace();
+export async function loadBusinessHub(input?: { intentBriefId?: string; userId?: string }) {
+  const ws = await getWorkspace(input?.userId);
   const entitlements = getBusinessEntitlements(ws.plan);
   const [fundings, requests, opportunities, collaborations] = await Promise.all([
-    listFundingsForBusiness(ws.name).catch(() => []),
+    listFundingsForBusiness(ws.businessId).catch(() => []),
     listPublishedBusinessRequests().catch(() => [] as MarketplaceBusinessRequestRow[]),
     listPublishedCreatorOpportunities().catch(() => [] as MarketplaceCreatorOpportunityRow[]),
     listCollaborations({}).catch(() => []),
   ]);
 
-  const ownRequests = await listWorkspaceBusinessRequests(DEMO_BUSINESS_WORKSPACE_ID).catch(
+  const ownRequests = await listWorkspaceBusinessRequests(ws.businessId).catch(
     () => [] as MarketplaceBusinessRequestRow[],
   );
   const draftRequests = ws.briefs.filter((brief) => brief.status === "draft").length;

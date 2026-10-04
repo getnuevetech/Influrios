@@ -522,6 +522,8 @@ export async function requestPrefund(input: {
   customMilestones?: { title: string; shareBps: number }[] | null;
   /** Immutable financial plan snapshot embedded beside the fee freeze. */
   financialPlan?: Record<string, unknown> | null;
+  /** Owning business workspace — durable spend/pipeline ownership (not brand name). */
+  workspaceId?: string | null;
 }) {
   await ensureMarketplaceDefaults();
   await ensureSettlementDefaults();
@@ -663,6 +665,7 @@ export async function requestPrefund(input: {
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;
   const businessName = input.businessName.trim().slice(0, 120);
   const creatorSlug = input.creatorSlug.trim().slice(0, 80);
+  const workspaceId = input.workspaceId?.trim() || null;
   const baseTitle = input.title.trim().slice(0, 140);
   if (currency !== "USD" && !fxRate?.active) {
     return { ok: false as const, error: `No Wise currency is saved for ${currency}. Nothing was funded.` };
@@ -712,6 +715,7 @@ export async function requestPrefund(input: {
         data: {
           jurisdictionCode: code,
           businessName,
+          workspaceId,
           creatorSlug,
           title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
           currency: part.fx.currency,
@@ -1193,14 +1197,14 @@ export async function listFundingsForCreator(creatorSlug: string) {
   return rows.map(presentFunding);
 }
 
-/** Spend view for a business — matches on funding.businessName (case-insensitive contains). */
-export async function listFundingsForBusiness(businessName: string) {
+/** Spend view for a business — durable workspaceId ownership (not brand substring). */
+export async function listFundingsForBusiness(workspaceId: string) {
   await sweepAutoApprovals();
   await sweepDueRecurrences();
-  const needle = businessName.trim();
-  if (!needle) return [];
+  const id = workspaceId.trim();
+  if (!id) return [];
   const rows = await prisma.collaborationFunding.findMany({
-    where: { businessName: { contains: needle, mode: "insensitive" } },
+    where: { workspaceId: id },
     orderBy: { createdAt: "desc" },
     include: {
       milestones: { orderBy: { sortOrder: "asc" } },
@@ -1230,6 +1234,7 @@ function presentFunding(row: {
   id: string;
   jurisdictionCode: string;
   businessName: string;
+  workspaceId?: string | null;
   creatorSlug: string;
   title: string;
   currency: string;

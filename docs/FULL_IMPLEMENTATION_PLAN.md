@@ -161,7 +161,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 #### W2.3 Business hub residuals — DONE (multi-creator team proposals Deferred-external)
 | Exists | Missing | Exit |
 |---|---|---|
-| Requests, suggestions, spend summary, contract link; applicant reply/decline/shortlist in hub UI; **Campaign Intent upsert** (`updateBrief` + hidden `briefId`) + **Refresh suggestions** CTA (re-rank without new brief) | Multi-creator team proposals (Collab OS §3.3) | Reply/decline/shortlist without admin workarounds — **DONE**; intent save/refresh — **DONE**; multi-creator team proposals **Deferred-external** |
+| Requests, suggestions, spend summary (**workspaceId FK**), contract link; applicant reply/decline/shortlist in hub UI; **Campaign Intent upsert** + **Refresh suggestions**; **account-bound BusinessWorkspace** + BusinessProfile on terms | Multi-creator team proposals (Collab OS §3.3) | Reply/decline/shortlist — **DONE**; intent save/refresh — **DONE**; durable tenancy/spend ownership — **DONE**; multi-creator **Deferred-external** |
 | Pipeline chrome mapped to funding/milestone states via `derivePipelineStage` + funding badges | — | No cosmetic-only steps — **DONE** |
 
 #### W2.3b Guest suggestion sample — DONE
@@ -184,7 +184,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Funding badges on payments + hub pipelines; immutable fee snapshot on funding + hub fee locked line; revision counters on payments + hub; review deadline on submitted milestones; **unified admin transaction detail** `/admin/marketplace/[fundingId]` (parties, milestones, provider, fee rule, funds, audit) | — | Badges + timeline + fee + revisions visible to both sides; admin unified txn view **DONE** |
+| Funding badges on payments + hub pipelines; immutable fee snapshot on funding + hub fee locked line; revision counters on payments + hub; review deadline on submitted milestones; **unified admin transaction detail** `/admin/marketplace/[fundingId]`; business spend/pipeline lists by **funding.workspaceId** (not brand contains) | — | Badges + timeline + fee + revisions visible to both sides; admin unified txn view **DONE**; durable business funding ownership **DONE** |
 
 ---
 
@@ -259,7 +259,7 @@ Ledger + commercial depth code exits met; live provider rails remain Deferred-ex
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Event kinds + Influencer templates; `collab_notification` jobs; hooks on funding/milestones/revisions/approvals/payouts/disputes/cancel/refund/change-order/attribution/jurisdiction limits; review-deadline sweep | — | Event kinds + templates use Influencer terminology |
+| Event kinds + Influencer templates; `collab_notification` jobs; hooks on funding/milestones/revisions/approvals/payouts/disputes/cancel/refund/change-order/attribution/jurisdiction limits; review-deadline sweep; business recipients resolve via **workspace.ownerUserId** (BusinessProfile fallback by name) | — | Event kinds + templates use Influencer terminology; business recipient path durable |
 
 #### W3.12 Legal pack commercial sync — DONE
 **Source:** Product Addendum §17  
