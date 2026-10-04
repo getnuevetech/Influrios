@@ -70,9 +70,20 @@ describe("admin permission checks", () => {
 });
 
 describe("admin permission catalog", () => {
-  it("includes marketplace and access keys used by the console", () => {
+  it("includes marketplace, access, and collab finance keys", () => {
     assert.ok(ADMIN_PERMISSIONS.includes("marketplace.manage"));
     assert.ok(ADMIN_PERMISSIONS.includes("access.manage_users"));
+    assert.ok(ADMIN_PERMISSIONS.includes("collab_finance.view"));
+    assert.ok(ADMIN_PERMISSIONS.includes("collab_finance.manage"));
+    assert.ok(ADMIN_PERMISSIONS.includes("collab_finance.high_risk"));
     assert.ok(ADMIN_PERMISSIONS.includes("legacy_demo_payments" as never) === false);
+  });
+
+  it("gates collab finance module and high-risk separately", () => {
+    const viewer = sampleSession({ permissions: ["collab_finance.view"] });
+    assert.equal(canAccessModule(viewer, "collab_finance"), true);
+    assert.equal(hasPermission(viewer, "collab_finance.high_risk"), false);
+    const risk = sampleSession({ permissions: ["collab_finance.high_risk"] });
+    assert.equal(hasPermission(risk, "collab_finance.high_risk"), true);
   });
 });

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
+import { requireCollabFinanceHighRisk } from "@/lib/admin-auth";
 import { saveCollabControlPlane } from "@/lib/collab-control-plane";
 
 function num(formData: FormData, key: string, fallback: number) {
@@ -15,10 +16,19 @@ function bool(formData: FormData, key: string) {
 }
 
 export async function actionSaveCollabControlPlane(formData: FormData) {
-  const session = await requireAdminAction("marketplace.manage");
+  const session = await requireAdminAction("collab_finance.manage");
   const dualUsd = Number(formData.get("dualApprovalUsd"));
   const dualApprovalThresholdCents =
     Number.isFinite(dualUsd) && dualUsd >= 0 ? Math.round(dualUsd * 100) : 500_00;
+
+  // Changing the dual-approval money threshold is high-risk — require step-up.
+  const stepUp = await requireCollabFinanceHighRisk(
+    session,
+    String(formData.get("stepUpPassword") ?? ""),
+  );
+  if (!stepUp.ok) {
+    redirect(`/admin/collaboration-ops?error=${encodeURIComponent(stepUp.error)}`);
+  }
 
   await saveCollabControlPlane({
     actor: session.email,

@@ -11,7 +11,7 @@ function bool(formData: FormData, key: string) {
 }
 
 export async function actionToggleCorridor(formData: FormData) {
-  const session = await requireAdminAction("marketplace.manage");
+  const session = await requireAdminAction("collab_finance.manage");
   const countryCode = String(formData.get("countryCode") ?? "").trim().toUpperCase();
   const active = String(formData.get("active") ?? "") === "1";
   try {
@@ -26,7 +26,7 @@ export async function actionToggleCorridor(formData: FormData) {
 }
 
 export async function actionUpdateCorridor(formData: FormData) {
-  const session = await requireAdminAction("marketplace.manage");
+  const session = await requireAdminAction("collab_finance.manage");
   const countryCode = String(formData.get("countryCode") ?? "").trim().toUpperCase();
   const methods = formData
     .getAll("payoutMethod")

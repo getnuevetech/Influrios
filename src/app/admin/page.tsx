@@ -239,14 +239,14 @@ const LINKS: {
     href: "/admin/corridors",
     title: "Country corridors",
     blurb: "Suspend or update Country Activation Matrix without a deploy.",
-    module: "marketplace",
+    module: "collab_finance",
     meta: () => "P6 corridor control",
   },
   {
     href: "/admin/collaboration-ops",
     title: "Collaboration operations",
     blurb: "Dual-approval thresholds, mentorship eligibility, account purposes, audit.",
-    module: "marketplace",
+    module: "collab_finance",
     meta: () => "P6 control plane",
   },
   {
