@@ -7,6 +7,7 @@ import {
   actionReserveSlug,
   actionSaveShortDomain,
   actionSaveShortSettings,
+  actionSetAliasRedirect,
   actionSetLinkStatus,
 } from "@/app/admin/short-links/actions";
 import { requireAdminPage } from "@/app/admin/guard";
@@ -32,7 +33,11 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
   let links: Awaited<
     ReturnType<
       typeof prisma.shortLink.findMany<{
-        include: { creator: true; qrIdentities: { where: { status: "active" }; take: 1 } };
+        include: {
+          creator: true;
+          qrIdentities: { where: { status: "active" }; take: 1 };
+          aliases: { orderBy: { createdAt: "desc" } };
+        };
       }>
     >
   > = [];
@@ -54,7 +59,11 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
       getResolverMetricsRollup(24),
     ]);
     links = await prisma.shortLink.findMany({
-      include: { creator: true, qrIdentities: { where: { status: "active" }, take: 1 } },
+      include: {
+        creator: true,
+        qrIdentities: { where: { status: "active" }, take: 1 },
+        aliases: { orderBy: { createdAt: "desc" } },
+      },
       orderBy: { updatedAt: "desc" },
       take: 40,
     });
@@ -237,6 +246,10 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
 
       <section className="card-surface mt-4 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Links</h2>
+        <p className="mt-1 text-xs text-muted">
+          Alias policy: after a slug change the old name redirects to the current one until you disable it here
+          (INFLR.me §20.12).
+        </p>
         <ul className="mt-3 space-y-3 text-sm">
           {links.map((link) => (
             <li key={link.id} className="rounded-xl border border-border p-3">
@@ -266,6 +279,26 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
                     </form>
                   ) : null}
                 </div>
+              ) : null}
+              {link.aliases.length ? (
+                <ul className="mt-3 space-y-1 border-t border-border pt-2 text-xs text-muted">
+                  {link.aliases.map((alias) => (
+                    <li key={alias.id} className="flex flex-wrap items-center gap-2">
+                      <span>
+                        /{alias.slug} → /{link.slug} · {alias.redirect ? "redirect on" : "redirect off"}
+                      </span>
+                      {canEdit ? (
+                        <form action={actionSetAliasRedirect}>
+                          <input type="hidden" name="id" value={alias.id} />
+                          <input type="hidden" name="redirect" value={alias.redirect ? "0" : "1"} />
+                          <button type="submit" className="btn-secondary !py-0.5 text-[11px]">
+                            {alias.redirect ? "Disable redirect" : "Enable redirect"}
+                          </button>
+                        </form>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </li>
           ))}

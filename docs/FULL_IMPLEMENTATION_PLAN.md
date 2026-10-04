@@ -290,7 +290,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | Exists | Missing | Exit |
 |---|---|---|
-| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records; **branded failure pages** with Influrios CTA + outcome marker | Domain verification admin UX deepen; alias policy polish | Spec §20 criteria 11–24 (branded failure + open-redirect + suspend — **core DONE**) |
+| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records; **branded failure pages** with Influrios CTA + outcome marker; **alias policy** (admin enable/disable redirect + creator warn-before-change) | Domain verification admin UX deepen | Spec §20 criteria 11–24 (branded failure + open-redirect + suspend + alias policy — **core DONE**) |
 | Pro `dynamic` flag + destination setter | Pro **self-serve** dynamic destination + destination history + rollback | Spec §9 + Phase 3 — DONE (Phase 4 campaign/NFC still later) |
 | Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics; **resolver ops metrics** | Spec §10 — DONE; Spec §20 observable resolver metrics — **DONE** |
 | — | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Explicitly later; do not block P4 finance |
@@ -538,7 +538,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Criterion | Status |
 |---|---|
 | Valid slug resolves | PARTIAL / largely DONE |
-| Alias after slug change | PARTIAL |
+| Alias after slug change | DONE (admin redirect toggle + creator confirm) |
 | Permanent QR survives slug change | PARTIAL / largely DONE |
 | Pro dynamic destination without QR regen | DONE (Pro self-serve + history/rollback) |
 | Suspended link blocked | DONE (`finishSlug` / QR path return 403 branded page) |

@@ -362,7 +362,7 @@ async function resolveShortRequestFromStore(
     where: { slug },
     include: { shortLink: true },
   });
-  if (alias?.redirect && alias.shortLink.status === "active") {
+  if (alias && aliasShouldRedirect(alias)) {
     const hostName = domain.hostname;
     const cache = redirectCacheFor("alias");
     void recordEvent(alias.shortLinkId, "alias_redirect", { slug }, hints);
@@ -372,6 +372,16 @@ async function resolveShortRequestFromStore(
       location: `https://${hostName}/${alias.shortLink.slug}`,
       shortLinkId: alias.shortLinkId,
       eventType: "alias_redirect",
+    };
+  }
+
+  // Spec §20.12 — disabled alias redirects do not resolve (configured alias policy).
+  if (alias) {
+    return {
+      kind: "page",
+      status: 404,
+      title: "Link not found",
+      message: "That Influrios short link does not exist.",
     };
   }
 
@@ -518,6 +528,28 @@ export async function changeCreatorSlug(creatorSlug: string, nextSlug: string) {
   }
   void recordEvent(link.id, "slug_change", { from: link.slug, to: slug });
   return { ok: true as const, slug };
+}
+
+/** Spec §20.12 — alias redirects follow configured policy (admin can disable). */
+export function aliasShouldRedirect(alias: { redirect: boolean; shortLink: { status: string } }) {
+  return Boolean(alias.redirect && alias.shortLink.status === "active");
+}
+
+/** Admin ops: enable or disable an old-slug redirect without deleting the alias row. */
+export async function setAliasRedirect(aliasId: string, redirect: boolean) {
+  const id = aliasId.trim();
+  if (!id) return { ok: false as const, error: "Missing alias." };
+  const updated = await prisma.shortLinkAlias.updateMany({
+    where: { id },
+    data: { redirect },
+  });
+  if (updated.count !== 1) return { ok: false as const, error: "Alias not found." };
+  return { ok: true as const };
+}
+
+/** Warn copy before a creator slug change (Spec §13). */
+export function slugChangeWarning(fromSlug: string, toSlug: string) {
+  return `“/${fromSlug}” will permanently redirect to “/${toSlug}” until an admin disables that alias. Your printed QR still works.`;
 }
 
 export type DestinationActorType = "creator" | "admin" | "system";

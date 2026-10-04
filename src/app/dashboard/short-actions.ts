@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import {
   changeCreatorSlug,
+  ensureCreatorShortLink,
+  normalizeSlug,
   rollbackCreatorDynamicDestination,
   setCreatorDynamicDestination,
 } from "@/lib/short-link";
@@ -12,7 +14,18 @@ import {
 export async function actionChangeShortSlug(formData: FormData) {
   const draft = await getCreatorSessionDraft();
   if (!draft) redirect("/claim");
-  const result = await changeCreatorSlug(draft.slug, String(formData.get("slug") ?? ""));
+  const nextSlug = String(formData.get("slug") ?? "");
+  const acknowledged = String(formData.get("acknowledged") ?? "") === "1";
+  // Spec §13 — warn before slug change; require explicit acknowledgement.
+  if (!acknowledged) {
+    const link = await ensureCreatorShortLink(draft.slug);
+    const normalized = normalizeSlug(nextSlug);
+    if (link && normalized && link.slug === normalized) {
+      redirect("/dashboard?saved=1");
+    }
+    redirect(`/dashboard?confirmSlug=${encodeURIComponent(normalized || nextSlug.trim().toLowerCase())}`);
+  }
+  const result = await changeCreatorSlug(draft.slug, nextSlug);
   if (!result.ok) redirect(`/dashboard?error=${encodeURIComponent(result.error)}`);
   redirect("/dashboard?saved=1");
 }
