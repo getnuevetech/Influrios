@@ -67,7 +67,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     redirect(`/collaboration/business?error=${encodeURIComponent("Agree to the Business / Brand Terms before starting a contract.")}`);
   }
 
-  const ws = await getWorkspace();
+  const ws = await getWorkspace(account.id);
   const entitlements = getBusinessEntitlements(ws.plan);
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
   const businessName = String(formData.get("businessName") ?? ws.name).trim() || ws.name;
@@ -261,6 +261,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     serviceLevel,
     customMilestones: usingCustom ? drafts : null,
     financialPlan: locked as unknown as Record<string, unknown>,
+    workspaceId: ws.businessId,
   });
   if (!result.ok) {
     qs.set("step", "funding");

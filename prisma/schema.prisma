@@ -76,6 +76,7 @@ model User {
   updatedAt       DateTime  @updatedAt
   creator         Creator?
   business        BusinessProfile?
+  businessWorkspace BusinessWorkspace?
   consents        ConsentRecord[]
   emailChallenges EmailChallenge[]
   passwordResets  PasswordReset[]
@@ -681,18 +682,22 @@ model BusinessProfile {
   updatedAt   DateTime @updatedAt
 }
 
-/// Demo business workspace persisted for briefs, shortlists, and inquiries.
+/// Business workspace for briefs, shortlists, inquiries, and owned marketplace requests.
+/// Demo seed keeps id `demo-business`; signed-in hubs bind via ownerUserId (1:1).
 model BusinessWorkspace {
-  id         String                 @id @default("demo-business")
-  name       String
-  plan       String                 @default("BUSINESS_PRO")
-  industry   String
-  updatedAt  DateTime               @updatedAt
-  briefs     BusinessBrief[]
-  shortlist  BusinessShortlistItem[]
-  inquiries  BusinessInquiry[]
-  matchQueue ManagedMatchRequest[]
+  id          String                 @id @default(cuid())
+  ownerUserId String?                @unique
+  owner       User?                  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  name        String
+  plan        String                 @default("BUSINESS_PRO")
+  industry    String
+  updatedAt   DateTime               @updatedAt
+  briefs      BusinessBrief[]
+  shortlist   BusinessShortlistItem[]
+  inquiries   BusinessInquiry[]
+  matchQueue  ManagedMatchRequest[]
   marketplaceRequests MarketplaceBusinessRequest[]
+  fundings    CollaborationFunding[]
 }
 
 model BusinessBrief {
@@ -1376,6 +1381,9 @@ model CollaborationFunding {
   id               String   @id @default(cuid())
   jurisdictionCode String
   businessName     String
+  /// Owning business workspace when funded from the hub/wizard; null for legacy/admin rows.
+  workspaceId      String?
+  workspace        BusinessWorkspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   creatorSlug      String
   title            String
   currency         String   @default("USD")
@@ -1417,6 +1425,7 @@ model CollaborationFunding {
   @@index([status])
   @@index([repeatOfId])
   @@index([scheduleId])
+  @@index([workspaceId])
 }
 
 model FundingMilestone {

@@ -230,6 +230,7 @@ async function resolveCollabRecipients(input: {
   audience: (typeof COLLAB_NOTIFICATION_TEMPLATES)[CollabNotificationKind]["audience"];
   businessName: string;
   creatorSlug: string;
+  workspaceId?: string | null;
 }): Promise<string[]> {
   const emails = new Set<string>();
   const needBusiness = input.audience === "business" || input.audience === "both";
@@ -237,11 +238,20 @@ async function resolveCollabRecipients(input: {
   const needAdmin = input.audience === "admin";
 
   if (needBusiness) {
-    const business = await prisma.businessProfile.findFirst({
-      where: { name: { equals: input.businessName, mode: "insensitive" } },
-      include: { user: { select: { email: true } } },
-    });
-    if (business?.user.email) emails.add(business.user.email.trim().toLowerCase());
+    if (input.workspaceId?.trim()) {
+      const workspace = await prisma.businessWorkspace.findUnique({
+        where: { id: input.workspaceId.trim() },
+        include: { owner: { select: { email: true } } },
+      });
+      if (workspace?.owner?.email) emails.add(workspace.owner.email.trim().toLowerCase());
+    }
+    if (![...emails].length) {
+      const business = await prisma.businessProfile.findFirst({
+        where: { name: { equals: input.businessName, mode: "insensitive" } },
+        include: { user: { select: { email: true } } },
+      });
+      if (business?.user.email) emails.add(business.user.email.trim().toLowerCase());
+    }
   }
   if (needInfluencer) {
     const creator = await prisma.creator.findUnique({
@@ -300,6 +310,7 @@ export async function notifyCollabFundingEvent(input: {
     audience: template.audience,
     businessName: funding.businessName,
     creatorSlug: funding.creatorSlug,
+    workspaceId: funding.workspaceId,
   });
   for (const email of input.extraEmails ?? []) {
     const cleaned = email.trim().toLowerCase();
