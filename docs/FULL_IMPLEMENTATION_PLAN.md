@@ -172,7 +172,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 #### W2.3c Marketplace application lifecycle — DONE
 | Exists | Missing | Exit |
 |---|---|---|
-| Prisma + state machine existed but **no product callers**; now creator **Apply**, business **Invite** from suggestions, hub transition UI through `COLLABORATION_DRAFTED` → contract; per-suggestion Inquire/Contract/Invite | Multi-creator team proposals | Collab OS §4.3 + §3.3 non-team conversion — **DONE**; multi-creator **Deferred-external** |
+| Creator **Apply** (published request enforced); business **Invite** (session + owned brand); hub transitions with **visible timeline events**; ownership guards on creator/business transitions; opportunity **Connect/Apply**; per-suggestion Inquire/Contract/Invite + shortlist Invite; EXPIRED reachable in UI; unit tests for graph + ownership | Multi-creator team proposals | Collab OS §4.3 + §3.3 non-team conversion — **DONE**; multi-creator **Deferred-external** |
 
 #### W2.4 Mentorship stub — DONE (full module = P7 core shipped)
 | Exists | Missing | Exit |

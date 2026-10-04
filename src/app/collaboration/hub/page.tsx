@@ -29,6 +29,7 @@ import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { applicationTransitionLabel } from "@/lib/marketplace-listings";
 import {
   actionApplyToBusinessRequest,
+  actionApplyToCreatorOpportunity,
   actionCreatorTransitionApplication,
 } from "./actions";
 
@@ -577,9 +578,14 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-indigo">{row.displayName}</p>
                         <p className="text-[11px] text-muted">Looking for {item.lookingFor}</p>
-                        <Link href={`/creators/${row.slug}`} className="btn-primary mt-2 !px-3 !py-1 text-[11px]">
-                          Connect
-                        </Link>
+                        <form action={actionApplyToCreatorOpportunity} className="mt-2">
+                          <input type="hidden" name="opportunityId" value={item.id} />
+                          <input type="hidden" name="toSlug" value={item.creatorSlug} />
+                          <input type="hidden" name="note" value={`Connect from hub · ${creator.displayName}`} />
+                          <button type="submit" className="btn-primary !px-3 !py-1 text-[11px]">
+                            Connect / Apply
+                          </button>
+                        </form>
                       </div>
                     </li>
                   );
@@ -598,7 +604,9 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                   hub.applications.map((application) => (
                     <li key={application.id} className="rounded-xl border border-[#E8EDF8] p-3">
                       <p className="text-sm font-bold text-indigo">
-                        {application.requestBrand ?? "Business request"}
+                        {application.requestBrand ??
+                          application.opportunityLookingFor ??
+                          (application.kind === "creator_opportunity" ? "Creator opportunity" : "Business request")}
                       </p>
                       <p className="mt-1 text-[10px] font-semibold uppercase text-violet">
                         {application.status}
@@ -607,14 +615,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                         {application.note ?? "Marketplace application"}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {application.nextStatuses
-                          .filter((status) =>
-                            ["VIEWED", "RESPONDED", "WITHDRAWN", "DECLINED", "ACCEPTED", "COLLABORATION_DRAFTED"].includes(
-                              status,
-                            ),
-                          )
-                          .slice(0, 3)
-                          .map((status) => (
+                        {application.nextStatuses.map((status) => (
                             <form key={status} action={actionCreatorTransitionApplication}>
                               <input type="hidden" name="applicationId" value={application.id} />
                               <input type="hidden" name="toStatus" value={status} />
@@ -635,6 +636,21 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                           </Link>
                         ) : null}
                       </div>
+                      {application.events.length > 0 ? (
+                        <ol className="mt-2 space-y-1 border-t border-[#E8EDF8] pt-2">
+                          {application.events.map((event) => (
+                            <li key={event.id} className="text-[10px] text-muted">
+                              <span className="font-semibold text-indigo">
+                                {event.fromStatus ? `${event.fromStatus} → ` : ""}
+                                {event.toStatus}
+                              </span>
+                              {event.note ? ` · ${event.note}` : ""}
+                              {" · "}
+                              {new Date(event.createdAt).toLocaleString()}
+                            </li>
+                          ))}
+                        </ol>
+                      ) : null}
                     </li>
                   ))
                 )}

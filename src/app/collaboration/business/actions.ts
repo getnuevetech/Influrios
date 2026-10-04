@@ -20,7 +20,10 @@ import {
 } from "@/lib/business";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import {
+  businessOwnsApplication,
   createMarketplaceApplication,
+  getMarketplaceApplication,
+  isWorkspaceOwnedRequestBrand,
   listPublishedBusinessRequests,
   MARKETPLACE_APPLICATION_STATUSES,
   transitionMarketplaceApplication,
@@ -29,6 +32,20 @@ import {
 } from "@/lib/marketplace-listings";
 
 const HUB = "/collaboration/business";
+
+async function requireBusinessSession() {
+  await assertCollabOsV1();
+  const account = await getAccountSession().catch(() => null);
+  if (!account) redirect(`/login?next=${encodeURIComponent(HUB)}&gate=business`);
+  const accepted = await hasCurrentLegalRecord({
+    documentKey: "business-terms",
+    userId: account.id,
+  }).catch(() => true);
+  if (!accepted) {
+    redirect(`${HUB}?error=${encodeURIComponent("Agree to the Business / Brand Terms before using the hub.")}`);
+  }
+  return account;
+}
 
 async function requireBusinessTerms() {
   await assertCollabOsV1();
@@ -227,8 +244,7 @@ export async function actionRequestManagedMatch(formData: FormData) {
 
 /** W2.3c — invite a suggested/shortlisted creator onto an owned published request. */
 export async function actionInviteCreatorToRequest(formData: FormData) {
-  await requireBusinessTerms();
-  const account = await getAccountSession().catch(() => null);
+  const account = await requireBusinessSession();
   const ws = await getWorkspace();
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
   const requestId = String(formData.get("requestId") ?? "").trim();
@@ -237,42 +253,54 @@ export async function actionInviteCreatorToRequest(formData: FormData) {
     redirect(`${HUB}?error=${encodeURIComponent("Choose a creator to invite.")}#suggestions`);
   }
   const requests = await listPublishedBusinessRequests();
-  const own = requests.filter(
-    (row) =>
-      row.brand.toLowerCase() === ws.name.toLowerCase() ||
-      row.brand.toLowerCase().includes(ws.name.toLowerCase().slice(0, 8)),
-  );
+  const own = requests.filter((row) => isWorkspaceOwnedRequestBrand(row.brand, ws.name));
   const target = (requestId ? own.find((row) => row.id === requestId) : null) ?? own[0];
   if (!target) {
     redirect(
       `${HUB}?error=${encodeURIComponent("Publish a business request before inviting creators.")}#create-request`,
     );
   }
-  await createMarketplaceApplication({
-    kind: "business_request",
-    businessRequestId: target.id,
-    fromUserId: account?.id,
-    toSlug: creatorSlug,
-    note: note || `Invitation from ${ws.name}`,
-  });
+  try {
+    await createMarketplaceApplication({
+      kind: "business_request",
+      businessRequestId: target.id,
+      fromUserId: account.id,
+      toSlug: creatorSlug,
+      note: note || `Invitation from ${ws.name}`,
+    });
+  } catch (error) {
+    redirect(
+      `${HUB}?error=${encodeURIComponent(error instanceof Error ? error.message : "Invite failed.")}#suggestions`,
+    );
+  }
   revalidateHub();
   redirect(`${HUB}?invited=${encodeURIComponent(creatorSlug)}#applicants`);
 }
 
 /** W2.3c — advance a marketplace application on an owned request. */
 export async function actionTransitionMarketplaceApplication(formData: FormData) {
-  await requireBusinessTerms();
-  const account = await getAccountSession().catch(() => null);
+  const account = await requireBusinessSession();
+  const ws = await getWorkspace();
   const applicationId = String(formData.get("applicationId") ?? "").trim();
   const toStatus = String(formData.get("toStatus") ?? "").trim() as MarketplaceApplicationStatus;
   if (!applicationId || !(MARKETPLACE_APPLICATION_STATUSES as readonly string[]).includes(toStatus)) {
     redirect(`${HUB}?error=${encodeURIComponent("Invalid application transition.")}#applicants`);
   }
+  const existing = await getMarketplaceApplication(applicationId);
+  const published = await listPublishedBusinessRequests();
+  const ownedIds = published
+    .filter((row) => isWorkspaceOwnedRequestBrand(row.brand, ws.name))
+    .map((row) => row.id);
+  if (!existing || !businessOwnsApplication(existing, ownedIds)) {
+    redirect(
+      `${HUB}?error=${encodeURIComponent("You can only manage applications on your published requests.")}#applicants`,
+    );
+  }
   try {
     const updated = await transitionMarketplaceApplication({
       id: applicationId,
       toStatus,
-      actorUserId: account?.id,
+      actorUserId: account.id,
       note: String(formData.get("note") ?? "") || undefined,
     });
     revalidateHub();

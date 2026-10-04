@@ -19,6 +19,7 @@ import {
   listPublishedBusinessRequests,
   listPublishedCreatorOpportunities,
   listMarketplaceApplications,
+  isWorkspaceOwnedRequestBrand,
   persistTopMatches,
   type MarketplaceApplicationRow,
   type MarketplaceBusinessRequestRow,
@@ -349,11 +350,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string }) {
     listCollaborations({}).catch(() => []),
   ]);
 
-  const ownRequests = requests.filter(
-    (row) =>
-      row.brand.toLowerCase() === ws.name.toLowerCase() ||
-      row.brand.toLowerCase().includes(ws.name.toLowerCase().slice(0, 8)),
-  );
+  const ownRequests = requests.filter((row) => isWorkspaceOwnedRequestBrand(row.brand, ws.name));
   const draftRequests = ws.briefs.filter((brief) => brief.status === "draft").length;
   const activeBriefs = ws.briefs.filter((brief) => brief.status === "active").length;
   const pendingReview = ws.inquiries.filter((inquiry) => inquiry.status === "sent").length;
