@@ -99,6 +99,14 @@ async function runJob(kind: string, payload: unknown) {
     await runProviderHoldWarnSweep();
     return;
   }
+  if (kind === "failed_payout_retry_sweep") {
+    await runFailedPayoutRetrySweep();
+    return;
+  }
+  if (kind === "funding_recon_sweep") {
+    await runFundingReconciliationSweep();
+    return;
+  }
   if (kind === "collab_notification") {
     if (!data.to || !data.subject || !data.text) {
       throw new Error("Collaboration notification job is missing a recipient or copy.");
@@ -584,6 +592,197 @@ export async function enqueueProviderHoldWarnSweep() {
   await prisma.job.create({
     data: {
       kind: "provider_hold_warn_sweep",
+      status: "queued",
+      payload: { enqueuedAt: new Date().toISOString() },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
+}
+
+/**
+ * Dev §16 — provider-safe failed payout retry.
+ * Resets payout_failed → approved after backoff when no release ledger exists (no double-pay).
+ */
+export async function runFailedPayoutRetrySweep(now = new Date()) {
+  const {
+    shouldRetryFailedPayout,
+    DEFAULT_FAILED_PAYOUT_BACKOFF_HOURS,
+    DEFAULT_FAILED_PAYOUT_MAX_ATTEMPTS,
+  } = await import("@/lib/collab-ops-jobs");
+  const failed = await prisma.fundingMilestone.findMany({
+    where: { status: "payout_failed" },
+    include: {
+      funding: true,
+      entries: { where: { kind: "release" }, take: 1 },
+    },
+    take: 100,
+    orderBy: { payoutFailedAt: "asc" },
+  });
+  let retried = 0;
+  for (const milestone of failed) {
+    if (
+      !shouldRetryFailedPayout({
+        milestoneStatus: milestone.status,
+        hasReleaseLedgerEntry: milestone.entries.length > 0,
+        payoutFailedAt: milestone.payoutFailedAt,
+        payoutRetryCount: milestone.payoutRetryCount,
+        now,
+        backoffHours: DEFAULT_FAILED_PAYOUT_BACKOFF_HOURS,
+        maxAttempts: DEFAULT_FAILED_PAYOUT_MAX_ATTEMPTS,
+      })
+    ) {
+      continue;
+    }
+    const updated = await prisma.fundingMilestone.updateMany({
+      where: { id: milestone.id, status: "payout_failed" },
+      data: {
+        status: "approved",
+        payoutFailedAt: null,
+        payoutRetryCount: { increment: 1 },
+      },
+    });
+    if (updated.count !== 1) continue;
+    retried += 1;
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: "system",
+          action: "payout_retry_queued",
+          objectType: "FundingMilestone",
+          objectId: milestone.id,
+          after: {
+            fundingId: milestone.fundingId,
+            attempt: milestone.payoutRetryCount + 1,
+            at: now.toISOString(),
+          },
+        },
+      })
+      .catch(() => undefined);
+    await notifyCollabFundingEvent({
+      fundingId: milestone.fundingId,
+      kind: "payout_failed",
+      milestone: milestone.title,
+      detail: `Provider-safe retry #${milestone.payoutRetryCount + 1} queued (milestone back to approved; awaiting provider payout.released).`,
+      processNow: false,
+    });
+  }
+  if (retried > 0) await processDueJobs();
+  return { scanned: failed.length, retried };
+}
+
+export async function enqueueFailedPayoutRetrySweep() {
+  await prisma.job.create({
+    data: {
+      kind: "failed_payout_retry_sweep",
+      status: "queued",
+      payload: { enqueuedAt: new Date().toISOString() },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
+}
+
+/** Dev §16 — stale funding intents + unbalanced held ledgers. */
+export async function runFundingReconciliationSweep(now = new Date()) {
+  const { shouldFlagStaleFundingIntent, shouldFlagLedgerMismatch, DEFAULT_STALE_FUNDING_HOURS } =
+    await import("@/lib/collab-ops-jobs");
+  const { ledgerMovements, reconcileLedger } = await import("@/lib/ledger");
+  const awaiting = await prisma.collaborationFunding.findMany({
+    where: { status: "awaiting_provider" },
+    take: 100,
+    orderBy: { createdAt: "asc" },
+  });
+  const held = await prisma.collaborationFunding.findMany({
+    where: { status: { in: ["held", "payment_risk"] } },
+    include: { entries: true },
+    take: 100,
+    orderBy: { createdAt: "asc" },
+  });
+  let flagged = 0;
+  for (const funding of awaiting) {
+    if (
+      !shouldFlagStaleFundingIntent({
+        fundingStatus: funding.status,
+        createdAt: funding.createdAt,
+        now,
+        staleHours: DEFAULT_STALE_FUNDING_HOURS,
+      })
+    ) {
+      continue;
+    }
+    const already = await prisma.auditLog.findFirst({
+      where: {
+        action: "funding_recon_stale",
+        objectType: "CollaborationFunding",
+        objectId: funding.id,
+      },
+    });
+    if (already) continue;
+    flagged += 1;
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: "system",
+          action: "funding_recon_stale",
+          objectType: "CollaborationFunding",
+          objectId: funding.id,
+          after: { createdAt: funding.createdAt.toISOString(), at: now.toISOString() },
+        },
+      })
+      .catch(() => undefined);
+    await notifyCollabFundingEvent({
+      fundingId: funding.id,
+      kind: "provider_jurisdiction_limitation",
+      detail: `Stale funding intent still awaiting provider after ${DEFAULT_STALE_FUNDING_HOURS}h.`,
+      processNow: false,
+    });
+  }
+  for (const funding of held) {
+    const reconciled = reconcileLedger(ledgerMovements(funding.entries), funding.grossCents);
+    if (!shouldFlagLedgerMismatch({ balanced: reconciled.balanced, fundingStatus: funding.status })) {
+      continue;
+    }
+    const already = await prisma.auditLog.findFirst({
+      where: {
+        action: "funding_recon_mismatch",
+        objectType: "CollaborationFunding",
+        objectId: funding.id,
+      },
+    });
+    if (already) continue;
+    flagged += 1;
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: "system",
+          action: "funding_recon_mismatch",
+          objectType: "CollaborationFunding",
+          objectId: funding.id,
+          after: {
+            heldCents: reconciled.heldCents,
+            releasedCents: reconciled.releasedCents,
+            refundedCents: reconciled.refundedCents,
+            at: now.toISOString(),
+          },
+        },
+      })
+      .catch(() => undefined);
+    await notifyCollabFundingEvent({
+      fundingId: funding.id,
+      kind: "provider_jurisdiction_limitation",
+      detail: `Ledger/provider mismatch: held ${reconciled.heldCents}¢ / released ${reconciled.releasedCents}¢ / refunded ${reconciled.refundedCents}¢ vs gross ${funding.grossCents}¢.`,
+      processNow: false,
+    });
+  }
+  if (flagged > 0) await processDueJobs();
+  return { scanned: awaiting.length + held.length, flagged };
+}
+
+export async function enqueueFundingReconciliationSweep() {
+  await prisma.job.create({
+    data: {
+      kind: "funding_recon_sweep",
       status: "queued",
       payload: { enqueuedAt: new Date().toISOString() },
     },
