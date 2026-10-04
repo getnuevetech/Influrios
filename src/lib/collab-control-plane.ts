@@ -29,11 +29,18 @@ export type GuestCollabThresholds = {
   applyHard: number;
 };
 
+/** W2.3c — marketplace application EXPIRED: manual UI only, or auto after N days. */
+export type ApplicationExpirePolicy = {
+  mode: "manual" | "auto";
+  afterDays: number;
+};
+
 export type CollabControlPlane = {
   version: number;
   dualApprovalThresholdCents: number;
   mentorship: MentorshipEligibility;
   guestCollab: GuestCollabThresholds;
+  applicationExpire: ApplicationExpirePolicy;
   updatedAt: string | null;
 };
 
@@ -52,6 +59,10 @@ export const DEFAULT_COLLAB_CONTROL_PLANE: CollabControlPlane = {
     proposeHard: 2,
     applySoft: 2,
     applyHard: 3,
+  },
+  applicationExpire: {
+    mode: "manual",
+    afterDays: 14,
   },
   updatedAt: null,
 };
@@ -88,6 +99,8 @@ function parseControlPlane(raw: unknown): CollabControlPlane {
   const row = asObject(raw);
   const mentorship = asObject(row.mentorship);
   const guest = asObject(row.guestCollab);
+  const expire = asObject(row.applicationExpire);
+  const expireMode = expire.mode === "auto" ? "auto" : "manual";
   return {
     version: asInt(row.version, DEFAULT_COLLAB_CONTROL_PLANE.version, 1),
     dualApprovalThresholdCents: asInt(
@@ -110,6 +123,14 @@ function parseControlPlane(raw: unknown): CollabControlPlane {
       proposeHard: asInt(guest.proposeHard, DEFAULT_COLLAB_CONTROL_PLANE.guestCollab.proposeHard, 1),
       applySoft: asInt(guest.applySoft, DEFAULT_COLLAB_CONTROL_PLANE.guestCollab.applySoft, 1),
       applyHard: asInt(guest.applyHard, DEFAULT_COLLAB_CONTROL_PLANE.guestCollab.applyHard, 1),
+    },
+    applicationExpire: {
+      mode: expireMode,
+      afterDays: asInt(
+        expire.afterDays,
+        DEFAULT_COLLAB_CONTROL_PLANE.applicationExpire.afterDays,
+        1,
+      ),
     },
     updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : null,
   };
@@ -157,11 +178,22 @@ export async function saveCollabControlPlane(
       applySoft: asInt(input.guestCollab?.applySoft ?? prev.guestCollab.applySoft, prev.guestCollab.applySoft, 1),
       applyHard: asInt(input.guestCollab?.applyHard ?? prev.guestCollab.applyHard, prev.guestCollab.applyHard, 1),
     },
+    applicationExpire: {
+      mode: input.applicationExpire?.mode === "auto" ? "auto" : input.applicationExpire?.mode === "manual"
+        ? "manual"
+        : prev.applicationExpire.mode,
+      afterDays: asInt(
+        input.applicationExpire?.afterDays ?? prev.applicationExpire.afterDays,
+        prev.applicationExpire.afterDays,
+        1,
+      ),
+    },
     updatedAt: new Date().toISOString(),
   };
   // Soft ≤ hard for each pair.
   next.guestCollab.proposeSoft = Math.min(next.guestCollab.proposeSoft, next.guestCollab.proposeHard);
   next.guestCollab.applySoft = Math.min(next.guestCollab.applySoft, next.guestCollab.applyHard);
+  next.applicationExpire.afterDays = Math.min(365, Math.max(1, next.applicationExpire.afterDays));
 
   await prisma.platformSetting.upsert({
     where: { key: COLLAB_CONTROL_PLANE_KEY },

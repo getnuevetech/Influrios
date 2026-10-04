@@ -598,6 +598,61 @@ export function applicationTransitionLabel(status: MarketplaceApplicationStatus)
   }
 }
 
+const AUTO_EXPIREABLE_STATUSES: MarketplaceApplicationStatus[] = [
+  "REQUESTED",
+  "VIEWED",
+  "RESPONDED",
+  "NEGOTIATING",
+];
+
+/** Pure — whether an open application is past the admin auto-expire window. */
+export function applicationIsStaleForExpire(input: {
+  createdAt: Date | string;
+  afterDays: number;
+  now?: Date;
+}): boolean {
+  const days = Number.isFinite(input.afterDays) ? Math.max(1, Math.floor(input.afterDays)) : 14;
+  const created = input.createdAt instanceof Date ? input.createdAt : new Date(input.createdAt);
+  if (Number.isNaN(created.getTime())) return false;
+  const now = input.now ?? new Date();
+  const ageMs = now.getTime() - created.getTime();
+  return ageMs >= days * 24 * 60 * 60 * 1000;
+}
+
+/**
+ * W2.3c — when control plane mode is `auto`, expire stale open applications.
+ * Manual mode is a no-op (ops use hub EXPIRED buttons).
+ */
+export async function sweepExpiredMarketplaceApplications(now = new Date()) {
+  const { getCollabControlPlane } = await import("@/lib/collab-control-plane");
+  const plane = await getCollabControlPlane();
+  if (plane.applicationExpire.mode !== "auto") {
+    return { mode: "manual" as const, scanned: 0, expired: 0 };
+  }
+  const afterDays = plane.applicationExpire.afterDays;
+  const cutoff = new Date(now.getTime() - afterDays * 24 * 60 * 60 * 1000);
+  const candidates = await prisma.marketplaceApplication.findMany({
+    where: {
+      status: { in: AUTO_EXPIREABLE_STATUSES },
+      createdAt: { lte: cutoff },
+    },
+    take: 100,
+    orderBy: { createdAt: "asc" },
+  });
+  let expired = 0;
+  for (const row of candidates) {
+    if (!applicationIsStaleForExpire({ createdAt: row.createdAt, afterDays, now })) continue;
+    if (!canTransitionApplication(row.status, "EXPIRED")) continue;
+    await transitionMarketplaceApplication({
+      id: row.id,
+      toStatus: "EXPIRED",
+      note: `Auto-expired after ${afterDays} day(s) (admin control plane).`,
+    });
+    expired += 1;
+  }
+  return { mode: "auto" as const, scanned: candidates.length, expired };
+}
+
 /** Persist a scored match and attach a per-user save bookmark. */
 export async function saveMatchForUser(input: {
   match: CreatorMatch;

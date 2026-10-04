@@ -111,6 +111,11 @@ async function runJob(kind: string, payload: unknown) {
     await runScheduledReleaseSweep();
     return;
   }
+  if (kind === "marketplace_application_expire_sweep") {
+    const { sweepExpiredMarketplaceApplications } = await import("@/lib/marketplace-listings");
+    await sweepExpiredMarketplaceApplications();
+    return;
+  }
   if (kind === "collab_notification") {
     if (!data.to || !data.subject || !data.text) {
       throw new Error("Collaboration notification job is missing a recipient or copy.");
@@ -882,6 +887,19 @@ export async function enqueueScheduledReleaseSweep() {
   await prisma.job.create({
     data: {
       kind: "scheduled_release_sweep",
+      status: "queued",
+      payload: { enqueuedAt: new Date().toISOString() },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
+}
+
+/** W2.3c — queue marketplace application auto-expire sweep (no-op when mode is manual). */
+export async function enqueueMarketplaceApplicationExpireSweep() {
+  await prisma.job.create({
+    data: {
+      kind: "marketplace_application_expire_sweep",
       status: "queued",
       payload: { enqueuedAt: new Date().toISOString() },
     },

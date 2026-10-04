@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { requireCollabFinanceHighRisk } from "@/lib/admin-auth";
 import { saveCollabControlPlane } from "@/lib/collab-control-plane";
+import { enqueueMarketplaceApplicationExpireSweep } from "@/lib/jobs";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 function num(formData: FormData, key: string, fallback: number) {
   const value = Number(formData.get(key));
@@ -46,8 +47,19 @@ export async function actionSaveCollabControlPlane(formData: FormData) {
       applySoft: num(formData, "applySoft", 2),
       applyHard: num(formData, "applyHard", 3),
     },
+    applicationExpire: {
+      mode: String(formData.get("applicationExpireMode") ?? "manual") === "auto" ? "auto" : "manual",
+      afterDays: num(formData, "applicationExpireAfterDays", 14),
+    },
   });
   revalidatePath("/admin/collaboration-ops");
   revalidatePath("/admin/corridors");
   redirect("/admin/collaboration-ops?saved=1");
+}
+
+export async function actionQueueApplicationExpireSweep() {
+  await requireAdminAction("collab_finance.manage");
+  await enqueueMarketplaceApplicationExpireSweep();
+  revalidatePath("/admin/collaboration-ops");
+  redirect("/admin/collaboration-ops?swept=1");
 }

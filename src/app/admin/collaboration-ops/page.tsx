@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { actionSaveCollabControlPlane } from "@/app/admin/collaboration-ops/actions";
+import { actionQueueApplicationExpireSweep, actionSaveCollabControlPlane } from "@/app/admin/collaboration-ops/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import {
@@ -16,7 +16,7 @@ import type { FeeTypeAmount } from "@/lib/ledger";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Collaboration operations · Admin" };
 
-type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
+type Props = { searchParams: Promise<{ saved?: string; error?: string; swept?: string }> };
 
 function formatFeesByType(feesByType: FeeTypeAmount[], currency: string, totalCents: number) {
   if (feesByType.length === 0) return formatMoney(totalCents, currency);
@@ -67,12 +67,19 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
         </Link>
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Collaboration operations</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          Control plane for corridors, mentorship eligibility, dual-approval thresholds, guest collab limits, and
-          account-purpose reference. Config is versioned and audit-logged — no deploy required.
+          Control plane for corridors, mentorship eligibility, dual-approval thresholds, guest collab limits,
+          marketplace application expire (manual/auto), and account-purpose reference. Config is versioned and
+          audit-logged — no deploy required.
         </p>
       </div>
 
       {params.saved ? <p className="text-sm font-semibold text-emerald-700">Control plane saved (v{plane.version}).</p> : null}
+      {params.swept ? (
+        <p className="text-sm font-semibold text-emerald-700">
+          Application expire sweep queued
+          {plane.applicationExpire.mode === "manual" ? " (no-op while mode is manual)" : ""}.
+        </p>
+      ) : null}
       {params.error ? <p className="text-sm font-semibold text-amber-800">{params.error}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -205,6 +212,38 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
             </label>
           ))}
 
+          <h3 className="font-display text-sm font-bold text-indigo sm:col-span-2">
+            Marketplace application expire
+          </h3>
+          <p className="text-[11px] text-muted sm:col-span-2">
+            Manual keeps EXPIRED as a hub button only. Auto expires open applications (REQUESTED → NEGOTIATING)
+            after the configured age via the expire sweep job.
+          </p>
+          <label className="text-xs font-semibold text-muted">
+            Expire mode
+            <select
+              name="applicationExpireMode"
+              defaultValue={plane.applicationExpire.mode}
+              disabled={!canManage}
+              className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+            >
+              <option value="manual">Manual (hub button only)</option>
+              <option value="auto">Auto (sweep after N days)</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-muted">
+            Auto-expire after (days)
+            <input
+              name="applicationExpireAfterDays"
+              type="number"
+              min={1}
+              max={365}
+              defaultValue={plane.applicationExpire.afterDays}
+              disabled={!canManage}
+              className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+            />
+          </label>
+
           {canManage ? (
             <div className="sm:col-span-2 space-y-3">
               <label className="block text-xs font-semibold text-muted">
@@ -230,6 +269,19 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
             </div>
           ) : null}
         </form>
+        {canManage ? (
+          <form action={actionQueueApplicationExpireSweep} className="mt-4 border-t border-[#E4EBFF] pt-4">
+            <p className="text-xs text-muted">
+              Current mode: <span className="font-semibold text-indigo">{plane.applicationExpire.mode}</span>
+              {plane.applicationExpire.mode === "auto"
+                ? ` · ${plane.applicationExpire.afterDays} day(s)`
+                : " · sweep is a no-op until you switch to Auto"}
+            </p>
+            <button type="submit" className="btn-secondary mt-2 !py-2 text-sm">
+              Queue application expire sweep now
+            </button>
+          </form>
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
