@@ -67,8 +67,9 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
         </Link>
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Collaboration operations</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          Control plane for corridors, mentorship eligibility, dual-approval thresholds, guest collab limits, and
-          account-purpose reference. Config is versioned and audit-logged — no deploy required.
+          Control plane for corridors, mentorship eligibility, dual-approval thresholds, guest collab limits,
+          marketplace application expire (manual/auto), and account-purpose reference. Config is versioned and
+          audit-logged — no deploy required.
         </p>
       </div>
 
