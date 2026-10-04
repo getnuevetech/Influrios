@@ -20,6 +20,7 @@ import { collabOsV1Enabled } from "@/lib/collab-os";
 import { getCms } from "@/lib/cms";
 import { getCollaborationLanding } from "@/lib/landing-pages";
 import { consumeGuestQuota } from "@/lib/guest-usage";
+import { loadGuestSuggestionSample } from "@/lib/guest-suggestions";
 import {
   allDirectoryMatches,
   filterMatches,
@@ -61,6 +62,7 @@ type Props = {
     saved?: string;
     error?: string;
     landing?: string;
+    sample?: string;
   }>;
 };
 
@@ -126,7 +128,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
       : collabOsOn
         ? "/collaboration/business#suggestions"
         : "/collaboration/propose"
-    : `/login?next=${encodeURIComponent("/collaboration?goal=awareness")}&gate=suggestions`;
+    : "/collaboration?landing=1#guest-suggestions";
 
   if (params.save && account) {
     const [partyASlug, partyBSlug] = params.save.split(":").map((part) => decodeURIComponent(part.trim()));
@@ -203,6 +205,18 @@ export default async function CollaborationPage({ searchParams }: Props) {
 
   const hero = landing.hero;
   const dual = landing.dualPath;
+  const showGuestSample = !signedIn || params.landing === "1";
+  const guestSample =
+    showGuestSample && params.sample === "1"
+      ? await loadGuestSuggestionSample({
+          goal: params.goal,
+          specialty: params.specialty,
+          location: params.location,
+          platform: params.platform,
+          budget: params.budget,
+        }).catch(() => null)
+      : null;
+  const signupForSuggestions = `/login?next=${encodeURIComponent("/collaboration/business#suggestions")}&gate=suggestions`;
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -522,21 +536,150 @@ export default async function CollaborationPage({ searchParams }: Props) {
         </article>
       </section>
 
-      {/* —— Suggestions banner —— */}
-      <section className="mx-auto w-full max-w-[90rem] px-4 py-4 sm:px-6 lg:px-10">
+      {/* —— Suggestions banner + guest sample (Collab OS §3.3) —— */}
+      <section id="guest-suggestions" className="mx-auto w-full max-w-[90rem] px-4 py-4 sm:px-6 lg:px-10">
         <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-[#633CFF] via-[#5B4CFF] to-[#2979FF] p-5 text-white shadow-lg sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="max-w-xl">
               <h2 className="font-display text-xl font-bold">{landing.suggestionsBanner.title}</h2>
-              <p className="mt-1 text-sm text-white/80">{landing.suggestionsBanner.subtitle}</p>
+              <p className="mt-1 text-sm text-white/80">
+                {showGuestSample
+                  ? "Enter a campaign goal and specialty for a limited anonymized sample. Sign up to see full influencer identities, save matches, and invite."
+                  : landing.suggestionsBanner.subtitle}
+              </p>
             </div>
-            <Link
-              href={suggestionsHref}
-              className="ink-on-light inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold"
-            >
-              {landing.suggestionsBanner.cta.label} <IconArrowRight size={14} />
-            </Link>
+            {!showGuestSample ? (
+              <Link
+                href={suggestionsHref}
+                className="ink-on-light inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold"
+              >
+                {landing.suggestionsBanner.cta.label} <IconArrowRight size={14} />
+              </Link>
+            ) : null}
           </div>
+
+          {showGuestSample ? (
+            <form
+              action="/collaboration#guest-suggestions"
+              className="mt-5 grid gap-3 rounded-2xl bg-white/10 p-4 backdrop-blur-sm sm:grid-cols-2 lg:grid-cols-5"
+            >
+              <input type="hidden" name="landing" value="1" />
+              <input type="hidden" name="sample" value="1" />
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-white/80">
+                Campaign goal
+                <select
+                  name="goal"
+                  defaultValue={params.goal ?? "Brand Awareness"}
+                  className="mt-1 w-full rounded-xl border-0 bg-white px-3 py-2 text-sm font-medium text-indigo"
+                >
+                  <option>Brand Awareness</option>
+                  <option>Product Launch</option>
+                  <option>Content Series</option>
+                  <option>Event Activation</option>
+                  <option>Long-term Partnership</option>
+                </select>
+              </label>
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-white/80">
+                Specialty
+                <select
+                  name="specialty"
+                  defaultValue={params.specialty ?? "beauty"}
+                  className="mt-1 w-full rounded-xl border-0 bg-white px-3 py-2 text-sm font-medium text-indigo"
+                >
+                  {taxonomy.map((item) => (
+                    <option key={item.slug} value={item.slug}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-white/80">
+                Geography
+                <input
+                  name="location"
+                  defaultValue={params.location ?? "Global"}
+                  className="mt-1 w-full rounded-xl border-0 bg-white px-3 py-2 text-sm font-normal text-indigo"
+                />
+              </label>
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-white/80">
+                Platform
+                <select
+                  name="platform"
+                  defaultValue={params.platform ?? "INSTAGRAM"}
+                  className="mt-1 w-full rounded-xl border-0 bg-white px-3 py-2 text-sm font-medium text-indigo"
+                >
+                  <option value="INSTAGRAM">Instagram</option>
+                  <option value="TIKTOK">TikTok</option>
+                  <option value="YOUTUBE">YouTube</option>
+                  <option value="X">X</option>
+                </select>
+              </label>
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  className="ink-on-light w-full rounded-full bg-white px-4 py-2.5 text-sm font-bold"
+                >
+                  Show sample <IconArrowRight size={14} />
+                </button>
+              </div>
+            </form>
+          ) : null}
+
+          {guestSample && guestSample.suggestions.length > 0 ? (
+            <div className="mt-5">
+              <p className="text-xs font-semibold text-white/85">
+                Limited preview · {guestSample.suggestions.length} anonymized suggestion
+                {guestSample.suggestions.length === 1 ? "" : "s"} for{" "}
+                {guestSample.brief.goal} · {specialtyLabel(guestSample.brief.specialty)}
+              </p>
+              <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {guestSample.suggestions.map((card) => (
+                  <li
+                    key={card.sampleId}
+                    className="overflow-hidden rounded-2xl border border-white/20 bg-white/95 text-indigo shadow-sm"
+                  >
+                    <div className="relative h-28">
+                      <Image
+                        src={card.image}
+                        alt=""
+                        fill
+                        className="object-cover blur-[2px] scale-105"
+                        sizes="240px"
+                      />
+                      <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-violet">
+                        {card.score}% fit
+                      </span>
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-bold text-indigo">{card.label}</p>
+                      <p className="text-[11px] text-muted">
+                        {card.title} · {card.followersHint}
+                      </p>
+                      <p className="mt-2 line-clamp-2 rounded-lg bg-[#F8FAFF] p-2 text-[11px] text-muted">
+                        {card.reason}
+                      </p>
+                      <Link
+                        href={signupForSuggestions}
+                        className="btn-primary mt-3 !px-3 !py-1.5 text-[11px]"
+                      >
+                        Sign up to reveal <IconArrowRight size={12} />
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {showGuestSample && params.sample === "1" && guestSample && guestSample.suggestions.length === 0 ? (
+            <p className="mt-4 text-sm text-white/85">
+              No sample matches yet for that brief. Try another specialty or{" "}
+              <Link href={signupForSuggestions} className="font-bold underline">
+                sign up
+              </Link>{" "}
+              for the full suggestion workflow.
+            </p>
+          ) : null}
         </div>
       </section>
 
