@@ -74,6 +74,12 @@ async function runJob(kind: string, payload: unknown) {
     if (!result.ok) throw new Error(result.message);
     return;
   }
+  if (kind === "milestone_auto_approval") {
+    const { runAutoApprovalSweep } = await import("@/lib/marketplace-ledger");
+    const result = await runAutoApprovalSweep();
+    if (result.disabled) return;
+    return;
+  }
   if (kind === "provider_webhook" || kind === "ai_provider") {
     throw new Error("This row is a record. Stripe redelivers webhooks, and specialty suggestions are run again from the creator dashboard.");
   }
@@ -157,4 +163,17 @@ export async function retryFailedJob(id: string) {
 
 export async function listJobs(limit = 50) {
   return prisma.job.findMany({ orderBy: { createdAt: "desc" }, take: limit });
+}
+
+/** W3.5 — queue an idempotent milestone auto-approval sweep. */
+export async function enqueueAutoApprovalSweep() {
+  await prisma.job.create({
+    data: {
+      kind: "milestone_auto_approval",
+      status: "queued",
+      payload: { enqueuedAt: new Date().toISOString() },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
 }

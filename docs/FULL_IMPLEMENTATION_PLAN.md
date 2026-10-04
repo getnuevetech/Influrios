@@ -216,17 +216,17 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Prefund / ledger funding; schedule kinds `once` \| `staged` \| `recurring` (`schedule.ts`); `stagedFundingEnabled` setting | Explicit product modes FULL vs STAGED vs NONE with clear “outside protected coverage” marking for NONE | Staged: later phases cannot start unfunded; NONE never shows Fully Funded badge |
 | — | Recurring/ambassador funding | Deferred until Dev P3 (after base ledger stable) — do not block P4 |
 
-#### W3.5 Milestone lifecycle depth — PARTIAL
+#### W3.5 Milestone lifecycle depth — PARTIAL (auto-approval job shipped)
 | Exists | Missing | Exit |
 |---|---|---|
-| Templates, custom milestones entitlement, submit/approve paths, `shouldAutoApprove` / `sweepAutoApprovals` on ledger reads | Configurable review windows by jurisdiction/type/service level from **accepted snapshot**; dedicated idempotent auto-approval **job** kind | Dev Addendum §8 + §22.5–6 |
+| Templates, submit/approve; `runAutoApprovalSweep` + `milestone_auto_approval` job (skips open disputes); admin toggle | Per-jurisdiction/service-level review window snapshots | Dev Addendum §8 + §22.5–6 |
 | Revision tracking | Revision limits → change order or dispute only | §22.6 |
-| — | Full milestone state machine labels aligned to Dev §8 / Collab §6.4 (RELEASE_AUTHORIZED → PROVIDER_RELEASE_REQUESTED → RELEASE_CONFIRMED) | State names + transitions audited |
+| — | Full milestone state machine labels aligned to Dev §8 / Collab §6.4 | State names + transitions audited |
 
-#### W3.6 Disputes / cancellations / refunds / chargebacks — PARTIAL
+#### W3.6 Disputes / cancellations / refunds / chargebacks — PARTIAL (kill-fee matrix shipped)
 | Exists | Missing | Exit |
 |---|---|---|
-| Dispute + partial refund + change-order modules/tests (`milestone-disputes.ts`, `disputes.ts`) | Kill-fee templates; jurisdiction-aware cancellation matrix; chargeback / payment-risk workflow | Product Addendum §11–12 acceptance |
+| Dispute + partial refund + change-order; `calculateCancellation` kill-fee matrix + admin kill-fee settings; chargeback → payment-risk flag | Provider-executed cancel/refund wiring; full chargeback ops UI | Product Addendum §11–12 acceptance |
 | Milestone-specific disputes (base) | Reason codes + evidence + outcomes fully matching Dev §13 | §22.7–8 |
 
 #### W3.7 Attribution / repeat deals — PARTIAL

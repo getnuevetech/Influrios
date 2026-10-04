@@ -1217,6 +1217,11 @@ model MarketplaceSettings {
   maxChangeOrders          Int      @default(2)
   riskControlsEnabled      Boolean  @default(true)
   maxOpenDisputes          Int      @default(0)
+  /// W3.5 — when false, the auto-approval job/sweep is a no-op.
+  autoApprovalEnabled      Boolean  @default(true)
+  /// W3.6 — kill fee on current milestone when brand cancels after work began (bps of milestone).
+  killFeeBps               Int      @default(2500)
+  killFeeFixedCents        Int      @default(0)
   updatedAt                DateTime @updatedAt
 }
 

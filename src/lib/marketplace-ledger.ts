@@ -144,6 +144,9 @@ export async function marketplaceConfig() {
     riskControlsEnabled: settings?.riskControlsEnabled ?? true,
     maxOpenDisputes: settings?.maxOpenDisputes ?? 0,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
+    autoApprovalEnabled: settings?.autoApprovalEnabled ?? true,
+    killFeeBps: settings?.killFeeBps ?? 2500,
+    killFeeFixedCents: settings?.killFeeFixedCents ?? 0,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
     stagedFundingEnabled: settings?.stagedFundingEnabled ?? true,
@@ -182,6 +185,9 @@ export async function saveMarketplaceSettings(input: {
   riskControlsEnabled?: boolean;
   maxOpenDisputes?: number;
   cancelUnconfirmed?: boolean;
+  autoApprovalEnabled?: boolean;
+  killFeeBps?: number;
+  killFeeFixedCents?: number;
 }) {
   await ensureMarketplaceDefaults();
   const hours = Math.round(input.reviewWindowHours);
@@ -208,6 +214,17 @@ export async function saveMarketplaceSettings(input: {
   if (maxOpenDisputes != null && (!Number.isInteger(maxOpenDisputes) || maxOpenDisputes < 0 || maxOpenDisputes > 1000)) {
     throw new Error("Open-dispute limit must be from 0 to 1000.");
   }
+  const killFeeBps = input.killFeeBps == null ? null : Math.round(input.killFeeBps);
+  if (killFeeBps != null && (!Number.isInteger(killFeeBps) || killFeeBps < 0 || killFeeBps > 10_000)) {
+    throw new Error("Kill fee must be from 0 to 10000 basis points.");
+  }
+  const killFeeFixedCents = input.killFeeFixedCents == null ? null : Math.round(input.killFeeFixedCents);
+  if (
+    killFeeFixedCents != null &&
+    (!Number.isInteger(killFeeFixedCents) || killFeeFixedCents < 0 || killFeeFixedCents > 100_000_000)
+  ) {
+    throw new Error("Kill fee fixed amount must be from 0 to 1,000,000 USD.");
+  }
   return prisma.marketplaceSettings.update({
     where: { id: "default" },
     data: {
@@ -221,6 +238,9 @@ export async function saveMarketplaceSettings(input: {
       ...(input.riskControlsEnabled == null ? {} : { riskControlsEnabled: input.riskControlsEnabled }),
       ...(maxOpenDisputes == null ? {} : { maxOpenDisputes }),
       ...(input.cancelUnconfirmed == null ? {} : { cancelUnconfirmed: input.cancelUnconfirmed }),
+      ...(input.autoApprovalEnabled == null ? {} : { autoApprovalEnabled: input.autoApprovalEnabled }),
+      ...(killFeeBps == null ? {} : { killFeeBps }),
+      ...(killFeeFixedCents == null ? {} : { killFeeFixedCents }),
     },
   });
 }
@@ -694,18 +714,50 @@ export async function sweepDueRecurrences(now = new Date()) {
 }
 
 async function sweepAutoApprovals() {
+  return runAutoApprovalSweep();
+}
+
+/**
+ * W3.5 — Dedicated idempotent auto-approval sweep (Dev Addendum §8 / §17).
+ * Skips milestones with an open dispute. Safe to run from jobs or read paths.
+ */
+export async function runAutoApprovalSweep(now = new Date()) {
+  const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
+  if (settings && settings.autoApprovalEnabled === false) {
+    return { scanned: 0, approved: 0, skippedDispute: 0, disabled: true as const };
+  }
   const due = await prisma.fundingMilestone.findMany({
-    where: { status: "submitted", autoApproveAt: { lte: new Date() } },
+    where: { status: "submitted", autoApproveAt: { lte: now } },
   });
+  let approved = 0;
+  let skippedDispute = 0;
   for (const milestone of due) {
-    if (!shouldAutoApprove(milestone.status, milestone.autoApproveAt, new Date())) continue;
+    if (!shouldAutoApprove(milestone.status, milestone.autoApproveAt, now)) continue;
+    const disputeOpen = await milestoneHasOpenDispute(milestone.fundingId, milestone.id);
+    if (disputeOpen) {
+      skippedDispute += 1;
+      continue;
+    }
     const next = advanceMilestone("submitted", "auto_approve");
     if (!next.ok) continue;
-    await prisma.fundingMilestone.updateMany({
+    const updated = await prisma.fundingMilestone.updateMany({
       where: { id: milestone.id, status: "submitted" },
-      data: { status: next.status, approvedAt: new Date() },
+      data: { status: next.status, approvedAt: now },
     });
+    if (updated.count === 1) {
+      approved += 1;
+      await prisma.auditLog.create({
+        data: {
+          actor: "system",
+          action: "milestone_auto_approved",
+          objectType: "FundingMilestone",
+          objectId: milestone.id,
+          after: { fundingId: milestone.fundingId, at: now.toISOString() },
+        },
+      }).catch(() => null);
+    }
   }
+  return { scanned: due.length, approved, skippedDispute, disabled: false as const };
 }
 
 export async function requestChangeOrder(input: { fundingId: string; grossCents: number; note: string }) {
