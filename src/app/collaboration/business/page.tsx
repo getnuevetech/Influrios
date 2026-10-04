@@ -126,6 +126,10 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               Start Contract
             </Link>
           </div>
+          <p className="mt-3 max-w-xl text-[11px] text-muted">
+            Suggestions and managed intros connect you with Influencers. Protected milestone funding only starts
+            after both parties accept a contract — an introduction is not a Fully Funded collaboration.
+          </p>
         </div>
       </section>
 

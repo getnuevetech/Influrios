@@ -15,6 +15,7 @@ import {
   INTRO_STATUSES,
   listQueuedMatchRequests,
 } from "@/lib/managed-matching";
+import { MATCHING_PRODUCT_BOUNDARY } from "@/lib/matching-product-boundary";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
@@ -83,8 +84,12 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
             Managed Matching
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Phase 4 ops console — creator opt-in, shortlist delivery, facilitated intros, and
-            intro → paid tracking. Automate only after this manual pilot works.
+            Phase 4 ops console — Influencer opt-in, shortlist delivery, facilitated intros, and
+            intro-fee tracking. Automate only after this manual pilot works.
+          </p>
+          <p className="mt-2 max-w-2xl rounded-xl border border-[#E4E9F5] bg-[#F7FAFF] px-3 py-2 text-xs text-indigo">
+            <strong>R073:</strong> {MATCHING_PRODUCT_BOUNDARY.summary}{" "}
+            {MATCHING_PRODUCT_BOUNDARY.nextStepHint}
           </p>
         </div>
         <div className="flex gap-3 text-center text-xs">
@@ -98,7 +103,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
           </div>
           <div className="rounded-xl bg-emerald-100 px-4 py-2">
             <p className="font-display text-lg font-bold text-emerald-700">{paidCount}</p>
-            <p className="text-muted">Paid</p>
+            <p className="text-muted">Intro fees</p>
           </div>
         </div>
       </div>

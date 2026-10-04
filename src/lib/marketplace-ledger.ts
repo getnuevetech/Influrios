@@ -8,6 +8,7 @@ import {
   serializeApprovedProviderIds,
   parseApprovedProviderIds,
 } from "@/lib/jurisdiction-capabilities";
+import { isFundableServiceLevel } from "@/lib/matching-product-boundary";
 import { resolveFundingMode, stagedPhaseCanStart } from "@/lib/funding-modes";
 import { rightsAfterAcceptance, rightsAfterPaymentRelease } from "@/lib/content-rights";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
@@ -587,6 +588,13 @@ export async function requestPrefund(input: {
       });
     });
     return capabilityGate;
+  }
+  if (!isFundableServiceLevel(serviceLevel)) {
+    return {
+      ok: false as const,
+      error:
+        "Discovery and platform-match introductions are not fundable. Use a contracted or managed service level for protected payments.",
+    };
   }
   const gate = canRequestPrefund({
     jurisdictionEnabled: Boolean(jurisdiction?.protectedPaymentsEnabled),
