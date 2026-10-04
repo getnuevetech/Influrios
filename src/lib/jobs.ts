@@ -119,8 +119,8 @@ async function runJob(kind: string, payload: unknown) {
     if (!result.ok) throw new Error(result.error);
     return;
   }
-  if (kind === "provider_webhook" || kind === "ai_provider") {
-    throw new Error("This row is a record. Stripe redelivers webhooks, and specialty suggestions are run again from the creator dashboard.");
+  if (kind === "provider_webhook" || kind === "ai_provider" || kind === "provider_instruction") {
+    throw new Error("This row is a record. Stripe redelivers webhooks, specialty suggestions rerun from the creator dashboard, and provider refund/cancel instructions await a signed payout.refunded webhook.");
   }
   throw new Error(`Unknown job kind ${kind}.`);
 }
