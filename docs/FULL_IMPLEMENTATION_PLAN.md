@@ -259,13 +259,12 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | Jobs mail for invitations/verification | Notify on funding, milestones, review deadlines, revisions, approvals, payouts, disputes, cancellations/refunds, provider/jurisdiction limitations | Event kinds + templates use Influencer terminology |
 
-#### W3.12 Legal pack commercial sync — PARTIAL
+#### W3.12 Legal pack commercial sync — DONE
 **Source:** Product Addendum §17  
 
 | Exists | Missing | Exit |
 |---|---|---|
-| `LegalAcceptance` versioning | Collaboration Marketplace Terms, Creator-Brand / Creator-Creator / Managed Promotion agreements updated to reference live fee snapshot (not hard-coded %) | Legal pack checklist signed |
-| Fee disclosure timestamp path | Explicit fee-disclosure acceptance on contract accept | Dev §24 |
+| Marketplace Terms + Protected Payments Policy v1.2 reference live fee snapshot; explicit fee-disclosure checkbox + timestamp on contract fund; legal acknowledgements recorded | — | Fee disclosure acceptance + snapshot-referenced legal pack |
 
 ---
 

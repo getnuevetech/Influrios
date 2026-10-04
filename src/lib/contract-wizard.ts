@@ -51,6 +51,8 @@ export type CollaborationFinancialPlan = {
   lockedAt: string | null;
   /** Default rights activation rule for the deal (Product §13). */
   rightsActivateOn: "release" | "acceptance" | "custom";
+  /** W3.12 — timestamped fee disclosure accepted before funding. */
+  feeDisclosure?: Record<string, unknown> | null;
   milestones: FinancialPlanMilestone[];
   milestoneSource: "template" | "custom";
 };

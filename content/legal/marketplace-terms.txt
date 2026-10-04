@@ -9,38 +9,28 @@ Influrios may support discovery, platform match, contracted collaboration, manag
 services. Availability and fees depend on country, plan, collaboration type, and legal/provider enablement.
 
 3. Fee Matrix
-Fees may be percentage-based, at, tiered, minimum/maximum, waived, or enterprise-custom. Fees may be charged to the
-creator, business, or both. The applicable fee is displayed before acceptance and stored as an immutable snapshot for the deal.
-Future fee-rule changes do not silently change an accepted deal.
+Fees may be percentage-based, fixed, tiered, minimum/maximum, waived, or enterprise-custom. Fees may be charged to the
+creator, business, or both. Legal agreements reference the live admin fee schedule and the immutable fee snapshot captured
+at acceptance — not a hard-coded percentage embedded in this document. The applicable fee is displayed before acceptance
+and stored as an immutable snapshot for the deal. Future fee-rule changes do not silently change an accepted deal.
 
-4. Relationship Attribution
+4. Fee Disclosure
+Before funding, the business party must expressly accept the fee disclosure for that collaboration. Acceptance is timestamped
+and stored with the rule id/version, fee type, method, and calculated fee. Disputes about fee amount for an accepted deal
+start from that snapshot.
+
+5. Relationship Attribution
 Influrios may apply a disclosed attribution period to relationships introduced through the platform or managed outreach. The
-period must not be inde nite. Users may declare a documented pre-existing relationship before acceptance. Disputed
+period must not be indefinite. Users may declare a documented pre-existing relationship before acceptance. Disputed
 attribution may be reviewed by Influrios.
 
-5. Off-Platform Circumvention
+6. Off-Platform Circumvention
 Users must not intentionally move an Influrios-introduced transaction off-platform solely to evade an accepted platform fee or
-protected-payment obligation during the applicable attribution period. This does not give Influrios ownership of a creator’s
+protected-payment obligation during the applicable attribution period. This does not give Influrios ownership of a creator's
 career or unrelated future relationships.
 
-6. Changes
+7. Changes
 Material changes to compensation, deliverables, milestones, usage rights, or deadlines after acceptance should be documented
 in a change order accepted by affected parties.
-
-fl
-
-fl
-
-fl
-
-fl
-
-fi
-
-fl
-
-fl
-
-fl
 
 Influrios | Draft for Counsel Review | September 2026

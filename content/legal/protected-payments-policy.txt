@@ -18,8 +18,9 @@ The accepted snapshot controls even if later admin settings change.
 4. Fees
 Influrios may charge platform service fees, collaboration fees, managed-introduction fees, managed-campaign fees, success
 fees, processing/FX fees, cancellation fees, or other disclosed charges. Fee type, payer, basis, percentage/amount, minimum/
-maximum, and rule version must be shown before acceptance. No hidden or retroactive fee may be added to an accepted deal
-except a party-approved amendment or legally required charge.
+maximum, and rule version must be shown before acceptance and frozen into the deal’s fee snapshot. This policy does not
+embed a mutable commercial percentage; the live admin fee matrix and accepted snapshot control. No hidden or retroactive
+fee may be added to an accepted deal except a party-approved amendment or legally required charge.
 
 5. Release
 Creator payouts are initiated only after the applicable milestone is approved, auto-approved, or otherwise resolved in Creator’s

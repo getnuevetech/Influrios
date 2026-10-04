@@ -24,4 +24,16 @@ describe("legal trigger routing", () => {
   it("does not publish a single master pack key", () => {
     assert.equal(LEGAL_CATALOG.some((doc) => doc.key.includes("master")), false);
   });
+
+  it("acknowledges marketplace fee legal pack on collaboration trigger", () => {
+    const keys = documentsForTrigger(LEGAL_CATALOG, "collaboration", "acknowledgement").map((doc) => doc.key);
+    assert.ok(keys.includes("marketplace-terms"));
+    assert.ok(keys.includes("protected-payments-policy"));
+    const marketplace = LEGAL_CATALOG.find((doc) => doc.key === "marketplace-terms");
+    assert.equal(marketplace?.version, "1.2");
+    assert.match(
+      String(marketplace?.title ?? ""),
+      /Marketplace/i,
+    );
+  });
 });

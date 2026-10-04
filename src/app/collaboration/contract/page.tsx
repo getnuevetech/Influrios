@@ -22,6 +22,7 @@ import {
   allowedServiceLevels,
   capabilitiesFromJurisdictionRow,
 } from "@/lib/jurisdiction-capabilities";
+import { buildFeeDisclosureSummary } from "@/lib/fee-disclosure";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
@@ -49,6 +50,7 @@ type Props = {
     mode?: string;
     influencerAccepted?: string;
     accepted?: string;
+    feeDisclosure?: string;
     error?: string;
   }>;
 };
@@ -114,6 +116,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const usingCustom = params.mode === "custom" && entitlements.customMilestones;
   const influencerAccepted = params.influencerAccepted === "1";
   const partyAccepted = params.accepted === "1";
+  const feeDisclosureAccepted = params.feeDisclosure === "1";
 
   const templates: MilestoneDraft[] = (config.templates ?? [])
     .filter((row) => row.active)
@@ -586,6 +589,57 @@ export default async function ContractWizardPage({ searchParams }: Props) {
 
           <section id="accept">
             <h2 className="font-display text-xl font-bold text-indigo">7. Accept & funding instruction</h2>
+            {quote && plan ? (
+              <div className="mt-3 rounded-xl border border-border bg-[#F7FAFF] px-4 py-3 text-sm text-indigo">
+                <p className="font-semibold">Fee disclosure</p>
+                <p className="mt-1 text-xs text-muted">
+                  {buildFeeDisclosureSummary({
+                    feeCents: quote.feeCents,
+                    ruleId: quote.rule?.id ?? null,
+                    ruleName: quote.rule?.name ?? null,
+                    ruleVersion: quote.rule?.version ?? null,
+                    feeType: quote.rule?.feeType ?? null,
+                    method: quote.rule?.method ?? null,
+                    percentBps: quote.rule?.percentBps ?? null,
+                    fixedCents: quote.rule?.fixedCents ?? null,
+                    payer: quote.rule?.payer ?? null,
+                    jurisdiction: jurisdictionCode,
+                    serviceLevel: effectiveServiceLevel,
+                    grossCents,
+                    explanation: quote.explanation,
+                  })}
+                </p>
+                <p className="mt-2 text-xs text-muted">
+                  Legal pack references this live fee snapshot — not a hard-coded percentage. See{" "}
+                  <Link href="/legal/marketplace-terms" className="font-semibold text-violet hover:underline" target="_blank">
+                    Marketplace Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/legal/protected-payments-policy"
+                    className="font-semibold text-violet hover:underline"
+                    target="_blank"
+                  >
+                    Protected Payments Policy
+                  </Link>
+                  .
+                </p>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted">Preview a fee quote before accepting the disclosure.</p>
+            )}
+            <label className="mt-3 flex items-start gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="feeDisclosureAccepted"
+                defaultChecked={feeDisclosureAccepted}
+                className="mt-0.5 accent-violet"
+              />
+              <span>
+                I accept this fee disclosure. The quoted fee rule version and calculated fee will freeze into the deal
+                snapshot on funding.
+              </span>
+            </label>
             <label className="mt-3 flex items-start gap-2 text-sm text-indigo">
               <input
                 type="checkbox"
