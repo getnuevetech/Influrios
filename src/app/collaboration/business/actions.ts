@@ -19,7 +19,14 @@ import {
   updateInquiryStatus,
 } from "@/lib/business";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
-import { upsertBusinessRequest } from "@/lib/marketplace-listings";
+import {
+  createMarketplaceApplication,
+  listPublishedBusinessRequests,
+  MARKETPLACE_APPLICATION_STATUSES,
+  transitionMarketplaceApplication,
+  upsertBusinessRequest,
+  type MarketplaceApplicationStatus,
+} from "@/lib/marketplace-listings";
 
 const HUB = "/collaboration/business";
 
@@ -216,4 +223,71 @@ export async function actionRequestManagedMatch(formData: FormData) {
     redirect(`${HUB}?error=${encodeURIComponent(result.error)}`);
   }
   redirect(`${HUB}?queued=1`);
+}
+
+/** W2.3c — invite a suggested/shortlisted creator onto an owned published request. */
+export async function actionInviteCreatorToRequest(formData: FormData) {
+  await requireBusinessTerms();
+  const account = await getAccountSession().catch(() => null);
+  const ws = await getWorkspace();
+  const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+  if (!creatorSlug) {
+    redirect(`${HUB}?error=${encodeURIComponent("Choose a creator to invite.")}#suggestions`);
+  }
+  const requests = await listPublishedBusinessRequests();
+  const own = requests.filter(
+    (row) =>
+      row.brand.toLowerCase() === ws.name.toLowerCase() ||
+      row.brand.toLowerCase().includes(ws.name.toLowerCase().slice(0, 8)),
+  );
+  const target = (requestId ? own.find((row) => row.id === requestId) : null) ?? own[0];
+  if (!target) {
+    redirect(
+      `${HUB}?error=${encodeURIComponent("Publish a business request before inviting creators.")}#create-request`,
+    );
+  }
+  await createMarketplaceApplication({
+    kind: "business_request",
+    businessRequestId: target.id,
+    fromUserId: account?.id,
+    toSlug: creatorSlug,
+    note: note || `Invitation from ${ws.name}`,
+  });
+  revalidateHub();
+  redirect(`${HUB}?invited=${encodeURIComponent(creatorSlug)}#applicants`);
+}
+
+/** W2.3c — advance a marketplace application on an owned request. */
+export async function actionTransitionMarketplaceApplication(formData: FormData) {
+  await requireBusinessTerms();
+  const account = await getAccountSession().catch(() => null);
+  const applicationId = String(formData.get("applicationId") ?? "").trim();
+  const toStatus = String(formData.get("toStatus") ?? "").trim() as MarketplaceApplicationStatus;
+  if (!applicationId || !(MARKETPLACE_APPLICATION_STATUSES as readonly string[]).includes(toStatus)) {
+    redirect(`${HUB}?error=${encodeURIComponent("Invalid application transition.")}#applicants`);
+  }
+  try {
+    const updated = await transitionMarketplaceApplication({
+      id: applicationId,
+      toStatus,
+      actorUserId: account?.id,
+      note: String(formData.get("note") ?? "") || undefined,
+    });
+    revalidateHub();
+    if (toStatus === "COLLABORATION_DRAFTED") {
+      const creator = updated.toSlug || updated.fromSlug;
+      redirect(
+        creator
+          ? `/collaboration/contract?creator=${encodeURIComponent(creator)}`
+          : `${HUB}?drafted=1#applicants`,
+      );
+    }
+    redirect(`${HUB}?app=${encodeURIComponent(toStatus)}#applicants`);
+  } catch (error) {
+    redirect(
+      `${HUB}?error=${encodeURIComponent(error instanceof Error ? error.message : "Transition failed.")}#applicants`,
+    );
+  }
 }

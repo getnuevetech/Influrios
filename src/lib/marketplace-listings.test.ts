@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  applicationTransitionLabel,
   canTransitionApplication,
   MARKETPLACE_APPLICATION_STATUSES,
+  nextApplicationStatuses,
 } from "./marketplace-listings";
 
 describe("marketplace application state machine", () => {
@@ -24,5 +26,17 @@ describe("marketplace application state machine", () => {
     assert.equal(canTransitionApplication("RESPONDED", "NEGOTIATING"), true);
     assert.equal(canTransitionApplication("NEGOTIATING", "ACCEPTED"), true);
     assert.equal(canTransitionApplication("ACCEPTED", "COLLABORATION_DRAFTED"), true);
+  });
+
+  it("lists next statuses and readable transition labels (W2.3c)", () => {
+    assert.deepEqual(nextApplicationStatuses("REQUESTED"), [
+      "VIEWED",
+      "DECLINED",
+      "EXPIRED",
+      "WITHDRAWN",
+    ]);
+    assert.deepEqual(nextApplicationStatuses("ACCEPTED"), ["COLLABORATION_DRAFTED", "WITHDRAWN"]);
+    assert.equal(applicationTransitionLabel("COLLABORATION_DRAFTED"), "Draft contract");
+    assert.equal(applicationTransitionLabel("VIEWED"), "Mark viewed");
   });
 });

@@ -169,6 +169,11 @@ Comparing thin plan v1 to every attached product/design document found these **m
 |---|---|---|
 | Public `/collaboration` guest form ranks directory creators and shows **2–3 anonymized / partially revealed** cards (`guest-suggestions.ts`); signup unlocks full hub reveal | — | Collab OS §3.3 guest sample — **DONE** |
 
+#### W2.3c Marketplace application lifecycle — DONE
+| Exists | Missing | Exit |
+|---|---|---|
+| Prisma + state machine existed but **no product callers**; now creator **Apply**, business **Invite** from suggestions, hub transition UI through `COLLABORATION_DRAFTED` → contract; per-suggestion Inquire/Contract/Invite | Multi-creator team proposals | Collab OS §4.3 + §3.3 non-team conversion — **DONE**; multi-creator **Deferred-external** |
+
 #### W2.4 Mentorship stub — DONE (full module = P7 core shipped)
 | Exists | Missing | Exit |
 |---|---|---|
@@ -588,7 +593,7 @@ DEFERRED-EXTERNAL (ops / product / later phase)
  ├─ P7 paid mentorship commercial pack
  ├─ P8 SKU/cookie rename soak
  ├─ W2.3 multi-creator team proposals
- └─ (W2.5 unified admin txn view — DONE; W2.3 intent refresh — DONE; W2.3b guest sample — DONE)
+ └─ (W2.5 unified admin txn view — DONE; W2.3 intent refresh — DONE; W2.3b guest sample — DONE; W2.3c applications — DONE)
 
 NON-GOALS until product asks:
   Meilisearch · Stripe Connect hard-enable · Collab Messages inbox product

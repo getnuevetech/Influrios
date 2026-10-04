@@ -28,6 +28,7 @@ import {
   scoreCreatorPair,
   type CreatorMatch,
 } from "@/lib/matching";
+import { actionApplyToBusinessRequest } from "@/app/collaboration/hub/actions";
 import {
   listPublishedBusinessRequests,
   listPublishedCreatorOpportunities,
@@ -494,9 +495,21 @@ export default async function CollaborationPage({ searchParams }: Props) {
                       {item.budget} · {item.location}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs text-muted">{item.summary}</p>
-                    <Link href={businessHref} className="mt-2 inline-flex text-[11px] font-bold text-violet">
-                      View Details
-                    </Link>
+                    {signedIn && draft?.slug ? (
+                      <form action={actionApplyToBusinessRequest} className="mt-2">
+                        <input type="hidden" name="requestId" value={item.id} />
+                        <button type="submit" className="inline-flex text-[11px] font-bold text-violet">
+                          Apply to request →
+                        </button>
+                      </form>
+                    ) : (
+                      <Link
+                        href={`/login?next=${encodeURIComponent("/collaboration/hub#business-requests")}&gate=apply`}
+                        className="mt-2 inline-flex text-[11px] font-bold text-violet"
+                      >
+                        Sign in to apply →
+                      </Link>
+                    )}
                   </div>
                 </div>
               </li>

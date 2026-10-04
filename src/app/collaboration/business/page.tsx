@@ -21,6 +21,7 @@ import {
   actionAcceptBusinessTerms,
   actionAddShortlist,
   actionDeclineInquiry,
+  actionInviteCreatorToRequest,
   actionPostBusinessRequest,
   actionRefreshCampaignSuggestions,
   actionRemoveShortlist,
@@ -29,7 +30,9 @@ import {
   actionSendInquiry,
   actionSetPlan,
   actionShortlistFromInquiry,
+  actionTransitionMarketplaceApplication,
 } from "./actions";
+import { applicationTransitionLabel } from "@/lib/marketplace-listings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business Collaboration Hub · Influrios" };
@@ -47,6 +50,9 @@ type Props = {
     plan?: string;
     queued?: string;
     terms?: string;
+    invited?: string;
+    app?: string;
+    drafted?: string;
   }>;
 };
 
@@ -206,6 +212,16 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
           {params.queued ? (
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
               Managed matching queued for review.
+            </p>
+          ) : null}
+          {params.invited ? (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              Invitation sent to {params.invited}. Track it under Applicants.
+            </p>
+          ) : null}
+          {params.app ? (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              Application moved to {params.app}.
             </p>
           ) : null}
 
@@ -373,6 +389,40 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             Shortlist
                           </button>
                         </form>
+                        <form action={actionSendInquiry}>
+                          <input type="hidden" name="creatorSlug" value={creator.slug} />
+                          {hub.intentBrief ? (
+                            <input type="hidden" name="briefId" value={hub.intentBrief.id} />
+                          ) : null}
+                          <input
+                            type="hidden"
+                            name="message"
+                            value={`Hi ${creator.displayName} — we'd love to collaborate on ${hub.intentBrief?.goal ?? "a campaign"}.`}
+                          />
+                          <button type="submit" className="btn-secondary !px-3 !py-1.5 text-[11px]">
+                            Inquire
+                          </button>
+                        </form>
+                        <Link
+                          href={`/collaboration/contract?creator=${encodeURIComponent(creator.slug)}`}
+                          className="btn-secondary !px-3 !py-1.5 text-[11px]"
+                        >
+                          Contract
+                        </Link>
+                        {hub.ownRequests[0] ? (
+                          <form action={actionInviteCreatorToRequest}>
+                            <input type="hidden" name="creatorSlug" value={creator.slug} />
+                            <input type="hidden" name="requestId" value={hub.ownRequests[0].id} />
+                            <input
+                              type="hidden"
+                              name="note"
+                              value={`Invited from suggestions for ${hub.intentBrief?.title ?? "campaign"}`}
+                            />
+                            <button type="submit" className="btn-secondary !px-3 !py-1.5 text-[11px]">
+                              Invite
+                            </button>
+                          </form>
+                        ) : null}
                       </div>
                     </div>
                   </article>
@@ -442,10 +492,68 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             <section id="applicants" className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
               <h2 className="font-display text-lg font-bold text-indigo">Applicants & Inquiries</h2>
               <ul className="mt-3 space-y-3">
-                {hub.inquiries.length === 0 ? (
-                  <li className="text-sm text-muted">No inquiries yet. Shortlist an influencer and send a note.</li>
-                ) : (
-                  hub.inquiries.map((inquiry) => {
+                {hub.applications.length === 0 && hub.inquiries.length === 0 ? (
+                  <li className="text-sm text-muted">
+                    No applications yet. Invite from suggestions or wait for creators to apply.
+                  </li>
+                ) : null}
+                {hub.applications.map((application) => {
+                  const creator = application.creatorSlug
+                    ? bySlug.get(application.creatorSlug)
+                    : null;
+                  return (
+                    <li key={application.id} className="flex gap-3 rounded-xl border border-[#E8EDF8] p-3">
+                      <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#F4F7FF]">
+                        {creator ? (
+                          <Image src={creator.image} alt="" fill className="object-cover" sizes="44px" />
+                        ) : null}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-indigo">
+                          {creator?.displayName ?? application.creatorSlug ?? "Applicant"}
+                        </p>
+                        <p className="text-[11px] text-muted">
+                          {application.requestBrand ?? "Request"} · {application.note ?? "Marketplace application"}
+                        </p>
+                        <p className="mt-1 text-[10px] font-semibold uppercase text-violet">
+                          {application.status}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {application.nextStatuses
+                            .filter((status) => !["EXPIRED"].includes(status))
+                            .slice(0, 4)
+                            .map((status) => (
+                              <form key={status} action={actionTransitionMarketplaceApplication}>
+                                <input type="hidden" name="applicationId" value={application.id} />
+                                <input type="hidden" name="toStatus" value={status} />
+                                <button
+                                  type="submit"
+                                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold ${
+                                    status === "DECLINED" || status === "WITHDRAWN"
+                                      ? "border border-border text-muted"
+                                      : status === "COLLABORATION_DRAFTED" || status === "ACCEPTED"
+                                        ? "bg-violet text-white"
+                                        : "border border-violet/30 text-violet"
+                                  }`}
+                                >
+                                  {applicationTransitionLabel(status)}
+                                </button>
+                              </form>
+                            ))}
+                          {application.status === "COLLABORATION_DRAFTED" && application.creatorSlug ? (
+                            <Link
+                              href={`/collaboration/contract?creator=${encodeURIComponent(application.creatorSlug)}`}
+                              className="rounded-lg bg-violet px-2.5 py-1 text-[11px] font-bold text-white"
+                            >
+                              Open contract
+                            </Link>
+                          ) : null}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+                {hub.inquiries.map((inquiry) => {
                     const creator = bySlug.get(inquiry.creatorSlug);
                     const open = inquiry.status === "sent";
                     return (
@@ -489,8 +597,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                         </div>
                       </li>
                     );
-                  })
-                )}
+                  })}
               </ul>
               {hub.suggestions[0] ? (
                 <form action={actionSendInquiry} className="mt-4 space-y-2 border-t border-[#E4E9F5] pt-4">
