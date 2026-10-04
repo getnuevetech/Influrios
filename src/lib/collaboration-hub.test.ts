@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   PIPELINE_STAGES,
   derivePipelineStage,
+  pipelineFundingSurface,
   scoreBusinessRequestForCreator,
   summarizeBusinessSpend,
 } from "./collaboration-hub";
@@ -14,6 +15,25 @@ describe("collaboration hub pipeline", () => {
     assert.equal(derivePipelineStage({ collaborationStatus: "draft" }), "Match");
     assert.equal(derivePipelineStage({ collaborationStatus: "sent" }), "Match");
     assert.equal(derivePipelineStage({ collaborationStatus: "accepted" }), "Contract");
+  });
+
+  it("surfaces Product §16 funding badge, locked fee, and revision summary", () => {
+    const surface = pipelineFundingSurface({
+      status: "held",
+      feeCents: 500,
+      currency: "USD",
+      grossCents: 10_000,
+      heldCents: 10_000,
+      releasedCents: 0,
+      milestones: [
+        { title: "Delivery", revisionCount: 1, revisionLimit: 2, status: "submitted" },
+      ],
+    });
+    assert.equal(surface.fundingBadge, "Fully Funded");
+    assert.equal(surface.feeCents, 500);
+    assert.equal(surface.currency, "USD");
+    assert.match(String(surface.revisionSummary), /1\/2 revisions/);
+    assert.match(String(surface.revisionSummary), /Delivery/);
   });
 
   it("advances through funded → progress → review → released", () => {

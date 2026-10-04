@@ -15,6 +15,7 @@ import { BUSINESS_PLAN_PRICES, type BusinessPlanCode } from "@/lib/business-enti
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
+import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
 import { SPECIALTY_TAXONOMY, formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import {
   actionAcceptBusinessTerms,
@@ -532,7 +533,22 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="text-sm font-bold text-indigo">{item.title}</p>
-                        <p className="text-[11px] text-muted">with {item.counterparty}</p>
+                        <p className="text-[11px] text-muted">
+                          with {item.counterparty}
+                          {item.fundingBadge ? (
+                            <>
+                              {" "}
+                              ·{" "}
+                              <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${FUNDING_BADGE_CLASS[item.fundingBadge]}`}>
+                                {item.fundingBadge}
+                              </span>
+                            </>
+                          ) : null}
+                          {item.feeCents != null && item.currency
+                            ? ` · fee locked ${formatMoney(item.feeCents, item.currency)}`
+                            : ""}
+                          {item.revisionSummary ? ` · ${item.revisionSummary}` : ""}
+                        </p>
                       </div>
                       <Link href={item.href} className="text-xs font-bold text-violet">
                         Open →

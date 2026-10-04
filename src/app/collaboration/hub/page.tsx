@@ -23,6 +23,7 @@ import { getCms } from "@/lib/cms";
 import { getDirectoryCreator, indexCreatorsBySlug, getDirectory } from "@/lib/directory";
 import { formatMoney } from "@/lib/money";
 import { POPULAR_MATCH_CHIPS } from "@/lib/matching";
+import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
 import { PAYOUT_METHOD_LABELS, type PayoutMethod } from "@/lib/payout-readiness";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 
@@ -584,6 +585,19 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                       </div>
                       <p className="mb-2 text-[11px] text-muted">
                         with {other?.displayName ?? item.counterparty} · {item.stage}
+                        {item.fundingBadge ? (
+                          <>
+                            {" "}
+                            ·{" "}
+                            <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${FUNDING_BADGE_CLASS[item.fundingBadge]}`}>
+                              {item.fundingBadge}
+                            </span>
+                          </>
+                        ) : null}
+                        {item.feeCents != null && item.currency ? (
+                          <> · fee locked {formatMoney(item.feeCents, item.currency)}</>
+                        ) : null}
+                        {item.revisionSummary ? <> · {item.revisionSummary}</> : null}
                       </p>
                       <ol className="flex flex-wrap gap-1">
                         {PIPELINE_STAGES.map((stage, index) => {

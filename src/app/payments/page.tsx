@@ -446,6 +446,11 @@ export default async function PaymentsPage({ searchParams }: Props) {
                           {milestone.revisionLimit > 0
                             ? ` · revisions ${milestone.revisionCount} of ${milestone.revisionLimit}`
                             : " · no revisions"}
+                          {milestone.autoApproveAt && milestone.status === "submitted"
+                            ? ` · review by ${new Date(milestone.autoApproveAt).toISOString().slice(0, 16).replace("T", " ")} UTC`
+                            : milestone.reviewWindowHours
+                              ? ` · ${milestone.reviewWindowHours}h review window`
+                              : ""}
                           {milestone.status === "approved" && asRightsStatus(milestone.rightsStatus) === "pending"
                             ? " · usage rights activate on payment release"
                             : ""}
