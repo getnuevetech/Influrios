@@ -214,11 +214,11 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | Templates, submit/approve; auto-approval job; revision tracking; §22.6 exhausted → change order/dispute; Dev §8 labels; plan/jurisdiction/settings lifecycle snapshot frozen on milestones + fee snapshot | — | Dev Addendum §8 + §22.5–6 |
 
-#### W3.6 Disputes / cancellations / refunds / chargebacks — PARTIAL (kill-fee + §13 reasons/outcomes shipped)
+#### W3.6 Disputes / cancellations / refunds / chargebacks — PARTIAL (kill-fee + §13 + chargeback ops shipped)
 | Exists | Missing | Exit |
 |---|---|---|
-| Dispute + partial refund + change-order; `calculateCancellation` kill-fee matrix + admin kill-fee settings; chargeback → payment-risk flag; Dev §13 reason catalog + resolution outcomes | Provider-executed cancel/refund wiring; full chargeback ops UI | Product Addendum §11–12 acceptance |
-| Milestone-specific disputes with reason codes + evidence + outcomes (release/refund/split/settle/escalate) | — | §22.7–8 reason/outcome depth DONE; provider rails still open |
+| Dispute + partial refund + change-order; `calculateCancellation` kill-fee matrix + admin kill-fee settings; `funding.chargeback` → `payment_risk`; held cancel queues provider refund/cancel intent; admin chargeback/cancel ops UI; Dev §13 reason catalog + resolution outcomes | Live provider rails beyond marketplace adapter stubs; deeper chargeback evidence pack | Product Addendum §11–12 acceptance (core ops path DONE) |
+| Milestone-specific disputes with reason codes + evidence + outcomes (release/refund/split/settle/escalate) | — | §22.7–8 reason/outcome depth DONE; provider live rails still open |
 
 #### W3.7 Attribution / repeat deals — DONE
 | Exists | Missing | Exit |

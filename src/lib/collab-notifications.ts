@@ -18,6 +18,7 @@ export const COLLAB_NOTIFICATION_KINDS = [
   "dispute_resolved",
   "collaboration_cancelled",
   "refund_completed",
+  "payment_risk",
   "change_order_accepted",
   "preexisting_relationship_claimed",
   "provider_jurisdiction_limitation",
@@ -121,6 +122,12 @@ export const COLLAB_NOTIFICATION_TEMPLATES: Record<CollabNotificationKind, Colla
     audience: "both",
     subject: "Refund completed — {{title}}",
     body: "A refund was completed for {{title}}. Detail: {{detail}}",
+  },
+  payment_risk: {
+    kind: "payment_risk",
+    audience: "both",
+    subject: "Payment risk — {{title}}",
+    body: "Protected payment for {{title}} ({{business}} ↔ {{influencer}}) entered payment-risk. Releases are paused until ops or the provider resolves the chargeback/reversal. Detail: {{detail}}",
   },
   change_order_accepted: {
     kind: "change_order_accepted",
@@ -227,6 +234,8 @@ export function collabKindForMarketplaceEvent(
       return "funding_successful";
     case "funding.failed":
       return "funding_failed";
+    case "funding.chargeback":
+      return "payment_risk";
     case "payout.released":
       return "payout_completed";
     case "payout.refunded":

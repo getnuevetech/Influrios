@@ -379,3 +379,40 @@ export async function actionEnqueueFundingReconciliationSweep() {
   revalidatePath("/admin/jobs");
   redirect("/admin/marketplace?saved=funding_recon");
 }
+
+export async function actionExecuteHeldCancellation(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const { executeHeldCancellation, isCancellationReason } = await import("@/lib/collaboration-cancellation");
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  const reasonRaw = String(formData.get("reason") ?? "").trim();
+  const currentMilestoneId = String(formData.get("currentMilestoneId") ?? "").trim() || null;
+  const note = String(formData.get("note") ?? "").trim();
+  const acceptedPartialUsd = String(formData.get("acceptedPartialUsd") ?? "").trim();
+  if (!fundingId) redirect("/admin/marketplace?error=" + encodeURIComponent("Choose a funding record."));
+  if (!isCancellationReason(reasonRaw)) {
+    redirect("/admin/marketplace?error=" + encodeURIComponent("Choose a valid cancellation reason."));
+  }
+  const acceptedPartialCents =
+    acceptedPartialUsd === "" ? null : Math.round(Number(acceptedPartialUsd) * 100);
+  if (acceptedPartialCents != null && (!Number.isFinite(acceptedPartialCents) || acceptedPartialCents < 0)) {
+    redirect("/admin/marketplace?error=" + encodeURIComponent("Accepted partial amount is invalid."));
+  }
+  const result = await executeHeldCancellation({
+    fundingId,
+    reason: reasonRaw,
+    currentMilestoneId,
+    acceptedPartialCents,
+    actor: "admin",
+    note,
+  });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect(
+    result.paymentRisk
+      ? "/admin/marketplace?saved=payment_risk"
+      : "/admin/marketplace?saved=cancellation_queued",
+  );
+}

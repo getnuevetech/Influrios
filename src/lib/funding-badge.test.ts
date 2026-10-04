@@ -14,6 +14,10 @@ describe("funding-badge", () => {
     assert.equal(fundingBadge({ status: "awaiting_provider" }), "Awaiting Funding");
   });
 
+  it("maps payment_risk to Payment Risk", () => {
+    assert.equal(fundingBadge({ status: "payment_risk", heldCents: 1000 }), "Payment Risk");
+  });
+
   it("maps held with only held funds to Fully Funded", () => {
     assert.equal(fundingBadge({ status: "held", heldCents: 1000, releasedCents: 0 }), "Fully Funded");
   });

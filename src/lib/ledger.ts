@@ -293,8 +293,15 @@ export function marketplaceDisposition(input: {
   if (input.eventType === "funding.failed") {
     return input.fundingStatus === "awaiting_provider" ? "apply" : "reject";
   }
+  if (input.eventType === "funding.chargeback") {
+    // Chargeback freezes held funds into payment-risk; no automatic refund/ledger move.
+    if (input.fundingStatus === "held" && input.heldCents > 0) return "apply";
+    if (input.fundingStatus === "payment_risk") return "ignore";
+    return "reject";
+  }
   if (input.eventType === "payout.released") {
     if (input.disputeOpen) return "reject";
+    if (input.fundingStatus === "payment_risk") return "reject";
     if (
       (input.milestoneStatus === "approved" || input.milestoneStatus === "payout_failed") &&
       input.amountCents === input.expectedCents &&
@@ -310,6 +317,7 @@ export function marketplaceDisposition(input: {
     return "reject";
   }
   if (input.eventType === "payout.refunded") {
+    if (input.fundingStatus !== "held" && input.fundingStatus !== "payment_risk") return "reject";
     if (!(input.amountCents > 0 && input.amountCents <= input.heldCents && input.heldCents > 0)) return "reject";
     if (input.milestoneRemainingCents != null && input.amountCents > input.milestoneRemainingCents) return "reject";
     if (input.requestedRefundCents != null && input.amountCents !== input.requestedRefundCents) return "reject";

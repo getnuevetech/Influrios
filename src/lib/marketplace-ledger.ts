@@ -1419,7 +1419,9 @@ export async function applyMarketplaceEvent(input: {
         })
       : null;
   const expectedCents =
-    input.eventType === "funding.held" || input.eventType === "funding.failed"
+    input.eventType === "funding.held" ||
+    input.eventType === "funding.failed" ||
+    input.eventType === "funding.chargeback"
       ? funding.grossCents
       : input.eventType === "payout.released" || input.eventType === "payout.failed"
         ? left > 0
@@ -1474,6 +1476,14 @@ export async function applyMarketplaceEvent(input: {
           where: { id: funding.id, status: "awaiting_provider" },
           data: { status: "cancelled" },
         });
+        return;
+      }
+      if (input.eventType === "funding.chargeback") {
+        const risk = await tx.collaborationFunding.updateMany({
+          where: { id: funding.id, status: "held" },
+          data: { status: "payment_risk" },
+        });
+        if (risk.count !== 1) throw new LedgerReject("Prefund is not held for chargeback.");
         return;
       }
       if (input.eventType === "payout.failed" && milestone) {
@@ -1606,7 +1616,7 @@ export async function applyMarketplaceEvent(input: {
         });
         if (held.heldCents - input.amountCents === 0) {
           await tx.collaborationFunding.updateMany({
-            where: { id: funding.id, status: "held" },
+            where: { id: funding.id, status: { in: ["held", "payment_risk"] } },
             data: { status: "refunded" },
           });
         }
@@ -1661,9 +1671,11 @@ export async function applyMarketplaceEvent(input: {
           detail:
             input.eventType === "funding.failed"
               ? "Provider rejected or failed the funding hold."
-              : input.eventType === "payout.refunded"
-                ? `Refunded ${input.amountCents}¢`
-                : undefined,
+              : input.eventType === "funding.chargeback"
+                ? "Provider reported a chargeback — funding moved to payment-risk; no automatic refund."
+                : input.eventType === "payout.refunded"
+                  ? `Refunded ${input.amountCents}¢`
+                  : undefined,
         });
       });
     }

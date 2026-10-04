@@ -6,6 +6,7 @@ export type FundingBadge =
   | "Fully Funded"
   | "Partially Funded"
   | "Awaiting Funding"
+  | "Payment Risk"
   | "Protected Payment Unavailable"
   | "Outside Protected Coverage";
 
@@ -26,6 +27,7 @@ export function fundingBadge(input: FundingBadgeInput): FundingBadge {
   if (mode === "NONE") return "Outside Protected Coverage";
   if (input.protectedPaymentsEnabled === false) return "Protected Payment Unavailable";
   const status = input.status.toLowerCase();
+  if (status === "payment_risk") return "Payment Risk";
   if (status === "awaiting_provider" || status === "draft" || status === "pending") {
     return "Awaiting Funding";
   }
@@ -49,6 +51,7 @@ export const FUNDING_BADGE_CLASS: Record<FundingBadge, string> = {
   "Fully Funded": "bg-emerald-100 text-emerald-800",
   "Partially Funded": "bg-amber-100 text-amber-900",
   "Awaiting Funding": "bg-blue-100 text-blue-800",
+  "Payment Risk": "bg-rose-100 text-rose-800",
   "Protected Payment Unavailable": "bg-slate-100 text-slate-700",
   "Outside Protected Coverage": "bg-slate-100 text-slate-700",
 };
