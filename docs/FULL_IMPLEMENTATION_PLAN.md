@@ -292,7 +292,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 |---|---|---|
 | `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records | Phase 1–2 DoD fully evidenced (domain verification admin UX, alias policy, branded failure pages) | Spec §20 criteria 11–24 |
 | Pro `dynamic` flag + destination setter | Pro **self-serve** dynamic destination + destination history + rollback | Spec §9 + Phase 3 — DONE (Phase 4 campaign/NFC still later) |
-| Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics | Spec §10 — DONE (resolver metrics / Phase 4 still later) |
+| Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics; **resolver ops metrics** | Spec §10 — DONE; Spec §20 observable resolver metrics — **DONE** |
 | — | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Explicitly later; do not block P4 finance |
 | Card design system | Align remaining chrome to Platform Spec §39 assets; live data not raster | Card matches approved vertical standard |
 | OG / social sharing | Influrios-branded preview; canonical SEO on influrios.com | Spec §11 — DONE (card/profile OG + INFLR crawler interstitial) |
@@ -549,7 +549,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Analytics privacy + entitlements complete | DONE (views/standard/advanced + bot filter; no precise geo) |
 | Canonical SEO on Influrios profile | DONE (OG alternates.canonical → /creators/{slug}) |
 | Domain config change without code | PARTIAL |
-| Observable resolver metrics | NOT STARTED |
+| Observable resolver metrics | DONE (outcome + latency on every resolve; admin 24h rollup; `x-influrios-resolve-outcome`) |
 
 ### 7.8 Product Strategy v2.2 — still binding product rules
 
