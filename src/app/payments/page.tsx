@@ -23,6 +23,7 @@ import {
   allowedServiceLevels,
   capabilitiesFromJurisdictionRow,
 } from "@/lib/jurisdiction-capabilities";
+import { FUNDING_MODE_LABELS, asFundingMode } from "@/lib/funding-modes";
 import { buildPayoutFeeFxQuote } from "@/lib/payout-readiness";
 
 export const dynamic = "force-dynamic";
@@ -280,6 +281,25 @@ export default async function PaymentsPage({ searchParams }: Props) {
             const jurisdiction = jurisdictions.find((row) => row.code === deal.jurisdictionCode);
             const fx = readFxSnapshot(deal.fxSnapshotJson);
             const shares = readShareSnapshot(deal.shareSnapshotJson);
+            const mode = asFundingMode(deal.fundingMode);
+            const schedulePartiallyFunded =
+              deal.scheduleKind === "staged" &&
+              Boolean(deal.scheduleId) &&
+              fundings.some(
+                (other) =>
+                  other.scheduleId === deal.scheduleId &&
+                  other.id !== deal.id &&
+                  other.status === "awaiting_provider",
+              );
+            const badge = fundingBadge({
+              status: deal.status,
+              heldCents: deal.ledger.heldCents,
+              releasedCents: deal.ledger.releasedCents,
+              fundedCents: deal.grossCents,
+              protectedPaymentsEnabled: jurisdiction?.protectedPaymentsEnabled,
+              fundingMode: deal.fundingMode,
+              schedulePartiallyFunded,
+            });
             return (
               <article key={deal.id} className="card-surface p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -289,30 +309,13 @@ export default async function PaymentsPage({ searchParams }: Props) {
                     </p>
                     <h3 className="mt-1 font-display text-xl font-bold text-indigo">{deal.title}</h3>
                     <p className="mt-1 font-mono text-[11px] text-muted">
-                      {deal.id} · {fundingTerm(Boolean(jurisdiction?.escrowTermAllowed))}
+                      {deal.id} · {fundingTerm(Boolean(jurisdiction?.escrowTermAllowed))} ·{" "}
+                      {FUNDING_MODE_LABELS[mode]}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        FUNDING_BADGE_CLASS[
-                          fundingBadge({
-                            status: deal.status,
-                            heldCents: deal.ledger.heldCents,
-                            releasedCents: deal.ledger.releasedCents,
-                            fundedCents: deal.grossCents,
-                            protectedPaymentsEnabled: jurisdiction?.protectedPaymentsEnabled,
-                          })
-                        ]
-                      }`}
-                    >
-                      {fundingBadge({
-                        status: deal.status,
-                        heldCents: deal.ledger.heldCents,
-                        releasedCents: deal.ledger.releasedCents,
-                        fundedCents: deal.grossCents,
-                        protectedPaymentsEnabled: jurisdiction?.protectedPaymentsEnabled,
-                      })}
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${FUNDING_BADGE_CLASS[badge]}`}>
+                      {badge}
                     </span>
                     <span className={`rounded-full px-3 py-1 text-[10px] font-semibold capitalize ${STATUS_COLOR[deal.status] ?? "bg-slate-100 text-slate-700"}`}>
                       {deal.status.replaceAll("_", " ")}
