@@ -18,11 +18,15 @@ import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 import { FUNDING_BADGE_CLASS, fundingBadge } from "@/lib/funding-badge";
-import { SERVICE_LEVEL_LABELS, SERVICE_LEVELS } from "@/lib/collaboration-fees";
+import { SERVICE_LEVEL_LABELS } from "@/lib/collaboration-fees";
 import {
   allowedServiceLevels,
   capabilitiesFromJurisdictionRow,
 } from "@/lib/jurisdiction-capabilities";
+import {
+  FUNDABLE_SERVICE_LEVELS,
+  fundableServiceLevelsForUi,
+} from "@/lib/matching-product-boundary";
 import { FUNDING_MODE_LABELS, asFundingMode } from "@/lib/funding-modes";
 import { RIGHTS_STATUS_LABELS, asRightsStatus } from "@/lib/content-rights";
 import { buildPayoutFeeFxQuote } from "@/lib/payout-readiness";
@@ -72,9 +76,10 @@ export default async function PaymentsPage({ searchParams }: Props) {
   const jurisdictions = config?.jurisdictions ?? [];
   const homeJurisdiction = jurisdictions.find((row) => row.code === "US") ?? jurisdictions[0];
   const homeCaps = homeJurisdiction ? capabilitiesFromJurisdictionRow(homeJurisdiction) : null;
+  // W3.2 — only fundable levels the jurisdiction allows; never invent contracted.
   const paymentServiceLevels = homeCaps
-    ? (allowedServiceLevels(homeCaps, SERVICE_LEVELS) as (typeof SERVICE_LEVELS)[number][])
-    : (["contracted"] as (typeof SERVICE_LEVELS)[number][]);
+    ? fundableServiceLevelsForUi(allowedServiceLevels(homeCaps, FUNDABLE_SERVICE_LEVELS))
+    : [];
   const stagedAllowed = Boolean(config?.stagedFundingEnabled && homeCaps?.stagedPrefundingEnabled);
   const recurringAllowed = Boolean(config?.recurringFundingEnabled && homeCaps?.recurringFundingEnabled);
   const term = fundingTerm(Boolean(homeJurisdiction?.escrowTermAllowed));
@@ -204,9 +209,14 @@ export default async function PaymentsPage({ searchParams }: Props) {
               <span className="font-semibold text-indigo">Service level</span>
               <select
                 name="serviceLevel"
+                required
+                disabled={paymentServiceLevels.length === 0}
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                defaultValue={paymentServiceLevels.includes("contracted") ? "contracted" : paymentServiceLevels[0]}
+                defaultValue={paymentServiceLevels[0] ?? ""}
               >
+                {paymentServiceLevels.length === 0 ? (
+                  <option value="">No fundable service level for this jurisdiction</option>
+                ) : null}
                 {paymentServiceLevels.map((level) => (
                   <option key={level} value={level}>
                     {SERVICE_LEVEL_LABELS[level]}

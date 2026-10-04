@@ -62,6 +62,7 @@ describe("prefund gross cap", () => {
         creatorSlug: "sofia-martinez",
         title: "Cap blocks",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(blocked.ok, false);
@@ -73,6 +74,7 @@ describe("prefund gross cap", () => {
         creatorSlug: "sofia-martinez",
         title: "Cap allows",
         grossCents: 5_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       if (!allowed.ok) assert.doesNotMatch(allowed.error, /admin cap/);
