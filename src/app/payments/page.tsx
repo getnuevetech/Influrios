@@ -24,6 +24,7 @@ import {
   capabilitiesFromJurisdictionRow,
 } from "@/lib/jurisdiction-capabilities";
 import { FUNDING_MODE_LABELS, asFundingMode } from "@/lib/funding-modes";
+import { RIGHTS_STATUS_LABELS, asRightsStatus } from "@/lib/content-rights";
 import { buildPayoutFeeFxQuote } from "@/lib/payout-readiness";
 
 export const dynamic = "force-dynamic";
@@ -433,6 +434,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${MILESTONE_COLOR[milestone.status] ?? ""}`}>
                             {milestone.status}
                           </span>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                            {RIGHTS_STATUS_LABELS[asRightsStatus(milestone.rightsStatus)]}
+                          </span>
                         </div>
                         <p className="mt-0.5 text-xs text-muted">
                           {formatMoney(milestone.amountCents, deal.currency)}
@@ -442,6 +446,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                           {milestone.revisionLimit > 0
                             ? ` · revisions ${milestone.revisionCount} of ${milestone.revisionLimit}`
                             : " · no revisions"}
+                          {milestone.status === "approved" && asRightsStatus(milestone.rightsStatus) === "pending"
+                            ? " · usage rights activate on payment release"
+                            : ""}
                         </p>
                         {milestone.revisionNote && milestone.status === "pending" ? (
                           <p className="mt-1 text-xs text-indigo">Revision: {milestone.revisionNote}</p>

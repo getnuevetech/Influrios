@@ -9,6 +9,7 @@ import {
   parseApprovedProviderIds,
 } from "@/lib/jurisdiction-capabilities";
 import { resolveFundingMode, stagedPhaseCanStart } from "@/lib/funding-modes";
+import { rightsAfterAcceptance, rightsAfterPaymentRelease } from "@/lib/content-rights";
 import {
   advanceMilestone,
   autoApproveDeadline,
@@ -685,6 +686,12 @@ export async function requestPrefund(input: {
               amountCents: part.milestoneAmounts[milestoneIndex],
               sortOrder: template.sortOrder,
               status: "pending",
+              rightsStatus: "pending",
+              rightsActivateOn:
+                (input.financialPlan?.rightsActivateOn as string | undefined) === "acceptance" ||
+                (input.financialPlan?.rightsActivateOn as string | undefined) === "custom"
+                  ? String(input.financialPlan?.rightsActivateOn)
+                  : "release",
               reviewWindowHours: windowHours,
               revisionLimit,
             })),
@@ -1115,6 +1122,9 @@ function presentFunding(row: {
     status: string;
     sortOrder: number;
     autoApproveAt: Date | null;
+    rightsStatus?: string;
+    rightsActivateOn?: string;
+    rightsActivatedAt?: Date | null;
     revisionLimit: number;
     revisionCount: number;
     revisionNote: string;
@@ -1217,9 +1227,23 @@ export async function approveFundingMilestone(fundingId: string, milestoneId: st
   if (!milestone) return { ok: false as const, error: "Milestone not found." };
   const next = advanceMilestone(milestone.status as "submitted", "approve");
   if (!next.ok) return next;
+  const now = new Date();
+  const rights = rightsAfterAcceptance({
+    activateOn: milestone.rightsActivateOn,
+    currentStatus: milestone.rightsStatus,
+  });
   await prisma.fundingMilestone.update({
     where: { id: milestone.id },
-    data: { status: next.status, approvedAt: new Date() },
+    data: {
+      status: next.status,
+      approvedAt: now,
+      ...(rights.status !== "pending"
+        ? {
+            rightsStatus: rights.status,
+            rightsActivatedAt: now,
+          }
+        : {}),
+    },
   });
   return { ok: true as const };
 }
@@ -1329,9 +1353,18 @@ export async function applyMarketplaceEvent(input: {
         const fresh = await tx.ledgerEntry.findMany({ where: { fundingId: funding.id } });
         const held = reconcileLedger(ledgerMovements(fresh), funding.grossCents);
         if (left <= 0 || held.heldCents < left) throw new LedgerReject("The provider is not holding enough.");
+        const rights = rightsAfterPaymentRelease({
+          activateOn: milestone.rightsActivateOn,
+          currentStatus: milestone.rightsStatus,
+        });
         const released = await tx.fundingMilestone.updateMany({
           where: { id: milestone.id, status: "approved", refundedCents: milestone.refundedCents },
-          data: { status: "released" },
+          data: {
+            status: "released",
+            ...(rights.shouldActivate
+              ? { rightsStatus: rights.status, rightsActivatedAt: new Date() }
+              : {}),
+          },
         });
         if (released.count !== 1) throw new LedgerReject("Milestone is not approved.");
         const snapshot = funding.feeSnapshotJson as { financialPlan?: unknown } | null;
