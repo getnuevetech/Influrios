@@ -7,7 +7,9 @@ import {
   canTransitionApplication,
   createMarketplaceApplication,
   creatorOwnsApplication,
+  isWorkspaceOwnedRequest,
   isWorkspaceOwnedRequestBrand,
+  listWorkspaceBusinessRequests,
   MARKETPLACE_APPLICATION_STATUSES,
   nextApplicationStatuses,
   sweepExpiredMarketplaceApplications,
@@ -16,6 +18,7 @@ import {
 } from "./marketplace-listings";
 import { prisma } from "./db";
 import { DEFAULT_COLLAB_CONTROL_PLANE, saveCollabControlPlane } from "./collab-control-plane";
+import { DEMO_BUSINESS_WORKSPACE_ID, getWorkspace } from "./business";
 
 const hasDbUrl = Boolean(process.env.DATABASE_URL);
 
@@ -90,11 +93,17 @@ describe("marketplace application state machine", () => {
 });
 
 describe("marketplace application ownership guards (W2.3c)", () => {
-  it("matches workspace-owned request brands", () => {
+  it("owns requests only by durable workspaceId (not brand text)", () => {
+    assert.equal(isWorkspaceOwnedRequest({ workspaceId: "demo-business" }, "demo-business"), true);
+    assert.equal(isWorkspaceOwnedRequest({ workspaceId: "other" }, "demo-business"), false);
+    assert.equal(isWorkspaceOwnedRequest({ workspaceId: null }, "demo-business"), false);
+    assert.equal(isWorkspaceOwnedRequest({}, "demo-business"), false);
+    assert.equal(isWorkspaceOwnedRequest({ workspaceId: "demo-business" }, ""), false);
+  });
+
+  it("keeps deprecated brand helper for legacy reads only", () => {
     assert.equal(isWorkspaceOwnedRequestBrand("Luminous Beauty", "Luminous Beauty"), true);
-    assert.equal(isWorkspaceOwnedRequestBrand("Luminous Beauty Co.", "Luminous Beauty"), true);
     assert.equal(isWorkspaceOwnedRequestBrand("Other Brand", "Luminous Beauty"), false);
-    assert.equal(isWorkspaceOwnedRequestBrand("", "Luminous Beauty"), false);
   });
 
   it("recognizes creator parties on either side", () => {
@@ -107,6 +116,56 @@ describe("marketplace application ownership guards (W2.3c)", () => {
     assert.equal(businessOwnsApplication({ businessRequestId: "req-1" }, ["req-1", "req-2"]), true);
     assert.equal(businessOwnsApplication({ businessRequestId: "req-9" }, ["req-1"]), false);
     assert.equal(businessOwnsApplication({ businessRequestId: null }, ["req-1"]), false);
+  });
+});
+
+describe("marketplace request workspace ownership (db)", () => {
+  it("lists only published requests for the owning workspaceId", async (t) => {
+    if (!(await requireDb(t))) return;
+    await getWorkspace();
+    const stamp = Date.now().toString(36);
+    const owned = await prisma.marketplaceBusinessRequest.create({
+      data: {
+        id: `req-own-${stamp}`,
+        brand: `Foreign Brand ${stamp}`,
+        category: "beauty",
+        budget: "$1K",
+        location: "USA",
+        tags: ["own"],
+        summary: "Owned by workspaceId even when brand differs",
+        lookingFor: "creators",
+        status: "published",
+        sortOrder: 97,
+        publishedAt: new Date(),
+        workspaceId: DEMO_BUSINESS_WORKSPACE_ID,
+      },
+    });
+    const catalog = await prisma.marketplaceBusinessRequest.create({
+      data: {
+        id: `req-cat-${stamp}`,
+        brand: "Luminous Beauty",
+        category: "beauty",
+        budget: "$1K",
+        location: "USA",
+        tags: ["catalog"],
+        summary: "Admin catalog seed with matching brand but no workspace",
+        lookingFor: "creators",
+        status: "published",
+        sortOrder: 98,
+        publishedAt: new Date(),
+        workspaceId: null,
+      },
+    });
+
+    const rows = await listWorkspaceBusinessRequests(DEMO_BUSINESS_WORKSPACE_ID);
+    assert.ok(rows.some((row) => row.id === owned.id));
+    assert.ok(!rows.some((row) => row.id === catalog.id));
+    assert.equal(isWorkspaceOwnedRequest(owned, DEMO_BUSINESS_WORKSPACE_ID), true);
+    assert.equal(isWorkspaceOwnedRequest(catalog, DEMO_BUSINESS_WORKSPACE_ID), false);
+
+    await prisma.marketplaceBusinessRequest.deleteMany({
+      where: { id: { in: [owned.id, catalog.id] } },
+    });
   });
 });
 

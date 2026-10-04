@@ -570,11 +570,15 @@ model MarketplaceBusinessRequest {
   status       String   @default("published")
   sortOrder    Int      @default(0)
   publishedAt  DateTime?
+  /** Owning business workspace when posted from the hub; null for admin catalog seeds. */
+  workspaceId  String?
+  workspace    BusinessWorkspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   applications MarketplaceApplication[]
 
   @@index([status, sortOrder])
+  @@index([workspaceId])
 }
 
 /// Public marketplace creator opportunity (Collab OS P1b).
@@ -688,6 +692,7 @@ model BusinessWorkspace {
   shortlist  BusinessShortlistItem[]
   inquiries  BusinessInquiry[]
   matchQueue ManagedMatchRequest[]
+  marketplaceRequests MarketplaceBusinessRequest[]
 }
 
 model BusinessBrief {

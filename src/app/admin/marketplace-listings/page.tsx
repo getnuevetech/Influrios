@@ -105,6 +105,13 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
               defaultValue={String(row.sortOrder)}
               disabled={!canEdit}
             />
+            <Field
+              label="Workspace id (hub ownership; blank = catalog)"
+              name="workspaceId"
+              defaultValue={row.workspaceId ?? ""}
+              disabled={!canEdit}
+              className="sm:col-span-2"
+            />
             {canEdit ? (
               <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
                 Save request
@@ -140,6 +147,13 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
               </select>
             </label>
             <Field label="Sort order" name="sortOrder" type="number" defaultValue="99" disabled={!canEdit} />
+            <Field
+              label="Workspace id (hub ownership; blank = catalog)"
+              name="workspaceId"
+              defaultValue=""
+              disabled={!canEdit}
+              className="sm:col-span-2"
+            />
             <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
               Create request
             </button>

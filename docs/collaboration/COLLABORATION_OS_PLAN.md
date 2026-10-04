@@ -95,11 +95,11 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 ### P1b — Marketplace objects ✅
 
 - Prisma: `MarketplaceBusinessRequest`, `MarketplaceCreatorOpportunity`, `MarketplaceMatchRecord`, applications + events.
-- Application/invitation state machine + timeline events **wired to hubs** (creator Apply, business Invite, status transitions with **visible event timeline** → contract draft; ownership guards; opportunity Connect/Apply; **admin manual/auto expire** + sweep).
-- Admin CRUD at `/admin/marketplace-listings`.
+- Application/invitation state machine + timeline events **wired to hubs** (creator Apply, business Invite, status transitions with **visible event timeline** → contract draft; **workspaceId FK** ownership guards; opportunity Connect/Apply; **admin manual/auto expire** + sweep).
+- Admin CRUD at `/admin/marketplace-listings` (optional workspace ownership link; blank = catalog).
 - Public `/collaboration` lists read from DB (seeded from former hardcoded arrays when empty).
 
-**Exit:** public lists read from DB; admin can publish without deploy; apply/invite/transition path live — **met**.
+**Exit:** public lists read from DB; admin can publish without deploy; apply/invite/transition path live with durable workspace ownership — **met**.
 
 ### P2 — Creator Collaboration Hub (Figure 2) ✅
 

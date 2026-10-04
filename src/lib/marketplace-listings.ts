@@ -58,6 +58,7 @@ export type MarketplaceBusinessRequestRow = BusinessRequest & {
   imageUrl?: string | null;
   status: string;
   sortOrder: number;
+  workspaceId?: string | null;
 };
 
 export type MarketplaceCreatorOpportunityRow = CreatorOpportunity & {
@@ -139,6 +140,7 @@ export async function listPublishedBusinessRequests(filters?: {
       imageUrl: row.imageUrl,
       status: row.status,
       sortOrder: row.sortOrder,
+      workspaceId: row.workspaceId,
     }))
     .filter((item) => {
       if (filters?.budget && item.budget !== filters.budget) return false;
@@ -203,6 +205,8 @@ export async function upsertBusinessRequest(input: {
   imageUrl?: string;
   status: "draft" | "published" | "closed";
   sortOrder: number;
+  /** Owning hub workspace; null clears ownership (admin catalog). */
+  workspaceId?: string | null;
 }) {
   const brand = input.brand.trim();
   const category = input.category.trim();
@@ -213,6 +217,12 @@ export async function upsertBusinessRequest(input: {
   if (!brand || !category || !budget || !location || !summary || !lookingFor) {
     throw new Error("Brand, category, budget, location, summary, and looking-for are required.");
   }
+  const workspaceId =
+    input.workspaceId === undefined
+      ? undefined
+      : input.workspaceId === null || input.workspaceId.trim() === ""
+        ? null
+        : input.workspaceId.trim();
   const data = {
     brand,
     category,
@@ -226,6 +236,7 @@ export async function upsertBusinessRequest(input: {
     status: input.status,
     sortOrder: Number.isFinite(input.sortOrder) ? input.sortOrder : 0,
     publishedAt: input.status === "published" ? new Date() : null,
+    ...(workspaceId !== undefined ? { workspaceId } : {}),
   };
   if (input.id) {
     return prisma.marketplaceBusinessRequest.update({ where: { id: input.id }, data });
@@ -424,7 +435,17 @@ export function nextApplicationStatuses(from: string): MarketplaceApplicationSta
   return [...APPLICATION_TRANSITIONS[from]];
 }
 
-/** Pure — workspace owns a marketplace request row by brand match. */
+/** Pure — workspace owns a request only via durable workspaceId (not brand substring). */
+export function isWorkspaceOwnedRequest(
+  request: { workspaceId?: string | null },
+  workspaceId: string,
+): boolean {
+  const owned = workspaceId.trim();
+  if (!owned) return false;
+  return (request.workspaceId ?? "").trim() === owned;
+}
+
+/** @deprecated Brand substring is not used for product auth — prefer isWorkspaceOwnedRequest. */
 export function isWorkspaceOwnedRequestBrand(brand: string, workspaceName: string): boolean {
   const b = brand.trim().toLowerCase();
   const w = workspaceName.trim().toLowerCase();
@@ -450,6 +471,31 @@ export function businessOwnsApplication(
   const id = application.businessRequestId?.trim();
   if (!id) return false;
   return ownedRequestIds.includes(id);
+}
+
+export async function listWorkspaceBusinessRequests(workspaceId: string): Promise<MarketplaceBusinessRequestRow[]> {
+  const id = workspaceId.trim();
+  if (!id) return [];
+  await ensureMarketplaceListings();
+  const rows = await prisma.marketplaceBusinessRequest.findMany({
+    where: { workspaceId: id, status: "published" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    brand: row.brand,
+    category: row.category,
+    budget: row.budget,
+    location: row.location,
+    tags: row.tags,
+    summary: row.summary,
+    lookingFor: row.lookingFor,
+    logoUrl: row.logoUrl,
+    imageUrl: row.imageUrl,
+    status: row.status,
+    sortOrder: row.sortOrder,
+    workspaceId: row.workspaceId,
+  }));
 }
 
 export type MarketplaceApplicationEventRow = {
