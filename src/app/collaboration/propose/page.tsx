@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { GuestGateBanner } from "@/components/guest-gate-banner";
 import { getAccountSession } from "@/lib/accounts";
 import {
   commercialChoices,
@@ -12,6 +13,7 @@ import { isPlanCode, type PlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { scoreCreatorPair } from "@/lib/matching";
 import { getDirectoryCreator } from "@/lib/directory";
+import { consumeGuestQuota } from "@/lib/guest-usage";
 import { specialtyLabel } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +79,11 @@ async function submitProposal(formData: FormData) {
 export default async function ProposeCollaborationPage({ searchParams }: Props) {
   const params = await searchParams;
   const collabOsOffNotice = params.notice === "collab_os_off";
+  const returnPath = `/collaboration/propose?a=${encodeURIComponent(params.a ?? "")}&b=${encodeURIComponent(params.b ?? "")}&from=${encodeURIComponent(params.from ?? params.a ?? "")}`;
+  const guestGate = await consumeGuestQuota("propose");
+  if (guestGate.decision === "hard") {
+    redirect(`/login?next=${encodeURIComponent(returnPath)}&gate=proposal`);
+  }
   const creatorA = params.a ? await getDirectoryCreator(params.a) : undefined;
   const creatorB = params.b ? await getDirectoryCreator(params.b) : undefined;
   const from = params.from ? await getDirectoryCreator(params.from) : creatorA;
@@ -152,6 +159,11 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+      {guestGate.decision === "soft" ? (
+        <div className="mb-6 -mx-4 sm:-mx-6">
+          <GuestGateBanner copy={guestGate.copy} next={returnPath} />
+        </div>
+      ) : null}
       <p className="text-xs font-semibold uppercase tracking-wide text-violet">Structured proposal</p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Propose a collaboration</h1>
       <p className="mt-2 text-muted">

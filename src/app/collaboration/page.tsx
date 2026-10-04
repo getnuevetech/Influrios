@@ -19,6 +19,7 @@ import { getCreatorSessionDraft } from "@/lib/claim";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { getCms } from "@/lib/cms";
 import { getCollaborationLanding } from "@/lib/landing-pages";
+import { consumeGuestQuota } from "@/lib/guest-usage";
 import {
   allDirectoryMatches,
   filterMatches,
@@ -146,7 +147,12 @@ export default async function CollaborationPage({ searchParams }: Props) {
     }
   }
   if (params.save && !account) {
-    redirect(`/login?next=${encodeURIComponent(`/collaboration?save=${params.save}`)}&gate=save`);
+    const gate = await consumeGuestQuota("apply");
+    redirect(
+      `/login?next=${encodeURIComponent(`/collaboration?save=${params.save}`)}&gate=${
+        gate.decision === "hard" ? "apply" : "save"
+      }`,
+    );
   }
 
   const [requestPool, opportunities] = await Promise.all([

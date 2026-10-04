@@ -891,10 +891,13 @@ model GuestUsagePolicy {
 }
 
 model GuestUsage {
-  id           String   @id
-  profileViews Int      @default(0)
-  searches     Int      @default(0)
-  updatedAt    DateTime @updatedAt
+  id             String   @id
+  profileViews   Int      @default(0)
+  searches       Int      @default(0)
+  /// P6 — guest collab propose/apply counters (control-plane soft/hard thresholds).
+  collabProposes Int      @default(0)
+  collabApplies  Int      @default(0)
+  updatedAt      DateTime @updatedAt
 }
 
 model ProfileClaim {
