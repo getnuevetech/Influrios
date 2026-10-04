@@ -1444,9 +1444,20 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-semibold text-indigo">
-                  {funding.businessName} → {funding.creatorSlug}
+                  <Link
+                    href={`/admin/marketplace/${funding.id}`}
+                    className="hover:text-violet hover:underline"
+                  >
+                    {funding.businessName} → {funding.creatorSlug}
+                  </Link>
                 </p>
                 <p className="text-muted">{funding.title}</p>
+                <Link
+                  href={`/admin/marketplace/${funding.id}`}
+                  className="mt-1 inline-block text-xs font-semibold text-violet hover:underline"
+                >
+                  Open transaction →
+                </Link>
               </div>
               <p className="text-xs font-semibold uppercase tracking-wide text-violet">{funding.status.replaceAll("_", " ")}</p>
             </div>

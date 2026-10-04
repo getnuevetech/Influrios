@@ -169,12 +169,12 @@ Comparing thin plan v1 to every attached product/design document found these **m
 |---|---|---|
 | Banner + `/mentorship` find/become hub + eligibility + request flow | Paid commercial pack; richer scheduling | P7 core **DONE**; paid pack **Deferred-external** |
 
-#### W2.5 Product UX funding surfaces — DONE (hub + payments)
+#### W2.5 Product UX funding surfaces — DONE (hub + payments + admin txn)
 **Source:** Product Addendum §16  
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Funding badges on payments + hub pipelines; immutable fee snapshot on funding + hub fee locked line; revision counters on payments + hub; review deadline on submitted milestones | Unified admin transaction view (Dev §19) | Badges + timeline + fee + revisions visible to both sides — **DONE**; unified admin txn view **Deferred-external** |
+| Funding badges on payments + hub pipelines; immutable fee snapshot on funding + hub fee locked line; revision counters on payments + hub; review deadline on submitted milestones; **unified admin transaction detail** `/admin/marketplace/[fundingId]` (parties, milestones, provider, fee rule, funds, audit) | — | Badges + timeline + fee + revisions visible to both sides; admin unified txn view **DONE** |
 
 ---
 
@@ -583,7 +583,7 @@ DEFERRED-EXTERNAL (ops / product / later phase)
  ├─ P7 paid mentorship commercial pack
  ├─ P8 SKU/cookie rename soak
  ├─ W2.3 intent refresh / multi-creator team proposals
- └─ W2.5 unified admin transaction view (Dev §19)
+ └─ (W2.5 unified admin txn view — DONE)
 
 NON-GOALS until product asks:
   Meilisearch · Stripe Connect hard-enable · Collab Messages inbox product
