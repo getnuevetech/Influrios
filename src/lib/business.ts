@@ -46,6 +46,9 @@ export type BusinessWorkspace = {
 
 const WORKSPACE_ID = "demo-business";
 
+/** Stable demo business workspace id used by hub ownership links. */
+export const DEMO_BUSINESS_WORKSPACE_ID = WORKSPACE_ID;
+
 const BRIEF_STATUSES = ["draft", "active", "closed"] as const;
 const INQUIRY_STATUSES = ["sent", "replied", "declined"] as const;
 const PLAN_CODES: BusinessPlanCode[] = ["BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];

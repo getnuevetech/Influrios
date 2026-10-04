@@ -6,9 +6,9 @@ import { getAccountSession } from "@/lib/accounts";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import {
-  addToShortlist,
   buildCampaignIntentFields,
   createBrief,
+  DEMO_BUSINESS_WORKSPACE_ID,
   getWorkspace,
   removeFromShortlist,
   requestManagedMatch,
@@ -17,14 +17,14 @@ import {
   setBusinessPlan,
   updateBrief,
   updateInquiryStatus,
+  addToShortlist,
 } from "@/lib/business";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import {
   businessOwnsApplication,
   createMarketplaceApplication,
   getMarketplaceApplication,
-  isWorkspaceOwnedRequestBrand,
-  listPublishedBusinessRequests,
+  listWorkspaceBusinessRequests,
   MARKETPLACE_APPLICATION_STATUSES,
   transitionMarketplaceApplication,
   upsertBusinessRequest,
@@ -147,6 +147,7 @@ export async function actionPostBusinessRequest(formData: FormData) {
     lookingFor: `${brief.specialty} influencers`,
     status: "published",
     sortOrder: 0,
+    workspaceId: DEMO_BUSINESS_WORKSPACE_ID,
   });
   revalidateHub();
   redirect(`${HUB}?posted=1#requests`);
@@ -252,8 +253,7 @@ export async function actionInviteCreatorToRequest(formData: FormData) {
   if (!creatorSlug) {
     redirect(`${HUB}?error=${encodeURIComponent("Choose a creator to invite.")}#suggestions`);
   }
-  const requests = await listPublishedBusinessRequests();
-  const own = requests.filter((row) => isWorkspaceOwnedRequestBrand(row.brand, ws.name));
+  const own = await listWorkspaceBusinessRequests(DEMO_BUSINESS_WORKSPACE_ID);
   const target = (requestId ? own.find((row) => row.id === requestId) : null) ?? own[0];
   if (!target) {
     redirect(
@@ -280,17 +280,13 @@ export async function actionInviteCreatorToRequest(formData: FormData) {
 /** W2.3c — advance a marketplace application on an owned request. */
 export async function actionTransitionMarketplaceApplication(formData: FormData) {
   const account = await requireBusinessSession();
-  const ws = await getWorkspace();
   const applicationId = String(formData.get("applicationId") ?? "").trim();
   const toStatus = String(formData.get("toStatus") ?? "").trim() as MarketplaceApplicationStatus;
   if (!applicationId || !(MARKETPLACE_APPLICATION_STATUSES as readonly string[]).includes(toStatus)) {
     redirect(`${HUB}?error=${encodeURIComponent("Invalid application transition.")}#applicants`);
   }
   const existing = await getMarketplaceApplication(applicationId);
-  const published = await listPublishedBusinessRequests();
-  const ownedIds = published
-    .filter((row) => isWorkspaceOwnedRequestBrand(row.brand, ws.name))
-    .map((row) => row.id);
+  const ownedIds = (await listWorkspaceBusinessRequests(DEMO_BUSINESS_WORKSPACE_ID)).map((row) => row.id);
   if (!existing || !businessOwnsApplication(existing, ownedIds)) {
     redirect(
       `${HUB}?error=${encodeURIComponent("You can only manage applications on your published requests.")}#applicants`,

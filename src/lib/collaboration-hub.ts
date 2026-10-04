@@ -19,12 +19,13 @@ import {
   listPublishedBusinessRequests,
   listPublishedCreatorOpportunities,
   listMarketplaceApplications,
-  isWorkspaceOwnedRequestBrand,
+  listWorkspaceBusinessRequests,
   persistTopMatches,
   type MarketplaceApplicationRow,
   type MarketplaceBusinessRequestRow,
   type MarketplaceCreatorOpportunityRow,
 } from "@/lib/marketplace-listings";
+import { DEMO_BUSINESS_WORKSPACE_ID } from "@/lib/business";
 import {
   computePayoutReadiness,
   type PayoutReadiness,
@@ -350,7 +351,9 @@ export async function loadBusinessHub(input?: { intentBriefId?: string }) {
     listCollaborations({}).catch(() => []),
   ]);
 
-  const ownRequests = requests.filter((row) => isWorkspaceOwnedRequestBrand(row.brand, ws.name));
+  const ownRequests = await listWorkspaceBusinessRequests(DEMO_BUSINESS_WORKSPACE_ID).catch(
+    () => [] as MarketplaceBusinessRequestRow[],
+  );
   const draftRequests = ws.briefs.filter((brief) => brief.status === "draft").length;
   const activeBriefs = ws.briefs.filter((brief) => brief.status === "active").length;
   const pendingReview = ws.inquiries.filter((inquiry) => inquiry.status === "sent").length;

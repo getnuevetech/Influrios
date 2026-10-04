@@ -16,6 +16,7 @@ function statusFromForm(value: FormDataEntryValue | null): "draft" | "published"
 export async function actionSaveBusinessRequest(formData: FormData) {
   await requireAdminAction("collaborations.edit");
   try {
+    const workspaceRaw = String(formData.get("workspaceId") ?? "").trim();
     await upsertBusinessRequest({
       id: String(formData.get("id") ?? "").trim() || undefined,
       brand: String(formData.get("brand") ?? ""),
@@ -32,6 +33,8 @@ export async function actionSaveBusinessRequest(formData: FormData) {
       imageUrl: String(formData.get("imageUrl") ?? ""),
       status: statusFromForm(formData.get("status")),
       sortOrder: Number(formData.get("sortOrder") ?? 0),
+      // Empty clears hub ownership (admin catalog). Non-empty links to BusinessWorkspace.
+      workspaceId: workspaceRaw || null,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save request";

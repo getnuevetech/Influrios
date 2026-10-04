@@ -172,7 +172,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 #### W2.3c Marketplace application lifecycle — DONE
 | Exists | Missing | Exit |
 |---|---|---|
-| Creator **Apply** (published enforced); business **Invite** (session + owned brand); hub transitions with **visible timeline events**; ownership guards; opportunity Connect/Apply; EXPIRED in UI; **admin manual/auto expire** on Collab Ops control plane + expire sweep job; **DB integration tests** for create/transition/events + auto-expire | Multi-creator team proposals | Collab OS §4.3 + §3.3 non-team conversion — **DONE**; multi-creator **Deferred-external** |
+| Creator **Apply** (published enforced); business **Invite** (session + **workspaceId FK** ownership); hub transitions with **visible timeline events**; ownership guards (**not** brand substring); opportunity Connect/Apply; EXPIRED in UI; **admin manual/auto expire** + sweep; admin optional workspace link; **DB integration tests** for create/transition/events + auto-expire + workspace ownership | Multi-creator team proposals | Collab OS §4.3 + §3.3 non-team conversion — **DONE**; multi-creator **Deferred-external** |
 
 #### W2.4 Mentorship stub — DONE (full module = P7 core shipped)
 | Exists | Missing | Exit |
