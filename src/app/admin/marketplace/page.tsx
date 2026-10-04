@@ -18,6 +18,8 @@ import {
   actionSaveTemplates,
   actionEnqueueAutoApproval,
   actionEnqueueReviewDeadlineSweep,
+  actionEnqueueDisputeSlaSweep,
+  actionEnqueueProviderHoldWarnSweep,
 } from "@/app/admin/marketplace/actions";
 import { listAttributionClaims, listAttributionSources } from "@/lib/deal-attribution";
 import { readShareSnapshot } from "@/lib/fx-share";
@@ -347,6 +349,16 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             <form action={actionEnqueueReviewDeadlineSweep}>
               <button type="submit" className="btn-secondary !py-1.5 text-xs">
                 Queue review-deadline notices now
+              </button>
+            </form>
+            <form action={actionEnqueueDisputeSlaSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue dispute SLA reminders now
+              </button>
+            </form>
+            <form action={actionEnqueueProviderHoldWarnSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue provider hold warnings now
               </button>
             </form>
           </div>

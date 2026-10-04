@@ -637,9 +637,9 @@ LATER / gated:
 | Funding reconciliation | PARTIAL |
 | Milestone review deadline / auto-approval | DONE (job + review-deadline sweep + frozen window) |
 | Scheduled release / payout reconciliation | PARTIAL |
-| Provider hold-period warnings | NOT STARTED |
+| Provider hold-period warnings | DONE (sweep + admin queue; 7d default) |
 | Failed payout retry | PARTIAL |
-| Dispute SLA reminders | NOT STARTED |
+| Dispute SLA reminders | DONE (sweep + admin queue; 72h default) |
 | Recurring funding-cycle creation | Deferred |
 | Financial reconciliation / mismatch alerts | PARTIAL |
 

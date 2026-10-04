@@ -21,6 +21,8 @@ export const COLLAB_NOTIFICATION_KINDS = [
   "change_order_accepted",
   "preexisting_relationship_claimed",
   "provider_jurisdiction_limitation",
+  "dispute_sla_reminder",
+  "provider_hold_period_warning",
 ] as const;
 
 export type CollabNotificationKind = (typeof COLLAB_NOTIFICATION_KINDS)[number];
@@ -137,6 +139,18 @@ export const COLLAB_NOTIFICATION_TEMPLATES: Record<CollabNotificationKind, Colla
     audience: "both",
     subject: "Provider or jurisdiction limitation — {{title}}",
     body: "A provider or jurisdiction limitation affects {{title}}. Detail: {{detail}}",
+  },
+  dispute_sla_reminder: {
+    kind: "dispute_sla_reminder",
+    audience: "both",
+    subject: "Dispute SLA reminder — {{milestone}}",
+    body: "An open dispute on “{{milestone}}” for {{title}} ({{business}} ↔ {{influencer}}) is past the response SLA. Detail: {{detail}}",
+  },
+  provider_hold_period_warning: {
+    kind: "provider_hold_period_warning",
+    audience: "admin",
+    subject: "Provider hold period warning — {{title}}",
+    body: "Protected funds for {{title}} ({{business}} ↔ {{influencer}}) have been held past the warning window. Detail: {{detail}}",
   },
 };
 
