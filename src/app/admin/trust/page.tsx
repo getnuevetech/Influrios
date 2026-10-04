@@ -107,7 +107,9 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                   {dispute.funding.businessName} → {dispute.funding.creatorSlug}
                 </p>
                 <p className="text-muted">
-                  {dispute.milestone?.title ?? "Milestone"} · {dispute.reasonLabel} · {dispute.status.replaceAll("_", " ")}
+                  {dispute.milestone?.title ?? "Milestone"} · {dispute.reasonLabel}
+                  {dispute.reasonCode ? ` (${dispute.reasonCode})` : ""} · {dispute.status.replaceAll("_", " ")}
+                  {dispute.resolutionOutcome ? ` · outcome ${dispute.resolutionOutcome.replaceAll("_", " ")}` : ""}
                 </p>
                 <p className="mt-1 text-indigo">{dispute.details}</p>
                 <p className="mt-1 text-xs text-muted">
@@ -140,7 +142,7 @@ export default async function AdminTrustPage({ searchParams }: Props) {
               </div>
             </div>
             {canMediate &&
-            ["open", "under_review", "refund_requested"].includes(dispute.status) &&
+            ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"].includes(dispute.status) &&
             dispute.notes.length < dispute.evidenceLimit ? (
               <form action={actionAddLedgerEvidence} className="mt-3 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="disputeId" value={dispute.id} />
@@ -157,16 +159,19 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                 </button>
               </form>
             ) : null}
-            {canMediate && ["open", "under_review", "refund_requested"].includes(dispute.status) ? (
+            {canMediate && ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"].includes(dispute.status) ? (
               <form action={actionDecideLedgerDispute} className="mt-3 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="disputeId" value={dispute.id} />
                 <label className="text-xs font-semibold text-muted">
                   Decision
                   <select name="decision" className="mt-1 rounded-lg border border-border px-2 py-1.5 text-sm text-indigo">
                     <option value="review">Mark under review</option>
-                    <option value="release">Allow release</option>
-                    <option value="refund">Request full refund</option>
-                    {partialRefunds ? <option value="partial">Request partial refund</option> : null}
+                    <option value="release">Creator release</option>
+                    <option value="refund">Brand refund (full)</option>
+                    {partialRefunds ? <option value="partial">Split amount (partial refund)</option> : null}
+                    <option value="settle">Mutual settlement</option>
+                    <option value="escalate_provider">Escalate to provider</option>
+                    <option value="escalate_legal">Escalate to legal</option>
                     <option value="withdraw">Withdraw</option>
                   </select>
                 </label>
