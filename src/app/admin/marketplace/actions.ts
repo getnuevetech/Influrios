@@ -15,7 +15,7 @@ import {
 import { saveFxRates, saveRevenueParties } from "@/lib/settlement";
 import { setProductSwitch } from "@/lib/product-switches";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
-import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep } from "@/lib/jobs";
+import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep } from "@/lib/jobs";
 
 function flag(formData: FormData, name: string) {
   return formData.get(name) === "on";
@@ -346,4 +346,20 @@ export async function actionEnqueueReviewDeadlineSweep() {
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin/jobs");
   redirect("/admin/marketplace?saved=review_deadlines");
+}
+
+export async function actionEnqueueDisputeSlaSweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueDisputeSlaSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=dispute_sla");
+}
+
+export async function actionEnqueueProviderHoldWarnSweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueProviderHoldWarnSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=hold_warnings");
 }

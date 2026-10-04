@@ -91,6 +91,14 @@ async function runJob(kind: string, payload: unknown) {
     await runReviewDeadlineSweep();
     return;
   }
+  if (kind === "dispute_sla_sweep") {
+    await runDisputeSlaSweep();
+    return;
+  }
+  if (kind === "provider_hold_warn_sweep") {
+    await runProviderHoldWarnSweep();
+    return;
+  }
   if (kind === "collab_notification") {
     if (!data.to || !data.subject || !data.text) {
       throw new Error("Collaboration notification job is missing a recipient or copy.");
@@ -284,8 +292,10 @@ export async function notifyCollabFundingEvent(input: {
   if (
     input.kind === "dispute_opened" ||
     input.kind === "dispute_resolved" ||
+    input.kind === "dispute_sla_reminder" ||
     input.kind === "payout_failed" ||
     input.kind === "provider_jurisdiction_limitation" ||
+    input.kind === "provider_hold_period_warning" ||
     input.kind === "preexisting_relationship_claimed"
   ) {
     const admins = await prisma.adminUser.findMany({
@@ -437,6 +447,143 @@ export async function enqueueReviewDeadlineSweep() {
   await prisma.job.create({
     data: {
       kind: "review_deadline_sweep",
+      status: "queued",
+      payload: { enqueuedAt: new Date().toISOString() },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
+}
+
+/** Dev §16 — remind parties when an open dispute is past the SLA window. */
+export async function runDisputeSlaSweep(now = new Date()) {
+  const { shouldRemindDisputeSla, DEFAULT_DISPUTE_SLA_HOURS } = await import("@/lib/collab-ops-jobs");
+  const open = await prisma.milestoneDispute.findMany({
+    where: { status: { in: ["open", "under_review"] } },
+    include: { milestone: true, funding: true },
+    take: 100,
+    orderBy: { createdAt: "asc" },
+  });
+  let notified = 0;
+  for (const dispute of open) {
+    if (
+      !shouldRemindDisputeSla({
+        status: dispute.status,
+        openedAt: dispute.createdAt,
+        now,
+        slaHours: DEFAULT_DISPUTE_SLA_HOURS,
+      })
+    ) {
+      continue;
+    }
+    const already = await prisma.auditLog.findFirst({
+      where: {
+        action: "dispute_sla_reminded",
+        objectType: "MilestoneDispute",
+        objectId: dispute.id,
+      },
+    });
+    if (already) continue;
+    const result = await notifyCollabFundingEvent({
+      fundingId: dispute.fundingId,
+      kind: "dispute_sla_reminder",
+      milestone: dispute.milestone?.title,
+      detail: `${dispute.reasonLabel} · open since ${dispute.createdAt.toISOString().slice(0, 10)} (${DEFAULT_DISPUTE_SLA_HOURS}h SLA)`,
+      processNow: false,
+    });
+    if (result.count > 0) {
+      notified += 1;
+      await prisma.auditLog
+        .create({
+          data: {
+            actor: "system",
+            action: "dispute_sla_reminded",
+            objectType: "MilestoneDispute",
+            objectId: dispute.id,
+            after: { fundingId: dispute.fundingId, at: now.toISOString() },
+          },
+        })
+        .catch(() => undefined);
+    }
+  }
+  if (notified > 0) await processDueJobs();
+  return { scanned: open.length, notified };
+}
+
+export async function enqueueDisputeSlaSweep() {
+  await prisma.job.create({
+    data: {
+      kind: "dispute_sla_sweep",
+      status: "queued",
+      payload: { enqueuedAt: new Date().toISOString() },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
+}
+
+/** Dev §16 — warn ops when provider-held funds sit past the hold warning window. */
+export async function runProviderHoldWarnSweep(now = new Date()) {
+  const { shouldWarnProviderHold, DEFAULT_PROVIDER_HOLD_WARN_HOURS } = await import("@/lib/collab-ops-jobs");
+  const held = await prisma.collaborationFunding.findMany({
+    where: { status: "held" },
+    include: {
+      entries: { where: { kind: "hold" }, orderBy: { createdAt: "asc" }, take: 1 },
+    },
+    take: 100,
+    orderBy: { createdAt: "asc" },
+  });
+  let notified = 0;
+  for (const funding of held) {
+    const heldAt = funding.entries[0]?.createdAt ?? funding.createdAt;
+    if (
+      !shouldWarnProviderHold({
+        fundingStatus: funding.status,
+        heldAt,
+        now,
+        warnHours: DEFAULT_PROVIDER_HOLD_WARN_HOURS,
+      })
+    ) {
+      continue;
+    }
+    const already = await prisma.auditLog.findFirst({
+      where: {
+        action: "provider_hold_warned",
+        objectType: "CollaborationFunding",
+        objectId: funding.id,
+      },
+    });
+    if (already) continue;
+    const ageHours = Math.round((now.getTime() - heldAt.getTime()) / (60 * 60 * 1000));
+    const result = await notifyCollabFundingEvent({
+      fundingId: funding.id,
+      kind: "provider_hold_period_warning",
+      detail: `Held for ${ageHours}h (warn after ${DEFAULT_PROVIDER_HOLD_WARN_HOURS}h). Gross ${funding.grossCents}¢ ${funding.currency}.`,
+      processNow: false,
+    });
+    if (result.count > 0) {
+      notified += 1;
+      await prisma.auditLog
+        .create({
+          data: {
+            actor: "system",
+            action: "provider_hold_warned",
+            objectType: "CollaborationFunding",
+            objectId: funding.id,
+            after: { heldAt: heldAt.toISOString(), at: now.toISOString() },
+          },
+        })
+        .catch(() => undefined);
+    }
+  }
+  if (notified > 0) await processDueJobs();
+  return { scanned: held.length, notified };
+}
+
+export async function enqueueProviderHoldWarnSweep() {
+  await prisma.job.create({
+    data: {
+      kind: "provider_hold_warn_sweep",
       status: "queued",
       payload: { enqueuedAt: new Date().toISOString() },
     },
