@@ -303,7 +303,10 @@ export function marketplaceDisposition(input: {
     if (input.disputeOpen) return "reject";
     if (input.fundingStatus === "payment_risk") return "reject";
     if (
-      (input.milestoneStatus === "approved" || input.milestoneStatus === "payout_failed") &&
+      (input.milestoneStatus === "approved" ||
+        input.milestoneStatus === "release_scheduled" ||
+        input.milestoneStatus === "release_requested" ||
+        input.milestoneStatus === "payout_failed") &&
       input.amountCents === input.expectedCents &&
       input.heldCents >= input.amountCents
     ) {
@@ -313,7 +316,14 @@ export function marketplaceDisposition(input: {
   }
   if (input.eventType === "payout.failed") {
     if (input.disputeOpen) return "reject";
-    if (input.milestoneStatus === "approved" && input.amountCents === input.expectedCents) return "apply";
+    if (
+      (input.milestoneStatus === "approved" ||
+        input.milestoneStatus === "release_scheduled" ||
+        input.milestoneStatus === "release_requested") &&
+      input.amountCents === input.expectedCents
+    ) {
+      return "apply";
+    }
     return "reject";
   }
   if (input.eventType === "payout.refunded") {

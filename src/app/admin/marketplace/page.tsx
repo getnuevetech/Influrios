@@ -22,6 +22,8 @@ import {
   actionEnqueueProviderHoldWarnSweep,
   actionEnqueueFailedPayoutRetrySweep,
   actionEnqueueFundingReconciliationSweep,
+  actionEnqueueScheduledReleaseSweep,
+  actionScheduleMilestoneRelease,
   actionExecuteHeldCancellation,
 } from "@/app/admin/marketplace/actions";
 import { listAttributionClaims, listAttributionSources } from "@/lib/deal-attribution";
@@ -66,6 +68,13 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
     ]);
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
   const cancellable = fundings.filter((f) => f.status === "held" || f.status === "payment_risk");
+  const schedulable = fundings.flatMap((funding) =>
+    funding.status !== "held"
+      ? []
+      : funding.milestones
+          .filter((m) => m.status === "approved" || m.status === "payout_failed")
+          .map((m) => ({ funding, milestone: m })),
+  );
 
   return (
     <div className="space-y-6">
@@ -379,6 +388,11 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             <form action={actionEnqueueFundingReconciliationSweep}>
               <button type="submit" className="btn-secondary !py-1.5 text-xs">
                 Queue funding reconciliation now
+              </button>
+            </form>
+            <form action={actionEnqueueScheduledReleaseSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue scheduled releases now
               </button>
             </form>
           </div>
@@ -911,6 +925,56 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="card-surface p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Scheduled release</h2>
+        <p className="mt-1 text-xs text-muted">
+          Dev §8: APPROVED → release_scheduled → release_requested → signed{" "}
+          <code className="text-[11px]">payout.released</code>. Authorizing release does not move money; the sweep
+          queues a durable <code className="text-[11px]">mkt_release_*</code> instruction when due.
+        </p>
+        {canManage && schedulable.length > 0 ? (
+          <form action={actionScheduleMilestoneRelease} className="mt-4 grid gap-3 sm:grid-cols-3">
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Approved milestone
+              <select
+                name="milestonePick"
+                required
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                defaultValue=""
+              >
+                <option value="">Select</option>
+                {schedulable.map(({ funding, milestone }) => (
+                  <option key={milestone.id} value={`${funding.id}::${milestone.id}`}>
+                    {funding.businessName} → {funding.creatorSlug} · {milestone.title} ·{" "}
+                    {formatMoney(milestone.amountCents, funding.currency)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Delay hours
+              <input
+                name="delayHours"
+                type="number"
+                min={0}
+                max={720}
+                defaultValue={0}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <div className="sm:col-span-3">
+              <button type="submit" className="btn-secondary !py-2 text-sm">
+                Authorize release
+              </button>
+            </div>
+          </form>
+        ) : (
+          <p className="mt-3 text-sm text-muted">
+            {canManage ? "No approved held milestones ready to schedule." : "Ops can authorize releases here."}
+          </p>
         )}
       </section>
 

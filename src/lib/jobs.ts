@@ -107,6 +107,10 @@ async function runJob(kind: string, payload: unknown) {
     await runFundingReconciliationSweep();
     return;
   }
+  if (kind === "scheduled_release_sweep") {
+    await runScheduledReleaseSweep();
+    return;
+  }
   if (kind === "collab_notification") {
     if (!data.to || !data.subject || !data.text) {
       throw new Error("Collaboration notification job is missing a recipient or copy.");
@@ -783,6 +787,101 @@ export async function enqueueFundingReconciliationSweep() {
   await prisma.job.create({
     data: {
       kind: "funding_recon_sweep",
+      status: "queued",
+      payload: { enqueuedAt: new Date().toISOString() },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
+}
+
+/**
+ * Dev §8 / §16 — due release_scheduled milestones → provider release instruction + release_requested.
+ * Ledger still moves only on signed payout.released.
+ */
+export async function runScheduledReleaseSweep(now = new Date()) {
+  const { shouldRequestScheduledRelease } = await import("@/lib/collab-ops-jobs");
+  const { releasableCents } = await import("@/lib/ledger");
+  const { createMarketplaceSignedWebhookAdapter } = await import("@/lib/payment-provider-adapter");
+  const { verifyMarketplaceSignature } = await import("@/lib/ledger");
+  const adapter = createMarketplaceSignedWebhookAdapter({
+    verifySignature: verifyMarketplaceSignature,
+  });
+  const due = await prisma.fundingMilestone.findMany({
+    where: {
+      status: "release_scheduled",
+      releaseScheduledAt: { lte: now },
+      funding: { status: "held" },
+    },
+    include: { funding: true },
+    take: 100,
+    orderBy: { releaseScheduledAt: "asc" },
+  });
+  let requested = 0;
+  for (const milestone of due) {
+    if (
+      !shouldRequestScheduledRelease({
+        milestoneStatus: milestone.status,
+        releaseScheduledAt: milestone.releaseScheduledAt,
+        now,
+      })
+    ) {
+      continue;
+    }
+    const openDispute = await prisma.milestoneDispute.findFirst({
+      where: {
+        fundingId: milestone.fundingId,
+        status: { in: ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"] },
+        OR: [{ milestoneId: milestone.id }, { milestoneId: null }],
+      },
+    });
+    if (openDispute) continue;
+    const amount = releasableCents(milestone.amountCents, milestone.refundedCents);
+    if (amount <= 0) continue;
+    const instruction = await adapter.createReleaseOrTransfer({
+      fundingId: milestone.fundingId,
+      milestoneId: milestone.id,
+      amountCents: amount,
+    });
+    if (!instruction.ok) continue;
+    const updated = await prisma.fundingMilestone.updateMany({
+      where: { id: milestone.id, status: "release_scheduled" },
+      data: { status: "release_requested" },
+    });
+    if (updated.count !== 1) continue;
+    requested += 1;
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: "system",
+          action: "milestone_release_requested",
+          objectType: "FundingMilestone",
+          objectId: milestone.id,
+          after: {
+            fundingId: milestone.fundingId,
+            reference: instruction.reference,
+            amountCents: amount,
+            at: now.toISOString(),
+          },
+        },
+      })
+      .catch(() => undefined);
+    await notifyCollabFundingEvent({
+      fundingId: milestone.fundingId,
+      kind: "milestone_approved",
+      milestone: milestone.title,
+      detail: `Provider release requested (${instruction.reference}); awaiting signed payout.released.`,
+      processNow: false,
+    });
+  }
+  if (requested > 0) await processDueJobs();
+  return { scanned: due.length, requested };
+}
+
+export async function enqueueScheduledReleaseSweep() {
+  await prisma.job.create({
+    data: {
+      kind: "scheduled_release_sweep",
       status: "queued",
       payload: { enqueuedAt: new Date().toISOString() },
     },
