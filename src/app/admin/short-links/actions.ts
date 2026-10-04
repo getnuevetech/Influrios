@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { prisma } from "@/lib/db";
-import { clearShortHostCache, normalizeSlug, setShortLinkDestination } from "@/lib/short-link";
+import { clearShortHostCache, normalizeSlug, setAliasRedirect, setShortLinkDestination } from "@/lib/short-link";
 
 function clean(value: FormDataEntryValue | null, max: number) {
   return String(value ?? "").trim().slice(0, max);
@@ -99,6 +99,16 @@ export async function actionAdminDestination(formData: FormData) {
     link.dynamic,
     { type: "admin", id: admin.userId },
   );
+  if (!result.ok) redirect(`/admin/short-links?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/admin/short-links");
+  redirect("/admin/short-links?saved=1");
+}
+
+export async function actionSetAliasRedirect(formData: FormData) {
+  await requireAdminAction("shortlinks.edit");
+  const id = clean(formData.get("id"), 80);
+  const redirectOn = clean(formData.get("redirect"), 10) === "1";
+  const result = await setAliasRedirect(id, redirectOn);
   if (!result.ok) redirect(`/admin/short-links?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/admin/short-links");
   redirect("/admin/short-links?saved=1");

@@ -11,7 +11,7 @@ import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
 import { classifyProfileTopics } from "@/lib/ai-runtime";
 import { isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { ensureCreatorShortLink, getCreatorShortLinkAnalytics, listShortLinkDestinationHistory, primaryShortHost } from "@/lib/short-link";
+import { ensureCreatorShortLink, getCreatorShortLinkAnalytics, listShortLinkDestinationHistory, primaryShortHost, slugChangeWarning } from "@/lib/short-link";
 import {
   completenessFor,
   getCreatorSessionDraft,
@@ -34,7 +34,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Influencer dashboard" };
 
 type Props = {
-  searchParams: Promise<{ published?: string; saved?: string; error?: string; social?: string }>;
+  searchParams: Promise<{ published?: string; saved?: string; error?: string; social?: string; confirmSlug?: string }>;
 };
 
 export default async function CreatorDashboardPage({ searchParams }: Props) {
@@ -450,20 +450,39 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               <img src={`/api/qr/${draft.slug}?size=160&logo=0`} alt="Influencer Card QR" width={160} height={160} />
             ) : null}
             {linkLimits?.customAlias ? (
-              <form action={actionChangeShortSlug} className="space-y-2">
-                <p className="text-xs text-muted">
-                  Changing this name keeps the printed QR and the previous short link. The old name redirects to the
-                  new one.
-                </p>
-                <input
-                  name="slug"
-                  defaultValue={shortLink.slug}
-                  className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
-                />
-                <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                  Update short link
-                </button>
-              </form>
+              <div className="space-y-2">
+                {params.confirmSlug && params.confirmSlug !== shortLink.slug ? (
+                  <form action={actionChangeShortSlug} className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                    <p className="text-xs font-semibold text-indigo">Confirm short link change</p>
+                    <p className="text-xs text-muted">{slugChangeWarning(shortLink.slug, params.confirmSlug)}</p>
+                    <input type="hidden" name="slug" value={params.confirmSlug} />
+                    <input type="hidden" name="acknowledged" value="1" />
+                    <div className="flex flex-wrap gap-2">
+                      <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                        Yes, change to /{params.confirmSlug}
+                      </button>
+                      <Link href="/dashboard" className="btn-secondary !py-1.5 text-xs">
+                        Cancel
+                      </Link>
+                    </div>
+                  </form>
+                ) : (
+                  <form action={actionChangeShortSlug} className="space-y-2">
+                    <p className="text-xs text-muted">
+                      Changing this name keeps the printed QR. You will confirm before the old name starts redirecting
+                      to the new one.
+                    </p>
+                    <input
+                      name="slug"
+                      defaultValue={shortLink.slug}
+                      className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
+                    />
+                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                      Update short link
+                    </button>
+                  </form>
+                )}
+              </div>
             ) : (
               <p className="text-xs text-muted">A custom short name follows the plan entitlement.</p>
             )}
