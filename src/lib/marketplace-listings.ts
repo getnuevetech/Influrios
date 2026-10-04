@@ -400,6 +400,115 @@ export function canTransitionApplication(from: string, to: string): boolean {
   return APPLICATION_TRANSITIONS[from].includes(to);
 }
 
+/** Allowed next statuses from the Collab OS §4.3 state machine. */
+export function nextApplicationStatuses(from: string): MarketplaceApplicationStatus[] {
+  if (!isApplicationStatus(from)) return [];
+  return [...APPLICATION_TRANSITIONS[from]];
+}
+
+export type MarketplaceApplicationRow = {
+  id: string;
+  kind: string;
+  businessRequestId: string | null;
+  opportunityId: string | null;
+  fromUserId: string | null;
+  fromSlug: string | null;
+  toSlug: string | null;
+  status: MarketplaceApplicationStatus;
+  note: string | null;
+  createdAt: string;
+  /** Creator slug on either side of the application. */
+  creatorSlug: string | null;
+  requestBrand: string | null;
+  nextStatuses: MarketplaceApplicationStatus[];
+};
+
+function mapApplication(row: {
+  id: string;
+  kind: string;
+  businessRequestId: string | null;
+  opportunityId: string | null;
+  fromUserId: string | null;
+  fromSlug: string | null;
+  toSlug: string | null;
+  status: string;
+  note: string | null;
+  createdAt: Date;
+  businessRequest?: { brand: string } | null;
+}): MarketplaceApplicationRow {
+  const status = isApplicationStatus(row.status) ? row.status : "REQUESTED";
+  const creatorSlug = row.fromSlug || row.toSlug || null;
+  return {
+    id: row.id,
+    kind: row.kind,
+    businessRequestId: row.businessRequestId,
+    opportunityId: row.opportunityId,
+    fromUserId: row.fromUserId,
+    fromSlug: row.fromSlug,
+    toSlug: row.toSlug,
+    status,
+    note: row.note,
+    createdAt: row.createdAt.toISOString(),
+    creatorSlug,
+    requestBrand: row.businessRequest?.brand ?? null,
+    nextStatuses: nextApplicationStatuses(status),
+  };
+}
+
+export async function listMarketplaceApplications(input?: {
+  businessRequestIds?: string[];
+  creatorSlug?: string;
+  limit?: number;
+}): Promise<MarketplaceApplicationRow[]> {
+  await ensureMarketplaceListings();
+  const where =
+    input?.businessRequestIds?.length || input?.creatorSlug
+      ? {
+          AND: [
+            input.businessRequestIds?.length
+              ? { businessRequestId: { in: input.businessRequestIds } }
+              : {},
+            input.creatorSlug
+              ? {
+                  OR: [{ fromSlug: input.creatorSlug }, { toSlug: input.creatorSlug }],
+                }
+              : {},
+          ],
+        }
+      : undefined;
+  const rows = await prisma.marketplaceApplication.findMany({
+    where,
+    include: { businessRequest: { select: { brand: true } } },
+    orderBy: { createdAt: "desc" },
+    take: input?.limit ?? 40,
+  });
+  return rows.map(mapApplication);
+}
+
+/** Human labels for hub transition buttons. */
+export function applicationTransitionLabel(status: MarketplaceApplicationStatus): string {
+  switch (status) {
+    case "VIEWED":
+      return "Mark viewed";
+    case "RESPONDED":
+      return "Mark responded";
+    case "NEGOTIATING":
+      return "Enter negotiation";
+    case "ACCEPTED":
+      return "Accept";
+    case "COLLABORATION_DRAFTED":
+      return "Draft contract";
+    case "DECLINED":
+      return "Decline";
+    case "EXPIRED":
+      return "Expire";
+    case "WITHDRAWN":
+      return "Withdraw";
+    default:
+      return status;
+  }
+}
+
 /** Persist a scored match and attach a per-user save bookmark. */
 export async function saveMatchForUser(input: {
   match: CreatorMatch;

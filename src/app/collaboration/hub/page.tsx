@@ -26,6 +26,11 @@ import { POPULAR_MATCH_CHIPS } from "@/lib/matching";
 import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
 import { PAYOUT_METHOD_LABELS, type PayoutMethod } from "@/lib/payout-readiness";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
+import { applicationTransitionLabel } from "@/lib/marketplace-listings";
+import {
+  actionApplyToBusinessRequest,
+  actionCreatorTransitionApplication,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Collaborations · Hub" };
@@ -37,6 +42,9 @@ type Props = {
     location?: string;
     budget?: string;
     saved?: string;
+    applied?: string;
+    app?: string;
+    error?: string;
   }>;
 };
 
@@ -249,6 +257,19 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
               Match saved to your hub.
             </p>
+          ) : null}
+          {params.applied ? (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              Application submitted. Track status under Applications.
+            </p>
+          ) : null}
+          {params.app ? (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              Application moved to {params.app}.
+            </p>
+          ) : null}
+          {params.error ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</p>
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -520,9 +541,13 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                         <p className="text-[11px] text-muted">
                           {item.budget} · {item.location}
                         </p>
-                        <Link href="/business" className="btn-primary mt-2 !px-3 !py-1 text-[11px]">
-                          View Details
-                        </Link>
+                        <form action={actionApplyToBusinessRequest} className="mt-2">
+                          <input type="hidden" name="requestId" value={item.id} />
+                          <input type="hidden" name="note" value={`Apply from hub · ${creator.displayName}`} />
+                          <button type="submit" className="btn-primary !px-3 !py-1 text-[11px]">
+                            Apply
+                          </button>
+                        </form>
                       </div>
                     </div>
                   </li>
@@ -559,6 +584,60 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                     </li>
                   );
                 })}
+              </ul>
+            </section>
+
+            <section id="applications" className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm xl:col-span-3">
+              <h2 className="mb-3 font-display text-base font-bold text-indigo">My Applications & Invitations</h2>
+              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {hub.applications.length === 0 ? (
+                  <li className="text-sm text-muted sm:col-span-2">
+                    No applications yet — Apply on a business request above.
+                  </li>
+                ) : (
+                  hub.applications.map((application) => (
+                    <li key={application.id} className="rounded-xl border border-[#E8EDF8] p-3">
+                      <p className="text-sm font-bold text-indigo">
+                        {application.requestBrand ?? "Business request"}
+                      </p>
+                      <p className="mt-1 text-[10px] font-semibold uppercase text-violet">
+                        {application.status}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-[11px] text-muted">
+                        {application.note ?? "Marketplace application"}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {application.nextStatuses
+                          .filter((status) =>
+                            ["VIEWED", "RESPONDED", "WITHDRAWN", "DECLINED", "ACCEPTED", "COLLABORATION_DRAFTED"].includes(
+                              status,
+                            ),
+                          )
+                          .slice(0, 3)
+                          .map((status) => (
+                            <form key={status} action={actionCreatorTransitionApplication}>
+                              <input type="hidden" name="applicationId" value={application.id} />
+                              <input type="hidden" name="toStatus" value={status} />
+                              <button
+                                type="submit"
+                                className="rounded-lg border border-violet/30 px-2.5 py-1 text-[11px] font-bold text-violet"
+                              >
+                                {applicationTransitionLabel(status)}
+                              </button>
+                            </form>
+                          ))}
+                        {application.status === "COLLABORATION_DRAFTED" ? (
+                          <Link
+                            href={`/collaboration/contract?creator=${encodeURIComponent(creator.slug)}`}
+                            className="rounded-lg bg-violet px-2.5 py-1 text-[11px] font-bold text-white"
+                          >
+                            Open contract
+                          </Link>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))
+                )}
               </ul>
             </section>
 

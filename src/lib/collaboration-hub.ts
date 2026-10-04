@@ -18,7 +18,9 @@ import { findDirectoryMatchesFor, type CreatorMatch, type MatchBreakdown } from 
 import {
   listPublishedBusinessRequests,
   listPublishedCreatorOpportunities,
+  listMarketplaceApplications,
   persistTopMatches,
+  type MarketplaceApplicationRow,
   type MarketplaceBusinessRequestRow,
   type MarketplaceCreatorOpportunityRow,
 } from "@/lib/marketplace-listings";
@@ -317,6 +319,11 @@ export async function loadCreatorHub(input: {
     .sort((a, b) => b.score - a.score)
     .slice(0, 8);
 
+  const applications = await listMarketplaceApplications({
+    creatorSlug: slug,
+    limit: 20,
+  }).catch(() => [] as MarketplaceApplicationRow[]);
+
   return {
     status,
     earnings,
@@ -327,6 +334,7 @@ export async function loadCreatorHub(input: {
     brandMatches,
     requests: requests.slice(0, 6),
     opportunities: opportunities.filter((item) => item.creatorSlug !== slug).slice(0, 6),
+    applications,
     collaborations,
   };
 }
@@ -373,6 +381,11 @@ export async function loadBusinessHub(input?: { intentBriefId?: string }) {
     suggestions = (await rankDirectoryCreatorsForBrief(intentBrief)).slice(0, limit);
   }
 
+  const ownRequestIds = ownRequests.map((row) => row.id);
+  const applications = ownRequestIds.length
+    ? await listMarketplaceApplications({ businessRequestIds: ownRequestIds, limit: 20 }).catch(() => [])
+    : [];
+
   const pipeline: HubPipelineItem[] = fundings.slice(0, 6).map((row) => {
     const stage = derivePipelineStage({
       collaborationStatus: "accepted",
@@ -408,6 +421,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string }) {
     suggestions,
     intentBrief,
     ownRequests: ownRequests.slice(0, 8),
+    applications,
     opportunities: opportunities.slice(0, 6),
     inquiries: ws.inquiries.slice(0, 10),
     shortlist: ws.shortlist,
