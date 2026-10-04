@@ -236,6 +236,20 @@ const LINKS: {
     meta: () => "Phase 12.1",
   },
   {
+    href: "/admin/corridors",
+    title: "Country corridors",
+    blurb: "Suspend or update Country Activation Matrix without a deploy.",
+    module: "marketplace",
+    meta: () => "P6 corridor control",
+  },
+  {
+    href: "/admin/collaboration-ops",
+    title: "Collaboration operations",
+    blurb: "Dual-approval thresholds, mentorship eligibility, account purposes, audit.",
+    module: "marketplace",
+    meta: () => "P6 control plane",
+  },
+  {
     href: "/admin/marketplace",
     title: "Marketplace ledger",
     blurb: "Prefund only after the provider confirms. Milestone templates and the escrow term are edited here. Sign in again if this page asks for permission.",

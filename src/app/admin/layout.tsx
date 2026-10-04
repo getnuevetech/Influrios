@@ -33,6 +33,8 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
   { href: "/admin/short-links", label: "Short links", module: "shortlinks" },
   { href: "/admin/payments", label: "Protected Payments", module: "payments" },
   { href: "/admin/fees", label: "Collaboration fees", module: "commerce" },
+  { href: "/admin/corridors", label: "Corridors", module: "marketplace" },
+  { href: "/admin/collaboration-ops", label: "Collaboration ops", module: "marketplace" },
   { href: "/admin/marketplace", label: "Marketplace ledger", module: "marketplace" },
   { href: "/admin/trust", label: "Trust & Disputes", module: "trust" },
   { href: "/admin/agency", label: "Agency", module: "agency" },

@@ -27,10 +27,26 @@ export async function actionDecideLedgerDispute(formData: FormData) {
   const disputeId = String(formData.get("disputeId") ?? "");
   const action = String(formData.get("decision") ?? "") as DisputeDecision;
   if (!ACTIONS.includes(action)) redirect("/admin/trust?error=Choose a decision.");
+  const requestedCents = Math.round(Number(formData.get("requestedUsd") ?? 0) * 100);
+  if (
+    (action === "refund" || action === "partial" || action === "release") &&
+    Number.isInteger(requestedCents) &&
+    requestedCents > 0
+  ) {
+    const { evaluateDualApproval, getCollabControlPlane } = await import("@/lib/collab-control-plane");
+    const plane = await getCollabControlPlane();
+    const dual = evaluateDualApproval({
+      amountCents: requestedCents,
+      thresholdCents: plane.dualApprovalThresholdCents,
+      primaryActor: session.email,
+      secondaryActor: String(formData.get("secondApprover") ?? ""),
+    });
+    if (!dual.ok) redirect(`/admin/trust?error=${encodeURIComponent(dual.error)}`);
+  }
   const result = await decideMilestoneDispute({
     disputeId,
     action,
-    requestedCents: Math.round(Number(formData.get("requestedUsd") ?? 0) * 100),
+    requestedCents,
     note: String(formData.get("note") ?? ""),
     actor: session.email,
   });
