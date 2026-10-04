@@ -8,6 +8,7 @@ import {
   actionSaveShortDomain,
   actionSaveShortSettings,
   actionSetAliasRedirect,
+  actionSetDomainVerified,
   actionSetLinkStatus,
 } from "@/app/admin/short-links/actions";
 import { requireAdminPage } from "@/app/admin/guard";
@@ -163,21 +164,37 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
 
       <section className="card-surface mt-6 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Domains</h2>
+        <p className="mt-1 text-xs text-muted">
+          Ops verifies ownership before a hostname can serve short links or become primary (INFLR.me §20.24). New
+          domains start unverified.
+        </p>
         <ul className="mt-3 space-y-2 text-sm">
           {domains.map((domain) => (
             <li key={domain.id} className="flex flex-wrap items-center justify-between gap-2">
               <span>
                 {domain.hostname} · {domain.label} · {domain.active ? "active" : "off"}
+                {domain.verified ? " · verified" : " · unverified"}
                 {domain.isPrimary ? " · primary" : ""}
                 {domain.fallback ? " · fallback" : ""}
               </span>
-              {canEdit && !domain.isPrimary ? (
-                <form action={actionMakePrimaryDomain}>
-                  <input type="hidden" name="id" value={domain.id} />
-                  <button type="submit" className="btn-secondary !py-1 text-xs">
-                    Make primary
-                  </button>
-                </form>
+              {canEdit ? (
+                <div className="flex flex-wrap gap-2">
+                  <form action={actionSetDomainVerified}>
+                    <input type="hidden" name="id" value={domain.id} />
+                    <input type="hidden" name="verified" value={domain.verified ? "0" : "1"} />
+                    <button type="submit" className="btn-secondary !py-1 text-xs">
+                      {domain.verified ? "Unverify" : "Mark verified"}
+                    </button>
+                  </form>
+                  {!domain.isPrimary && domain.verified ? (
+                    <form action={actionMakePrimaryDomain}>
+                      <input type="hidden" name="id" value={domain.id} />
+                      <button type="submit" className="btn-secondary !py-1 text-xs">
+                        Make primary
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
               ) : null}
             </li>
           ))}

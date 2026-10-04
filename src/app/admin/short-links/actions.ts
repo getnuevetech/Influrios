@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { prisma } from "@/lib/db";
-import { clearShortHostCache, normalizeSlug, setAliasRedirect, setShortLinkDestination } from "@/lib/short-link";
+import { clearShortHostCache, makePrimaryDomain, normalizeSlug, setAliasRedirect, setDomainVerification, setShortLinkDestination } from "@/lib/short-link";
 
 function clean(value: FormDataEntryValue | null, max: number) {
   return String(value ?? "").trim().slice(0, max);
@@ -19,7 +19,12 @@ export async function actionSaveShortDomain(formData: FormData) {
   await prisma.shortLinkDomain.upsert({
     where: { hostname },
     update: { label: clean(formData.get("label"), 80) || hostname, active: true },
-    create: { hostname, label: clean(formData.get("label"), 80) || hostname, active: true },
+    create: {
+      hostname,
+      label: clean(formData.get("label"), 80) || hostname,
+      active: true,
+      verified: false,
+    },
   });
   clearShortHostCache();
   revalidatePath("/admin/short-links");
@@ -29,11 +34,18 @@ export async function actionSaveShortDomain(formData: FormData) {
 export async function actionMakePrimaryDomain(formData: FormData) {
   await requireAdminAction("shortlinks.edit");
   const id = clean(formData.get("id"), 80);
-  await prisma.$transaction([
-    prisma.shortLinkDomain.updateMany({ data: { isPrimary: false } }),
-    prisma.shortLinkDomain.update({ where: { id }, data: { isPrimary: true, active: true } }),
-  ]);
-  clearShortHostCache();
+  const result = await makePrimaryDomain(id);
+  if (!result.ok) redirect(`/admin/short-links?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/admin/short-links");
+  redirect("/admin/short-links?saved=1");
+}
+
+export async function actionSetDomainVerified(formData: FormData) {
+  const admin = await requireAdminAction("shortlinks.edit");
+  const id = clean(formData.get("id"), 80);
+  const verified = clean(formData.get("verified"), 10) === "1";
+  const result = await setDomainVerification(id, verified, admin.userId);
+  if (!result.ok) redirect(`/admin/short-links?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/admin/short-links");
   redirect("/admin/short-links?saved=1");
 }
