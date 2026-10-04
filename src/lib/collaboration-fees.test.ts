@@ -21,6 +21,9 @@ function rule(overrides: Partial<CollaborationFeeRule> = {}): CollaborationFeeRu
     jurisdiction: "*",
     serviceLevel: "contracted",
     feeType: "collaboration",
+    fundingMode: "*",
+    relationshipSource: "*",
+    promotionChannel: "*",
     method: "percent",
     percentBps: 1000,
     fixedCents: 0,
@@ -74,6 +77,23 @@ describe("collaboration fee matching", () => {
     assert.equal(matchesRule(rule({ minGrossCents: 50_000 }), ctx, asOf), false);
     assert.equal(matchesRule(rule({ maxGrossCents: 500 }), ctx, asOf), false);
     assert.equal(matchesRule(rule({ jurisdiction: "US", serviceLevel: "managed_intro" }), ctx, asOf), true);
+  });
+
+  it("matches funding mode, relationship source, and promotion channel conditions", () => {
+    const stagedCtx: FeeResolveContext = {
+      ...ctx,
+      serviceLevel: "contracted",
+      fundingMode: "STAGED",
+      relationshipSource: "referral",
+      promotionChannel: "ambassador",
+    };
+    assert.equal(matchesRule(rule({ fundingMode: "STAGED" }), stagedCtx, asOf), true);
+    assert.equal(matchesRule(rule({ fundingMode: "FULL" }), stagedCtx, asOf), false);
+    assert.equal(matchesRule(rule({ relationshipSource: "referral" }), stagedCtx, asOf), true);
+    assert.equal(matchesRule(rule({ relationshipSource: "organic" }), stagedCtx, asOf), false);
+    assert.equal(matchesRule(rule({ promotionChannel: "ambassador" }), stagedCtx, asOf), true);
+    assert.equal(matchesRule(rule({ promotionChannel: "sponsored" }), stagedCtx, asOf), false);
+    assert.equal(ruleSpecificity(rule({ fundingMode: "STAGED", relationshipSource: "referral" })), 2);
   });
 
   it("picks highest priority then most specific jurisdiction/service", () => {

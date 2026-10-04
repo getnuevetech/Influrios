@@ -201,6 +201,9 @@ export async function actionSaveFeeRule(formData: FormData) {
       | "fx"
       | "cancellation_dispute"
       | "referral",
+    fundingMode: String(formData.get("fundingMode") || "*"),
+    relationshipSource: String(formData.get("relationshipSource") || "*"),
+    promotionChannel: String(formData.get("promotionChannel") || "*"),
     method: String(formData.get("method") || "percent") as
       | "percent"
       | "fixed"

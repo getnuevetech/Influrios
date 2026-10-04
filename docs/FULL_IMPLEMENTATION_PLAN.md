@@ -186,7 +186,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 #### W3.1 Fee matrix completeness — PARTIAL → fee types shipped
 | Exists | Missing | Exit |
 |---|---|---|
-| Versioned rules, simulator, snapshots; **`feeType` column** + labels | relationship_source / promotion / funding_mode conditions | Snapshots store fee type; reports separate columns still later |
+| Versioned rules, simulator, snapshots; **`feeType` column** + labels; funding_mode / relationship_source / promotion_channel conditions | Reports separate columns still later | Snapshots store fee type; condition matching DONE |
 | Conditions include serviceLevel | Full condition set beyond jurisdiction/service/gross | Rule tester explains winner (**done**) |
 | Priority/specificity + §22.1 overlap test | — | Test asserts documented winner |
 | Fee methods percent/fixed/combo | TIERED/WAIVED/CUSTOM_ENTERPRISE | Deferred |

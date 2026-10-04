@@ -1287,6 +1287,12 @@ model CollaborationFeeRule {
   serviceLevel  String   @default("contracted")
   /// Distinct commercial fee type (platform_service, collaboration, managed_intro, …) — Product Addendum §5.
   feeType       String   @default("collaboration")
+  /// W3.1 condition: FULL | STAGED | NONE | *
+  fundingMode   String   @default("*")
+  /// W3.1 condition: organic | platform_match | managed_intro | referral | pre_existing | *
+  relationshipSource String @default("*")
+  /// W3.1 condition: none | sponsored | ambassador | affiliate | *
+  promotionChannel String @default("*")
   minGrossCents Int?
   maxGrossCents Int?
   method        String   @default("percent")

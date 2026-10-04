@@ -691,6 +691,10 @@ export async function requestPrefund(input: {
       }),
       grossValueCents: usdCents,
       attributionStatus: attribution.attributionStatus,
+      fundingMode,
+      relationshipSource:
+        attribution.attributionStatus === "pre_existing" ? "pre_existing" : "organic",
+      promotionChannel: serviceLevel.startsWith("managed") ? "sponsored" : "none",
     }).catch(() => null);
     prepared.push({ gross: fx.convertedMinor, fx, milestoneAmounts, quote });
   }
@@ -854,6 +858,9 @@ export async function sweepDueRecurrences(now = new Date()) {
       jurisdiction: row.jurisdictionCode,
       serviceLevel: row.serviceLevel,
       grossValueCents: usdCents,
+      fundingMode: row.fundingMode || "FULL",
+      relationshipSource: "organic",
+      promotionChannel: row.serviceLevel.startsWith("managed") ? "sponsored" : "none",
     }).catch(() => null);
     const feeCents = convertFee(quote?.feeCents ?? 0, fx);
     const suffix = ` · ${nextIndex} of ${row.trancheCount}`;
@@ -1023,6 +1030,9 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     jurisdiction: funding.jurisdictionCode,
     serviceLevel: funding.serviceLevel,
     grossValueCents: input.grossCents,
+    fundingMode: funding.fundingMode || "FULL",
+    relationshipSource: "organic",
+    promotionChannel: funding.serviceLevel.startsWith("managed") ? "sponsored" : "none",
   }).catch(() => null);
   const feeCents = convertFee(quote?.feeCents ?? 0, fx);
   const nextFee = {
