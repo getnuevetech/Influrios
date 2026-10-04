@@ -93,7 +93,7 @@ describe("collaboration fee matching", () => {
     assert.equal(matchesRule(rule({ relationshipSource: "organic" }), stagedCtx, asOf), false);
     assert.equal(matchesRule(rule({ promotionChannel: "ambassador" }), stagedCtx, asOf), true);
     assert.equal(matchesRule(rule({ promotionChannel: "sponsored" }), stagedCtx, asOf), false);
-    assert.equal(ruleSpecificity(rule({ fundingMode: "STAGED", relationshipSource: "referral" })), 2);
+    assert.equal(ruleSpecificity(rule({ fundingMode: "STAGED", relationshipSource: "referral" })), 3);
   });
 
   it("picks highest priority then most specific jurisdiction/service", () => {
