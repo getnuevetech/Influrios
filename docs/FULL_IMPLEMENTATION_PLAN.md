@@ -74,7 +74,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | Dev P2 operations | Disputes, cancellation, reports, change orders, notifications | PARTIAL ledger; deepen W3.6 / W3.11; **P6** admin |
 | Dev P3 expansion | Staged/recurring, more countries, advanced attribution | W3.4 / W3.7 after P4 stable |
 | Dev P4 advanced | Revenue sharing, complex splits, enterprise rules | Explicitly deferred (§11) |
-| — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5 core shipped**; **P6–P8** remaining |
+| — | UX hubs / marketplace / mentorship | Collab **P0–P3 DONE**; **P5–P6 core shipped**; **P7–P8** remaining |
 
 ---
 
@@ -364,18 +364,23 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 ---
 
-### P6 — Admin Collaboration control plane — NOT STARTED
+### P6 — Admin Collaboration control plane — PARTIAL (core shipped)
 
 **Sources:** Collab OS §11; Dev Addendum §19  
 
-**Build**
-1. Corridors, account purposes, mentorship eligibility, dual-approval thresholds  
-2. Versioned config + audit  
-3. Guest thresholds for collab actions  
-4. Suspend corridor / change future fees without deploy  
-5. Admin surfaces: Commission/Fee Rules (exists), Jurisdiction Matrix (partial), Provider Health, Collaboration Operations, Financial Reports, Risk Controls  
+**Shipped**
+1. `/admin/corridors` — Country Activation Matrix: suspend/activate + edit methods/FX/holding without deploy  
+2. `/admin/collaboration-ops` — versioned control plane (dual-approval threshold, mentorship eligibility, guest collab thresholds) + account-purpose catalog + audit trail  
+3. Dual-approval gate on Trust ledger dispute decisions when override USD ≥ threshold  
+4. Admin nav cards + sidebar for Collaboration ops / Corridors  
 
-**Exit:** Ops operates Collab OS from admin alone.
+**Still open**
+- Deeper Provider Health dashboard beyond gateways page  
+- Mentorship product surfaces reading eligibility (P7)  
+- Guest collab propose/apply quota enforcement in public flows  
+- RBAC permission group dedicated to collab finance high-risk actions  
+
+**Exit (core):** Ops can suspend a corridor and change control-plane thresholds without deploy — met. Fee future-deals already on `/admin/fees`.
 
 **Depends on:** P4–P5 concepts exist to configure.
 

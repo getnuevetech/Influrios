@@ -172,10 +172,24 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                 </label>
                 {partialRefunds ? (
                   <label className="text-xs font-semibold text-muted">
-                    Partial USD
-                    <input name="requestedUsd" type="number" min={1} step={1} className="mt-1 w-28 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                    Partial / override USD
+                    <input name="requestedUsd" type="number" min={0} step={1} className="mt-1 w-28 rounded-lg border border-border px-2 py-1.5 text-sm" />
                   </label>
-                ) : null}
+                ) : (
+                  <label className="text-xs font-semibold text-muted">
+                    Override USD (dual-approval check)
+                    <input name="requestedUsd" type="number" min={0} step={1} className="mt-1 w-36 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                  </label>
+                )}
+                <label className="text-xs font-semibold text-muted">
+                  Second approver email
+                  <input
+                    name="secondApprover"
+                    type="email"
+                    placeholder="Required above dual-approval threshold"
+                    className="mt-1 w-52 rounded-lg border border-border px-2 py-1.5 text-sm"
+                  />
+                </label>
                 <label className="text-xs font-semibold text-muted">
                   Note
                   <input name="note" className="mt-1 rounded-lg border border-border px-2 py-1.5 text-sm" />

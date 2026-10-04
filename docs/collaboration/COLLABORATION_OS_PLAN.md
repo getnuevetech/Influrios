@@ -70,7 +70,7 @@ Influrios already has durable pieces to **extend**, not replace:
 | Milestones / finance | Strong ledger core | Domain account purposes; fee-earned-on-release; ROUTE_READY (P4) |
 | Payout readiness | P5 core: profile + corridors + hub panel + ROUTE_READY corridor gate | Admin corridor ops (P6); live method verification |
 | Mentorship | Public banner + stub landing | Full Mentor–Mentee hub (P7) |
-| Admin control plane | Fees/marketplace/trust + landing CMS | Corridors, mentorship eligibility, account purposes (P6) |
+| Admin control plane | P6 core: corridors suspend, versioned thresholds, ops hub, dual-approval gate | Deeper provider health; guest collab quota enforcement; P7 mentorship surfaces |
 
 ---
 
@@ -148,13 +148,13 @@ For Businesses marketing (`/business`) matches for-businesses-v2 with CMS at `/a
 
 **Exit (core):** fundable only when ROUTE_READY; creator hub payout panel real — met. Admin corridor ops → P6.
 
-### P6 — Admin Collaboration control plane
+### P6 — Admin Collaboration control plane — PARTIAL (core shipped)
 
-- Nav: category cards, mentorship eligibility, corridors, account purposes, dual-approval thresholds.
-- Versioned config + audit for fee/corridor/account mapping.
-- Guest thresholds for collab actions.
+- Nav: Collaboration ops + Corridors; fees/gateways/marketplace/trust linked from ops hub.
+- Versioned control plane + audit for dual-approval, mentorship eligibility, guest collab thresholds.
+- Corridor suspend/activate without deploy; account-purpose catalog.
 
-**Exit:** ops can suspend a corridor / change fee future-deals without code deploy.
+**Exit (core):** ops can suspend a corridor / change fee future-deals without code deploy — met.
 
 ### P7 — Mentorship module
 
