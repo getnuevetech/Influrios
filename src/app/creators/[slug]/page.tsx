@@ -30,6 +30,7 @@ import {
   specialtyLabel,
 } from "@/lib/seed-data";
 import { getDirectory, getDirectoryCreator, recordDirectoryEvent } from "@/lib/directory";
+import { creatorShareMetadata } from "@/lib/creator-og";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -39,23 +40,7 @@ export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const creator = await getDirectoryCreator(slug);
   if (!creator) return { title: "Influencer not found" };
-  const designation = creator.title?.trim();
-  const description =
-    creator.bio?.trim() ||
-    `${creator.displayName} — Influrios Influencer profile${designation ? ` · ${designation}` : ""}`;
-  return {
-    title: `${creator.displayName} · Influencer`,
-    description,
-    keywords: [
-      "influencer",
-      "influencers",
-      "content creator",
-      "creator",
-      creator.displayName,
-      designation,
-      ...(creator.specialties ?? []),
-    ].filter(Boolean),
-  };
+  return creatorShareMetadata(creator, { surface: "profile" });
 }
 
 function socialMetricLabel(platform: string) {

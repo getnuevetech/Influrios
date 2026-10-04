@@ -295,7 +295,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Basic analytics events | Privacy-safe async analytics + CTA/conversion events; entitlement-gated creator analytics | Spec §10 — DONE (resolver metrics / Phase 4 still later) |
 | — | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Explicitly later; do not block P4 finance |
 | Card design system | Align remaining chrome to Platform Spec §39 assets; live data not raster | Card matches approved vertical standard |
-| OG / social sharing | Influrios-branded preview; canonical SEO on influrios.com | Spec §11 |
+| OG / social sharing | Influrios-branded preview; canonical SEO on influrios.com | Spec §11 — DONE (card/profile OG + INFLR crawler interstitial) |
 
 ---
 
@@ -547,7 +547,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | Branded failure UX | PARTIAL |
 | Open-redirect protection | PARTIAL |
 | Analytics privacy + entitlements complete | DONE (views/standard/advanced + bot filter; no precise geo) |
-| Canonical SEO on Influrios profile | PARTIAL |
+| Canonical SEO on Influrios profile | DONE (OG alternates.canonical → /creators/{slug}) |
 | Domain config change without code | PARTIAL |
 | Observable resolver metrics | NOT STARTED |
 

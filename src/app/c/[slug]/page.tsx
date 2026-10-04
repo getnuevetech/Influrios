@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
+import { creatorShareMetadata } from "@/lib/creator-og";
 import { getDirectoryCreator, recordDirectoryEvent } from "@/lib/directory";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -10,13 +11,7 @@ export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const creator = await getDirectoryCreator(slug);
   if (!creator) return { title: "Card not found" };
-  return {
-    title: `${creator.displayName} · Influencer Card`,
-    description: `Influrios Influencer Card for ${creator.displayName}${
-      creator.title ? ` · ${creator.title}` : ""
-    }. Discover influencers and content creators on Influrios.`,
-    keywords: ["influencer", "influencer card", "content creator", "creator", creator.displayName],
-  };
+  return creatorShareMetadata(creator, { surface: "card" });
 }
 
 export default async function PublicCardPage({ params }: Props) {
