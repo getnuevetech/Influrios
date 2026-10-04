@@ -1,6 +1,9 @@
 -- W2.3 tenancy: bind BusinessWorkspace to User; durable CollaborationFunding.workspaceId.
 ALTER TABLE "BusinessWorkspace" ADD COLUMN IF NOT EXISTS "ownerUserId" TEXT;
 
+-- id is assigned in app (cuid / explicit demo id); drop legacy DB default.
+ALTER TABLE "BusinessWorkspace" ALTER COLUMN "id" DROP DEFAULT;
+
 DO $$
 BEGIN
   IF NOT EXISTS (
