@@ -2,6 +2,13 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { resolveFee } from "@/lib/collaboration-fees";
 import {
+  asLegalReviewStatus,
+  capabilitiesFromJurisdictionRow,
+  evaluatePrefundCapabilities,
+  serializeApprovedProviderIds,
+  parseApprovedProviderIds,
+} from "@/lib/jurisdiction-capabilities";
+import {
   advanceMilestone,
   autoApproveDeadline,
   releasableCents,
@@ -89,9 +96,54 @@ export async function ensureMarketplaceDefaults() {
     create: { id: "default", reviewWindowHours: 72 },
   });
   const jurisdictions = [
-    { code: "US", label: "United States", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "USD", minorDigits: 2, providerCode: "primary" },
-    { code: "GB", label: "United Kingdom", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "GBP", minorDigits: 2, providerCode: "primary" },
-    { code: "NG", label: "Nigeria", protectedPaymentsEnabled: false, escrowTermAllowed: false, currency: "NGN", minorDigits: 2, providerCode: "primary" },
+    {
+      code: "US",
+      label: "United States",
+      protectedPaymentsEnabled: true,
+      escrowTermAllowed: false,
+      fullPrefundingEnabled: true,
+      stagedPrefundingEnabled: false,
+      recurringFundingEnabled: false,
+      managedIntroductionEnabled: false,
+      managedNegotiationEnabled: false,
+      approvedProviderIds: "[]",
+      legalReviewStatus: "APPROVED",
+      currency: "USD",
+      minorDigits: 2,
+      providerCode: "primary",
+    },
+    {
+      code: "GB",
+      label: "United Kingdom",
+      protectedPaymentsEnabled: true,
+      escrowTermAllowed: false,
+      fullPrefundingEnabled: true,
+      stagedPrefundingEnabled: false,
+      recurringFundingEnabled: false,
+      managedIntroductionEnabled: false,
+      managedNegotiationEnabled: false,
+      approvedProviderIds: "[]",
+      legalReviewStatus: "APPROVED",
+      currency: "GBP",
+      minorDigits: 2,
+      providerCode: "primary",
+    },
+    {
+      code: "NG",
+      label: "Nigeria",
+      protectedPaymentsEnabled: false,
+      escrowTermAllowed: false,
+      fullPrefundingEnabled: false,
+      stagedPrefundingEnabled: false,
+      recurringFundingEnabled: false,
+      managedIntroductionEnabled: false,
+      managedNegotiationEnabled: false,
+      approvedProviderIds: "[]",
+      legalReviewStatus: "PENDING",
+      currency: "NGN",
+      minorDigits: 2,
+      providerCode: "primary",
+    },
   ];
   for (const row of jurisdictions) {
     await prisma.collaborationJurisdiction.upsert({
@@ -250,6 +302,16 @@ export async function saveJurisdiction(input: {
   label: string;
   protectedPaymentsEnabled: boolean;
   escrowTermAllowed: boolean;
+  fullPrefundingEnabled?: boolean;
+  stagedPrefundingEnabled?: boolean;
+  recurringFundingEnabled?: boolean;
+  managedIntroductionEnabled?: boolean;
+  managedNegotiationEnabled?: boolean;
+  approvedProviderIds?: string[] | string;
+  legalReviewStatus?: string;
+  capabilityNotes?: string;
+  capabilitiesEffectiveFrom?: string | null;
+  capabilitiesEffectiveTo?: string | null;
   currency: string;
   minorDigits: number;
   providerCode: string;
@@ -270,25 +332,47 @@ export async function saveJurisdiction(input: {
     where: { kind_code: { kind: "marketplace", code: providerCode } },
   });
   if (!assigned) throw new Error("Choose a marketplace provider.");
+  const legalReviewStatus = asLegalReviewStatus(input.legalReviewStatus);
+  const approvedProviderIds = serializeApprovedProviderIds(parseApprovedProviderIds(input.approvedProviderIds));
+  const capabilityNotes = String(input.capabilityNotes ?? "").trim().slice(0, 500);
+  const parseOptionalDate = (raw: string | null | undefined) => {
+    if (raw == null || String(raw).trim() === "") return null;
+    const date = new Date(String(raw));
+    if (Number.isNaN(date.getTime())) throw new Error("Use a valid capability effective date.");
+    return date;
+  };
+  const capabilitiesEffectiveFrom = parseOptionalDate(input.capabilitiesEffectiveFrom);
+  const capabilitiesEffectiveTo = parseOptionalDate(input.capabilitiesEffectiveTo);
+  if (
+    capabilitiesEffectiveFrom &&
+    capabilitiesEffectiveTo &&
+    capabilitiesEffectiveTo < capabilitiesEffectiveFrom
+  ) {
+    throw new Error("Capability end date must be on or after the start date.");
+  }
+  const protectedPaymentsEnabled = input.protectedPaymentsEnabled;
+  const data = {
+    label,
+    protectedPaymentsEnabled,
+    escrowTermAllowed: input.escrowTermAllowed && protectedPaymentsEnabled,
+    fullPrefundingEnabled: Boolean(input.fullPrefundingEnabled ?? true),
+    stagedPrefundingEnabled: Boolean(input.stagedPrefundingEnabled),
+    recurringFundingEnabled: Boolean(input.recurringFundingEnabled),
+    managedIntroductionEnabled: Boolean(input.managedIntroductionEnabled),
+    managedNegotiationEnabled: Boolean(input.managedNegotiationEnabled),
+    approvedProviderIds,
+    legalReviewStatus,
+    capabilityNotes,
+    capabilitiesEffectiveFrom,
+    capabilitiesEffectiveTo,
+    currency,
+    minorDigits,
+    providerCode,
+  };
   return prisma.collaborationJurisdiction.upsert({
     where: { code },
-    update: {
-      label,
-      protectedPaymentsEnabled: input.protectedPaymentsEnabled,
-      escrowTermAllowed: input.escrowTermAllowed && input.protectedPaymentsEnabled,
-      currency,
-      minorDigits,
-      providerCode,
-    },
-    create: {
-      code,
-      label,
-      protectedPaymentsEnabled: input.protectedPaymentsEnabled,
-      escrowTermAllowed: input.escrowTermAllowed && input.protectedPaymentsEnabled,
-      currency,
-      minorDigits,
-      providerCode,
-    },
+    update: data,
+    create: { code, ...data },
   });
 }
 
@@ -460,6 +544,16 @@ export async function requestPrefund(input: {
     maxOpenDisputes: settings?.maxOpenDisputes ?? 0,
   });
   if (!risk.ok) return risk;
+  const caps = jurisdiction ? capabilitiesFromJurisdictionRow(jurisdiction) : null;
+  const serviceLevel = (input.serviceLevel || "contracted").slice(0, 40);
+  const scheduleKind = (input.scheduleKind ?? "once").slice(0, 40);
+  const capabilityGate = evaluatePrefundCapabilities({
+    caps,
+    serviceLevel,
+    scheduleKind,
+    providerCode: assignedCode,
+  });
+  if (!capabilityGate.ok) return capabilityGate;
   const gate = canRequestPrefund({
     jurisdictionEnabled: Boolean(jurisdiction?.protectedPaymentsEnabled),
     providerReady: Boolean(provider?.enabled && provider.webhookCipher),
@@ -473,12 +567,12 @@ export async function requestPrefund(input: {
   });
   if (!attribution.ok) return attribution;
   const schedule = planSchedule({
-    kind: input.scheduleKind ?? "once",
+    kind: scheduleKind,
     grossCents: input.grossCents,
     stageCount: input.stageCount,
     occurrenceCount: input.occurrenceCount,
-    stagedEnabled: settings?.stagedFundingEnabled ?? true,
-    recurringEnabled: settings?.recurringFundingEnabled ?? true,
+    stagedEnabled: (settings?.stagedFundingEnabled ?? true) && Boolean(caps?.stagedPrefundingEnabled),
+    recurringEnabled: (settings?.recurringFundingEnabled ?? true) && Boolean(caps?.recurringFundingEnabled),
     maxStages: settings?.maxStages ?? 4,
     maxRecurrences: settings?.maxRecurrences ?? 6,
     intervalDays: settings?.recurringIntervalDays ?? 30,
@@ -497,7 +591,6 @@ export async function requestPrefund(input: {
     return { ok: false as const, error: "No active milestone templates are configured." };
   }
   const shares = milestoneDefs.map((row) => row.shareBps);
-  const serviceLevel = (input.serviceLevel || "contracted").slice(0, 40);
   const windowHours = settings?.reviewWindowHours ?? 72;
   const revisionLimit = settings?.maxRevisions ?? 2;
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;

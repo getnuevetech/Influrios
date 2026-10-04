@@ -18,6 +18,10 @@ import {
 } from "@/lib/contract-wizard";
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator } from "@/lib/directory";
+import {
+  capabilitiesFromJurisdictionRow,
+  serviceLevelAllowedByJurisdiction,
+} from "@/lib/jurisdiction-capabilities";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { ensureMarketplaceDefaults, marketplaceConfig, requestPrefund } from "@/lib/marketplace-ledger";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
@@ -126,6 +130,12 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const jurisdiction = config.jurisdictions.find((row) => row.code === jurisdictionCode);
   const provider =
     config.providers.find((row) => row.code === (jurisdiction?.providerCode || "primary")) ?? config.provider;
+
+  const caps = jurisdiction ? capabilitiesFromJurisdictionRow(jurisdiction) : null;
+  if (caps) {
+    const serviceGate = serviceLevelAllowedByJurisdiction(caps, serviceLevel);
+    if (!serviceGate.ok) redirectError(serviceGate.error, qs);
+  }
 
   const gates = evaluatePreContractGates({
     businessName,

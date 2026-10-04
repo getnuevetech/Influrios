@@ -47,7 +47,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 |---|---|---|
 | Fee types must stay distinct (platform vs collab vs managed vs FX…) | Product Addendum §5 | W3.1 |
 | Service levels on every collaboration (discovery → managed campaign) | Product Addendum §3 | W3.2 |
-| Jurisdiction capability flags (`protected_payment_enabled`, `escrow_term_allowed`, …) | Dev Addendum §6; Collab OS §10 | W3.3 *(code largely DONE; deepen)* |
+| Jurisdiction capability flags (`protected_payment_enabled`, `escrow_term_allowed`, full/staged/recurring, managed intro/negotiation, approved providers, legal review) | Dev Addendum §6; Collab OS §10 | W3.3 **DONE** |
 | Funding modes: full / staged / none (+ recurring deferred) | Product Addendum §7; Collab OS §7 | W3.4 |
 | Review, revisions, auto-approval, kill fees, chargebacks | Product Addendum §9–12; Dev Addendum §8–14 | W3.5–W3.6 |
 | Relationship attribution / repeat deals | Product Addendum §14; Dev Addendum §15 | W3.7 |
@@ -114,7 +114,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | D19 | Hide Contact CTA on claim publish | #79 | Acquisition UX |
 | D20 | Phase M probe/runbook scaffolding | `scripts/staging-evidence-probe.ts`, `docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md` | Ops scaffold (not live evidence) |
 | D21 | Docker build memory hardening | #69–#70 | Deploy |
-| D22 | Jurisdiction payment capability flags | `CollaborationJurisdiction.protectedPaymentsEnabled`, `escrowTermAllowed`; admin marketplace toggles; `fundingTerm` in `ledger.ts` | Dev Addendum §6; PA004/PA007 (base) |
+| D22 | Jurisdiction payment capability flags | `CollaborationJurisdiction` full matrix + `jurisdiction-capabilities.ts` + admin marketplace + prefund/wizard gates | Dev Addendum §6; PA004/PA007 |
 | D23 | Legal acceptance versioning | `LegalAcceptance.documentVersion` / `documentHash`; `legal.ts` | Dev Addendum §24 hooks (base) |
 | D24 | Agency seat CRUD behind switch | `AgencySeat`, `agency_seats` product switch | Platform Spec agency (CRUD only) |
 | D25 | Protected-payments / trust JSON quarantine | `legacy_demo_payments` off by default; ledger is product path | Development State Phase L / R4 |
@@ -204,11 +204,11 @@ Much ledger work exists; the following are still incomplete vs addenda.
 | `serviceLevel` on rules + funding; **wizard select** + admin selects | Jurisdiction availability gate for managed modes | Every contracted deal can record Product §3 enum |
 | Hard-coded `"contracted"` removed from wizard/actions | payments console still defaults unless form sends level | No silent managed default when disabled (W3.3) |
 
-#### W3.3 Jurisdiction / terminology gates — DONE (base) / PARTIAL (depth)
+#### W3.3 Jurisdiction / terminology gates — DONE
 | Exists | Missing | Exit |
 |---|---|---|
-| `protectedPaymentsEnabled`, `escrowTermAllowed`; UI `fundingTerm`; contract gates | Full capability set: full/staged/recurring funding flags, managed_introduction/negotiation, approved_provider_ids, legal_review_status | Capability flags override features (PA007) end-to-end |
-| — | Managed modes refuse API even if fee rule exists until jurisdiction enables | Dev Addendum §24 managed-service gate |
+| Full capability set on `CollaborationJurisdiction`: protected/escrow + full/staged/recurring funding, managed_introduction/negotiation, `approvedProviderIds`, `legalReviewStatus`, effective dates; admin marketplace toggles; `jurisdiction-capabilities.ts` gates | — | Capability flags override features (PA007) end-to-end |
+| `requestPrefund` + contract wizard refuse managed modes / schedule kinds until jurisdiction enables (even if fee rule exists) | — | Dev Addendum §24 managed-service gate |
 
 #### W3.4 Funding modes — PARTIAL
 | Exists | Missing | Exit |
