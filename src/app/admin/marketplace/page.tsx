@@ -5,6 +5,8 @@ import {
   actionSaveAttributionPolicy,
   actionSaveFundingSchedule,
   actionSaveAttributionSources,
+  actionFileAttributionClaim,
+  actionResolveAttributionClaim,
   actionCheckWiseRate,
   actionSaveDisputeReasons,
   actionSaveFxRates,
@@ -16,7 +18,7 @@ import {
   actionSaveTemplates,
   actionEnqueueAutoApproval,
 } from "@/app/admin/marketplace/actions";
-import { listAttributionSources } from "@/lib/deal-attribution";
+import { listAttributionClaims, listAttributionSources } from "@/lib/deal-attribution";
 import { readShareSnapshot } from "@/lib/fx-share";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { fundingTerm } from "@/lib/ledger";
@@ -36,12 +38,13 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, fundings, totals, reasons, sources, rates, parties, wise, reportsOn, legacyDemoOn] = await Promise.all([
+  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, legacyDemoOn] = await Promise.all([
     marketplaceConfig(),
     listFundings(),
     ledgerTotals(),
     listDisputeReasons(),
     listAttributionSources(),
+    listAttributionClaims(),
     listFxRates(),
     listRevenueParties(),
     wiseFxConfig(),
@@ -884,13 +887,14 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Attribution</h2>
         <p className="mt-1 text-xs text-muted">
-          A repeat must be the same business and creator, already confirmed by the provider, inside this window, and
-          at least the minimum gross. Changing the window does not rewrite a prefund that was already requested.
+          Attribution expiry is finite (never forever). A repeat must be the same business and creator, already
+          confirmed by the provider, inside this expiry window, and at least the minimum gross. Pre-existing
+          relationship claims can be contested and resolved here; upheld claims block managed introduction fees.
         </p>
         {canManage ? (
           <form action={actionSaveAttributionPolicy} className="mt-4 flex flex-wrap items-end gap-3">
             <label className="text-xs font-semibold text-muted">
-              Window days
+              Expiry days
               <input
                 name="attributionWindowDays"
                 type="number"
@@ -917,7 +921,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           </form>
         ) : (
           <p className="mt-3 text-sm text-indigo">
-            {config.attributionWindowDays} days · minimum {formatMoney(config.repeatMinGrossCents)}
+            Expires after {config.attributionWindowDays} days · minimum {formatMoney(config.repeatMinGrossCents)}
           </p>
         )}
         {canManage ? (
@@ -953,6 +957,63 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             ))}
           </ul>
         )}
+
+        <h3 className="mt-6 font-display text-base font-bold text-indigo">Pre-existing relationship contests</h3>
+        {canManage ? (
+          <form action={actionFileAttributionClaim} className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-muted">
+              Business
+              <input name="businessName" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Influencer slug
+              <input name="creatorSlug" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Evidence
+              <textarea name="evidence" required rows={2} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Optional funding id
+              <input name="fundingId" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-mono" />
+            </label>
+            <button type="submit" className="btn-secondary !py-2 text-sm sm:col-span-2">
+              File pre-existing claim
+            </button>
+          </form>
+        ) : null}
+        <ul className="mt-4 space-y-3">
+          {claims.length === 0 ? <li className="text-sm text-muted">No attribution claims yet.</li> : null}
+          {claims.map((claim) => (
+            <li key={claim.id} className="rounded-xl border border-border p-3 text-sm text-indigo">
+              <p className="font-semibold">
+                {claim.businessName} → {claim.creatorSlug} · {claim.status}
+              </p>
+              <p className="mt-1 text-xs text-muted">{claim.evidence}</p>
+              {canManage && (claim.status === "open" || claim.status === "under_review") ? (
+                <form action={actionResolveAttributionClaim} className="mt-3 flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="claimId" value={claim.id} />
+                  <label className="text-xs font-semibold text-muted">
+                    Admin note
+                    <input name="adminNote" className="mt-1 w-56 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                  </label>
+                  <button type="submit" name="decision" value="upheld" className="btn-primary !py-1.5 text-xs">
+                    Uphold (pre-existing)
+                  </button>
+                  <button type="submit" name="decision" value="rejected" className="btn-secondary !py-1.5 text-xs">
+                    Reject
+                  </button>
+                </form>
+              ) : null}
+              {claim.resolvedAt ? (
+                <p className="mt-1 text-[11px] text-muted">
+                  Resolved {claim.resolvedAt.toISOString().slice(0, 10)}
+                  {claim.adminNote ? ` · ${claim.adminNote}` : ""}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="card-surface p-5">

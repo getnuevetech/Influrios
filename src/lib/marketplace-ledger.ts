@@ -28,7 +28,7 @@ import {
   splitGross,
   type LedgerMovement,
 } from "@/lib/ledger";
-import { resolveDealAttribution } from "@/lib/deal-attribution";
+import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal-attribution";
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines } from "@/lib/fx-share";
 import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
@@ -620,8 +620,12 @@ export async function requestPrefund(input: {
     if (!milestoneAmounts) return { ok: false as const, error: "Milestone templates must add up to 100%." };
     const quote = await resolveFee({
       jurisdiction: code,
-      serviceLevel,
+      serviceLevel: serviceLevelForFeeResolution({
+        requestedServiceLevel: serviceLevel,
+        attributionStatus: attribution.attributionStatus,
+      }),
       grossValueCents: usdCents,
+      attributionStatus: attribution.attributionStatus,
     }).catch(() => null);
     prepared.push({ gross: fx.convertedMinor, fx, milestoneAmounts, quote });
   }
@@ -665,6 +669,8 @@ export async function requestPrefund(input: {
           status: "awaiting_provider",
           providerCode: provider!.code,
           attributionLabel: attribution.attributionLabel,
+          attributionStatus: attribution.attributionStatus,
+          attributionExpiresAt: attribution.attributionExpiresAt,
           repeatOfId: attribution.repeatOfId,
           changeOrderLimit,
           scheduleId,
@@ -787,6 +793,8 @@ export async function sweepDueRecurrences(now = new Date()) {
           status: "awaiting_provider",
           providerCode: row.providerCode,
           attributionLabel: row.attributionLabel,
+          attributionStatus: row.attributionStatus,
+          attributionExpiresAt: row.attributionExpiresAt,
           repeatOfId: row.repeatOfId,
           changeOrderLimit,
           scheduleId: row.scheduleId,

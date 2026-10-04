@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
-import { saveAttributionPolicy, saveAttributionSources } from "@/lib/deal-attribution";
+import { saveAttributionPolicy, saveAttributionSources, fileAttributionClaim, resolveAttributionClaim } from "@/lib/deal-attribution";
 import { saveDisputeReasons } from "@/lib/milestone-disputes";
 import {
   saveFundingSchedule,
@@ -294,6 +294,39 @@ export async function actionSaveAttributionSources(formData: FormData) {
   revalidatePath("/admin/marketplace");
   revalidatePath("/payments");
   redirect("/admin/marketplace?saved=sources");
+}
+
+export async function actionFileAttributionClaim(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const result = await fileAttributionClaim({
+    businessName: String(formData.get("businessName") ?? ""),
+    creatorSlug: String(formData.get("creatorSlug") ?? ""),
+    evidence: String(formData.get("evidence") ?? ""),
+    fundingId: String(formData.get("fundingId") ?? "") || null,
+    filedBy: "admin",
+  });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  redirect("/admin/marketplace?saved=attribution_claim");
+}
+
+export async function actionResolveAttributionClaim(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const decision = String(formData.get("decision") ?? "") as "upheld" | "rejected";
+  const result = await resolveAttributionClaim({
+    claimId: String(formData.get("claimId") ?? ""),
+    decision,
+    adminNote: String(formData.get("adminNote") ?? ""),
+    actor: "admin",
+  });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/payments");
+  redirect("/admin/marketplace?saved=attribution_resolved");
 }
 
 export async function actionEnqueueAutoApproval() {
