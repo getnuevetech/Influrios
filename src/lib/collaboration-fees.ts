@@ -86,6 +86,9 @@ export type CollaborationFeeRule = {
   jurisdiction: string; // "*" = all
   serviceLevel: string; // discovery | platform_match | contracted | managed_intro | managed_campaign | *
   feeType: FeeType;
+  fundingMode: string; // FULL | STAGED | NONE | *
+  relationshipSource: string; // organic | platform_match | managed_intro | referral | pre_existing | *
+  promotionChannel: string; // none | sponsored | ambassador | affiliate | *
   minGrossCents?: number;
   maxGrossCents?: number;
   method: FeeMethod;
@@ -122,7 +125,21 @@ export type FeeResolveContext = {
   asOf?: string;
   /** W3.7 — active | expired | contested | pre_existing */
   attributionStatus?: string;
+  fundingMode?: string;
+  relationshipSource?: string;
+  promotionChannel?: string;
 };
+
+export const FUNDING_MODE_CONDITIONS = ["*", "FULL", "STAGED", "NONE"] as const;
+export const RELATIONSHIP_SOURCE_CONDITIONS = [
+  "*",
+  "organic",
+  "platform_match",
+  "managed_intro",
+  "referral",
+  "pre_existing",
+] as const;
+export const PROMOTION_CHANNEL_CONDITIONS = ["*", "none", "sponsored", "ambassador", "affiliate"] as const;
 
 export type FeeJurisdiction = {
   code: string;
@@ -175,6 +192,9 @@ const DEFAULT_RULES: CollaborationFeeRule[] = [
     jurisdiction: "*",
     serviceLevel: "contracted",
     feeType: "collaboration",
+    fundingMode: "*",
+    relationshipSource: "*",
+    promotionChannel: "*",
     method: "percent",
     percentBps: 1000,
     fixedCents: 0,
@@ -193,6 +213,9 @@ const DEFAULT_RULES: CollaborationFeeRule[] = [
     jurisdiction: "US",
     serviceLevel: "managed_intro",
     feeType: "managed_intro",
+    fundingMode: "*",
+    relationshipSource: "*",
+    promotionChannel: "*",
     method: "percent_plus_fixed",
     percentBps: 1500,
     fixedCents: 2500,
@@ -211,6 +234,9 @@ const DEFAULT_RULES: CollaborationFeeRule[] = [
     jurisdiction: "*",
     serviceLevel: "discovery",
     feeType: "platform_service",
+    fundingMode: "*",
+    relationshipSource: "*",
+    promotionChannel: "*",
     method: "fixed",
     percentBps: 0,
     fixedCents: 0,
@@ -241,6 +267,9 @@ function ruleFromRow(row: {
   jurisdiction: string;
   serviceLevel: string;
   feeType: string;
+  fundingMode?: string | null;
+  relationshipSource?: string | null;
+  promotionChannel?: string | null;
   minGrossCents: number | null;
   maxGrossCents: number | null;
   method: string;
@@ -261,6 +290,9 @@ function ruleFromRow(row: {
     jurisdiction: row.jurisdiction,
     serviceLevel: row.serviceLevel,
     feeType: asFeeType(row.feeType || defaultFeeTypeForServiceLevel(row.serviceLevel)),
+    fundingMode: row.fundingMode || "*",
+    relationshipSource: row.relationshipSource || "*",
+    promotionChannel: row.promotionChannel || "*",
     minGrossCents: row.minGrossCents ?? undefined,
     maxGrossCents: row.maxGrossCents ?? undefined,
     method: asFeeMethod(row.method),
@@ -318,6 +350,9 @@ function ruleCreateData(rule: CollaborationFeeRule) {
     jurisdiction: rule.jurisdiction,
     serviceLevel: rule.serviceLevel,
     feeType: rule.feeType,
+    fundingMode: rule.fundingMode || "*",
+    relationshipSource: rule.relationshipSource || "*",
+    promotionChannel: rule.promotionChannel || "*",
     minGrossCents: rule.minGrossCents ?? null,
     maxGrossCents: rule.maxGrossCents ?? null,
     method: rule.method,
@@ -346,6 +381,9 @@ async function readLegacyStore(): Promise<{
         method: asFeeMethod(rule.method),
         payer: asFeePayer(rule.payer),
         feeType: asFeeType(rule.feeType || defaultFeeTypeForServiceLevel(rule.serviceLevel || "contracted")),
+        fundingMode: rule.fundingMode || "*",
+        relationshipSource: rule.relationshipSource || "*",
+        promotionChannel: rule.promotionChannel || "*",
         version: Number(rule.version) || 1,
         active: Boolean(rule.active),
         priority: Number(rule.priority) || 100,
@@ -491,6 +529,13 @@ export function matchesRule(rule: CollaborationFeeRule, ctx: FeeResolveContext, 
   if (rule.effectiveFrom > asOf) return false;
   if (rule.jurisdiction !== "*" && rule.jurisdiction !== ctx.jurisdiction) return false;
   if (rule.serviceLevel !== "*" && rule.serviceLevel !== ctx.serviceLevel) return false;
+  if (rule.fundingMode !== "*" && rule.fundingMode !== (ctx.fundingMode || "FULL")) return false;
+  if (rule.relationshipSource !== "*" && rule.relationshipSource !== (ctx.relationshipSource || "organic")) {
+    return false;
+  }
+  if (rule.promotionChannel !== "*" && rule.promotionChannel !== (ctx.promotionChannel || "none")) {
+    return false;
+  }
   if (rule.minGrossCents != null && ctx.grossValueCents < rule.minGrossCents) return false;
   if (rule.maxGrossCents != null && ctx.grossValueCents > rule.maxGrossCents) return false;
   return true;
@@ -514,16 +559,18 @@ export function pickWinningRule(rules: CollaborationFeeRule[], ctx: FeeResolveCo
     .filter((r) => matchesRule(r, ctx, asOf))
     .sort((a, b) => {
       if (b.priority !== a.priority) return b.priority - a.priority;
-      const aSpec =
-        (a.jurisdiction === "*" ? 0 : 1) + (a.serviceLevel === "*" ? 0 : 1);
-      const bSpec =
-        (b.jurisdiction === "*" ? 0 : 1) + (b.serviceLevel === "*" ? 0 : 1);
-      return bSpec - aSpec;
+      return ruleSpecificity(b) - ruleSpecificity(a);
     });
 }
 
 export function ruleSpecificity(rule: CollaborationFeeRule) {
-  return (rule.jurisdiction === "*" ? 0 : 1) + (rule.serviceLevel === "*" ? 0 : 1);
+  return (
+    (rule.jurisdiction === "*" ? 0 : 1) +
+    (rule.serviceLevel === "*" ? 0 : 1) +
+    (rule.fundingMode === "*" ? 0 : 1) +
+    (rule.relationshipSource === "*" ? 0 : 1) +
+    (rule.promotionChannel === "*" ? 0 : 1)
+  );
 }
 
 export function explainFeeWinner(
@@ -632,6 +679,9 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
           jurisdiction: input.jurisdiction ?? prev.jurisdiction,
           serviceLevel: input.serviceLevel ?? prev.serviceLevel,
           feeType: input.feeType ?? prev.feeType,
+          fundingMode: input.fundingMode ?? prev.fundingMode,
+          relationshipSource: input.relationshipSource ?? prev.relationshipSource,
+          promotionChannel: input.promotionChannel ?? prev.promotionChannel,
           minGrossCents:
             input.minGrossCents !== undefined ? input.minGrossCents ?? null : prev.minGrossCents,
           maxGrossCents:
@@ -661,6 +711,9 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
     jurisdiction: input.jurisdiction ?? "*",
     serviceLevel: input.serviceLevel ?? "contracted",
     feeType: input.feeType ?? defaultFeeTypeForServiceLevel(input.serviceLevel ?? "contracted"),
+    fundingMode: input.fundingMode ?? "*",
+    relationshipSource: input.relationshipSource ?? "*",
+    promotionChannel: input.promotionChannel ?? "*",
     minGrossCents: input.minGrossCents,
     maxGrossCents: input.maxGrossCents,
     method: input.method ?? "percent",

@@ -9,9 +9,12 @@ import { hasPermission } from "@/lib/admin-auth";
 import {
   FEE_TYPE_LABELS,
   FEE_TYPES,
+  FUNDING_MODE_CONDITIONS,
   formatCents,
   getFeeStore,
+  PROMOTION_CHANNEL_CONDITIONS,
   protectedPaymentLabel,
+  RELATIONSHIP_SOURCE_CONDITIONS,
   SERVICE_LEVEL_LABELS,
   SERVICE_LEVELS,
 } from "@/lib/collaboration-fees";
@@ -237,6 +240,51 @@ export default async function AdminFeesPage({ searchParams }: Props) {
                   {FEE_TYPES.map((type) => (
                     <option key={type} value={type}>
                       {FEE_TYPE_LABELS[type]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                Funding mode
+                <select
+                  name="fundingMode"
+                  defaultValue={rule.fundingMode}
+                  disabled={!canManage}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  {FUNDING_MODE_CONDITIONS.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {mode === "*" ? "* (any)" : mode}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                Relationship source
+                <select
+                  name="relationshipSource"
+                  defaultValue={rule.relationshipSource}
+                  disabled={!canManage}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  {RELATIONSHIP_SOURCE_CONDITIONS.map((source) => (
+                    <option key={source} value={source}>
+                      {source === "*" ? "* (any)" : source}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                Promotion channel
+                <select
+                  name="promotionChannel"
+                  defaultValue={rule.promotionChannel}
+                  disabled={!canManage}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  {PROMOTION_CHANNEL_CONDITIONS.map((channel) => (
+                    <option key={channel} value={channel}>
+                      {channel === "*" ? "* (any)" : channel}
                     </option>
                   ))}
                 </select>
