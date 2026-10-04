@@ -278,8 +278,9 @@ Remaining work is **Deferred-external** only (not more residual coding of comple
 1. **L1 Phase M** staging evidence when credentials are available.  
 2. **W2.1** landing PNG / CMS operator sign-off.  
 3. **L5** Airwallex checklist signatures before any adapter hard-wire.  
-4. Live provider rails / Phase 4 INFLR.me / paid mentorship / agency invite-auth — only when product asks.  
+4. Live provider rails / Phase 4 INFLR.me / paid mentorship — only when product asks.  
 5. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
+6. **L3 agency seats** invite/auth is code-complete; ops may enable `agency_seats` in staging when ready.
 
 Terminology source of truth (public UI complete): [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf) and `docs/source-specs/`. Engineering/API migration tracked as **Deferred-external** under P8 soak.
 

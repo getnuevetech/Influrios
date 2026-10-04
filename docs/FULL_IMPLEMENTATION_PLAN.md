@@ -117,7 +117,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | D21 | Docker build memory hardening | #69–#70 | Deploy |
 | D22 | Jurisdiction payment capability flags | `CollaborationJurisdiction` full matrix + `jurisdiction-capabilities.ts` + admin marketplace + prefund/wizard gates | Dev Addendum §6; PA004/PA007 |
 | D23 | Legal acceptance versioning | `LegalAcceptance.documentVersion` / `documentHash`; `legal.ts` | Dev Addendum §24 hooks (base) |
-| D24 | Agency seat CRUD behind switch | `AgencySeat`, `agency_seats` product switch | Platform Spec agency (CRUD only) |
+| D24 | Agency seat CRUD + invite/auth behind switch | `AgencySeat` invite fields, `agency-seats.ts`, `/agency/invite/[token]`, `agency_seats` switch | Platform Spec agency (L3 DONE) |
 | D25 | Protected-payments / trust JSON quarantine | `legacy_demo_payments` off by default; ledger is product path | Development State Phase L / R4 |
 | D26 | Phase L ops migrations | CMS, billing, intelligence, fee rules, admin auth → Postgres | Development State Phase L |
 
@@ -423,10 +423,10 @@ Ledger + commercial depth code exits met; live provider rails remain Deferred-ex
 |---|---|---|
 | Broad unit suite (`tsx --test`); **HTTP smoke catalog** (`http-smoke.ts`) covering landing/discover/claim/collab/pricing/resolver | Playwright browser E2E; default CI still offline (set `SMOKE_BASE_URL` + `SMOKE_LIVE=1` for live fetch) | Catalog gate **DONE**; live Playwright **Deferred-external** |
 
-### L3 — Agency seats — DONE (CRUD); invite/auth Deferred-external
+### L3 — Agency seats — DONE (CRUD + invite/auth)
 | Exists | Missing | Exit |
 |---|---|---|
-| Seat CRUD behind `agency_seats` switch (default **off**) | Invite/accept flow + multi-seat session auth when switch on | **Deferred-external** until product enables `agency_seats` |
+| Seat CRUD behind `agency_seats` switch (default **off**); **invite → copy-link accept → accepted active seat**; `/agency` mutations require accepted seat session when switch on; plan entitlement gate when switch off | Ops turning switch on in staging | Invite/accept + multi-seat session auth **DONE** (SMTP optional) |
 
 ### L4 — Collab OS feature flag — DONE
 | Exists | Missing | Exit |
@@ -574,7 +574,7 @@ DEFERRED-EXTERNAL (ops / product / later phase)
  ├─ L1 Phase M live evidence (SMTP / Stripe sandbox / social) when secrets available
  ├─ W2.1 Landing PNG sign-off + staging CMS E2E (operator)
  ├─ L2 live Playwright (`SMOKE_LIVE=1`)
- ├─ L3 agency invite + multi-seat session auth (when agency_seats enabled)
+ ├─ L3 agency invite + multi-seat session auth — DONE (switch still default off)
  ├─ L5 Airwallex checklist operator signatures → then adapter
  ├─ Live provider rails beyond marketplace instruction queue
  ├─ W3.4 / Dev P3 recurring·ambassador product mode
@@ -597,7 +597,7 @@ NON-GOALS until product asks:
 | 2 | Phase M evidence packs (SMTP / Stripe / social / marketplace webhook) | Ops | Deferred-external (L1) |
 | 3 | Sign Airwallex §8.3 checklist before any adapter hard-wire | Ops / Finance | Deferred-external (L5) |
 | 4 | Enable live Playwright smoke in staging CI when desired | Eng | Deferred-external (L2) |
-| 5 | Agency invite/auth only if product turns `agency_seats` on | Product | Deferred-external (L3) |
+| 5 | Turn `agency_seats` on in staging when product wants multi-seat ops | Product / Ops | Ops enablement (code DONE) |
 
 ---
 

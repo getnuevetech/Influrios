@@ -13,9 +13,11 @@ import {
   getAgencyStore,
   listPublishedPortfolios,
 } from "@/lib/agency";
+import { resolveAgencyAccess } from "@/lib/agency-auth";
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
+import { productSwitch } from "@/lib/product-switches";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Agency Workspace" };
@@ -29,6 +31,7 @@ type Props = {
     plan?: string;
     status?: string;
     toggled?: string;
+    seat?: string;
   }>;
 };
 
@@ -41,14 +44,22 @@ const CAMP_COLOR: Record<string, string> = {
 
 export default async function AgencyPage({ searchParams }: Props) {
   const params = await searchParams;
-  const ws = await getWorkspace();
+  const [ws, seatsOn, access] = await Promise.all([
+    getWorkspace(),
+    productSwitch("agency_seats"),
+    resolveAgencyAccess(),
+  ]);
   const entitlements = getBusinessEntitlements(ws.plan);
-  const unlocked = entitlements.agencyWorkspace;
+  const unlocked = seatsOn ? access.ok : entitlements.agencyWorkspace;
   const store = await getAgencyStore();
   const stats = agencyStats(store);
   const published = listPublishedPortfolios(store);
   const directoryCreators = await listDirectoryCreators();
   const bySlug = indexCreatorsBySlug(directoryCreators);
+  const seatLabel =
+    access.ok && access.mode === "seat"
+      ? `${access.account.email} · ${access.role}`
+      : null;
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -65,6 +76,8 @@ export default async function AgencyPage({ searchParams }: Props) {
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
             Business plan: {ws.plan}
             {unlocked ? " · Agency workspace on" : " · upgrade required"}
+            {seatsOn ? " · seats on" : ""}
+            {seatLabel ? ` · acting as ${seatLabel}` : ""}
           </p>
         </div>
       </section>
@@ -84,6 +97,12 @@ export default async function AgencyPage({ searchParams }: Props) {
             <p className="text-muted">Published cases</p>
           </div>
         </div>
+
+        {params.seat === "accepted" ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Seat invite accepted. You can mutate this agency workspace while seats are on.
+          </div>
+        ) : null}
 
         {params.error === "agency_plan_required" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -114,21 +133,32 @@ export default async function AgencyPage({ searchParams }: Props) {
         {!unlocked ? (
           <section className="card-surface flex flex-wrap items-center justify-between gap-4 p-6">
             <div>
-              <h2 className="font-display text-xl font-bold text-indigo">Unlock Agency workspace</h2>
+              <h2 className="font-display text-xl font-bold text-indigo">
+                {seatsOn ? "Agency seat required" : "Unlock Agency workspace"}
+              </h2>
               <p className="mt-1 text-sm text-muted">
-                Current plan is {ws.plan}. Agency adds roster, multi-creator casting, and joint
-                portfolios.
+                {seatsOn
+                  ? "Named seats are on. Accept an invite for your signed-in email, or ask an admin to invite you."
+                  : `Current plan is ${ws.plan}. Agency adds roster, multi-creator casting, and joint portfolios.`}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <form action={actionEnableAgencyPlan}>
-                <button type="submit" className="btn-primary !py-2 text-sm">
-                  Demo upgrade to AGENCY →
-                </button>
-              </form>
-              <Link href="/billing" className="btn-secondary !py-2 text-sm">
-                Billing
-              </Link>
+              {seatsOn ? (
+                <Link href="/login?next=%2Fagency" className="btn-primary !py-2 text-sm">
+                  Sign in →
+                </Link>
+              ) : (
+                <>
+                  <form action={actionEnableAgencyPlan}>
+                    <button type="submit" className="btn-primary !py-2 text-sm">
+                      Demo upgrade to AGENCY →
+                    </button>
+                  </form>
+                  <Link href="/billing" className="btn-secondary !py-2 text-sm">
+                    Billing
+                  </Link>
+                </>
+              )}
             </div>
           </section>
         ) : null}
