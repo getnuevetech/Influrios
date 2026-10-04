@@ -5,7 +5,10 @@ ALTER TABLE "AgencySeat" ADD COLUMN IF NOT EXISTS "invitedAt" TIMESTAMP(3) NOT N
 ALTER TABLE "AgencySeat" ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3);
 ALTER TABLE "AgencySeat" ADD COLUMN IF NOT EXISTS "acceptedAt" TIMESTAMP(3);
 ALTER TABLE "AgencySeat" ADD COLUMN IF NOT EXISTS "acceptedUserId" TEXT;
-ALTER TABLE "AgencySeat" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "AgencySeat" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3);
+
+UPDATE "AgencySeat" SET "updatedAt" = CURRENT_TIMESTAMP WHERE "updatedAt" IS NULL;
+ALTER TABLE "AgencySeat" ALTER COLUMN "updatedAt" SET NOT NULL;
 
 -- Existing active seats (pre-invite CRUD) are treated as already accepted.
 UPDATE "AgencySeat"
