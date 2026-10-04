@@ -156,7 +156,7 @@ const LINKS: {
     title: "Site stats",
     blurb: "Footer counters and the script tagline. Edit the numbers here.",
     module: "banners",
-    meta: () => "50K+ strip",
+    meta: () => "Verified strip",
   },
   {
     href: "/admin/guests",

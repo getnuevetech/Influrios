@@ -305,7 +305,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | Exists | Missing | Exit |
 |---|---|---|
-| Banners, categories, value-prop strip, landing CMS | Verified `SocialProofStats` with source/as-of + disable-when-stale; never show placeholder 50K+/12K+ as factual | §23.8–23.9 |
+| Banners, categories, value-prop strip, landing CMS | Verified `SocialProofStats` with source/as-of + disable-when-stale; never show placeholder 50K+/12K+ as factual | §23.8–23.9 — **DONE** (footer strip verifies source/as-of; placeholders disabled) |
 | Value-prop four pillars | Responsive matrix ≥1200 / 768–1199 / &lt;768; pillar analytics events; jurisdiction-aware Protected Payments claim | §23.9 acceptance tests |
 | Admin modules wide | Collab control plane corridors/account purposes (P6) | Collab OS §11 |
 | RBAC | Permission groups for new collab finance modules; step-up for high-risk actions | Platform Spec §34; Dev §20 |
@@ -480,7 +480,7 @@ Much ledger work exists; the following are still incomplete vs addenda.
 
 | # | Test | Status |
 |---|---|---|
-| 1 | No placeholder 50K+/12K+ as factual scale | PARTIAL (value-prop shipped; audit footer/stats) |
+| 1 | No placeholder 50K+/12K+ as factual scale | DONE (footer requires source/as-of; placeholders disabled) |
 | 2 | Four default pillars exact copy + accessible icons | PARTIAL / largely DONE |
 | 3 | Admin edit/reorder without deploy | DONE |
 | 4 | Disable pillar → balanced layout | Needs QA |
