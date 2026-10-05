@@ -279,16 +279,29 @@ bash deploy/scripts/deploy.sh
 ## 11. Domain + HTTPS (after DNS works)
 
 1. DNS A record `@` and `www` → static IP  
-2. Edit `/etc/nginx/sites-available/influrios` → set `server_name`  
+2. Edit `/etc/nginx/sites-available/influrios` → set:
+
+```nginx
+server_name influrios.com www.influrios.com;
+```
+
 3. `sudo nginx -t && sudo systemctl reload nginx`  
 4. Certbot:
 
 ```bash
 sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot --nginx -d influrios.com -d www.influrios.com
 ```
 
-5. Set `NEXT_PUBLIC_APP_URL=https://your-domain.com` in `.env` → `docker compose up -d --build web`
+If the cert was **issued** but install failed (`matching server block`):
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot install --cert-name influrios.com --nginx
+```
+
+5. Set `NEXT_PUBLIC_APP_URL=https://influrios.com` in `.env` → `bash deploy/scripts/deploy.sh`  
+6. `curl -I https://influrios.com`
 
 ---
 

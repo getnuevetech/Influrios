@@ -145,19 +145,40 @@ docker compose exec -T postgres pg_dump -U influrios influrios > backup-$(date +
 ## D. Domain + HTTPS
 
 1. DNS: create **A** records for `@` and `www` → Lightsail static IP  
-2. Edit Nginx `server_name` in `/etc/nginx/sites-available/influrios`  
+2. Edit Nginx `server_name` in `/etc/nginx/sites-available/influrios` to the real hostnames (must match certbot `-d` values):
+
+```nginx
+server_name influrios.com www.influrios.com;
+```
+
 3. `sudo nginx -t && sudo systemctl reload nginx`  
 4. Install certbot:
 
 ```bash
 sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot --nginx -d influrios.com -d www.influrios.com
 ```
 
-5. Update `.env` `NEXT_PUBLIC_APP_URL` to `https://your-domain.com` and redeploy:
+If certbot **saved** the certificate but failed with  
+`Could not automatically find a matching server block for influrios.com`:
+
+```bash
+# Ensure server_name matches (step 2), then install the already-issued cert:
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot install --cert-name influrios.com --nginx
+```
+
+5. Update `.env` `NEXT_PUBLIC_APP_URL` to `https://influrios.com` and redeploy:
 
 ```bash
 bash deploy/scripts/deploy.sh
+```
+
+6. Confirm:
+
+```bash
+curl -I https://influrios.com
+curl -I http://influrios.com   # should redirect to https after certbot
 ```
 
 ---
