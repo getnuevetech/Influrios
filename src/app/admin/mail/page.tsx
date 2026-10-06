@@ -18,6 +18,7 @@ import {
   SMS_BODY_MAX,
   getCommChannelSettings,
   listCommTemplates,
+  smsProviderLabel,
 } from "@/lib/comm-templates";
 import { mailSettingsView } from "@/lib/mail";
 
@@ -37,6 +38,7 @@ export default async function AdminMailPage({ searchParams }: Props) {
     smsProviderNote: "",
   }));
   const templates = await listCommTemplates().catch(() => []);
+  const smsLabel = smsProviderLabel();
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -47,7 +49,8 @@ export default async function AdminMailPage({ searchParams }: Props) {
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Email &amp; SMS</h1>
         <p className="mt-2 text-sm text-muted">
           Configure SMTP, enable outreach channels, and manage auto/manual templates. Each template has an email body
-          and a short SMS twin (max {SMS_BODY_MAX} characters).
+          and a short SMS twin (max {SMS_BODY_MAX} characters). SMS delivery mode:{" "}
+          <span className="font-semibold text-indigo">{smsLabel}</span>. Set SMS_PROVIDER=twilio for live sends.
         </p>
       </div>
 
@@ -137,7 +140,8 @@ export default async function AdminMailPage({ searchParams }: Props) {
       >
         <form action={actionSaveCommChannels} className="space-y-3">
           <p className="text-sm text-muted">
-            Choose which channels the platform may use. Members also set their preferred mode on Account.
+            Choose which channels the platform may use. Members also set their preferred mode on Account. SMS uses{" "}
+            {smsLabel}.
           </p>
           <label className="flex items-center gap-2 text-sm text-indigo">
             <input name="emailEnabled" type="checkbox" defaultChecked={channels.emailEnabled} disabled={!canEdit} />
@@ -245,8 +249,12 @@ export default async function AdminMailPage({ searchParams }: Props) {
                 <form action={actionSendCommTemplate} className="flex flex-wrap items-end gap-2">
                   <input type="hidden" name="templateId" value={template.id} />
                   <label className="text-xs font-semibold text-indigo">
-                    Send to
-                    <input name="to" type="email" defaultValue={session.email} required className="mt-1 block rounded-lg border border-border px-2 py-1.5" />
+                    Email to
+                    <input name="to" type="email" defaultValue={session.email} className="mt-1 block rounded-lg border border-border px-2 py-1.5" />
+                  </label>
+                  <label className="text-xs font-semibold text-indigo">
+                    SMS phone
+                    <input name="toPhone" type="tel" placeholder="+15551234567" className="mt-1 block rounded-lg border border-border px-2 py-1.5" />
                   </label>
                   <label className="text-xs font-semibold text-indigo">
                     Channel

@@ -8,11 +8,18 @@ import {
   actionAdminSetCampaignStatus,
   actionAdminSetSeat,
   actionAdminTogglePortfolio,
+  actionCreateAgencyWorkspace,
   actionSaveAgencySeats,
 } from "@/app/admin/agency/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { agencyStats, getAgencyStore, listAgencySeats } from "@/lib/agency";
+import {
+  agencyStats,
+  getAgencyStore,
+  listAgencySeats,
+  listAgencyWorkspaces,
+} from "@/lib/agency";
+import { AGENCY_WORKSPACE_ID } from "@/lib/agency-seats";
 import { productSwitch } from "@/lib/product-switches";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
@@ -31,6 +38,8 @@ type Props = {
     portfolio?: string;
     status?: string;
     toggled?: string;
+    workspaceId?: string;
+    workspace?: string;
   }>;
 };
 
@@ -38,7 +47,18 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
   const session = await requireAdminPage("agency");
   const canManage = hasPermission(session, "agency.manage");
   const params = await searchParams;
-  const [store, seats, seatsOn] = await Promise.all([getAgencyStore(), listAgencySeats(), productSwitch("agency_seats")]);
+  const workspaces = await listAgencyWorkspaces();
+  const workspaceId =
+    (params.workspaceId && workspaces.some((w) => w.id === params.workspaceId)
+      ? params.workspaceId
+      : null) ||
+    workspaces[0]?.id ||
+    AGENCY_WORKSPACE_ID;
+  const [store, seats, seatsOn] = await Promise.all([
+    getAgencyStore(workspaceId),
+    listAgencySeats(workspaceId),
+    productSwitch("agency_seats"),
+  ]);
   const stats = agencyStats(store);
   const directoryCreators = await listDirectoryCreators();
   const bySlug = indexCreatorsBySlug(directoryCreators);
@@ -52,8 +72,9 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
           </Link>
           <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Agency</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Roster, campaigns, and joint portfolios for {store.name} are stored with the workspace. Named seats stay
-            off until you turn them on. Turning seats off leaves the roster in place and refuses a new seat.
+            Roster, campaigns, and joint portfolios for <span className="font-semibold text-indigo">{store.name}</span>{" "}
+            ({store.agencyId}). Switch workspaces below for multi-tenant ops. Named seats stay off until you turn them
+            on.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-center text-xs">
@@ -72,6 +93,66 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         </div>
       </div>
 
+      <section className="card-surface flex flex-wrap items-end gap-3 p-5">
+        <form className="flex flex-wrap items-end gap-3">
+          <label className="text-sm font-semibold text-indigo">
+            Workspace
+            <select
+              name="workspaceId"
+              defaultValue={workspaceId}
+              className="mt-1 block min-w-[14rem] rounded-xl border border-border px-3 py-2 text-sm font-normal"
+              onChange={undefined}
+            >
+              {workspaces.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name} ({w.id})
+                </option>
+              ))}
+            </select>
+          </label>
+          <noscript>
+            <button type="submit" className="btn-secondary !py-2 text-sm">
+              Switch
+            </button>
+          </noscript>
+          {/* Server component: use links for switch without client JS */}
+        </form>
+        <div className="flex flex-wrap gap-2">
+          {workspaces.map((w) => (
+            <Link
+              key={w.id}
+              href={`/admin/agency?workspaceId=${encodeURIComponent(w.id)}`}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                w.id === workspaceId
+                  ? "border-violet bg-lavender text-violet"
+                  : "border-border text-indigo hover:border-violet"
+              }`}
+            >
+              {w.name}
+            </Link>
+          ))}
+        </div>
+        {canManage ? (
+          <form action={actionCreateAgencyWorkspace} className="ml-auto grid w-full gap-2 sm:w-auto sm:grid-cols-3">
+            <input
+              name="id"
+              required
+              placeholder="workspace_id"
+              className="rounded-xl border border-border px-3 py-2 text-sm"
+            />
+            <input
+              name="name"
+              required
+              placeholder="Display name"
+              className="rounded-xl border border-border px-3 py-2 text-sm"
+            />
+            <button type="submit" className="btn-secondary !py-2 text-sm">
+              Create workspace
+            </button>
+          </form>
+        ) : null}
+      </section>
+
       {params.error ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {params.error}
@@ -84,7 +165,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
       params.campaign ||
       params.portfolio ||
       params.status ||
-      params.toggled ? (
+      params.toggled ||
+      params.workspace ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Saved.
         </div>
@@ -105,6 +187,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         </p>
         {canManage ? (
           <form action={actionSaveAgencySeats} className="mt-4 flex flex-wrap items-center gap-3">
+            <input type="hidden" name="workspaceId" value={workspaceId} />
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="agency_seats" defaultChecked={seatsOn} className="accent-violet" />
               Allow named seats
@@ -131,6 +214,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
               </span>
               {canManage ? (
                 <form action={actionAdminSetSeat}>
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="email" value={seat.email} />
                   <input type="hidden" name="active" value={seat.active ? "0" : "1"} />
                   <button type="submit" className="text-xs font-semibold text-violet">
@@ -143,6 +227,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         </ul>
         {canManage ? (
           <form action={actionAdminAddSeat} className="mt-4 grid gap-3 sm:grid-cols-3">
+            <input type="hidden" name="workspaceId" value={workspaceId} />
             <input
               name="email"
               type="email"
@@ -180,6 +265,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
                   {bySlug.get(m.creatorSlug)?.displayName ?? m.creatorSlug}
                   {canManage ? (
                     <form action={actionAdminRemoveRoster} className="mt-1">
+                      <input type="hidden" name="workspaceId" value={workspaceId} />
                       <input type="hidden" name="creatorSlug" value={m.creatorSlug} />
                       <button type="submit" className="text-[11px] font-semibold text-rose-700">
                         Remove
@@ -197,6 +283,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
 
         {canManage ? (
           <form action={actionAdminAddRoster} className="mt-4 grid gap-3 sm:grid-cols-4">
+            <input type="hidden" name="workspaceId" value={workspaceId} />
             <select name="creatorSlug" className="rounded-xl border border-border px-3 py-2 text-sm" required>
               {directoryCreators.filter((c) => !store.roster.some((r) => r.creatorSlug === c.slug)).map(
                 (c) => (
@@ -241,6 +328,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
                 <div className="flex flex-wrap gap-1">
                   {(["briefing", "casting", "live", "wrapped"] as const).map((st) => (
                     <form key={st} action={actionAdminSetCampaignStatus}>
+                      <input type="hidden" name="workspaceId" value={workspaceId} />
                       <input type="hidden" name="id" value={c.id} />
                       <input type="hidden" name="status" value={st} />
                       <button
@@ -258,6 +346,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         ))}
         {canManage ? (
           <form action={actionAdminCreateCampaign} className="card-surface grid gap-3 p-5 sm:grid-cols-2">
+            <input type="hidden" name="workspaceId" value={workspaceId} />
             <input name="title" required placeholder="Title" className="rounded-xl border border-border px-3 py-2 text-sm" />
             <input name="clientName" required placeholder="Client" className="rounded-xl border border-border px-3 py-2 text-sm" />
             <input name="specialty" defaultValue="beauty" className="rounded-xl border border-border px-3 py-2 text-sm" />
@@ -295,6 +384,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
             </div>
             {canManage ? (
               <form action={actionAdminTogglePortfolio}>
+                <input type="hidden" name="workspaceId" value={workspaceId} />
                 <input type="hidden" name="id" value={p.id} />
                 <input type="hidden" name="published" value={p.published ? "0" : "1"} />
                 <button type="submit" className="btn-secondary !py-1.5 text-xs">
@@ -306,6 +396,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         ))}
         {canManage ? (
           <form action={actionAdminCreatePortfolio} className="card-surface grid gap-3 p-5 sm:grid-cols-2">
+            <input type="hidden" name="workspaceId" value={workspaceId} />
             <input name="title" required defaultValue="Ops case study" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
             <input name="tagline" defaultValue="Complementary collab proof" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
             <select name="leftSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={directoryCreators[0]?.slug}>

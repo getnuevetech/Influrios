@@ -101,6 +101,7 @@ export async function actionSendCommTemplate(formData: FormData) {
   const result = await sendCommTemplateTest({
     templateId: clean(formData.get("templateId"), 60),
     toEmail: clean(formData.get("to"), 200),
+    toPhone: clean(formData.get("toPhone"), 40),
     channel,
   });
   revalidatePath("/admin/mail");

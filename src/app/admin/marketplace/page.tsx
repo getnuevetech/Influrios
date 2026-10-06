@@ -25,6 +25,7 @@ import {
   actionEnqueueScheduledReleaseSweep,
   actionScheduleMilestoneRelease,
   actionExecuteHeldCancellation,
+  actionSimulatePrefundHold,
 } from "@/app/admin/marketplace/actions";
 import { listAttributionClaims, listAttributionSources } from "@/lib/deal-attribution";
 import { readShareSnapshot } from "@/lib/fx-share";
@@ -101,11 +102,14 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Marketplace ledger</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          A prefund stays unfunded until a signed provider webhook confirms it. Cancelling before that confirmation
-          posts no ledger entry. Dispute decisions do not move the money the provider is holding. Attribution is
-          copied onto the prefund and is not rewritten when the source list changes. A staged or recurring
-          prefund stays unfunded until each tranche has its own signed webhook.           Gross is entered in USD. Another currency uses the Wise user rate for the saved profile. A typed
-          number is not the rate. Revenue-share lines are written when the provider releases a milestone. They are not cash.
+          A prefund stays unfunded until a signed provider webhook confirms it — or an admin uses{" "}
+          <span className="font-semibold text-indigo">Simulate provider hold (demo)</span> on an awaiting record.
+          The demo marketplace provider is seeded as “demo” and can be replaced with a live provider later. Cancelling
+          before confirmation posts no ledger entry. Dispute decisions do not move the money the provider is holding.
+          Attribution is copied onto the prefund and is not rewritten when the source list changes. Staged or recurring
+          prefunds stay unfunded until each tranche has its own confirmation. Gross is entered in USD. Another currency
+          uses the Wise user rate for the saved profile. Revenue-share lines are written when the provider releases a
+          milestone. They are not cash.
         </p>
       </div>
 
@@ -1477,6 +1481,18 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 Change order {formatMoney(order.previousUsdCents)} → {formatMoney(order.nextUsdCents)}. {order.note}
               </p>
             ))}
+            {canManage && funding.status === "awaiting_provider" ? (
+              <form action={actionSimulatePrefundHold} className="mt-3 flex flex-wrap items-center gap-2">
+                <input type="hidden" name="fundingId" value={funding.id} />
+                <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                  Simulate provider hold (demo)
+                </button>
+                <span className="text-[11px] text-muted">
+                  Confirms this prefund without a live webhook. Uses provider “{funding.providerCode}”. Swap to a real
+                  marketplace webhook when ready.
+                </span>
+              </form>
+            ) : null}
             <ul className="mt-2 space-y-1 text-indigo">
               {funding.milestones.map((milestone) => (
                 <li key={milestone.id}>

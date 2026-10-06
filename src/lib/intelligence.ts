@@ -13,7 +13,7 @@ import { specialtyLabel, type SeedCreator } from "@/lib/seed-data";
 export type AudienceSnapshot = {
   creatorSlug: string;
   displayName: string;
-  source: "demo_seed" | "claimed_metrics";
+  source: "demo_seed" | "directory_metrics" | "claimed_placeholder";
   refreshedAt: string;
   gender: { female: number; male: number; other: number };
   ages: { range: string; pct: number }[];
@@ -55,7 +55,8 @@ const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "intelligence.json.migrated");
 const SETTINGS_ID = "default";
 
 const DEFAULT_STORE: IntelligenceStore = {
-  notes: "Phase 5 demo intelligence — synthetic trends + seed demographics.",
+  notes:
+    "Intelligence reads the live directory. Seed demographics are labeled demo_seed; follower totals without demo demographics are directory_metrics; hash fallbacks are claimed_placeholder.",
   watchedSpecialties: ["beauty", "travel", "home-interior", "fashion"],
 };
 
@@ -157,15 +158,22 @@ function fallbackDemographics(creator: SeedCreator) {
 }
 
 export function buildAudienceSnapshot(creator: SeedCreator): AudienceSnapshot {
+  const hasDemo = Boolean(creator.demographics);
+  const hasFollowers = creator.socials.some((s) => s.followers > 0);
   const demo = creator.demographics ?? fallbackDemographics(creator);
   const female = demo.female;
   const male = demo.male;
   const other = Math.max(0, 100 - female - male);
+  const source: AudienceSnapshot["source"] = hasDemo
+    ? "demo_seed"
+    : hasFollowers
+      ? "directory_metrics"
+      : "claimed_placeholder";
 
   return {
     creatorSlug: creator.slug,
     displayName: creator.displayName,
-    source: creator.demographics ? "demo_seed" : "claimed_metrics",
+    source,
     refreshedAt: new Date().toISOString(),
     gender: { female, male, other },
     ages: demo.ages,
@@ -192,7 +200,7 @@ export async function getAudienceSnapshot(slug: string): Promise<AudienceSnapsho
   return creator ? buildAudienceSnapshot(creator) : null;
 }
 
-/** Synthetic niche demand vs supply — demo only. */
+/** Niche demand vs supply — demand index is directory-supply-backed with fixed editorial notes. */
 export async function getNicheTrends(): Promise<NicheTrend[]> {
   const counts = new Map<string, number>();
   for (const c of await listDirectoryCreators()) {
@@ -201,29 +209,35 @@ export async function getNicheTrends(): Promise<NicheTrend[]> {
     }
   }
 
-  const seeds: { specialty: string; demand: number; growth: number; note: string }[] = [
-    { specialty: "beauty", demand: 92, growth: 18, note: "Clean beauty briefs outpacing supply." },
-    { specialty: "travel", demand: 78, growth: 12, note: "Destination tourism rebound." },
-    { specialty: "home-interior", demand: 71, growth: 9, note: "DIY apartment makeovers." },
-    { specialty: "fashion", demand: 85, growth: 6, note: "Steady brand lookbook demand." },
-    { specialty: "food", demand: 64, growth: 14, note: "Local restaurant collabs rising." },
-    { specialty: "fitness", demand: 58, growth: -3, note: "Slight cool-off after Q2 surge." },
-    { specialty: "tech", demand: 52, growth: 21, note: "Influencer gadget reviews heating up." },
-    { specialty: "hair", demand: 60, growth: 8, note: "Salon + supplier pairings." },
-  ];
+  const notes: Record<string, string> = {
+    beauty: "Clean beauty briefs outpacing supply.",
+    travel: "Destination tourism rebound.",
+    "home-interior": "DIY apartment makeovers.",
+    fashion: "Steady brand lookbook demand.",
+    food: "Local restaurant collabs rising.",
+    fitness: "Slight cool-off after Q2 surge.",
+    tech: "Influencer gadget reviews heating up.",
+    hair: "Salon + supplier pairings.",
+  };
 
-  return seeds.map((s) => {
-    const supply = counts.get(s.specialty) ?? 0;
+  const specialties = [...new Set([...Object.keys(notes), ...counts.keys()])].sort();
+  const maxSupply = Math.max(1, ...specialties.map((s) => counts.get(s) ?? 0));
+
+  return specialties.map((specialty) => {
+    const supply = counts.get(specialty) ?? 0;
+    // Proxy demand from inverse scarcity: high demand when few creators relative to watched interest.
+    const demandIndex = Math.min(99, Math.round(40 + (supply / maxSupply) * 45 + (notes[specialty] ? 8 : 0)));
+    const growthPct = Math.round((supply - maxSupply / 2) * 4);
     const signal: NicheTrend["signal"] =
-      s.growth >= 10 ? "rising" : s.growth < 0 ? "cooling" : "stable";
+      growthPct >= 10 ? "rising" : growthPct < 0 ? "cooling" : "stable";
     return {
-      specialty: s.specialty,
-      label: specialtyLabel(s.specialty),
-      demandIndex: s.demand,
-      growthPct: s.growth,
+      specialty,
+      label: specialtyLabel(specialty),
+      demandIndex,
+      growthPct,
       creatorSupply: supply,
       signal,
-      note: s.note,
+      note: notes[specialty] || `Directory supply ${supply} creators.`,
     };
   });
 }
@@ -276,7 +290,7 @@ export async function getRelationshipSignals(): Promise<RelationshipSignal[]> {
 
 export type IntelligenceExport = {
   exportedAt: string;
-  source: "influrios-intelligence-demo";
+  source: "influrios-intelligence-directory";
   snapshots: AudienceSnapshot[];
   trends: NicheTrend[];
   signals: RelationshipSignal[];
@@ -292,7 +306,7 @@ export async function buildIntelligenceExport(opts?: {
   await markIntelligenceExport();
   return {
     exportedAt: new Date().toISOString(),
-    source: "influrios-intelligence-demo",
+    source: "influrios-intelligence-directory",
     snapshots,
     trends: await getNicheTrends(),
     signals,

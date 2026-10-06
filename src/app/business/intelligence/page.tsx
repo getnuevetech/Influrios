@@ -64,8 +64,8 @@ export default async function BusinessIntelligencePage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted">
                 Demo data — demographics labeled{" "}
-                <span className="font-semibold text-indigo">demo_seed / claimed_metrics</span>. Not
-                live social API sync.
+                <span className="font-semibold text-indigo">demo_seed / directory_metrics / claimed_placeholder</span>.
+                Not live social API sync.
               </p>
               <div className="flex flex-wrap gap-2">
                 <a

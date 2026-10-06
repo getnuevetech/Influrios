@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/db";
 import { deliverMail, loadMailConfig } from "@/lib/mail";
+import { deliverSms, SMS_BODY_MAX, smsProviderLabel } from "@/lib/sms";
 
-/** ~2 SMS segments (GSM-7). Keep admin copy short. */
-export const SMS_BODY_MAX = 320;
+export { SMS_BODY_MAX, smsProviderLabel };
 
 export const COMM_AUDIENCES = ["all", "user", "business", "influencer", "admin"] as const;
 export type CommAudience = (typeof COMM_AUDIENCES)[number];
@@ -239,6 +239,7 @@ const SAMPLE_VARS: CommVars = {
 export async function sendCommTemplateTest(input: {
   templateId: string;
   toEmail: string;
+  toPhone?: string;
   channel: "email" | "sms";
 }): Promise<{ ok: boolean; message: string }> {
   const channels = await getCommChannelSettings();
@@ -273,22 +274,25 @@ export async function sendCommTemplateTest(input: {
   if (!channels.smsEnabled) return { ok: false, message: "SMS channel is turned off." };
   const sms = renderCommCopy(template.bodySms, SAMPLE_VARS);
   if (!sms) return { ok: false, message: "This template has no SMS body." };
-  try {
-    await prisma.job.create({
-      data: {
-        kind: "sms_test",
-        status: "failed",
-        lastError: "SMS provider is not connected yet. Template preview was recorded only.",
-        payload: { to: input.toEmail, templateKey: template.key, channel: "sms", preview: sms.slice(0, SMS_BODY_MAX) },
-      },
-    });
-  } catch {
-    /* ignore */
+  const to =
+    String(input.toPhone || "").trim() ||
+    String(input.toEmail || "").trim();
+  const sent = await deliverSms({
+    to,
+    body: sms,
+    templateKey: template.key,
+    kind: "sms_test",
+  });
+  if (sent.ok) {
+    return {
+      ok: true,
+      message:
+        sent.provider === "demo"
+          ? `Demo SMS accepted for “${template.name}” (${smsProviderLabel()}). Check Jobs.`
+          : `SMS accepted for “${template.name}” via ${sent.provider}.`,
+    };
   }
-  return {
-    ok: false,
-    message: "SMS channel is enabled, but no SMS provider is connected yet. Preview was logged on Jobs.",
-  };
+  return { ok: false, message: sent.message };
 }
 
 export async function setUserCommPreference(input: {
