@@ -2,6 +2,7 @@ import type { PlanTier, Prisma, SocialPlatform } from "@prisma/client";
 import { listPublishedClaimCreators } from "@/lib/claim";
 import { toPublicProfile } from "@/lib/onboarding";
 import { prisma } from "@/lib/db";
+import { rethrowIfNextDynamicError } from "@/lib/next-dynamic";
 import { isPlanCode } from "@/lib/entitlements";
 import {
   defaultAvatarForGender,
@@ -391,8 +392,9 @@ export async function getDirectory(): Promise<Cache> {
   try {
     const { connection } = await import("next/server");
     await connection();
-  } catch {
-    // scripts
+  } catch (error) {
+    rethrowIfNextDynamicError(error);
+    // Scripts and unit tests have no request scope.
   }
   if (cache && Date.now() - cache.at < CACHE_MS) return cache;
   try {
