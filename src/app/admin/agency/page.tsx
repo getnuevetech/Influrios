@@ -12,7 +12,8 @@ import {
 } from "@/app/admin/agency/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { agencyStats, getAgencyStore, listAgencySeats } from "@/lib/agency";
+import { agencyStats, agencyWorkspaceIdForOwner, getAgencyStore, listAgencySeats } from "@/lib/agency";
+import { getAccountSession } from "@/lib/accounts";
 import { productSwitch } from "@/lib/product-switches";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
@@ -38,7 +39,13 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
   const session = await requireAdminPage("agency");
   const canManage = hasPermission(session, "agency.manage");
   const params = await searchParams;
-  const [store, seats, seatsOn] = await Promise.all([getAgencyStore(), listAgencySeats(), productSwitch("agency_seats")]);
+  const account = await getAccountSession();
+  const workspaceId = account ? agencyWorkspaceIdForOwner(account.id) : null;
+  const [store, seats, seatsOn] = await Promise.all([
+    getAgencyStore(workspaceId),
+    listAgencySeats(workspaceId),
+    productSwitch("agency_seats"),
+  ]);
   const stats = agencyStats(store);
   const directoryCreators = await listDirectoryCreators();
   const bySlug = indexCreatorsBySlug(directoryCreators);

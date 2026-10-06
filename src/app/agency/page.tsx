@@ -4,12 +4,12 @@ import {
   actionAddRoster,
   actionCreateCampaign,
   actionCreatePortfolio,
-  actionEnableAgencyPlan,
   actionSetCampaignStatus,
   actionTogglePortfolio,
 } from "@/app/agency/actions";
 import {
   agencyStats,
+  agencyWorkspaceIdForOwner,
   getAgencyStore,
   listPublishedPortfolios,
 } from "@/lib/agency";
@@ -51,7 +51,13 @@ export default async function AgencyPage({ searchParams }: Props) {
   ]);
   const entitlements = getBusinessEntitlements(ws.plan);
   const unlocked = seatsOn ? access.ok : entitlements.agencyWorkspace;
-  const store = await getAgencyStore();
+  const workspaceId =
+    access.ok && access.mode === "seat"
+      ? access.seat.workspaceId
+      : access.ok && access.account?.id
+        ? agencyWorkspaceIdForOwner(access.account.id)
+        : null;
+  const store = await getAgencyStore(workspaceId);
   const stats = agencyStats(store);
   const published = listPublishedPortfolios(store);
   const directoryCreators = await listDirectoryCreators();
@@ -66,7 +72,7 @@ export default async function AgencyPage({ searchParams }: Props) {
       <section className="hero-atmosphere text-white">
         <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
-            Phase 11 · Agency
+            Agency
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold">{store.name}</h1>
           <p className="mt-3 max-w-2xl text-white/75">
@@ -106,12 +112,10 @@ export default async function AgencyPage({ searchParams }: Props) {
 
         {params.error === "agency_plan_required" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Agency plan required to mutate roster / campaigns / portfolios.{" "}
-            <form action={actionEnableAgencyPlan} className="mt-2 inline">
-              <button type="submit" className="font-semibold text-violet underline">
-                Demo upgrade to AGENCY →
-              </button>
-            </form>
+            Agency plan required to change the roster, campaigns, and portfolios.{" "}
+            <Link href="/billing" className="font-semibold text-violet underline">
+              Upgrade on Billing →
+            </Link>
           </div>
         ) : params.error ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -148,16 +152,9 @@ export default async function AgencyPage({ searchParams }: Props) {
                   Sign in →
                 </Link>
               ) : (
-                <>
-                  <form action={actionEnableAgencyPlan}>
-                    <button type="submit" className="btn-primary !py-2 text-sm">
-                      Demo upgrade to AGENCY →
-                    </button>
-                  </form>
-                  <Link href="/billing" className="btn-secondary !py-2 text-sm">
-                    Billing
-                  </Link>
-                </>
+                <Link href="/billing" className="btn-primary !py-2 text-sm">
+                  Upgrade on Billing →
+                </Link>
               )}
             </div>
           </section>
@@ -377,7 +374,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 Joint portfolios
               </h2>
               <p className="mt-1 text-sm text-muted">
-                Case-study stubs for complementary creator pairs — closes Phase 2 collab proof.
+                Joint portfolios for complementary creator pairs on this agency workspace.
               </p>
             </div>
             <Link

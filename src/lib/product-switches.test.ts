@@ -89,11 +89,9 @@ describe("admin product switches", () => {
     if (!portal.ok) assert.match(portal.error, /Nothing was opened/);
   });
 
-  it("refuses demo checkout when that switch is off and Stripe is not configured", async () => {
-    if (isStripeConfigured()) return;
-    setProductSwitchForTests("demo_checkout", false);
+  it("refuses checkout when Stripe is not configured", async () => {
+    if (!process.env.DATABASE_URL || isStripeConfigured()) return;
     const result = await startCheckout({ sku: "creator_plus" });
-    setProductSwitchForTests("demo_checkout", null);
     assert.equal(result.ok, false);
     if (!result.ok) assert.match(result.error, /Nothing was charged/);
   });

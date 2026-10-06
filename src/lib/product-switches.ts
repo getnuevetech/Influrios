@@ -2,11 +2,6 @@ import { prisma } from "@/lib/db";
 
 export const PRODUCT_SWITCHES = [
   {
-    key: "demo_checkout",
-    enabled: true,
-    description: "Checkout can finish without Stripe. Turn this off and nothing is charged until Stripe is ready.",
-  },
-  {
     key: "customer_portal",
     enabled: false,
     description: "Members can open the Stripe billing portal. Turned off, the portal stays closed.",
@@ -25,12 +20,6 @@ export const PRODUCT_SWITCHES = [
     key: "agency_seats",
     enabled: false,
     description: "Named seats on the agency workspace. Turned off, the roster stays and new seats are refused.",
-  },
-  {
-    key: "legacy_demo_payments",
-    enabled: false,
-    description:
-      "Phase 9/10 JSON escrow and trust demo consoles. Turned off, product CTAs stay on the marketplace ledger.",
   },
   {
     key: "paid_mentoring",

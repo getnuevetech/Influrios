@@ -13,7 +13,7 @@ import { specialtyLabel, type SeedCreator } from "@/lib/seed-data";
 export type AudienceSnapshot = {
   creatorSlug: string;
   displayName: string;
-  source: "demo_seed" | "claimed_metrics";
+  source: "claimed_metrics" | "unavailable";
   refreshedAt: string;
   gender: { female: number; male: number; other: number };
   ages: { range: string; pct: number }[];
@@ -55,8 +55,8 @@ const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "intelligence.json.migrated");
 const SETTINGS_ID = "default";
 
 const DEFAULT_STORE: IntelligenceStore = {
-  notes: "Phase 5 demo intelligence — synthetic trends + seed demographics.",
-  watchedSpecialties: ["beauty", "travel", "home-interior", "fashion"],
+  notes: "",
+  watchedSpecialties: [],
 };
 
 function storeFromRow(row: {
@@ -65,10 +65,8 @@ function storeFromRow(row: {
   lastExportAt: Date | null;
 }): IntelligenceStore {
   return {
-    notes: row.notes || DEFAULT_STORE.notes,
-    watchedSpecialties: row.watchedSpecialties.length
-      ? row.watchedSpecialties
-      : [...DEFAULT_STORE.watchedSpecialties],
+    notes: row.notes,
+    watchedSpecialties: row.watchedSpecialties,
     lastExportAt: row.lastExportAt?.toISOString(),
   };
 }
@@ -137,40 +135,21 @@ export async function markIntelligenceExport(): Promise<void> {
   });
 }
 
-function fallbackDemographics(creator: SeedCreator) {
-  const hash = creator.slug.length * 17;
-  return {
-    female: 55 + (hash % 25),
-    male: 45 - (hash % 20),
-    locations: [
-      { name: creator.locationCity, pct: 22 + (hash % 10) },
-      { name: "New York", pct: 14 },
-      { name: "London", pct: 9 },
-    ],
-    ages: [
-      { range: "18-24", pct: 28 },
-      { range: "25-34", pct: 34 },
-      { range: "35-44", pct: 22 },
-      { range: "45+", pct: 16 },
-    ],
-  };
-}
-
 export function buildAudienceSnapshot(creator: SeedCreator): AudienceSnapshot {
-  const demo = creator.demographics ?? fallbackDemographics(creator);
-  const female = demo.female;
-  const male = demo.male;
-  const other = Math.max(0, 100 - female - male);
+  const demo = creator.demographics;
+  const female = demo?.female ?? 0;
+  const male = demo?.male ?? 0;
+  const other = demo ? Math.max(0, 100 - female - male) : 0;
 
   return {
     creatorSlug: creator.slug,
     displayName: creator.displayName,
-    source: creator.demographics ? "demo_seed" : "claimed_metrics",
+    source: demo ? "claimed_metrics" : "unavailable",
     refreshedAt: new Date().toISOString(),
     gender: { female, male, other },
-    ages: demo.ages,
-    topLocations: demo.locations.slice(0, 5),
-    engagementRate: creator.stats?.engagementRate ?? "3.2%",
+    ages: demo?.ages ?? [],
+    topLocations: demo?.locations.slice(0, 5) ?? [],
+    engagementRate: creator.stats?.engagementRate ?? "",
     totalReach: creator.stats?.totalReach ?? formatRoughReach(creator),
     primaryPlatforms: creator.socials.slice(0, 3).map((s) => s.platform),
   };
@@ -192,7 +171,7 @@ export async function getAudienceSnapshot(slug: string): Promise<AudienceSnapsho
   return creator ? buildAudienceSnapshot(creator) : null;
 }
 
-/** Synthetic niche demand vs supply — demo only. */
+/** Specialty supply counted from the live directory. No invented demand or growth. */
 export async function getNicheTrends(): Promise<NicheTrend[]> {
   const counts = new Map<string, number>();
   for (const c of await listDirectoryCreators()) {
@@ -201,31 +180,17 @@ export async function getNicheTrends(): Promise<NicheTrend[]> {
     }
   }
 
-  const seeds: { specialty: string; demand: number; growth: number; note: string }[] = [
-    { specialty: "beauty", demand: 92, growth: 18, note: "Clean beauty briefs outpacing supply." },
-    { specialty: "travel", demand: 78, growth: 12, note: "Destination tourism rebound." },
-    { specialty: "home-interior", demand: 71, growth: 9, note: "DIY apartment makeovers." },
-    { specialty: "fashion", demand: 85, growth: 6, note: "Steady brand lookbook demand." },
-    { specialty: "food", demand: 64, growth: 14, note: "Local restaurant collabs rising." },
-    { specialty: "fitness", demand: 58, growth: -3, note: "Slight cool-off after Q2 surge." },
-    { specialty: "tech", demand: 52, growth: 21, note: "Influencer gadget reviews heating up." },
-    { specialty: "hair", demand: 60, growth: 8, note: "Salon + supplier pairings." },
-  ];
-
-  return seeds.map((s) => {
-    const supply = counts.get(s.specialty) ?? 0;
-    const signal: NicheTrend["signal"] =
-      s.growth >= 10 ? "rising" : s.growth < 0 ? "cooling" : "stable";
-    return {
-      specialty: s.specialty,
-      label: specialtyLabel(s.specialty),
-      demandIndex: s.demand,
-      growthPct: s.growth,
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([specialty, supply]) => ({
+      specialty,
+      label: specialtyLabel(specialty),
+      demandIndex: supply,
+      growthPct: 0,
       creatorSupply: supply,
-      signal,
-      note: s.note,
-    };
-  });
+      signal: "stable" as const,
+      note: "",
+    }));
 }
 
 export async function getRelationshipSignals(): Promise<RelationshipSignal[]> {
@@ -276,7 +241,7 @@ export async function getRelationshipSignals(): Promise<RelationshipSignal[]> {
 
 export type IntelligenceExport = {
   exportedAt: string;
-  source: "influrios-intelligence-demo";
+  source: "influrios-intelligence";
   snapshots: AudienceSnapshot[];
   trends: NicheTrend[];
   signals: RelationshipSignal[];
@@ -292,7 +257,7 @@ export async function buildIntelligenceExport(opts?: {
   await markIntelligenceExport();
   return {
     exportedAt: new Date().toISOString(),
-    source: "influrios-intelligence-demo",
+    source: "influrios-intelligence",
     snapshots,
     trends: await getNicheTrends(),
     signals,

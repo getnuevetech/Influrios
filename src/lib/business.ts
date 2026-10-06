@@ -256,7 +256,7 @@ export async function ensureOwnedBusinessWorkspace(
   }
 }
 
-export async function setBusinessPlan(plan: BusinessPlanCode, workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
+export async function setBusinessPlan(plan: BusinessPlanCode, workspaceId: string) {
   if (!PLAN_CODES.includes(plan)) throw new Error("Unknown business plan.");
   await readWorkspace(workspaceId);
   await prisma.businessWorkspace.update({ where: { id: workspaceId }, data: { plan } });

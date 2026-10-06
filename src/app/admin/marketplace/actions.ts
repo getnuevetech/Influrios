@@ -41,7 +41,6 @@ export async function actionSaveMarketplaceSettings(formData: FormData) {
       killFeeFixedCents: Math.round(Number(formData.get("killFeeFixedUsd") ?? 0) * 100),
     });
     await setProductSwitch("financial_reports", formData.get("financialReports") === "on");
-    await setProductSwitch("legacy_demo_payments", formData.get("legacyDemoPayments") === "on");
     await setProductSwitch("collab_os_v1", formData.get("collabOsV1") === "on");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save settings.";

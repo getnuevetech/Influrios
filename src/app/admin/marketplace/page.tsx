@@ -67,7 +67,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const canManage = hasPermission(session, "marketplace.manage");
   const canHighRiskCancel = hasPermission(session, "collab_finance.high_risk");
   const params = await searchParams;
-  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, legacyDemoOn, collabOsOn, paymentRisk] =
+  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, collabOsOn, paymentRisk] =
     await Promise.all([
       marketplaceConfig(),
       listFundings(),
@@ -79,7 +79,6 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       listRevenueParties(),
       wiseFxConfig(),
       productSwitch("financial_reports"),
-      productSwitch("legacy_demo_payments"),
       productSwitch("collab_os_v1"),
       listPaymentRiskFundings(),
     ]);
@@ -317,10 +316,6 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Show the monthly ledger report
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="legacyDemoPayments" defaultChecked={legacyDemoOn} className="accent-violet" />
-              Show Phase 9/10 JSON payment and trust demos
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="collabOsV1" defaultChecked={collabOsOn} className="accent-violet" />
               Collaboration OS hubs and contract wizard (`collab_os_v1`)
             </label>
@@ -370,7 +365,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             {config.maxGrossCents > 0 ? formatMoney(config.maxGrossCents) : "off"} · partial refunds{" "}
             {config.partialRefundsEnabled ? "on" : "off"} · change orders{" "}
             {config.changeOrdersEnabled ? config.maxChangeOrders : "off"} · open disputes{" "}
-            {config.riskControlsEnabled ? config.maxOpenDisputes : "off"} · monthly report {reportsOn ? "on" : "off"} · legacy demos {legacyDemoOn ? "on" : "off"}
+            {config.riskControlsEnabled ? config.maxOpenDisputes : "off"} · monthly report {reportsOn ? "on" : "off"}
             · collab OS {collabOsOn ? "on" : "off"} · auto-approval {config.autoApprovalEnabled ? "on" : "off"} · kill fee{" "}
             {((config.killFeeBps ?? 0) / 100).toFixed(0)}% + {formatMoney(config.killFeeFixedCents ?? 0)}
           </p>

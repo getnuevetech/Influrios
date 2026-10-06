@@ -25,7 +25,7 @@ function sampleCreator(overrides: Partial<SeedCreator> = {}): SeedCreator {
 }
 
 describe("intelligence snapshots", () => {
-  it("builds a demo snapshot with gender remainder and platforms", () => {
+  it("uses claimed demographics and does not invent a split", () => {
     const snapshot = buildAudienceSnapshot(
       sampleCreator({
         demographics: {
@@ -34,13 +34,31 @@ describe("intelligence snapshots", () => {
           locations: [{ name: "Austin", pct: 40 }],
           ages: [{ range: "25-34", pct: 50 }],
         },
+        stats: {
+          engagementRate: "4.1%",
+          engagementDelta: "",
+          totalReach: "12K",
+          reachDelta: "",
+          avgViews: "",
+          viewsDelta: "",
+          collaborations: "",
+          collabDelta: "",
+        },
       }),
     );
     assert.equal(snapshot.creatorSlug, "ada-maker");
-    assert.equal(snapshot.source, "demo_seed");
+    assert.equal(snapshot.source, "claimed_metrics");
     assert.equal(snapshot.gender.other, 10);
-    assert.ok(snapshot.engagementRate);
+    assert.equal(snapshot.engagementRate, "4.1%");
     assert.deepEqual(snapshot.primaryPlatforms, ["INSTAGRAM"]);
+
+    const empty = buildAudienceSnapshot(sampleCreator());
+    assert.equal(empty.source, "unavailable");
+    assert.equal(empty.gender.female, 0);
+    assert.equal(empty.gender.male, 0);
+    assert.deepEqual(empty.ages, []);
+    assert.deepEqual(empty.topLocations, []);
+    assert.equal(empty.engagementRate, "");
   });
 });
 
@@ -48,7 +66,7 @@ describe("intelligence export csv", () => {
   it("escapes quotes and includes snapshot columns", () => {
     const payload: IntelligenceExport = {
       exportedAt: "2026-10-02T00:00:00.000Z",
-      source: "influrios-intelligence-demo",
+      source: "influrios-intelligence",
       snapshots: [
         {
           creatorSlug: "ada",

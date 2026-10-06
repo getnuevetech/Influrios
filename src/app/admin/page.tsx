@@ -5,20 +5,16 @@ import {
   getAdminSession,
   type AdminModule,
 } from "@/lib/admin-auth";
-import { agencyStats, getAgencyStore } from "@/lib/agency";
+import { agencyStats, agencyWorkspaceIdForOwner, getAgencyStore } from "@/lib/agency";
+import { getAccountSession } from "@/lib/accounts";
 import { getBillingStore } from "@/lib/billing";
 import { stripeBillingMode } from "@/lib/stripe-admin";
 import { providerHealth } from "@/lib/provider-health";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
-import {
-  isLegacyDemoPaymentsAdminHref,
-  legacyDemoPaymentsEnabled,
-} from "@/lib/legacy-demo-payments";
+import { isLegacyDemoPaymentsAdminHref } from "@/lib/legacy-demo-payments";
 import { formatMoney } from "@/lib/money";
-import { escrowStats, getProtectedPaymentsStore } from "@/lib/protected-payments";
-import { getTrustStore, trustStats } from "@/lib/trust";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -288,23 +284,23 @@ export default async function AdminHomePage({
   if (!session) redirect("/admin/login");
 
   const params = await searchParams;
-  const legacyDemoOn = await legacyDemoPaymentsEnabled().catch(() => false);
-  const [cms, matching, billing, payments, trust, agency, memberAccounts, health, stripeMode, snapshotsList, trends] =
+  const account = await getAccountSession().catch(() => null);
+  const agencyId = account ? agencyWorkspaceIdForOwner(account.id) : null;
+  const [cms, matching, billing, heldCount, heldSum, openDisputes, agency, memberAccounts, health, stripeMode, snapshotsList, trends] =
     await Promise.all([
       getCms().catch(() => null),
       getManagedMatching().catch(() => null),
       getBillingStore().catch(() => null),
-      legacyDemoOn ? getProtectedPaymentsStore().catch(() => null) : Promise.resolve(null),
-      legacyDemoOn ? getTrustStore().catch(() => null) : Promise.resolve(null),
-      getAgencyStore().catch(() => null),
+      prisma.collaborationFunding.count({ where: { status: "held" } }).catch(() => 0),
+      prisma.collaborationFunding.aggregate({ where: { status: "held" }, _sum: { grossCents: true } }).catch(() => ({ _sum: { grossCents: 0 } })),
+      prisma.milestoneDispute.count({ where: { status: { in: ["open", "under_review"] } } }).catch(() => 0),
+      agencyId ? getAgencyStore(agencyId).catch(() => null) : Promise.resolve(null),
       prisma.user.count().catch(() => 0),
       providerHealth().catch(() => null),
       stripeBillingMode().catch(() => "demo" as const),
       getAllAudienceSnapshots().catch(() => []),
       getNicheTrends().catch(() => []),
     ]);
-  const payStats = payments ? escrowStats(payments) : { active: 0, held: 0 };
-  const tStats = trust ? trustStats(trust) : { open: 0, resolved: 0, total: 0, contracts: 0 };
   const aStats = agency ? agencyStats(agency) : { roster: 0, campaigns: 0, live: 0, portfolios: 0, published: 0 };
   const visibleCards = cms?.featuredCards.cards.filter((c) => c.visible).length ?? 0;
   const optIns = matching?.optIns.filter((o) => o.openToManaged).length ?? 0;
@@ -319,9 +315,9 @@ export default async function AdminHomePage({
     snapshots,
     rising,
     completedCheckouts,
-    escrowActive: payStats.active,
-    escrowHeld: formatMoney(payStats.held),
-    trustOpen: tStats.open,
+    escrowActive: heldCount,
+    escrowHeld: formatMoney(heldSum._sum.grossCents ?? 0),
+    trustOpen: openDisputes,
     agencyRoster: aStats.roster,
     memberAccounts,
     stripeMode,
@@ -329,7 +325,7 @@ export default async function AdminHomePage({
 
   const visibleLinks = LINKS.filter(
     (l) =>
-      (legacyDemoOn || !isLegacyDemoPaymentsAdminHref(l.href)) &&
+      !isLegacyDemoPaymentsAdminHref(l.href) &&
       canAccessModule(session, l.module),
   );
 

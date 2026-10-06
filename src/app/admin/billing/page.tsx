@@ -20,8 +20,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
   const canEdit = hasPermission(session, "gateways.edit");
   const params = await searchParams;
   const store = await getBillingStore();
-  const [demoOn, portalOn, prices, stripeMode] = await Promise.all([
-    productSwitch("demo_checkout"),
+  const [portalOn, prices, stripeMode] = await Promise.all([
     productSwitch("customer_portal"),
     listBillingPriceIds(),
     stripeBillingMode(),
@@ -37,7 +36,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Billing</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Demo checkout stays on until you turn it off. A Stripe sandbox key (sk_test_ or rkcs_test_) can be saved
+          A plan changes only after Stripe confirms Checkout. A Stripe sandbox key (sk_test_ or rkcs_test_) can be saved
           on the Stripe gateway. Checkout opens Stripe and leaves the plan unpaid until Stripe confirms the session.
           A live key saved on the gateway is refused.
         </p>
@@ -57,16 +56,12 @@ export default async function AdminBillingPage({ searchParams }: Props) {
       <section className="card-surface p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Checkout switches</h2>
         <p className="mt-1 text-sm text-muted">
-          Demo checkout is {demoOn ? "on" : "off"}. Billing portal is {portalOn ? "on" : "off"}.
+          Checkout requires Stripe. Billing portal is {portalOn ? "on" : "off"}.
           {!canEdit ? " Saving these needs the gateways edit permission." : ""}
         </p>
         {canEdit ? (
           <>
           <form action={actionSaveBillingSwitches} className="mt-4 space-y-3">
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="demo_checkout" defaultChecked={demoOn} className="accent-violet" />
-              Allow checkout to finish without Stripe
-            </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="customer_portal" defaultChecked={portalOn} className="accent-violet" />
               Allow the Stripe billing portal

@@ -20,7 +20,6 @@ export async function actionCheckStripeSandbox() {
 
 export async function actionSaveBillingSwitches(formData: FormData) {
   await requireAdminAction("gateways.edit");
-  await setProductSwitch("demo_checkout", formData.get("demo_checkout") === "on");
   await setProductSwitch("customer_portal", formData.get("customer_portal") === "on");
   revalidatePath("/admin/billing");
   revalidatePath("/billing");

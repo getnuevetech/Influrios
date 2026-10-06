@@ -52,8 +52,8 @@ for (const row of PRODUCT_SWITCHES) {
   console.log(`  ${row.key}: default ${row.enabled ? "on" : "off"} — ${row.description}`);
 }
 
-console.log("\nAfter Stripe sandbox is green: turn demo_checkout OFF on staging.");
-console.log("Leave customer_portal, stripe_connect, legacy_demo_payments OFF unless testing those paths.");
+console.log("\nCheckout stays closed until a Stripe sandbox key is saved. Plans change only after Stripe confirms payment.");
+console.log("Leave customer_portal and stripe_connect OFF unless testing those paths.");
 console.log("\nFill evidence in docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md — this script does not prove delivery.");
 
 if (missingRequired > 0) {

@@ -23,9 +23,10 @@ export default async function BillingSuccessPage({ searchParams }: Props) {
 
   let productName = params.sku ? getProduct(params.sku)?.name : undefined;
   let error: string | null = null;
-  const mode = params.demo === "1" ? "demo" : "stripe";
 
-  if (localId) {
+  if (params.demo === "1") {
+    error = "Checkout was not confirmed by Stripe. Nothing was changed.";
+  } else if (localId) {
     const result = await completeCheckout(localId, {
       creatorSlug: params.creator || undefined,
     });
@@ -50,14 +51,13 @@ export default async function BillingSuccessPage({ searchParams }: Props) {
         ) : (
           <>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">
-              {mode === "demo" ? "Demo upgrade complete" : "Payment received"}
+              Payment received
             </p>
             <h1 className="mt-2 font-display text-3xl font-bold text-indigo">
               You’re on {productName ?? "your plan"}
             </h1>
             <p className="mt-3 text-sm text-muted">
-              Entitlements are active on the demo workspace
-              {mode === "demo" ? " (no Stripe charge)" : " via Stripe Checkout"}.
+              Stripe confirmed this checkout. The plan is active on your workspace.
             </p>
           </>
         )}
