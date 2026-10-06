@@ -210,7 +210,7 @@ const LINKS: {
   {
     href: "/admin/signing",
     title: "Document signing",
-    blurb: "Signing API used after a collaboration is accepted.",
+    blurb: "Demo lifecycle and DocuSign-ready providers after a collaboration is accepted.",
     module: "signing",
     meta: () => "Demo lifecycle + DocuSign-ready",
   },
