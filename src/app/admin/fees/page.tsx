@@ -3,8 +3,10 @@ import { requireAdminPage } from "@/app/admin/guard";
 import {
   actionDeleteFeeRule,
   actionDeleteFeeSnapshot,
+  actionDeleteJurisdictionGate,
   actionFreezeFeeSnapshot,
   actionSaveFeeRule,
+  actionSaveJurisdictionGate,
   actionSimulateFee,
 } from "@/app/admin/actions";
 import { AdminCollapse } from "@/components/admin-collapse";
@@ -22,6 +24,7 @@ import {
   RELATIONSHIP_SOURCE_CONDITIONS,
   SERVICE_LEVEL_LABELS,
   SERVICE_LEVELS,
+  type CollaborationFeeRule,
 } from "@/lib/collaboration-fees";
 
 export const metadata = { title: "Admin · Collaboration fees" };
@@ -64,9 +67,14 @@ export default async function AdminFeesPage({ searchParams }: Props) {
         </p>
       </div>
 
-      {params.saved ? (
+      {params.saved === "rule" || params.saved === "1" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Fee rule saved (version bumped when commercial fields change).
+        </div>
+      ) : null}
+      {params.saved === "jurisdiction" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Jurisdiction gate saved.
         </div>
       ) : null}
       {params.removed === "rule" ? (
@@ -77,6 +85,11 @@ export default async function AdminFeesPage({ searchParams }: Props) {
       {params.removed === "snapshot" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Fee snapshot removed.
+        </div>
+      ) : null}
+      {params.removed === "jurisdiction" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Jurisdiction gate removed.
         </div>
       ) : null}
       {params.error ? (
@@ -173,38 +186,130 @@ export default async function AdminFeesPage({ searchParams }: Props) {
         ) : null}
       </section>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Jurisdiction gates</h2>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[480px] text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-muted">
-              <tr>
-                <th className="py-2">Code</th>
-                <th>Protected payments</th>
-                <th>Public term</th>
-              </tr>
-            </thead>
-            <tbody>
-              {store.jurisdictions.map((j) => (
-                <tr key={j.code} className="border-t border-[#E6ECFF]">
-                  <td className="py-2 font-semibold text-indigo">
-                    {j.code} · {j.label}
-                  </td>
-                  <td>{j.protectedPaymentsEnabled ? "Enabled" : "Disabled"}</td>
-                  <td>{protectedPaymentLabel(j.escrowTermAllowed)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-bold text-indigo">Jurisdiction gates</h2>
+          <p className="mt-1 text-xs text-muted">
+            Manage which markets allow protected payments and whether UI may say “escrow” (PA004). Deeper
+            capability flags also live under Marketplace.
+          </p>
         </div>
-        <p className="mt-2 text-xs text-muted">
+        {store.jurisdictions.map((j) => (
+          <AdminCollapse
+            key={j.code}
+            title={`${j.code} · ${j.label}`}
+            subtitle={`${j.protectedPaymentsEnabled ? "Protected payments on" : "Protected payments off"} · ${protectedPaymentLabel(j.escrowTermAllowed)}`}
+          >
+            {canManage ? (
+              <div className="space-y-3">
+                <form action={actionSaveJurisdictionGate} className="grid gap-3 sm:grid-cols-2">
+                  <input type="hidden" name="code" value={j.code} />
+                  <label className="text-xs font-semibold text-muted">
+                    Code
+                    <input
+                      value={j.code}
+                      readOnly
+                      className="mt-1 w-full rounded-lg border border-border bg-[#F7FAFF] px-3 py-2 text-sm text-indigo"
+                    />
+                  </label>
+                  <label className="text-xs font-semibold text-muted">
+                    Label
+                    <input
+                      name="label"
+                      defaultValue={j.label}
+                      required
+                      className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-indigo">
+                    <input
+                      type="checkbox"
+                      name="protectedPaymentsEnabled"
+                      defaultChecked={j.protectedPaymentsEnabled}
+                      className="accent-violet"
+                    />
+                    Protected payments enabled
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-indigo">
+                    <input
+                      type="checkbox"
+                      name="escrowTermAllowed"
+                      defaultChecked={j.escrowTermAllowed}
+                      className="accent-violet"
+                    />
+                    Allow the word escrow
+                  </label>
+                  <button type="submit" className="btn-primary w-fit !py-2 text-sm sm:col-span-2">
+                    Save jurisdiction
+                  </button>
+                </form>
+                <form action={actionDeleteJurisdictionGate}>
+                  <input type="hidden" name="code" value={j.code} />
+                  <button type="submit" className="text-xs font-semibold text-amber-800 hover:underline">
+                    Remove jurisdiction
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <p className="text-sm text-muted">
+                {j.protectedPaymentsEnabled ? "Enabled" : "Disabled"} ·{" "}
+                {protectedPaymentLabel(j.escrowTermAllowed)}
+              </p>
+            )}
+          </AdminCollapse>
+        ))}
+        {canManage ? (
+          <form
+            action={actionSaveJurisdictionGate}
+            className="grid gap-3 rounded-2xl border border-dashed border-[#E4EBFF] bg-white p-4 sm:grid-cols-2"
+          >
+            <h3 className="font-semibold text-indigo sm:col-span-2">Add jurisdiction gate</h3>
+            <label className="text-xs font-semibold text-muted">
+              Code (ISO-2)
+              <input
+                name="code"
+                required
+                maxLength={2}
+                placeholder="KE"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Label
+              <input
+                name="label"
+                required
+                placeholder="Kenya"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="protectedPaymentsEnabled" className="accent-violet" />
+              Protected payments enabled
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="escrowTermAllowed" className="accent-violet" />
+              Allow the word escrow
+            </label>
+            <button type="submit" className="btn-secondary w-fit sm:col-span-2">
+              Create jurisdiction
+            </button>
+          </form>
+        ) : null}
+        <p className="text-xs text-muted">
           PA004 — UI must not say “escrow” unless <code>escrowTermAllowed</code> is true for that
           jurisdiction.
         </p>
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-display text-lg font-bold text-indigo">Active rules</h2>
+        <div>
+          <h2 className="font-display text-lg font-bold text-indigo">Active rules</h2>
+          <p className="mt-1 text-xs text-muted">
+            Existing rules are collapsed after save. Use <span className="font-semibold">Add a fee rule</span>{" "}
+            below to create a new matrix row.
+          </p>
+        </div>
         {store.rules
           .slice()
           .sort((a, b) => b.priority - a.priority)
@@ -214,180 +319,29 @@ export default async function AdminFeesPage({ searchParams }: Props) {
               title={rule.name}
               subtitle={`${rule.active ? "Active" : "Inactive"} · v${rule.version} · ${rule.jurisdiction}/${rule.serviceLevel} · priority ${rule.priority}`}
             >
-            <form
-              action={actionSaveFeeRule}
-              className="grid gap-3 sm:grid-cols-3"
-            >
-              <input type="hidden" name="id" value={rule.id} />
-              <label className="text-xs font-semibold text-muted sm:col-span-2">
-                Name
-                <input
-                  name="name"
-                  defaultValue={rule.name}
-                  disabled={!canManage}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
-                />
-              </label>
-              <label className="flex items-end gap-2 text-xs font-semibold">
-                <input
-                  type="checkbox"
-                  name="active"
-                  defaultChecked={rule.active}
-                  disabled={!canManage}
-                />
-                Active · v{rule.version}
-              </label>
-              <Field name="priority" label="Priority" defaultValue={String(rule.priority)} disabled={!canManage} />
-              <Field name="jurisdiction" label="Jurisdiction" defaultValue={rule.jurisdiction} disabled={!canManage} />
-              <label className="text-xs font-semibold text-muted">
-                Service level
-                <select
-                  name="serviceLevel"
-                  defaultValue={rule.serviceLevel}
-                  disabled={!canManage}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  <option value="*">* (any)</option>
-                  {SERVICE_LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {SERVICE_LEVEL_LABELS[level]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-muted">
-                Fee type
-                <select
-                  name="feeType"
-                  defaultValue={rule.feeType}
-                  disabled={!canManage}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  {FEE_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {FEE_TYPE_LABELS[type]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-muted">
-                Funding mode
-                <select
-                  name="fundingMode"
-                  defaultValue={rule.fundingMode}
-                  disabled={!canManage}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  {FUNDING_MODE_CONDITIONS.map((mode) => (
-                    <option key={mode} value={mode}>
-                      {mode === "*" ? "* (any)" : mode}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-muted">
-                Relationship source
-                <select
-                  name="relationshipSource"
-                  defaultValue={rule.relationshipSource}
-                  disabled={!canManage}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  {RELATIONSHIP_SOURCE_CONDITIONS.map((source) => (
-                    <option key={source} value={source}>
-                      {source === "*" ? "* (any)" : source}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-muted">
-                Promotion channel
-                <select
-                  name="promotionChannel"
-                  defaultValue={rule.promotionChannel}
-                  disabled={!canManage}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  {PROMOTION_CHANNEL_CONDITIONS.map((channel) => (
-                    <option key={channel} value={channel}>
-                      {channel === "*" ? "* (any)" : channel}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-muted">
-                Method
-                <select
-                  name="method"
-                  defaultValue={rule.method}
-                  disabled={!canManage}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  {FEE_METHODS.map((method) => (
-                    <option key={method} value={method}>
-                      {FEE_METHOD_LABELS[method]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Field name="percentBps" label="Percent (bps)" defaultValue={String(rule.percentBps)} disabled={!canManage} />
-              <Field
-                name="fixedUsd"
-                label="Fixed / enterprise USD"
-                defaultValue={String(rule.fixedCents / 100)}
-                disabled={!canManage}
-              />
-              <Field
-                name="minFeeUsd"
-                label="Min fee USD"
-                defaultValue={String(rule.minFeeCents / 100)}
-                disabled={!canManage}
-              />
-              <Field
-                name="maxFeeUsd"
-                label="Max fee USD"
-                defaultValue={rule.maxFeeCents != null ? String(rule.maxFeeCents / 100) : ""}
-                disabled={!canManage}
-              />
-              <label className="text-xs font-semibold text-muted sm:col-span-3">
-                Tier bands JSON (tiered method)
-                <textarea
-                  name="tierBandsJson"
-                  defaultValue={
-                    rule.tierBands.length ? JSON.stringify(rule.tierBands) : ""
-                  }
-                  disabled={!canManage}
-                  rows={2}
-                  placeholder='[{"upToCents":100000,"percentBps":800},{"upToCents":null,"percentBps":1200}]'
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 font-mono text-xs text-indigo disabled:bg-[#F3F4F6]"
-                />
-              </label>
-              <Field name="payer" label="Payer" defaultValue={rule.payer} disabled={!canManage} />
-              <label className="text-xs font-semibold text-muted sm:col-span-3">
-                Notes
-                <input
-                  name="notes"
-                  defaultValue={rule.notes}
-                  disabled={!canManage}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
-                />
-              </label>
+              <FeeRuleForm rule={rule} canManage={canManage} />
               {canManage ? (
-                <button type="submit" className="btn-primary sm:col-span-3 !py-2 text-sm">
-                  Save rule
-                </button>
+                <form action={actionDeleteFeeRule} className="mt-3 border-t border-[#E6ECFF] pt-3">
+                  <input type="hidden" name="id" value={rule.id} />
+                  <button type="submit" className="text-xs font-semibold text-amber-800 hover:underline">
+                    Remove this rule
+                  </button>
+                </form>
               ) : null}
-            </form>
-            {canManage ? (
-              <form action={actionDeleteFeeRule} className="mt-3 border-t border-[#E6ECFF] pt-3">
-                <input type="hidden" name="id" value={rule.id} />
-                <button type="submit" className="text-xs font-semibold text-amber-800 hover:underline">
-                  Remove this rule
-                </button>
-              </form>
-            ) : null}
             </AdminCollapse>
           ))}
+
+        {canManage ? (
+          <div className="rounded-2xl border border-dashed border-[#E4EBFF] bg-white p-4">
+            <h3 className="font-semibold text-indigo">Add a fee rule</h3>
+            <p className="mt-1 text-xs text-muted">
+              Creates a new active matrix row. Leave ID blank — the server assigns one.
+            </p>
+            <div className="mt-3">
+              <FeeRuleForm canManage />
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <AdminCollapse
@@ -424,6 +378,179 @@ export default async function AdminFeesPage({ searchParams }: Props) {
         </ul>
       </AdminCollapse>
     </div>
+  );
+}
+
+function FeeRuleForm({
+  rule,
+  canManage,
+}: {
+  rule?: CollaborationFeeRule;
+  canManage: boolean;
+}) {
+  const isNew = !rule;
+  return (
+    <form action={actionSaveFeeRule} className="grid gap-3 sm:grid-cols-3">
+      {rule ? <input type="hidden" name="id" value={rule.id} /> : null}
+      <label className="text-xs font-semibold text-muted sm:col-span-2">
+        Name
+        <input
+          name="name"
+          defaultValue={rule?.name ?? ""}
+          required
+          placeholder="New collaboration fee rule"
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        />
+      </label>
+      <label className="flex items-end gap-2 text-xs font-semibold">
+        <input
+          type="checkbox"
+          name="active"
+          defaultChecked={rule?.active ?? true}
+          disabled={!canManage}
+        />
+        {rule ? `Active · v${rule.version}` : "Active"}
+      </label>
+      <Field name="priority" label="Priority" defaultValue={String(rule?.priority ?? 100)} disabled={!canManage} />
+      <Field name="jurisdiction" label="Jurisdiction" defaultValue={rule?.jurisdiction ?? "*"} disabled={!canManage} />
+      <label className="text-xs font-semibold text-muted">
+        Service level
+        <select
+          name="serviceLevel"
+          defaultValue={rule?.serviceLevel ?? "contracted"}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        >
+          <option value="*">* (any)</option>
+          {SERVICE_LEVELS.map((level) => (
+            <option key={level} value={level}>
+              {SERVICE_LEVEL_LABELS[level]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-xs font-semibold text-muted">
+        Fee type
+        <select
+          name="feeType"
+          defaultValue={rule?.feeType ?? "collaboration"}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        >
+          {FEE_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {FEE_TYPE_LABELS[type]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-xs font-semibold text-muted">
+        Funding mode
+        <select
+          name="fundingMode"
+          defaultValue={rule?.fundingMode ?? "*"}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        >
+          {FUNDING_MODE_CONDITIONS.map((mode) => (
+            <option key={mode} value={mode}>
+              {mode === "*" ? "* (any)" : mode}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-xs font-semibold text-muted">
+        Relationship source
+        <select
+          name="relationshipSource"
+          defaultValue={rule?.relationshipSource ?? "*"}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        >
+          {RELATIONSHIP_SOURCE_CONDITIONS.map((source) => (
+            <option key={source} value={source}>
+              {source === "*" ? "* (any)" : source}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-xs font-semibold text-muted">
+        Promotion channel
+        <select
+          name="promotionChannel"
+          defaultValue={rule?.promotionChannel ?? "*"}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        >
+          {PROMOTION_CHANNEL_CONDITIONS.map((channel) => (
+            <option key={channel} value={channel}>
+              {channel === "*" ? "* (any)" : channel}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-xs font-semibold text-muted">
+        Method
+        <select
+          name="method"
+          defaultValue={rule?.method ?? "percent"}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        >
+          {FEE_METHODS.map((method) => (
+            <option key={method} value={method}>
+              {FEE_METHOD_LABELS[method]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Field name="percentBps" label="Percent (bps)" defaultValue={String(rule?.percentBps ?? 1000)} disabled={!canManage} />
+      <Field
+        name="fixedUsd"
+        label="Fixed / enterprise USD"
+        defaultValue={String((rule?.fixedCents ?? 0) / 100)}
+        disabled={!canManage}
+      />
+      <Field
+        name="minFeeUsd"
+        label="Min fee USD"
+        defaultValue={String((rule?.minFeeCents ?? 0) / 100)}
+        disabled={!canManage}
+      />
+      <Field
+        name="maxFeeUsd"
+        label="Max fee USD"
+        defaultValue={rule?.maxFeeCents != null ? String(rule.maxFeeCents / 100) : ""}
+        disabled={!canManage}
+      />
+      <label className="text-xs font-semibold text-muted sm:col-span-3">
+        Tier bands JSON (tiered method)
+        <textarea
+          name="tierBandsJson"
+          defaultValue={rule?.tierBands?.length ? JSON.stringify(rule.tierBands) : ""}
+          disabled={!canManage}
+          rows={2}
+          placeholder='[{"upToCents":100000,"percentBps":800},{"upToCents":null,"percentBps":1200}]'
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 font-mono text-xs text-indigo disabled:bg-[#F3F4F6]"
+        />
+      </label>
+      <Field name="payer" label="Payer" defaultValue={rule?.payer ?? "brand"} disabled={!canManage} />
+      <label className="text-xs font-semibold text-muted sm:col-span-3">
+        Notes
+        <input
+          name="notes"
+          defaultValue={rule?.notes ?? ""}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        />
+      </label>
+      {canManage ? (
+        <button type="submit" className="btn-primary sm:col-span-3 !py-2 text-sm">
+          {isNew ? "Create rule" : "Save rule"}
+        </button>
+      ) : null}
+    </form>
   );
 }
 

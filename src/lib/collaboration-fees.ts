@@ -826,6 +826,47 @@ export async function deleteFeeSnapshot(snapshotId: string) {
   return { removed: true as const, id };
 }
 
+/** Create or update the fee-page jurisdiction gate fields (PA004). */
+export async function upsertJurisdictionGate(input: {
+  code: string;
+  label: string;
+  protectedPaymentsEnabled: boolean;
+  escrowTermAllowed: boolean;
+}) {
+  await ensureFeeDefaults();
+  const code = input.code.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) throw new Error("Use a two-letter jurisdiction code (e.g. US, NG).");
+  const label = input.label.trim().slice(0, 80);
+  if (!label) throw new Error("A jurisdiction label is required.");
+  const protectedPaymentsEnabled = Boolean(input.protectedPaymentsEnabled);
+  const escrowTermAllowed = Boolean(input.escrowTermAllowed) && protectedPaymentsEnabled;
+  const existing = await prisma.collaborationJurisdiction.findUnique({ where: { code } });
+  if (existing) {
+    return prisma.collaborationJurisdiction.update({
+      where: { code },
+      data: { label, protectedPaymentsEnabled, escrowTermAllowed },
+    });
+  }
+  return prisma.collaborationJurisdiction.create({
+    data: {
+      code,
+      label,
+      protectedPaymentsEnabled,
+      escrowTermAllowed,
+    },
+  });
+}
+
+export async function deleteJurisdictionGate(codeRaw: string) {
+  await ensureFeeDefaults();
+  const code = codeRaw.trim().toUpperCase();
+  if (!code) throw new Error("Choose a jurisdiction.");
+  const existing = await prisma.collaborationJurisdiction.findUnique({ where: { code } });
+  if (!existing) throw new Error("Jurisdiction not found.");
+  await prisma.collaborationJurisdiction.delete({ where: { code } });
+  return { removed: true as const, code, label: existing.label };
+}
+
 export async function getJurisdiction(code: string) {
   await ensureFeeDefaults();
   const row = await prisma.collaborationJurisdiction.findUnique({ where: { code } });
