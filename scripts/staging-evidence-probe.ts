@@ -75,7 +75,12 @@ async function main() {
   // Health
   try {
     const health = await fetchText(`${app}/api/health`);
-    type HealthJson = { ok?: boolean; status?: string; checks?: { db?: { ok?: boolean } } };
+    type HealthJson = {
+      ok?: boolean;
+      status?: string;
+      checks?: { db?: { ok?: boolean } };
+      secrets?: { authConfigured?: boolean };
+    };
     let parsed: HealthJson | null = null;
     try {
       parsed = JSON.parse(health.body) as HealthJson;
@@ -84,6 +89,7 @@ async function main() {
     }
     const ok = health.status === 200 && Boolean(parsed?.ok);
     const dbOk = parsed?.checks?.db?.ok;
+    const authConfigured = parsed?.secrets?.authConfigured === true;
     checks.push({
       id: "health",
       label: "/api/health ok (web + db)",
@@ -91,6 +97,14 @@ async function main() {
       detail: ok
         ? `status=${health.status}; db=${dbOk === false ? "fail" : "ok"}`
         : `status=${health.status}; body=${health.body.slice(0, 160)}`,
+    });
+    checks.push({
+      id: "auth_secret",
+      label: "Health secrets.authConfigured",
+      ok: authConfigured,
+      detail: authConfigured
+        ? "AUTH_SECRET or ADMIN_SESSION_SECRET is set on the host"
+        : "authConfigured is false. Set AUTH_SECRET on the host and redeploy. Phase M E0 is not met.",
     });
   } catch (error) {
     checks.push({
@@ -129,7 +143,9 @@ async function main() {
     const collab = await fetchText(`${app}/collaboration`);
     const joinCta =
       includesAny(collab.body, ["Join to request matches"]) ||
-      includesAny(collab.body, ["Request a Collaboration"]);
+      includesAny(collab.body, ["Request a Collaboration"]) ||
+      includesAny(collab.body, ["Sign in to apply"]) ||
+      includesAny(collab.body, ["Join as an Influencer"]);
     const legacyUpgrade =
       includesAny(collab.body, ["Upgrade from STARTER to request matches"]) ||
       /Upgrade from[\s\S]{0,40}STARTER[\s\S]{0,40}to request matches/i.test(collab.body);
@@ -177,6 +193,13 @@ async function main() {
     ["stripe", "Stripe sandbox checkout → webhook → plan + duplicate skip"],
     ["social", "One social OAuth consent → callback + metric gate"],
     ["marketplace", "Marketplace hold → release + duplicate skip"],
+    ["sms", "Twilio SMS verify template and message SID"],
+    ["meili", "Meilisearch index count equals published creators"],
+    ["recurring", "Recurring tranche 2 after the sweep tick"],
+    ["team", "Two-creator proposal, both accepts, funding id"],
+    ["esign", "DocuSign envelope completed once"],
+    ["regional", "Flutterwave or M-Pesa charge paid only by webhook"],
+    ["mentorship", "Paid mentorship Checkout id with no CollaborationFunding row"],
   ] as const) {
     checks.push({
       id: row[0],
@@ -190,7 +213,9 @@ async function main() {
   console.log("Webhook / callback URLs (register before §3–§6)");
   console.log(`  Stripe billing:     ${app}/api/billing/webhook`);
   console.log(`  Marketplace:        ${app}/api/marketplace/webhook`);
-  console.log(`  Social OAuth:       ${app}/api/social/callback\n`);
+  console.log(`  Social OAuth:       ${app}/api/social/callback`);
+  console.log(`  Signing:            ${app}/api/signing/webhook`);
+  console.log(`  Sweep clock:        ${app}/api/cron/sweeps\n`);
 
   console.log("| Check | Result | Detail |");
   console.log("|-------|--------|--------|");
@@ -204,7 +229,7 @@ async function main() {
   const passed = auto.filter((c) => c.ok === true);
 
   console.log(`\nAuto checks: ${passed.length} pass, ${failed.length} fail, ${auto.length} total.`);
-  console.log("Operator checks still required for Phase M sign-off (SMTP, Stripe, social, marketplace).");
+  console.log("Operator checks still required for Phase M sign-off. A blank evidence cell is not done.");
   console.log("This script does not mark Phase M complete.\n");
 
   if (failed.length > 0) {

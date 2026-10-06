@@ -6,7 +6,7 @@
 
 Feature-status history stays in `FULL_IMPLEMENTATION_PLAN.md`. This document is the work that still has to be built.
 
-**Code on main:** A through D, F through L. Slice L stores Twilio credentials and sends `sms_send` jobs, opens the billing portal and Connect from stored Stripe ids, charges Flutterwave and M-Pesa only after a verified webhook, runs the three remaining AI functions through the assigned provider with a rules label on failure, and checks out paid mentorship without writing collaboration holding. Still open: Slice E staging evidence, which needs a live staging host.
+**Code on main:** A through D, F through L. Slice E is not signed off. A probe of `https://influrios.com` on 2026-10-06 found HTTPS and a healthy database, and `secrets.authConfigured: false`. The E13 table stays empty until an operator records the sandbox ids.
 
 ---
 
