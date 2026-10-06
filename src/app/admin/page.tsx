@@ -75,7 +75,7 @@ const LINKS: {
     blurb: "Plan catalog, checkout sessions, Stripe readiness.",
     module: "billing",
     meta: (c) =>
-      `${c.completedCheckouts} completed · ${c.stripeMode === "sandbox" ? "Sandbox" : c.stripeMode === "live" ? "Live" : "Demo"} mode`,
+      `${c.completedCheckouts} completed · ${c.stripeMode === "sandbox" ? "Sandbox" : c.stripeMode === "live" ? "Live" : "Not configured"}`,
   },
   {
     href: "/admin/plans",
@@ -171,9 +171,9 @@ const LINKS: {
   {
     href: "/admin/mail",
     title: "Email & SMS",
-    blurb: "SMTP, SMS demo/Twilio, templates, and channel preferences.",
+    blurb: "SMTP, Twilio SMS, templates, and channel preferences.",
     module: "mail",
-    meta: () => "Email + SMS demo Jobs",
+    meta: () => "Email and SMS",
   },
   {
     href: "/admin/jobs",
@@ -199,16 +199,23 @@ const LINKS: {
   {
     href: "/admin/gateways",
     title: "Payment gateways",
-    blurb: "Stripe, Flutterwave, and any other gateway, each assigned to countries.",
+    blurb: "Stripe, Flutterwave, M-Pesa, and Airwallex. Save every credential here.",
     module: "gateways",
     meta: () => "Country routes",
   },
   {
+    href: "/admin/search",
+    title: "Meilisearch",
+    blurb: "Discover host and API key. Rebuild the creator index after saving.",
+    module: "gateways",
+    meta: () => "Search index",
+  },
+  {
     href: "/admin/signing",
     title: "Document signing",
-    blurb: "Demo lifecycle and DocuSign-ready providers after a collaboration is accepted.",
+    blurb: "DocuSign integration key, user id, account id, and private key.",
     module: "signing",
-    meta: () => "Demo lifecycle + DocuSign-ready",
+    meta: () => "Saved DocuSign credentials",
   },
   {
     href: "/admin/social",

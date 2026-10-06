@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
-import { createHmac } from "crypto";
+import { createHmac, createVerify, generateKeyPairSync } from "crypto";
 import { describe, it } from "node:test";
-import { createDocuSignEnvelope, parseDocuSignWebhook, verifyDocuSignSignature } from "./docusign";
+import {
+  assembleDocuSignCredentials,
+  createDocuSignEnvelope,
+  docuSignJwtAssertion,
+  parseDocuSignWebhook,
+  verifyDocuSignSignature,
+} from "./docusign";
 
 describe("DocuSign adapter", () => {
   const secret = "connect-secret";
@@ -51,5 +57,42 @@ describe("DocuSign adapter", () => {
       },
     });
     assert.equal(failed.ok, false);
+  });
+
+  it("builds a JWT from the saved integration key and private key", () => {
+    const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const assertion = docuSignJwtAssertion({
+      integrationKey: "integration-key",
+      userId: "user-id",
+      oauthBaseUrl: "https://account-d.docusign.com",
+      privateKey: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+      now: 1_700_000_000,
+    });
+    const [header, payload, signature] = assertion.split(".");
+    assert.equal(assertion.split(".").length, 3);
+    const verifier = createVerify("RSA-SHA256");
+    verifier.update(`${header}.${payload}`);
+    verifier.end();
+    assert.equal(verifier.verify(publicKey, Buffer.from(signature, "base64url")), true);
+    const claims = JSON.parse(Buffer.from(payload, "base64url").toString()) as { iss: string; sub: string; aud: string };
+    assert.equal(claims.iss, "integration-key");
+    assert.equal(claims.sub, "user-id");
+    assert.equal(claims.aud, "account-d.docusign.com");
+  });
+
+  it("requires the admin fields when the environment is empty", () => {
+    const missing = assembleDocuSignCredentials({ stored: {}, env: {} });
+    assert.equal(missing.ok, false);
+    const ready = assembleDocuSignCredentials({
+      stored: {
+        integrationKey: "key",
+        userId: "user",
+        accountId: "acct",
+        privateKey: "pem",
+        baseUrl: "https://demo.docusign.net",
+      },
+      env: {},
+    });
+    assert.equal(ready.ok, true);
   });
 });

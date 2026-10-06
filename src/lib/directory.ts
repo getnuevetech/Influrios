@@ -424,15 +424,17 @@ export async function directoryHasCreator(slug: string): Promise<boolean> {
 export { indexCreatorsBySlug } from "@/lib/seed-data";
 
 export async function searchDirectory(query: CreatorSearchQuery) {
-  const { meiliConfigured, searchCreatorIndex } = await import("@/lib/creator-index");
-  if (meiliConfigured()) {
-    const indexed = await searchCreatorIndex(query);
+  const { searchCreatorIndex } = await import("@/lib/creator-index");
+  const { loadMeiliConfig } = await import("@/lib/search-settings");
+  const meili = await loadMeiliConfig();
+  if (meili) {
+    const indexed = await searchCreatorIndex(query, { MEILI_HOST: meili.host, MEILI_API_KEY: meili.apiKey });
     const directory = await getDirectory();
     const allowed = new Set(indexed.slugs);
     return directory.creators.filter((creator) => allowed.has(creator.slug));
   }
   if (process.env.NODE_ENV === "production") {
-    throw new Error("MEILI_HOST is required.");
+    throw new Error("Meilisearch host is required. Save it in admin or set MEILI_HOST.");
   }
   const directory = await getDirectory();
   const specialtyValues = query.specialty

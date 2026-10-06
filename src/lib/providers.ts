@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
+import { assembleDocuSignCredentials, openDocuSignEnvelope } from "@/lib/signing/docusign";
 import { classifyStripeKey } from "@/lib/stripe-admin";
 
 export const AI_FUNCTIONS = [
@@ -76,28 +77,69 @@ export type GatewayRemovalImpact = {
   blockers: string[];
 };
 
-type ProviderExtra = {
+export type ProviderExtra = {
   model?: string;
   isDefaultBackup?: boolean;
   lastWebhookAt?: string;
+  holdingAccountId?: string;
+  operationsAccountId?: string;
+  integrationKey?: string;
+  userId?: string;
+  oauthBaseUrl?: string;
 };
 
-function readProviderExtra(extraJson: unknown): ProviderExtra {
+function extraString(raw: Record<string, unknown>, key: string) {
+  return typeof raw[key] === "string" && raw[key].trim() ? raw[key].trim() : undefined;
+}
+
+export function readProviderExtra(extraJson: unknown): ProviderExtra {
   if (!extraJson || typeof extraJson !== "object" || Array.isArray(extraJson)) return {};
   const raw = extraJson as Record<string, unknown>;
   return {
-    model: typeof raw.model === "string" ? raw.model : undefined,
-    isDefaultBackup: raw.isDefaultBackup === true,
-    lastWebhookAt: typeof raw.lastWebhookAt === "string" ? raw.lastWebhookAt : undefined,
+    model: extraString(raw, "model"),
+    isDefaultBackup: raw.isDefaultBackup === true ? true : undefined,
+    lastWebhookAt: extraString(raw, "lastWebhookAt"),
+    holdingAccountId: extraString(raw, "holdingAccountId"),
+    operationsAccountId: extraString(raw, "operationsAccountId"),
+    integrationKey: extraString(raw, "integrationKey"),
+    userId: extraString(raw, "userId"),
+    oauthBaseUrl: extraString(raw, "oauthBaseUrl"),
   };
 }
 
-function writeProviderExtra(existing: unknown, patch: ProviderExtra): ProviderExtra | undefined {
-  const current = readProviderExtra(existing);
-  const next: ProviderExtra = { ...current, ...patch };
-  if (patch.model === "") delete next.model;
-  if (patch.isDefaultBackup === false) delete next.isDefaultBackup;
-  if (!next.model && !next.isDefaultBackup && !next.lastWebhookAt) return undefined;
+function putExtraString(next: ProviderExtra, key: keyof ProviderExtra, value: string | undefined) {
+  if (value === undefined) return;
+  const trimmed = value.trim();
+  if (trimmed) (next as Record<string, unknown>)[key] = trimmed;
+  else delete (next as Record<string, unknown>)[key];
+}
+
+/** Keep stored extra fields when a later save only patches one of them. */
+export function mergeProviderExtra(existing: unknown, patch: Partial<ProviderExtra>): ProviderExtra | undefined {
+  const next: ProviderExtra = { ...readProviderExtra(existing) };
+  if (patch.model !== undefined) putExtraString(next, "model", patch.model);
+  if (patch.isDefaultBackup !== undefined) {
+    if (patch.isDefaultBackup) next.isDefaultBackup = true;
+    else delete next.isDefaultBackup;
+  }
+  if (patch.lastWebhookAt !== undefined) putExtraString(next, "lastWebhookAt", patch.lastWebhookAt);
+  if (patch.holdingAccountId !== undefined) putExtraString(next, "holdingAccountId", patch.holdingAccountId);
+  if (patch.operationsAccountId !== undefined) putExtraString(next, "operationsAccountId", patch.operationsAccountId);
+  if (patch.integrationKey !== undefined) putExtraString(next, "integrationKey", patch.integrationKey);
+  if (patch.userId !== undefined) putExtraString(next, "userId", patch.userId);
+  if (patch.oauthBaseUrl !== undefined) putExtraString(next, "oauthBaseUrl", patch.oauthBaseUrl);
+  if (
+    !next.model &&
+    !next.isDefaultBackup &&
+    !next.lastWebhookAt &&
+    !next.holdingAccountId &&
+    !next.operationsAccountId &&
+    !next.integrationKey &&
+    !next.userId &&
+    !next.oauthBaseUrl
+  ) {
+    return undefined;
+  }
   return next;
 }
 
@@ -210,6 +252,52 @@ const GATEWAY_SHELLS = [
   { code: "mpesa", name: "M-Pesa" },
 ] as const;
 
+export function gatewayCredentialLabels(code: string): { publicKey: string; secret: string; note: string } {
+  switch (code) {
+    case "airwallex":
+      return {
+        publicKey: "Client id",
+        secret: "API key",
+        note: "Save the holding account id and the operations account id before a prefund opens an Airwallex payment. The operations account receives milestone splits.",
+      };
+    case "mpesa":
+      return {
+        publicKey: "Business short code",
+        secret: "Access token",
+        note: "The short code is BusinessShortCode. The access token is the Daraja bearer token. The webhook secret verifies x-mpesa-signature.",
+      };
+    case "flutterwave":
+      return {
+        publicKey: "Public key",
+        secret: "Secret key",
+        note: "Checkout uses the secret key. The webhook secret is the verif-hash value.",
+      };
+    case "stripe":
+      return {
+        publicKey: "Publishable key",
+        secret: "Secret key",
+        note: "Save a sandbox secret key (sk_test_, rk_test_, or rkcs_test_). A live key is refused.",
+      };
+    default:
+      return { publicKey: "Public key", secret: "Secret", note: "" };
+  }
+}
+
+async function ensureProviderShell(kind: string, code: string, name: string) {
+  const existing = await prisma.integrationProvider.findUnique({
+    where: { kind_code: { kind, code } },
+  });
+  if (existing) return;
+  try {
+    await prisma.integrationProvider.create({
+      data: { kind, code, name, enabled: false },
+    });
+  } catch (error) {
+    const prismaCode = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    if (prismaCode !== "P2002") throw error;
+  }
+}
+
 let catalogTask: Promise<void> | null = null;
 
 export function ensureIntegrationCatalog() {
@@ -236,6 +324,9 @@ async function seedIntegrationCatalog() {
       if (code !== "P2002") throw error;
     }
   }
+  await ensureProviderShell("payment", "airwallex", "Airwallex");
+  await ensureProviderShell("search", "meilisearch", "Meilisearch");
+  await ensureProviderShell("signing", "docusign", "DocuSign");
   const gateways = await prisma.integrationProvider.findMany({ where: { kind: "payment" } });
   // Do not recreate shells after an admin removed one; only seed shells on an empty catalog.
   if (gateways.length === 0) {
@@ -283,7 +374,7 @@ async function seedIntegrationCatalog() {
   }
 }
 
-export async function listProviders(kind: "ai" | "payment" | "signing" | "connect") {
+export async function listProviders(kind: "ai" | "payment" | "signing" | "connect" | "search") {
   await ensureIntegrationCatalog();
   const rows = await prisma.integrationProvider.findMany({ where: { kind }, orderBy: { name: "asc" } });
   return rows.map((row) => {
@@ -301,13 +392,18 @@ export async function listProviders(kind: "ai" | "payment" | "signing" | "connec
       model: extra.model ?? "",
       isDefaultBackup: kind === "payment" ? Boolean(extra.isDefaultBackup) : false,
       lastWebhookAt: extra.lastWebhookAt ?? "",
+      holdingAccountId: extra.holdingAccountId ?? "",
+      operationsAccountId: extra.operationsAccountId ?? "",
+      integrationKey: extra.integrationKey ?? "",
+      userId: extra.userId ?? "",
+      oauthBaseUrl: extra.oauthBaseUrl ?? "",
     };
   });
 }
 
 export async function saveProvider(input: {
   id?: string;
-  kind: "ai" | "payment" | "signing" | "connect";
+  kind: "ai" | "payment" | "signing" | "connect" | "search";
   code: string;
   name: string;
   enabled: boolean;
@@ -318,6 +414,11 @@ export async function saveProvider(input: {
   model: string;
   clearSecret?: boolean;
   clearWebhook?: boolean;
+  holdingAccountId?: string;
+  operationsAccountId?: string;
+  integrationKey?: string;
+  userId?: string;
+  oauthBaseUrl?: string;
 }) {
   const code = providerCode(input.code);
   if (!code) throw new Error("A provider code is required.");
@@ -330,14 +431,30 @@ export async function saveProvider(input: {
   if (baseUrl && input.kind === "ai" && !aiEndpointAllowed(baseUrl)) {
     throw new Error("AI calls are limited to https://api.openai.com and https://api.anthropic.com.");
   }
-  if (baseUrl && !baseUrl.startsWith("https://")) throw new Error("The API base URL must start with https://.");
+  if (baseUrl && input.kind === "search") {
+    let allowed = false;
+    try {
+      const url = new URL(baseUrl);
+      allowed = (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
+    } catch {
+      allowed = false;
+    }
+    if (!allowed) throw new Error("The Meilisearch host must be an http or https URL.");
+  } else if (baseUrl && !baseUrl.startsWith("https://")) {
+    throw new Error("The API base URL must start with https://.");
+  }
 
   const existing = input.id
     ? await prisma.integrationProvider.findUnique({ where: { id: input.id } })
     : await prisma.integrationProvider.findUnique({ where: { kind_code: { kind: input.kind, code } } });
 
-  const extraJson = writeProviderExtra(existing?.extraJson, {
+  const extraJson = mergeProviderExtra(existing?.extraJson, {
     model: input.model.trim().slice(0, 80),
+    ...(input.holdingAccountId !== undefined ? { holdingAccountId: input.holdingAccountId.slice(0, 120) } : {}),
+    ...(input.operationsAccountId !== undefined ? { operationsAccountId: input.operationsAccountId.slice(0, 120) } : {}),
+    ...(input.integrationKey !== undefined ? { integrationKey: input.integrationKey.slice(0, 120) } : {}),
+    ...(input.userId !== undefined ? { userId: input.userId.slice(0, 120) } : {}),
+    ...(input.oauthBaseUrl !== undefined ? { oauthBaseUrl: input.oauthBaseUrl.slice(0, 200) } : {}),
   });
 
   const data = {
@@ -440,7 +557,7 @@ export async function setDefaultBackupGateway(providerId: string) {
       prisma.integrationProvider.update({
         where: { id: row.id },
         data: {
-          extraJson: writeProviderExtra(row.extraJson, {
+          extraJson: mergeProviderExtra(row.extraJson, {
             isDefaultBackup: row.id === provider.id,
           }) ?? undefined,
         },
@@ -458,7 +575,7 @@ export async function clearDefaultBackupGateway() {
       .map((row) =>
         prisma.integrationProvider.update({
           where: { id: row.id },
-          data: { extraJson: writeProviderExtra(row.extraJson, { isDefaultBackup: false }) ?? undefined },
+          data: { extraJson: mergeProviderExtra(row.extraJson, { isDefaultBackup: false }) ?? undefined },
         }),
       ),
   );
@@ -645,6 +762,7 @@ export async function activeSigningProvider() {
     orderBy: { updatedAt: "desc" },
   });
   if (!provider) return null;
+  const extra = readProviderExtra(provider.extraJson);
   return {
     id: provider.id,
     name: provider.name,
@@ -652,7 +770,11 @@ export async function activeSigningProvider() {
     hasSecret: Boolean(provider.secretCipher),
     enabled: provider.enabled,
     baseUrl: provider.baseUrl ?? "",
+    publicKey: provider.publicKey ?? "",
     secretCipher: provider.secretCipher,
+    integrationKey: extra.integrationKey ?? "",
+    userId: extra.userId ?? "",
+    oauthBaseUrl: extra.oauthBaseUrl ?? "",
   };
 }
 
@@ -694,10 +816,45 @@ export async function queueSignatureRequest(input: { collaborationId: string; ti
   if (!gate.ok) return gate;
   const secret = provider!.secretCipher ? decryptSecret(provider!.secretCipher) : null;
   const code = provider!.code.trim().toLowerCase();
-  const demoMode = code === "demo" || code === "demo_sign" || !provider!.baseUrl;
   let externalId = "";
-  if (demoMode) {
+  if (code === "demo" || code === "demo_sign") {
     externalId = `demosign_${Date.now().toString(36)}`;
+  } else if (code === "docusign" || code.includes("docusign")) {
+    const collab = await prisma.collaboration.findUnique({
+      where: { id: input.collaborationId },
+      include: { initiatorUser: true, decidedByUser: true },
+    });
+    const parties = [collab?.initiatorUser, collab?.decidedByUser]
+      .filter((user): user is NonNullable<typeof user> => Boolean(user?.email))
+      .filter((user, index, all) => all.findIndex((row) => row.email === user.email) === index)
+      .map((user) => ({ name: user.name?.trim() || user.email, email: user.email }));
+    if (parties.length < 1) {
+      return { ok: false as const, error: "Add an email on each signer before sending the envelope. Nothing was signed." };
+    }
+    const credentials = assembleDocuSignCredentials({
+      stored: {
+        integrationKey: provider!.integrationKey,
+        userId: provider!.userId,
+        accountId: provider!.publicKey,
+        privateKey: secret ?? "",
+        baseUrl: provider!.baseUrl,
+        oauthBaseUrl: provider!.oauthBaseUrl,
+      },
+    });
+    if (!credentials.ok) return credentials;
+    const opened = await openDocuSignEnvelope({
+      credentials,
+      request: {
+        collaborationId: input.collaborationId,
+        title: input.title.slice(0, 160),
+        documentHtml: `<h1>${input.title.slice(0, 160)}</h1><p>${collab?.scope ?? ""}</p>`,
+        parties,
+      },
+    });
+    if (!opened.ok) return opened;
+    externalId = opened.envelopeId;
+  } else if (!provider!.baseUrl) {
+    return { ok: false as const, error: "Add the signing API base URL in admin. Nothing was signed." };
   } else {
     const asked = await askSigningProvider({
       baseUrl: provider!.baseUrl,

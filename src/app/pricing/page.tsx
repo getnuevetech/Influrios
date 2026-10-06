@@ -33,7 +33,7 @@ export default async function PricingPage() {
             configured, demo flow otherwise.
           </p>
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-            Mode: {stripeMode === "sandbox" ? "Stripe sandbox" : stripeMode === "live" ? "Stripe live" : stripeMode === "rejected" ? "Stripe sandbox key required" : "Demo checkout"}
+            Mode: {stripeMode === "sandbox" ? "Stripe sandbox" : stripeMode === "live" ? "Stripe live" : stripeMode === "rejected" ? "Stripe sandbox key required" : "Stripe key not saved"}
           </p>
         </div>
       </section>

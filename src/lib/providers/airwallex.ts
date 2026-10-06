@@ -140,12 +140,40 @@ export function parseAirwallexMentorshipWebhook(body: string):
   };
 }
 
+export async function loginAirwallex(input: {
+  baseUrl: string;
+  clientId: string;
+  apiKey: string;
+  fetchImpl?: typeof fetch;
+}): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  try {
+    const response = await fetchImpl(`${input.baseUrl.replace(/\/$/, "")}/api/v1/authentication/login`, {
+      method: "POST",
+      headers: {
+        "x-client-id": input.clientId,
+        "x-api-key": input.apiKey,
+        "content-type": "application/json",
+      },
+      body: "{}",
+      signal: AbortSignal.timeout(8000),
+    });
+    const text = await response.text();
+    if (!response.ok) return { ok: false, error: text.slice(0, 300) || "Airwallex did not return a token. Nothing was charged." };
+    const payload = JSON.parse(text) as { token?: string };
+    if (!payload.token) return { ok: false, error: "Airwallex did not return a token. Nothing was charged." };
+    return { ok: true, token: payload.token };
+  } catch {
+    return { ok: false, error: "Airwallex did not return a token. Nothing was charged." };
+  }
+}
+
 export async function createAirwallexFunding(input: {
   baseUrl: string;
   token: string;
   request: AirwallexFundingRequest;
   fetchImpl?: typeof fetch;
-}): Promise<{ ok: true; paymentId: string; splitIds: string[] } | { ok: false; error: string }> {
+}): Promise<{ ok: true; paymentId: string; splitIds: string[]; url?: string } | { ok: false; error: string }> {
   if (!input.request.holdingAccountId) return { ok: false, error: "Holding account id is required." };
   if (input.request.splits.length < 1) return { ok: false, error: "Each milestone needs a FundsSplit." };
   const fetchImpl = input.fetchImpl ?? fetch;
@@ -174,9 +202,11 @@ export async function createAirwallexFunding(input: {
     return { ok: false, error: "Airwallex returned an unreadable payment." };
   }
   if (!payload.id) return { ok: false, error: "Airwallex did not return a payment id." };
+  const nextAction = (payload as { next_action?: { url?: string } }).next_action;
   return {
     ok: true,
     paymentId: payload.id,
+    url: typeof nextAction?.url === "string" ? nextAction.url : undefined,
     splitIds: (payload.funds_split ?? []).map((split) => split.id).filter((id): id is string => Boolean(id)),
   };
 }

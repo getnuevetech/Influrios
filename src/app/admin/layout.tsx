@@ -55,6 +55,7 @@ const SIDE_GROUPS: SideGroup[] = [
     name: "Payments & finance",
     links: [
       { href: "/admin/gateways", label: "Payment gateways", module: "gateways" },
+      { href: "/admin/search", label: "Meilisearch", module: "gateways" },
       { href: "/admin/payments", label: "Protected Payments", module: "payments" },
       { href: "/admin/fees", label: "Collaboration fees", module: "commerce" },
       { href: "/admin/corridors", label: "Corridors", module: "collab_finance" },

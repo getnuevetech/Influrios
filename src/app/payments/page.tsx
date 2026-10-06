@@ -5,6 +5,7 @@ import {
   actionCancelPrefund,
   actionConvertAmbassador,
   actionCreateDeal,
+  actionOpenFundingCheckout,
   actionOpenDispute,
   actionStopSeries,
   actionRequestChangeOrder,
@@ -46,6 +47,8 @@ type Props = {
     evidence?: string;
     cancelled?: string;
     disputed?: string;
+    checkout?: string;
+    returned?: string;
     error?: string;
   }>;
 };
@@ -126,6 +129,16 @@ export default async function PaymentsPage({ searchParams }: Props) {
           </div>
         </div>
 
+        {params.checkout ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Provider reference {params.checkout}. The funding stays unconfirmed until the payment webhook.
+          </div>
+        ) : null}
+        {params.returned ? (
+          <div className="rounded-2xl border border-[#E4EBFF] bg-white px-4 py-3 text-sm text-indigo">
+            Checkout returned. The funding stays unconfirmed until the payment webhook.
+          </div>
+        ) : null}
         {params.error ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</div>
         ) : null}
@@ -429,6 +442,23 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 </div>
                 {deal.status === "awaiting_provider" ? (
                   <div className="mt-4 space-y-3">
+                    <form action={actionOpenFundingCheckout} className="flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="dealId" value={deal.id} />
+                      <label className="text-xs font-semibold text-muted">
+                        Payer email
+                        <input name="email" type="email" required className="mt-1 w-48 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
+                      </label>
+                      <label className="text-xs font-semibold text-muted">
+                        M-Pesa phone
+                        <input name="phone" className="mt-1 w-40 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
+                      </label>
+                      <button type="submit" className="btn-primary !py-2 text-sm">
+                        Open provider checkout
+                      </button>
+                    </form>
+                    <p className="text-xs text-muted">
+                      Uses the gateway assigned to {deal.jurisdictionCode}. Flutterwave needs the email. M-Pesa needs the phone and short code. Airwallex needs the holding and operations accounts. Nothing is marked paid until the webhook.
+                    </p>
                     <p className="text-xs text-muted">
                       Change orders {deal.changeOrderCount} of {deal.changeOrderLimit}.
                       {config?.changeOrdersEnabled === false ? " Change orders are turned off." : ""}

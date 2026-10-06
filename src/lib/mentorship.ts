@@ -5,14 +5,15 @@
  */
 import { getCollabControlPlane, mentorshipEligibilityOk } from "@/lib/collab-control-plane";
 import { prisma } from "@/lib/db";
-import { decryptSecret } from "@/lib/provider-secrets";
 import { productSwitch } from "@/lib/product-switches";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
 import {
   createAirwallexMentorshipIntent,
+  loginAirwallex,
   parseAirwallexMentorshipWebhook,
   verifyAirwallexSignature,
 } from "@/lib/providers/airwallex";
+import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
 import { openStripeOneTimeCheckout, stripeCredentials } from "@/lib/stripe-admin";
 
 export const MENTORSHIP_STATUSES = ["pending", "accepted", "declined", "cancelled"] as const;
@@ -102,13 +103,15 @@ export async function confirmMentorshipPayment(input: {
 }
 
 async function airwallexMentorshipCredentials() {
-  const row = await prisma.integrationProvider
-    .findUnique({ where: { kind_code: { kind: "payment", code: "airwallex" } } })
-    .catch(() => null);
-  if (!row?.enabled || !row.secretCipher || !row.baseUrl) return null;
-  const token = decryptSecret(row.secretCipher);
-  if (!token) return null;
-  return { token, baseUrl: row.baseUrl };
+  const settings = await loadAirwallexConfig();
+  if (!settings) return { ok: false as const, error: "Paid mentorship checkout is not configured. Nothing was charged." };
+  const login = await loginAirwallex({
+    baseUrl: settings.baseUrl,
+    clientId: settings.clientId,
+    apiKey: settings.apiKey,
+  });
+  if (!login.ok) return login;
+  return { ok: true as const, token: login.token, baseUrl: settings.baseUrl };
 }
 
 async function openPaidMentorshipCheckout(input: {
@@ -140,7 +143,7 @@ async function openPaidMentorshipCheckout(input: {
     return { ok: true as const, provider: "stripe", checkoutRef: opened.id, url: opened.url };
   }
   const airwallex = await airwallexMentorshipCredentials();
-  if (airwallex) {
+  if (airwallex.ok) {
     const opened = await createAirwallexMentorshipIntent({
       baseUrl: airwallex.baseUrl,
       token: airwallex.token,
@@ -156,8 +159,9 @@ async function openPaidMentorshipCheckout(input: {
         url: `${origin}/mentorship?returned=1&request=${input.requestId}`,
       };
     }
+    return opened;
   }
-  return { ok: false as const, error: "Paid mentorship checkout is not configured. Nothing was charged." };
+  return airwallex;
 }
 
 export async function applyAirwallexMentorshipWebhook(body: string, signature: string | null): Promise<
@@ -168,14 +172,11 @@ export async function applyAirwallexMentorshipWebhook(body: string, signature: s
   if (!parsed.ok && parsed.error === "not_mentorship") {
     return { ok: false, error: parsed.error, status: 400, fallThrough: true };
   }
-  const row = await prisma.integrationProvider
-    .findUnique({ where: { kind_code: { kind: "payment", code: "airwallex" } } })
-    .catch(() => null);
-  if (!row?.enabled || !row.webhookCipher) {
+  const settings = await loadAirwallexConfig();
+  if (!settings?.webhookSecret) {
     return { ok: false, error: "Airwallex is not ready.", status: 503, fallThrough: false };
   }
-  const secret = decryptSecret(row.webhookCipher);
-  if (!secret || !verifyAirwallexSignature(body, signature, secret)) {
+  if (!verifyAirwallexSignature(body, signature, settings.webhookSecret)) {
     return { ok: false, error: "Signature did not match.", status: 401, fallThrough: false };
   }
   if (!parsed.ok) return { ok: false, error: parsed.error, status: 400, fallThrough: false };

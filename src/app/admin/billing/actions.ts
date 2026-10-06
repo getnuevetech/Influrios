@@ -21,6 +21,7 @@ export async function actionCheckStripeSandbox() {
 export async function actionSaveBillingSwitches(formData: FormData) {
   await requireAdminAction("gateways.edit");
   await setProductSwitch("customer_portal", formData.get("customer_portal") === "on");
+  await setProductSwitch("paid_mentoring", formData.get("paid_mentoring") === "on");
   revalidatePath("/admin/billing");
   revalidatePath("/billing");
   redirect("/admin/billing?saved=switches");

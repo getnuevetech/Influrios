@@ -20,8 +20,9 @@ export default async function AdminBillingPage({ searchParams }: Props) {
   const canEdit = hasPermission(session, "gateways.edit");
   const params = await searchParams;
   const store = await getBillingStore();
-  const [portalOn, prices, stripeMode] = await Promise.all([
+  const [portalOn, paidMentoringOn, prices, stripeMode] = await Promise.all([
     productSwitch("customer_portal"),
+    productSwitch("paid_mentoring"),
     listBillingPriceIds(),
     stripeBillingMode(),
   ]);
@@ -56,7 +57,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
       <section className="card-surface p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Checkout switches</h2>
         <p className="mt-1 text-sm text-muted">
-          Checkout requires Stripe. Billing portal is {portalOn ? "on" : "off"}.
+          Checkout requires Stripe. Billing portal is {portalOn ? "on" : "off"}. Paid mentorship is {paidMentoringOn ? "on" : "off"}.
           {!canEdit ? " Saving these needs the gateways edit permission." : ""}
         </p>
         {canEdit ? (
@@ -66,6 +67,13 @@ export default async function AdminBillingPage({ searchParams }: Props) {
               <input type="checkbox" name="customer_portal" defaultChecked={portalOn} className="accent-violet" />
               Allow the Stripe billing portal
             </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="paid_mentoring" defaultChecked={paidMentoringOn} className="accent-violet" />
+              Allow paid mentorship sessions
+            </label>
+            <p className="text-xs text-muted">
+              Paid mentorship stays off until this is checked. Checkout uses the Stripe gateway, then Airwallex when Stripe is not saved. The session stays unpaid until the payment webhook.
+            </p>
             <button type="submit" className="btn-primary !py-2 text-sm">
               Save switches
             </button>
@@ -120,7 +128,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
         </div>
         <div className="rounded-xl bg-emerald-100 px-4 py-2">
           <p className="font-display text-lg font-bold text-emerald-700">
-            {stripeMode === "sandbox" ? "Sandbox" : stripeMode === "live" ? "Live" : stripeMode === "rejected" ? "Key" : "Demo"}
+            {stripeMode === "sandbox" ? "Sandbox" : stripeMode === "live" ? "Live" : stripeMode === "rejected" ? "Key" : "Not configured"}
           </p>
           <p className="text-muted">Mode</p>
         </div>
@@ -129,7 +137,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
       <section className="card-surface p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Environment</h2>
         <ul className="mt-3 space-y-1 text-sm text-muted">
-          <li>STRIPE_SECRET_KEY: {process.env.STRIPE_SECRET_KEY ? "set" : "missing (demo mode)"}</li>
+          <li>STRIPE_SECRET_KEY: {process.env.STRIPE_SECRET_KEY ? "set in the environment" : "not set — save a sandbox key on Payment gateways"}</li>
           <li>
             STRIPE_WEBHOOK_SECRET: {process.env.STRIPE_WEBHOOK_SECRET ? "set" : "missing"}
           </li>
@@ -214,7 +222,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
             {store.sessions.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-4 text-muted">
-                  No sessions yet — run a demo checkout from /billing.
+                  No sessions yet. A plan changes after Stripe confirms checkout from /billing.
                 </td>
               </tr>
             ) : (
