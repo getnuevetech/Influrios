@@ -63,12 +63,19 @@ export function isProductSwitchKey(value: string): value is ProductSwitchKey {
 export async function productSwitch(key: ProductSwitchKey): Promise<boolean> {
   if (testOverrides.has(key)) return testOverrides.get(key)!;
   const spec = PRODUCT_SWITCHES.find((row) => row.key === key)!;
-  const row = await prisma.featureFlag.upsert({
-    where: { key },
-    update: {},
-    create: { key, enabled: spec.enabled, description: spec.description },
-  });
-  return row.enabled;
+  try {
+    const row = await prisma.featureFlag.upsert({
+      where: { key },
+      update: {},
+      create: { key, enabled: spec.enabled, description: spec.description },
+    });
+    return row.enabled;
+  } catch (error) {
+    const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    if (code !== "P2002") throw error;
+    const row = await prisma.featureFlag.findUnique({ where: { key } });
+    return row?.enabled ?? spec.enabled;
+  }
 }
 
 export async function listProductSwitches() {
