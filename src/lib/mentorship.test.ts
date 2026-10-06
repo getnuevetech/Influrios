@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { airwallexMentorshipIntentBody } from "./providers/airwallex";
+import { stripeOneTimeCheckoutBody, stripePayoutRouteReady } from "./stripe-admin";
 import {
   EXPERIENCE_BAND_LABELS,
   experienceBandFromFollowers,
+  MENTORSHIP_SESSION_CENTS,
   mentorshipFundsIsolated,
   totalFollowersFromSocials,
 } from "./mentorship";
@@ -49,6 +52,125 @@ describe("mentorship fund isolation", () => {
     const paid = mentorshipFundsIsolated({ paidMentoringEnabled: true, paidRequested: true });
     assert.equal(paid.ok, true);
     if (paid.ok) assert.equal(paid.usesCollaborationHolding, false);
+  });
+});
+
+describe("paid mentorship checkout", () => {
+  it("uses a one-time Stripe payment and an Airwallex intent with no collaboration holding", () => {
+    const stripe = stripeOneTimeCheckoutBody({
+      amountCents: MENTORSHIP_SESSION_CENTS,
+      name: "Influrios mentorship session",
+      successUrl: "https://example.com/ok",
+      cancelUrl: "https://example.com/cancel",
+      metadata: { purpose: "mentorship", requestId: "req-1" },
+    });
+    assert.equal(stripe.get("mode"), "payment");
+    assert.equal(stripe.get("metadata[purpose]"), "mentorship");
+    assert.equal(stripe.has("line_items[0][price_data][recurring][interval]"), false);
+    const airwallex = airwallexMentorshipIntentBody({
+      requestId: "req-1",
+      amountCents: MENTORSHIP_SESSION_CENTS,
+      currency: "USD",
+    });
+    assert.equal("holdingAccountId" in airwallex, false);
+    assert.equal("funds_split" in airwallex, false);
+    assert.equal(stripePayoutRouteReady({ providerCode: "stripe", routeReady: true, stripeConnectAccountId: null }), false);
+    assert.equal(
+      stripePayoutRouteReady({ providerCode: "stripe", routeReady: true, stripeConnectAccountId: "acct_ready" }),
+      true,
+    );
+    assert.equal(stripePayoutRouteReady({ providerCode: "flutterwave", routeReady: true, stripeConnectAccountId: null }), true);
+  });
+
+  it("does not create collaboration funding when paid mentoring is on", async (t) => {
+    if (!(await requireDb(t))) return;
+    setProductSwitchForTests("paid_mentoring", true);
+    const { setStripeTransportForTests } = await import("./stripe-admin");
+    const { requestMentorship } = await import("./mentorship");
+    const { saveCollabControlPlane, DEFAULT_COLLAB_CONTROL_PLANE } = await import("./collab-control-plane");
+    const previousKey = process.env.STRIPE_SECRET_KEY;
+    process.env.STRIPE_SECRET_KEY = "sk_test_phaseLmentorship";
+    setStripeTransportForTests(async () =>
+      new Response(
+        JSON.stringify({
+          id: "cs_test_mentorphaseL",
+          url: "https://checkout.stripe.com/c/pay/cs_test_mentorphaseL",
+          livemode: false,
+        }),
+        { status: 200 },
+      ),
+    );
+    await saveCollabControlPlane({
+      actor: "p7-test@example.com",
+      mentorship: {
+        ...DEFAULT_COLLAB_CONTROL_PLANE.mentorship,
+        enabled: true,
+        minFollowers: 0,
+        requireIdentityVerified: false,
+        requireGlobalPayoutReady: false,
+      },
+    });
+    const stamp = Date.now().toString(36);
+    const mentor = await prisma.creator.create({
+      data: {
+        slug: `mentor-paid-${stamp}`,
+        displayName: "Mentor Paid",
+        title: "Coach",
+        bio: "Paid mentor",
+        locationCountry: "USA",
+        identityVerified: "VERIFIED",
+        profileState: "VERIFIED",
+        claimed: true,
+      },
+    });
+    const mentee = await prisma.creator.create({
+      data: {
+        slug: `mentee-paid-${stamp}`,
+        displayName: "Mentee Paid",
+        title: "Rising",
+        bio: "Paid mentee",
+        locationCountry: "USA",
+        profileState: "VERIFIED",
+        claimed: true,
+      },
+    });
+    const before = await prisma.collaborationFunding.count();
+    try {
+      await prisma.mentorshipProfile.create({
+        data: { creatorId: mentor.id, eligible: true, availability: "open", nichesJson: ["beauty"] },
+      });
+      const paid = await requestMentorship({
+        menteeCreatorId: mentee.id,
+        mentorCreatorId: mentor.id,
+        message: "Paid session",
+        paidRequested: true,
+        customerEmail: "mentee@example.com",
+      });
+      assert.equal(paid.ok, true);
+      if (!paid.ok) return;
+      assert.equal(paid.usesCollaborationHolding, false);
+      assert.equal(paid.request.paymentStatus, "open");
+      assert.equal(paid.request.paymentProvider, "stripe");
+      assert.match(paid.checkoutUrl ?? "", /^https:\/\//);
+      assert.equal(await prisma.collaborationFunding.count(), before);
+      const funding = await prisma.collaborationFunding.findUnique({ where: { id: paid.request.checkoutRef ?? "" } });
+      assert.equal(funding, null);
+    } finally {
+      await prisma.mentorshipRequest.deleteMany({
+        where: { OR: [{ mentorCreatorId: mentor.id }, { menteeCreatorId: mentee.id }] },
+      });
+      await prisma.mentorshipProfile.deleteMany({ where: { creatorId: mentor.id } });
+      await prisma.creator.delete({ where: { id: mentee.id } }).catch(() => null);
+      await prisma.creator.delete({ where: { id: mentor.id } }).catch(() => null);
+      setProductSwitchForTests("paid_mentoring", null);
+      setStripeTransportForTests(null);
+      if (previousKey === undefined) delete process.env.STRIPE_SECRET_KEY;
+      else process.env.STRIPE_SECRET_KEY = previousKey;
+      await saveCollabControlPlane({
+        actor: "p7-test@example.com",
+        mentorship: DEFAULT_COLLAB_CONTROL_PLANE.mentorship,
+      });
+    }
   });
 });
 

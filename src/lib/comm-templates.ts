@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { deliverMail, loadMailConfig } from "@/lib/mail";
-import { deliverSms, SMS_BODY_MAX, smsProviderLabel } from "@/lib/sms";
+import { SMS_BODY_MAX, smsProviderLabel } from "@/lib/sms";
 
 export { SMS_BODY_MAX, smsProviderLabel };
 
@@ -142,27 +142,20 @@ export async function getCommChannelSettings() {
   return {
     emailEnabled: row?.emailEnabled ?? true,
     smsEnabled: row?.smsEnabled ?? false,
-    smsProviderNote: row?.smsProviderNote ?? "",
   };
 }
 
-export async function saveCommChannelSettings(input: {
-  emailEnabled: boolean;
-  smsEnabled: boolean;
-  smsProviderNote: string;
-}) {
+export async function saveCommChannelSettings(input: { emailEnabled: boolean; smsEnabled: boolean }) {
   await prisma.commChannelSettings.upsert({
     where: { id: "default" },
     create: {
       id: "default",
       emailEnabled: input.emailEnabled,
       smsEnabled: input.smsEnabled,
-      smsProviderNote: input.smsProviderNote.trim().slice(0, 400),
     },
     update: {
       emailEnabled: input.emailEnabled,
       smsEnabled: input.smsEnabled,
-      smsProviderNote: input.smsProviderNote.trim().slice(0, 400),
     },
   });
 }
@@ -274,25 +267,29 @@ export async function sendCommTemplateTest(input: {
   if (!channels.smsEnabled) return { ok: false, message: "SMS channel is turned off." };
   const sms = renderCommCopy(template.bodySms, SAMPLE_VARS);
   if (!sms) return { ok: false, message: "This template has no SMS body." };
-  const to =
-    String(input.toPhone || "").trim() ||
-    String(input.toEmail || "").trim();
-  const sent = await deliverSms({
-    to,
-    body: sms,
-    templateKey: template.key,
-    kind: "sms_test",
+  const to = String(input.toPhone || "").trim();
+  if (!to) return { ok: false, message: "Add a destination phone for the SMS test." };
+  const job = await prisma.job.create({
+    data: {
+      kind: "sms_send",
+      status: "queued",
+      payload: { to, body: sms, templateKey: template.key },
+    },
   });
-  if (sent.ok) {
+  const { processDueJobs } = await import("@/lib/jobs");
+  await processDueJobs();
+  const done = await prisma.job.findUnique({ where: { id: job.id } });
+  if (done?.status === "succeeded") {
+    const payload = done.payload && typeof done.payload === "object" && !Array.isArray(done.payload) ? done.payload : {};
+    const externalId = "externalId" in payload && typeof payload.externalId === "string" ? payload.externalId : "";
     return {
       ok: true,
-      message:
-        sent.provider === "demo"
-          ? `Demo SMS accepted for “${template.name}” (${smsProviderLabel()}). Check Jobs.`
-          : `SMS accepted for “${template.name}” via ${sent.provider}.`,
+      message: externalId
+        ? `Twilio accepted “${template.name}” (${externalId}).`
+        : `Twilio accepted “${template.name}”.`,
     };
   }
-  return { ok: false, message: sent.message };
+  return { ok: false, message: done?.lastError || "Twilio did not accept the SMS." };
 }
 
 export async function setUserCommPreference(input: {

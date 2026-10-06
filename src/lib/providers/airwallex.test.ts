@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { createHmac } from "crypto";
 import { describe, it } from "node:test";
-import { createAirwallexFunding, parseAirwallexWebhook, verifyAirwallexSignature } from "./airwallex";
+import {
+  airwallexMentorshipIntentBody,
+  createAirwallexFunding,
+  parseAirwallexMentorshipWebhook,
+  parseAirwallexWebhook,
+  verifyAirwallexSignature,
+} from "./airwallex";
 
 describe("Airwallex adapter", () => {
   const secret = "awx-secret";
@@ -45,5 +51,23 @@ describe("Airwallex adapter", () => {
     assert.equal(result.ok && result.splitIds.length, 2);
     assert.match(seen, /acct-creator/);
     assert.match(seen, /hold-acct/);
+  });
+
+  it("builds a mentorship intent with no holding account and no splits", () => {
+    const body = airwallexMentorshipIntentBody({ requestId: "req-1", amountCents: 4900, currency: "USD" });
+    assert.equal(body.metadata.purpose, "mentorship");
+    assert.equal("holdingAccountId" in body, false);
+    assert.equal("funds_split" in body, false);
+    const payload = JSON.stringify({
+      id: "evt-m",
+      name: "payment_intent.succeeded",
+      data: { object: { id: "int-m", metadata: { purpose: "mentorship", requestId: "req-1" } } },
+    });
+    const parsed = parseAirwallexMentorshipWebhook(payload);
+    assert.equal(parsed.ok && parsed.paid, true);
+    assert.equal(parsed.ok && parsed.requestId, "req-1");
+    const funding = parseAirwallexMentorshipWebhook(held);
+    assert.equal(funding.ok, false);
+    if (!funding.ok) assert.equal(funding.error, "not_mentorship");
   });
 });

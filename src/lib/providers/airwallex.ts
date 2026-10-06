@@ -72,6 +72,74 @@ export function parseAirwallexWebhook(body: string):
   };
 }
 
+/** One-time mentorship intent. No holding account and no milestone splits. */
+export function airwallexMentorshipIntentBody(input: { requestId: string; amountCents: number; currency: string }) {
+  return {
+    request_id: `mentorship_${input.requestId}`,
+    amount: input.amountCents,
+    currency: input.currency,
+    merchant_order_id: `mentorship_${input.requestId}`,
+    metadata: { purpose: "mentorship", requestId: input.requestId },
+  };
+}
+
+export async function createAirwallexMentorshipIntent(input: {
+  baseUrl: string;
+  token: string;
+  requestId: string;
+  amountCents: number;
+  currency: string;
+  fetchImpl?: typeof fetch;
+}): Promise<{ ok: true; paymentId: string } | { ok: false; error: string }> {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const response = await fetchImpl(`${input.baseUrl.replace(/\/$/, "")}/api/v1/pa/payment_intents/create`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${input.token}`, "content-type": "application/json" },
+    body: JSON.stringify(airwallexMentorshipIntentBody(input)),
+  });
+  const text = await response.text();
+  if (!response.ok) return { ok: false, error: text.slice(0, 300) || "Airwallex did not create a payment." };
+  let payload: { id?: string; funds_split?: unknown; metadata?: { holdingAccountId?: unknown } };
+  try {
+    payload = JSON.parse(text) as { id?: string };
+  } catch {
+    return { ok: false, error: "Airwallex returned an unreadable payment." };
+  }
+  if (!payload.id) return { ok: false, error: "Airwallex did not return a payment id." };
+  return { ok: true, paymentId: payload.id };
+}
+
+export function parseAirwallexMentorshipWebhook(body: string):
+  | { ok: true; eventId: string; requestId: string; paymentId: string; paid: boolean }
+  | { ok: false; error: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { ok: false, error: "Invalid JSON." };
+  }
+  if (!parsed || typeof parsed !== "object") return { ok: false, error: "Invalid payload." };
+  const record = parsed as {
+    id?: unknown;
+    name?: unknown;
+    data?: { object?: { id?: unknown; metadata?: { purpose?: unknown; requestId?: unknown } } };
+  };
+  const purpose = record.data?.object?.metadata?.purpose;
+  const requestId = record.data?.object?.metadata?.requestId;
+  if (purpose !== "mentorship") return { ok: false, error: "not_mentorship" };
+  if (typeof record.id !== "string" || typeof requestId !== "string" || !requestId) {
+    return { ok: false, error: "Airwallex mentorship event is missing a request id." };
+  }
+  const paymentId = typeof record.data?.object?.id === "string" ? record.data.object.id : record.id;
+  return {
+    ok: true,
+    eventId: record.id,
+    requestId,
+    paymentId,
+    paid: record.name === "payment_intent.succeeded",
+  };
+}
+
 export async function createAirwallexFunding(input: {
   baseUrl: string;
   token: string;

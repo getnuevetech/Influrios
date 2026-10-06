@@ -22,11 +22,11 @@ async function requireCreator() {
   if (!draft?.slug) redirect("/claim");
   const creator = await prisma.creator.findUnique({ where: { slug: draft.slug } });
   if (!creator) redirect("/claim");
-  return creator;
+  return { creator, account };
 }
 
 export async function actionBecomeMentor(formData: FormData) {
-  const creator = await requireCreator();
+  const { creator } = await requireCreator();
   const niches = String(formData.get("niches") ?? "")
     .split(",")
     .map((n) => n.trim())
@@ -48,23 +48,26 @@ export async function actionBecomeMentor(formData: FormData) {
 }
 
 export async function actionRequestMentor(formData: FormData) {
-  const creator = await requireCreator();
+  const { creator, account } = await requireCreator();
   const mentorCreatorId = String(formData.get("mentorCreatorId") ?? "").trim();
   const result = await requestMentorship({
     menteeCreatorId: creator.id,
     mentorCreatorId,
     message: String(formData.get("message") ?? ""),
     paidRequested: String(formData.get("paidRequested") ?? "") === "1",
+    customerEmail: account.email,
+    userId: account.id,
   });
   if (!result.ok) {
     redirect(`${BASE}?error=${encodeURIComponent(result.error)}#find`);
   }
   revalidatePath(BASE);
+  if (result.checkoutUrl) redirect(result.checkoutUrl);
   redirect(`${BASE}?requested=1#inbox`);
 }
 
 export async function actionRespondMentorship(formData: FormData) {
-  const creator = await requireCreator();
+  const { creator } = await requireCreator();
   const requestId = String(formData.get("requestId") ?? "").trim();
   const decision = String(formData.get("decision") ?? "");
   if (decision !== "accepted" && decision !== "declined") {
@@ -84,7 +87,7 @@ export async function actionRespondMentorship(formData: FormData) {
 }
 
 export async function actionCancelMentorship(formData: FormData) {
-  const creator = await requireCreator();
+  const { creator } = await requireCreator();
   const requestId = String(formData.get("requestId") ?? "").trim();
   const result = await cancelMentorshipRequest({
     requestId,

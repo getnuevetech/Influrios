@@ -308,7 +308,7 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
           <AdminCollapse
             key={provider.id}
             title={provider.name}
-            subtitle={`${provider.enabled ? "Enabled" : "Disabled"}${provider.isDefaultBackup ? " · Default backup" : ""} · ${provider.code}`}
+            subtitle={`${provider.enabled ? "Enabled" : "Disabled"} · Secret ${provider.secret}${provider.isDefaultBackup ? " · Default backup" : ""} · Last webhook ${provider.lastWebhookAt ? new Date(provider.lastWebhookAt).toLocaleString() : "never"} · ${provider.code}`}
           >
             <form action={actionSaveGateway} className="grid gap-3 sm:grid-cols-2">
               <input type="hidden" name="id" value={provider.id} />
