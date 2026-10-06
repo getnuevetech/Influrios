@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { safeNextPath } from "@/lib/account-policy";
 import {
   clearAccountSession,
+  getAccountSession,
   loginAccount,
   registerAccount,
   requestPasswordReset,
@@ -130,4 +131,22 @@ export async function actionResetPassword(formData: FormData) {
 export async function actionLogout() {
   await clearAccountSession();
   redirect("/");
+}
+
+export async function actionSaveCommPreference(formData: FormData) {
+  const session = await getAccountSession();
+  if (!session) redirect("/login?next=/account");
+  const channel = String(formData.get("preferredCommChannel") ?? "email") === "sms" ? "sms" : "email";
+  try {
+    const { setUserCommPreference } = await import("@/lib/comm-templates");
+    await setUserCommPreference({
+      userId: session.id,
+      preferredCommChannel: channel,
+      phone: String(formData.get("phone") ?? ""),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save preference.";
+    redirect(`/account?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/account?saved=1");
 }

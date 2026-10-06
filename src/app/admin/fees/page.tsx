@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/app/admin/guard";
 import {
+  actionDeleteFeeRule,
+  actionDeleteFeeSnapshot,
   actionFreezeFeeSnapshot,
   actionSaveFeeRule,
   actionSimulateFee,
 } from "@/app/admin/actions";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import {
   FEE_METHOD_LABELS,
@@ -35,6 +38,8 @@ type Props = {
     explanation?: string;
     frozen?: string;
     saved?: string;
+    removed?: string;
+    error?: string;
   }>;
 };
 
@@ -62,6 +67,21 @@ export default async function AdminFeesPage({ searchParams }: Props) {
       {params.saved ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Fee rule saved (version bumped when commercial fields change).
+        </div>
+      ) : null}
+      {params.removed === "rule" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Fee rule removed.
+        </div>
+      ) : null}
+      {params.removed === "snapshot" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Fee snapshot removed.
+        </div>
+      ) : null}
+      {params.error ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {params.error}
         </div>
       ) : null}
       {params.frozen ? (
@@ -189,10 +209,14 @@ export default async function AdminFeesPage({ searchParams }: Props) {
           .slice()
           .sort((a, b) => b.priority - a.priority)
           .map((rule) => (
-            <form
+            <AdminCollapse
               key={rule.id}
+              title={rule.name}
+              subtitle={`${rule.active ? "Active" : "Inactive"} · v${rule.version} · ${rule.jurisdiction}/${rule.serviceLevel} · priority ${rule.priority}`}
+            >
+            <form
               action={actionSaveFeeRule}
-              className="card-surface grid gap-3 p-4 sm:grid-cols-3"
+              className="grid gap-3 sm:grid-cols-3"
             >
               <input type="hidden" name="id" value={rule.id} />
               <label className="text-xs font-semibold text-muted sm:col-span-2">
@@ -354,30 +378,51 @@ export default async function AdminFeesPage({ searchParams }: Props) {
                 </button>
               ) : null}
             </form>
+            {canManage ? (
+              <form action={actionDeleteFeeRule} className="mt-3 border-t border-[#E6ECFF] pt-3">
+                <input type="hidden" name="id" value={rule.id} />
+                <button type="submit" className="text-xs font-semibold text-amber-800 hover:underline">
+                  Remove this rule
+                </button>
+              </form>
+            ) : null}
+            </AdminCollapse>
           ))}
       </section>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Recent fee snapshots</h2>
-        <p className="mt-1 text-xs text-muted">
+      <AdminCollapse
+        title="Recent fee snapshots"
+        subtitle={`${store.snapshots.length} snapshot${store.snapshots.length === 1 ? "" : "s"} · PA006`}
+      >
+        <p className="text-xs text-muted">
           Accepted commercial quotes freeze here — later rule edits must not recalculate them
-          (PA006).
+          (PA006). Admins may remove snapshots when they are no longer needed for audit.
         </p>
         <ul className="mt-3 space-y-2 text-sm">
           {store.snapshots.length === 0 ? (
             <li className="text-muted">No snapshots yet — run the simulator and freeze one.</li>
           ) : (
             store.snapshots.slice(0, 10).map((s) => (
-              <li key={s.id} className="rounded-lg border border-[#E6ECFF] px-3 py-2">
-                <span className="font-semibold text-indigo">{s.id}</span> · {s.ruleName} v
-                {s.ruleVersion} · {FEE_TYPE_LABELS[s.feeType] ?? s.feeType} ·{" "}
-                {formatCents(s.calculatedFeeCents)} on{" "}
-                {formatCents(s.basisCents)} ({s.jurisdiction}/{s.serviceLevel})
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#E6ECFF] px-3 py-2">
+                <span>
+                  <span className="font-semibold text-indigo">{s.id}</span> · {s.ruleName} v
+                  {s.ruleVersion} · {FEE_TYPE_LABELS[s.feeType] ?? s.feeType} ·{" "}
+                  {formatCents(s.calculatedFeeCents)} on{" "}
+                  {formatCents(s.basisCents)} ({s.jurisdiction}/{s.serviceLevel})
+                </span>
+                {canManage ? (
+                  <form action={actionDeleteFeeSnapshot}>
+                    <input type="hidden" name="id" value={s.id} />
+                    <button type="submit" className="text-xs font-semibold text-amber-800 hover:underline">
+                      Remove
+                    </button>
+                  </form>
+                ) : null}
               </li>
             ))
           )}
         </ul>
-      </section>
+      </AdminCollapse>
     </div>
   );
 }

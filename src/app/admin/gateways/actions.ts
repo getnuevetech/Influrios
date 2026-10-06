@@ -112,3 +112,33 @@ export async function actionRemoveGateway(formData: FormData) {
   }
   redirect("/admin/gateways?saved=removed");
 }
+
+export async function actionSaveCountryGroup(formData: FormData) {
+  await requireAdminAction("gateways.edit");
+  const { savePaymentCountryGroup } = await import("@/lib/payment-country-groups");
+  const countryRaw = clean(formData.get("countryCodes"));
+  try {
+    await savePaymentCountryGroup({
+      id: clean(formData.get("id")) || undefined,
+      name: clean(formData.get("name")),
+      providerId: clean(formData.get("providerId")),
+      countryCodes: [countryRaw],
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the country group.";
+    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/gateways?saved=group");
+}
+
+export async function actionDeleteCountryGroup(formData: FormData) {
+  await requireAdminAction("gateways.edit");
+  const { deletePaymentCountryGroup } = await import("@/lib/payment-country-groups");
+  try {
+    await deletePaymentCountryGroup(clean(formData.get("id")));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not remove the country group.";
+    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/gateways?saved=group-removed");
+}

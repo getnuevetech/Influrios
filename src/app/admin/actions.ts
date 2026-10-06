@@ -233,3 +233,29 @@ export async function actionSaveFeeRule(formData: FormData) {
   revalidatePath("/admin/fees");
   redirect("/admin/fees?saved=rule");
 }
+
+export async function actionDeleteFeeRule(formData: FormData) {
+  await requireAdminAction("commerce.manage");
+  try {
+    const { deleteFeeRule } = await import("@/lib/collaboration-fees");
+    await deleteFeeRule(String(formData.get("id") || ""));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not remove the fee rule.";
+    redirect(`/admin/fees?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/fees");
+  redirect("/admin/fees?removed=rule");
+}
+
+export async function actionDeleteFeeSnapshot(formData: FormData) {
+  await requireAdminAction("commerce.manage");
+  try {
+    const { deleteFeeSnapshot } = await import("@/lib/collaboration-fees");
+    await deleteFeeSnapshot(String(formData.get("id") || ""));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not remove the snapshot.";
+    redirect(`/admin/fees?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/fees");
+  redirect("/admin/fees?removed=snapshot");
+}
