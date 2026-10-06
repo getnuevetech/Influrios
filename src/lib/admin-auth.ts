@@ -1,11 +1,13 @@
 /**
- * Admin access control — cookie sessions + file-backed roles/permissions.
+ * Admin access control — cookie sessions + Postgres roles/permissions.
  * Super admin can create access levels from granular feature permissions.
+ * One-time import from data/admin-auth.json when the DB tables are empty.
  */
 import { createHmac, timingSafeEqual, randomBytes, scryptSync } from "crypto";
 import { promises as fs } from "fs";
 import { cookies, headers } from "next/headers";
 import path from "path";
+import { prisma } from "@/lib/db";
 
 /** Granular feature permissions selectable when creating an access level. */
 export const ADMIN_PERMISSIONS = [
@@ -58,6 +60,9 @@ export const ADMIN_PERMISSIONS = [
   "jobs.retry",
   "marketplace.view",
   "marketplace.manage",
+  "collab_finance.view",
+  "collab_finance.manage",
+  "collab_finance.high_risk",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -86,7 +91,8 @@ export type AdminModule =
   | "shortlinks"
   | "mail"
   | "jobs"
-  | "marketplace";
+  | "marketplace"
+  | "collab_finance";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -115,10 +121,10 @@ export const ADMIN_PERMISSION_GROUPS: {
   {
     module: "matching",
     label: "Managed matching",
-    description: "Creator opt-in, shortlist intros, and pipeline status",
+    description: "Influencer opt-in, shortlist intros, and pipeline status",
     permissions: [
       { id: "matching.view", label: "View matching", hint: "See opt-ins and intro pipeline" },
-      { id: "matching.manage_optins", label: "Manage opt-ins", hint: "Toggle creator managed opt-in" },
+      { id: "matching.manage_optins", label: "Manage opt-ins", hint: "Toggle influencer managed opt-in" },
       { id: "matching.create_intros", label: "Create intros", hint: "Deliver shortlist → create intro" },
       { id: "matching.advance_intros", label: "Advance intros", hint: "Move intro status / mark paid" },
     ],
@@ -204,6 +210,28 @@ export const ADMIN_PERMISSION_GROUPS: {
     ],
   },
   {
+    module: "collab_finance",
+    label: "Collab finance",
+    description: "Corridors, control plane, held cancel / chargeback — high-risk money ops",
+    permissions: [
+      {
+        id: "collab_finance.view",
+        label: "View collab finance",
+        hint: "Open collaboration ops and corridors",
+      },
+      {
+        id: "collab_finance.manage",
+        label: "Manage collab finance",
+        hint: "Edit corridors and non-threshold control-plane settings",
+      },
+      {
+        id: "collab_finance.high_risk",
+        label: "High-risk collab finance",
+        hint: "Held cancel, chargeback disposition, dual-approval threshold — requires password step-up",
+      },
+    ],
+  },
+  {
     module: "accounts",
     label: "Member accounts",
     description: "Registered members, consent version, and password rules",
@@ -260,10 +288,10 @@ export const ADMIN_PERMISSION_GROUPS: {
   {
     module: "social",
     label: "Social networks",
-    description: "Live account connections, follower and like sync, and the creator terms",
+    description: "Live account connections, follower and like sync, and the influencer terms",
     permissions: [
       { id: "social.view", label: "View social networks", hint: "Open network connections and the integration terms" },
-      { id: "social.edit", label: "Edit social networks", hint: "Save API details and the terms creators must accept" },
+      { id: "social.edit", label: "Edit social networks", hint: "Save API details and the terms influencers must accept" },
     ],
   },
   {
@@ -349,7 +377,8 @@ export type AdminSession = {
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_PATH = path.join(DATA_DIR, "admin-auth.json");
+const LEGACY_STORE_PATH = path.join(DATA_DIR, "admin-auth.json");
+const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "admin-auth.json.migrated");
 const COOKIE_NAME = "influrios_admin_session";
 const SESSION_DAYS = 7;
 
@@ -433,6 +462,9 @@ const DEFAULT_ROLES: AdminRole[] = [
       "jobs.retry",
       "marketplace.view",
       "marketplace.manage",
+      "collab_finance.view",
+      "collab_finance.manage",
+      "collab_finance.high_risk",
     ],
     system: true,
   },
@@ -454,6 +486,9 @@ const DEFAULT_ROLES: AdminRole[] = [
       "gateways.edit",
       "marketplace.view",
       "marketplace.manage",
+      "collab_finance.view",
+      "collab_finance.manage",
+      "collab_finance.high_risk",
     ],
     system: true,
   },
@@ -462,6 +497,20 @@ const DEFAULT_ROLES: AdminRole[] = [
     name: "Trust Admin",
     description: "Dispute mediation and contract briefs only.",
     permissions: ["trust.view", "trust.mediate"],
+    system: true,
+  },
+  {
+    id: "role_collab_finance",
+    name: "Collab Finance Admin",
+    description: "Corridors, collaboration ops, and high-risk money actions (with step-up).",
+    permissions: [
+      "collab_finance.view",
+      "collab_finance.manage",
+      "collab_finance.high_risk",
+      "marketplace.view",
+      "commerce.view",
+      "trust.view",
+    ],
     system: true,
   },
   {
@@ -528,30 +577,6 @@ function normalizeStore(store: AdminAuthStore): AdminAuthStore {
   };
 }
 
-/** Keep system roles in sync with DEFAULT_ROLES (new modules/permissions). */
-function syncSystemRoles(store: AdminAuthStore): AdminAuthStore {
-  const defaults = new Map(DEFAULT_ROLES.map((r) => [r.id, r]));
-  const roles = store.roles.map((role) => {
-    const def = defaults.get(role.id);
-    if (def && role.system) {
-      return {
-        ...role,
-        name: def.name,
-        description: def.description,
-        permissions: [...def.permissions],
-        system: true,
-      };
-    }
-    return role;
-  });
-  for (const def of DEFAULT_ROLES) {
-    if (!roles.some((r) => r.id === def.id)) {
-      roles.push(structuredClone(def));
-    }
-  }
-  return { ...store, roles };
-}
-
 function defaultStore(): AdminAuthStore {
   const salt = randomBytes(16).toString("hex");
   const password = process.env.ADMIN_SUPER_PASSWORD || "InfluriosAdmin!2026";
@@ -574,36 +599,171 @@ function defaultStore(): AdminAuthStore {
   };
 }
 
-async function ensureStore(): Promise<AdminAuthStore> {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as AdminAuthStore;
-    if (!parsed.roles?.length || !parsed.users?.length) return defaultStore();
-    const normalized = syncSystemRoles(normalizeStore(parsed));
-    // Persist when coarse perms expanded or system roles gained new features
-    const changed = JSON.stringify(parsed) !== JSON.stringify(normalized);
-    if (changed) await saveStore(normalized);
-    return normalized;
-  } catch {
-    const store = defaultStore();
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
-    } catch {
-      /* read-only */
+function roleFromDb(row: {
+  id: string;
+  name: string;
+  description: string;
+  system: boolean;
+  permissions: string[];
+}): AdminRole {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    system: row.system,
+    permissions: expandPermissions(row.permissions),
+  };
+}
+
+function userFromDb(row: {
+  id: string;
+  email: string;
+  name: string;
+  roleId: string;
+  passwordHash: string;
+  passwordSalt: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): AdminUser {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    roleId: row.roleId,
+    passwordHash: row.passwordHash,
+    passwordSalt: row.passwordSalt,
+    active: row.active,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+async function loadStoreFromDb(): Promise<AdminAuthStore> {
+  const [roles, users] = await Promise.all([
+    prisma.adminRole.findMany({ orderBy: { name: "asc" } }),
+    prisma.adminUser.findMany({ orderBy: { createdAt: "asc" } }),
+  ]);
+  return normalizeStore({
+    roles: roles.map(roleFromDb),
+    users: users.map(userFromDb),
+  });
+}
+
+async function writeStoreToDb(store: AdminAuthStore) {
+  const normalized = normalizeStore(store);
+  await prisma.$transaction(async (tx) => {
+    for (const role of normalized.roles) {
+      await tx.adminRole.upsert({
+        where: { id: role.id },
+        create: {
+          id: role.id,
+          name: role.name,
+          description: role.description,
+          system: Boolean(role.system),
+          permissions: role.permissions,
+        },
+        update: {
+          name: role.name,
+          description: role.description,
+          system: Boolean(role.system),
+          permissions: role.permissions,
+        },
+      });
     }
-    return store;
+    for (const user of normalized.users) {
+      await tx.adminUser.upsert({
+        where: { id: user.id },
+        create: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          roleId: user.roleId,
+          passwordHash: user.passwordHash,
+          passwordSalt: user.passwordSalt,
+          active: user.active,
+          createdAt: new Date(user.createdAt),
+          updatedAt: new Date(user.updatedAt),
+        },
+        update: {
+          email: user.email,
+          name: user.name,
+          roleId: user.roleId,
+          passwordHash: user.passwordHash,
+          passwordSalt: user.passwordSalt,
+          active: user.active,
+          updatedAt: new Date(user.updatedAt),
+        },
+      });
+    }
+  });
+}
+
+async function syncSystemRolesDb() {
+  for (const def of DEFAULT_ROLES) {
+    await prisma.adminRole.upsert({
+      where: { id: def.id },
+      create: {
+        id: def.id,
+        name: def.name,
+        description: def.description,
+        system: true,
+        permissions: [...def.permissions],
+      },
+      update: {
+        name: def.name,
+        description: def.description,
+        system: true,
+        permissions: [...def.permissions],
+      },
+    });
   }
 }
 
-async function saveStore(store: AdminAuthStore) {
+async function readLegacyJsonStore(): Promise<AdminAuthStore | null> {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+    const raw = await fs.readFile(LEGACY_STORE_PATH, "utf8");
+    const parsed = JSON.parse(raw) as AdminAuthStore;
+    if (!parsed.roles?.length || !parsed.users?.length) return null;
+    return normalizeStore(parsed);
   } catch {
-    /* ignore */
+    return null;
   }
+}
+
+async function markLegacyMigrated() {
+  try {
+    await fs.rename(LEGACY_STORE_PATH, LEGACY_MIGRATED_PATH);
+  } catch {
+    try {
+      await fs.unlink(LEGACY_STORE_PATH);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/**
+ * DB is authoritative. Empty tables import admin-auth.json once, else bootstrap
+ * from ADMIN_SUPER_EMAIL / ADMIN_SUPER_PASSWORD (and DEFAULT_ROLES).
+ */
+async function ensureStore(): Promise<AdminAuthStore> {
+  const userCount = await prisma.adminUser.count();
+  if (userCount === 0) {
+    const legacy = await readLegacyJsonStore();
+    if (legacy) {
+      await writeStoreToDb(legacy);
+      await markLegacyMigrated();
+    } else {
+      await writeStoreToDb(defaultStore());
+    }
+  }
+  await syncSystemRolesDb();
+  return loadStoreFromDb();
+}
+
+async function saveStore(store: AdminAuthStore) {
+  await writeStoreToDb(store);
 }
 
 export async function getAdminAuthStore() {
@@ -677,6 +837,40 @@ export function canAccessModule(
   if (!session) return false;
   const prefix = `${module}.`;
   return session.permissions.some((p) => p.startsWith(prefix));
+}
+
+/** Re-enter password for high-risk collab finance actions (Platform Spec §34 / Dev §20). */
+export async function verifyAdminStepUp(
+  session: AdminSession,
+  password: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const store = await ensureStore();
+  const user = store.users.find((u) => u.id === session.userId && u.active);
+  if (!user) return { ok: false, error: "Admin session is no longer valid. Sign in again." };
+  if (!password.trim()) {
+    return { ok: false, error: "Re-enter your admin password to confirm this high-risk action." };
+  }
+  if (!verifyPassword(password, user.passwordSalt, user.passwordHash)) {
+    return { ok: false, error: "Password confirmation failed. Nothing was changed." };
+  }
+  return { ok: true };
+}
+
+/**
+ * High-risk collab finance gate: requires `collab_finance.high_risk` + password step-up.
+ * Super/payments roles that carry the permission can proceed after confirming password.
+ */
+export async function requireCollabFinanceHighRisk(
+  session: AdminSession,
+  password: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!hasPermission(session, "collab_finance.high_risk")) {
+    return {
+      ok: false,
+      error: "This action needs the Collab finance · High-risk permission.",
+    };
+  }
+  return verifyAdminStepUp(session, password);
 }
 
 export async function requireAdminSession(

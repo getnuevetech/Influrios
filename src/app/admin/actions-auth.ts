@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   ADMIN_COOKIE,
@@ -14,15 +14,33 @@ import {
   type AdminPermission,
   updateAdminUserRole,
 } from "@/lib/admin-auth";
+import {
+  AUTH_LOCKOUT_GENERIC_MESSAGE,
+  lockoutMessage,
+  recordAuthFailure,
+  recordAuthSuccess,
+} from "@/lib/auth-lockout";
+
+function clientIp(headerStore: Headers) {
+  return headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
 
 export async function actionAdminLogin(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/admin");
+  const headerStore = await headers();
+  const ip = clientIp(headerStore);
+  const locked = lockoutMessage("admin-login", ip, email);
+  if (locked) {
+    redirect(`/admin/login?error=${encodeURIComponent(AUTH_LOCKOUT_GENERIC_MESSAGE)}&next=${encodeURIComponent(next)}`);
+  }
   const result = await loginAdmin(email, password);
   if (!result.ok) {
+    recordAuthFailure("admin-login", ip, email);
     redirect(`/admin/login?error=${encodeURIComponent(result.error)}&next=${encodeURIComponent(next)}`);
   }
+  recordAuthSuccess("admin-login", ip, email);
   const jar = await cookies();
   jar.set(ADMIN_COOKIE, result.token, await adminCookieOptions());
   redirect(next.startsWith("/admin") ? next : "/admin");

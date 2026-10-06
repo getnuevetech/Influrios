@@ -32,6 +32,7 @@ const MODULE_PATH: Record<AdminModule, string> = {
   shortlinks: "/admin/short-links",
   mail: "/admin/mail",
   jobs: "/admin/jobs",
+  collab_finance: "/admin/collaboration-ops",
 };
 
 /** Gate an admin page by module (any feature under that module). */

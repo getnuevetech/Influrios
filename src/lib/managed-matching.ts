@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { listDirectoryCreators } from "@/lib/directory";
 import { SEED_CREATORS } from "@/lib/seed-data";
 
 export type IntroStatus =
@@ -19,6 +20,10 @@ export type ManagedIntro = {
   notes: string;
   status: IntroStatus;
   feeExpected?: string;
+  feeExpectedCents?: number | null;
+  feeIntentRef?: string | null;
+  feeProviderRef?: string | null;
+  feeSettlementAt?: string | null;
   createdAt: string;
   updatedAt: string;
   timeline: { at: string; status: IntroStatus; note?: string }[];
@@ -75,6 +80,10 @@ type IntroRow = {
   notes: string;
   status: string;
   feeExpected: string | null;
+  feeExpectedCents: number | null;
+  feeIntentRef: string | null;
+  feeProviderRef: string | null;
+  feeSettlementAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   events: { status: string; note: string | null; createdAt: Date }[];
@@ -90,6 +99,10 @@ function mapIntro(row: IntroRow): ManagedIntro {
     notes: row.notes,
     status: asIntroStatus(row.status),
     feeExpected: row.feeExpected ?? undefined,
+    feeExpectedCents: row.feeExpectedCents,
+    feeIntentRef: row.feeIntentRef,
+    feeProviderRef: row.feeProviderRef,
+    feeSettlementAt: row.feeSettlementAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     timeline: [...row.events]
@@ -107,8 +120,9 @@ let managedSeed: Promise<void> | null = null;
 async function seedManaged() {
   const optCount = await prisma.creatorManagedOptIn.count();
   if (optCount === 0) {
+    const creators = await listDirectoryCreators().catch(() => SEED_CREATORS);
     await prisma.creatorManagedOptIn.createMany({
-      data: SEED_CREATORS.map((creator) => ({
+      data: creators.map((creator) => ({
         creatorSlug: creator.slug,
         openToManaged: creator.openToCollab && creator.planTier !== "STARTER",
         targetingNotes: creator.offer ?? "",
@@ -137,7 +151,7 @@ async function seedManaged() {
         events: {
           create: [
             { status: "draft", note: "Shortlist delivered", createdAt: new Date(base) },
-            { status: "outreach", note: "Creator contacted", createdAt: new Date(base + 1000) },
+            { status: "outreach", note: "Influencer contacted", createdAt: new Date(base + 1000) },
             { status: "introduced", note: "Both parties connected", createdAt: new Date(base + 2000) },
           ],
         },
@@ -280,6 +294,145 @@ export async function advanceIntro(id: string, status: IntroStatus, note?: strin
   return mapIntro(row);
 }
 
+const TERMINAL_INTRO_STATUSES = new Set<IntroStatus>(["paid", "declined", "closed"]);
+
+/** Default deal basis for sandbox intro-fee quotes when ops omit a gross. */
+export const DEFAULT_INTRO_FEE_GROSS_CENTS = 10_000;
+
+/**
+ * W4 — quote managed_intro fee and open a sandbox settlement intent.
+ * Does not create CollaborationFunding / protected holds (R073).
+ */
+export async function requestIntroFeeSettlement(
+  introId: string,
+  opts?: { jurisdiction?: string; grossValueCents?: number },
+) {
+  await ensureManaged();
+  const intro = await prisma.managedIntro.findUnique({ where: { id: introId } });
+  if (!intro) return { ok: false as const, error: "Introduction not found." };
+  const status = asIntroStatus(intro.status);
+  if (TERMINAL_INTRO_STATUSES.has(status) && status !== "paid") {
+    return { ok: false as const, error: "This introduction is closed and cannot be billed." };
+  }
+  if (status === "paid" && intro.feeProviderRef) {
+    return { ok: false as const, error: "Intro fee already settled." };
+  }
+  const gross =
+    Number.isInteger(opts?.grossValueCents) && (opts?.grossValueCents ?? 0) > 0
+      ? (opts!.grossValueCents as number)
+      : DEFAULT_INTRO_FEE_GROSS_CENTS;
+  const { resolveFee } = await import("@/lib/collaboration-fees");
+  const quote = await resolveFee({
+    jurisdiction: opts?.jurisdiction || "US",
+    serviceLevel: "managed_intro",
+    grossValueCents: gross,
+    fundingMode: "NONE",
+    relationshipSource: "managed_intro",
+    promotionChannel: "sponsored",
+  });
+  if (!quote.rule || quote.feeCents <= 0) {
+    return { ok: false as const, error: quote.explanation || "No managed introduction fee rule matched." };
+  }
+  const intentRef = intro.feeIntentRef || `intro_fee_${intro.id}`;
+  const now = new Date();
+  const feeQuoteJson = {
+    ruleId: quote.rule.id,
+    ruleName: quote.rule.name,
+    ruleVersion: quote.rule.version,
+    feeType: quote.rule.feeType,
+    feeCents: quote.feeCents,
+    percentBps: quote.rule.percentBps,
+    fixedCents: quote.rule.fixedCents,
+    grossValueCents: gross,
+    jurisdiction: opts?.jurisdiction || "US",
+    explanation: quote.explanation,
+    capturedAt: now.toISOString(),
+  };
+  const row = await prisma.managedIntro.update({
+    where: { id: intro.id },
+    data: {
+      feeExpectedCents: quote.feeCents,
+      feeQuoteJson,
+      feeIntentRef: intentRef,
+      events: {
+        create: {
+          status: intro.status,
+          note: `Fee settlement requested · ${quote.feeCents}¢ · intent ${intentRef}`,
+          createdAt: now,
+        },
+      },
+    },
+    include: { events: true },
+  });
+  return {
+    ok: true as const,
+    introId: row.id,
+    feeCents: quote.feeCents,
+    intentRef,
+    quote: {
+      ruleId: quote.rule.id,
+      explanation: quote.explanation,
+      feeType: quote.rule.feeType,
+    },
+  };
+}
+
+/**
+ * Sandbox / provider confirm for an intro fee intent.
+ * Sets status=paid with provider ref — never Fully Funded / protected hold (R073).
+ */
+export async function confirmIntroFeeSettlement(introId: string, providerRef: string) {
+  await ensureManaged();
+  const ref = providerRef.trim().slice(0, 120);
+  if (!ref) return { ok: false as const, error: "Provider reference is required." };
+  const intro = await prisma.managedIntro.findUnique({ where: { id: introId } });
+  if (!intro) return { ok: false as const, error: "Introduction not found." };
+  if (!intro.feeIntentRef || intro.feeExpectedCents == null) {
+    return { ok: false as const, error: "Request an intro fee quote before confirming settlement." };
+  }
+  if (asIntroStatus(intro.status) === "paid" && intro.feeProviderRef) {
+    if (intro.feeProviderRef === ref) {
+      return {
+        ok: true as const,
+        introId: intro.id,
+        status: "paid" as const,
+        providerRef: ref,
+        feeCents: intro.feeExpectedCents,
+      };
+    }
+    return { ok: false as const, error: "Intro fee already settled with a different provider reference." };
+  }
+  const now = new Date();
+  const row = await prisma.managedIntro.update({
+    where: { id: intro.id },
+    data: {
+      status: "paid",
+      feeProviderRef: ref,
+      feeSettlementAt: now,
+      events: {
+        create: {
+          status: "paid",
+          note: `Intro fee settled · ${intro.feeExpectedCents}¢ · ref ${ref}`,
+          createdAt: now,
+        },
+      },
+    },
+    include: { events: true },
+  });
+  return {
+    ok: true as const,
+    introId: row.id,
+    status: "paid" as const,
+    providerRef: ref,
+    feeCents: row.feeExpectedCents ?? intro.feeExpectedCents,
+  };
+}
+
+/** Convenience for admin sandbox confirm without typing a ref. */
+export function sandboxIntroFeeProviderRef(intentRef: string) {
+  return `sandbox_${intentRef}`;
+}
+
 export async function listQueuedMatchRequests(): Promise<MatchQueueItem[]> {
   const rows = await prisma.managedMatchRequest.findMany({
     where: { status: "queued" },
@@ -311,7 +464,7 @@ export async function recordIntroFromRequest(input: {
       return { ok: false as const, error: "This request is no longer in the queue." };
     }
     if (!input.creatorSlug) {
-      return { ok: false as const, error: "Choose a creator for the introduction." };
+      return { ok: false as const, error: "Choose an influencer for the introduction." };
     }
     const now = new Date();
     const intro = await tx.managedIntro.create({
@@ -345,7 +498,7 @@ export const INTRO_STATUSES: { code: IntroStatus; label: string }[] = [
   { code: "outreach", label: "Outreach" },
   { code: "introduced", label: "Introduced" },
   { code: "in_conversation", label: "In conversation" },
-  { code: "paid", label: "Paid relationship" },
+  { code: "paid", label: "Intro fee settled" },
   { code: "declined", label: "Declined" },
   { code: "closed", label: "Closed" },
 ];

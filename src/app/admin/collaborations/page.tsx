@@ -7,7 +7,7 @@ import {
   getCollaborationSettings,
   listCollaborations,
 } from "@/lib/collaborations";
-import { getCreatorBySlug } from "@/lib/seed-data";
+import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Collaborations · Admin" };
@@ -30,6 +30,9 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
     console.error("admin collaborations", error);
     dbError = true;
   }
+
+  const directory = await getDirectory().catch(() => null);
+  const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -95,8 +98,8 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
           </thead>
           <tbody>
             {records.map((record) => {
-              const initiator = getCreatorBySlug(record.initiatorSlug);
-              const recipient = getCreatorBySlug(record.recipientSlug);
+              const initiator = bySlug.get(record.initiatorSlug);
+              const recipient = bySlug.get(record.recipientSlug);
               return (
                 <tr key={record.id} className="border-b border-[#E4EBFF] last:border-0">
                   <td className="px-4 py-3">

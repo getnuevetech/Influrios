@@ -3,6 +3,15 @@ import { prisma } from "@/lib/db";
 import { isPlanCode, type EntitlementLimits } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { isShortLinkHost, normalizeShortHost } from "@/lib/short-link-hosts";
+import {
+  privacyMetaFromHints,
+  summarizeAdminShortLinkRollup,
+  summarizeShortLinkAnalytics,
+  type CreatorShortLinkAnalytics,
+  type ShortLinkPrivacyHints,
+} from "@/lib/short-link-analytics";
+
+export type { ShortLinkPrivacyHints } from "@/lib/short-link-analytics";
 
 export const LAUNCH_SHORT_HOST = "inflr.me";
 
@@ -99,7 +108,7 @@ export async function primaryShortHost(): Promise<string> {
   if (hostCache && Date.now() - hostCache.at < 30_000) return hostCache.host;
   try {
     const row = await prisma.shortLinkDomain.findFirst({
-      where: { isPrimary: true, active: true },
+      where: { isPrimary: true, active: true, verified: true },
       orderBy: { hostname: "asc" },
     });
     const host = row?.hostname || LAUNCH_SHORT_HOST;
@@ -112,6 +121,15 @@ export async function primaryShortHost(): Promise<string> {
 
 export function clearShortHostCache() {
   hostCache = null;
+}
+
+/** Spec §20.24 — only verified+active domains serve short links / become primary. */
+export function domainCanServe(domain: { verified: boolean; active: boolean }) {
+  return Boolean(domain.verified && domain.active);
+}
+
+export function domainCanBePrimary(domain: { verified: boolean; active: boolean }) {
+  return domainCanServe(domain);
 }
 
 async function settingsRow() {
@@ -144,7 +162,13 @@ export async function ensureShortLinkDefaults() {
     await prisma.shortLinkDomain.upsert({
       where: { hostname: domain.hostname },
       update: {},
-      create: { ...domain, active: true },
+      create: {
+        ...domain,
+        active: true,
+        verified: true,
+        verifiedAt: new Date(),
+        verifiedBy: "system",
+      },
     });
   }
   for (const slug of RESERVED_SLUGS) {
@@ -185,22 +209,24 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
   const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
   const entitlements = await entitlementsForPlan(plan);
   if (!entitlements.shortlink || entitlements.shortlinkMax < 1) return null;
+  const snapshot = entitlementSnapshotForMint(plan, entitlements);
   const current = creator.shortLinks[0];
   if (current) {
     if ((entitlements.standardQr || entitlements.dynamicQr) && current.status === "active") {
       await createQr(current.id);
     }
-    if (current.dynamic !== entitlements.dynamicQr) {
-      await prisma.shortLink.update({
-        where: { id: current.id },
-        data: { dynamic: entitlements.dynamicQr },
-      });
+    const patch: { dynamic?: boolean; entitlementSnapshotJson?: object } = {};
+    if (current.dynamic !== entitlements.dynamicQr) patch.dynamic = entitlements.dynamicQr;
+    if (current.entitlementSnapshotJson == null) patch.entitlementSnapshotJson = snapshot;
+    if (Object.keys(patch).length) {
+      await prisma.shortLink.update({ where: { id: current.id }, data: patch });
     }
     return prisma.shortLink.findUnique({
       where: { id: current.id },
       include: { qrIdentities: { where: { status: "active" }, take: 1 } },
     });
   }
+  if (!canCreateAnotherShortLink(creator.shortLinks.length, entitlements)) return null;
   const slug = normalizeSlug(creator.card?.shortAlias || creator.slug.split("-")[0] || "");
   if (!slug || isReservedSlug(slug)) return null;
   const taken = await prisma.shortLink.findUnique({ where: { slug } });
@@ -215,6 +241,7 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
         destination: `/c/${creator.slug}`,
         status: "active",
         dynamic: entitlements.dynamicQr,
+        entitlementSnapshotJson: snapshot,
       },
     });
     if (entitlements.standardQr || entitlements.dynamicQr) await createQr(link.id);
@@ -226,6 +253,40 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
     if (typeof error === "object" && error && "code" in error && error.code === "P2002") return null;
     throw error;
   }
+}
+
+export type ShortLinkEntitlementSnapshot = {
+  plan: string;
+  shortlink: boolean;
+  shortlinkMax: number;
+  customAlias: boolean;
+  standardQr: boolean;
+  dynamicQr: boolean;
+  frozenAt: string;
+};
+
+export function entitlementSnapshotForMint(
+  plan: string,
+  entitlements: EntitlementLimits,
+): ShortLinkEntitlementSnapshot {
+  return {
+    plan,
+    shortlink: entitlements.shortlink,
+    shortlinkMax: entitlements.shortlinkMax,
+    customAlias: entitlements.customAlias,
+    standardQr: entitlements.standardQr,
+    dynamicQr: entitlements.dynamicQr,
+    frozenAt: new Date().toISOString(),
+  };
+}
+
+export function canCreateAnotherShortLink(existingActiveCount: number, entitlements: EntitlementLimits) {
+  if (!canMintShortLink(entitlements)) return false;
+  return existingActiveCount < entitlements.shortlinkMax;
+}
+
+export function canMintShortLink(entitlements: EntitlementLimits) {
+  return entitlements.shortlink && entitlements.shortlinkMax > 0;
 }
 
 export async function shortLinkPublicLabel(creatorSlug: string): Promise<string | null> {
@@ -247,16 +308,29 @@ type ResolveHit =
   | { kind: "redirect"; status: 301 | 302; location: string; cacheControl: string; shortLinkId: string; eventType: string }
   | { kind: "page"; status: number; title: string; message: string };
 
-async function recordEvent(shortLinkId: string | undefined, eventType: string, meta: Record<string, string>) {
+async function recordEvent(
+  shortLinkId: string | undefined,
+  eventType: string,
+  meta: Record<string, string>,
+  hints?: ShortLinkPrivacyHints | null,
+) {
   if (!shortLinkId) return;
+  const privacy = privacyMetaFromHints(hints);
+  if (privacy.bot) return;
   await prisma.shortLinkEvent
-    .create({ data: { shortLinkId, eventType, metaJson: meta } })
+    .create({
+      data: {
+        shortLinkId,
+        eventType,
+        metaJson: { ...meta, ...privacy.public },
+      },
+    })
     .catch(() => undefined);
 }
 
 export function shortLinkRootMessage(canonicalOrigin?: string) {
   const origin = (canonicalOrigin || process.env.NEXT_PUBLIC_APP_URL || "https://influrios.com").replace(/\/$/, "");
-  return `Creator profiles stay on Influrios. Open ${origin} to browse the directory.`;
+  return `Influencer profiles stay on Influrios. Open ${origin} to browse the directory.`;
 }
 
 /** Known launch hosts can explain themselves when the store is down. Slugs are never invented. */
@@ -279,25 +353,35 @@ export function hitWhenShortStoreUnavailable(host: string, path: string): Resolv
   };
 }
 
-export async function resolveShortRequest(host: string, path: string): Promise<ResolveHit> {
+export async function resolveShortRequest(
+  host: string,
+  path: string,
+  hints?: ShortLinkPrivacyHints | null,
+): Promise<ResolveHit> {
   try {
-    return await resolveShortRequestFromStore(host, path);
+    return await resolveShortRequestFromStore(host, path, hints);
   } catch (error) {
     console.error("short link resolve", error);
     return hitWhenShortStoreUnavailable(host, path);
   }
 }
 
-async function resolveShortRequestFromStore(host: string, path: string): Promise<ResolveHit> {
+async function resolveShortRequestFromStore(
+  host: string,
+  path: string,
+  hints?: ShortLinkPrivacyHints | null,
+): Promise<ResolveHit> {
   await ensureShortLinkDefaults();
   const hostname = normalizeShortHost(host);
   const domain = await prisma.shortLinkDomain.findUnique({ where: { hostname } });
-  if (!domain?.active) {
+  if (!domain || !domainCanServe(domain)) {
     return {
       kind: "page",
       status: 404,
       title: "Unknown short domain",
-      message: "This hostname is not an active Influrios short-link domain.",
+      message: domain && domain.active && !domain.verified
+        ? "This short-link domain is not verified yet."
+        : "This hostname is not an active Influrios short-link domain.",
     };
   }
   const clean = path.split("?")[0].replace(/\/+$/, "") || "/";
@@ -314,7 +398,7 @@ async function resolveShortRequestFromStore(host: string, path: string): Promise
   const allowed = hostsFrom(settings);
 
   const qr = clean.match(/^\/q\/([A-Za-z0-9_-]{4,80})$/);
-  if (qr) return resolveQrToken(qr[1], allowed, settings.canonicalOrigin);
+  if (qr) return resolveQrToken(qr[1], allowed, settings.canonicalOrigin, hints);
 
   const slugMatch = clean.match(/^\/([a-z0-9][a-z0-9-]{1,30})$/);
   if (!slugMatch) {
@@ -326,16 +410,16 @@ async function resolveShortRequestFromStore(host: string, path: string): Promise
   }
 
   const direct = await prisma.shortLink.findUnique({ where: { slug } });
-  if (direct) return finishSlug(direct, allowed, settings.canonicalOrigin, "destination");
+  if (direct) return finishSlug(direct, allowed, settings.canonicalOrigin, "destination", hints);
 
   const alias = await prisma.shortLinkAlias.findUnique({
     where: { slug },
     include: { shortLink: true },
   });
-  if (alias?.redirect && alias.shortLink.status === "active") {
+  if (alias && aliasShouldRedirect(alias)) {
     const hostName = domain.hostname;
     const cache = redirectCacheFor("alias");
-    void recordEvent(alias.shortLinkId, "alias_redirect", { slug });
+    void recordEvent(alias.shortLinkId, "alias_redirect", { slug }, hints);
     return {
       kind: "redirect",
       ...cache,
@@ -345,8 +429,18 @@ async function resolveShortRequestFromStore(host: string, path: string): Promise
     };
   }
 
+  // Spec §20.12 — disabled alias redirects do not resolve (configured alias policy).
+  if (alias) {
+    return {
+      kind: "page",
+      status: 404,
+      title: "Link not found",
+      message: "That Influrios short link does not exist.",
+    };
+  }
+
   const provisioned = await provisionByPublicSlug(slug);
-  if (provisioned) return finishSlug(provisioned, allowed, settings.canonicalOrigin, "destination");
+  if (provisioned) return finishSlug(provisioned, allowed, settings.canonicalOrigin, "destination", hints);
 
   return { kind: "page", status: 404, title: "Link not found", message: "That Influrios short link does not exist." };
 }
@@ -355,6 +449,7 @@ export async function resolveQrToken(
   token: string,
   allowedHosts?: string[],
   canonicalOrigin?: string,
+  hints?: ShortLinkPrivacyHints | null,
 ): Promise<ResolveHit> {
   await ensureShortLinkDefaults();
   const settings = await settingsRow();
@@ -375,7 +470,7 @@ export async function resolveQrToken(
         ? safeRedirectTarget(link.destination, allowed, origin)
         : safeRedirectTarget(`/c/${legacy.creator.slug}`, allowed, origin);
       if (location && link?.status === "active") {
-        void recordEvent(link.id, "qr_scan", { token, legacy: "card" });
+        void recordEvent(link.id, "qr_scan", { token, legacy: "card" }, hints);
         const cache = redirectCacheFor("destination");
         return { kind: "redirect", ...cache, location, shortLinkId: link.id, eventType: "qr_scan" };
       }
@@ -405,7 +500,7 @@ export async function resolveQrToken(
     };
   }
   const cache = redirectCacheFor("destination");
-  void recordEvent(identity.shortLinkId, "qr_scan", { token: identity.token });
+  void recordEvent(identity.shortLinkId, "qr_scan", { token: identity.token }, hints);
   return { kind: "redirect", ...cache, location, shortLinkId: identity.shortLinkId, eventType: "qr_scan" };
 }
 
@@ -414,6 +509,7 @@ async function finishSlug(
   allowed: string[],
   canonicalOrigin: string,
   kind: "alias" | "destination",
+  hints?: ShortLinkPrivacyHints | null,
 ): Promise<ResolveHit> {
   if (link.status !== "active") {
     return {
@@ -433,7 +529,7 @@ async function finishSlug(
     };
   }
   const cache = redirectCacheFor(kind);
-  void recordEvent(link.id, "resolve", { destination: location });
+  void recordEvent(link.id, "resolve", { destination: location }, hints);
   return { kind: "redirect", ...cache, location, shortLinkId: link.id, eventType: "resolve" };
 }
 
@@ -451,10 +547,6 @@ async function provisionByPublicSlug(slug: string) {
   const entitlements = await entitlementsForPlan(plan);
   if (!canMintShortLink(entitlements)) return null;
   return ensureCreatorShortLink(creators[0].slug);
-}
-
-export function canMintShortLink(entitlements: EntitlementLimits) {
-  return entitlements.shortlink && entitlements.shortlinkMax > 0;
 }
 
 export async function changeCreatorSlug(creatorSlug: string, nextSlug: string) {
@@ -488,23 +580,301 @@ export async function changeCreatorSlug(creatorSlug: string, nextSlug: string) {
   return { ok: true as const, slug };
 }
 
-export async function setShortLinkDestination(shortLinkId: string, destination: string, dynamic: boolean) {
-  if (!dynamic) return { ok: false as const, error: "Only a dynamic short link can change destination." };
-  const settings = await getShortLinkSettings();
-  const location = safeRedirectTarget(destination, hostsFrom(settings), settings.canonicalOrigin);
-  if (!location) return { ok: false as const, error: "Destination must be an Influrios path or an allow-listed https host." };
-  const stored = destination.trim().startsWith("/") ? destination.trim() : location;
-  await prisma.shortLink.update({
-    where: { id: shortLinkId },
-    data: { destination: stored, destinationKind: stored.startsWith("/") ? "path" : "https" },
+/** Spec §20.12 — alias redirects follow configured policy (admin can disable). */
+export function aliasShouldRedirect(alias: { redirect: boolean; shortLink: { status: string } }) {
+  return Boolean(alias.redirect && alias.shortLink.status === "active");
+}
+
+/** Admin ops: enable or disable an old-slug redirect without deleting the alias row. */
+export async function setAliasRedirect(aliasId: string, redirect: boolean) {
+  const id = aliasId.trim();
+  if (!id) return { ok: false as const, error: "Missing alias." };
+  const updated = await prisma.shortLinkAlias.updateMany({
+    where: { id },
+    data: { redirect },
   });
-  void recordEvent(shortLinkId, "destination_change", { destination: stored });
+  if (updated.count !== 1) return { ok: false as const, error: "Alias not found." };
   return { ok: true as const };
 }
 
-export function brandedFallbackHtml(title: string, message: string) {
+/** Ops-attested domain ownership — Spec §16 / §20.24 (no DNS challenge). */
+export async function setDomainVerification(
+  domainId: string,
+  verified: boolean,
+  actorId?: string | null,
+) {
+  const id = domainId.trim();
+  if (!id) return { ok: false as const, error: "Missing domain." };
+  const domain = await prisma.shortLinkDomain.findUnique({ where: { id } });
+  if (!domain) return { ok: false as const, error: "Domain not found." };
+  if (!verified && domain.isPrimary) {
+    return { ok: false as const, error: "Make another verified domain primary before unverifying this one." };
+  }
+  await prisma.shortLinkDomain.update({
+    where: { id },
+    data: verified
+      ? { verified: true, verifiedAt: new Date(), verifiedBy: actorId?.trim() || "admin" }
+      : { verified: false, verifiedAt: null, verifiedBy: null },
+  });
+  clearShortHostCache();
+  return { ok: true as const };
+}
+
+export async function makePrimaryDomain(domainId: string) {
+  const id = domainId.trim();
+  if (!id) return { ok: false as const, error: "Missing domain." };
+  const domain = await prisma.shortLinkDomain.findUnique({ where: { id } });
+  if (!domain) return { ok: false as const, error: "Domain not found." };
+  if (!domainCanBePrimary(domain)) {
+    return { ok: false as const, error: "Verify the domain before making it primary." };
+  }
+  await prisma.$transaction([
+    prisma.shortLinkDomain.updateMany({ data: { isPrimary: false } }),
+    prisma.shortLinkDomain.update({ where: { id }, data: { isPrimary: true, active: true } }),
+  ]);
+  clearShortHostCache();
+  return { ok: true as const };
+}
+
+/** Warn copy before a creator slug change (Spec §13). */
+export function slugChangeWarning(fromSlug: string, toSlug: string) {
+  return `“/${fromSlug}” will permanently redirect to “/${toSlug}” until an admin disables that alias. Your printed QR still works.`;
+}
+
+export type DestinationActorType = "creator" | "admin" | "system";
+
+export type DestinationChangeActor = {
+  type: DestinationActorType;
+  id?: string | null;
+};
+
+/** Gate for Pro dynamic destination changes (INFLR.me Spec §9). */
+export function canChangeDynamicDestination(input: {
+  dynamic: boolean;
+  status: string;
+  requireEntitlement?: boolean;
+  entitlementsDynamicQr?: boolean;
+}): { ok: true } | { ok: false; error: string } {
+  if (!input.dynamic) return { ok: false, error: "Only a dynamic short link can change destination." };
+  if (input.status !== "active") {
+    return { ok: false, error: "Suspended short links cannot change destination." };
+  }
+  if (input.requireEntitlement && !input.entitlementsDynamicQr) {
+    return { ok: false, error: "Dynamic destinations are included on the Pro plan." };
+  }
+  return { ok: true };
+}
+
+export function storeDestinationValue(destination: string, resolvedHttps: string): string {
+  const trimmed = destination.trim();
+  return trimmed.startsWith("/") ? trimmed : resolvedHttps;
+}
+
+export function destinationKindFor(stored: string): "path" | "https" {
+  return stored.startsWith("/") ? "path" : "https";
+}
+
+/** Most recent history row is the prior safe destination for immediate rollback. */
+export function priorDestinationFromHistory(
+  entries: Array<{ previousDestination: string; previousKind: string }>,
+): { destination: string; destinationKind: string } | null {
+  const latest = entries[0];
+  if (!latest?.previousDestination) return null;
+  return { destination: latest.previousDestination, destinationKind: latest.previousKind };
+}
+
+export async function setShortLinkDestination(
+  shortLinkId: string,
+  destination: string,
+  dynamic: boolean,
+  actor: DestinationChangeActor = { type: "system" },
+  reason: "update" | "rollback" = "update",
+) {
+  const link = await prisma.shortLink.findUnique({ where: { id: shortLinkId } });
+  if (!link) return { ok: false as const, error: "Missing short link." };
+  const gate = canChangeDynamicDestination({
+    dynamic: dynamic && link.dynamic,
+    status: link.status,
+  });
+  if (!gate.ok) return gate;
+
+  const settings = await getShortLinkSettings();
+  const location = safeRedirectTarget(destination, hostsFrom(settings), settings.canonicalOrigin);
+  if (!location) {
+    return { ok: false as const, error: "Destination must be an Influrios path or an allow-listed https host." };
+  }
+  const stored = storeDestinationValue(destination, location);
+  const kind = destinationKindFor(stored);
+  if (stored === link.destination) return { ok: true as const, destination: stored, unchanged: true as const };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.shortLinkDestinationHistory.create({
+      data: {
+        shortLinkId,
+        previousDestination: link.destination,
+        previousKind: link.destinationKind,
+        destination: stored,
+        destinationKind: kind,
+        actorType: actor.type,
+        actorId: actor.id ?? null,
+        reason,
+      },
+    });
+    await tx.shortLink.update({
+      where: { id: shortLinkId },
+      data: { destination: stored, destinationKind: kind },
+    });
+  });
+  // Opaque QR identities are untouched — Pro destination changes must not require QR regeneration.
+  void recordEvent(shortLinkId, "destination_change", {
+    destination: stored,
+    reason,
+    actorType: actor.type,
+  });
+  return { ok: true as const, destination: stored, unchanged: false as const };
+}
+
+export async function listShortLinkDestinationHistory(shortLinkId: string, limit = 20) {
+  return prisma.shortLinkDestinationHistory.findMany({
+    where: { shortLinkId },
+    orderBy: { createdAt: "desc" },
+    take: Math.min(Math.max(limit, 1), 50),
+  });
+}
+
+export async function rollbackShortLinkDestination(
+  shortLinkId: string,
+  actor: DestinationChangeActor = { type: "system" },
+) {
+  const history = await listShortLinkDestinationHistory(shortLinkId, 1);
+  const prior = priorDestinationFromHistory(history);
+  if (!prior) return { ok: false as const, error: "No prior destination to restore." };
+  return setShortLinkDestination(shortLinkId, prior.destination, true, actor, "rollback");
+}
+
+/** Pro self-serve destination update — ownership + dynamicQr entitlement gated. */
+export async function setCreatorDynamicDestination(creatorSlug: string, destination: string) {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  if (!creator) return { ok: false as const, error: "Publish your card before changing the destination." };
+  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const entitlements = await entitlementsForPlan(plan);
+  const link = creator.shortLinks[0];
+  if (!link) return { ok: false as const, error: "This plan does not include a short link." };
+  const gate = canChangeDynamicDestination({
+    dynamic: link.dynamic,
+    status: link.status,
+    requireEntitlement: true,
+    entitlementsDynamicQr: entitlements.dynamicQr,
+  });
+  if (!gate.ok) return gate;
+  return setShortLinkDestination(link.id, destination, true, { type: "creator", id: creator.id }, "update");
+}
+
+export async function rollbackCreatorDynamicDestination(creatorSlug: string) {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  if (!creator) return { ok: false as const, error: "Publish your card before changing the destination." };
+  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const entitlements = await entitlementsForPlan(plan);
+  const link = creator.shortLinks[0];
+  if (!link) return { ok: false as const, error: "This plan does not include a short link." };
+  const gate = canChangeDynamicDestination({
+    dynamic: link.dynamic,
+    status: link.status,
+    requireEntitlement: true,
+    entitlementsDynamicQr: entitlements.dynamicQr,
+  });
+  if (!gate.ok) return gate;
+  return rollbackShortLinkDestination(link.id, { type: "creator", id: creator.id });
+}
+
+/** Entitlement-aware creator analytics — never returns another creator's traffic. */
+export async function getCreatorShortLinkAnalytics(
+  creatorSlug: string,
+): Promise<{ ok: true; analytics: CreatorShortLinkAnalytics; shortLinkId: string } | { ok: false; error: string }> {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  if (!creator) return { ok: false, error: "Publish your card before viewing link analytics." };
+  const link = creator.shortLinks[0];
+  if (!link) return { ok: false, error: "This plan does not include a short link." };
+  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const entitlements = await entitlementsForPlan(plan);
+  const events = await prisma.shortLinkEvent.findMany({
+    where: { shortLinkId: link.id },
+    orderBy: { createdAt: "desc" },
+    take: 2_000,
+    select: { eventType: true, metaJson: true, createdAt: true },
+  });
+  return {
+    ok: true,
+    shortLinkId: link.id,
+    analytics: summarizeShortLinkAnalytics(events, entitlements.analytics),
+  };
+}
+
+export async function getAdminShortLinkAnalyticsRollup() {
+  const [events, abuseOpen] = await Promise.all([
+    prisma.shortLinkEvent.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5_000,
+      select: { eventType: true, metaJson: true },
+    }),
+    prisma.shortLinkAbuseCase.count({ where: { status: "open" } }),
+  ]);
+  return summarizeAdminShortLinkRollup(events, abuseOpen);
+}
+
+/** Record a card CTA click against the creator's short link (privacy-safe). */
+export async function recordCreatorCtaClick(
+  creatorSlug: string,
+  hints?: ShortLinkPrivacyHints | null,
+) {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  const link = creator?.shortLinks[0];
+  if (!link || link.status !== "active") return { ok: false as const };
+  void recordEvent(link.id, "cta_click", { source: "influencer_card" }, hints);
+  return { ok: true as const };
+}
+
+export async function recordCreatorInquiryConversion(
+  creatorSlug: string,
+  hints?: ShortLinkPrivacyHints | null,
+) {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
+  });
+  const link = creator?.shortLinks[0];
+  if (!link || link.status !== "active") return { ok: false as const };
+  void recordEvent(link.id, "inquiry_conversion", { source: "contact_inquiry" }, hints);
+  return { ok: true as const };
+}
+
+export function brandedFallbackHtml(
+  title: string,
+  message: string,
+  options?: { canonicalOrigin?: string; ctaLabel?: string; outcome?: string },
+) {
   const safeTitle = escapeHtml(title);
   const safeMessage = escapeHtml(message);
+  const origin = (
+    options?.canonicalOrigin ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://influrios.com"
+  ).replace(/\/$/, "");
+  const safeOrigin = escapeHtml(origin);
+  const ctaLabel = escapeHtml(options?.ctaLabel || "Open Influrios");
+  const outcome = options?.outcome ? escapeHtml(options.outcome) : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -512,11 +882,14 @@ export function brandedFallbackHtml(title: string, message: string) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${safeTitle} · Influrios</title>
 </head>
-<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0b123f;color:#fff;font-family:Georgia,serif">
+<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(ellipse at top,#1a2460 0%,#0b123f 55%,#070b28 100%);color:#fff;font-family:Georgia,'Times New Roman',serif">
   <main style="max-width:28rem;padding:2rem;text-align:center">
-    <p style="letter-spacing:.18em;text-transform:uppercase;font-size:.75rem;color:#c4b5fd">Influrios</p>
-    <h1 style="font-size:1.8rem;margin:.5rem 0">${safeTitle}</h1>
-    <p style="color:#dbe4ff;line-height:1.5">${safeMessage}</p>
+    <p style="letter-spacing:.18em;text-transform:uppercase;font-size:.75rem;color:#c4b5fd;margin:0">Influrios</p>
+    <h1 style="font-size:1.8rem;margin:.75rem 0 .5rem;font-weight:700">${safeTitle}</h1>
+    <p style="color:#dbe4ff;line-height:1.55;margin:0 0 1.5rem">${safeMessage}</p>
+    <a href="${safeOrigin}" style="display:inline-block;padding:.7rem 1.25rem;border-radius:.85rem;background:linear-gradient(90deg,#633CFF,#2979FF);color:#fff;text-decoration:none;font-family:system-ui,sans-serif;font-size:.875rem;font-weight:700">${ctaLabel}</a>
+    <p style="margin:1.25rem 0 0;font-family:system-ui,sans-serif;font-size:.7rem;color:#94a3b8">Influencer profiles and collaborations live on Influrios — short links only redirect.</p>
+    ${outcome ? `<p style="margin:.5rem 0 0;font-family:ui-monospace,monospace;font-size:.65rem;color:#64748b" data-resolve-outcome="${outcome}">${outcome}</p>` : ""}
   </main>
 </body>
 </html>`;

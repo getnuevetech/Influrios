@@ -19,6 +19,7 @@ describe("gross cap and ledger totals", () => {
       {
         currency: "usd",
         grossCents: 10_000,
+        feeType: "collaboration",
         entries: [
           { kind: "hold", amountCents: 10_000 },
           { kind: "fee", amountCents: 1_000 },
@@ -34,17 +35,26 @@ describe("gross cap and ledger totals", () => {
       {
         currency: "USD",
         grossCents: 1_000,
-        entries: [{ kind: "hold", amountCents: 1_500 }],
+        feeType: "managed_intro",
+        entries: [
+          { kind: "hold", amountCents: 1_500 },
+          { kind: "fee", amountCents: 200 },
+        ],
       },
     ]);
     const usd = totals.find((row) => row.currency === "USD");
     const gbp = totals.find((row) => row.currency === "GBP");
-    assert.equal(usd?.heldCents, 8_000 + 1_500);
+    assert.equal(usd?.heldCents, 7_000 + 1_300);
     assert.equal(usd?.releasedCents, 2_000);
-    assert.equal(usd?.feeCents, 1_000);
+    assert.equal(usd?.feeCents, 1_200);
+    assert.deepEqual(usd?.feesByType, [
+      { feeType: "collaboration", amountCents: 1_000 },
+      { feeType: "managed_intro", amountCents: 200 },
+    ]);
     assert.equal(usd?.unbalanced, 1);
     assert.equal(gbp?.heldCents, 7_500);
     assert.equal(gbp?.feeCents, 0);
+    assert.deepEqual(gbp?.feesByType, []);
   });
 });
 
@@ -62,6 +72,7 @@ describe("prefund gross cap", () => {
         creatorSlug: "sofia-martinez",
         title: "Cap blocks",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(blocked.ok, false);
@@ -73,6 +84,7 @@ describe("prefund gross cap", () => {
         creatorSlug: "sofia-martinez",
         title: "Cap allows",
         grossCents: 5_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       if (!allowed.ok) assert.doesNotMatch(allowed.error, /admin cap/);

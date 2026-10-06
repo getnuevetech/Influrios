@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getCreatorBySlug } from "@/lib/seed-data";
+import { getDirectoryCreator } from "@/lib/directory";
 import {
   approveFundingMilestone,
   requestChangeOrder,
@@ -10,6 +10,7 @@ import {
   requestPrefund,
   submitFundingMilestone,
 } from "@/lib/marketplace-ledger";
+import { requireFundableServiceLevel } from "@/lib/matching-product-boundary";
 import { addDisputeEvidence, cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
 
 function dollarsToCents(raw: string) {
@@ -23,8 +24,12 @@ export async function actionCreateDeal(formData: FormData) {
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
   const briefTitle = String(formData.get("briefTitle") ?? "").trim();
   const jurisdictionCode = String(formData.get("jurisdictionCode") ?? "US");
+  const serviceLevelGate = requireFundableServiceLevel(String(formData.get("serviceLevel") ?? ""));
+  if (!serviceLevelGate.ok) {
+    redirect(`/payments?error=${encodeURIComponent(serviceLevelGate.error)}`);
+  }
   const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
-  const creator = getCreatorBySlug(creatorSlug);
+  const creator = await getDirectoryCreator(creatorSlug);
   if (!businessName || !creatorSlug || !briefTitle || !creator || grossCents <= 0) {
     redirect("/payments?error=Add a business, creator, title, and gross amount.");
   }
@@ -34,7 +39,7 @@ export async function actionCreateDeal(formData: FormData) {
     title: briefTitle,
     jurisdictionCode,
     grossCents,
-    serviceLevel: "contracted",
+    serviceLevel: serviceLevelGate.serviceLevel,
     sourceId: String(formData.get("sourceId") ?? ""),
     repeatOfId: String(formData.get("repeatOfId") ?? ""),
     scheduleKind: String(formData.get("scheduleKind") ?? "once"),

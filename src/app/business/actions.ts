@@ -7,6 +7,8 @@ import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import {
   addToShortlist,
   createBrief,
+  ensureOwnedBusinessWorkspace,
+  getWorkspace,
   removeFromShortlist,
   requestManagedMatch,
   sendInquiry,
@@ -14,9 +16,9 @@ import {
 } from "@/lib/business";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 
-async function requireBusinessTerms() {
+async function requireBusinessAccount() {
   const account = await getAccountSession().catch(() => null);
-  if (!account) return;
+  if (!account) redirect("/login?next=/business");
   const accepted = await hasCurrentLegalRecord({
     documentKey: "business-terms",
     userId: account.id,
@@ -24,6 +26,8 @@ async function requireBusinessTerms() {
   if (!accepted) {
     redirect("/business?error=" + encodeURIComponent("Agree to the Business / Brand Terms before using the workspace."));
   }
+  const ws = await getWorkspace(account.id);
+  return { account, ws };
 }
 
 export async function actionAcceptBusinessTerms(formData: FormData) {
@@ -33,6 +37,7 @@ export async function actionAcceptBusinessTerms(formData: FormData) {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business");
   if (await hasCurrentLegalRecord({ documentKey: "business-terms", userId: account.id })) {
+    await ensureOwnedBusinessWorkspace(account.id);
     redirect("/business?terms=1");
   }
   await recordLegalEvent({
@@ -42,14 +47,15 @@ export async function actionAcceptBusinessTerms(formData: FormData) {
     userRole: "BUSINESS",
     extraKeys: ["terms-of-service", "privacy-policy"],
   });
+  await ensureOwnedBusinessWorkspace(account.id);
   redirect("/business?terms=1");
 }
 
 export async function actionAddShortlist(formData: FormData) {
-  await requireBusinessTerms();
+  const { ws } = await requireBusinessAccount();
   const slug = String(formData.get("slug") ?? "");
   const note = String(formData.get("note") ?? "") || undefined;
-  const result = await addToShortlist(slug, note);
+  const result = await addToShortlist(slug, note, ws.businessId);
   revalidatePath("/business");
   revalidatePath(`/creators/${slug}`);
   if (!result.ok) {
@@ -59,37 +65,40 @@ export async function actionAddShortlist(formData: FormData) {
 }
 
 export async function actionRemoveShortlist(formData: FormData) {
-  await requireBusinessTerms();
+  const { ws } = await requireBusinessAccount();
   const slug = String(formData.get("slug") ?? "");
-  await removeFromShortlist(slug);
+  await removeFromShortlist(slug, ws.businessId);
   revalidatePath("/business");
   redirect("/business");
 }
 
 export async function actionCreateBrief(formData: FormData) {
-  await requireBusinessTerms();
-  await createBrief({
-    title: String(formData.get("title") ?? "Untitled brief"),
-    goal: String(formData.get("goal") ?? "Brand Awareness"),
-    specialty: String(formData.get("specialty") ?? "beauty"),
-    budget: String(formData.get("budget") ?? "$1K – $5K"),
-    location: [String(formData.get("locationCity") ?? ""), String(formData.get("locationCountry") ?? "")]
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .join(", ") || String(formData.get("location") ?? "USA"),
-    platform: String(formData.get("platform") ?? "INSTAGRAM"),
-    summary: String(formData.get("summary") ?? ""),
-  });
+  const { ws } = await requireBusinessAccount();
+  await createBrief(
+    {
+      title: String(formData.get("title") ?? "Untitled brief"),
+      goal: String(formData.get("goal") ?? "Brand Awareness"),
+      specialty: String(formData.get("specialty") ?? "beauty"),
+      budget: String(formData.get("budget") ?? "$1K – $5K"),
+      location: [String(formData.get("locationCity") ?? ""), String(formData.get("locationCountry") ?? "")]
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join(", ") || String(formData.get("location") ?? "USA"),
+      platform: String(formData.get("platform") ?? "INSTAGRAM"),
+      summary: String(formData.get("summary") ?? ""),
+    },
+    ws.businessId,
+  );
   revalidatePath("/business");
   redirect("/business?brief=1");
 }
 
 export async function actionSendInquiry(formData: FormData) {
-  await requireBusinessTerms();
+  const { ws } = await requireBusinessAccount();
   const creatorSlug = String(formData.get("creatorSlug") ?? "");
   const message = String(formData.get("message") ?? "");
   const briefId = String(formData.get("briefId") ?? "") || undefined;
-  const result = await sendInquiry({ creatorSlug, message, briefId });
+  const result = await sendInquiry({ creatorSlug, message, briefId }, ws.businessId);
   revalidatePath("/business");
   if (!result.ok) {
     redirect(`/business?error=${encodeURIComponent(result.error)}`);
@@ -98,10 +107,10 @@ export async function actionSendInquiry(formData: FormData) {
 }
 
 export async function actionSetPlan(formData: FormData) {
-  await requireBusinessTerms();
+  const { ws } = await requireBusinessAccount();
   const plan = String(formData.get("plan") ?? "BUSINESS_FREE") as BusinessPlanCode;
   try {
-    await setBusinessPlan(plan);
+    await setBusinessPlan(plan, ws.businessId);
   } catch {
     redirect("/business?error=" + encodeURIComponent("The business workspace is unavailable. Nothing was saved."));
   }
@@ -110,11 +119,11 @@ export async function actionSetPlan(formData: FormData) {
 }
 
 export async function actionRequestManagedMatch(formData: FormData) {
-  await requireBusinessTerms();
+  const { ws } = await requireBusinessAccount();
   const briefId = String(formData.get("briefId") ?? "");
   let result: Awaited<ReturnType<typeof requestManagedMatch>>;
   try {
-    result = await requestManagedMatch(briefId);
+    result = await requestManagedMatch(briefId, ws.businessId);
   } catch {
     redirect("/business?error=" + encodeURIComponent("The business workspace is unavailable. Nothing was saved."));
   }

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
-import { saveAttributionPolicy, saveAttributionSources } from "@/lib/deal-attribution";
+import { saveAttributionPolicy, saveAttributionSources, fileAttributionClaim, resolveAttributionClaim } from "@/lib/deal-attribution";
 import { saveDisputeReasons } from "@/lib/milestone-disputes";
 import {
   saveFundingSchedule,
@@ -15,6 +15,8 @@ import {
 import { saveFxRates, saveRevenueParties } from "@/lib/settlement";
 import { setProductSwitch } from "@/lib/product-switches";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
+import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep, enqueueScheduledReleaseSweep } from "@/lib/jobs";
+import { scheduleMilestoneRelease } from "@/lib/marketplace-ledger";
 
 function flag(formData: FormData, name: string) {
   return formData.get(name) === "on";
@@ -34,8 +36,13 @@ export async function actionSaveMarketplaceSettings(formData: FormData) {
       riskControlsEnabled: formData.get("riskControlsEnabled") === "on",
       maxOpenDisputes: Number(formData.get("maxOpenDisputes")),
       cancelUnconfirmed: formData.get("cancelUnconfirmed") === "on",
+      autoApprovalEnabled: formData.get("autoApprovalEnabled") === "on",
+      killFeeBps: Math.round(Number(formData.get("killFeePercent") ?? 0) * 100),
+      killFeeFixedCents: Math.round(Number(formData.get("killFeeFixedUsd") ?? 0) * 100),
     });
     await setProductSwitch("financial_reports", formData.get("financialReports") === "on");
+    await setProductSwitch("legacy_demo_payments", formData.get("legacyDemoPayments") === "on");
+    await setProductSwitch("collab_os_v1", formData.get("collabOsV1") === "on");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save settings.";
     redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
@@ -52,6 +59,18 @@ export async function actionSaveJurisdiction(formData: FormData) {
       label: String(formData.get("label") ?? ""),
       protectedPaymentsEnabled: flag(formData, "protectedPaymentsEnabled"),
       escrowTermAllowed: flag(formData, "escrowTermAllowed"),
+      fullPrefundingEnabled: flag(formData, "fullPrefundingEnabled"),
+      stagedPrefundingEnabled: flag(formData, "stagedPrefundingEnabled"),
+      recurringFundingEnabled: flag(formData, "recurringFundingEnabled"),
+      managedIntroductionEnabled: flag(formData, "managedIntroductionEnabled"),
+      managedNegotiationEnabled: flag(formData, "managedNegotiationEnabled"),
+      approvedProviderIds: String(formData.get("approvedProviderIds") ?? ""),
+      legalReviewStatus: String(formData.get("legalReviewStatus") ?? "APPROVED"),
+      capabilityNotes: String(formData.get("capabilityNotes") ?? ""),
+      capabilitiesEffectiveFrom: String(formData.get("capabilitiesEffectiveFrom") ?? "") || null,
+      capabilitiesEffectiveTo: String(formData.get("capabilitiesEffectiveTo") ?? "") || null,
+      reviewWindowHours: String(formData.get("reviewWindowHours") ?? ""),
+      maxRevisions: String(formData.get("maxRevisions") ?? ""),
       currency: String(formData.get("currency") ?? "USD"),
       minorDigits: Number(formData.get("minorDigits") ?? 2),
       providerCode: String(formData.get("providerCode") ?? "primary"),
@@ -279,4 +298,182 @@ export async function actionSaveAttributionSources(formData: FormData) {
   revalidatePath("/admin/marketplace");
   revalidatePath("/payments");
   redirect("/admin/marketplace?saved=sources");
+}
+
+export async function actionFileAttributionClaim(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const result = await fileAttributionClaim({
+    businessName: String(formData.get("businessName") ?? ""),
+    creatorSlug: String(formData.get("creatorSlug") ?? ""),
+    evidence: String(formData.get("evidence") ?? ""),
+    fundingId: String(formData.get("fundingId") ?? "") || null,
+    filedBy: "admin",
+  });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  redirect("/admin/marketplace?saved=attribution_claim");
+}
+
+export async function actionResolveAttributionClaim(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const decision = String(formData.get("decision") ?? "") as "upheld" | "rejected";
+  const result = await resolveAttributionClaim({
+    claimId: String(formData.get("claimId") ?? ""),
+    decision,
+    adminNote: String(formData.get("adminNote") ?? ""),
+    actor: "admin",
+  });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/payments");
+  redirect("/admin/marketplace?saved=attribution_resolved");
+}
+
+export async function actionEnqueueAutoApproval() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueAutoApprovalSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=auto_approval");
+}
+
+export async function actionEnqueueReviewDeadlineSweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueReviewDeadlineSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=review_deadlines");
+}
+
+export async function actionEnqueueDisputeSlaSweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueDisputeSlaSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=dispute_sla");
+}
+
+export async function actionEnqueueProviderHoldWarnSweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueProviderHoldWarnSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=hold_warnings");
+}
+
+export async function actionEnqueueFailedPayoutRetrySweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueFailedPayoutRetrySweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=payout_retry");
+}
+
+export async function actionEnqueueFundingReconciliationSweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueFundingReconciliationSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=funding_recon");
+}
+
+export async function actionExecuteHeldCancellation(formData: FormData) {
+  const session = await requireAdminAction("collab_finance.high_risk");
+  const { requireCollabFinanceHighRisk } = await import("@/lib/admin-auth");
+  const stepUp = await requireCollabFinanceHighRisk(
+    session,
+    String(formData.get("stepUpPassword") ?? ""),
+  );
+  if (!stepUp.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(stepUp.error)}`);
+  }
+  const { executeHeldCancellation, isCancellationReason } = await import("@/lib/collaboration-cancellation");
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  const reasonRaw = String(formData.get("reason") ?? "").trim();
+  const currentMilestoneId = String(formData.get("currentMilestoneId") ?? "").trim() || null;
+  const note = String(formData.get("note") ?? "").trim();
+  const acceptedPartialUsd = String(formData.get("acceptedPartialUsd") ?? "").trim();
+  if (!fundingId) redirect("/admin/marketplace?error=" + encodeURIComponent("Choose a funding record."));
+  if (!isCancellationReason(reasonRaw)) {
+    redirect("/admin/marketplace?error=" + encodeURIComponent("Choose a valid cancellation reason."));
+  }
+  const acceptedPartialCents =
+    acceptedPartialUsd === "" ? null : Math.round(Number(acceptedPartialUsd) * 100);
+  if (acceptedPartialCents != null && (!Number.isFinite(acceptedPartialCents) || acceptedPartialCents < 0)) {
+    redirect("/admin/marketplace?error=" + encodeURIComponent("Accepted partial amount is invalid."));
+  }
+  const result = await executeHeldCancellation({
+    fundingId,
+    reason: reasonRaw,
+    currentMilestoneId,
+    acceptedPartialCents,
+    actor: "admin",
+    note,
+    evidence: {
+      providerCaseId: String(formData.get("providerCaseId") ?? "").trim() || null,
+      providerReference: String(formData.get("providerReference") ?? "").trim() || null,
+      amountCents: (() => {
+        const raw = String(formData.get("evidenceAmountUsd") ?? "").trim();
+        if (!raw) return null;
+        const cents = Math.round(Number(raw) * 100);
+        return Number.isFinite(cents) && cents >= 0 ? cents : null;
+      })(),
+      reasonCode: String(formData.get("evidenceReasonCode") ?? "").trim() || null,
+      receivedAt: String(formData.get("evidenceReceivedAt") ?? "").trim() || null,
+      attachmentUrls: String(formData.get("evidenceAttachmentUrls") ?? "")
+        .split(/[\n,]+/)
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .slice(0, 10),
+    },
+  });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect(
+    result.paymentRisk
+      ? "/admin/marketplace?saved=payment_risk"
+      : "/admin/marketplace?saved=cancellation_queued",
+  );
+}
+
+export async function actionEnqueueScheduledReleaseSweep() {
+  await requireAdminAction("marketplace.manage");
+  await enqueueScheduledReleaseSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=scheduled_release");
+}
+
+export async function actionScheduleMilestoneRelease(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const pick = String(formData.get("milestonePick") ?? "").trim();
+  const [fundingId, milestoneId] = pick.split("::");
+  const delayHoursRaw = String(formData.get("delayHours") ?? "0").trim();
+  const delayHours = Number(delayHoursRaw);
+  if (!fundingId || !milestoneId) {
+    redirect("/admin/marketplace?error=" + encodeURIComponent("Choose funding and milestone."));
+  }
+  if (!Number.isFinite(delayHours) || delayHours < 0 || delayHours > 720) {
+    redirect("/admin/marketplace?error=" + encodeURIComponent("Delay hours must be 0–720."));
+  }
+  const releaseAt = new Date(Date.now() + delayHours * 60 * 60 * 1000);
+  const result = await scheduleMilestoneRelease({
+    fundingId,
+    milestoneId,
+    releaseAt,
+    actor: "admin",
+  });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=release_scheduled");
 }

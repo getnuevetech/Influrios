@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { actionClaimDraft } from "@/app/claim/actions";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { draftToSeedCreator, getDraft } from "@/lib/claim";
+import { getInfluencerIdentity } from "@/lib/landing-pages";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Preview your Influencer Card" };
@@ -19,18 +20,21 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
   const q = await searchParams;
   const draft = await getDraft(draftId);
   if (!draft) notFound();
-  const creator = draftToSeedCreator(draft);
+  const [creator, identity] = await Promise.all([
+    Promise.resolve(draftToSeedCreator(draft)),
+    getInfluencerIdentity(),
+  ]);
 
   return (
     <div className="min-h-[80vh] bg-[radial-gradient(ellipse_at_top,_#EAE4FF,_#F7FAFF_55%,_#D9E8FF)] px-4 py-10">
       <div className="mx-auto mb-8 max-w-3xl text-center">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Draft preview</p>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">
-          Your card — before you sign up
+          Your Influencer Card — before you sign up
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Generated from <span className="font-semibold text-indigo">{draft.inputHandle}</span>. Nothing
-          is public until you claim, verify, and publish.
+          Generated from <span className="font-semibold text-indigo">{draft.inputHandle}</span>. This is a
+          temporary full-card preview — nothing is public until you claim, verify, and publish.
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
           {STAGES.map((s, i) => (
@@ -52,12 +56,13 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
         </div>
       ) : null}
 
-      <PublicInfluencerCard creator={creator} qrDisplay="default" />
+      <PublicInfluencerCard creator={creator} qrDisplay="large" draftPreview />
 
       <div className="mx-auto mt-8 max-w-sm card-surface space-y-4 p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Claim this card</h2>
+        <h2 className="font-display text-xl font-bold text-indigo">Claim this Influencer Profile</h2>
         <p className="text-sm text-muted">
-          Attach your email to take ownership. Demo auth — no password required in Phase 8.
+          Attach your email to take ownership. Your temporary card shows the full Influrios experience —
+          publishing starts on the Starter plan.
         </p>
         <form action={actionClaimDraft} className="space-y-3">
           <input type="hidden" name="draftId" value={draft.id} />
@@ -69,6 +74,35 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
               defaultValue={draft.displayName}
               className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
             />
+          </label>
+          <label className="block text-sm font-semibold text-indigo">
+            How do you describe yourself?
+            <select
+              name="title"
+              defaultValue={draft.title || "Influencer"}
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+            >
+              {identity.selfDescriptions.map((label) => (
+                <option key={label} value={label}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-muted">
+              Your platform role is Influencer. This is how you describe your influence.
+            </span>
+          </label>
+          <label className="block text-sm font-semibold text-indigo">
+            Gender (optional — picks your default avatar)
+            <select
+              name="gender"
+              defaultValue={draft.gender || "unspecified"}
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+            >
+              <option value="unspecified">Prefer not to say</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </select>
           </label>
           <label className="block text-sm font-semibold text-indigo">
             Email

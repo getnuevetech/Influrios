@@ -5,6 +5,7 @@ import {
   canCancelUnconfirmed,
   canOpenMilestoneDispute,
   decideDispute,
+  DISPUTE_REASON_CATALOG,
   disputeStatusAfterRefund,
 } from "./disputes";
 import { ledgerMovements, marketplaceDisposition, reconcileLedger } from "./ledger";
@@ -92,6 +93,7 @@ describe("dispute rules", () => {
     if (full.ok) {
       assert.equal(full.status, "refund_requested");
       assert.equal(full.requestedRefundCents, 5000);
+      assert.equal(full.outcome, "brand_refund");
     }
     const partial = decideDispute({
       status: "under_review",
@@ -101,7 +103,10 @@ describe("dispute rules", () => {
       milestoneCents: 5000,
     });
     assert.equal(partial.ok, true);
-    if (partial.ok) assert.equal(partial.requestedRefundCents, 1200);
+    if (partial.ok) {
+      assert.equal(partial.requestedRefundCents, 1200);
+      assert.equal(partial.outcome, "split_amount");
+    }
     assert.equal(
       decideDispute({
         status: "open",
@@ -130,7 +135,10 @@ describe("dispute rules", () => {
       milestoneCents: 5000,
     });
     assert.equal(withdrawn.ok, true);
-    if (withdrawn.ok) assert.equal(withdrawn.status, "withdrawn");
+    if (withdrawn.ok) {
+      assert.equal(withdrawn.status, "withdrawn");
+      assert.equal(withdrawn.outcome, "withdrawn");
+    }
     const allowed = decideDispute({
       status: "under_review",
       action: "release",
@@ -139,7 +147,63 @@ describe("dispute rules", () => {
       milestoneCents: 5000,
     });
     assert.equal(allowed.ok, true);
-    if (allowed.ok) assert.equal(allowed.status, "resolved_release");
+    if (allowed.ok) {
+      assert.equal(allowed.status, "resolved_release");
+      assert.equal(allowed.outcome, "creator_release");
+    }
+  });
+
+  it("maps Dev §13 settlement and escalation outcomes without moving cash", () => {
+    const settle = decideDispute({
+      status: "under_review",
+      action: "settle",
+      requestedCents: 0,
+      heldCents: 5000,
+      milestoneCents: 5000,
+    });
+    assert.equal(settle.ok, true);
+    if (settle.ok) {
+      assert.equal(settle.status, "resolved_settlement");
+      assert.equal(settle.outcome, "mutual_settlement");
+      assert.equal(settle.requestedRefundCents, null);
+    }
+    const provider = decideDispute({
+      status: "open",
+      action: "escalate_provider",
+      requestedCents: 0,
+      heldCents: 5000,
+      milestoneCents: 5000,
+    });
+    assert.equal(provider.ok, true);
+    if (provider.ok) {
+      assert.equal(provider.status, "escalated_provider");
+      assert.equal(provider.outcome, "escalate_provider");
+    }
+    const legal = decideDispute({
+      status: "escalated_provider",
+      action: "escalate_legal",
+      requestedCents: 0,
+      heldCents: 5000,
+      milestoneCents: 5000,
+    });
+    assert.equal(legal.ok, true);
+    if (legal.ok) {
+      assert.equal(legal.status, "escalated_legal");
+      assert.equal(legal.outcome, "escalate_legal");
+    }
+  });
+
+  it("includes the Dev §13 reason-code catalog", () => {
+    const codes = DISPUTE_REASON_CATALOG.map((row) => row.code);
+    assert.deepEqual(codes, [
+      "non_delivery",
+      "quality_scope",
+      "missed_deadline",
+      "unauthorized_revision",
+      "publication_issue",
+      "payment_fraud",
+      "other",
+    ]);
   });
 
   it("closes a refund request only when the provider refund covers the request", () => {
@@ -301,7 +365,7 @@ describe("milestone dispute ledger", () => {
       });
       const releasedLedger = reconcileLedger(ledgerMovements(released?.entries ?? []), 10_000);
       assert.equal(releasedLedger.heldCents, 0);
-      assert.equal(releasedLedger.releasedCents, 10_000);
+      assert.equal(releasedLedger.releasedCents + releasedLedger.feeCents, 10_000);
       assert.equal(released?.milestones[0]?.status, "released");
 
       const refundHold = await applyMarketplaceEvent({

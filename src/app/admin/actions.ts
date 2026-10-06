@@ -160,6 +160,8 @@ export async function actionSimulateFee(formData: FormData) {
     grossUsd: String(formData.get("grossUsd") || "0"),
     feeCents: String(result.feeCents),
     rule: result.rule?.name ?? "none",
+    feeType: result.rule?.feeType ?? "",
+    explanation: result.explanation.slice(0, 400),
   });
   redirect(`/admin/fees?${q.toString()}`);
 }
@@ -181,7 +183,16 @@ export async function actionFreezeFeeSnapshot(formData: FormData) {
 
 export async function actionSaveFeeRule(formData: FormData) {
   await requireAdminAction("commerce.manage");
-  const { upsertFeeRule } = await import("@/lib/collaboration-fees");
+  const { parseTierBands, upsertFeeRule } = await import("@/lib/collaboration-fees");
+  let tierBands: ReturnType<typeof parseTierBands> = [];
+  const rawBands = String(formData.get("tierBandsJson") || "").trim();
+  if (rawBands) {
+    try {
+      tierBands = parseTierBands(JSON.parse(rawBands));
+    } catch {
+      tierBands = [];
+    }
+  }
   await upsertFeeRule({
     id: String(formData.get("id") || "") || undefined,
     name: String(formData.get("name") || "Untitled rule"),
@@ -189,16 +200,33 @@ export async function actionSaveFeeRule(formData: FormData) {
     priority: Number(formData.get("priority") || 100),
     jurisdiction: String(formData.get("jurisdiction") || "*"),
     serviceLevel: String(formData.get("serviceLevel") || "contracted"),
+    feeType: String(formData.get("feeType") || "collaboration") as
+      | "platform_service"
+      | "collaboration"
+      | "managed_intro"
+      | "managed_campaign"
+      | "success"
+      | "processing"
+      | "fx"
+      | "cancellation_dispute"
+      | "referral",
+    fundingMode: String(formData.get("fundingMode") || "*"),
+    relationshipSource: String(formData.get("relationshipSource") || "*"),
+    promotionChannel: String(formData.get("promotionChannel") || "*"),
     method: String(formData.get("method") || "percent") as
       | "percent"
       | "fixed"
-      | "percent_plus_fixed",
+      | "percent_plus_fixed"
+      | "waived"
+      | "tiered"
+      | "custom_enterprise",
     percentBps: Number(formData.get("percentBps") || 0),
     fixedCents: Math.round(Number(formData.get("fixedUsd") || 0) * 100),
     minFeeCents: Math.round(Number(formData.get("minFeeUsd") || 0) * 100),
     maxFeeCents: formData.get("maxFeeUsd")
       ? Math.round(Number(formData.get("maxFeeUsd")) * 100)
       : null,
+    tierBands,
     payer: String(formData.get("payer") || "brand") as "brand" | "creator" | "split",
     notes: String(formData.get("notes") || ""),
   });

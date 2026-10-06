@@ -7,12 +7,15 @@ import {
   actionReserveSlug,
   actionSaveShortDomain,
   actionSaveShortSettings,
+  actionSetAliasRedirect,
+  actionSetDomainVerified,
   actionSetLinkStatus,
 } from "@/app/admin/short-links/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
-import { ensureShortLinkDefaults, getShortLinkSettings } from "@/lib/short-link";
+import { ensureShortLinkDefaults, getAdminShortLinkAnalyticsRollup, getShortLinkSettings } from "@/lib/short-link";
+import { getResolverMetricsRollup } from "@/lib/short-link-resolver-metrics";
 import { shortLinkHosts } from "@/lib/short-link-hosts";
 
 export const dynamic = "force-dynamic";
@@ -31,25 +34,37 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
   let links: Awaited<
     ReturnType<
       typeof prisma.shortLink.findMany<{
-        include: { creator: true; qrIdentities: { where: { status: "active" }; take: 1 } };
+        include: {
+          creator: true;
+          qrIdentities: { where: { status: "active" }; take: 1 };
+          aliases: { orderBy: { createdAt: "desc" } };
+        };
       }>
     >
   > = [];
   let events: Awaited<ReturnType<typeof prisma.shortLinkEvent.findMany>> = [];
   let cases: Awaited<ReturnType<typeof prisma.shortLinkAbuseCase.findMany>> = [];
   let settings: Awaited<ReturnType<typeof getShortLinkSettings>> | null = null;
+  let rollup: Awaited<ReturnType<typeof getAdminShortLinkAnalyticsRollup>> | null = null;
+  let resolverMetrics: Awaited<ReturnType<typeof getResolverMetricsRollup>> | null = null;
   let dbError = false;
   try {
     await ensureShortLinkDefaults();
-    [domains, reserved, events, cases, settings] = await Promise.all([
+    [domains, reserved, events, cases, settings, rollup, resolverMetrics] = await Promise.all([
       prisma.shortLinkDomain.findMany({ orderBy: { hostname: "asc" } }),
       prisma.reservedSlug.findMany({ orderBy: { slug: "asc" } }),
       prisma.shortLinkEvent.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
       prisma.shortLinkAbuseCase.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
       getShortLinkSettings(),
+      getAdminShortLinkAnalyticsRollup(),
+      getResolverMetricsRollup(24),
     ]);
     links = await prisma.shortLink.findMany({
-      include: { creator: true, qrIdentities: { where: { status: "active" }, take: 1 } },
+      include: {
+        creator: true,
+        qrIdentities: { where: { status: "active" }, take: 1 },
+        aliases: { orderBy: { createdAt: "desc" } },
+      },
       orderBy: { updatedAt: "desc" },
       take: 40,
     });
@@ -65,7 +80,7 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Short links</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        inflr.me is redirect infrastructure. Creator profiles stay on the canonical Influrios origin. QR codes encode
+        inflr.me is redirect infrastructure. Influencer profiles stay on the canonical Influrios origin. QR codes encode
         an opaque /q token on the primary short domain, so a slug change does not require a reprint. Sign in again if
         this page was forbidden after the permission was added.
       </p>
@@ -77,23 +92,109 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
       {params.error ? <p className="mt-4 text-sm text-amber-800">{params.error}</p> : null}
       {dbError ? <p className="mt-4 text-sm text-amber-800">Short links are unavailable.</p> : null}
 
+      {rollup ? (
+        <section className="card-surface mt-6 grid gap-3 p-5 sm:grid-cols-5">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">Visits</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.visits}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">QR scans</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.qrScans}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">CTA clicks</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.ctaClicks}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">Destination changes</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.destinationChanges}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">Open abuse</p>
+            <p className="font-display text-2xl font-bold text-indigo">{rollup.abuseOpen}</p>
+          </div>
+        </section>
+      ) : null}
+
+      {resolverMetrics ? (
+        <section className="card-surface mt-6 p-5">
+          <h2 className="font-display text-lg font-bold text-indigo">Resolver metrics (last {resolverMetrics.windowHours}h)</h2>
+          <p className="mt-1 text-xs text-muted">
+            Ops outcomes from every resolve — including misses and errors (INFLR.me Spec §20). Response header{" "}
+            <code className="rounded bg-[#F4F7FF] px-1">x-influrios-resolve-outcome</code>.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">Resolves</p>
+              <p className="font-display text-2xl font-bold text-indigo">{resolverMetrics.total}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">Redirects</p>
+              <p className="font-display text-2xl font-bold text-indigo">{resolverMetrics.redirects}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">Failures</p>
+              <p className="font-display text-2xl font-bold text-indigo">{resolverMetrics.failures}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">p50 / p95 latency</p>
+              <p className="font-display text-2xl font-bold text-indigo">
+                {resolverMetrics.p50LatencyMs ?? "—"}
+                <span className="text-sm font-semibold text-muted"> / </span>
+                {resolverMetrics.p95LatencyMs ?? "—"}
+                <span className="text-sm font-semibold text-muted"> ms</span>
+              </p>
+            </div>
+          </div>
+          <ul className="mt-4 flex flex-wrap gap-2 text-xs">
+            {Object.entries(resolverMetrics.byOutcome)
+              .filter(([, count]) => count > 0)
+              .map(([outcome, count]) => (
+                <li key={outcome} className="rounded-full bg-[#F4F7FF] px-2.5 py-1 font-semibold text-indigo">
+                  {outcome.replaceAll("_", " ")} · {count}
+                </li>
+              ))}
+            {resolverMetrics.total === 0 ? (
+              <li className="text-muted">No resolver traffic in this window yet.</li>
+            ) : null}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="card-surface mt-6 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Domains</h2>
+        <p className="mt-1 text-xs text-muted">
+          Ops verifies ownership before a hostname can serve short links or become primary (INFLR.me §20.24). New
+          domains start unverified.
+        </p>
         <ul className="mt-3 space-y-2 text-sm">
           {domains.map((domain) => (
             <li key={domain.id} className="flex flex-wrap items-center justify-between gap-2">
               <span>
                 {domain.hostname} · {domain.label} · {domain.active ? "active" : "off"}
+                {domain.verified ? " · verified" : " · unverified"}
                 {domain.isPrimary ? " · primary" : ""}
                 {domain.fallback ? " · fallback" : ""}
               </span>
-              {canEdit && !domain.isPrimary ? (
-                <form action={actionMakePrimaryDomain}>
-                  <input type="hidden" name="id" value={domain.id} />
-                  <button type="submit" className="btn-secondary !py-1 text-xs">
-                    Make primary
-                  </button>
-                </form>
+              {canEdit ? (
+                <div className="flex flex-wrap gap-2">
+                  <form action={actionSetDomainVerified}>
+                    <input type="hidden" name="id" value={domain.id} />
+                    <input type="hidden" name="verified" value={domain.verified ? "0" : "1"} />
+                    <button type="submit" className="btn-secondary !py-1 text-xs">
+                      {domain.verified ? "Unverify" : "Mark verified"}
+                    </button>
+                  </form>
+                  {!domain.isPrimary && domain.verified ? (
+                    <form action={actionMakePrimaryDomain}>
+                      <input type="hidden" name="id" value={domain.id} />
+                      <button type="submit" className="btn-secondary !py-1 text-xs">
+                        Make primary
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
               ) : null}
             </li>
           ))}
@@ -162,6 +263,10 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
 
       <section className="card-surface mt-4 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Links</h2>
+        <p className="mt-1 text-xs text-muted">
+          Alias policy: after a slug change the old name redirects to the current one until you disable it here
+          (INFLR.me §20.12).
+        </p>
         <ul className="mt-3 space-y-3 text-sm">
           {links.map((link) => (
             <li key={link.id} className="rounded-xl border border-border p-3">
@@ -191,6 +296,26 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
                     </form>
                   ) : null}
                 </div>
+              ) : null}
+              {link.aliases.length ? (
+                <ul className="mt-3 space-y-1 border-t border-border pt-2 text-xs text-muted">
+                  {link.aliases.map((alias) => (
+                    <li key={alias.id} className="flex flex-wrap items-center gap-2">
+                      <span>
+                        /{alias.slug} → /{link.slug} · {alias.redirect ? "redirect on" : "redirect off"}
+                      </span>
+                      {canEdit ? (
+                        <form action={actionSetAliasRedirect}>
+                          <input type="hidden" name="id" value={alias.id} />
+                          <input type="hidden" name="redirect" value={alias.redirect ? "0" : "1"} />
+                          <button type="submit" className="btn-secondary !py-0.5 text-[11px]">
+                            {alias.redirect ? "Disable redirect" : "Enable redirect"}
+                          </button>
+                        </form>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </li>
           ))}

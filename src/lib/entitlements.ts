@@ -221,8 +221,15 @@ export function decideCount(
   return { ok: false, feature, limit, upgradePlanCode };
 }
 
+export type CardChromeTier = "starter" | "plus" | "pro";
+
 export type CardChrome = {
+  /** Visual tier from theme entitlement (UI-IC-001–003). */
+  tier: CardChromeTier;
+  /** True for Pro full themes (legacy alias for dark premium shell). */
   premium: boolean;
+  /** Plus or Pro — elevated (non-white) shell. */
+  elevated: boolean;
   gold: boolean;
   ctaLabel: string;
   showShortlink: boolean;
@@ -232,12 +239,17 @@ export type CardChrome = {
 
 /** Visual system derived from entitlements. Gold and QR follow features, not the plan name. */
 export function cardChrome(entitlements: EntitlementLimits): CardChrome {
-  const premium = entitlements.themes === "full";
-  let ctaLabel = "View Profile →";
+  const tier: CardChromeTier =
+    entitlements.themes === "full" ? "pro" : entitlements.themes === "limited" ? "plus" : "starter";
+  const premium = tier === "pro";
+  let ctaLabel = "Contact →";
   if (premium && entitlements.collabCta) ctaLabel = "Work With Me →";
   else if (entitlements.contactInquiry === "full") ctaLabel = "Contact →";
+  else if (entitlements.contactInquiry === "limited") ctaLabel = "Contact →";
   return {
+    tier,
     premium,
+    elevated: tier === "plus" || tier === "pro",
     gold: premium,
     ctaLabel,
     showShortlink: entitlements.shortlink,
@@ -245,3 +257,59 @@ export function cardChrome(entitlements: EntitlementLimits): CardChrome {
     dynamicQr: entitlements.dynamicQr,
   };
 }
+
+/** Shell class tokens for Starter / Plus / Pro card chrome (Platform Spec §39). */
+export function cardShellClasses(chrome: CardChrome) {
+  if (chrome.tier === "pro") {
+    return {
+      root: "bg-pro text-white ring-1 ring-gold/40",
+      panel: "bg-pro",
+      muted: "text-white/70",
+      mutedSoft: "text-white/50",
+      mutedFaint: "text-white/40",
+      chip: "bg-white/10 text-lavender",
+      panelSoft: "bg-white/5",
+      panelBordered: "bg-white/5",
+      badge: "bg-gold/20 text-[#F6E7B0]",
+      qrRing: "ring-1 ring-gold/50",
+      qrMini: "ring-1 ring-gold",
+      ctaRing: "ring-1 ring-gold/50",
+    };
+  }
+  if (chrome.tier === "plus") {
+    return {
+      root: "bg-plus text-white ring-1 ring-blue/40",
+      panel: "bg-plus",
+      muted: "text-white/75",
+      mutedSoft: "text-white/55",
+      mutedFaint: "text-white/45",
+      chip: "bg-white/15 text-lavender",
+      panelSoft: "bg-white/10",
+      panelBordered: "bg-white/10",
+      badge: "bg-white/20 text-lavender",
+      qrRing: "ring-1 ring-white/40",
+      qrMini: "ring-1 ring-white/50",
+      ctaRing: "ring-1 ring-white/30",
+    };
+  }
+  return {
+    root: "bg-white text-indigo ring-1 ring-border",
+    panel: "bg-white",
+    muted: "text-muted",
+    mutedSoft: "text-muted",
+    mutedFaint: "text-muted",
+    chip: "chip",
+    panelSoft: "bg-[#EEF4FF]",
+    panelBordered: "border border-border bg-starter-bg",
+    badge: "bg-white/95 text-violet",
+    qrRing: "ring-1 ring-border",
+    qrMini: "border border-border",
+    ctaRing: "",
+  };
+}
+
+/** Full-card chrome for signup draft previews (demo only — not published entitlements). */
+export const DRAFT_PREVIEW_ENTITLEMENTS: EntitlementLimits = {
+  ...PLAN_ENTITLEMENTS.PRO,
+  // Preview shows the full card experience; publishing still starts on Starter.
+};

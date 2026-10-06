@@ -1,7 +1,8 @@
 /**
- * Phase 6 — Monetization / billing (Stripe-ready, demo fallback).
- * Catalog covers Creator Plus/Pro and Business Pro/Agency.
- * Without STRIPE_SECRET_KEY, checkout completes in demo mode and upgrades local stores.
+ * Phase 6 / Phase L.4 — Monetization / billing (Stripe-ready, demo fallback).
+ * Catalog covers Influencer Plus/Pro and Business Pro/Agency.
+ * Checkout attempts live in Postgres (CheckoutAttempt). Plan truth is User /
+ * Creator / SubscriptionState. One-time import from data/billing.json.
  */
 import { promises as fs } from "fs";
 import path from "path";
@@ -40,7 +41,7 @@ export const BILLING_CATALOG: BillingProduct[] = [
   {
     sku: "creator_plus",
     audience: "creator",
-    name: "Creator Plus",
+    name: "Influencer Plus",
     priceLabel: "$19/mo",
     amountCents: 1900,
     interval: "month",
@@ -56,7 +57,7 @@ export const BILLING_CATALOG: BillingProduct[] = [
   {
     sku: "creator_pro",
     audience: "creator",
-    name: "Creator Pro",
+    name: "Influencer Pro",
     priceLabel: "$29/mo",
     amountCents: 2900,
     interval: "month",
@@ -80,7 +81,7 @@ export const BILLING_CATALOG: BillingProduct[] = [
     highlights: [
       "100 shortlist · 50 inquiries/mo",
       "Fit insights + Intelligence",
-      "JSON/CSV exports",
+      "Custom milestone schedules",
     ],
     businessPlan: "BUSINESS_PRO",
     stripePriceEnv: "STRIPE_PRICE_BUSINESS_PRO",
@@ -95,7 +96,7 @@ export const BILLING_CATALOG: BillingProduct[] = [
     description: "Team seats, managed matching, and higher limits.",
     highlights: [
       "500 shortlist · 200 inquiries/mo",
-      "Managed matching entitlement",
+      "Managed matching + custom milestones",
       "15 team seats",
     ],
     businessPlan: "AGENCY",
@@ -105,6 +106,10 @@ export const BILLING_CATALOG: BillingProduct[] = [
 
 export function getProduct(sku: string): BillingProduct | undefined {
   return BILLING_CATALOG.find((p) => p.sku === sku);
+}
+
+export function isBillingSku(value: string): value is BillingSku {
+  return BILLING_CATALOG.some((product) => product.sku === value);
 }
 
 export type CheckoutSessionRecord = {
@@ -134,47 +139,182 @@ export type BillingStore = {
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_PATH = path.join(DATA_DIR, "billing.json");
+const LEGACY_STORE_PATH = path.join(DATA_DIR, "billing.json");
+const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "billing.json.migrated");
+const LAST_WEBHOOK_KEY = "billing.lastWebhookAt";
 
-const DEFAULT_STORE: BillingStore = {
-  sessions: [],
-  creatorOverrides: [
-    {
-      creatorSlug: "sofia-martinez",
-      plan: "PLUS",
-      updatedAt: new Date().toISOString(),
-      source: "demo",
+function asSku(value: string): BillingSku | null {
+  return isBillingSku(value) ? value : null;
+}
+
+function sessionFromRow(row: {
+  id: string;
+  sku: string;
+  mode: string;
+  status: string;
+  customerEmail: string | null;
+  userId: string | null;
+  creatorSlug: string | null;
+  stripeSessionId: string | null;
+  createdAt: Date;
+  completedAt: Date | null;
+}): CheckoutSessionRecord | null {
+  const sku = asSku(row.sku);
+  if (!sku) return null;
+  const mode = row.mode === "stripe" ? "stripe" : "demo";
+  const status =
+    row.status === "completed" || row.status === "canceled" || row.status === "open"
+      ? row.status
+      : "open";
+  return {
+    id: row.id,
+    sku,
+    mode,
+    status,
+    customerEmail: row.customerEmail ?? undefined,
+    userId: row.userId ?? undefined,
+    creatorSlug: row.creatorSlug ?? undefined,
+    stripeSessionId: row.stripeSessionId ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+    completedAt: row.completedAt?.toISOString(),
+  };
+}
+
+async function upsertAttempt(session: CheckoutSessionRecord) {
+  await prisma.checkoutAttempt.upsert({
+    where: { id: session.id },
+    create: {
+      id: session.id,
+      sku: session.sku,
+      mode: session.mode,
+      status: session.status,
+      customerEmail: session.customerEmail,
+      userId: session.userId,
+      creatorSlug: session.creatorSlug,
+      stripeSessionId: session.stripeSessionId,
+      createdAt: new Date(session.createdAt),
+      completedAt: session.completedAt ? new Date(session.completedAt) : null,
     },
-  ],
-};
+    update: {
+      sku: session.sku,
+      mode: session.mode,
+      status: session.status,
+      customerEmail: session.customerEmail,
+      userId: session.userId,
+      creatorSlug: session.creatorSlug,
+      stripeSessionId: session.stripeSessionId,
+      completedAt: session.completedAt ? new Date(session.completedAt) : null,
+    },
+  });
+}
 
-async function ensureStore(): Promise<BillingStore> {
+async function readLegacyBilling(): Promise<{
+  sessions: CheckoutSessionRecord[];
+  lastWebhookAt?: string;
+} | null> {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    return { ...DEFAULT_STORE, ...(JSON.parse(raw) as BillingStore) };
+    const raw = await fs.readFile(LEGACY_STORE_PATH, "utf8");
+    const parsed = JSON.parse(raw) as Partial<BillingStore>;
+    const sessions = (parsed.sessions ?? [])
+      .map((session) => {
+        const sku = asSku(session.sku);
+        if (!sku) return null;
+        return {
+          ...session,
+          sku,
+          mode: session.mode === "stripe" ? ("stripe" as const) : ("demo" as const),
+          status:
+            session.status === "completed" || session.status === "canceled"
+              ? session.status
+              : ("open" as const),
+        };
+      })
+      .filter((session): session is CheckoutSessionRecord => Boolean(session));
+    return {
+      sessions,
+      lastWebhookAt: typeof parsed.lastWebhookAt === "string" ? parsed.lastWebhookAt : undefined,
+    };
   } catch {
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(STORE_PATH, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
-    } catch {
-      /* read-only */
-    }
-    return structuredClone(DEFAULT_STORE);
+    return null;
   }
 }
 
-async function saveStore(store: BillingStore) {
+async function markLegacyMigrated() {
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+    await fs.rename(LEGACY_STORE_PATH, LEGACY_MIGRATED_PATH);
   } catch {
-    /* ignore */
+    try {
+      await fs.unlink(LEGACY_STORE_PATH);
+    } catch {
+      /* ignore */
+    }
   }
+}
+
+async function migrateLegacyBillingOnce() {
+  const count = await prisma.checkoutAttempt.count();
+  if (count > 0) return;
+  const legacy = await readLegacyBilling();
+  if (!legacy) return;
+  for (const session of legacy.sessions) {
+    await upsertAttempt(session);
+  }
+  if (legacy.lastWebhookAt) {
+    await prisma.platformSetting.upsert({
+      where: { key: LAST_WEBHOOK_KEY },
+      create: { key: LAST_WEBHOOK_KEY, value: legacy.lastWebhookAt },
+      update: { value: legacy.lastWebhookAt },
+    });
+  }
+  await markLegacyMigrated();
+}
+
+async function loadCreatorOverrides(): Promise<CreatorPlanOverride[]> {
+  const creators = await prisma.creator.findMany({
+    where: { planTier: { in: ["PLUS", "PRO"] } },
+    select: { slug: true, planTier: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+    take: 50,
+  });
+  return creators
+    .filter((row): row is typeof row & { planTier: "PLUS" | "PRO" } => row.planTier === "PLUS" || row.planTier === "PRO")
+    .map((row) => ({
+      creatorSlug: row.slug,
+      plan: row.planTier,
+      updatedAt: row.updatedAt.toISOString(),
+      source: "checkout" as const,
+    }));
+}
+
+async function loadLastWebhookAt(): Promise<string | undefined> {
+  const row = await prisma.platformSetting.findUnique({ where: { key: LAST_WEBHOOK_KEY } });
+  if (typeof row?.value === "string") return row.value;
+  const job = await prisma.job.findFirst({
+    where: { kind: "provider_webhook" },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  return job?.createdAt.toISOString();
 }
 
 export async function getBillingStore(): Promise<BillingStore> {
-  return ensureStore();
+  await migrateLegacyBillingOnce();
+  const [rows, creatorOverrides, lastWebhookAt] = await Promise.all([
+    prisma.checkoutAttempt.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
+    loadCreatorOverrides(),
+    loadLastWebhookAt(),
+  ]);
+  return {
+    sessions: rows.map(sessionFromRow).filter((session): session is CheckoutSessionRecord => Boolean(session)),
+    creatorOverrides,
+    lastWebhookAt,
+  };
+}
+
+export async function getCheckoutAttempt(sessionId: string): Promise<CheckoutSessionRecord | null> {
+  await migrateLegacyBillingOnce();
+  const row = await prisma.checkoutAttempt.findUnique({ where: { id: sessionId } });
+  return row ? sessionFromRow(row) : null;
 }
 
 export function isStripeConfigured(): boolean {
@@ -245,6 +385,16 @@ export async function startCheckout(input: {
   const product = getProduct(input.sku);
   if (!product) return { ok: false, error: "Unknown plan SKU" };
 
+  // P8: telemetry only — SKUs stay creator_* for Stripe metadata compatibility.
+  if (product.sku.startsWith("creator_")) {
+    const { recordCreatorFieldDeprecation } = await import("@/lib/legacy-teardown");
+    await recordCreatorFieldDeprecation({
+      field: product.sku,
+      source: "billing.startCheckout",
+      actor: input.customerEmail ?? input.userId ?? "checkout",
+    }).catch(() => null);
+  }
+
   const creds = await stripeCredentials();
   if (!creds.ok && creds.reason === "rejected") {
     return { ok: false, error: "Use a Stripe sandbox key. Nothing was charged." };
@@ -254,8 +404,9 @@ export async function startCheckout(input: {
     if (!demo) return { ok: false, error: "Checkout is turned off. Nothing was charged." };
   }
 
-  const store = await ensureStore();
+  await migrateLegacyBillingOnce();
   const sessionId = newId("cs");
+  const createdAt = new Date().toISOString();
 
   if (creds.ok) {
     const priceId = await billingPriceId(product.sku, product.stripePriceEnv);
@@ -278,7 +429,7 @@ export async function startCheckout(input: {
       },
     });
     if (!opened.ok) return opened;
-    store.sessions.unshift({
+    await upsertAttempt({
       id: sessionId,
       sku: product.sku,
       mode: "stripe",
@@ -287,14 +438,12 @@ export async function startCheckout(input: {
       userId: input.userId,
       creatorSlug: input.creatorSlug,
       stripeSessionId: opened.id,
-      createdAt: new Date().toISOString(),
+      createdAt,
     });
-    await saveStore(store);
     return { ok: true, mode: "stripe", url: opened.url, sessionId };
   }
 
-  // Demo checkout — no Stripe keys required
-  store.sessions.unshift({
+  await upsertAttempt({
     id: sessionId,
     sku: product.sku,
     mode: "demo",
@@ -302,9 +451,8 @@ export async function startCheckout(input: {
     customerEmail: input.customerEmail,
     userId: input.userId,
     creatorSlug: input.creatorSlug,
-    createdAt: new Date().toISOString(),
+    createdAt,
   });
-  await saveStore(store);
 
   const origin = getAppOrigin();
   const params = new URLSearchParams({
@@ -324,8 +472,7 @@ export async function startCheckout(input: {
 export async function completeCheckout(sessionId: string, opts?: {
   creatorSlug?: string;
 }): Promise<{ ok: true; product: BillingProduct } | { ok: false; error: string }> {
-  const store = await ensureStore();
-  const session = store.sessions.find((s) => s.id === sessionId);
+  const session = await getCheckoutAttempt(sessionId);
   if (!session) return { ok: false, error: "Checkout session not found" };
   if (session.status === "completed") {
     const product = getProduct(session.sku)!;
@@ -368,48 +515,66 @@ export async function completeCheckout(sessionId: string, opts?: {
 
   session.status = "completed";
   session.completedAt = new Date().toISOString();
+  await upsertAttempt(session);
 
   if (product.businessPlan) {
     await setBusinessPlan(product.businessPlan);
   }
 
-  if (product.creatorPlan) {
-    const creatorSlug = slug || "sofia-martinez";
-    const existing = store.creatorOverrides.find((c) => c.creatorSlug === creatorSlug);
-    if (existing) {
-      existing.plan = product.creatorPlan;
-      existing.updatedAt = new Date().toISOString();
-      existing.source = "checkout";
-    } else {
-      store.creatorOverrides.push({
-        creatorSlug,
-        plan: product.creatorPlan,
-        updatedAt: new Date().toISOString(),
-        source: "checkout",
-      });
-    }
-  }
-
-  await saveStore(store);
   return { ok: true, product };
 }
 
+/**
+ * Ensure a CheckoutAttempt exists for a Stripe webhook when the open row was lost.
+ * Uses Stripe metadata only — never invents a paid status without applyPlanOnce.
+ */
+export async function ensureStripeAttemptFromMetadata(input: {
+  localId: string;
+  sku: string;
+  userId?: string;
+  creatorSlug?: string;
+  stripeSessionId?: string;
+}): Promise<CheckoutSessionRecord | null> {
+  const sku = asSku(input.sku);
+  if (!sku) return null;
+  const existing = await getCheckoutAttempt(input.localId);
+  if (existing) return existing;
+  const session: CheckoutSessionRecord = {
+    id: input.localId,
+    sku,
+    mode: "stripe",
+    status: "open",
+    userId: input.userId || undefined,
+    creatorSlug: input.creatorSlug || undefined,
+    stripeSessionId: input.stripeSessionId,
+    createdAt: new Date().toISOString(),
+  };
+  await upsertAttempt(session);
+  return session;
+}
+
 export async function cancelCheckout(sessionId: string) {
-  const store = await ensureStore();
-  const session = store.sessions.find((s) => s.id === sessionId);
+  const session = await getCheckoutAttempt(sessionId);
   if (session && session.status === "open") {
     session.status = "canceled";
-    await saveStore(store);
+    await upsertAttempt(session);
   }
 }
 
 export async function getCreatorPlanOverride(slug: string): Promise<PlanCode | null> {
-  const store = await ensureStore();
-  return store.creatorOverrides.find((c) => c.creatorSlug === slug)?.plan ?? null;
+  const creator = await prisma.creator.findUnique({
+    where: { slug },
+    select: { planTier: true },
+  });
+  if (creator?.planTier === "PLUS" || creator?.planTier === "PRO") return creator.planTier;
+  return null;
 }
 
 export async function markWebhookReceived() {
-  const store = await ensureStore();
-  store.lastWebhookAt = new Date().toISOString();
-  await saveStore(store);
+  const at = new Date().toISOString();
+  await prisma.platformSetting.upsert({
+    where: { key: LAST_WEBHOOK_KEY },
+    create: { key: LAST_WEBHOOK_KEY, value: at },
+    update: { value: at },
+  });
 }

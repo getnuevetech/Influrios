@@ -5,6 +5,8 @@ import {
   actionSaveAttributionPolicy,
   actionSaveFundingSchedule,
   actionSaveAttributionSources,
+  actionFileAttributionClaim,
+  actionResolveAttributionClaim,
   actionCheckWiseRate,
   actionSaveDisputeReasons,
   actionSaveFxRates,
@@ -14,39 +16,82 @@ import {
   actionSaveMarketplaceSettings,
   actionSaveRevenueParties,
   actionSaveTemplates,
+  actionEnqueueAutoApproval,
+  actionEnqueueReviewDeadlineSweep,
+  actionEnqueueDisputeSlaSweep,
+  actionEnqueueProviderHoldWarnSweep,
+  actionEnqueueFailedPayoutRetrySweep,
+  actionEnqueueFundingReconciliationSweep,
+  actionEnqueueScheduledReleaseSweep,
+  actionScheduleMilestoneRelease,
+  actionExecuteHeldCancellation,
 } from "@/app/admin/marketplace/actions";
-import { listAttributionSources } from "@/lib/deal-attribution";
+import { listAttributionClaims, listAttributionSources } from "@/lib/deal-attribution";
 import { readShareSnapshot } from "@/lib/fx-share";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
+import { CANCELLATION_REASON_LABELS, type CancellationReason } from "@/lib/cancellation-matrix";
+import { listPaymentRiskFundings } from "@/lib/collaboration-cancellation";
 import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFxRates, listRevenueParties } from "@/lib/settlement";
 import { wiseFxConfig } from "@/lib/wise-quote";
-import { formatMoney } from "@/lib/protected-payments";
+import { formatMoney } from "@/lib/money";
 import { ledgerMonthlyReport, ledgerTotals, listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { productSwitch } from "@/lib/product-switches";
+import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
+import { feeTypeFromFundingSnapshot, type FeeTypeAmount } from "@/lib/ledger";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };
 
 type Props = { searchParams: Promise<{ saved?: string; error?: string; wiseRate?: string; wiseCurrency?: string }> };
 
+const CANCEL_REASONS = Object.keys(CANCELLATION_REASON_LABELS) as CancellationReason[];
+
+function formatFeesByType(feesByType: FeeTypeAmount[], currency: string, totalCents: number) {
+  if (feesByType.length === 0) return formatMoney(totalCents, currency);
+  if (feesByType.length === 1) {
+    const only = feesByType[0];
+    const label = FEE_TYPE_LABELS[only.feeType as FeeType] ?? only.feeType;
+    return `${label} ${formatMoney(only.amountCents, currency)}`;
+  }
+  const parts = feesByType.map((row) => {
+    const label = FEE_TYPE_LABELS[row.feeType as FeeType] ?? row.feeType;
+    return `${label} ${formatMoney(row.amountCents, currency)}`;
+  });
+  return `${formatMoney(totalCents, currency)} (${parts.join("; ")})`;
+}
+
 export default async function AdminMarketplacePage({ searchParams }: Props) {
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
+  const canHighRiskCancel = hasPermission(session, "collab_finance.high_risk");
   const params = await searchParams;
-  const [config, fundings, totals, reasons, sources, rates, parties, wise, reportsOn] = await Promise.all([
-    marketplaceConfig(),
-    listFundings(),
-    ledgerTotals(),
-    listDisputeReasons(),
-    listAttributionSources(),
-    listFxRates(),
-    listRevenueParties(),
-    wiseFxConfig(),
-    productSwitch("financial_reports"),
-  ]);
+  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, legacyDemoOn, collabOsOn, paymentRisk] =
+    await Promise.all([
+      marketplaceConfig(),
+      listFundings(),
+      ledgerTotals(),
+      listDisputeReasons(),
+      listAttributionSources(),
+      listAttributionClaims(),
+      listFxRates(),
+      listRevenueParties(),
+      wiseFxConfig(),
+      productSwitch("financial_reports"),
+      productSwitch("legacy_demo_payments"),
+      productSwitch("collab_os_v1"),
+      listPaymentRiskFundings(),
+    ]);
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
+  const cancellable = fundings.filter((f) => f.status === "held" || f.status === "payment_risk");
+  const schedulable = fundings.flatMap((funding) =>
+    funding.status !== "held"
+      ? []
+      : funding.milestones
+          .filter((m) => m.status === "approved" || m.status === "payout_failed")
+          .map((m) => ({ funding, milestone: m })),
+  );
 
   return (
     <div className="space-y-6">
@@ -272,8 +317,48 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Show the monthly ledger report
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="legacyDemoPayments" defaultChecked={legacyDemoOn} className="accent-violet" />
+              Show Phase 9/10 JSON payment and trust demos
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="collabOsV1" defaultChecked={collabOsOn} className="accent-violet" />
+              Collaboration OS hubs and contract wizard (`collab_os_v1`)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
               Allow cancelling a prefund before the provider confirms it
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="autoApprovalEnabled"
+                defaultChecked={config.autoApprovalEnabled}
+                className="accent-violet"
+              />
+              Run milestone auto-approval job when the review window expires
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Kill fee % (current milestone after work begins)
+              <input
+                name="killFeePercent"
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                defaultValue={Math.round((config.killFeeBps ?? 2500) / 100)}
+                className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Kill fee fixed USD
+              <input
+                name="killFeeFixedUsd"
+                type="number"
+                min={0}
+                step={0.01}
+                defaultValue={((config.killFeeFixedCents ?? 0) / 100).toFixed(2)}
+                className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
             </label>
             <button type="submit" className="btn-primary !py-2 text-sm">
               Save window
@@ -285,13 +370,58 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             {config.maxGrossCents > 0 ? formatMoney(config.maxGrossCents) : "off"} · partial refunds{" "}
             {config.partialRefundsEnabled ? "on" : "off"} · change orders{" "}
             {config.changeOrdersEnabled ? config.maxChangeOrders : "off"} · open disputes{" "}
-            {config.riskControlsEnabled ? config.maxOpenDisputes : "off"} · monthly report {reportsOn ? "on" : "off"}
+            {config.riskControlsEnabled ? config.maxOpenDisputes : "off"} · monthly report {reportsOn ? "on" : "off"} · legacy demos {legacyDemoOn ? "on" : "off"}
+            · collab OS {collabOsOn ? "on" : "off"} · auto-approval {config.autoApprovalEnabled ? "on" : "off"} · kill fee{" "}
+            {((config.killFeeBps ?? 0) / 100).toFixed(0)}% + {formatMoney(config.killFeeFixedCents ?? 0)}
           </p>
         )}
+        {canManage ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <form action={actionEnqueueAutoApproval}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue auto-approval sweep now
+              </button>
+            </form>
+            <form action={actionEnqueueReviewDeadlineSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue review-deadline notices now
+              </button>
+            </form>
+            <form action={actionEnqueueDisputeSlaSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue dispute SLA reminders now
+              </button>
+            </form>
+            <form action={actionEnqueueProviderHoldWarnSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue provider hold warnings now
+              </button>
+            </form>
+            <form action={actionEnqueueFailedPayoutRetrySweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue failed payout retries now
+              </button>
+            </form>
+            <form action={actionEnqueueFundingReconciliationSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue funding reconciliation now
+              </button>
+            </form>
+            <form action={actionEnqueueScheduledReleaseSweep}>
+              <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                Queue scheduled releases now
+              </button>
+            </form>
+          </div>
+        ) : null}
       </section>
 
       <section className="card-surface space-y-4 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Jurisdictions</h2>
+        <p className="text-xs text-muted">
+          Capability flags override features even when a fee rule or provider adapter exists (PA007 / Dev §24).
+          Managed introduction and managed campaign stay off until legal review is APPROVED and the matching toggle is on.
+        </p>
         {config.jurisdictions.map((row) => (
           <form key={row.code} action={actionSaveJurisdiction} className="grid gap-3 rounded-xl border border-border p-4 sm:grid-cols-4">
             <input type="hidden" name="code" value={row.code} />
@@ -327,6 +457,151 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 className="accent-violet"
               />
               Allow the word escrow
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="fullPrefundingEnabled"
+                defaultChecked={row.fullPrefundingEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Full prefunding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="stagedPrefundingEnabled"
+                defaultChecked={row.stagedPrefundingEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Staged prefunding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="recurringFundingEnabled"
+                defaultChecked={row.recurringFundingEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Recurring funding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="managedIntroductionEnabled"
+                defaultChecked={row.managedIntroductionEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Managed introduction
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input
+                type="checkbox"
+                name="managedNegotiationEnabled"
+                defaultChecked={row.managedNegotiationEnabled}
+                disabled={!canManage}
+                className="accent-violet"
+              />
+              Managed negotiation / campaign
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Legal review
+              <select
+                name="legalReviewStatus"
+                defaultValue={row.legalReviewStatus}
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              >
+                <option value="APPROVED">APPROVED</option>
+                <option value="PENDING">PENDING</option>
+                <option value="BLOCKED">BLOCKED</option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-3">
+              Approved provider ids (comma or JSON; empty = any assigned)
+              <input
+                name="approvedProviderIds"
+                defaultValue={
+                  (() => {
+                    try {
+                      const parsed = JSON.parse(row.approvedProviderIds || "[]") as unknown;
+                      return Array.isArray(parsed) ? parsed.join(", ") : row.approvedProviderIds;
+                    } catch {
+                      return row.approvedProviderIds;
+                    }
+                  })()
+                }
+                disabled={!canManage}
+                placeholder="primary, airwallex"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Effective from
+              <input
+                name="capabilitiesEffectiveFrom"
+                type="date"
+                defaultValue={
+                  row.capabilitiesEffectiveFrom
+                    ? new Date(row.capabilitiesEffectiveFrom).toISOString().slice(0, 10)
+                    : ""
+                }
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Effective to
+              <input
+                name="capabilitiesEffectiveTo"
+                type="date"
+                defaultValue={
+                  row.capabilitiesEffectiveTo
+                    ? new Date(row.capabilitiesEffectiveTo).toISOString().slice(0, 10)
+                    : ""
+                }
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Capability notes
+              <input
+                name="capabilityNotes"
+                defaultValue={row.capabilityNotes}
+                disabled={!canManage}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Review window hours (blank = marketplace default)
+              <input
+                name="reviewWindowHours"
+                type="number"
+                min={0}
+                max={8760}
+                defaultValue={row.reviewWindowHours ?? ""}
+                disabled={!canManage}
+                placeholder={String(config.reviewWindowHours)}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Max revisions (blank = marketplace default)
+              <input
+                name="maxRevisions"
+                type="number"
+                min={0}
+                max={20}
+                defaultValue={row.maxRevisions ?? ""}
+                disabled={!canManage}
+                placeholder={String(config.maxRevisions)}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
             </label>
             <label className="text-xs font-semibold text-muted">
               Currency
@@ -390,6 +665,50 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="escrowTermAllowed" className="accent-violet" />
               Allow the word escrow
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="fullPrefundingEnabled" defaultChecked className="accent-violet" />
+              Full prefunding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="stagedPrefundingEnabled" className="accent-violet" />
+              Staged prefunding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="recurringFundingEnabled" className="accent-violet" />
+              Recurring funding
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="managedIntroductionEnabled" className="accent-violet" />
+              Managed introduction
+            </label>
+            <label className="flex items-center gap-2 text-sm text-indigo">
+              <input type="checkbox" name="managedNegotiationEnabled" className="accent-violet" />
+              Managed negotiation / campaign
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Legal review
+              <select name="legalReviewStatus" defaultValue="PENDING" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+                <option value="APPROVED">APPROVED</option>
+                <option value="PENDING">PENDING</option>
+                <option value="BLOCKED">BLOCKED</option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-3">
+              Approved provider ids
+              <input name="approvedProviderIds" placeholder="primary" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Effective from
+              <input name="capabilitiesEffectiveFrom" type="date" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Effective to
+              <input name="capabilitiesEffectiveTo" type="date" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Capability notes
+              <input name="capabilityNotes" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
             </label>
             <label className="text-xs font-semibold text-muted">
               Currency
@@ -627,6 +946,213 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       </section>
 
       <section className="card-surface p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Scheduled release</h2>
+        <p className="mt-1 text-xs text-muted">
+          Dev §8: APPROVED → release_scheduled → release_requested → signed{" "}
+          <code className="text-[11px]">payout.released</code>. Authorizing release does not move money; the sweep
+          queues a durable <code className="text-[11px]">mkt_release_*</code> instruction when due.
+        </p>
+        {canManage && schedulable.length > 0 ? (
+          <form action={actionScheduleMilestoneRelease} className="mt-4 grid gap-3 sm:grid-cols-3">
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Approved milestone
+              <select
+                name="milestonePick"
+                required
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                defaultValue=""
+              >
+                <option value="">Select</option>
+                {schedulable.map(({ funding, milestone }) => (
+                  <option key={milestone.id} value={`${funding.id}::${milestone.id}`}>
+                    {funding.businessName} → {funding.creatorSlug} · {milestone.title} ·{" "}
+                    {formatMoney(milestone.amountCents, funding.currency)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Delay hours
+              <input
+                name="delayHours"
+                type="number"
+                min={0}
+                max={720}
+                defaultValue={0}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <div className="sm:col-span-3">
+              <button type="submit" className="btn-secondary !py-2 text-sm">
+                Authorize release
+              </button>
+            </div>
+          </form>
+        ) : (
+          <p className="mt-3 text-sm text-muted">
+            {canManage ? "No approved held milestones ready to schedule." : "Ops can authorize releases here."}
+          </p>
+        )}
+      </section>
+
+      <section className="card-surface p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Chargebacks &amp; held cancellations</h2>
+        <p className="mt-1 text-xs text-muted">
+          Chargebacks move a held prefund into payment-risk with no automatic refund. Other cancel reasons and
+          dispute refund decisions queue a durable provider instruction (
+          <code className="text-[11px]">mkt_refund_*</code> / <code className="text-[11px]">mkt_cancel_*</code>
+          ); ledger balances still change only on signed{" "}
+          <code className="text-[11px]">payout.refunded</code>. Releases stay blocked while status is payment-risk.
+        </p>
+        {paymentRisk.length > 0 ? (
+          <ul className="mt-3 space-y-2 text-sm text-indigo">
+            {paymentRisk.map((funding) => (
+              <li key={funding.id} className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+                <span className="font-semibold">Payment risk</span> · {funding.businessName} → {funding.creatorSlug} ·{" "}
+                {funding.title} · held {formatMoney(funding.ledger.heldCents, funding.currency)}
+                {funding.evidence ? (
+                  <p className="mt-1 text-xs text-rose-900">
+                    Evidence:{" "}
+                    {[
+                      funding.evidence.providerCaseId ? `case ${funding.evidence.providerCaseId}` : null,
+                      funding.evidence.providerReference
+                        ? `ref ${funding.evidence.providerReference}`
+                        : null,
+                      funding.evidence.reasonCode ? `code ${funding.evidence.reasonCode}` : null,
+                      funding.evidence.amountCents != null
+                        ? `${formatMoney(funding.evidence.amountCents, funding.evidence.currency)}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "pack recorded"}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-muted">No payment-risk fundings right now.</p>
+        )}
+        {canHighRiskCancel && cancellable.length > 0 ? (
+          <form action={actionExecuteHeldCancellation} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Funding
+              <select name="fundingId" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+                <option value="">Select held or payment-risk prefund</option>
+                {cancellable.map((funding) => (
+                  <option key={funding.id} value={funding.id}>
+                    {funding.status} · {funding.businessName} → {funding.creatorSlug} · {funding.title} ·{" "}
+                    {formatMoney(funding.grossCents, funding.currency)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Reason
+              <select name="reason" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+                {CANCEL_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {CANCELLATION_REASON_LABELS[reason]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Current milestone id (optional)
+              <input
+                name="currentMilestoneId"
+                placeholder="cuid"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Accepted partial USD (optional)
+              <input
+                name="acceptedPartialUsd"
+                type="number"
+                min={0}
+                step={0.01}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Note
+              <input name="note" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Provider case id (chargeback evidence)
+              <input
+                name="providerCaseId"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Provider reference
+              <input
+                name="providerReference"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Evidence amount USD
+              <input
+                name="evidenceAmountUsd"
+                type="number"
+                min={0}
+                step={0.01}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Evidence reason code
+              <input
+                name="evidenceReasonCode"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Evidence received at (ISO)
+              <input
+                name="evidenceReceivedAt"
+                placeholder="2026-10-04T12:00:00.000Z"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Evidence attachment URLs (comma or newline)
+              <textarea
+                name="evidenceAttachmentUrls"
+                rows={2}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Confirm password (high-risk)
+              <input
+                name="stepUpPassword"
+                type="password"
+                autoComplete="current-password"
+                required
+                placeholder="Re-enter your admin password"
+                className="mt-1 w-full max-w-md rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <button type="submit" className="btn-secondary !py-2 text-sm">
+                Queue cancellation / mark payment-risk
+              </button>
+            </div>
+          </form>
+        ) : canHighRiskCancel ? (
+          <p className="mt-3 text-sm text-muted">No held fundings available to cancel.</p>
+        ) : canManage ? (
+          <p className="mt-3 text-sm text-muted">
+            Held cancel / payment-risk needs Collab finance · High-risk plus password step-up.
+          </p>
+        ) : null}
+      </section>
+
+      <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Dispute reasons</h2>
         <p className="mt-1 text-xs text-muted">
           The label is copied onto a dispute when it opens. Later edits do not rename open cases. A decision does not
@@ -670,13 +1196,14 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Attribution</h2>
         <p className="mt-1 text-xs text-muted">
-          A repeat must be the same business and creator, already confirmed by the provider, inside this window, and
-          at least the minimum gross. Changing the window does not rewrite a prefund that was already requested.
+          Attribution expiry is finite (never forever). A repeat must be the same business and creator, already
+          confirmed by the provider, inside this expiry window, and at least the minimum gross. Pre-existing
+          relationship claims can be contested and resolved here; upheld claims block managed introduction fees.
         </p>
         {canManage ? (
           <form action={actionSaveAttributionPolicy} className="mt-4 flex flex-wrap items-end gap-3">
             <label className="text-xs font-semibold text-muted">
-              Window days
+              Expiry days
               <input
                 name="attributionWindowDays"
                 type="number"
@@ -703,7 +1230,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           </form>
         ) : (
           <p className="mt-3 text-sm text-indigo">
-            {config.attributionWindowDays} days · minimum {formatMoney(config.repeatMinGrossCents)}
+            Expires after {config.attributionWindowDays} days · minimum {formatMoney(config.repeatMinGrossCents)}
           </p>
         )}
         {canManage ? (
@@ -739,6 +1266,63 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             ))}
           </ul>
         )}
+
+        <h3 className="mt-6 font-display text-base font-bold text-indigo">Pre-existing relationship contests</h3>
+        {canManage ? (
+          <form action={actionFileAttributionClaim} className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-muted">
+              Business
+              <input name="businessName" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Influencer slug
+              <input name="creatorSlug" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Evidence
+              <textarea name="evidence" required rows={2} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Optional funding id
+              <input name="fundingId" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-mono" />
+            </label>
+            <button type="submit" className="btn-secondary !py-2 text-sm sm:col-span-2">
+              File pre-existing claim
+            </button>
+          </form>
+        ) : null}
+        <ul className="mt-4 space-y-3">
+          {claims.length === 0 ? <li className="text-sm text-muted">No attribution claims yet.</li> : null}
+          {claims.map((claim) => (
+            <li key={claim.id} className="rounded-xl border border-border p-3 text-sm text-indigo">
+              <p className="font-semibold">
+                {claim.businessName} → {claim.creatorSlug} · {claim.status}
+              </p>
+              <p className="mt-1 text-xs text-muted">{claim.evidence}</p>
+              {canManage && (claim.status === "open" || claim.status === "under_review") ? (
+                <form action={actionResolveAttributionClaim} className="mt-3 flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="claimId" value={claim.id} />
+                  <label className="text-xs font-semibold text-muted">
+                    Admin note
+                    <input name="adminNote" className="mt-1 w-56 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                  </label>
+                  <button type="submit" name="decision" value="upheld" className="btn-primary !py-1.5 text-xs">
+                    Uphold (pre-existing)
+                  </button>
+                  <button type="submit" name="decision" value="rejected" className="btn-secondary !py-1.5 text-xs">
+                    Reject
+                  </button>
+                </form>
+              ) : null}
+              {claim.resolvedAt ? (
+                <p className="mt-1 text-[11px] text-muted">
+                  Resolved {claim.resolvedAt.toISOString().slice(0, 10)}
+                  {claim.adminNote ? ` · ${claim.adminNote}` : ""}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="card-surface p-5">
@@ -808,14 +1392,16 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Ledger totals</h2>
         <p className="mt-1 text-xs text-muted">
-          These figures are what the provider is holding, released, or refunded. Fees are quoted separately. Revenue shares are not cash.
+          These figures are what the provider is holding, released, or refunded. Fees are quoted separately by fee type
+          (Product §5). Revenue shares are not cash.
         </p>
         {totals.length === 0 ? <p className="mt-3 text-sm text-muted">No prefunds yet.</p> : null}
         <ul className="mt-3 space-y-2 text-sm text-indigo">
           {totals.map((row) => (
             <li key={row.currency}>
               {row.currency} · held {formatMoney(row.heldCents, row.currency)} · released {formatMoney(row.releasedCents, row.currency)} · refunded{" "}
-              {formatMoney(row.refundedCents, row.currency)} · fees {formatMoney(row.feeCents, row.currency)}
+              {formatMoney(row.refundedCents, row.currency)} · fees{" "}
+              {formatFeesByType(row.feesByType, row.currency, row.feeCents)}
               {row.unbalanced > 0 ? ` · ${row.unbalanced} unbalanced` : ""}
             </li>
           ))}
@@ -826,7 +1412,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         <section className="card-surface p-5">
           <h2 className="font-display text-lg font-bold text-indigo">Monthly ledger report</h2>
           <p className="mt-1 text-xs text-muted">
-            Amounts recorded in each month. This is not the current held balance. Revenue shares are left out.
+            Amounts recorded in each month. Fees show as separate columns by fee type. Revenue shares are left out.
           </p>
           {monthly.length === 0 ? <p className="mt-3 text-sm text-muted">No ledger rows yet.</p> : null}
           <ul className="mt-3 space-y-2 text-sm text-indigo">
@@ -834,7 +1420,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               <li key={`${row.currency}-${row.month}`}>
                 {row.month} · {row.currency} · holds {formatMoney(row.heldCents, row.currency)} · releases{" "}
                 {formatMoney(row.releasedCents, row.currency)} · refunds {formatMoney(row.refundedCents, row.currency)} · fees{" "}
-                {formatMoney(row.feeCents, row.currency)}
+                {formatFeesByType(row.feesByType, row.currency, row.feeCents)}
               </li>
             ))}
           </ul>
@@ -851,20 +1437,33 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         {fundings.length === 0 ? <p className="text-sm text-muted">No prefunds yet.</p> : null}
         {fundings.map((funding) => {
           const shares = readShareSnapshot(funding.shareSnapshotJson);
+          const feeType = feeTypeFromFundingSnapshot(funding.feeSnapshotJson, funding.serviceLevel);
+          const feeTypeLabel = FEE_TYPE_LABELS[feeType as FeeType] ?? feeType;
           return (
           <article key={funding.id} className="card-surface p-4 text-sm">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-semibold text-indigo">
-                  {funding.businessName} → {funding.creatorSlug}
+                  <Link
+                    href={`/admin/marketplace/${funding.id}`}
+                    className="hover:text-violet hover:underline"
+                  >
+                    {funding.businessName} → {funding.creatorSlug}
+                  </Link>
                 </p>
                 <p className="text-muted">{funding.title}</p>
+                <Link
+                  href={`/admin/marketplace/${funding.id}`}
+                  className="mt-1 inline-block text-xs font-semibold text-violet hover:underline"
+                >
+                  Open transaction →
+                </Link>
               </div>
               <p className="text-xs font-semibold uppercase tracking-wide text-violet">{funding.status.replaceAll("_", " ")}</p>
             </div>
             <p className="mt-2 text-muted">
               Gross {formatMoney(funding.grossCents, funding.currency)} · {funding.currency} · provider {funding.providerCode} · fee snapshot{" "}
-              {formatMoney(funding.feeCents, funding.currency)} · held by provider{" "}
+              {formatMoney(funding.feeCents, funding.currency)} ({feeTypeLabel}) · held by provider{" "}
               {formatMoney(funding.ledger.heldCents, funding.currency)} · released{" "}
               {formatMoney(funding.ledger.releasedCents, funding.currency)}
               {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}

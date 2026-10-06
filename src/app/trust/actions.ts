@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { assertLegacyDemoPayments } from "@/lib/legacy-demo-payments";
 import { openDispute, type DisputeOpenedBy } from "@/lib/trust";
 
 export async function actionOpenDispute(formData: FormData) {
+  await assertLegacyDemoPayments();
   const selection = String(formData.get("selection") ?? "");
   let dealId = String(formData.get("dealId") ?? "");
   let milestoneId = String(formData.get("milestoneId") ?? "");

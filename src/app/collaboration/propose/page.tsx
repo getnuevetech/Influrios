@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { GuestGateBanner } from "@/components/guest-gate-banner";
 import { getAccountSession } from "@/lib/accounts";
 import {
   commercialChoices,
@@ -11,7 +12,9 @@ import {
 import { isPlanCode, type PlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { scoreCreatorPair } from "@/lib/matching";
-import { getCreatorBySlug, specialtyLabel } from "@/lib/seed-data";
+import { getDirectoryCreator } from "@/lib/directory";
+import { consumeGuestQuota } from "@/lib/guest-usage";
+import { specialtyLabel } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -19,7 +22,7 @@ export const metadata = {
 };
 
 type Props = {
-  searchParams: Promise<{ a?: string; b?: string; from?: string; error?: string }>;
+  searchParams: Promise<{ a?: string; b?: string; from?: string; error?: string; notice?: string }>;
 };
 
 async function submitProposal(formData: FormData) {
@@ -31,9 +34,9 @@ async function submitProposal(formData: FormData) {
   const account = await getAccountSession();
   if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=proposal`);
 
-  const creatorA = getCreatorBySlug(a);
-  const creatorB = getCreatorBySlug(b);
-  const viewer = getCreatorBySlug(from);
+  const creatorA = await getDirectoryCreator(a);
+  const creatorB = await getDirectoryCreator(b);
+  const viewer = await getDirectoryCreator(from);
   const initiator = viewer?.slug === creatorB?.slug ? creatorB : creatorA;
   const recipient = initiator?.slug === creatorA?.slug ? creatorB : creatorA;
   const plan: PlanCode = initiator && isPlanCode(initiator.planTier) ? initiator.planTier : "STARTER";
@@ -75,17 +78,36 @@ async function submitProposal(formData: FormData) {
 
 export default async function ProposeCollaborationPage({ searchParams }: Props) {
   const params = await searchParams;
-  const creatorA = params.a ? getCreatorBySlug(params.a) : undefined;
-  const creatorB = params.b ? getCreatorBySlug(params.b) : undefined;
-  const from = params.from ? getCreatorBySlug(params.from) : creatorA;
+  const collabOsOffNotice = params.notice === "collab_os_off";
+  const returnPath = `/collaboration/propose?a=${encodeURIComponent(params.a ?? "")}&b=${encodeURIComponent(params.b ?? "")}&from=${encodeURIComponent(params.from ?? params.a ?? "")}`;
+  const guestGate = await consumeGuestQuota("propose");
+  if (guestGate.decision === "hard") {
+    redirect(`/login?next=${encodeURIComponent(returnPath)}&gate=proposal`);
+  }
+  const creatorA = params.a ? await getDirectoryCreator(params.a) : undefined;
+  const creatorB = params.b ? await getDirectoryCreator(params.b) : undefined;
+  const from = params.from ? await getDirectoryCreator(params.from) : creatorA;
 
   if (!creatorA || !creatorB || !from) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <p className="font-semibold text-indigo">Missing creators for this proposal.</p>
+        {collabOsOffNotice ? (
+          <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Collaboration OS hubs are turned off. Propose and records stay available.
+          </p>
+        ) : null}
+        <p className="font-semibold text-indigo">Missing influencers for this proposal.</p>
         <Link href="/collaboration" className="mt-4 inline-block text-violet">
           Back to matches
         </Link>
+        <div className="mt-6 flex justify-center gap-4 text-sm">
+          <Link href="/collaboration/records" className="font-semibold text-violet hover:underline">
+            Contracts &amp; records
+          </Link>
+          <Link href="/collaboration?landing=1" className="font-semibold text-violet hover:underline">
+            Public matches
+          </Link>
+        </div>
       </div>
     );
   }
@@ -137,6 +159,11 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+      {guestGate.decision === "soft" ? (
+        <div className="mb-6 -mx-4 sm:-mx-6">
+          <GuestGateBanner copy={guestGate.copy} next={returnPath} />
+        </div>
+      ) : null}
       <p className="text-xs font-semibold uppercase tracking-wide text-violet">Structured proposal</p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Propose a collaboration</h1>
       <p className="mt-2 text-muted">
@@ -206,7 +233,7 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
           <input
             name="title"
             required
-            defaultValue={`${specialtyLabel(offerSpecialty || "Creator")} × ${specialtyLabel(needSpecialty || "Creator")} collab`}
+            defaultValue={`${specialtyLabel(offerSpecialty || "Influencer")} × ${specialtyLabel(needSpecialty || "Influencer")} collab`}
             className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
           />
         </label>

@@ -41,7 +41,7 @@ export default async function BillingPage({ searchParams }: Props) {
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold">Plans & checkout</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Creator Plus/Pro and Business Pro/Agency — Stripe Checkout when keys are set, demo
+            Influencer Plus/Pro and Business Pro/Agency — Stripe Checkout when keys are set, demo
             upgrade flow otherwise.
           </p>
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
@@ -130,7 +130,7 @@ export default async function BillingPage({ searchParams }: Props) {
         </section>
 
         <section>
-          <h2 className="font-display text-2xl font-bold text-indigo">Creator plans</h2>
+          <h2 className="font-display text-2xl font-bold text-indigo">Influencer plans</h2>
           <p className="mt-1 text-sm text-muted">
             Starter stays free via{" "}
             <Link href="/claim" className="font-semibold text-violet hover:underline">

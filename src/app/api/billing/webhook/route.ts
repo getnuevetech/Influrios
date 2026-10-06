@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
   completeCheckout,
-  getBillingStore,
+  ensureStripeAttemptFromMetadata,
   markWebhookReceived,
 } from "@/lib/billing";
 import { stripeCredentials, stripeWebhookSecret } from "@/lib/stripe-admin";
@@ -25,7 +25,7 @@ function subscriptionId(object: StripeObject, eventType: string) {
 
 /**
  * Stripe webhook. A duplicate event id does not change the plan again.
- * checkout.session.completed without a local session is not stored, so a later delivery can apply.
+ * checkout.session.completed can apply from metadata when the local attempt is missing.
  */
 export async function POST(req: NextRequest) {
   const creds = await stripeCredentials();
@@ -85,10 +85,20 @@ export async function POST(req: NextRequest) {
   try {
     if (event.type === "checkout.session.completed") {
       const localId = object.metadata?.localSessionId;
-      if (!localId) return NextResponse.json({ received: false, pending: true }, { status: 503 });
-      const store = await getBillingStore();
-      const local = store.sessions.find((session) => session.id === localId);
-      if (!local) return NextResponse.json({ received: false, pending: true }, { status: 503 });
+      const metaSku = object.metadata?.sku;
+      if (!localId || !metaSku) {
+        return NextResponse.json({ received: false, pending: true }, { status: 503 });
+      }
+      const local = await ensureStripeAttemptFromMetadata({
+        localId,
+        sku: metaSku,
+        userId: object.metadata?.userId || undefined,
+        creatorSlug: object.metadata?.creatorSlug || undefined,
+        stripeSessionId: object.id,
+      });
+      if (!local) {
+        return NextResponse.json({ received: false, pending: true }, { status: 503 });
+      }
       await applyPlanOnce({
         provider: "stripe",
         eventId: event.id,

@@ -4,15 +4,26 @@ import {
   canCancelUnconfirmed,
   canOpenMilestoneDispute,
   decideDispute,
+  DISPUTE_REASON_CATALOG,
   disputeStatusAfterRefund,
   evidenceLink,
   type DisputeDecision,
 } from "@/lib/disputes";
 
 export type { DisputeDecision };
+export {
+  DISPUTE_REASON_CATALOG,
+  DISPUTE_RESOLUTION_OUTCOME_LABELS,
+  DISPUTE_RESOLUTION_OUTCOMES,
+  outcomeForDecision,
+} from "@/lib/disputes";
 import { ledgerMovements, reconcileLedger, releasableCents } from "@/lib/ledger";
 
-const OPEN = ["open", "under_review", "refund_requested"];
+const OPEN = ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"];
+
+function fireCollabNotify(run: () => Promise<unknown>) {
+  void run().catch(() => undefined);
+}
 
 let partialRefundsForTests: boolean | null = null;
 
@@ -21,28 +32,34 @@ export function setPartialRefundsForTests(enabled: boolean | null) {
   partialRefundsForTests = enabled;
 }
 
+/** Sync Dev §13 reason catalog by code; keep any admin custom reasons without codes. */
 export async function ensureDisputeReasons() {
   await prisma.marketplaceSettings.upsert({
     where: { id: "default" },
     update: {},
     create: { id: "default", reviewWindowHours: 72 },
   });
-  const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
-  if (settings?.reasonsSeeded) return;
-  await prisma.$transaction(async (tx) => {
-    const current = await tx.marketplaceSettings.findUnique({ where: { id: "default" } });
-    if (current?.reasonsSeeded) return;
-    const count = await tx.disputeReason.count();
-    if (count === 0) {
-      await tx.disputeReason.createMany({
-        data: [
-          { label: "Deliverable does not match the brief", sortOrder: 1, active: true },
-          { label: "Work was not delivered", sortOrder: 2, active: true },
-          { label: "Cancel the remaining balance", sortOrder: 3, active: true },
-        ],
+  for (const row of DISPUTE_REASON_CATALOG) {
+    const existing = await prisma.disputeReason.findUnique({ where: { code: row.code } });
+    if (existing) {
+      await prisma.disputeReason.update({
+        where: { id: existing.id },
+        data: { label: row.label, sortOrder: row.sortOrder, active: true },
+      });
+    } else {
+      await prisma.disputeReason.create({
+        data: {
+          code: row.code,
+          label: row.label,
+          sortOrder: row.sortOrder,
+          active: true,
+        },
       });
     }
-    await tx.marketplaceSettings.update({ where: { id: "default" }, data: { reasonsSeeded: true } });
+  }
+  await prisma.marketplaceSettings.update({
+    where: { id: "default" },
+    data: { reasonsSeeded: true },
   });
 }
 
@@ -51,11 +68,12 @@ export async function listDisputeReasons() {
   return prisma.disputeReason.findMany({ orderBy: { sortOrder: "asc" } });
 }
 
-export async function saveDisputeReasons(rows: { id?: string; label: string; active: boolean }[]) {
+export async function saveDisputeReasons(rows: { id?: string; label: string; active: boolean; code?: string | null }[]) {
   await ensureDisputeReasons();
   const cleaned = rows
     .map((row, index) => ({
       id: row.id,
+      code: row.code?.trim() || null,
       label: row.label.trim().slice(0, 120),
       active: row.active,
       sortOrder: index + 1,
@@ -68,17 +86,35 @@ export async function saveDisputeReasons(rows: { id?: string; label: string; act
       if (row.id) {
         await tx.disputeReason.update({
           where: { id: row.id },
-          data: { label: row.label, active: row.active, sortOrder: row.sortOrder },
+          data: {
+            label: row.label,
+            active: row.active,
+            sortOrder: row.sortOrder,
+            ...(row.code ? { code: row.code } : {}),
+          },
         });
         keep.add(row.id);
       } else {
         const created = await tx.disputeReason.create({
-          data: { label: row.label, active: row.active, sortOrder: row.sortOrder },
+          data: {
+            label: row.label,
+            active: row.active,
+            sortOrder: row.sortOrder,
+            code: row.code,
+          },
         });
         keep.add(created.id);
       }
     }
-    await tx.disputeReason.deleteMany({ where: { id: { notIn: [...keep] } } });
+    // Never delete catalog-coded reasons; deactivate instead if dropped from form.
+    const coded = await tx.disputeReason.findMany({ where: { code: { not: null } } });
+    for (const row of coded) {
+      if (!keep.has(row.id)) {
+        await tx.disputeReason.update({ where: { id: row.id }, data: { active: false } });
+        keep.add(row.id);
+      }
+    }
+    await tx.disputeReason.deleteMany({ where: { id: { notIn: [...keep] }, code: null } });
   });
 }
 
@@ -119,6 +155,7 @@ async function openDisputeOnMilestone(input: { fundingId: string; milestoneId: s
       milestoneId: milestone!.id,
       openedBy: input.openedBy,
       reasonLabel: reason!.label,
+      reasonCode: reason!.code ?? null,
       details,
       status: "open",
       evidenceLimit: settings?.maxEvidence ?? 5,
@@ -130,9 +167,23 @@ async function openDisputeOnMilestone(input: { fundingId: string; milestoneId: s
       action: "dispute_opened",
       objectType: "MilestoneDispute",
       objectId: dispute.id,
-      after: { fundingId: funding!.id, milestoneId: milestone!.id, reason: reason!.label },
+      after: {
+        fundingId: funding!.id,
+        milestoneId: milestone!.id,
+        reason: reason!.label,
+        reasonCode: reason!.code ?? null,
+      },
     },
   }).catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId: funding!.id,
+      kind: "dispute_opened",
+      milestone: milestone!.title,
+      detail: reason!.label,
+    });
+  });
   return { ok: true as const, id: dispute.id };
 }
 
@@ -170,6 +221,14 @@ export async function cancelUnconfirmedFunding(fundingId: string) {
       after: { status: "cancelled" },
     },
   }).catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId,
+      kind: "collaboration_cancelled",
+      detail: "Unconfirmed prefund cancelled before provider hold.",
+    });
+  });
   return { ok: true as const };
 }
 
@@ -222,6 +281,7 @@ export async function decideMilestoneDispute(input: {
       status: decision.status,
       requestedRefundCents: decision.requestedRefundCents,
       resolutionNote: input.note?.trim().slice(0, 500) || dispute.resolutionNote,
+      resolutionOutcome: decision.outcome ?? dispute.resolutionOutcome,
     },
   });
   await prisma.auditLog.create({
@@ -230,10 +290,66 @@ export async function decideMilestoneDispute(input: {
       action: `dispute_${input.action}`,
       objectType: "MilestoneDispute",
       objectId: dispute.id,
-      after: { status: decision.status, requestedRefundCents: decision.requestedRefundCents },
+      after: {
+        status: decision.status,
+        requestedRefundCents: decision.requestedRefundCents,
+        resolutionOutcome: decision.outcome,
+      },
     },
   }).catch(() => undefined);
-  return { ok: true as const, status: decision.status };
+  if (
+    decision.status === "resolved_release" ||
+    decision.status === "resolved_settlement" ||
+    decision.status === "withdrawn"
+  ) {
+    fireCollabNotify(async () => {
+      const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+      await notifyCollabFundingEvent({
+        fundingId: dispute.fundingId,
+        kind: "dispute_resolved",
+        milestone: dispute.milestone.title,
+        detail: input.note?.trim() || decision.outcome || decision.status,
+      });
+    });
+  }
+  // Queue provider refund instruction after refund/partial decisions — cash still waits for payout.refunded.
+  if (input.action === "refund" || input.action === "partial") {
+    const { createMarketplaceSignedWebhookAdapter } = await import("@/lib/payment-provider-adapter");
+    const { verifyMarketplaceSignature } = await import("@/lib/ledger");
+    const adapter = createMarketplaceSignedWebhookAdapter({
+      verifySignature: verifyMarketplaceSignature,
+    });
+    const amount =
+      input.action === "partial"
+        ? (decision.requestedRefundCents ?? input.requestedCents ?? 0)
+        : releasableCents(dispute.milestone.amountCents, dispute.milestone.refundedCents);
+    const instruction =
+      input.action === "partial"
+        ? await adapter.createPartialRefund({
+            fundingId: dispute.fundingId,
+            amountCents: amount,
+            milestoneId: dispute.milestoneId ?? undefined,
+          })
+        : amount >= held.heldCents && held.heldCents > 0
+          ? await adapter.createFullRefund({ fundingId: dispute.fundingId })
+          : await adapter.createPartialRefund({
+              fundingId: dispute.fundingId,
+              amountCents: amount,
+              milestoneId: dispute.milestoneId ?? undefined,
+            });
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: input.actor,
+          action: "dispute_provider_refund_instruction",
+          objectType: "MilestoneDispute",
+          objectId: dispute.id,
+          after: { instruction, amountCents: amount },
+        },
+      })
+      .catch(() => undefined);
+  }
+  return { ok: true as const, status: decision.status, outcome: decision.outcome };
 }
 
 export async function addDisputeEvidence(input: {
@@ -308,5 +424,14 @@ export async function closeDisputesForRefund(input: {
     });
     if (!next) continue;
     await prisma.milestoneDispute.update({ where: { id: dispute.id }, data: { status: next } });
+    fireCollabNotify(async () => {
+      const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+      await notifyCollabFundingEvent({
+        fundingId: input.fundingId,
+        kind: "dispute_resolved",
+        milestone: dispute.milestone?.title,
+        detail: next,
+      });
+    });
   }
 }

@@ -14,7 +14,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { agencyStats, getAgencyStore, listAgencySeats } from "@/lib/agency";
 import { productSwitch } from "@/lib/product-switches";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Agency" };
@@ -24,6 +24,7 @@ type Props = {
     error?: string;
     seats?: string;
     seat?: string;
+    invite?: string;
     roster?: string;
     removed?: string;
     campaign?: string;
@@ -39,6 +40,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
   const params = await searchParams;
   const [store, seats, seatsOn] = await Promise.all([getAgencyStore(), listAgencySeats(), productSwitch("agency_seats")]);
   const stats = agencyStats(store);
+  const directoryCreators = await listDirectoryCreators();
+  const bySlug = indexCreatorsBySlug(directoryCreators);
 
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
@@ -87,12 +90,18 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         </div>
       ) : null}
 
+      {params.invite ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Seat invite created. Copy link:{" "}
+          <code className="rounded bg-white px-1.5 py-0.5 text-xs text-indigo">{params.invite}</code>
+        </div>
+      ) : null}
       <section className="card-surface p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Seats</h2>
         <p className="mt-1 text-sm text-muted">
           {seatsOn
-            ? "New seats can be added. A seat does not sign in on its own."
-            : "Agency seats are turned off. The roster below stays available."}
+            ? "Invite a teammate by email. They accept via copy-link (SMTP optional). Only accepted active seats can mutate /agency when seats are on."
+            : "Agency seats are turned off. The roster below stays available; plan entitlement gates /agency."}
         </p>
         {canManage ? (
           <form action={actionSaveAgencySeats} className="mt-4 flex flex-wrap items-center gap-3">
@@ -110,7 +119,15 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
           {seats.map((seat) => (
             <li key={seat.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
               <span className="font-semibold text-indigo">
-                {seat.email} · {seat.role} · {seat.active ? "active" : "inactive"}
+                {seat.email} · {seat.role} · {seat.inviteStatus}
+                {seat.active ? " · active" : " · inactive"}
+                {seat.inviteToken && seat.inviteStatus === "pending" ? (
+                  <>
+                    {" "}
+                    · invite{" "}
+                    <code className="rounded bg-[#F0F4FF] px-1 text-[11px]">/agency/invite/{seat.inviteToken}</code>
+                  </>
+                ) : null}
               </span>
               {canManage ? (
                 <form action={actionAdminSetSeat}>
@@ -138,8 +155,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
               <option value="manager">Manager</option>
               <option value="member">Member</option>
             </select>
-            <button type="submit" className="btn-primary !py-2 text-sm">
-              Add seat
+            <button type="submit" className="btn-primary !py-2 text-sm" disabled={!seatsOn}>
+              Invite seat
             </button>
           </form>
         ) : null}
@@ -150,7 +167,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         <table className="mt-4 w-full min-w-[640px] text-left text-sm">
           <thead className="text-xs uppercase tracking-wide text-muted">
             <tr>
-              <th className="pb-2 pr-3">Creator</th>
+              <th className="pb-2 pr-3">Influencer</th>
               <th className="pb-2 pr-3">Role</th>
               <th className="pb-2 pr-3">Retainer</th>
               <th className="pb-2">Notes</th>
@@ -160,7 +177,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
             {store.roster.map((m) => (
               <tr key={m.creatorSlug} className="border-t border-border">
                 <td className="py-2.5 pr-3 font-semibold text-indigo">
-                  {getCreatorBySlug(m.creatorSlug)?.displayName ?? m.creatorSlug}
+                  {bySlug.get(m.creatorSlug)?.displayName ?? m.creatorSlug}
                   {canManage ? (
                     <form action={actionAdminRemoveRoster} className="mt-1">
                       <input type="hidden" name="creatorSlug" value={m.creatorSlug} />
@@ -181,7 +198,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         {canManage ? (
           <form action={actionAdminAddRoster} className="mt-4 grid gap-3 sm:grid-cols-4">
             <select name="creatorSlug" className="rounded-xl border border-border px-3 py-2 text-sm" required>
-              {SEED_CREATORS.filter((c) => !store.roster.some((r) => r.creatorSlug === c.slug)).map(
+              {directoryCreators.filter((c) => !store.roster.some((r) => r.creatorSlug === c.slug)).map(
                 (c) => (
                   <option key={c.slug} value={c.slug}>
                     {c.displayName}
@@ -270,8 +287,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
             <div>
               <h3 className="font-display text-lg font-bold text-indigo">{p.title}</h3>
               <p className="text-sm text-muted">
-                {getCreatorBySlug(p.leftSlug)?.displayName} ×{" "}
-                {getCreatorBySlug(p.rightSlug)?.displayName}
+                {bySlug.get(p.leftSlug)?.displayName} ×{" "}
+                {bySlug.get(p.rightSlug)?.displayName}
                 {p.published ? " · published" : " · draft"}
               </p>
               <p className="mt-1 text-sm text-muted">{p.outcome}</p>
@@ -291,13 +308,13 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
           <form action={actionAdminCreatePortfolio} className="card-surface grid gap-3 p-5 sm:grid-cols-2">
             <input name="title" required defaultValue="Ops case study" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
             <input name="tagline" defaultValue="Complementary collab proof" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
-            <select name="leftSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={SEED_CREATORS[0]?.slug}>
-              {SEED_CREATORS.map((c) => (
+            <select name="leftSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={directoryCreators[0]?.slug}>
+              {directoryCreators.map((c) => (
                 <option key={c.slug} value={c.slug}>{c.displayName}</option>
               ))}
             </select>
-            <select name="rightSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={SEED_CREATORS[1]?.slug}>
-              {SEED_CREATORS.map((c) => (
+            <select name="rightSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={directoryCreators[1]?.slug}>
+              {directoryCreators.map((c) => (
                 <option key={c.slug} value={c.slug}>{c.displayName}</option>
               ))}
             </select>

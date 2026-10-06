@@ -7,7 +7,7 @@ import {
   getNicheTrends,
   getRelationshipSignals,
 } from "@/lib/intelligence";
-import { getCreatorBySlug } from "@/lib/seed-data";
+import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business · Intelligence" };
@@ -23,19 +23,21 @@ export default async function BusinessIntelligencePage() {
   const entitlements = getBusinessEntitlements(ws.plan);
   const locked = !entitlements.intelligence;
 
-  const snapshots = locked ? [] : getAllAudienceSnapshots().slice(0, 6);
-  const trends = locked ? [] : getNicheTrends();
+  const snapshots = locked ? [] : (await getAllAudienceSnapshots()).slice(0, 6);
+  const trends = locked ? [] : await getNicheTrends();
   const signals = locked ? [] : await getRelationshipSignals();
+  const directory = await getDirectory().catch(() => null);
+  const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
 
   return (
     <div className="bg-[#F7FAFF]">
       <section className="hero-atmosphere text-white">
         <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
-          <Link href="/business" className="text-sm font-semibold text-lavender/90 hover:underline">
-            ← Business workspace
+          <Link href="/collaboration/business" className="text-sm font-semibold text-lavender/90 hover:underline">
+            ← Business Collaboration Hub
           </Link>
           <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
-            Phase 5 · Intelligence
+            Business Intelligence
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold">Audience & relationship intelligence</h1>
           <p className="mt-3 max-w-2xl text-white/75">
@@ -53,7 +55,7 @@ export default async function BusinessIntelligencePage() {
               Audience snapshots, niche demand trends, relationship signals, and CSV/JSON exports are
               available on Business Pro and Agency.
             </p>
-            <Link href="/business#pricing" className="btn-primary mt-6 inline-flex">
+            <Link href="/collaboration/business#pricing" className="btn-primary mt-6 inline-flex">
               View business plans →
             </Link>
           </div>
@@ -104,7 +106,7 @@ export default async function BusinessIntelligencePage() {
                       {t.growthPct >= 0 ? "+" : ""}
                       {t.growthPct}% growth
                     </p>
-                    <p className="mt-1 text-xs text-muted">{t.creatorSupply} creators in directory</p>
+                    <p className="mt-1 text-xs text-muted">{t.creatorSupply} influencers in directory</p>
                     <p className="mt-2 text-xs text-muted">{t.note}</p>
                   </div>
                 ))}
@@ -119,7 +121,7 @@ export default async function BusinessIntelligencePage() {
               </p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 {snapshots.map((s) => {
-                  const creator = getCreatorBySlug(s.creatorSlug);
+                  const creator = bySlug.get(s.creatorSlug);
                   return (
                     <div
                       key={s.creatorSlug}

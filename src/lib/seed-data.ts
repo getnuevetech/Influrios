@@ -28,6 +28,8 @@ export type SeedCreator = {
   avatarColor: string;
   image: string;
   coverImage?: string;
+  /** Presentation gender for default avatars — not demographics audience gender. */
+  gender?: "male" | "female" | "unspecified";
   badge: string;
   statusLabel: string;
   planTier: "STARTER" | "PLUS" | "PRO";
@@ -75,6 +77,31 @@ export const CATEGORY_IMAGES: Record<string, string> = {
   fitness: "/demo/categories/cat-fitness.jpg",
   tech: "/demo/categories/cat-tech.jpg",
   lifestyle: "/demo/categories/cat-lifestyle.jpg",
+  parenting: "/demo/categories/cat-parenting.jpg",
+  finance: "/demo/categories/cat-finance.jpg",
+  gaming: "/demo/categories/cat-gaming.jpg",
+  music: "/demo/categories/cat-music.jpg",
+  comedy: "/demo/categories/cat-comedy.jpg",
+  education: "/demo/categories/cat-education.jpg",
+  sports: "/demo/categories/cat-sports.jpg",
+  automotive: "/demo/categories/cat-automotive.jpg",
+  pets: "/demo/categories/cat-pets.jpg",
+  photography: "/demo/categories/cat-photography.jpg",
+  art: "/demo/categories/cat-art.jpg",
+  business: "/demo/categories/cat-business.jpg",
+  health: "/demo/categories/cat-health.jpg",
+  outdoors: "/demo/categories/cat-outdoors.jpg",
+  sustainability: "/demo/categories/cat-sustainability.jpg",
+  entertainment: "/demo/categories/cat-entertainment.jpg",
+  dance: "/demo/categories/cat-dance.jpg",
+  books: "/demo/categories/cat-books.jpg",
+  diy: "/demo/categories/cat-diy.jpg",
+  weddings: "/demo/categories/cat-weddings.jpg",
+  "real-estate": "/demo/categories/cat-real-estate.jpg",
+  luxury: "/demo/categories/cat-luxury.jpg",
+  science: "/demo/categories/cat-science.jpg",
+  news: "/demo/categories/cat-news.jpg",
+  spirituality: "/demo/categories/cat-spirituality.jpg",
 };
 
 export const SPECIALTY_TAXONOMY: {
@@ -370,7 +397,7 @@ export const SEED_CREATORS: SeedCreator[] = [
   {
     slug: "sofia-martinez",
     displayName: "Sofia Martinez",
-    title: "Beauty & Lifestyle Creator",
+    title: "Beauty & Lifestyle Influencer",
     bio: "Helping people create brighter, more confident routines through honest beauty content, travel moments, and brand stories that feel real.",
     locationCity: "Los Angeles",
     locationState: "California",
@@ -379,7 +406,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     avatarColor: "#633CFF",
     image: "/demo/creators/creator-sofia.jpg",
     coverImage: "/demo/sofia/sofia-banner.jpg",
-    badge: "Top Creator",
+    badge: "Top Influencer",
     statusLabel: "Open to Collaborations",
     planTier: "PLUS",
     verified: true,
@@ -471,7 +498,7 @@ export const SEED_CREATORS: SeedCreator[] = [
   {
     slug: "daniel-kim",
     displayName: "Daniel Kim",
-    title: "Travel & Tech Creator",
+    title: "Travel & Tech Influencer",
     bio: "Destination storytelling with a focus on tourism partnerships and multi-city itineraries.",
     locationCity: "Seoul",
     locationState: "Seoul",
@@ -490,12 +517,12 @@ export const SEED_CREATORS: SeedCreator[] = [
     ],
     openToCollab: true,
     offer: "Travel itinerary content",
-    need: "Local food creators",
+    need: "Local food influencers",
   },
   {
     slug: "priya-sharma",
     displayName: "Priya Sharma",
-    title: "Food & Lifestyle Creator",
+    title: "Food & Lifestyle Influencer",
     bio: "Room transformations and accessible design for urban apartments.",
     locationCity: "Mumbai",
     locationState: "Maharashtra",
@@ -516,12 +543,12 @@ export const SEED_CREATORS: SeedCreator[] = [
     ],
     openToCollab: true,
     offer: "Interior design transformations",
-    need: "Custom woodwork / cabinetry creators",
+    need: "Custom woodwork / cabinetry influencers",
   },
   {
     slug: "marcus-lee",
     displayName: "Marcus Lee",
-    title: "Fitness & Wellness Creator",
+    title: "Fitness & Wellness Influencer",
     bio: "Strength training and recovery education for busy professionals.",
     locationCity: "Austin",
     locationState: "Texas",
@@ -541,7 +568,7 @@ export const SEED_CREATORS: SeedCreator[] = [
     ],
     openToCollab: true,
     offer: "Training program content",
-    need: "Nutrition creators",
+    need: "Nutrition influencers",
   },
   {
     slug: "amara-okonkwo",
@@ -569,7 +596,7 @@ export const SEED_CREATORS: SeedCreator[] = [
   {
     slug: "jordan-blake",
     displayName: "Jordan Blake",
-    title: "Fashion & Lifestyle Creator",
+    title: "Fashion & Lifestyle Influencer",
     bio: "Consumer tech reviews and integrated smart-home walkthroughs.",
     locationCity: "London",
     locationState: "England",
@@ -589,13 +616,13 @@ export const SEED_CREATORS: SeedCreator[] = [
     ],
     openToCollab: true,
     offer: "Product demos and install walkthroughs",
-    need: "Home security creators",
+    need: "Home security influencers",
   },
 ];
 
 export const COLLAB_MATCH_PRESETS = [
   {
-    title: "Interior Designer + Woodwork Creator",
+    title: "Interior Designer + Woodwork Influencer",
     image: "/demo/categories/cat-home.jpg",
     tags: ["Design", "Craft", "Home Decor"],
     leftSlug: "sofia-martinez",
@@ -609,7 +636,7 @@ export const COLLAB_MATCH_PRESETS = [
     rightSlug: "priya-sharma",
   },
   {
-    title: "Food Creator + Kitchen Brand",
+    title: "Food Influencer + Kitchen Brand",
     image: "/demo/categories/cat-food.jpg",
     tags: ["Food", "Kitchen", "Brand"],
     leftSlug: "marcus-lee",
@@ -622,7 +649,63 @@ export const COLLAB_MATCH_PRESETS = [
     leftSlug: "priya-sharma",
     rightSlug: "sofia-martinez",
   },
+  {
+    title: "Beauty Influencer + Skincare Partner",
+    image: "/demo/categories/cat-beauty.jpg",
+    tags: ["Beauty", "Skincare", "Launch"],
+    leftSlug: "sofia-martinez",
+    rightSlug: "amara-okonkwo",
+  },
+  {
+    title: "Fitness Influencer + Wellness Brand",
+    image: "/demo/categories/cat-fitness.jpg",
+    tags: ["Fitness", "Wellness"],
+    leftSlug: "jordan-blake",
+    rightSlug: "marcus-lee",
+  },
+  {
+    title: "Tech Reviewer + Gadget Launch",
+    image: "/demo/categories/cat-tech.jpg",
+    tags: ["Tech", "Reviews", "Launch"],
+    leftSlug: "priya-sharma",
+    rightSlug: "daniel-kim",
+  },
+  {
+    title: "Fashion Influencer + Streetwear Label",
+    image: "/demo/categories/cat-fashion.jpg",
+    tags: ["Fashion", "Streetwear"],
+    leftSlug: "amara-okonkwo",
+    rightSlug: "jordan-blake",
+  },
+  {
+    title: "Lifestyle Influencer + Home Brand",
+    image: "/demo/categories/cat-lifestyle.jpg",
+    tags: ["Lifestyle", "Home"],
+    leftSlug: "marcus-lee",
+    rightSlug: "sofia-martinez",
+  },
+  {
+    title: "Supplier + Stylist Restock Drop",
+    image: "/demo/categories/cat-suppliers.jpg",
+    tags: ["Supply", "Beauty", "Retail"],
+    leftSlug: "daniel-kim",
+    rightSlug: "amara-okonkwo",
+  },
 ];
+
+/** Resolve a specialty slug to the best matching category demo image. */
+export function categoryImageFor(
+  slug: string,
+  taxonomy: { slug: string; children?: { slug: string }[] }[] = SPECIALTY_TAXONOMY,
+): string {
+  if (CATEGORY_IMAGES[slug]) return CATEGORY_IMAGES[slug]!;
+  for (const parent of taxonomy) {
+    if (parent.children?.some((child) => child.slug === slug)) {
+      return CATEGORY_IMAGES[parent.slug] ?? CATEGORY_IMAGES.lifestyle!;
+    }
+  }
+  return CATEGORY_IMAGES.lifestyle!;
+}
 
 export function formatFollowers(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, "")}M`;
@@ -631,7 +714,12 @@ export function formatFollowers(n: number): string {
 }
 
 export function getCreatorBySlug(slug: string) {
+  /** Seed/fixture lookup only. Product pages should use getDirectoryCreator / listDirectoryCreators. */
   return SEED_CREATORS.find((c) => c.slug === slug);
+}
+
+export function indexCreatorsBySlug<T extends { slug: string }>(creators: readonly T[]): Map<string, T> {
+  return new Map(creators.map((creator) => [creator.slug, creator]));
 }
 
 export type CreatorSearchQuery = {
@@ -692,12 +780,17 @@ export function filterCreators(
 
   let results = creators.filter((c) => {
     if (q) {
-      const aliasWords = c.specialties
-        .flatMap((slug) => synonyms.filter((row) => row.slug === slug).map((row) => row.term))
-        .join(" ");
-      const hay =
-        `${c.displayName} ${c.title} ${c.bio} ${c.specialties.join(" ")} ${aliasWords} ${c.locationCity} ${c.locationCountry}`.toLowerCase();
-      if (!hay.includes(q)) return false;
+      // Terminology addendum: treat creator / content creator / influencer as related role queries.
+      // Keep list in sync with ROLE_SEARCH_SYNONYMS in landing-pages.ts (avoid circular import).
+      const roleOnly = ["creator", "creators", "content creator", "influencer", "influencers"].includes(q);
+      if (!roleOnly) {
+        const aliasWords = c.specialties
+          .flatMap((slug) => synonyms.filter((row) => row.slug === slug).map((row) => row.term))
+          .join(" ");
+        const hay =
+          `${c.displayName} ${c.title} ${c.bio} ${c.specialties.join(" ")} ${aliasWords} ${c.locationCity} ${c.locationCountry} influencer influencers creator creators content creator`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
     }
     if (
       specialties.length &&

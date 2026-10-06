@@ -12,6 +12,11 @@ import { providerHealth } from "@/lib/provider-health";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
+import {
+  isLegacyDemoPaymentsAdminHref,
+  legacyDemoPaymentsEnabled,
+} from "@/lib/legacy-demo-payments";
+import { formatMoney } from "@/lib/money";
 import { escrowStats, getProtectedPaymentsStore } from "@/lib/protected-payments";
 import { getTrustStore, trustStats } from "@/lib/trust";
 import { prisma } from "@/lib/db";
@@ -93,9 +98,30 @@ const LINKS: {
   {
     href: "/admin/homepage",
     title: "Homepage",
-    blurb: "Reorder landing sections and header links.",
+    blurb: "Section order, category images, collab match cards, menus, and links to banner/card CMS.",
     module: "banners",
-    meta: () => "Draft or publish sections",
+    meta: () => "Full homepage CMS hub",
+  },
+  {
+    href: "/admin/collaboration-landing",
+    title: "Collaboration landing",
+    blurb: "Public /collaboration hero, dual path, features, mentorship, and trust copy.",
+    module: "banners",
+    meta: () => "CMS landing sections",
+  },
+  {
+    href: "/admin/business-landing",
+    title: "Business landing",
+    blurb: "Public /business hero, capabilities, plans, and signup form copy.",
+    module: "banners",
+    meta: () => "CMS landing sections",
+  },
+  {
+    href: "/admin/influencer-identity",
+    title: "Influencer identity",
+    blurb: "Self-description labels (Content Creator, Blogger, …) separate from the Influencer role.",
+    module: "banners",
+    meta: () => "Terminology addendum",
   },
   {
     href: "/admin/payments",
@@ -130,7 +156,7 @@ const LINKS: {
     title: "Site stats",
     blurb: "Footer counters and the script tagline. Edit the numbers here.",
     module: "banners",
-    meta: () => "50K+ strip",
+    meta: () => "Verified strip",
   },
   {
     href: "/admin/guests",
@@ -191,7 +217,7 @@ const LINKS: {
   {
     href: "/admin/social",
     title: "Social networks",
-    blurb: "Live follower and like sync. Creators accept the terms before a network connects.",
+    blurb: "Live follower and like sync. Influencers accept the terms before a network connects.",
     module: "social",
     meta: () => "Terms required",
   },
@@ -208,6 +234,20 @@ const LINKS: {
     blurb: "Fee matrix, simulator, immutable snapshots.",
     module: "commerce",
     meta: () => "Phase 12.1",
+  },
+  {
+    href: "/admin/corridors",
+    title: "Country corridors",
+    blurb: "Suspend or update Country Activation Matrix without a deploy.",
+    module: "collab_finance",
+    meta: () => "P6 corridor control",
+  },
+  {
+    href: "/admin/collaboration-ops",
+    title: "Collaboration operations",
+    blurb: "Dual-approval thresholds, mentorship eligibility, account purposes, audit.",
+    module: "collab_finance",
+    meta: () => "P6 control plane",
   },
   {
     href: "/admin/marketplace",
@@ -248,24 +288,28 @@ export default async function AdminHomePage({
   if (!session) redirect("/admin/login");
 
   const params = await searchParams;
-  const [cms, matching, billing, payments, trust, agency, memberAccounts, health, stripeMode] = await Promise.all([
-    getCms().catch(() => null),
-    getManagedMatching().catch(() => null),
-    getBillingStore().catch(() => null),
-    getProtectedPaymentsStore().catch(() => null),
-    getTrustStore().catch(() => null),
-    getAgencyStore().catch(() => null),
-    prisma.user.count().catch(() => 0),
-    providerHealth().catch(() => null),
-    stripeBillingMode().catch(() => "demo" as const),
-  ]);
+  const legacyDemoOn = await legacyDemoPaymentsEnabled().catch(() => false);
+  const [cms, matching, billing, payments, trust, agency, memberAccounts, health, stripeMode, snapshotsList, trends] =
+    await Promise.all([
+      getCms().catch(() => null),
+      getManagedMatching().catch(() => null),
+      getBillingStore().catch(() => null),
+      legacyDemoOn ? getProtectedPaymentsStore().catch(() => null) : Promise.resolve(null),
+      legacyDemoOn ? getTrustStore().catch(() => null) : Promise.resolve(null),
+      getAgencyStore().catch(() => null),
+      prisma.user.count().catch(() => 0),
+      providerHealth().catch(() => null),
+      stripeBillingMode().catch(() => "demo" as const),
+      getAllAudienceSnapshots().catch(() => []),
+      getNicheTrends().catch(() => []),
+    ]);
   const payStats = payments ? escrowStats(payments) : { active: 0, held: 0 };
   const tStats = trust ? trustStats(trust) : { open: 0, resolved: 0, total: 0, contracts: 0 };
   const aStats = agency ? agencyStats(agency) : { roster: 0, campaigns: 0, live: 0, portfolios: 0, published: 0 };
   const visibleCards = cms?.featuredCards.cards.filter((c) => c.visible).length ?? 0;
   const optIns = matching?.optIns.filter((o) => o.openToManaged).length ?? 0;
-  const snapshots = getAllAudienceSnapshots().length;
-  const rising = getNicheTrends().filter((t) => t.signal === "rising").length;
+  const snapshots = snapshotsList.length;
+  const rising = trends.filter((t) => t.signal === "rising").length;
   const completedCheckouts = billing?.sessions.filter((s) => s.status === "completed").length ?? 0;
   const ctx = {
     visibleCards,
@@ -276,18 +320,18 @@ export default async function AdminHomePage({
     rising,
     completedCheckouts,
     escrowActive: payStats.active,
-    escrowHeld: new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(payStats.held / 100),
+    escrowHeld: formatMoney(payStats.held),
     trustOpen: tStats.open,
     agencyRoster: aStats.roster,
     memberAccounts,
     stripeMode,
   };
 
-  const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));
+  const visibleLinks = LINKS.filter(
+    (l) =>
+      (legacyDemoOn || !isLegacyDemoPaymentsAdminHref(l.href)) &&
+      canAccessModule(session, l.module),
+  );
 
   return (
     <div>
@@ -315,7 +359,7 @@ export default async function AdminHomePage({
       ) : null}
 
       {health ? (
-        <section className="mt-6 grid gap-3 sm:grid-cols-3" aria-label="Provider health">
+        <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Provider health">
           {health.map((line) => (
             <div key={line.key} className="rounded-xl border border-[#E4EBFF] bg-white px-4 py-3">
               <p className="text-xs font-bold uppercase tracking-wide text-violet">{line.title}</p>

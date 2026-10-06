@@ -57,17 +57,19 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
-      # JSON demo stores and banner uploads survive image rebuilds until each module moves to Postgres.
+      # Banner/media uploads are required (CMS files live here).
+      # /app/data holds remaining JSON demos (payments, trust, fees)
+      # until those modules move to Postgres. Admin, CMS, billing, and intelligence no longer need it.
       - influrios_data:/app/data
       - influrios_uploads:/app/public/uploads
     networks:
       - influrios
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 40s
+      start_period: 60s
 
 volumes:
   influrios_pg:

@@ -1,40 +1,54 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { actionPublishDraft, actionUpdateDashboardProfile } from "@/app/claim/actions";
+import {
+  actionPublishDraft,
+  actionUpdateDashboardProfile,
+  actionUpdateProfileMedia,
+} from "@/app/claim/actions";
 import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
-import { actionChangeShortSlug } from "@/app/dashboard/short-actions";
+import { actionChangeShortSlug, actionRollbackDynamicDestination, actionSetDynamicDestination } from "@/app/dashboard/short-actions";
 import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
 import { classifyProfileTopics } from "@/lib/ai-runtime";
 import { isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { ensureCreatorShortLink, primaryShortHost } from "@/lib/short-link";
+import { ensureCreatorShortLink, getCreatorShortLinkAnalytics, listShortLinkDestinationHistory, primaryShortHost, slugChangeWarning } from "@/lib/short-link";
 import {
   completenessFor,
   getCreatorSessionDraft,
 } from "@/lib/claim";
+import { getInfluencerIdentity } from "@/lib/landing-pages";
 import { socialConnectState } from "@/lib/social-connect";
 import { PlaceFields } from "@/components/place-fields";
 import { getDirectory } from "@/lib/directory";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 import { actionAddOwnEvidence, actionOpenOwnDispute, actionRequestOwnChangeOrder, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
 import { readFxSnapshot } from "@/lib/fx-share";
-import { formatMoney } from "@/lib/protected-payments";
+import { formatMoney } from "@/lib/money";
 import { listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
+import Image from "next/image";
+import { BRAND_AVATARS, BRAND_BANNERS } from "@/lib/profile-media";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Creator dashboard" };
+export const metadata = { title: "Influencer dashboard" };
 
 type Props = {
-  searchParams: Promise<{ published?: string; saved?: string; error?: string; social?: string }>;
+  searchParams: Promise<{ published?: string; saved?: string; error?: string; social?: string; confirmSlug?: string }>;
 };
 
 export default async function CreatorDashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const draft = await getCreatorSessionDraft();
   if (!draft) redirect("/claim");
-  const directory = await getDirectory().catch(() => null);
+  const [directory, identity] = await Promise.all([
+    getDirectory().catch(() => null),
+    getInfluencerIdentity().catch(() => null),
+  ]);
+  const selfDescriptions =
+    identity?.selfDescriptions?.length
+      ? identity.selfDescriptions
+      : ["Influencer", "Content Creator", "Other"];
   const specialtyGroups = (directory?.taxonomy ?? SPECIALTY_TAXONOMY.map((parent) => ({
     slug: parent.slug,
     name: parent.name,
@@ -46,6 +60,14 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
   const linkLimits = await entitlementsForPlan(planCode).catch(() => null);
   const shortLink = draft.stage === "published" ? await ensureCreatorShortLink(draft.slug).catch(() => null) : null;
   const shortHost = await primaryShortHost().catch(() => "inflr.me");
+  const destinationHistory =
+    shortLink && linkLimits?.dynamicQr
+      ? await listShortLinkDestinationHistory(shortLink.id, 5).catch(() => [])
+      : [];
+  const linkAnalytics =
+    shortLink && shortLink.status === "active"
+      ? await getCreatorShortLinkAnalytics(draft.slug).catch(() => null)
+      : null;
   const topics = await classifyProfileTopics(`${draft.title}\n${draft.bio}`).catch(() => ({
     suggestions: [],
     source: "fallback" as const,
@@ -72,7 +94,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">
-            Phase 8 · Creator dashboard
+            Phase 8 · Influencer dashboard
           </p>
           <h1 className="mt-2 font-display text-3xl font-bold text-indigo">
             Welcome{draft.ownerName ? `, ${draft.ownerName.split(" ")[0]}` : ""}
@@ -99,6 +121,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       {params.saved === "1" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Profile saved.
+        </div>
+      ) : null}
+      {params.saved === "destination" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Short-link destination updated. The printed QR is unchanged.
         </div>
       ) : null}
       {params.error ? (
@@ -150,65 +177,189 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <section id="profile" className="card-surface p-6">
-          <h2 className="font-display text-xl font-bold text-indigo">Edit profile</h2>
-          <form action={actionUpdateDashboardProfile} className="mt-4 grid gap-3 sm:grid-cols-2">
-            <input type="hidden" name="draftId" value={draft.id} />
-            <label className="text-sm sm:col-span-2">
-              <span className="font-semibold text-indigo">Display name</span>
-              <input
-                name="displayName"
-                defaultValue={draft.displayName}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+        <section id="profile" className="card-surface space-y-6 p-6">
+          <div>
+            <h2 className="font-display text-xl font-bold text-indigo">Profile photo &amp; banner</h2>
+            <p className="mt-1 text-sm text-muted">
+              New profiles start with Influrios brand art. Set your gender for a matching default avatar, upload your own
+              photos, or cycle branded banners anytime.
+            </p>
+            <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+              <div className="relative h-28 w-full bg-[#EEF2FF]">
+                <Image
+                  src={draft.coverImage || BRAND_BANNERS[0]}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="640px"
+                  unoptimized={draft.coverImage?.endsWith(".svg")}
+                />
+              </div>
+              <div className="flex items-end gap-4 bg-white p-4">
+                <span className="relative -mt-10 h-20 w-20 overflow-hidden rounded-full ring-4 ring-white">
+                  <Image
+                    src={draft.image || BRAND_AVATARS.unspecified}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                    unoptimized={draft.image?.endsWith(".svg")}
+                  />
+                </span>
+                <div className="min-w-0 flex-1 pb-1">
+                  <p className="truncate text-sm font-bold text-indigo">{draft.displayName}</p>
+                  <p className="text-xs text-muted">Gender: {draft.gender}</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <form action={actionUpdateProfileMedia} encType="multipart/form-data" className="space-y-2 rounded-xl border border-border p-3">
+                <input type="hidden" name="draftId" value={draft.id} />
+                <input type="hidden" name="intent" value="avatar" />
+                <p className="text-xs font-bold uppercase tracking-wide text-violet">Profile photo</p>
+                <input
+                  type="file"
+                  name="avatar"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo"
+                />
+                <button type="submit" className="btn-primary w-full !py-2 text-xs">
+                  Upload photo
+                </button>
+              </form>
+              <form action={actionUpdateProfileMedia} encType="multipart/form-data" className="space-y-2 rounded-xl border border-border p-3">
+                <input type="hidden" name="draftId" value={draft.id} />
+                <input type="hidden" name="intent" value="cover" />
+                <p className="text-xs font-bold uppercase tracking-wide text-violet">Banner</p>
+                <input
+                  type="file"
+                  name="cover"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo"
+                />
+                <button type="submit" className="btn-primary w-full !py-2 text-xs">
+                  Upload banner
+                </button>
+              </form>
+              <form action={actionUpdateProfileMedia} className="space-y-2 rounded-xl border border-border p-3">
+                <input type="hidden" name="draftId" value={draft.id} />
+                <input type="hidden" name="intent" value="avatar-default" />
+                <p className="text-xs font-bold uppercase tracking-wide text-violet">Use brand avatar</p>
+                <select
+                  name="gender"
+                  defaultValue={draft.gender}
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                >
+                  <option value="unspecified">Generic Influrios</option>
+                  <option value="female">Female default</option>
+                  <option value="male">Male default</option>
+                </select>
+                <button type="submit" className="btn-secondary w-full !py-2 text-xs">
+                  Apply default avatar
+                </button>
+              </form>
+              <form action={actionUpdateProfileMedia} className="space-y-2 rounded-xl border border-border p-3">
+                <input type="hidden" name="draftId" value={draft.id} />
+                <input type="hidden" name="intent" value="cover-next" />
+                <p className="text-xs font-bold uppercase tracking-wide text-violet">Brand banner</p>
+                <p className="text-xs text-muted">Cycle the Influrios rooftop / lounge banners.</p>
+                <button type="submit" className="btn-secondary w-full !py-2 text-xs">
+                  Next brand banner
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="font-display text-xl font-bold text-indigo">Edit profile</h2>
+            <form action={actionUpdateDashboardProfile} className="mt-4 grid gap-3 sm:grid-cols-2">
+              <input type="hidden" name="draftId" value={draft.id} />
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Display name</span>
+                <input
+                  name="displayName"
+                  defaultValue={draft.displayName}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                />
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">How do you describe yourself?</span>
+                <select
+                  name="title"
+                  defaultValue={
+                    selfDescriptions.includes(draft.title)
+                      ? draft.title
+                      : draft.title
+                        ? draft.title
+                        : "Influencer"
+                  }
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                >
+                  {!selfDescriptions.includes(draft.title) && draft.title ? (
+                    <option value={draft.title}>{draft.title} (current)</option>
+                  ) : null}
+                  {selfDescriptions.map((label) => (
+                    <option key={label} value={label}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs font-normal text-muted">
+                  Platform role stays Influencer. Pick a self-description from the admin-managed list.
+                </span>
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Gender (for default avatar)</span>
+                <select
+                  name="gender"
+                  defaultValue={draft.gender}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                >
+                  <option value="unspecified">Prefer not to say / unknown</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                </select>
+              </label>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Bio</span>
+                <textarea
+                  name="bio"
+                  rows={3}
+                  defaultValue={draft.bio}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                />
+              </label>
+              <PlaceFields
+                cityName="locationCity"
+                countryName="locationCountry"
+                defaultCity={draft.locationCity}
+                defaultCountry={draft.locationCountry}
+                className="contents"
               />
-            </label>
-            <label className="text-sm sm:col-span-2">
-              <span className="font-semibold text-indigo">Title</span>
-              <input
-                name="title"
-                defaultValue={draft.title}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-              />
-            </label>
-            <label className="text-sm sm:col-span-2">
-              <span className="font-semibold text-indigo">Bio</span>
-              <textarea
-                name="bio"
-                rows={3}
-                defaultValue={draft.bio}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-              />
-            </label>
-            <PlaceFields
-              cityName="locationCity"
-              countryName="locationCountry"
-              defaultCity={draft.locationCity}
-              defaultCountry={draft.locationCountry}
-              className="contents"
-            />
-            <label className="text-sm sm:col-span-2">
-              <span className="font-semibold text-indigo">Primary specialty</span>
-              <select
-                name="specialty"
-                defaultValue={draft.specialties[0] ?? "lifestyle"}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-              >
-                {specialtyGroups.map((group) => (
-                  <optgroup key={group.slug} label={group.name}>
-                    <option value={group.slug}>{group.name}</option>
-                    {group.children.filter((child) => child.active).map((child) => (
-                      <option key={child.slug} value={child.slug}>
-                        {child.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
-              Save profile
-            </button>
-          </form>
+              <label className="text-sm sm:col-span-2">
+                <span className="font-semibold text-indigo">Primary specialty</span>
+                <select
+                  name="specialty"
+                  defaultValue={draft.specialties[0] ?? "lifestyle"}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                >
+                  {specialtyGroups.map((group) => (
+                    <optgroup key={group.slug} label={group.name}>
+                      <option value={group.slug}>{group.name}</option>
+                      {group.children.filter((child) => child.active).map((child) => (
+                        <option key={child.slug} value={child.slug}>
+                          {child.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+              <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
+                Save profile
+              </button>
+            </form>
+          </div>
         </section>
 
         <section className="card-surface p-6">
@@ -299,23 +450,85 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               <img src={`/api/qr/${draft.slug}?size=160&logo=0`} alt="Influencer Card QR" width={160} height={160} />
             ) : null}
             {linkLimits?.customAlias ? (
-              <form action={actionChangeShortSlug} className="space-y-2">
-                <p className="text-xs text-muted">
-                  Changing this name keeps the printed QR and the previous short link. The old name redirects to the
-                  new one.
-                </p>
-                <input
-                  name="slug"
-                  defaultValue={shortLink.slug}
-                  className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
-                />
-                <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                  Update short link
-                </button>
-              </form>
+              <div className="space-y-2">
+                {params.confirmSlug && params.confirmSlug !== shortLink.slug ? (
+                  <form action={actionChangeShortSlug} className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                    <p className="text-xs font-semibold text-indigo">Confirm short link change</p>
+                    <p className="text-xs text-muted">{slugChangeWarning(shortLink.slug, params.confirmSlug)}</p>
+                    <input type="hidden" name="slug" value={params.confirmSlug} />
+                    <input type="hidden" name="acknowledged" value="1" />
+                    <div className="flex flex-wrap gap-2">
+                      <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                        Yes, change to /{params.confirmSlug}
+                      </button>
+                      <Link href="/dashboard" className="btn-secondary !py-1.5 text-xs">
+                        Cancel
+                      </Link>
+                    </div>
+                  </form>
+                ) : (
+                  <form action={actionChangeShortSlug} className="space-y-2">
+                    <p className="text-xs text-muted">
+                      Changing this name keeps the printed QR. You will confirm before the old name starts redirecting
+                      to the new one.
+                    </p>
+                    <input
+                      name="slug"
+                      defaultValue={shortLink.slug}
+                      className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
+                    />
+                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                      Update short link
+                    </button>
+                  </form>
+                )}
+              </div>
             ) : (
               <p className="text-xs text-muted">A custom short name follows the plan entitlement.</p>
             )}
+            {linkLimits?.dynamicQr && shortLink.dynamic ? (
+              <div className="space-y-3 border-t border-border pt-3">
+                <div>
+                  <p className="font-semibold text-indigo">Dynamic destination</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Pro can change where the short link and QR resolve without reprinting the QR. Paths stay on
+                    Influrios; https hosts must be allow-listed by admin.
+                  </p>
+                </div>
+                <p className="text-xs text-muted">
+                  Current: <span className="font-semibold text-indigo">{shortLink.destination}</span>
+                </p>
+                <form action={actionSetDynamicDestination} className="space-y-2">
+                  <input
+                    name="destination"
+                    defaultValue={shortLink.destination}
+                    placeholder={`/c/${draft.slug} or https://influrios.com/...`}
+                    className="w-full max-w-md rounded-xl border border-border px-3 py-2"
+                  />
+                  <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                    Update destination
+                  </button>
+                </form>
+                {destinationHistory.length ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-indigo">Recent changes</p>
+                    <ul className="space-y-1 text-xs text-muted">
+                      {destinationHistory.map((row) => (
+                        <li key={row.id}>
+                          {row.createdAt.toISOString().slice(0, 16).replace("T", " ")} · {row.reason} ·{" "}
+                          {row.previousDestination} → {row.destination}
+                        </li>
+                      ))}
+                    </ul>
+                    <form action={actionRollbackDynamicDestination}>
+                      <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                        Roll back to prior destination
+                      </button>
+                    </form>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : (
           <p className="mt-2 text-sm text-muted">
@@ -323,6 +536,76 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
           </p>
         )}
       </section>
+
+      {linkAnalytics?.ok ? (
+        <section className="card-surface p-6">
+          <h2 className="font-display text-xl font-bold text-indigo">Link analytics</h2>
+          <p className="mt-2 text-sm text-muted">
+            Privacy-safe totals for your short link and QR. Depth follows your plan entitlement (
+            {linkAnalytics.analytics.level}). Precise location is never stored.
+          </p>
+          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted">Total visits</dt>
+              <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.totalVisits}</dd>
+            </div>
+            {linkAnalytics.analytics.qrScans != null ? (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">QR scans</dt>
+                <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.qrScans}</dd>
+              </div>
+            ) : null}
+            {linkAnalytics.analytics.directVisits != null ? (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">Direct short-link visits</dt>
+                <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.directVisits}</dd>
+              </div>
+            ) : null}
+            {linkAnalytics.analytics.ctaClicks != null ? (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">Card CTA clicks</dt>
+                <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.ctaClicks}</dd>
+              </div>
+            ) : null}
+            {linkAnalytics.analytics.inquiryConversions != null ? (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">Inquiry conversions</dt>
+                <dd className="font-display text-2xl font-bold text-indigo">
+                  {linkAnalytics.analytics.inquiryConversions}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          {linkAnalytics.analytics.deviceClasses || linkAnalytics.analytics.referrerClasses ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 text-sm text-indigo">
+              {linkAnalytics.analytics.deviceClasses ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Device class</p>
+                  <ul className="mt-1 space-y-1">
+                    {Object.entries(linkAnalytics.analytics.deviceClasses).map(([key, count]) => (
+                      <li key={key}>
+                        {key}: {count}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {linkAnalytics.analytics.referrerClasses ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Referrer class</p>
+                  <ul className="mt-1 space-y-1">
+                    {Object.entries(linkAnalytics.analytics.referrerClasses).map(([key, count]) => (
+                      <li key={key}>
+                        {key}: {count}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {social ? (
         <section className="card-surface p-6">
@@ -344,7 +627,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               <div className="rounded-xl bg-lavender/40 p-4 text-sm text-indigo">
                 <p className="font-semibold">Before the network login</p>
                 <p className="mt-2">
-                  Accepting the Creator Terms does not authorize a social account. This step explains the permissions
+                  Accepting the Influencer Terms does not authorize a social account. This step explains the permissions
                   and asks you to acknowledge the{" "}
                   <Link href="/legal/connected-social-data-policy" className="font-semibold underline" target="_blank">
                     Connected Social Data & API Policy
@@ -376,7 +659,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                       <span>
                         I acknowledge the Connected Social Data & API Policy and authorize Influrios to start the{" "}
                         {account.name} login
-                        {account.scopes ? ` for: ${account.scopes}` : ""}. This is not granted by the Creator Terms.
+                        {account.scopes ? ` for: ${account.scopes}` : ""}. This is not granted by the Influencer Terms.
                       </span>
                     </label>
                     <button type="submit" className="btn-primary !py-1.5 text-xs">

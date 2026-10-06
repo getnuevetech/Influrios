@@ -1,9 +1,9 @@
 # Influrios — Development State Review & Next Implementation Plan
 
-**Date:** 2026-10-02  
-**Repo reviewed:** `main` @ `49153de`  
-**Sources:** codebase, `docs/IMPLEMENTATION_PLAN.md`, `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, CI, Prisma schema, deploy scripts  
-**Sequencing authority for new work:** this document (supersedes the “first coding slice” close of `IMPLEMENTATION_PLAN.md` for post–Phase-12 work)
+**Date:** 2026-10-02 (updated 2026-10-04)  
+**Repo reviewed:** `main` after Collab OS P0–P8 cores + residual closure #125  
+**Sources:** codebase, `docs/IMPLEMENTATION_PLAN.md`, `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, `docs/FULL_IMPLEMENTATION_PLAN.md` v2.1, CI, Prisma schema, deploy scripts, archived product specs in `docs/source-specs/`  
+**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) **v2.1** (DONE / Deferred-external; no silent PARTIAL on completed Exits). This doc remains money/invariant authority and maturity inventory.
 
 ---
 
@@ -15,9 +15,9 @@ Influrios is past the branded-demo stage and into a **hybrid production platform
 |---|---|
 | Product surface | Wide: Home, Discover, profiles, cards, claim, dashboard, collaboration, business, agency, billing, payments/trust, legal, large admin |
 | Data durability | Strong for Phases A–I + 12.3–12.13 (88 Prisma models, versioned migrations) |
-| Dual architecture | Still real: 8 JSON file stores under `data/`; `SEED_CREATORS` still drives matching / several pickers |
+| Dual architecture | Remaining JSON demos: payments, trust, fee simulator; claim + admin + CMS + billing + intelligence + directory are Postgres |
 | Spec MVP (section 33) | Structurally met (unit gate + CI); not yet proven with live SMTP, Stripe, and social credentials |
-| Ops / deploy | Docker Compose on Lightsail is the intended path; docs still mix older PM2 language |
+| Ops / deploy | Docker Compose on Lightsail; Lightsail guide is Compose-only (legacy PM2 config removed) |
 | Next risk | Building more Phase 12 depth before retiring dual stores and hard-wiring launch integrations |
 
 **Bottom line:** stop extending the transaction engine. Harden the path that creators and ops actually use: single source of truth for profiles, claim → account → Discover, live mail/billing/social, and quarantine or remove the Phase 9/10 JSON consoles.
@@ -80,28 +80,20 @@ These modules read/write Prisma and match the implementation plan’s “Impleme
 
 | Store | Path | Role today |
 |---|---|---|
-| Claim funnel | `data/claim-funnel.json` via `claim.ts` | Primary claim UX; mirrors into `OnboardingSession` / Creator via `claim-persist.ts` |
-| CMS banners / value prop content | `data/cms.json` via `cms.ts` | Banner uploads + strip copy; homepage *order* is Postgres sections |
-| Billing sessions | `data/billing.json` via `billing.ts` | Demo checkout history; plan apply also hits Prisma `User` / subscription state |
-| Fee matrix simulator | `data/collaboration-fees.json` | Admin fee rules UI (ledger fee snapshot is separate / immutable on funding) |
-| Phase 9 protected payments | `data/protected-payments.json` | Explicit demo console (`/admin/payments`, parts of `/payments`) |
-| Phase 10 trust | `data/trust.json` | Explicit demo queue (`/admin/trust`, “Earlier demo queue” on `/trust`) |
-| Intelligence | `data/intelligence.json` | Trends / export still file-backed; uses `SEED_CREATORS` |
-| Admin RBAC | `data/admin-auth.json` | Roles, users, permissions — durable only via Docker volume |
+| ~~Claim funnel~~ | ~~`data/claim-funnel.json`~~ | **Retired in Phase K.** `OnboardingSession` + Creator via `claim.ts` / `claim-persist.ts` are authoritative. |
+| CMS banners / value prop content | `CmsSection.payload` via `cms.ts` | Banner image **files** stay on `uploads`; one-time import from `cms.json` |
+| Billing sessions | Postgres `CheckoutAttempt` via `billing.ts` | Plan apply hits `User` / `Creator` / `SubscriptionState`; one-time import from `billing.json` |
+| Fee matrix simulator | Postgres `CollaborationFeeRule` / `CollaborationFeeSnapshot` via `collaboration-fees.ts` | Admin fee rules UI; one-time import from `collaboration-fees.json`; ledger fee snapshot stays immutable on funding |
+| Phase 9 protected payments | `data/protected-payments.json` (quarantined) | Demo console only when `legacy_demo_payments` is on; no JSON seed write when off |
+| Phase 10 trust | `data/trust.json` (quarantined) | Demo queue only when `legacy_demo_payments` is on; ledger disputes stay on `/admin/trust` |
+| Intelligence | Postgres `IntelligenceSettings` via `intelligence.ts` | Trends/signals stay computed from directory; one-time import from `intelligence.json` |
+| Admin RBAC | Postgres `AdminUser` / `AdminRole` | HMAC cookie unchanged; one-time import from `admin-auth.json` then rename to `.migrated` |
 
 Docker Compose mounts `influrios_data` → `/app/data` so rebuilds do not wipe these, but they are **not** first-class migrations.
 
-### 4.3 Seed-array runtime debt
+### 4.3 Seed-array residual use
 
-`SEED_CREATORS` in `src/lib/seed-data.ts` is still used for:
-
-- Collaboration explorer scoring defaults (`matching.ts`, `/collaboration`)
-- Business fit ranking over seed list (`business.ts`)
-- Agency / payments / matching admin picker options
-- Intelligence audience snapshots
-- Directory cold-start seed + fallback when DB is empty
-
-Directory *does* load Postgres creators and unions published claims, but several product paths still behave as if the six seed rows are the network.
+`SEED_CREATORS` remains for **cold-start seed** and empty-DB fallback in `directory.ts`. Product matching, collaboration, business fit, agency/payments pickers, and intelligence were rewired in Phase J to directory helpers. Do not add new product reads against the seed array.
 
 ### 4.4 Integrations: code ready, credentials optional
 
@@ -120,11 +112,11 @@ Directory *does* load Postgres creators and unions published claims, but several
 - **Strength:** CI on every PR; migration drift check; brand ban; broad unit coverage of ledger/entitlement/state machines; `mvp-gate` encodes Spec §33 structurally.
 - **Gap:** Almost no HTTP/integration tests, no Playwright smoke of claim → Discover, no webhook contract tests against Stripe fixtures, MVP gate does not assert live DB wiring for CMS/search.
 
-### 4.6 Deploy docs drift
+### 4.6 Deploy docs
 
-- README correctly says **Docker Compose**, not PM2 for the app.
-- `docs/deploy/AWS_LIGHTSAIL.md` still describes Nginx → PM2 → Next.js in places.
-- Prefer aligning deploy docs to Compose + volume mounts before the next server rebuild.
+- README and `docs/deploy/AWS_LIGHTSAIL.md` / `FRESH_SERVER_SETUP.md` are **Compose-only** for the app.
+- Use `npm run staging:evidence-probe -- <url>` to prefill Phase M auto-checks against a live host.
+- Remaining Phase M work is operator credentials (SMTP, Stripe sandbox, social OAuth, marketplace webhook).
 
 ---
 
@@ -143,7 +135,8 @@ Do not add staged-funding variants, extra providers, or new ledger product surfa
 
 ### R3 — Finish claim dual-write retirement
 
-1. Make `OnboardingSession` / `ProfileClaim` / publish path authoritative; stop requiring `claim-funnel.json` for publish.  
+1. ~~Make `OnboardingSession` / `ProfileClaim` / publish path authoritative; stop requiring `claim-funnel.json` for publish.~~ **Done (Phase K).**  
+2. ~~Move CMS banner/value-prop payloads into `CmsSection` content JSON or dedicated tables.~~ **Done (Phase L.2).**  
 2. Link published claim to `User` (already partially present in accounts) and drop long-lived demo creator cookie as the ownership proof.  
 3. Keep DEMO_CODE verify only when mail is not ready; once SMTP is ready, email challenge is the default path.
 
@@ -152,10 +145,10 @@ Do not add staged-funding variants, extra providers, or new ledger product surfa
 | Action | Target |
 |---|---|
 | Move | Admin RBAC → Postgres (`AdminUser` / `AdminRole` models or equivalent) |
-| Move | CMS banner/value-prop payloads into `CmsSection` content JSON or dedicated tables |
-| Move or drop | Billing session log → Prisma (or Stripe Dashboard only) |
-| Quarantine | Phase 9/10 JSON consoles: hide behind admin flag `legacy_demo_payments` default **off** in production; point all product CTAs at marketplace ledger |
-| Move later | Intelligence store + fee simulator (after directory purification) |
+| ~~Move~~ | ~~CMS banner/value-prop payloads into `CmsSection` content JSON~~ **Done (L.2)** |
+| ~~Move or drop~~ | ~~Billing session log → Prisma~~ **Done (`CheckoutAttempt`, L.4)** |
+| Quarantine | Phase 9/10 JSON consoles: hide behind admin flag `legacy_demo_payments` default **off**; no JSON seed write when off; point all product CTAs at marketplace ledger |
+| ~~Move later~~ | ~~Fee simulator~~ **Done (`CollaborationFeeRule`)** |
 
 ### R5 — Launch-integration sprint (credentials + honesty)
 
@@ -177,22 +170,20 @@ Ship a short ops checklist, not more UI:
 - Rate-limit claim, register, and admin login.  
 - Ensure public profile DTO never leaks email / admin notes (spot-check claim publish + API exports).
 
-### R7 — Test the loops that matter
+### R7 — Test the loops that matter — DONE (thin suite)
 
-Add a thin integration suite (Node test or Playwright) for:
+Thin suite in `src/lib/loops.test.ts` (CI + pure always-on). Deeper coverage remains in dedicated files:
 
-1. Seed creator visible on Discover after migrate+seed  
-2. Claim → verify → publish → appears on Discover  
-3. Guest soft/hard gate  
-4. Stripe webhook idempotency with fixture payloads  
-5. Marketplace `funding.held` → release path with signed fixture  
+1. ~~Seed creator visible on Discover after migrate+seed~~ **`searchDirectory` DB case + `filterCreators` pure**  
+2. ~~Claim → verify → publish → appears on Discover~~ **`persistPublishedClaim` → directory lookup; public DTO strip**  
+3. ~~Guest soft/hard gate~~ **`decideGuestGate` in loops + `account-policy.test.ts`**  
+4. ~~Stripe webhook idempotency~~ **`webhookDisposition` + `phase-h` / `mvp-gate`**  
+5. ~~Marketplace `funding.held` → release~~ **disposition in loops; full path in `ledger` / `fx-share`**
 
-Keep unit tests for ledger math; do not replace them.
+### R8 — Docs cleanup — DONE
 
-### R8 — Docs cleanup
-
-- Mark §3 gap matrix in `IMPLEMENTATION_PLAN.md` as **historical (pre A–I)**.  
-- Point README “current plan” at this document for sequencing.  
+- ~~Mark §3 gap matrix in `IMPLEMENTATION_PLAN.md` as historical (pre A–I).~~  
+- ~~Point README “current plan” at this document for sequencing.~~  
 - Leave strategy / addendum docs as product law; do not duplicate fee rules here.
 
 ---
@@ -201,43 +192,39 @@ Keep unit tests for ledger math; do not replace them.
 
 Phases below are **vertical slices**. Each leaves current screens working. Prefer small PRs (repo habit already established).
 
-### Phase J — Directory purity (critical path)
+### Phase J — Directory purity (critical path) — DONE
 
 **Proves:** Discover, collaboration scoring, and business fit use the same Postgres creator set.
 
-1. Add `listDirectoryCreators()` / `getDirectoryCreator(slug)` as the only product read API (wrap existing `directory.ts`).  
-2. Replace `SEED_CREATORS` imports in `matching.ts`, `business.ts`, `intelligence.ts`, agency/payments pickers with those helpers.  
-3. Restrict `SEED_CREATORS` exports to seed + tests (eslint or `check` script optional).  
-4. Ensure seed script upserts the six creators + taxonomy once; boot path does not invent a second catalog.  
-5. Unit/integration: Discover count matches `prisma.creator.count()` for published/unclaimed-visible rules.
+Shipped on `main`: directory helpers, matching/collab/business/intelligence/agency/payments rewired off seed, `legacy_demo_payments` gated.
 
-**Exit:** removing a creator row from Postgres removes them from Discover and match lists without a code change.
+**Exit met:** removing a creator row from Postgres removes them from Discover and match lists without a code change.
 
-### Phase K — Claim & identity consolidation
+### Phase K — Claim & identity consolidation — DONE
 
 **Proves:** ownership is a User + Creator link, not a JSON draft cookie alone.
 
-1. Publish path writes only through `claim-persist` / Prisma; JSON store becomes cache or is deleted.  
-2. After register/login, attach open onboarding session (`ONB-008`).  
-3. Creator dashboard loads by account session → creator slug.  
-4. Verification: if `mailReady()`, send email challenge; else labeled demo code.  
-5. Public DTO audit on `/creators/[slug]` and `/c/[slug]`.
+1. Publish path writes only through `claim-persist` / Prisma; `claim-funnel.json` deleted from the runtime path.  
+2. After register/login, `attachClaimToUser` links the open onboarding session (`ONB-008`).  
+3. Creator dashboard loads by account session → linked `OnboardingSession` / Creator slug.  
+4. Verification: if `mailReady()`, enqueue SMTP challenge; else labeled demo code on the verify page.  
+5. `publicClaimPayload` strips email / verifyCode / ownerName for public/audit DTOs.
 
-**Exit:** wipe `data/claim-funnel.json`; published profiles and dashboard still work after restart.
+**Exit met:** claim drafts survive without `data/claim-funnel.json`; published profiles and dashboard resolve from Postgres after restart.
 
-### Phase L — Ops store migration & demo quarantine
+### Phase L — Ops store migration & demo quarantine — DONE (core path)
 
 **Proves:** production admin survives without JSON files except uploads.
 
-1. Prisma models for admin users/roles/permissions; migrate `admin-auth.json` once; keep HMAC cookie.  
-2. Fold CMS JSON fields into section payloads; keep upload volume for banners.  
-3. Feature flag `legacy_demo_payments` (default off): gate `/admin/payments` Phase 9 UI and trust demo forms.  
-4. Billing: persist checkout attempts in Prisma or stop writing `billing.json` when Stripe confirms.  
-5. Document volume mounts: `uploads` required; `data/` optional after migration.
+1. ~~Prisma models for admin users/roles/permissions; migrate `admin-auth.json` once; keep HMAC cookie.~~ **Done.**  
+2. ~~Fold CMS JSON fields into section payloads; keep upload volume for banners.~~ **Done.**  
+3. ~~Feature flag `legacy_demo_payments` (default off): gate `/admin/payments` Phase 9 UI and trust demo forms.~~ **Done (Phase J + confirmed).**  
+4. ~~Billing: persist checkout attempts in Prisma or stop writing `billing.json` when Stripe confirms.~~ **Done (`CheckoutAttempt`).**  
+5. ~~Document volume mounts: `uploads` required; `data/` optional after migration.~~ **Done.**
 
-**Exit:** fresh Compose up with empty `data/` volume boots admin (bootstrap env superuser), CMS, and marketplace.
+**Exit met for admin + CMS + billing + intelligence + fee rules:** fresh Compose with empty `data/` boots those paths from Postgres. Remaining JSON demos (`protected-payments`, `trust`) stay quarantined / optional.
 
-### Phase M — Launch integrations
+### Phase M — Launch integrations — RUNBOOK + PROBE SHIPPED (evidence pending)
 
 **Proves:** Spec §33 items 8–10 with real providers in a staging environment.
 
@@ -248,44 +235,60 @@ Phases below are **vertical slices**. Each leaves current screens working. Prefe
 5. Turn `demo_checkout` off on staging once Stripe path is green.  
 6. Marketplace: one jurisdiction + provider webhook fixture through hold → release.
 
-**Exit:** written runbook in `docs/deploy/` with “green” evidence; production switches match policy.
+**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/staging-evidence-probe.ts`, `scripts/marketplace-webhook-fixture.ts`.
 
-### Phase N — Hardening & observability
+**Exit:** staging operator fills the green evidence tables in that runbook; production switches match the policy table. **Not complete until evidence is signed — CI alone does not finish Phase M.** Auto-probe covers health / homepage / guest collab CTAs only.
+
+### Phase N — Hardening & observability — DONE (code + docs)
 
 **Proves:** Lightsail instance can be rebuilt from docs alone.
 
-1. Rewrite Lightsail guide to Compose-only; remove PM2 app path.  
-2. HTTPS (Let’s Encrypt) + `NEXT_PUBLIC_APP_URL` https.  
-3. Backup script + restore drill.  
-4. `/api/health` (web + DB).  
-5. Basic rate limits / lockout on auth endpoints.  
-6. Optional: Sentry or structured logs — only if ops asks.
+1. ~~Rewrite Lightsail guide to Compose-only; remove PM2 app path.~~ **Done.**  
+2. ~~HTTPS (Let’s Encrypt) + `NEXT_PUBLIC_APP_URL` https.~~ **Documented + health curl.**  
+3. ~~Backup script + restore drill.~~ **`deploy/scripts/backup-postgres.sh` / `restore-postgres.sh`.**  
+4. ~~`/api/health` (web + DB).~~ **Done.**  
+5. ~~Basic rate limits / lockout on auth endpoints.~~ **In-memory lockout on admin/account/claim verify.**  
+6. Optional: Sentry or structured logs — only if ops asks. **Skipped.**
 
-**Exit:** new Lightsail host reaches healthy homepage + admin login using only `FRESH_SERVER_SETUP` + `.env`.
+**Exit:** follow `FRESH_SERVER_SETUP` + `.env` → homepage + admin login; `curl /api/health` returns ok.
 
-### Phase O — Product polish (only after J–M)
+### Phase O — Product polish (started)
 
 Pick from product backlog once loops are honest:
 
 - Meilisearch when Discover latency/filter load hurts  
 - Customer Portal / Connect when paid volume exists  
-- Intelligence persistence  
-- Fee simulator → versioned Prisma rules (if still JSON)  
-- Agency multi-seat auth when `agency_seats` turns on  
+- ~~Intelligence persistence~~ **Done (`IntelligenceSettings`).**  
+- ~~Fee simulator → versioned Prisma rules~~ **Done (`CollaborationFeeRule` / `CollaborationFeeSnapshot`).**  
+- ~~Phase 9/10 quarantine harden~~ **Done** (no JSON seed when switch off; `formatMoney` extracted; admin home skips demo stores).  
+- ~~R7 loops suite + R8 docs cleanup~~ **Done.**  
+- Agency multi-seat auth when `agency_seats` turns on (seat CRUD already behind the switch)  
 - E-sign / formal contracts (still non-goal until counsel + volume)
 
 ---
 
-## 7. Suggested first coding slice (this week)
+## 7. Suggested next coding slice
 
-Smallest change that reduces long-term cost:
+**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) §8.
 
-1. **Phase J.1–J.2** — directory helpers + rewire `matching.ts` and collaboration page off direct `SEED_CREATORS`.  
-2. **Flag** `legacy_demo_payments` and hide Phase 9 admin CTA behind it (default off in production via env or seeded flag).  
-3. **Doc PR** — this file + README link + note on `IMPLEMENTATION_PLAN.md` §3 historical status.  
-4. **Deploy doc** fix for PM2 → Compose in `AWS_LIGHTSAIL.md` (can be same or follow-up PR).
+**Collaboration OS** — P0–P8 **code cores shipped** (#73–#125). W1–W6 code exits closed.
 
-Do **not** start another marketplace capability in the same window.
+Remaining work is **Deferred-external** only (not more residual coding of completed phases):
+
+1. **L1 Phase M** staging evidence when credentials are available.  
+2. **W2.1** landing PNG / CMS operator sign-off.  
+3. **L5** Airwallex checklist signatures before any adapter hard-wire.  
+4. Live provider rails / Phase 4 INFLR.me / paid mentorship — only when product asks.  
+5. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
+6. **L3 agency seats** invite/auth is code-complete; ops may enable `agency_seats` in staging when ready.
+
+Terminology source of truth (public UI complete): [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf) and `docs/source-specs/`. Engineering/API migration tracked as **Deferred-external** under P8 soak.
+
+Approved landing designs: [`docs/design-references/collaboration/public-landing-v3.png`](./design-references/collaboration/public-landing-v3.png), [`docs/design-references/business/for-businesses-v2.png`](./design-references/business/for-businesses-v2.png).
+
+Admin CMS: `/admin/collaboration-landing`, `/admin/business-landing`, `/admin/influencer-identity`.
+
+Business hub: `/collaboration/business` (legacy `/business/workspace` redirects).
 
 ---
 
@@ -318,10 +321,10 @@ Do **not** start another marketplace capability in the same window.
 
 **Public / app routes:** `/`, `/discover`, `/categories`, `/creators/[slug]`, `/c/[slug]`, `/card`, `/claim/*`, `/dashboard`, `/collaboration/*`, `/business/*`, `/agency`, `/billing`, `/payments`, `/trust`, `/pricing`, `/register`, `/login`, `/account/*`, `/invite/[token]`, `/legal/*`, `/q/[token]`
 
-**Admin:** access, accounts, agency, ai, banners, billing, cards, collaborations, fees, gateways, guests, homepage, intelligence, invitations, jobs, legal, mail, marketplace, matching, payments, plans, short-links, signing, social, stats, taxonomy, trust, value-prop
+**Admin:** access, accounts, agency, ai, banners, billing, business-landing, cards, collaboration-landing, collaborations, fees, gateways, guests, homepage, influencer-identity, intelligence, invitations, jobs, legal, mail, marketplace, matching, payments, plans, short-links, signing, social, stats, taxonomy, trust, value-prop
 
-**API:** billing webhook, marketplace webhook, social callback, short resolve, QR, places, intelligence export
+**API:** health, billing webhook, marketplace webhook, social callback, short resolve, QR, places, intelligence export
 
-**Prisma:** 88 models; migrations through admin switches / change orders (Oct 2026)
+**Prisma:** 90 models; migrations through collaboration fee rules (Oct 2026)
 
-**JSON under `data/`:** `claim-funnel`, `cms`, `billing`, `collaboration-fees`, `protected-payments`, `trust`, `intelligence`, `admin-auth`
+**JSON under `data/`:** `protected-payments`, `trust` — only seeded when `legacy_demo_payments` is on (claim-funnel, admin-auth, cms, billing, intelligence, collaboration-fees retired)

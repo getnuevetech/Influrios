@@ -22,8 +22,8 @@ export default async function AdminJobsPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Jobs</h1>
       <p className="mt-2 text-sm text-muted">
-        Mail, verification, and provider records. A failed mail job can be queued again. Invitation mail is marked
-        delivered only after SMTP accepts it. Sign in again if this page was forbidden after the permission was added.
+        Mail, verification, milestone auto-approval, and provider records. A failed mail job can be queued again.
+        Invitation mail is marked delivered only after SMTP accepts it. Auto-approval sweeps skip disputed milestones.
       </p>
       {params.retried ? <p className="mt-4 text-sm font-semibold text-emerald-700">Retry queued.</p> : null}
       {!jobs ? <p className="mt-4 text-sm text-amber-800">The job list is unavailable.</p> : null}

@@ -30,6 +30,7 @@ import {
   specialtyLabel,
 } from "@/lib/seed-data";
 import { getDirectory, getDirectoryCreator, recordDirectoryEvent } from "@/lib/directory";
+import { creatorShareMetadata } from "@/lib/creator-og";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -38,8 +39,8 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const creator = await getDirectoryCreator(slug);
-  if (!creator) return { title: "Creator not found" };
-  return { title: creator.displayName, description: creator.bio };
+  if (!creator) return { title: "Influencer not found" };
+  return creatorShareMetadata(creator, { surface: "profile" });
 }
 
 function socialMetricLabel(platform: string) {
@@ -65,7 +66,7 @@ export default async function CreatorProfilePage({ params }: Props) {
   if (gate.decision === "hard") {
     redirect(`/login?next=${encodeURIComponent(`/creators/${slug}`)}&gate=profile`);
   }
-  await recordDirectoryEvent("profile_viewed", { slug, surface: "profile" });
+  await recordDirectoryEvent("influencer_profile_viewed", { slug, surface: "profile" });
 
   const directory = await getDirectory();
   const related = directory.creators.filter((c) => c.slug !== creator.slug).slice(0, 4);
@@ -698,10 +699,10 @@ export default async function CreatorProfilePage({ params }: Props) {
             <h3 className="font-display text-[1.15rem] font-bold text-indigo">
               You Might Also Like
             </h3>
-            <p className="mt-0.5 text-[11px] text-muted">Discover more amazing creators.</p>
+            <p className="mt-0.5 text-[11px] text-muted">Discover more amazing influencers.</p>
           </div>
           <Link href="/discover" className="text-[11px] font-semibold text-blue hover:underline">
-            View More Creators →
+            View More Influencers →
           </Link>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:thin]">
@@ -743,14 +744,14 @@ export default async function CreatorProfilePage({ params }: Props) {
         <div className="overflow-hidden rounded-[1.4rem] bg-gradient-to-r from-[#1B1464] via-[#3B2B9A] to-[#2979FF] px-6 py-8 text-center text-white sm:px-10 sm:py-9">
           <h3 className="font-display text-[1.35rem] font-bold sm:text-[1.55rem]">Join Influrios</h3>
           <p className="mx-auto mt-1.5 max-w-lg text-[12px] text-white/80">
-            Create your free Influencer Card or find creators for your next campaign.
+            Create your free Influencer Card or find influencers for your next campaign.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
             <Link
               href="/claim"
               className="ink-on-light rounded-full bg-white px-5 py-2 text-[12px] font-semibold shadow"
             >
-              Join as a Creator
+              Join as an Influencer
             </Link>
             <Link
               href="/business"

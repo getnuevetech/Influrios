@@ -1,6 +1,17 @@
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
-import { resolveFee } from "@/lib/collaboration-fees";
+import { defaultFeeTypeForServiceLevel, resolveFee } from "@/lib/collaboration-fees";
+import {
+  asLegalReviewStatus,
+  capabilitiesFromJurisdictionRow,
+  evaluatePrefundCapabilities,
+  serializeApprovedProviderIds,
+  parseApprovedProviderIds,
+} from "@/lib/jurisdiction-capabilities";
+import { requireFundableServiceLevel } from "@/lib/matching-product-boundary";
+import { resolveFundingMode, stagedPhaseCanStart } from "@/lib/funding-modes";
+import { rightsAfterAcceptance, rightsAfterPaymentRelease } from "@/lib/content-rights";
+import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   advanceMilestone,
   autoApproveDeadline,
@@ -8,6 +19,7 @@ import {
   canRequestChangeOrder,
   canRequestPrefund,
   disputeLoadAllowsPrefund,
+  feeTypeFromFundingSnapshot,
   grossWithinCap,
   sharesFromAmounts,
   summarizeLedgerReport,
@@ -20,17 +32,23 @@ import {
   splitGross,
   type LedgerMovement,
 } from "@/lib/ledger";
-import { resolveDealAttribution } from "@/lib/deal-attribution";
+import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal-attribution";
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines } from "@/lib/fx-share";
 import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
 import { quoteWiseUserRate } from "@/lib/wise-quote";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
+import { splitMilestoneRelease } from "@/lib/account-purpose";
 
 const PROVIDER_CODE = "primary";
 
 let grossCapForTests: number | null = null;
 let changeOrdersForTests: boolean | null = null;
+
+/** W3.11 — never block money paths on notification delivery. */
+function fireCollabNotify(run: () => Promise<unknown>) {
+  void run().catch(() => undefined);
+}
 
 /** Tests pin the USD cap without writing the shared settings row. */
 export function setGrossCapForTests(cents: number | null) {
@@ -88,9 +106,54 @@ export async function ensureMarketplaceDefaults() {
     create: { id: "default", reviewWindowHours: 72 },
   });
   const jurisdictions = [
-    { code: "US", label: "United States", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "USD", minorDigits: 2, providerCode: "primary" },
-    { code: "GB", label: "United Kingdom", protectedPaymentsEnabled: true, escrowTermAllowed: false, currency: "GBP", minorDigits: 2, providerCode: "primary" },
-    { code: "NG", label: "Nigeria", protectedPaymentsEnabled: false, escrowTermAllowed: false, currency: "NGN", minorDigits: 2, providerCode: "primary" },
+    {
+      code: "US",
+      label: "United States",
+      protectedPaymentsEnabled: true,
+      escrowTermAllowed: false,
+      fullPrefundingEnabled: true,
+      stagedPrefundingEnabled: false,
+      recurringFundingEnabled: false,
+      managedIntroductionEnabled: false,
+      managedNegotiationEnabled: false,
+      approvedProviderIds: "[]",
+      legalReviewStatus: "APPROVED",
+      currency: "USD",
+      minorDigits: 2,
+      providerCode: "primary",
+    },
+    {
+      code: "GB",
+      label: "United Kingdom",
+      protectedPaymentsEnabled: true,
+      escrowTermAllowed: false,
+      fullPrefundingEnabled: true,
+      stagedPrefundingEnabled: false,
+      recurringFundingEnabled: false,
+      managedIntroductionEnabled: false,
+      managedNegotiationEnabled: false,
+      approvedProviderIds: "[]",
+      legalReviewStatus: "APPROVED",
+      currency: "GBP",
+      minorDigits: 2,
+      providerCode: "primary",
+    },
+    {
+      code: "NG",
+      label: "Nigeria",
+      protectedPaymentsEnabled: false,
+      escrowTermAllowed: false,
+      fullPrefundingEnabled: false,
+      stagedPrefundingEnabled: false,
+      recurringFundingEnabled: false,
+      managedIntroductionEnabled: false,
+      managedNegotiationEnabled: false,
+      approvedProviderIds: "[]",
+      legalReviewStatus: "PENDING",
+      currency: "NGN",
+      minorDigits: 2,
+      providerCode: "primary",
+    },
   ];
   for (const row of jurisdictions) {
     await prisma.collaborationJurisdiction.upsert({
@@ -143,6 +206,9 @@ export async function marketplaceConfig() {
     riskControlsEnabled: settings?.riskControlsEnabled ?? true,
     maxOpenDisputes: settings?.maxOpenDisputes ?? 0,
     cancelUnconfirmed: settings?.cancelUnconfirmed ?? true,
+    autoApprovalEnabled: settings?.autoApprovalEnabled ?? true,
+    killFeeBps: settings?.killFeeBps ?? 2500,
+    killFeeFixedCents: settings?.killFeeFixedCents ?? 0,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
     stagedFundingEnabled: settings?.stagedFundingEnabled ?? true,
@@ -181,6 +247,9 @@ export async function saveMarketplaceSettings(input: {
   riskControlsEnabled?: boolean;
   maxOpenDisputes?: number;
   cancelUnconfirmed?: boolean;
+  autoApprovalEnabled?: boolean;
+  killFeeBps?: number;
+  killFeeFixedCents?: number;
 }) {
   await ensureMarketplaceDefaults();
   const hours = Math.round(input.reviewWindowHours);
@@ -207,6 +276,17 @@ export async function saveMarketplaceSettings(input: {
   if (maxOpenDisputes != null && (!Number.isInteger(maxOpenDisputes) || maxOpenDisputes < 0 || maxOpenDisputes > 1000)) {
     throw new Error("Open-dispute limit must be from 0 to 1000.");
   }
+  const killFeeBps = input.killFeeBps == null ? null : Math.round(input.killFeeBps);
+  if (killFeeBps != null && (!Number.isInteger(killFeeBps) || killFeeBps < 0 || killFeeBps > 10_000)) {
+    throw new Error("Kill fee must be from 0 to 10000 basis points.");
+  }
+  const killFeeFixedCents = input.killFeeFixedCents == null ? null : Math.round(input.killFeeFixedCents);
+  if (
+    killFeeFixedCents != null &&
+    (!Number.isInteger(killFeeFixedCents) || killFeeFixedCents < 0 || killFeeFixedCents > 100_000_000)
+  ) {
+    throw new Error("Kill fee fixed amount must be from 0 to 1,000,000 USD.");
+  }
   return prisma.marketplaceSettings.update({
     where: { id: "default" },
     data: {
@@ -220,6 +300,9 @@ export async function saveMarketplaceSettings(input: {
       ...(input.riskControlsEnabled == null ? {} : { riskControlsEnabled: input.riskControlsEnabled }),
       ...(maxOpenDisputes == null ? {} : { maxOpenDisputes }),
       ...(input.cancelUnconfirmed == null ? {} : { cancelUnconfirmed: input.cancelUnconfirmed }),
+      ...(input.autoApprovalEnabled == null ? {} : { autoApprovalEnabled: input.autoApprovalEnabled }),
+      ...(killFeeBps == null ? {} : { killFeeBps }),
+      ...(killFeeFixedCents == null ? {} : { killFeeFixedCents }),
     },
   });
 }
@@ -229,6 +312,18 @@ export async function saveJurisdiction(input: {
   label: string;
   protectedPaymentsEnabled: boolean;
   escrowTermAllowed: boolean;
+  fullPrefundingEnabled?: boolean;
+  stagedPrefundingEnabled?: boolean;
+  recurringFundingEnabled?: boolean;
+  managedIntroductionEnabled?: boolean;
+  managedNegotiationEnabled?: boolean;
+  approvedProviderIds?: string[] | string;
+  legalReviewStatus?: string;
+  capabilityNotes?: string;
+  capabilitiesEffectiveFrom?: string | null;
+  capabilitiesEffectiveTo?: string | null;
+  reviewWindowHours?: number | string | null;
+  maxRevisions?: number | string | null;
   currency: string;
   minorDigits: number;
   providerCode: string;
@@ -249,25 +344,59 @@ export async function saveJurisdiction(input: {
     where: { kind_code: { kind: "marketplace", code: providerCode } },
   });
   if (!assigned) throw new Error("Choose a marketplace provider.");
+  const legalReviewStatus = asLegalReviewStatus(input.legalReviewStatus);
+  const approvedProviderIds = serializeApprovedProviderIds(parseApprovedProviderIds(input.approvedProviderIds));
+  const capabilityNotes = String(input.capabilityNotes ?? "").trim().slice(0, 500);
+  const parseOptionalDate = (raw: string | null | undefined) => {
+    if (raw == null || String(raw).trim() === "") return null;
+    const date = new Date(String(raw));
+    if (Number.isNaN(date.getTime())) throw new Error("Use a valid capability effective date.");
+    return date;
+  };
+  const capabilitiesEffectiveFrom = parseOptionalDate(input.capabilitiesEffectiveFrom);
+  const capabilitiesEffectiveTo = parseOptionalDate(input.capabilitiesEffectiveTo);
+  if (
+    capabilitiesEffectiveFrom &&
+    capabilitiesEffectiveTo &&
+    capabilitiesEffectiveTo < capabilitiesEffectiveFrom
+  ) {
+    throw new Error("Capability end date must be on or after the start date.");
+  }
+  const parseOptionalInt = (raw: number | string | null | undefined, label: string, max: number) => {
+    if (raw == null || String(raw).trim() === "") return null;
+    const n = Math.round(Number(raw));
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > max) {
+      throw new Error(`${label} must be from 0 to ${max}, or blank for marketplace default.`);
+    }
+    return n;
+  };
+  const reviewWindowHours = parseOptionalInt(input.reviewWindowHours, "Review window hours", 8760);
+  const maxRevisions = parseOptionalInt(input.maxRevisions, "Max revisions", 20);
+  const protectedPaymentsEnabled = input.protectedPaymentsEnabled;
+  const data = {
+    label,
+    protectedPaymentsEnabled,
+    escrowTermAllowed: input.escrowTermAllowed && protectedPaymentsEnabled,
+    fullPrefundingEnabled: Boolean(input.fullPrefundingEnabled ?? true),
+    stagedPrefundingEnabled: Boolean(input.stagedPrefundingEnabled),
+    recurringFundingEnabled: Boolean(input.recurringFundingEnabled),
+    managedIntroductionEnabled: Boolean(input.managedIntroductionEnabled),
+    managedNegotiationEnabled: Boolean(input.managedNegotiationEnabled),
+    approvedProviderIds,
+    legalReviewStatus,
+    capabilityNotes,
+    capabilitiesEffectiveFrom,
+    capabilitiesEffectiveTo,
+    reviewWindowHours,
+    maxRevisions,
+    currency,
+    minorDigits,
+    providerCode,
+  };
   return prisma.collaborationJurisdiction.upsert({
     where: { code },
-    update: {
-      label,
-      protectedPaymentsEnabled: input.protectedPaymentsEnabled,
-      escrowTermAllowed: input.escrowTermAllowed && input.protectedPaymentsEnabled,
-      currency,
-      minorDigits,
-      providerCode,
-    },
-    create: {
-      code,
-      label,
-      protectedPaymentsEnabled: input.protectedPaymentsEnabled,
-      escrowTermAllowed: input.escrowTermAllowed && input.protectedPaymentsEnabled,
-      currency,
-      minorDigits,
-      providerCode,
-    },
+    update: data,
+    create: { code, ...data },
   });
 }
 
@@ -382,12 +511,21 @@ export async function requestPrefund(input: {
   creatorSlug: string;
   title: string;
   grossCents: number;
-  serviceLevel?: string;
+  /** Required — never silently default to contracted (W3.2). */
+  serviceLevel: string;
   sourceId?: string | null;
   repeatOfId?: string | null;
   scheduleKind?: string;
   stageCount?: number;
   occurrenceCount?: number;
+  /** Collab OS P3 — optional custom milestone schedule (must sum to 100%). */
+  customMilestones?: { title: string; shareBps: number }[] | null;
+  /** Immutable financial plan snapshot embedded beside the fee freeze. */
+  financialPlan?: Record<string, unknown> | null;
+  /** Owning business workspace — durable spend/pipeline ownership (not brand name). */
+  workspaceId?: string | null;
+  /** Optional proposal/record link for creator hub pipeline (not title fuzzy match). */
+  collaborationId?: string | null;
 }) {
   await ensureMarketplaceDefaults();
   await ensureSettlementDefaults();
@@ -405,6 +543,21 @@ export async function requestPrefund(input: {
   if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) {
     return { ok: false as const, error: "Enter a gross amount greater than zero." };
   }
+  const customRows =
+    input.customMilestones
+      ?.map((row, index) => ({
+        title: String(row.title ?? "").trim().slice(0, 120),
+        shareBps: row.shareBps,
+        sortOrder: index + 1,
+        active: true,
+      }))
+      .filter((row) => row.title) ?? null;
+  if (customRows && customRows.length > 0) {
+    const shareTotal = customRows.reduce((sum, row) => sum + row.shareBps, 0);
+    if (shareTotal !== 10_000 || customRows.some((row) => !Number.isInteger(row.shareBps) || row.shareBps <= 0)) {
+      return { ok: false as const, error: "Custom milestone shares must add up to 100%." };
+    }
+  }
   const cap = grossWithinCap({ grossCents: input.grossCents, maxGrossCents: activeGrossCap(settings?.maxGrossCents) });
   if (!cap.ok) return cap;
   const businessNameForRisk = input.businessName.trim().slice(0, 120);
@@ -420,11 +573,47 @@ export async function requestPrefund(input: {
     maxOpenDisputes: settings?.maxOpenDisputes ?? 0,
   });
   if (!risk.ok) return risk;
+  const caps = jurisdiction ? capabilitiesFromJurisdictionRow(jurisdiction) : null;
+  const serviceLevelGate = requireFundableServiceLevel(input.serviceLevel);
+  if (!serviceLevelGate.ok) return serviceLevelGate;
+  const serviceLevel = serviceLevelGate.serviceLevel.slice(0, 40);
+  const scheduleKind = (input.scheduleKind ?? "once").slice(0, 40);
+  const capabilityGate = evaluatePrefundCapabilities({
+    caps,
+    serviceLevel,
+    scheduleKind,
+    providerCode: assignedCode,
+  });
+  if (!capabilityGate.ok) {
+    fireCollabNotify(async () => {
+      const { notifyCollabParties } = await import("@/lib/jobs");
+      await notifyCollabParties({
+        kind: "provider_jurisdiction_limitation",
+        businessName: input.businessName,
+        creatorSlug: input.creatorSlug,
+        title: input.title,
+        detail: capabilityGate.error,
+      });
+    });
+    return capabilityGate;
+  }
   const gate = canRequestPrefund({
     jurisdictionEnabled: Boolean(jurisdiction?.protectedPaymentsEnabled),
     providerReady: Boolean(provider?.enabled && provider.webhookCipher),
   });
-  if (!gate.ok) return gate;
+  if (!gate.ok) {
+    fireCollabNotify(async () => {
+      const { notifyCollabParties } = await import("@/lib/jobs");
+      await notifyCollabParties({
+        kind: "provider_jurisdiction_limitation",
+        businessName: input.businessName,
+        creatorSlug: input.creatorSlug,
+        title: input.title,
+        detail: gate.error,
+      });
+    });
+    return gate;
+  }
   const attribution = await resolveDealAttribution({
     businessName: input.businessName,
     creatorSlug: input.creatorSlug,
@@ -433,24 +622,53 @@ export async function requestPrefund(input: {
   });
   if (!attribution.ok) return attribution;
   const schedule = planSchedule({
-    kind: input.scheduleKind ?? "once",
+    kind: scheduleKind,
     grossCents: input.grossCents,
     stageCount: input.stageCount,
     occurrenceCount: input.occurrenceCount,
-    stagedEnabled: settings?.stagedFundingEnabled ?? true,
-    recurringEnabled: settings?.recurringFundingEnabled ?? true,
+    stagedEnabled: (settings?.stagedFundingEnabled ?? true) && Boolean(caps?.stagedPrefundingEnabled),
+    recurringEnabled: (settings?.recurringFundingEnabled ?? true) && Boolean(caps?.recurringFundingEnabled),
     maxStages: settings?.maxStages ?? 4,
     maxRecurrences: settings?.maxRecurrences ?? 6,
     intervalDays: settings?.recurringIntervalDays ?? 30,
   });
   if (!schedule.ok) return schedule;
-  const shares = templates.map((row) => row.shareBps);
-  const serviceLevel = (input.serviceLevel || "contracted").slice(0, 40);
-  const windowHours = settings?.reviewWindowHours ?? 72;
-  const revisionLimit = settings?.maxRevisions ?? 2;
+  const milestoneDefs =
+    customRows && customRows.length > 0
+      ? customRows
+      : templates.map((row) => ({
+          title: row.title,
+          shareBps: row.shareBps,
+          sortOrder: row.sortOrder,
+          active: row.active,
+        }));
+  if (milestoneDefs.length === 0) {
+    return { ok: false as const, error: "No active milestone templates are configured." };
+  }
+  const shares = milestoneDefs.map((row) => row.shareBps);
+  const fundingMode = resolveFundingMode({
+    scheduleKind,
+    protectedPaymentsEnabled: caps?.protectedPaymentsEnabled ?? Boolean(jurisdiction?.protectedPaymentsEnabled),
+  });
+  const planLifecycle = input.financialPlan as
+    | { reviewWindowHours?: number | null; revisionLimit?: number | null }
+    | null
+    | undefined;
+  const lifecycle = resolveLifecycleSnapshot({
+    planReviewWindowHours: planLifecycle?.reviewWindowHours,
+    planRevisionLimit: planLifecycle?.revisionLimit,
+    jurisdictionReviewWindowHours: jurisdiction?.reviewWindowHours,
+    jurisdictionMaxRevisions: jurisdiction?.maxRevisions,
+    settingsReviewWindowHours: settings?.reviewWindowHours ?? 72,
+    settingsMaxRevisions: settings?.maxRevisions ?? 2,
+  });
+  const windowHours = lifecycle.reviewWindowHours;
+  const revisionLimit = lifecycle.revisionLimit;
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;
   const businessName = input.businessName.trim().slice(0, 120);
   const creatorSlug = input.creatorSlug.trim().slice(0, 80);
+  const workspaceId = input.workspaceId?.trim() || null;
+  const collaborationId = input.collaborationId?.trim() || null;
   const baseTitle = input.title.trim().slice(0, 140);
   if (currency !== "USD" && !fxRate?.active) {
     return { ok: false as const, error: `No Wise currency is saved for ${currency}. Nothing was funded.` };
@@ -470,8 +688,16 @@ export async function requestPrefund(input: {
     if (!milestoneAmounts) return { ok: false as const, error: "Milestone templates must add up to 100%." };
     const quote = await resolveFee({
       jurisdiction: code,
-      serviceLevel,
+      serviceLevel: serviceLevelForFeeResolution({
+        requestedServiceLevel: serviceLevel,
+        attributionStatus: attribution.attributionStatus,
+      }),
       grossValueCents: usdCents,
+      attributionStatus: attribution.attributionStatus,
+      fundingMode,
+      relationshipSource:
+        attribution.attributionStatus === "pre_existing" ? "pre_existing" : "organic",
+      promotionChannel: serviceLevel.startsWith("managed") ? "sponsored" : "none",
     }).catch(() => null);
     prepared.push({ gross: fx.convertedMinor, fx, milestoneAmounts, quote });
   }
@@ -492,6 +718,8 @@ export async function requestPrefund(input: {
         data: {
           jurisdictionCode: code,
           businessName,
+          workspaceId,
+          collaborationId,
           creatorSlug,
           title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
           currency: part.fx.currency,
@@ -505,27 +733,44 @@ export async function requestPrefund(input: {
             percentBps: quote?.rule?.percentBps ?? null,
             fixedCents: quote?.rule?.fixedCents ?? null,
             feeCents,
+            feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(serviceLevel),
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: new Date().toISOString(),
-          },
+            ...(input.financialPlan ? { financialPlan: input.financialPlan } : {}),
+            lifecycleSnapshot: {
+              reviewWindowHours: windowHours,
+              revisionLimit,
+              source: lifecycle.source,
+            },
+            milestoneSource: customRows && customRows.length > 0 ? "custom" : "template",
+          } as object,
           fxSnapshotJson: fxRecord(part.fx),
           shareSnapshotJson: shareSnapshot,
           status: "awaiting_provider",
           providerCode: provider!.code,
           attributionLabel: attribution.attributionLabel,
+          attributionStatus: attribution.attributionStatus,
+          attributionExpiresAt: attribution.attributionExpiresAt,
           repeatOfId: attribution.repeatOfId,
           changeOrderLimit,
           scheduleId,
           scheduleKind: schedule.kind,
+          fundingMode,
           trancheIndex: index + 1,
           trancheCount: schedule.trancheCount,
           intervalDays: schedule.intervalDays,
           milestones: {
-            create: templates.map((template, milestoneIndex) => ({
+            create: milestoneDefs.map((template, milestoneIndex) => ({
               title: template.title,
               amountCents: part.milestoneAmounts[milestoneIndex],
               sortOrder: template.sortOrder,
               status: "pending",
+              rightsStatus: "pending",
+              rightsActivateOn:
+                (input.financialPlan?.rightsActivateOn as string | undefined) === "acceptance" ||
+                (input.financialPlan?.rightsActivateOn as string | undefined) === "custom"
+                  ? String(input.financialPlan?.rightsActivateOn)
+                  : "release",
               reviewWindowHours: windowHours,
               revisionLimit,
             })),
@@ -550,9 +795,14 @@ export async function requestPrefund(input: {
         currency,
         attributionLabel: attribution.attributionLabel,
         repeatOfId: attribution.repeatOfId,
+        milestoneSource: customRows && customRows.length > 0 ? "custom" : "template",
       },
     },
   }).catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({ fundingId: created[0], kind: "funding_required" });
+  });
   return { ok: true as const, id: created[0], status: "awaiting_provider" as const };
 }
 
@@ -566,8 +816,6 @@ export async function sweepDueRecurrences(now = new Date()) {
     prisma.marketplaceSettings.findUnique({ where: { id: "default" } }),
   ]);
   const shares = templates.map((row) => row.shareBps);
-  const windowHours = settings?.reviewWindowHours ?? 72;
-  const revisionLimit = settings?.maxRevisions ?? 2;
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;
   const shareSnapshot = await activeShareSnapshot();
   for (const row of confirmed) {
@@ -591,6 +839,19 @@ export async function sweepDueRecurrences(now = new Date()) {
     const jurisdiction = await prisma.collaborationJurisdiction.findUnique({
       where: { code: row.jurisdictionCode },
     });
+    const planLifecycle = row.feeSnapshotJson as
+      | { financialPlan?: { reviewWindowHours?: number | null; revisionLimit?: number | null } }
+      | null;
+    const lifecycle = resolveLifecycleSnapshot({
+      planReviewWindowHours: planLifecycle?.financialPlan?.reviewWindowHours,
+      planRevisionLimit: planLifecycle?.financialPlan?.revisionLimit,
+      jurisdictionReviewWindowHours: jurisdiction?.reviewWindowHours,
+      jurisdictionMaxRevisions: jurisdiction?.maxRevisions,
+      settingsReviewWindowHours: settings?.reviewWindowHours ?? 72,
+      settingsMaxRevisions: settings?.maxRevisions ?? 2,
+    });
+    const windowHours = lifecycle.reviewWindowHours;
+    const revisionLimit = lifecycle.revisionLimit;
     const fx = await quoteWiseUserRate({
       currency,
       usdCents,
@@ -603,6 +864,9 @@ export async function sweepDueRecurrences(now = new Date()) {
       jurisdiction: row.jurisdictionCode,
       serviceLevel: row.serviceLevel,
       grossValueCents: usdCents,
+      fundingMode: row.fundingMode || "FULL",
+      relationshipSource: "organic",
+      promotionChannel: row.serviceLevel.startsWith("managed") ? "sponsored" : "none",
     }).catch(() => null);
     const feeCents = convertFee(quote?.feeCents ?? 0, fx);
     const suffix = ` · ${nextIndex} of ${row.trancheCount}`;
@@ -625,6 +889,7 @@ export async function sweepDueRecurrences(now = new Date()) {
             percentBps: quote?.rule?.percentBps ?? null,
             fixedCents: quote?.rule?.fixedCents ?? null,
             feeCents,
+            feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(row.serviceLevel),
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: now.toISOString(),
           },
@@ -633,10 +898,16 @@ export async function sweepDueRecurrences(now = new Date()) {
           status: "awaiting_provider",
           providerCode: row.providerCode,
           attributionLabel: row.attributionLabel,
+          attributionStatus: row.attributionStatus,
+          attributionExpiresAt: row.attributionExpiresAt,
           repeatOfId: row.repeatOfId,
           changeOrderLimit,
           scheduleId: row.scheduleId,
           scheduleKind: "recurring",
+          fundingMode: resolveFundingMode({
+            scheduleKind: "recurring",
+            protectedPaymentsEnabled: true,
+          }),
           trancheIndex: nextIndex,
           trancheCount: row.trancheCount,
           intervalDays: row.intervalDays,
@@ -659,18 +930,58 @@ export async function sweepDueRecurrences(now = new Date()) {
 }
 
 async function sweepAutoApprovals() {
+  return runAutoApprovalSweep();
+}
+
+/**
+ * W3.5 — Dedicated idempotent auto-approval sweep (Dev Addendum §8 / §17).
+ * Skips milestones with an open dispute. Safe to run from jobs or read paths.
+ */
+export async function runAutoApprovalSweep(now = new Date()) {
+  const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
+  if (settings && settings.autoApprovalEnabled === false) {
+    return { scanned: 0, approved: 0, skippedDispute: 0, disabled: true as const };
+  }
   const due = await prisma.fundingMilestone.findMany({
-    where: { status: "submitted", autoApproveAt: { lte: new Date() } },
+    where: { status: "submitted", autoApproveAt: { lte: now } },
   });
+  let approved = 0;
+  let skippedDispute = 0;
   for (const milestone of due) {
-    if (!shouldAutoApprove(milestone.status, milestone.autoApproveAt, new Date())) continue;
+    if (!shouldAutoApprove(milestone.status, milestone.autoApproveAt, now)) continue;
+    const disputeOpen = await milestoneHasOpenDispute(milestone.fundingId, milestone.id);
+    if (disputeOpen) {
+      skippedDispute += 1;
+      continue;
+    }
     const next = advanceMilestone("submitted", "auto_approve");
     if (!next.ok) continue;
-    await prisma.fundingMilestone.updateMany({
+    const updated = await prisma.fundingMilestone.updateMany({
       where: { id: milestone.id, status: "submitted" },
-      data: { status: next.status, approvedAt: new Date() },
+      data: { status: next.status, approvedAt: now },
     });
+    if (updated.count === 1) {
+      approved += 1;
+      await prisma.auditLog.create({
+        data: {
+          actor: "system",
+          action: "milestone_auto_approved",
+          objectType: "FundingMilestone",
+          objectId: milestone.id,
+          after: { fundingId: milestone.fundingId, at: now.toISOString() },
+        },
+      }).catch(() => null);
+      fireCollabNotify(async () => {
+        const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+        await notifyCollabFundingEvent({
+          fundingId: milestone.fundingId,
+          kind: "milestone_auto_approved",
+          milestone: milestone.title,
+        });
+      });
+    }
   }
+  return { scanned: due.length, approved, skippedDispute, disabled: false as const };
 }
 
 export async function requestChangeOrder(input: { fundingId: string; grossCents: number; note: string }) {
@@ -726,6 +1037,9 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     jurisdiction: funding.jurisdictionCode,
     serviceLevel: funding.serviceLevel,
     grossValueCents: input.grossCents,
+    fundingMode: funding.fundingMode || "FULL",
+    relationshipSource: "organic",
+    promotionChannel: funding.serviceLevel.startsWith("managed") ? "sponsored" : "none",
   }).catch(() => null);
   const feeCents = convertFee(quote?.feeCents ?? 0, fx);
   const nextFee = {
@@ -735,6 +1049,7 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     percentBps: quote?.rule?.percentBps ?? null,
     fixedCents: quote?.rule?.fixedCents ?? null,
     feeCents,
+    feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(funding.serviceLevel),
     explanation: quote?.explanation ?? "Fee rules were unavailable.",
     capturedAt: new Date().toISOString(),
   };
@@ -774,12 +1089,25 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     if (message.includes("Nothing was changed")) return { ok: false as const, error: message };
     throw error;
   }
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId: funding.id,
+      kind: "change_order_accepted",
+      detail: note,
+    });
+  });
   return { ok: true as const };
 }
 
 export async function ledgerMonthlyReport() {
   const entries = await prisma.ledgerEntry.findMany({
-    select: { kind: true, amountCents: true, createdAt: true, funding: { select: { currency: true } } },
+    select: {
+      kind: true,
+      amountCents: true,
+      createdAt: true,
+      funding: { select: { currency: true, serviceLevel: true, feeSnapshotJson: true } },
+    },
     orderBy: { createdAt: "desc" },
     take: 5000,
   });
@@ -789,6 +1117,7 @@ export async function ledgerMonthlyReport() {
       kind: entry.kind,
       amountCents: entry.amountCents,
       createdAt: entry.createdAt,
+      feeType: feeTypeFromFundingSnapshot(entry.funding.feeSnapshotJson, entry.funding.serviceLevel),
     })),
   );
 }
@@ -798,10 +1127,19 @@ export async function ledgerTotals() {
     select: {
       currency: true,
       grossCents: true,
+      serviceLevel: true,
+      feeSnapshotJson: true,
       entries: { select: { kind: true, amountCents: true } },
     },
   });
-  return summarizeLedger(fundings);
+  return summarizeLedger(
+    fundings.map((funding) => ({
+      currency: funding.currency,
+      grossCents: funding.grossCents,
+      feeType: feeTypeFromFundingSnapshot(funding.feeSnapshotJson, funding.serviceLevel),
+      entries: funding.entries,
+    })),
+  );
 }
 
 export async function listFundings() {
@@ -863,10 +1201,45 @@ export async function listFundingsForCreator(creatorSlug: string) {
   return rows.map(presentFunding);
 }
 
+/** Spend view for a business — durable workspaceId ownership (not brand substring). */
+export async function listFundingsForBusiness(workspaceId: string) {
+  await sweepAutoApprovals();
+  await sweepDueRecurrences();
+  const id = workspaceId.trim();
+  if (!id) return [];
+  const rows = await prisma.collaborationFunding.findMany({
+    where: { workspaceId: id },
+    orderBy: { createdAt: "desc" },
+    include: {
+      milestones: { orderBy: { sortOrder: "asc" } },
+      entries: true,
+      disputes: {
+        where: { status: { in: ["open", "under_review", "refund_requested"] } },
+        select: {
+          id: true,
+          milestoneId: true,
+          status: true,
+          evidenceLimit: true,
+          notes: { orderBy: { createdAt: "asc" }, select: { id: true, author: true, body: true, url: true } },
+        },
+      },
+      repeatOf: { select: { id: true, title: true } },
+      changeOrders: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, note: true, previousUsdCents: true, nextUsdCents: true },
+      },
+    },
+    take: 40,
+  });
+  return rows.map(presentFunding);
+}
+
 function presentFunding(row: {
   id: string;
   jurisdictionCode: string;
   businessName: string;
+  workspaceId?: string | null;
+  collaborationId?: string | null;
   creatorSlug: string;
   title: string;
   currency: string;
@@ -884,6 +1257,9 @@ function presentFunding(row: {
     status: string;
     sortOrder: number;
     autoApproveAt: Date | null;
+    rightsStatus?: string;
+    rightsActivateOn?: string;
+    rightsActivatedAt?: Date | null;
     revisionLimit: number;
     revisionCount: number;
     revisionNote: string;
@@ -901,7 +1277,9 @@ function presentFunding(row: {
   changeOrderLimit: number;
   changeOrderCount: number;
   changeOrders: { id: string; note: string; previousUsdCents: number; nextUsdCents: number }[];
+  scheduleId?: string | null;
   scheduleKind: string;
+  fundingMode: string;
   trancheIndex: number;
   trancheCount: number;
   intervalDays: number;
@@ -916,9 +1294,13 @@ export async function submitFundingMilestone(fundingId: string, milestoneId: str
     include: { funding: true },
   });
   if (!milestone) return { ok: false as const, error: "Milestone not found." };
-  if (milestone.funding.status !== "held") {
-    return { ok: false as const, error: "Submit work after the provider confirms the prefund." };
-  }
+  const phaseGate = stagedPhaseCanStart({
+    fundingMode: milestone.funding.fundingMode,
+    fundingStatus: milestone.funding.status,
+    trancheIndex: milestone.funding.trancheIndex,
+    scheduleKind: milestone.funding.scheduleKind,
+  });
+  if (!phaseGate.ok) return phaseGate;
   const next = advanceMilestone(milestone.status as "pending", "submit");
   if (!next.ok) return next;
   const submittedAt = new Date();
@@ -929,6 +1311,14 @@ export async function submitFundingMilestone(fundingId: string, milestoneId: str
       submittedAt,
       autoApproveAt: autoApproveDeadline(submittedAt, milestone.reviewWindowHours),
     },
+  });
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId,
+      kind: "milestone_submitted",
+      milestone: milestone.title,
+    });
   });
   return { ok: true as const };
 }
@@ -972,6 +1362,15 @@ export async function requestFundingRevision(fundingId: string, milestoneId: str
       },
     })
     .catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId,
+      kind: "revision_requested",
+      milestone: milestone.title,
+      detail: text,
+    });
+  });
   return { ok: true as const, revisionCount: gate.revisionCount };
 }
 
@@ -980,11 +1379,99 @@ export async function approveFundingMilestone(fundingId: string, milestoneId: st
   if (!milestone) return { ok: false as const, error: "Milestone not found." };
   const next = advanceMilestone(milestone.status as "submitted", "approve");
   if (!next.ok) return next;
+  const now = new Date();
+  const rights = rightsAfterAcceptance({
+    activateOn: milestone.rightsActivateOn,
+    currentStatus: milestone.rightsStatus,
+  });
   await prisma.fundingMilestone.update({
     where: { id: milestone.id },
-    data: { status: next.status, approvedAt: new Date() },
+    data: {
+      status: next.status,
+      approvedAt: now,
+      ...(rights.status !== "pending"
+        ? {
+            rightsStatus: rights.status,
+            rightsActivatedAt: now,
+          }
+        : {}),
+    },
+  });
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId,
+      kind: "milestone_approved",
+      milestone: milestone.title,
+    });
   });
   return { ok: true as const };
+}
+
+/**
+ * Dev §8 — APPROVED → RELEASE_AUTHORIZED (release_scheduled).
+ * Does not move money; scheduled_release_sweep queues the provider instruction.
+ */
+export async function scheduleMilestoneRelease(input: {
+  fundingId: string;
+  milestoneId: string;
+  releaseAt?: Date | null;
+  actor?: string;
+}) {
+  const { canScheduleMilestoneRelease } = await import("@/lib/collab-ops-jobs");
+  const funding = await prisma.collaborationFunding.findUnique({
+    where: { id: input.fundingId },
+    include: {
+      milestones: { where: { id: input.milestoneId }, take: 1 },
+      disputes: {
+        where: {
+          status: { in: ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"] },
+          OR: [{ milestoneId: input.milestoneId }, { milestoneId: null }],
+        },
+        take: 1,
+      },
+    },
+  });
+  if (!funding) return { ok: false as const, error: "Prefund not found." };
+  const milestone = funding.milestones[0];
+  if (!milestone) return { ok: false as const, error: "Milestone not found." };
+  const gate = canScheduleMilestoneRelease({
+    milestoneStatus: milestone.status,
+    fundingStatus: funding.status,
+    disputeOpen: funding.disputes.length > 0,
+  });
+  if (!gate.ok) return gate;
+  const releaseAt = input.releaseAt && !Number.isNaN(input.releaseAt.getTime()) ? input.releaseAt : new Date();
+  const updated = await prisma.fundingMilestone.updateMany({
+    where: { id: milestone.id, status: { in: ["approved", "payout_failed"] } },
+    data: {
+      status: "release_scheduled",
+      releaseScheduledAt: releaseAt,
+      payoutFailedAt: null,
+    },
+  });
+  if (updated.count !== 1) return { ok: false as const, error: "That milestone cannot be scheduled for release." };
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: input.actor ?? "ops",
+        action: "milestone_release_scheduled",
+        objectType: "FundingMilestone",
+        objectId: milestone.id,
+        after: { fundingId: funding.id, releaseScheduledAt: releaseAt.toISOString() },
+      },
+    })
+    .catch(() => undefined);
+  fireCollabNotify(async () => {
+    const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+    await notifyCollabFundingEvent({
+      fundingId: funding.id,
+      kind: "milestone_approved",
+      milestone: milestone.title,
+      detail: `Release authorized for ${releaseAt.toISOString()}. Provider request queues when due.`,
+    });
+  });
+  return { ok: true as const, releaseScheduledAt: releaseAt };
 }
 
 export async function applyMarketplaceEvent(input: {
@@ -1023,9 +1510,11 @@ export async function applyMarketplaceEvent(input: {
         })
       : null;
   const expectedCents =
-    input.eventType === "funding.held" || input.eventType === "funding.failed"
+    input.eventType === "funding.held" ||
+    input.eventType === "funding.failed" ||
+    input.eventType === "funding.chargeback"
       ? funding.grossCents
-      : input.eventType === "payout.released"
+      : input.eventType === "payout.released" || input.eventType === "payout.failed"
         ? left > 0
           ? left
           : -1
@@ -1067,19 +1556,10 @@ export async function applyMarketplaceEvent(input: {
             amountCents: funding.grossCents,
             provider: providerKey,
             eventId,
+            accountPurpose: "COLLABORATION_HOLDING",
           },
         });
-        if (funding.feeCents > 0) {
-          await tx.ledgerEntry.create({
-            data: {
-              fundingId: funding.id,
-              kind: "fee",
-              amountCents: funding.feeCents,
-              provider: providerKey,
-              eventId,
-            },
-          });
-        }
+        // P4: platform fee stays unearned in Holding until milestone release — do not book fee here.
         return;
       }
       if (input.eventType === "funding.failed") {
@@ -1089,11 +1569,34 @@ export async function applyMarketplaceEvent(input: {
         });
         return;
       }
+      if (input.eventType === "funding.chargeback") {
+        const risk = await tx.collaborationFunding.updateMany({
+          where: { id: funding.id, status: "held" },
+          data: { status: "payment_risk" },
+        });
+        if (risk.count !== 1) throw new LedgerReject("Prefund is not held for chargeback.");
+        return;
+      }
+      if (input.eventType === "payout.failed" && milestone) {
+        const failed = await tx.fundingMilestone.updateMany({
+          where: {
+            id: milestone.id,
+            status: { in: ["approved", "release_scheduled", "release_requested"] },
+          },
+          data: {
+            status: "payout_failed",
+            payoutFailedAt: new Date(),
+            releaseScheduledAt: null,
+          },
+        });
+        if (failed.count !== 1) throw new LedgerReject("Milestone is not approved for payout failure.");
+        return;
+      }
       if (input.eventType === "payout.released" && milestone) {
         const blocking = await tx.milestoneDispute.findFirst({
           where: {
             fundingId: funding.id,
-            status: { in: ["open", "under_review", "refund_requested"] },
+            status: { in: ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"] },
             OR: [{ milestoneId: milestone.id }, { milestoneId: null }],
           },
         });
@@ -1101,23 +1604,74 @@ export async function applyMarketplaceEvent(input: {
         const fresh = await tx.ledgerEntry.findMany({ where: { fundingId: funding.id } });
         const held = reconcileLedger(ledgerMovements(fresh), funding.grossCents);
         if (left <= 0 || held.heldCents < left) throw new LedgerReject("The provider is not holding enough.");
+        const rights = rightsAfterPaymentRelease({
+          activateOn: milestone.rightsActivateOn,
+          currentStatus: milestone.rightsStatus,
+        });
         const released = await tx.fundingMilestone.updateMany({
-          where: { id: milestone.id, status: "approved", refundedCents: milestone.refundedCents },
-          data: { status: "released" },
+          where: {
+            id: milestone.id,
+            status: { in: ["approved", "release_scheduled", "release_requested", "payout_failed"] },
+            refundedCents: milestone.refundedCents,
+          },
+          data: {
+            status: "released",
+            payoutFailedAt: null,
+            releaseScheduledAt: null,
+            ...(rights.shouldActivate
+              ? { rightsStatus: rights.status, rightsActivatedAt: new Date() }
+              : {}),
+          },
         });
         if (released.count !== 1) throw new LedgerReject("Milestone is not approved.");
+        const snapshot = funding.feeSnapshotJson as { financialPlan?: unknown } | null;
+        const planMilestones = (snapshot?.financialPlan as { milestones?: unknown[] } | undefined)?.milestones;
+        const milestoneIndex = Array.isArray(planMilestones)
+          ? planMilestones.findIndex(
+              (row) =>
+                row &&
+                typeof row === "object" &&
+                "title" in row &&
+                String((row as { title?: string }).title) === milestone.title,
+            )
+          : -1;
+        const legs = splitMilestoneRelease({
+          releasableCents: left,
+          fundingGrossCents: funding.grossCents,
+          fundingFeeCents: funding.feeCents,
+          financialPlanJson: snapshot?.financialPlan,
+          milestoneTitle: milestone.title,
+          milestoneIndex: milestoneIndex >= 0 ? milestoneIndex : undefined,
+        });
+        // Dual release legs: creator payout from Holding + earned fee to Operations (P4).
         await tx.ledgerEntry.create({
           data: {
             fundingId: funding.id,
             milestoneId: milestone.id,
             kind: "release",
-            amountCents: left,
+            amountCents: legs.creatorCents,
+            party: "Influencer",
+            accountPurpose: "COLLABORATION_HOLDING",
             provider: providerKey,
             eventId,
           },
         });
+        if (legs.feeCents > 0) {
+          await tx.ledgerEntry.create({
+            data: {
+              fundingId: funding.id,
+              milestoneId: milestone.id,
+              kind: "fee",
+              amountCents: legs.feeCents,
+              party: "Platform",
+              accountPurpose: "OPERATIONS",
+              provider: providerKey,
+              eventId,
+            },
+          });
+        }
         const parties = readShareSnapshot(funding.shareSnapshotJson);
-        const lines = parties ? shareLines(left, parties) : null;
+        const lines = parties ? shareLines(legs.creatorCents, parties) : null;
         if (lines) {
           for (const line of lines) {
             await tx.ledgerEntry.create({
@@ -1127,6 +1681,7 @@ export async function applyMarketplaceEvent(input: {
                 kind: "share",
                 party: line.party,
                 amountCents: line.amountCents,
+                accountPurpose: "COLLABORATION_HOLDING",
                 provider: providerKey,
                 eventId,
               },
@@ -1157,7 +1712,7 @@ export async function applyMarketplaceEvent(input: {
         });
         if (held.heldCents - input.amountCents === 0) {
           await tx.collaborationFunding.updateMany({
-            where: { id: funding.id, status: "held" },
+            where: { id: funding.id, status: { in: ["held", "payment_risk"] } },
             data: { status: "refunded" },
           });
         }
@@ -1200,6 +1755,26 @@ export async function applyMarketplaceEvent(input: {
         after: { eventId, amountCents: input.amountCents },
       },
     }).catch(() => undefined);
+    const { collabKindForMarketplaceEvent } = await import("@/lib/collab-notifications");
+    const kind = collabKindForMarketplaceEvent(input.eventType);
+    if (kind) {
+      fireCollabNotify(async () => {
+        const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+        await notifyCollabFundingEvent({
+          fundingId: funding.id,
+          kind,
+          milestone: milestone?.title,
+          detail:
+            input.eventType === "funding.failed"
+              ? "Provider rejected or failed the funding hold."
+              : input.eventType === "funding.chargeback"
+                ? "Provider reported a chargeback — funding moved to payment-risk; no automatic refund."
+                : input.eventType === "payout.refunded"
+                  ? `Refunded ${input.amountCents}¢`
+                  : undefined,
+        });
+      });
+    }
   }
   return { applied: disposition === "apply", result: disposition };
 }

@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { actionAdminLogout } from "@/app/admin/actions-auth";
 import { canAccessModule, getAdminSession, type AdminModule } from "@/lib/admin-auth";
+import {
+  isLegacyDemoPaymentsAdminHref,
+  legacyDemoPaymentsEnabled,
+} from "@/lib/legacy-demo-payments";
 
 const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboard" }[] = [
   { href: "/admin", label: "Dashboard", module: "dashboard" },
@@ -20,6 +24,7 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
   { href: "/admin/mail", label: "Email", module: "mail" },
   { href: "/admin/jobs", label: "Jobs", module: "jobs" },
   { href: "/admin/collaborations", label: "Collaborations", module: "collaborations" },
+  { href: "/admin/marketplace-listings", label: "Marketplace listings", module: "collaborations" },
   { href: "/admin/ai", label: "AI pipelines", module: "ai" },
   { href: "/admin/gateways", label: "Payment gateways", module: "gateways" },
   { href: "/admin/signing", label: "Document signing", module: "signing" },
@@ -28,6 +33,8 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
   { href: "/admin/short-links", label: "Short links", module: "shortlinks" },
   { href: "/admin/payments", label: "Protected Payments", module: "payments" },
   { href: "/admin/fees", label: "Collaboration fees", module: "commerce" },
+  { href: "/admin/corridors", label: "Corridors", module: "collab_finance" },
+  { href: "/admin/collaboration-ops", label: "Collaboration ops", module: "collab_finance" },
   { href: "/admin/marketplace", label: "Marketplace ledger", module: "marketplace" },
   { href: "/admin/trust", label: "Trust & Disputes", module: "trust" },
   { href: "/admin/agency", label: "Agency", module: "agency" },
@@ -37,14 +44,16 @@ const SIDE_LINKS: { href: string; label: string; module?: AdminModule | "dashboa
 /** Signed-in admin chrome with left sidebar (login page stays clean when no session). */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
+  const legacyDemoOn = session ? await legacyDemoPaymentsEnabled() : false;
 
   if (!session) {
     return <div>{children}</div>;
   }
 
-  const links = SIDE_LINKS.filter((l) =>
-    l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule),
-  );
+  const links = SIDE_LINKS.filter((l) => {
+    if (!legacyDemoOn && isLegacyDemoPaymentsAdminHref(l.href)) return false;
+    return l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule);
+  });
 
   return (
     <div className="min-h-screen bg-[#F5F8FF]">

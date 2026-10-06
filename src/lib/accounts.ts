@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { passwordError } from "@/lib/account-policy";
 import { getSiteConfig } from "@/lib/site-config";
-import { getCreatorSessionDraft } from "@/lib/claim";
 
 const COOKIE = "influrios_account";
 const SESSION_DAYS = 14;
@@ -186,14 +185,10 @@ export async function latestDemoCode(email: string) {
 
 async function attachOnboarding(userId: string) {
   try {
-    const draft = await getCreatorSessionDraft();
-    if (!draft) return;
-    await prisma.onboardingSession.update({
-      where: { id: draft.id },
-      data: { userId },
-    });
-  } catch {
-    /* The claim may still be JSON-only if Postgres was down when it was created. */
+    const { attachClaimToUser } = await import("@/lib/claim");
+    await attachClaimToUser(userId);
+  } catch (error) {
+    console.error("onboarding attach skipped", error);
   }
 }
 

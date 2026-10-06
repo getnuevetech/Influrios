@@ -9,14 +9,15 @@ import {
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getManagedMatching } from "@/lib/managed-matching";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
+import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
+import { formatMoney } from "@/lib/money";
 import {
   escrowStats,
-  formatMoney,
   getProtectedPaymentsStore,
   type EscrowStatus,
   type MilestoneStatus,
 } from "@/lib/protected-payments";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Protected Payments" };
@@ -53,9 +54,30 @@ export default async function AdminPaymentsPage({ searchParams }: Props) {
   const session = await requireAdminPage("payments");
   const canManage = hasPermission(session, "payments.manage");
   const params = await searchParams;
+  const legacyOn = await legacyDemoPaymentsEnabled();
+  if (!legacyOn) {
+    return (
+      <div className="mx-auto max-w-[90rem] space-y-6 px-4 py-10 sm:px-6">
+        <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
+          ← Admin
+        </Link>
+        <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Protected Payments</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted">
+          The Phase 9 JSON demo console is off. Prefunding and milestone release live on the{" "}
+          <Link href="/admin/marketplace" className="font-semibold text-violet hover:underline">
+            marketplace ledger
+          </Link>
+          . Turn on <span className="font-semibold text-indigo">legacy demo payments</span> in marketplace settings
+          only when you need the old demo store.
+        </p>
+      </div>
+    );
+  }
   const store = await getProtectedPaymentsStore();
   const matching = await getManagedMatching();
   const stats = escrowStats(store);
+  const directoryCreators = await listDirectoryCreators();
+  const bySlug = indexCreatorsBySlug(directoryCreators);
 
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
@@ -138,14 +160,14 @@ export default async function AdminPaymentsPage({ searchParams }: Props) {
               />
             </label>
             <label className="text-sm">
-              <span className="font-semibold text-indigo">Creator</span>
+              <span className="font-semibold text-indigo">Influencer</span>
               <select
                 name="creatorSlug"
                 required
                 defaultValue="sofia-martinez"
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2"
               >
-                {SEED_CREATORS.slice(0, 12).map((c) => (
+                {directoryCreators.slice(0, 12).map((c) => (
                   <option key={c.slug} value={c.slug}>
                     {c.displayName}
                   </option>
@@ -168,7 +190,7 @@ export default async function AdminPaymentsPage({ searchParams }: Props) {
                 {matching.intros.map((intro) => (
                   <option key={intro.id} value={intro.id}>
                     {intro.id} · {intro.businessName} →{" "}
-                    {getCreatorBySlug(intro.creatorSlug)?.displayName ?? intro.creatorSlug} ·{" "}
+                    {bySlug.get(intro.creatorSlug)?.displayName ?? intro.creatorSlug} ·{" "}
                     {intro.briefTitle}
                   </option>
                 ))}

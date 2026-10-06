@@ -1,8 +1,5 @@
-import {
-  SEED_CREATORS,
-  specialtyLabel,
-  type SeedCreator,
-} from "@/lib/seed-data";
+import { listDirectoryCreators } from "@/lib/directory";
+import { specialtyLabel, type SeedCreator } from "@/lib/seed-data";
 import { getEntitlements, type PlanCode } from "@/lib/entitlements";
 
 export type MatchBreakdown = {
@@ -189,20 +186,21 @@ export function scoreCreatorPair(a: SeedCreator, b: SeedCreator): CreatorMatch |
   };
 }
 
-export function findMatchesFor(creatorSlug: string): CreatorMatch[] {
-  const me = SEED_CREATORS.find((c) => c.slug === creatorSlug);
+export function findMatchesFor(creatorSlug: string, creators: readonly SeedCreator[]): CreatorMatch[] {
+  const me = creators.find((c) => c.slug === creatorSlug);
   if (!me) return [];
-  return SEED_CREATORS.map((other) => scoreCreatorPair(me, other))
+  return creators
+    .map((other) => scoreCreatorPair(me, other))
     .filter((m): m is CreatorMatch => Boolean(m))
     .sort((x, y) => y.score - x.score);
 }
 
-export function allCreatorMatches(): CreatorMatch[] {
+export function allCreatorMatches(creators: readonly SeedCreator[]): CreatorMatch[] {
   const seen = new Set<string>();
   const out: CreatorMatch[] = [];
-  for (let i = 0; i < SEED_CREATORS.length; i++) {
-    for (let j = i + 1; j < SEED_CREATORS.length; j++) {
-      const match = scoreCreatorPair(SEED_CREATORS[i], SEED_CREATORS[j]);
+  for (let i = 0; i < creators.length; i++) {
+    for (let j = i + 1; j < creators.length; j++) {
+      const match = scoreCreatorPair(creators[i], creators[j]);
       if (!match) continue;
       const key = [match.a.slug, match.b.slug].sort().join(":");
       if (seen.has(key)) continue;
@@ -211,6 +209,14 @@ export function allCreatorMatches(): CreatorMatch[] {
     }
   }
   return out.sort((a, b) => b.score - a.score);
+}
+
+export async function allDirectoryMatches(): Promise<CreatorMatch[]> {
+  return allCreatorMatches(await listDirectoryCreators());
+}
+
+export async function findDirectoryMatchesFor(creatorSlug: string): Promise<CreatorMatch[]> {
+  return findMatchesFor(creatorSlug, await listDirectoryCreators());
 }
 
 export function filterMatches(
@@ -311,10 +317,40 @@ export const CREATOR_OPPORTUNITIES: CreatorOpportunity[] = [
 ];
 
 export const POPULAR_MATCH_CHIPS = [
-  { title: "Interior Designer + Woodwork Creator", specialty: "home-interior", image: "/demo/categories/cat-home.jpg" },
-  { title: "Hair Stylist + Hair Supplier", specialty: "hair", image: "/demo/categories/cat-hair.jpg" },
-  { title: "Food Creator + Kitchen Brand", specialty: "food", image: "/demo/categories/cat-food.jpg" },
-  { title: "Travel Influencer + Tourism Brand", specialty: "travel", image: "/demo/categories/cat-travel.jpg" },
-  { title: "Fitness Creator + Wellness Brand", specialty: "fitness", image: "/demo/categories/cat-fitness.jpg" },
-  { title: "Beauty Creator + Skincare Brand", specialty: "beauty", image: "/demo/categories/cat-beauty.jpg" },
+  {
+    title: "Interior Designer",
+    subtitle: "+ Woodwork Influencer",
+    specialty: "home-interior",
+    image: "/demo/categories/cat-home.jpg",
+  },
+  {
+    title: "Hair Stylist",
+    subtitle: "+ Hair Supplier",
+    specialty: "hair",
+    image: "/demo/categories/cat-hair.jpg",
+  },
+  {
+    title: "Food Influencer",
+    subtitle: "+ Kitchen Brand",
+    specialty: "food",
+    image: "/demo/categories/cat-food.jpg",
+  },
+  {
+    title: "Travel Influencer",
+    subtitle: "+ Tourism Brand",
+    specialty: "travel",
+    image: "/demo/categories/cat-travel.jpg",
+  },
+  {
+    title: "Fitness Influencer",
+    subtitle: "+ Wellness Brand",
+    specialty: "fitness",
+    image: "/demo/categories/cat-fitness.jpg",
+  },
+  {
+    title: "Beauty Influencer",
+    subtitle: "+ Skincare Brand",
+    specialty: "beauty",
+    image: "/demo/categories/cat-beauty.jpg",
+  },
 ];

@@ -2,8 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   actionAdvanceIntro,
+  actionConfirmIntroFeeSettlement,
   actionCreateIntro,
   actionRecordIntroduction,
+  actionRequestIntroFeeSettlement,
   actionSetManagedPromotion,
   actionSetOptIn,
 } from "@/app/admin/matching/actions";
@@ -15,7 +17,9 @@ import {
   INTRO_STATUSES,
   listQueuedMatchRequests,
 } from "@/lib/managed-matching";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+import { introStatusDisplayLabel, MATCHING_PRODUCT_BOUNDARY } from "@/lib/matching-product-boundary";
+import { formatMoney } from "@/lib/money";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Managed Matching" };
@@ -27,6 +31,8 @@ type Props = {
     optin?: string;
     flag?: string;
     recorded?: string;
+    feeQuoted?: string;
+    feeSettled?: string;
     error?: string;
   }>;
 };
@@ -69,6 +75,9 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
   const optInCount = store.optIns.filter((o) => o.openToManaged).length;
   const paidCount = store.intros.filter((i) => i.status === "paid").length;
 
+  const directoryCreators = await listDirectoryCreators();
+  const bySlug = indexCreatorsBySlug(directoryCreators);
+
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -80,8 +89,12 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
             Managed Matching
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Phase 4 ops console — creator opt-in, shortlist delivery, facilitated intros, and
-            intro → paid tracking. Automate only after this manual pilot works.
+            Phase 4 ops console — Influencer opt-in, shortlist delivery, facilitated intros, and
+            intro-fee tracking. Automate only after this manual pilot works.
+          </p>
+          <p className="mt-2 max-w-2xl rounded-xl border border-[#E4E9F5] bg-[#F7FAFF] px-3 py-2 text-xs text-indigo">
+            <strong>R073:</strong> {MATCHING_PRODUCT_BOUNDARY.summary}{" "}
+            {MATCHING_PRODUCT_BOUNDARY.nextStepHint}
           </p>
         </div>
         <div className="flex gap-3 text-center text-xs">
@@ -95,7 +108,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
           </div>
           <div className="rounded-xl bg-emerald-100 px-4 py-2">
             <p className="font-display text-lg font-bold text-emerald-700">{paidCount}</p>
-            <p className="text-muted">Paid</p>
+            <p className="text-muted">Intro fees</p>
           </div>
         </div>
       </div>
@@ -105,14 +118,16 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
           {params.error}
         </div>
       ) : null}
-      {params.created || params.advanced || params.optin || params.flag || params.recorded ? (
+      {params.created || params.advanced || params.optin || params.flag || params.recorded || params.feeQuoted || params.feeSettled ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Saved
           {params.created ? " · intro created" : ""}
           {params.advanced ? " · status advanced" : ""}
+          {params.feeQuoted ? " · intro fee quote requested" : ""}
+          {params.feeSettled ? " · intro fee settled (sandbox)" : ""}
+          {params.recorded ? " · introduction recorded" : ""}
           {params.optin ? ` · opt-in updated (${params.optin})` : ""}
-          {params.flag ? " · managed promotion updated" : ""}
-          {params.recorded ? " · introduction recorded" : ""}.
+          {params.flag ? " · managed promotion updated" : ""}.
         </div>
       ) : null}
 
@@ -161,13 +176,13 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                   <form action={actionRecordIntroduction} className="mt-3 grid gap-2 sm:grid-cols-2">
                     <input type="hidden" name="requestId" value={item.id} />
                     <label className="text-sm">
-                      <span className="font-semibold text-indigo">Creator</span>
+                      <span className="font-semibold text-indigo">Influencer</span>
                       <select name="creatorSlug" required className="mt-1 w-full rounded-xl border border-border px-3 py-2">
                         {store.optIns
                           .filter((opt) => opt.openToManaged)
                           .map((opt) => (
                             <option key={opt.creatorSlug} value={opt.creatorSlug}>
-                              {getCreatorBySlug(opt.creatorSlug)?.displayName ?? opt.creatorSlug}
+                              {bySlug.get(opt.creatorSlug)?.displayName ?? opt.creatorSlug}
                             </option>
                           ))}
                       </select>
@@ -221,13 +236,13 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
               />
             </label>
             <label className="text-sm">
-              <span className="font-semibold text-indigo">Creator</span>
+              <span className="font-semibold text-indigo">Influencer</span>
               <select name="creatorSlug" className="mt-1 w-full rounded-xl border border-border px-3 py-2" required>
                 {store.optIns
                   .filter((o) => o.openToManaged)
                   .map((o) => (
                     <option key={o.creatorSlug} value={o.creatorSlug}>
-                      {getCreatorBySlug(o.creatorSlug)?.displayName ?? o.creatorSlug}
+                      {bySlug.get(o.creatorSlug)?.displayName ?? o.creatorSlug}
                     </option>
                   ))}
               </select>
@@ -272,7 +287,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
         <h2 className="font-display text-xl font-bold text-indigo">Intro pipeline</h2>
         <ul className="mt-4 space-y-4">
           {store.intros.map((intro) => {
-            const creator = getCreatorBySlug(intro.creatorSlug);
+            const creator = bySlug.get(intro.creatorSlug);
             return (
               <li
                 key={intro.id}
@@ -292,18 +307,23 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${STATUS_COLOR[intro.status]}`}
                       >
-                        {intro.status.replace("_", " ")}
+                        {introStatusDisplayLabel(intro.status)}
                       </span>
                     </div>
                     <p className="text-sm text-muted">
                       {intro.briefTitle}
                       {intro.feeExpected ? ` · ${intro.feeExpected}` : ""}
+                      {intro.feeExpectedCents != null
+                        ? ` · quoted ${formatMoney(intro.feeExpectedCents)}`
+                        : ""}
+                      {intro.feeIntentRef ? ` · intent ${intro.feeIntentRef}` : ""}
+                      {intro.feeProviderRef ? ` · settled ${intro.feeProviderRef}` : ""}
                     </p>
                     {intro.notes ? <p className="mt-1 text-xs text-muted">{intro.notes}</p> : null}
                     <ol className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold text-muted">
                       {intro.timeline.map((t, i) => (
                         <li key={`${t.at}-${i}`} className="rounded bg-white px-2 py-0.5 ring-1 ring-border">
-                          {t.status}
+                          {introStatusDisplayLabel(t.status)}
                           {t.note ? ` — ${t.note}` : ""}
                         </li>
                       ))}
@@ -311,38 +331,70 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                   </div>
                 </div>
                 {canAdvanceIntros ? (
-                  <form action={actionAdvanceIntro} className="mt-3 flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="id" value={intro.id} />
-                    <label className="text-xs">
-                      <span className="font-semibold text-indigo">Advance to</span>
-                      <select
-                        name="status"
-                        defaultValue={
-                          INTRO_STATUSES[
-                            Math.min(
-                              INTRO_STATUSES.findIndex((s) => s.code === intro.status) + 1,
-                              INTRO_STATUSES.length - 1,
-                            )
-                          ]?.code ?? "outreach"
-                        }
-                        className="ml-2 rounded-lg border border-border px-2 py-1"
-                      >
-                        {INTRO_STATUSES.map((s) => (
-                          <option key={s.code} value={s.code}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <input
-                      name="note"
-                      placeholder="Note (optional)"
-                      className="min-w-[10rem] flex-1 rounded-lg border border-border px-2 py-1 text-sm"
-                    />
-                    <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
-                      Update status
-                    </button>
-                  </form>
+                  <div className="mt-3 space-y-2">
+                    {intro.status !== "paid" && intro.status !== "declined" && intro.status !== "closed" ? (
+                      <div className="flex flex-wrap gap-2">
+                        <form action={actionRequestIntroFeeSettlement} className="flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="id" value={intro.id} />
+                          <label className="text-xs">
+                            <span className="font-semibold text-indigo">Deal basis (¢)</span>
+                            <input
+                              name="grossCents"
+                              type="number"
+                              min={100}
+                              placeholder="10000"
+                              className="ml-2 w-28 rounded-lg border border-border px-2 py-1 text-sm"
+                            />
+                          </label>
+                          <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
+                            {intro.feeIntentRef ? "Refresh fee quote" : "Request fee quote"}
+                          </button>
+                        </form>
+                        {intro.feeIntentRef && intro.feeExpectedCents != null ? (
+                          <form action={actionConfirmIntroFeeSettlement}>
+                            <input type="hidden" name="id" value={intro.id} />
+                            <input type="hidden" name="intentRef" value={intro.feeIntentRef} />
+                            <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
+                              Confirm sandbox fee
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <p className="text-[10px] text-muted">{MATCHING_PRODUCT_BOUNDARY.introFeePaidHint}</p>
+                    <form action={actionAdvanceIntro} className="flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="id" value={intro.id} />
+                      <label className="text-xs">
+                        <span className="font-semibold text-indigo">Advance to</span>
+                        <select
+                          name="status"
+                          defaultValue={
+                            INTRO_STATUSES[
+                              Math.min(
+                                INTRO_STATUSES.findIndex((s) => s.code === intro.status) + 1,
+                                INTRO_STATUSES.length - 1,
+                              )
+                            ]?.code ?? "outreach"
+                          }
+                          className="ml-2 rounded-lg border border-border px-2 py-1"
+                        >
+                          {INTRO_STATUSES.map((s) => (
+                            <option key={s.code} value={s.code}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <input
+                        name="note"
+                        placeholder="Note (optional)"
+                        className="min-w-[10rem] flex-1 rounded-lg border border-border px-2 py-1 text-sm"
+                      />
+                      <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
+                        Update status
+                      </button>
+                    </form>
+                  </div>
                 ) : null}
               </li>
             );
@@ -350,15 +402,15 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
         </ul>
       </section>
 
-      {/* Creator opt-in targeting */}
+      {/* Influencer opt-in targeting */}
       <section className="card-surface p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Creator opt-in targeting</h2>
+        <h2 className="font-display text-xl font-bold text-indigo">Influencer opt-in targeting</h2>
         <p className="mt-1 text-sm text-muted">
-          Only opted-in creators appear in the intro delivery picker.
+          Only opted-in influencers appear in the intro delivery picker.
           {!canManageOptins ? " View-only — your role cannot change opt-ins." : ""}
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {SEED_CREATORS.map((c) => {
+          {directoryCreators.map((c) => {
             const opt = store.optIns.find((o) => o.creatorSlug === c.slug);
             if (!canManageOptins) {
               return (

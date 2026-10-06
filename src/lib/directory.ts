@@ -4,6 +4,11 @@ import { toPublicProfile } from "@/lib/onboarding";
 import { prisma } from "@/lib/db";
 import { isPlanCode } from "@/lib/entitlements";
 import {
+  defaultAvatarForGender,
+  defaultBannerForSeed,
+  normalizeProfileGender,
+} from "@/lib/profile-media";
+import {
   SEED_CREATORS,
   SPECIALTY_TAXONOMY,
   filterCreators,
@@ -96,7 +101,9 @@ function blankCreator(slug: string, name: string): SeedCreator {
     locationCountry: "",
     languages: [],
     avatarColor: "#633CFF",
-    image: "/demo/creators/creator-sofia.jpg",
+    image: "/brand/avatars/generic.svg",
+    coverImage: "/brand/banners/rooftop-crew.png",
+    gender: "unspecified",
     badge: "Rising Star",
     statusLabel: "Open to partnerships",
     planTier: "STARTER",
@@ -141,7 +148,22 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
     specialties: specialties.length ? specialties : base.specialties,
     socials: socials.length ? socials : base.socials,
     openToCollab: row.openToCollab,
-    image: base.image || row.avatarUrl || blankCreator(row.slug, row.displayName).image,
+    image: (() => {
+      const raw = row.avatarUrl || base.image || "";
+      // Claimed non-seed profiles must not keep legacy demo headshots as their face.
+      if (!seed && raw.includes("/demo/creators/")) {
+        return defaultAvatarForGender(normalizeProfileGender(row.gender));
+      }
+      return raw || defaultAvatarForGender(normalizeProfileGender(row.gender));
+    })(),
+    coverImage: (() => {
+      const raw = row.coverUrl || base.coverImage || "";
+      if (!seed && (!raw || raw.includes("/demo/sofia/"))) {
+        return defaultBannerForSeed(row.slug);
+      }
+      return raw || defaultBannerForSeed(row.slug);
+    })(),
+    gender: normalizeProfileGender(row.gender || base.gender),
     verified: row.profileState === "VERIFIED" || row.identityVerified === "VERIFIED" ? true : base.verified,
   };
 }
@@ -388,6 +410,18 @@ export async function getDirectoryCreator(slug: string): Promise<SeedCreator | n
   return directory.creators.find((creator) => creator.slug === slug) ?? null;
 }
 
+/** Product read API — every match, picker, and ranking path should use this (or getDirectoryCreator). */
+export async function listDirectoryCreators(): Promise<SeedCreator[]> {
+  const directory = await getDirectory();
+  return directory.creators;
+}
+
+export async function directoryHasCreator(slug: string): Promise<boolean> {
+  return Boolean(await getDirectoryCreator(slug));
+}
+
+export { indexCreatorsBySlug } from "@/lib/seed-data";
+
 export async function searchDirectory(query: CreatorSearchQuery) {
   const directory = await getDirectory();
   const specialtyValues = query.specialty
@@ -430,10 +464,12 @@ export async function recordDirectoryEvent(
   creatorId?: string | null,
 ) {
   try {
+    const { canonicalDirectoryEvent, withLegacyEventMeta } = await import("@/lib/terminology-events");
+    const canonical = canonicalDirectoryEvent(eventType);
     await prisma.analyticsEvent.create({
       data: {
-        eventType,
-        metaJson: meta as Prisma.InputJsonValue,
+        eventType: canonical,
+        metaJson: withLegacyEventMeta(eventType, meta) as Prisma.InputJsonValue,
         creatorId: creatorId ?? undefined,
       },
     });

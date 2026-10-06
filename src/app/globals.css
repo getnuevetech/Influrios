@@ -16,6 +16,7 @@
   --starter-violet: #7b46f6;
 
   --pro-deep-base: #0b123f;
+  --plus-deep-base: #162a7a;
 
   --background: #f7faff;
   --foreground: #111a5a;
@@ -38,6 +39,7 @@
   --color-pink: var(--pink-accent);
   --color-gold: var(--champagne-gold);
   --color-pro: var(--pro-deep-base);
+  --color-plus: var(--plus-deep-base);
   --font-sans: var(--font-plus-jakarta);
   --font-display: var(--font-sora);
   --font-script: var(--font-caveat);

@@ -2,10 +2,15 @@
  * Phase 10 — Disputes, Trust & Contract briefs.
  * Mediation queue for escrow milestones + lightweight collab contract templates.
  * Demo store only — not legal advice / not e-sign.
+ * Gated by `legacy_demo_payments` (default off); live disputes use the marketplace ledger.
  */
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import {
+  assertLegacyDemoPayments,
+  legacyDemoPaymentsEnabled,
+} from "@/lib/legacy-demo-payments";
 import {
   getDeal,
   getProtectedPaymentsStore,
@@ -76,14 +81,14 @@ const DEFAULT_STORE: TrustStore = {
   contracts: [
     {
       id: "contract_std_collab",
-      title: "Standard creator collab brief",
+      title: "Standard influencer collab brief",
       audience: "both",
       summary:
         "Scope, milestones, usage rights, and escrow release rules for a typical sponsored post package.",
       clauses: [
         "Deliverables and due dates follow the escrow milestones attached to this deal.",
         "Brand usage rights: organic + paid amplification for 90 days after publish.",
-        "Creator retains ownership of raw footage unless otherwise agreed in writing.",
+        "Influencer retains ownership of raw footage unless otherwise agreed in writing.",
         "Funds held in Influrios escrow until each milestone is accepted or mediated.",
         "Either party may open a dispute; ops mediation is binding for the demo rails.",
       ],
@@ -97,7 +102,7 @@ const DEFAULT_STORE: TrustStore = {
       summary: "Extended paid media license when brands need whitelisting or ads.",
       clauses: [
         "Paid media / whitelisting term: 6 months from first go-live.",
-        "Creator grants non-exclusive worldwide license for the contracted assets.",
+        "Influencer grants non-exclusive worldwide license for the contracted assets.",
         "Edits that change meaning require creator approval before release of final milestone.",
       ],
       createdAt: now(),
@@ -106,9 +111,21 @@ const DEFAULT_STORE: TrustStore = {
   ],
 };
 
+const EMPTY_STORE: TrustStore = {
+  notes: "Phase 10 demo trust queue is off. Use marketplace ledger disputes.",
+  disputes: [],
+  contracts: [],
+};
+
 async function ensureStore(): Promise<TrustStore> {
+  const legacyOn = await legacyDemoPaymentsEnabled();
+  if (!legacyOn) {
+    // P8: frozen — never seed or rehydrate demo JSON when the switch is off.
+    const { purgeLegacyDemoJsonFiles } = await import("@/lib/legacy-teardown");
+    await purgeLegacyDemoJsonFiles().catch(() => null);
+    return structuredClone(EMPTY_STORE);
+  }
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
     const raw = await fs.readFile(STORE_PATH, "utf8");
     return JSON.parse(raw) as TrustStore;
   } catch {
@@ -123,6 +140,7 @@ async function ensureStore(): Promise<TrustStore> {
 }
 
 async function saveStore(store: TrustStore) {
+  await assertLegacyDemoPayments();
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");

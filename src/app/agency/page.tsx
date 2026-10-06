@@ -13,9 +13,11 @@ import {
   getAgencyStore,
   listPublishedPortfolios,
 } from "@/lib/agency";
+import { resolveAgencyAccess } from "@/lib/agency-auth";
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
+import { productSwitch } from "@/lib/product-switches";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Agency Workspace" };
@@ -29,6 +31,7 @@ type Props = {
     plan?: string;
     status?: string;
     toggled?: string;
+    seat?: string;
   }>;
 };
 
@@ -41,12 +44,22 @@ const CAMP_COLOR: Record<string, string> = {
 
 export default async function AgencyPage({ searchParams }: Props) {
   const params = await searchParams;
-  const ws = await getWorkspace();
+  const [ws, seatsOn, access] = await Promise.all([
+    getWorkspace(),
+    productSwitch("agency_seats"),
+    resolveAgencyAccess(),
+  ]);
   const entitlements = getBusinessEntitlements(ws.plan);
-  const unlocked = entitlements.agencyWorkspace;
+  const unlocked = seatsOn ? access.ok : entitlements.agencyWorkspace;
   const store = await getAgencyStore();
   const stats = agencyStats(store);
   const published = listPublishedPortfolios(store);
+  const directoryCreators = await listDirectoryCreators();
+  const bySlug = indexCreatorsBySlug(directoryCreators);
+  const seatLabel =
+    access.ok && access.mode === "seat"
+      ? `${access.account.email} · ${access.role}`
+      : null;
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -63,6 +76,8 @@ export default async function AgencyPage({ searchParams }: Props) {
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
             Business plan: {ws.plan}
             {unlocked ? " · Agency workspace on" : " · upgrade required"}
+            {seatsOn ? " · seats on" : ""}
+            {seatLabel ? ` · acting as ${seatLabel}` : ""}
           </p>
         </div>
       </section>
@@ -82,6 +97,12 @@ export default async function AgencyPage({ searchParams }: Props) {
             <p className="text-muted">Published cases</p>
           </div>
         </div>
+
+        {params.seat === "accepted" ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Seat invite accepted. You can mutate this agency workspace while seats are on.
+          </div>
+        ) : null}
 
         {params.error === "agency_plan_required" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -112,21 +133,32 @@ export default async function AgencyPage({ searchParams }: Props) {
         {!unlocked ? (
           <section className="card-surface flex flex-wrap items-center justify-between gap-4 p-6">
             <div>
-              <h2 className="font-display text-xl font-bold text-indigo">Unlock Agency workspace</h2>
+              <h2 className="font-display text-xl font-bold text-indigo">
+                {seatsOn ? "Agency seat required" : "Unlock Agency workspace"}
+              </h2>
               <p className="mt-1 text-sm text-muted">
-                Current plan is {ws.plan}. Agency adds roster, multi-creator casting, and joint
-                portfolios.
+                {seatsOn
+                  ? "Named seats are on. Accept an invite for your signed-in email, or ask an admin to invite you."
+                  : `Current plan is ${ws.plan}. Agency adds roster, multi-creator casting, and joint portfolios.`}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <form action={actionEnableAgencyPlan}>
-                <button type="submit" className="btn-primary !py-2 text-sm">
-                  Demo upgrade to AGENCY →
-                </button>
-              </form>
-              <Link href="/billing" className="btn-secondary !py-2 text-sm">
-                Billing
-              </Link>
+              {seatsOn ? (
+                <Link href="/login?next=%2Fagency" className="btn-primary !py-2 text-sm">
+                  Sign in →
+                </Link>
+              ) : (
+                <>
+                  <form action={actionEnableAgencyPlan}>
+                    <button type="submit" className="btn-primary !py-2 text-sm">
+                      Demo upgrade to AGENCY →
+                    </button>
+                  </form>
+                  <Link href="/billing" className="btn-secondary !py-2 text-sm">
+                    Billing
+                  </Link>
+                </>
+              )}
             </div>
           </section>
         ) : null}
@@ -135,7 +167,7 @@ export default async function AgencyPage({ searchParams }: Props) {
           <h2 className="font-display text-2xl font-bold text-indigo">Talent roster</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {store.roster.map((m) => {
-              const c = getCreatorBySlug(m.creatorSlug);
+              const c = bySlug.get(m.creatorSlug);
               return (
                 <article key={m.creatorSlug} className="card-surface flex gap-3 p-4">
                   {c?.image ? (
@@ -175,13 +207,13 @@ export default async function AgencyPage({ searchParams }: Props) {
                 Add to roster
               </h3>
               <label className="text-sm">
-                <span className="font-semibold text-indigo">Creator</span>
+                <span className="font-semibold text-indigo">Influencer</span>
                 <select
                   name="creatorSlug"
                   required
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 >
-                  {SEED_CREATORS.filter(
+                  {directoryCreators.filter(
                     (c) => !store.roster.some((r) => r.creatorSlug === c.slug),
                   ).map((c) => (
                     <option key={c.slug} value={c.slug}>
@@ -241,7 +273,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                   <p className="mt-2 text-xs text-muted">
                     Cast:{" "}
                     {camp.creatorSlugs
-                      .map((s) => getCreatorBySlug(s)?.displayName ?? s)
+                      .map((s) => bySlug.get(s)?.displayName ?? s)
                       .join(", ")}
                   </p>
                 </div>
@@ -358,8 +390,8 @@ export default async function AgencyPage({ searchParams }: Props) {
 
           <div className="grid gap-4 md:grid-cols-2">
             {store.portfolios.map((p) => {
-              const left = getCreatorBySlug(p.leftSlug);
-              const right = getCreatorBySlug(p.rightSlug);
+              const left = bySlug.get(p.leftSlug);
+              const right = bySlug.get(p.rightSlug);
               return (
                 <article key={p.id} className="card-surface p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -431,14 +463,14 @@ export default async function AgencyPage({ searchParams }: Props) {
                 />
               </label>
               <label className="text-sm">
-                <span className="font-semibold text-indigo">Creator A</span>
+                <span className="font-semibold text-indigo">Influencer A</span>
                 <select
                   name="leftSlug"
                   required
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                   defaultValue={store.roster[0]?.creatorSlug}
                 >
-                  {SEED_CREATORS.map((c) => (
+                  {directoryCreators.map((c) => (
                     <option key={c.slug} value={c.slug}>
                       {c.displayName}
                     </option>
@@ -446,14 +478,14 @@ export default async function AgencyPage({ searchParams }: Props) {
                 </select>
               </label>
               <label className="text-sm">
-                <span className="font-semibold text-indigo">Creator B</span>
+                <span className="font-semibold text-indigo">Influencer B</span>
                 <select
                   name="rightSlug"
                   required
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                  defaultValue={store.roster[1]?.creatorSlug ?? SEED_CREATORS[1]?.slug}
+                  defaultValue={store.roster[1]?.creatorSlug ?? directoryCreators[1]?.slug}
                 >
-                  {SEED_CREATORS.map((c) => (
+                  {directoryCreators.map((c) => (
                     <option key={c.slug} value={c.slug}>
                       {c.displayName}
                     </option>

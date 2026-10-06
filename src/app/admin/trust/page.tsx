@@ -9,7 +9,9 @@ import { hasPermission } from "@/lib/admin-auth";
 import { actionAddLedgerEvidence, actionDecideLedgerDispute } from "@/app/admin/trust/ledger-actions";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
 import { listMilestoneDisputes } from "@/lib/milestone-disputes";
-import { formatMoney, getProtectedPaymentsStore } from "@/lib/protected-payments";
+import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
+import { formatMoney } from "@/lib/money";
+import { getProtectedPaymentsStore } from "@/lib/protected-payments";
 import {
   enrichDispute,
   getTrustStore,
@@ -43,15 +45,18 @@ export default async function AdminTrustPage({ searchParams }: Props) {
   const session = await requireAdminPage("trust");
   const canMediate = hasPermission(session, "trust.mediate");
   const params = await searchParams;
-  const trust = await getTrustStore();
-  const payments = await getProtectedPaymentsStore();
+  const legacyOn = await legacyDemoPaymentsEnabled();
+  const trust = legacyOn ? await getTrustStore() : null;
+  const payments = legacyOn ? await getProtectedPaymentsStore() : null;
   const [ledgerDisputes, marketplace] = await Promise.all([
     listMilestoneDisputes().catch(() => []),
     marketplaceConfig().catch(() => null),
   ]);
   const partialRefunds = marketplace?.partialRefundsEnabled ?? true;
-  const stats = trustStats(trust);
-  const enriched = await Promise.all(trust.disputes.map((d) => enrichDispute(d)));
+  const stats = trust
+    ? trustStats(trust)
+    : { open: 0, resolved: 0, total: 0, contracts: 0 };
+  const enriched = trust ? await Promise.all(trust.disputes.map((d) => enrichDispute(d))) : [];
 
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
@@ -65,7 +70,9 @@ export default async function AdminTrustPage({ searchParams }: Props) {
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
             Ledger disputes block a provider release until ops record a decision. That decision does not move money.
-            The section below is the earlier demo queue.
+            {legacyOn
+              ? "The Phase 9/10 demo mediation queue stays available while legacy demo payments is on."
+              : "The Phase 9/10 demo queue is off. Turn on legacy demo payments in marketplace settings to restore it."}
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-center text-xs">
@@ -100,7 +107,9 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                   {dispute.funding.businessName} → {dispute.funding.creatorSlug}
                 </p>
                 <p className="text-muted">
-                  {dispute.milestone?.title ?? "Milestone"} · {dispute.reasonLabel} · {dispute.status.replaceAll("_", " ")}
+                  {dispute.milestone?.title ?? "Milestone"} · {dispute.reasonLabel}
+                  {dispute.reasonCode ? ` (${dispute.reasonCode})` : ""} · {dispute.status.replaceAll("_", " ")}
+                  {dispute.resolutionOutcome ? ` · outcome ${dispute.resolutionOutcome.replaceAll("_", " ")}` : ""}
                 </p>
                 <p className="mt-1 text-indigo">{dispute.details}</p>
                 <p className="mt-1 text-xs text-muted">
@@ -133,7 +142,7 @@ export default async function AdminTrustPage({ searchParams }: Props) {
               </div>
             </div>
             {canMediate &&
-            ["open", "under_review", "refund_requested"].includes(dispute.status) &&
+            ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"].includes(dispute.status) &&
             dispute.notes.length < dispute.evidenceLimit ? (
               <form action={actionAddLedgerEvidence} className="mt-3 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="disputeId" value={dispute.id} />
@@ -150,25 +159,42 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                 </button>
               </form>
             ) : null}
-            {canMediate && ["open", "under_review", "refund_requested"].includes(dispute.status) ? (
+            {canMediate && ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"].includes(dispute.status) ? (
               <form action={actionDecideLedgerDispute} className="mt-3 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="disputeId" value={dispute.id} />
                 <label className="text-xs font-semibold text-muted">
                   Decision
                   <select name="decision" className="mt-1 rounded-lg border border-border px-2 py-1.5 text-sm text-indigo">
                     <option value="review">Mark under review</option>
-                    <option value="release">Allow release</option>
-                    <option value="refund">Request full refund</option>
-                    {partialRefunds ? <option value="partial">Request partial refund</option> : null}
+                    <option value="release">Creator release</option>
+                    <option value="refund">Brand refund (full)</option>
+                    {partialRefunds ? <option value="partial">Split amount (partial refund)</option> : null}
+                    <option value="settle">Mutual settlement</option>
+                    <option value="escalate_provider">Escalate to provider</option>
+                    <option value="escalate_legal">Escalate to legal</option>
                     <option value="withdraw">Withdraw</option>
                   </select>
                 </label>
                 {partialRefunds ? (
                   <label className="text-xs font-semibold text-muted">
-                    Partial USD
-                    <input name="requestedUsd" type="number" min={1} step={1} className="mt-1 w-28 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                    Partial / override USD
+                    <input name="requestedUsd" type="number" min={0} step={1} className="mt-1 w-28 rounded-lg border border-border px-2 py-1.5 text-sm" />
                   </label>
-                ) : null}
+                ) : (
+                  <label className="text-xs font-semibold text-muted">
+                    Override USD (dual-approval check)
+                    <input name="requestedUsd" type="number" min={0} step={1} className="mt-1 w-36 rounded-lg border border-border px-2 py-1.5 text-sm" />
+                  </label>
+                )}
+                <label className="text-xs font-semibold text-muted">
+                  Second approver email
+                  <input
+                    name="secondApprover"
+                    type="email"
+                    placeholder="Required above dual-approval threshold"
+                    className="mt-1 w-52 rounded-lg border border-border px-2 py-1.5 text-sm"
+                  />
+                </label>
                 <label className="text-xs font-semibold text-muted">
                   Note
                   <input name="note" className="mt-1 rounded-lg border border-border px-2 py-1.5 text-sm" />
@@ -197,6 +223,8 @@ export default async function AdminTrustPage({ searchParams }: Props) {
         </div>
       ) : null}
 
+      {legacyOn && trust && payments ? (
+        <>
       <section className="space-y-4">
         <h2 className="font-display text-xl font-bold text-indigo">Mediation queue</h2>
         {enriched.length === 0 ? (
@@ -299,7 +327,7 @@ export default async function AdminTrustPage({ searchParams }: Props) {
                 defaultValue="both"
               >
                 <option value="both">Both</option>
-                <option value="creator">Creator</option>
+                <option value="creator">Influencer</option>
                 <option value="business">Business</option>
               </select>
             </label>
@@ -390,13 +418,24 @@ export default async function AdminTrustPage({ searchParams }: Props) {
           </article>
         ))}
       </section>
+        </>
+      ) : null}
 
-      <p className="text-xs text-muted">
-        {trust.notes} · Public view:{" "}
-        <Link href="/trust" className="font-semibold text-violet hover:underline">
-          /trust
-        </Link>
-      </p>
+      {legacyOn && trust ? (
+        <p className="text-xs text-muted">
+          {trust.notes} · Public view:{" "}
+          <Link href="/trust" className="font-semibold text-violet hover:underline">
+            /trust
+          </Link>
+        </p>
+      ) : (
+        <p className="text-xs text-muted">
+          Public view:{" "}
+          <Link href="/trust" className="font-semibold text-violet hover:underline">
+            /trust
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   PLAN_ENTITLEMENTS,
   applyFeatureRows,
   cardChrome,
+  cardShellClasses,
   decideCount,
   limitsToFeatureRows,
 } from "./entitlements";
@@ -69,26 +70,44 @@ describe("entitlement decisions", () => {
 describe("card chrome", () => {
   it("hides QR and gold on starter limits", () => {
     const chrome = cardChrome(PLAN_ENTITLEMENTS.STARTER);
+    assert.equal(chrome.tier, "starter");
+    assert.equal(chrome.elevated, false);
     assert.equal(chrome.showQr, false);
     assert.equal(chrome.gold, false);
     assert.equal(chrome.showShortlink, false);
-    assert.equal(chrome.ctaLabel, "View Profile →");
+    assert.equal(chrome.ctaLabel, "Contact →");
+    const shell = cardShellClasses(chrome);
+    assert.match(shell.root, /bg-white/);
+    assert.doesNotMatch(shell.root, /bg-pro|bg-plus|ring-gold/);
   });
 
-  it("shows a standard QR on plus limits without gold", () => {
+  it("shows a standard QR on plus limits without gold and with distinct elevated chrome", () => {
     const chrome = cardChrome(PLAN_ENTITLEMENTS.PLUS);
+    assert.equal(chrome.tier, "plus");
+    assert.equal(chrome.premium, false);
+    assert.equal(chrome.elevated, true);
     assert.equal(chrome.showQr, true);
     assert.equal(chrome.dynamicQr, false);
     assert.equal(chrome.gold, false);
     assert.equal(chrome.showShortlink, true);
     assert.equal(chrome.ctaLabel, "Contact →");
+    const shell = cardShellClasses(chrome);
+    assert.match(shell.root, /bg-plus/);
+    assert.doesNotMatch(shell.root, /ring-gold|bg-pro|bg-white /);
+    const starterShell = cardShellClasses(cardChrome(PLAN_ENTITLEMENTS.STARTER));
+    assert.notEqual(shell.root, starterShell.root);
   });
 
   it("uses gold and the work CTA only when the theme entitlement is full", () => {
     const chrome = cardChrome(PLAN_ENTITLEMENTS.PRO);
+    assert.equal(chrome.tier, "pro");
     assert.equal(chrome.premium, true);
+    assert.equal(chrome.elevated, true);
     assert.equal(chrome.gold, true);
     assert.equal(chrome.dynamicQr, true);
     assert.equal(chrome.ctaLabel, "Work With Me →");
+    const shell = cardShellClasses(chrome);
+    assert.match(shell.root, /bg-pro/);
+    assert.match(shell.root, /ring-gold/);
   });
 });

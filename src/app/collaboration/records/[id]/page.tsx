@@ -5,7 +5,8 @@ import { getAccountSession } from "@/lib/accounts";
 import { COLLABORATION_STATUSES, getCollaboration, reasonList, type CollaborationStatus } from "@/lib/collaborations";
 import { prisma } from "@/lib/db";
 import { activeSigningProvider } from "@/lib/providers";
-import { getCreatorBySlug, specialtyLabel } from "@/lib/seed-data";
+import { getDirectoryCreator } from "@/lib/directory";
+import { specialtyLabel } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +39,8 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
   if (!record) notFound();
 
   const account = await getAccountSession();
-  const initiator = getCreatorBySlug(record.initiatorSlug);
-  const recipient = getCreatorBySlug(record.recipientSlug);
+  const initiator = await getDirectoryCreator(record.initiatorSlug);
+  const recipient = await getDirectoryCreator(record.recipientSlug);
   const reasons = reasonList(record.reasons);
   const status = (COLLABORATION_STATUSES as readonly string[]).includes(record.status)
     ? (record.status as CollaborationStatus)
@@ -121,6 +122,17 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
             </form>
           ))}
         </div>
+      ) : null}
+
+      {account && status === "accepted" ? (
+        <p className="mt-6">
+          <Link
+            href={`/collaboration/contract?collaboration=${encodeURIComponent(record.id)}&creator=${encodeURIComponent(record.recipientSlug)}&title=${encodeURIComponent(record.title)}&scope=${encodeURIComponent(record.scope.slice(0, 200))}&commercial=${encodeURIComponent(record.commercial)}`}
+            className="btn-primary"
+          >
+            Open contract & fund
+          </Link>
+        </p>
       ) : null}
       <section className="card-surface mt-6 p-6 text-sm">
         <h2 className="font-semibold text-indigo">Document signing</h2>

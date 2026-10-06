@@ -18,6 +18,16 @@ type Props = {
 
 export const metadata = {
   title: "Discover Influencers",
+  description:
+    "Find influencers and content creators by specialty, location, and platform on Influrios.",
+  keywords: [
+    "influencer",
+    "influencers",
+    "content creator",
+    "creator",
+    "influencer discovery",
+    "Influrios",
+  ],
 };
 
 const CHIP_ORDER = ["beauty", "travel", "fitness", "home-interior", "hair", "food", "tech", "lifestyle"];
@@ -37,6 +47,34 @@ function list(value: string | string[] | undefined): string[] {
 
 function first(value: string | string[] | undefined): string {
   return list(value)[0] ?? "";
+}
+
+function discoverReturnPath(params: Record<string, string | string[] | undefined>): string {
+  const sp = new URLSearchParams();
+  for (const key of [
+    "q",
+    "specialty",
+    "country",
+    "state",
+    "city",
+    "platform",
+    "language",
+    "followersMin",
+    "followersMax",
+    "engagementMin",
+    "engagementMax",
+    "collabType",
+    "rate",
+    "openToCollab",
+    "verified",
+    "sort",
+  ] as const) {
+    for (const value of list(params[key])) {
+      sp.append(key, value);
+    }
+  }
+  const query = sp.toString();
+  return query ? `/discover?${query}` : "/discover";
 }
 
 export default async function DiscoverPage({ searchParams }: Props) {
@@ -72,7 +110,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
     },
     directory.synonyms,
   );
-  await recordDirectoryEvent("search_submitted", {
+  await recordDirectoryEvent("influencer_search_submitted", {
     q,
     specialty: specialties.join(","),
     country: countries.join(","),
@@ -102,14 +140,20 @@ export default async function DiscoverPage({ searchParams }: Props) {
   const topMatches = results.slice(0, 5);
   const heroCards = directory.creators.slice(0, 3);
   const activeChip = specialties[0] ?? "";
+  const returnTo = discoverReturnPath({
+    ...params,
+    specialty: specialties,
+    platform: platforms,
+    country: countries,
+  });
   const searchGate = await consumeGuestQuota("search");
   if (searchGate.decision === "hard") {
-    redirect("/login?next=/discover&gate=search");
+    redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=search`);
   }
 
   return (
     <div className="bg-[#F4F7FF] pb-16">
-      <GuestGateBanner copy={searchGate.decision === "soft" ? searchGate.copy : ""} next="/discover" />
+      <GuestGateBanner copy={searchGate.decision === "soft" ? searchGate.copy : ""} next={returnTo} />
       <section className="relative overflow-hidden border-b border-[#E4E9F5] bg-[radial-gradient(ellipse_at_top_right,_#E7DEFF_0%,_#F7FAFF_42%,_#EEF3FF_100%)]">
         <div className="pointer-events-none absolute -right-16 top-0 h-72 w-72 rounded-full bg-[#C4B5FD]/40 blur-3xl" />
         <div className="relative mx-auto grid w-full max-w-[90rem] items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-10 lg:py-14">
@@ -119,7 +163,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
             </p>
             <h1 className="mt-3 font-display text-4xl font-bold text-indigo sm:text-5xl">Discover Influencers</h1>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-              Find the perfect creators for your brand. Search by niche, location, audience and more to
+              Find the perfect influencers for your brand. Search by niche, location, audience and more to
               build meaningful collaborations.
             </p>
             <form action="/discover" className="mt-6 flex max-w-2xl items-center gap-2 rounded-full bg-white p-1.5 shadow-[0_16px_40px_rgba(99,60,255,0.12)] ring-1 ring-[#E4E9F5]">
@@ -150,7 +194,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
 
           <div className="relative hidden h-64 lg:block">
             <p className="absolute left-6 top-2 z-10 max-w-[12rem] font-script text-2xl leading-tight text-violet">
-              Find Amazing Creators For Your Next Campaign
+              Find Amazing Influencers For Your Next Campaign
             </p>
             {heroCards.map((creator, index) => (
               <Link
@@ -166,7 +210,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
               >
                 <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="140px" />
                 <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-8 text-[10px] font-bold uppercase tracking-wide text-white">
-                  {creator.specialties[0]?.replace("-", " ") ?? "Creator"}
+                  {creator.specialties[0]?.replace("-", " ") ?? "Influencer"}
                 </span>
               </Link>
             ))}
@@ -282,7 +326,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
 
             {results.length === 0 ? (
               <div className="rounded-2xl border border-[#E4E9F5] bg-white p-10 text-center">
-                <p className="font-semibold text-indigo">No creators matched those filters.</p>
+                <p className="font-semibold text-indigo">No influencers matched those filters.</p>
                 <Link href="/discover" className="mt-4 inline-block text-sm font-semibold text-violet">
                   Clear filters
                 </Link>
@@ -308,13 +352,13 @@ export default async function DiscoverPage({ searchParams }: Props) {
           <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-r from-[#1B1464] via-[#3D2E9E] to-[#633CFF] text-white shadow-xl">
             <div className="grid items-center gap-6 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr]">
               <div>
-                <h2 className="font-display text-2xl font-bold sm:text-3xl">Partner with Amazing Creators</h2>
+                <h2 className="font-display text-2xl font-bold sm:text-3xl">Partner with Amazing Influencers</h2>
                 <p className="mt-2 max-w-lg text-sm text-white/75">
-                  Launch a brand campaign with creators who match your audience, niche, and goals.
+                  Launch a brand campaign with influencers who match your audience, niche, and goals.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {[
-                    [directory.creators.length.toLocaleString(), "Creators in directory"],
+                    [directory.creators.length.toLocaleString(), "Influencers in directory"],
                     [countryNames.length.toLocaleString(), "Countries represented"],
                     [taxonomy.length.toLocaleString(), "Active niches"],
                     [results.filter((creator) => creator.openToCollab).length.toLocaleString(), "Open to collaborate"],
@@ -325,7 +369,10 @@ export default async function DiscoverPage({ searchParams }: Props) {
                     </span>
                   ))}
                 </div>
-                <Link href="/business" className="ink-on-light mt-6 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold">
+                <Link
+                  href={`/login?next=${encodeURIComponent("/business")}&gate=business`}
+                  className="ink-on-light mt-6 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold"
+                >
                   Create a Campaign
                 </Link>
               </div>
@@ -336,7 +383,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
                   </div>
                 ) : null}
                 <p className="absolute bottom-2 left-0 max-w-[12rem] font-script text-2xl leading-tight text-white">
-                  Bigger Creators. Brighter Brands. Together.
+                  Bigger Influencers. Brighter Brands. Together.
                 </p>
               </div>
             </div>

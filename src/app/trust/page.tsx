@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { actionOpenDispute } from "@/app/trust/actions";
 import { listMilestoneDisputes } from "@/lib/milestone-disputes";
-import {
-  formatMoney,
-  getProtectedPaymentsStore,
-} from "@/lib/protected-payments";
+import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
+import { formatMoney } from "@/lib/money";
+import { getProtectedPaymentsStore } from "@/lib/protected-payments";
 import {
   enrichDispute,
   getTrustStore,
@@ -30,29 +29,35 @@ const STATUS_COLOR: Record<DisputeStatus, string> = {
 
 export default async function TrustPage({ searchParams }: Props) {
   const params = await searchParams;
-  const trust = await getTrustStore();
-  const payments = await getProtectedPaymentsStore();
-  const stats = trustStats(trust);
-  const enriched = await Promise.all(trust.disputes.map((d) => enrichDispute(d)));
+  const legacyOn = await legacyDemoPaymentsEnabled();
+  const trust = legacyOn ? await getTrustStore() : null;
+  const payments = legacyOn ? await getProtectedPaymentsStore() : null;
+  const stats = trust
+    ? trustStats(trust)
+    : { open: 0, resolved: 0, total: 0, contracts: 0 };
+  const enriched = trust ? await Promise.all(trust.disputes.map((d) => enrichDispute(d))) : [];
   const ledgerDisputes = await listMilestoneDisputes().catch(() => []);
 
-  const disputable = payments.deals.flatMap((deal) =>
-    deal.milestones
-      .filter((m) => m.status !== "released" && deal.fundedCents > 0)
-      .map((m) => ({ deal, milestone: m })),
-  );
+  const disputable = payments
+    ? payments.deals.flatMap((deal) =>
+        deal.milestones
+          .filter((m) => m.status !== "released" && deal.fundedCents > 0)
+          .map((m) => ({ deal, milestone: m })),
+      )
+    : [];
 
   return (
     <div className="bg-[#F7FAFF]">
       <section className="hero-atmosphere text-white">
         <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
-            Phase 10 · Trust &amp; Disputes
+            Trust &amp; Disputes
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold">Mediation &amp; briefs</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Open a dispute on a provider-held milestone from Protected Payments. A decision records
-            what should happen next and does not move the money. The queue below is the earlier demo.
+            {legacyOn
+              ? "Demo queue is on for ops testing. Product disputes use the marketplace ledger; a decision records what should happen next and does not move the money."
+              : "Ledger disputes for provider-held milestones. Phase 9/10 JSON demos stay frozen off — open disputes from Protected Payments on the marketplace path."}
           </p>
         </div>
       </section>
@@ -115,6 +120,8 @@ export default async function TrustPage({ searchParams }: Props) {
           )}
         </section>
 
+        {legacyOn && trust ? (
+          <>
         <section className="card-surface p-6">
           <h2 className="font-display text-xl font-bold text-indigo">Earlier demo queue</h2>
           <p className="mt-1 text-sm text-muted">
@@ -151,7 +158,7 @@ export default async function TrustPage({ searchParams }: Props) {
                   defaultValue="business"
                 >
                   <option value="business">Business</option>
-                  <option value="creator">Creator</option>
+                  <option value="creator">Influencer</option>
                   <option value="ops">Ops</option>
                 </select>
               </label>
@@ -246,6 +253,8 @@ export default async function TrustPage({ searchParams }: Props) {
             ))}
           </div>
         </section>
+          </>
+        ) : null}
 
         <p className="text-center text-sm text-muted">
           Admin mediation:{" "}

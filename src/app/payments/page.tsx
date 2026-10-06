@@ -15,8 +15,21 @@ import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
 import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
-import { formatMoney } from "@/lib/protected-payments";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
+import { formatMoney } from "@/lib/money";
+import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
+import { FUNDING_BADGE_CLASS, fundingBadge } from "@/lib/funding-badge";
+import { SERVICE_LEVEL_LABELS } from "@/lib/collaboration-fees";
+import {
+  allowedServiceLevels,
+  capabilitiesFromJurisdictionRow,
+} from "@/lib/jurisdiction-capabilities";
+import {
+  FUNDABLE_SERVICE_LEVELS,
+  fundableServiceLevelsForUi,
+} from "@/lib/matching-product-boundary";
+import { FUNDING_MODE_LABELS, asFundingMode } from "@/lib/funding-modes";
+import { RIGHTS_STATUS_LABELS, asRightsStatus } from "@/lib/content-rights";
+import { buildPayoutFeeFxQuote } from "@/lib/payout-readiness";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Protected Payments" };
@@ -62,12 +75,21 @@ export default async function PaymentsPage({ searchParams }: Props) {
   ]);
   const jurisdictions = config?.jurisdictions ?? [];
   const homeJurisdiction = jurisdictions.find((row) => row.code === "US") ?? jurisdictions[0];
+  const homeCaps = homeJurisdiction ? capabilitiesFromJurisdictionRow(homeJurisdiction) : null;
+  // W3.2 — only fundable levels the jurisdiction allows; never invent contracted.
+  const paymentServiceLevels = homeCaps
+    ? fundableServiceLevelsForUi(allowedServiceLevels(homeCaps, FUNDABLE_SERVICE_LEVELS))
+    : [];
+  const stagedAllowed = Boolean(config?.stagedFundingEnabled && homeCaps?.stagedPrefundingEnabled);
+  const recurringAllowed = Boolean(config?.recurringFundingEnabled && homeCaps?.recurringFundingEnabled);
   const term = fundingTerm(Boolean(homeJurisdiction?.escrowTermAllowed));
   const usdFundings = fundings.filter((row) => row.currency === "USD");
   const mixedCurrency = fundings.some((row) => row.currency !== "USD");
   const held = usdFundings.reduce((sum, row) => sum + row.ledger.heldCents, 0);
   const released = usdFundings.reduce((sum, row) => sum + row.ledger.releasedCents, 0);
   const confirmed = fundings.filter((row) => row.status === "held" || row.status === "completed").length;
+  const directoryCreators = await listDirectoryCreators().catch(() => []);
+  const bySlug = indexCreatorsBySlug(directoryCreators);
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -143,14 +165,14 @@ export default async function PaymentsPage({ searchParams }: Props) {
               />
             </label>
             <label className="text-sm">
-              <span className="font-semibold text-indigo">Creator</span>
+              <span className="font-semibold text-indigo">Influencer</span>
               <select
                 name="creatorSlug"
                 required
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 defaultValue="sofia-martinez"
               >
-                {SEED_CREATORS.slice(0, 12).map((creator) => (
+                {directoryCreators.slice(0, 12).map((creator) => (
                   <option key={creator.slug} value={creator.slug}>
                     {creator.displayName}
                   </option>
@@ -184,6 +206,25 @@ export default async function PaymentsPage({ searchParams }: Props) {
               />
             </label>
             <label className="text-sm">
+              <span className="font-semibold text-indigo">Service level</span>
+              <select
+                name="serviceLevel"
+                required
+                disabled={paymentServiceLevels.length === 0}
+                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
+                defaultValue={paymentServiceLevels[0] ?? ""}
+              >
+                {paymentServiceLevels.length === 0 ? (
+                  <option value="">No fundable service level for this jurisdiction</option>
+                ) : null}
+                {paymentServiceLevels.map((level) => (
+                  <option key={level} value={level}>
+                    {SERVICE_LEVEL_LABELS[level]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
               <span className="font-semibold text-indigo">Attribution</span>
               <select name="sourceId" required className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2">
                 {sources.filter((source) => source.active).map((source) => (
@@ -207,9 +248,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
             <label className="text-sm">
               <span className="font-semibold text-indigo">Schedule</span>
               <select name="scheduleKind" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2" defaultValue="once">
-                <option value="once">One prefund</option>
-                {config?.stagedFundingEnabled ? <option value="staged">Staged</option> : null}
-                {config?.recurringFundingEnabled ? <option value="recurring">Recurring</option> : null}
+                {homeCaps?.fullPrefundingEnabled !== false ? <option value="once">One prefund</option> : null}
+                {stagedAllowed ? <option value="staged">Staged</option> : null}
+                {recurringAllowed ? <option value="recurring">Recurring</option> : null}
               </select>
             </label>
             <label className="text-sm">
@@ -247,10 +288,29 @@ export default async function PaymentsPage({ searchParams }: Props) {
           <h2 className="font-display text-2xl font-bold text-indigo">Active deals</h2>
           {fundings.length === 0 ? <p className="text-sm text-muted">No deals yet — request a prefund above.</p> : null}
           {fundings.map((deal) => {
-            const creator = getCreatorBySlug(deal.creatorSlug);
+            const creator = bySlug.get(deal.creatorSlug);
             const jurisdiction = jurisdictions.find((row) => row.code === deal.jurisdictionCode);
             const fx = readFxSnapshot(deal.fxSnapshotJson);
             const shares = readShareSnapshot(deal.shareSnapshotJson);
+            const mode = asFundingMode(deal.fundingMode);
+            const schedulePartiallyFunded =
+              deal.scheduleKind === "staged" &&
+              Boolean(deal.scheduleId) &&
+              fundings.some(
+                (other) =>
+                  other.scheduleId === deal.scheduleId &&
+                  other.id !== deal.id &&
+                  other.status === "awaiting_provider",
+              );
+            const badge = fundingBadge({
+              status: deal.status,
+              heldCents: deal.ledger.heldCents,
+              releasedCents: deal.ledger.releasedCents,
+              fundedCents: deal.grossCents,
+              protectedPaymentsEnabled: jurisdiction?.protectedPaymentsEnabled,
+              fundingMode: deal.fundingMode,
+              schedulePartiallyFunded,
+            });
             return (
               <article key={deal.id} className="card-surface p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -260,12 +320,18 @@ export default async function PaymentsPage({ searchParams }: Props) {
                     </p>
                     <h3 className="mt-1 font-display text-xl font-bold text-indigo">{deal.title}</h3>
                     <p className="mt-1 font-mono text-[11px] text-muted">
-                      {deal.id} · {fundingTerm(Boolean(jurisdiction?.escrowTermAllowed))}
+                      {deal.id} · {fundingTerm(Boolean(jurisdiction?.escrowTermAllowed))} ·{" "}
+                      {FUNDING_MODE_LABELS[mode]}
                     </p>
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_COLOR[deal.status] ?? "bg-slate-100 text-slate-700"}`}>
-                    {deal.status.replaceAll("_", " ")}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${FUNDING_BADGE_CLASS[badge]}`}>
+                      {badge}
+                    </span>
+                    <span className={`rounded-full px-3 py-1 text-[10px] font-semibold capitalize ${STATUS_COLOR[deal.status] ?? "bg-slate-100 text-slate-700"}`}>
+                      {deal.status.replaceAll("_", " ")}
+                    </span>
+                  </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted">
                   <span>
@@ -378,6 +444,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${MILESTONE_COLOR[milestone.status] ?? ""}`}>
                             {milestone.status}
                           </span>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                            {RIGHTS_STATUS_LABELS[asRightsStatus(milestone.rightsStatus)]}
+                          </span>
                         </div>
                         <p className="mt-0.5 text-xs text-muted">
                           {formatMoney(milestone.amountCents, deal.currency)}
@@ -387,6 +456,14 @@ export default async function PaymentsPage({ searchParams }: Props) {
                           {milestone.revisionLimit > 0
                             ? ` · revisions ${milestone.revisionCount} of ${milestone.revisionLimit}`
                             : " · no revisions"}
+                          {milestone.autoApproveAt && milestone.status === "submitted"
+                            ? ` · review by ${new Date(milestone.autoApproveAt).toISOString().slice(0, 16).replace("T", " ")} UTC`
+                            : milestone.reviewWindowHours
+                              ? ` · ${milestone.reviewWindowHours}h review window`
+                              : ""}
+                          {milestone.status === "approved" && asRightsStatus(milestone.rightsStatus) === "pending"
+                            ? " · usage rights activate on payment release"
+                            : ""}
                         </p>
                         {milestone.revisionNote && milestone.status === "pending" ? (
                           <p className="mt-1 text-xs text-indigo">Revision: {milestone.revisionNote}</p>
@@ -403,9 +480,28 @@ export default async function PaymentsPage({ searchParams }: Props) {
                           </form>
                         ) : null}
                         {milestone.status === "submitted" ? (
-                          <form action={actionApproveMilestone}>
+                          <form action={actionApproveMilestone} className="space-y-2">
                             <input type="hidden" name="dealId" value={deal.id} />
                             <input type="hidden" name="milestoneId" value={milestone.id} />
+                            {(() => {
+                              const feeCents = Math.round(
+                                (deal.feeCents * (milestone.amountCents || 0)) / Math.max(deal.grossCents, 1),
+                              );
+                              const quote = buildPayoutFeeFxQuote({
+                                creatorGrossCents: milestone.amountCents,
+                                platformFeeCents: Math.min(feeCents, milestone.amountCents),
+                                fundingCurrency: deal.currency,
+                                payoutCurrency: deal.currency,
+                              });
+                              return quote.ok ? (
+                                <p className="text-[11px] text-muted">
+                                  Exact fee/FX before confirm: net{" "}
+                                  {formatMoney(quote.quote.creatorNetCents, deal.currency)} after{" "}
+                                  {formatMoney(quote.quote.platformFeeCents, deal.currency)} fee
+                                  {quote.quote.fxApplied ? ` · FX → ${quote.quote.payoutCurrency}` : ""}.
+                                </p>
+                              ) : null;
+                            })()}
                             <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
                               Approve work
                             </button>

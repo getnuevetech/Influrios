@@ -1,9 +1,9 @@
 # Influrios — Implementation Plan
 
 **Status:** Phases A–I and Phase 12.3–12.13 are implemented on `main` (ledger, disputes, attribution, schedules, FX/shares, Wise, revisions, evidence, gross cap, partial refunds, change orders, admin product switches, Stripe sandbox). Short-link resolver boots only when its tables are readable. Public layouts stay as designed. Live charges, mail, social sync, and marketplace holds still wait on configured providers.  
-**Sequencing for new work:** [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md) (2026-10-02) — directory purity, claim consolidation, JSON quarantine, launch integrations. Do not extend Phase 12 further before that plan.  
+**Sequencing for new work:** [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md) — Phases J–O on `main` (homepage UX included); Phase M staging evidence still needs operator sign-off on a live host (`npm run staging:evidence-probe`).  
 **Sources:** Technical Development Specification v2.2 and the design templates, reviewed against the repo.  
-**Date:** 2026-09-30 · **Status line updated:** 2026-10-02  
+**Date:** 2026-09-30 · **Status line updated:** 2026-10-03  
 **Supersedes for sequencing (historical):** the “build Phase 0–1 next” close of `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`.  
 **Does not replace:** Product Strategy / Spec v2.2 (behavior), or `docs/ADDENDUM_IMPLEMENTATION_RECOMMENDATIONS.md` (collaboration-fee compliance).
 
@@ -46,9 +46,11 @@ Remaining design work is a **thin pass inside Phase C**, not a separate redesign
 
 ## 3. Gap matrix
 
-Priority is what blocks section 33, not how polished the screen looks.
+> **Historical (pre Phases A–I).** This table is the 2026-09-30 diagnostic that drove Phases A–I. It is **not** the current repo state. Do not use it for sequencing — use [`DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](./DEVELOPMENT_STATE_AND_NEXT_PLAN.md). Many “absent / JSON / seed-only” rows below have since moved to Postgres (directory, claim, CMS, admin RBAC, billing attempts, fee rules, intelligence, marketplace ledger).
 
-| Area | Spec | Current evidence | Plan action |
+Priority **was** what blocked section 33 at plan time, not how polished the screen looked.
+
+| Area | Spec | Evidence as of 2026-09-30 (historical) | Plan action (then) |
 |---|---|---|---|
 | Brand | `BRAND-001`–`003` | Influrios in `layout.tsx`, chrome, cards | Centralize product-name strings in site settings. Lint-ban “Influence Connect”. |
 | Persistence | `R143`, `R031` | Schema in `prisma/schema.prisma`; runtime JSON under `data/` (not in git); Docker has no `data/` volume | Migrations. App reads/writes Postgres. Temporary volume only while a module is still on JSON. |

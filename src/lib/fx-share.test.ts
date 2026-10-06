@@ -33,7 +33,7 @@ describe("admin FX and revenue shares", () => {
 
   it("splits a release into share lines that reconcile ignores", () => {
     const lines = shareLines(7_500, [
-      { label: "Creator", shareBps: 8000 },
+      { label: "Influencer", shareBps: 8000 },
       { label: "Platform", shareBps: 2000 },
     ]);
     assert.ok(lines);
@@ -90,6 +90,7 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "GB rate missing",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(notReady.ok, false);
@@ -122,6 +123,7 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "GB rate missing",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(inactive.ok, false);
@@ -154,6 +156,7 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "GB launch",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(created.ok, true);
@@ -178,7 +181,7 @@ describe("marketplace FX prefund", () => {
       assert.equal(fx?.quoteId, "quote-gb-1");
       assert.equal(wiseCalls, 1);
       const frozenShares = readShareSnapshot(row.shareSnapshotJson);
-      assert.equal(frozenShares?.[0]?.label, "Creator");
+      assert.equal(frozenShares?.[0]?.label, "Influencer");
 
       await prisma.fxRate.update({ where: { currency: "GBP" }, data: { minorPerUsd: 80 } });
       await saveRevenueParties(
@@ -200,12 +203,13 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "GB quote failed",
         grossCents: 10_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(failed.ok, false);
       if (!failed.ok) assert.match(failed.error, /did not return a user rate/);
       assert.equal(await prisma.collaborationFunding.count({ where: { title: "GB quote failed" } }), 0);
-      assert.equal(readShareSnapshot(frozen?.shareSnapshotJson)?.[0]?.label, "Creator");
+      assert.equal(readShareSnapshot(frozen?.shareSnapshotJson)?.[0]?.label, "Influencer");
 
       const wrong = await applyMarketplaceEvent({
         provider: "primary",
@@ -240,10 +244,19 @@ describe("marketplace FX prefund", () => {
         include: { entries: true },
       });
       const shareEntries = finished?.entries.filter((entry) => entry.kind === "share") ?? [];
-      assert.equal(shareEntries.reduce((sum, entry) => sum + entry.amountCents, 0), milestone.amountCents);
+      const releaseEntries = finished?.entries.filter((entry) => entry.kind === "release") ?? [];
+      const feeEntries = finished?.entries.filter((entry) => entry.kind === "fee") ?? [];
+      const departed =
+        releaseEntries.reduce((sum, entry) => sum + entry.amountCents, 0) +
+        feeEntries.reduce((sum, entry) => sum + entry.amountCents, 0);
+      assert.equal(departed, milestone.amountCents);
+      assert.equal(
+        shareEntries.reduce((sum, entry) => sum + entry.amountCents, 0),
+        releaseEntries.reduce((sum, entry) => sum + entry.amountCents, 0),
+      );
       assert.equal(shareEntries.some((entry) => entry.party.includes("later")), false);
       const ledger = reconcileLedger(ledgerMovements(finished?.entries ?? []), 7_500);
-      assert.equal(ledger.releasedCents, milestone.amountCents);
+      assert.equal(ledger.releasedCents + ledger.feeCents, milestone.amountCents);
       assert.equal(ledger.heldCents, 7_500 - milestone.amountCents);
       assert.equal(ledger.balanced, true);
     } finally {
@@ -333,6 +346,7 @@ describe("marketplace FX prefund", () => {
         creatorSlug: "sofia-martinez",
         title: "Harbor while off",
         grossCents: 5_000,
+        serviceLevel: "contracted",
         sourceId: source.id,
       });
       assert.equal(refused.ok, false);

@@ -50,3 +50,6 @@ export function FeaturedCarousel({
     </div>
   );
 }
+
+/** Alias used by homepage category / collaboration rows. */
+export const HorizontalScroller = FeaturedCarousel;

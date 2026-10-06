@@ -26,6 +26,24 @@ export const PRODUCT_SWITCHES = [
     enabled: false,
     description: "Named seats on the agency workspace. Turned off, the roster stays and new seats are refused.",
   },
+  {
+    key: "legacy_demo_payments",
+    enabled: false,
+    description:
+      "Phase 9/10 JSON escrow and trust demo consoles. Turned off, product CTAs stay on the marketplace ledger.",
+  },
+  {
+    key: "paid_mentoring",
+    enabled: false,
+    description:
+      "Paid Influencer Mentorship sessions. Off = community mentoring only; never mixes into Collaboration Holding.",
+  },
+  {
+    key: "collab_os_v1",
+    enabled: true,
+    description:
+      "Collaboration OS hubs and contract wizard. Turned off, signed-in users stay on the public landing plus propose/records.",
+  },
 ] as const;
 
 export type ProductSwitchKey = (typeof PRODUCT_SWITCHES)[number]["key"];

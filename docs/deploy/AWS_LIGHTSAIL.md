@@ -5,7 +5,8 @@
 
 > **New server?** Start here first → **[FRESH_SERVER_SETUP.md](./FRESH_SERVER_SETUP.md)**  
 > (OS update, GitHub deploy key, Docker + Nginx, then clone + deploy)  
-> **Current sequencing / maturity:** [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md)
+> **Current sequencing / maturity:** [`../DEVELOPMENT_STATE_AND_NEXT_PLAN.md`](../DEVELOPMENT_STATE_AND_NEXT_PLAN.md)  
+> **Staging SMTP / Stripe / social / marketplace drills:** [`STAGING_LAUNCH_INTEGRATIONS.md`](./STAGING_LAUNCH_INTEGRATIONS.md)
 
 PM2 was an earlier host process manager for Next.js. **Do not use PM2 for the app.** The web process and Postgres both run in Docker Compose; Nginx proxies to `127.0.0.1:3000`.
 
@@ -113,7 +114,22 @@ POSTGRES_USER=influrios
 POSTGRES_PASSWORD=pick-a-strong-password
 POSTGRES_DB=influrios
 DATABASE_URL="postgresql://influrios:pick-a-strong-password@127.0.0.1:5432/influrios?schema=public"
+
+AUTH_SECRET=generate-a-long-random-string
+ADMIN_SESSION_SECRET=generate-another-long-random-string
+ADMIN_SUPER_EMAIL=admin@your-domain.com
+ADMIN_SUPER_PASSWORD=pick-a-strong-admin-password
 ```
+
+Compose volumes:
+
+| Volume | Mount | Required? |
+|---|---|---|
+| `influrios_pg` | Postgres data | **Yes** |
+| `influrios_uploads` | `/app/public/uploads` (banner/media files) | **Yes** |
+| `influrios_data` | `/app/data` (optional Phase 9/10 JSON demos when `legacy_demo_payments` is on) | Optional — admin/CMS/billing/intelligence/fees are Postgres |
+
+`legacy_demo_payments` stays **off** by default — do not force it on in production.
 
 ```bash
 bash deploy/scripts/db-up.sh      # starts postgres container
@@ -134,12 +150,20 @@ Visit `http://STATIC_IP` — you should see the Influrios home page.
 ### Back up Docker Postgres data
 
 ```bash
-# Logical dump
-docker compose exec -T postgres pg_dump -U influrios influrios > backup-$(date +%F).sql
+bash deploy/scripts/backup-postgres.sh
+# Writes /var/backups/influrios/influrios-YYYYMMDD-HHMMSS.sql.gz (keeps ~14 days)
 
-# Or snapshot the Lightsail instance periodically (includes Docker volume disk)
+# Restore drill (stops web, recreates DB, migrates, starts web, curls /api/health):
+# bash deploy/scripts/restore-postgres.sh /var/backups/influrios/influrios-….sql.gz
+
+# Optional: Lightsail instance snapshots (includes Docker volume disk + uploads)
 ```
 
+Cron example (daily 03:15 UTC):
+
+```cron
+15 3 * * * cd /var/www/influrios && bash deploy/scripts/backup-postgres.sh >> /var/log/influrios-backup.log 2>&1
+```
 ---
 
 ## D. Domain + HTTPS
@@ -172,8 +196,10 @@ sudo certbot install --cert-name influrios.com --nginx
 
 ```bash
 bash deploy/scripts/deploy.sh
+curl -fsS https://your-domain.com/api/health
 ```
 
+<<<<<<< HEAD
 6. Confirm:
 
 ```bash
@@ -181,6 +207,9 @@ curl -I https://influrios.com
 curl -I http://influrios.com   # should redirect to https after certbot
 ```
 
+=======
+Stripe, social callbacks, and marketplace webhooks must use the same https origin.
+>>>>>>> origin/main
 ---
 
 ## E. Ongoing deploy (after first setup)
@@ -189,6 +218,9 @@ curl -I http://influrios.com   # should redirect to https after certbot
 cd /var/www/influrios
 git pull origin main
 bash deploy/scripts/deploy.sh
+curl -fsS http://127.0.0.1:3000/api/health
+# From a laptop (optional Phase M auto-checks):
+# npm run staging:evidence-probe -- https://your-domain.com
 ```
 
 ---
@@ -217,10 +249,10 @@ Open http://localhost:3000
 |------|----------|
 | RAM | Prefer 4 GB if building on the instance (Node build + Postgres share RAM) |
 | Swap | If on 2 GB: add 2 GB swapfile |
-| DB backups | `pg_dump` on a schedule + Lightsail instance snapshots |
+| DB backups | `bash deploy/scripts/backup-postgres.sh` on a schedule + Lightsail instance snapshots (covers uploads) |
 | Updates | `sudo apt-get update && sudo apt-get upgrade` monthly |
-| Logs | `pm2 logs` · `docker compose logs postgres` · `/var/log/nginx/` |
-| Health | `curl -I https://your-domain.com` · `docker compose ps` |
+| Logs | `docker compose logs -f web` · `docker compose logs postgres` · `/var/log/nginx/` |
+| Health | `curl -fsS https://your-domain.com/api/health` · `docker compose ps` |
 
 ---
 

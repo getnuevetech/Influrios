@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
+import { assertLegacyDemoPayments } from "@/lib/legacy-demo-payments";
 import {
   advanceDispute,
   attachContractToDeal,
@@ -19,6 +20,7 @@ const RESOLUTIONS: DisputeStatus[] = [
 ];
 
 export async function actionAdvanceDispute(formData: FormData) {
+  await assertLegacyDemoPayments();
   await requireAdminAction("trust.mediate");
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "") as DisputeStatus;
@@ -40,6 +42,7 @@ export async function actionAdvanceDispute(formData: FormData) {
 }
 
 export async function actionCreateContract(formData: FormData) {
+  await assertLegacyDemoPayments();
   await requireAdminAction("trust.mediate");
   const title = String(formData.get("title") ?? "").trim();
   const audience = String(formData.get("audience") ?? "both") as
@@ -65,6 +68,7 @@ export async function actionCreateContract(formData: FormData) {
 }
 
 export async function actionAttachContract(formData: FormData) {
+  await assertLegacyDemoPayments();
   await requireAdminAction("trust.mediate");
   const contractId = String(formData.get("contractId") ?? "");
   const dealId = String(formData.get("dealId") ?? "");

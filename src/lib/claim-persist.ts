@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
-import type { ClaimDraft } from "@/lib/claim";
+import { publicClaimPayload, type ClaimDraft } from "@/lib/claim";
 import { prisma } from "@/lib/db";
-import type { OnboardingState, SocialPlatform } from "@prisma/client";
+import type { OnboardingState, Prisma, SocialPlatform } from "@prisma/client";
 
 const PLATFORMS = new Set([
   "INSTAGRAM",
@@ -29,28 +29,17 @@ function asPlatform(value: string): SocialPlatform {
   return (PLATFORMS.has(value) ? value : "INSTAGRAM") as SocialPlatform;
 }
 
-function publicPayload(draft: ClaimDraft) {
+function privatePayload(draft: ClaimDraft): Prisma.InputJsonValue {
   return {
-    slug: draft.slug,
-    displayName: draft.displayName,
-    title: draft.title,
-    bio: draft.bio,
-    locationCity: draft.locationCity,
-    locationCountry: draft.locationCountry,
-    specialties: draft.specialties,
-    socials: draft.socials.map((social) => ({
-      platform: social.platform,
-      handle: social.handle,
-      url: social.url,
-      followers: social.followers,
-    })),
-    image: draft.image,
-    stage: draft.stage,
-    attribution: draft.attribution,
+    ...publicClaimPayload(draft),
+    verifyCode: draft.verifyCode,
+    verificationDelivery: draft.verificationDelivery ?? "demo",
+    planTier: draft.planTier,
   };
 }
 
 export async function syncOnboardingSession(draft: ClaimDraft) {
+  const verifyMethod = draft.verificationDelivery === "email" ? "EMAIL" : "DEMO_CODE";
   await prisma.onboardingSession.upsert({
     where: { id: draft.id },
     create: {
@@ -63,8 +52,8 @@ export async function syncOnboardingSession(draft: ClaimDraft) {
       ownerName: draft.ownerName,
       emailVerifiedAt: draft.verifiedAt ? new Date(draft.verifiedAt) : null,
       publishedAt: draft.publishedAt ? new Date(draft.publishedAt) : null,
-      verifyMethod: "DEMO_CODE",
-      payload: publicPayload(draft),
+      verifyMethod,
+      payload: privatePayload(draft),
     },
     update: {
       state: onboardingState(draft.stage),
@@ -73,7 +62,8 @@ export async function syncOnboardingSession(draft: ClaimDraft) {
       ownerName: draft.ownerName,
       emailVerifiedAt: draft.verifiedAt ? new Date(draft.verifiedAt) : null,
       publishedAt: draft.publishedAt ? new Date(draft.publishedAt) : null,
-      payload: publicPayload(draft),
+      verifyMethod,
+      payload: privatePayload(draft),
     },
   });
 }
@@ -100,7 +90,7 @@ export async function recordVerificationAttempt(input: {
   await prisma.verificationAttempt.create({
     data: {
       sessionId: input.draft.id,
-      method: "DEMO_CODE",
+      method: input.draft.verificationDelivery === "email" ? "EMAIL" : "DEMO_CODE",
       channel: input.channel,
       success: input.success,
       detail: input.detail,
@@ -115,8 +105,13 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
 
   const user = await prisma.user.upsert({
     where: { email: draft.email },
-    create: { email: draft.email, role: "CREATOR", planTier: "STARTER" },
-    update: { role: "CREATOR" },
+    create: { email: draft.email, name: draft.ownerName, role: "CREATOR", planTier: "STARTER" },
+    update: { role: "CREATOR", name: draft.ownerName ?? undefined },
+  });
+
+  await prisma.onboardingSession.update({
+    where: { id: draft.id },
+    data: { userId: user.id },
   });
 
   const creator = await prisma.creator.upsert({
@@ -131,6 +126,8 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
       locationCountry: draft.locationCountry,
       languages: ["English"],
       avatarUrl: draft.image,
+      coverUrl: draft.coverImage,
+      gender: draft.gender,
       openToCollab: true,
       claimed: true,
       planTier: draft.planTier ?? "STARTER",
@@ -145,6 +142,8 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
       locationCity: draft.locationCity,
       locationCountry: draft.locationCountry,
       avatarUrl: draft.image,
+      coverUrl: draft.coverImage,
+      gender: draft.gender,
       claimed: true,
       profileState: "VERIFIED",
     },
@@ -218,9 +217,9 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
       action: "claim.publish",
       objectType: "Creator",
       objectId: creator.id,
-      after: publicPayload(draft),
+      after: publicClaimPayload(draft),
     },
   });
 
-  return { creatorId: creator.id, qrToken };
+  return { creatorId: creator.id, userId: user.id, qrToken };
 }

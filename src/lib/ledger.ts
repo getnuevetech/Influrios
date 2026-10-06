@@ -26,6 +26,9 @@ export function disputeLoadAllowsPrefund(input: {
   return { ok: true };
 }
 
+/** Product Addendum §5 — fee amounts stay distinct by type in financial reports. */
+export type FeeTypeAmount = { feeType: string; amountCents: number };
+
 export type LedgerMonthTotal = {
   currency: string;
   month: string;
@@ -33,26 +36,55 @@ export type LedgerMonthTotal = {
   releasedCents: number;
   refundedCents: number;
   feeCents: number;
+  /** Fee legs broken out by frozen feeType (defaults to collaboration when missing). */
+  feesByType: FeeTypeAmount[];
 };
+
+function bumpFeeType(bucket: Map<string, number>, feeType: string | undefined, amountCents: number) {
+  const key = (feeType && feeType.trim()) || "collaboration";
+  bucket.set(key, (bucket.get(key) ?? 0) + amountCents);
+}
+
+function feeTypeAmounts(bucket: Map<string, number>): FeeTypeAmount[] {
+  return [...bucket.entries()]
+    .map(([feeType, amountCents]) => ({ feeType, amountCents }))
+    .sort((a, b) => a.feeType.localeCompare(b.feeType));
+}
 
 /** Monthly sums of recorded movements. A share line is not included. */
 export function summarizeLedgerReport(
-  rows: { currency: string; kind: string; amountCents: number; createdAt: Date }[],
+  rows: { currency: string; kind: string; amountCents: number; createdAt: Date; feeType?: string | null }[],
 ): LedgerMonthTotal[] {
-  const map = new Map<string, LedgerMonthTotal>();
+  const map = new Map<string, LedgerMonthTotal & { _fees: Map<string, number> }>();
   for (const row of rows) {
     if (row.kind !== "hold" && row.kind !== "release" && row.kind !== "refund" && row.kind !== "fee") continue;
     const month = row.createdAt.toISOString().slice(0, 7);
     const currency = (row.currency || "USD").toUpperCase();
     const key = `${currency}|${month}`;
-    const current = map.get(key) ?? { currency, month, heldCents: 0, releasedCents: 0, refundedCents: 0, feeCents: 0 };
+    const current =
+      map.get(key) ??
+      ({
+        currency,
+        month,
+        heldCents: 0,
+        releasedCents: 0,
+        refundedCents: 0,
+        feeCents: 0,
+        feesByType: [],
+        _fees: new Map<string, number>(),
+      } as LedgerMonthTotal & { _fees: Map<string, number> });
     if (row.kind === "hold") current.heldCents += row.amountCents;
     if (row.kind === "release") current.releasedCents += row.amountCents;
     if (row.kind === "refund") current.refundedCents += row.amountCents;
-    if (row.kind === "fee") current.feeCents += row.amountCents;
+    if (row.kind === "fee") {
+      current.feeCents += row.amountCents;
+      bumpFeeType(current._fees, row.feeType ?? undefined, row.amountCents);
+    }
     map.set(key, current);
   }
-  return [...map.values()].sort((a, b) => b.month.localeCompare(a.month) || a.currency.localeCompare(b.currency));
+  return [...map.values()]
+    .map(({ _fees, ...row }) => ({ ...row, feesByType: feeTypeAmounts(_fees) }))
+    .sort((a, b) => b.month.localeCompare(a.month) || a.currency.localeCompare(b.currency));
 }
 
 /** Zero means the admin has not set a cap. The check uses the USD amount, before conversion. */
@@ -179,7 +211,11 @@ export function requestRevision(input: {
     return { ok: false, error: "That milestone cannot take this step." };
   }
   if (input.revisionCount >= input.revisionLimit) {
-    return { ok: false, error: "This milestone has used its revision limit." };
+    return {
+      ok: false,
+      error:
+        "This milestone has used its revision limit. Open a dispute or request a change order — revisions cannot silently expand scope.",
+    };
   }
   return { ok: true, revisionCount: input.revisionCount + 1 };
 }
@@ -209,35 +245,61 @@ export type LedgerCurrencyTotal = {
   releasedCents: number;
   refundedCents: number;
   feeCents: number;
+  feesByType: FeeTypeAmount[];
   unbalanced: number;
 };
 
 /** Fees and share lines are not added into the held amount. Currencies stay separate. */
 export function summarizeLedger(
-  fundings: { currency: string; grossCents: number; entries: { kind: string; amountCents: number }[] }[],
+  fundings: {
+    currency: string;
+    grossCents: number;
+    feeType?: string | null;
+    entries: { kind: string; amountCents: number }[];
+  }[],
 ): LedgerCurrencyTotal[] {
-  const totals = new Map<string, LedgerCurrencyTotal>();
+  const totals = new Map<string, LedgerCurrencyTotal & { _fees: Map<string, number> }>();
   for (const funding of fundings) {
     const currency = (funding.currency || "USD").toUpperCase();
-    const row = totals.get(currency) ?? {
-      currency,
-      heldCents: 0,
-      releasedCents: 0,
-      refundedCents: 0,
-      feeCents: 0,
-      unbalanced: 0,
-    };
+    const row =
+      totals.get(currency) ??
+      ({
+        currency,
+        heldCents: 0,
+        releasedCents: 0,
+        refundedCents: 0,
+        feeCents: 0,
+        feesByType: [],
+        unbalanced: 0,
+        _fees: new Map<string, number>(),
+      } as LedgerCurrencyTotal & { _fees: Map<string, number> });
     const reconciled = reconcileLedger(ledgerMovements(funding.entries), funding.grossCents);
     row.heldCents += reconciled.heldCents;
     row.releasedCents += reconciled.releasedCents;
     row.refundedCents += reconciled.refundedCents;
-    row.feeCents += funding.entries
+    const feeSum = funding.entries
       .filter((entry) => entry.kind === "fee")
       .reduce((sum, entry) => sum + entry.amountCents, 0);
+    row.feeCents += feeSum;
+    if (feeSum > 0) bumpFeeType(row._fees, funding.feeType ?? undefined, feeSum);
     if (!reconciled.balanced) row.unbalanced += 1;
     totals.set(currency, row);
   }
-  return [...totals.values()].sort((a, b) => a.currency.localeCompare(b.currency));
+  return [...totals.values()]
+    .map(({ _fees, ...row }) => ({ ...row, feesByType: feeTypeAmounts(_fees) }))
+    .sort((a, b) => a.currency.localeCompare(b.currency));
+}
+
+/** Read feeType from a frozen funding snapshot (legacy rows default to collaboration). */
+export function feeTypeFromFundingSnapshot(snapshot: unknown, serviceLevel?: string | null): string {
+  if (snapshot && typeof snapshot === "object" && "feeType" in snapshot) {
+    const raw = (snapshot as { feeType?: unknown }).feeType;
+    if (typeof raw === "string" && raw.trim()) return raw.trim();
+  }
+  if (serviceLevel === "discovery") return "platform_service";
+  if (serviceLevel === "managed_intro") return "managed_intro";
+  if (serviceLevel === "managed_campaign") return "managed_campaign";
+  return "collaboration";
 }
 
 export function reconcileLedger(entries: LedgerMovement[], grossCents: number) {
@@ -246,9 +308,18 @@ export function reconcileLedger(entries: LedgerMovement[], grossCents: number) {
   const heldIn = sum("hold");
   const released = sum("release");
   const refunded = sum("refund");
-  const held = heldIn - released - refunded;
-  const balanced = held >= 0 && heldIn <= grossCents && released + refunded <= heldIn;
-  return { heldCents: held, releasedCents: released, refundedCents: refunded, heldInCents: heldIn, balanced };
+  // P4: earned platform fee legs leave Collaboration Holding (fee booked on release, not on hold).
+  const fees = sum("fee");
+  const held = heldIn - released - refunded - fees;
+  const balanced = held >= 0 && heldIn <= grossCents && released + refunded + fees <= heldIn;
+  return {
+    heldCents: held,
+    releasedCents: released,
+    refundedCents: refunded,
+    feeCents: fees,
+    heldInCents: heldIn,
+    balanced,
+  };
 }
 
 /** What is still owed on a milestone after signed refunds. The original amount stays. */
@@ -280,10 +351,20 @@ export function marketplaceDisposition(input: {
   if (input.eventType === "funding.failed") {
     return input.fundingStatus === "awaiting_provider" ? "apply" : "reject";
   }
+  if (input.eventType === "funding.chargeback") {
+    // Chargeback freezes held funds into payment-risk; no automatic refund/ledger move.
+    if (input.fundingStatus === "held" && input.heldCents > 0) return "apply";
+    if (input.fundingStatus === "payment_risk") return "ignore";
+    return "reject";
+  }
   if (input.eventType === "payout.released") {
     if (input.disputeOpen) return "reject";
+    if (input.fundingStatus === "payment_risk") return "reject";
     if (
-      input.milestoneStatus === "approved" &&
+      (input.milestoneStatus === "approved" ||
+        input.milestoneStatus === "release_scheduled" ||
+        input.milestoneStatus === "release_requested" ||
+        input.milestoneStatus === "payout_failed") &&
       input.amountCents === input.expectedCents &&
       input.heldCents >= input.amountCents
     ) {
@@ -291,7 +372,20 @@ export function marketplaceDisposition(input: {
     }
     return "reject";
   }
+  if (input.eventType === "payout.failed") {
+    if (input.disputeOpen) return "reject";
+    if (
+      (input.milestoneStatus === "approved" ||
+        input.milestoneStatus === "release_scheduled" ||
+        input.milestoneStatus === "release_requested") &&
+      input.amountCents === input.expectedCents
+    ) {
+      return "apply";
+    }
+    return "reject";
+  }
   if (input.eventType === "payout.refunded") {
+    if (input.fundingStatus !== "held" && input.fundingStatus !== "payment_risk") return "reject";
     if (!(input.amountCents > 0 && input.amountCents <= input.heldCents && input.heldCents > 0)) return "reject";
     if (input.milestoneRemainingCents != null && input.amountCents > input.milestoneRemainingCents) return "reject";
     if (input.requestedRefundCents != null && input.amountCents !== input.requestedRefundCents) return "reject";

@@ -1,0 +1,369 @@
+
+
+Discovery • Matching • Requests • Contracts • Milestones • Funding • Payouts • Mentorship
+Supersedes and extends the existing Collaboration implementation
+Prepared for Influrios Dev AI • October 2026
+
+
+
+SYSTEM OVERVIEW
+1. Executive Architecture
+What Dev AI is building and the rules it must not violate.
+1.1 Product definition
+Influrios Collaboration is a global collaboration operating system connecting creators, businesses, agencies and complementary creators. It must support public discovery, signed-in matching, business requests, creator opportunities, business collaboration suggestions, collaboration contracting, full funding, milestone-controlled release, commissions, creator payout readiness, multi-country payment routing, disputes, analytics and mentorship-led onboarding.
+1.2 Core domain modules
+
+
+1.3 Non-negotiable invariants
+Collaboration-funded money must never settle into or be treated as Influrios/Nueve operating cash before the corresponding platform fee is earned.
+Creator funds must never route through the Influrios Operations Account.
+Influrios Operations / Business Account and Collaboration Holding / Protected Funds must be distinct financial domains in both the provider configuration and internal ledger.
+A collaboration may not become fundable until a valid payment route and creator payout route are known.
+A creator may not be marked Global Payout Ready until identity/KYC and at least one supported payout route are verified.
+Milestone percentages plus any non-milestone allocation must equal exactly 100% of the collaboration amount; rounding must be deterministic.
+The platform fee/commission is calculated once from the deal snapshot, then earned and released according to milestone rules; an Admin fee change must never retroactively alter an existing contract.
+Payment providers execute money movement. Influrios remains the source of truth for contract state, milestone state and business authorization to release.
+No Airwallex-, Flutterwave-, Escrow.com- or other provider-specific business logic may be hard-coded into Collaboration domain rules.
+All release, refund, dispute and payout requests must be idempotent and auditable.
+UX / PRODUCT
+2. Experience Architecture
+Two public acquisition experiences and role-specific authenticated workspaces.
+2.1 Public Collaboration Landing Page
+The public page must attract both businesses and creators before login. It must preserve the strongest concepts from the current page while presenting Collaboration as a living marketplace rather than a static matching demo.
+Hero: clear creator/business collaboration message + search box. Search supports creators, brands, specialties, categories and opportunities.
+Category cards directly below hero: Interior Designer + Woodwork Creator; Hair Stylist + Hair Supplier; Food Creator + Kitchen Brand; Travel Influencer + Tourism Brand; Fitness Creator + Wellness Brand; Beauty Creator + Skincare Brand; Admin-manageable.
+Featured / possible collaboration match showing two parties, match score, Why This Match, complementary specialties and CTA.
+Business Requests: real/public-safe requests from businesses actively seeking creators.
+Creator Collaboration Opportunities: creators looking for complementary creators or business categories.
+Get Collaboration Suggestions CTA for businesses. Guest can enter business category/goals and receive a limited preview; full results require signup.
+Become a Mentor banner promoting the Mentor–Mentee network.
+Separate Join as Creator and Join as Business acquisition banners.
+Guest browsing thresholds controlled by Admin; no fabricated stats. Public metrics display only when backed by real analytics.
+
+Figure 1 — Public Collaboration Landing Page design reference. Text/metrics shown in concept art are placeholders; production values are dynamic.
+2.2 Signed-in Creator Collaboration Hub
+Creator profile card with identity, specialties, location, platform links and selected creator metrics.
+Top status cards: Active Collaborations, Pending Invitations, Saved Matches, Completed Collaborations, Available Earnings.
+Persistent search + filters by category, location, budget, collaboration type, platform, audience and relevance.
+Recommended Matches for You with reason/explanation and Save/View/Request actions.
+Payout & Earnings panel with Available for Payout, Primary Payout, Secondary Payout and Payout Ready status.
+Business Requests list, Creator Collaboration Opportunities list, and Active Collaboration Pipeline.
+Become a Mentor banner visible based on eligibility and profile status.
+Navigation shortcuts: My Collaborations, Find Matches, Business Requests, Saved Matches, Messages, Contracts & Agreements, Payments, Analytics and Settings.
+
+Figure 2 — Signed-in creator Collaboration Hub design reference.
+2.3 Signed-in Business Collaboration Hub
+The business view uses the same domain services but prioritizes campaign creation, creator discovery, suggested collaborators, funding and spend.
+Business profile summary and verification status.
+Status cards: Active Collaborations, Draft Requests, Pending Responses/Review, Funded Value, Released Spend, Completed Collaborations.
+Primary CTAs: Create Collaboration / Post Request / Get Collaboration Suggestions.
+AI-assisted suggestion form: business type, campaign objective, geography, audience, budget, platforms, creator specialties, collaboration type and timeframe.
+Recommended creators and creator teams with Why This Match.
+Posted Business Requests and applicant management.
+Funding, contract, milestone and review dashboards for each active collaboration.
+Spend and fee reporting separated into funded, held, released, refunded and platform fee.
+2.4 Mentor–Mentee acquisition module
+Mentorship is an adjacent collaboration product and a deliberate creator-acquisition strategy. It should be visible on the public Collaboration landing page and inside authenticated collaboration workspaces.
+Public Mentor Landing: Become a Mentor, benefits, impact, eligibility and CTA.
+Mentor–Mentee Hub: Find a Mentor / Become a Mentor tabs; search by niche, country, experience, platform and availability.
+Mentee can request mentorship from an eligible mentor. Mentor can accept/decline and set boundaries/availability.
+Mentor eligibility should be Admin-configurable and can consider verified identity, account age, collaboration history, audience/engagement thresholds and moderation standing.
+Initial mentorship may be free/community-based. Paid mentoring must be a feature flag with separate terms, pricing, payments and tax treatment if later enabled.
+Mentorship must not be mixed into collaboration funding balances unless a paid mentoring product is explicitly enabled.
+
+Figure 3 — Experience family reference including public page, signed-in dashboard, business discovery and Mentor–Mentee concepts.
+MARKETPLACE
+3. Discovery, Search & Matching
+Preserve the useful concepts from the current page but make them first-class services.
+3.1 Search dimensions
+
+
+3.2 Match object
+A match is not only a score. It is a structured explanation object stored so the UI can say why two parties fit.
+party_a_id / party_b_id
+match_type: CREATOR_BUSINESS | CREATOR_CREATOR | CREATOR_TEAM | BUSINESS_CREATOR_TEAM
+match_score (0–100) and model/rules version
+specialty_alignment, audience_alignment, geography_alignment, platform_alignment, goal_alignment, budget_alignment
+reason_summary + structured reason codes
+eligibility blockers (e.g., payout route unavailable, age restriction, category restriction)
+generated_at, expires_at, saved_by, dismissed_by, converted_to_collaboration_id
+3.3 Business collaboration suggestions
+Businesses can explicitly ask Influrios who they should collaborate with. This feature should exist as a public acquisition tool and a richer authenticated workflow.
+Business enters industry/category and campaign goal.
+Optional: target country/audience, budget, platform and desired creator specialty.
+Guest receives a limited sample of 2–3 anonymized or partially revealed suggestions.
+Signup/verification unlocks full creator identities, match explanations, save/invite actions and collaboration creation.
+Signed-in business can save the brief as a reusable Campaign Intent and refresh suggestions as new creators become available.
+A suggestion can become an invitation, request, direct collaboration draft or multi-creator team proposal.
+COLLABORATION OBJECTS
+4. Opportunity & Request System
+Business Requests and Creator Collaboration Opportunities become structured marketplace objects.
+4.1 Business Request
+
+
+4.2 Creator Collaboration Opportunity
+Creators may publish that they are seeking complementary creators, suppliers, brands or categories without publishing private financial data.
+Creator looking for: creator specialty, business category or both.
+Purpose: co-create, event, product review, travel, content exchange, long-term partnership, mentorship crossover, etc.
+Location/remote preference and date availability.
+Optional compensation expectation or 'open to proposal'.
+Connect / Invite / Save actions.
+Moderation and anti-spam limits.
+4.3 Application and invitation states
+REQUESTED → VIEWED → RESPONDED → NEGOTIATING → ACCEPTED → COLLABORATION_DRAFTED, with DECLINED / EXPIRED / WITHDRAWN terminal alternatives. All transitions create timeline events.
+DEAL FORMATION
+5. Collaboration Creation & Contract Wizard
+The contract is created only after identity, route and commercial terms are coherent.
+5.1 Wizard sequence
+Parties: business, creator(s), agency if applicable.
+Scope: campaign objective, deliverables, content channels, usage/rights, revision limits.
+Commercial terms: gross value, currency, fee payer, expenses, taxes/withholding assumptions.
+Milestones: template selection or custom milestones if entitled.
+Payment readiness: verify funding method + each creator's valid payout route.
+Schedule: dates, review window, auto-approval rules, cancellation rules.
+Contract preview: exact immutable financial snapshot and legal terms.
+Party acceptance / e-sign step.
+Funding instruction.
+Activation only after required funding status is confirmed.
+5.2 Pre-contract gates
+
+
+CORE FINANCE
+6. Milestone System
+Milestones are product logic first, payment instructions second.
+6.1 Milestone templates controlled by Admin
+Admin-defined standard milestones are the default and are recommended. Business-custom milestones are allowed only when the business plan/entitlement enables them.
+
+
+6.2 Plan entitlement rules
+
+
+6.3 Milestone validation
+Percentages must sum to 100.0000% before funding.
+Admin sets minimum and maximum milestone percentage and maximum count.
+Currency amounts are derived from the contract amount with deterministic rounding; final milestone absorbs approved rounding remainder.
+Creator must approve any custom milestone schedule before contract acceptance.
+Once fully signed and funded, percentage/amount edits require a formal change order; never overwrite the original schedule.
+Each milestone stores gross allocation, creator allocation, platform fee allocation, provider references and release state.
+6.4 Milestone lifecycle
+DRAFT → FUNDED → ACTIVE → SUBMITTED → UNDER_REVIEW → APPROVED → RELEASE_AUTHORIZED → PROVIDER_RELEASE_REQUESTED → RELEASE_CONFIRMED → CREATOR_AVAILABLE.
+Exception states: REVISION_REQUESTED, DISPUTED, CANCELLED, REFUND_PENDING, REFUNDED, COMPLIANCE_HOLD, PAYMENT_ERROR.
+FINANCIAL SYSTEM
+7. Collaboration Finance Architecture
+Clean separation of company money, protected collaboration money and creator earnings.
+7.1 Financial domains
+
+
+
+
+7.2 Contract funding model
+Example: $10,000 collaboration, 7.5% platform fee, Standard 20/30/30/20 milestones.
+
+
+At funding, the full $10,000 belongs to the collaboration financial domain. Influrios Operations receives $0. The $750 is recorded as maximum allocated platform fee but remains unearned until milestones are approved.
+7.3 Release behavior
+When M1 is approved, the system authorizes two releases from the collaboration financial domain: $1,850 to the creator-connected financial destination and $150 of earned platform fee to Influrios Operations. The remaining $8,000 stays protected.
+Creator release and platform-fee release must be linked to the same milestone event but may have separate provider transaction references.
+If the provider cannot atomically release both legs, Influrios records a compound release transaction and reconciles both legs independently.
+A platform fee is not EARNED until the underlying milestone meets the contract release condition.
+Cancellation after partial completion releases/refunds only according to the immutable financial schedule and cancellation rules.
+7.4 Fee configuration
+Commission must be Admin-configurable and versioned. Never hard-code 7.5%.
+
+
+PAYMENTS
+8. Payment Orchestration & Provider Abstraction
+Airwallex may be primary, but Collaboration must remain gateway-independent.
+8.1 Provider adapter contract
+Implement a PaymentProviderAdapter interface. Collaboration domain calls business capabilities, never provider endpoints directly.
+
+
+8.2 Airwallex assumed integration model
+Current official Airwallex documentation supports connected accounts, multiple FundsSplit records on a payment, manual-release split funds, PSP-agnostic Holding Accounts, platform-fee splits, Global Accounts and multiple accounts for one legal entity. These capabilities make Airwallex a strong candidate for the primary implementation, but production behavior must be validated in sandbox and under Influrios' actual approved program.
+Preferred conceptual structure: Influrios Operations Account is separate from Collaboration Holding / protected marketplace flow.
+Creators are onboarded as connected accounts where the approved country/account model permits.
+A fully funded collaboration generates provider-side milestone allocations/references with manual release.
+Milestone approval in Influrios triggers provider release; provider webhooks confirm actual movement.
+Earned fee may be moved from Holding to the platform wallet/Operations according to the approved Airwallex program.
+Global Accounts are receiving rails, not substitutes for the internal separation between Operations and Collaboration.
+Do not assume any country/account/payout capability until the Airwallex program configuration confirms it.
+8.3 Mandatory Airwallex validation items
+Confirm multiple manual-release FundsSplit objects from one funded collaboration can target the same creator connected account when representing multiple milestones.
+Confirm the exact Holding Account / connected-account topology for collaboration funds while keeping Nueve/Influrios Operations separate.
+Confirm the cleanest way to keep platform fee allocations unearned/restricted until the corresponding milestone is approved.
+Confirm supported connected-account types by creator country: full, withdrawal, ledger, individual/business.
+Confirm Global Account availability and supported receiving currencies for target countries.
+Confirm payout destinations and FX capabilities by corridor.
+Confirm provider-level refund, chargeback, reserve and dispute behavior.
+Confirm whether regional payout providers can be used after release without routing creator money through Influrios Operations.
+8.4 Other providers
+Flutterwave, M-Pesa, Escrow.com, Adyen, Routefusion and future providers are adapters/rails, not core collaboration logic. Admin determines which capabilities are enabled by country and corridor.
+PAYOUTS
+9. Creator Payout Readiness
+Make international payment simple for the creator while keeping routing intelligence behind the scenes.
+9.1 Creator payout profile
+
+
+9.2 Creator-facing experience
+Creator chooses Primary and Secondary payout methods using user-friendly names such as M-Pesa, Local Bank or USD Bank; provider branding is optional and normally hidden.
+UI displays Global Payout Ready only when at least one valid route exists.
+Before collaboration acceptance, show expected payout currency and estimated fees/FX where determinable.
+At payout, show exact fee/FX quote before confirmation.
+If the primary route is unavailable, creator may select the verified secondary route subject to contract/currency rules.
+Payout Ready means the released creator balance is confirmed available for onward payout — not merely that a provider initiated a transfer.
+9.3 Payout status
+PENDING_EARNING → MILESTONE_RELEASED → PAYOUT_READY → PAYOUT_REQUESTED → PROCESSING → PAID, with FAILED / RETURNED / COMPLIANCE_HOLD exceptions.
+GLOBALIZATION
+10. Global Country & Corridor Engine
+The financial route must be known before money is accepted.
+10.1 Country Activation Matrix
+
+
+Per country/corridor store collection methods, currencies, KYC/KYB model, holding capability, supported creator account type, payout methods, FX, limits, fees, tax/withholding requirements, provider priority and fallback.
+10.2 Route decision
+Before contract funding, the Payment Route Engine evaluates:
+Business funding country and currency.
+Creator country and verified payout methods.
+Collaboration currency and amount.
+Protected-holding requirement.
+Creator connected-account eligibility.
+Available pay-in, hold, FX and payout providers.
+Country/legal status and provider program status.
+Limits, fees and expected settlement time.
+Fallback route if primary provider becomes unavailable.
+ADMINISTRATION
+11. Admin Collaboration Control Plane
+Every variable likely to change must be configurable and versioned.
+11.1 Admin navigation
+
+
+11.2 Financial account configuration
+Admin must not accept arbitrary bank credentials from ordinary staff. Sensitive provider/account configuration belongs behind restricted RBAC and encrypted secrets.
+Define logical account purpose: OPERATIONS, COLLABORATION_HOLDING, PLATFORM_FEE_CLEARING, REFUND_RESERVE, REGIONAL_SETTLEMENT.
+Associate provider account/wallet IDs by environment and currency.
+Set allowed inbound/outbound transaction types.
+Prevent any operation that routes creator/protected funds into OPERATIONS except an earned fee transfer event.
+Require dual approval for manual financial overrides above Admin-configurable thresholds.
+Every configuration change is versioned and audit-logged.
+RISK CONTROLS
+12. Contracts, Reviews, Disputes & Changes
+Commercial state and money state must stay synchronized.
+12.1 Review / auto-approval
+Each milestone has an agreed review window. The business may approve, request a permitted revision, or open a dispute with a structured reason. If no action occurs by the deadline and the contract enables auto-approval, Influrios automatically authorizes release.
+Admin default review window; higher business plans may propose custom window if entitled.
+Revision count and allowed scope are contract fields.
+Auto-approval scheduler must be idempotent and suppress release when a dispute/compliance hold exists.
+All approvals/rejections record actor, timestamp, evidence and contract version.
+12.2 Change order
+After signature/funding, milestone amount or scope changes require a new versioned Change Order. A change order may require additional funding, partial refund or reallocation. Never mutate the original contract schedule silently.
+12.3 Disputes
+Opening a dispute freezes only the affected milestone amount unless rules require a broader hold.
+Evidence supports file/message references, timestamps and deliverable versions.
+Admin/approved resolver may decide release-to-creator, refund-to-business, split allocation or negotiated settlement.
+Provider instructions are generated only after the dispute decision is committed.
+Legal/compliance holds supersede ordinary auto-release.
+ENGINEERING
+13. Data Model
+Suggested canonical entities. Names may change, semantics may not.
+
+
+13.1 Financial snapshot fields
+collaboration_financial_plan should include:
+contract_currency, gross_contract_value, fee_rule_id/version, fee_method/rate, total_platform_fee, total_creator_compensation
+fee_payer, provider_route_version, funding_country, creator_country, payout_currency
+created_at, locked_at, contract_version, rounding_policy
+milestone allocations with gross_amount, creator_amount, platform_fee_amount and percentage
+ENGINEERING
+14. Events, Webhooks & Idempotency
+Financial correctness depends on event discipline.
+14.1 Event-driven model
+Provider webhooks update external facts; they must never directly advance commercial milestones without Collaboration Engine validation.
+
+
+14.2 Idempotency rules
+Every provider command uses a stable idempotency key derived from internal transaction ID.
+Webhook event IDs are persisted; duplicate events are acknowledged but not re-applied.
+A release cannot execute twice even if Admin/user/API retries.
+Provider status is reconciled periodically against internal expected state.
+Any divergence creates a reconciliation exception, not an automatic money movement.
+EXPERIENCE
+15. Notifications & Messaging
+Keep all parties aware of contractual and financial state.
+
+
+MONETIZATION
+16. Plans & Entitlements
+Commercial packaging controls advanced collaboration capability without forking code.
+
+
+Do not hard-code plan names. Plans are Admin bundles of entitlements and numeric limits.
+CONTROLS
+17. Security, Audit & Financial Controls
+The collaboration system handles high-value, cross-border transactions and must be treated as a financial-grade workflow.
+RBAC separates ordinary support, collaboration operations, finance operations, dispute resolution, legal/compliance and super-admin.
+No API secret or full bank/payout credential is stored/displayed in plaintext.
+Sensitive payout data is tokenized/provider-referenced where possible.
+Manual release/refund overrides above threshold require dual approval.
+Every money-affecting action includes actor, reason, source IP/session, before/after state and external reference.
+High-risk changes (commission rule, account mapping, corridor activation, provider credentials) require elevated permission and audit event.
+Creator and business account suspension immediately blocks new contract/funding actions; existing funds follow compliance/provider/legal handling rules.
+Provider health monitoring can disable new funding while allowing safe completion/refund of existing deals.
+ANALYTICS
+18. Analytics & Reporting
+Measure marketplace health, financial integrity and product adoption.
+
+
+MIGRATION
+19. Migration from Existing Collaboration Page
+Preserve valuable discovery behavior; replace fragile implementation.
+The existing page contains useful product concepts that must remain visible in the new system:
+Popular Collaboration Matches/category cards.
+Filter Matches / search options.
+Recommended Match with Why This Match.
+Business Requests / create-request concept.
+Creator Collaboration Opportunities.
+Creator↔business and creator↔creator collaboration types.
+Join as Creator / Join as Business acquisition pathways.
+Migration rule: existing saved matches, invitations/requests and collaboration records should be mapped into the new canonical entities where data quality permits. Do not maintain two parallel collaboration engines.
+Inventory current collaboration tables/endpoints/UI actions.
+Map each current object to new domain entity or deprecate it.
+Create migration scripts with dry-run reports.
+Introduce new Collaboration services behind feature flags.
+Migrate read paths, then write paths.
+Freeze legacy writes.
+Run reconciliation and user-visible regression tests.
+Remove deprecated endpoints only after production verification.
+DELIVERY
+20. Implementation Phases
+Build vertically so every phase leaves a coherent product.
+
+
+QA
+21. Acceptance Criteria & Golden Invariants
+Dev AI must demonstrate these before the system is considered complete.
+Public Collaboration landing can be used without login and exposes category cards, search, business requests, creator opportunities, collaboration suggestions CTA and mentor banner.
+Creator and business authenticated dashboards are role-aware and use the same canonical Collaboration backend.
+Business can create a request and/or ask for collaboration suggestions.
+Admin can define standard milestone templates without code changes.
+A business plan can allow standard-only or custom milestones through entitlements.
+Custom milestone percentages cannot proceed unless total = 100% and creator accepts them.
+Admin can change commission rules for future deals without altering existing deal snapshots.
+A funded collaboration records $0 as available Influrios Operations cash until a milestone earns a platform fee.
+Creator money never enters the Operations account.
+Each milestone can independently release creator amount and earned platform fee and retain remaining protected funds.
+Creator can configure Primary and Secondary payout destinations; status and compatibility are stored separately.
+Contract cannot be funded without a ROUTE_READY result.
+Provider webhooks are idempotent and do not double-release money.
+Cancellation after partial completion calculates creator earnings, earned fee and refundable balance correctly.
+A dispute freezes the affected milestone and blocks auto-release.
+Admin can suspend a country/provider route without code deployment.
+Airwallex-specific code exists only inside provider implementation/adapters, not domain rules.
+All financial actions are fully auditable and reconcilable.
+EXTERNAL DEPENDENCY
+22. Provider Validation Reference
+Current Airwallex features used as design assumptions. Validate contract/program specifics before production.
+
+
+Important: these references describe public product capabilities as of October 2026. The approved Influrios account structure, supported creator countries, wallet/account types, fee behavior, payout destinations and regulatory responsibilities must be confirmed with Airwallex during onboarding and sandbox validation. If Airwallex cannot satisfy a corridor, the provider-agnostic design allows a different adapter without rewriting Collaboration domain logic.
+22.1 Final Dev AI instruction
+

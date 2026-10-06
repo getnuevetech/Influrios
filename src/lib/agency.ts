@@ -4,8 +4,8 @@
  */
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
+import { directoryHasCreator } from "@/lib/directory";
 import { productSwitch } from "@/lib/product-switches";
-import { getCreatorBySlug, SEED_CREATORS } from "@/lib/seed-data";
 
 export type RosterMember = {
   creatorSlug: string;
@@ -103,7 +103,7 @@ const DEFAULT_STORE: AgencyStore = {
     {
       id: "portfolio_demo_1",
       title: "Clean beauty × texture care",
-      tagline: "Complementary creators, one brand story",
+      tagline: "Complementary influencers, one brand story",
       leftSlug: "sofia-martinez",
       rightSlug: "amara-okonkwo",
       specialty: "beauty",
@@ -264,11 +264,11 @@ export async function addRosterMember(input: {
   notes?: string;
 }) {
   const store = await ensureStore();
-  if (!getCreatorBySlug(input.creatorSlug) && !SEED_CREATORS.some((c) => c.slug === input.creatorSlug)) {
+  if (!(await directoryHasCreator(input.creatorSlug))) {
     throw new Error("Unknown creator");
   }
   if (store.roster.some((r) => r.creatorSlug === input.creatorSlug)) {
-    throw new Error("Creator already on roster");
+    throw new Error("Influencer already on roster");
   }
   await prisma.agencyRosterMember.create({
     data: {
@@ -352,7 +352,7 @@ export async function createJointPortfolio(input: {
   published?: boolean;
 }) {
   await ensureWorkspace();
-  if (input.leftSlug === input.rightSlug) throw new Error("Pick two different creators");
+  if (input.leftSlug === input.rightSlug) throw new Error("Pick two different influencers");
   const ts = now();
   const portfolio: JointPortfolio = {
     id: `portfolio_${randomBytes(4).toString("hex")}`,
@@ -374,7 +374,7 @@ export async function createJointPortfolio(input: {
     updatedAt: ts,
   };
   if (!portfolio.title || !portfolio.leftSlug || !portfolio.rightSlug) {
-    throw new Error("Title and both creators required");
+    throw new Error("Title and both influencers required");
   }
   await prisma.agencyPortfolio.create({
     data: {
@@ -409,17 +409,11 @@ export async function listAgencySeats() {
   return prisma.agencySeat.findMany({ where: { workspaceId: WORKSPACE_ID }, orderBy: { createdAt: "asc" } });
 }
 
+/** @deprecated Prefer inviteAgencySeat — kept for switch-off refusal tests and admin redirect. */
 export async function addAgencySeat(input: { email: string; role?: string }) {
-  if (!(await productSwitch("agency_seats"))) throw new Error("Agency seats are turned off.");
-  const email = input.email.trim().toLowerCase().slice(0, 160);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a seat email.");
-  const role = input.role === "owner" || input.role === "manager" ? input.role : "member";
-  await ensureWorkspace();
-  await prisma.agencySeat.upsert({
-    where: { workspaceId_email: { workspaceId: WORKSPACE_ID, email } },
-    update: { role, active: true },
-    create: { workspaceId: WORKSPACE_ID, email, role, active: true },
-  });
+  const { inviteAgencySeat } = await import("@/lib/agency-seats");
+  const result = await inviteAgencySeat(input);
+  return result.seat;
 }
 
 export async function setAgencySeatActive(email: string, active: boolean) {
