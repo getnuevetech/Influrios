@@ -291,7 +291,6 @@ sudo apt-get install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d influrios.com -d www.influrios.com
 ```
 
-<<<<<<< HEAD
 If the cert was **issued** but install failed (`matching server block`):
 
 ```bash
@@ -300,11 +299,7 @@ sudo certbot install --cert-name influrios.com --nginx
 ```
 
 5. Set `NEXT_PUBLIC_APP_URL=https://influrios.com` in `.env` → `bash deploy/scripts/deploy.sh`  
-6. `curl -I https://influrios.com`
-=======
-5. Set `NEXT_PUBLIC_APP_URL=https://your-domain.com` in `.env` → `bash deploy/scripts/deploy.sh`  
-6. Confirm `curl -fsS https://your-domain.com/api/health` returns `"ok": true`
->>>>>>> origin/main
+6. Confirm `curl -fsS https://influrios.com/api/health` returns `"ok": true` and `curl -I https://influrios.com` is HTTPS.
 
 ---
 

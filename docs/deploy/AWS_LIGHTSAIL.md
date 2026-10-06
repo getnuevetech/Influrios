@@ -196,10 +196,9 @@ sudo certbot install --cert-name influrios.com --nginx
 
 ```bash
 bash deploy/scripts/deploy.sh
-curl -fsS https://your-domain.com/api/health
+curl -fsS https://influrios.com/api/health
 ```
 
-<<<<<<< HEAD
 6. Confirm:
 
 ```bash
@@ -207,9 +206,7 @@ curl -I https://influrios.com
 curl -I http://influrios.com   # should redirect to https after certbot
 ```
 
-=======
 Stripe, social callbacks, and marketplace webhooks must use the same https origin.
->>>>>>> origin/main
 ---
 
 ## E. Ongoing deploy (after first setup)
