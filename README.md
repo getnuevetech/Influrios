@@ -38,7 +38,7 @@ bash deploy/scripts/deploy.sh            # docker compose up --build
 
 ## Docs
 
-- **[Engineering review (2026-10-06)](./docs/ENGINEERING_REVIEW_2026-10-06.md)** — **what to build next** (entitlements, sweep clock, secrets, CI)
+- **[Engineering review (2026-10-06)](./docs/ENGINEERING_REVIEW_2026-10-06.md)** — **what to build next** (admin demo removal, sweep clock, recurring funding, Airwallex, team proposals, Meilisearch, e-sign, Phase M)
 - **[Development state & next plan](./docs/DEVELOPMENT_STATE_AND_NEXT_PLAN.md)** — feature-phase log (Phases J–O)
 - **[Collaboration OS plan](./docs/collaboration/COLLABORATION_OS_PLAN.md)** — marketplace + hubs + finance recommendations (approved designs)
 - [Implementation plan](./docs/IMPLEMENTATION_PLAN.md) — Phases A–I + 12.x log; §3 gap matrix is **historical**

@@ -7,7 +7,7 @@
 
 **Money / ledger invariants remain absolute** (Development Spec addendum PA001–PA007; Collab OS §1.3). This plan is the feature-status record. Production gaps found after this baseline (sweep clock, demo-workspace entitlements, secret fallbacks, CI typecheck) are sequenced in [`ENGINEERING_REVIEW_2026-10-06.md`](./ENGINEERING_REVIEW_2026-10-06.md).
 
-**Progress:** W1–W6 and P4–P8 **code exits are DONE**. Remaining items are **Deferred-external** only (ops/live/product/Phase 4). No silent PARTIAL on completed Exits.
+**Progress:** W1–W6 and P4–P8 **code exits are DONE**. Work that was left unfinished — admin demo consoles, recurring cycles, Airwallex, team proposals, Meilisearch, e-sign, and Phase M evidence — is specified as complete slices in [`ENGINEERING_REVIEW_2026-10-06.md`](./ENGINEERING_REVIEW_2026-10-06.md). A partial or demo path is not an exit.
 
 ---
 
