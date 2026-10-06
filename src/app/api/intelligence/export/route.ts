@@ -8,8 +8,7 @@ import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 
 /**
- * Phase 5 export API — JSON or CSV audience / trend / signal payload.
- * Gated by demo Business Pro / Agency intelligence entitlement.
+ * Intelligence export. The viewer's owned workspace plan is the gate.
  */
 export async function GET(req: NextRequest) {
   const account = await getAccountSession();
@@ -19,7 +18,7 @@ export async function GET(req: NextRequest) {
       { status: 401 },
     );
   }
-  const ws = await getWorkspace();
+  const ws = await getWorkspace(account.id);
   const entitlements = getBusinessEntitlements(ws.plan);
 
   if (!entitlements.intelligence || !entitlements.exports) {

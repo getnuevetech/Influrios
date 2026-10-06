@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import {
@@ -19,9 +20,10 @@ const SIGNAL_COLOR: Record<string, string> = {
 };
 
 export default async function BusinessIntelligencePage() {
-  const ws = await getWorkspace();
+  const account = await getAccountSession();
+  const ws = await getWorkspace(account?.id);
   const entitlements = getBusinessEntitlements(ws.plan);
-  const locked = !entitlements.intelligence;
+  const locked = !account || !entitlements.intelligence;
 
   const snapshots = locked ? [] : (await getAllAudienceSnapshots()).slice(0, 6);
   const trends = locked ? [] : await getNicheTrends();
@@ -63,9 +65,8 @@ export default async function BusinessIntelligencePage() {
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted">
-                Demo data — demographics labeled{" "}
-                <span className="font-semibold text-indigo">demo_seed / claimed_metrics</span>. Not
-                live social API sync.
+                Figures come from published directory profiles and recorded collaboration activity for{" "}
+                <span className="font-semibold text-indigo">{ws.name || "your workspace"}</span>.
               </p>
               <div className="flex flex-wrap gap-2">
                 <a

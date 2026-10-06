@@ -40,13 +40,15 @@ export const HTTP_SMOKE_ROUTES: SmokeRoute[] = [
   },
 ];
 
-export function smokeBaseUrl(env: NodeJS.ProcessEnv = process.env): string | null {
+type SmokeEnv = { SMOKE_BASE_URL?: string; SMOKE_LIVE?: string; [key: string]: string | undefined };
+
+export function smokeBaseUrl(env: SmokeEnv = process.env): string | null {
   const raw = String(env.SMOKE_BASE_URL || "").trim();
   if (!raw) return null;
   return raw.replace(/\/$/, "");
 }
 
-export function smokeLiveEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+export function smokeLiveEnabled(env: SmokeEnv = process.env): boolean {
   return Boolean(smokeBaseUrl(env) && (env.SMOKE_LIVE === "1" || env.SMOKE_LIVE === "true"));
 }
 

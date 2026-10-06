@@ -8,6 +8,7 @@ import {
   requestChangeOrder,
   requestFundingRevision,
   requestPrefund,
+  stopRecurringSeries,
   submitFundingMilestone,
 } from "@/lib/marketplace-ledger";
 import { requireFundableServiceLevel } from "@/lib/matching-product-boundary";
@@ -117,6 +118,32 @@ export async function actionAddEvidence(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/admin/trust");
   redirect("/payments?evidence=1");
+}
+
+export async function actionStopSeries(formData: FormData) {
+  const result = await stopRecurringSeries(String(formData.get("scheduleId") ?? ""));
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/payments");
+  redirect("/payments?stopped=1");
+}
+
+export async function actionConvertAmbassador(formData: FormData) {
+  const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
+  const result = await requestPrefund({
+    businessName: String(formData.get("businessName") ?? ""),
+    creatorSlug: String(formData.get("creatorSlug") ?? ""),
+    title: `${String(formData.get("title") ?? "Ambassador").replace(/ · \d+ of \d+$/, "")} ambassador`,
+    jurisdictionCode: String(formData.get("jurisdictionCode") ?? "US"),
+    grossCents,
+    serviceLevel: String(formData.get("serviceLevel") ?? ""),
+    scheduleKind: "recurring",
+    occurrenceCount: Number(formData.get("occurrenceCount") ?? 2),
+    repeatOfId: String(formData.get("fundingId") ?? ""),
+    workspaceId: String(formData.get("workspaceId") ?? "") || null,
+  });
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/payments");
+  redirect("/payments?ambassador=1");
 }
 
 export async function actionOpenDispute(formData: FormData) {

@@ -333,10 +333,11 @@ sudo certbot install --cert-name influrios.com --nginx
 6. git clone → /var/www/influrios
 7. bash deploy/scripts/setup-lightsail.sh   # Docker + Nginx (Compose runs the app)
 8. newgrp docker
-9. `.env` with `POSTGRES_*`, `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_SESSION_SECRET`, `ADMIN_SUPER_EMAIL`, `ADMIN_SUPER_PASSWORD`
+9. `.env` with `POSTGRES_*`, `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_SESSION_SECRET`, `CRON_SECRET`, `ADMIN_SUPER_EMAIL`, `ADMIN_SUPER_PASSWORD`
 10. `bash deploy/scripts/db-up.sh && bash deploy/scripts/deploy.sh`
 11. DNS + certbot → set `NEXT_PUBLIC_APP_URL=https://…` → redeploy
-12. `curl -fsS https://your-domain.com/api/health`
+12. `curl -fsS https://your-domain.com/api/health` (`secrets.authConfigured` is true)
+13. Crontab every 5 minutes: `CRON_SECRET=... APP_URL=https://your-domain /var/www/influrios/deploy/scripts/sweep-cron.sh`
 
 Admin login uses Postgres (`AdminUser`); volumes: `influrios_uploads` required for banners, `influrios_data` only for remaining JSON demos.
 ```

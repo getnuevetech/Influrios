@@ -251,7 +251,7 @@ export async function getFundingTransactionView(
       actor: row.actor,
       action: row.action,
       objectType: row.objectType,
-      objectId: row.objectId,
+      objectId: row.objectId ?? "",
       createdAt: row.createdAt.toISOString(),
     })),
   };

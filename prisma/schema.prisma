@@ -1463,11 +1463,13 @@ model CollaborationFunding {
   attributionExpiresAt DateTime?
   scheduleId        String?
   scheduleKind      String   @default("once")
-  /// Product Addendum §7 mode: FULL | STAGED | NONE (recurring deferred as schedule kind only).
+  /// FULL | STAGED | RECURRING | NONE. Recurring series use scheduleKind=recurring.
   fundingMode       String   @default("FULL")
   trancheIndex      Int      @default(1)
   trancheCount      Int      @default(1)
   intervalDays      Int      @default(0)
+  /// When true, the sweep does not open another tranche for this schedule.
+  seriesStopped     Boolean  @default(false)
   repeatOfId        String?
   repeatOf          CollaborationFunding?  @relation("FundingRepeat", fields: [repeatOfId], references: [id], onDelete: SetNull)
   repeats           CollaborationFunding[] @relation("FundingRepeat")
@@ -1762,4 +1764,30 @@ model AdminUser {
   updatedAt    DateTime  @updatedAt
 
   @@index([roleId])
+}
+
+/// Multi-creator proposal. All members must accept before a contract opens.
+model TeamProposal {
+  id          String               @id @default(cuid())
+  workspaceId String
+  title       String
+  status      String               @default("sent")
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  members     TeamProposalMember[]
+
+  @@index([workspaceId, status])
+}
+
+model TeamProposalMember {
+  id          String       @id @default(cuid())
+  proposalId  String
+  proposal    TeamProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  creatorSlug String
+  status      String       @default("invited")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([proposalId, creatorSlug])
+  @@index([creatorSlug, status])
 }

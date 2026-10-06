@@ -47,8 +47,20 @@ export type BusinessWorkspace = {
 
 const WORKSPACE_ID = "demo-business";
 
-/** Stable demo business workspace id used by seeds and unauthenticated paths. */
+/** Seed workspace for fixtures. Signed-in product paths use the owner's workspace. */
 export const DEMO_BUSINESS_WORKSPACE_ID = WORKSPACE_ID;
+
+/** Logged-out readers get a free workspace that is not stored and is not Business Pro. */
+export const PUBLIC_BUSINESS_WORKSPACE: BusinessWorkspace = {
+  businessId: "public",
+  ownerUserId: null,
+  name: "",
+  plan: "BUSINESS_FREE",
+  industry: "",
+  shortlist: [],
+  briefs: [],
+  inquiries: [],
+};
 
 const BRIEF_STATUSES = ["draft", "active", "closed"] as const;
 const INQUIRY_STATUSES = ["sent", "replied", "declined"] as const;
@@ -174,12 +186,18 @@ async function readWorkspace(workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
 }
 
 /**
- * Resolve the business workspace for a signed-in user (creates + upserts BusinessProfile),
- * or the demo seed workspace when no userId is provided.
+ * Signed-in users get their owned workspace. Logged-out callers get a free public
+ * workspace and do not read or create the demo Business Pro seed.
  */
 export async function getWorkspace(userId?: string | null): Promise<BusinessWorkspace> {
   const id = userId?.trim();
-  if (id) return ensureOwnedBusinessWorkspace(id);
+  if (!id) return PUBLIC_BUSINESS_WORKSPACE;
+  return ensureOwnedBusinessWorkspace(id);
+}
+
+/** Fixture helper. Product pages use getWorkspace(userId). */
+export async function ensureDemoBusinessWorkspace() {
+  await ensureDemoWorkspace();
   return readWorkspace(DEMO_BUSINESS_WORKSPACE_ID);
 }
 

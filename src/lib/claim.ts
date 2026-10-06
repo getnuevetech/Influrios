@@ -3,6 +3,7 @@
  * Draft → claim → verify → publish. OnboardingSession in Postgres is authoritative.
  */
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { requireAuthSecret } from "@/lib/app-secret";
 import { decideCount, isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { prisma } from "@/lib/db";
@@ -129,7 +130,9 @@ const PLATFORMS = new Set([
 ]);
 
 function secret() {
-  return process.env.CREATOR_SESSION_SECRET || process.env.ADMIN_SESSION_SECRET || "influrios-creator-demo";
+  const dedicated = process.env.CREATOR_SESSION_SECRET?.trim();
+  if (dedicated) return dedicated;
+  return requireAuthSecret("admin");
 }
 
 function sign(payload: string) {

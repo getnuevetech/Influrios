@@ -8,7 +8,6 @@ import {
   listBillingPriceIds,
 } from "@/lib/billing";
 import { stripeBillingMode } from "@/lib/stripe-admin";
-import { getWorkspace } from "@/lib/business";
 import { productSwitch } from "@/lib/product-switches";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +20,6 @@ export default async function AdminBillingPage({ searchParams }: Props) {
   const canEdit = hasPermission(session, "gateways.edit");
   const params = await searchParams;
   const store = await getBillingStore();
-  const ws = await getWorkspace();
   const [demoOn, portalOn, prices, stripeMode] = await Promise.all([
     productSwitch("demo_checkout"),
     productSwitch("customer_portal"),
@@ -148,7 +146,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
             Webhook endpoint: <code className="text-indigo">/api/billing/webhook</code>
           </li>
           <li>
-            Business workspace plan: <span className="font-semibold text-indigo">{ws.plan}</span>
+            Member plans change when Stripe confirms checkout. This console does not read a shared demo workspace.
           </li>
           {store.lastWebhookAt ? (
             <li>Last webhook: {new Date(store.lastWebhookAt).toLocaleString()}</li>

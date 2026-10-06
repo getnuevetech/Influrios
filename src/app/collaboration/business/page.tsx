@@ -131,6 +131,9 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             <a href="#suggestions" className="btn-secondary !py-2 text-sm">
               Get Suggestions
             </a>
+            <Link href="/collaboration/team" className="btn-secondary !py-2 text-sm">
+              Team proposal
+            </Link>
             <Link href="/collaboration/contract" className="btn-secondary !py-2 text-sm">
               Start Contract
             </Link>

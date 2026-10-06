@@ -24,12 +24,9 @@ const nextConfig: NextConfig = {
     staticGenerationMaxConcurrency: 1,
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
-    ],
+    // Creator and CMS media are served from this app. Remote optimization is off
+    // so the image route cannot fetch arbitrary hosts.
+    remotePatterns: [],
   },
 };
 

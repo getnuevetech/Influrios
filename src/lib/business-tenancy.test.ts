@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { prisma } from "./db";
 import {
   DEMO_BUSINESS_WORKSPACE_ID,
+  PUBLIC_BUSINESS_WORKSPACE,
   ensureOwnedBusinessWorkspace,
   getWorkspace,
 } from "./business";
@@ -109,9 +110,10 @@ describe("business workspace tenancy (W2.3)", () => {
     await prisma.user.deleteMany({ where: { id: { in: [userA.id, userB.id] } } });
   });
 
-  it("demo getWorkspace stays on demo-business without a user", async (t) => {
-    if (!(await requireDb(t))) return;
+  it("logged-out getWorkspace is the free public workspace", async () => {
     const demo = await getWorkspace();
-    assert.equal(demo.businessId, DEMO_BUSINESS_WORKSPACE_ID);
+    assert.equal(demo.businessId, PUBLIC_BUSINESS_WORKSPACE.businessId);
+    assert.equal(demo.plan, "BUSINESS_FREE");
+    assert.notEqual(demo.businessId, DEMO_BUSINESS_WORKSPACE_ID);
   });
 });

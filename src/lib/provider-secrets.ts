@@ -1,11 +1,8 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypto";
+import { requireAuthSecret } from "@/lib/app-secret";
 
 function secretKey() {
-  const secret =
-    process.env.AUTH_SECRET ||
-    process.env.ADMIN_SESSION_SECRET ||
-    "influrios-dev-admin-secret-change-me";
-  return scryptSync(secret, "influrios-provider-secrets", 32);
+  return scryptSync(requireAuthSecret("provider"), "influrios-provider-secrets", 32);
 }
 
 /** AES-GCM ciphertext. The admin UI never receives the plaintext back. */

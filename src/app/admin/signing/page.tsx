@@ -45,9 +45,9 @@ export default async function AdminSigningPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Document signing</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        Admin shell only. E-sign provider success is a non-goal until counsel approves a provider. The contract
-        wizard stays accept-only and must not claim that a signature provider completed. Credentials saved here are
-        for future wiring — queued requests do not prove legal execution.
+        DocuSign sends the envelope. A request stays queued or sent until the verified Connect webhook at
+        /api/signing/webhook marks it completed, declined, or voided. Replaying the same event does not change it
+        again. This page cannot mark a request completed.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}

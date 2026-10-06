@@ -96,19 +96,19 @@ describe("guest suggestion sample (Collab OS §3.3)", () => {
         slug: "amara-okonkwo",
         displayName: "Amara Okonkwo",
         specialties: ["beauty"],
-        socials: [{ platform: "INSTAGRAM", handle: "@a", followers: 50_000 }],
+        socials: [{ platform: "INSTAGRAM", handle: "@a", url: "https://example.com/a", followers: 50_000 }],
       }),
       fakeCreator({
         slug: "jordan-lee",
         displayName: "Jordan Lee",
         specialties: ["tech"],
-        socials: [{ platform: "YOUTUBE", handle: "@j", followers: 8_000 }],
+        socials: [{ platform: "YOUTUBE", handle: "@j", url: "https://example.com/j", followers: 8_000 }],
       }),
       fakeCreator({
         slug: "priya-shah",
         displayName: "Priya Shah",
         specialties: ["beauty"],
-        socials: [{ platform: "INSTAGRAM", handle: "@p", followers: 22_000 }],
+        socials: [{ platform: "INSTAGRAM", handle: "@p", url: "https://example.com/p", followers: 22_000 }],
       }),
     ];
     const brief = buildGuestSuggestionBrief({ specialty: "beauty", platform: "INSTAGRAM" });

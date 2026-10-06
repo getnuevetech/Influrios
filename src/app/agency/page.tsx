@@ -44,10 +44,10 @@ const CAMP_COLOR: Record<string, string> = {
 
 export default async function AgencyPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [ws, seatsOn, access] = await Promise.all([
-    getWorkspace(),
+  const access = await resolveAgencyAccess();
+  const [ws, seatsOn] = await Promise.all([
+    getWorkspace(access.ok ? access.account?.id : null),
     productSwitch("agency_seats"),
-    resolveAgencyAccess(),
   ]);
   const entitlements = getBusinessEntitlements(ws.plan);
   const unlocked = seatsOn ? access.ok : entitlements.agencyWorkspace;

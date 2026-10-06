@@ -1,0 +1,114 @@
+import { createHmac, timingSafeEqual } from "crypto";
+
+export type AirwallexSplit = { milestoneId: string; amountCents: number; connectedAccountId: string };
+
+export type AirwallexFundingRequest = {
+  fundingId: string;
+  amountCents: number;
+  currency: string;
+  holdingAccountId: string;
+  splits: AirwallexSplit[];
+};
+
+export function verifyAirwallexSignature(body: string, signature: string | null, secret: string): boolean {
+  if (!signature || !secret) return false;
+  const digest = createHmac("sha256", secret).update(body).digest("hex");
+  const presented = Buffer.from(signature);
+  const expected = Buffer.from(digest);
+  if (presented.length !== expected.length) return false;
+  return timingSafeEqual(presented, expected);
+}
+
+/**
+ * Maps an Airwallex payment event onto the marketplace ledger event vocabulary.
+ * Domain code never sees Airwallex types; the webhook route calls this then applyMarketplaceEvent.
+ */
+export function parseAirwallexWebhook(body: string):
+  | {
+      ok: true;
+      eventId: string;
+      eventType: "funding.held" | "payout.released" | "payout.refunded";
+      fundingId: string;
+      amountCents: number;
+      milestoneId?: string;
+    }
+  | { ok: false; error: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { ok: false, error: "Invalid JSON." };
+  }
+  if (!parsed || typeof parsed !== "object") return { ok: false, error: "Invalid payload." };
+  const record = parsed as {
+    id?: unknown;
+    name?: unknown;
+    data?: { object?: { id?: unknown; amount?: unknown; metadata?: { fundingId?: unknown; milestoneId?: unknown } } };
+  };
+  const name = String(record.name ?? "");
+  const eventType =
+    name === "payment_intent.succeeded"
+      ? "funding.held"
+      : name === "funds_split.released"
+        ? "payout.released"
+        : name === "payment_intent.refunded"
+          ? "payout.refunded"
+          : null;
+  const fundingId = record.data?.object?.metadata?.fundingId;
+  const amount = record.data?.object?.amount;
+  if (!eventType || typeof fundingId !== "string" || typeof record.id !== "string") {
+    return { ok: false, error: "Airwallex event is missing a funding id." };
+  }
+  const amountCents = typeof amount === "number" ? Math.round(amount) : Number(amount);
+  if (!Number.isInteger(amountCents) || amountCents < 0) return { ok: false, error: "Amount is invalid." };
+  const milestoneId = record.data?.object?.metadata?.milestoneId;
+  return {
+    ok: true,
+    eventId: record.id,
+    eventType,
+    fundingId,
+    amountCents,
+    milestoneId: typeof milestoneId === "string" ? milestoneId : undefined,
+  };
+}
+
+export async function createAirwallexFunding(input: {
+  baseUrl: string;
+  token: string;
+  request: AirwallexFundingRequest;
+  fetchImpl?: typeof fetch;
+}): Promise<{ ok: true; paymentId: string; splitIds: string[] } | { ok: false; error: string }> {
+  if (!input.request.holdingAccountId) return { ok: false, error: "Holding account id is required." };
+  if (input.request.splits.length < 1) return { ok: false, error: "Each milestone needs a FundsSplit." };
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const response = await fetchImpl(`${input.baseUrl.replace(/\/$/, "")}/api/v1/pa/payment_intents/create`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${input.token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      request_id: input.request.fundingId,
+      amount: input.request.amountCents,
+      currency: input.request.currency,
+      merchant_order_id: input.request.fundingId,
+      metadata: { fundingId: input.request.fundingId, holdingAccountId: input.request.holdingAccountId },
+      funds_split: input.request.splits.map((split) => ({
+        destination: split.connectedAccountId,
+        amount: split.amountCents,
+        metadata: { fundingId: input.request.fundingId, milestoneId: split.milestoneId },
+      })),
+    }),
+  });
+  const text = await response.text();
+  if (!response.ok) return { ok: false, error: text.slice(0, 300) || "Airwallex did not create a payment." };
+  let payload: { id?: string; funds_split?: { id?: string }[] };
+  try {
+    payload = JSON.parse(text) as { id?: string; funds_split?: { id?: string }[] };
+  } catch {
+    return { ok: false, error: "Airwallex returned an unreadable payment." };
+  }
+  if (!payload.id) return { ok: false, error: "Airwallex did not return a payment id." };
+  return {
+    ok: true,
+    paymentId: payload.id,
+    splitIds: (payload.funds_split ?? []).map((split) => split.id).filter((id): id is string => Boolean(id)),
+  };
+}
