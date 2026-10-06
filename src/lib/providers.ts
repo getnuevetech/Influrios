@@ -79,6 +79,7 @@ export type GatewayRemovalImpact = {
 type ProviderExtra = {
   model?: string;
   isDefaultBackup?: boolean;
+  lastWebhookAt?: string;
 };
 
 function readProviderExtra(extraJson: unknown): ProviderExtra {
@@ -87,6 +88,7 @@ function readProviderExtra(extraJson: unknown): ProviderExtra {
   return {
     model: typeof raw.model === "string" ? raw.model : undefined,
     isDefaultBackup: raw.isDefaultBackup === true,
+    lastWebhookAt: typeof raw.lastWebhookAt === "string" ? raw.lastWebhookAt : undefined,
   };
 }
 
@@ -95,7 +97,7 @@ function writeProviderExtra(existing: unknown, patch: ProviderExtra): ProviderEx
   const next: ProviderExtra = { ...current, ...patch };
   if (patch.model === "") delete next.model;
   if (patch.isDefaultBackup === false) delete next.isDefaultBackup;
-  if (!next.model && !next.isDefaultBackup) return undefined;
+  if (!next.model && !next.isDefaultBackup && !next.lastWebhookAt) return undefined;
   return next;
 }
 
@@ -298,6 +300,7 @@ export async function listProviders(kind: "ai" | "payment" | "signing" | "connec
       webhook: secretStatus(row.webhookCipher),
       model: extra.model ?? "",
       isDefaultBackup: kind === "payment" ? Boolean(extra.isDefaultBackup) : false,
+      lastWebhookAt: extra.lastWebhookAt ?? "",
     };
   });
 }

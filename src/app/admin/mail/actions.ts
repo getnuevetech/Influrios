@@ -10,6 +10,7 @@ import {
   sendCommTemplateTest,
 } from "@/lib/comm-templates";
 import { saveMailSettings, sendInvitationTest } from "@/lib/mail";
+import { saveTwilioCredentials } from "@/lib/sms";
 
 function clean(value: FormDataEntryValue | null, max: number) {
   return String(value ?? "").trim().slice(0, max);
@@ -53,8 +54,18 @@ export async function actionSaveCommChannels(formData: FormData) {
   await saveCommChannelSettings({
     emailEnabled: formData.get("emailEnabled") === "on",
     smsEnabled: formData.get("smsEnabled") === "on",
-    smsProviderNote: clean(formData.get("smsProviderNote"), 400),
   });
+  try {
+    await saveTwilioCredentials({
+      accountSid: clean(formData.get("twilioAccountSid"), 64),
+      authToken: String(formData.get("twilioAuthToken") ?? ""),
+      from: clean(formData.get("twilioFrom"), 32),
+      clearToken: formData.get("clearTwilioToken") === "on",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save Twilio credentials.";
+    redirect(`/admin/mail?error=${encodeURIComponent(message)}`);
+  }
   revalidatePath("/admin/mail");
   redirect("/admin/mail?saved=channels");
 }

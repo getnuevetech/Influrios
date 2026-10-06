@@ -403,11 +403,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
         <p className="mt-2 text-sm text-muted">
           {topics.source === "provider"
             ? "The assigned provider suggested these. They are saved only when you confirm."
-            : "These come from the profile text. They are saved only when you confirm."}
+            : "These are a rules result from keyword matching on the profile text. They are not model output. They are saved only when you confirm."}
           {" "}This plan keeps {specialtyCap} {specialtyCap === 1 ? "specialty" : "specialties"}.
         </p>
         {topics.providerError ? (
-          <p className="mt-2 text-sm text-amber-800">The provider did not answer. The keyword list is shown instead.</p>
+          <p className="mt-2 text-sm text-amber-800">The provider did not answer. The rules result is shown instead.</p>
         ) : null}
         {suggestionRows.size === 0 ? (
           <p className="mt-3 text-sm text-muted">No specialty keywords matched this profile yet.</p>

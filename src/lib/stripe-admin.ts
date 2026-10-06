@@ -31,9 +31,14 @@ export async function stripeCredentials(): Promise<
     const mode = classifyStripeKey(fromEnv);
     return mode ? { ok: true, secret: fromEnv, mode } : { ok: false, reason: "rejected" };
   }
-  const row = await prisma.integrationProvider.findUnique({
-    where: { kind_code: { kind: "payment", code: "stripe" } },
-  });
+  let row: { enabled: boolean; secretCipher: string | null } | null = null;
+  try {
+    row = await prisma.integrationProvider.findUnique({
+      where: { kind_code: { kind: "payment", code: "stripe" } },
+    });
+  } catch {
+    return { ok: false, reason: "missing" };
+  }
   if (!row?.enabled || !row.secretCipher) return { ok: false, reason: "missing" };
   const secret = decryptSecret(row.secretCipher);
   if (!secret) return { ok: false, reason: "rejected" };
@@ -140,6 +145,132 @@ export async function openStripeCheckout(input: {
   } catch {
     return { ok: false as const, error: "Stripe did not open checkout. Nothing was charged." };
   }
+}
+
+/** One-time Checkout. This is not a subscription and does not create collaboration funding. */
+export function stripeOneTimeCheckoutBody(input: {
+  amountCents: number;
+  name: string;
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
+  metadata: Record<string, string>;
+}) {
+  const body = new URLSearchParams({
+    mode: "payment",
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+    customer_creation: "always",
+    "line_items[0][quantity]": "1",
+    "line_items[0][price_data][currency]": "usd",
+    "line_items[0][price_data][unit_amount]": String(input.amountCents),
+    "line_items[0][price_data][product_data][name]": input.name,
+  });
+  for (const [key, value] of Object.entries(input.metadata)) body.set(`metadata[${key}]`, value);
+  if (input.customerEmail) body.set("customer_email", input.customerEmail);
+  return body;
+}
+
+export async function openStripeOneTimeCheckout(input: {
+  secret: string;
+  mode: StripeKeyMode;
+  amountCents: number;
+  name: string;
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
+  metadata: Record<string, string>;
+}) {
+  try {
+    const payload = await stripeCall("POST", "/v1/checkout/sessions", input.secret, stripeOneTimeCheckoutBody(input));
+    const id = checkoutId(payload?.id);
+    const url = httpsUrl(payload?.url);
+    const livemode = payload?.livemode;
+    if (!payload || !id || !url) return { ok: false as const, error: "Stripe did not open checkout. Nothing was charged." };
+    if (input.mode === "sandbox" && livemode !== false) {
+      return { ok: false as const, error: "Stripe did not open a sandbox checkout. Nothing was charged." };
+    }
+    if (input.mode === "live" && livemode !== true) {
+      return { ok: false as const, error: "Stripe did not open checkout. Nothing was charged." };
+    }
+    return { ok: true as const, id, url };
+  } catch {
+    return { ok: false as const, error: "Stripe did not open checkout. Nothing was charged." };
+  }
+}
+
+export async function rememberStripeCustomer(userId: string | null | undefined, customerId: string | null | undefined) {
+  const id = userId?.trim();
+  const customer = customerId ? stripeCustomerId(customerId) : null;
+  if (!id || !customer) return;
+  await prisma.user.update({ where: { id }, data: { stripeCustomerId: customer } }).catch(() => undefined);
+}
+
+/** A Stripe corridor is ready only when the payout profile stores an acct_ id. */
+export function stripePayoutRouteReady(input: {
+  providerCode?: string | null;
+  routeReady: boolean;
+  stripeConnectAccountId?: string | null;
+}) {
+  if (!input.routeReady) return false;
+  if ((input.providerCode ?? "").toLowerCase() === "stripe") {
+    return Boolean(stripeAccountId(input.stripeConnectAccountId ?? ""));
+  }
+  return true;
+}
+
+async function connectSecret() {
+  const row = await prisma.integrationProvider.findUnique({
+    where: { kind_code: { kind: "connect", code: "stripe" } },
+  });
+  if (!row?.enabled || !row.secretCipher) return null;
+  const secret = decryptSecret(row.secretCipher);
+  return secret || null;
+}
+
+export async function createStripeExpressAccount(input: { secret: string; email?: string }) {
+  const body = new URLSearchParams({ type: "express", "capabilities[transfers][requested]": "true" });
+  if (input.email) body.set("email", input.email);
+  try {
+    const payload = await stripeCall("POST", "/v1/accounts", input.secret, body);
+    const id = typeof payload?.id === "string" ? stripeAccountId(payload.id) : null;
+    if (!id) return { ok: false as const, error: "Stripe did not create a Connect account. Nothing was stored." };
+    return { ok: true as const, accountId: id };
+  } catch {
+    return { ok: false as const, error: "Stripe did not create a Connect account. Nothing was stored." };
+  }
+}
+
+/** Opens Connect onboarding for the signed-in creator and stores acct_ on the payout profile. */
+export async function openCreatorConnectOnboarding(input: {
+  userId: string;
+  email?: string;
+  refreshUrl: string;
+  returnUrl: string;
+}) {
+  const enabled = await productSwitch("stripe_connect");
+  if (!enabled) return { ok: false as const, error: "Stripe Connect is turned off. Nothing was opened." };
+  const creator = await prisma.creator.findUnique({
+    where: { userId: input.userId },
+    include: { payoutProfile: true },
+  });
+  if (!creator) {
+    return { ok: false as const, error: "Create your Influencer Card before opening payout setup. Nothing was opened." };
+  }
+  let accountId = stripeAccountId(creator.payoutProfile?.stripeConnectAccountId ?? "");
+  if (!accountId) {
+    const secret = await connectSecret();
+    if (!secret) return { ok: false as const, error: "Stripe Connect is not ready. Nothing was opened." };
+    const created = await createStripeExpressAccount({ secret, email: input.email });
+    if (!created.ok) return created;
+    accountId = created.accountId;
+    await prisma.influencerPayoutProfile.upsert({
+      where: { creatorId: creator.id },
+      create: { creatorId: creator.id, stripeConnectAccountId: accountId },
+      update: { stripeConnectAccountId: accountId },
+    });
+  }
+  return openConnectLink({ accountId, refreshUrl: input.refreshUrl, returnUrl: input.returnUrl });
 }
 
 export async function confirmStripeCheckout(input: {

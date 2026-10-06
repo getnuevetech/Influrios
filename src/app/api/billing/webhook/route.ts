@@ -5,14 +5,28 @@ import {
   ensureStripeAttemptFromMetadata,
   markWebhookReceived,
 } from "@/lib/billing";
-import { stripeCredentials, stripeWebhookSecret } from "@/lib/stripe-admin";
+import { confirmMentorshipPayment } from "@/lib/mentorship";
+import { rememberStripeCustomer, stripeCredentials, stripeWebhookSecret } from "@/lib/stripe-admin";
 import { applyPlanOnce, noteWebhook, webhookDisposition } from "@/lib/webhook-idempotency";
 
 type StripeObject = {
   id?: string;
-  metadata?: { localSessionId?: string; creatorSlug?: string; sku?: string; userId?: string } | null;
+  customer?: string | { id?: string } | null;
+  metadata?: {
+    localSessionId?: string;
+    creatorSlug?: string;
+    sku?: string;
+    userId?: string;
+    purpose?: string;
+    requestId?: string;
+  } | null;
   subscription?: string | { id?: string } | null;
 };
+
+function customerIdOf(object: StripeObject) {
+  const raw = typeof object.customer === "string" ? object.customer : object.customer?.id;
+  return raw ?? null;
+}
 
 function subscriptionId(object: StripeObject, eventType: string) {
   if (eventType === "customer.subscription.deleted" && object.id) return object.id;
@@ -83,6 +97,24 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    if (event.type === "checkout.session.completed" && object.metadata?.purpose === "mentorship") {
+      const requestId = object.metadata.requestId?.trim() ?? "";
+      if (!requestId || !object.id) {
+        return NextResponse.json({ received: false, pending: true }, { status: 503 });
+      }
+      const confirmed = await confirmMentorshipPayment({
+        requestId,
+        checkoutRef: object.id,
+        provider: "stripe",
+      });
+      if (!confirmed.ok) {
+        return NextResponse.json({ error: confirmed.error }, { status: 409 });
+      }
+      await rememberStripeCustomer(object.metadata.userId, customerIdOf(object));
+      await noteWebhook({ provider: "stripe", eventId: event.id, eventType: event.type, result: "mentorship_paid" });
+      return NextResponse.json({ received: true, mentorship: true });
+    }
+
     if (event.type === "checkout.session.completed") {
       const localId = object.metadata?.localSessionId;
       const metaSku = object.metadata?.sku;
@@ -108,6 +140,7 @@ export async function POST(req: NextRequest) {
         creatorSlug: object.metadata?.creatorSlug || local.creatorSlug,
         externalId: subscriptionId(object, event.type) || local.stripeSessionId || local.id,
       });
+      await rememberStripeCustomer(local.userId || object.metadata?.userId, customerIdOf(object));
       await completeCheckout(local.id, { creatorSlug: object.metadata?.creatorSlug || local.creatorSlug });
     } else {
       const externalId = subscriptionId(object, event.type);

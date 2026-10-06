@@ -2,8 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
+import { prisma } from "@/lib/db";
 import { getAppOrigin, startCheckout, type BillingSku } from "@/lib/billing";
-import { openConnectLink, openCustomerPortal } from "@/lib/stripe-admin";
+import { openCreatorConnectOnboarding, openCustomerPortal } from "@/lib/stripe-admin";
 
 const SKUS: BillingSku[] = ["creator_plus", "creator_pro", "business_pro", "agency"];
 
@@ -40,24 +41,29 @@ export async function actionStartCheckout(formData: FormData) {
   redirect(result.url);
 }
 
-export async function actionOpenPortal(formData: FormData) {
+export async function actionOpenPortal() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/billing&gate=portal");
+  const user = await prisma.user.findUnique({ where: { id: account.id }, select: { stripeCustomerId: true } });
+  if (!user?.stripeCustomerId) {
+    redirect(`/billing?error=${encodeURIComponent("Complete a Stripe checkout first. Nothing was opened.")}`);
+  }
   const origin = getAppOrigin();
   const result = await openCustomerPortal({
-    customerId: String(formData.get("customerId") ?? ""),
+    customerId: user.stripeCustomerId,
     returnUrl: `${origin}/billing`,
   });
   if (!result.ok) redirect(`/billing?error=${encodeURIComponent(result.error)}`);
   redirect(result.url);
 }
 
-export async function actionOpenConnect(formData: FormData) {
+export async function actionOpenConnect() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/billing&gate=connect");
   const origin = getAppOrigin();
-  const result = await openConnectLink({
-    accountId: String(formData.get("accountId") ?? ""),
+  const result = await openCreatorConnectOnboarding({
+    userId: account.id,
+    email: account.email,
     refreshUrl: `${origin}/billing`,
     returnUrl: `${origin}/billing`,
   });

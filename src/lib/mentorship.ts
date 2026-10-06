@@ -5,8 +5,15 @@
  */
 import { getCollabControlPlane, mentorshipEligibilityOk } from "@/lib/collab-control-plane";
 import { prisma } from "@/lib/db";
+import { decryptSecret } from "@/lib/provider-secrets";
 import { productSwitch } from "@/lib/product-switches";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
+import {
+  createAirwallexMentorshipIntent,
+  parseAirwallexMentorshipWebhook,
+  verifyAirwallexSignature,
+} from "@/lib/providers/airwallex";
+import { openStripeOneTimeCheckout, stripeCredentials } from "@/lib/stripe-admin";
 
 export const MENTORSHIP_STATUSES = ["pending", "accepted", "declined", "cancelled"] as const;
 export type MentorshipRequestStatus = (typeof MENTORSHIP_STATUSES)[number];
@@ -54,6 +61,132 @@ export function mentorshipFundsIsolated(input: {
 
 export async function paidMentoringEnabled() {
   return productSwitch("paid_mentoring");
+}
+
+/** One paid session. Confirmed only by the payment webhook. */
+export const MENTORSHIP_SESSION_CENTS = 4900;
+
+function appOrigin() {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    process.env.APP_URL?.replace(/\/$/, "") ||
+    "http://localhost:3000"
+  );
+}
+
+export async function confirmMentorshipPayment(input: {
+  requestId: string;
+  checkoutRef: string;
+  provider: string;
+}) {
+  const refs = [input.checkoutRef, input.requestId].map((value) => value.trim()).filter(Boolean);
+  const clash = await prisma.collaborationFunding.findFirst({ where: { id: { in: refs } } });
+  if (clash) {
+    return { ok: false as const, error: "Mentorship checkout cannot confirm a collaboration funding." };
+  }
+  const row = await prisma.mentorshipRequest.findUnique({ where: { id: input.requestId } });
+  if (!row) return { ok: false as const, error: "Mentorship request not found." };
+  if (row.checkoutRef && input.checkoutRef && row.checkoutRef !== input.checkoutRef) {
+    return { ok: false as const, error: "Checkout reference does not match this mentorship request." };
+  }
+  if (row.paymentStatus === "paid") return { ok: true as const, duplicate: true };
+  await prisma.mentorshipRequest.update({
+    where: { id: row.id },
+    data: {
+      paymentStatus: "paid",
+      paymentProvider: input.provider,
+      checkoutRef: row.checkoutRef || input.checkoutRef,
+    },
+  });
+  return { ok: true as const, duplicate: false };
+}
+
+async function airwallexMentorshipCredentials() {
+  const row = await prisma.integrationProvider
+    .findUnique({ where: { kind_code: { kind: "payment", code: "airwallex" } } })
+    .catch(() => null);
+  if (!row?.enabled || !row.secretCipher || !row.baseUrl) return null;
+  const token = decryptSecret(row.secretCipher);
+  if (!token) return null;
+  return { token, baseUrl: row.baseUrl };
+}
+
+async function openPaidMentorshipCheckout(input: {
+  requestId: string;
+  amountCents: number;
+  customerEmail?: string;
+  userId?: string;
+}) {
+  const origin = appOrigin();
+  const successUrl = `${origin}/mentorship?returned=1&request=${input.requestId}`;
+  const cancelUrl = `${origin}/mentorship?error=${encodeURIComponent("Checkout was cancelled. Nothing was confirmed.")}`;
+  const creds = await stripeCredentials().catch(() => ({ ok: false as const, reason: "missing" as const }));
+  if (creds.ok) {
+    const opened = await openStripeOneTimeCheckout({
+      secret: creds.secret,
+      mode: creds.mode,
+      amountCents: input.amountCents,
+      name: "Influrios mentorship session",
+      successUrl,
+      cancelUrl,
+      customerEmail: input.customerEmail,
+      metadata: {
+        purpose: "mentorship",
+        requestId: input.requestId,
+        userId: input.userId ?? "",
+      },
+    });
+    if (!opened.ok) return opened;
+    return { ok: true as const, provider: "stripe", checkoutRef: opened.id, url: opened.url };
+  }
+  const airwallex = await airwallexMentorshipCredentials();
+  if (airwallex) {
+    const opened = await createAirwallexMentorshipIntent({
+      baseUrl: airwallex.baseUrl,
+      token: airwallex.token,
+      requestId: input.requestId,
+      amountCents: input.amountCents,
+      currency: "USD",
+    });
+    if (opened.ok) {
+      return {
+        ok: true as const,
+        provider: "airwallex",
+        checkoutRef: opened.paymentId,
+        url: `${origin}/mentorship?returned=1&request=${input.requestId}`,
+      };
+    }
+  }
+  return { ok: false as const, error: "Paid mentorship checkout is not configured. Nothing was charged." };
+}
+
+export async function applyAirwallexMentorshipWebhook(body: string, signature: string | null): Promise<
+  | { ok: true; paid: boolean; fallThrough?: false }
+  | { ok: false; error: string; status: number; fallThrough: boolean }
+> {
+  const parsed = parseAirwallexMentorshipWebhook(body);
+  if (!parsed.ok && parsed.error === "not_mentorship") {
+    return { ok: false, error: parsed.error, status: 400, fallThrough: true };
+  }
+  const row = await prisma.integrationProvider
+    .findUnique({ where: { kind_code: { kind: "payment", code: "airwallex" } } })
+    .catch(() => null);
+  if (!row?.enabled || !row.webhookCipher) {
+    return { ok: false, error: "Airwallex is not ready.", status: 503, fallThrough: false };
+  }
+  const secret = decryptSecret(row.webhookCipher);
+  if (!secret || !verifyAirwallexSignature(body, signature, secret)) {
+    return { ok: false, error: "Signature did not match.", status: 401, fallThrough: false };
+  }
+  if (!parsed.ok) return { ok: false, error: parsed.error, status: 400, fallThrough: false };
+  if (!parsed.paid) return { ok: true, paid: false };
+  const confirmed = await confirmMentorshipPayment({
+    requestId: parsed.requestId,
+    checkoutRef: parsed.paymentId,
+    provider: "airwallex",
+  });
+  if (!confirmed.ok) return { ok: false, error: confirmed.error, status: 409, fallThrough: false };
+  return { ok: true, paid: true };
 }
 
 export async function evaluateCreatorMentorshipEligibility(creatorId: string) {
@@ -190,6 +323,8 @@ export async function requestMentorship(input: {
   mentorCreatorId: string;
   message?: string;
   paidRequested?: boolean;
+  customerEmail?: string;
+  userId?: string;
 }) {
   if (input.menteeCreatorId === input.mentorCreatorId) {
     return { ok: false as const, error: "You cannot request mentorship from yourself." };
@@ -226,16 +361,34 @@ export async function requestMentorship(input: {
     return { ok: false as const, error: "You already have an open request with this mentor." };
   }
 
+  const paid = Boolean(input.paidRequested) && paidOn;
   const row = await prisma.mentorshipRequest.create({
     data: {
       mentorCreatorId: input.mentorCreatorId,
       menteeCreatorId: input.menteeCreatorId,
       message: (input.message ?? "").trim().slice(0, 800),
-      paidRequested: Boolean(input.paidRequested) && paidOn,
+      paidRequested: paid,
       status: "pending",
+      paymentStatus: "unpaid",
+      amountCents: paid ? MENTORSHIP_SESSION_CENTS : 0,
     },
   });
-  return { ok: true as const, request: row, usesCollaborationHolding: false as const };
+  if (!paid) return { ok: true as const, request: row, usesCollaborationHolding: false as const, checkoutUrl: null };
+  const opened = await openPaidMentorshipCheckout({
+    requestId: row.id,
+    amountCents: MENTORSHIP_SESSION_CENTS,
+    customerEmail: input.customerEmail,
+    userId: input.userId,
+  });
+  if (!opened.ok) {
+    await prisma.mentorshipRequest.delete({ where: { id: row.id } }).catch(() => undefined);
+    return opened;
+  }
+  const request = await prisma.mentorshipRequest.update({
+    where: { id: row.id },
+    data: { paymentStatus: "open", paymentProvider: opened.provider, checkoutRef: opened.checkoutRef },
+  });
+  return { ok: true as const, request, usesCollaborationHolding: false as const, checkoutUrl: opened.url };
 }
 
 export async function respondToMentorshipRequest(input: {
@@ -250,6 +403,9 @@ export async function respondToMentorshipRequest(input: {
   }
   if (row.status !== "pending") {
     return { ok: false as const, error: "Only pending requests can be accepted or declined." };
+  }
+  if (input.decision === "accepted" && row.paidRequested && row.paymentStatus !== "paid") {
+    return { ok: false as const, error: "Paid mentorship is confirmed only after the payment webhook." };
   }
   if (input.decision === "accepted") {
     const profile = await prisma.mentorshipProfile.findUnique({

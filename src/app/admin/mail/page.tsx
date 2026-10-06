@@ -21,6 +21,7 @@ import {
   smsProviderLabel,
 } from "@/lib/comm-templates";
 import { mailSettingsView } from "@/lib/mail";
+import { twilioSettingsView } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Email · Admin" };
@@ -35,10 +36,15 @@ export default async function AdminMailPage({ searchParams }: Props) {
   const channels = await getCommChannelSettings().catch(() => ({
     emailEnabled: true,
     smsEnabled: false,
-    smsProviderNote: "",
+  }));
+  const twilio = await twilioSettingsView().catch(() => ({
+    accountSid: "",
+    from: "",
+    hasToken: false,
+    configured: false,
   }));
   const templates = await listCommTemplates().catch(() => []);
-  const smsLabel = smsProviderLabel();
+  const smsLabel = smsProviderLabel(twilio.configured);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -49,8 +55,9 @@ export default async function AdminMailPage({ searchParams }: Props) {
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Email &amp; SMS</h1>
         <p className="mt-2 text-sm text-muted">
           Configure SMTP, enable outreach channels, and manage auto/manual templates. Each template has an email body
-          and a short SMS twin (max {SMS_BODY_MAX} characters). SMS delivery mode:{" "}
-          <span className="font-semibold text-indigo">{smsLabel}</span>. Set SMS_PROVIDER=twilio for live sends.
+          and a short SMS twin (max {SMS_BODY_MAX} characters). SMS delivery:{" "}
+          <span className="font-semibold text-indigo">{smsLabel}</span>. A saved account SID, auth token, and
+          from-number are required before Twilio accepts a message.
         </p>
       </div>
 
@@ -140,8 +147,8 @@ export default async function AdminMailPage({ searchParams }: Props) {
       >
         <form action={actionSaveCommChannels} className="space-y-3">
           <p className="text-sm text-muted">
-            Choose which channels the platform may use. Members also set their preferred mode on Account. SMS uses{" "}
-            {smsLabel}.
+            Choose which channels the platform may use. Members who prefer SMS and have a phone receive the same
+            invite, verify, and collaboration triggers as email when SMS is enabled. Delivery uses {smsLabel}.
           </p>
           <label className="flex items-center gap-2 text-sm text-indigo">
             <input name="emailEnabled" type="checkbox" defaultChecked={channels.emailEnabled} disabled={!canEdit} />
@@ -152,14 +159,39 @@ export default async function AdminMailPage({ searchParams }: Props) {
             SMS enabled
           </label>
           <label className="block text-sm">
-            <span className="font-semibold text-indigo">SMS provider note</span>
+            <span className="font-semibold text-indigo">Twilio account SID</span>
             <input
-              name="smsProviderNote"
-              defaultValue={channels.smsProviderNote}
+              name="twilioAccountSid"
+              defaultValue={twilio.accountSid}
               disabled={!canEdit}
-              placeholder="Ops note until an SMS provider is connected"
+              autoComplete="off"
               className="mt-1 w-full rounded-xl border border-border px-3 py-2"
             />
+          </label>
+          <label className="block text-sm">
+            <span className="font-semibold text-indigo">Twilio auth token</span>
+            <input
+              name="twilioAuthToken"
+              type="password"
+              autoComplete="new-password"
+              placeholder={twilio.hasToken ? "Saved. Leave blank to keep it." : "Not saved"}
+              disabled={!canEdit}
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="font-semibold text-indigo">Twilio from-number</span>
+            <input
+              name="twilioFrom"
+              defaultValue={twilio.from}
+              disabled={!canEdit}
+              placeholder="+15555550100"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-indigo">
+            <input name="clearTwilioToken" type="checkbox" disabled={!canEdit} />
+            Remove the saved auth token
           </label>
           {canEdit ? (
             <button type="submit" className="btn-secondary !py-2 text-sm">

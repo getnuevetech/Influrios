@@ -33,6 +33,7 @@ type Props = {
     requested?: string;
     responded?: string;
     cancelled?: string;
+    returned?: string;
   }>;
 };
 
@@ -86,7 +87,7 @@ export default async function MentorshipPage({ searchParams }: Props) {
         </div>
       </section>
 
-      {(params.error || params.mentor || params.requested || params.responded || params.cancelled) && (
+      {(params.error || params.mentor || params.requested || params.responded || params.cancelled || params.returned) && (
         <div className="mx-auto max-w-[90rem] px-4 pt-6 sm:px-6 lg:px-10">
           {params.error ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
@@ -94,13 +95,15 @@ export default async function MentorshipPage({ searchParams }: Props) {
             </p>
           ) : (
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-              {params.mentor
-                ? "Mentor profile saved. You are listed when availability is open."
-                : params.requested
-                  ? "Mentorship request sent."
-                  : params.responded
-                    ? `Request ${params.responded}.`
-                    : "Request cancelled."}
+              {params.returned
+                ? "Checkout returned. The session stays unconfirmed until the payment webhook."
+                : params.mentor
+                  ? "Mentor profile saved. You are listed when availability is open."
+                  : params.requested
+                    ? "Mentorship request sent."
+                    : params.responded
+                      ? `Request ${params.responded}.`
+                      : "Request cancelled."}
             </p>
           )}
         </div>
@@ -174,7 +177,7 @@ export default async function MentorshipPage({ searchParams }: Props) {
                     {paidOn ? (
                       <label className="flex items-center gap-2 text-xs text-indigo">
                         <input type="checkbox" name="paidRequested" value="1" />
-                        Request paid session (still outside collab holding)
+                        Request a paid session. Checkout does not use collaboration holding, and the session stays unconfirmed until the payment webhook.
                       </label>
                     ) : null}
                     <button type="submit" className="btn-primary w-full !py-2 text-xs">
@@ -306,15 +309,25 @@ export default async function MentorshipPage({ searchParams }: Props) {
                         {row.mentee.displayName} · <span className="capitalize text-muted">{row.status}</span>
                       </p>
                       {row.message ? <p className="mt-1 text-xs text-muted">{row.message}</p> : null}
+                      {row.paidRequested ? (
+                        <p className="mt-1 text-xs text-muted">
+                          Paid session ·{" "}
+                          {row.paymentStatus === "paid"
+                            ? "confirmed by the payment webhook"
+                            : "waiting for the payment webhook"}
+                        </p>
+                      ) : null}
                       {row.status === "pending" ? (
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <form action={actionRespondMentorship}>
-                            <input type="hidden" name="requestId" value={row.id} />
-                            <input type="hidden" name="decision" value="accepted" />
-                            <button type="submit" className="btn-primary !px-3 !py-1.5 text-[11px]">
-                              Accept
-                            </button>
-                          </form>
+                          {!row.paidRequested || row.paymentStatus === "paid" ? (
+                            <form action={actionRespondMentorship}>
+                              <input type="hidden" name="requestId" value={row.id} />
+                              <input type="hidden" name="decision" value="accepted" />
+                              <button type="submit" className="btn-primary !px-3 !py-1.5 text-[11px]">
+                                Accept
+                              </button>
+                            </form>
+                          ) : null}
                           <form action={actionRespondMentorship} className="flex gap-2">
                             <input type="hidden" name="requestId" value={row.id} />
                             <input type="hidden" name="decision" value="declined" />
@@ -345,6 +358,16 @@ export default async function MentorshipPage({ searchParams }: Props) {
                       <p className="font-semibold text-indigo">
                         {row.mentor.displayName} · <span className="capitalize text-muted">{row.status}</span>
                       </p>
+                      {row.paidRequested ? (
+                        <p className="mt-1 text-xs text-muted">
+                          Paid session ·{" "}
+                          {row.paymentStatus === "paid"
+                            ? "confirmed by the payment webhook"
+                            : params.returned
+                              ? "checkout returned; still waiting for the payment webhook"
+                              : "waiting for the payment webhook"}
+                        </p>
+                      ) : null}
                       {row.status === "pending" ? (
                         <form action={actionCancelMentorship} className="mt-2">
                           <input type="hidden" name="requestId" value={row.id} />

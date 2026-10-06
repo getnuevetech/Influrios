@@ -9,6 +9,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { productSwitch } from "@/lib/product-switches";
+import { prisma } from "@/lib/db";
 import { paymentRoutes } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,15 @@ export default async function BillingPage({ searchParams }: Props) {
     productSwitch("customer_portal"),
     productSwitch("stripe_connect"),
   ]);
+  const billingIdentity = account
+    ? await prisma.user.findUnique({
+        where: { id: account.id },
+        select: {
+          stripeCustomerId: true,
+          creator: { select: { payoutProfile: { select: { stripeConnectAccountId: true } } } },
+        },
+      })
+    : null;
   const creatorPlans = BILLING_CATALOG.filter((p) => p.audience === "creator");
   const businessPlans = BILLING_CATALOG.filter((p) => p.audience === "business");
 
@@ -80,17 +90,11 @@ export default async function BillingPage({ searchParams }: Props) {
             <h2 className="font-display text-xl font-bold text-indigo">Billing portal</h2>
             <p className="text-sm text-muted">
               {portalOn
-                ? "Opens only after Stripe returns a billing portal link."
+                ? billingIdentity?.stripeCustomerId
+                  ? `Opens the billing portal for the customer saved from checkout (${billingIdentity.stripeCustomerId}).`
+                  : "Complete a Stripe checkout first. Nothing is opened until that webhook stores a customer id."
                 : "The billing portal is turned off. Nothing is opened."}
             </p>
-            <label className="block text-xs font-semibold text-muted">
-              Stripe customer id
-              <input
-                name="customerId"
-                placeholder="cus_"
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-indigo"
-              />
-            </label>
             <button type="submit" className="btn-secondary !py-2 text-sm">
               Open billing portal
             </button>
@@ -99,17 +103,11 @@ export default async function BillingPage({ searchParams }: Props) {
             <h2 className="font-display text-xl font-bold text-indigo">Payout account</h2>
             <p className="text-sm text-muted">
               {connectOn
-                ? "Opens only after Stripe returns an account link. This does not move a payout."
+                ? billingIdentity?.creator?.payoutProfile?.stripeConnectAccountId
+                  ? `Opens Stripe Connect for the account stored on your payout profile (${billingIdentity.creator.payoutProfile.stripeConnectAccountId}).`
+                  : "Creates a Stripe Connect account for your Influencer Card and stores it on your payout profile. This does not move a payout."
                 : "Stripe Connect is turned off. Nothing is opened."}
             </p>
-            <label className="block text-xs font-semibold text-muted">
-              Stripe account id
-              <input
-                name="accountId"
-                placeholder="acct_"
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-indigo"
-              />
-            </label>
             <button type="submit" className="btn-secondary !py-2 text-sm">
               Open account link
             </button>

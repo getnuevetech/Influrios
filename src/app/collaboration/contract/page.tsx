@@ -34,6 +34,7 @@ import {
   type PayoutMethod,
 } from "@/lib/payout-readiness";
 import { DEFAULT_PAYMENT_ROUTES, paymentRoutes } from "@/lib/providers";
+import { stripePayoutRouteReady } from "@/lib/stripe-admin";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contract & Milestone Wizard · Influrios" };
@@ -176,7 +177,17 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     identityVerified: creatorSlug ? identityVerified : false,
     creatorCountryKnown: Boolean(creatorCountry),
     corridorActive: payoutReadiness ? payoutReadiness.corridorActive : Boolean(creatorCountry),
-    paymentRouteReady: Boolean(route?.ready),
+    paymentRouteReady: stripePayoutRouteReady({
+      providerCode: route?.providerCode,
+      routeReady: Boolean(route?.ready),
+      stripeConnectAccountId: dbCreator
+        ? (
+            await prisma.influencerPayoutProfile
+              .findUnique({ where: { creatorId: dbCreator.id }, select: { stripeConnectAccountId: true } })
+              .catch(() => null)
+          )?.stripeConnectAccountId
+        : null,
+    }),
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
     marketplaceProviderReady: Boolean(provider?.ready),
   });

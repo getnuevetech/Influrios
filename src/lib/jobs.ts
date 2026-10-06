@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { SWEEP_JOB_KINDS } from "@/lib/sweep-clock";
 import { getAppOrigin } from "@/lib/billing";
@@ -28,7 +29,7 @@ function payloadOf(payload: unknown): Record<string, string> {
   return out;
 }
 
-async function runJob(kind: string, payload: unknown) {
+async function runJob(kind: string, payload: unknown): Promise<{ externalId?: string } | void> {
   const data = payloadOf(payload);
   if (kind === "invitation_email") {
     if (!data.invitationId) throw new Error("Invitation job is missing an id.");
@@ -53,6 +54,12 @@ async function runJob(kind: string, payload: unknown) {
     await prisma.invitationEvent.create({
       data: { invitationId: invitation.id, kind: "send_delivered", actor: "smtp", detail: invitation.email },
     });
+    const { queuePreferredSms } = await import("@/lib/sms");
+    await queuePreferredSms({
+      email: invitation.email,
+      body: `Influrios invitation: ${vars.link}`,
+      templateKey: "invitation_email",
+    });
     return;
   }
   if (kind === "verification_email") {
@@ -63,6 +70,13 @@ async function runJob(kind: string, payload: unknown) {
       text: `Your Influrios verification code is ${data.code}. It expires in 30 minutes. The same code stays on the verify screen if this message does not arrive.`,
     });
     if (!result.ok) throw new Error(result.error);
+    const { queuePreferredSms } = await import("@/lib/sms");
+    await queuePreferredSms({
+      userId: data.userId,
+      email: data.email,
+      body: `Your Influrios verification code is ${data.code}. It expires in 30 minutes.`,
+      templateKey: "verification_email",
+    });
     return;
   }
   if (kind === "claim_verification_email") {
@@ -73,6 +87,12 @@ async function runJob(kind: string, payload: unknown) {
       text: `Your Influrios claim verification code is ${data.code}. Enter it to continue publishing your Influencer Card. This code does not verify your social account.`,
     });
     if (!result.ok) throw new Error(result.error);
+    const { queuePreferredSms } = await import("@/lib/sms");
+    await queuePreferredSms({
+      email: data.email,
+      body: `Your Influrios claim verification code is ${data.code}.`,
+      templateKey: "claim_verification_email",
+    });
     return;
   }
   if (kind === "mail_test") {
@@ -132,18 +152,25 @@ async function runJob(kind: string, payload: unknown) {
       text: data.text,
     });
     if (!result.ok) throw new Error(result.error);
+    const { queuePreferredSms } = await import("@/lib/sms");
+    await queuePreferredSms({
+      email: data.to,
+      body: data.text,
+      templateKey: data.notificationKind || "collab_notification",
+    });
     return;
+  }
+  if (kind === "sms_send") {
+    if (!data.to || !data.body) throw new Error("SMS job is missing a destination or body.");
+    const { deliverSms } = await import("@/lib/sms");
+    const sent = await deliverSms({ to: data.to, body: data.body });
+    if (!sent.ok) throw new Error(sent.message);
+    return { externalId: sent.externalId };
   }
   if (kind === "provider_webhook" || kind === "ai_provider" || kind === "provider_instruction") {
     throw new Error("This row is a record. Stripe redelivers webhooks, specialty suggestions rerun from the creator dashboard, and provider refund/cancel instructions await a signed payout.refunded webhook.");
   }
   throw new Error(`Unknown job kind ${kind}.`);
-}
-
-function payloadWithoutCode(payload: unknown): Record<string, string> {
-  const data = payloadOf(payload);
-  delete data.code;
-  return data;
 }
 
 export async function enqueueDueSweeps() {
@@ -201,15 +228,22 @@ export async function processDueJobs(limit = 8) {
     const current = await prisma.job.findUnique({ where: { id: job.id } });
     if (!current) continue;
     try {
-      await runJob(current.kind, current.payload);
+      const outcome = await runJob(current.kind, current.payload);
       const clearCode =
         current.kind === "verification_email" || current.kind === "claim_verification_email";
+      const nextPayload =
+        current.payload && typeof current.payload === "object" && !Array.isArray(current.payload)
+          ? { ...(current.payload as Record<string, unknown>) }
+          : {};
+      if (clearCode) delete nextPayload.code;
+      if (outcome?.externalId) nextPayload.externalId = outcome.externalId;
+      const payloadChanged = clearCode || Boolean(outcome?.externalId);
       await prisma.job.update({
         where: { id: job.id },
         data: {
           status: "succeeded",
           lastError: null,
-          ...(clearCode ? { payload: payloadWithoutCode(current.payload) } : {}),
+          ...(payloadChanged ? { payload: nextPayload as Prisma.InputJsonValue } : {}),
         },
       });
       processed += 1;

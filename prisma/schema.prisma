@@ -75,6 +75,8 @@ model User {
   /// Preferred outreach channel: email | sms
   preferredCommChannel String @default("email")
   phone           String?
+  /// Stripe Customer id from a confirmed Checkout. The billing portal uses this id.
+  stripeCustomerId String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   creator         Creator?
@@ -310,6 +312,11 @@ model MentorshipRequest {
   responseNote    String   @default("")
   /// Always false unless paid_mentoring product switch is on — never touches collab holding.
   paidRequested   Boolean  @default(false)
+  /// unpaid | open | paid. Confirmed only by the payment webhook.
+  paymentStatus   String   @default("unpaid")
+  paymentProvider String?
+  checkoutRef     String?
+  amountCents     Int      @default(0)
   updatedAt       DateTime @updatedAt
   createdAt       DateTime @default(now())
 
@@ -333,6 +340,8 @@ model InfluencerPayoutProfile {
   secondaryCountryCode   String?
   secondaryCurrency      String?
   globalPayoutReady      Boolean  @default(false)
+  /// Stripe Connect account id (acct_). Required before a Stripe corridor is ROUTE_READY.
+  stripeConnectAccountId String?
   updatedAt              DateTime @updatedAt
   createdAt              DateTime @default(now())
 }
@@ -1105,8 +1114,6 @@ model CommChannelSettings {
   id           String   @id @default("default")
   emailEnabled Boolean  @default(true)
   smsEnabled   Boolean  @default(false)
-  /// Optional SMS gateway base URL / notes for ops — no live send until a provider is wired.
-  smsProviderNote String @default("")
   updatedAt    DateTime @updatedAt
 }
 

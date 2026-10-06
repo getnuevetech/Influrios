@@ -19,6 +19,7 @@ import {
   type MilestoneDraft,
 } from "@/lib/contract-wizard";
 import { prisma } from "@/lib/db";
+import { stripePayoutRouteReady } from "@/lib/stripe-admin";
 import { getDirectoryCreator } from "@/lib/directory";
 import {
   capabilitiesFromJurisdictionRow,
@@ -165,7 +166,17 @@ export async function actionSubmitContractWizard(formData: FormData) {
     identityVerified,
     creatorCountryKnown: Boolean(creatorCountry),
     corridorActive: payoutReadiness ? payoutReadiness.corridorActive : Boolean(creatorCountry),
-    paymentRouteReady: Boolean(route?.ready),
+    paymentRouteReady: stripePayoutRouteReady({
+      providerCode: route?.providerCode,
+      routeReady: Boolean(route?.ready),
+      stripeConnectAccountId: dbCreator
+        ? (
+            await prisma.influencerPayoutProfile
+              .findUnique({ where: { creatorId: dbCreator.id }, select: { stripeConnectAccountId: true } })
+              .catch(() => null)
+          )?.stripeConnectAccountId
+        : null,
+    }),
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
     marketplaceProviderReady: Boolean(provider?.ready),
   });
