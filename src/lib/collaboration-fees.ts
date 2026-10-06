@@ -808,6 +808,24 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
   return ruleFromRow(created);
 }
 
+export async function deleteFeeRule(ruleId: string) {
+  const id = ruleId.trim();
+  if (!id) throw new Error("Choose a fee rule.");
+  const existing = await prisma.collaborationFeeRule.findUnique({ where: { id } });
+  if (!existing) throw new Error("Fee rule not found.");
+  await prisma.collaborationFeeRule.delete({ where: { id } });
+  return { removed: true as const, id, name: existing.name };
+}
+
+export async function deleteFeeSnapshot(snapshotId: string) {
+  const id = snapshotId.trim();
+  if (!id) throw new Error("Choose a fee snapshot.");
+  const existing = await prisma.collaborationFeeSnapshot.findUnique({ where: { id } });
+  if (!existing) throw new Error("Fee snapshot not found.");
+  await prisma.collaborationFeeSnapshot.delete({ where: { id } });
+  return { removed: true as const, id };
+}
+
 export async function getJurisdiction(code: string) {
   await ensureFeeDefaults();
   const row = await prisma.collaborationJurisdiction.findUnique({ where: { code } });
