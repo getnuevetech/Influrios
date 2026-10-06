@@ -690,20 +690,28 @@ export async function queueSignatureRequest(input: { collaborationId: string; ti
   });
   if (!gate.ok) return gate;
   const secret = provider!.secretCipher ? decryptSecret(provider!.secretCipher) : null;
-  const asked = await askSigningProvider({
-    baseUrl: provider!.baseUrl,
-    secret: secret ?? "",
-    title: input.title.slice(0, 160),
-    collaborationId: input.collaborationId,
-  });
-  if (!asked.ok) return asked;
+  const code = provider!.code.trim().toLowerCase();
+  const demoMode = code === "demo" || code === "demo_sign" || !provider!.baseUrl;
+  let externalId = "";
+  if (demoMode) {
+    externalId = `demosign_${Date.now().toString(36)}`;
+  } else {
+    const asked = await askSigningProvider({
+      baseUrl: provider!.baseUrl,
+      secret: secret ?? "",
+      title: input.title.slice(0, 160),
+      collaborationId: input.collaborationId,
+    });
+    if (!asked.ok) return asked;
+    externalId = asked.externalId || `sign_${Date.now().toString(36)}`;
+  }
   const row = await prisma.signatureRequest.create({
     data: {
       collaborationId: input.collaborationId,
       providerId: provider!.id,
-      status: "queued",
+      status: "sent",
       title: input.title.slice(0, 160),
-      externalId: asked.externalId,
+      externalId,
       lastError: null,
     },
   });

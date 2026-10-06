@@ -6,6 +6,7 @@ import { requireAdminAction } from "@/app/admin/guard";
 import {
   addRosterMember,
   createAgencyCampaign,
+  createAgencyWorkspace,
   createJointPortfolio,
   removeRosterMember,
   setAgencySeatActive,
@@ -13,71 +14,106 @@ import {
   setPortfolioPublished,
   type AgencyCampaign,
 } from "@/lib/agency";
+import { AGENCY_WORKSPACE_ID } from "@/lib/agency-seats";
 import { setProductSwitch } from "@/lib/product-switches";
+
+function workspaceOf(formData: FormData) {
+  return String(formData.get("workspaceId") ?? AGENCY_WORKSPACE_ID).trim() || AGENCY_WORKSPACE_ID;
+}
+
+function agencyRedirect(workspaceId: string, query: string) {
+  return `/admin/agency?workspaceId=${encodeURIComponent(workspaceId)}&${query}`;
+}
 
 export async function actionSaveAgencySeats(formData: FormData) {
   await requireAdminAction("agency.manage");
+  const workspaceId = workspaceOf(formData);
   await setProductSwitch("agency_seats", formData.get("agency_seats") === "on");
   revalidatePath("/admin/agency");
-  redirect("/admin/agency?seats=1");
+  redirect(agencyRedirect(workspaceId, "seats=1"));
+}
+
+export async function actionCreateAgencyWorkspace(formData: FormData) {
+  await requireAdminAction("agency.manage");
+  try {
+    const created = await createAgencyWorkspace({
+      id: String(formData.get("id") ?? ""),
+      name: String(formData.get("name") ?? ""),
+      notes: String(formData.get("notes") ?? ""),
+    });
+    revalidatePath("/admin/agency");
+    redirect(agencyRedirect(created.id, "workspace=1"));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "workspace_failed";
+    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+  }
 }
 
 export async function actionAdminAddSeat(formData: FormData) {
   await requireAdminAction("agency.manage");
+  const workspaceId = workspaceOf(formData);
   try {
     const { inviteAgencySeat } = await import("@/lib/agency-seats");
     const invited = await inviteAgencySeat({
       email: String(formData.get("email") ?? ""),
       role: String(formData.get("role") ?? "member"),
+      workspaceId,
     });
     revalidatePath("/admin/agency");
-    redirect(`/admin/agency?seat=1&invite=${encodeURIComponent(invited.invitePath)}`);
+    redirect(
+      agencyRedirect(workspaceId, `seat=1&invite=${encodeURIComponent(invited.invitePath)}`),
+    );
   } catch (e) {
     const msg = e instanceof Error ? e.message : "seat_failed";
-    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+    redirect(agencyRedirect(workspaceId, `error=${encodeURIComponent(msg)}`));
   }
 }
 
 export async function actionAdminSetSeat(formData: FormData) {
   await requireAdminAction("agency.manage");
+  const workspaceId = workspaceOf(formData);
   try {
-    await setAgencySeatActive(String(formData.get("email") ?? ""), formData.get("active") === "1");
+    await setAgencySeatActive(String(formData.get("email") ?? ""), formData.get("active") === "1", workspaceId);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "seat_failed";
-    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+    redirect(agencyRedirect(workspaceId, `error=${encodeURIComponent(msg)}`));
   }
   revalidatePath("/admin/agency");
-  redirect("/admin/agency?seat=1");
+  redirect(agencyRedirect(workspaceId, "seat=1"));
 }
 
 export async function actionAdminAddRoster(formData: FormData) {
   await requireAdminAction("agency.manage");
+  const workspaceId = workspaceOf(formData);
   try {
     await addRosterMember({
       creatorSlug: String(formData.get("creatorSlug") ?? ""),
       role: (String(formData.get("role") ?? "talent") as "talent" | "lead" | "specialist") || "talent",
       retainerLabel: String(formData.get("retainerLabel") ?? ""),
       notes: String(formData.get("notes") ?? ""),
+      workspaceId,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "add_failed";
-    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+    redirect(agencyRedirect(workspaceId, `error=${encodeURIComponent(msg)}`));
   }
   revalidatePath("/admin/agency");
   revalidatePath("/agency");
-  redirect("/admin/agency?roster=1");
+  redirect(agencyRedirect(workspaceId, "roster=1"));
 }
 
 export async function actionAdminRemoveRoster(formData: FormData) {
   await requireAdminAction("agency.manage");
-  await removeRosterMember(String(formData.get("creatorSlug") ?? ""));
+  const workspaceId = workspaceOf(formData);
+  await removeRosterMember(String(formData.get("creatorSlug") ?? ""), workspaceId);
   revalidatePath("/admin/agency");
   revalidatePath("/agency");
-  redirect("/admin/agency?removed=1");
+  redirect(agencyRedirect(workspaceId, "removed=1"));
 }
 
 export async function actionAdminCreateCampaign(formData: FormData) {
   await requireAdminAction("agency.manage");
+  const workspaceId = workspaceOf(formData);
   const creatorSlugs = String(formData.get("creatorSlugs") ?? "")
     .split(",")
     .map((s) => s.trim())
@@ -90,33 +126,36 @@ export async function actionAdminCreateCampaign(formData: FormData) {
       budgetLabel: String(formData.get("budgetLabel") ?? ""),
       summary: String(formData.get("summary") ?? ""),
       creatorSlugs,
+      workspaceId,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "campaign_failed";
-    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+    redirect(agencyRedirect(workspaceId, `error=${encodeURIComponent(msg)}`));
   }
   revalidatePath("/admin/agency");
   revalidatePath("/agency");
-  redirect("/admin/agency?campaign=1");
+  redirect(agencyRedirect(workspaceId, "campaign=1"));
 }
 
 export async function actionAdminSetCampaignStatus(formData: FormData) {
   await requireAdminAction("agency.manage");
+  const workspaceId = workspaceOf(formData);
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "") as AgencyCampaign["status"];
   try {
-    await setCampaignStatus(id, status);
+    await setCampaignStatus(id, status, workspaceId);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "status_failed";
-    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+    redirect(agencyRedirect(workspaceId, `error=${encodeURIComponent(msg)}`));
   }
   revalidatePath("/admin/agency");
   revalidatePath("/agency");
-  redirect(`/admin/agency?status=${id}`);
+  redirect(agencyRedirect(workspaceId, `status=${id}`));
 }
 
 export async function actionAdminCreatePortfolio(formData: FormData) {
   await requireAdminAction("agency.manage");
+  const workspaceId = workspaceOf(formData);
   const metrics = String(formData.get("metrics") ?? "")
     .split("\n")
     .map((line) => line.trim())
@@ -136,29 +175,31 @@ export async function actionAdminCreatePortfolio(formData: FormData) {
       metrics,
       campaignId: String(formData.get("campaignId") ?? "") || undefined,
       published: true,
+      workspaceId,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "portfolio_failed";
-    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+    redirect(agencyRedirect(workspaceId, `error=${encodeURIComponent(msg)}`));
   }
   revalidatePath("/admin/agency");
   revalidatePath("/agency");
   revalidatePath("/collaboration");
-  redirect("/admin/agency?portfolio=1");
+  redirect(agencyRedirect(workspaceId, "portfolio=1"));
 }
 
 export async function actionAdminTogglePortfolio(formData: FormData) {
   await requireAdminAction("agency.manage");
+  const workspaceId = workspaceOf(formData);
   const id = String(formData.get("id") ?? "");
   const published = formData.get("published") === "1";
   try {
-    await setPortfolioPublished(id, published);
+    await setPortfolioPublished(id, published, workspaceId);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "toggle_failed";
-    redirect(`/admin/agency?error=${encodeURIComponent(msg)}`);
+    redirect(agencyRedirect(workspaceId, `error=${encodeURIComponent(msg)}`));
   }
   revalidatePath("/admin/agency");
   revalidatePath("/agency");
   revalidatePath("/collaboration");
-  redirect(`/admin/agency?toggled=${id}`);
+  redirect(agencyRedirect(workspaceId, `toggled=${id}`));
 }

@@ -42,18 +42,24 @@ describe("intelligence snapshots", () => {
     assert.ok(snapshot.engagementRate);
     assert.deepEqual(snapshot.primaryPlatforms, ["INSTAGRAM"]);
   });
+
+  it("labels follower-backed creators as directory_metrics", () => {
+    const snapshot = buildAudienceSnapshot(sampleCreator());
+    assert.equal(snapshot.source, "directory_metrics");
+    assert.ok(snapshot.totalReach);
+  });
 });
 
 describe("intelligence export csv", () => {
   it("escapes quotes and includes snapshot columns", () => {
     const payload: IntelligenceExport = {
       exportedAt: "2026-10-02T00:00:00.000Z",
-      source: "influrios-intelligence-demo",
+      source: "influrios-intelligence-directory",
       snapshots: [
         {
           creatorSlug: "ada",
           displayName: 'Ada "Maker"',
-          source: "claimed_metrics",
+          source: "directory_metrics",
           refreshedAt: "2026-10-02T00:00:00.000Z",
           gender: { female: 50, male: 40, other: 10 },
           ages: [],

@@ -477,3 +477,19 @@ export async function actionScheduleMilestoneRelease(formData: FormData) {
   revalidatePath("/admin/jobs");
   redirect("/admin/marketplace?saved=release_scheduled");
 }
+
+export async function actionSimulatePrefundHold(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  if (!fundingId) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent("Missing funding id.")}`);
+  }
+  const { simulatePrefundHold } = await import("@/lib/marketplace-ledger");
+  const result = await simulatePrefundHold(fundingId);
+  revalidatePath("/admin/marketplace");
+  revalidatePath(`/admin/marketplace/${fundingId}`);
+  revalidatePath("/payments");
+  revalidatePath("/dashboard");
+  if (!result.ok) redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  redirect(`/admin/marketplace?saved=demo_hold&funding=${encodeURIComponent(fundingId)}`);
+}

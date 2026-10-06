@@ -9,6 +9,7 @@ import {
 } from "@/lib/intelligence";
 
 export const metadata = { title: "Admin · Intelligence" };
+export const dynamic = "force-dynamic";
 
 export default async function AdminIntelligencePage() {
   const session = await requireAdminPage("intelligence");
@@ -18,6 +19,11 @@ export default async function AdminIntelligencePage() {
   const trends = await getNicheTrends();
   const signals = await getRelationshipSignals();
   const rising = trends.filter((t) => t.signal === "rising").length;
+  const sourceCounts = {
+    demo_seed: snapshots.filter((s) => s.source === "demo_seed").length,
+    directory_metrics: snapshots.filter((s) => s.source === "directory_metrics").length,
+    claimed_placeholder: snapshots.filter((s) => s.source === "claimed_placeholder").length,
+  };
 
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
@@ -27,8 +33,8 @@ export default async function AdminIntelligencePage() {
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Intelligence</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Phase 5 ops view — audience snapshot coverage, niche trends, and relationship signals.
-          Automate exports only after B2B demand validates.
+          Audience snapshots from the live directory, niche trends from specialty supply, and relationship signals from
+          managed matching. Source labels show demo seed vs directory metrics vs placeholder fallback.
         </p>
       </div>
 
@@ -45,6 +51,12 @@ export default async function AdminIntelligencePage() {
           <p className="font-display text-lg font-bold text-emerald-700">{signals.length}</p>
           <p className="text-muted">Signals</p>
         </div>
+        <div className="rounded-xl bg-[#EEF2FF] px-4 py-2">
+          <p className="font-display text-lg font-bold text-indigo">
+            {sourceCounts.demo_seed}/{sourceCounts.directory_metrics}/{sourceCounts.claimed_placeholder}
+          </p>
+          <p className="text-muted">Seed / dir / placeholder</p>
+        </div>
       </div>
 
       <section className="card-surface p-6">
@@ -59,9 +71,14 @@ export default async function AdminIntelligencePage() {
             Open business Intelligence UI
           </Link>
           {canExport ? (
-            <a href="/api/intelligence/export?format=json" className="btn-primary !py-2 text-sm">
-              Hit export API (JSON)
-            </a>
+            <>
+              <a href="/admin/intelligence/export?format=json" className="btn-primary !py-2 text-sm">
+                Export JSON (admin)
+              </a>
+              <a href="/admin/intelligence/export?format=csv" className="btn-secondary !py-2 text-sm">
+                Export CSV
+              </a>
+            </>
           ) : (
             <span className="rounded-xl bg-[#EEF2FF] px-3 py-2 text-sm text-muted">
               Export requires the Export intelligence feature on your access level.
@@ -71,7 +88,34 @@ export default async function AdminIntelligencePage() {
       </section>
 
       <section className="card-surface overflow-x-auto p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Audience snapshots</h2>
+        <table className="mt-4 w-full min-w-[720px] text-left text-sm">
+          <thead className="text-xs uppercase tracking-wide text-muted">
+            <tr>
+              <th className="pb-2 pr-3 font-semibold">Creator</th>
+              <th className="pb-2 pr-3 font-semibold">Source</th>
+              <th className="pb-2 pr-3 font-semibold">Reach</th>
+              <th className="pb-2 pr-3 font-semibold">Engagement</th>
+              <th className="pb-2 font-semibold">Top location</th>
+            </tr>
+          </thead>
+          <tbody>
+            {snapshots.map((s) => (
+              <tr key={s.creatorSlug} className="border-t border-border">
+                <td className="py-2.5 pr-3 font-semibold text-indigo">{s.displayName}</td>
+                <td className="py-2.5 pr-3 text-xs">{s.source}</td>
+                <td className="py-2.5 pr-3">{s.totalReach}</td>
+                <td className="py-2.5 pr-3">{s.engagementRate}</td>
+                <td className="py-2.5">{s.topLocations[0]?.name ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="card-surface overflow-x-auto p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Trend table</h2>
+        <p className="mt-1 text-xs text-muted">Demand index is derived from directory specialty supply.</p>
         <table className="mt-4 w-full min-w-[640px] text-left text-sm">
           <thead className="text-xs uppercase tracking-wide text-muted">
             <tr>

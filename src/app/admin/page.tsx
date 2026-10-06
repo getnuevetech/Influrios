@@ -69,7 +69,7 @@ const LINKS: {
   {
     href: "/admin/intelligence",
     title: "Intelligence",
-    blurb: "Audience snapshots, niche trends, relationship signals.",
+    blurb: "Directory-backed snapshots, niche trends, relationship signals.",
     module: "intelligence",
     meta: (c) => `${c.snapshots} snapshots · ${c.rising} rising niches`,
   },
@@ -140,7 +140,7 @@ const LINKS: {
   {
     href: "/admin/agency",
     title: "Agency",
-    blurb: "Talent roster, campaigns, joint portfolios.",
+    blurb: "Multi-workspace talent roster, campaigns, joint portfolios.",
     module: "agency",
     meta: (c) => `${c.agencyRoster} on roster`,
   },
@@ -174,10 +174,10 @@ const LINKS: {
   },
   {
     href: "/admin/mail",
-    title: "Email",
-    blurb: "SMTP host and a test of the claim invitation. Sign in again if this page asks for permission.",
+    title: "Email & SMS",
+    blurb: "SMTP, SMS demo/Twilio, templates, and channel preferences.",
     module: "mail",
-    meta: () => "Sends only when SMTP accepts",
+    meta: () => "Email + SMS demo Jobs",
   },
   {
     href: "/admin/jobs",
@@ -212,7 +212,7 @@ const LINKS: {
     title: "Document signing",
     blurb: "Signing API used after a collaboration is accepted.",
     module: "signing",
-    meta: () => "Queued until the provider confirms",
+    meta: () => "Demo lifecycle + DocuSign-ready",
   },
   {
     href: "/admin/social",
