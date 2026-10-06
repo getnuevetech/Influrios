@@ -1,8 +1,6 @@
-import { productSwitch } from "@/lib/product-switches";
-
-/** Phase 9/10 JSON escrow and trust demo consoles. Default off. */
+/** Phase 9/10 JSON escrow and trust consoles are removed. The marketplace ledger is the only money path. */
 export async function legacyDemoPaymentsEnabled(): Promise<boolean> {
-  return productSwitch("legacy_demo_payments");
+  return false;
 }
 
 export async function assertLegacyDemoPayments() {

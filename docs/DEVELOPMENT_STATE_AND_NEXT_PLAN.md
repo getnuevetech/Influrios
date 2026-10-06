@@ -3,7 +3,7 @@
 **Date:** 2026-10-02 (updated 2026-10-04)  
 **Repo reviewed:** `main` after Collab OS P0–P8 cores + residual closure #125  
 **Sources:** codebase, `docs/IMPLEMENTATION_PLAN.md`, `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, `docs/FULL_IMPLEMENTATION_PLAN.md` v2.1, CI, Prisma schema, deploy scripts, archived product specs in `docs/source-specs/`  
-**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) **v2.1** (DONE / Deferred-external; no silent PARTIAL on completed Exits). This doc remains money/invariant authority and maturity inventory.
+**Feature-status authority:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) **v2.1** (DONE / Deferred-external). **Next implementation slices:** [`ENGINEERING_REVIEW_2026-10-06.md`](./ENGINEERING_REVIEW_2026-10-06.md). This doc remains the money/invariant and maturity inventory.
 
 ---
 
@@ -269,18 +269,11 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) §8.
+**Next coding slices:** [`ENGINEERING_REVIEW_2026-10-06.md`](./ENGINEERING_REVIEW_2026-10-06.md) (entitlement identity, sweep clock, secrets, `tsc` in CI). Feature-status inventory remains [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) §8.
 
 **Collaboration OS** — P0–P8 **code cores shipped** (#73–#125). W1–W6 code exits closed.
 
-Remaining work is **Deferred-external** only (not more residual coding of completed phases):
-
-1. **L1 Phase M** staging evidence when credentials are available.  
-2. **W2.1** landing PNG / CMS operator sign-off.  
-3. **L5** Airwallex checklist signatures before any adapter hard-wire.  
-4. Live provider rails / Phase 4 INFLR.me / paid mentorship — only when product asks.  
-5. Do **not** start Meilisearch / Connect / e-sign / Airwallex domain hard-coding without product asking.
-6. **L3 agency seats** invite/auth is code-complete; ops may enable `agency_seats` in staging when ready.
+The next build is [`ENGINEERING_REVIEW_2026-10-06.md`](./ENGINEERING_REVIEW_2026-10-06.md): finish admin demo and shell consoles, then recurring funding, team proposals, Meilisearch, e-sign, and the Airwallex adapter, then Phase M evidence. A slice is finished only when its exit tests pass.
 
 Terminology source of truth (public UI complete): [`docs/collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf`](./collaboration/Influrios_Influencer_Terminology_Development_Addendum_v1.pdf) and `docs/source-specs/`. Engineering/API migration tracked as **Deferred-external** under P8 soak.
 
@@ -292,15 +285,16 @@ Business hub: `/collaboration/business` (legacy `/business/workspace` redirects)
 
 ---
 
-## 8. Out of scope / do not build next
+## 8. Still out of scope
 
-- Another JSON demo module  
-- Marking M-Pesa, Connect payouts, or signatures complete without provider confirmation  
-- Redis / Meilisearch / separate AI microservice  
-- Universal influencer score  
-- Scraping  
-- Revival of “Influence Connect” branding  
-- Raster cards as the live Influencer Card  
+- Another JSON demo module
+- Marking a provider payment, payout, or signature complete without that provider’s webhook
+- A separate AI microservice, or a universal influencer score
+- Scraping
+- Revival of “Influence Connect” branding
+- Raster cards as the live Influencer Card
+
+Meilisearch, Airwallex, e-sign, Connect, M-Pesa, and recurring funding are in [`ENGINEERING_REVIEW_2026-10-06.md`](./ENGINEERING_REVIEW_2026-10-06.md). They are finished only when that plan’s exit tests pass.  
 
 ---
 

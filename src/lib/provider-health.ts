@@ -17,7 +17,6 @@ export async function providerHealth(): Promise<HealthLine[]> {
     billing,
     stripeMode,
     marketplace,
-    demoCheckout,
     collabOs,
     shortDomain,
     paymentRiskCount,
@@ -38,7 +37,6 @@ export async function providerHealth(): Promise<HealthLine[]> {
     getBillingStore().catch(() => null),
     stripeBillingMode().catch(() => "demo" as const),
     marketplaceWebhookSecret("primary").catch(() => ({ error: "not_ready" as const })),
-    productSwitch("demo_checkout").catch(() => true),
     productSwitch("collab_os_v1").catch(() => true),
     prisma.shortLinkDomain
       .findFirst({ where: { isPrimary: true }, select: { hostname: true, verified: true, active: true } })
@@ -67,8 +65,8 @@ export async function providerHealth(): Promise<HealthLine[]> {
             ? "Stripe live secret is set."
             : stripeMode === "rejected"
               ? "The saved Stripe key is not a sandbox key. Nothing is charged."
-              : "Stripe secret is not set. Demo checkout still completes locally.",
-      detail: [paymentDetail, `demo_checkout is ${demoCheckout ? "on" : "off"}`].filter(Boolean).join(" · "),
+              : "Stripe secret is not set. Checkout stays closed until a key is saved.",
+      detail: paymentDetail,
     },
     {
       key: "email",

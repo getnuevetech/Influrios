@@ -1,5 +1,5 @@
 /**
- * Phase 6 / Phase L.4 — Monetization / billing (Stripe-ready, demo fallback).
+ * Phase 6 / Phase L.4 — Monetization / billing. Plans change only after Stripe confirms payment.
  * Catalog covers Influencer Plus/Pro and Business Pro/Agency.
  * Checkout attempts live in Postgres (CheckoutAttempt). Plan truth is User /
  * Creator / SubscriptionState. One-time import from data/billing.json.
@@ -8,7 +8,6 @@ import { promises as fs } from "fs";
 import path from "path";
 import { setBusinessPlan } from "@/lib/business";
 import { prisma } from "@/lib/db";
-import { productSwitch } from "@/lib/product-switches";
 import { confirmStripeCheckout, openStripeCheckout, stripeCredentials } from "@/lib/stripe-admin";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import type { PlanCode } from "@/lib/entitlements";
@@ -372,10 +371,10 @@ function newId(prefix: string) {
 }
 
 export type StartCheckoutResult =
-  | { ok: true; mode: "stripe" | "demo"; url: string; sessionId: string }
+  | { ok: true; mode: "stripe"; url: string; sessionId: string }
   | { ok: false; error: string };
 
-/** Start Checkout — Stripe when configured, otherwise demo success URL. */
+/** Start Checkout. A plan changes only after Stripe confirms the session. */
 export async function startCheckout(input: {
   sku: BillingSku;
   customerEmail?: string;
@@ -400,8 +399,7 @@ export async function startCheckout(input: {
     return { ok: false, error: "Use a Stripe sandbox key. Nothing was charged." };
   }
   if (!creds.ok) {
-    const demo = await productSwitch("demo_checkout");
-    if (!demo) return { ok: false, error: "Checkout is turned off. Nothing was charged." };
+    return { ok: false, error: "Stripe is not configured. Nothing was charged." };
   }
 
   await migrateLegacyBillingOnce();
@@ -443,30 +441,7 @@ export async function startCheckout(input: {
     return { ok: true, mode: "stripe", url: opened.url, sessionId };
   }
 
-  await upsertAttempt({
-    id: sessionId,
-    sku: product.sku,
-    mode: "demo",
-    status: "open",
-    customerEmail: input.customerEmail,
-    userId: input.userId,
-    creatorSlug: input.creatorSlug,
-    createdAt,
-  });
-
-  const origin = getAppOrigin();
-  const params = new URLSearchParams({
-    local: sessionId,
-    demo: "1",
-    sku: product.sku,
-  });
-  if (input.creatorSlug) params.set("creator", input.creatorSlug);
-  return {
-    ok: true,
-    mode: "demo",
-    url: `${origin}/billing/success?${params.toString()}`,
-    sessionId,
-  };
+  return { ok: false, error: "Stripe is not configured. Nothing was charged." };
 }
 
 export async function completeCheckout(sessionId: string, opts?: {
@@ -482,25 +457,26 @@ export async function completeCheckout(sessionId: string, opts?: {
   const product = getProduct(session.sku);
   if (!product) return { ok: false, error: "Unknown product on session" };
 
-  if (session.mode === "stripe") {
-    const creds = await stripeCredentials();
-    if (!creds.ok || !session.stripeSessionId) {
-      return { ok: false, error: "Stripe has not confirmed this payment. Nothing was changed." };
-    }
-    const confirmed = await confirmStripeCheckout({
-      secret: creds.secret,
-      mode: creds.mode,
-      checkoutSessionId: session.stripeSessionId,
-      localId: session.id,
-    });
-    if (!confirmed.ok) return confirmed;
+  if (session.mode !== "stripe" || !session.stripeSessionId) {
+    return { ok: false, error: "Stripe has not confirmed this payment. Nothing was changed." };
   }
+  const creds = await stripeCredentials();
+  if (!creds.ok) {
+    return { ok: false, error: "Stripe has not confirmed this payment. Nothing was changed." };
+  }
+  const confirmed = await confirmStripeCheckout({
+    secret: creds.secret,
+    mode: creds.mode,
+    checkoutSessionId: session.stripeSessionId,
+    localId: session.id,
+  });
+  if (!confirmed.ok) return confirmed;
 
   const slug = opts?.creatorSlug || session.creatorSlug || (product.creatorPlan ? "sofia-martinez" : undefined);
   try {
     const { applyPlanOnce, checkoutEventId } = await import("@/lib/webhook-idempotency");
     await applyPlanOnce({
-      provider: session.mode === "stripe" ? "stripe" : "demo",
+      provider: "stripe",
       eventId: checkoutEventId(session.id),
       eventType: "checkout.session.completed",
       sku: session.sku,
@@ -517,8 +493,10 @@ export async function completeCheckout(sessionId: string, opts?: {
   session.completedAt = new Date().toISOString();
   await upsertAttempt(session);
 
-  if (product.businessPlan) {
-    await setBusinessPlan(product.businessPlan);
+  if (product.businessPlan && session.userId) {
+    const { getWorkspace } = await import("@/lib/business");
+    const workspace = await getWorkspace(session.userId);
+    await setBusinessPlan(product.businessPlan, workspace.businessId);
   }
 
   return { ok: true, product };

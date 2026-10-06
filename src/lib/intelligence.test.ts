@@ -25,7 +25,7 @@ function sampleCreator(overrides: Partial<SeedCreator> = {}): SeedCreator {
 }
 
 describe("intelligence snapshots", () => {
-  it("builds a demo snapshot with gender remainder and platforms", () => {
+  it("uses claimed demographics and does not invent a split", () => {
     const snapshot = buildAudienceSnapshot(
       sampleCreator({
         demographics: {
@@ -34,19 +34,31 @@ describe("intelligence snapshots", () => {
           locations: [{ name: "Austin", pct: 40 }],
           ages: [{ range: "25-34", pct: 50 }],
         },
+        stats: {
+          engagementRate: "4.1%",
+          engagementDelta: "",
+          totalReach: "12K",
+          reachDelta: "",
+          avgViews: "",
+          viewsDelta: "",
+          collaborations: "",
+          collabDelta: "",
+        },
       }),
     );
     assert.equal(snapshot.creatorSlug, "ada-maker");
-    assert.equal(snapshot.source, "demo_seed");
+    assert.equal(snapshot.source, "claimed_metrics");
     assert.equal(snapshot.gender.other, 10);
-    assert.ok(snapshot.engagementRate);
+    assert.equal(snapshot.engagementRate, "4.1%");
     assert.deepEqual(snapshot.primaryPlatforms, ["INSTAGRAM"]);
-  });
 
-  it("labels follower-backed creators as directory_metrics", () => {
-    const snapshot = buildAudienceSnapshot(sampleCreator());
-    assert.equal(snapshot.source, "directory_metrics");
-    assert.ok(snapshot.totalReach);
+    const empty = buildAudienceSnapshot(sampleCreator());
+    assert.equal(empty.source, "unavailable");
+    assert.equal(empty.gender.female, 0);
+    assert.equal(empty.ages.length, 0);
+    assert.equal(empty.topLocations.length, 0);
+    assert.equal(empty.engagementRate, "");
+    assert.ok(empty.totalReach);
   });
 });
 
@@ -59,7 +71,7 @@ describe("intelligence export csv", () => {
         {
           creatorSlug: "ada",
           displayName: 'Ada "Maker"',
-          source: "directory_metrics",
+          source: "claimed_metrics",
           refreshedAt: "2026-10-02T00:00:00.000Z",
           gender: { female: 50, male: 40, other: 10 },
           ages: [],

@@ -3,8 +3,10 @@ import {
   actionAddEvidence,
   actionApproveMilestone,
   actionCancelPrefund,
+  actionConvertAmbassador,
   actionCreateDeal,
   actionOpenDispute,
+  actionStopSeries,
   actionRequestChangeOrder,
   actionRequestRevision,
   actionSubmitMilestone,
@@ -333,6 +335,36 @@ export default async function PaymentsPage({ searchParams }: Props) {
                     </span>
                   </div>
                 </div>
+                {deal.scheduleKind === "recurring" && deal.scheduleId && !deal.seriesStopped ? (
+                  <form action={actionStopSeries} className="mt-4">
+                    <input type="hidden" name="scheduleId" value={deal.scheduleId} />
+                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                      Stop future tranches
+                    </button>
+                  </form>
+                ) : null}
+                {deal.scheduleKind === "once" && (deal.status === "completed" || deal.status === "released") ? (
+                  <form action={actionConvertAmbassador} className="mt-4 flex flex-wrap items-end gap-2">
+                    <input type="hidden" name="fundingId" value={deal.id} />
+                    <input type="hidden" name="businessName" value={deal.businessName} />
+                    <input type="hidden" name="creatorSlug" value={deal.creatorSlug} />
+                    <input type="hidden" name="title" value={deal.title} />
+                    <input type="hidden" name="jurisdictionCode" value={deal.jurisdictionCode} />
+                    <input type="hidden" name="serviceLevel" value={deal.serviceLevel} />
+                    <input type="hidden" name="workspaceId" value={deal.workspaceId ?? ""} />
+                    <label className="text-xs font-semibold text-muted">
+                      Ambassador occurrences
+                      <input name="occurrenceCount" type="number" min={2} defaultValue={2} className="mt-1 block w-24 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
+                    </label>
+                    <label className="text-xs font-semibold text-muted">
+                      Gross USD
+                      <input name="grossUsd" type="number" min={1} defaultValue={Math.max(1, Math.round(deal.grossCents / 100))} className="mt-1 block w-28 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
+                    </label>
+                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                      Start ambassador series
+                    </button>
+                  </form>
+                ) : null}
                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted">
                   <span>
                     Total <strong className="text-indigo">{formatMoney(deal.grossCents, deal.currency)}</strong>
@@ -360,6 +392,17 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   <span>
                     Provider <strong className="text-indigo">{deal.providerCode}</strong>
                   </span>
+                  {deal.scheduleKind === "recurring" && deal.scheduleId ? (
+                    <span>
+                      {scheduleLabel({
+                        scheduleKind: deal.scheduleKind,
+                        trancheIndex: deal.trancheIndex,
+                        trancheCount: deal.trancheCount,
+                        intervalDays: deal.intervalDays,
+                      })}
+                      {deal.seriesStopped ? " · stopped" : ""}
+                    </span>
+                  ) : null}
                   {shares ? (
                     <span>
                       Revenue share{" "}

@@ -20,9 +20,8 @@ export default async function AdminIntelligencePage() {
   const signals = await getRelationshipSignals();
   const rising = trends.filter((t) => t.signal === "rising").length;
   const sourceCounts = {
-    demo_seed: snapshots.filter((s) => s.source === "demo_seed").length,
-    directory_metrics: snapshots.filter((s) => s.source === "directory_metrics").length,
-    claimed_placeholder: snapshots.filter((s) => s.source === "claimed_placeholder").length,
+    claimed: snapshots.filter((s) => s.source === "claimed_metrics").length,
+    unavailable: snapshots.filter((s) => s.source === "unavailable").length,
   };
 
   return (
@@ -34,7 +33,7 @@ export default async function AdminIntelligencePage() {
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Intelligence</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           Audience snapshots from the live directory, niche trends from specialty supply, and relationship signals from
-          managed matching. Source labels show demo seed vs directory metrics vs placeholder fallback.
+          managed matching. Gender and age splits appear only when the creator record includes claimed demographics.
         </p>
       </div>
 
@@ -53,9 +52,9 @@ export default async function AdminIntelligencePage() {
         </div>
         <div className="rounded-xl bg-[#EEF2FF] px-4 py-2">
           <p className="font-display text-lg font-bold text-indigo">
-            {sourceCounts.demo_seed}/{sourceCounts.directory_metrics}/{sourceCounts.claimed_placeholder}
+            {sourceCounts.claimed}/{sourceCounts.unavailable}
           </p>
-          <p className="text-muted">Seed / dir / placeholder</p>
+          <p className="text-muted">Claimed / unavailable</p>
         </div>
       </div>
 

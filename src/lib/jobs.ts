@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { SWEEP_JOB_KINDS } from "@/lib/sweep-clock";
 import { getAppOrigin } from "@/lib/billing";
 import {
   COLLAB_NOTIFICATION_TEMPLATES,
@@ -116,6 +117,11 @@ async function runJob(kind: string, payload: unknown) {
     await sweepExpiredMarketplaceApplications();
     return;
   }
+  if (kind === "recurring_cycle_sweep") {
+    const { sweepDueRecurrences } = await import("@/lib/marketplace-ledger");
+    await sweepDueRecurrences();
+    return;
+  }
   if (kind === "collab_notification") {
     if (!data.to || !data.subject || !data.text) {
       throw new Error("Collaboration notification job is missing a recipient or copy.");
@@ -134,12 +140,58 @@ async function runJob(kind: string, payload: unknown) {
   throw new Error(`Unknown job kind ${kind}.`);
 }
 
+function payloadWithoutCode(payload: unknown): Record<string, string> {
+  const data = payloadOf(payload);
+  delete data.code;
+  return data;
+}
+
+export async function enqueueDueSweeps() {
+  const open = await prisma.job.findMany({
+    where: { kind: { in: [...SWEEP_JOB_KINDS] }, status: { in: ["queued", "running"] } },
+    select: { kind: true },
+  });
+  const have = new Set(open.map((row) => row.kind));
+  let queued = 0;
+  for (const kind of SWEEP_JOB_KINDS) {
+    if (have.has(kind)) continue;
+    await prisma.job.create({
+      data: {
+        kind,
+        status: "queued",
+        payload: { enqueuedAt: new Date().toISOString() },
+      },
+    });
+    queued += 1;
+  }
+  return { queued };
+}
+
+export async function listSweepStatus() {
+  const rows = await Promise.all(
+    SWEEP_JOB_KINDS.map(async (kind) => {
+      const latest = await prisma.job.findFirst({
+        where: { kind },
+        orderBy: { createdAt: "desc" },
+      });
+      return {
+        kind,
+        status: latest?.status ?? "never",
+        at: latest?.updatedAt.toISOString() ?? null,
+        lastError: latest?.lastError ?? null,
+      };
+    }),
+  );
+  return rows;
+}
+
 export async function processDueJobs(limit = 8) {
   const due = await prisma.job.findMany({
     where: { status: "queued", runAfter: { lte: new Date() } },
     orderBy: { createdAt: "asc" },
     take: limit,
   });
+  let processed = 0;
   for (const job of due) {
     const claimed = await prisma.job.updateMany({
       where: { id: job.id, status: "queued" },
@@ -150,10 +202,17 @@ export async function processDueJobs(limit = 8) {
     if (!current) continue;
     try {
       await runJob(current.kind, current.payload);
+      const clearCode =
+        current.kind === "verification_email" || current.kind === "claim_verification_email";
       await prisma.job.update({
         where: { id: job.id },
-        data: { status: "succeeded", lastError: null },
+        data: {
+          status: "succeeded",
+          lastError: null,
+          ...(clearCode ? { payload: payloadWithoutCode(current.payload) } : {}),
+        },
       });
+      processed += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Job failed";
       const status = nextJobStatus(current.attempts, false);
@@ -167,6 +226,7 @@ export async function processDueJobs(limit = 8) {
       });
     }
   }
+  return { processed };
 }
 
 export async function enqueueVerificationEmail(userId: string, code: string) {

@@ -28,11 +28,11 @@ export type AgencyAccess =
   | { ok: false; error: string; seatsEnabled: boolean };
 
 export async function resolveAgencyAccess(): Promise<AgencyAccess> {
-  const [seatsEnabled, workspace, account] = await Promise.all([
+  const [seatsEnabled, account] = await Promise.all([
     productSwitch("agency_seats"),
-    getWorkspace(),
     getAccountSession(),
   ]);
+  const workspace = await getWorkspace(account?.id);
 
   if (seatsEnabled) {
     if (!account) {

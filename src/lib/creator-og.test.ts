@@ -46,8 +46,11 @@ describe("creator OG / social sharing (W5 / INFLR.me §11)", () => {
     );
     assert.equal(meta.alternates?.canonical, "https://influrios.com/creators/sofia-martinez");
     assert.equal(meta.openGraph?.siteName, "Influrios");
-    assert.match(String(meta.openGraph?.images?.[0] && typeof meta.openGraph.images[0] === "object" && "url" in meta.openGraph.images[0] ? meta.openGraph.images[0].url : ""), /creator-sofia/);
-    assert.equal(meta.twitter?.card, "summary_large_image");
+    const images = meta.openGraph?.images;
+    const first = Array.isArray(images) ? images[0] : images;
+    const imageUrl = first && typeof first === "object" && "url" in first ? String(first.url) : "";
+    assert.match(imageUrl, /creator-sofia/);
+    assert.equal((meta.twitter as { card?: string } | null | undefined)?.card, "summary_large_image");
   });
 
   it("detects social preview bots and builds interstitial with canonical back to Influrios", () => {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authSecretConfigured } from "@/lib/app-secret";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export async function GET() {
       web: { ok: true },
       db: dbOk ? { ok: true, latencyMs } : { ok: false },
     },
+    secrets: { authConfigured: authSecretConfigured() },
     ts,
   };
 

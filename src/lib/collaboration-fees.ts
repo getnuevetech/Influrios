@@ -4,6 +4,7 @@
  * Accepted quotes produce an immutable fee snapshot (admin simulator freezes here;
  * marketplace prefunds freeze on CollaborationFunding.feeSnapshotJson).
  */
+import { Prisma } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
@@ -767,8 +768,8 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
           tierBandsJson:
             input.tierBands !== undefined
               ? input.tierBands.length
-                ? input.tierBands
-                : null
+                ? (input.tierBands as unknown as Prisma.InputJsonValue)
+                : Prisma.DbNull
               : undefined,
           payer: input.payer ?? prev.payer,
           effectiveFrom: input.effectiveFrom ? new Date(input.effectiveFrom) : prev.effectiveFrom,

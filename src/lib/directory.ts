@@ -168,28 +168,6 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
   };
 }
 
-function fallbackSnapshot(): Cache {
-  const taxonomy: TaxonomyNode[] = SPECIALTY_TAXONOMY.map((parent) => ({
-    slug: parent.slug,
-    name: parent.name,
-    active: true,
-    children: (parent.children ?? []).map((child) => ({ ...child, active: true })),
-  }));
-  return {
-    at: Date.now(),
-    creators: SEED_CREATORS.map((creator) => toPublicProfile(creator)),
-    taxonomy,
-    synonyms: DEFAULT_SYNONYMS,
-    sections: DEFAULT_HOMEPAGE_SECTIONS.map((section, index) => ({
-      ...section,
-      id: `fallback-${section.key}`,
-      updatedBy: null,
-      sortOrder: index,
-    })),
-    menus: DEFAULT_MENUS.map((item, index) => ({ ...item, id: `fallback-${index}`, visible: true })),
-  };
-}
-
 async function ensureSpecialties() {
   const rows = await prisma.specialty.findMany({ select: { id: true, slug: true } });
   const bySlug = new Map(rows.map((row) => [row.slug, row.id]));
@@ -421,8 +399,8 @@ export async function getDirectory(): Promise<Cache> {
     cache = await readDirectory();
     return cache;
   } catch (error) {
-    console.error("directory: using seed fallback", error);
-    return fallbackSnapshot();
+    console.error("directory: postgres read failed", error);
+    throw error;
   }
 }
 
@@ -444,6 +422,16 @@ export async function directoryHasCreator(slug: string): Promise<boolean> {
 export { indexCreatorsBySlug } from "@/lib/seed-data";
 
 export async function searchDirectory(query: CreatorSearchQuery) {
+  const { meiliConfigured, searchCreatorIndex } = await import("@/lib/creator-index");
+  if (meiliConfigured()) {
+    const indexed = await searchCreatorIndex(query);
+    const directory = await getDirectory();
+    const allowed = new Set(indexed.slugs);
+    return directory.creators.filter((creator) => allowed.has(creator.slug));
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("MEILI_HOST is required.");
+  }
   const directory = await getDirectory();
   const specialtyValues = query.specialty
     ? (Array.isArray(query.specialty) ? query.specialty : [query.specialty]).map(

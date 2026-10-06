@@ -307,7 +307,7 @@ export async function decideMilestoneDispute(input: {
       await notifyCollabFundingEvent({
         fundingId: dispute.fundingId,
         kind: "dispute_resolved",
-        milestone: dispute.milestone.title,
+        milestone: dispute.milestone?.title ?? "Milestone",
         detail: input.note?.trim() || decision.outcome || decision.status,
       });
     });

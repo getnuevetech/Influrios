@@ -7,9 +7,6 @@ import { prisma } from "@/lib/db";
 import { directoryHasCreator } from "@/lib/directory";
 import { productSwitch } from "@/lib/product-switches";
 
-export { AGENCY_WORKSPACE_ID as DEFAULT_AGENCY_WORKSPACE_ID } from "@/lib/agency-seats";
-import { AGENCY_WORKSPACE_ID } from "@/lib/agency-seats";
-
 export type RosterMember = {
   creatorSlug: string;
   role: "talent" | "lead" | "specialist";
@@ -56,80 +53,30 @@ export type AgencyStore = {
   portfolios: JointPortfolio[];
 };
 
-const WORKSPACE_ID = AGENCY_WORKSPACE_ID;
 const now = () => new Date().toISOString();
 
-function resolveWorkspaceId(workspaceId?: string) {
-  const id = (workspaceId || WORKSPACE_ID).trim().slice(0, 64);
-  if (!id) return WORKSPACE_ID;
+/** Stable id for the agency workspace owned by a member account. */
+export function agencyWorkspaceIdForOwner(ownerUserId: string) {
+  return `agency_owner_${ownerUserId}`.slice(0, 64);
+}
+
+function resolveWorkspaceId(workspaceId?: string | null) {
+  const id = (workspaceId ?? "").trim().slice(0, 64);
+  if (!id) throw new Error("Agency workspace is required.");
   return id;
 }
 
-const DEFAULT_STORE: AgencyStore = {
-  agencyId: "agency_demo_1",
-  name: "Northstar Influence",
-  plan: "AGENCY",
-  notes:
-    "Phase 11 demo agency — roster + campaigns + joint portfolio stubs. Upgrade business plan to AGENCY to unlock.",
-  roster: [
-    {
-      creatorSlug: "sofia-martinez",
-      role: "lead",
-      retainerLabel: "$4.5K / mo",
-      notes: "Beauty lead; clean skincare launches",
-      addedAt: now(),
-    },
-    {
-      creatorSlug: "amara-okonkwo",
-      role: "specialist",
-      retainerLabel: "Project",
-      notes: "Natural hair / texture specialist",
-      addedAt: now(),
-    },
-    {
-      creatorSlug: "jordan-blake",
-      role: "talent",
-      retainerLabel: "Project",
-      notes: "Lifestyle / wellness crossovers",
-      addedAt: now(),
-    },
-  ],
-  campaigns: [
-    {
-      id: "camp_clean_launch",
-      title: "Luminous Clean Launch",
-      clientName: "Luminous Beauty",
-      status: "live",
-      specialty: "beauty",
-      budgetLabel: "$12K package",
-      creatorSlugs: ["sofia-martinez", "amara-okonkwo"],
-      summary: "3-post launch + joint reel with complementary beauty + hair angles.",
-      createdAt: now(),
-      updatedAt: now(),
-    },
-  ],
-  portfolios: [
-    {
-      id: "portfolio_demo_1",
-      title: "Clean beauty × texture care",
-      tagline: "Complementary influencers, one brand story",
-      leftSlug: "sofia-martinez",
-      rightSlug: "amara-okonkwo",
-      specialty: "beauty",
-      outcome:
-        "Joint reel + carousel drove save-heavy engagement and a measurable lift in branded search.",
-      metrics: [
-        { label: "Combined reach", value: "1.2M" },
-        { label: "Saves", value: "18.4K" },
-        { label: "Brand lift", value: "+22%" },
-      ],
-      campaignId: "camp_clean_launch",
-      published: true,
-      createdAt: now(),
-      updatedAt: now(),
-    },
-  ],
-};
+function emptyStore(): AgencyStore {
+  return {
+    agencyId: "",
+    name: "Agency",
+    plan: "AGENCY",
+    notes: "",
+    roster: [],
+    campaigns: [],
+    portfolios: [],
+  };
+}
 
 function asStringList(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
@@ -145,72 +92,22 @@ function asMetrics(value: unknown) {
   });
 }
 
-async function ensureWorkspace(workspaceId = WORKSPACE_ID) {
+async function ensureWorkspace(workspaceId: string) {
   const id = resolveWorkspaceId(workspaceId);
   const existing = await prisma.agencyWorkspace.findUnique({ where: { id } });
   if (existing) return existing;
-  // Full demo seed only for the default workspace.
-  if (id !== WORKSPACE_ID) {
-    try {
-      return await prisma.agencyWorkspace.create({
-        data: {
-          id,
-          name: id.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).slice(0, 80) || "Agency",
-          plan: "AGENCY",
-          notes: "Admin-created agency workspace.",
-        },
-      });
-    } catch (error) {
-      if (!isUnique(error)) throw error;
-      return prisma.agencyWorkspace.findUniqueOrThrow({ where: { id } });
-    }
-  }
   try {
     return await prisma.agencyWorkspace.create({
       data: {
-        id: WORKSPACE_ID,
-        name: DEFAULT_STORE.name,
-        plan: DEFAULT_STORE.plan,
-        notes: DEFAULT_STORE.notes,
-        roster: {
-          create: DEFAULT_STORE.roster.map((member) => ({
-            creatorSlug: member.creatorSlug,
-            role: member.role,
-            retainerLabel: member.retainerLabel,
-            notes: member.notes,
-          })),
-        },
-        campaigns: {
-          create: DEFAULT_STORE.campaigns.map((campaign) => ({
-            id: campaign.id,
-            title: campaign.title,
-            clientName: campaign.clientName,
-            status: campaign.status,
-            specialty: campaign.specialty,
-            budgetLabel: campaign.budgetLabel,
-            creatorSlugs: campaign.creatorSlugs,
-            summary: campaign.summary,
-          })),
-        },
-        portfolios: {
-          create: DEFAULT_STORE.portfolios.map((portfolio) => ({
-            id: portfolio.id,
-            title: portfolio.title,
-            tagline: portfolio.tagline,
-            leftSlug: portfolio.leftSlug,
-            rightSlug: portfolio.rightSlug,
-            specialty: portfolio.specialty,
-            outcome: portfolio.outcome,
-            metricsJson: portfolio.metrics,
-            campaignId: portfolio.campaignId,
-            published: portfolio.published,
-          })),
-        },
+        id,
+        name: "Agency",
+        plan: "AGENCY",
+        notes: "",
       },
     });
   } catch (error) {
     if (!isUnique(error)) throw error;
-    return prisma.agencyWorkspace.findUniqueOrThrow({ where: { id: WORKSPACE_ID } });
+    return prisma.agencyWorkspace.findUniqueOrThrow({ where: { id } });
   }
 }
 
@@ -218,7 +115,7 @@ function isUnique(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && String(error.code) === "P2002";
 }
 
-async function ensureStore(workspaceId = WORKSPACE_ID): Promise<AgencyStore> {
+async function ensureStore(workspaceId: string): Promise<AgencyStore> {
   const id = resolveWorkspaceId(workspaceId);
   await ensureWorkspace(id);
   const row = await prisma.agencyWorkspace.findUniqueOrThrow({
@@ -271,7 +168,6 @@ async function ensureStore(workspaceId = WORKSPACE_ID): Promise<AgencyStore> {
 }
 
 export async function listAgencyWorkspaces() {
-  await ensureWorkspace(WORKSPACE_ID);
   return prisma.agencyWorkspace.findMany({ orderBy: { name: "asc" } });
 }
 
@@ -300,7 +196,8 @@ export async function createAgencyWorkspace(input: { id: string; name: string; n
   }
 }
 
-export async function getAgencyStore(workspaceId?: string) {
+export async function getAgencyStore(workspaceId?: string | null) {
+  if (!workspaceId?.trim()) return emptyStore();
   return ensureStore(resolveWorkspaceId(workspaceId));
 }
 
@@ -469,7 +366,8 @@ export async function setPortfolioPublished(id: string, published: boolean, work
   return p;
 }
 
-export async function listAgencySeats(workspaceId?: string) {
+export async function listAgencySeats(workspaceId?: string | null) {
+  if (!workspaceId?.trim()) return [];
   const id = resolveWorkspaceId(workspaceId);
   await ensureWorkspace(id);
   return prisma.agencySeat.findMany({ where: { workspaceId: id }, orderBy: { createdAt: "asc" } });

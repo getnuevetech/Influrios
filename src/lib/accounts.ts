@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes, randomInt, scryptSync, timingSafeE
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { passwordError } from "@/lib/account-policy";
+import { requireAuthSecret } from "@/lib/app-secret";
 import { getSiteConfig } from "@/lib/site-config";
 
 const COOKIE = "influrios_account";
@@ -15,7 +16,7 @@ export type AccountSession = {
 };
 
 function secret() {
-  return process.env.AUTH_SECRET || process.env.ADMIN_SESSION_SECRET || "influrios-account-demo";
+  return requireAuthSecret("account");
 }
 
 function sign(payload: string) {

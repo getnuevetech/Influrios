@@ -14,11 +14,12 @@ import {
   setPortfolioPublished,
   type AgencyCampaign,
 } from "@/lib/agency";
-import { AGENCY_WORKSPACE_ID } from "@/lib/agency-seats";
 import { setProductSwitch } from "@/lib/product-switches";
 
 function workspaceOf(formData: FormData) {
-  return String(formData.get("workspaceId") ?? AGENCY_WORKSPACE_ID).trim() || AGENCY_WORKSPACE_ID;
+  const workspaceId = String(formData.get("workspaceId") ?? "").trim();
+  if (!workspaceId) throw new Error("Choose an agency workspace.");
+  return workspaceId;
 }
 
 function agencyRedirect(workspaceId: string, query: string) {

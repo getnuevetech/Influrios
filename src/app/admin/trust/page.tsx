@@ -70,9 +70,6 @@ export default async function AdminTrustPage({ searchParams }: Props) {
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
             Ledger disputes block a provider release until ops record a decision. That decision does not move money.
-            {legacyOn
-              ? "The Phase 9/10 demo mediation queue stays available while legacy demo payments is on."
-              : "The Phase 9/10 demo queue is off. Turn on legacy demo payments in marketplace settings to restore it."}
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-center text-xs">

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   addRosterMember,
+  agencyWorkspaceIdForOwner,
   createAgencyCampaign,
   createJointPortfolio,
   setCampaignStatus,
@@ -12,19 +13,27 @@ import {
 } from "@/lib/agency";
 import { resolveAgencyAccess } from "@/lib/agency-auth";
 
-async function requireAgencyAccess() {
+async function requireWorkspaceId() {
   const access = await resolveAgencyAccess();
   if (!access.ok) {
     redirect(`/agency?error=${encodeURIComponent(access.error)}`);
   }
-  return access;
+  const workspaceId =
+    access.mode === "seat"
+      ? access.seat.workspaceId
+      : access.account?.id
+        ? agencyWorkspaceIdForOwner(access.account.id)
+        : null;
+  if (!workspaceId) redirect("/agency?error=Sign in to use your agency workspace.");
+  return workspaceId;
 }
 
 export async function actionAddRoster(formData: FormData) {
-  await requireAgencyAccess();
+  const workspaceId = await requireWorkspaceId();
   const creatorSlug = String(formData.get("creatorSlug") ?? "");
   try {
     await addRosterMember({
+      workspaceId,
       creatorSlug,
       role: (String(formData.get("role") ?? "talent") as "talent" | "lead" | "specialist") || "talent",
       retainerLabel: String(formData.get("retainerLabel") ?? ""),
@@ -40,13 +49,14 @@ export async function actionAddRoster(formData: FormData) {
 }
 
 export async function actionCreateCampaign(formData: FormData) {
-  await requireAgencyAccess();
+  const workspaceId = await requireWorkspaceId();
   const creatorSlugs = String(formData.get("creatorSlugs") ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
   try {
     await createAgencyCampaign({
+      workspaceId,
       title: String(formData.get("title") ?? ""),
       clientName: String(formData.get("clientName") ?? ""),
       specialty: String(formData.get("specialty") ?? "beauty"),
@@ -64,11 +74,11 @@ export async function actionCreateCampaign(formData: FormData) {
 }
 
 export async function actionSetCampaignStatus(formData: FormData) {
-  await requireAgencyAccess();
+  const workspaceId = await requireWorkspaceId();
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "") as AgencyCampaign["status"];
   try {
-    await setCampaignStatus(id, status);
+    await setCampaignStatus(id, status, workspaceId);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "status_failed";
     redirect(`/agency?error=${encodeURIComponent(msg)}`);
@@ -79,7 +89,7 @@ export async function actionSetCampaignStatus(formData: FormData) {
 }
 
 export async function actionCreatePortfolio(formData: FormData) {
-  await requireAgencyAccess();
+  const workspaceId = await requireWorkspaceId();
   const metricsRaw = String(formData.get("metrics") ?? "");
   const metrics = metricsRaw
     .split("\n")
@@ -91,6 +101,7 @@ export async function actionCreatePortfolio(formData: FormData) {
     });
   try {
     await createJointPortfolio({
+      workspaceId,
       title: String(formData.get("title") ?? ""),
       tagline: String(formData.get("tagline") ?? ""),
       leftSlug: String(formData.get("leftSlug") ?? ""),
@@ -112,11 +123,11 @@ export async function actionCreatePortfolio(formData: FormData) {
 }
 
 export async function actionTogglePortfolio(formData: FormData) {
-  await requireAgencyAccess();
+  const workspaceId = await requireWorkspaceId();
   const id = String(formData.get("id") ?? "");
   const published = formData.get("published") === "1";
   try {
-    await setPortfolioPublished(id, published);
+    await setPortfolioPublished(id, published, workspaceId);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "toggle_failed";
     redirect(`/agency?error=${encodeURIComponent(msg)}`);
@@ -127,11 +138,3 @@ export async function actionTogglePortfolio(formData: FormData) {
   redirect(`/agency?toggled=${id}`);
 }
 
-/** Demo helper — bump workspace to AGENCY from the agency page. */
-export async function actionEnableAgencyPlan() {
-  const { setBusinessPlan } = await import("@/lib/business");
-  await setBusinessPlan("AGENCY");
-  revalidatePath("/agency");
-  revalidatePath("/business");
-  redirect("/agency?plan=AGENCY");
-}

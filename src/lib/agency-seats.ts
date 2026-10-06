@@ -13,7 +13,6 @@ export const AGENCY_INVITE_STATUSES = ["pending", "accepted", "revoked"] as cons
 export type AgencyInviteStatus = (typeof AGENCY_INVITE_STATUSES)[number];
 
 export const AGENCY_INVITE_EXPIRY_DAYS = 14;
-export const AGENCY_WORKSPACE_ID = "agency_demo_1";
 
 export function asAgencySeatRole(value: string | undefined | null): AgencySeatRole {
   if (value === "owner" || value === "manager") return value;
@@ -93,15 +92,16 @@ export async function inviteAgencySeat(input: {
   const email = normalizeSeatEmail(input.email);
   if (!isValidSeatEmail(email)) throw new Error("Enter a seat email.");
   const role = asAgencySeatRole(input.role);
-  const workspaceId = input.workspaceId || AGENCY_WORKSPACE_ID;
+  const workspaceId = input.workspaceId?.trim();
+  if (!workspaceId) throw new Error("Agency workspace is required.");
   await prisma.agencyWorkspace.upsert({
     where: { id: workspaceId },
     update: {},
     create: {
       id: workspaceId,
-      name: "Northstar Influence",
+      name: "Agency",
       plan: "AGENCY",
-      notes: "Agency workspace — seats invite/accept gated by agency_seats switch.",
+      notes: "",
     },
   });
   const token = newAgencyInviteToken();
@@ -190,13 +190,16 @@ export async function acceptAgencySeatInvite(input: {
   return { ok: true as const, seat: updated, alreadyAccepted: false as const };
 }
 
-export async function resolveAgencySeatForEmail(email: string, workspaceId = AGENCY_WORKSPACE_ID) {
+export async function resolveAgencySeatForEmail(email: string) {
   const seatsEnabled = await productSwitch("agency_seats");
   if (!seatsEnabled) return null;
-  const seat = await prisma.agencySeat.findUnique({
+  const seat = await prisma.agencySeat.findFirst({
     where: {
-      workspaceId_email: { workspaceId, email: normalizeSeatEmail(email) },
+      email: normalizeSeatEmail(email),
+      inviteStatus: "accepted",
+      active: true,
     },
+    orderBy: { acceptedAt: "desc" },
   });
   if (!seat) return null;
   if (!canUseAgencySeatSession({ seatsEnabled: true, inviteStatus: seat.inviteStatus, active: seat.active })) {
@@ -205,7 +208,7 @@ export async function resolveAgencySeatForEmail(email: string, workspaceId = AGE
   return seat;
 }
 
-export async function revokeAgencySeatInvite(email: string, workspaceId = AGENCY_WORKSPACE_ID) {
+export async function revokeAgencySeatInvite(email: string, workspaceId: string) {
   if (!(await productSwitch("agency_seats"))) {
     throw new Error("Agency seats are turned off.");
   }

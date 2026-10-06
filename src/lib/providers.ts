@@ -359,7 +359,7 @@ export async function saveProvider(input: {
   if (existing) {
     return prisma.integrationProvider.update({
       where: { id: existing.id },
-      data: { ...data, secretCipher, webhookCipher, extraJson: extraJson ?? null },
+      data: { ...data, secretCipher, webhookCipher, extraJson: extraJson ?? undefined },
     });
   }
   return prisma.integrationProvider.create({
@@ -439,7 +439,7 @@ export async function setDefaultBackupGateway(providerId: string) {
         data: {
           extraJson: writeProviderExtra(row.extraJson, {
             isDefaultBackup: row.id === provider.id,
-          }) ?? null,
+          }) ?? undefined,
         },
       }),
     ),
@@ -455,7 +455,7 @@ export async function clearDefaultBackupGateway() {
       .map((row) =>
         prisma.integrationProvider.update({
           where: { id: row.id },
-          data: { extraJson: writeProviderExtra(row.extraJson, { isDefaultBackup: false }) ?? null },
+          data: { extraJson: writeProviderExtra(row.extraJson, { isDefaultBackup: false }) ?? undefined },
         }),
       ),
   );
@@ -506,12 +506,12 @@ export async function gatewayRemovalImpact(providerId: string): Promise<GatewayR
     countryCode: route.countryCode,
     countryName: countryDisplayName(route.countryCode, nameByCode.get(route.countryCode)),
   }));
-  const blockers = buildGatewayRemovalBlockers({ countries, isDefaultBackup });
+  const blockers = buildGatewayRemovalBlockers({ countries, isDefaultBackup: Boolean(isDefaultBackup) });
   return {
     providerId: provider.id,
     providerCode: provider.code,
     providerName: provider.name,
-    isDefaultBackup,
+    isDefaultBackup: Boolean(isDefaultBackup),
     countries,
     blocked: blockers.length > 0,
     blockers,

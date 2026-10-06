@@ -3,7 +3,6 @@ import { describe, it } from "node:test";
 import { allCreatorMatches, findMatchesFor, scoreCreatorPair } from "./matching";
 import { indexCreatorsBySlug, SEED_CREATORS } from "./seed-data";
 import { assertLegacyDemoPayments, isLegacyDemoPaymentsAdminHref } from "./legacy-demo-payments";
-import { setProductSwitchForTests } from "./product-switches";
 
 describe("directory purity helpers", () => {
   it("indexes creators by slug for picker lookups", () => {
@@ -31,16 +30,8 @@ describe("directory purity helpers", () => {
 });
 
 describe("legacy demo payments switch", () => {
-  it("refuses Phase 9/10 demo writes when the switch is off", async () => {
-    setProductSwitchForTests("legacy_demo_payments", false);
+  it("always refuses Phase 9/10 demo writes", async () => {
     await assert.rejects(() => assertLegacyDemoPayments(), /marketplace ledger/i);
-    setProductSwitchForTests("legacy_demo_payments", null);
-  });
-
-  it("allows Phase 9/10 demo writes when the switch is on", async () => {
-    setProductSwitchForTests("legacy_demo_payments", true);
-    await assertLegacyDemoPayments();
-    setProductSwitchForTests("legacy_demo_payments", null);
   });
 
   it("only treats /admin/payments as a legacy-only admin href", () => {

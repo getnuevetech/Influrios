@@ -108,6 +108,6 @@ export function legacyInventorySnapshot() {
     creatorCompatFields: CREATOR_STAR_COMPAT_FIELDS,
     signingDecision:
       "Keep /admin/signing as a non-goal shell until counsel approves e-sign. Contract wizard remains accept-only; do not claim provider success.",
-    moneyEngine: "marketplace ledger (CollaborationFunding + LedgerEntry) is the sole product money path when legacy_demo_payments is off.",
+    moneyEngine: "marketplace ledger (CollaborationFunding + LedgerEntry) is the sole product money path.",
   };
 }

@@ -19,7 +19,7 @@ async function main() {
       .replace(/\bCreators\b/g, "Influencers");
     await prisma.cmsSection.update({
       where: { key: "collaboration" },
-      data: { payload },
+      data: { payload: payload as object },
     });
     console.log(
       "cms matches",

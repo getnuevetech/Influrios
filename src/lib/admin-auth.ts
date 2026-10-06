@@ -7,6 +7,7 @@ import { createHmac, timingSafeEqual, randomBytes, scryptSync } from "crypto";
 import { promises as fs } from "fs";
 import { cookies, headers } from "next/headers";
 import path from "path";
+import { requireAuthSecret } from "@/lib/app-secret";
 import { prisma } from "@/lib/db";
 
 /** Granular feature permissions selectable when creating an access level. */
@@ -530,11 +531,7 @@ const DEFAULT_ROLES: AdminRole[] = [
 ];
 
 function sessionSecret() {
-  return (
-    process.env.ADMIN_SESSION_SECRET ||
-    process.env.AUTH_SECRET ||
-    "influrios-dev-admin-secret-change-me"
-  );
+  return requireAuthSecret("admin");
 }
 
 function hashPassword(password: string, salt: string) {
@@ -579,7 +576,11 @@ function normalizeStore(store: AdminAuthStore): AdminAuthStore {
 
 function defaultStore(): AdminAuthStore {
   const salt = randomBytes(16).toString("hex");
-  const password = process.env.ADMIN_SUPER_PASSWORD || "InfluriosAdmin!2026";
+  const fromEnv = process.env.ADMIN_SUPER_PASSWORD?.trim();
+  if (!fromEnv && process.env.NODE_ENV === "production") {
+    throw new Error("ADMIN_SUPER_PASSWORD is required in production.");
+  }
+  const password = fromEnv || "InfluriosAdmin!2026";
   const email = (process.env.ADMIN_SUPER_EMAIL || "admin@influrios.com").toLowerCase();
   return {
     roles: structuredClone(DEFAULT_ROLES),

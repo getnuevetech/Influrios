@@ -18,7 +18,7 @@ import {
 } from "./marketplace-listings";
 import { prisma } from "./db";
 import { DEFAULT_COLLAB_CONTROL_PLANE, saveCollabControlPlane } from "./collab-control-plane";
-import { DEMO_BUSINESS_WORKSPACE_ID, getWorkspace } from "./business";
+import { DEMO_BUSINESS_WORKSPACE_ID, ensureDemoBusinessWorkspace } from "./business";
 
 const hasDbUrl = Boolean(process.env.DATABASE_URL);
 
@@ -122,7 +122,7 @@ describe("marketplace application ownership guards (W2.3c)", () => {
 describe("marketplace request workspace ownership (db)", () => {
   it("lists only published requests for the owning workspaceId", async (t) => {
     if (!(await requireDb(t))) return;
-    await getWorkspace();
+    await ensureDemoBusinessWorkspace();
     const stamp = Date.now().toString(36);
     const owned = await prisma.marketplaceBusinessRequest.create({
       data: {

@@ -5,6 +5,7 @@ import {
   getBillingStore,
 } from "@/lib/billing";
 import { stripeBillingMode } from "@/lib/stripe-admin";
+import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { getBusinessEntitlements } from "@/lib/business-entitlements";
 import { productSwitch } from "@/lib/product-switches";
@@ -21,7 +22,8 @@ export default async function BillingPage({ searchParams }: Props) {
   const params = await searchParams;
   const stripeMode = await stripeBillingMode();
   const stripeLive = stripeMode === "sandbox" || stripeMode === "live";
-  const ws = await getWorkspace();
+  const account = await getAccountSession();
+  const ws = await getWorkspace(account?.id);
   const be = getBusinessEntitlements(ws.plan);
   const store = await getBillingStore();
   const [routes, portalOn, connectOn] = await Promise.all([
@@ -41,8 +43,7 @@ export default async function BillingPage({ searchParams }: Props) {
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold">Plans & checkout</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Influencer Plus/Pro and Business Pro/Agency — Stripe Checkout when keys are set, demo
-            upgrade flow otherwise.
+            Influencer Plus/Pro and Business Pro/Agency. A plan changes after Stripe confirms checkout.
           </p>
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
             Mode: {stripeMode === "sandbox" ? "Stripe sandbox" : stripeMode === "live" ? "Stripe live" : stripeMode === "rejected" ? "Stripe sandbox key required" : "Demo checkout"}
@@ -116,10 +117,16 @@ export default async function BillingPage({ searchParams }: Props) {
         </section>
 
         <section className="card-surface p-6">
-          <h2 className="font-display text-xl font-bold text-indigo">Current demo entitlements</h2>
+          <h2 className="font-display text-xl font-bold text-indigo">Your business plan</h2>
           <p className="mt-1 text-sm text-muted">
-            Business workspace: <span className="font-semibold text-indigo">{ws.plan}</span> ·
-            Intelligence {be.intelligence ? "on" : "off"} · Exports {be.exports ? "on" : "off"}
+            {account ? (
+              <>
+                Workspace: <span className="font-semibold text-indigo">{ws.plan}</span> · Intelligence{" "}
+                {be.intelligence ? "on" : "off"} · Exports {be.exports ? "on" : "off"}
+              </>
+            ) : (
+              <>Sign in to see the plan on your workspace. This page does not use a shared demo plan.</>
+            )}
           </p>
           <p className="mt-1 text-xs text-muted">
             Recent sessions: {store.sessions.length}

@@ -9,7 +9,6 @@ import {
   purgeLegacyDemoJsonFiles,
   recordCreatorFieldDeprecation,
 } from "./legacy-teardown";
-import { setProductSwitchForTests } from "./product-switches";
 import { prisma } from "./db";
 
 const hasDbUrl = Boolean(process.env.DATABASE_URL);
@@ -47,7 +46,6 @@ describe("legacy inventory", () => {
 describe("legacy teardown freeze (db)", () => {
   it("purges demo JSON when legacy switch is off and records deprecation telemetry", async (t) => {
     if (!(await requireDb(t))) return;
-    setProductSwitchForTests("legacy_demo_payments", false);
     const dataDir = path.join(process.cwd(), "data");
     await fs.mkdir(dataDir, { recursive: true }).catch(() => null);
     const paymentsPath = path.join(dataDir, "protected-payments.json");
@@ -77,22 +75,5 @@ describe("legacy teardown freeze (db)", () => {
     });
     assert.ok(audit);
 
-    setProductSwitchForTests("legacy_demo_payments", null);
-  });
-
-  it("keeps JSON files when legacy demos are intentionally on", async (t) => {
-    if (!(await requireDb(t))) return;
-    setProductSwitchForTests("legacy_demo_payments", true);
-    const dataDir = path.join(process.cwd(), "data");
-    await fs.mkdir(dataDir, { recursive: true }).catch(() => null);
-    const paymentsPath = path.join(dataDir, "protected-payments.json");
-    await fs.writeFile(paymentsPath, JSON.stringify({ deals: [], notes: "keep" }), "utf8");
-
-    const purged = await purgeLegacyDemoJsonFiles();
-    assert.equal(purged.frozen, false);
-    assert.equal(purged.removed.length, 0);
-    await fs.access(paymentsPath);
-    await fs.unlink(paymentsPath).catch(() => null);
-    setProductSwitchForTests("legacy_demo_payments", null);
   });
 });

@@ -63,9 +63,8 @@ export default async function BusinessIntelligencePage() {
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted">
-                Demo data — demographics labeled{" "}
-                <span className="font-semibold text-indigo">demo_seed / directory_metrics / claimed_placeholder</span>.
-                Not live social API sync.
+                Audience splits appear only when a creator record includes claimed demographics.
+                Reach uses follower totals already on the profile. Niche rows are directory supply counts.
               </p>
               <div className="flex flex-wrap gap-2">
                 <a

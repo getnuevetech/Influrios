@@ -821,6 +821,18 @@ export async function requestPrefund(input: {
   return { ok: true as const, id: created[0], status: "awaiting_provider" as const };
 }
 
+/** Stop later tranches. Tranches already held or released stay in the ledger. */
+export async function stopRecurringSeries(scheduleId: string) {
+  const id = scheduleId.trim();
+  if (!id) return { ok: false as const, error: "Schedule id is required." };
+  const updated = await prisma.collaborationFunding.updateMany({
+    where: { scheduleId: id, scheduleKind: "recurring" },
+    data: { seriesStopped: true },
+  });
+  if (updated.count === 0) return { ok: false as const, error: "Recurring series not found." };
+  return { ok: true as const, stopped: updated.count };
+}
+
 export async function sweepDueRecurrences(now = new Date()) {
   const confirmed = await prisma.collaborationFunding.findMany({
     where: { scheduleKind: "recurring", status: { in: ["held", "completed", "refunded"] } },
@@ -834,6 +846,7 @@ export async function sweepDueRecurrences(now = new Date()) {
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;
   const shareSnapshot = await activeShareSnapshot();
   for (const row of confirmed) {
+    if (row.seriesStopped) continue;
     if (!row.scheduleId || row.trancheIndex >= row.trancheCount) continue;
     const holdAt = row.entries[0]?.createdAt ?? null;
     if (!recurrenceIsDue({ holdAt, intervalDays: row.intervalDays, now })) continue;
@@ -1278,6 +1291,7 @@ function presentFunding(row: {
     revisionLimit: number;
     revisionCount: number;
     revisionNote: string;
+    reviewWindowHours?: number | null;
   }[];
   entries: { kind: string; amountCents: number }[];
   disputes?: {
@@ -1298,6 +1312,9 @@ function presentFunding(row: {
   trancheIndex: number;
   trancheCount: number;
   intervalDays: number;
+  seriesStopped?: boolean;
+  serviceLevel?: string;
+  feeSnapshotJson?: unknown;
 }) {
   const movements: LedgerMovement[] = ledgerMovements(row.entries);
   return { ...row, ledger: reconcileLedger(movements, row.grossCents) };

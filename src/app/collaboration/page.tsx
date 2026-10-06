@@ -432,6 +432,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
               brand={brand}
               canRequest={canRequest}
               signedIn={signedIn}
+              collabOsOn={collabOsOn}
               viewerSlug={viewer?.slug}
               viewerPlan={viewerPlan}
             />
@@ -875,6 +876,7 @@ function FeaturedMatchCard({
   signedIn,
   viewerSlug,
   viewerPlan,
+  collabOsOn,
 }: {
   match: CreatorMatch;
   brand: MarketplaceBusinessRequestRow;
@@ -882,6 +884,7 @@ function FeaturedMatchCard({
   signedIn: boolean;
   viewerSlug?: string;
   viewerPlan: PlanCode;
+  collabOsOn: boolean;
 }) {
   const factors = [
     ["Audience Alignment", match.breakdown.audienceAlignment],
