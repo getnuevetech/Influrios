@@ -15,9 +15,24 @@ describe("signing lifecycle", () => {
     assert.equal(canAdvanceSignatureStatus("queued", "signed"), false);
   });
 
-  it("resolves demo mode unless DocuSign env is ready", () => {
-    assert.equal(resolveSigningMode("demo"), "demo");
-    assert.equal(resolveSigningMode("docusign"), "demo");
+  it("resolves DocuSign only when the saved credentials are complete", () => {
+    const empty: Record<string, string | undefined> = {};
+    assert.equal(resolveSigningMode("demo", null, empty), "demo");
+    assert.equal(resolveSigningMode("docusign", null, empty), "unconfigured");
+    assert.equal(
+      resolveSigningMode(
+        "docusign",
+        {
+          integrationKey: "key",
+          userId: "user",
+          accountId: "acct",
+          privateKey: "pem",
+          baseUrl: "https://demo.docusign.net",
+        },
+        empty,
+      ),
+      "docusign",
+    );
   });
 
   it("accepts unsigned demo webhooks when secret is empty", () => {

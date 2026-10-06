@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDirectoryCreator } from "@/lib/directory";
+import { openFundingCollection } from "@/lib/provider-collection";
+import { resolvePaymentGatewayForCountry } from "@/lib/providers";
+import { prisma } from "@/lib/db";
 import {
   approveFundingMilestone,
   requestChangeOrder,
@@ -51,6 +54,33 @@ export async function actionCreateDeal(formData: FormData) {
   revalidatePath("/payments");
   revalidatePath("/admin/marketplace");
   redirect(`/payments?created=${result.id}`);
+}
+
+export async function actionOpenFundingCheckout(formData: FormData) {
+  const fundingId = String(formData.get("dealId") ?? "").trim();
+  const funding = await prisma.collaborationFunding.findUnique({
+    where: { id: fundingId },
+    include: { milestones: true },
+  });
+  if (!funding || funding.status !== "awaiting_provider") {
+    redirect("/payments?error=This%20funding%20is%20not%20waiting%20for%20a%20provider.");
+  }
+  const route = await resolvePaymentGatewayForCountry(funding.jurisdictionCode);
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const opened = await openFundingCollection({
+    providerCode: route.providerCode ?? "",
+    fundingId: funding.id,
+    amountCents: funding.grossCents,
+    currency: funding.currency,
+    email: String(formData.get("email") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+    milestones: funding.milestones.map((milestone) => ({ id: milestone.id, amountCents: milestone.amountCents })),
+    origin,
+  });
+  if (!opened.ok) redirect(`/payments?error=${encodeURIComponent(opened.error)}`);
+  if (opened.url) redirect(opened.url);
+  revalidatePath("/payments");
+  redirect(`/payments?checkout=${encodeURIComponent(opened.reference)}`);
 }
 
 export async function actionRequestChangeOrder(formData: FormData) {

@@ -56,7 +56,7 @@ export default async function BillingPage({ searchParams }: Props) {
             Influencer Plus/Pro and Business Pro/Agency. A plan changes after Stripe confirms checkout.
           </p>
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-            Mode: {stripeMode === "sandbox" ? "Stripe sandbox" : stripeMode === "live" ? "Stripe live" : stripeMode === "rejected" ? "Stripe sandbox key required" : "Demo checkout"}
+            Mode: {stripeMode === "sandbox" ? "Stripe sandbox" : stripeMode === "live" ? "Stripe live" : stripeMode === "rejected" ? "Stripe sandbox key required" : "Stripe key not saved"}
           </p>
         </div>
       </section>
@@ -176,7 +176,7 @@ export default async function BillingPage({ searchParams }: Props) {
                   </span>
                 </label>
                 <button type="submit" className="btn-primary mt-4 w-full !py-2.5 text-sm">
-                  {stripeMode === "sandbox" ? "Checkout with Stripe sandbox →" : stripeLive ? "Checkout with Stripe →" : "Demo upgrade →"}
+                  {stripeMode === "sandbox" ? "Checkout with Stripe sandbox →" : stripeLive ? "Checkout with Stripe →" : "Checkout with Stripe →"}
                 </button>
               </form>
             ))}
@@ -186,7 +186,7 @@ export default async function BillingPage({ searchParams }: Props) {
         <section>
           <h2 className="font-display text-2xl font-bold text-indigo">Business plans</h2>
           <p className="mt-1 text-sm text-muted">
-            Upgrades the demo business workspace plan after successful checkout.
+            Upgrades the signed-in business workspace after Stripe confirms checkout.
           </p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {businessPlans.map((p) => (
@@ -220,7 +220,7 @@ export default async function BillingPage({ searchParams }: Props) {
                   </span>
                 </label>
                 <button type="submit" className="btn-primary mt-4 w-full !py-2.5 text-sm">
-                  {stripeMode === "sandbox" ? "Checkout with Stripe sandbox →" : stripeLive ? "Checkout with Stripe →" : "Demo upgrade →"}
+                  {stripeMode === "sandbox" ? "Checkout with Stripe sandbox →" : stripeLive ? "Checkout with Stripe →" : "Checkout with Stripe →"}
                 </button>
               </form>
             ))}

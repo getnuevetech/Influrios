@@ -6,6 +6,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/provider-secrets";
 import { activeSigningProvider, queueSignatureRequest, signingCanQueue } from "@/lib/providers";
+import { docuSignCredentialsReady } from "@/lib/signing/docusign";
 
 export const SIGNATURE_STATUSES = [
   "queued",
@@ -35,28 +36,39 @@ export function canAdvanceSignatureStatus(from: string, to: string): boolean {
   return ALLOWED[from as SignatureStatus].includes(to as SignatureStatus);
 }
 
-function docusignEnvReady() {
-  return Boolean(
-    (process.env.DOCUSIGN_INTEGRATION_KEY || "").trim() &&
-      (process.env.DOCUSIGN_USER_ID || "").trim() &&
-      (process.env.DOCUSIGN_ACCOUNT_ID || "").trim(),
-  );
-}
+export type SigningIdentity = {
+  integrationKey?: string;
+  userId?: string;
+  accountId?: string;
+  privateKey?: string;
+  baseUrl?: string;
+};
 
-/** Resolve demo vs DocuSign mode from provider code + env. */
-export function resolveSigningMode(providerCode: string): "demo" | "docusign" {
+/** Demo only when that provider is selected. DocuSign stays unconfigured until the saved or env credentials are complete. */
+export function resolveSigningMode(
+  providerCode: string,
+  credentials?: SigningIdentity | null,
+  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
+): "demo" | "docusign" | "unconfigured" {
   const code = providerCode.trim().toLowerCase();
   if (code === "demo" || code === "demo_sign") return "demo";
-  if (code === "docusign" && docusignEnvReady()) return "docusign";
-  if (docusignEnvReady() && code.includes("docusign")) return "docusign";
-  return "demo";
+  const ready = docuSignCredentialsReady({
+    integrationKey: credentials?.integrationKey || env.DOCUSIGN_INTEGRATION_KEY || "",
+    userId: credentials?.userId || env.DOCUSIGN_USER_ID || "",
+    accountId: credentials?.accountId || env.DOCUSIGN_ACCOUNT_ID || "",
+    privateKey: credentials?.privateKey || env.DOCUSIGN_PRIVATE_KEY || "",
+    baseUrl: credentials?.baseUrl || env.DOCUSIGN_BASE_URL || "",
+  });
+  if (code === "docusign" || code.includes("docusign")) return ready ? "docusign" : "unconfigured";
+  return "unconfigured";
 }
 
-export function signingModeLabel(providerCode?: string | null) {
-  if (!providerCode) return "Demo (no provider)";
-  return resolveSigningMode(providerCode) === "docusign"
-    ? "DocuSign"
-    : "Demo (swappable — set DocuSign env to go live)";
+export function signingModeLabel(providerCode?: string | null, credentials?: SigningIdentity | null) {
+  if (!providerCode) return "No signing provider";
+  const mode = resolveSigningMode(providerCode, credentials);
+  if (mode === "docusign") return "DocuSign";
+  if (mode === "demo") return "Demo signing";
+  return "DocuSign credentials are not saved";
 }
 
 /**
@@ -72,7 +84,13 @@ export async function createSigningEnvelope(input: {
   baseUrl: string;
   secret: string;
 }): Promise<{ ok: true; externalId: string; mode: "demo" | "docusign" } | { ok: false; error: string }> {
-  const mode = resolveSigningMode(input.providerCode);
+  const mode = resolveSigningMode(input.providerCode, { baseUrl: input.baseUrl, privateKey: input.secret });
+  if (mode === "unconfigured") {
+    return {
+      ok: false,
+      error: "Add the DocuSign integration key, user id, account id, private key, and API base URL in admin. Nothing was signed.",
+    };
+  }
   if (mode === "demo" || !input.baseUrl) {
     return {
       ok: true,

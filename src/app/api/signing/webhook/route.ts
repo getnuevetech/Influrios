@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseDocuSignWebhook, verifyDocuSignSignature } from "@/lib/signing/docusign";
 import {
   activeSigningWebhookSecret,
   markSignatureFromWebhook,
@@ -8,15 +9,40 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const STATUS_EVENT = {
+  completed: "signed",
+  declined: "declined",
+  voided: "voided",
+} as const;
+
 /**
  * Provider webhook for signature lifecycle events.
- * Demo providers may omit a webhook secret; live DocuSign should set one on the provider.
- *
- * Body: { requestId?: string, externalId?: string, event: "viewed"|"signed"|"declined"|"voided" }
- * Header: x-influrios-signing-signature (HMAC-SHA256 hex of body)
+ * DocuSign Connect uses x-docusign-signature-1 (HMAC-SHA256 base64).
+ * Other providers use x-influrios-signing-signature (HMAC-SHA256 hex).
  */
 export async function POST(request: NextRequest) {
   const body = await request.text();
+  const ready = await activeSigningWebhookSecret().catch(() => ({ error: "missing" as const }));
+  if ("error" in ready) {
+    return NextResponse.json({ error: "No signing provider is ready." }, { status: 503 });
+  }
+
+  const docusignSignature = request.headers.get("x-docusign-signature-1");
+  const docusign = parseDocuSignWebhook(body);
+  if (docusignSignature || (docusign.ok && ready.code.toLowerCase().includes("docusign"))) {
+    if (!ready.secret || !verifyDocuSignSignature(body, docusignSignature, ready.secret)) {
+      return NextResponse.json({ error: "Signature did not match." }, { status: 401 });
+    }
+    if (!docusign.ok) return NextResponse.json({ error: docusign.error }, { status: 400 });
+    if (docusign.status === "sent") {
+      return NextResponse.json({ ok: true, ignored: true, provider: ready.code });
+    }
+    const event = STATUS_EVENT[docusign.status];
+    const result = await markSignatureFromWebhook({ externalId: docusign.envelopeId, event });
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+    return NextResponse.json({ ok: true, id: result.id, status: result.status, provider: ready.code });
+  }
+
   let parsed: { requestId?: string; externalId?: string; event?: string };
   try {
     parsed = JSON.parse(body) as typeof parsed;
@@ -30,23 +56,15 @@ export async function POST(request: NextRequest) {
   if (!parsed.requestId && !parsed.externalId) {
     return NextResponse.json({ error: "Provide requestId or externalId." }, { status: 400 });
   }
-
-  const ready = await activeSigningWebhookSecret().catch(() => ({ error: "missing" as const }));
-  if ("error" in ready) {
-    return NextResponse.json({ error: "No signing provider is ready." }, { status: 503 });
-  }
   const signature = request.headers.get("x-influrios-signing-signature");
   if (!verifySigningWebhookSignature(body, signature, ready.secret)) {
     return NextResponse.json({ error: "Signature did not match." }, { status: 401 });
   }
-
   const result = await markSignatureFromWebhook({
     requestId: parsed.requestId,
     externalId: parsed.externalId,
     event: event as "viewed" | "signed" | "declined" | "voided",
   });
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
-  }
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true, id: result.id, status: result.status, provider: ready.code });
 }

@@ -13,7 +13,7 @@ import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import { listPaymentCountryGroups } from "@/lib/payment-country-groups";
 import { productSwitch } from "@/lib/product-switches";
-import { getDefaultBackupGateway, listProviders, paymentRoutes } from "@/lib/providers";
+import { gatewayCredentialLabels, getDefaultBackupGateway, listProviders, paymentRoutes } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Payment gateways · Admin" };
@@ -318,21 +318,36 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                 <input name="name" defaultValue={provider.name} disabled={!canEdit} className={inputClass} />
               </label>
               <label className="block text-sm font-semibold text-indigo">
-                Public key
+                {gatewayCredentialLabels(provider.code).publicKey}
                 <input name="publicKey" defaultValue={provider.publicKey} disabled={!canEdit} className={inputClass} />
               </label>
               <label className="block text-sm font-semibold text-indigo sm:col-span-2">
                 API base URL
                 <input name="baseUrl" defaultValue={provider.baseUrl} placeholder="https://" disabled={!canEdit} className={inputClass} />
               </label>
+              {provider.code === "airwallex" ? (
+                <>
+                  <label className="block text-sm font-semibold text-indigo">
+                    Holding account id
+                    <input name="holdingAccountId" defaultValue={provider.holdingAccountId} disabled={!canEdit} className={inputClass} />
+                  </label>
+                  <label className="block text-sm font-semibold text-indigo">
+                    Operations account id
+                    <input name="operationsAccountId" defaultValue={provider.operationsAccountId} disabled={!canEdit} className={inputClass} />
+                  </label>
+                </>
+              ) : null}
               <label className="block text-sm font-semibold text-indigo">
-                Secret ({provider.secret})
+                {gatewayCredentialLabels(provider.code).secret} ({provider.secret})
                 <input name="secret" type="password" placeholder="Leave blank to keep" disabled={!canEdit} className={inputClass} />
               </label>
               <label className="block text-sm font-semibold text-indigo">
                 Webhook secret ({provider.webhook})
                 <input name="webhook" type="password" placeholder="Leave blank to keep" disabled={!canEdit} className={inputClass} />
               </label>
+              {gatewayCredentialLabels(provider.code).note ? (
+                <p className="text-xs text-muted sm:col-span-2">{gatewayCredentialLabels(provider.code).note}</p>
+              ) : null}
               <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
                 <input type="checkbox" name="enabled" value="1" defaultChecked={provider.enabled} disabled={!canEdit} />
                 Enabled

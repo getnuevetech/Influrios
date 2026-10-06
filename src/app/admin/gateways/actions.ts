@@ -31,6 +31,8 @@ export async function actionSaveGateway(formData: FormData) {
       model: "",
       clearSecret: formData.get("clearSecret") === "1",
       clearWebhook: formData.get("clearWebhook") === "1",
+      ...(formData.has("holdingAccountId") ? { holdingAccountId: clean(formData.get("holdingAccountId")) } : {}),
+      ...(formData.has("operationsAccountId") ? { operationsAccountId: clean(formData.get("operationsAccountId")) } : {}),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the gateway.";
