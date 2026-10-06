@@ -196,24 +196,40 @@ async function ensureSpecialties() {
   for (const [index, parent] of SPECIALTY_TAXONOMY.entries()) {
     let parentId = bySlug.get(parent.slug);
     if (!parentId) {
-      const created = await prisma.specialty.create({
-        data: { slug: parent.slug, name: parent.name, sortOrder: index, active: true },
-      });
-      parentId = created.id;
+      try {
+        const created = await prisma.specialty.create({
+          data: { slug: parent.slug, name: parent.name, sortOrder: index, active: true },
+        });
+        parentId = created.id;
+      } catch (error) {
+        const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+        if (code !== "P2002") throw error;
+        const existing = await prisma.specialty.findUnique({ where: { slug: parent.slug } });
+        if (!existing) throw error;
+        parentId = existing.id;
+      }
       bySlug.set(parent.slug, parentId);
     }
     for (const [childIndex, child] of (parent.children ?? []).entries()) {
       if (bySlug.has(child.slug)) continue;
-      const created = await prisma.specialty.create({
-        data: {
-          slug: child.slug,
-          name: child.name,
-          parentId,
-          sortOrder: childIndex,
-          active: true,
-        },
-      });
-      bySlug.set(child.slug, created.id);
+      try {
+        const created = await prisma.specialty.create({
+          data: {
+            slug: child.slug,
+            name: child.name,
+            parentId,
+            sortOrder: childIndex,
+            active: true,
+          },
+        });
+        bySlug.set(child.slug, created.id);
+      } catch (error) {
+        const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+        if (code !== "P2002") throw error;
+        const existing = await prisma.specialty.findUnique({ where: { slug: child.slug } });
+        if (!existing) throw error;
+        bySlug.set(child.slug, existing.id);
+      }
     }
   }
 }
@@ -287,7 +303,12 @@ async function ensureDirectory() {
   const sectionKeys = new Set((await prisma.cmsSection.findMany({ select: { key: true } })).map((row) => row.key));
   for (const section of DEFAULT_HOMEPAGE_SECTIONS) {
     if (sectionKeys.has(section.key)) continue;
-    await prisma.cmsSection.create({ data: section });
+    try {
+      await prisma.cmsSection.create({ data: section });
+    } catch (error) {
+      const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+      if (code !== "P2002") throw error;
+    }
   }
 
   if ((await prisma.siteMenuItem.count()) === 0) {

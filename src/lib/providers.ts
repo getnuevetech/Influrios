@@ -60,7 +60,44 @@ export type GatewayReadiness = {
   hasSecret: boolean;
   ready: boolean;
   reason: "ready" | "no_route" | "inactive" | "disabled" | "missing_secret";
+  /** When the country route gateway is not ready, the admin default/backup may serve instead. */
+  backupProviderCode?: string | null;
+  backupProviderName?: string | null;
+  usingBackup?: boolean;
 };
+
+export type GatewayRemovalImpact = {
+  providerId: string;
+  providerCode: string;
+  providerName: string;
+  isDefaultBackup: boolean;
+  countries: { countryCode: string; countryName: string }[];
+  blocked: boolean;
+  blockers: string[];
+};
+
+type ProviderExtra = {
+  model?: string;
+  isDefaultBackup?: boolean;
+};
+
+function readProviderExtra(extraJson: unknown): ProviderExtra {
+  if (!extraJson || typeof extraJson !== "object" || Array.isArray(extraJson)) return {};
+  const raw = extraJson as Record<string, unknown>;
+  return {
+    model: typeof raw.model === "string" ? raw.model : undefined,
+    isDefaultBackup: raw.isDefaultBackup === true,
+  };
+}
+
+function writeProviderExtra(existing: unknown, patch: ProviderExtra): ProviderExtra | undefined {
+  const current = readProviderExtra(existing);
+  const next: ProviderExtra = { ...current, ...patch };
+  if (patch.model === "") delete next.model;
+  if (patch.isDefaultBackup === false) delete next.isDefaultBackup;
+  if (!next.model && !next.isDefaultBackup) return undefined;
+  return next;
+}
 
 export function assessGateway(input: {
   countryCode: string;
@@ -197,22 +234,25 @@ async function seedIntegrationCatalog() {
       if (code !== "P2002") throw error;
     }
   }
-  for (const shell of GATEWAY_SHELLS) {
-    const existing = await prisma.integrationProvider.findUnique({
-      where: { kind_code: { kind: "payment", code: shell.code } },
-    });
-    if (existing) continue;
-    try {
-      await prisma.integrationProvider.create({
-        data: { kind: "payment", code: shell.code, name: shell.name, enabled: false },
-      });
-    } catch (error) {
-      const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
-      if (code !== "P2002") throw error;
+  const gateways = await prisma.integrationProvider.findMany({ where: { kind: "payment" } });
+  // Do not recreate shells after an admin removed one; only seed shells on an empty catalog.
+  if (gateways.length === 0) {
+    for (const shell of GATEWAY_SHELLS) {
+      try {
+        await prisma.integrationProvider.create({
+          data: { kind: "payment", code: shell.code, name: shell.name, enabled: false },
+        });
+      } catch (error) {
+        const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+        if (code !== "P2002") throw error;
+      }
     }
   }
-  const gateways = await prisma.integrationProvider.findMany({ where: { kind: "payment" } });
-  const byCode = new Map(gateways.map((row) => [row.code, row]));
+  const paymentGateways =
+    gateways.length === 0
+      ? await prisma.integrationProvider.findMany({ where: { kind: "payment" } })
+      : gateways;
+  const byCode = new Map(paymentGateways.map((row) => [row.code, row]));
   for (const country of DEFAULT_PAYMENT_ROUTES) {
     await prisma.country.upsert({
       where: { code: country.countryCode },
@@ -244,18 +284,22 @@ async function seedIntegrationCatalog() {
 export async function listProviders(kind: "ai" | "payment" | "signing" | "connect") {
   await ensureIntegrationCatalog();
   const rows = await prisma.integrationProvider.findMany({ where: { kind }, orderBy: { name: "asc" } });
-  return rows.map((row) => ({
-    id: row.id,
-    kind: row.kind,
-    code: row.code,
-    name: row.name,
-    enabled: row.enabled,
-    baseUrl: row.baseUrl ?? "",
-    publicKey: row.publicKey ?? "",
-    secret: secretStatus(row.secretCipher),
-    webhook: secretStatus(row.webhookCipher),
-    model: typeof row.extraJson === "object" && row.extraJson && "model" in row.extraJson ? String((row.extraJson as { model?: string }).model ?? "") : "",
-  }));
+  return rows.map((row) => {
+    const extra = readProviderExtra(row.extraJson);
+    return {
+      id: row.id,
+      kind: row.kind,
+      code: row.code,
+      name: row.name,
+      enabled: row.enabled,
+      baseUrl: row.baseUrl ?? "",
+      publicKey: row.publicKey ?? "",
+      secret: secretStatus(row.secretCipher),
+      webhook: secretStatus(row.webhookCipher),
+      model: extra.model ?? "",
+      isDefaultBackup: kind === "payment" ? Boolean(extra.isDefaultBackup) : false,
+    };
+  });
 }
 
 export async function saveProvider(input: {
@@ -285,17 +329,21 @@ export async function saveProvider(input: {
   }
   if (baseUrl && !baseUrl.startsWith("https://")) throw new Error("The API base URL must start with https://.");
 
+  const existing = input.id
+    ? await prisma.integrationProvider.findUnique({ where: { id: input.id } })
+    : await prisma.integrationProvider.findUnique({ where: { kind_code: { kind: input.kind, code } } });
+
+  const extraJson = writeProviderExtra(existing?.extraJson, {
+    model: input.model.trim().slice(0, 80),
+  });
+
   const data = {
     name,
     enabled: input.enabled,
     baseUrl: baseUrl || null,
     publicKey: input.publicKey.trim().slice(0, 200) || null,
-    extraJson: input.model.trim() ? { model: input.model.trim().slice(0, 80) } : undefined,
+    extraJson: extraJson ?? undefined,
   };
-
-  const existing = input.id
-    ? await prisma.integrationProvider.findUnique({ where: { id: input.id } })
-    : await prisma.integrationProvider.findUnique({ where: { kind_code: { kind: input.kind, code } } });
 
   const secretCipher = input.clearSecret
     ? null
@@ -311,7 +359,7 @@ export async function saveProvider(input: {
   if (existing) {
     return prisma.integrationProvider.update({
       where: { id: existing.id },
-      data: { ...data, secretCipher, webhookCipher },
+      data: { ...data, secretCipher, webhookCipher, extraJson: extraJson ?? null },
     });
   }
   return prisma.integrationProvider.create({
@@ -321,20 +369,30 @@ export async function saveProvider(input: {
 
 export async function paymentRoutes() {
   await ensureIntegrationCatalog();
-  const routes = await prisma.paymentCountryRoute.findMany({
-    include: { provider: true },
-    orderBy: { countryCode: "asc" },
-  });
-  return routes.map((route) =>
-    assessGateway({
+  const [routes, backup] = await Promise.all([
+    prisma.paymentCountryRoute.findMany({
+      include: { provider: true },
+      orderBy: { countryCode: "asc" },
+    }),
+    getDefaultBackupGateway(),
+  ]);
+  return routes.map((route) => {
+    const primary = assessGateway({
       countryCode: route.countryCode,
       providerCode: route.provider.code,
       providerName: route.provider.name,
       routeActive: route.active,
       providerEnabled: route.provider.enabled,
       hasSecret: Boolean(route.provider.secretCipher),
-    }),
-  );
+    });
+    if (!backup || backup.id === route.providerId) return primary;
+    return {
+      ...primary,
+      backupProviderCode: backup.code,
+      backupProviderName: backup.name,
+      usingBackup: !primary.ready && backup.enabled && Boolean(backup.hasSecret),
+    };
+  });
 }
 
 export async function setCountryGateway(countryCode: string, providerId: string) {
@@ -352,6 +410,199 @@ export async function setCountryGateway(countryCode: string, providerId: string)
     update: { providerId: provider.id, active: true },
     create: { countryCode: code, providerId: provider.id, active: true },
   });
+}
+
+export async function getDefaultBackupGateway() {
+  await ensureIntegrationCatalog();
+  const rows = await prisma.integrationProvider.findMany({ where: { kind: "payment" } });
+  const row = rows.find((item) => readProviderExtra(item.extraJson).isDefaultBackup);
+  if (!row) return null;
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    enabled: row.enabled,
+    hasSecret: Boolean(row.secretCipher),
+  };
+}
+
+export async function setDefaultBackupGateway(providerId: string) {
+  const id = providerId.trim();
+  if (!id) throw new Error("Choose a payment gateway to set as the default backup.");
+  const provider = await prisma.integrationProvider.findFirst({ where: { id, kind: "payment" } });
+  if (!provider) throw new Error("Choose a payment gateway.");
+  const paymentProviders = await prisma.integrationProvider.findMany({ where: { kind: "payment" } });
+  await prisma.$transaction(
+    paymentProviders.map((row) =>
+      prisma.integrationProvider.update({
+        where: { id: row.id },
+        data: {
+          extraJson: writeProviderExtra(row.extraJson, {
+            isDefaultBackup: row.id === provider.id,
+          }) ?? null,
+        },
+      }),
+    ),
+  );
+  return { id: provider.id, code: provider.code, name: provider.name };
+}
+
+export async function clearDefaultBackupGateway() {
+  const paymentProviders = await prisma.integrationProvider.findMany({ where: { kind: "payment" } });
+  await prisma.$transaction(
+    paymentProviders
+      .filter((row) => readProviderExtra(row.extraJson).isDefaultBackup)
+      .map((row) =>
+        prisma.integrationProvider.update({
+          where: { id: row.id },
+          data: { extraJson: writeProviderExtra(row.extraJson, { isDefaultBackup: false }) ?? null },
+        }),
+      ),
+  );
+}
+
+export function countryDisplayName(countryCode: string, countryName?: string | null) {
+  const code = countryCode.trim().toUpperCase();
+  if (countryName?.trim()) return countryName.trim();
+  const seeded = DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === code);
+  return seeded?.name ?? code;
+}
+
+export function buildGatewayRemovalBlockers(input: {
+  countries: { countryCode: string; countryName: string }[];
+  isDefaultBackup: boolean;
+}): string[] {
+  const blockers: string[] = [];
+  if (input.countries.length > 0) {
+    const labels = input.countries.map((c) => `${c.countryName} (${c.countryCode})`).join(", ");
+    blockers.push(
+      `This gateway is assigned to ${labels}. Replace each country with another gateway before removing it.`,
+    );
+  }
+  if (input.isDefaultBackup) {
+    blockers.push(
+      "This gateway is the default backup for failed country gateways. Set another default backup before removing it.",
+    );
+  }
+  return blockers;
+}
+
+export async function gatewayRemovalImpact(providerId: string): Promise<GatewayRemovalImpact> {
+  const provider = await prisma.integrationProvider.findFirst({
+    where: { id: providerId, kind: "payment" },
+    include: { countryRoutes: true },
+  });
+  if (!provider) {
+    throw new Error("Choose a payment gateway.");
+  }
+  const isDefaultBackup = readProviderExtra(provider.extraJson).isDefaultBackup;
+  const countryCodes = provider.countryRoutes.map((route) => route.countryCode);
+  const countryRows =
+    countryCodes.length > 0
+      ? await prisma.country.findMany({ where: { code: { in: countryCodes } } })
+      : [];
+  const nameByCode = new Map(countryRows.map((row) => [row.code, row.name]));
+  const countries = provider.countryRoutes.map((route) => ({
+    countryCode: route.countryCode,
+    countryName: countryDisplayName(route.countryCode, nameByCode.get(route.countryCode)),
+  }));
+  const blockers = buildGatewayRemovalBlockers({ countries, isDefaultBackup });
+  return {
+    providerId: provider.id,
+    providerCode: provider.code,
+    providerName: provider.name,
+    isDefaultBackup,
+    countries,
+    blocked: blockers.length > 0,
+    blockers,
+  };
+}
+
+/**
+ * Reassign affected countries (and optionally move the default backup), then delete the gateway.
+ * Refuses deletion while any country still points at this gateway or while it remains the default backup.
+ */
+export async function removePaymentGateway(input: {
+  providerId: string;
+  replacements?: { countryCode: string; providerId: string }[];
+  newDefaultProviderId?: string | null;
+}) {
+  const impact = await gatewayRemovalImpact(input.providerId);
+  const replacements = input.replacements ?? [];
+
+  for (const replacement of replacements) {
+    if (replacement.providerId === input.providerId) {
+      throw new Error("Choose a different gateway for each affected country.");
+    }
+    await setCountryGateway(replacement.countryCode, replacement.providerId);
+  }
+
+  if (impact.isDefaultBackup) {
+    const nextDefault = (input.newDefaultProviderId ?? "").trim();
+    if (!nextDefault || nextDefault === input.providerId) {
+      throw new Error("Set another gateway as the default backup before removing this one.");
+    }
+    await setDefaultBackupGateway(nextDefault);
+  }
+
+  const refreshed = await gatewayRemovalImpact(input.providerId);
+  if (refreshed.blocked) {
+    throw new Error(refreshed.blockers[0] ?? "Reassign affected countries before removing this gateway.");
+  }
+
+  await prisma.integrationProvider.delete({ where: { id: input.providerId } });
+  return { removed: true as const, code: impact.providerCode, name: impact.providerName };
+}
+
+/** Prefer the country route when ready; otherwise fall back to the admin default backup gateway. */
+export async function resolvePaymentGatewayForCountry(countryCode: string) {
+  const code = countryCode.trim().toUpperCase();
+  const route = await prisma.paymentCountryRoute.findUnique({
+    where: { countryCode: code },
+    include: { provider: true },
+  });
+  const primary = assessGateway({
+    countryCode: code,
+    providerCode: route?.provider.code,
+    providerName: route?.provider.name,
+    routeActive: route?.active,
+    providerEnabled: route?.provider.enabled,
+    hasSecret: Boolean(route?.provider.secretCipher),
+  });
+  if (primary.ready && route) {
+    return {
+      ...primary,
+      providerId: route.providerId,
+      usingBackup: false as const,
+    };
+  }
+  const backup = await getDefaultBackupGateway();
+  if (!backup || backup.id === route?.providerId) {
+    return { ...primary, providerId: route?.providerId ?? null, usingBackup: false as const };
+  }
+  const backupReady = backup.enabled && backup.hasSecret;
+  if (!backupReady) {
+    return {
+      ...primary,
+      providerId: route?.providerId ?? null,
+      backupProviderCode: backup.code,
+      backupProviderName: backup.name,
+      usingBackup: false as const,
+    };
+  }
+  return {
+    countryCode: code,
+    providerId: backup.id,
+    providerCode: backup.code,
+    providerName: backup.name,
+    enabled: true,
+    hasSecret: true,
+    ready: true,
+    reason: "ready" as const,
+    backupProviderCode: backup.code,
+    backupProviderName: backup.name,
+    usingBackup: true as const,
+  };
 }
 
 export async function aiFunctionRoutes() {

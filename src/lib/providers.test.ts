@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { decryptSecret, encryptSecret } from "./provider-secrets";
-import { aiEndpointAllowed, assessGateway, routeAiFunction, signingCanQueue } from "./providers";
+import {
+  aiEndpointAllowed,
+  assessGateway,
+  buildGatewayRemovalBlockers,
+  countryDisplayName,
+  routeAiFunction,
+  signingCanQueue,
+} from "./providers";
 
 describe("provider secrets", () => {
   it("round-trips a gateway secret without storing plaintext", () => {
@@ -45,6 +52,22 @@ describe("payment country routes", () => {
       "missing_secret",
     );
     assert.equal(assessGateway({ countryCode: "JP" }).reason, "no_route");
+  });
+
+  it("names Nigeria from the starter route list when no country row name is passed", () => {
+    assert.equal(countryDisplayName("NG"), "Nigeria");
+    assert.equal(countryDisplayName("ng", "Federal Republic of Nigeria"), "Federal Republic of Nigeria");
+  });
+
+  it("blocks gateway removal while countries or the default backup still depend on it", () => {
+    const blockers = buildGatewayRemovalBlockers({
+      countries: [{ countryCode: "NG", countryName: "Nigeria" }],
+      isDefaultBackup: true,
+    });
+    assert.equal(blockers.length, 2);
+    assert.match(blockers[0]!, /Nigeria \(NG\)/);
+    assert.match(blockers[1]!, /default backup/);
+    assert.deepEqual(buildGatewayRemovalBlockers({ countries: [], isDefaultBackup: false }), []);
   });
 });
 

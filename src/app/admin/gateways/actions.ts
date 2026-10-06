@@ -3,7 +3,13 @@
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { setProductSwitch } from "@/lib/product-switches";
-import { saveProvider, setCountryGateway } from "@/lib/providers";
+import {
+  gatewayRemovalImpact,
+  removePaymentGateway,
+  saveProvider,
+  setCountryGateway,
+  setDefaultBackupGateway,
+} from "@/lib/providers";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value ?? "");
@@ -66,4 +72,43 @@ export async function actionAssignCountryGateway(formData: FormData) {
     redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
   }
   redirect("/admin/gateways?saved=country");
+}
+
+export async function actionSetDefaultBackupGateway(formData: FormData) {
+  await requireAdminAction("gateways.edit");
+  try {
+    await setDefaultBackupGateway(clean(formData.get("providerId")));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not set the default backup gateway.";
+    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/gateways?saved=default");
+}
+
+export async function actionGatewayRemovalImpact(providerId: string) {
+  await requireAdminAction("gateways.edit");
+  return gatewayRemovalImpact(providerId);
+}
+
+export async function actionRemoveGateway(formData: FormData) {
+  await requireAdminAction("gateways.edit");
+  const providerId = clean(formData.get("providerId"));
+  const newDefaultProviderId = clean(formData.get("newDefaultProviderId")) || null;
+  const countryCodes = formData.getAll("countryCode").map((value) => clean(value)).filter(Boolean);
+  const replacementProviderIds = formData.getAll("replacementProviderId").map((value) => clean(value));
+  const replacements = countryCodes.map((countryCode, index) => ({
+    countryCode,
+    providerId: replacementProviderIds[index] ?? "",
+  }));
+  try {
+    await removePaymentGateway({
+      providerId,
+      replacements: replacements.filter((row) => row.providerId),
+      newDefaultProviderId,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not remove the gateway.";
+    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/gateways?saved=removed");
 }
