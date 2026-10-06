@@ -1,5 +1,6 @@
 import { Prisma, type PlanTier } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { rethrowIfNextDynamicError } from "@/lib/next-dynamic";
 import {
   PLAN_ENTITLEMENTS,
   applyFeatureRows,
@@ -32,7 +33,8 @@ async function optIntoRequest() {
   try {
     const { connection } = await import("next/server");
     await connection();
-  } catch {
+  } catch (error) {
+    rethrowIfNextDynamicError(error);
     // Scripts and unit tests have no request scope.
   }
 }
