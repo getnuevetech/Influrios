@@ -6,7 +6,7 @@
 
 Feature-status history stays in `FULL_IMPLEMENTATION_PLAN.md`. This document is the work that still has to be built.
 
-**Code started on this branch:** A (workspace entitlements), B (sweep cron), C (production secrets and image hosts), D (`tsc --noEmit`), G (stop series and ambassador conversion), H (team proposal object and `/collaboration/team`), I (Meilisearch client, Compose service, Discover reads the index when `MEILI_HOST` is set), J (DocuSign adapter and `/api/signing/webhook`), K (Airwallex funding client and webhook parser). Still open: F demo-store deletion, SMS, Flutterwave and M-Pesa charge adapters, stored Stripe customer and Connect ids, the other three AI provider calls, paid mentorship checkout, and Slice E staging evidence.
+**Code on main:** A through D, F through L. Slice L stores Twilio credentials and sends `sms_send` jobs, opens the billing portal and Connect from stored Stripe ids, charges Flutterwave and M-Pesa only after a verified webhook, runs the three remaining AI functions through the assigned provider with a rules label on failure, and checks out paid mentorship without writing collaboration holding. Still open: Slice E staging evidence, which needs a live staging host.
 
 ---
 
