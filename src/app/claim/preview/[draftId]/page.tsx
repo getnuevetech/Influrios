@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { actionClaimDraft } from "@/app/claim/actions";
+import { ClaimForm } from "@/components/claim-form";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { draftToSeedCreator, getDraft } from "@/lib/claim";
 import { getInfluencerIdentity } from "@/lib/landing-pages";
@@ -24,6 +25,15 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
     Promise.resolve(draftToSeedCreator(draft)),
     getInfluencerIdentity(),
   ]);
+
+  const titleOptions = identity.selfDescriptions.length
+    ? identity.selfDescriptions
+    : ["Influencer", "Blogger", "Creator"];
+  const titleDefault = titleOptions.includes(draft.title)
+    ? draft.title
+    : titleOptions.includes("Influencer")
+      ? "Influencer"
+      : titleOptions[0]!;
 
   return (
     <div className="min-h-[80vh] bg-[radial-gradient(ellipse_at_top,_#EAE4FF,_#F7FAFF_55%,_#D9E8FF)] px-4 py-10">
@@ -51,7 +61,10 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
       </div>
 
       {q.error ? (
-        <div className="mx-auto mb-6 max-w-sm rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div
+          role="alert"
+          className="mx-auto mb-6 max-w-sm rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
           {q.error}
         </div>
       ) : null}
@@ -64,13 +77,14 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
           Attach your email to take ownership. Your temporary card shows the full Influrios experience —
           publishing starts on the Starter plan.
         </p>
-        <form action={actionClaimDraft} className="space-y-3">
+        <ClaimForm action={actionClaimDraft}>
           <input type="hidden" name="draftId" value={draft.id} />
           <label className="block text-sm font-semibold text-indigo">
             Display name
             <input
               name="name"
               required
+              minLength={2}
               defaultValue={draft.displayName}
               className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
             />
@@ -79,10 +93,10 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
             How do you describe yourself?
             <select
               name="title"
-              defaultValue={draft.title || "Influencer"}
+              defaultValue={titleDefault}
               className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
             >
-              {identity.selfDescriptions.map((label) => (
+              {titleOptions.map((label) => (
                 <option key={label} value={label}>
                   {label}
                 </option>
@@ -110,14 +124,13 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
               name="email"
               type="email"
               required
+              autoComplete="email"
               placeholder="you@email.com"
+              defaultValue={draft.email || ""}
               className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
             />
           </label>
-          <button type="submit" className="btn-primary w-full">
-            Claim & continue →
-          </button>
-        </form>
+        </ClaimForm>
         <p className="text-center text-xs text-muted">
           <Link href="/claim" className="font-semibold text-violet hover:underline">
             ← Start over

@@ -17,7 +17,7 @@ function sampleDraft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
     locationCountry: "USA",
     specialties: ["woodworking"],
     socials: [{ platform: "INSTAGRAM", handle: "@ada", url: "https://instagram.com/ada", followers: 12 }],
-    image: "/brand/avatars/generic.svg",
+    image: "/brand/avatars/generic.png",
     coverImage: "/brand/banners/rooftop-crew.png",
     gender: "unspecified",
     email: "ada@example.com",

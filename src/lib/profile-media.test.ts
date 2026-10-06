@@ -22,10 +22,17 @@ describe("profile gender", () => {
 });
 
 describe("branded defaults", () => {
-  it("picks gender-specific avatars and a generic mark when unknown", () => {
+  it("picks gender-specific avatars and a lifestyle still when unknown", () => {
     assert.equal(defaultAvatarForGender("male"), BRAND_AVATARS.male);
     assert.equal(defaultAvatarForGender("female"), BRAND_AVATARS.female);
     assert.equal(defaultAvatarForGender("unspecified"), BRAND_AVATARS.unspecified);
+    assert.ok(BRAND_AVATARS.unspecified.endsWith(".png"));
+  });
+
+  it("rewrites the legacy SVG mark to the current unspecified avatar", async () => {
+    const { normalizeBrandAvatar } = await import("./profile-media");
+    assert.equal(normalizeBrandAvatar("/brand/avatars/generic.svg"), BRAND_AVATARS.unspecified);
+    assert.equal(normalizeBrandAvatar("/brand/avatars/male.png", "male"), BRAND_AVATARS.male);
   });
 
   it("assigns banners stably from the seed and cycles on request", () => {

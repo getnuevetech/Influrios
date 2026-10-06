@@ -18,7 +18,7 @@ export function appOrigin(): string {
 
 export function absoluteAssetUrl(pathOrUrl: string | null | undefined, origin = appOrigin()): string {
   const raw = (pathOrUrl || "").trim();
-  if (!raw) return `${origin}/brand/avatars/generic.svg`;
+  if (!raw) return `${origin}/brand/avatars/generic.png`;
   if (/^https?:\/\//i.test(raw)) return raw;
   const path = raw.startsWith("/") ? raw : `/${raw}`;
   return `${origin}${path}`;

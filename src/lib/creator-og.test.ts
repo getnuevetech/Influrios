@@ -13,7 +13,7 @@ import {
 
 describe("creator OG / social sharing (W5 / INFLR.me §11)", () => {
   it("builds absolute image URLs and Influrios canonical profile URLs", () => {
-    assert.equal(absoluteAssetUrl("/brand/avatars/generic.svg", "https://influrios.com"), "https://influrios.com/brand/avatars/generic.svg");
+    assert.equal(absoluteAssetUrl("/brand/avatars/generic.png", "https://influrios.com"), "https://influrios.com/brand/avatars/generic.png");
     assert.equal(
       absoluteAssetUrl("https://cdn.example.com/a.jpg", "https://influrios.com"),
       "https://cdn.example.com/a.jpg",

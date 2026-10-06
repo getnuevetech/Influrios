@@ -101,7 +101,7 @@ function blankCreator(slug: string, name: string): SeedCreator {
     locationCountry: "",
     languages: [],
     avatarColor: "#633CFF",
-    image: "/brand/avatars/generic.svg",
+    image: "/brand/avatars/generic.png",
     coverImage: "/brand/banners/rooftop-crew.png",
     gender: "unspecified",
     badge: "Rising Star",

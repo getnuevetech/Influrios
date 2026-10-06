@@ -62,7 +62,14 @@ export function InfluencerCardView({
   return (
     <div className={`mx-auto w-full max-w-sm overflow-hidden rounded-[1.75rem] shadow-2xl ${shell.root}`}>
       <div className={`relative ${compact ? "h-40" : "h-48"}`}>
-        <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="400px" />
+        <Image
+          src={creator.image}
+          alt={creator.displayName}
+          fill
+          className="object-cover"
+          sizes="400px"
+          unoptimized={creator.image.endsWith(".svg") || creator.image.startsWith("data:")}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         {!hideCta ? (
           <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${shell.badge}`}>
