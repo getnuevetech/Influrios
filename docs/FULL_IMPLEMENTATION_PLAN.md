@@ -5,7 +5,7 @@
 **Baseline:** `main` after #125 + honesty retag  
 **Code audit:** 2026-10-04 against Prisma, `src/lib/*`, admin routes, Collab OS plan  
 
-**Money / ledger invariants remain absolute** (Development Spec addendum PA001–PA007; Collab OS §1.3). This plan sequences *remaining* work; it does not reopen completed engines.
+**Money / ledger invariants remain absolute** (Development Spec addendum PA001–PA007; Collab OS §1.3). This plan is the feature-status record. Production gaps found after this baseline (sweep clock, demo-workspace entitlements, secret fallbacks, CI typecheck) are sequenced in [`ENGINEERING_REVIEW_2026-10-06.md`](./ENGINEERING_REVIEW_2026-10-06.md).
 
 **Progress:** W1–W6 and P4–P8 **code exits are DONE**. Remaining items are **Deferred-external** only (ops/live/product/Phase 4). No silent PARTIAL on completed Exits.
 

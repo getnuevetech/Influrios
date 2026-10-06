@@ -3,7 +3,7 @@
 **Date:** 2026-10-02 (updated 2026-10-04)  
 **Repo reviewed:** `main` after Collab OS P0–P8 cores + residual closure #125  
 **Sources:** codebase, `docs/IMPLEMENTATION_PLAN.md`, `docs/RECOMMENDATIONS_AND_EXECUTION_PLAN.md`, `docs/FULL_IMPLEMENTATION_PLAN.md` v2.1, CI, Prisma schema, deploy scripts, archived product specs in `docs/source-specs/`  
-**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) **v2.1** (DONE / Deferred-external; no silent PARTIAL on completed Exits). This doc remains money/invariant authority and maturity inventory.
+**Feature-status authority:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) **v2.1** (DONE / Deferred-external). **Next implementation slices:** [`ENGINEERING_REVIEW_2026-10-06.md`](./ENGINEERING_REVIEW_2026-10-06.md). This doc remains the money/invariant and maturity inventory.
 
 ---
 
@@ -269,7 +269,7 @@ Pick from product backlog once loops are honest:
 
 ## 7. Suggested next coding slice
 
-**Sequencing authority for remaining work:** [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) §8.
+**Next coding slices:** [`ENGINEERING_REVIEW_2026-10-06.md`](./ENGINEERING_REVIEW_2026-10-06.md) (entitlement identity, sweep clock, secrets, `tsc` in CI). Feature-status inventory remains [`FULL_IMPLEMENTATION_PLAN.md`](./FULL_IMPLEMENTATION_PLAN.md) §8.
 
 **Collaboration OS** — P0–P8 **code cores shipped** (#73–#125). W1–W6 code exits closed.
 
