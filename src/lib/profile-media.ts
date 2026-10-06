@@ -7,7 +7,8 @@ export type ProfileGender = "male" | "female" | "unspecified";
 export const BRAND_AVATARS = {
   male: "/brand/avatars/male.png",
   female: "/brand/avatars/female.png",
-  unspecified: "/brand/avatars/generic.svg",
+  /** Lifestyle rooftop still — not the old SVG mark (breaks next/image optimizer). */
+  unspecified: "/brand/avatars/generic.png",
 } as const;
 
 export const BRAND_BANNERS = [
@@ -15,7 +16,13 @@ export const BRAND_BANNERS = [
   "/brand/banners/rooftop-lounge.png",
 ] as const;
 
-const BRAND_AVATAR_SET = new Set<string>(Object.values(BRAND_AVATARS));
+/** Retired SVG mark — still treat as brand default so drafts remapped to generic.png. */
+export const LEGACY_BRAND_AVATARS = ["/brand/avatars/generic.svg"] as const;
+
+const BRAND_AVATAR_SET = new Set<string>([
+  ...Object.values(BRAND_AVATARS),
+  ...LEGACY_BRAND_AVATARS,
+]);
 const BRAND_BANNER_SET = new Set<string>(BRAND_BANNERS);
 /** Legacy demo headshots we no longer want as new-user defaults. */
 export const LEGACY_DEMO_AVATARS = [
@@ -53,6 +60,14 @@ export function defaultAvatarForGender(gender: ProfileGender | null | undefined)
   return BRAND_AVATARS[g];
 }
 
+/** Rewrite retired brand paths (e.g. generic.svg) to the current default. */
+export function normalizeBrandAvatar(path: string | null | undefined, gender?: ProfileGender | null): string {
+  if (!path || (LEGACY_BRAND_AVATARS as readonly string[]).includes(path) || path.endsWith("/generic.svg")) {
+    return defaultAvatarForGender(gender);
+  }
+  return path;
+}
+
 /** Banner from the brand pool — stable for a given seed (usually slug). */
 export function defaultBannerForSeed(seed: string, offset = 0): string {
   const index = (mediaHash(seed) + offset) % BRAND_BANNERS.length;
@@ -85,7 +100,12 @@ export function resolveDefaultAvatar(input: {
   seed?: string;
 }): string {
   const social = input.socialImage?.trim() || null;
-  if (social && !isBrandDefaultAvatar(social) && !social.includes("/demo/creators/")) {
+  if (
+    social &&
+    !isBrandDefaultAvatar(social) &&
+    !social.includes("/demo/creators/") &&
+    !social.endsWith(".svg")
+  ) {
     return social;
   }
   return defaultAvatarForGender(input.gender);

@@ -10,6 +10,7 @@ import { advanceClaimStage, evaluateCompletion, secondSocialDecision } from "@/l
 import {
   defaultAvatarForGender,
   defaultBannerForSeed,
+  normalizeBrandAvatar,
   normalizeProfileGender,
   resolveDefaultAvatar,
   resolveDefaultBanner,
@@ -533,6 +534,18 @@ export async function getPublishedCreatorBySlug(slug: string): Promise<SeedCreat
 }
 
 export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
+  const image = normalizeBrandAvatar(draft.image, draft.gender);
+  const coverImage = draft.coverImage?.includes("/demo/sofia/")
+    ? defaultBannerForSeed(draft.slug)
+    : draft.coverImage || defaultBannerForSeed(draft.slug);
+  // Temporary claim cards: when still on a brand default avatar, prefer the lifestyle
+  // cover so the hero matches the Influrios branded preview imagery.
+  const hero =
+    draft.stage !== "published" &&
+    (image === defaultAvatarForGender(draft.gender) || image.endsWith("/generic.png") || image.endsWith("/generic.svg"))
+      ? coverImage
+      : image;
+
   return {
     slug: draft.slug,
     displayName: draft.displayName,
@@ -542,8 +555,8 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     locationCountry: draft.locationCountry,
     languages: ["English"],
     avatarColor: "#633CFF",
-    image: draft.image,
-    coverImage: draft.coverImage,
+    image: hero,
+    coverImage,
     gender: draft.gender,
     badge: draft.stage === "published" ? "Rising Star" : "Draft preview",
     statusLabel: draft.stage === "published" ? "Open to partnerships" : "Draft — not public yet",

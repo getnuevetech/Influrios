@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { actionClaimDraft } from "@/app/claim/actions";
 import { actionDeclineInvitation } from "@/app/invite/actions";
+import { ClaimForm } from "@/components/claim-form";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { draftToSeedCreator } from "@/lib/claim";
 import { openInvitation, renderInvitationCopy } from "@/lib/invitations";
@@ -57,7 +58,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
             <p className="text-sm text-muted">
               This draft is the directory profile we prepared. It is not a blank signup.
             </p>
-            <form action={actionClaimDraft} className="space-y-3">
+            <ClaimForm action={actionClaimDraft} submitLabel="Claim this profile →">
               <input type="hidden" name="draftId" value={opened.draft.id} />
               <input type="hidden" name="next" value={`/invite/${invitation.token}`} />
               <label className="block text-sm font-semibold text-indigo">
@@ -91,10 +92,7 @@ export default async function InvitationPage({ params, searchParams }: Props) {
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
                 />
               </label>
-              <button type="submit" className="btn-primary w-full">
-                Claim this profile →
-              </button>
-            </form>
+            </ClaimForm>
             <form action={actionDeclineInvitation}>
               <input type="hidden" name="token" value={invitation.token} />
               <button type="submit" className="text-sm font-semibold text-muted hover:text-indigo">
