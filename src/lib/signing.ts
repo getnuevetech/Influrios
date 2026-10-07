@@ -136,6 +136,12 @@ export async function advanceSignatureRequest(input: {
   to: SignatureStatus;
   note?: string;
 }): Promise<{ ok: true; status: string } | { ok: false; error: string }> {
+  if (input.to === "signed") {
+    return {
+      ok: false,
+      error: "A contract is signed when DocuSign reports every party complete. An admin form cannot sign it.",
+    };
+  }
   const row = await prisma.signatureRequest.findUnique({ where: { id: input.id } });
   if (!row) return { ok: false, error: "Signature request not found." };
   if (!canAdvanceSignatureStatus(row.status, input.to)) {

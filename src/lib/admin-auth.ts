@@ -49,6 +49,10 @@ export const ADMIN_PERMISSIONS = [
   "gateways.edit",
   "signing.view",
   "signing.edit",
+  "contracts.view",
+  "contracts.templates",
+  "contracts.message",
+  "contracts.manage",
   "social.view",
   "social.edit",
   "legal.view",
@@ -87,6 +91,7 @@ export type AdminModule =
   | "ai"
   | "gateways"
   | "signing"
+  | "contracts"
   | "social"
   | "legal"
   | "shortlinks"
@@ -284,6 +289,25 @@ export const ADMIN_PERMISSION_GROUPS: {
     permissions: [
       { id: "signing.view", label: "View signing", hint: "Open the signing API and requests" },
       { id: "signing.edit", label: "Edit signing", hint: "Save API details" },
+    ],
+  },
+  {
+    module: "contracts",
+    label: "Contract agreements",
+    description: "Agreement template, stored PDFs, and messages kept on each contract",
+    permissions: [
+      { id: "contracts.view", label: "View contracts", hint: "Open stored agreements" },
+      { id: "contracts.templates", label: "Edit contract template", hint: "Change the agreement text and variables" },
+      {
+        id: "contracts.message",
+        label: "Contract messages",
+        hint: "Open the contract conversation. Super Admin has this until it is granted.",
+      },
+      {
+        id: "contracts.manage",
+        label: "Contract manager",
+        hint: "Receive messages sent to the contract manager",
+      },
     ],
   },
   {

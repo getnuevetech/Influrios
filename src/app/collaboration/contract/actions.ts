@@ -31,6 +31,13 @@ import {
   requireFeeDisclosureAccepted,
 } from "@/lib/fee-disclosure";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
+import { formatMoney } from "@/lib/money";
+import {
+  fundingAllowedBySignature,
+  resolveCreatorParties,
+  sendCollaborationContract,
+} from "@/lib/contract-document";
+import { creatorAmountsForMilestone } from "@/lib/team-proposal";
 import { ensureMarketplaceDefaults, marketplaceConfig, requestPrefund } from "@/lib/marketplace-ledger";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
 import { paymentRoutes } from "@/lib/providers";
@@ -237,14 +244,16 @@ export async function actionSubmitContractWizard(formData: FormData) {
     redirect(`${BASE}?${qs.toString()}`);
   }
 
-  const fundGate = canFundContract({
-    gates,
-    milestones: milestoneGate,
-    accepted: partyAccepted,
-  });
-  if (!fundGate.ok) {
-    qs.set("step", gates.ok ? "accept" : "payment_readiness");
-    redirectError(fundGate.error, qs);
+  if (intent !== "sign") {
+    const fundGate = canFundContract({
+      gates,
+      milestones: milestoneGate,
+      accepted: partyAccepted,
+    });
+    if (!fundGate.ok) {
+      qs.set("step", gates.ok ? "accept" : "payment_readiness");
+      redirectError(fundGate.error, qs);
+    }
   }
 
   const quote = await resolveFee({
@@ -320,6 +329,73 @@ export async function actionSubmitContractWizard(formData: FormData) {
       acceptedByUserId: account.id,
     },
   });
+  if (intent === "sign") {
+    const members = teamShares
+      ? teamShares.map((row) => ({ creatorSlug: row.label, shareBps: row.shareBps }))
+      : [{ creatorSlug, shareBps: 10_000 }];
+    const creators = await resolveCreatorParties(members);
+    if (!creators.ok) redirectError(creators.error, qs);
+    const sent = await sendCollaborationContract({
+      workspaceId: ws.businessId,
+      collaborationId: linkedCollaborationId,
+      teamProposalId: teamProposalId || null,
+      createdByUserId: account.id,
+      source: Object.fromEntries(qs.entries()),
+      render: {
+        title,
+        scope,
+        commercial,
+        jurisdiction: jurisdictionCode,
+        serviceLevel,
+        currency: plan.contractCurrency,
+        grossLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
+        platformFeeLabel: formatMoney(plan.totalPlatformFeeCents, plan.contractCurrency),
+        creatorCompensationLabel: formatMoney(plan.totalCreatorCompensationCents, plan.contractCurrency),
+        businessName,
+        businessEmail: account.email,
+        parties: [
+          {
+            role: "business",
+            name: account.name || businessName,
+            email: account.email,
+            userId: account.id,
+          },
+          ...creators.parties,
+        ],
+        milestones: plan.milestones.map((milestone) => {
+          const shares = teamShares
+            ? creatorAmountsForMilestone(
+                milestone.creatorCents,
+                teamShares.map((row) => ({ creatorSlug: row.label, shareBps: row.shareBps })),
+              )
+            : [{ creatorSlug, amountCents: milestone.creatorCents }];
+          return {
+            title: milestone.title,
+            shareLabel: `${(milestone.shareBps / 100).toFixed(0)}%`,
+            grossLabel: formatMoney(milestone.grossCents, plan.contractCurrency),
+            feeLabel: formatMoney(milestone.platformFeeCents, plan.contractCurrency),
+            creatorShares:
+              shares?.map((share) => `${share.creatorSlug} ${formatMoney(share.amountCents, plan.contractCurrency)}`).join(", ") ??
+              "",
+          };
+        }),
+        feeDisclosure: buildFeeDisclosureSummary(disclosureGate.record),
+        generatedAt: new Date().toISOString(),
+      },
+    });
+    if (!sent.ok) redirectError(sent.error, qs);
+    redirect(`/collaboration/contracts/${sent.id}`);
+  }
+
+  const contractDocumentId = String(formData.get("contractDocumentId") ?? "").trim();
+  const signedDocument = contractDocumentId
+    ? await prisma.contractDocument.findUnique({ where: { id: contractDocumentId } })
+    : null;
+  const signatureGate = fundingAllowedBySignature(signedDocument?.workspaceId === ws.businessId ? signedDocument.status : "");
+  if (!signatureGate.ok) {
+    qs.set("step", "accept");
+    redirectError(signatureGate.error, qs);
+  }
   const result = await requestPrefund({
     businessName,
     creatorSlug,
@@ -337,6 +413,12 @@ export async function actionSubmitContractWizard(formData: FormData) {
   if (!result.ok) {
     qs.set("step", "funding");
     redirectError(result.error, qs);
+  }
+  if (signedDocument) {
+    await prisma.contractDocument.update({
+      where: { id: signedDocument.id },
+      data: { fundingId: result.id },
+    });
   }
 
   revalidatePath(BASE);

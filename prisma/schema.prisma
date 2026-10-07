@@ -594,6 +594,75 @@ model SignatureRequest {
   @@index([collaborationId])
 }
 
+/// Admin-edited collaboration agreement. Variables are filled when a contract is generated.
+model ContractTemplate {
+  id        String   @id @default("collaboration")
+  name      String
+  body      String
+  updatedAt DateTime @updatedAt
+}
+
+/// One generated agreement. Signed only after DocuSign reports every party complete.
+model ContractDocument {
+  id              String            @id @default(cuid())
+  workspaceId     String?
+  collaborationId String?
+  fundingId       String?
+  teamProposalId  String?
+  title           String
+  renderedBody    String
+  pdfBytes        Bytes
+  /// draft | sent | signed | declined | voided
+  status          String            @default("draft")
+  envelopeId      String            @default("")
+  createdByUserId String?
+  sourceJson      Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  parties         ContractParty[]
+  messages        ContractMessage[]
+
+  @@index([workspaceId, createdAt])
+  @@index([envelopeId])
+  @@index([createdByUserId])
+}
+
+model ContractParty {
+  id          String           @id @default(cuid())
+  documentId  String
+  document    ContractDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  role        String
+  name        String
+  email       String
+  userId      String?
+  creatorSlug String?
+  shareBps    Int              @default(0)
+  /// pending | signed | declined
+  status      String           @default("pending")
+  signedAt    DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([documentId])
+  @@index([userId])
+}
+
+/// Conversation kept on the contract. Audience decides who can read the message.
+model ContractMessage {
+  id               String           @id @default(cuid())
+  documentId       String
+  document         ContractDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  senderUserId     String?
+  senderAdminId    String?
+  senderName       String
+  body             String
+  /// party | all_parties | admin | contract_manager
+  audience         String
+  recipientPartyId String?
+  createdAt        DateTime         @default(now())
+
+  @@index([documentId, createdAt])
+}
+
 model CollaborationEvent {
   id              String        @id @default(cuid())
   collaborationId String
