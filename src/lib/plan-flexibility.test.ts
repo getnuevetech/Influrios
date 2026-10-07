@@ -12,7 +12,7 @@ describe("flexible plan codes", () => {
     assert.equal(normalizePlanCode("1PLAN"), null);
   });
 
-  it("keeps campaign links off the empty plan and on the launch Pro default", () => {
+  it("starts every launch plan at zero campaign links until an admin saves a count", () => {
     assert.equal(EMPTY_ENTITLEMENTS.campaignLinksMax, 0);
     assert.equal(EMPTY_ENTITLEMENTS.nfc, false);
     assert.equal(PLAN_ENTITLEMENTS.PLUS.campaignLinksMax, 0);
