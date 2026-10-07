@@ -1837,13 +1837,18 @@ model AdminUser {
 
 /// Multi-creator proposal. All members must accept before a contract opens.
 model TeamProposal {
-  id          String               @id @default(cuid())
-  workspaceId String
-  title       String
-  status      String               @default("sent")
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  members     TeamProposalMember[]
+  id             String               @id @default(cuid())
+  workspaceId    String
+  title          String
+  campaignIntent String               @default("")
+  /// sent | partial | accepted | declined | expired | draft
+  status         String               @default("sent")
+  expiresAt      DateTime?
+  /// Set when the accepted proposal creates its one funding instruction.
+  fundingId      String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  members        TeamProposalMember[]
 
   @@index([workspaceId, status])
 }
@@ -1853,6 +1858,9 @@ model TeamProposalMember {
   proposalId  String
   proposal    TeamProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   creatorSlug String
+  role        String       @default("creator")
+  shareBps    Int          @default(0)
+  /// invited | accepted | declined
   status      String       @default("invited")
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt

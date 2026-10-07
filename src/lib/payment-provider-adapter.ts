@@ -43,6 +43,8 @@ export interface PaymentProviderAdapter {
     fundingId: string;
     milestoneId: string;
     amountCents: number;
+    /** One release pays each party this amount. Team proposals use creator slugs. */
+    shares?: { label: string; amountCents: number }[];
   }): Promise<{ ok: true; reference: string } | { ok: false; error: string }>;
   createPartialRefund(input: {
     fundingId: string;
@@ -63,6 +65,7 @@ export async function queueProviderInstruction(input: {
   amountCents?: number;
   milestoneId?: string | null;
   actor?: string;
+  shares?: { label: string; amountCents: number }[];
 }): Promise<{ ok: true; reference: string } | { ok: false; error: string }> {
   const fundingId = input.fundingId.trim();
   if (!fundingId) return { ok: false, error: "Funding id is required." };
@@ -96,6 +99,7 @@ export async function queueProviderInstruction(input: {
         fundingId,
         amountCents: input.amountCents ?? null,
         milestoneId: input.milestoneId ?? null,
+        shares: input.shares ?? null,
         queuedAt: new Date().toISOString(),
         note: "Instruction only — ledger moves on signed payout.refunded / provider webhook.",
       },
@@ -114,6 +118,7 @@ export async function queueProviderInstruction(input: {
           jobId: job.id,
           amountCents: input.amountCents ?? null,
           milestoneId: input.milestoneId ?? null,
+          shares: input.shares ?? null,
         },
       },
     })
@@ -150,6 +155,7 @@ export function createMarketplaceSignedWebhookAdapter(deps: {
         fundingId: input.fundingId,
         amountCents: input.amountCents,
         milestoneId: input.milestoneId,
+        shares: input.shares,
       });
     },
     async createPartialRefund(input) {

@@ -32,6 +32,8 @@ import {
   actionApplyToCreatorOpportunity,
   actionCreatorTransitionApplication,
 } from "./actions";
+import { actionRespondTeamProposal } from "@/app/collaboration/team/actions";
+import { listTeamProposalsForCreator } from "@/lib/team-proposal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Collaborations · Hub" };
@@ -46,6 +48,7 @@ type Props = {
     applied?: string;
     app?: string;
     error?: string;
+    status?: string;
   }>;
 };
 
@@ -54,6 +57,7 @@ const SIDE_LINKS = [
   { href: "/collaboration/hub#matches", label: "Find Matches", anchor: "matches" },
   { href: "/collaboration/hub#business-requests", label: "Business Requests", anchor: "business-requests" },
   { href: "/collaboration/hub#saved", label: "Saved Matches", anchor: "saved" },
+  { href: "/collaboration/hub#team-proposals", label: "Team proposals", anchor: "team-proposals" },
   { href: "/collaboration/records", label: "Contracts & Agreements", anchor: null },
   { href: "/payments", label: "Payments & Wallet", anchor: null },
   { href: "/dashboard", label: "Influencer Profile", anchor: null },
@@ -82,10 +86,11 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
     redirect("/claim");
   }
 
-  const [hub, directory, cms] = await Promise.all([
+  const [hub, directory, cms, teamProposals] = await Promise.all([
     loadCreatorHub({ userId: account.id, creator }),
     getDirectory().catch(() => null),
     getCms().catch(() => null),
+    listTeamProposalsForCreator(draft.slug).catch(() => []),
   ]);
   const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
 
@@ -254,6 +259,52 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
         </aside>
 
         <div className="min-w-0 space-y-6">
+          <section id="team-proposals" className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
+            <h2 className="font-display text-xl font-bold text-indigo">Team proposals</h2>
+            <p className="mt-1 text-sm text-muted">
+              Accept or decline a team invitation. The business contract opens only after every creator accepts.
+            </p>
+            {params.status ? <p className="mt-2 text-sm font-semibold text-indigo">Status: {params.status}</p> : null}
+            {teamProposals.length === 0 ? (
+              <p className="mt-3 text-sm text-muted">No team invitations.</p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {teamProposals.map((proposal) => (
+                  <li key={proposal.id} className="rounded-xl bg-[#F4F7FF] p-3">
+                    <p className="font-semibold text-indigo">{proposal.title}</p>
+                    <p className="text-xs uppercase tracking-wide text-violet">{proposal.status}</p>
+                    <ul className="mt-1 text-sm text-muted">
+                      {proposal.members.map((member) => (
+                        <li key={member.id}>
+                          {member.creatorSlug} · {member.status}
+                        </li>
+                      ))}
+                    </ul>
+                    {proposal.status === "sent" || proposal.status === "partial" ? (
+                      proposal.members.some(
+                        (member) => member.creatorSlug === creator.slug && member.status === "invited",
+                      ) ? (
+                        <form action={actionRespondTeamProposal} className="mt-2 flex gap-2">
+                          <input type="hidden" name="proposalId" value={proposal.id} />
+                          <input type="hidden" name="returnTo" value="/collaboration/hub" />
+                          <button name="decision" value="accepted" className="btn-primary !py-1.5 text-xs">
+                            Accept
+                          </button>
+                          <button name="decision" value="declined" className="btn-secondary !py-1.5 text-xs">
+                            Decline
+                          </button>
+                        </form>
+                      ) : null
+                    ) : proposal.status === "declined" ? (
+                      <p className="mt-2 text-xs text-muted">This proposal is closed. A new proposal is required to change the team.</p>
+                    ) : proposal.status === "accepted" ? (
+                      <p className="mt-2 text-xs text-muted">Every creator accepted. The business can open the contract.</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           {params.saved ? (
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
               Match saved to your hub.
