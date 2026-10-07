@@ -34,6 +34,12 @@ import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import { ensureMarketplaceDefaults, marketplaceConfig, requestPrefund } from "@/lib/marketplace-ledger";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
 import { paymentRoutes } from "@/lib/providers";
+import {
+  memberShareSnapshot,
+  teamFundingReady,
+  teamMemberReadiness,
+  wizardParties,
+} from "@/lib/team-proposal";
 
 const BASE = "/collaboration/contract";
 
@@ -71,6 +77,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const ws = await getWorkspace(account.id);
   const entitlements = await businessEntitlementsForPlan(ws.plan);
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
+  const teamProposalId = String(formData.get("teamProposalId") ?? "").trim();
   const collaborationId = String(formData.get("collaborationId") ?? "").trim() || undefined;
   const businessName = String(formData.get("businessName") ?? ws.name).trim() || ws.name;
   const title = String(formData.get("title") ?? "").trim();
@@ -88,6 +95,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   const qs = new URLSearchParams();
   qs.set("creator", creatorSlug);
+  if (teamProposalId) qs.set("team", teamProposalId);
   if (collaborationId) qs.set("collaboration", collaborationId);
   qs.set("title", title);
   qs.set("scope", scope);
@@ -160,7 +168,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     if (!serviceGate.ok) redirectError(serviceGate.error, qs);
   }
 
-  const gates = evaluatePreContractGates({
+  let gates = evaluatePreContractGates({
     businessName,
     creatorSlug,
     identityVerified,
@@ -180,6 +188,43 @@ export async function actionSubmitContractWizard(formData: FormData) {
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
     marketplaceProviderReady: Boolean(provider?.ready),
   });
+
+  let teamShares: { label: string; shareBps: number }[] | null = null;
+  if (teamProposalId) {
+    const proposal = await prisma.teamProposal.findUnique({
+      where: { id: teamProposalId },
+      include: { members: { orderBy: { createdAt: "asc" } } },
+    });
+    if (!proposal || proposal.workspaceId !== ws.businessId) {
+      redirectError("That team proposal is not on this workspace.", qs);
+    }
+    const parties = wizardParties(proposal);
+    if (!parties) redirectError("Every creator must accept before the contract opens.", qs);
+    if (proposal.fundingId) redirectError("This team proposal already has a funding instruction.", qs);
+    const checks = await Promise.all(
+      parties.map((party) =>
+        teamMemberReadiness({
+          creatorSlug: party.creatorSlug,
+          businessName,
+          jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
+          marketplaceProviderReady: Boolean(provider?.ready),
+        }),
+      ),
+    );
+    const ready = teamFundingReady({
+      status: proposal.status,
+      payoutReady: checks.map((check) => check.ready),
+    });
+    gates = ready.ok
+      ? { ok: true, status: "ROUTE_READY", blockers: [] }
+      : {
+          ok: false,
+          status: "ROUTE_BLOCKED",
+          blockers: checks.flatMap((check) => check.blockers),
+        };
+    teamShares = memberShareSnapshot(parties);
+    if (!teamShares) redirectError("Team creator shares must add up to 100%.", qs);
+  }
 
   qs.set("step", intent === "fund" ? "funding" : intent === "accept" ? "accept" : "preview");
 
@@ -286,6 +331,8 @@ export async function actionSubmitContractWizard(formData: FormData) {
     financialPlan: locked as unknown as Record<string, unknown>,
     workspaceId: ws.businessId,
     collaborationId: linkedCollaborationId,
+    teamProposalId: teamProposalId || null,
+    creatorShares: teamShares,
   });
   if (!result.ok) {
     qs.set("step", "funding");

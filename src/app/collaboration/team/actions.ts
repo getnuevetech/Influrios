@@ -7,6 +7,11 @@ import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { createTeamProposal, respondToTeamProposal } from "@/lib/team-proposal";
 
+function safeReturn(value: string) {
+  if (value === "/collaboration/business" || value === "/collaboration/hub") return value;
+  return "/collaboration/team";
+}
+
 export async function actionSendTeamProposal(formData: FormData) {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/collaboration/team");
@@ -15,11 +20,14 @@ export async function actionSendTeamProposal(formData: FormData) {
   const result = await createTeamProposal({
     workspaceId: ws.businessId,
     title: String(formData.get("title") ?? ""),
+    campaignIntent: String(formData.get("campaignIntent") ?? ""),
     creatorSlugs: slugs,
   });
-  if (!result.ok) redirect(`/collaboration/team?error=${encodeURIComponent(result.error)}`);
+  const returnTo = safeReturn(String(formData.get("returnTo") ?? ""));
+  if (!result.ok) redirect(`${returnTo}?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/collaboration/team");
-  redirect("/collaboration/team?sent=1");
+  revalidatePath("/collaboration/business");
+  redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}sent=1`);
 }
 
 export async function actionRespondTeamProposal(formData: FormData) {
@@ -39,7 +47,9 @@ export async function actionRespondTeamProposal(formData: FormData) {
     creatorSlug: slug,
     decision,
   });
-  if (!result.ok) redirect(`/collaboration/team?error=${encodeURIComponent(result.error)}`);
+  const returnTo = safeReturn(String(formData.get("returnTo") ?? ""));
+  if (!result.ok) redirect(`${returnTo}?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/collaboration/team");
-  redirect(`/collaboration/team?status=${result.status}`);
+  revalidatePath("/collaboration/hub");
+  redirect(`${returnTo}?status=${result.status}`);
 }

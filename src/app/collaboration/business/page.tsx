@@ -33,6 +33,8 @@ import {
   actionTransitionMarketplaceApplication,
 } from "./actions";
 import { applicationTransitionLabel } from "@/lib/marketplace-listings";
+import { actionSendTeamProposal } from "@/app/collaboration/team/actions";
+import { teamSendControl } from "@/lib/team-proposal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business Collaboration Hub · Influrios" };
@@ -48,6 +50,7 @@ type Props = {
     added?: string;
     inquiry?: string;
     plan?: string;
+    sent?: string;
     queued?: string;
     terms?: string;
     invited?: string;
@@ -432,6 +435,38 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 ))
               )}
             </div>
+            {params.sent ? (
+              <p className="mt-3 text-sm font-semibold text-emerald-700">
+                Team proposal sent. It opens a contract after every creator accepts.{" "}
+                <Link href="/collaboration/team" className="text-violet hover:underline">
+                  View proposals
+                </Link>
+              </p>
+            ) : null}
+            {teamSendControl({ audience: "business" }).visible && hub.suggestions.length >= 2 ? (
+              <form action={actionSendTeamProposal} className="mt-4 space-y-2 rounded-xl border border-[#E4E9F5] bg-[#F8FAFF] p-4">
+                <input type="hidden" name="returnTo" value="/collaboration/business" />
+                <input type="hidden" name="title" value={hub.intentBrief?.title || "Team proposal"} />
+                <input
+                  type="hidden"
+                  name="campaignIntent"
+                  value={[hub.intentBrief?.goal, hub.intentBrief?.summary].filter(Boolean).join(" · ") || hub.intentBrief?.title || "Team proposal"}
+                />
+                <fieldset className="space-y-1">
+                  <legend className="text-sm font-semibold text-indigo">Send a team proposal</legend>
+                  <p className="text-xs text-muted">Select two or more suggestions. One proposal, one contract, one funding instruction.</p>
+                  {hub.suggestions.map(({ creator }) => (
+                    <label key={creator.slug} className="flex items-center gap-2 text-sm text-indigo">
+                      <input type="checkbox" name="creatorSlug" value={creator.slug} />
+                      {creator.displayName}
+                    </label>
+                  ))}
+                </fieldset>
+                <button type="submit" className="btn-primary !py-2 text-sm">
+                  Send team proposal
+                </button>
+              </form>
+            ) : null}
             {!hub.entitlements.fitInsights ? (
               <p className="mt-3 text-xs text-muted">
                 Showing a limited preview.{" "}

@@ -35,6 +35,12 @@ import {
 } from "@/lib/payout-readiness";
 import { DEFAULT_PAYMENT_ROUTES, paymentRoutes } from "@/lib/providers";
 import { stripePayoutRouteReady } from "@/lib/stripe-admin";
+import {
+  creatorAmountsForMilestone,
+  teamFundingReady,
+  teamMemberReadiness,
+  wizardParties,
+} from "@/lib/team-proposal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contract & Milestone Wizard · Influrios" };
@@ -44,6 +50,7 @@ type Props = {
     step?: string;
     creator?: string;
     collaboration?: string;
+    team?: string;
     title?: string;
     scope?: string;
     commercial?: string;
@@ -171,7 +178,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     ? serviceLevel
     : availableServiceLevels[0] ?? "contracted";
 
-  const gates = evaluatePreContractGates({
+  let gates = evaluatePreContractGates({
     businessName: ws.name,
     creatorSlug: creatorSlug || "",
     identityVerified: creatorSlug ? identityVerified : false,
@@ -191,6 +198,45 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
     marketplaceProviderReady: Boolean(provider?.ready),
   });
+
+  const teamId = (params.team ?? "").trim();
+  const teamProposal = teamId
+    ? await prisma.teamProposal
+        .findUnique({
+          where: { id: teamId },
+          include: { members: { orderBy: { createdAt: "asc" } } },
+        })
+        .catch(() => null)
+    : null;
+  const teamParties =
+    teamProposal && teamProposal.workspaceId === ws.businessId ? wizardParties(teamProposal) : null;
+  const teamChecks = teamParties
+    ? await Promise.all(
+        teamParties.map((party) =>
+          teamMemberReadiness({
+            creatorSlug: party.creatorSlug,
+            businessName: ws.name,
+            jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
+            marketplaceProviderReady: Boolean(provider?.ready),
+          }),
+        ),
+      )
+    : [];
+  if (teamProposal && teamProposal.workspaceId === ws.businessId) {
+    const ready = teamFundingReady({
+      status: teamProposal.status,
+      payoutReady: teamChecks.map((check) => check.ready),
+    });
+    gates = ready.ok
+      ? { ok: true, status: "ROUTE_READY" as const, blockers: [] }
+      : {
+          ok: false,
+          status: "ROUTE_BLOCKED" as const,
+          blockers: teamParties
+            ? teamChecks.flatMap((check) => check.blockers)
+            : ["Every creator must accept before the contract opens."],
+        };
+  }
 
   const milestoneGate = customMilestonesGate({
     entitled: entitlements.customMilestones,
@@ -292,12 +338,33 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         <form action={actionSubmitContractWizard} className="space-y-8 rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
           <input type="hidden" name="businessName" value={ws.name} />
           {linkedCollab ? <input type="hidden" name="collaborationId" value={linkedCollab.id} /> : null}
+          {teamProposal && teamProposal.workspaceId === ws.businessId ? (
+            <input type="hidden" name="teamProposalId" value={teamProposal.id} />
+          ) : null}
 
           <section id="parties">
             <h2 className="font-display text-xl font-bold text-indigo">1. Parties</h2>
             <p className="mt-1 text-sm text-muted">
               Business: <strong>{ws.name}</strong> · plan {ws.plan.replace(/_/g, " ")}
             </p>
+            {teamProposal && teamProposal.workspaceId === ws.businessId ? (
+              <div className="mt-4">
+                <input type="hidden" name="creatorSlug" value={teamProposal.members[0]?.creatorSlug ?? ""} />
+                <p className="text-sm font-semibold text-indigo">Team</p>
+                <ul className="mt-2 space-y-1 text-sm text-muted">
+                  {teamProposal.members.map((party) => (
+                    <li key={party.creatorSlug}>
+                      {party.creatorSlug} · {party.status} · {(party.shareBps / 100).toFixed(2)}% of creator compensation
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-muted">
+                  {teamParties
+                    ? "One funding instruction. Each milestone release pays every creator the share saved on the proposal."
+                    : "The contract opens after every creator accepts. A decline closes this proposal."}
+                </p>
+              </div>
+            ) : (
             <label className="mt-4 block text-sm font-semibold text-indigo">
               Influencer
               <select
@@ -316,6 +383,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 )}
               </select>
             </label>
+            )}
             {creator ? (
               <div className="mt-3 flex items-center gap-3 rounded-xl bg-[#F4F7FF] p-3">
                 <span className="relative h-12 w-12 overflow-hidden rounded-full">
@@ -592,20 +660,36 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   </p>
                 ) : null}
                 <ul className="mt-4 space-y-2">
-                  {plan.milestones.map((m) => (
+                  {plan.milestones.map((m) => {
+                    const creatorShares = teamParties
+                      ? creatorAmountsForMilestone(m.creatorCents, teamParties)
+                      : null;
+                    return (
                     <li
                       key={m.title}
-                      className="flex justify-between gap-3 rounded-xl bg-[#F4F7FF] px-3 py-2 text-sm"
+                      className="rounded-xl bg-[#F4F7FF] px-3 py-2 text-sm"
                     >
-                      <span className="font-semibold text-indigo">
-                        {m.title} · {(m.shareBps / 100).toFixed(0)}%
-                      </span>
-                      <span className="text-muted">
-                        {formatMoney(m.grossCents, plan.contractCurrency)} (fee{" "}
-                        {formatMoney(m.platformFeeCents, plan.contractCurrency)})
-                      </span>
+                      <div className="flex justify-between gap-3">
+                        <span className="font-semibold text-indigo">
+                          {m.title} · {(m.shareBps / 100).toFixed(0)}%
+                        </span>
+                        <span className="text-muted">
+                          {formatMoney(m.grossCents, plan.contractCurrency)} (fee{" "}
+                          {formatMoney(m.platformFeeCents, plan.contractCurrency)})
+                        </span>
+                      </div>
+                      {creatorShares ? (
+                        <ul className="mt-1 text-xs text-muted">
+                          {creatorShares.map((share) => (
+                            <li key={share.creatorSlug}>
+                              {share.creatorSlug} · {formatMoney(share.amountCents, plan.contractCurrency)}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </>
             ) : (

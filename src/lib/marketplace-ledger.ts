@@ -520,6 +520,8 @@ export async function saveFundingSchedule(input: {
   });
 }
 
+class TeamFundingReject extends Error {}
+
 export async function requestPrefund(input: {
   jurisdictionCode: string;
   businessName: string;
@@ -541,6 +543,9 @@ export async function requestPrefund(input: {
   workspaceId?: string | null;
   /** Optional proposal/record link for creator hub pipeline (not title fuzzy match). */
   collaborationId?: string | null;
+  /** Accepted team proposal. One funding row pays every creator from this share list. */
+  teamProposalId?: string | null;
+  creatorShares?: { label: string; shareBps: number }[] | null;
 }) {
   await ensureMarketplaceDefaults();
   await ensureSettlementDefaults();
@@ -688,7 +693,12 @@ export async function requestPrefund(input: {
   if (currency !== "USD" && !fxRate?.active) {
     return { ok: false as const, error: `No Wise currency is saved for ${currency}. Nothing was funded.` };
   }
-  const shareSnapshot = await activeShareSnapshot();
+  const revenueShares = await activeShareSnapshot();
+  const teamShares = input.creatorShares ? readShareSnapshot(input.creatorShares) : null;
+  if (input.creatorShares && (!teamShares || teamShares.length < 2)) {
+    return { ok: false as const, error: "Team creator shares must add up to 100%." };
+  }
+  const shareSnapshot = teamShares ?? revenueShares;
   const prepared: {
     gross: number;
     fx: Extract<Awaited<ReturnType<typeof quoteWiseUserRate>>, { ok: true }>;
@@ -717,7 +727,9 @@ export async function requestPrefund(input: {
     prepared.push({ gross: fx.convertedMinor, fx, milestoneAmounts, quote });
   }
   const scheduleId = schedule.kind === "once" ? null : randomUUID();
-  const created = await prisma.$transaction(async (tx) => {
+  let created: string[];
+  try {
+  created = await prisma.$transaction(async (tx) => {
     const ids: string[] = [];
     for (let index = 0; index < prepared.length; index += 1) {
       const part = prepared[index];
@@ -751,6 +763,7 @@ export async function requestPrefund(input: {
             feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(serviceLevel),
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: new Date().toISOString(),
+            ...(input.teamProposalId ? { teamProposalId: input.teamProposalId } : {}),
             ...(input.financialPlan ? { financialPlan: input.financialPlan } : {}),
             lifecycleSnapshot: {
               reviewWindowHours: windowHours,
@@ -794,8 +807,20 @@ export async function requestPrefund(input: {
       });
       ids.push(row.id);
     }
+    if (input.teamProposalId) {
+      if (ids.length !== 1) throw new TeamFundingReject("A team proposal uses one funding instruction.");
+      const locked = await tx.teamProposal.updateMany({
+        where: { id: input.teamProposalId, fundingId: null, status: "accepted" },
+        data: { fundingId: ids[0] },
+      });
+      if (locked.count !== 1) throw new TeamFundingReject("This team proposal already has a funding instruction.");
+    }
     return ids;
   });
+  } catch (error) {
+    if (error instanceof TeamFundingReject) return { ok: false as const, error: error.message };
+    throw error;
+  }
   await prisma.auditLog.create({
     data: {
       actor: "marketplace",

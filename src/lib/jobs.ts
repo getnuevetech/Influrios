@@ -917,6 +917,8 @@ export async function enqueueFundingReconciliationSweep() {
 export async function runScheduledReleaseSweep(now = new Date()) {
   const { shouldRequestScheduledRelease } = await import("@/lib/collab-ops-jobs");
   const { releasableCents } = await import("@/lib/ledger");
+  const { splitMilestoneRelease } = await import("@/lib/account-purpose");
+  const { readShareSnapshot, shareLines } = await import("@/lib/fx-share");
   const { createMarketplaceSignedWebhookAdapter } = await import("@/lib/payment-provider-adapter");
   const { verifyMarketplaceSignature } = await import("@/lib/ledger");
   const adapter = createMarketplaceSignedWebhookAdapter({
@@ -953,10 +955,20 @@ export async function runScheduledReleaseSweep(now = new Date()) {
     if (openDispute) continue;
     const amount = releasableCents(milestone.amountCents, milestone.refundedCents);
     if (amount <= 0) continue;
+    const parties = readShareSnapshot(milestone.funding.shareSnapshotJson);
+    const legs = splitMilestoneRelease({
+      releasableCents: amount,
+      fundingGrossCents: milestone.funding.grossCents,
+      fundingFeeCents: milestone.funding.feeCents,
+      financialPlanJson: (milestone.funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan,
+      milestoneTitle: milestone.title,
+    });
+    const lines = parties && legs.creatorCents > 0 ? shareLines(legs.creatorCents, parties) : null;
     const instruction = await adapter.createReleaseOrTransfer({
       fundingId: milestone.fundingId,
       milestoneId: milestone.id,
       amountCents: amount,
+      shares: lines?.map((line) => ({ label: line.label, amountCents: line.amountCents })),
     });
     if (!instruction.ok) continue;
     const updated = await prisma.fundingMilestone.updateMany({

@@ -4,7 +4,12 @@ import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { listDirectoryCreators } from "@/lib/directory";
-import { teamFundingReady } from "@/lib/team-proposal";
+import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
+import {
+  teamFundingReady,
+  teamMemberReadiness,
+  wizardHrefForProposal,
+} from "@/lib/team-proposal";
 import { listTeamProposalsForCreator, listTeamProposalsForWorkspace } from "@/lib/team-proposal";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +24,17 @@ export default async function TeamProposalPage({ searchParams }: Props) {
   const creator = account
     ? await prisma.creator.findFirst({ where: { userId: account.id }, select: { slug: true } })
     : null;
-  const [directory, outgoing, incoming] = await Promise.all([
+  const [directory, outgoing, incoming, config] = await Promise.all([
     listDirectoryCreators().catch(() => []),
     account && ws.businessId !== "public" ? listTeamProposalsForWorkspace(ws.businessId).catch(() => []) : [],
     creator ? listTeamProposalsForCreator(creator.slug).catch(() => []) : [],
+    ensureMarketplaceDefaults()
+      .then(() => marketplaceConfig())
+      .catch(() => null),
   ]);
+  const jurisdiction = config?.jurisdictions.find((row) => row.code === "US") ?? config?.jurisdictions[0];
+  const provider =
+    config?.providers.find((row) => row.code === (jurisdiction?.providerCode || "primary")) ?? config?.provider;
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -76,32 +87,53 @@ export default async function TeamProposalPage({ searchParams }: Props) {
         <section className="space-y-3">
           <h2 className="font-display text-xl font-bold text-indigo">Your proposals</h2>
           {outgoing.length === 0 ? <p className="text-sm text-muted">No team proposals from this workspace.</p> : null}
-          {outgoing.map((proposal) => {
+          {await Promise.all(outgoing.map(async (proposal) => {
+            const checks = config
+              ? await Promise.all(
+                  proposal.members.map((member) =>
+                    teamMemberReadiness({
+                      creatorSlug: member.creatorSlug,
+                      businessName: ws.name,
+                      jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
+                      marketplaceProviderReady: Boolean(provider?.ready),
+                    }),
+                  ),
+                )
+              : proposal.members.map(() => ({ ready: false, blockers: ["Marketplace config is unavailable."] }));
             const ready = teamFundingReady({
               status: proposal.status,
-              payoutReady: proposal.members.map(() => false),
+              payoutReady: checks.map((check) => check.ready),
             });
+            const wizardHref = wizardHrefForProposal(proposal);
             return (
               <article key={proposal.id} className="card-surface p-4">
                 <p className="font-semibold text-indigo">{proposal.title}</p>
                 <p className="mt-1 text-xs uppercase tracking-wide text-violet">{proposal.status}</p>
+                {proposal.campaignIntent ? (
+                  <p className="mt-1 text-sm text-muted">{proposal.campaignIntent}</p>
+                ) : null}
                 <ul className="mt-2 text-sm text-muted">
-                  {proposal.members.map((member) => (
+                  {proposal.members.map((member, index) => (
                     <li key={member.id}>
-                      {member.creatorSlug} · {member.status}
+                      {member.creatorSlug} · {member.role} · {member.status} · {(member.shareBps / 100).toFixed(2)}%
+                      {checks[index] && !checks[index].ready ? " · payout route not ready" : ""}
                     </li>
                   ))}
                 </ul>
-                {proposal.status === "accepted" ? (
+                {proposal.status === "accepted" && wizardHref ? (
                   <p className="mt-2 text-sm text-indigo">
-                    {ready.ok
-                      ? "Ready to fund."
-                      : "Contract can open. Funding stays blocked until every payout route is ready."}
+                    {ready.ok ? "Every payout route is ready. " : "Funding stays blocked until every payout route is ready. "}
+                    <Link href={wizardHref} className="font-semibold text-violet hover:underline">
+                      Open the contract
+                    </Link>
                   </p>
+                ) : null}
+                {proposal.status === "declined" ? (
+                  <p className="mt-2 text-sm text-muted">Declined. Send a new proposal to change who is included.</p>
                 ) : null}
               </article>
             );
-          })}
+          }))}
         </section>
 
         <section className="space-y-3">
