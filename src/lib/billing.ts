@@ -484,7 +484,7 @@ export async function completeCheckout(sessionId: string, opts?: {
   });
   if (!confirmed.ok) return confirmed;
 
-  const slug = opts?.creatorSlug || session.creatorSlug || (product?.creatorPlan ? "sofia-martinez" : undefined);
+  const slug = opts?.creatorSlug || session.creatorSlug || undefined;
   try {
     const { applyPlanOnce, checkoutEventId } = await import("@/lib/webhook-idempotency");
     await applyPlanOnce({
