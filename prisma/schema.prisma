@@ -358,6 +358,8 @@ model InfluencerPayoutProfile {
   globalPayoutReady      Boolean  @default(false)
   /// Stripe Connect account id (acct_). Required before a Stripe corridor is ROUTE_READY.
   stripeConnectAccountId String?
+  /// Connected-account reference for the collaboration payout rail. Release splits pay this account.
+  providerConnectedAccountId String?
   updatedAt              DateTime @updatedAt
   createdAt              DateTime @default(now())
 }
@@ -374,6 +376,19 @@ model CountryActivationCorridor {
   kycModel               String   @default("identity_light")
   notes                  String   @default("")
   updatedAt              DateTime @updatedAt
+}
+
+/// Fields a payout provider returned for a country. Unreturned fields stay empty.
+model ProviderCorridorCapability {
+  id             String   @id @default(cuid())
+  providerCode   String
+  countryCode    String
+  accountType    String?
+  currenciesJson Json?
+  payoutMethod   String?
+  updatedAt      DateTime @updatedAt
+
+  @@unique([providerCode, countryCode])
 }
 
 model CreatorSpecialty {
@@ -1595,6 +1610,10 @@ model CollaborationFunding {
   serviceLevel     String
   status            String   @default("awaiting_provider")
   providerCode      String
+  /// Provider payment id from the charge. The ledger stays awaiting_provider until the webhook.
+  providerPaymentId String?
+  /// Milestone id to provider split id (string or list). Release uses these ids.
+  providerSplitJson Json?
   attributionLabel  String   @default("")
   /// W3.7 — active | expired | contested | pre_existing
   attributionStatus String   @default("active")
@@ -1655,6 +1674,8 @@ model FundingMilestone {
   /// Dev §16 — set when provider reports payout.failed; cleared on successful release or retry reset.
   payoutFailedAt    DateTime?
   payoutRetryCount  Int                  @default(0)
+  /// First provider split id for this milestone. The full list lives on the funding.
+  providerSplitId   String?
   updatedAt         DateTime             @updatedAt
   entries           LedgerEntry[]
   disputes          MilestoneDispute[]

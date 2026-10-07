@@ -16,9 +16,8 @@ import {
   parseChargebackEvidence,
   type ChargebackEvidencePack,
 } from "@/lib/chargeback-evidence";
-import { ledgerMovements, reconcileLedger } from "@/lib/ledger";
-import { createMarketplaceSignedWebhookAdapter } from "@/lib/payment-provider-adapter";
-import { verifyMarketplaceSignature } from "@/lib/ledger";
+import { ledgerMovements, reconcileLedger, verifyMarketplaceSignature } from "@/lib/ledger";
+import { adapterForProvider } from "@/lib/payment-provider-adapter";
 
 const CHARGEBACK_REASONS = new Set<CancellationReason>(["chargeback"]);
 
@@ -107,7 +106,7 @@ export async function executeHeldCancellation(input: {
   });
   if (!calc.ok) return calc;
 
-  const providerAdapter = createMarketplaceSignedWebhookAdapter({
+  const providerAdapter = await adapterForProvider(funding.providerCode, {
     verifySignature: verifyMarketplaceSignature,
   });
 

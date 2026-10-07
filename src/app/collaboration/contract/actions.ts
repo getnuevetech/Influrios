@@ -19,7 +19,6 @@ import {
   type MilestoneDraft,
 } from "@/lib/contract-wizard";
 import { prisma } from "@/lib/db";
-import { stripePayoutRouteReady } from "@/lib/stripe-admin";
 import { getDirectoryCreator } from "@/lib/directory";
 import {
   capabilitiesFromJurisdictionRow,
@@ -40,7 +39,7 @@ import {
 import { creatorAmountsForMilestone } from "@/lib/team-proposal";
 import { ensureMarketplaceDefaults, marketplaceConfig, requestPrefund } from "@/lib/marketplace-ledger";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
-import { paymentRoutes } from "@/lib/providers";
+import { collectionPayoutReady, paymentRoutes } from "@/lib/providers";
 import {
   memberShareSnapshot,
   teamFundingReady,
@@ -175,22 +174,25 @@ export async function actionSubmitContractWizard(formData: FormData) {
     if (!serviceGate.ok) redirectError(serviceGate.error, qs);
   }
 
+  const payoutProfile = dbCreator
+    ? await prisma.influencerPayoutProfile
+        .findUnique({
+          where: { creatorId: dbCreator.id },
+          select: { stripeConnectAccountId: true, providerConnectedAccountId: true },
+        })
+        .catch(() => null)
+    : null;
   let gates = evaluatePreContractGates({
     businessName,
     creatorSlug,
     identityVerified,
     creatorCountryKnown: Boolean(creatorCountry),
     corridorActive: payoutReadiness ? payoutReadiness.corridorActive : Boolean(creatorCountry),
-    paymentRouteReady: stripePayoutRouteReady({
+    paymentRouteReady: collectionPayoutReady({
       providerCode: route?.providerCode,
       routeReady: Boolean(route?.ready),
-      stripeConnectAccountId: dbCreator
-        ? (
-            await prisma.influencerPayoutProfile
-              .findUnique({ where: { creatorId: dbCreator.id }, select: { stripeConnectAccountId: true } })
-              .catch(() => null)
-          )?.stripeConnectAccountId
-        : null,
+      stripeConnectAccountId: payoutProfile?.stripeConnectAccountId,
+      providerConnectedAccountId: payoutProfile?.providerConnectedAccountId,
     }),
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
     marketplaceProviderReady: Boolean(provider?.ready),

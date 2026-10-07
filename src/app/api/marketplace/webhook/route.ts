@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyMarketplaceSignature } from "@/lib/ledger";
+import { applyIntroFeeFromWebhook } from "@/lib/managed-matching";
 import { applyAirwallexMentorshipWebhook } from "@/lib/mentorship";
 import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
-import { parseAirwallexWebhook, verifyAirwallexSignature } from "@/lib/providers/airwallex";
+import { parseAirwallexIntroFeeWebhook, parseAirwallexWebhook, verifyAirwallexSignature } from "@/lib/providers/airwallex";
 import { applyMarketplaceEvent, marketplaceWebhookSecret } from "@/lib/marketplace-ledger";
 import { createMarketplaceSignedWebhookAdapter } from "@/lib/payment-provider-adapter";
 import { applyRegionalCharge, gatewayWebhookSecret, readRegionalWebhook } from "@/lib/providers/regional-charge";
@@ -56,6 +57,20 @@ export async function POST(request: NextRequest) {
     }
     if (!verifyAirwallexSignature(body, signature, settings.webhookSecret)) {
       return NextResponse.json({ error: "Signature did not match." }, { status: 401 });
+    }
+    const introEvent = parseAirwallexIntroFeeWebhook(body);
+    if (introEvent.ok) {
+      if (!introEvent.paid) return NextResponse.json({ ok: true, paid: false });
+      const settled = await applyIntroFeeFromWebhook({
+        intentRef: introEvent.intentRef,
+        paymentId: introEvent.paymentId,
+        eventId: introEvent.eventId,
+      });
+      if (!settled.ok) return NextResponse.json({ error: settled.error }, { status: settled.status });
+      return NextResponse.json({ ok: true, paid: true, duplicate: settled.duplicate });
+    }
+    if (introEvent.error !== "not_intro_fee") {
+      return NextResponse.json({ error: introEvent.error }, { status: 400 });
     }
     const fundingEvent = parseAirwallexWebhook(body);
     if (!fundingEvent.ok) return NextResponse.json({ error: fundingEvent.error }, { status: 400 });

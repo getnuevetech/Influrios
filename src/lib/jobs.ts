@@ -919,11 +919,8 @@ export async function runScheduledReleaseSweep(now = new Date()) {
   const { releasableCents } = await import("@/lib/ledger");
   const { splitMilestoneRelease } = await import("@/lib/account-purpose");
   const { readShareSnapshot, shareLines } = await import("@/lib/fx-share");
-  const { createMarketplaceSignedWebhookAdapter } = await import("@/lib/payment-provider-adapter");
+  const { adapterForProvider } = await import("@/lib/payment-provider-adapter");
   const { verifyMarketplaceSignature } = await import("@/lib/ledger");
-  const adapter = createMarketplaceSignedWebhookAdapter({
-    verifySignature: verifyMarketplaceSignature,
-  });
   const due = await prisma.fundingMilestone.findMany({
     where: {
       status: "release_scheduled",
@@ -964,6 +961,9 @@ export async function runScheduledReleaseSweep(now = new Date()) {
       milestoneTitle: milestone.title,
     });
     const lines = parties && legs.creatorCents > 0 ? shareLines(legs.creatorCents, parties) : null;
+    const adapter = await adapterForProvider(milestone.funding.providerCode, {
+      verifySignature: verifyMarketplaceSignature,
+    });
     const instruction = await adapter.createReleaseOrTransfer({
       fundingId: milestone.fundingId,
       milestoneId: milestone.id,

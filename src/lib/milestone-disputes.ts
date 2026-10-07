@@ -314,9 +314,9 @@ export async function decideMilestoneDispute(input: {
   }
   // Queue provider refund instruction after refund/partial decisions — cash still waits for payout.refunded.
   if (input.action === "refund" || input.action === "partial") {
-    const { createMarketplaceSignedWebhookAdapter } = await import("@/lib/payment-provider-adapter");
+    const { adapterForProvider } = await import("@/lib/payment-provider-adapter");
     const { verifyMarketplaceSignature } = await import("@/lib/ledger");
-    const adapter = createMarketplaceSignedWebhookAdapter({
+    const adapter = await adapterForProvider(dispute.funding.providerCode, {
       verifySignature: verifyMarketplaceSignature,
     });
     const amount =

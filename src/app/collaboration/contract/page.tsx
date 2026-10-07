@@ -33,8 +33,7 @@ import {
   PAYOUT_METHOD_LABELS,
   type PayoutMethod,
 } from "@/lib/payout-readiness";
-import { DEFAULT_PAYMENT_ROUTES, paymentRoutes } from "@/lib/providers";
-import { stripePayoutRouteReady } from "@/lib/stripe-admin";
+import { collectionPayoutReady, DEFAULT_PAYMENT_ROUTES, paymentRoutes } from "@/lib/providers";
 import {
   creatorAmountsForMilestone,
   teamFundingReady,
@@ -179,22 +178,25 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     ? serviceLevel
     : availableServiceLevels[0] ?? "contracted";
 
+  const payoutProfile = dbCreator
+    ? await prisma.influencerPayoutProfile
+        .findUnique({
+          where: { creatorId: dbCreator.id },
+          select: { stripeConnectAccountId: true, providerConnectedAccountId: true },
+        })
+        .catch(() => null)
+    : null;
   let gates = evaluatePreContractGates({
     businessName: ws.name,
     creatorSlug: creatorSlug || "",
     identityVerified: creatorSlug ? identityVerified : false,
     creatorCountryKnown: Boolean(creatorCountry),
     corridorActive: payoutReadiness ? payoutReadiness.corridorActive : Boolean(creatorCountry),
-    paymentRouteReady: stripePayoutRouteReady({
+    paymentRouteReady: collectionPayoutReady({
       providerCode: route?.providerCode,
       routeReady: Boolean(route?.ready),
-      stripeConnectAccountId: dbCreator
-        ? (
-            await prisma.influencerPayoutProfile
-              .findUnique({ where: { creatorId: dbCreator.id }, select: { stripeConnectAccountId: true } })
-              .catch(() => null)
-          )?.stripeConnectAccountId
-        : null,
+      stripeConnectAccountId: payoutProfile?.stripeConnectAccountId,
+      providerConnectedAccountId: payoutProfile?.providerConnectedAccountId,
     }),
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
     marketplaceProviderReady: Boolean(provider?.ready),

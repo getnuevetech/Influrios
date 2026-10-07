@@ -1,5 +1,4 @@
-import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
-import { createAirwallexFunding, loginAirwallex } from "@/lib/providers/airwallex";
+import { openAirwallexFundingCollection } from "@/lib/providers/airwallex-runtime";
 import { createFlutterwaveCharge } from "@/lib/providers/flutterwave";
 import { createMpesaCharge } from "@/lib/providers/mpesa";
 import { prisma } from "@/lib/db";
@@ -73,29 +72,5 @@ export async function openFundingCollection(input: {
     if (!opened.ok) return opened;
     return { ok: true, reference: opened.checkoutRequestId };
   }
-  const settings = await loadAirwallexConfig();
-  if (!settings) return { ok: false, error: "Save and enable the Airwallex client id, API key, and base URL in admin. Nothing was charged." };
-  if (!settings.holdingAccountId || !settings.operationsAccountId) {
-    return { ok: false, error: "Save the Airwallex holding account id and operations account id in admin. Nothing was charged." };
-  }
-  if (input.milestones.length < 1) return { ok: false, error: "This funding has no milestones. Nothing was charged." };
-  const login = await loginAirwallex({ baseUrl: settings.baseUrl, clientId: settings.clientId, apiKey: settings.apiKey });
-  if (!login.ok) return login;
-  const opened = await createAirwallexFunding({
-    baseUrl: settings.baseUrl,
-    token: login.token,
-    request: {
-      fundingId: input.fundingId,
-      amountCents: input.amountCents,
-      currency: input.currency,
-      holdingAccountId: settings.holdingAccountId,
-      splits: input.milestones.map((milestone) => ({
-        milestoneId: milestone.id,
-        amountCents: milestone.amountCents,
-        connectedAccountId: settings.operationsAccountId,
-      })),
-    },
-  });
-  if (!opened.ok) return opened;
-  return { ok: true, reference: opened.paymentId, url: opened.url };
+  return openAirwallexFundingCollection({ fundingId: input.fundingId });
 }

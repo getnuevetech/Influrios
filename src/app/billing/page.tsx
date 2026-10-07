@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { actionOpenConnect, actionOpenPortal, actionStartCheckout } from "@/app/billing/actions";
+import { actionOpenConnect, actionOpenConnectedAccount, actionOpenPortal, actionStartCheckout } from "@/app/billing/actions";
 import {
   BILLING_CATALOG,
   getBillingStore,
@@ -37,7 +37,11 @@ export default async function BillingPage({ searchParams }: Props) {
         where: { id: account.id },
         select: {
           stripeCustomerId: true,
-          creator: { select: { payoutProfile: { select: { stripeConnectAccountId: true } } } },
+          creator: {
+            select: {
+              payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true } },
+            },
+          },
         },
       })
     : null;
@@ -110,6 +114,17 @@ export default async function BillingPage({ searchParams }: Props) {
             </p>
             <button type="submit" className="btn-secondary !py-2 text-sm">
               Open account link
+            </button>
+          </form>
+          <form action={actionOpenConnectedAccount} className="space-y-3 md:col-span-2">
+            <h2 className="font-display text-xl font-bold text-indigo">Collaboration payout account</h2>
+            <p className="text-sm text-muted">
+              {billingIdentity?.creator?.payoutProfile?.providerConnectedAccountId
+                ? `Linked connected account ${billingIdentity.creator.payoutProfile.providerConnectedAccountId}. This does not move a payout.`
+                : "When your country jurisdiction lists Airwallex, this creates or links a connected account and stores it on your payout profile. Milestone splits pay that account. This does not move a payout."}
+            </p>
+            <button type="submit" className="btn-secondary !py-2 text-sm">
+              {billingIdentity?.creator?.payoutProfile?.providerConnectedAccountId ? "Confirm connected account" : "Create connected account"}
             </button>
           </form>
         </section>
