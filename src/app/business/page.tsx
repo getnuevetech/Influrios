@@ -41,8 +41,8 @@ export default async function BusinessPage() {
             <p className="text-sm font-medium text-indigo">
               You are signed in — open your Business Collaboration Hub to manage campaigns.
             </p>
-            <Link href="/collaboration/business" className="btn-primary !px-4 !py-2 text-sm">
-              Open business hub →
+            <Link href="/business/home" className="btn-primary !px-4 !py-2 text-sm">
+              Open business account →
             </Link>
           </div>
         </div>

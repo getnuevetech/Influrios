@@ -94,9 +94,9 @@ export default async function CardMarketingPage() {
           ))}
         </div>
         <p className="mt-4 text-center text-sm text-muted">
-          Phase 6 monetization — full catalog & demo/Stripe checkout at{" "}
-          <Link href="/billing" className="font-semibold text-violet hover:underline">
-            /billing
+          Plan features and checkout are on{" "}
+          <Link href="/pricing" className="font-semibold text-violet hover:underline">
+            Influencer plans
           </Link>
           .
         </p>

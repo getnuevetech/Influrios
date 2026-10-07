@@ -8,54 +8,13 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { BUSINESS_FEATURE_KEYS } from "@/lib/business-entitlements";
 import { EDITABLE_FEATURE_KEYS } from "@/lib/entitlements";
+import { PLAN_FEATURE_META } from "@/lib/plan-presentation";
 import { listPlanCatalog, listPlanFeatures, type PlanFeatureEditorRow } from "@/lib/entitlements-db";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Plan entitlements · Admin" };
 
-const LABELS: Record<string, { label: string; kind: "int" | "bool" | "text"; options?: string[]; hint?: string }> = {
-  "card.social_links.max": { label: "Social links", kind: "int" },
-  "card.specialties.max": { label: "Specialties", kind: "int" },
-  "card.portfolio_items.max": { label: "Portfolio items", kind: "int" },
-  "card.qr.enabled": { label: "QR code", kind: "bool" },
-  "card.qr.dynamic": { label: "Dynamic destination", kind: "bool" },
-  "card.nfc.enabled": {
-    label: "NFC tag URL",
-    kind: "bool",
-    hint: "Mints inflr.me/n/{token}. The creator writes that URL onto a physical tag.",
-  },
-  "card.shortlink.enabled": { label: "Short link", kind: "bool" },
-  "card.shortlink.max": { label: "Profile short links", kind: "int", hint: "The inflr.me/{name} link. This is not the campaign-link count." },
-  "card.campaign_links.max": {
-    label: "Campaign links",
-    kind: "int",
-    hint: "The number you save is the only campaign-link limit for this plan. A new plan starts at 0. Nothing else adds a count.",
-  },
-  "card.custom_slug.enabled": { label: "Custom slug", kind: "bool" },
-  "card.collaboration.enabled": { label: "Collaboration CTA", kind: "bool" },
-  "collaboration.proposals.max": { label: "Proposals per window", kind: "int" },
-  "card.media_kit.enabled": { label: "Media kit", kind: "bool" },
-  "card.lead_tracking.enabled": { label: "Lead tracking", kind: "bool" },
-  "card.contact.level": { label: "Contact", kind: "text", options: ["none", "limited", "full"] },
-  "card.analytics.level": { label: "Analytics", kind: "text", options: ["views", "standard", "advanced"] },
-  "card.custom_theme.level": { label: "Theme", kind: "text", options: ["default", "limited", "full"] },
-  "card.platform_branding": {
-    label: "Platform branding",
-    kind: "text",
-    options: ["visible", "reduced", "minimal"],
-  },
-  "business.shortlist.max": { label: "Shortlist size", kind: "int" },
-  "business.inquiry.max": { label: "Inquiries per month", kind: "int" },
-  "business.team_seats.max": { label: "Team seats", kind: "int" },
-  "business.advanced_filters": { label: "Advanced filters", kind: "bool" },
-  "business.fit_insights": { label: "Fit insights", kind: "bool" },
-  "business.exports": { label: "Exports", kind: "bool" },
-  "business.saved_alerts": { label: "Saved alerts", kind: "bool" },
-  "business.managed_matching": { label: "Managed matching", kind: "bool" },
-  "business.intelligence": { label: "Intelligence", kind: "bool" },
-  "business.agency_workspace": { label: "Agency workspace", kind: "bool" },
-  "business.custom_milestones": { label: "Custom milestones", kind: "bool" },
-};
+const LABELS = PLAN_FEATURE_META;
 
 const inputClass = "mt-1 w-full rounded-lg border border-[#E4EBFF] px-2 py-1 text-sm font-normal";
 

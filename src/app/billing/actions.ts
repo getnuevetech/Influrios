@@ -5,21 +5,23 @@ import { getAccountSession } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
 import { getAppOrigin, isBillingSku, startCheckout } from "@/lib/billing";
 import { findActivePlan } from "@/lib/entitlements-db";
+import { planPageReturn } from "@/lib/plan-presentation";
 import { openCreatorConnectOnboarding, openCustomerPortal } from "@/lib/stripe-admin";
 
 export async function actionStartCheckout(formData: FormData) {
   const sku = String(formData.get("sku") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim() || undefined;
+  const returnTo = planPageReturn(formData.get("returnTo"));
 
   if (!isBillingSku(sku)) {
     const plan = await findActivePlan(sku);
-    if (!plan) redirect("/billing?error=invalid_sku");
+    if (!plan) redirect(`${returnTo}?error=${encodeURIComponent("That plan is not available. Nothing was charged.")}`);
   }
   if (formData.get("acceptSubscription") !== "on") {
-    redirect("/billing?error=" + encodeURIComponent("Agree to the subscription terms at checkout."));
+    redirect(`${returnTo}?error=` + encodeURIComponent("Agree to the subscription terms at checkout."));
   }
   const account = await getAccountSession();
-  if (!account) redirect("/login?next=/billing&gate=checkout");
+  if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=checkout`);
 
   const { recordLegalEvent } = await import("@/lib/legal");
   await recordLegalEvent({
@@ -36,24 +38,25 @@ export async function actionStartCheckout(formData: FormData) {
     userId: account.id,
   });
   if (!result.ok) {
-    redirect(`/billing?error=${encodeURIComponent(result.error)}`);
+    redirect(`${returnTo}?error=${encodeURIComponent(result.error)}`);
   }
   redirect(result.url);
 }
 
-export async function actionOpenPortal() {
+export async function actionOpenPortal(formData?: FormData) {
+  const returnTo = planPageReturn(formData?.get("returnTo"));
   const account = await getAccountSession();
-  if (!account) redirect("/login?next=/billing&gate=portal");
+  if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=portal`);
   const user = await prisma.user.findUnique({ where: { id: account.id }, select: { stripeCustomerId: true } });
   if (!user?.stripeCustomerId) {
-    redirect(`/billing?error=${encodeURIComponent("Complete a Stripe checkout first. Nothing was opened.")}`);
+    redirect(`${returnTo}?error=${encodeURIComponent("Complete a Stripe checkout first. Nothing was opened.")}`);
   }
   const origin = getAppOrigin();
   const result = await openCustomerPortal({
     customerId: user.stripeCustomerId,
-    returnUrl: `${origin}/billing`,
+    returnUrl: `${origin}${returnTo}`,
   });
-  if (!result.ok) redirect(`/billing?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok) redirect(`${returnTo}?error=${encodeURIComponent(result.error)}`);
   redirect(result.url);
 }
 
