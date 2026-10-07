@@ -10,7 +10,6 @@ import { openCreatorConnectOnboarding, openCustomerPortal } from "@/lib/stripe-a
 export async function actionStartCheckout(formData: FormData) {
   const sku = String(formData.get("sku") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim() || undefined;
-  const creatorSlug = String(formData.get("creatorSlug") ?? "").trim() || undefined;
 
   if (!isBillingSku(sku)) {
     const plan = await findActivePlan(sku);
@@ -29,10 +28,11 @@ export async function actionStartCheckout(formData: FormData) {
     userId: account.id,
     userRole: "CREATOR",
   });
+  const creator = await prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } }).catch(() => null);
   const result = await startCheckout({
     sku,
     customerEmail: email || account.email,
-    creatorSlug,
+    creatorSlug: creator?.slug,
     userId: account.id,
   });
   if (!result.ok) {

@@ -1,254 +1,265 @@
 import Link from "next/link";
 import { actionOpenConnect, actionOpenConnectedAccount, actionOpenPortal, actionStartCheckout } from "@/app/billing/actions";
-import {
-  BILLING_CATALOG,
-  getBillingStore,
-} from "@/lib/billing";
-import { stripeBillingMode } from "@/lib/stripe-admin";
+import { BILLING_CATALOG } from "@/lib/billing";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
-import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
+import { listPublicPlanOffers, type PublicPlanOffer } from "@/lib/entitlements-db";
 import { productSwitch } from "@/lib/product-switches";
 import { prisma } from "@/lib/db";
-import { paymentRoutes } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Billing & Plans" };
+export const metadata = { title: "Billing" };
 
 type Props = {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; connected?: string }>;
 };
+
+type Offer = PublicPlanOffer;
+
+function catalogOffers(): Offer[] {
+  const paid = BILLING_CATALOG.map((plan) => ({
+    code: plan.sku,
+    sku: plan.sku,
+    name: plan.name,
+    priceLabel: plan.priceLabel,
+    amountCents: plan.amountCents,
+    description: plan.description,
+    audience: plan.audience,
+    checkout: plan.amountCents > 0,
+    highlights: plan.highlights,
+  }));
+  return [
+    {
+      code: "STARTER",
+      sku: "creator_starter",
+      name: "Influencer Starter",
+      priceLabel: "Free",
+      amountCents: 0,
+      description: "Claim your Influencer Card and get discovered.",
+      audience: "creator",
+      checkout: false,
+      highlights: ["Public profile", "Basic specialties", "Discover listing"],
+    },
+    ...paid,
+  ];
+}
+
+function labelFor(code: string | null | undefined, offers: Offer[]) {
+  if (!code) return "Starter";
+  return offers.find((plan) => plan.code === code || plan.sku === code)?.name ?? code;
+}
 
 export default async function BillingPage({ searchParams }: Props) {
   const params = await searchParams;
-  const stripeMode = await stripeBillingMode();
-  const stripeLive = stripeMode === "sandbox" || stripeMode === "live";
   const account = await getAccountSession();
-  const ws = await getWorkspace(account?.id);
-  const be = await businessEntitlementsForPlan(ws.plan);
-  const store = await getBillingStore();
-  const [routes, portalOn, connectOn] = await Promise.all([
-    paymentRoutes().catch(() => []),
-    productSwitch("customer_portal"),
-    productSwitch("stripe_connect"),
-  ]);
-  const billingIdentity = account
-    ? await prisma.user.findUnique({
-        where: { id: account.id },
-        select: {
-          stripeCustomerId: true,
-          creator: {
-            select: {
-              payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true } },
+  const offers = (await listPublicPlanOffers().catch(() => null)) ?? catalogOffers();
+  const creatorPlans = offers.filter((plan) => plan.audience === "creator");
+  const businessPlans = offers.filter((plan) => plan.audience === "business");
+  const identity = account
+    ? await prisma.user
+        .findUnique({
+          where: { id: account.id },
+          select: {
+            planTier: true,
+            stripeCustomerId: true,
+            creator: {
+              select: {
+                planTier: true,
+                payoutProfile: {
+                  select: { stripeConnectAccountId: true, providerConnectedAccountId: true },
+                },
+              },
             },
           },
-        },
-      })
+        })
+        .catch(() => null)
     : null;
-  const creatorPlans = BILLING_CATALOG.filter((p) => p.audience === "creator");
-  const businessPlans = BILLING_CATALOG.filter((p) => p.audience === "business");
+  const workspace = account ? await getWorkspace(account.id).catch(() => null) : null;
+  const [portalOn, connectOn] = account
+    ? await Promise.all([
+        productSwitch("customer_portal").catch(() => false),
+        productSwitch("stripe_connect").catch(() => false),
+      ])
+    : [false, false];
+  const creatorPlan = identity?.creator?.planTier || identity?.planTier;
 
   return (
     <div className="bg-[#F7FAFF]">
       <section className="hero-atmosphere text-white">
-        <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
-            Phase 6 · Monetization
-          </p>
-          <h1 className="mt-2 font-display text-4xl font-bold">Plans & checkout</h1>
+        <div className="mx-auto max-w-[90rem] px-4 py-14 sm:px-6 lg:px-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">Account</p>
+          <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">Billing</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Influencer Plus/Pro and Business Pro/Agency. A plan changes after Stripe confirms checkout.
-          </p>
-          <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-            Mode: {stripeMode === "sandbox" ? "Stripe sandbox" : stripeMode === "live" ? "Stripe live" : stripeMode === "rejected" ? "Stripe sandbox key required" : "Stripe key not saved"}
+            Your plan, invoices, and payout setup. A paid plan changes after Stripe confirms checkout.
           </p>
         </div>
       </section>
 
-      <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
+      <div className="mx-auto max-w-[90rem] space-y-10 px-4 py-10 sm:px-6 lg:px-10">
         {params.error ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Checkout error: {params.error}
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</div>
+        ) : null}
+        {params.connected ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            Connected account saved on your payout profile.
           </div>
         ) : null}
 
-        {routes.length ? (
-          <section className="card-surface p-6">
-            <h2 className="font-display text-xl font-bold text-indigo">Country gateways</h2>
-            <p className="mt-1 text-sm text-muted">
-              Each country uses the gateway assigned in admin. A route is ready only after that gateway is enabled and
-              its secret is saved. This checkout does not mark Flutterwave or M-Pesa as paid on its own.
-            </p>
-            <ul className="mt-3 grid gap-1 text-sm text-muted sm:grid-cols-2">
-              {routes.map((route) => (
-                <li key={route.countryCode}>
-                  {route.countryCode} → {route.providerName ?? "Unassigned"} ({route.ready ? "ready" : route.reason.replace(/_/g, " ")})
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        <section className="card-surface grid gap-6 p-6 md:grid-cols-2">
-          <form action={actionOpenPortal} className="space-y-3">
-            <h2 className="font-display text-xl font-bold text-indigo">Billing portal</h2>
-            <p className="text-sm text-muted">
-              {portalOn
-                ? billingIdentity?.stripeCustomerId
-                  ? `Opens the billing portal for the customer saved from checkout (${billingIdentity.stripeCustomerId}).`
-                  : "Complete a Stripe checkout first. Nothing is opened until that webhook stores a customer id."
-                : "The billing portal is turned off. Nothing is opened."}
-            </p>
-            <button type="submit" className="btn-secondary !py-2 text-sm">
-              Open billing portal
-            </button>
-          </form>
-          <form action={actionOpenConnect} className="space-y-3">
-            <h2 className="font-display text-xl font-bold text-indigo">Payout account</h2>
-            <p className="text-sm text-muted">
-              {connectOn
-                ? billingIdentity?.creator?.payoutProfile?.stripeConnectAccountId
-                  ? `Opens Stripe Connect for the account stored on your payout profile (${billingIdentity.creator.payoutProfile.stripeConnectAccountId}).`
-                  : "Creates a Stripe Connect account for your Influencer Card and stores it on your payout profile. This does not move a payout."
-                : "Stripe Connect is turned off. Nothing is opened."}
-            </p>
-            <button type="submit" className="btn-secondary !py-2 text-sm">
-              Open account link
-            </button>
-          </form>
-          <form action={actionOpenConnectedAccount} className="space-y-3 md:col-span-2">
-            <h2 className="font-display text-xl font-bold text-indigo">Collaboration payout account</h2>
-            <p className="text-sm text-muted">
-              {billingIdentity?.creator?.payoutProfile?.providerConnectedAccountId
-                ? `Linked connected account ${billingIdentity.creator.payoutProfile.providerConnectedAccountId}. This does not move a payout.`
-                : "When your country jurisdiction lists Airwallex, this creates or links a connected account and stores it on your payout profile. Milestone splits pay that account. This does not move a payout."}
-            </p>
-            <button type="submit" className="btn-secondary !py-2 text-sm">
-              {billingIdentity?.creator?.payoutProfile?.providerConnectedAccountId ? "Confirm connected account" : "Create connected account"}
-            </button>
-          </form>
+        <section className="card-surface p-6 sm:p-8">
+          {account && !identity ? (
+            <div>
+              <h2 className="font-display text-xl font-bold text-indigo">Your plan</h2>
+              <p className="mt-1 text-sm text-muted">{account.email}</p>
+              <p className="mt-3 text-sm text-muted">Plan details are unavailable right now. You can still choose a plan below.</p>
+            </div>
+          ) : account && identity ? (
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,16rem)_1fr] lg:items-start">
+              <div>
+                <h2 className="font-display text-xl font-bold text-indigo">Your plan</h2>
+                <p className="mt-1 text-sm text-muted">{account.email}</p>
+                <dl className="mt-4 space-y-3 text-sm">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Influencer</dt>
+                    <dd className="mt-0.5 font-display text-lg font-bold text-indigo">{labelFor(creatorPlan, offers)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">Business</dt>
+                    <dd className="mt-0.5 font-display text-lg font-bold text-indigo">
+                      {labelFor(workspace?.plan, offers)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {!identity.creator && !portalOn ? (
+                  <p className="text-sm text-muted sm:col-span-2">
+                    Choose a plan below. It applies to this account after Stripe confirms payment.
+                  </p>
+                ) : null}
+                {portalOn ? (
+                  <form action={actionOpenPortal} className="rounded-2xl border border-border bg-white p-4">
+                    <h3 className="font-display text-base font-bold text-indigo">Invoices and card</h3>
+                    <p className="mt-1 text-sm text-muted">
+                      {identity.stripeCustomerId
+                        ? "Open Stripe to update the card, download invoices, or cancel."
+                        : "Finish a checkout first. The billing portal opens for the customer Stripe saves on your account."}
+                    </p>
+                    <button type="submit" className="btn-secondary mt-4 !py-2 text-sm">
+                      Open billing portal
+                    </button>
+                  </form>
+                ) : null}
+                {identity.creator && connectOn ? (
+                  <form action={actionOpenConnect} className="rounded-2xl border border-border bg-white p-4">
+                    <h3 className="font-display text-base font-bold text-indigo">Payout account</h3>
+                    <p className="mt-1 text-sm text-muted">
+                      {identity.creator.payoutProfile?.stripeConnectAccountId
+                        ? "Stripe Connect is saved on your payout profile. Opening it does not send a payout."
+                        : "Create the Stripe Connect account for your Influencer Card. This does not send a payout."}
+                    </p>
+                    <button type="submit" className="btn-secondary mt-4 !py-2 text-sm">
+                      {identity.creator.payoutProfile?.stripeConnectAccountId ? "Open payout account" : "Set up payouts"}
+                    </button>
+                  </form>
+                ) : null}
+                {identity.creator ? (
+                  <form action={actionOpenConnectedAccount} className="rounded-2xl border border-border bg-white p-4">
+                    <h3 className="font-display text-base font-bold text-indigo">Collaboration payouts</h3>
+                    <p className="mt-1 text-sm text-muted">
+                      {identity.creator.payoutProfile?.providerConnectedAccountId
+                        ? `Connected account ${identity.creator.payoutProfile.providerConnectedAccountId} is saved. Milestone splits pay this account.`
+                        : "Create the connected account that receives milestone splits. This does not send a payout."}
+                    </p>
+                    <button type="submit" className="btn-secondary mt-4 !py-2 text-sm">
+                      {identity.creator.payoutProfile?.providerConnectedAccountId
+                        ? "Confirm connected account"
+                        : "Create connected account"}
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="font-display text-xl font-bold text-indigo">Your plan</h2>
+                <p className="mt-1 max-w-xl text-sm text-muted">
+                  Sign in to see the plan on your account, open invoices, or set up payouts.
+                </p>
+              </div>
+              <Link href="/login?next=/billing" className="btn-primary !py-2.5 text-center text-sm">
+                Log in
+              </Link>
+            </div>
+          )}
         </section>
 
-        <section className="card-surface p-6">
-          <h2 className="font-display text-xl font-bold text-indigo">Your business plan</h2>
-          <p className="mt-1 text-sm text-muted">
-            {account ? (
-              <>
-                Workspace: <span className="font-semibold text-indigo">{ws.plan}</span> · Intelligence{" "}
-                {be.intelligence ? "on" : "off"} · Exports {be.exports ? "on" : "off"}
-              </>
-            ) : (
-              <>Sign in to see the plan on your workspace. This page does not use a shared demo plan.</>
-            )}
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            Recent sessions: {store.sessions.length}
-            {store.lastWebhookAt
-              ? ` · Last webhook ${new Date(store.lastWebhookAt).toLocaleString()}`
-              : ""}
-          </p>
-        </section>
-
-        <section>
-          <h2 className="font-display text-2xl font-bold text-indigo">Influencer plans</h2>
-          <p className="mt-1 text-sm text-muted">
-            Starter stays free via{" "}
-            <Link href="/claim" className="font-semibold text-violet hover:underline">
-              Create Your Card
-            </Link>
-            . Paid tiers unlock QR and collab tools.
-          </p>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {creatorPlans.map((p) => (
-              <form key={p.sku} action={actionStartCheckout} className="card-surface flex flex-col p-6">
-                <input type="hidden" name="sku" value={p.sku} />
-                <input type="hidden" name="creatorSlug" value="sofia-martinez" />
-                <p className="text-xs font-bold uppercase tracking-wide text-violet">{p.name}</p>
-                <p className="mt-1 font-display text-3xl font-bold text-indigo">{p.priceLabel}</p>
-                <p className="mt-2 text-sm text-muted">{p.description}</p>
-                <ul className="mt-4 flex-1 space-y-1.5 text-sm text-muted">
-                  {p.highlights.map((h) => (
-                    <li key={h}>✓ {h}</li>
-                  ))}
-                </ul>
-                <label className="mt-4 block text-xs font-semibold text-muted">
-                  Email (optional)
-                  <input
-                    name="email"
-                    type="email"
-                    placeholder="you@creator.demo"
-                    className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-indigo"
-                  />
-                </label>
-                <label className="mt-4 flex items-start gap-2 text-xs text-indigo">
-                  <input type="checkbox" name="acceptSubscription" required className="mt-0.5 accent-violet" />
-                  <span>
-                    I agree to the{" "}
-                    <Link href="/legal/subscription-terms" className="font-semibold underline" target="_blank">
-                      Subscription, Billing, Cancellation & Refund Terms
-                    </Link>
-                    . {p.priceLabel} renews until cancelled. Refund rules are in those terms.
-                  </span>
-                </label>
-                <button type="submit" className="btn-primary mt-4 w-full !py-2.5 text-sm">
-                  {stripeMode === "sandbox" ? "Checkout with Stripe sandbox →" : stripeLive ? "Checkout with Stripe →" : "Checkout with Stripe →"}
-                </button>
-              </form>
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <h2 className="font-display text-2xl font-bold text-indigo">Business plans</h2>
-          <p className="mt-1 text-sm text-muted">
-            Upgrades the signed-in business workspace after Stripe confirms checkout.
-          </p>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {businessPlans.map((p) => (
-              <form key={p.sku} action={actionStartCheckout} className="card-surface flex flex-col p-6">
-                <input type="hidden" name="sku" value={p.sku} />
-                <p className="text-xs font-bold uppercase tracking-wide text-violet">{p.name}</p>
-                <p className="mt-1 font-display text-3xl font-bold text-indigo">{p.priceLabel}</p>
-                <p className="mt-2 text-sm text-muted">{p.description}</p>
-                <ul className="mt-4 flex-1 space-y-1.5 text-sm text-muted">
-                  {p.highlights.map((h) => (
-                    <li key={h}>✓ {h}</li>
-                  ))}
-                </ul>
-                <label className="mt-4 block text-xs font-semibold text-muted">
-                  Work email (optional)
-                  <input
-                    name="email"
-                    type="email"
-                    placeholder="brand@company.demo"
-                    className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-indigo"
-                  />
-                </label>
-                <label className="mt-4 flex items-start gap-2 text-xs text-indigo">
-                  <input type="checkbox" name="acceptSubscription" required className="mt-0.5 accent-violet" />
-                  <span>
-                    I agree to the{" "}
-                    <Link href="/legal/subscription-terms" className="font-semibold underline" target="_blank">
-                      Subscription, Billing, Cancellation & Refund Terms
-                    </Link>
-                    . {p.priceLabel} renews until cancelled. Refund rules are in those terms.
-                  </span>
-                </label>
-                <button type="submit" className="btn-primary mt-4 w-full !py-2.5 text-sm">
-                  {stripeMode === "sandbox" ? "Checkout with Stripe sandbox →" : stripeLive ? "Checkout with Stripe →" : "Checkout with Stripe →"}
-                </button>
-              </form>
-            ))}
-          </div>
-        </section>
+        <PlanSection
+          title="Influencer plans"
+          copy="Starter is free when you create your card. Paid plans check out with Stripe."
+          plans={creatorPlans}
+        />
+        <PlanSection
+          title="Business plans"
+          copy="The plan applies to the business workspace on the signed-in account."
+          plans={businessPlans}
+        />
 
         <p className="text-center text-sm text-muted">
-          Admin ops:{" "}
-          <Link href="/admin/billing" className="font-semibold text-violet hover:underline">
-            Billing console
+          Comparing plans?{" "}
+          <Link href="/pricing" className="font-semibold text-violet hover:underline">
+            View pricing
           </Link>
         </p>
       </div>
     </div>
+  );
+}
+
+function PlanSection({ title, copy, plans }: { title: string; copy: string; plans: Offer[] }) {
+  return (
+    <section>
+      <h2 className="font-display text-2xl font-bold text-indigo">{title}</h2>
+      <p className="mt-1 text-sm text-muted">{copy}</p>
+      <div className={`mt-5 grid gap-4 ${plans.length > 2 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+        {plans.map((plan) => (
+          <article key={plan.code} className="card-surface flex flex-col p-6">
+            <p className="text-xs font-bold uppercase tracking-wide text-violet">{plan.name}</p>
+            <p className="mt-2 font-display text-3xl font-bold text-indigo">
+              {plan.amountCents === 0 ? "Free" : plan.priceLabel.replace("/mo", "")}
+              {plan.amountCents > 0 ? <span className="text-sm font-semibold text-muted"> / mo</span> : null}
+            </p>
+            <p className="mt-2 text-sm text-muted">{plan.description}</p>
+            <ul className="mt-4 flex-1 space-y-1.5 text-[13px] text-indigo/80">
+              {plan.highlights.map((line) => (
+                <li key={line}>• {line}</li>
+              ))}
+            </ul>
+            {plan.checkout ? (
+              <form action={actionStartCheckout} className="mt-6 space-y-3">
+                <input type="hidden" name="sku" value={plan.sku} />
+                <label className="flex items-start gap-2 text-xs text-indigo">
+                  <input type="checkbox" name="acceptSubscription" required className="mt-0.5 accent-violet" />
+                  <span>
+                    I agree to the{" "}
+                    <Link href="/legal/subscription-terms" className="font-semibold underline" target="_blank">
+                      subscription terms
+                    </Link>
+                    . {plan.priceLabel} renews until cancelled.
+                  </span>
+                </label>
+                <button type="submit" className="btn-primary w-full !py-2.5 text-sm">
+                  Choose {plan.name}
+                </button>
+              </form>
+            ) : (
+              <Link href="/claim" className="btn-primary mt-6 w-full !py-2.5 text-center text-sm">
+                Create your card
+              </Link>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
