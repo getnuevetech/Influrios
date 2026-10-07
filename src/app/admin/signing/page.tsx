@@ -189,7 +189,7 @@ export default async function AdminSigningPage({ searchParams }: Props) {
                 </div>
                 {canEdit && !["signed", "declined", "voided"].includes(request.status) ? (
                   <div className="flex flex-wrap gap-1">
-                    {SIGNATURE_STATUSES.filter((s) => s !== request.status).map((to) => (
+                    {SIGNATURE_STATUSES.filter((s) => s !== request.status && s !== "signed").map((to) => (
                       <form key={to} action={actionAdvanceSignatureRequest}>
                         <input type="hidden" name="id" value={request.id} />
                         <input type="hidden" name="to" value={to} />

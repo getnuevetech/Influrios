@@ -67,6 +67,7 @@ const SIDE_GROUPS: SideGroup[] = [
     links: [
       { href: "/admin/ai", label: "AI pipelines", module: "ai" },
       { href: "/admin/signing", label: "Document signing", module: "signing" },
+      { href: "/admin/contracts", label: "Contract template", module: "contracts" },
       { href: "/admin/social", label: "Social networks", module: "social" },
       { href: "/admin/legal", label: "Legal documents", module: "legal" },
       { href: "/admin/short-links", label: "Short links", module: "shortlinks" },

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseDocuSignWebhook, verifyDocuSignSignature } from "@/lib/signing/docusign";
+import { applyContractEnvelopeEvent } from "@/lib/contract-document";
 import {
   activeSigningWebhookSecret,
   markSignatureFromWebhook,
@@ -39,8 +40,17 @@ export async function POST(request: NextRequest) {
     }
     const event = STATUS_EVENT[docusign.status];
     const result = await markSignatureFromWebhook({ externalId: docusign.envelopeId, event });
-    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
-    return NextResponse.json({ ok: true, id: result.id, status: result.status, provider: ready.code });
+    const contract = await applyContractEnvelopeEvent({
+      envelopeId: docusign.envelopeId,
+      status: docusign.status,
+    });
+    if (!result.ok && !contract.applied) return NextResponse.json({ error: result.error }, { status: 400 });
+    return NextResponse.json({
+      ok: true,
+      id: result.ok ? result.id : contract.id,
+      status: contract.applied ? contract.status : result.ok ? result.status : docusign.status,
+      provider: ready.code,
+    });
   }
 
   let parsed: { requestId?: string; externalId?: string; event?: string };
@@ -65,6 +75,16 @@ export async function POST(request: NextRequest) {
     externalId: parsed.externalId,
     event: event as "viewed" | "signed" | "declined" | "voided",
   });
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
-  return NextResponse.json({ ok: true, id: result.id, status: result.status, provider: ready.code });
+  const envelopeStatus = event === "signed" ? "completed" : event === "declined" || event === "voided" ? event : null;
+  const contract =
+    envelopeStatus && parsed.externalId
+      ? await applyContractEnvelopeEvent({ envelopeId: parsed.externalId, status: envelopeStatus })
+      : { applied: false as const, id: undefined, status: undefined };
+  if (!result.ok && !contract.applied) return NextResponse.json({ error: result.error }, { status: 400 });
+  return NextResponse.json({
+    ok: true,
+    id: result.ok ? result.id : contract.id,
+    status: contract.applied ? contract.status : result.ok ? result.status : event,
+    provider: ready.code,
+  });
 }

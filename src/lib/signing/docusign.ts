@@ -6,6 +6,8 @@ export type EnvelopeRequest = {
   collaborationId: string;
   title: string;
   documentHtml: string;
+  /** PDF bytes sent to DocuSign instead of the HTML body. */
+  documentPdf?: Buffer;
   parties: EnvelopeParty[];
 };
 
@@ -186,18 +188,39 @@ export async function createDocuSignEnvelope(input: {
       emailSubject: input.request.title,
       status: "sent",
       documents: [
-        {
-          documentBase64: Buffer.from(input.request.documentHtml, "utf8").toString("base64"),
-          name: "contract.html",
-          fileExtension: "html",
-          documentId: "1",
-        },
+        input.request.documentPdf
+          ? {
+              documentBase64: input.request.documentPdf.toString("base64"),
+              name: "contract.pdf",
+              fileExtension: "pdf",
+              documentId: "1",
+            }
+          : {
+              documentBase64: Buffer.from(input.request.documentHtml, "utf8").toString("base64"),
+              name: "contract.html",
+              fileExtension: "html",
+              documentId: "1",
+            },
       ],
       recipients: {
         signers: input.request.parties.map((party, index) => ({
           email: party.email,
           name: party.name,
           recipientId: String(index + 1),
+          ...(input.request.documentPdf
+            ? {
+                tabs: {
+                  signHereTabs: [
+                    {
+                      anchorString: `/sig${index + 1}/`,
+                      anchorUnits: "pixels",
+                      anchorXOffset: "0",
+                      anchorYOffset: "0",
+                    },
+                  ],
+                },
+              }
+            : {}),
         })),
       },
     }),

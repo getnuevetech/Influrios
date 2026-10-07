@@ -61,6 +61,7 @@ type Props = {
     influencerAccepted?: string;
     accepted?: string;
     feeDisclosure?: string;
+    contractDocument?: string;
     error?: string;
   }>;
 };
@@ -340,6 +341,9 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           {linkedCollab ? <input type="hidden" name="collaborationId" value={linkedCollab.id} /> : null}
           {teamProposal && teamProposal.workspaceId === ws.businessId ? (
             <input type="hidden" name="teamProposalId" value={teamProposal.id} />
+          ) : null}
+          {params.contractDocument ? (
+            <input type="hidden" name="contractDocumentId" value={params.contractDocument} />
           ) : null}
 
           <section id="parties">
@@ -758,18 +762,25 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 className="mt-0.5 accent-violet"
               />
               <span>
-                I accept this financial plan on behalf of {ws.name}. Funding freezes the fee rule version and milestone
-                schedule into an immutable snapshot.
+                I accept this financial plan on behalf of {ws.name}. This checkbox does not sign the agreement. Funding
+                freezes the fee rule version after DocuSign reports every party complete.
               </span>
             </label>
+            <p className="mt-3 text-sm text-muted">
+              The agreement is signed when DocuSign reports every party complete. Until then it stays unsigned, and
+              funding does not start. The PDF is stored on each party&apos;s account.
+            </p>
           </section>
 
           <div className="flex flex-col gap-3 border-t border-[#E4E9F5] pt-4 sm:flex-row">
             <button type="submit" name="intent" value="preview" className="btn-secondary flex-1">
               Refresh preview
             </button>
+            <button type="submit" name="intent" value="sign" className="btn-secondary flex-1">
+              Send for signature
+            </button>
             <button type="submit" name="intent" value="fund" className="btn-primary flex-1">
-              Accept & request funding →
+              Request funding →
             </button>
           </div>
         </form>

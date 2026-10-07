@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { actionLogout, actionSaveCommPreference } from "@/app/account/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
+import { listContractsForUser } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +18,13 @@ export default async function AccountPage({
   if (!session) redirect("/login?next=/account");
   const params = await searchParams;
   const draft = await getCreatorSessionDraft();
-  const user = await prisma.user.findUnique({
-    where: { id: session.id },
-    select: { preferredCommChannel: true, phone: true },
-  });
+  const [user, contracts] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.id },
+      select: { preferredCommChannel: true, phone: true },
+    }),
+    listContractsForUser(session.id).catch(() => []),
+  ]);
   return (
     <div className="mx-auto max-w-lg px-4 py-14">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>
@@ -45,6 +49,25 @@ export default async function AccountPage({
           </p>
         )}
       </div>
+
+      <section id="contracts" className="card-surface mt-4 space-y-3 p-6">
+        <h2 className="font-display text-lg font-bold text-indigo">Contracts</h2>
+        <p className="text-sm text-muted">
+          Each agreement sent for signature is stored here for every party. It is signed when DocuSign reports every
+          party complete.
+        </p>
+        {contracts.length === 0 ? <p className="text-sm text-muted">No contracts on this account yet.</p> : null}
+        <ul className="space-y-2 text-sm">
+          {contracts.map((contract) => (
+            <li key={contract.id}>
+              <Link href={`/collaboration/contracts/${contract.id}`} className="font-semibold text-violet hover:underline">
+                {contract.title}
+              </Link>{" "}
+              · {contract.status}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <form action={actionSaveCommPreference} className="card-surface mt-4 space-y-3 p-6">
         <h2 className="font-display text-lg font-bold text-indigo">Communication preference</h2>

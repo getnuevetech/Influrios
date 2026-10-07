@@ -27,6 +27,7 @@ const MODULE_PATH: Record<AdminModule, string> = {
   ai: "/admin/ai",
   gateways: "/admin/gateways",
   signing: "/admin/signing",
+  contracts: "/admin/contracts",
   social: "/admin/social",
   legal: "/admin/legal",
   shortlinks: "/admin/short-links",
