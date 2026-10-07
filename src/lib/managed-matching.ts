@@ -378,59 +378,55 @@ export async function requestIntroFeeSettlement(
 }
 
 /**
- * Sandbox / provider confirm for an intro fee intent.
- * Sets status=paid with provider ref — never Fully Funded / protected hold (R073).
+ * A typed reference is not payment. The intro stays unpaid until the provider webhook.
  */
-export async function confirmIntroFeeSettlement(introId: string, providerRef: string) {
+export async function confirmIntroFeeSettlement(introId: string, _providerRef: string) {
   await ensureManaged();
-  const ref = providerRef.trim().slice(0, 120);
-  if (!ref) return { ok: false as const, error: "Provider reference is required." };
   const intro = await prisma.managedIntro.findUnique({ where: { id: introId } });
   if (!intro) return { ok: false as const, error: "Introduction not found." };
   if (!intro.feeIntentRef || intro.feeExpectedCents == null) {
     return { ok: false as const, error: "Request an intro fee quote before confirming settlement." };
   }
-  if (asIntroStatus(intro.status) === "paid" && intro.feeProviderRef) {
-    if (intro.feeProviderRef === ref) {
-      return {
-        ok: true as const,
-        introId: intro.id,
-        status: "paid" as const,
-        providerRef: ref,
-        feeCents: intro.feeExpectedCents,
-      };
-    }
-    return { ok: false as const, error: "Intro fee already settled with a different provider reference." };
+  return {
+    ok: false as const,
+    error: "An intro fee is marked paid only when the provider webhook arrives. Nothing was marked paid.",
+  };
+}
+
+/** Marks the intro paid from a verified provider event. The same payment id does not settle twice. */
+export async function applyIntroFeeFromWebhook(input: { intentRef: string; paymentId: string; eventId: string }) {
+  await ensureManaged();
+  const intentRef = input.intentRef.trim();
+  const paymentId = input.paymentId.trim().slice(0, 120);
+  if (!intentRef || !paymentId) return { ok: false as const, error: "Payment id is required.", status: 400 };
+  const intro = await prisma.managedIntro.findFirst({ where: { feeIntentRef: intentRef } });
+  if (!intro) return { ok: false as const, error: "Introduction not found.", status: 404 };
+  if (intro.feeExpectedCents == null) {
+    return { ok: false as const, error: "Request an intro fee quote before settlement.", status: 409 };
+  }
+  if (asIntroStatus(intro.status) === "paid" && intro.feeProviderRef === paymentId) {
+    return { ok: true as const, duplicate: true, introId: intro.id };
+  }
+  if (asIntroStatus(intro.status) === "paid") {
+    return { ok: false as const, error: "Intro fee already settled with a different provider reference.", status: 409 };
   }
   const now = new Date();
-  const row = await prisma.managedIntro.update({
+  await prisma.managedIntro.update({
     where: { id: intro.id },
     data: {
       status: "paid",
-      feeProviderRef: ref,
+      feeProviderRef: paymentId,
       feeSettlementAt: now,
       events: {
         create: {
           status: "paid",
-          note: `Intro fee settled · ${intro.feeExpectedCents}¢ · ref ${ref}`,
+          note: `Intro fee settled from provider webhook ${input.eventId} · ${intro.feeExpectedCents}¢`,
           createdAt: now,
         },
       },
     },
-    include: { events: true },
   });
-  return {
-    ok: true as const,
-    introId: row.id,
-    status: "paid" as const,
-    providerRef: ref,
-    feeCents: row.feeExpectedCents ?? intro.feeExpectedCents,
-  };
-}
-
-/** Convenience for admin sandbox confirm without typing a ref. */
-export function sandboxIntroFeeProviderRef(intentRef: string) {
-  return `sandbox_${intentRef}`;
+  return { ok: true as const, duplicate: false, introId: intro.id };
 }
 
 export async function listQueuedMatchRequests(): Promise<MatchQueueItem[]> {

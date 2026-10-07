@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   actionAdvanceIntro,
-  actionConfirmIntroFeeSettlement,
+  actionOpenIntroFeeCheckout,
   actionCreateIntro,
   actionRecordIntroduction,
   actionRequestIntroFeeSettlement,
@@ -32,7 +32,7 @@ type Props = {
     flag?: string;
     recorded?: string;
     feeQuoted?: string;
-    feeSettled?: string;
+    feeOpened?: string;
     error?: string;
   }>;
 };
@@ -118,13 +118,13 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
           {params.error}
         </div>
       ) : null}
-      {params.created || params.advanced || params.optin || params.flag || params.recorded || params.feeQuoted || params.feeSettled ? (
+      {params.created || params.advanced || params.optin || params.flag || params.recorded || params.feeQuoted || params.feeOpened ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Saved
           {params.created ? " · intro created" : ""}
           {params.advanced ? " · status advanced" : ""}
           {params.feeQuoted ? " · intro fee quote requested" : ""}
-          {params.feeSettled ? " · intro fee settled (sandbox)" : ""}
+          {params.feeOpened ? " · intro fee checkout opened. Paid when the provider webhook arrives." : ""}
           {params.recorded ? " · introduction recorded" : ""}
           {params.optin ? ` · opt-in updated (${params.optin})` : ""}
           {params.flag ? " · managed promotion updated" : ""}.
@@ -351,14 +351,16 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                           </button>
                         </form>
                         {intro.feeIntentRef && intro.feeExpectedCents != null ? (
-                          <form action={actionConfirmIntroFeeSettlement}>
+                          <form action={actionOpenIntroFeeCheckout}>
                             <input type="hidden" name="id" value={intro.id} />
-                            <input type="hidden" name="intentRef" value={intro.feeIntentRef} />
                             <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
-                              Confirm sandbox fee
+                              Open fee checkout
                             </button>
                           </form>
                         ) : null}
+                        <p className="w-full text-[10px] text-muted">
+                          Opening checkout does not mark this intro paid. The provider webhook is the only settlement.
+                        </p>
                       </div>
                     ) : null}
                     <p className="text-[10px] text-muted">{MATCHING_PRODUCT_BOUNDARY.introFeePaidHint}</p>

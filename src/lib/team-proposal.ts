@@ -3,8 +3,7 @@ import { prisma } from "@/lib/db";
 import { getDirectoryCreator } from "@/lib/directory";
 import { shareLines } from "@/lib/fx-share";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
-import { paymentRoutes } from "@/lib/providers";
-import { stripePayoutRouteReady } from "@/lib/stripe-admin";
+import { collectionPayoutReady, paymentRoutes } from "@/lib/providers";
 
 export type MemberDecision = "invited" | "accepted" | "declined";
 export type TeamMatchType = "CREATOR_TEAM" | "BUSINESS_CREATOR_TEAM";
@@ -360,7 +359,7 @@ export async function teamMemberReadiness(input: {
     ? await prisma.influencerPayoutProfile
         .findUnique({
           where: { creatorId: dbCreator.id },
-          select: { stripeConnectAccountId: true },
+          select: { stripeConnectAccountId: true, providerConnectedAccountId: true },
         })
         .catch(() => null)
     : null;
@@ -370,10 +369,11 @@ export async function teamMemberReadiness(input: {
     identityVerified,
     creatorCountryKnown: Boolean(country),
     corridorActive: payout ? payout.corridorActive : Boolean(country),
-    paymentRouteReady: stripePayoutRouteReady({
+    paymentRouteReady: collectionPayoutReady({
       providerCode: route?.providerCode,
       routeReady: Boolean(route?.ready),
       stripeConnectAccountId: profile?.stripeConnectAccountId,
+      providerConnectedAccountId: profile?.providerConnectedAccountId,
     }),
     jurisdictionProtectedPayments: input.jurisdictionProtectedPayments,
     marketplaceProviderReady: input.marketplaceProviderReady,

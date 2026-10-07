@@ -57,6 +57,16 @@ export async function actionOpenPortal() {
   redirect(result.url);
 }
 
+export async function actionOpenConnectedAccount() {
+  const account = await getAccountSession();
+  if (!account) redirect("/login?next=/billing&gate=connect");
+  const { openCreatorConnectedAccount } = await import("@/lib/providers/airwallex-runtime");
+  const result = await openCreatorConnectedAccount({ userId: account.id, email: account.email });
+  if (!result.ok) redirect(`/billing?error=${encodeURIComponent(result.error)}`);
+  if (result.url && result.url.startsWith("https://")) redirect(result.url);
+  redirect("/billing?connected=1");
+}
+
 export async function actionOpenConnect() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/billing&gate=connect");

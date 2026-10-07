@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { gatewayCredentialLabels, mergeProviderExtra } from "./providers";
+import { collectionPayoutReady, gatewayCredentialLabels, mergeProviderExtra } from "./providers";
 import { collectionProviderCode } from "./provider-collection";
 
 describe("admin integration fields", () => {
@@ -25,5 +25,20 @@ describe("admin integration fields", () => {
     assert.equal(gatewayCredentialLabels("airwallex").secret, "API key");
     assert.equal(collectionProviderCode("flutterwave"), "flutterwave");
     assert.equal(collectionProviderCode("stripe"), null);
+  });
+
+  it("requires a connected account only for the collaboration payout rail", () => {
+    assert.equal(
+      collectionPayoutReady({ providerCode: "airwallex", routeReady: true, providerConnectedAccountId: null }),
+      false,
+    );
+    assert.equal(
+      collectionPayoutReady({ providerCode: "airwallex", routeReady: true, providerConnectedAccountId: "acct_creator" }),
+      true,
+    );
+    assert.equal(
+      collectionPayoutReady({ providerCode: "flutterwave", routeReady: true, providerConnectedAccountId: null }),
+      true,
+    );
   });
 });

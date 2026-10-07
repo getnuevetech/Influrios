@@ -5,11 +5,9 @@ import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import {
   advanceIntro,
-  confirmIntroFeeSettlement,
   createIntro,
   recordIntroFromRequest,
   requestIntroFeeSettlement,
-  sandboxIntroFeeProviderRef,
   setCreatorOptIn,
   setManagedPromotionEnabled,
   type IntroStatus,
@@ -54,18 +52,15 @@ export async function actionRequestIntroFeeSettlement(formData: FormData) {
   redirect(`/admin/matching?feeQuoted=${id}`);
 }
 
-export async function actionConfirmIntroFeeSettlement(formData: FormData) {
+export async function actionOpenIntroFeeCheckout(formData: FormData) {
   await requireAdminAction("matching.advance_intros");
   const id = String(formData.get("id") ?? "");
-  const intentRef = String(formData.get("intentRef") ?? "").trim();
-  const providerRef =
-    String(formData.get("providerRef") ?? "").trim() ||
-    (intentRef ? sandboxIntroFeeProviderRef(intentRef) : "");
-  const result = await confirmIntroFeeSettlement(id, providerRef);
+  const { openIntroFeeCheckout } = await import("@/lib/providers/airwallex-runtime");
+  const result = await openIntroFeeCheckout(id);
   revalidatePath("/admin/matching");
-  revalidatePath("/business");
   if (!result.ok) redirect(`/admin/matching?error=${encodeURIComponent(result.error)}`);
-  redirect(`/admin/matching?feeSettled=${id}`);
+  if (result.url && result.url.startsWith("https://")) redirect(result.url);
+  redirect(`/admin/matching?feeOpened=${encodeURIComponent(result.paymentId)}`);
 }
 
 export async function actionSetManagedPromotion(formData: FormData) {

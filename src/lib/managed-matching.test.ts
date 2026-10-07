@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { prisma } from "./db";
 import {
+  applyIntroFeeFromWebhook,
   confirmIntroFeeSettlement,
   createIntro,
   requestIntroFeeSettlement,
-  sandboxIntroFeeProviderRef,
 } from "./managed-matching";
 import {
   assertIntroNotProtectedPayment,
@@ -37,18 +37,25 @@ describe("intro fee settlement (W4 / R073)", () => {
       const blocked = await confirmIntroFeeSettlement(intro.id, "");
       assert.equal(blocked.ok, false);
 
-      const confirmed = await confirmIntroFeeSettlement(
-        intro.id,
-        sandboxIntroFeeProviderRef(quoted.intentRef),
-      );
+      const typed = await confirmIntroFeeSettlement(intro.id, `sandbox_${quoted.intentRef}`);
+      assert.equal(typed.ok, false);
+      if (!typed.ok) assert.match(typed.error, /webhook/i);
+      const unpaid = await prisma.managedIntro.findUnique({ where: { id: intro.id } });
+      assert.notEqual(unpaid?.status, "paid");
+      assert.equal(unpaid?.feeProviderRef, null);
+
+      const confirmed = await applyIntroFeeFromWebhook({
+        intentRef: quoted.intentRef,
+        paymentId: "int_intro_1",
+        eventId: "evt_intro_1",
+      });
       assert.equal(confirmed.ok, true);
       if (!confirmed.ok) return;
-      assert.equal(confirmed.status, "paid");
-      assert.equal(confirmed.feeCents, quoted.feeCents);
+      assert.equal(confirmed.duplicate, false);
 
       const settled = await prisma.managedIntro.findUnique({ where: { id: intro.id } });
       assert.equal(settled?.status, "paid");
-      assert.ok(settled?.feeProviderRef?.startsWith("sandbox_"));
+      assert.equal(settled?.feeProviderRef, "int_intro_1");
       assert.ok(settled?.feeSettlementAt);
 
       assert.equal(introStatusDisplayLabel("paid"), "Intro fee settled");
@@ -56,11 +63,19 @@ describe("intro fee settlement (W4 / R073)", () => {
       assert.equal(assertIntroNotProtectedPayment({ claimingFullyFunded: true }).ok, false);
       assert.equal(assertIntroNotProtectedPayment({}).ok, true);
 
-      const again = await confirmIntroFeeSettlement(
-        intro.id,
-        sandboxIntroFeeProviderRef(quoted.intentRef),
-      );
+      const again = await applyIntroFeeFromWebhook({
+        intentRef: quoted.intentRef,
+        paymentId: "int_intro_1",
+        eventId: "evt_intro_1",
+      });
       assert.equal(again.ok, true);
+      if (again.ok) assert.equal(again.duplicate, true);
+      const other = await applyIntroFeeFromWebhook({
+        intentRef: quoted.intentRef,
+        paymentId: "int_intro_2",
+        eventId: "evt_intro_2",
+      });
+      assert.equal(other.ok, false);
     } finally {
       await prisma.managedIntroEvent.deleteMany({ where: { introId: intro.id } });
       await prisma.managedIntro.deleteMany({ where: { id: intro.id } });

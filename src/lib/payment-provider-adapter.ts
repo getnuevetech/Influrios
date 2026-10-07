@@ -126,6 +126,20 @@ export async function queueProviderInstruction(input: {
   return { ok: true, reference };
 }
 
+/** Picks the rail that speaks to the provider. Collaboration ledger code stays on the webhook. */
+export async function adapterForProvider(
+  providerCode: string | null | undefined,
+  deps: {
+    verifySignature: (body: string, secret: string, signature: string | null | undefined) => boolean;
+  },
+): Promise<PaymentProviderAdapter> {
+  if ((providerCode ?? "").trim().toLowerCase() === "airwallex") {
+    const { createAirwallexPaymentAdapter } = await import("@/lib/providers/airwallex-runtime");
+    return createAirwallexPaymentAdapter();
+  }
+  return createMarketplaceSignedWebhookAdapter(deps);
+}
+
 /** Marketplace signed-webhook adapter — wraps existing Influrios marketplace confirmation path. */
 export function createMarketplaceSignedWebhookAdapter(deps: {
   verifySignature: (body: string, secret: string, signature: string | null | undefined) => boolean;

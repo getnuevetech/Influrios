@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
 import { assembleDocuSignCredentials, openDocuSignEnvelope } from "@/lib/signing/docusign";
-import { classifyStripeKey } from "@/lib/stripe-admin";
+import { classifyStripeKey, stripePayoutRouteReady } from "@/lib/stripe-admin";
 
 export const AI_FUNCTIONS = [
   {
@@ -236,6 +236,32 @@ export function signingEndpointAllowed(baseUrl: string | null | undefined) {
   }
 }
 
+export function providerNeedsConnectedAccount(code: string | null | undefined) {
+  return (code ?? "").trim().toLowerCase() === "airwallex";
+}
+
+/** Stripe corridors need acct_. This rail needs the stored connected-account reference. */
+export function collectionPayoutReady(input: {
+  providerCode?: string | null;
+  routeReady: boolean;
+  stripeConnectAccountId?: string | null;
+  providerConnectedAccountId?: string | null;
+}) {
+  if (
+    !stripePayoutRouteReady({
+      providerCode: input.providerCode,
+      routeReady: input.routeReady,
+      stripeConnectAccountId: input.stripeConnectAccountId,
+    })
+  ) {
+    return false;
+  }
+  if (providerNeedsConnectedAccount(input.providerCode)) {
+    return Boolean(input.providerConnectedAccountId?.trim());
+  }
+  return true;
+}
+
 export function signingCanQueue(input: { enabled: boolean; hasSecret: boolean; collaborationStatus: string }): { ok: true } | { ok: false; error: string } {
   if (input.collaborationStatus !== "accepted") {
     return { ok: false, error: "A proposal can be sent for signature after it is accepted." };
@@ -258,7 +284,7 @@ export function gatewayCredentialLabels(code: string): { publicKey: string; secr
       return {
         publicKey: "Client id",
         secret: "API key",
-        note: "Save the holding account id and the operations account id before a prefund opens an Airwallex payment. The operations account receives milestone splits.",
+        note: "Save the holding account id and the operations account id. Milestone splits pay the creator connected account. The fee stays in holding until the release webhook.",
       };
     case "mpesa":
       return {
