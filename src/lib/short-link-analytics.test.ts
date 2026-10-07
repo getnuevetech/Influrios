@@ -66,6 +66,16 @@ describe("short-link analytics privacy (W5 / INFLR.me §10)", () => {
     );
     assert.equal(rollup.visits, 2);
     assert.equal(rollup.qrScans, 1);
+    const withPhase4 = summarizeAdminShortLinkRollup(
+      [
+        { eventType: "nfc_tap", metaJson: {} },
+        { eventType: "campaign_redirect", metaJson: {} },
+        { eventType: "qr_scan", metaJson: {} },
+      ],
+      0,
+    );
+    assert.equal(withPhase4.visits, 3);
+    assert.equal(withPhase4.qrScans, 1);
     assert.equal(rollup.ctaClicks, 1);
     assert.equal(rollup.destinationChanges, 1);
     assert.equal(rollup.abuseOpen, 2);

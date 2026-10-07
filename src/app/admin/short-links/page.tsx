@@ -37,7 +37,10 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
         include: {
           creator: true;
           qrIdentities: { where: { status: "active" }; take: 1 };
+          nfcIdentities: { where: { status: "active" }; take: 1 };
           aliases: { orderBy: { createdAt: "desc" } };
+          schedules: { where: { status: "pending" }; orderBy: { startsAt: "asc" } };
+          campaignLinks: { where: { status: { not: "archived" } }; orderBy: { createdAt: "desc" } };
         };
       }>
     >
@@ -63,7 +66,10 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
       include: {
         creator: true,
         qrIdentities: { where: { status: "active" }, take: 1 },
+        nfcIdentities: { where: { status: "active" }, take: 1 },
         aliases: { orderBy: { createdAt: "desc" } },
+        schedules: { where: { status: "pending" }, orderBy: { startsAt: "asc" } },
+        campaignLinks: { where: { status: { not: "archived" } }, orderBy: { createdAt: "desc" } },
       },
       orderBy: { updatedAt: "desc" },
       take: 40,
@@ -81,8 +87,9 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Short links</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
         inflr.me is redirect infrastructure. Influencer profiles stay on the canonical Influrios origin. QR codes encode
-        an opaque /q token on the primary short domain, so a slug change does not require a reprint. Sign in again if
-        this page was forbidden after the permission was added.
+        an opaque /q token and NFC tags encode an opaque /n token, so a slug or destination change does not require a
+        reprint. Campaign links use /c/{"{code}"} and keep their own destination. Sign in again if this page was
+        forbidden after the permission was added.
       </p>
       <p className="mt-2 text-xs text-muted">
         Hosts recognized at the edge: {shortLinkHosts().join(", ")}. Add any extra hostname to SHORT_LINK_HOSTS as well
@@ -275,8 +282,27 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
               </p>
               <p className="text-xs text-muted">
                 {link.creator?.displayName ?? "unassigned"} · {link.destination}
-                {link.qrIdentities[0] ? ` · QR ${link.qrIdentities[0].token}` : ""}
+                {link.qrIdentities[0] ? ` · QR /q/${link.qrIdentities[0].token}` : ""}
+                {link.nfcIdentities[0] ? ` · NFC /n/${link.nfcIdentities[0].token}` : ""}
               </p>
+              {link.schedules.length ? (
+                <ul className="mt-2 space-y-1 text-xs text-muted">
+                  {link.schedules.map((row) => (
+                    <li key={row.id}>
+                      Pending {row.startsAt.toISOString().slice(0, 16).replace("T", " ")} UTC → {row.destination}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {link.campaignLinks.length ? (
+                <ul className="mt-2 space-y-1 text-xs text-muted">
+                  {link.campaignLinks.map((row) => (
+                    <li key={row.id}>
+                      /c/{row.code} · {row.label} · {row.status} · {row.destination}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {canEdit ? (
                 <div className="mt-2 flex flex-wrap gap-2">
                   <form action={actionSetLinkStatus}>

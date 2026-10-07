@@ -142,6 +142,11 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
     await sweepDueRecurrences();
     return;
   }
+  if (kind === "short_link_schedule_sweep") {
+    const { applyDueShortLinkSchedules } = await import("@/lib/short-link");
+    await applyDueShortLinkSchedules();
+    return;
+  }
   if (kind === "collab_notification") {
     if (!data.to || !data.subject || !data.text) {
       throw new Error("Collaboration notification job is missing a recipient or copy.");

@@ -4,6 +4,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { parseShortPath } from "@/lib/short-link-phase4";
 import type { Prisma } from "@prisma/client";
 
 export const SHORT_LINK_RESOLVER_METRIC_EVENT = "short_link_resolver_outcome";
@@ -64,11 +65,8 @@ export function resolverMetricMeta(input: {
 }
 
 export function pathKindFromPath(path: string): string {
-  const clean = path.split("?")[0].replace(/\/+$/, "") || "/";
-  if (clean === "/") return "root";
-  if (/^\/q\//i.test(clean)) return "qr";
-  if (/^\/[a-z0-9][a-z0-9-]{1,30}$/i.test(clean)) return "slug";
-  return "other";
+  const parsed = parseShortPath(path);
+  return parsed.kind === "unknown" ? "other" : parsed.kind;
 }
 
 export async function recordResolverMetric(input: {
