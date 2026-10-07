@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions";
 import { getAccountSession } from "@/lib/accounts";
-import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace } from "@/lib/business";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { resolveFee, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, asServiceLevel } from "@/lib/collaboration-fees";
@@ -101,7 +101,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const stepIndex = CONTRACT_WIZARD_STEPS.indexOf(step);
 
   const ws = await getWorkspace(account.id);
-  const entitlements = getBusinessEntitlements(ws.plan);
+  const entitlements = await businessEntitlementsForPlan(ws.plan);
   await ensureMarketplaceDefaults();
   const [config, creators, routes] = await Promise.all([
     marketplaceConfig(),

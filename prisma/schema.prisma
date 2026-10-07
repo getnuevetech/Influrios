@@ -16,15 +16,6 @@ enum UserRole {
   ADMIN
 }
 
-enum PlanTier {
-  STARTER
-  PLUS
-  PRO
-  BUSINESS_FREE
-  BUSINESS_PRO
-  AGENCY
-}
-
 enum DataSource {
   CREATOR_CLAIMED
   PLATFORM_VERIFIED
@@ -71,7 +62,8 @@ model User {
   emailVerifiedAt DateTime?
   suspendedAt     DateTime?
   role            UserRole  @default(CREATOR)
-  planTier        PlanTier  @default(STARTER)
+  /// Catalog code from EntitlementPlan. Admin can add codes without a schema change.
+  planTier        String    @default("STARTER")
   /// Preferred outreach channel: email | sms
   preferredCommChannel String @default("email")
   phone           String?
@@ -93,16 +85,23 @@ model User {
 }
 
 model EntitlementPlan {
-  id          String   @id @default(cuid())
-  code        PlanTier @unique
-  name        String
-  description String?
-  limitsJson  Json
-  featuresJson Json
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  features    PlanFeatureEntitlement[]
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  description   String?
+  /// creator | business
+  audience      String   @default("creator")
+  amountCents   Int      @default(0)
+  priceLabel    String   @default("")
+  stripePriceId String?
+  publicListing Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  limitsJson    Json
+  featuresJson  Json
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  features      PlanFeatureEntitlement[]
 }
 
 /// Machine-readable plan limits. Runtime reads these rows, not plan-name branches.
@@ -123,7 +122,7 @@ model PlanFeatureEntitlement {
 /// Country or account grants applied after the plan rows.
 model EntitlementOverride {
   id          String    @id @default(cuid())
-  planCode    PlanTier?
+  planCode    String?
   countryCode String?
   subjectId   String?
   featureKey  String
@@ -184,6 +183,22 @@ model IntelligenceSettings {
   watchedSpecialties String[]  @default(["beauty", "travel", "home-interior", "fashion"])
   lastExportAt       DateTime?
   updatedAt          DateTime  @updatedAt
+}
+
+/// Public help. Admin edits these rows. Seed keys are inserted once and then left alone.
+model FaqEntry {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  /// general | creator | business | agency | visitor
+  audience   String
+  question   String
+  answer     String
+  sortOrder  Int      @default(0)
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([audience, published, sortOrder])
 }
 
 model CmsSection {
@@ -266,7 +281,7 @@ model Creator {
   identityVerified   VerificationStatus @default(UNVERIFIED)
   profileState       ProfileState       @default(UNCLAIMED)
   claimed            Boolean            @default(false)
-  planTier           PlanTier           @default(STARTER)
+  planTier           String             @default("STARTER")
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   specialties        CreatorSpecialty[]

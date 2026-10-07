@@ -3,18 +3,18 @@
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
-import { getAppOrigin, startCheckout, type BillingSku } from "@/lib/billing";
+import { getAppOrigin, isBillingSku, startCheckout } from "@/lib/billing";
+import { findActivePlan } from "@/lib/entitlements-db";
 import { openCreatorConnectOnboarding, openCustomerPortal } from "@/lib/stripe-admin";
 
-const SKUS: BillingSku[] = ["creator_plus", "creator_pro", "business_pro", "agency"];
-
 export async function actionStartCheckout(formData: FormData) {
-  const sku = String(formData.get("sku") ?? "") as BillingSku;
+  const sku = String(formData.get("sku") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim() || undefined;
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim() || undefined;
 
-  if (!SKUS.includes(sku)) {
-    redirect("/billing?error=invalid_sku");
+  if (!isBillingSku(sku)) {
+    const plan = await findActivePlan(sku);
+    if (!plan) redirect("/billing?error=invalid_sku");
   }
   if (formData.get("acceptSubscription") !== "on") {
     redirect("/billing?error=" + encodeURIComponent("Agree to the subscription terms at checkout."));

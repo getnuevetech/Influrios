@@ -1,4 +1,4 @@
-import type { PlanTier, Prisma, SocialPlatform } from "@prisma/client";
+import type { Prisma, SocialPlatform } from "@prisma/client";
 import { listPublishedClaimCreators } from "@/lib/claim";
 import { toPublicProfile } from "@/lib/onboarding";
 import { prisma } from "@/lib/db";
@@ -88,7 +88,7 @@ export function invalidateDirectoryCache() {
   cache = null;
 }
 
-function isCreatorPlan(plan: PlanTier): plan is "STARTER" | "PLUS" | "PRO" {
+function isCreatorPlan(plan: string): plan is "STARTER" | "PLUS" | "PRO" {
   return isPlanCode(plan);
 }
 

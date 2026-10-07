@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
-import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace } from "@/lib/business";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { asServiceLevel, resolveFee } from "@/lib/collaboration-fees";
@@ -69,7 +69,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   }
 
   const ws = await getWorkspace(account.id);
-  const entitlements = getBusinessEntitlements(ws.plan);
+  const entitlements = await businessEntitlementsForPlan(ws.plan);
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
   const collaborationId = String(formData.get("collaborationId") ?? "").trim() || undefined;
   const businessName = String(formData.get("businessName") ?? ws.name).trim() || ws.name;

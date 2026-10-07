@@ -1,6 +1,6 @@
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
-import { isPlanCode, type EntitlementLimits } from "@/lib/entitlements";
+import type { EntitlementLimits } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { isShortLinkHost, normalizeShortHost } from "@/lib/short-link-hosts";
 import {
@@ -220,15 +220,15 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
     include: { card: true, shortLinks: { where: { status: { not: "archived" } } } },
   });
   if (!creator || creator.profileState === "RESTRICTED") return null;
-  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const plan = creator.planTier || "STARTER";
   const entitlements = await entitlementsForPlan(plan);
   if (!entitlements.shortlink || entitlements.shortlinkMax < 1) return null;
   const snapshot = entitlementSnapshotForMint(plan, entitlements);
   const current = creator.shortLinks[0];
   if (current) {
-    if ((entitlements.standardQr || entitlements.dynamicQr) && current.status === "active") {
-      await createQr(current.id);
-      await createNfc(current.id);
+    if (current.status === "active") {
+      if (entitlements.standardQr || entitlements.dynamicQr) await createQr(current.id);
+      if (entitlements.nfc) await createNfc(current.id);
     }
     const patch: { dynamic?: boolean; entitlementSnapshotJson?: object } = {};
     if (current.dynamic !== entitlements.dynamicQr) patch.dynamic = entitlements.dynamicQr;
@@ -259,10 +259,8 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
         entitlementSnapshotJson: snapshot,
       },
     });
-    if (entitlements.standardQr || entitlements.dynamicQr) {
-      await createQr(link.id);
-      await createNfc(link.id);
-    }
+    if (entitlements.standardQr || entitlements.dynamicQr) await createQr(link.id);
+    if (entitlements.nfc) await createNfc(link.id);
     return prisma.shortLink.findUnique({
       where: { id: link.id },
       include: activeIdentityInclude,
@@ -616,7 +614,7 @@ async function provisionByPublicSlug(slug: string) {
     take: 3,
   });
   if (creators.length !== 1) return null;
-  const plan = isPlanCode(creators[0].planTier) ? creators[0].planTier : "STARTER";
+  const plan = creators[0].planTier || "STARTER";
   const entitlements = await entitlementsForPlan(plan);
   if (!canMintShortLink(entitlements)) return null;
   return ensureCreatorShortLink(creators[0].slug);
@@ -630,7 +628,7 @@ export async function changeCreatorSlug(creatorSlug: string, nextSlug: string) {
   }
   const creator = await prisma.creator.findUnique({ where: { slug: creatorSlug } });
   if (!creator) return { ok: false as const, error: "Publish your card before changing the short link." };
-  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const plan = creator.planTier || "STARTER";
   const entitlements = await entitlementsForPlan(plan);
   if (!entitlements.customAlias) return { ok: false as const, error: "Custom slugs are not included on this plan." };
   const link = await ensureCreatorShortLink(creatorSlug);
@@ -906,11 +904,17 @@ export async function createCampaignLink(input: {
   });
   const link = creator?.shortLinks[0];
   if (!creator || !link) return { ok: false as const, error: "An active short link is required before a campaign link." };
-  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const plan = creator.planTier || "STARTER";
   const entitlements = await entitlementsForPlan(plan);
   const campaignCount = await prisma.campaignLink.count({ where: { creatorId: creator.id, status: { not: "archived" } } });
-  if (!canAddCampaignLink({ shortlinkMax: entitlements.shortlinkMax, campaignCount })) {
-    return { ok: false as const, error: "This plan has no remaining campaign link slots." };
+  if (!canAddCampaignLink({ campaignMax: entitlements.campaignLinksMax, campaignCount })) {
+    const max = entitlements.campaignLinksMax;
+    return {
+      ok: false as const,
+      error: max < 1
+        ? "This plan does not include campaign links. An admin sets that count on the plan."
+        : `This plan allows ${max} campaign ${max === 1 ? "link" : "links"}.`,
+    };
   }
   const code = normalizeCampaignCode(input.code, RESERVED_SLUGS);
   if (!code) return { ok: false as const, error: "Use a short campaign code with letters, numbers, and hyphens." };
@@ -972,7 +976,7 @@ export async function setCreatorDynamicDestination(creatorSlug: string, destinat
     include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
   });
   if (!creator) return { ok: false as const, error: "Publish your card before changing the destination." };
-  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const plan = creator.planTier || "STARTER";
   const entitlements = await entitlementsForPlan(plan);
   const link = creator.shortLinks[0];
   if (!link) return { ok: false as const, error: "This plan does not include a short link." };
@@ -992,7 +996,7 @@ export async function rollbackCreatorDynamicDestination(creatorSlug: string) {
     include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
   });
   if (!creator) return { ok: false as const, error: "Publish your card before changing the destination." };
-  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const plan = creator.planTier || "STARTER";
   const entitlements = await entitlementsForPlan(plan);
   const link = creator.shortLinks[0];
   if (!link) return { ok: false as const, error: "This plan does not include a short link." };
@@ -1017,7 +1021,7 @@ export async function getCreatorShortLinkAnalytics(
   if (!creator) return { ok: false, error: "Publish your card before viewing link analytics." };
   const link = creator.shortLinks[0];
   if (!link) return { ok: false, error: "This plan does not include a short link." };
-  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const plan = creator.planTier || "STARTER";
   const entitlements = await entitlementsForPlan(plan);
   const events = await prisma.shortLinkEvent.findMany({
     where: { shortLinkId: link.id },

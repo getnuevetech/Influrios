@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getProduct, type BillingSku } from "@/lib/billing";
-import type { PlanTier } from "@prisma/client";
+import { getProduct } from "@/lib/billing";
 
 export type WebhookDisposition = "skip" | "apply" | "ignore";
 
@@ -68,9 +67,14 @@ export async function applyPlanOnce(input: {
   const disposition = webhookDisposition({ duplicate: false, eventType: input.eventType });
   const product = getProduct(input.sku);
   const status = subscriptionStatusForEvent(input.eventType);
-  if (!product || !status || disposition !== "apply") return { applied: false };
+  const stored = product
+    ? null
+    : await prisma.entitlementPlan.findUnique({ where: { code: input.sku } });
+  if ((!product && !stored) || !status || disposition !== "apply") return { applied: false };
 
-  const plan = (product.creatorPlan || product.businessPlan) as PlanTier | undefined;
+  const creatorPlan = product?.creatorPlan ?? (stored && stored.audience !== "business" ? stored.code : undefined);
+  const businessPlan = product?.businessPlan ?? (stored && stored.audience === "business" ? stored.code : undefined);
+  const plan = creatorPlan || businessPlan;
   try {
     await prisma.$transaction(async (tx) => {
       await tx.processedWebhook.create({
@@ -84,10 +88,10 @@ export async function applyPlanOnce(input: {
       if (status === "active" && plan && input.userId) {
         await tx.user.update({ where: { id: input.userId }, data: { planTier: plan } });
       }
-      if (status === "active" && product.creatorPlan && input.creatorSlug) {
+      if (status === "active" && creatorPlan && input.creatorSlug) {
         await tx.creator.updateMany({
           where: { slug: input.creatorSlug },
-          data: { planTier: product.creatorPlan },
+          data: { planTier: creatorPlan },
         });
       }
       await tx.subscriptionState.upsert({
@@ -100,7 +104,7 @@ export async function applyPlanOnce(input: {
         create: {
           provider: input.provider,
           externalId: input.externalId || input.eventId,
-          sku: input.sku as BillingSku,
+          sku: input.sku,
           status,
           userId: input.userId || null,
           creatorSlug: input.creatorSlug || null,

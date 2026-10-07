@@ -18,7 +18,6 @@ import {
 } from "@/app/dashboard/short-actions";
 import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
 import { classifyProfileTopics } from "@/lib/ai-runtime";
-import { isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { canAddCampaignLink } from "@/lib/short-link-phase4";
 import {
@@ -74,7 +73,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
     children: (parent.children ?? []).map((child) => ({ ...child, active: true })),
   }))).filter((parent) => parent.active);
   const social = await socialConnectState(draft.slug).catch(() => null);
-  const planCode = isPlanCode(draft.planTier ?? "") ? draft.planTier! : "STARTER";
+  const planCode = draft.planTier || "STARTER";
   const linkLimits = await entitlementsForPlan(planCode).catch(() => null);
   const shortLink = draft.stage === "published" ? await ensureCreatorShortLink(draft.slug).catch(() => null) : null;
   const shortHost = await primaryShortHost().catch(() => "inflr.me");
@@ -87,8 +86,9 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       ? await listPendingShortLinkSchedules(shortLink.id).catch(() => [])
       : [];
   const campaignLinks = shortLink ? await listCreatorCampaignLinks(draft.slug).catch(() => []) : [];
+  const campaignMax = linkLimits?.campaignLinksMax ?? 0;
   const campaignRoom = canAddCampaignLink({
-    shortlinkMax: linkLimits?.shortlinkMax ?? 0,
+    campaignMax,
     campaignCount: campaignLinks.length,
   });
   const linkAnalytics =
@@ -487,9 +487,18 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               <img src={`/api/qr/${draft.slug}?size=160&logo=0`} alt="Influencer Card QR" width={160} height={160} />
             ) : null}
             {shortLink.nfcIdentities[0] ? (
-              <p>
-                NFC tag: https://{shortHost}/n/{shortLink.nfcIdentities[0].token}
-              </p>
+              <div className="space-y-1">
+                <p>
+                  NFC URL: https://{shortHost}/n/{shortLink.nfcIdentities[0].token}
+                </p>
+                <p className="text-xs text-muted">
+                  Write this URL onto a blank NFC sticker or card with your phone. A tap opens the current destination.
+                  Changing the destination does not require a new tag.{" "}
+                  <Link href="/faq?audience=creator#nfc-write" className="font-semibold text-violet hover:underline">
+                    NFC instructions
+                  </Link>
+                </p>
+              </div>
             ) : null}
             {linkLimits?.customAlias ? (
               <div className="space-y-2">
@@ -607,7 +616,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               <div>
                 <p className="font-semibold text-indigo">Campaign links</p>
                 <p className="mt-1 text-xs text-muted">
-                  A campaign link is https://{shortHost}/c/your-code and keeps its own destination. Visits are counted on this short link. The profile short link uses one slot, so a plan with one slot cannot add a campaign.
+                  A campaign link is https://{shortHost}/c/your-code and keeps its own destination. Visits are counted on this short link. This plan allows {campaignMax} campaign {campaignMax === 1 ? "link" : "links"}. That number is a plan feature, separate from the profile short link.
                 </p>
               </div>
               {campaignLinks.length ? (
@@ -653,8 +662,8 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               ) : (
                 <p className="text-xs text-muted">
                   {campaignLinks.length
-                    ? "Every campaign slot on this plan is in use."
-                    : "Campaign links appear when the plan includes more than one short-link slot."}
+                    ? `All ${campaignMax} campaign ${campaignMax === 1 ? "link" : "links"} on this plan are in use.`
+                    : "This plan’s campaign-link count is 0. An admin can raise it without changing the short link."}
                 </p>
               )}
             </div>

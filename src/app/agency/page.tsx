@@ -15,7 +15,7 @@ import {
 } from "@/lib/agency";
 import { resolveAgencyAccess } from "@/lib/agency-auth";
 import { getWorkspace } from "@/lib/business";
-import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 import { productSwitch } from "@/lib/product-switches";
 
@@ -49,7 +49,7 @@ export default async function AgencyPage({ searchParams }: Props) {
     getWorkspace(access.ok ? access.account?.id : null),
     productSwitch("agency_seats"),
   ]);
-  const entitlements = getBusinessEntitlements(ws.plan);
+  const entitlements = await businessEntitlementsForPlan(ws.plan);
   const unlocked = seatsOn ? access.ok : entitlements.agencyWorkspace;
   const workspaceId =
     access.ok && access.mode === "seat"

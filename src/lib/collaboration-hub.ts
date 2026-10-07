@@ -10,7 +10,7 @@ import {
   type CampaignBrief,
   type CreatorFit,
 } from "@/lib/business";
-import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { listCollaborations } from "@/lib/collaborations";
 import { fundingBadge, type FundingBadge } from "@/lib/funding-badge";
 import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketplace-ledger";
@@ -343,7 +343,7 @@ export async function loadCreatorHub(input: {
 
 export async function loadBusinessHub(input?: { intentBriefId?: string; userId?: string }) {
   const ws = await getWorkspace(input?.userId);
-  const entitlements = getBusinessEntitlements(ws.plan);
+  const entitlements = await businessEntitlementsForPlan(ws.plan);
   const [fundings, requests, opportunities, collaborations] = await Promise.all([
     listFundingsForBusiness(ws.businessId).catch(() => []),
     listPublishedBusinessRequests().catch(() => [] as MarketplaceBusinessRequestRow[]),

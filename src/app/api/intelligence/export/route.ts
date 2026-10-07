@@ -5,7 +5,7 @@ import {
   intelligenceExportToCsv,
 } from "@/lib/intelligence";
 import { getWorkspace } from "@/lib/business";
-import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 
 /**
  * Intelligence export. The viewer's owned workspace plan is the gate.
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     );
   }
   const ws = await getWorkspace(account.id);
-  const entitlements = getBusinessEntitlements(ws.plan);
+  const entitlements = await businessEntitlementsForPlan(ws.plan);
 
   if (!entitlements.intelligence || !entitlements.exports) {
     return NextResponse.json(

@@ -4,7 +4,7 @@
  */
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
-import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { resolveAgencySeatForEmail, type AgencySeatRole, asAgencySeatRole } from "@/lib/agency-seats";
 import { productSwitch } from "@/lib/product-switches";
 
@@ -56,7 +56,7 @@ export async function resolveAgencyAccess(): Promise<AgencyAccess> {
     };
   }
 
-  const entitlements = getBusinessEntitlements(workspace.plan);
+  const entitlements = await businessEntitlementsForPlan(workspace.plan);
   if (!entitlements.agencyWorkspace) {
     return { ok: false, error: "agency_plan_required", seatsEnabled: false };
   }

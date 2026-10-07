@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionStartCheckout } from "@/app/billing/actions";
 import { BILLING_CATALOG, type BillingProduct } from "@/lib/billing";
+import { listPublicPlanOffers, type PublicPlanOffer } from "@/lib/entitlements-db";
 import { stripeBillingMode } from "@/lib/stripe-admin";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +18,26 @@ const STARTER = {
 
 export default async function PricingPage() {
   const stripeMode = await stripeBillingMode();
-  const creatorPaid = BILLING_CATALOG.filter((p) => p.audience === "creator");
-  const businessPlans = BILLING_CATALOG.filter((p) => p.audience === "business");
+  const offers = await listPublicPlanOffers().catch(() => null);
+  const creatorPlans = offers
+    ? offers.filter((plan) => plan.audience === "creator")
+    : [
+        { ...STARTER, code: "STARTER", checkout: false, audience: "creator" as const },
+        ...BILLING_CATALOG.filter((plan) => plan.audience === "creator").map((plan) => ({
+          ...plan,
+          code: plan.sku,
+          checkout: true,
+          audience: "creator" as const,
+        })),
+      ];
+  const businessPlans = offers
+    ? offers.filter((plan) => plan.audience === "business")
+    : BILLING_CATALOG.filter((plan) => plan.audience === "business").map((plan) => ({
+        ...plan,
+        code: plan.sku,
+        checkout: true,
+        audience: "business" as const,
+      }));
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -29,8 +48,7 @@ export default async function PricingPage() {
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">Pricing</h1>
           <p className="mx-auto mt-3 max-w-2xl text-white/75">
-            Choose an influencer or business plan. Upgrade anytime — Stripe Checkout when keys are
-            configured, demo flow otherwise.
+            Plans and their features are configured by Influrios. A paid plan checks out with Stripe when that plan has a price id.
           </p>
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
             Mode: {stripeMode === "sandbox" ? "Stripe sandbox" : stripeMode === "live" ? "Stripe live" : stripeMode === "rejected" ? "Stripe sandbox key required" : "Stripe key not saved"}
@@ -42,12 +60,11 @@ export default async function PricingPage() {
         <section>
           <h2 className="font-display text-2xl font-bold text-indigo">Influencer plans</h2>
           <p className="mt-1 text-sm text-muted">
-            Starter free · Plus & Pro unlock QR, shortlinks, and collaboration tools.
+            The cards below are the public plans. Campaign links, NFC, and the other features are whatever is saved on each plan.
           </p>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
-            <PlanCard plan={STARTER} />
-            {creatorPaid.map((plan) => (
-              <PlanCard key={plan.sku} plan={plan} checkout />
+            {creatorPlans.map((plan) => (
+              <PlanCard key={plan.code} plan={plan} checkout={plan.checkout} />
             ))}
           </div>
         </section>
@@ -59,7 +76,7 @@ export default async function PricingPage() {
           </p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {businessPlans.map((plan) => (
-              <PlanCard key={plan.sku} plan={plan} checkout />
+              <PlanCard key={plan.code} plan={plan} checkout={plan.checkout} />
             ))}
           </div>
         </section>
@@ -79,7 +96,7 @@ function PlanCard({
   plan,
   checkout = false,
 }: {
-  plan: Pick<BillingProduct, "sku" | "name" | "priceLabel" | "amountCents" | "description" | "highlights"> | typeof STARTER;
+  plan: Pick<BillingProduct, "sku" | "name" | "priceLabel" | "amountCents" | "description" | "highlights"> | PublicPlanOffer | typeof STARTER;
   checkout?: boolean;
 }) {
   return (
@@ -98,8 +115,12 @@ function PlanCard({
         ))}
       </ul>
       {checkout ? (
-        <form action={actionStartCheckout} className="mt-6">
+        <form action={actionStartCheckout} className="mt-6 space-y-3">
           <input type="hidden" name="sku" value={plan.sku} />
+          <label className="flex items-start gap-2 text-xs text-indigo">
+            <input type="checkbox" name="acceptSubscription" required className="mt-0.5 accent-violet" />
+            <span>I agree to the subscription terms. {plan.priceLabel} renews until cancelled.</span>
+          </label>
           <button type="submit" className="btn-primary w-full !py-2.5 text-sm">
             Choose {plan.name}
           </button>
