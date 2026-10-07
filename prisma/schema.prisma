@@ -276,6 +276,7 @@ model Creator {
   collabNeeds        CollaborationNeed[]
   socialConnections  SocialConnection[]
   shortLinks         ShortLink[]
+  campaignLinks      CampaignLink[]
   payoutProfile      InfluencerPayoutProfile?
   mentorshipProfile  MentorshipProfile?
   mentorshipAsMentor MentorshipRequest[] @relation("MentorshipMentor")
@@ -1193,6 +1194,9 @@ model ShortLink {
   updatedAt       DateTime @updatedAt
   aliases         ShortLinkAlias[]
   qrIdentities    QrIdentity[]
+  nfcIdentities   NfcIdentity[]
+  schedules       ShortLinkSchedule[]
+  campaignLinks   CampaignLink[]
   events          ShortLinkEvent[]
   abuseCases      ShortLinkAbuseCase[]
   destinationHistory ShortLinkDestinationHistory[]
@@ -1222,6 +1226,49 @@ model ShortLinkAlias {
   slug        String    @unique
   redirect    Boolean   @default(true)
   createdAt   DateTime  @default(now())
+}
+
+/// Opaque NFC payload. The token is not a slug. Destination changes do not require a new tag.
+model NfcIdentity {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  shortLinkId String
+  shortLink   ShortLink @relation(fields: [shortLinkId], references: [id], onDelete: Cascade)
+  status      String    @default("active")
+  createdAt   DateTime  @default(now())
+}
+
+/// Future destination for a dynamic short link. The sweep applies it; QR and NFC tokens stay put.
+model ShortLinkSchedule {
+  id              String    @id @default(cuid())
+  shortLinkId     String
+  shortLink       ShortLink @relation(fields: [shortLinkId], references: [id], onDelete: Cascade)
+  destination     String
+  destinationKind String
+  startsAt        DateTime
+  status          String    @default("pending")
+  appliedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([status, startsAt])
+}
+
+/// inflr.me/c/{code}. Owns its destination. Visits are recorded on the creator short link.
+model CampaignLink {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  creatorId       String
+  creator         Creator   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  shortLinkId     String
+  shortLink       ShortLink @relation(fields: [shortLinkId], references: [id], onDelete: Cascade)
+  label           String
+  destination     String
+  destinationKind String
+  status          String    @default("active")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([creatorId, status])
 }
 
 /// Opaque QR payload. The token is not a slug and not the canonical profile URL.

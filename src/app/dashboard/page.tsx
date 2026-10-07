@@ -6,12 +6,30 @@ import {
   actionUpdateProfileMedia,
 } from "@/app/claim/actions";
 import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
-import { actionChangeShortSlug, actionRollbackDynamicDestination, actionSetDynamicDestination } from "@/app/dashboard/short-actions";
+import { ScheduleStartsField } from "@/app/dashboard/schedule-starts-field";
+import {
+  actionCancelSchedule,
+  actionChangeShortSlug,
+  actionCreateCampaignLink,
+  actionRollbackDynamicDestination,
+  actionScheduleDestination,
+  actionSetCampaignLinkStatus,
+  actionSetDynamicDestination,
+} from "@/app/dashboard/short-actions";
 import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
 import { classifyProfileTopics } from "@/lib/ai-runtime";
 import { isPlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { ensureCreatorShortLink, getCreatorShortLinkAnalytics, listShortLinkDestinationHistory, primaryShortHost, slugChangeWarning } from "@/lib/short-link";
+import { canAddCampaignLink } from "@/lib/short-link-phase4";
+import {
+  ensureCreatorShortLink,
+  getCreatorShortLinkAnalytics,
+  listCreatorCampaignLinks,
+  listPendingShortLinkSchedules,
+  listShortLinkDestinationHistory,
+  primaryShortHost,
+  slugChangeWarning,
+} from "@/lib/short-link";
 import {
   completenessFor,
   getCreatorSessionDraft,
@@ -64,6 +82,15 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
     shortLink && linkLimits?.dynamicQr
       ? await listShortLinkDestinationHistory(shortLink.id, 5).catch(() => [])
       : [];
+  const pendingSchedules =
+    shortLink && linkLimits?.dynamicQr && shortLink.dynamic
+      ? await listPendingShortLinkSchedules(shortLink.id).catch(() => [])
+      : [];
+  const campaignLinks = shortLink ? await listCreatorCampaignLinks(draft.slug).catch(() => []) : [];
+  const campaignRoom = canAddCampaignLink({
+    shortlinkMax: linkLimits?.shortlinkMax ?? 0,
+    campaignCount: campaignLinks.length,
+  });
   const linkAnalytics =
     shortLink && shortLink.status === "active"
       ? await getCreatorShortLinkAnalytics(draft.slug).catch(() => null)
@@ -126,6 +153,16 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       {params.saved === "destination" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Short-link destination updated. The printed QR is unchanged.
+        </div>
+      ) : null}
+      {params.saved === "schedule" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Destination schedule updated. The QR and NFC tokens stay the same.
+        </div>
+      ) : null}
+      {params.saved === "campaign" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Campaign link updated.
         </div>
       ) : null}
       {params.error ? (
@@ -449,6 +486,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={`/api/qr/${draft.slug}?size=160&logo=0`} alt="Influencer Card QR" width={160} height={160} />
             ) : null}
+            {shortLink.nfcIdentities[0] ? (
+              <p>
+                NFC tag: https://{shortHost}/n/{shortLink.nfcIdentities[0].token}
+              </p>
+            ) : null}
             {linkLimits?.customAlias ? (
               <div className="space-y-2">
                 {params.confirmSlug && params.confirmSlug !== shortLink.slug ? (
@@ -527,8 +569,95 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                     </form>
                   </div>
                 ) : null}
+                <form action={actionScheduleDestination} className="space-y-2">
+                  <p className="text-xs font-semibold text-indigo">Schedule a destination</p>
+                  <p className="text-xs text-muted">
+                    The change applies at the chosen time. The QR and NFC tokens stay the same. One pending change at a time.
+                  </p>
+                  <input
+                    name="destination"
+                    placeholder={`/c/${draft.slug} or https://influrios.com/...`}
+                    className="w-full max-w-md rounded-xl border border-border px-3 py-2"
+                  />
+                  <ScheduleStartsField />
+                  <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                    Schedule destination
+                  </button>
+                </form>
+                {pendingSchedules.length ? (
+                  <ul className="space-y-2 text-xs text-muted">
+                    {pendingSchedules.map((row) => (
+                      <li key={row.id} className="flex flex-wrap items-center gap-2">
+                        <span>
+                          {row.startsAt.toISOString().slice(0, 16).replace("T", " ")} UTC → {row.destination}
+                        </span>
+                        <form action={actionCancelSchedule}>
+                          <input type="hidden" name="scheduleId" value={row.id} />
+                          <button type="submit" className="btn-secondary !py-0.5 text-[11px]">
+                            Cancel
+                          </button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             ) : null}
+            <div className="space-y-3 border-t border-border pt-3">
+              <div>
+                <p className="font-semibold text-indigo">Campaign links</p>
+                <p className="mt-1 text-xs text-muted">
+                  A campaign link is https://{shortHost}/c/your-code and keeps its own destination. Visits are counted on this short link. The profile short link uses one slot, so a plan with one slot cannot add a campaign.
+                </p>
+              </div>
+              {campaignLinks.length ? (
+                <ul className="space-y-2">
+                  {campaignLinks.map((row) => (
+                    <li key={row.id} className="rounded-xl border border-border p-3 text-xs">
+                      <p className="font-semibold text-indigo">
+                        https://{shortHost}/c/{row.code} · {row.label} · {row.status}
+                      </p>
+                      <p className="mt-1 text-muted">{row.destination}</p>
+                      <form action={actionSetCampaignLinkStatus} className="mt-2">
+                        <input type="hidden" name="campaignId" value={row.id} />
+                        <input type="hidden" name="status" value={row.status === "active" ? "suspended" : "active"} />
+                        <button type="submit" className="btn-secondary !py-1 text-xs">
+                          {row.status === "active" ? "Suspend" : "Activate"}
+                        </button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {campaignRoom ? (
+                <form action={actionCreateCampaignLink} className="space-y-2">
+                  <input
+                    name="code"
+                    placeholder="spring-launch"
+                    className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
+                  />
+                  <input
+                    name="label"
+                    placeholder="Spring launch"
+                    className="w-full max-w-md rounded-xl border border-border px-3 py-2"
+                  />
+                  <input
+                    name="destination"
+                    placeholder={`/c/${draft.slug} or https://influrios.com/...`}
+                    className="w-full max-w-md rounded-xl border border-border px-3 py-2"
+                  />
+                  <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                    Add campaign link
+                  </button>
+                </form>
+              ) : (
+                <p className="text-xs text-muted">
+                  {campaignLinks.length
+                    ? "Every campaign slot on this plan is in use."
+                    : "Campaign links appear when the plan includes more than one short-link slot."}
+                </p>
+              )}
+            </div>
           </div>
         ) : (
           <p className="mt-2 text-sm text-muted">

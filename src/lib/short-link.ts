@@ -10,6 +10,7 @@ import {
   type CreatorShortLinkAnalytics,
   type ShortLinkPrivacyHints,
 } from "@/lib/short-link-analytics";
+import { canAddCampaignLink, normalizeCampaignCode, parseShortPath, scheduleStartsInFuture } from "@/lib/short-link-phase4";
 
 export type { ShortLinkPrivacyHints } from "@/lib/short-link-analytics";
 
@@ -199,6 +200,19 @@ async function createQr(shortLinkId: string) {
   return prisma.qrIdentity.create({ data: { token: newToken(), shortLinkId, status: "active" } });
 }
 
+async function createNfc(shortLinkId: string) {
+  const existing = await prisma.nfcIdentity.findFirst({
+    where: { shortLinkId, status: "active" },
+  });
+  if (existing) return existing;
+  return prisma.nfcIdentity.create({ data: { token: newToken(), shortLinkId, status: "active" } });
+}
+
+const activeIdentityInclude = {
+  qrIdentities: { where: { status: "active" }, take: 1 },
+  nfcIdentities: { where: { status: "active" }, take: 1 },
+} as const;
+
 export async function ensureCreatorShortLink(creatorSlug: string) {
   await ensureShortLinkDefaults();
   const creator = await prisma.creator.findUnique({
@@ -214,6 +228,7 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
   if (current) {
     if ((entitlements.standardQr || entitlements.dynamicQr) && current.status === "active") {
       await createQr(current.id);
+      await createNfc(current.id);
     }
     const patch: { dynamic?: boolean; entitlementSnapshotJson?: object } = {};
     if (current.dynamic !== entitlements.dynamicQr) patch.dynamic = entitlements.dynamicQr;
@@ -223,7 +238,7 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
     }
     return prisma.shortLink.findUnique({
       where: { id: current.id },
-      include: { qrIdentities: { where: { status: "active" }, take: 1 } },
+      include: activeIdentityInclude,
     });
   }
   if (!canCreateAnotherShortLink(creator.shortLinks.length, entitlements)) return null;
@@ -244,10 +259,13 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
         entitlementSnapshotJson: snapshot,
       },
     });
-    if (entitlements.standardQr || entitlements.dynamicQr) await createQr(link.id);
+    if (entitlements.standardQr || entitlements.dynamicQr) {
+      await createQr(link.id);
+      await createNfc(link.id);
+    }
     return prisma.shortLink.findUnique({
       where: { id: link.id },
-      include: { qrIdentities: { where: { status: "active" }, take: 1 } },
+      include: activeIdentityInclude,
     });
   } catch (error) {
     if (typeof error === "object" && error && "code" in error && error.code === "P2002") return null;
@@ -396,15 +414,14 @@ async function resolveShortRequestFromStore(
   }
   const settings = await settingsRow();
   const allowed = hostsFrom(settings);
-
-  const qr = clean.match(/^\/q\/([A-Za-z0-9_-]{4,80})$/);
-  if (qr) return resolveQrToken(qr[1], allowed, settings.canonicalOrigin, hints);
-
-  const slugMatch = clean.match(/^\/([a-z0-9][a-z0-9-]{1,30})$/);
-  if (!slugMatch) {
+  const parsed = parseShortPath(clean);
+  if (parsed.kind === "qr") return resolveQrToken(parsed.token, allowed, settings.canonicalOrigin, hints);
+  if (parsed.kind === "nfc") return resolveNfcToken(parsed.token, allowed, settings.canonicalOrigin, hints);
+  if (parsed.kind === "campaign") return resolveCampaignCode(parsed.code, allowed, settings.canonicalOrigin, hints);
+  if (parsed.kind !== "slug") {
     return { kind: "page", status: 404, title: "Link not found", message: "That Influrios short link does not exist." };
   }
-  const slug = slugMatch[1];
+  const slug = parsed.slug;
   if (isReservedSlug(slug) || (await prisma.reservedSlug.findUnique({ where: { slug } }))) {
     return { kind: "page", status: 404, title: "Reserved", message: "That name is reserved by Influrios." };
   }
@@ -502,6 +519,62 @@ export async function resolveQrToken(
   const cache = redirectCacheFor("destination");
   void recordEvent(identity.shortLinkId, "qr_scan", { token: identity.token }, hints);
   return { kind: "redirect", ...cache, location, shortLinkId: identity.shortLinkId, eventType: "qr_scan" };
+}
+
+export async function resolveNfcToken(
+  token: string,
+  allowedHosts?: string[],
+  canonicalOrigin?: string,
+  hints?: ShortLinkPrivacyHints | null,
+): Promise<ResolveHit> {
+  await ensureShortLinkDefaults();
+  const settings = await settingsRow();
+  const allowed = allowedHosts ?? hostsFrom(settings);
+  const origin = canonicalOrigin ?? settings.canonicalOrigin;
+  const identity = await prisma.nfcIdentity.findUnique({
+    where: { token },
+    include: { shortLink: true },
+  });
+  if (!identity || identity.status !== "active") {
+    return { kind: "page", status: 404, title: "NFC not found", message: "This NFC tag is not an active Influrios identity." };
+  }
+  if (identity.shortLink.status !== "active") {
+    return {
+      kind: "page",
+      status: 403,
+      title: "Link unavailable",
+      message: "This Influrios link is suspended. The NFC identity is unchanged.",
+    };
+  }
+  const location = safeRedirectTarget(identity.shortLink.destination, allowed, origin);
+  if (!location) {
+    return { kind: "page", status: 404, title: "Destination blocked", message: "This link destination is not on the Influrios allow list." };
+  }
+  const cache = redirectCacheFor("destination");
+  void recordEvent(identity.shortLinkId, "nfc_tap", { token: identity.token }, hints);
+  return { kind: "redirect", ...cache, location, shortLinkId: identity.shortLinkId, eventType: "nfc_tap" };
+}
+
+async function resolveCampaignCode(
+  code: string,
+  allowedHosts: string[],
+  canonicalOrigin: string,
+  hints?: ShortLinkPrivacyHints | null,
+): Promise<ResolveHit> {
+  const campaign = await prisma.campaignLink.findUnique({
+    where: { code },
+    include: { shortLink: true },
+  });
+  if (!campaign || campaign.status !== "active" || campaign.shortLink.status !== "active") {
+    return { kind: "page", status: 404, title: "Campaign not found", message: "That Influrios campaign link does not exist." };
+  }
+  const location = safeRedirectTarget(campaign.destination, allowedHosts, canonicalOrigin);
+  if (!location) {
+    return { kind: "page", status: 404, title: "Destination blocked", message: "This campaign destination is not on the Influrios allow list." };
+  }
+  const cache = redirectCacheFor("destination");
+  void recordEvent(campaign.shortLinkId, "campaign_redirect", { code: campaign.code }, hints);
+  return { kind: "redirect", ...cache, location, shortLinkId: campaign.shortLinkId, eventType: "campaign_redirect" };
 }
 
 async function finishSlug(
@@ -688,7 +761,7 @@ export async function setShortLinkDestination(
   destination: string,
   dynamic: boolean,
   actor: DestinationChangeActor = { type: "system" },
-  reason: "update" | "rollback" = "update",
+  reason: "update" | "rollback" | "schedule" = "update",
 ) {
   const link = await prisma.shortLink.findUnique({ where: { id: shortLinkId } });
   if (!link) return { ok: false as const, error: "Missing short link." };
@@ -750,6 +823,146 @@ export async function rollbackShortLinkDestination(
   const prior = priorDestinationFromHistory(history);
   if (!prior) return { ok: false as const, error: "No prior destination to restore." };
   return setShortLinkDestination(shortLinkId, prior.destination, true, actor, "rollback");
+}
+
+export async function scheduleShortLinkDestination(shortLinkId: string, destination: string, startsAt: Date) {
+  const link = await prisma.shortLink.findUnique({ where: { id: shortLinkId } });
+  if (!link) return { ok: false as const, error: "Missing short link." };
+  const gate = canChangeDynamicDestination({ dynamic: link.dynamic, status: link.status });
+  if (!gate.ok) return gate;
+  if (!scheduleStartsInFuture(startsAt, new Date())) {
+    return { ok: false as const, error: "Choose a start time at least a minute from now." };
+  }
+  const pending = await prisma.shortLinkSchedule.count({ where: { shortLinkId, status: "pending" } });
+  if (pending > 0) return { ok: false as const, error: "A destination change is already scheduled. Cancel it first." };
+  const settings = await getShortLinkSettings();
+  const location = safeRedirectTarget(destination, hostsFrom(settings), settings.canonicalOrigin);
+  if (!location) {
+    return { ok: false as const, error: "Destination must be an Influrios path or an allow-listed https host." };
+  }
+  const stored = storeDestinationValue(destination, location);
+  const row = await prisma.shortLinkSchedule.create({
+    data: {
+      shortLinkId,
+      destination: stored,
+      destinationKind: destinationKindFor(stored),
+      startsAt,
+      status: "pending",
+    },
+  });
+  return { ok: true as const, id: row.id, destination: stored, startsAt: row.startsAt };
+}
+
+export async function cancelShortLinkSchedule(shortLinkId: string, scheduleId: string) {
+  const updated = await prisma.shortLinkSchedule.updateMany({
+    where: { id: scheduleId, shortLinkId, status: "pending" },
+    data: { status: "cancelled" },
+  });
+  if (updated.count !== 1) return { ok: false as const, error: "That schedule is not pending." };
+  return { ok: true as const };
+}
+
+export async function listPendingShortLinkSchedules(shortLinkId: string) {
+  return prisma.shortLinkSchedule.findMany({
+    where: { shortLinkId, status: "pending" },
+    orderBy: { startsAt: "asc" },
+  });
+}
+
+/** Applies due schedules. QR and NFC tokens are not rewritten. */
+export async function applyDueShortLinkSchedules(now = new Date()) {
+  const due = await prisma.shortLinkSchedule.findMany({
+    where: { status: "pending", startsAt: { lte: now } },
+    orderBy: { startsAt: "asc" },
+    take: 50,
+  });
+  let applied = 0;
+  for (const row of due) {
+    const result = await setShortLinkDestination(
+      row.shortLinkId,
+      row.destination,
+      true,
+      { type: "system", id: "schedule" },
+      "schedule",
+    );
+    await prisma.shortLinkSchedule.update({
+      where: { id: row.id },
+      data: result.ok ? { status: "applied", appliedAt: now } : { status: "blocked" },
+    });
+    if (result.ok) applied += 1;
+  }
+  return { applied, scanned: due.length };
+}
+
+export async function createCampaignLink(input: {
+  creatorSlug: string;
+  code: string;
+  label: string;
+  destination: string;
+}) {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: input.creatorSlug },
+    include: { shortLinks: { where: { status: "active" }, take: 1 } },
+  });
+  const link = creator?.shortLinks[0];
+  if (!creator || !link) return { ok: false as const, error: "An active short link is required before a campaign link." };
+  const plan = isPlanCode(creator.planTier) ? creator.planTier : "STARTER";
+  const entitlements = await entitlementsForPlan(plan);
+  const campaignCount = await prisma.campaignLink.count({ where: { creatorId: creator.id, status: { not: "archived" } } });
+  if (!canAddCampaignLink({ shortlinkMax: entitlements.shortlinkMax, campaignCount })) {
+    return { ok: false as const, error: "This plan has no remaining campaign link slots." };
+  }
+  const code = normalizeCampaignCode(input.code, RESERVED_SLUGS);
+  if (!code) return { ok: false as const, error: "Use a short campaign code with letters, numbers, and hyphens." };
+  const label = input.label.trim().slice(0, 80);
+  if (!label) return { ok: false as const, error: "A campaign label is required." };
+  const settings = await getShortLinkSettings();
+  const location = safeRedirectTarget(input.destination, hostsFrom(settings), settings.canonicalOrigin);
+  if (!location) {
+    return { ok: false as const, error: "Destination must be an Influrios path or an allow-listed https host." };
+  }
+  const takenSlug = await prisma.shortLink.findUnique({ where: { slug: code } });
+  const takenAlias = await prisma.shortLinkAlias.findUnique({ where: { slug: code } });
+  if (takenSlug || takenAlias) return { ok: false as const, error: "That code is already a short link." };
+  const stored = storeDestinationValue(input.destination, location);
+  try {
+    const row = await prisma.campaignLink.create({
+      data: {
+        code,
+        label,
+        creatorId: creator.id,
+        shortLinkId: link.id,
+        destination: stored,
+        destinationKind: destinationKindFor(stored),
+        status: "active",
+      },
+    });
+    return { ok: true as const, id: row.id, code: row.code };
+  } catch (error) {
+    const prismaCode = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    if (prismaCode === "P2002") return { ok: false as const, error: "That campaign code is already in use." };
+    throw error;
+  }
+}
+
+export async function listCreatorCampaignLinks(creatorSlug: string) {
+  const creator = await prisma.creator.findUnique({ where: { slug: creatorSlug }, select: { id: true } });
+  if (!creator) return [];
+  return prisma.campaignLink.findMany({
+    where: { creatorId: creator.id, status: { not: "archived" } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function setCampaignLinkStatus(creatorSlug: string, campaignId: string, status: "active" | "suspended") {
+  const creator = await prisma.creator.findUnique({ where: { slug: creatorSlug }, select: { id: true } });
+  if (!creator) return { ok: false as const, error: "Creator not found." };
+  const updated = await prisma.campaignLink.updateMany({
+    where: { id: campaignId, creatorId: creator.id, status: { not: "archived" } },
+    data: { status },
+  });
+  if (updated.count !== 1) return { ok: false as const, error: "Campaign link not found." };
+  return { ok: true as const };
 }
 
 /** Pro self-serve destination update — ownership + dynamicQr entitlement gated. */

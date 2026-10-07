@@ -55,6 +55,8 @@ describe("short-link resolver metrics (W5 / §20)", () => {
   it("labels path kinds and shapes metric meta", () => {
     assert.equal(pathKindFromPath("/"), "root");
     assert.equal(pathKindFromPath("/q/abc123"), "qr");
+    assert.equal(pathKindFromPath("/n/abc123"), "nfc");
+    assert.equal(pathKindFromPath("/c/spring-launch"), "campaign");
     assert.equal(pathKindFromPath("/sofia-martinez"), "slug");
     assert.equal(pathKindFromPath("/weird/path"), "other");
     const meta = resolverMetricMeta({

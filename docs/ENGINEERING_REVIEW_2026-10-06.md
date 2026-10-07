@@ -6,7 +6,7 @@
 
 Feature-status history stays in `FULL_IMPLEMENTATION_PLAN.md`. This document is the work that still has to be built.
 
-**Code on main:** A through D, F through L. Slice L stores Twilio credentials and sends `sms_send` jobs, opens the billing portal and Connect from stored Stripe ids, charges Flutterwave and M-Pesa only after a verified webhook, runs the three remaining AI functions through the assigned provider with a rules label on failure, and checks out paid mentorship without writing collaboration holding. Still open: Slice E staging evidence, which needs a live staging host.
+**Code on main:** A through D, F through L, and INFLR.me Phase 4. Slice L stores Twilio credentials and sends `sms_send` jobs, opens the billing portal and Connect from stored Stripe ids, charges Flutterwave and M-Pesa only after a verified webhook, runs the three remaining AI functions through the assigned provider with a rules label on failure, and checks out paid mentorship without writing collaboration holding. Phase 4 adds campaign links at `inflr.me/c/{code}`, NFC tags at `inflr.me/n/{token}`, and scheduled destinations applied by `short_link_schedule_sweep`. Still open: Slice E staging evidence, which needs a live staging host.
 
 ---
 

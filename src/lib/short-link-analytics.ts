@@ -72,7 +72,7 @@ export function isBotEvent(event: ShortLinkEventRow): boolean {
   return meta.bot === true || meta.bot === "true";
 }
 
-const VISIT_TYPES = new Set(["resolve", "qr_scan", "alias_redirect"]);
+const VISIT_TYPES = new Set(["resolve", "qr_scan", "alias_redirect", "nfc_tap", "campaign_redirect"]);
 
 export type CreatorShortLinkAnalytics = {
   level: AnalyticsLevel;

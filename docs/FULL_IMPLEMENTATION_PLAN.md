@@ -282,7 +282,7 @@ Ledger + commercial depth code exits met; live provider rails remain Deferred-ex
 
 ---
 
-### W5 — Influencer Card & INFLR.me — DONE (Phase 4 Deferred-external)
+### W5 — Influencer Card & INFLR.me — DONE (Phase 4 on main)
 
 **Source:** Strategy §8, §19; Platform Spec §38–39; INFLR.me Spec  
 
@@ -301,7 +301,7 @@ Ledger + commercial depth code exits met; live provider rails remain Deferred-ex
 
 | Exists | Missing | Exit |
 |---|---|---|
-| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records; **branded failure pages** with Influrios CTA + outcome marker; **alias policy** (admin enable/disable redirect + creator warn-before-change); **domain verification** (ops-attested `verified` + primary gate); mint entitlement snapshot | Campaign links `/c/`, NFC, scheduled destinations (Phase 4) | Spec §20 criteria 11–24 core **DONE**; Phase 4 **Deferred-external** |
+| `ShortLink*` models, resolver, opaque QR, `/admin/short-links`, domain records; **branded failure pages** with Influrios CTA + outcome marker; **alias policy** (admin enable/disable redirect + creator warn-before-change); **domain verification** (ops-attested `verified` + primary gate); mint entitlement snapshot; campaign links `/c/{code}`, NFC `/n/{token}`, scheduled destinations | — | Spec §20 criteria 11–24 core **DONE**; Phase 4 **DONE** |
 | Pro `dynamic` flag + destination setter | — | Spec §9 + Phase 3 — DONE |
 | Basic analytics events | — | Spec §10 — DONE; Spec §20 observable resolver metrics — **DONE** |
 | Card design system | — | **DONE** — Starter white / Plus `bg-plus` electric-blue / Pro `bg-pro` + gold |
@@ -589,7 +589,7 @@ DEFERRED-EXTERNAL (ops / product / later phase)
  ├─ Live provider rails beyond marketplace instruction queue
  ├─ W3.4 / Dev P3 recurring·ambassador product mode
  ├─ Dev P4 revenue sharing / complex splits
- ├─ W5 Phase 4 campaign/NFC/scheduled destinations
+ ├─ W5 Phase 4 campaign/NFC/scheduled destinations — DONE
  ├─ P7 paid mentorship commercial pack
  ├─ P8 SKU/cookie rename soak
  ├─ W2.3 multi-creator team proposals
@@ -647,7 +647,7 @@ From Platform Spec §31, Strategy, Collab OS, Development State, Dev Addendum de
 - Mixing mentorship payouts into collaboration holding without paid-mentoring flag  
 - Blind Prisma `Creator` table rename in one deploy  
 - Revenue-sharing collaborations / complex split payouts / enterprise negotiated rules (Dev P4)  
-- Campaign/NFC/scheduled INFLR.me routes (INFLR.me Phase 4) before P4–P5 finance  
+- Campaign/NFC/scheduled INFLR.me routes before P4–P5 finance (shipped after finance as Phase 4)  
 - Recurring ambassador funding before base ledger + P4 stable  
 - Full collab **Messages / inbox** product until product promotes it (until then: hide dead hub nav — W2.2)  
 - Claiming e-sign provider success from the contract wizard (`/admin/signing` shell stays non-goal until counsel)  
