@@ -21,6 +21,10 @@ export type EntitlementLimits = {
   mediaKit: boolean;
   leadTracking: boolean;
   proposalsMax: number;
+  /** How many inflr.me/c/{code} links this plan may have. Independent of the profile short link. */
+  campaignLinksMax: number;
+  /** Mint an inflr.me/n/{token} URL the creator writes onto a physical tag. */
+  nfc: boolean;
 };
 
 export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
@@ -41,6 +45,8 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     mediaKit: false,
     leadTracking: false,
     proposalsMax: 0,
+    campaignLinksMax: 0,
+    nfc: false,
   },
   PLUS: {
     specialtiesMax: 3,
@@ -59,6 +65,8 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     mediaKit: false,
     leadTracking: false,
     proposalsMax: 8,
+    campaignLinksMax: 0,
+    nfc: true,
   },
   PRO: {
     specialtiesMax: 8,
@@ -77,7 +85,31 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     mediaKit: true,
     leadTracking: true,
     proposalsMax: 30,
+    campaignLinksMax: 4,
+    nfc: true,
   },
+};
+
+/** Used when a plan code is not one of the launch creator plans. Feature rows fill this in. */
+export const EMPTY_ENTITLEMENTS: EntitlementLimits = {
+  specialtiesMax: 0,
+  socialLinksMax: 0,
+  portfolioMax: 0,
+  shortlink: false,
+  shortlinkMax: 0,
+  customAlias: false,
+  standardQr: false,
+  dynamicQr: false,
+  contactInquiry: "none",
+  collabCta: false,
+  analytics: "views",
+  themes: "default",
+  platformBranding: "visible",
+  mediaKit: false,
+  leadTracking: false,
+  proposalsMax: 0,
+  campaignLinksMax: 0,
+  nfc: false,
 };
 
 /** Launch-default fallback when the database catalog is empty or unreachable. */
@@ -88,6 +120,15 @@ export function getEntitlements(plan: PlanCode): EntitlementLimits {
 export function isPlanCode(value: string): value is PlanCode {
   return value === "STARTER" || value === "PLUS" || value === "PRO";
 }
+
+/** Admin-created codes. Launch codes such as STARTER and BUSINESS_PRO also match. */
+export function normalizePlanCode(input: string): string | null {
+  const code = input.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (!/^[A-Z][A-Z0-9_]{1,31}$/.test(code)) return null;
+  return code;
+}
+
+export const PLAN_LIMIT_MAX = 10_000;
 
 export type FeatureValue = {
   featureKey: string;
@@ -101,6 +142,7 @@ const INT_FIELDS = {
   "card.social_links.max": "socialLinksMax",
   "card.portfolio_items.max": "portfolioMax",
   "card.shortlink.max": "shortlinkMax",
+  "card.campaign_links.max": "campaignLinksMax",
   "collaboration.proposals.max": "proposalsMax",
 } as const satisfies Record<string, keyof EntitlementLimits>;
 
@@ -109,6 +151,7 @@ const BOOL_FIELDS = {
   "card.custom_slug.enabled": "customAlias",
   "card.qr.enabled": "standardQr",
   "card.qr.dynamic": "dynamicQr",
+  "card.nfc.enabled": "nfc",
   "card.collaboration.enabled": "collabCta",
   "card.media_kit.enabled": "mediaKit",
   "card.lead_tracking.enabled": "leadTracking",
@@ -136,6 +179,8 @@ export const EDITABLE_FEATURE_KEYS = [
   "card.qr.dynamic",
   "card.shortlink.enabled",
   "card.shortlink.max",
+  "card.campaign_links.max",
+  "card.nfc.enabled",
   "card.custom_slug.enabled",
   "card.collaboration.enabled",
   "collaboration.proposals.max",

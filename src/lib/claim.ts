@@ -4,7 +4,7 @@
  */
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { requireAuthSecret } from "@/lib/app-secret";
-import { decideCount, isPlanCode } from "@/lib/entitlements";
+import { decideCount, isPlanCode, normalizePlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { prisma } from "@/lib/db";
 import { advanceClaimStage, evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
@@ -49,7 +49,7 @@ export type ClaimDraft = {
   verifiedAt?: string;
   publishedAt?: string;
   attribution: string;
-  planTier?: SeedCreator["planTier"];
+  planTier?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -77,7 +77,7 @@ type SessionPayload = {
   attribution: string;
   verifyCode?: string;
   verificationDelivery?: "demo" | "email";
-  planTier?: SeedCreator["planTier"];
+  planTier?: string;
 };
 
 const COOKIE_NAME = "influrios_creator_session";
@@ -267,10 +267,7 @@ function readPayload(raw: Prisma.JsonValue): SessionPayload {
     attribution: typeof value.attribution === "string" ? value.attribution : "ORGANIC_SIGNUP",
     verifyCode: typeof value.verifyCode === "string" ? value.verifyCode : undefined,
     verificationDelivery: value.verificationDelivery === "email" ? "email" : "demo",
-    planTier:
-      value.planTier === "STARTER" || value.planTier === "PLUS" || value.planTier === "PRO"
-        ? value.planTier
-        : undefined,
+    planTier: normalizePlanCode(typeof value.planTier === "string" ? value.planTier : "") ?? undefined,
   };
 }
 
@@ -563,7 +560,7 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     gender: draft.gender,
     badge: draft.stage === "published" ? "Rising Star" : "Draft preview",
     statusLabel: draft.stage === "published" ? "Open to partnerships" : "Draft — not public yet",
-    planTier: draft.planTier ?? "STARTER",
+    planTier: draft.planTier === "PLUS" || draft.planTier === "PRO" ? draft.planTier : "STARTER",
     specialties: draft.specialties,
     socials: draft.socials,
     openToCollab: true,
@@ -723,9 +720,9 @@ export async function updateDraftProfile(
   const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
   if (patch.specialties) {
-    const plan = draft.planTier && isPlanCode(draft.planTier) ? draft.planTier : "STARTER";
+    const plan = draft.planTier || "STARTER";
     const limits = await entitlementsForPlan(plan);
-    const decision = decideCount(limits, "specialtiesMax", patch.specialties.length, plan);
+    const decision = decideCount(limits, "specialtiesMax", patch.specialties.length, isPlanCode(plan) ? plan : "STARTER");
     if (!decision.ok) {
       const upgrade = decision.upgradePlanCode ? ` Upgrade to ${decision.upgradePlanCode}.` : "";
       throw new Error(
@@ -874,7 +871,7 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
     ownerName: creator.displayName,
     publishedAt: creator.updatedAt.toISOString(),
     attribution: "PROFILE_CLAIM",
-    planTier: creator.planTier === "PLUS" || creator.planTier === "PRO" ? creator.planTier : "STARTER",
+    planTier: normalizePlanCode(creator.planTier) ?? "STARTER",
     createdAt: creator.createdAt.toISOString(),
     updatedAt: now,
   };

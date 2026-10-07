@@ -195,6 +195,9 @@ export async function SiteFooter() {
           <div className="text-sm font-semibold uppercase tracking-wide text-white/50">Resources</div>
           <ul className="mt-3 space-y-2 text-sm text-white/80">
             <li>
+              <Link href="/faq">FAQ</Link>
+            </li>
+            <li>
               <Link href="/card">Pricing</Link>
             </li>
             <li>

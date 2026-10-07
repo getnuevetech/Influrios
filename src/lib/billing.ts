@@ -113,7 +113,7 @@ export function isBillingSku(value: string): value is BillingSku {
 
 export type CheckoutSessionRecord = {
   id: string;
-  sku: BillingSku;
+  sku: string;
   mode: "stripe" | "demo";
   status: "open" | "completed" | "canceled";
   customerEmail?: string;
@@ -142,8 +142,11 @@ const LEGACY_STORE_PATH = path.join(DATA_DIR, "billing.json");
 const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "billing.json.migrated");
 const LAST_WEBHOOK_KEY = "billing.lastWebhookAt";
 
-function asSku(value: string): BillingSku | null {
-  return isBillingSku(value) ? value : null;
+function asSku(value: string): string | null {
+  const trimmed = value.trim();
+  if (isBillingSku(trimmed)) return trimmed;
+  if (/^[A-Z][A-Z0-9_]{1,31}$/.test(trimmed)) return trimmed;
+  return null;
 }
 
 function sessionFromRow(row: {
@@ -376,16 +379,25 @@ export type StartCheckoutResult =
 
 /** Start Checkout. A plan changes only after Stripe confirms the session. */
 export async function startCheckout(input: {
-  sku: BillingSku;
+  sku: string;
   customerEmail?: string;
   creatorSlug?: string;
   userId?: string;
 }): Promise<StartCheckoutResult> {
   const product = getProduct(input.sku);
-  if (!product) return { ok: false, error: "Unknown plan SKU" };
+  const { findActivePlan } = await import("@/lib/entitlements-db");
+  const custom = product ? null : await findActivePlan(input.sku);
+  if (!product && !custom) return { ok: false, error: "Unknown plan" };
+  if (custom && custom.amountCents <= 0) {
+    return { ok: false, error: "This plan has no monthly price. An admin assigns it." };
+  }
+  const customPrice = custom?.stripePriceId && /^price_[A-Za-z0-9]+$/.test(custom.stripePriceId) ? custom.stripePriceId : "";
+  if (custom && !customPrice) {
+    return { ok: false, error: "Save a Stripe price id on this plan before checkout." };
+  }
 
   // P8: telemetry only — SKUs stay creator_* for Stripe metadata compatibility.
-  if (product.sku.startsWith("creator_")) {
+  if (product?.sku.startsWith("creator_")) {
     const { recordCreatorFieldDeprecation } = await import("@/lib/legacy-teardown");
     await recordCreatorFieldDeprecation({
       field: product.sku,
@@ -407,20 +419,20 @@ export async function startCheckout(input: {
   const createdAt = new Date().toISOString();
 
   if (creds.ok) {
-    const priceId = await billingPriceId(product.sku, product.stripePriceEnv);
+    const priceId = product ? await billingPriceId(product.sku, product.stripePriceEnv) : customPrice;
     const origin = getAppOrigin();
     const opened = await openStripeCheckout({
       secret: creds.secret,
       mode: creds.mode,
       priceId,
-      amountCents: product.amountCents,
-      name: product.name,
-      description: product.description,
+      amountCents: product?.amountCents ?? custom!.amountCents,
+      name: product?.name ?? custom!.name,
+      description: product?.description ?? custom!.description ?? custom!.name,
       successUrl: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}&local=${sessionId}`,
       cancelUrl: `${origin}/billing/cancel?local=${sessionId}`,
       customerEmail: input.customerEmail,
       metadata: {
-        sku: product.sku,
+        sku: product?.sku ?? custom!.code,
         localSessionId: sessionId,
         creatorSlug: input.creatorSlug ?? "",
         userId: input.userId ?? "",
@@ -429,7 +441,7 @@ export async function startCheckout(input: {
     if (!opened.ok) return opened;
     await upsertAttempt({
       id: sessionId,
-      sku: product.sku,
+      sku: product?.sku ?? custom!.code,
       mode: "stripe",
       status: "open",
       customerEmail: input.customerEmail,
@@ -446,16 +458,16 @@ export async function startCheckout(input: {
 
 export async function completeCheckout(sessionId: string, opts?: {
   creatorSlug?: string;
-}): Promise<{ ok: true; product: BillingProduct } | { ok: false; error: string }> {
+}): Promise<{ ok: true; product: { sku: string; name: string } } | { ok: false; error: string }> {
   const session = await getCheckoutAttempt(sessionId);
   if (!session) return { ok: false, error: "Checkout session not found" };
-  if (session.status === "completed") {
-    const product = getProduct(session.sku)!;
-    return { ok: true, product };
-  }
-
   const product = getProduct(session.sku);
-  if (!product) return { ok: false, error: "Unknown product on session" };
+  const plan = product ? null : await prisma.entitlementPlan.findUnique({ where: { code: session.sku } });
+  const productName = product?.name ?? plan?.name ?? session.sku;
+  if (session.status === "completed") {
+    return { ok: true, product: { sku: session.sku, name: productName } };
+  }
+  if (!product && !plan) return { ok: false, error: "Unknown product on session" };
 
   if (session.mode !== "stripe" || !session.stripeSessionId) {
     return { ok: false, error: "Stripe has not confirmed this payment. Nothing was changed." };
@@ -472,7 +484,7 @@ export async function completeCheckout(sessionId: string, opts?: {
   });
   if (!confirmed.ok) return confirmed;
 
-  const slug = opts?.creatorSlug || session.creatorSlug || (product.creatorPlan ? "sofia-martinez" : undefined);
+  const slug = opts?.creatorSlug || session.creatorSlug || (product?.creatorPlan ? "sofia-martinez" : undefined);
   try {
     const { applyPlanOnce, checkoutEventId } = await import("@/lib/webhook-idempotency");
     await applyPlanOnce({
@@ -493,13 +505,14 @@ export async function completeCheckout(sessionId: string, opts?: {
   session.completedAt = new Date().toISOString();
   await upsertAttempt(session);
 
-  if (product.businessPlan && session.userId) {
+  const businessPlan = product?.businessPlan ?? (plan?.audience === "business" ? plan.code : undefined);
+  if (businessPlan && session.userId) {
     const { getWorkspace } = await import("@/lib/business");
     const workspace = await getWorkspace(session.userId);
-    await setBusinessPlan(product.businessPlan, workspace.businessId);
+    await setBusinessPlan(businessPlan, workspace.businessId);
   }
 
-  return { ok: true, product };
+  return { ok: true, product: { sku: session.sku, name: productName } };
 }
 
 /**

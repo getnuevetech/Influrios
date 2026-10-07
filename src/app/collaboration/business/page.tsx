@@ -11,7 +11,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { loadBusinessHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
-import { BUSINESS_PLAN_PRICES, type BusinessPlanCode } from "@/lib/business-entitlements";
+import { BUSINESS_PLAN_PRICES, isBusinessPlanCode, type BusinessPlanCode } from "@/lib/business-entitlements";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
@@ -156,7 +156,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 <p className="font-display text-lg font-bold text-indigo">{hub.workspace.name}</p>
                 <p className="text-xs text-muted">{hub.workspace.industry}</p>
                 <p className="mt-1 text-[11px] font-semibold text-violet">
-                  {BUSINESS_PLAN_PRICES[hub.workspace.plan].label} plan
+                  {isBusinessPlanCode(hub.workspace.plan) ? BUSINESS_PLAN_PRICES[hub.workspace.plan].label : hub.workspace.plan} plan
                 </p>
               </div>
             </div>

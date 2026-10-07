@@ -34,11 +34,11 @@ describe("INFLR.me phase 4 paths", () => {
     assert.equal(normalizeCampaignCode("spring--launch", reserved), null);
   });
 
-  it("keeps one short-link slot for the profile and the rest for campaigns", () => {
-    assert.equal(canAddCampaignLink({ shortlinkMax: 1, campaignCount: 0 }), false);
-    assert.equal(canAddCampaignLink({ shortlinkMax: 5, campaignCount: 0 }), true);
-    assert.equal(canAddCampaignLink({ shortlinkMax: 5, campaignCount: 3 }), true);
-    assert.equal(canAddCampaignLink({ shortlinkMax: 5, campaignCount: 4 }), false);
+  it("uses the plan's campaign-link count and ignores the short-link cap", () => {
+    assert.equal(canAddCampaignLink({ campaignMax: 0, campaignCount: 0 }), false);
+    assert.equal(canAddCampaignLink({ campaignMax: 1, campaignCount: 0 }), true);
+    assert.equal(canAddCampaignLink({ campaignMax: 4, campaignCount: 3 }), true);
+    assert.equal(canAddCampaignLink({ campaignMax: 4, campaignCount: 4 }), false);
   });
 
   it("requires a scheduled start more than a minute ahead and applies only pending rows that are due", () => {

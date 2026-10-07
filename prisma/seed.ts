@@ -1,4 +1,4 @@
-import { PrismaClient, PlanTier, SocialPlatform } from "@prisma/client";
+import { PrismaClient, SocialPlatform } from "@prisma/client";
 import { ensureLaunchEntitlements } from "../src/lib/entitlements-db";
 import { ensureMarketplaceListings } from "../src/lib/marketplace-listings";
 import { SEED_CREATORS, SPECIALTY_TAXONOMY } from "../src/lib/seed-data";
@@ -44,7 +44,7 @@ async function main() {
         locationCountry: creator.locationCountry,
         languages: creator.languages,
         avatarUrl: creator.image,
-        planTier: creator.planTier as PlanTier,
+        planTier: creator.planTier,
         openToCollab: creator.openToCollab,
       },
       create: {
@@ -57,7 +57,7 @@ async function main() {
         languages: creator.languages,
         avatarUrl: creator.image,
         coverUrl: creator.coverImage,
-        planTier: creator.planTier as PlanTier,
+        planTier: creator.planTier,
         openToCollab: creator.openToCollab,
         claimed: false,
         profileState: "UNCLAIMED",

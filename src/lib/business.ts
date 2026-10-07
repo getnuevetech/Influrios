@@ -1,4 +1,5 @@
-import { getBusinessEntitlements, type BusinessPlanCode } from "@/lib/business-entitlements";
+import { isBusinessPlanCode } from "@/lib/business-entitlements";
+import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { managedMatchGate } from "@/lib/business-queue";
 import { directoryHasCreator, listDirectoryCreators } from "@/lib/directory";
 import { prisma } from "@/lib/db";
@@ -38,7 +39,7 @@ export type BusinessWorkspace = {
   businessId: string;
   ownerUserId?: string | null;
   name: string;
-  plan: BusinessPlanCode;
+  plan: string;
   industry: string;
   shortlist: ShortlistItem[];
   briefs: CampaignBrief[];
@@ -64,10 +65,10 @@ export const PUBLIC_BUSINESS_WORKSPACE: BusinessWorkspace = {
 
 const BRIEF_STATUSES = ["draft", "active", "closed"] as const;
 const INQUIRY_STATUSES = ["sent", "replied", "declined"] as const;
-const PLAN_CODES: BusinessPlanCode[] = ["BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];
 
-function asPlan(value: string): BusinessPlanCode {
-  return PLAN_CODES.includes(value as BusinessPlanCode) ? (value as BusinessPlanCode) : "BUSINESS_PRO";
+function asPlan(value: string): string {
+  const code = value.trim().toUpperCase();
+  return code || "BUSINESS_PRO";
 }
 
 function asBriefStatus(value: string): CampaignBrief["status"] {
@@ -256,10 +257,15 @@ export async function ensureOwnedBusinessWorkspace(
   }
 }
 
-export async function setBusinessPlan(plan: BusinessPlanCode, workspaceId: string) {
-  if (!PLAN_CODES.includes(plan)) throw new Error("Unknown business plan.");
+export async function setBusinessPlan(plan: string, workspaceId: string) {
+  const code = plan.trim().toUpperCase();
+  if (!isBusinessPlanCode(code)) {
+    const { findActivePlan } = await import("@/lib/entitlements-db");
+    const row = await findActivePlan(code);
+    if (!row || row.audience !== "business") throw new Error("Unknown business plan.");
+  }
   await readWorkspace(workspaceId);
-  await prisma.businessWorkspace.update({ where: { id: workspaceId }, data: { plan } });
+  await prisma.businessWorkspace.update({ where: { id: workspaceId }, data: { plan: code } });
   return readWorkspace(workspaceId);
 }
 
@@ -269,7 +275,7 @@ export async function addToShortlist(
   workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
 ) {
   const ws = await readWorkspace(workspaceId);
-  const limits = getBusinessEntitlements(ws.plan);
+  const limits = await businessEntitlementsForPlan(ws.plan);
   if (ws.shortlist.some((item) => item.creatorSlug === creatorSlug)) return { ok: true as const, ws };
   if (ws.shortlist.length >= limits.shortlistMax) {
     return {
@@ -423,7 +429,7 @@ export async function sendInquiry(
   workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
 ) {
   const ws = await readWorkspace(workspaceId);
-  const limits = getBusinessEntitlements(ws.plan);
+  const limits = await businessEntitlementsForPlan(ws.plan);
   const month = new Date().toISOString().slice(0, 7);
   const sentThisMonth = ws.inquiries.filter((inquiry) => inquiry.createdAt.startsWith(month)).length;
   if (sentThisMonth >= limits.inquiryMaxPerMonth) {
@@ -515,7 +521,7 @@ export async function requestManagedMatch(briefId: string, workspaceId = DEMO_BU
   ]);
   const gate = managedMatchGate({
     flagEnabled,
-    planAllows: getBusinessEntitlements(ws.plan).managedMatching,
+    planAllows: (await businessEntitlementsForPlan(ws.plan)).managedMatching,
     alreadyQueued: queued.includes(briefId),
   });
   if (!gate.ok) return gate;

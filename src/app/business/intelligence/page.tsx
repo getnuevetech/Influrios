@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getWorkspace } from "@/lib/business";
-import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import {
   getAllAudienceSnapshots,
   getNicheTrends,
@@ -20,7 +20,7 @@ const SIGNAL_COLOR: Record<string, string> = {
 
 export default async function BusinessIntelligencePage() {
   const ws = await getWorkspace();
-  const entitlements = getBusinessEntitlements(ws.plan);
+  const entitlements = await businessEntitlementsForPlan(ws.plan);
   const locked = !entitlements.intelligence;
 
   const snapshots = locked ? [] : (await getAllAudienceSnapshots()).slice(0, 6);

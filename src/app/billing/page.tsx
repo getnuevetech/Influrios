@@ -7,7 +7,7 @@ import {
 import { stripeBillingMode } from "@/lib/stripe-admin";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
-import { getBusinessEntitlements } from "@/lib/business-entitlements";
+import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { productSwitch } from "@/lib/product-switches";
 import { prisma } from "@/lib/db";
 import { paymentRoutes } from "@/lib/providers";
@@ -25,7 +25,7 @@ export default async function BillingPage({ searchParams }: Props) {
   const stripeLive = stripeMode === "sandbox" || stripeMode === "live";
   const account = await getAccountSession();
   const ws = await getWorkspace(account?.id);
-  const be = getBusinessEntitlements(ws.plan);
+  const be = await businessEntitlementsForPlan(ws.plan);
   const store = await getBillingStore();
   const [routes, portalOn, connectOn] = await Promise.all([
     paymentRoutes().catch(() => []),

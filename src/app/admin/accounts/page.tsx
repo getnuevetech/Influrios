@@ -3,13 +3,14 @@ import { actionSaveAccountPolicy, actionSaveMember } from "@/app/admin/accounts/
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { assignablePlanCodes } from "@/lib/entitlements-db";
 import { DEFAULT_SITE_CONFIG, getSiteConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Member accounts" };
 
 const ROLES = ["CREATOR", "BUSINESS", "AGENCY", "ADMIN"] as const;
-const PLANS = ["STARTER", "PLUS", "PRO", "BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"] as const;
+const FALLBACK_PLANS = ["STARTER", "PLUS", "PRO", "BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];
 
 export default async function AdminAccountsPage({
   searchParams,
@@ -20,6 +21,7 @@ export default async function AdminAccountsPage({
   const canEdit = hasPermission(session, "accounts.edit");
   const params = await searchParams;
   const policy = await getSiteConfig();
+  const catalogPlans = await assignablePlanCodes().catch(() => FALLBACK_PLANS);
   const users = await prisma.user
     .findMany({
       orderBy: { createdAt: "desc" },
@@ -123,7 +125,7 @@ export default async function AdminAccountsPage({
                 <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
                   Plan
                   <select name="planTier" defaultValue={user.planTier} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo">
-                    {PLANS.map((plan) => (
+                    {[...new Set([user.planTier, ...catalogPlans])].map((plan) => (
                       <option key={plan} value={plan}>
                         {plan}
                       </option>

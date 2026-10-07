@@ -31,10 +31,10 @@ export function normalizeCampaignCode(input: string, reserved: readonly string[]
   return code;
 }
 
-/** The profile short link uses one slot. Remaining slots can be campaign links. */
-export function canAddCampaignLink(input: { shortlinkMax: number; campaignCount: number }): boolean {
-  if (input.shortlinkMax < 2) return false;
-  return input.campaignCount < input.shortlinkMax - 1;
+/** campaignMax is the plan feature card.campaign_links.max. It is not the short-link cap. */
+export function canAddCampaignLink(input: { campaignMax: number; campaignCount: number }): boolean {
+  if (input.campaignMax < 1) return false;
+  return input.campaignCount < input.campaignMax;
 }
 
 export function scheduleIsDue(input: { status: string; startsAt: Date; now: Date }): boolean {
