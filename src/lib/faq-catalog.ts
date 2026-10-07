@@ -53,7 +53,7 @@ export const FAQ_SEED: FaqSeed[] = [
     sortOrder: 40,
     question: "What does the campaign-link number mean?",
     answer:
-      "A campaign link is an address like https://inflr.me/c/spring-launch. It has its own destination. Visits are counted on the creator’s short link.\n\nThe number on the plan is how many of those links the creator may have at once. It is not a count of short links, QR codes, or NFC tags. Setting it to 4 means four campaign links. Setting it to 0 means none. An admin changes that number per plan.",
+      "A campaign link is an address like https://inflr.me/c/spring-launch. It has its own destination. Visits are counted on the creator’s short link.\n\nHow many a creator may have is the Campaign links number an admin saves on that plan. A new plan starts at 0. There is no built-in count. The number is not tied to short links, QR codes, or NFC tags.",
   },
   {
     key: "accounts-and-sign-in",
@@ -109,7 +109,7 @@ export const FAQ_SEED: FaqSeed[] = [
     sortOrder: 50,
     question: "How do I put my NFC link on a phone or a tag?",
     answer:
-      "Influrios does not install anything on a phone. It gives you a permanent web address, https://inflr.me/n/{token}, shown on the dashboard when the plan includes NFC.\n\nYou write that address onto a blank NFC sticker, card, or key fob:\n\n1. Copy the NFC URL from Your links on the dashboard.\n2. On iPhone, open the Shortcuts app, create a shortcut that opens that URL, and use an NFC automation, or use an NFC writer app from the App Store that can write a URL record. iPhone can write NFC tags from iOS 13 onward when the writer app supports it.\n3. On Android, install an NFC writer app such as NFC Tools, choose Write, add a URL record, paste the Influrios NFC URL, and hold the blank tag to the back of the phone until the app says the write finished.\n4. Lock the tag in the writer app if you do not want someone else to overwrite it.\n5. Tap the tag with a phone that has NFC turned on. It should open the current destination.\n\nThe visitor’s phone does not store your tag. It only opens the link for that tap.\n\nYou can also send the same URL by message or email. That is a normal link. It does not require NFC.",
+      "When your plan includes NFC, Your links on the dashboard shows a permanent address, https://inflr.me/n/{token}, and a Write to NFC tag button.\n\nOn an Android phone in Chrome, open the dashboard, tap Write to NFC tag, allow NFC if the browser asks, and hold a blank sticker, card, or key fob against the phone until the page says the tag was written. That button is the writer. You do not install a separate NFC app. Write the same URL onto as many blank tags as you need.\n\niPhone does not let a website write an NFC tag. On iPhone, open Shortcuts, create a shortcut that opens the NFC URL from the dashboard, and attach that shortcut to a tag. The address is the same one.\n\nA tap opens the current destination. Changing the destination does not require writing the tag again.\n\nThe visitor’s phone does not store the tag. It only opens the link for that tap. You can also send the URL by message or email.",
   },
   {
     key: "nfc-transfer",
@@ -117,7 +117,7 @@ export const FAQ_SEED: FaqSeed[] = [
     sortOrder: 60,
     question: "How do I transfer, replace, or stop an NFC tag?",
     answer:
-      "The token stays the same when you change the short-link name or the destination. You do not rewrite the tag for those changes. The physical tag you already programmed keeps opening the new destination.\n\nTo hand the tag to someone else, give them the sticker or card. The URL still belongs to your Influrios card. There is no separate file to move onto their phone.\n\nTo replace a lost tag, write the same NFC URL onto a new blank tag. Do not ask Influrios for a second token. One active NFC URL belongs to the short link.\n\nTo stop a tag that left your control, suspend the short link from the dashboard or ask an admin to suspend it. The token does not change. Taps then show that the link is unavailable.\n\nChanging phones does not affect the tag. The tag stores the URL. Your phone is only the tool you used to write it.",
+      "The token stays the same when you change the short-link name or the destination. You do not write the tag again for those changes. The physical tag keeps opening the new destination.\n\nTo hand a tag to someone else, give them the sticker or card. The URL still belongs to your Influrios card. There is no file to move onto their phone.\n\nTo replace a lost tag, tap Write to NFC tag on the dashboard and hold a new blank tag to the phone. On iPhone, run the same Shortcut against a new tag. Do not ask for a second token. One active NFC URL belongs to the short link.\n\nTo stop a tag that left your control, suspend the short link from the dashboard or ask an admin to suspend it. The token does not change. Taps then show that the link is unavailable.\n\nChanging phones does not affect a tag that was already written. The tag stores the URL.",
   },
   {
     key: "creator-schedule",

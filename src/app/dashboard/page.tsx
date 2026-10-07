@@ -6,6 +6,7 @@ import {
   actionUpdateProfileMedia,
 } from "@/app/claim/actions";
 import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
+import { NfcWriter } from "@/app/dashboard/nfc-writer";
 import { ScheduleStartsField } from "@/app/dashboard/schedule-starts-field";
 import {
   actionCancelSchedule,
@@ -487,13 +488,13 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               <img src={`/api/qr/${draft.slug}?size=160&logo=0`} alt="Influencer Card QR" width={160} height={160} />
             ) : null}
             {shortLink.nfcIdentities[0] ? (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <p>
                   NFC URL: https://{shortHost}/n/{shortLink.nfcIdentities[0].token}
                 </p>
+                <NfcWriter url={`https://${shortHost}/n/${shortLink.nfcIdentities[0].token}`} />
                 <p className="text-xs text-muted">
-                  Write this URL onto a blank NFC sticker or card with your phone. A tap opens the current destination.
-                  Changing the destination does not require a new tag.{" "}
+                  A tap opens the current destination. Changing the destination does not require writing the tag again.{" "}
                   <Link href="/faq?audience=creator#nfc-write" className="font-semibold text-violet hover:underline">
                     NFC instructions
                   </Link>

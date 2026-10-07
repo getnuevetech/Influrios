@@ -85,7 +85,7 @@ export const PLAN_ENTITLEMENTS: Record<PlanCode, EntitlementLimits> = {
     mediaKit: true,
     leadTracking: true,
     proposalsMax: 30,
-    campaignLinksMax: 4,
+    campaignLinksMax: 0,
     nfc: true,
   },
 };
@@ -196,6 +196,17 @@ export type EditableFeatureKey = (typeof EDITABLE_FEATURE_KEYS)[number];
 
 export function isEditableFeatureKey(value: string): value is EditableFeatureKey {
   return (EDITABLE_FEATURE_KEYS as readonly string[]).includes(value);
+}
+
+/** The saved card.campaign_links.max row is the only count. A missing row allows none. */
+export function campaignLinksMaxFromRows(rows: FeatureValue[]): number {
+  let found: number | null = null;
+  for (const row of rows) {
+    if (row.featureKey !== "card.campaign_links.max") continue;
+    if (typeof row.limitInt !== "number" || !Number.isFinite(row.limitInt)) continue;
+    found = Math.max(0, Math.round(row.limitInt));
+  }
+  return found ?? 0;
 }
 
 export function limitsToFeatureRows(limits: EntitlementLimits): FeatureValue[] {

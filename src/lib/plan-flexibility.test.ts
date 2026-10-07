@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { FAQ_AUDIENCES, FAQ_SEED, isFaqAudience } from "./faq-catalog";
-import { EMPTY_ENTITLEMENTS, PLAN_ENTITLEMENTS, normalizePlanCode } from "./entitlements";
+import { EMPTY_ENTITLEMENTS, PLAN_ENTITLEMENTS, campaignLinksMaxFromRows, normalizePlanCode } from "./entitlements";
 import { canAddCampaignLink } from "./short-link-phase4";
 
 describe("flexible plan codes", () => {
@@ -12,13 +12,17 @@ describe("flexible plan codes", () => {
     assert.equal(normalizePlanCode("1PLAN"), null);
   });
 
-  it("keeps campaign links off the empty plan and on the launch Pro default", () => {
+  it("starts every launch plan at zero campaign links until an admin saves a count", () => {
     assert.equal(EMPTY_ENTITLEMENTS.campaignLinksMax, 0);
     assert.equal(EMPTY_ENTITLEMENTS.nfc, false);
     assert.equal(PLAN_ENTITLEMENTS.PLUS.campaignLinksMax, 0);
     assert.equal(PLAN_ENTITLEMENTS.PLUS.nfc, true);
-    assert.equal(PLAN_ENTITLEMENTS.PRO.campaignLinksMax, 4);
-    assert.equal(canAddCampaignLink({ campaignMax: PLAN_ENTITLEMENTS.PRO.campaignLinksMax, campaignCount: 4 }), false);
+    assert.equal(PLAN_ENTITLEMENTS.PRO.campaignLinksMax, 0);
+    assert.equal(campaignLinksMaxFromRows([]), 0);
+    assert.equal(
+      campaignLinksMaxFromRows([{ featureKey: "card.campaign_links.max", enabled: true, limitInt: 12, valueText: null }]),
+      12,
+    );
     assert.equal(canAddCampaignLink({ campaignMax: 12, campaignCount: 4 }), true);
   });
 });
@@ -32,10 +36,10 @@ describe("faq catalog", () => {
     const write = FAQ_SEED.find((entry) => entry.key === "nfc-write");
     const transfer = FAQ_SEED.find((entry) => entry.key === "nfc-transfer");
     assert.ok(write);
-    assert.match(write!.answer, /NFC Tools/);
-    assert.match(write!.answer, /Shortcuts/);
+    assert.match(write!.answer, /Write to NFC tag/);
+    assert.match(write!.answer, /iPhone/);
     assert.ok(transfer);
-    assert.match(transfer!.answer, /same NFC URL/);
+    assert.match(transfer!.answer, /Write to NFC tag/);
     assert.match(transfer!.answer, /suspend/i);
     const plans = FAQ_SEED.find((entry) => entry.key === "how-plans-work");
     assert.match(plans!.answer, /campaign links/);
