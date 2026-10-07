@@ -122,7 +122,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">
-            Phase 8 · Influencer dashboard
+            Creator profile
           </p>
           <h1 className="mt-2 font-display text-3xl font-bold text-indigo">
             Welcome{draft.ownerName ? `, ${draft.ownerName.split(" ")[0]}` : ""}
