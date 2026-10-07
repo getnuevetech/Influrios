@@ -1,11 +1,25 @@
 import { prisma } from "@/lib/db";
 import { FAQ_SEED, isFaqAudience, type FaqAudience } from "@/lib/faq-catalog";
 
+const REFRESH_WHEN = ["nfc-write", "nfc-transfer", "what-is-a-campaign-link-count"] as const;
+
 export async function ensureFaqEntries() {
-  const existing = await prisma.faqEntry.findMany({ select: { key: true } });
-  const have = new Set(existing.map((row) => row.key));
+  const existing = await prisma.faqEntry.findMany({ select: { key: true, answer: true } });
+  const stored = new Map(existing.map((row) => [row.key, row.answer]));
   for (const entry of FAQ_SEED) {
-    if (have.has(entry.key)) continue;
+    const current = stored.get(entry.key);
+    const stale =
+      current != null &&
+      (REFRESH_WHEN as readonly string[]).includes(entry.key) &&
+      (current.includes("NFC Tools") || current.includes("Setting it to 4"));
+    if (current && !stale) continue;
+    if (current && stale) {
+      await prisma.faqEntry.update({
+        where: { key: entry.key },
+        data: { question: entry.question, answer: entry.answer, sortOrder: entry.sortOrder },
+      });
+      continue;
+    }
     await prisma.faqEntry.create({
       data: {
         key: entry.key,

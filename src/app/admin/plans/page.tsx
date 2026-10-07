@@ -29,7 +29,7 @@ const LABELS: Record<string, { label: string; kind: "int" | "bool" | "text"; opt
   "card.campaign_links.max": {
     label: "Campaign links",
     kind: "int",
-    hint: "How many inflr.me/c/{code} links. Set any number. It is not derived from the short-link cap.",
+    hint: "The number you save is the only campaign-link limit for this plan. A new plan starts at 0. Nothing else adds a count.",
   },
   "card.custom_slug.enabled": { label: "Custom slug", kind: "bool" },
   "card.collaboration.enabled": { label: "Collaboration CTA", kind: "bool" },

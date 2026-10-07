@@ -6,6 +6,7 @@ import {
   PLAN_ENTITLEMENTS,
   PLAN_LIMIT_MAX,
   applyFeatureRows,
+  campaignLinksMaxFromRows,
   getEntitlements,
   isEditableFeatureKey,
   isPlanCode,
@@ -236,6 +237,7 @@ export async function getEffectiveEntitlements(input: {
       return true;
     });
     if (overrides.length) limits = applyFeatureRows(limits, overrides);
+    limits.campaignLinksMax = campaignLinksMaxFromRows([...rows, ...overrides]);
     return limits;
   } catch (error) {
     console.error("entitlements: using launch defaults", error);
