@@ -7,9 +7,12 @@ import {
   canTransitionApplication,
   createMarketplaceApplication,
   creatorOwnsApplication,
+  isLaunchSampleBusinessRequest,
+  isLaunchSampleCreatorOpportunity,
   isWorkspaceOwnedRequest,
   isWorkspaceOwnedRequestBrand,
   listWorkspaceBusinessRequests,
+  publicListingAsset,
   MARKETPLACE_APPLICATION_STATUSES,
   nextApplicationStatuses,
   sweepExpiredMarketplaceApplications,
@@ -35,6 +38,42 @@ async function requireDb(t: { skip: (msg?: string) => void }) {
     return false;
   }
 }
+
+describe("launch sample marketplace rows", () => {
+  it("hides an untouched sample and keeps an edited brand", () => {
+    assert.equal(
+      isLaunchSampleBusinessRequest({
+        id: "br-sephora",
+        brand: "Lumina Beauty Co.",
+        summary: "Looking for beauty + hair educators for a clean-skincare launch series.",
+      }),
+      true,
+    );
+    assert.equal(
+      isLaunchSampleBusinessRequest({
+        id: "br-sephora",
+        brand: "Northwind Studio",
+        summary: "Looking for beauty + hair educators for a clean-skincare launch series.",
+      }),
+      false,
+    );
+    assert.equal(
+      isLaunchSampleCreatorOpportunity({
+        id: "co-daniel",
+        creatorSlug: "daniel-kim",
+        summary: "Open to destination partnerships and co-created food itineraries.",
+      }),
+      true,
+    );
+    assert.equal(isLaunchSampleCreatorOpportunity({ id: "opp-1", creatorSlug: "ada", summary: "Real" }), false);
+  });
+
+  it("drops demo art and keeps an uploaded logo", () => {
+    assert.equal(publicListingAsset("/demo/brands/sephora.svg"), null);
+    assert.equal(publicListingAsset("/uploads/banners/logo.png"), "/uploads/banners/logo.png");
+    assert.equal(publicListingAsset("  "), null);
+  });
+});
 
 describe("marketplace application state machine", () => {
   it("exposes the Collab OS invitation statuses", () => {

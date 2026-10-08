@@ -72,7 +72,34 @@ function isApplicationStatus(value: string): value is MarketplaceApplicationStat
   return (MARKETPLACE_APPLICATION_STATUSES as readonly string[]).includes(value);
 }
 
-/** Seed demo marketplace listings once when tables are empty. */
+export function isLaunchSampleBusinessRequest(row: {
+  id: string;
+  brand: string;
+  summary: string;
+}): boolean {
+  const sample = BUSINESS_REQUESTS.find((item) => item.id === row.id);
+  if (!sample) return false;
+  return sample.brand === row.brand && sample.summary === row.summary;
+}
+
+export function isLaunchSampleCreatorOpportunity(row: {
+  id: string;
+  creatorSlug: string;
+  summary: string;
+}): boolean {
+  const sample = CREATOR_OPPORTUNITIES.find((item) => item.id === row.id);
+  if (!sample) return false;
+  return sample.creatorSlug === row.creatorSlug && sample.summary === row.summary;
+}
+
+/** Demo art is not a business logo. Uploaded paths stay. */
+export function publicListingAsset(url: string | null | undefined): string | null {
+  const value = url?.trim() ?? "";
+  if (!value || value.includes("/demo/")) return null;
+  return value;
+}
+
+/** Explicit `db:seed` only. Public and admin reads do not insert these rows. */
 export async function ensureMarketplaceListings() {
   const [requestCount, opportunityCount] = await Promise.all([
     prisma.marketplaceBusinessRequest.count(),
@@ -121,7 +148,6 @@ export async function listPublishedBusinessRequests(filters?: {
   budget?: string;
   goal?: string;
 }): Promise<MarketplaceBusinessRequestRow[]> {
-  await ensureMarketplaceListings();
   const rows = await prisma.marketplaceBusinessRequest.findMany({
     where: { status: "published" },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
@@ -136,12 +162,13 @@ export async function listPublishedBusinessRequests(filters?: {
       tags: row.tags,
       summary: row.summary,
       lookingFor: row.lookingFor,
-      logoUrl: row.logoUrl,
-      imageUrl: row.imageUrl,
+      logoUrl: publicListingAsset(row.logoUrl),
+      imageUrl: publicListingAsset(row.imageUrl),
       status: row.status,
       sortOrder: row.sortOrder,
       workspaceId: row.workspaceId,
     }))
+    .filter((item) => !isLaunchSampleBusinessRequest(item))
     .filter((item) => {
       if (filters?.budget && item.budget !== filters.budget) return false;
       if (filters?.goal) {
@@ -156,7 +183,6 @@ export async function listPublishedCreatorOpportunities(filters?: {
   specialty?: string;
   creatorSlugs?: string[];
 }): Promise<MarketplaceCreatorOpportunityRow[]> {
-  await ensureMarketplaceListings();
   const rows = await prisma.marketplaceCreatorOpportunity.findMany({
     where: { status: "published" },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
@@ -172,6 +198,7 @@ export async function listPublishedCreatorOpportunities(filters?: {
       status: row.status,
       sortOrder: row.sortOrder,
     }))
+    .filter((item) => !isLaunchSampleCreatorOpportunity(item))
     .filter((item) => {
       if (filters?.creatorSlugs && !filters.creatorSlugs.includes(item.creatorSlug)) return false;
       return true;
@@ -179,14 +206,12 @@ export async function listPublishedCreatorOpportunities(filters?: {
 }
 
 export async function listAdminBusinessRequests() {
-  await ensureMarketplaceListings();
   return prisma.marketplaceBusinessRequest.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
 }
 
 export async function listAdminCreatorOpportunities() {
-  await ensureMarketplaceListings();
   return prisma.marketplaceCreatorOpportunity.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
@@ -476,7 +501,6 @@ export function businessOwnsApplication(
 export async function listWorkspaceBusinessRequests(workspaceId: string): Promise<MarketplaceBusinessRequestRow[]> {
   const id = workspaceId.trim();
   if (!id) return [];
-  await ensureMarketplaceListings();
   const rows = await prisma.marketplaceBusinessRequest.findMany({
     where: { workspaceId: id, status: "published" },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
@@ -490,8 +514,8 @@ export async function listWorkspaceBusinessRequests(workspaceId: string): Promis
     tags: row.tags,
     summary: row.summary,
     lookingFor: row.lookingFor,
-    logoUrl: row.logoUrl,
-    imageUrl: row.imageUrl,
+    logoUrl: publicListingAsset(row.logoUrl),
+    imageUrl: publicListingAsset(row.imageUrl),
     status: row.status,
     sortOrder: row.sortOrder,
     workspaceId: row.workspaceId,
@@ -594,7 +618,6 @@ export async function listMarketplaceApplications(input?: {
   opportunityIds?: string[];
   limit?: number;
 }): Promise<MarketplaceApplicationRow[]> {
-  await ensureMarketplaceListings();
   const clauses: Record<string, unknown>[] = [];
   if (input?.businessRequestIds?.length) {
     clauses.push({ businessRequestId: { in: input.businessRequestIds } });

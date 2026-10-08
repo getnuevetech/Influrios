@@ -109,6 +109,21 @@ export default async function AdminBannersPage({ searchParams }: Props) {
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2"
                 />
               </label>
+              {b.id === "sponsored" ? (
+                <label className="text-sm sm:col-span-2">
+                  <span className="font-semibold text-indigo">Partner names</span>
+                  <textarea
+                    name="partners"
+                    rows={4}
+                    defaultValue={b.partners.join("\n")}
+                    placeholder="One saved partner per line"
+                    className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+                  />
+                  <span className="text-xs text-muted">Leave this empty and the homepage omits the name row.</span>
+                </label>
+              ) : (
+                <input type="hidden" name="partners" value={b.partners.join("\n")} />
+              )}
               <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
                 Save {b.label}
               </button>
@@ -137,6 +152,12 @@ export default async function AdminBannersPage({ searchParams }: Props) {
                   {b.ctaLabel || "—"} → {b.ctaHref || "—"}
                 </dd>
               </div>
+              {b.id === "sponsored" ? (
+                <div className="sm:col-span-2">
+                  <dt className="font-semibold text-indigo">Partner names</dt>
+                  <dd className="text-muted">{b.partners.length > 0 ? b.partners.join(", ") : "None saved"}</dd>
+                </div>
+              ) : null}
             </dl>
           )}
 

@@ -20,6 +20,22 @@ describe("public sample surfaces", () => {
     assert.equal(home.includes("sofia-martinez"), false);
     assert.equal(home.includes("2.4M"), false);
     assert.equal(home.includes("3.1M"), false);
+    assert.equal(home.includes("Samsung"), false);
+    assert.equal(home.includes("L'ORÉAL"), false);
+    assert.equal(home.includes("Nike"), false);
+    assert.equal(home.includes("Adobe"), false);
+    assert.match(home, /sponsored\.partners/);
+  });
+
+  it("does not insert sample marketplace rows on a read", () => {
+    const listings = source("src/lib/marketplace-listings.ts");
+    assert.equal(listings.includes("await ensureMarketplaceListings()"), false);
+    const profile = source("src/app/creators/[slug]/page.tsx");
+    assert.equal(profile.includes("leading global brands"), false);
+    assert.equal(profile.includes("/demo/"), true);
+    const matching = source("src/app/admin/matching/page.tsx");
+    assert.equal(matching.includes("manual pilot"), false);
+    assert.equal(matching.includes("Phase 4 ops"), false);
   });
 
   it("does not insert a sample introduction", () => {

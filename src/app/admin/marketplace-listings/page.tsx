@@ -6,6 +6,8 @@ import {
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import {
+  isLaunchSampleBusinessRequest,
+  isLaunchSampleCreatorOpportunity,
   listAdminBusinessRequests,
   listAdminCreatorOpportunities,
 } from "@/lib/marketplace-listings";
@@ -38,7 +40,8 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Marketplace listings</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Publish business requests and creator collaboration opportunities shown on the public
-          Collaboration landing. Changes appear without a redeploy.
+          Collaboration landing. A row that still matches the launch sample stays off the public
+          page until the brand or summary changes, or it is closed.
         </p>
       </div>
 
@@ -60,6 +63,11 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
             className="grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4 sm:grid-cols-2"
           >
             <input type="hidden" name="id" value={row.id} />
+            {isLaunchSampleBusinessRequest(row) ? (
+              <p className="text-xs text-amber-800 sm:col-span-2">
+                This row still matches the launch sample, so the public page omits it.
+              </p>
+            ) : null}
             <Field label="Brand" name="brand" defaultValue={row.brand} disabled={!canEdit} />
             <Field label="Category" name="category" defaultValue={row.category} disabled={!canEdit} />
             <Field label="Budget" name="budget" defaultValue={row.budget} disabled={!canEdit} />
@@ -170,6 +178,11 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
             className="grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4 sm:grid-cols-2"
           >
             <input type="hidden" name="id" value={row.id} />
+            {isLaunchSampleCreatorOpportunity(row) ? (
+              <p className="text-xs text-amber-800 sm:col-span-2">
+                This row still matches the launch sample, so the public page omits it.
+              </p>
+            ) : null}
             <label className="block text-xs font-semibold text-muted">
               Influencer
               <select name="creatorSlug" defaultValue={row.creatorSlug} disabled={!canEdit} className={inputClass}>

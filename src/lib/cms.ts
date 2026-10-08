@@ -23,6 +23,8 @@ export type BannerConfig = {
   ctaHref: string;
   /** One or more banner images (admin-uploadable). First is primary. */
   images: string[];
+  /** Names an admin saved for the sponsored banner. Empty means the public row is omitted. */
+  partners: string[];
 };
 
 export type CardFeatureFlags = {
@@ -268,6 +270,7 @@ const DEFAULT_CMS: SiteCms = {
       ctaLabel: "Search",
       ctaHref: "/discover",
       images: [],
+      partners: [],
     },
     sponsored: {
       id: "sponsored",
@@ -278,7 +281,8 @@ const DEFAULT_CMS: SiteCms = {
       subtitle: "Exclusive collaboration opportunities with leading global brands.",
       ctaLabel: "View Opportunities",
       ctaHref: "/collaboration",
-      images: ["/demo/content/content-collab-1.jpg", "/demo/creators/creator-sofia.jpg"],
+      images: [],
+      partners: [],
     },
     cardPromo: {
       id: "cardPromo",
@@ -290,6 +294,7 @@ const DEFAULT_CMS: SiteCms = {
       ctaLabel: "Create Your Influencer Card",
       ctaHref: "/claim",
       images: [],
+      partners: [],
     },
     cta: {
       id: "cta",
@@ -302,6 +307,7 @@ const DEFAULT_CMS: SiteCms = {
       ctaLabel: "Join as an Influencer",
       ctaHref: "/claim",
       images: ["/demo/cta-community.jpg"],
+      partners: [],
     },
   },
   featuredCards: {
@@ -315,15 +321,39 @@ const DEFAULT_CMS: SiteCms = {
   collaborationMatches: DEFAULT_COLLABORATION_MATCHES,
 };
 
+/** One partner name per line. Duplicates and blank lines are dropped. */
+export function partnerNamesFromText(text: string): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const name = line.trim().replace(/\s+/g, " ");
+    if (!name || name.length > 48) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(name);
+    if (names.length >= 8) break;
+  }
+  return names;
+}
+
+/** Sample creator photos are not a stored campaign. */
+export function publicBannerImages(images: string[]): string[] {
+  return images.filter((src) => !src.includes("/demo/creators/"));
+}
+
 /** Merge a stored banner with defaults so empty admin fields do not blank the public CTA. */
 export function mergeBannerConfig(slot: BannerSlot, incoming?: Partial<BannerConfig> | null): BannerConfig {
   const base = DEFAULT_CMS.banners[slot];
-  if (!incoming) return { ...base, images: [...base.images] };
+  if (!incoming) return { ...base, images: [...base.images], partners: [...base.partners] };
   const merged: BannerConfig = {
     ...base,
     ...incoming,
     id: slot,
     images: Array.isArray(incoming.images) ? [...incoming.images] : [...base.images],
+    partners: Array.isArray(incoming.partners)
+      ? partnerNamesFromText(incoming.partners.join("\n"))
+      : [...base.partners],
   };
   for (const field of ["title", "subtitle", "ctaLabel", "ctaHref"] as const) {
     const val = merged[field];
@@ -408,6 +438,9 @@ function bannerFromPayload(slot: BannerSlot, raw: Prisma.JsonValue | null | unde
     ctaLabel: typeof obj.ctaLabel === "string" ? obj.ctaLabel : undefined,
     ctaHref: typeof obj.ctaHref === "string" ? obj.ctaHref : undefined,
     images: Array.isArray(obj.images) ? obj.images.filter((item): item is string => typeof item === "string") : undefined,
+    partners: Array.isArray(obj.partners)
+      ? obj.partners.filter((item): item is string => typeof item === "string")
+      : undefined,
   });
 }
 
@@ -495,6 +528,7 @@ function bannerPayload(banner: BannerConfig): Prisma.InputJsonValue {
     ctaLabel: banner.ctaLabel,
     ctaHref: banner.ctaHref,
     images: banner.images,
+    partners: banner.partners,
   };
 }
 

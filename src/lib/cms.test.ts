@@ -7,6 +7,8 @@ import {
   mergeBannerConfig,
   mergeFeaturedCards,
   mergeValueProposition,
+  partnerNamesFromText,
+  publicBannerImages,
 } from "./cms";
 
 describe("cms payload merge", () => {
@@ -86,6 +88,7 @@ describe("cms payload merge", () => {
     assert.equal(cms.banners.hero.ctaLabel, DEFAULT_CMS.banners.hero.ctaLabel);
     assert.equal(cms.banners.cardPromo.enabled, false);
     assert.equal(cms.banners.sponsored.enabled, true);
+    assert.deepEqual(cms.banners.sponsored.partners, []);
     assert.equal(cms.featuredCards.widthScale, 1.1);
     assert.equal(cms.valueProposition.eyebrow, "Why us");
     assert.ok(cms.valueProposition.items.length >= 4);
@@ -93,5 +96,17 @@ describe("cms payload merge", () => {
     assert.equal(cms.categories.items[0]?.slug, "beauty");
     assert.equal(cms.collaborationMatches.title, "Pairs");
     assert.equal(cms.collaborationMatches.matches.length, 1);
+  });
+
+  it("saves sponsor names only from the banner text and drops sample creator photos", () => {
+    assert.deepEqual(DEFAULT_CMS.banners.sponsored.partners, []);
+    assert.deepEqual(DEFAULT_CMS.banners.sponsored.images, []);
+    assert.deepEqual(partnerNamesFromText("Acme\nAcme\n  Northwind  \n\n"), ["Acme", "Northwind"]);
+    const merged = mergeBannerConfig("sponsored", {
+      partners: ["Acme", "acme", "Northwind"],
+      images: ["/demo/creators/creator-sofia.jpg", "/uploads/banners/campaign.jpg"],
+    });
+    assert.deepEqual(merged.partners, ["Acme", "Northwind"]);
+    assert.deepEqual(publicBannerImages(merged.images), ["/uploads/banners/campaign.jpg"]);
   });
 });
