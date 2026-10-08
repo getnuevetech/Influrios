@@ -174,7 +174,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
               <span className="font-semibold text-indigo">Business</span>
               <input
                 name="businessName"
-                defaultValue="Luminous Beauty"
+                placeholder="Business name"
                 required
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
               />
@@ -185,7 +185,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 name="creatorSlug"
                 required
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                defaultValue="sofia-martinez"
+                defaultValue={directoryCreators[0]?.slug ?? ""}
               >
                 {directoryCreators.slice(0, 12).map((creator) => (
                   <option key={creator.slug} value={creator.slug}>

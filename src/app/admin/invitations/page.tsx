@@ -213,7 +213,7 @@ export default async function AdminInvitationsPage({
               <option value="slug">Profile slug</option>
               <option value="email">Email</option>
             </select>
-            <input name="value" placeholder="sofia-martinez or email" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2 sm:col-span-2" />
+            <input name="value" placeholder="profile slug or email" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2 sm:col-span-2" />
             <input name="reason" placeholder="Reason" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" />
             {canEdit ? <button type="submit" className="btn-primary w-fit sm:col-span-4">Suppress</button> : null}
           </form>

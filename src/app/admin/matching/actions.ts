@@ -15,12 +15,19 @@ import {
 
 export async function actionCreateIntro(formData: FormData) {
   await requireAdminAction("matching.create_intros");
+  const businessName = String(formData.get("businessName") ?? "").trim();
+  const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
+  const briefTitle = String(formData.get("briefTitle") ?? "").trim();
+  if (!businessName || !creatorSlug || !briefTitle) {
+    redirect("/admin/matching?error=Add%20a%20business%2C%20an%20influencer%2C%20and%20a%20brief%20title.");
+  }
+  const feeExpected = String(formData.get("feeExpected") ?? "").trim();
   await createIntro({
-    businessName: String(formData.get("businessName") ?? "Demo Business"),
-    creatorSlug: String(formData.get("creatorSlug") ?? ""),
-    briefTitle: String(formData.get("briefTitle") ?? "Untitled brief"),
+    businessName,
+    creatorSlug,
+    briefTitle,
     notes: String(formData.get("notes") ?? ""),
-    feeExpected: String(formData.get("feeExpected") ?? "15% success fee"),
+    feeExpected: feeExpected || undefined,
   });
   revalidatePath("/admin/matching");
   revalidatePath("/business");

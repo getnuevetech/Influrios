@@ -66,10 +66,6 @@ function asIntroStatus(value: string): IntroStatus {
   return INTRO_STATUS_CODES.includes(value as IntroStatus) ? (value as IntroStatus) : "draft";
 }
 
-function isUnique(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && String(error.code) === "P2002";
-}
-
 type IntroRow = {
   id: string;
   businessName: string;
@@ -131,34 +127,6 @@ async function seedManaged() {
     });
   }
 
-  const intro = await prisma.managedIntro.findUnique({ where: { id: "intro-demo-1" } });
-  const introCount = await prisma.managedIntro.count();
-  if (intro || introCount > 0) return;
-  const base = Date.now();
-  try {
-    await prisma.managedIntro.create({
-      data: {
-        id: "intro-demo-1",
-        businessName: "Luminous Beauty",
-        businessId: "demo-business",
-        creatorSlug: "sofia-martinez",
-        briefTitle: "Clean Skincare Launch",
-        briefId: "brief-clean-launch",
-        notes: "Manual intro — beauty educator fit for 3-post series.",
-        status: "introduced",
-        feeExpected: "15% success fee",
-        events: {
-          create: [
-            { status: "draft", note: "Shortlist delivered", createdAt: new Date(base) },
-            { status: "outreach", note: "Influencer contacted", createdAt: new Date(base + 1000) },
-            { status: "introduced", note: "Both parties connected", createdAt: new Date(base + 2000) },
-          ],
-        },
-      },
-    });
-  } catch (error) {
-    if (!isUnique(error)) throw error;
-  }
 }
 
 function ensureManaged() {
@@ -247,6 +215,16 @@ export async function setCreatorOptIn(
   } satisfies CreatorOptIn;
 }
 
+function businessKey(name: string) {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  return slug ? `biz_${slug}` : "biz_account";
+}
+
 export async function createIntro(input: {
   businessName: string;
   businessId?: string;
@@ -261,7 +239,7 @@ export async function createIntro(input: {
   const row = await prisma.managedIntro.create({
     data: {
       businessName: input.businessName,
-      businessId: input.businessId ?? "demo-business",
+      businessId: input.businessId?.trim() || businessKey(input.businessName),
       creatorSlug: input.creatorSlug,
       briefTitle: input.briefTitle,
       briefId: input.briefId,
