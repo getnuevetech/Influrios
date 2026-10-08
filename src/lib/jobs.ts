@@ -67,7 +67,7 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
     const result = await sendMail({
       to: data.email,
       subject: "Your Influrios verification code",
-      text: `Your Influrios verification code is ${data.code}. It expires in 30 minutes. The same code stays on the verify screen if this message does not arrive.`,
+      text: `Your Influrios verification code is ${data.code}. It expires in 30 minutes.`,
     });
     if (!result.ok) throw new Error(result.error);
     const { queuePreferredSms } = await import("@/lib/sms");
@@ -93,6 +93,18 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
       body: `Your Influrios claim verification code is ${data.code}.`,
       templateKey: "claim_verification_email",
     });
+    return;
+  }
+  if (kind === "password_reset_email") {
+    if (!data.email || !data.token) throw new Error("Password reset job is missing an address or token.");
+    const origin = getAppOrigin();
+    const link = `${origin}/account/reset?token=${encodeURIComponent(data.token)}`;
+    const result = await sendMail({
+      to: data.email,
+      subject: "Reset your Influrios password",
+      text: `Reset your Influrios password: ${link}. This link expires in 30 minutes.`,
+    });
+    if (!result.ok) throw new Error(result.error);
     return;
   }
   if (kind === "mail_test") {
@@ -240,12 +252,17 @@ export async function processDueJobs(limit = 8) {
     try {
       const outcome = await runJob(current.kind, current.payload);
       const clearCode =
-        current.kind === "verification_email" || current.kind === "claim_verification_email";
+        current.kind === "verification_email" ||
+        current.kind === "claim_verification_email" ||
+        current.kind === "password_reset_email";
       const nextPayload =
         current.payload && typeof current.payload === "object" && !Array.isArray(current.payload)
           ? { ...(current.payload as Record<string, unknown>) }
           : {};
-      if (clearCode) delete nextPayload.code;
+      if (clearCode) {
+        delete nextPayload.code;
+        delete nextPayload.token;
+      }
       if (outcome?.externalId) nextPayload.externalId = outcome.externalId;
       const payloadChanged = clearCode || Boolean(outcome?.externalId);
       await prisma.job.update({
@@ -298,6 +315,20 @@ export async function enqueueClaimVerificationEmail(email: string, code: string)
       kind: "claim_verification_email",
       status: "queued",
       payload: { email: email.trim().toLowerCase(), code },
+    },
+  });
+  await processDueJobs();
+  return { queued: true };
+}
+
+export async function enqueuePasswordResetEmail(email: string, token: string) {
+  const { mailReady } = await import("@/lib/mail");
+  if (!(await mailReady())) return { queued: false };
+  await prisma.job.create({
+    data: {
+      kind: "password_reset_email",
+      status: "queued",
+      payload: { email: email.trim().toLowerCase(), token },
     },
   });
   await processDueJobs();

@@ -109,12 +109,9 @@ export async function actionRequestReset(formData: FormData) {
   if (locked) {
     redirect("/account/reset?sent=1");
   }
-  const token = await requestPasswordReset(email).catch(() => null);
+  await requestPasswordReset(email).catch(() => null);
   recordAuthFailure("password-reset", ip, email);
-  if (!token) {
-    redirect("/account/reset?sent=1");
-  }
-  redirect(`/account/reset?sent=1&token=${encodeURIComponent(token)}`);
+  redirect("/account/reset?sent=1");
 }
 
 export async function actionResetPassword(formData: FormData) {

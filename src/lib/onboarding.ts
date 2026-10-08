@@ -46,7 +46,7 @@ export const DEFAULT_COMPLETION_RULES: CompletionRule[] = [
   {
     key: "email_verified",
     label: "Verify email",
-    hint: "Confirm the email code. SMTP delivers it when mail is ready; otherwise a labeled demo code is shown.",
+    hint: "Enter the code from the verification email. Nothing is verified when SMTP is not configured.",
     weight: 25,
   },
   {

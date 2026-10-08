@@ -42,14 +42,17 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function demoCode() {
+function verificationCode() {
   return String(randomInt(100000, 1000000));
 }
 
+/** Stores a code only after SMTP accepts the verification job. The page never reads it. */
 async function issueEmailChallenge(userId: string) {
-  const code = demoCode();
+  const { mailReady } = await import("@/lib/mail");
+  if (!(await mailReady())) return null;
+  const code = verificationCode();
   await prisma.emailChallenge.deleteMany({ where: { userId, usedAt: null } });
-  await prisma.emailChallenge.create({
+  const challenge = await prisma.emailChallenge.create({
     data: {
       userId,
       demoCode: code,
@@ -58,9 +61,15 @@ async function issueEmailChallenge(userId: string) {
   });
   try {
     const { enqueueVerificationEmail } = await import("@/lib/jobs");
-    await enqueueVerificationEmail(userId, code);
+    const queued = await enqueueVerificationEmail(userId, code);
+    if (!queued.queued) {
+      await prisma.emailChallenge.delete({ where: { id: challenge.id } });
+      return null;
+    }
   } catch (error) {
+    await prisma.emailChallenge.delete({ where: { id: challenge.id } }).catch(() => undefined);
     console.error("verification mail skipped", error);
+    return null;
   }
   return code;
 }
@@ -134,7 +143,8 @@ export async function verifyAccountEmail(email: string, code: string) {
     where: { userId: user.id, usedAt: null, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
   });
-  if (!challenge || challenge.demoCode !== code.trim()) {
+  if (!challenge) throw new Error("Nothing was sent. Nothing was verified.");
+  if (challenge.demoCode !== code.trim()) {
     throw new Error("That verification code is not valid.");
   }
   await prisma.emailChallenge.update({ where: { id: challenge.id }, data: { usedAt: new Date() } });
@@ -149,16 +159,30 @@ export async function verifyAccountEmail(email: string, code: string) {
 
 export async function requestPasswordReset(email: string) {
   const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
-  if (!user?.passwordHash) return null;
+  if (!user?.passwordHash) return { sent: false };
+  const { mailReady } = await import("@/lib/mail");
+  if (!(await mailReady())) return { sent: false };
   const token = randomBytes(24).toString("base64url");
-  await prisma.passwordReset.create({
+  const row = await prisma.passwordReset.create({
     data: {
       userId: user.id,
       tokenHash: hashToken(token),
       expiresAt: new Date(Date.now() + 1000 * 60 * 30),
     },
   });
-  return token;
+  try {
+    const { enqueuePasswordResetEmail } = await import("@/lib/jobs");
+    const queued = await enqueuePasswordResetEmail(user.email, token);
+    if (!queued.queued) {
+      await prisma.passwordReset.delete({ where: { id: row.id } });
+      return { sent: false };
+    }
+  } catch (error) {
+    await prisma.passwordReset.delete({ where: { id: row.id } }).catch(() => undefined);
+    console.error("password reset mail skipped", error);
+    return { sent: false };
+  }
+  return { sent: true };
 }
 
 export async function resetPassword(token: string, password: string) {
@@ -174,14 +198,6 @@ export async function resetPassword(token: string, password: string) {
   await prisma.passwordReset.update({ where: { id: row.id }, data: { usedAt: new Date() } });
   await setAccountSession(row.userId);
   await attachOnboarding(row.userId);
-}
-
-export async function latestDemoCode(email: string) {
-  const user = await prisma.user.findUnique({
-    where: { email: email.trim().toLowerCase() },
-    include: { emailChallenges: { where: { usedAt: null }, orderBy: { createdAt: "desc" }, take: 1 } },
-  });
-  return user?.emailChallenges[0]?.demoCode ?? null;
 }
 
 async function attachOnboarding(userId: string) {
