@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseDocuSignWebhook, verifyDocuSignSignature } from "@/lib/signing/docusign";
 import { applyContractEnvelopeEvent } from "@/lib/contract-document";
-import {
-  activeSigningWebhookSecret,
-  markSignatureFromWebhook,
-  verifySigningWebhookSignature,
-} from "@/lib/signing";
+import { activeSigningWebhookSecret, markSignatureFromWebhook } from "@/lib/signing";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,9 +13,7 @@ const STATUS_EVENT = {
 } as const;
 
 /**
- * Provider webhook for signature lifecycle events.
- * DocuSign Connect uses x-docusign-signature-1 (HMAC-SHA256 base64).
- * Other providers use x-influrios-signing-signature (HMAC-SHA256 hex).
+ * DocuSign Connect webhook. A contract is signed only from a verified DocuSign event.
  */
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -53,38 +47,8 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  let parsed: { requestId?: string; externalId?: string; event?: string };
-  try {
-    parsed = JSON.parse(body) as typeof parsed;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
-  }
-  const event = String(parsed.event || "").trim().toLowerCase();
-  if (!["viewed", "signed", "declined", "voided"].includes(event)) {
-    return NextResponse.json({ error: "Unsupported event." }, { status: 400 });
-  }
-  if (!parsed.requestId && !parsed.externalId) {
-    return NextResponse.json({ error: "Provide requestId or externalId." }, { status: 400 });
-  }
-  const signature = request.headers.get("x-influrios-signing-signature");
-  if (!verifySigningWebhookSignature(body, signature, ready.secret)) {
-    return NextResponse.json({ error: "Signature did not match." }, { status: 401 });
-  }
-  const result = await markSignatureFromWebhook({
-    requestId: parsed.requestId,
-    externalId: parsed.externalId,
-    event: event as "viewed" | "signed" | "declined" | "voided",
-  });
-  const envelopeStatus = event === "signed" ? "completed" : event === "declined" || event === "voided" ? event : null;
-  const contract =
-    envelopeStatus && parsed.externalId
-      ? await applyContractEnvelopeEvent({ envelopeId: parsed.externalId, status: envelopeStatus })
-      : { applied: false as const, id: undefined, status: undefined };
-  if (!result.ok && !contract.applied) return NextResponse.json({ error: result.error }, { status: 400 });
-  return NextResponse.json({
-    ok: true,
-    id: result.ok ? result.id : contract.id,
-    status: contract.applied ? contract.status : result.ok ? result.status : event,
-    provider: ready.code,
-  });
+  return NextResponse.json(
+    { error: "A signature is recorded when DocuSign reports every party complete. Nothing was signed." },
+    { status: 400 },
+  );
 }
