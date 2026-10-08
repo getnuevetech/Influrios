@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { buildAudienceSnapshot, intelligenceExportToCsv, type IntelligenceExport } from "./intelligence";
+import {
+  buildAudienceSnapshot,
+  intelligenceExportToCsv,
+  nicheTrendsFromCounts,
+  requestSpecialtiesForCollaboration,
+  type IntelligenceExport,
+} from "./intelligence";
 import type { SeedCreator } from "./seed-data";
 
 function sampleCreator(overrides: Partial<SeedCreator> = {}): SeedCreator {
@@ -88,5 +95,58 @@ describe("intelligence export csv", () => {
     assert.ok(csv.includes("creatorSlug"));
     assert.ok(csv.includes('"Ada ""Maker"""'));
     assert.ok(csv.includes("Austin"));
+  });
+});
+
+describe("niche counts", () => {
+  it("compares open requests with creator counts and does not invent growth", () => {
+    const rows = nicheTrendsFromCounts({
+      supply: [
+        { specialty: "beauty", creators: 2 },
+        { specialty: "Beauty", creators: 1 },
+        { specialty: "travel", creators: 4 },
+        { specialty: "tech", creators: 1 },
+        { specialty: "", creators: 9 },
+      ],
+      requests: ["beauty", " beauty ", "travel", "food", "tech", "", null],
+    });
+    const beauty = rows.find((row) => row.specialty === "beauty");
+    const travel = rows.find((row) => row.specialty === "travel");
+    const food = rows.find((row) => row.specialty === "food");
+    assert.equal(beauty?.requestCount, 2);
+    assert.equal(beauty?.creatorSupply, 3);
+    assert.equal(beauty?.balance, "more_creators");
+    assert.equal(travel?.requestCount, 1);
+    assert.equal(travel?.creatorSupply, 4);
+    assert.equal(food?.requestCount, 1);
+    assert.equal(food?.creatorSupply, 0);
+    assert.equal(food?.balance, "more_requests");
+    assert.equal(rows.find((row) => row.specialty === "tech")?.balance, "even");
+    assert.equal(rows.some((row) => row.specialty === ""), false);
+    assert.equal(rows[0]?.specialty, "beauty");
+
+    assert.deepEqual(requestSpecialtiesForCollaboration({ offerSpecialty: "Beauty", needSpecialty: "beauty" }), [
+      "beauty",
+    ]);
+    assert.deepEqual(
+      requestSpecialtiesForCollaboration({ offerSpecialty: "beauty", needSpecialty: "travel" }),
+      ["beauty", "travel"],
+    );
+    assert.deepEqual(requestSpecialtiesForCollaboration({ offerSpecialty: "  ", needSpecialty: null }), []);
+  });
+
+  it("does not describe niche rows as synthetic demand or scored fits", () => {
+    const lib = readFileSync("src/lib/intelligence.ts", "utf8");
+    const page = readFileSync("src/app/business/intelligence/page.tsx", "utf8");
+    const admin = readFileSync("src/app/admin/intelligence/page.tsx", "utf8");
+    assert.equal(lib.includes("growthPct"), false);
+    assert.equal(lib.includes("demandIndex"), false);
+    assert.equal(lib.includes("Cap for demo"), false);
+    assert.equal(lib.includes("strength:"), false);
+    assert.equal(page.includes("synthetic pilot"), false);
+    assert.equal(page.includes("% growth"), false);
+    assert.equal(page.includes("sig.strength"), false);
+    assert.equal(admin.includes("Rising niches"), false);
+    assert.equal(admin.includes("Demand index"), false);
   });
 });
