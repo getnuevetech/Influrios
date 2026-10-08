@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
 import { listDirectoryCreators } from "@/lib/directory";
-import { SEED_CREATORS } from "@/lib/seed-data";
 
 export type IntroStatus =
   | "draft"
@@ -120,7 +119,7 @@ let managedSeed: Promise<void> | null = null;
 async function seedManaged() {
   const optCount = await prisma.creatorManagedOptIn.count();
   if (optCount === 0) {
-    const creators = await listDirectoryCreators().catch(() => SEED_CREATORS);
+    const creators = await listDirectoryCreators();
     await prisma.creatorManagedOptIn.createMany({
       data: creators.map((creator) => ({
         creatorSlug: creator.slug,

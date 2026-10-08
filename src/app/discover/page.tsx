@@ -6,8 +6,8 @@ import { consumeGuestQuota } from "@/lib/guest-usage";
 import { CreatorCard } from "@/components/creator-card";
 import { DiscoverFilters, DiscoverSort } from "@/components/discover-filters";
 import { CategoryGlyph, IconArrowRight, IconSearch } from "@/components/icons";
-import { getDirectory, recordDirectoryEvent } from "@/lib/directory";
-import { filterCreators, formatFollowers, languageOptionsFor, totalFollowers } from "@/lib/seed-data";
+import { getDirectory, recordDirectoryEvent, searchDirectory } from "@/lib/directory";
+import { formatFollowers, languageOptionsFor, totalFollowers } from "@/lib/seed-data";
 import { canonicalSpecialty } from "@/lib/taxonomy";
 
 export const dynamic = "force-dynamic";
@@ -88,28 +88,24 @@ export default async function DiscoverPage({ searchParams }: Props) {
   const platforms = list(params.platform);
   const q = first(params.q);
   const sort = first(params.sort) || "relevant";
-  const results = filterCreators(
-    directory.creators,
-    {
-      q,
-      specialty: specialties,
-      country: countries,
-      state: first(params.state),
-      city: first(params.city),
-      platform: platforms,
-      language: first(params.language),
-      followersMin: first(params.followersMin),
-      followersMax: first(params.followersMax),
-      engagementMin: first(params.engagementMin),
-      engagementMax: first(params.engagementMax),
-      collabType: first(params.collabType),
-      rate: first(params.rate),
-      openToCollab: first(params.openToCollab),
-      verified: first(params.verified),
-      sort,
-    },
-    directory.synonyms,
-  );
+  const results = await searchDirectory({
+    q,
+    specialty: specialties,
+    country: countries,
+    state: first(params.state),
+    city: first(params.city),
+    platform: platforms,
+    language: first(params.language),
+    followersMin: first(params.followersMin),
+    followersMax: first(params.followersMax),
+    engagementMin: first(params.engagementMin),
+    engagementMax: first(params.engagementMax),
+    collabType: first(params.collabType),
+    rate: first(params.rate),
+    openToCollab: first(params.openToCollab),
+    verified: first(params.verified),
+    sort,
+  });
   await recordDirectoryEvent("influencer_search_submitted", {
     q,
     specialty: specialties.join(","),

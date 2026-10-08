@@ -117,6 +117,10 @@ export async function applyPlanOnce(input: {
         },
       });
     });
+    if (status === "active" && input.creatorSlug) {
+      const { syncCreatorSearch } = await import("@/lib/creator-search");
+      await syncCreatorSearch(input.creatorSlug);
+    }
     return { applied: true };
   } catch (error) {
     if (isUnique(error)) return { applied: false };

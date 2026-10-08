@@ -785,6 +785,8 @@ async function syncPublishedCreatorProfile(draft: ClaimDraft) {
   }
   const { invalidateDirectoryCache } = await import("@/lib/directory");
   invalidateDirectoryCache();
+  const { syncCreatorSearch } = await import("@/lib/creator-search");
+  await syncCreatorSearch(draft.slug);
 }
 
 export function completenessFor(draft: ClaimDraft): {
