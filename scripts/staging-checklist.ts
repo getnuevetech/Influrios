@@ -12,16 +12,22 @@ function present(name: string) {
 }
 
 const app = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
-const required = ["DATABASE_URL", "AUTH_SECRET", "ADMIN_SESSION_SECRET"] as const;
+const required = ["DATABASE_URL"] as const;
 const recommended = [
   "NEXT_PUBLIC_APP_URL",
+  "ADMIN_SESSION_SECRET",
   "ADMIN_SUPER_EMAIL",
   "ADMIN_SUPER_PASSWORD",
+  "CRON_SECRET",
+  "MEILI_HOST",
+  "MEILI_API_KEY",
   "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "SMTP_HOST",
   "SMTP_FROM",
+  "AIRWALLEX_CLIENT_ID",
+  "AIRWALLEX_API_KEY",
 ] as const;
 
 let missingRequired = 0;
@@ -33,7 +39,9 @@ console.log(`HTTPS: ${app.startsWith("https://") ? "yes" : "no — set NEXT_PUBL
 console.log("Webhook / callback URLs");
 console.log(`  Stripe billing:     ${app}/api/billing/webhook`);
 console.log(`  Marketplace:        ${app}/api/marketplace/webhook`);
-console.log(`  Social OAuth:       ${app}/api/social/callback\n`);
+console.log(`  Social OAuth:       ${app}/api/social/callback`);
+console.log(`  Signing:            ${app}/api/signing/webhook`);
+console.log(`  Sweep clock:        ${app}/api/cron/sweeps\n`);
 
 console.log("Required env");
 for (const key of required) {
@@ -41,6 +49,9 @@ for (const key of required) {
   if (!ok) missingRequired += 1;
   console.log(`  ${ok ? "OK" : "MISSING"}  ${key}`);
 }
+const authOk = present("AUTH_SECRET") || present("ADMIN_SESSION_SECRET");
+if (!authOk) missingRequired += 1;
+console.log(`  ${authOk ? "OK" : "MISSING"}  AUTH_SECRET or ADMIN_SESSION_SECRET`);
 
 console.log("\nRecommended for staging integrations");
 for (const key of recommended) {

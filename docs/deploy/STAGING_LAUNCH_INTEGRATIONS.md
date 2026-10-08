@@ -114,18 +114,14 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 | Duplicate delivery skipped | ☐ yes ☐ no |
 | Notes | |
 
-### Turn off demo checkout (after Stripe is green)
-
-On staging Admin → Billing / Marketplace product switches:
-
-- Set **`demo_checkout` → off**.
-- Leave **`customer_portal`**, **`stripe_connect`**, **`legacy_demo_payments`** **off** unless deliberately testing those paths.
+`demo_checkout` and `legacy_demo_payments` are removed. Checkout stays closed until a Stripe sandbox key is saved. Leave `customer_portal` and `stripe_connect` off unless those paths are the ones under test.
 
 | Evidence | Result |
 |----------|--------|
-| `demo_checkout` off | ☐ |
 | Checkout without Stripe refused | ☐ |
 | Checkout with sandbox still works | ☐ |
+| Billing portal host `billing.stripe.com` | |
+| Connect `acct_` on the payout profile | |
 
 ---
 
@@ -178,10 +174,10 @@ Copy these defaults to production unless product explicitly overrides:
 
 | Switch | Production default |
 |--------|--------------------|
-| `demo_checkout` | **off** once Stripe sandbox path is green on staging |
+| `demo_checkout` | removed. Checkout stays closed without a sandbox key |
 | `customer_portal` | off |
 | `stripe_connect` | off |
-| `legacy_demo_payments` | off |
+| `legacy_demo_payments` | removed |
 | `agency_seats` | off until multi-seat is intentional |
 | `financial_reports` | on (ops) |
 
@@ -191,14 +187,22 @@ Live Stripe keys (`sk_live_`) only after staging evidence above is filled and re
 
 ## 7. Phase M exit sign-off
 
-Phase M is **complete** only when this table is filled with real staging evidence (not CI alone).
+Phase M is **complete** only when every cell below has a real evidence id. A blank cell is not done. The probe does not fill these cells.
 
-| Area | Green? | Date | Operator |
-|------|--------|------|----------|
-| Env + HTTPS + webhooks registered | ☐ | | |
-| SMTP invite + verify + job retry | ☐ | | |
-| Stripe sandbox + duplicate skip + `demo_checkout` off | ☐ | | |
-| One social OAuth + metric gate | ☐ | | |
-| Marketplace hold → release | ☐ | | |
+Probe of `https://influrios.com` on 2026-10-06T23:01:35Z: HTTPS, homepage, admin login, and database health passed. `secrets.authConfigured` was **false**. E0 is not met until that field is true. SMTP, SMS, Stripe, social, Meilisearch, Airwallex, recurring, team proposals, DocuSign, Flutterwave or M-Pesa, and paid mentorship were not exercised. No sandbox credentials were available to this run.
+
+| Area | Evidence id | Date | Operator |
+|------|-------------|------|----------|
+| Env, HTTPS, auth secret, cron | | | |
+| SMTP + SMS | | | |
+| Stripe checkout, duplicate skip, portal, Connect | | | |
+| Social OAuth | | | |
+| Meilisearch counts | | | |
+| Airwallex hold and release | | | |
+| Recurring tranche 2 | | | |
+| Team proposal | | | |
+| DocuSign completed | | | |
+| Flutterwave or M-Pesa | | | |
+| Intro fee + paid mentorship | | | |
 
 **Sign-off:** ______________________ date __________
