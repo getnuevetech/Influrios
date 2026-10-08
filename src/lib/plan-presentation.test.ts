@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { hidesMarketingChrome } from "./chrome-routes";
 import {
@@ -137,5 +138,10 @@ describe("plan presentation", () => {
     assert.equal(hidesMarketingChrome("/dashboard/profile"), true);
     assert.equal(hidesMarketingChrome("/business"), false);
     assert.equal(hidesMarketingChrome("/discover"), false);
+    const layout = readFileSync("src/app/layout.tsx", "utf8");
+    const frame = readFileSync("src/components/chrome-frame.tsx", "utf8");
+    assert.match(layout, /ChromeFrame/);
+    assert.match(frame, /usePathname/);
+    assert.equal(layout.includes("x-pathname"), false);
   });
 });
