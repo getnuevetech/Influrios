@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { actionSimulatePrefundHold } from "@/app/admin/marketplace/actions";
 import { requireAdminPage } from "@/app/admin/guard";
-import { hasPermission } from "@/lib/admin-auth";
 import { getFundingTransactionView } from "@/lib/admin-transaction-view";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { formatMoney } from "@/lib/money";
@@ -13,8 +11,7 @@ export const metadata = { title: "Admin · Transaction" };
 type Props = { params: Promise<{ fundingId: string }> };
 
 export default async function AdminFundingTransactionPage({ params }: Props) {
-  const session = await requireAdminPage("marketplace");
-  const canManage = hasPermission(session, "marketplace.manage");
+  await requireAdminPage("marketplace");
   const { fundingId } = await params;
   const view = await getFundingTransactionView(fundingId);
   if (!view) notFound();
@@ -104,17 +101,10 @@ export default async function AdminFundingTransactionPage({ params }: Props) {
           {formatMoney(funds.refundedCents, funding.currency)} · earned fee{" "}
           {formatMoney(funds.feeCents, funding.currency)}
         </p>
-        {canManage && funding.status === "awaiting_provider" ? (
-          <form action={actionSimulatePrefundHold} className="pt-2">
-            <input type="hidden" name="fundingId" value={funding.id} />
-            <button type="submit" className="btn-secondary !py-2 text-sm">
-              Simulate provider hold (demo)
-            </button>
-            <p className="mt-1 text-xs text-muted">
-              Confirms this prefund without a live webhook. Provider “{provider.code}” — replace with a real signed
-              webhook when ready for production tests.
-            </p>
-          </form>
+        {funding.status === "awaiting_provider" ? (
+          <p className="pt-2 text-xs text-muted">
+            This prefund stays unfunded until the provider webhook confirms it.
+          </p>
         ) : null}
       </section>
 
