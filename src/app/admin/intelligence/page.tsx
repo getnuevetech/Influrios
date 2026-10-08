@@ -6,6 +6,7 @@ import {
   getIntelligenceStore,
   getNicheTrends,
   getRelationshipSignals,
+  NICHE_BALANCE_LABEL,
 } from "@/lib/intelligence";
 
 export const metadata = { title: "Admin · Intelligence" };
@@ -18,7 +19,7 @@ export default async function AdminIntelligencePage() {
   const snapshots = await getAllAudienceSnapshots();
   const trends = await getNicheTrends();
   const signals = await getRelationshipSignals();
-  const rising = trends.filter((t) => t.signal === "rising").length;
+  const moreRequests = trends.filter((t) => t.balance === "more_requests").length;
   const sourceCounts = {
     claimed: snapshots.filter((s) => s.source === "claimed_metrics").length,
     unavailable: snapshots.filter((s) => s.source === "unavailable").length,
@@ -32,8 +33,9 @@ export default async function AdminIntelligencePage() {
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Intelligence</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Audience snapshots from the live directory, niche trends from specialty supply, and relationship signals from
-          managed matching. Gender and age splits appear only when the creator record includes claimed demographics.
+          Audience snapshots from the live directory. Niche rows compare open requests with creator counts.
+          Relationship rows are managed introductions. Gender and age splits appear only when the creator record
+          includes claimed demographics.
         </p>
       </div>
 
@@ -43,8 +45,8 @@ export default async function AdminIntelligencePage() {
           <p className="text-muted">Snapshots</p>
         </div>
         <div className="rounded-xl bg-[#D9E8FF] px-4 py-2">
-          <p className="font-display text-lg font-bold text-blue">{rising}</p>
-          <p className="text-muted">Rising niches</p>
+          <p className="font-display text-lg font-bold text-blue">{moreRequests}</p>
+          <p className="text-muted">More requests</p>
         </div>
         <div className="rounded-xl bg-emerald-100 px-4 py-2">
           <p className="font-display text-lg font-bold text-emerald-700">{signals.length}</p>
@@ -113,29 +115,26 @@ export default async function AdminIntelligencePage() {
       </section>
 
       <section className="card-surface overflow-x-auto p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Trend table</h2>
-        <p className="mt-1 text-xs text-muted">Demand index is derived from directory specialty supply.</p>
+        <h2 className="font-display text-xl font-bold text-indigo">Niche counts</h2>
+        <p className="mt-1 text-xs text-muted">
+          Open briefs, collaborations, agency campaigns, and published listings. Searches are not stored.
+        </p>
         <table className="mt-4 w-full min-w-[640px] text-left text-sm">
           <thead className="text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="pb-2 pr-3 font-semibold">Niche</th>
-              <th className="pb-2 pr-3 font-semibold">Demand</th>
-              <th className="pb-2 pr-3 font-semibold">Growth</th>
-              <th className="pb-2 pr-3 font-semibold">Supply</th>
-              <th className="pb-2 font-semibold">Signal</th>
+              <th className="pb-2 pr-3 font-semibold">Requests</th>
+              <th className="pb-2 pr-3 font-semibold">Creators</th>
+              <th className="pb-2 font-semibold">Balance</th>
             </tr>
           </thead>
           <tbody>
             {trends.map((t) => (
               <tr key={t.specialty} className="border-t border-border">
                 <td className="py-2.5 pr-3 font-semibold text-indigo">{t.label}</td>
-                <td className="py-2.5 pr-3">{t.demandIndex}</td>
-                <td className="py-2.5 pr-3">
-                  {t.growthPct >= 0 ? "+" : ""}
-                  {t.growthPct}%
-                </td>
+                <td className="py-2.5 pr-3">{t.requestCount}</td>
                 <td className="py-2.5 pr-3">{t.creatorSupply}</td>
-                <td className="py-2.5 capitalize">{t.signal}</td>
+                <td className="py-2.5">{NICHE_BALANCE_LABEL[t.balance]}</td>
               </tr>
             ))}
           </tbody>
@@ -153,9 +152,7 @@ export default async function AdminIntelligencePage() {
                   {s.kind} · {s.parties.join(" / ")}
                 </p>
               </div>
-              <span className="rounded-full bg-lavender px-2.5 py-1 text-xs font-bold text-violet">
-                {s.strength} · {s.status}
-              </span>
+              <span className="rounded-full bg-lavender px-2.5 py-1 text-xs font-bold text-violet">{s.status}</span>
             </li>
           ))}
         </ul>

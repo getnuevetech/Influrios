@@ -31,7 +31,7 @@ const LINKS: {
     optIns: number;
     intros: number;
     snapshots: number;
-    rising: number;
+    moreRequests: number;
     completedCheckouts: number;
     escrowActive: number;
     escrowHeld: string;
@@ -65,9 +65,9 @@ const LINKS: {
   {
     href: "/admin/intelligence",
     title: "Intelligence",
-    blurb: "Directory-backed snapshots, niche trends, relationship signals.",
+    blurb: "Directory snapshots, open-request counts, and managed introductions.",
     module: "intelligence",
-    meta: (c) => `${c.snapshots} snapshots · ${c.rising} rising niches`,
+    meta: (c) => `${c.snapshots} snapshots · ${c.moreRequests} niches with more requests`,
   },
   {
     href: "/admin/billing",
@@ -312,7 +312,7 @@ export default async function AdminHomePage({
   const visibleCards = cms?.featuredCards.cards.filter((c) => c.visible).length ?? 0;
   const optIns = matching?.optIns.filter((o) => o.openToManaged).length ?? 0;
   const snapshots = snapshotsList.length;
-  const rising = trends.filter((t) => t.signal === "rising").length;
+  const moreRequests = trends.filter((t) => t.balance === "more_requests").length;
   const completedCheckouts = billing?.sessions.filter((s) => s.status === "completed").length ?? 0;
   const ctx = {
     visibleCards,
@@ -320,7 +320,7 @@ export default async function AdminHomePage({
     optIns,
     intros: matching?.intros.length ?? 0,
     snapshots,
-    rising,
+    moreRequests,
     completedCheckouts,
     escrowActive: heldCount,
     escrowHeld: formatMoney(heldSum._sum.grossCents ?? 0),

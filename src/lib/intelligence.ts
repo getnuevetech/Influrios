@@ -1,12 +1,14 @@
 /**
- * Phase 5 / Phase O — Intelligence.
- * Audience snapshots and trends read the Postgres directory.
+ * Audience snapshots read claimed creator demographics.
+ * Niche rows compare open requests with directory creator counts.
+ * A relationship row is a managed introduction.
  * Ops notes / watched specialties / last export live in IntelligenceSettings.
  */
 import { promises as fs } from "fs";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
+import { isLaunchSampleBusinessRequest } from "@/lib/marketplace-listings";
 import { getManagedMatching } from "@/lib/managed-matching";
 import { specialtyLabel, type SeedCreator } from "@/lib/seed-data";
 
@@ -23,24 +25,30 @@ export type AudienceSnapshot = {
   primaryPlatforms: string[];
 };
 
+export type NicheBalance = "more_requests" | "more_creators" | "even";
+
 export type NicheTrend = {
   specialty: string;
   label: string;
-  demandIndex: number;
-  growthPct: number;
+  requestCount: number;
   creatorSupply: number;
-  signal: "rising" | "stable" | "cooling";
+  balance: NicheBalance;
   note: string;
 };
 
 export type RelationshipSignal = {
   id: string;
-  kind: "intro_pipeline" | "collab_fit" | "repeat_interest";
+  kind: "intro_pipeline";
   title: string;
   parties: string[];
-  strength: number;
   status: string;
   note: string;
+};
+
+export const NICHE_BALANCE_LABEL: Record<NicheBalance, string> = {
+  more_requests: "More requests",
+  more_creators: "More creators",
+  even: "Even",
 };
 
 export type IntelligenceStore = {
@@ -171,72 +179,135 @@ export async function getAudienceSnapshot(slug: string): Promise<AudienceSnapsho
   return creator ? buildAudienceSnapshot(creator) : null;
 }
 
-/** Specialty supply counted from the live directory. No invented demand or growth. */
+export function specialtyKey(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+export function nicheBalance(requestCount: number, creatorSupply: number): NicheBalance {
+  if (requestCount > creatorSupply) return "more_requests";
+  if (requestCount < creatorSupply) return "more_creators";
+  return "even";
+}
+
+export function nicheBalanceNote(balance: NicheBalance): string {
+  if (balance === "more_requests") return "More open requests than creators in the directory.";
+  if (balance === "more_creators") return "More creators in the directory than open requests.";
+  return "Open requests match the creator count.";
+}
+
+/** One collaboration names each distinct specialty once. */
+export function requestSpecialtiesForCollaboration(row: {
+  offerSpecialty?: string | null;
+  needSpecialty?: string | null;
+}): string[] {
+  const offer = specialtyKey(row.offerSpecialty);
+  const need = specialtyKey(row.needSpecialty);
+  if (offer && need && offer !== need) return [offer, need];
+  if (offer) return [offer];
+  if (need) return [need];
+  return [];
+}
+
+export function nicheTrendsFromCounts(input: {
+  supply: { specialty: string; creators: number }[];
+  requests: Array<string | null | undefined>;
+}): NicheTrend[] {
+  const supply = new Map<string, number>();
+  for (const row of input.supply) {
+    const key = specialtyKey(row.specialty);
+    if (!key || row.creators < 1) continue;
+    supply.set(key, (supply.get(key) ?? 0) + row.creators);
+  }
+  const requests = new Map<string, number>();
+  for (const raw of input.requests) {
+    const key = specialtyKey(raw);
+    if (!key) continue;
+    requests.set(key, (requests.get(key) ?? 0) + 1);
+  }
+  const keys = new Set([...supply.keys(), ...requests.keys()]);
+  return [...keys]
+    .map((specialty) => {
+      const creatorSupply = supply.get(specialty) ?? 0;
+      const requestCount = requests.get(specialty) ?? 0;
+      const balance = nicheBalance(requestCount, creatorSupply);
+      return {
+        specialty,
+        label: specialtyLabel(specialty),
+        requestCount,
+        creatorSupply,
+        balance,
+        note: nicheBalanceNote(balance),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.requestCount - a.requestCount ||
+        b.creatorSupply - a.creatorSupply ||
+        a.specialty.localeCompare(b.specialty),
+    );
+}
+
+/**
+ * Open requests are draft or active briefs, collaborations that are still
+ * draft, sent, or accepted, agency campaigns that are not wrapped, and
+ * published marketplace listings that are no longer the launch sample.
+ * Searches are not stored, so they are not counted. Growth is not estimated.
+ */
 export async function getNicheTrends(): Promise<NicheTrend[]> {
-  const counts = new Map<string, number>();
-  for (const c of await listDirectoryCreators()) {
-    for (const s of c.specialties) {
-      counts.set(s, (counts.get(s) ?? 0) + 1);
+  const supply = new Map<string, number>();
+  for (const creator of await listDirectoryCreators()) {
+    for (const specialty of creator.specialties) {
+      const key = specialtyKey(specialty);
+      if (!key) continue;
+      supply.set(key, (supply.get(key) ?? 0) + 1);
     }
   }
 
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([specialty, supply]) => ({
-      specialty,
-      label: specialtyLabel(specialty),
-      demandIndex: supply,
-      growthPct: 0,
-      creatorSupply: supply,
-      signal: "stable" as const,
-      note: "",
-    }));
+  const [briefs, collaborations, campaigns, listings] = await Promise.all([
+    prisma.businessBrief.findMany({
+      where: { status: { in: ["draft", "active"] } },
+      select: { specialty: true },
+    }),
+    prisma.collaboration.findMany({
+      where: { status: { in: ["draft", "sent", "accepted"] } },
+      select: { offerSpecialty: true, needSpecialty: true },
+    }),
+    prisma.agencyCampaign.findMany({
+      where: { status: { in: ["briefing", "casting", "live"] } },
+      select: { specialty: true },
+    }),
+    prisma.marketplaceBusinessRequest.findMany({
+      where: { status: "published" },
+      select: { id: true, brand: true, summary: true, category: true },
+    }),
+  ]);
+
+  const requests: string[] = briefs.map((row) => row.specialty);
+  for (const row of collaborations) requests.push(...requestSpecialtiesForCollaboration(row));
+  for (const row of campaigns) requests.push(row.specialty);
+  for (const row of listings) {
+    if (isLaunchSampleBusinessRequest(row)) continue;
+    requests.push(row.category);
+  }
+
+  return nicheTrendsFromCounts({
+    supply: [...supply.entries()].map(([specialty, creators]) => ({ specialty, creators })),
+    requests,
+  });
 }
 
 export async function getRelationshipSignals(): Promise<RelationshipSignal[]> {
   const matching = await getManagedMatching();
   const creators = await listDirectoryCreators();
-  const bySlug = new Map(creators.map((c) => [c.slug, c]));
-  const signals: RelationshipSignal[] = [];
-
-  for (const intro of matching.intros) {
-    const creator = bySlug.get(intro.creatorSlug);
-    signals.push({
-      id: `intro-${intro.id}`,
-      kind: "intro_pipeline",
-      title: intro.briefTitle,
-      parties: [intro.businessName, creator?.displayName ?? intro.creatorSlug],
-      strength: intro.status === "paid" ? 95 : intro.status === "introduced" ? 70 : 45,
-      status: intro.status,
-      note: intro.notes || "Managed intro in pipeline",
-    });
-  }
-
-  // Complementary offer/need pairs as collab-fit signals
-  for (const a of creators) {
-    if (!a.offer || !a.need) continue;
-    for (const b of creators) {
-      if (a.slug === b.slug || !b.offer) continue;
-      const aNeed = a.need.toLowerCase();
-      const bOffer = b.offer.toLowerCase();
-      const overlap =
-        a.specialties.some((s) => b.specialties.includes(s)) ||
-        aNeed.split(" ").some((w) => w.length > 4 && bOffer.includes(w));
-      if (!overlap) continue;
-      signals.push({
-        id: `fit-${a.slug}-${b.slug}`,
-        kind: "collab_fit",
-        title: `${a.displayName} ↔ ${b.displayName}`,
-        parties: [a.displayName, b.displayName],
-        strength: 62,
-        status: "suggested",
-        note: `${a.displayName} needs “${a.need}”; ${b.displayName} offers “${b.offer}”.`,
-      });
-    }
-  }
-
-  // Cap for demo UI
-  return signals.slice(0, 12);
+  const bySlug = new Map(creators.map((creator) => [creator.slug, creator]));
+  return matching.intros.map((intro) => ({
+    id: `intro-${intro.id}`,
+    kind: "intro_pipeline" as const,
+    title: intro.briefTitle,
+    parties: [intro.businessName, bySlug.get(intro.creatorSlug)?.displayName ?? intro.creatorSlug],
+    status: intro.status,
+    note: intro.notes.trim() || "Managed introduction",
+  }));
 }
 
 export type IntelligenceExport = {
