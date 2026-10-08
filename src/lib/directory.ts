@@ -1,6 +1,5 @@
-import type { Prisma, SocialPlatform } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { listPublishedClaimCreators } from "@/lib/claim";
-import { toPublicProfile } from "@/lib/onboarding";
 import { prisma } from "@/lib/db";
 import { rethrowIfNextDynamicError } from "@/lib/next-dynamic";
 import { isPlanCode } from "@/lib/entitlements";
@@ -10,16 +9,14 @@ import {
   normalizeProfileGender,
 } from "@/lib/profile-media";
 import {
-  SEED_CREATORS,
   SPECIALTY_TAXONOMY,
-  filterCreators,
   languageOptionsFor,
   locationOptionsFor,
   type CreatorSearchQuery,
   type SeedCreator,
   type SeedSocial,
 } from "@/lib/seed-data";
-import { canonicalSpecialty, type SynonymLink } from "@/lib/taxonomy";
+import type { SynonymLink } from "@/lib/taxonomy";
 
 const CACHE_MS = 5_000;
 
@@ -122,8 +119,7 @@ type DirectoryRow = Prisma.CreatorGetPayload<{
 }>;
 
 function mergeCreator(row: DirectoryRow): SeedCreator {
-  const seed = SEED_CREATORS.find((creator) => creator.slug === row.slug);
-  const base = seed ?? blankCreator(row.slug, row.displayName);
+  const gender = normalizeProfileGender(row.gender);
   const specialties = [...row.specialties]
     .filter((link) => link.specialty.active)
     .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
@@ -135,37 +131,25 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
     followers: social.followers ?? 0,
   }));
   const planTier = isCreatorPlan(row.planTier) ? row.planTier : "STARTER";
-  const publicBase = toPublicProfile(base);
+  const avatar = row.avatarUrl && !row.avatarUrl.includes("/demo/creators/") ? row.avatarUrl : defaultAvatarForGender(gender);
+  const cover = row.coverUrl && !row.coverUrl.includes("/demo/sofia/") ? row.coverUrl : defaultBannerForSeed(row.slug);
   return {
-    ...publicBase,
+    ...blankCreator(row.slug, row.displayName),
     slug: row.slug,
     displayName: row.displayName,
-    title: row.title || base.title,
-    bio: row.bio || base.bio,
-    locationCity: row.locationCity || base.locationCity,
-    locationCountry: row.locationCountry || base.locationCountry,
-    languages: row.languages.length ? row.languages : base.languages,
+    title: row.title ?? "",
+    bio: row.bio ?? "",
+    locationCity: row.locationCity ?? "",
+    locationCountry: row.locationCountry ?? "",
+    languages: row.languages,
     planTier,
-    specialties: specialties.length ? specialties : base.specialties,
-    socials: socials.length ? socials : base.socials,
+    specialties,
+    socials,
     openToCollab: row.openToCollab,
-    image: (() => {
-      const raw = row.avatarUrl || base.image || "";
-      // Claimed non-seed profiles must not keep legacy demo headshots as their face.
-      if (!seed && raw.includes("/demo/creators/")) {
-        return defaultAvatarForGender(normalizeProfileGender(row.gender));
-      }
-      return raw || defaultAvatarForGender(normalizeProfileGender(row.gender));
-    })(),
-    coverImage: (() => {
-      const raw = row.coverUrl || base.coverImage || "";
-      if (!seed && (!raw || raw.includes("/demo/sofia/"))) {
-        return defaultBannerForSeed(row.slug);
-      }
-      return raw || defaultBannerForSeed(row.slug);
-    })(),
-    gender: normalizeProfileGender(row.gender || base.gender),
-    verified: row.profileState === "VERIFIED" || row.identityVerified === "VERIFIED" ? true : base.verified,
+    image: avatar,
+    coverImage: cover,
+    gender,
+    verified: row.profileState === "VERIFIED" || row.identityVerified === "VERIFIED",
   };
 }
 
@@ -215,69 +199,6 @@ async function ensureSpecialties() {
 
 async function ensureDirectory() {
   await ensureSpecialties();
-
-  if ((await prisma.creator.count()) === 0) {
-    const specialties = await prisma.specialty.findMany();
-    const specialtyIds = new Map(specialties.map((row) => [row.slug, row.id]));
-    for (const creator of SEED_CREATORS) {
-      const row = await prisma.creator.create({
-        data: {
-          slug: creator.slug,
-          displayName: creator.displayName,
-          title: creator.title,
-          bio: creator.bio,
-          locationCity: creator.locationCity,
-          locationCountry: creator.locationCountry,
-          languages: creator.languages,
-          avatarUrl: creator.image,
-          coverUrl: creator.coverImage,
-          planTier: creator.planTier,
-          openToCollab: creator.openToCollab,
-          claimed: false,
-          profileState: "UNCLAIMED",
-        },
-      });
-      for (const [index, slug] of creator.specialties.entries()) {
-        const specialtyId = specialtyIds.get(slug);
-        if (!specialtyId) continue;
-        await prisma.creatorSpecialty.create({
-          data: { creatorId: row.id, specialtyId, isPrimary: index === 0, source: "PLATFORM_VERIFIED" },
-        });
-      }
-      for (const social of creator.socials) {
-        await prisma.socialAccount.create({
-          data: {
-            creatorId: row.id,
-            platform: social.platform as SocialPlatform,
-            handle: social.handle,
-            url: social.url,
-            followers: social.followers,
-            source: "PLATFORM_VERIFIED",
-          },
-        });
-      }
-      await prisma.influenceCard.create({
-        data: {
-          creatorId: row.id,
-          slug: creator.slug,
-          shortAlias: creator.planTier === "STARTER" ? null : creator.slug.split("-")[0],
-          published: true,
-          theme: creator.planTier.toLowerCase(),
-        },
-      });
-      const primarySpecialtyId = creator.specialties[0] ? specialtyIds.get(creator.specialties[0]) : undefined;
-      if (creator.offer) {
-        await prisma.collaborationOffer.create({
-          data: { creatorId: row.id, summary: creator.offer, specialtyId: primarySpecialtyId ?? null },
-        });
-      }
-      if (creator.need) {
-        await prisma.collaborationNeed.create({
-          data: { creatorId: row.id, summary: creator.need, specialtyId: primarySpecialtyId ?? null },
-        });
-      }
-    }
-  }
 
   const sectionKeys = new Set((await prisma.cmsSection.findMany({ select: { key: true } })).map((row) => row.key));
   for (const section of DEFAULT_HOMEPAGE_SECTIONS) {
@@ -423,32 +344,19 @@ export async function directoryHasCreator(slug: string): Promise<boolean> {
 
 export { indexCreatorsBySlug } from "@/lib/seed-data";
 
+export async function loadPublicCreator(slug: string): Promise<SeedCreator | null> {
+  const row = await prisma.creator.findUnique({
+    where: { slug },
+    include: { specialties: { include: { specialty: true } }, socialAccounts: true },
+  });
+  if (!row || row.profileState === "RESTRICTED") return null;
+  return mergeCreator(row);
+}
+
 export async function searchDirectory(query: CreatorSearchQuery) {
-  const { searchCreatorIndex } = await import("@/lib/creator-index");
-  const { loadMeiliConfig } = await import("@/lib/search-settings");
-  const meili = await loadMeiliConfig();
-  if (meili) {
-    const indexed = await searchCreatorIndex(query, { MEILI_HOST: meili.host, MEILI_API_KEY: meili.apiKey });
-    const directory = await getDirectory();
-    const allowed = new Set(indexed.slugs);
-    return directory.creators.filter((creator) => allowed.has(creator.slug));
-  }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Meilisearch host is required. Save it in admin or set MEILI_HOST.");
-  }
   const directory = await getDirectory();
-  const specialtyValues = query.specialty
-    ? (Array.isArray(query.specialty) ? query.specialty : [query.specialty]).map(
-        (value) => canonicalSpecialty(value, directory.synonyms) ?? value,
-      )
-    : undefined;
-  const q = canonicalSpecialty(query.q, directory.synonyms);
-  const textQuery = query.q && q !== query.q.toLowerCase().trim() ? q : query.q;
-  return filterCreators(
-    directory.creators,
-    { ...query, specialty: specialtyValues, q: textQuery },
-    directory.synonyms,
-  );
+  const { searchIndexedCreators } = await import("@/lib/creator-search");
+  return searchIndexedCreators(query, directory);
 }
 
 export async function publicTaxonomy() {
@@ -529,6 +437,8 @@ export async function addSpecialtySynonym(input: { actor: string; slug: string; 
     },
   });
   invalidateDirectoryCache();
+  const { pushTaxonomySynonyms } = await import("@/lib/creator-search");
+  await pushTaxonomySynonyms();
 }
 
 export async function removeSpecialtySynonym(input: { actor: string; id: string }) {
@@ -543,6 +453,8 @@ export async function removeSpecialtySynonym(input: { actor: string; id: string 
     },
   });
   invalidateDirectoryCache();
+  const { pushTaxonomySynonyms } = await import("@/lib/creator-search");
+  await pushTaxonomySynonyms();
 }
 
 export async function updateHomepageSection(input: {

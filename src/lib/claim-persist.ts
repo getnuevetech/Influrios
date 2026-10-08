@@ -221,5 +221,7 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
     },
   });
 
+  const { syncCreatorSearch } = await import("@/lib/creator-search");
+  await syncCreatorSearch(draft.slug);
   return { creatorId: creator.id, userId: user.id, qrToken };
 }

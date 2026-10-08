@@ -165,6 +165,11 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
     });
     return;
   }
+  if (kind === "reindex_creators") {
+    const { reindexCreators } = await import("@/lib/creator-search");
+    await reindexCreators();
+    return;
+  }
   if (kind === "sms_send") {
     if (!data.to || !data.body) throw new Error("SMS job is missing a destination or body.");
     const { deliverSms } = await import("@/lib/sms");

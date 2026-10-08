@@ -499,6 +499,8 @@ export async function completeSocialCallback(input: { code?: string; state?: str
         tokenExpiresAt: token.expiresAt,
       },
     });
+    const { syncCreatorSearch } = await import("@/lib/creator-search");
+    await syncCreatorSearch(slug);
     return { ok: true as const, slug };
   } catch {
     await prisma.socialConnection.update({
@@ -579,6 +581,8 @@ export async function refreshSocialConnection(input: { slug: string; platform: s
       where: { id: connection.id },
       data: { status: "connected", lastError: null, lastSyncedAt: new Date() },
     });
+    const { syncCreatorSearch } = await import("@/lib/creator-search");
+    await syncCreatorSearch(input.slug);
     return { ok: true as const };
   } catch {
     return { ok: false as const, error: "The network could not be reached." };
@@ -596,6 +600,8 @@ export async function disconnectSocial(input: { slug: string; platform: string }
     data: { source: "CREATOR_CLAIMED", followers: null, likes: null, refreshedAt: null },
   });
   invalidateDirectoryCache();
+  const { syncCreatorSearch } = await import("@/lib/creator-search");
+  await syncCreatorSearch(input.slug);
   return { ok: true as const };
 }
 

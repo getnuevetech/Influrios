@@ -2,6 +2,7 @@ import Link from "next/link";
 import { actionRebuildSearchIndex, actionSaveSearch } from "@/app/admin/search/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
+import { searchIndexStatus } from "@/lib/creator-search";
 import { listProviders } from "@/lib/providers";
 import { loadMeiliConfig } from "@/lib/search-settings";
 
@@ -18,11 +19,13 @@ export default async function AdminSearchPage({ searchParams }: Props) {
   const params = await searchParams;
   let provider: Awaited<ReturnType<typeof listProviders>>[number] | null = null;
   let activeHost = "";
+  let indexStatus: Awaited<ReturnType<typeof searchIndexStatus>> | null = null;
   let dbError = false;
   try {
     const providers = await listProviders("search");
     provider = providers.find((row) => row.code === "meilisearch") ?? providers[0] ?? null;
     activeHost = (await loadMeiliConfig())?.host ?? "";
+    indexStatus = await searchIndexStatus();
   } catch (error) {
     console.error("admin search", error);
     dbError = true;
@@ -70,13 +73,40 @@ export default async function AdminSearchPage({ searchParams }: Props) {
         </form>
       ) : null}
 
-      {canEdit ? (
-        <form action={actionRebuildSearchIndex} className="mt-4">
-          <button type="submit" className="btn-secondary !py-2 text-sm">
-            Rebuild creator index
-          </button>
-        </form>
-      ) : null}
+      <section className="mt-6 rounded-2xl border border-[#E4EBFF] bg-white p-4">
+        <h2 className="font-display text-lg font-bold text-indigo">Creator index</h2>
+        <dl className="mt-3 grid gap-2 text-sm text-indigo sm:grid-cols-2">
+          <div>
+            <dt className="text-muted">Postgres creators</dt>
+            <dd className="font-semibold">{indexStatus ? indexStatus.postgresCount : "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-muted">Index documents</dt>
+            <dd className="font-semibold">{indexStatus?.indexCount ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-muted">Last reindex</dt>
+            <dd className="font-semibold">
+              {indexStatus?.lastReindexAt
+                ? `${indexStatus.lastReindexAt.toISOString().replace("T", " ").slice(0, 16)} UTC`
+                : "Not yet"}
+              {indexStatus?.lastStatus ? ` (${indexStatus.lastStatus})` : ""}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted">Host in use</dt>
+            <dd className="font-semibold">{indexStatus?.host || activeHost || "not configured"}</dd>
+          </div>
+        </dl>
+        {indexStatus?.lastError ? <p className="mt-3 text-sm text-amber-800">{indexStatus.lastError}</p> : null}
+        {canEdit ? (
+          <form action={actionRebuildSearchIndex} className="mt-4">
+            <button type="submit" className="btn-secondary !py-2 text-sm">
+              Reindex
+            </button>
+          </form>
+        ) : null}
+      </section>
     </div>
   );
 }

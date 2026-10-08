@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAccountSession } from "@/lib/accounts";
 import { getDirectory } from "@/lib/directory";
+import { rethrowIfNextDynamicError } from "@/lib/next-dynamic";
 import { getFooterStrip, type FooterIconKey, type FooterTone } from "@/lib/site-config";
 import {
   IconBuilding,
@@ -46,10 +47,16 @@ const STAT_TONES: Record<FooterTone, string> = {
 };
 
 export async function SiteHeader() {
-  const directory = await getDirectory();
+  let links: { href: string; label: string }[] = NAV;
+  try {
+    const directory = await getDirectory();
+    const nav = directory.menus.filter((item) => item.menu === "header" && item.visible);
+    if (nav.length) links = nav;
+  } catch (error) {
+    rethrowIfNextDynamicError(error);
+    console.error("site header", error);
+  }
   const account = await getAccountSession().catch(() => null);
-  const nav = directory.menus.filter((item) => item.menu === "header" && item.visible);
-  const links = nav.length ? nav : NAV;
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-[90rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8 xl:px-10">
@@ -93,9 +100,17 @@ export async function SiteHeader() {
 }
 
 export async function SiteFooter() {
-  const [directory, strip] = await Promise.all([getDirectory(), getFooterStrip()]);
-  const platform = directory.menus.filter((item) => item.menu === "footer_platform" && item.visible);
-  const platformLinks = platform.length ? platform : FOOTER_PLATFORM;
+  let platformLinks: { href: string; label: string }[] = FOOTER_PLATFORM;
+  let strip: Awaited<ReturnType<typeof getFooterStrip>> = { stats: [], tagline: "" };
+  try {
+    const [directory, loaded] = await Promise.all([getDirectory(), getFooterStrip()]);
+    const platform = directory.menus.filter((item) => item.menu === "footer_platform" && item.visible);
+    if (platform.length) platformLinks = platform;
+    strip = loaded;
+  } catch (error) {
+    rethrowIfNextDynamicError(error);
+    console.error("site footer", error);
+  }
   return (
     <footer className="mt-0 border-t border-white/10 bg-pro text-white">
       {strip.stats.length ? (

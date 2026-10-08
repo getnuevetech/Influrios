@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
-import { ensureCreatorIndex, upsertCreatorDocument } from "@/lib/creator-index";
-import { listDirectoryCreators } from "@/lib/directory";
 import { saveProvider } from "@/lib/providers";
-import { loadMeiliConfig } from "@/lib/search-settings";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value ?? "");
@@ -38,17 +35,9 @@ export async function actionSaveSearch(formData: FormData) {
 
 export async function actionRebuildSearchIndex() {
   await requireAdminAction("gateways.edit");
-  const config = await loadMeiliConfig();
-  if (!config) {
-    redirect("/admin/search?error=Save%20the%20Meilisearch%20host%20and%20enable%20it%20first.");
-  }
-  const env = { MEILI_HOST: config.host, MEILI_API_KEY: config.apiKey };
   try {
-    await ensureCreatorIndex(env);
-    const creators = await listDirectoryCreators();
-    for (const creator of creators) {
-      await upsertCreatorDocument(creator, env);
-    }
+    const { reindexCreatorsAndRecord } = await import("@/lib/creator-search");
+    await reindexCreatorsAndRecord();
   } catch (error) {
     const message = error instanceof Error ? error.message : "The search index was not rebuilt.";
     redirect(`/admin/search?error=${encodeURIComponent(message)}`);
