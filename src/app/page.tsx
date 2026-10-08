@@ -14,7 +14,7 @@ import {
   IconYouTube,
   SocialIcon,
 } from "@/components/icons";
-import { getCms } from "@/lib/cms";
+import { getCms, publicBannerImages } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
 import { categoryImageFor, formatFollowers, specialtyLabel, totalFollowers, type SeedCreator } from "@/lib/seed-data";
@@ -74,6 +74,7 @@ export default async function HomePage() {
   const sectionRank = (key: string) => sections.find((item) => item.key === key)?.sortOrder ?? 50;
   const hero = cms.banners.hero;
   const sponsored = cms.banners.sponsored;
+  const sponsoredImages = publicBannerImages(sponsored.images);
   const cardPromo = cms.banners.cardPromo;
   const cta = cms.banners.cta;
   const valueProposition = cms.valueProposition;
@@ -336,9 +337,9 @@ export default async function HomePage() {
             <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-r from-[#0B123F] via-[#1a1460] to-[#633CFF] shadow-xl">
               <div className="pointer-events-none absolute -right-10 top-0 h-56 w-56 rounded-full bg-pink/30 blur-3xl" />
               <div className="relative grid items-center gap-6 p-5 sm:p-7 lg:grid-cols-[auto_1fr_auto] lg:gap-10">
-                {sponsored.images[0] ? (
+                {sponsoredImages[0] ? (
                   <div className="relative mx-auto hidden h-32 w-32 overflow-hidden rounded-2xl ring-2 ring-white/20 sm:block lg:h-36 lg:w-36">
-                    <Image src={sponsored.images[0]} alt="" fill className="object-cover" sizes="144px" />
+                    <Image src={sponsoredImages[0]} alt="" fill className="object-cover" sizes="144px" />
                   </div>
                 ) : null}
                 <div className="text-center text-white lg:text-left">
@@ -349,13 +350,15 @@ export default async function HomePage() {
                     {sponsored.title}
                   </h2>
                   <p className="mt-2 text-sm text-white/70">{sponsored.subtitle}</p>
-                  <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 lg:justify-start">
-                    {["Samsung", "L'ORÉAL", "airbnb", "Nike", "Adobe"].map((brand) => (
-                      <span key={brand} className="font-display text-sm font-bold text-white/90">
-                        {brand}
-                      </span>
-                    ))}
-                  </div>
+                  {sponsored.partners.length > 0 ? (
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 lg:justify-start">
+                      {sponsored.partners.map((brand) => (
+                        <span key={brand} className="font-display text-sm font-bold text-white/90">
+                          {brand}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                   <Link
                     href={sponsored.ctaHref || "/collaboration"}
                     className="ink-on-light mt-5 inline-flex min-h-[42px] min-w-[160px] items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold shadow-lg"
@@ -364,9 +367,9 @@ export default async function HomePage() {
                     <IconArrowRight size={14} />
                   </Link>
                 </div>
-                {sponsored.images[1] ? (
+                {sponsoredImages[1] ? (
                   <div className="relative mx-auto hidden h-36 w-28 overflow-hidden rounded-2xl ring-2 ring-white/20 xl:block">
-                    <Image src={sponsored.images[1]} alt="" fill className="object-cover" sizes="112px" />
+                    <Image src={sponsoredImages[1]} alt="" fill className="object-cover" sizes="112px" />
                   </div>
                 ) : null}
               </div>

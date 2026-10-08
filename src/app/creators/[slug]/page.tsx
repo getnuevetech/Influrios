@@ -661,33 +661,27 @@ export default async function CreatorProfilePage({ params }: Props) {
         </section>
       ) : null}
 
-      {/* —— Brands thin strip —— */}
-      {creator.brands && creator.brands.length > 0 ? (
+      {/* —— Brands named on the published profile —— */}
+      {(creator.brands ?? []).filter((b) => b.name.trim() && !b.logo.includes("/demo/")).length > 0 ? (
         <section className="mx-auto max-w-[90rem] px-4 pb-5 sm:px-6 lg:px-10">
           <div className="flex flex-wrap items-center gap-4 rounded-[1.1rem] border border-[#E6ECFF] bg-white px-4 py-3.5 shadow-sm sm:px-5">
-            <div className="min-w-[160px] shrink-0">
-              <h3 className="font-display text-[0.95rem] font-bold text-indigo">
-                Trusted by Amazing Brands
-              </h3>
-              <p className="mt-0.5 text-[10px] text-muted">
-                {firstName} has collaborated with leading global brands.
-              </p>
+            <h3 className="min-w-[120px] shrink-0 font-display text-[0.95rem] font-bold text-indigo">
+              Brands
+            </h3>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-2">
+              {(creator.brands ?? [])
+                .filter((b) => b.name.trim() && !b.logo.includes("/demo/"))
+                .map((b) => (
+                  <Image
+                    key={b.name}
+                    src={b.logo}
+                    alt={b.name}
+                    width={90}
+                    height={28}
+                    className="h-5 w-auto object-contain"
+                  />
+                ))}
             </div>
-            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-2 opacity-80 grayscale">
-              {creator.brands.map((b) => (
-                <Image
-                  key={b.name}
-                  src={b.logo}
-                  alt={b.name}
-                  width={90}
-                  height={28}
-                  className="h-5 w-auto object-contain"
-                />
-              ))}
-            </div>
-            <span className="shrink-0 text-[11px] font-semibold text-blue">
-              View All Collaborations →
-            </span>
           </div>
         </section>
       ) : null}

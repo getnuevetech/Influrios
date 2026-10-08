@@ -7,6 +7,7 @@ import {
   addBannerImage,
   removeBannerImage,
   saveBannerUpload,
+  partnerNamesFromText,
   updateBanner,
   updateFeaturedCardsConfig,
   updateManagedCard,
@@ -24,6 +25,7 @@ export async function actionUpdateBanner(formData: FormData) {
     subtitle: String(formData.get("subtitle") ?? ""),
     ctaLabel: String(formData.get("ctaLabel") ?? ""),
     ctaHref: String(formData.get("ctaHref") ?? ""),
+    partners: partnerNamesFromText(String(formData.get("partners") ?? "")),
   });
   revalidatePath("/");
   revalidatePath("/admin");

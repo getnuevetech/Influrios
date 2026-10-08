@@ -183,6 +183,12 @@ export default async function CollaborationPage({ searchParams }: Props) {
     const creator = bySlug.get(item.creatorSlug);
     return creator?.specialties.some((slug) => slug.includes(params.specialty!)) ?? false;
   });
+  const visibleOpportunities = filteredOpportunities
+    .flatMap((item) => {
+      const creator = bySlug.get(item.creatorSlug);
+      return creator ? [{ item, creator }] : [];
+    })
+    .slice(0, 4);
   const heroFaces = directory.creators.slice(0, 6);
   const taxonomy = directory.taxonomy;
   const popularCards =
@@ -426,10 +432,10 @@ export default async function CollaborationPage({ searchParams }: Props) {
           </a>
         </div>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-          {featured && brand ? (
+          {featured ? (
             <FeaturedMatchCard
               match={featured}
-              brand={brand}
+              brand={brand ?? null}
               canRequest={canRequest}
               signedIn={signedIn}
               collabOsOn={collabOsOn}
@@ -482,6 +488,11 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </Link>
           </div>
           <ul className="space-y-3">
+            {requests.length === 0 ? (
+              <li className="rounded-xl border border-dashed border-[#E8EDF8] px-3 py-4 text-sm text-muted">
+                A published business request appears here.
+              </li>
+            ) : null}
             {requests.slice(0, 4).map((item) => (
               <li key={item.id} className="rounded-xl border border-[#E8EDF8] p-3">
                 <div className="flex gap-3">
@@ -528,10 +539,12 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </Link>
           </div>
           <ul className="space-y-3">
-            {filteredOpportunities.slice(0, 4).map((item) => {
-              const creator = bySlug.get(item.creatorSlug);
-              if (!creator) return null;
-              return (
+            {visibleOpportunities.length === 0 ? (
+              <li className="rounded-xl border border-dashed border-[#E8EDF8] px-3 py-4 text-sm text-muted">
+                A published influencer opportunity appears here.
+              </li>
+            ) : (
+              visibleOpportunities.map(({ item, creator }) => (
                 <li key={item.id} className="flex gap-3 rounded-xl border border-[#E8EDF8] p-3">
                   <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full">
                     <Image src={creator.image} alt="" fill className="object-cover" sizes="44px" />
@@ -544,8 +557,8 @@ export default async function CollaborationPage({ searchParams }: Props) {
                     </Link>
                   </div>
                 </li>
-              );
-            })}
+              ))
+            )}
           </ul>
         </article>
       </section>
@@ -879,7 +892,7 @@ function FeaturedMatchCard({
   collabOsOn,
 }: {
   match: CreatorMatch;
-  brand: MarketplaceBusinessRequestRow;
+  brand: MarketplaceBusinessRequestRow | null;
   canRequest: boolean;
   signedIn: boolean;
   viewerSlug?: string;
@@ -899,7 +912,7 @@ function FeaturedMatchCard({
 
   return (
     <article className="rounded-[1.5rem] border border-[#E4E9F5] bg-white p-5 shadow-sm sm:p-6">
-      <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+      <div className={`grid items-center gap-4 ${brand ? "lg:grid-cols-[1fr_auto_1fr]" : "lg:grid-cols-[1fr_auto]"}`}>
         <PartyCard
           image={match.a.image}
           name={match.a.displayName}
@@ -920,32 +933,34 @@ function FeaturedMatchCard({
             ))}
           </dl>
         </div>
-        <div className="rounded-2xl border border-[#E8EDF8] bg-white p-4">
-          <div className="flex gap-3">
-            <span className="relative h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-[#F4F7FF]">
-              {brand.imageUrl || brand.logoUrl ? (
-                <Image
-                  src={(brand.imageUrl || brand.logoUrl)!}
-                  alt=""
-                  fill
-                  className={brand.imageUrl ? "object-cover" : "object-contain p-2"}
-                  sizes="64px"
-                />
-              ) : null}
-            </span>
-            <div>
-              <span className="rounded-full bg-[#EAE4FF] px-2 py-0.5 text-[10px] font-bold text-violet">
-                Brand
+        {brand ? (
+          <div className="rounded-2xl border border-[#E8EDF8] bg-white p-4">
+            <div className="flex gap-3">
+              <span className="relative h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-[#F4F7FF]">
+                {brand.imageUrl || brand.logoUrl ? (
+                  <Image
+                    src={(brand.imageUrl || brand.logoUrl)!}
+                    alt=""
+                    fill
+                    className={brand.imageUrl ? "object-cover" : "object-contain p-2"}
+                    sizes="64px"
+                  />
+                ) : null}
               </span>
-              <p className="mt-1 font-display text-lg font-bold text-indigo">{brand.brand}</p>
-              <p className="text-xs text-muted">{brand.category}</p>
-              <p className="mt-1 flex items-center gap-1 text-xs text-muted">
-                <IconMapPin size={12} className="text-violet" />
-                {brand.location}
-              </p>
+              <div>
+                <span className="rounded-full bg-[#EAE4FF] px-2 py-0.5 text-[10px] font-bold text-violet">
+                  Brand
+                </span>
+                <p className="mt-1 font-display text-lg font-bold text-indigo">{brand.brand}</p>
+                <p className="text-xs text-muted">{brand.category}</p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-muted">
+                  <IconMapPin size={12} className="text-violet" />
+                  {brand.location}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
       <div className="mt-5 rounded-2xl bg-[#F4F0FF] p-4">
