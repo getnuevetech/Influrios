@@ -257,7 +257,7 @@ const LINKS: {
     title: "Marketplace ledger",
     blurb: "Prefund only after the provider confirms. Milestone templates and the escrow term are edited here. Sign in again if this page asks for permission.",
     module: "marketplace",
-    meta: () => "Phase 12.3",
+    meta: () => "Webhook hold",
   },
   {
     href: "/admin/legal",

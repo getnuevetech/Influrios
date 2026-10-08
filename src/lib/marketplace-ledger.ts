@@ -167,21 +167,6 @@ export async function ensureMarketplaceDefaults() {
     update: {},
     create: { kind: "marketplace", code: PROVIDER_CODE, name: "Marketplace provider", enabled: false },
   });
-  // Demo hold gateway — confirms prefunds without a real PSP webhook. Swap to primary/Stripe later.
-  {
-    const { encryptSecret } = await import("@/lib/provider-secrets");
-    await prisma.integrationProvider.upsert({
-      where: { kind_code: { kind: "marketplace", code: "demo" } },
-      update: {},
-      create: {
-        kind: "marketplace",
-        code: "demo",
-        name: "Demo hold (swappable)",
-        enabled: true,
-        webhookCipher: encryptSecret("demo-marketplace-webhook"),
-      },
-    });
-  }
   const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
   if (settings?.templatesSeeded) return;
   await prisma.$transaction(async (tx) => {
@@ -246,7 +231,7 @@ export async function marketplaceConfig() {
       name: row.name,
       enabled: row.enabled,
       webhook: row.webhookCipher ? ("saved" as const) : ("missing" as const),
-      ready: Boolean(row.enabled && row.webhookCipher),
+      ready: marketplaceProviderCanConfirm(row.code) && Boolean(row.enabled && row.webhookCipher),
     })),
   };
 }
@@ -1836,39 +1821,14 @@ export async function applyMarketplaceEvent(input: {
   return { applied: disposition === "apply", result: disposition };
 }
 
-/**
- * Admin / E2E helper — confirm an awaiting prefund as held without a live PSP webhook.
- * Uses applyMarketplaceEvent so ledger rules stay identical to a real provider callback.
- * Prefer providerCode "demo" for staging; any assigned provider works for ops testing.
- */
-export async function simulatePrefundHold(fundingId: string) {
-  const funding = await prisma.collaborationFunding.findUnique({ where: { id: fundingId } });
-  if (!funding) return { ok: false as const, error: "Prefund not found." };
-  if (funding.status !== "awaiting_provider") {
-    return { ok: false as const, error: `Prefund is “${funding.status}”, not awaiting provider.` };
-  }
-  const provider = (funding.providerCode || PROVIDER_CODE).trim() || PROVIDER_CODE;
-  const eventId = `demo-hold-${funding.id}-${Date.now().toString(36)}`;
-  const result = await applyMarketplaceEvent({
-    provider,
-    eventId,
-    eventType: "funding.held",
-    fundingId: funding.id,
-    amountCents: funding.grossCents,
-  });
-  if (result.result === "rejected" || result.result === "missing") {
-    return { ok: false as const, error: `Hold was not applied (${result.result}).` };
-  }
-  return {
-    ok: true as const,
-    applied: result.applied,
-    result: result.result,
-    eventId,
-    provider,
-  };
+/** A code named demo cannot confirm a prefund, even when an old row is still enabled. */
+export function marketplaceProviderCanConfirm(code: string) {
+  const normalized = code.trim().toLowerCase();
+  return normalized.length > 0 && normalized !== "demo";
 }
 
 export async function marketplaceWebhookSecret(code = PROVIDER_CODE) {
+  if (!marketplaceProviderCanConfirm(code)) return { error: "not_ready" as const };
   await ensureMarketplaceDefaults();
   const provider = await prisma.integrationProvider.findUnique({
     where: { kind_code: { kind: "marketplace", code } },

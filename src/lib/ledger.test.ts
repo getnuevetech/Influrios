@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   advanceMilestone,
@@ -14,8 +15,30 @@ import {
   splitGross,
   verifyMarketplaceSignature,
 } from "./ledger";
-import { applyMarketplaceEvent } from "./marketplace-ledger";
+import { applyMarketplaceEvent, marketplaceProviderCanConfirm } from "./marketplace-ledger";
 import { prisma } from "./db";
+
+describe("marketplace hold confirmation", () => {
+  it("refuses a demo provider code", () => {
+    assert.equal(marketplaceProviderCanConfirm("demo"), false);
+    assert.equal(marketplaceProviderCanConfirm(" Demo "), false);
+    assert.equal(marketplaceProviderCanConfirm(""), false);
+    assert.equal(marketplaceProviderCanConfirm("airwallex"), true);
+    assert.equal(marketplaceProviderCanConfirm("primary"), true);
+  });
+
+  it("does not seed a demo hold or simulate a prefund", () => {
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    const detail = readFileSync("src/app/admin/marketplace/[fundingId]/page.tsx", "utf8");
+    const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
+    assert.equal(ledger.includes("simulatePrefundHold"), false);
+    assert.equal(ledger.includes("demo-marketplace-webhook"), false);
+    assert.equal(page.includes("Simulate provider hold"), false);
+    assert.equal(detail.includes("Simulate provider hold"), false);
+    assert.equal(actions.includes("actionSimulatePrefundHold"), false);
+  });
+});
 
 describe("marketplace ledger rules", () => {
   it("uses Protected Payment until the jurisdiction allows the escrow term", () => {
