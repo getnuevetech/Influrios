@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Caveat, Plus_Jakarta_Sans, Sora } from "next/font/google";
-import { headers } from "next/headers";
+import { ChromeFrame } from "@/components/chrome-frame";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
-import { hidesMarketingChrome } from "@/lib/chrome-routes";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -32,15 +31,13 @@ export const metadata: Metadata = {
     "Influence discovery and collaboration platform. Create your free Influencer Card. One card. All your influence.",
 };
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const path = (await headers()).get("x-pathname") ?? "";
-  const bare = hidesMarketingChrome(path);
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className={`${plusJakarta.variable} ${sora.variable} ${caveat.variable} antialiased`}>
-        {bare ? null : <SiteHeader />}
-        <main>{children}</main>
-        {bare ? null : <SiteFooter />}
+        <ChromeFrame header={<SiteHeader />} footer={<SiteFooter />}>
+          {children}
+        </ChromeFrame>
       </body>
     </html>
   );
