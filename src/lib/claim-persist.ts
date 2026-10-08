@@ -33,13 +33,13 @@ function privatePayload(draft: ClaimDraft): Prisma.InputJsonValue {
   return {
     ...publicClaimPayload(draft),
     verifyCode: draft.verifyCode,
-    verificationDelivery: draft.verificationDelivery ?? "demo",
+    verificationDelivery: draft.verificationDelivery ?? "unsent",
     planTier: draft.planTier,
   };
 }
 
 export async function syncOnboardingSession(draft: ClaimDraft) {
-  const verifyMethod = draft.verificationDelivery === "email" ? "EMAIL" : "DEMO_CODE";
+  const verifyMethod = draft.verificationDelivery === "email" ? "EMAIL" : "UNSENT";
   await prisma.onboardingSession.upsert({
     where: { id: draft.id },
     create: {
@@ -90,7 +90,7 @@ export async function recordVerificationAttempt(input: {
   await prisma.verificationAttempt.create({
     data: {
       sessionId: input.draft.id,
-      method: input.draft.verificationDelivery === "email" ? "EMAIL" : "DEMO_CODE",
+      method: input.draft.verificationDelivery === "email" ? "EMAIL" : "UNSENT",
       channel: input.channel,
       success: input.success,
       detail: input.detail,

@@ -23,7 +23,7 @@ export default async function RegisterPage({ searchParams }: Props) {
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Create your account</h1>
       <p className="mt-2 text-sm text-muted">
-        Email and password. After you confirm the demo code, we send you back to {next}.
+        Email and password. We email a confirmation code when SMTP is configured, then send you back to {next}.
       </p>
       {params.error ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

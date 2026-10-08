@@ -2,7 +2,7 @@
  * Phase 8 / Phase K — Creator Claim & Activation
  * Draft → claim → verify → publish. OnboardingSession in Postgres is authoritative.
  */
-import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createHmac, randomBytes, randomInt, timingSafeEqual } from "crypto";
 import { requireAuthSecret } from "@/lib/app-secret";
 import { decideCount, isPlanCode, normalizePlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
@@ -42,10 +42,10 @@ export type ClaimDraft = {
   gender: ProfileGender;
   email?: string;
   ownerName?: string;
-  /** Verification code — shown only when SMTP is not ready (demo path). */
+  /** Mailed verification code. Absent until SMTP accepts the message. */
   verifyCode?: string;
-  /** How the claim verification code was delivered. */
-  verificationDelivery?: "demo" | "email";
+  /** email after SMTP accepts the code. demo is a stored legacy value and does not verify. */
+  verificationDelivery?: "demo" | "email" | "unsent";
   verifiedAt?: string;
   publishedAt?: string;
   attribution: string;
@@ -76,7 +76,7 @@ type SessionPayload = {
   stage: ClaimStage;
   attribution: string;
   verifyCode?: string;
-  verificationDelivery?: "demo" | "email";
+  verificationDelivery?: "demo" | "email" | "unsent";
   planTier?: string;
 };
 
@@ -137,12 +137,6 @@ function secret() {
 
 function sign(payload: string) {
   return createHmac("sha256", secret()).update(payload).digest("hex");
-}
-
-function hash(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return h;
 }
 
 function slugify(input: string) {
@@ -266,7 +260,8 @@ function readPayload(raw: Prisma.JsonValue): SessionPayload {
     stage,
     attribution: typeof value.attribution === "string" ? value.attribution : "ORGANIC_SIGNUP",
     verifyCode: typeof value.verifyCode === "string" ? value.verifyCode : undefined,
-    verificationDelivery: value.verificationDelivery === "email" ? "email" : "demo",
+    verificationDelivery:
+      value.verificationDelivery === "email" ? "email" : value.verificationDelivery === "unsent" ? "unsent" : "demo",
     planTier: normalizePlanCode(typeof value.planTier === "string" ? value.planTier : "") ?? undefined,
   };
 }
@@ -286,9 +281,14 @@ function sessionPayload(draft: ClaimDraft): SessionPayload {
     stage: draft.stage,
     attribution: draft.attribution,
     verifyCode: draft.verifyCode,
-    verificationDelivery: draft.verificationDelivery ?? "demo",
+    verificationDelivery: draft.verificationDelivery ?? "unsent",
     planTier: draft.planTier,
   };
+}
+
+/** A claim code verifies the email only after SMTP accepted it. A stored demo code does not. */
+export function claimEmailCanVerify(delivery: string | null | undefined): boolean {
+  return delivery === "email";
 }
 
 /** Public audit/DTO payload — never includes email or verifyCode. */
@@ -342,7 +342,12 @@ export function draftFromSession(row: OnboardingSession): ClaimDraft {
     email: row.email ?? undefined,
     ownerName: row.ownerName ?? undefined,
     verifyCode: payload.verifyCode,
-    verificationDelivery: row.verifyMethod === "EMAIL" || payload.verificationDelivery === "email" ? "email" : "demo",
+    verificationDelivery:
+      row.verifyMethod === "EMAIL" || payload.verificationDelivery === "email"
+        ? "email"
+        : payload.verificationDelivery === "unsent" || row.verifyMethod === "UNSENT"
+          ? "unsent"
+          : "demo",
     verifiedAt: row.emailVerifiedAt?.toISOString(),
     publishedAt: row.publishedAt?.toISOString(),
     attribution: payload.attribution,
@@ -353,8 +358,7 @@ export function draftFromSession(row: OnboardingSession): ClaimDraft {
 }
 
 async function writeDraft(draft: ClaimDraft, userId?: string | null) {
-  const verifyMethod =
-    draft.verificationDelivery === "email" ? "EMAIL" : draft.verifyCode ? "DEMO_CODE" : "DEMO_CODE";
+  const verifyMethod = draft.verificationDelivery === "email" ? "EMAIL" : "UNSENT";
   await prisma.onboardingSession.upsert({
     where: { id: draft.id },
     create: {
@@ -609,12 +613,12 @@ export async function claimDraft(input: {
   });
   draft.coverImage = resolveDefaultBanner({ seed: draft.slug, coverImage: draft.coverImage });
   draft.stage = claimed.stage;
-  draft.verifyCode = String(100000 + (Math.abs(hash(email + draft.id)) % 900000));
   draft.updatedAt = new Date().toISOString();
 
   const { mailReady } = await import("@/lib/mail");
   const canMail = await mailReady();
-  draft.verificationDelivery = canMail ? "email" : "demo";
+  draft.verifyCode = canMail ? String(randomInt(100000, 1000000)) : undefined;
+  draft.verificationDelivery = canMail ? "email" : "unsent";
   await writeDraft(draft);
 
   const { recordClaim } = await import("@/lib/claim-persist");
@@ -622,7 +626,13 @@ export async function claimDraft(input: {
 
   if (canMail && draft.verifyCode) {
     const { enqueueClaimVerificationEmail } = await import("@/lib/jobs");
-    await enqueueClaimVerificationEmail(email, draft.verifyCode);
+    const queued = await enqueueClaimVerificationEmail(email, draft.verifyCode);
+    if (!queued.queued) {
+      draft.verifyCode = undefined;
+      draft.verificationDelivery = "unsent";
+      draft.updatedAt = new Date().toISOString();
+      await writeDraft(draft);
+    }
   }
 
   await noteInvitation(draft.id, "claimed");
@@ -634,7 +644,17 @@ export async function verifyDraft(draftId: string, code: string): Promise<ClaimD
   if (!draft) throw new Error("Draft not found");
   const verified = advanceClaimStage(draft.stage, "verify");
   if (!verified.ok) throw new Error(verified.error);
-  if (!draft.verifyCode || code.trim() !== draft.verifyCode) {
+  if (!claimEmailCanVerify(draft.verificationDelivery) || !draft.verifyCode) {
+    const { recordVerificationAttempt } = await import("@/lib/claim-persist");
+    await recordVerificationAttempt({
+      draft,
+      channel: "EMAIL",
+      success: false,
+      detail: "email was not sent",
+    });
+    throw new Error("SMTP is not configured. Nothing was verified.");
+  }
+  if (code.trim() !== draft.verifyCode) {
     const { recordVerificationAttempt } = await import("@/lib/claim-persist");
     await recordVerificationAttempt({
       draft,
@@ -657,10 +677,7 @@ export async function verifyDraft(draftId: string, code: string): Promise<ClaimD
     draft,
     channel: "EMAIL",
     success: true,
-    detail:
-      draft.verificationDelivery === "email"
-        ? "email code accepted; social account remains unverified"
-        : "demo email code accepted; social account remains unverified",
+    detail: "email code accepted; social account remains unverified",
   });
   return draft;
 }

@@ -49,33 +49,32 @@ export default async function ClaimVerifyPage({ params, searchParams }: Props) {
           </div>
         ) : (
           <div className="rounded-xl bg-[#EEF4FF] px-4 py-3 text-sm text-indigo">
-            <p className="font-semibold">Demo code for {draft.email}</p>
-            <p className="mt-1 font-display text-2xl font-bold tracking-[0.2em] text-violet">
-              {draft.verifyCode}
-            </p>
+            <p className="font-semibold">Nothing was sent to {draft.email}</p>
             <p className="mt-1 text-xs text-muted">
-              SMTP is not configured, so the code is shown here and labeled demo. A social challenge on{" "}
+              SMTP is not configured. Nothing was verified and no code is shown. A social challenge on{" "}
               {draft.platform} stays a separate verification.
             </p>
           </div>
         )}
 
-        <form action={actionVerifyDraft} className="space-y-3">
-          <input type="hidden" name="draftId" value={draft.id} />
-          <label className="block text-sm font-semibold text-indigo">
-            Enter verification code
-            <input
-              name="code"
-              required
-              inputMode="numeric"
-              placeholder="6-digit code"
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal tracking-widest"
-            />
-          </label>
-          <button type="submit" className="btn-primary w-full">
-            Verify email →
-          </button>
-        </form>
+        {mailed ? (
+          <form action={actionVerifyDraft} className="space-y-3">
+            <input type="hidden" name="draftId" value={draft.id} />
+            <label className="block text-sm font-semibold text-indigo">
+              Enter verification code
+              <input
+                name="code"
+                required
+                inputMode="numeric"
+                placeholder="6-digit code"
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal tracking-widest"
+              />
+            </label>
+            <button type="submit" className="btn-primary w-full">
+              Verify email →
+            </button>
+          </form>
+        ) : null}
       </div>
 
       <p className="mt-6 text-center text-sm">
