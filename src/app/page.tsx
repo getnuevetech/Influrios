@@ -17,55 +17,19 @@ import {
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
-import { categoryImageFor, type SeedCreator } from "@/lib/seed-data";
+import { categoryImageFor, formatFollowers, specialtyLabel, totalFollowers, type SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 
 const TRENDING = ["Beauty", "Travel", "Fitness", "Home & Interior", "Tech", "Food", "Fashion"];
 
-const HERO_FLOATS = [
-  {
-    slug: "sofia-martinez",
-    label: "Beauty",
-    followers: "2.4M",
-    platform: "INSTAGRAM" as const,
-    className: "left-[2%] top-[6%] hidden w-36 rotate-[-8deg] lg:block xl:w-40",
-  },
-  {
-    slug: "priya-sharma",
-    label: "Tech",
-    followers: "3.1M",
-    platform: "YOUTUBE" as const,
-    className: "right-[0%] top-[2%] hidden w-36 rotate-[7deg] md:block xl:w-40",
-  },
-  {
-    slug: "jordan-blake",
-    label: "Travel",
-    followers: "1.6M",
-    platform: "TIKTOK" as const,
-    className: "bottom-[4%] left-[8%] hidden w-32 rotate-[4deg] lg:block",
-  },
-  {
-    slug: "marcus-lee",
-    label: "Lifestyle",
-    followers: "980K",
-    platform: "INSTAGRAM" as const,
-    className: "bottom-[8%] right-[6%] hidden w-32 rotate-[-5deg] md:block",
-  },
-  {
-    slug: "amara-okonkwo",
-    label: "Fashion",
-    followers: "1.2M",
-    platform: "TIKTOK" as const,
-    className: "right-[18%] top-[38%] hidden w-28 rotate-[10deg] xl:block",
-  },
-  {
-    slug: "daniel-kim",
-    label: "Home & DIY",
-    followers: "740K",
-    platform: "YOUTUBE" as const,
-    className: "left-[16%] top-[42%] hidden w-28 rotate-[-12deg] xl:block",
-  },
+const FLOAT_CLASS = [
+  "left-[2%] top-[6%] hidden w-36 rotate-[-8deg] lg:block xl:w-40",
+  "right-[0%] top-[2%] hidden w-36 rotate-[7deg] md:block xl:w-40",
+  "bottom-[4%] left-[8%] hidden w-32 rotate-[4deg] lg:block",
+  "bottom-[8%] right-[6%] hidden w-32 rotate-[-5deg] md:block",
+  "right-[18%] top-[38%] hidden w-28 rotate-[10deg] xl:block",
+  "left-[16%] top-[42%] hidden w-28 rotate-[-12deg] xl:block",
 ];
 
 /** Full-bleed content shell */
@@ -94,10 +58,13 @@ export default async function HomePage() {
     .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
   const bySlug = new Map(directory.creators.map((creator) => [creator.slug, creator]));
   const creatorBySlug = (slug: string) => bySlug.get(slug);
-  const heroFloats = HERO_FLOATS.flatMap((item) => {
-    const creator = creatorBySlug(item.slug);
-    return creator ? [{ ...item, creator }] : [];
-  });
+  const heroFloats = directory.creators.slice(0, FLOAT_CLASS.length).map((creator, index) => ({
+    creator,
+    label: creator.specialties[0] ? specialtyLabel(creator.specialties[0]) : "Creator",
+    followers: formatFollowers(totalFollowers(creator)),
+    platform: creator.socials[0]?.platform,
+    className: FLOAT_CLASS[index] ?? "",
+  }));
   const sections = [...directory.sections].sort((a, b) => a.sortOrder - b.sortOrder);
   const sectionOn = (key: string) => {
     const section = sections.find((item) => item.key === key);
@@ -146,7 +113,7 @@ export default async function HomePage() {
           }));
 
   const proofAvatars = directory.creators.slice(0, 5);
-  const featuredCreator = creatorBySlug("sofia-martinez") ?? directory.creators[0];
+  const featuredCreator = directory.creators[0];
   const heroPadY = `${Math.round(4 * hero.heightScale)}rem`;
   const ctaPadY = `${Math.round(4 * cta.heightScale)}rem`;
 
@@ -185,7 +152,7 @@ export default async function HomePage() {
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
                   <div className="mb-1 flex items-center gap-1 text-white/90">
-                    <SocialIcon platform={item.platform} size={14} />
+                    {item.platform ? <SocialIcon platform={item.platform} size={14} /> : null}
                     <span className="text-[10px] font-semibold uppercase tracking-wide">{item.label}</span>
                   </div>
                   <p className="text-[11px] font-bold text-white">{item.followers} followers</p>
@@ -441,6 +408,7 @@ export default async function HomePage() {
             {cms.collaborationMatches.matches.map((m) => {
               const left = creatorBySlug(m.leftSlug);
               const right = creatorBySlug(m.rightSlug);
+              if (!left || !right) return null;
               return (
                 <Link
                   key={m.title}
@@ -539,17 +507,19 @@ export default async function HomePage() {
               <div className="rounded-[1.6rem] border-[5px] border-[#1a1a2e] bg-[#1a1a2e] p-1 shadow-2xl">
                 <div className="overflow-hidden rounded-[1.15rem] bg-white">
                   <div className="relative h-28">
-                    <Image
-                      src={featuredCreator?.image ?? "/demo/creators/creator-sofia.jpg"}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="200px"
-                    />
+                    {featuredCreator ? (
+                      <Image
+                        src={featuredCreator.image}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="200px"
+                      />
+                    ) : null}
                   </div>
                   <div className="space-y-1.5 px-3 py-3 text-center">
                     <p className="font-display text-sm font-bold text-indigo">
-                      {featuredCreator?.displayName ?? "Influencer"}
+                      {featuredCreator?.displayName ?? "Your card"}
                     </p>
                     {(featuredCreator?.socials ?? []).slice(0, 2).map((s) => (
                       <div

@@ -312,7 +312,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <input
                   name="title"
                   required
-                  defaultValue="Holiday gift sets"
+                  placeholder="Campaign title"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -321,7 +321,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <input
                   name="clientName"
                   required
-                  defaultValue="Luminous Beauty"
+                  placeholder="Client name"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -329,7 +329,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <span className="font-semibold text-indigo">Specialty</span>
                 <input
                   name="specialty"
-                  defaultValue="beauty"
+                  placeholder="Specialty"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -337,7 +337,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <span className="font-semibold text-indigo">Budget</span>
                 <input
                   name="budgetLabel"
-                  defaultValue="$8K package"
+                  placeholder="Budget"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -356,7 +356,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <span className="font-semibold text-indigo">Summary</span>
                 <input
                   name="summary"
-                  defaultValue="Multi-creator holiday push with joint cutdown."
+                  placeholder="What this campaign covers"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -447,7 +447,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <input
                   name="title"
                   required
-                  defaultValue="Dual-creator launch story"
+                  placeholder="Case study title"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -455,7 +455,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <span className="font-semibold text-indigo">Tagline</span>
                 <input
                   name="tagline"
-                  defaultValue="Complementary specialties, shared brand narrative"
+                  placeholder="Tagline"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -493,7 +493,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <span className="font-semibold text-indigo">Specialty</span>
                 <input
                   name="specialty"
-                  defaultValue="beauty"
+                  placeholder="Specialty"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -516,7 +516,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <textarea
                   name="outcome"
                   rows={2}
-                  defaultValue="Joint content drove stronger saves and assisted conversion vs solo posts."
+                  placeholder="What happened"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -527,7 +527,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <textarea
                   name="metrics"
                   rows={3}
-                  defaultValue={"Reach | 890K\nSaves | 12.1K\nBrand lift | +14%"}
+                  placeholder={"Label | value"}
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>

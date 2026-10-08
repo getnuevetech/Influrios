@@ -230,7 +230,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
               <span className="font-semibold text-indigo">Business</span>
               <input
                 name="businessName"
-                defaultValue="Luminous Beauty"
+                placeholder="Business name"
                 required
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2"
               />
