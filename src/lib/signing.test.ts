@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   canAdvanceSignatureStatus,
@@ -17,7 +19,8 @@ describe("signing lifecycle", () => {
 
   it("resolves DocuSign only when the saved credentials are complete", () => {
     const empty: Record<string, string | undefined> = {};
-    assert.equal(resolveSigningMode("demo", null, empty), "demo");
+    assert.equal(resolveSigningMode("demo", null, empty), "unconfigured");
+    assert.equal(resolveSigningMode("demo_sign", null, empty), "unconfigured");
     assert.equal(resolveSigningMode("docusign", null, empty), "unconfigured");
     assert.equal(
       resolveSigningMode(
@@ -35,8 +38,24 @@ describe("signing lifecycle", () => {
     );
   });
 
-  it("accepts unsigned demo webhooks when secret is empty", () => {
-    assert.equal(verifySigningWebhookSignature("{}", null, ""), true);
+  it("rejects a webhook that has no secret", () => {
+    assert.equal(verifySigningWebhookSignature("{}", null, ""), false);
     assert.equal(verifySigningWebhookSignature("{}", null, "secret"), false);
+    const body = "{}";
+    const signature = createHmac("sha256", "secret").update(body).digest("hex");
+    assert.equal(verifySigningWebhookSignature(body, signature, "secret"), true);
+    assert.equal(verifySigningWebhookSignature(body, signature, "other"), false);
+  });
+
+  it("does not mint a demo envelope or sign from a non-DocuSign body", () => {
+    const signing = readFileSync("src/lib/signing.ts", "utf8");
+    const providers = readFileSync("src/lib/providers.ts", "utf8");
+    const route = readFileSync("src/app/api/signing/webhook/route.ts", "utf8");
+    assert.equal(signing.includes("demosign_"), false);
+    assert.equal(signing.includes("ensureDemoSigningProvider"), false);
+    assert.equal(providers.includes("demosign_"), false);
+    assert.match(providers, /DocuSign is the signing provider/);
+    assert.match(route, /Nothing was signed/);
+    assert.equal(route.split("applyContractEnvelopeEvent(").length - 1, 1);
   });
 });

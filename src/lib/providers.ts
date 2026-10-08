@@ -844,7 +844,7 @@ export async function queueSignatureRequest(input: { collaborationId: string; ti
   const code = provider!.code.trim().toLowerCase();
   let externalId = "";
   if (code === "demo" || code === "demo_sign") {
-    externalId = `demosign_${Date.now().toString(36)}`;
+    return { ok: false as const, error: "DocuSign is the signing provider. Nothing was sent." };
   } else if (code === "docusign" || code.includes("docusign")) {
     const collab = await prisma.collaboration.findUnique({
       where: { id: input.collaborationId },
@@ -889,7 +889,10 @@ export async function queueSignatureRequest(input: { collaborationId: string; ti
       collaborationId: input.collaborationId,
     });
     if (!asked.ok) return asked;
-    externalId = asked.externalId || `sign_${Date.now().toString(36)}`;
+    if (!asked.externalId) {
+      return { ok: false as const, error: "The signing API did not return an envelope id. Nothing was sent." };
+    }
+    externalId = asked.externalId;
   }
   const row = await prisma.signatureRequest.create({
     data: {
