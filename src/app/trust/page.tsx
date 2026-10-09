@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listMilestoneDisputes } from "@/lib/milestone-disputes";
+import { purgeLegacyDemoJsonFiles } from "@/lib/legacy-teardown";
 import { formatMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,10 @@ type Props = {
 
 export default async function TrustPage({ searchParams }: Props) {
   const params = await searchParams;
-  const ledgerDisputes = await listMilestoneDisputes().catch(() => []);
+  const [ledgerDisputes] = await Promise.all([
+    listMilestoneDisputes().catch(() => []),
+    purgeLegacyDemoJsonFiles().catch(() => null),
+  ]);
   const open = ledgerDisputes.filter((dispute) => dispute.status === "open" || dispute.status === "under_review").length;
   const resolved = ledgerDisputes.length - open;
 
@@ -22,7 +26,7 @@ export default async function TrustPage({ searchParams }: Props) {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">
             Trust &amp; Disputes
           </p>
-          <h1 className="mt-2 font-display text-4xl font-bold">Mediation &amp; briefs</h1>
+          <h1 className="mt-2 font-display text-4xl font-bold">Ledger disputes</h1>
           <p className="mt-3 max-w-2xl text-white/75">
             Ledger disputes for provider-held milestones. A decision records what should happen next and does not move the money.
           </p>
@@ -48,7 +52,7 @@ export default async function TrustPage({ searchParams }: Props) {
         ) : null}
         {params.opened ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Dispute {params.opened} opened — ops will mediate.
+            Dispute {params.opened} opened. Ops will review it.
           </div>
         ) : null}
 

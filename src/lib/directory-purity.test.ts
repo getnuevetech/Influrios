@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
+import { promises as fs } from "fs";
+import path from "path";
 import { describe, it } from "node:test";
 import { allCreatorMatches, findMatchesFor, scoreCreatorPair } from "./matching";
 import { indexCreatorsBySlug, SEED_CREATORS } from "./seed-data";
-import { assertLegacyDemoPayments, isLegacyDemoPaymentsAdminHref } from "./legacy-demo-payments";
 
 describe("directory purity helpers", () => {
   it("indexes creators by slug for picker lookups", () => {
@@ -29,14 +30,22 @@ describe("directory purity helpers", () => {
   });
 });
 
-describe("legacy demo payments switch", () => {
-  it("always refuses Phase 9/10 demo writes", async () => {
-    await assert.rejects(() => assertLegacyDemoPayments(), /marketplace ledger/i);
-  });
-
-  it("only treats /admin/payments as a legacy-only admin href", () => {
-    assert.equal(isLegacyDemoPaymentsAdminHref("/admin/payments"), true);
-    assert.equal(isLegacyDemoPaymentsAdminHref("/admin/trust"), false);
-    assert.equal(isLegacyDemoPaymentsAdminHref("/admin/marketplace"), false);
+describe("phase 9/10 json demos", () => {
+  it("removes the json payment modules and the mediation queue", async () => {
+    const root = process.cwd();
+    for (const rel of [
+      "src/lib/protected-payments.ts",
+      "src/lib/trust.ts",
+      "src/lib/legacy-demo-payments.ts",
+      "src/app/admin/trust/actions.ts",
+    ]) {
+      await assert.rejects(() => fs.access(path.join(root, rel)));
+    }
+    const trustPage = await fs.readFile(path.join(root, "src/app/admin/trust/page.tsx"), "utf8");
+    const seed = await fs.readFile(path.join(root, "prisma/seed.ts"), "utf8");
+    assert.equal(trustPage.includes("getTrustStore"), false);
+    assert.equal(trustPage.includes("Mediation queue"), false);
+    assert.equal(trustPage.includes("actionCreateContract"), false);
+    assert.match(seed, /purgeLegacyDemoJsonFiles/);
   });
 });

@@ -31,7 +31,7 @@ describe("legacy inventory", () => {
   it("lists demo endpoints and signing decision", () => {
     const snap = legacyInventorySnapshot();
     assert.ok(snap.endpoints.some((row) => row.path === "/admin/payments"));
-    assert.match(snap.signingDecision, /non-goal/i);
+    assert.match(snap.signingDecision, /DocuSign/i);
     assert.match(snap.moneyEngine, /marketplace ledger/i);
   });
 
@@ -44,7 +44,7 @@ describe("legacy inventory", () => {
 });
 
 describe("legacy teardown freeze (db)", () => {
-  it("purges demo JSON when legacy switch is off and records deprecation telemetry", async (t) => {
+  it("purges leftover demo JSON and records deprecation telemetry", async (t) => {
     if (!(await requireDb(t))) return;
     const dataDir = path.join(process.cwd(), "data");
     await fs.mkdir(dataDir, { recursive: true }).catch(() => null);
