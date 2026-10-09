@@ -105,8 +105,9 @@ export default async function AdminMailPage({ searchParams }: Props) {
       <AdminCollapse title="Test SMTP (claim invitation)" subtitle="Uses the invitation template" defaultOpen>
         <form action={actionSendMailTest} className="space-y-3">
           <p className="text-sm text-muted">
-            Sends the claim invitation template to one address. If SMTP is not configured, you will see an error after
-            submit — the button stays clickable when you have edit access.
+            Sends the claim invitation template to one address. Preview labels fill the name, expiry, and profile, and
+            the link is this site. The message does not claim a profile. If SMTP is not configured, you will see an
+            error after submit — the button stays clickable when you have edit access.
           </p>
           <label className="block text-sm">
             <span className="font-semibold text-indigo">To</span>
@@ -227,6 +228,9 @@ export default async function AdminMailPage({ searchParams }: Props) {
             </form>
             {canEdit ? (
               <div className="mt-4 space-y-3 border-t border-[#E4EBFF] pt-3">
+                <p className="text-xs text-muted">
+                  Send email uses preview labels and this address. It does not issue a code or open a collaboration.
+                </p>
                 <form action={actionSendCommTemplate} className="flex flex-wrap items-end gap-2">
                   <input type="hidden" name="templateId" value={template.id} />
                   <input type="hidden" name="channel" value="email" />

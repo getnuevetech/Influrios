@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { deliverMail, loadMailConfig } from "@/lib/mail";
+import { deliverMail, loadMailConfig, previewMailVars } from "@/lib/mail";
 import { SMS_BODY_MAX, SMS_NOT_SENT_MESSAGE, smsProviderLabel } from "@/lib/sms";
 
 export { SMS_BODY_MAX, SMS_NOT_SENT_MESSAGE, smsProviderLabel };
@@ -216,19 +216,6 @@ export async function deleteCommTemplate(id: string) {
   await prisma.commTemplate.delete({ where: { id } });
 }
 
-const SAMPLE_VARS: CommVars = {
-  name: "Sofia Martinez",
-  email: "sofia@example.com",
-  phone: "+15555550100",
-  link: "https://influrios.com/example",
-  expiry: "14 days",
-  profile: "sofia-martinez",
-  business: "Harbor Brand",
-  collaboration: "Summer launch",
-  amount: "$250.00",
-  code: "482913",
-};
-
 export async function sendCommTemplateTest(input: {
   templateId: string;
   toEmail: string;
@@ -244,10 +231,11 @@ export async function sendCommTemplateTest(input: {
     if (!channels.emailEnabled) return { ok: false, message: "Email channel is turned off." };
     const config = await loadMailConfig();
     if (!config) return { ok: false, message: "SMTP is not configured. Nothing was sent." };
+    const preview = previewMailVars(input.toEmail);
     const result = await deliverMail(config, {
       to: input.toEmail,
-      subject: renderCommCopy(template.subject, SAMPLE_VARS),
-      text: renderCommCopy(template.bodyEmail, SAMPLE_VARS),
+      subject: renderCommCopy(template.subject, preview),
+      text: renderCommCopy(template.bodyEmail, preview),
     });
     try {
       await prisma.job.create({
