@@ -61,7 +61,7 @@ export const FAQ_SEED: FaqSeed[] = [
     sortOrder: 50,
     question: "How do I sign in?",
     answer:
-      "Creators start at Create Your Card, confirm the email Influrios sends, and then use the dashboard.\n\nBusinesses and agencies sign in from the login page and open the business or agency workspace their plan allows.\n\nIf email delivery is not configured yet, verification cannot complete. An admin saves SMTP under Email & SMS.",
+      "Creators start at Create Your Card, confirm the email Influrios sends, and then use the dashboard.\n\nBusinesses and agencies sign in from the login page and open the business or agency workspace their plan allows.\n\nIf email delivery is not configured yet, verification cannot complete. An admin saves SMTP under Email.",
   },
   {
     key: "get-help",

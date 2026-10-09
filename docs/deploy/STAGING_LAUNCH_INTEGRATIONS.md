@@ -187,14 +187,14 @@ Live Stripe keys (`sk_live_`) only after staging evidence above is filled and re
 
 ## 7. Phase M exit sign-off
 
-Phase M is **complete** only when every cell below has a real evidence id. A blank cell is not done. The probe does not fill these cells.
+Phase M is **complete** only when every cell below has a real evidence id. A blank cell is not done. The probe does not fill these cells. SMS is not an evidence cell. Twilio is not the provider, and nothing is sent.
 
 Probe of `https://influrios.com` on 2026-10-06T23:01:35Z: HTTPS, homepage, admin login, and database health passed. `secrets.authConfigured` was **false**. E0 is not met until that field is true. SMTP, SMS, Stripe, social, Meilisearch, Airwallex, recurring, team proposals, DocuSign, Flutterwave or M-Pesa, and paid mentorship were not exercised. No sandbox credentials were available to this run.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | | | |
-| SMTP + SMS | | | |
+| SMTP | | | |
 | Stripe checkout, duplicate skip, portal, Connect | | | |
 | Social OAuth | | | |
 | Meilisearch counts | | | |

@@ -133,12 +133,10 @@ export async function actionLogout() {
 export async function actionSaveCommPreference(formData: FormData) {
   const session = await getAccountSession();
   if (!session) redirect("/login?next=/account");
-  const channel = String(formData.get("preferredCommChannel") ?? "email") === "sms" ? "sms" : "email";
   try {
     const { setUserCommPreference } = await import("@/lib/comm-templates");
     await setUserCommPreference({
       userId: session.id,
-      preferredCommChannel: channel,
       phone: String(formData.get("phone") ?? ""),
     });
   } catch (error) {
