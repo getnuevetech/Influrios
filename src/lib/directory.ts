@@ -85,6 +85,14 @@ export function invalidateDirectoryCache() {
   cache = null;
 }
 
+/** Directory cards do not invent a rank. The status line follows the stored open-to-collab flag. */
+export function directoryLabels(openToCollab: boolean): { badge: string; statusLabel: string } {
+  return {
+    badge: "",
+    statusLabel: openToCollab ? "Open to partnerships" : "Not open to partnerships",
+  };
+}
+
 function isCreatorPlan(plan: string): plan is "STARTER" | "PLUS" | "PRO" {
   return isPlanCode(plan);
 }
@@ -102,8 +110,8 @@ function blankCreator(slug: string, name: string): SeedCreator {
     image: "/brand/avatars/generic.png",
     coverImage: "/brand/banners/rooftop-crew.png",
     gender: "unspecified",
-    badge: "Rising Star",
-    statusLabel: "Open to partnerships",
+    badge: "",
+    statusLabel: "",
     planTier: "STARTER",
     specialties: [],
     socials: [],
@@ -146,6 +154,7 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
     specialties,
     socials,
     openToCollab: row.openToCollab,
+    ...directoryLabels(row.openToCollab),
     image: avatar,
     coverImage: cover,
     gender,
