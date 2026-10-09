@@ -294,12 +294,26 @@ export async function sendMail(message: MailMessage): Promise<{ ok: true } | { o
   return deliverMail(config, message);
 }
 
-const SAMPLE_VARS = {
-  name: "Sofia Martinez",
-  link: "https://influrios.com/invite/sample",
-  expiry: "14 days",
-  profile: "sofia-martinez",
-};
+/** Labels for an admin test send. The address is the only real recipient fact. */
+export function previewMailVars(to?: string): Record<string, string> {
+  const origin = (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    "http://localhost:3000"
+  ).replace(/\/$/, "");
+  return {
+    name: "Preview recipient",
+    email: (to || "").trim(),
+    phone: "",
+    link: origin,
+    expiry: "preview window",
+    profile: "preview profile",
+    business: "Preview business",
+    collaboration: "Preview collaboration",
+    amount: "preview amount",
+    code: "preview code",
+  };
+}
 
 /** Send the claim invitation template. No job is recorded when SMTP is not configured. */
 export async function sendInvitationTest(to: string, record = true): Promise<{ ok: boolean; message: string }> {
@@ -317,10 +331,11 @@ export async function sendInvitationTest(to: string, record = true): Promise<{ o
   } catch {
     /* use the built-in template */
   }
+  const preview = previewMailVars(to);
   const result = await deliverMail(config, {
     to,
-    subject: renderInvitationCopy(subject, SAMPLE_VARS),
-    text: renderInvitationCopy(body, SAMPLE_VARS),
+    subject: renderInvitationCopy(subject, preview),
+    text: renderInvitationCopy(body, preview),
   });
   if (record) {
     try {
