@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import {
@@ -20,9 +22,19 @@ const BALANCE_COLOR: Record<string, string> = {
 };
 
 export default async function BusinessIntelligencePage() {
-  const ws = await getWorkspace();
-  const entitlements = await businessEntitlementsForPlan(ws.plan);
-  const locked = !entitlements.intelligence;
+  const account = await getAccountSession();
+  if (!account) redirect("/login?next=/business/intelligence");
+  const ws = await getWorkspace(account.id).catch(() => null);
+  if (!ws) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16">
+        <h1 className="font-display text-3xl font-bold text-indigo">Business intelligence</h1>
+        <p className="mt-2 text-sm text-muted">Workspace details are unavailable right now.</p>
+      </div>
+    );
+  }
+  const entitlements = await businessEntitlementsForPlan(ws.plan).catch(() => null);
+  const locked = !entitlements?.intelligence;
 
   const snapshots = locked ? [] : (await getAllAudienceSnapshots()).slice(0, 6);
   const trends = locked ? [] : await getNicheTrends();
@@ -53,10 +65,10 @@ export default async function BusinessIntelligencePage() {
           <div className="card-surface p-8 text-center">
             <h2 className="font-display text-2xl font-bold text-indigo">Business Pro unlocks Intelligence</h2>
             <p className="mx-auto mt-2 max-w-lg text-sm text-muted">
-              Audience snapshots, niche demand trends, relationship signals, and CSV/JSON exports are
-              available on Business Pro and Agency.
+              {ws.plan} does not include audience snapshots, niche counts, or relationship rows.
+              Business Pro and Agency include them.
             </p>
-            <Link href="/collaboration/business#pricing" className="btn-primary mt-6 inline-flex">
+            <Link href="/business/plans" className="btn-primary mt-6 inline-flex">
               View business plans →
             </Link>
           </div>
@@ -68,20 +80,22 @@ export default async function BusinessIntelligencePage() {
                 Reach uses follower totals already on the profile. Niche rows compare open requests
                 with creators in the directory. Searches are not stored, so they are not counted.
               </p>
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href="/api/intelligence/export?format=json"
-                  className="btn-secondary !py-2 text-sm"
-                >
-                  Export JSON
-                </a>
-                <a
-                  href="/api/intelligence/export?format=csv"
-                  className="btn-primary !py-2 text-sm"
-                >
-                  Export CSV
-                </a>
-              </div>
+              {entitlements?.exports ? (
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href="/api/intelligence/export?format=json"
+                    className="btn-secondary !py-2 text-sm"
+                  >
+                    Export JSON
+                  </a>
+                  <a
+                    href="/api/intelligence/export?format=csv"
+                    className="btn-primary !py-2 text-sm"
+                  >
+                    Export CSV
+                  </a>
+                </div>
+              ) : null}
             </div>
 
             {/* Niche trends */}
