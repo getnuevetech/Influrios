@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { ensureLaunchEntitlements } from "../src/lib/entitlements-db";
 import { ensureMarketplaceListings } from "../src/lib/marketplace-listings";
+import { removeUntouchedDemoBusinessWorkspace } from "../src/lib/business";
 import { clearStoredSeedCmsSamples, removeUntouchedSeedCreators } from "../src/lib/seed-directory";
 import { SPECIALTY_TAXONOMY } from "../src/lib/seed-data";
 
@@ -31,13 +32,14 @@ async function main() {
   }
 
   const removedCreators = await removeUntouchedSeedCreators();
+  const removedWorkspace = await removeUntouchedDemoBusinessWorkspace();
   const clearedCms = await clearStoredSeedCmsSamples();
 
   // Drop leftover sample brands and opportunities. An empty marketplace stays empty.
   await ensureMarketplaceListings();
 
   console.log(
-    `Seeded ${SPECIALTY_TAXONOMY.length} specialty trees. Removed ${removedCreators} untouched sample creators and cleared ${clearedCms} sample homepage sections.`,
+    `Seeded ${SPECIALTY_TAXONOMY.length} specialty trees. Removed ${removedCreators} untouched sample creators, ${removedWorkspace} sample workspace, and cleared ${clearedCms} sample homepage sections.`,
   );
 }
 

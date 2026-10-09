@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { prisma } from "./db";
+import { readFileSync } from "node:fs";
 import {
-  DEMO_BUSINESS_WORKSPACE_ID,
   PUBLIC_BUSINESS_WORKSPACE,
   ensureOwnedBusinessWorkspace,
   getWorkspace,
@@ -49,7 +49,7 @@ describe("business workspace tenancy (W2.3)", () => {
     assert.notEqual(wsA.businessId, wsB.businessId);
     assert.equal(wsA.ownerUserId, userA.id);
     assert.equal(wsB.ownerUserId, userB.id);
-    assert.notEqual(wsA.businessId, DEMO_BUSINESS_WORKSPACE_ID);
+    assert.notEqual(wsA.businessId, "demo-business");
 
     const again = await getWorkspace(userA.id);
     assert.equal(again.businessId, wsA.businessId);
@@ -114,6 +114,23 @@ describe("business workspace tenancy (W2.3)", () => {
     const demo = await getWorkspace();
     assert.equal(demo.businessId, PUBLIC_BUSINESS_WORKSPACE.businessId);
     assert.equal(demo.plan, "BUSINESS_FREE");
-    assert.notEqual(demo.businessId, DEMO_BUSINESS_WORKSPACE_ID);
+    assert.notEqual(demo.businessId, "demo-business");
+  });
+
+  it("does not create the retired sample workspace", () => {
+    const source = readFileSync("src/lib/business.ts", "utf8");
+    const seed = readFileSync("prisma/seed.ts", "utf8");
+    const sql = readFileSync(
+      "prisma/migrations/20261009030000_remove_demo_business_workspace/migration.sql",
+      "utf8",
+    );
+    assert.equal(source.includes("ensureDemoBusinessWorkspace"), false);
+    assert.equal(source.includes("ensureDemoWorkspace"), false);
+    assert.match(source, /removeUntouchedDemoBusinessWorkspace/);
+    assert.match(seed, /removeUntouchedDemoBusinessWorkspace/);
+    assert.match(sql, /demo-business/);
+    assert.match(sql, /Luminous Beauty/);
+    assert.match(sql, /brief-clean-launch/);
+    assert.match(sql, /"ownerUserId" IS NULL/);
   });
 });

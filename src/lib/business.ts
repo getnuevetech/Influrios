@@ -46,11 +46,6 @@ export type BusinessWorkspace = {
   inquiries: Inquiry[];
 };
 
-const WORKSPACE_ID = "demo-business";
-
-/** Seed workspace for fixtures. Signed-in product paths use the owner's workspace. */
-export const DEMO_BUSINESS_WORKSPACE_ID = WORKSPACE_ID;
-
 /** Logged-out readers get a free workspace that is not stored and is not Business Pro. */
 export const PUBLIC_BUSINESS_WORKSPACE: BusinessWorkspace = {
   businessId: "public",
@@ -131,75 +126,59 @@ function mapWorkspace(row: WorkspaceRow): BusinessWorkspace {
   };
 }
 
-let workspaceSeed: Promise<void> | null = null;
+const RETIRED_DEMO_WORKSPACE_ID = "demo-business";
+const RETIRED_DEMO_BRIEF_ID = "brief-clean-launch";
+const RETIRED_DEMO_BRIEF_SUMMARY =
+  "Seeking beauty educators for a 3-post launch series with honest routine content.";
 
-async function seedDemoWorkspace() {
-  const existing = await prisma.businessWorkspace.findUnique({ where: { id: WORKSPACE_ID } });
-  if (existing) return;
-  try {
-    await prisma.businessWorkspace.create({
-      data: {
-        id: WORKSPACE_ID,
-        name: "Luminous Beauty",
-        plan: "BUSINESS_PRO",
-        industry: "Skincare & Wellness",
-        briefs: {
-          create: {
-            id: "brief-clean-launch",
-            title: "Clean Skincare Launch",
-            goal: "Product Launch",
-            specialty: "beauty",
-            budget: "$5K – $10K",
-            location: "USA",
-            platform: "INSTAGRAM",
-            summary: "Seeking beauty educators for a 3-post launch series with honest routine content.",
-            status: "active",
-          },
-        },
-        shortlist: {
-          create: [
-            { creatorSlug: "sofia-martinez", note: "Top beauty fit" },
-            { creatorSlug: "amara-okonkwo", note: "Natural-hair angle" },
-          ],
-        },
-      },
-    });
-  } catch (error) {
-    if (!isUnique(error)) throw error;
-  }
-}
-
-function ensureDemoWorkspace() {
-  if (!workspaceSeed) {
-    workspaceSeed = seedDemoWorkspace().catch((error) => {
-      workspaceSeed = null;
-      throw error;
-    });
-  }
-  return workspaceSeed;
-}
-
-async function readWorkspace(workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
-  if (workspaceId === DEMO_BUSINESS_WORKSPACE_ID) await ensureDemoWorkspace();
-  const row = await loadRow(workspaceId);
+async function readWorkspace(workspaceId: string) {
+  const id = workspaceId.trim();
+  if (!id) throw new Error("Business workspace is required.");
+  const row = await loadRow(id);
   if (!row) throw new Error("Business workspace is unavailable.");
   return mapWorkspace(row);
 }
 
+/** Delete the retired sample workspace only when its brief and shortlist are still the sample. */
+export async function removeUntouchedDemoBusinessWorkspace(): Promise<number> {
+  const row = await prisma.businessWorkspace.findUnique({
+    where: { id: RETIRED_DEMO_WORKSPACE_ID },
+    include: {
+      briefs: true,
+      shortlist: true,
+      inquiries: { select: { id: true } },
+      matchQueue: { select: { id: true } },
+      marketplaceRequests: { select: { id: true } },
+      fundings: { select: { id: true } },
+    },
+  });
+  if (!row || row.ownerUserId) return 0;
+  if (row.name !== "Luminous Beauty" || row.industry !== "Skincare & Wellness") return 0;
+  if (row.inquiries.length || row.matchQueue.length || row.marketplaceRequests.length || row.fundings.length) {
+    return 0;
+  }
+  if (row.briefs.length !== 1) return 0;
+  const brief = row.briefs[0]!;
+  if (
+    brief.id !== RETIRED_DEMO_BRIEF_ID ||
+    brief.title !== "Clean Skincare Launch" ||
+    brief.summary !== RETIRED_DEMO_BRIEF_SUMMARY
+  ) {
+    return 0;
+  }
+  const sampleSlugs = new Set(["sofia-martinez", "amara-okonkwo"]);
+  if (row.shortlist.some((item) => !sampleSlugs.has(item.creatorSlug))) return 0;
+  await prisma.businessWorkspace.delete({ where: { id: row.id } });
+  return 1;
+}
+
 /**
- * Signed-in users get their owned workspace. Logged-out callers get a free public
- * workspace and do not read or create the demo Business Pro seed.
+ * Signed-in users get their owned workspace. Logged-out callers get a free public workspace.
  */
 export async function getWorkspace(userId?: string | null): Promise<BusinessWorkspace> {
   const id = userId?.trim();
   if (!id) return PUBLIC_BUSINESS_WORKSPACE;
   return ensureOwnedBusinessWorkspace(id);
-}
-
-/** Fixture helper. Product pages use getWorkspace(userId). */
-export async function ensureDemoBusinessWorkspace() {
-  await ensureDemoWorkspace();
-  return readWorkspace(DEMO_BUSINESS_WORKSPACE_ID);
 }
 
 /** Ensure BusinessProfile + owned BusinessWorkspace for a user (W2.3 tenancy). */
@@ -272,7 +251,7 @@ export async function setBusinessPlan(plan: string, workspaceId: string) {
 export async function addToShortlist(
   creatorSlug: string,
   note?: string,
-  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
+  workspaceId: string,
 ) {
   const ws = await readWorkspace(workspaceId);
   const limits = await businessEntitlementsForPlan(ws.plan);
@@ -297,7 +276,7 @@ export async function addToShortlist(
   return { ok: true as const, ws: await readWorkspace(workspaceId) };
 }
 
-export async function removeFromShortlist(creatorSlug: string, workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
+export async function removeFromShortlist(creatorSlug: string, workspaceId: string) {
   await readWorkspace(workspaceId);
   await prisma.businessShortlistItem.deleteMany({
     where: { workspaceId, creatorSlug },
@@ -307,7 +286,7 @@ export async function removeFromShortlist(creatorSlug: string, workspaceId = DEM
 
 export async function createBrief(
   input: Omit<CampaignBrief, "id" | "createdAt" | "status"> & { status?: CampaignBrief["status"] },
-  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
+  workspaceId: string,
 ) {
   await readWorkspace(workspaceId);
   const brief = await prisma.businessBrief.create({
@@ -330,7 +309,7 @@ export async function createBrief(
 export async function updateBrief(
   id: string,
   input: Omit<CampaignBrief, "id" | "createdAt" | "status"> & { status?: CampaignBrief["status"] },
-  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
+  workspaceId: string,
 ) {
   await readWorkspace(workspaceId);
   const existing = await prisma.businessBrief.findFirst({
@@ -426,7 +405,7 @@ export async function sendInquiry(
     message: string;
     briefId?: string;
   },
-  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
+  workspaceId: string,
 ) {
   const ws = await readWorkspace(workspaceId);
   const limits = await businessEntitlementsForPlan(ws.plan);
@@ -465,7 +444,7 @@ export async function sendInquiry(
 export async function updateInquiryStatus(
   id: string,
   status: Inquiry["status"],
-  workspaceId = DEMO_BUSINESS_WORKSPACE_ID,
+  workspaceId: string,
 ) {
   if (!INQUIRY_STATUSES.includes(status)) {
     return { ok: false as const, error: "Invalid inquiry status." };
@@ -492,7 +471,7 @@ export async function updateInquiryStatus(
   };
 }
 
-export async function queuedBriefIds(workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
+export async function queuedBriefIds(workspaceId: string) {
   await readWorkspace(workspaceId);
   const rows = await prisma.managedMatchRequest.findMany({
     where: { workspaceId, status: "queued" },
@@ -511,7 +490,7 @@ export async function businessMatchProviderName(): Promise<string | null> {
   return route.provider.name;
 }
 
-export async function requestManagedMatch(briefId: string, workspaceId = DEMO_BUSINESS_WORKSPACE_ID) {
+export async function requestManagedMatch(briefId: string, workspaceId: string) {
   const ws = await readWorkspace(workspaceId);
   const brief = ws.briefs.find((item) => item.id === briefId);
   if (!brief) return { ok: false as const, error: "Brief not found." };

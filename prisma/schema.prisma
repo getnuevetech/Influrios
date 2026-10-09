@@ -818,7 +818,7 @@ model BusinessProfile {
 }
 
 /// Business workspace for briefs, shortlists, inquiries, and owned marketplace requests.
-/// Demo seed keeps id `demo-business`; signed-in hubs bind via ownerUserId (1:1).
+/// Signed-in hubs bind via ownerUserId (1:1).
 model BusinessWorkspace {
   id          String                 @id @default(cuid())
   ownerUserId String?                @unique
