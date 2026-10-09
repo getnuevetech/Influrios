@@ -13,8 +13,6 @@ import { providerHealth } from "@/lib/provider-health";
 import { getCms } from "@/lib/cms";
 import { getAllAudienceSnapshots, getNicheTrends } from "@/lib/intelligence";
 import { getManagedMatching } from "@/lib/managed-matching";
-import { isLegacyDemoPaymentsAdminHref } from "@/lib/legacy-demo-payments";
-import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -33,8 +31,6 @@ const LINKS: {
     snapshots: number;
     moreRequests: number;
     completedCheckouts: number;
-    escrowActive: number;
-    escrowHeld: string;
     trustOpen: number;
     agencyRoster: number;
     memberAccounts: number;
@@ -120,16 +116,9 @@ const LINKS: {
     meta: () => "Terminology addendum",
   },
   {
-    href: "/admin/payments",
-    title: "Protected Payments",
-    blurb: "Escrow deals, milestone release, and refunds.",
-    module: "payments",
-    meta: (c) => `${c.escrowActive} active · ${c.escrowHeld} held`,
-  },
-  {
     href: "/admin/trust",
     title: "Trust & Disputes",
-    blurb: "Mediation queue and collab contract briefs.",
+    blurb: "Ledger disputes. A decision records the next step and does not move the money.",
     module: "trust",
     meta: (c) => `${c.trustOpen} open cases`,
   },
@@ -293,14 +282,16 @@ export default async function AdminHomePage({
   const params = await searchParams;
   const account = await getAccountSession().catch(() => null);
   const agencyId = account ? agencyWorkspaceIdForOwner(account.id) : null;
-  const [cms, matching, billing, heldCount, heldSum, openDisputes, agency, memberAccounts, health, stripeMode, snapshotsList, trends] =
+  const [cms, matching, billing, openDisputes, agency, memberAccounts, health, stripeMode, snapshotsList, trends] =
     await Promise.all([
       getCms().catch(() => null),
       getManagedMatching().catch(() => null),
       getBillingStore().catch(() => null),
-      prisma.collaborationFunding.count({ where: { status: "held" } }).catch(() => 0),
-      prisma.collaborationFunding.aggregate({ where: { status: "held" }, _sum: { grossCents: true } }).catch(() => ({ _sum: { grossCents: 0 } })),
-      prisma.milestoneDispute.count({ where: { status: { in: ["open", "under_review"] } } }).catch(() => 0),
+      prisma.milestoneDispute.count({
+        where: {
+          status: { in: ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"] },
+        },
+      }).catch(() => 0),
       agencyId ? getAgencyStore(agencyId).catch(() => null) : Promise.resolve(null),
       prisma.user.count().catch(() => 0),
       providerHealth().catch(() => null),
@@ -322,19 +313,13 @@ export default async function AdminHomePage({
     snapshots,
     moreRequests,
     completedCheckouts,
-    escrowActive: heldCount,
-    escrowHeld: formatMoney(heldSum._sum.grossCents ?? 0),
     trustOpen: openDisputes,
     agencyRoster: aStats.roster,
     memberAccounts,
     stripeMode,
   };
 
-  const visibleLinks = LINKS.filter(
-    (l) =>
-      !isLegacyDemoPaymentsAdminHref(l.href) &&
-      canAccessModule(session, l.module),
-  );
+  const visibleLinks = LINKS.filter((l) => canAccessModule(session, l.module));
 
   return (
     <div>

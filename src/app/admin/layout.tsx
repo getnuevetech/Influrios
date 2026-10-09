@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { actionAdminLogout } from "@/app/admin/actions-auth";
 import { canAccessModule, getAdminSession, type AdminModule } from "@/lib/admin-auth";
-import {
-  isLegacyDemoPaymentsAdminHref,
-  legacyDemoPaymentsEnabled,
-} from "@/lib/legacy-demo-payments";
 
 type SideLink = { href: string; label: string; module?: AdminModule | "dashboard" };
 
@@ -57,7 +53,6 @@ const SIDE_GROUPS: SideGroup[] = [
     links: [
       { href: "/admin/gateways", label: "Payment gateways", module: "gateways" },
       { href: "/admin/search", label: "Meilisearch", module: "gateways" },
-      { href: "/admin/payments", label: "Protected Payments", module: "payments" },
       { href: "/admin/fees", label: "Collaboration fees", module: "commerce" },
       { href: "/admin/corridors", label: "Corridors", module: "collab_finance" },
     ],
@@ -81,7 +76,6 @@ const SIDE_GROUPS: SideGroup[] = [
 /** Signed-in admin chrome with left sidebar (login page stays clean when no session). */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
-  const legacyDemoOn = session ? await legacyDemoPaymentsEnabled() : false;
 
   if (!session) {
     return <div>{children}</div>;
@@ -89,10 +83,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const groups = SIDE_GROUPS.map((group) => ({
     ...group,
-    links: group.links.filter((l) => {
-      if (!legacyDemoOn && isLegacyDemoPaymentsAdminHref(l.href)) return false;
-      return l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule);
-    }),
+    links: group.links.filter((l) =>
+      l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule),
+    ),
   })).filter((group) => group.links.length > 0);
 
   return (

@@ -5,7 +5,6 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { prisma } from "@/lib/db";
-import { legacyDemoPaymentsEnabled } from "@/lib/legacy-demo-payments";
 
 export const LEGACY_DEMO_JSON_FILES = [
   "protected-payments.json",
@@ -14,7 +13,7 @@ export const LEGACY_DEMO_JSON_FILES = [
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
-/** Paths that remain only for the gated Phase 9/10 JSON demos. */
+/** Removed Phase 9/10 paths. /admin/payments redirects to the marketplace ledger. */
 export const LEGACY_DEMO_ENDPOINTS = [
   { path: "/admin/payments", role: "admin", store: "protected-payments.json", productReplacement: "/admin/marketplace" },
   { path: "/trust (demo queue)", role: "public", store: "trust.json", productReplacement: "/payments + ledger disputes" },
@@ -76,16 +75,12 @@ export async function recordCreatorFieldDeprecation(input: {
   return { recorded: true, alias: resolvedAlias };
 }
 
-/** When legacy demos are off, remove quarantined JSON files if present. */
+/** Remove leftover Phase 9/10 JSON files if they are still on disk. */
 export async function purgeLegacyDemoJsonFiles(): Promise<{
   frozen: boolean;
   removed: string[];
   kept: string[];
 }> {
-  const frozen = !(await legacyDemoPaymentsEnabled());
-  if (!frozen) {
-    return { frozen: false, removed: [], kept: [...LEGACY_DEMO_JSON_FILES] };
-  }
   const removed: string[] = [];
   const kept: string[] = [];
   for (const name of LEGACY_DEMO_JSON_FILES) {
@@ -107,7 +102,7 @@ export function legacyInventorySnapshot() {
     jsonFiles: LEGACY_DEMO_JSON_FILES,
     creatorCompatFields: CREATOR_STAR_COMPAT_FIELDS,
     signingDecision:
-      "Keep /admin/signing as a non-goal shell until counsel approves e-sign. Contract wizard remains accept-only; do not claim provider success.",
+      "DocuSign completes a signature. The collaboration stays unsigned until every required party is completed.",
     moneyEngine: "marketplace ledger (CollaborationFunding + LedgerEntry) is the sole product money path.",
   };
 }

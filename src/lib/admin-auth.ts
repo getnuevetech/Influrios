@@ -173,19 +173,19 @@ export const ADMIN_PERMISSION_GROUPS: {
   {
     module: "payments",
     label: "Protected payments",
-    description: "Escrow deals, milestone release, and refunds",
+    description: "Marketplace ledger. The JSON escrow console is removed.",
     permissions: [
-      { id: "payments.view", label: "View payments", hint: "Open escrow console" },
-      { id: "payments.manage", label: "Manage payments", hint: "Create deals, fund, release, refund" },
+      { id: "payments.view", label: "View payments", hint: "Open the marketplace ledger" },
+      { id: "payments.manage", label: "Manage payments", hint: "Manage marketplace funding" },
     ],
   },
   {
     module: "trust",
     label: "Trust & disputes",
-    description: "Mediation queue and collab contract briefs",
+    description: "Ledger disputes. A decision records the next step and does not move the money.",
     permissions: [
-      { id: "trust.view", label: "View trust", hint: "Open disputes & contracts console" },
-      { id: "trust.mediate", label: "Mediate disputes", hint: "Advance cases and attach contracts" },
+      { id: "trust.view", label: "View trust", hint: "Open the ledger dispute queue" },
+      { id: "trust.mediate", label: "Mediate disputes", hint: "Record a decision and add evidence" },
     ],
   },
   {
@@ -503,7 +503,7 @@ const DEFAULT_ROLES: AdminRole[] = [
   {
     id: "role_payments",
     name: "Payments Admin",
-    description: "Protected payments escrow console only.",
+    description: "Marketplace ledger and payment gateways.",
     permissions: [
       "payments.view",
       "payments.manage",
@@ -520,7 +520,7 @@ const DEFAULT_ROLES: AdminRole[] = [
   {
     id: "role_trust",
     name: "Trust Admin",
-    description: "Dispute mediation and contract briefs only.",
+    description: "Ledger dispute decisions only.",
     permissions: ["trust.view", "trust.mediate"],
     system: true,
   },

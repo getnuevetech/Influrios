@@ -1,7 +1,7 @@
 # Collab OS P8 — Legacy inventory & teardown
 
 **Date:** 2026-10-04  
-**Status:** Core freeze shipped (`legacy_demo_payments` default off)
+**Status:** Phase 9/10 JSON modules deleted. Marketplace ledger is the only money path.
 
 ## 1. Money engine (canonical)
 
@@ -10,23 +10,20 @@
 | `CollaborationFunding` + `LedgerEntry` / `src/lib/marketplace-ledger.ts` | Sole product money path |
 | `/payments`, `/admin/marketplace`, `/admin/trust` (ledger disputes) | Product UI |
 
-## 2. Quarantined Phase 9/10 demos
+## 2. Removed Phase 9/10 demos
 
-| Endpoint / module | Store | Replacement |
+| Former path | Store | Replacement |
 |---|---|---|
-| `/admin/payments` | `data/protected-payments.json` | `/admin/marketplace` |
-| `/trust` demo queue | `data/trust.json` | Ledger disputes on `/payments` + `/admin/trust` |
+| `/admin/payments` (redirects) | `data/protected-payments.json` | `/admin/marketplace` |
+| JSON trust queue | `data/trust.json` | Ledger disputes on `/payments` + `/admin/trust` |
 | `src/lib/protected-payments.ts` | JSON | `marketplace-ledger.ts` |
 | `src/lib/trust.ts` | JSON | `milestone-disputes.ts` |
 
-**Freeze behavior (P8):**
-- `legacy_demo_payments` default **off**
-- When off: stores return empty in-memory snapshots; **no JSON seed/rehydrate**; existing demo JSON files are **purged** on read
-- Writes call `assertLegacyDemoPayments()` and throw if the switch is off
+`purgeLegacyDemoJsonFiles()` deletes those two JSON files when they are still on disk. Public `/payments` and `/trust` read the marketplace ledger. The legal document `protected-payments-policy` stays.
 
 ## 3. Document signing decision
 
-Keep `/admin/signing` as a **non-goal shell** until counsel approves e-sign. Contract wizard remains accept-only. Do **not** claim provider success from queued signature rows.
+DocuSign completes a signature. The collaboration stays unsigned until every required party is completed.
 
 ## 4. `creator_*` technical compatibility (not public role strings)
 
@@ -45,8 +42,8 @@ Checkout records `terminology.creator_field_deprecated` audit events for `creato
 ## 5. Exit checklist
 
 - [x] Inventory documented  
-- [x] Feature-flag cutover (`legacy_demo_payments`)  
-- [x] Freeze legacy writes + purge JSON when off  
-- [x] Signing fate decided (shell / non-goal)  
+- [x] JSON payment modules deleted  
+- [x] Purge leftover `protected-payments.json` and `trust.json`  
+- [x] Signing completes through DocuSign  
 - [x] Deprecation telemetry for creator_* SKUs  
 - [ ] Optional later: rename SKUs/cookies after dual-write window (do not break Stripe metadata)
