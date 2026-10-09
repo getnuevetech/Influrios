@@ -30,6 +30,10 @@ describe("public sample surfaces", () => {
   it("does not insert sample marketplace rows on a read", () => {
     const listings = source("src/lib/marketplace-listings.ts");
     assert.equal(listings.includes("await ensureMarketplaceListings()"), false);
+    assert.equal(listings.includes("createMany"), false);
+    const seed = source("prisma/seed.ts");
+    assert.equal(seed.includes("BUSINESS_REQUESTS"), false);
+    assert.equal(seed.includes("CREATOR_OPPORTUNITIES"), false);
     const profile = source("src/app/creators/[slug]/page.tsx");
     assert.equal(profile.includes("leading global brands"), false);
     assert.equal(profile.includes("/demo/"), true);

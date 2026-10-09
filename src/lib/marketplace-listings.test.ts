@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   applicationIsStaleForExpire,
@@ -18,10 +19,13 @@ import {
   sweepExpiredMarketplaceApplications,
   transitionMarketplaceApplication,
   getMarketplaceApplication,
+  upsertBusinessRequest,
+  upsertCreatorOpportunity,
 } from "./marketplace-listings";
 import { prisma } from "./db";
 import { DEFAULT_COLLAB_CONTROL_PLANE, saveCollabControlPlane } from "./collab-control-plane";
 import { DEMO_BUSINESS_WORKSPACE_ID, ensureDemoBusinessWorkspace } from "./business";
+import { BUSINESS_REQUESTS, CREATOR_OPPORTUNITIES } from "./matching";
 
 const hasDbUrl = Boolean(process.env.DATABASE_URL);
 
@@ -66,6 +70,58 @@ describe("launch sample marketplace rows", () => {
       true,
     );
     assert.equal(isLaunchSampleCreatorOpportunity({ id: "opp-1", creatorSlug: "ada", summary: "Real" }), false);
+  });
+
+  it("deletes leftover samples and does not insert them", () => {
+    const listings = readFileSync("src/lib/marketplace-listings.ts", "utf8");
+    const seed = readFileSync("prisma/seed.ts", "utf8");
+    const sql = readFileSync(
+      "prisma/migrations/20261009010000_remove_launch_sample_listings/migration.sql",
+      "utf8",
+    );
+    assert.equal(listings.includes("createMany"), false);
+    assert.equal(listings.includes("BRAND_DEMO_ART"), false);
+    assert.match(listings, /deleteMany/);
+    assert.match(seed, /ensureMarketplaceListings/);
+    assert.equal(seed.includes("BUSINESS_REQUESTS"), false);
+    assert.equal(seed.includes("CREATOR_OPPORTUNITIES"), false);
+    for (const row of [...BUSINESS_REQUESTS, ...CREATOR_OPPORTUNITIES]) {
+      assert.match(sql, new RegExp(row.id));
+      assert.match(sql, new RegExp(row.summary.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    }
+  });
+
+  it("refuses to save a retired sample identity", async () => {
+    const request = BUSINESS_REQUESTS[0]!;
+    await assert.rejects(
+      () =>
+        upsertBusinessRequest({
+          id: request.id,
+          brand: request.brand,
+          category: request.category,
+          budget: request.budget,
+          location: request.location,
+          tags: request.tags,
+          summary: request.summary,
+          lookingFor: request.lookingFor,
+          status: "published",
+          sortOrder: 0,
+        }),
+      /retired sample/,
+    );
+    const opportunity = CREATOR_OPPORTUNITIES[0]!;
+    await assert.rejects(
+      () =>
+        upsertCreatorOpportunity({
+          id: opportunity.id,
+          creatorSlug: opportunity.creatorSlug,
+          lookingFor: opportunity.lookingFor,
+          summary: opportunity.summary,
+          status: "published",
+          sortOrder: 0,
+        }),
+      /retired sample/,
+    );
   });
 
   it("drops demo art and keeps an uploaded logo", () => {
