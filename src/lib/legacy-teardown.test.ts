@@ -43,9 +43,8 @@ describe("legacy inventory", () => {
   });
 });
 
-describe("legacy teardown freeze (db)", () => {
-  it("purges leftover demo JSON and records deprecation telemetry", async (t) => {
-    if (!(await requireDb(t))) return;
+describe("legacy demo json purge", () => {
+  it("deletes leftover protected-payments.json and trust.json", async () => {
     const dataDir = path.join(process.cwd(), "data");
     await fs.mkdir(dataDir, { recursive: true }).catch(() => null);
     const paymentsPath = path.join(dataDir, "protected-payments.json");
@@ -60,6 +59,12 @@ describe("legacy teardown freeze (db)", () => {
 
     await assert.rejects(() => fs.access(paymentsPath));
     await assert.rejects(() => fs.access(trustPath));
+  });
+});
+
+describe("legacy teardown freeze (db)", () => {
+  it("records deprecation telemetry", async (t) => {
+    if (!(await requireDb(t))) return;
 
     const recorded = await recordCreatorFieldDeprecation({
       field: "creator_plus",
