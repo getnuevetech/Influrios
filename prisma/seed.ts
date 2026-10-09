@@ -121,7 +121,7 @@ async function main() {
     }
   }
 
-  // Explicit seed only. Public lists omit a row that still matches this sample.
+  // Drop leftover sample brands and opportunities. An empty marketplace stays empty.
   await ensureMarketplaceListings();
 
   console.log(`Seeded ${SPECIALTY_TAXONOMY.length} specialty trees and ${SEED_CREATORS.length} creators.`);

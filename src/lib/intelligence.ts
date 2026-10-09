@@ -250,7 +250,7 @@ export function nicheTrendsFromCounts(input: {
 /**
  * Open requests are draft or active briefs, collaborations that are still
  * draft, sent, or accepted, agency campaigns that are not wrapped, and
- * published marketplace listings that are no longer the launch sample.
+ * published marketplace listings. Retired launch-sample rows are excluded.
  * Searches are not stored, so they are not counted. Growth is not estimated.
  */
 export async function getNicheTrends(): Promise<NicheTrend[]> {

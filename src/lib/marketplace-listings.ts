@@ -38,21 +38,6 @@ const APPLICATION_TRANSITIONS: Record<MarketplaceApplicationStatus, MarketplaceA
   WITHDRAWN: [],
 };
 
-const BRAND_DEMO_ART: Record<string, { logoUrl: string; imageUrl: string }> = {
-  "Lumina Beauty Co.": {
-    logoUrl: "/demo/brands/sephora.svg",
-    imageUrl: "/demo/categories/cat-beauty.jpg",
-  },
-  WanderStay: {
-    logoUrl: "/demo/brands/airbnb.svg",
-    imageUrl: "/demo/categories/cat-travel.jpg",
-  },
-  "NexHome Tech": {
-    logoUrl: "/demo/brands/samsung.svg",
-    imageUrl: "/demo/categories/cat-tech.jpg",
-  },
-};
-
 export type MarketplaceBusinessRequestRow = BusinessRequest & {
   logoUrl?: string | null;
   imageUrl?: string | null;
@@ -99,49 +84,35 @@ export function publicListingAsset(url: string | null | undefined): string | nul
   return value;
 }
 
-/** Explicit `db:seed` only. Public and admin reads do not insert these rows. */
-export async function ensureMarketplaceListings() {
-  const [requestCount, opportunityCount] = await Promise.all([
-    prisma.marketplaceBusinessRequest.count(),
-    prisma.marketplaceCreatorOpportunity.count(),
-  ]);
+const RETIRED_SAMPLE_SAVE =
+  "This listing is a retired sample. Replace the brand or influencer and the summary with the party that posted it before saving.";
 
-  if (requestCount === 0) {
-    await prisma.marketplaceBusinessRequest.createMany({
-      data: BUSINESS_REQUESTS.map((item, index) => {
-        const art = BRAND_DEMO_ART[item.brand];
-        return {
+/** Seed and migrate delete leftover sample rows. Nothing in the product inserts them. */
+export async function ensureMarketplaceListings() {
+  const [requests, opportunities] = await Promise.all([
+    prisma.marketplaceBusinessRequest.deleteMany({
+      where: {
+        OR: BUSINESS_REQUESTS.map((item) => ({
           id: item.id,
           brand: item.brand,
-          category: item.category,
-          budget: item.budget,
-          location: item.location,
-          tags: item.tags,
           summary: item.summary,
-          lookingFor: item.lookingFor,
-          logoUrl: art?.logoUrl,
-          imageUrl: art?.imageUrl,
-          status: "published",
-          sortOrder: index,
-          publishedAt: new Date(),
-        };
-      }),
-    });
-  }
-
-  if (opportunityCount === 0) {
-    await prisma.marketplaceCreatorOpportunity.createMany({
-      data: CREATOR_OPPORTUNITIES.map((item, index) => ({
-        id: item.id,
-        creatorSlug: item.creatorSlug,
-        lookingFor: item.lookingFor,
-        summary: item.summary,
-        status: "published",
-        sortOrder: index,
-        publishedAt: new Date(),
-      })),
-    });
-  }
+        })),
+      },
+    }),
+    prisma.marketplaceCreatorOpportunity.deleteMany({
+      where: {
+        OR: CREATOR_OPPORTUNITIES.map((item) => ({
+          id: item.id,
+          creatorSlug: item.creatorSlug,
+          summary: item.summary,
+        })),
+      },
+    }),
+  ]);
+  return {
+    removedRequests: requests.count,
+    removedOpportunities: opportunities.count,
+  };
 }
 
 export async function listPublishedBusinessRequests(filters?: {
@@ -242,6 +213,9 @@ export async function upsertBusinessRequest(input: {
   if (!brand || !category || !budget || !location || !summary || !lookingFor) {
     throw new Error("Brand, category, budget, location, summary, and looking-for are required.");
   }
+  if (input.id && isLaunchSampleBusinessRequest({ id: input.id, brand, summary })) {
+    throw new Error(RETIRED_SAMPLE_SAVE);
+  }
   const workspaceId =
     input.workspaceId === undefined
       ? undefined
@@ -284,6 +258,9 @@ export async function upsertCreatorOpportunity(input: {
   const summary = input.summary.trim();
   if (!creatorSlug || !lookingFor || !summary) {
     throw new Error("Influencer slug, looking-for, and summary are required.");
+  }
+  if (input.id && isLaunchSampleCreatorOpportunity({ id: input.id, creatorSlug, summary })) {
+    throw new Error(RETIRED_SAMPLE_SAVE);
   }
   const data = {
     creatorSlug,

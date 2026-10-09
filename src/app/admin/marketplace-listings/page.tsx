@@ -39,9 +39,9 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
         </Link>
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Marketplace listings</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          Publish business requests and creator collaboration opportunities shown on the public
-          Collaboration landing. A row that still matches the launch sample stays off the public
-          page until the brand or summary changes, or it is closed.
+          Publish business requests and influencer opportunities that a business or an admin stored.
+          The launch sample brands are not created. A leftover sample stays off the public page.
+          Saving it requires a real brand or influencer and a summary that no longer match the sample.
         </p>
       </div>
 
@@ -65,7 +65,7 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
             <input type="hidden" name="id" value={row.id} />
             {isLaunchSampleBusinessRequest(row) ? (
               <p className="text-xs text-amber-800 sm:col-span-2">
-                This row still matches the launch sample, so the public page omits it.
+                This row is a retired sample. Replace the brand and summary before saving. The public page omits it.
               </p>
             ) : null}
             <Field label="Brand" name="brand" defaultValue={row.brand} disabled={!canEdit} />
@@ -180,7 +180,7 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
             <input type="hidden" name="id" value={row.id} />
             {isLaunchSampleCreatorOpportunity(row) ? (
               <p className="text-xs text-amber-800 sm:col-span-2">
-                This row still matches the launch sample, so the public page omits it.
+                This row is a retired sample. Replace the influencer and summary before saving. The public page omits it.
               </p>
             ) : null}
             <label className="block text-xs font-semibold text-muted">
