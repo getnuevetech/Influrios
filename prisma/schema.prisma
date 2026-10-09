@@ -1834,7 +1834,7 @@ model AgencyRosterMember {
   workspace     AgencyWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   creatorSlug   String
   role          String          @default("talent")
-  retainerLabel String          @default("Project")
+  retainerLabel String          @default("")
   notes         String          @default("")
   addedAt       DateTime        @default(now())
 
@@ -1870,7 +1870,7 @@ model AgencyPortfolio {
   outcome     String          @default("")
   metricsJson Json
   campaignId  String?
-  published   Boolean         @default(true)
+  published   Boolean         @default(false)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 

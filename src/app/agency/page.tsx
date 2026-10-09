@@ -184,7 +184,10 @@ export default async function AgencyPage({ searchParams }: Props) {
                     <p className="font-semibold text-indigo">
                       {c?.displayName ?? m.creatorSlug}
                     </p>
-                    <p className="text-xs capitalize text-violet">{m.role} · {m.retainerLabel}</p>
+                    <p className="text-xs capitalize text-violet">
+                      {m.role}
+                      {m.retainerLabel ? ` · ${m.retainerLabel}` : ""}
+                    </p>
                     <p className="mt-1 text-xs text-muted">{m.notes}</p>
                     <Link
                       href={`/creators/${m.creatorSlug}`}
@@ -235,7 +238,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 <span className="font-semibold text-indigo">Retainer</span>
                 <input
                   name="retainerLabel"
-                  defaultValue="Project"
+                  placeholder="Retainer"
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
@@ -264,9 +267,11 @@ export default async function AgencyPage({ searchParams }: Props) {
                     {camp.clientName}
                   </p>
                   <h3 className="mt-1 font-display text-lg font-bold text-indigo">{camp.title}</h3>
-                  <p className="mt-1 text-sm text-muted">
-                    {camp.summary} · {camp.budgetLabel}
-                  </p>
+                  {[camp.summary, camp.budgetLabel].filter(Boolean).length > 0 ? (
+                    <p className="mt-1 text-sm text-muted">
+                      {[camp.summary, camp.budgetLabel].filter(Boolean).join(" · ")}
+                    </p>
+                  ) : null}
                   <p className="mt-2 text-xs text-muted">
                     Cast:{" "}
                     {camp.creatorSlugs

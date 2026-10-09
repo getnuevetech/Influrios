@@ -300,13 +300,11 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
             <input
               name="retainerLabel"
               placeholder="Retainer"
-              defaultValue="Project"
               className="rounded-xl border border-border px-3 py-2 text-sm"
             />
             <button type="submit" className="btn-primary !py-2 text-sm">
               Add
             </button>
-            <input type="hidden" name="notes" value="Admin added" />
           </form>
         ) : null}
       </section>
@@ -320,7 +318,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
                 <p className="text-xs font-bold uppercase text-violet">{c.clientName}</p>
                 <h3 className="font-display text-lg font-bold text-indigo">{c.title}</h3>
                 <p className="text-sm text-muted">
-                  {c.summary} · {c.status} · {c.budgetLabel}
+                  {[c.summary, c.status, c.budgetLabel].filter(Boolean).join(" · ")}
                 </p>
               </div>
               {canManage ? (
@@ -348,8 +346,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
             <input type="hidden" name="workspaceId" value={workspaceId ?? ""} />
             <input name="title" required placeholder="Title" className="rounded-xl border border-border px-3 py-2 text-sm" />
             <input name="clientName" required placeholder="Client" className="rounded-xl border border-border px-3 py-2 text-sm" />
-            <input name="specialty" defaultValue="beauty" className="rounded-xl border border-border px-3 py-2 text-sm" />
-            <input name="budgetLabel" defaultValue="$10K" className="rounded-xl border border-border px-3 py-2 text-sm" />
+            <input name="specialty" placeholder="Specialty" className="rounded-xl border border-border px-3 py-2 text-sm" />
+            <input name="budgetLabel" placeholder="Budget" className="rounded-xl border border-border px-3 py-2 text-sm" />
             <input
               name="creatorSlugs"
               defaultValue={store.roster.slice(0, 2).map((r) => r.creatorSlug).join(",")}
@@ -358,7 +356,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
             />
             <input
               name="summary"
-              defaultValue="Admin-created multi-creator campaign"
+              placeholder="What this campaign covers"
               className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2"
             />
             <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
@@ -396,27 +394,33 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         {canManage ? (
           <form action={actionAdminCreatePortfolio} className="card-surface grid gap-3 p-5 sm:grid-cols-2">
             <input type="hidden" name="workspaceId" value={workspaceId ?? ""} />
-            <input name="title" required defaultValue="Ops case study" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
-            <input name="tagline" defaultValue="Complementary collab proof" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
-            <select name="leftSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={directoryCreators[0]?.slug}>
+            <input name="title" required placeholder="Title" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
+            <input name="tagline" placeholder="Tagline" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
+            <select name="leftSlug" required defaultValue="" className="rounded-xl border border-border px-3 py-2 text-sm">
+              <option value="" disabled>Influencer A</option>
               {directoryCreators.map((c) => (
                 <option key={c.slug} value={c.slug}>{c.displayName}</option>
               ))}
             </select>
-            <select name="rightSlug" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue={directoryCreators[1]?.slug}>
+            <select name="rightSlug" required defaultValue="" className="rounded-xl border border-border px-3 py-2 text-sm">
+              <option value="" disabled>Influencer B</option>
               {directoryCreators.map((c) => (
                 <option key={c.slug} value={c.slug}>{c.displayName}</option>
               ))}
             </select>
-            <input name="specialty" defaultValue="beauty" className="rounded-xl border border-border px-3 py-2 text-sm" />
+            <input name="specialty" placeholder="Specialty" className="rounded-xl border border-border px-3 py-2 text-sm" />
             <select name="campaignId" className="rounded-xl border border-border px-3 py-2 text-sm">
               <option value="">No campaign</option>
               {store.campaigns.map((c) => (
                 <option key={c.id} value={c.id}>{c.title}</option>
               ))}
             </select>
-            <textarea name="outcome" rows={2} defaultValue="Joint story outperformed solo posts on saves." className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
-            <textarea name="metrics" rows={2} defaultValue={"Reach | 500K\nSaves | 8K"} className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
+            <textarea name="outcome" rows={2} placeholder="What happened" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
+            <textarea name="metrics" rows={2} placeholder={"Label | value"} className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
+            <label className="flex items-center gap-2 text-sm text-indigo sm:col-span-2">
+              <input name="published" type="checkbox" />
+              Publish
+            </label>
             <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
               Create portfolio
             </button>
