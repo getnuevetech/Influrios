@@ -22,7 +22,7 @@ import { loadCreatorHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
 import { getCms } from "@/lib/cms";
 import { getDirectoryCreator, indexCreatorsBySlug, getDirectory } from "@/lib/directory";
 import { formatMoney } from "@/lib/money";
-import { POPULAR_MATCH_CHIPS } from "@/lib/matching";
+import { cardsFromStoredCollaborationMatches } from "@/lib/matching";
 import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
 import { PAYOUT_METHOD_LABELS, type PayoutMethod } from "@/lib/payout-readiness";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
@@ -129,19 +129,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
     return true;
   });
 
-  const popularCards =
-    cms?.collaborationMatches.matches.length
-      ? cms.collaborationMatches.matches.map((match) => {
-          const chip = POPULAR_MATCH_CHIPS.find((row) => match.title.includes(row.title));
-          const [left, right] = match.title.split(/\s*\+\s*/);
-          return {
-            title: left?.trim() || match.title,
-            subtitle: right ? `+ ${right.trim()}` : chip?.subtitle || "",
-            specialty: chip?.specialty || match.tags[0]?.toLowerCase() || "lifestyle",
-            image: match.image || chip?.image || "/demo/categories/cat-lifestyle.jpg",
-          };
-        })
-      : POPULAR_MATCH_CHIPS;
+  const popularCards = cardsFromStoredCollaborationMatches(cms?.collaborationMatches.matches ?? []);
 
   const availableCents = hub.earnings.releasedCents;
   const totalFollowers = creator.socials.reduce((sum, social) => sum + social.followers, 0);
@@ -160,6 +148,11 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
               View public collaboration landing →
             </Link>
           </div>
+          {popularCards.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-[#E4E9F5] bg-white px-4 py-6 text-sm text-muted">
+              Saved collaboration matches appear here.
+            </p>
+          ) : (
           <FeaturedCarousel stepPx={200}>
             {popularCards.map((chip) => (
               <Link
@@ -177,6 +170,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
               </Link>
             ))}
           </FeaturedCarousel>
+          )}
         </div>
       </section>
 

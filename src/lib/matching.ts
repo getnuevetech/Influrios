@@ -1,6 +1,7 @@
 import { listDirectoryCreators } from "@/lib/directory";
-import { specialtyLabel, type SeedCreator } from "@/lib/seed-data";
 import { getEntitlements, type PlanCode } from "@/lib/entitlements";
+import { categoryImageFor, specialtyLabel, type SeedCreator } from "@/lib/seed-data";
+import { normalizeInfluencerRoleTitle } from "@/lib/terminology-copy";
 
 export type MatchBreakdown = {
   audienceAlignment: number;
@@ -316,41 +317,30 @@ export const CREATOR_OPPORTUNITIES: CreatorOpportunity[] = [
   },
 ];
 
-export const POPULAR_MATCH_CHIPS = [
-  {
-    title: "Interior Designer",
-    subtitle: "+ Woodwork Influencer",
-    specialty: "home-interior",
-    image: "/demo/categories/cat-home.jpg",
-  },
-  {
-    title: "Hair Stylist",
-    subtitle: "+ Hair Supplier",
-    specialty: "hair",
-    image: "/demo/categories/cat-hair.jpg",
-  },
-  {
-    title: "Food Influencer",
-    subtitle: "+ Kitchen Brand",
-    specialty: "food",
-    image: "/demo/categories/cat-food.jpg",
-  },
-  {
-    title: "Travel Influencer",
-    subtitle: "+ Tourism Brand",
-    specialty: "travel",
-    image: "/demo/categories/cat-travel.jpg",
-  },
-  {
-    title: "Fitness Influencer",
-    subtitle: "+ Wellness Brand",
-    specialty: "fitness",
-    image: "/demo/categories/cat-fitness.jpg",
-  },
-  {
-    title: "Beauty Influencer",
-    subtitle: "+ Skincare Brand",
-    specialty: "beauty",
-    image: "/demo/categories/cat-beauty.jpg",
-  },
-];
+export type StoredMatchCard = {
+  title: string;
+  subtitle: string;
+  specialty: string;
+  image: string;
+};
+
+/** Cards for matches an admin saved. An empty list stays empty. */
+export function cardsFromStoredCollaborationMatches(
+  matches: Array<{ title: string; tags?: string[]; image?: string | null }>,
+): StoredMatchCard[] {
+  return matches.flatMap((match) => {
+    const displayTitle = normalizeInfluencerRoleTitle(match.title.trim());
+    if (!displayTitle) return [];
+    const [left, right] = displayTitle.split(/\s*\+\s*/);
+    const specialty = match.tags?.[0]?.trim().toLowerCase() || "";
+    const image = match.image?.trim() ?? "";
+    return [
+      {
+        title: left?.trim() || displayTitle,
+        subtitle: right?.trim() ? `+ ${right.trim()}` : "",
+        specialty: specialty || "lifestyle",
+        image: image && !image.includes("/demo/creators/") ? image : categoryImageFor(specialty || "lifestyle"),
+      },
+    ];
+  });
+}
