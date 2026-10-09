@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { directoryLabels } from "./directory";
+import { directoryLabels, profilePlace } from "./directory";
 
 describe("directory labels", () => {
   it("does not assign a rank and follows the open-to-collab flag", () => {
@@ -18,5 +18,12 @@ describe("directory labels", () => {
     assert.equal(directory.includes('badge: "Rising Star"'), false);
     assert.equal(card.includes("badgeLabel.trim()"), true);
     assert.equal(card.includes("creator.verified === true"), true);
+  });
+
+  it("joins a stored city and country and omits a blank side", () => {
+    assert.equal(profilePlace("Austin", "USA"), "Austin, USA");
+    assert.equal(profilePlace("Austin", "  "), "Austin");
+    assert.equal(profilePlace("", "Nigeria"), "Nigeria");
+    assert.equal(profilePlace("  ", ""), "");
   });
 });

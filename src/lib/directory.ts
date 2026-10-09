@@ -93,6 +93,11 @@ export function directoryLabels(openToCollab: boolean): { badge: string; statusL
   };
 }
 
+/** City and country from the stored profile. A blank side is omitted. */
+export function profilePlace(city: string, country: string): string {
+  return [city.trim(), country.trim()].filter(Boolean).join(", ");
+}
+
 function isCreatorPlan(plan: string): plan is "STARTER" | "PLUS" | "PRO" {
   return isPlanCode(plan);
 }

@@ -27,9 +27,10 @@ import {
 } from "@/components/icons";
 import {
   formatFollowers,
+  publicStoredImage,
   specialtyLabel,
 } from "@/lib/seed-data";
-import { getDirectory, getDirectoryCreator, recordDirectoryEvent } from "@/lib/directory";
+import { directoryLabels, getDirectory, getDirectoryCreator, profilePlace, recordDirectoryEvent } from "@/lib/directory";
 import { creatorShareMetadata } from "@/lib/creator-og";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -70,11 +71,22 @@ export default async function CreatorProfilePage({ params }: Props) {
 
   const directory = await getDirectory();
   const related = directory.creators.filter((c) => c.slug !== creator.slug).slice(0, 4);
-  const content = creator.featuredContent ?? [];
+  const content = (creator.featuredContent ?? []).flatMap((item) => {
+    const image = publicStoredImage(item.image);
+    return image ? [{ ...item, image }] : [];
+  });
+  const polaroids = (creator.polaroids ?? []).flatMap((item) => {
+    const image = publicStoredImage(item.image);
+    return image ? [{ ...item, image }] : [];
+  });
   const stats = creator.stats;
   const demo = creator.demographics;
-  const firstName = creator.displayName.split(" ")[0];
-  const tagline = creator.bannerTagline ?? creator.title;
+  const firstName = creator.displayName.split(" ")[0] || creator.displayName;
+  const tagline = (creator.bannerTagline ?? creator.title).trim();
+  const place = profilePlace(creator.locationCity, creator.locationCountry);
+  const languages = creator.languages.map((language) => language.trim()).filter(Boolean);
+  const bio = creator.bio.trim();
+  const partnership = directoryLabels(creator.openToCollab).statusLabel;
   const scriptLines = (
     creator.bannerScriptTags ??
     creator.specialties
@@ -85,13 +97,6 @@ export default async function CreatorProfilePage({ params }: Props) {
     .split(/\s*\/\s*/)
     .map((s) => s.trim())
     .filter(Boolean);
-
-  const cardBio =
-    creator.offer || creator.bio
-      ? `Creating a brighter, more confident you through real stories and beautiful places. ✨`
-      : creator.bio;
-
-  const aboutBio = `I'm ${firstName}, a ${creator.title.toLowerCase()} based in ${creator.locationCity}. ${creator.bio}`;
 
   const statTiles = stats
     ? [
@@ -178,14 +183,16 @@ export default async function CreatorProfilePage({ params }: Props) {
                 ♡
               </span>
             </h1>
-            <span className="mt-2 inline-flex rounded-full bg-gradient-to-r from-[#633CFF] to-[#8B5CFF] px-3 py-1 text-[10px] font-semibold tracking-wide text-white shadow-lg sm:text-[11px]">
-              {tagline}
-            </span>
+            {tagline ? (
+              <span className="mt-2 inline-flex rounded-full bg-gradient-to-r from-[#633CFF] to-[#8B5CFF] px-3 py-1 text-[10px] font-semibold tracking-wide text-white shadow-lg sm:text-[11px]">
+                {tagline}
+              </span>
+            ) : null}
           </div>
 
-          {creator.polaroids ? (
+          {polaroids.length > 0 ? (
             <div className="absolute bottom-3 right-2 hidden items-end gap-1.5 md:flex lg:right-8 lg:gap-2">
-              {creator.polaroids.map((p, i) => (
+              {polaroids.map((p, i) => (
                 <div
                   key={p.caption}
                   className={`w-[66px] overflow-hidden rounded-[3px] bg-white p-1 shadow-xl lg:w-[84px] ${
@@ -237,14 +244,20 @@ export default async function CreatorProfilePage({ params }: Props) {
                   </h2>
                   {creator.verified ? <IconVerified size={15} /> : null}
                 </div>
-                <p className="mt-0.5 text-[12px] font-medium text-indigo/80">{creator.title}</p>
-                <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted">
-                  <IconMapPin size={11} className="text-[#F97316]" />
-                  {creator.locationCity}, {creator.locationCountry}
-                </p>
-                <p className="mx-auto mt-2 max-w-xl text-[12px] leading-relaxed text-muted sm:mx-0">
-                  {creator.bio} ✨ Let&apos;s create a kinder, more colorful world together! 💜
-                </p>
+                {creator.title.trim() ? (
+                  <p className="mt-0.5 text-[12px] font-medium text-indigo/80">{creator.title}</p>
+                ) : null}
+                {place ? (
+                  <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted">
+                    <IconMapPin size={11} className="text-[#F97316]" />
+                    {place}
+                  </p>
+                ) : null}
+                {bio ? (
+                  <p className="mx-auto mt-2 max-w-xl text-[12px] leading-relaxed text-muted sm:mx-0">
+                    {bio}
+                  </p>
+                ) : null}
                 <div className="mt-2.5 flex flex-wrap justify-center gap-1.5 sm:justify-start">
                   {creator.specialties.map((s) => (
                     <span key={s} className="profile-tag !text-[10px] !px-2.5 !py-0.5">
@@ -267,7 +280,7 @@ export default async function CreatorProfilePage({ params }: Props) {
                       <SocialIcon platform={s.platform} size={14} className="text-indigo" />
                       <span className="leading-tight">
                         <span className="block text-[12px] font-bold text-indigo">
-                          {formatFollowers(s.followers)}
+                          {s.followers > 0 ? formatFollowers(s.followers) : "—"}
                         </span>
                         <span className="block text-[9px] font-medium text-muted">
                           {socialMetricLabel(s.platform)}
@@ -282,7 +295,7 @@ export default async function CreatorProfilePage({ params }: Props) {
                     className="btn-primary !gap-1 !px-3.5 !py-1.5 text-[12px]"
                   >
                     <IconMail size={13} />
-                    Contact
+                    About
                   </a>
                   <Link
                     href={`/collaboration?from=${creator.slug}`}
@@ -314,7 +327,7 @@ export default async function CreatorProfilePage({ params }: Props) {
               <div>
                 <h3 className="font-display text-[1rem] font-bold text-indigo">Influencer Card</h3>
                 <p className="mt-0.5 max-w-[260px] text-[10px] leading-snug text-muted">
-                  A powerful, shareable card with all her info, social links and more.
+                  Social links, specialties, and a QR that opens this card.
                 </p>
               </div>
               <Link
@@ -344,11 +357,15 @@ export default async function CreatorProfilePage({ params }: Props) {
                     </p>
                     {creator.verified ? <IconVerified size={13} /> : null}
                   </div>
-                  <p className="text-[10px] text-muted sm:text-[11px]">{creator.title}</p>
-                  <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted">
-                    <IconMapPin size={10} className="text-[#F97316]" />
-                    {creator.locationCity}, {creator.locationCountry}
-                  </p>
+                  {creator.title.trim() ? (
+                    <p className="text-[10px] text-muted sm:text-[11px]">{creator.title}</p>
+                  ) : null}
+                  {place ? (
+                    <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted">
+                      <IconMapPin size={10} className="text-[#F97316]" />
+                      {place}
+                    </p>
+                  ) : null}
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {creator.specialties.slice(0, 4).map((s) => (
                       <span
@@ -359,9 +376,11 @@ export default async function CreatorProfilePage({ params }: Props) {
                       </span>
                     ))}
                   </div>
-                  <p className="mt-1.5 line-clamp-2 text-[10px] leading-snug text-muted sm:text-[11px]">
-                    {cardBio}
-                  </p>
+                  {bio ? (
+                    <p className="mt-1.5 line-clamp-2 text-[10px] leading-snug text-muted sm:text-[11px]">
+                      {bio}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="hidden shrink-0 flex-col items-center sm:flex">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -415,9 +434,6 @@ export default async function CreatorProfilePage({ params }: Props) {
             <section className="rounded-[1.2rem] border border-[#E6ECFF] bg-white p-3.5 shadow-sm sm:p-4">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="font-display text-[1rem] font-bold text-indigo">Key Stats</h3>
-                <span className="rounded-full border border-[#E6ECFF] bg-[#F8FAFF] px-2.5 py-1 text-[10px] font-semibold text-muted">
-                  Last 30 Days ▾
-                </span>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
                 {statTiles.map(({ label, value, delta, Icon, tone }) => (
@@ -432,7 +448,7 @@ export default async function CreatorProfilePage({ params }: Props) {
                     <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-muted">
                       {label}
                     </p>
-                    <p className="mt-1 text-[9px] font-semibold text-emerald-600">{delta}</p>
+                    {delta ? <p className="mt-1 text-[9px] font-semibold text-emerald-600">{delta}</p> : null}
                   </div>
                 ))}
               </div>
@@ -446,28 +462,31 @@ export default async function CreatorProfilePage({ params }: Props) {
             <h3 className="font-display text-[1rem] font-bold text-indigo">About {firstName}</h3>
             <div className="mt-2.5 grid gap-4 sm:grid-cols-[1.35fr_0.9fr]">
               <div>
-                <p className="text-[12px] leading-relaxed text-muted">{aboutBio}</p>
-                <button type="button" className="mt-2 text-[11px] font-semibold text-blue hover:underline">
-                  Read More →
-                </button>
+                {bio ? <p className="text-[12px] leading-relaxed text-muted">{bio}</p> : null}
               </div>
               <ul className="space-y-2 text-[11px] text-muted">
+                <li className="flex items-center gap-2">
+                  <IconHandshake size={13} className="text-violet" />
+                  <span className="font-semibold text-indigo">{partnership}</span>
+                </li>
                 {creator.age ? (
                   <li className="flex items-center gap-2">
                     <IconCake size={13} className="text-violet" />
                     <span className="font-semibold text-indigo">{creator.age} years old</span>
                   </li>
                 ) : null}
-                <li className="flex items-center gap-2">
-                  <IconMapPin size={13} className="text-[#F97316]" />
-                  <span className="font-semibold text-indigo">
-                    {creator.locationCity}, {creator.locationCountry}
-                  </span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <IconLang size={13} className="text-blue" />
-                  <span className="font-semibold text-indigo">{creator.languages.join(", ")}</span>
-                </li>
+                {place ? (
+                  <li className="flex items-center gap-2">
+                    <IconMapPin size={13} className="text-[#F97316]" />
+                    <span className="font-semibold text-indigo">{place}</span>
+                  </li>
+                ) : null}
+                {languages.length > 0 ? (
+                  <li className="flex items-center gap-2">
+                    <IconLang size={13} className="text-blue" />
+                    <span className="font-semibold text-indigo">{languages.join(", ")}</span>
+                  </li>
+                ) : null}
                 {creator.linktree ? (
                   <li className="flex items-center gap-2">
                     <IconGlobe size={13} className="text-blue" />
@@ -494,25 +513,8 @@ export default async function CreatorProfilePage({ params }: Props) {
             <div>
               <h3 className="font-display text-[1.1rem] font-bold text-indigo">Featured Content</h3>
               <p className="mt-0.5 text-[11px] text-muted">
-                A glimpse of {firstName}&apos;s recent content across platforms. Scroll sideways to explore.
+                Content saved on {firstName}&apos;s profile.
               </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {["All", "Beauty", "Lifestyle", "Travel", "Fashion", "Brand Collaborations"].map(
-                (t) => (
-                  <span
-                    key={t}
-                    className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                      t === "All"
-                        ? "bg-gradient-to-r from-[#633CFF] to-[#2979FF] text-white"
-                        : "bg-white text-muted ring-1 ring-[#E0E7FF]"
-                    }`}
-                  >
-                    {t}
-                  </span>
-                ),
-              )}
-              <span className="ml-1 text-[11px] font-semibold text-blue">View All Content →</span>
             </div>
           </div>
 
@@ -637,9 +639,7 @@ export default async function CreatorProfilePage({ params }: Props) {
                 <h3 className="font-display text-[1.05rem] font-bold text-indigo">
                   Collaboration Preferences
                 </h3>
-                <p className="mt-0.5 text-[11px] text-muted">
-                  Open to exciting brand partnerships!
-                </p>
+                <p className="mt-0.5 text-[11px] text-muted">{partnership}</p>
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {creator.collabPrefs.map((p) => {
                     const Icon = COLLAB_ICON_MAP[p] ?? IconHeart;
@@ -716,16 +716,18 @@ export default async function CreatorProfilePage({ params }: Props) {
                   {c.displayName}
                   {c.verified ? <IconVerified size={12} /> : null}
                 </p>
-                <p className="text-[10px] text-muted">{c.title}</p>
-                <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted">
-                  <IconMapPin size={10} className="text-[#E11D48]" />
-                  {c.locationCity}, {c.locationCountry}
-                </p>
+                {c.title.trim() ? <p className="text-[10px] text-muted">{c.title}</p> : null}
+                {profilePlace(c.locationCity, c.locationCountry) ? (
+                  <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted">
+                    <IconMapPin size={10} className="text-[#E11D48]" />
+                    {profilePlace(c.locationCity, c.locationCountry)}
+                  </p>
+                ) : null}
                 <Link
                   href={`/creators/${c.slug}`}
                   className="mt-auto inline-flex justify-center rounded-full bg-[#EAE4FF] px-3 py-1 text-[11px] font-semibold text-violet"
                 >
-                  Follow
+                  View profile
                 </Link>
               </div>
             </article>
