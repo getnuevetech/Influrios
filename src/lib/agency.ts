@@ -1,6 +1,6 @@
 /**
- * Phase 11 — Agency Workspace & Joint Portfolios.
- * Multi-creator roster, agency campaigns, and collab case-study stubs.
+ * Agency workspace, roster, campaigns, and joint portfolios.
+ * A campaign or portfolio stores the specialty, budget, and metrics that were entered.
  */
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
@@ -82,13 +82,26 @@ function asStringList(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
+export function parsePortfolioMetricLines(raw: string) {
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .flatMap((line) => {
+      const [label, value] = line.split("|").map((part) => part.trim());
+      if (!label || !value || value === "—") return [];
+      return [{ label, value }];
+    });
+}
+
 function asMetrics(value: unknown) {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
-    const label = "label" in item ? String(item.label) : "";
-    const metric = "value" in item ? String(item.value) : "";
-    return label ? [{ label, value: metric }] : [];
+    const label = "label" in item ? String(item.label).trim() : "";
+    const metric = "value" in item ? String(item.value).trim() : "";
+    if (!label || !metric || metric === "—") return [];
+    return [{ label, value: metric }];
   });
 }
 
@@ -231,7 +244,7 @@ export async function addRosterMember(input: {
       workspaceId,
       creatorSlug: input.creatorSlug,
       role: input.role ?? "talent",
-      retainerLabel: input.retainerLabel?.trim() || "Project",
+      retainerLabel: input.retainerLabel?.trim() || "",
       notes: input.notes?.trim() || "",
     },
   });
@@ -262,8 +275,8 @@ export async function createAgencyCampaign(input: {
     title: input.title.trim(),
     clientName: input.clientName.trim(),
     status: "briefing",
-    specialty: input.specialty.trim() || "lifestyle",
-    budgetLabel: input.budgetLabel.trim() || "TBD",
+    specialty: input.specialty.trim(),
+    budgetLabel: input.budgetLabel.trim(),
     creatorSlugs: input.creatorSlugs.filter(Boolean),
     summary: input.summary.trim(),
     createdAt: ts,
@@ -322,16 +335,16 @@ export async function createJointPortfolio(input: {
     tagline: input.tagline.trim(),
     leftSlug: input.leftSlug,
     rightSlug: input.rightSlug,
-    specialty: input.specialty.trim() || "lifestyle",
+    specialty: input.specialty.trim(),
     outcome: input.outcome.trim(),
-    metrics: input.metrics?.length
-      ? input.metrics
-      : [
-          { label: "Reach", value: "—" },
-          { label: "Engagement", value: "—" },
-        ],
+    metrics: (input.metrics ?? []).flatMap((metric) => {
+      const label = metric.label.trim();
+      const value = metric.value.trim();
+      if (!label || !value || value === "—") return [];
+      return [{ label, value }];
+    }),
     campaignId: input.campaignId,
-    published: input.published ?? true,
+    published: input.published === true,
     createdAt: ts,
     updatedAt: ts,
   };

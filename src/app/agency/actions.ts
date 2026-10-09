@@ -7,6 +7,7 @@ import {
   agencyWorkspaceIdForOwner,
   createAgencyCampaign,
   createJointPortfolio,
+  parsePortfolioMetricLines,
   setCampaignStatus,
   setPortfolioPublished,
   type AgencyCampaign,
@@ -59,7 +60,7 @@ export async function actionCreateCampaign(formData: FormData) {
       workspaceId,
       title: String(formData.get("title") ?? ""),
       clientName: String(formData.get("clientName") ?? ""),
-      specialty: String(formData.get("specialty") ?? "beauty"),
+      specialty: String(formData.get("specialty") ?? ""),
       budgetLabel: String(formData.get("budgetLabel") ?? ""),
       summary: String(formData.get("summary") ?? ""),
       creatorSlugs,
@@ -90,15 +91,7 @@ export async function actionSetCampaignStatus(formData: FormData) {
 
 export async function actionCreatePortfolio(formData: FormData) {
   const workspaceId = await requireWorkspaceId();
-  const metricsRaw = String(formData.get("metrics") ?? "");
-  const metrics = metricsRaw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [label, value] = line.split("|").map((s) => s.trim());
-      return { label: label || "Metric", value: value || "—" };
-    });
+  const metrics = parsePortfolioMetricLines(String(formData.get("metrics") ?? ""));
   try {
     await createJointPortfolio({
       workspaceId,
@@ -106,7 +99,7 @@ export async function actionCreatePortfolio(formData: FormData) {
       tagline: String(formData.get("tagline") ?? ""),
       leftSlug: String(formData.get("leftSlug") ?? ""),
       rightSlug: String(formData.get("rightSlug") ?? ""),
-      specialty: String(formData.get("specialty") ?? "beauty"),
+      specialty: String(formData.get("specialty") ?? ""),
       outcome: String(formData.get("outcome") ?? ""),
       metrics,
       campaignId: String(formData.get("campaignId") ?? "") || undefined,
