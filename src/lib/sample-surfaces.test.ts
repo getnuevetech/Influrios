@@ -73,6 +73,13 @@ describe("public sample surfaces", () => {
     assert.match(hub, /cardsFromStoredCollaborationMatches/);
     const profile = source("src/app/creators/[slug]/page.tsx");
     assert.equal(profile.includes("leading global brands"), false);
+    assert.equal(profile.includes("kinder, more colorful"), false);
+    assert.equal(profile.includes("brighter, more confident"), false);
+    assert.equal(profile.includes("all her info"), false);
+    assert.equal(profile.includes("Last 30 Days"), false);
+    assert.equal(profile.includes("Read More"), false);
+    assert.equal(profile.includes("Open to exciting brand partnerships"), false);
+    assert.match(profile, /profilePlace/);
     assert.equal(profile.includes("/demo/"), true);
     const adminMatching = source("src/app/admin/matching/page.tsx");
     assert.equal(adminMatching.includes("manual pilot"), false);
