@@ -12,6 +12,7 @@ import { ShortlistHeartButton } from "@/components/shortlist-heart-button";
 import type { CardFeatureFlags } from "@/lib/cms";
 import {
   formatFollowers,
+  platformDisplayName,
   specialtyLabel,
   type SeedCreator,
 } from "@/lib/seed-data";
@@ -259,14 +260,6 @@ export async function CompactInfluencerCard({ creator }: { creator: SeedCreator 
   const allowedPlatforms = new Set(socials.map((s) => s.platform));
   const stripPlatforms = ["INSTAGRAM", "TIKTOK", "YOUTUBE", "X"] as const;
 
-  function platformLabel(platform: string) {
-    if (platform === "INSTAGRAM") return "Instagram";
-    if (platform === "TIKTOK") return "TikTok";
-    if (platform === "YOUTUBE") return "YouTube";
-    if (platform === "X") return "X";
-    return platform;
-  }
-
   return (
     <article className="w-full max-w-[480px] overflow-hidden rounded-2xl bg-white shadow-[0_20px_50px_rgba(17,26,90,0.14)] ring-1 ring-[#E4E9F5]">
       {/* Body: left content + QR panel */}
@@ -313,7 +306,7 @@ export async function CompactInfluencerCard({ creator }: { creator: SeedCreator 
                         {s.followers > 0 ? formatFollowers(s.followers) : "—"}
                       </p>
                       <p className="mt-1 whitespace-nowrap text-[10px] font-medium leading-none text-[#8B93A7] sm:text-[11px]">
-                        {platformLabel(s.platform)}
+                        {platformDisplayName(s.platform)}
                       </p>
                     </div>
                   </div>
@@ -370,7 +363,7 @@ export async function CompactInfluencerCard({ creator }: { creator: SeedCreator 
               target="_blank"
               rel="noreferrer"
               className="flex h-7 w-7 shrink-0 items-center justify-center transition hover:scale-110"
-              aria-label={platformLabel(platform)}
+              aria-label={platformDisplayName(platform)}
             >
               {icon}
             </a>

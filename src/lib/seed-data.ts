@@ -714,6 +714,17 @@ export function categoryImageFor(
   return CATEGORY_IMAGES.lifestyle!;
 }
 
+/** Public name for a stored social network. Unknown codes stay as stored. */
+export function platformDisplayName(platform: string): string {
+  if (platform === "INSTAGRAM") return "Instagram";
+  if (platform === "TIKTOK") return "TikTok";
+  if (platform === "YOUTUBE") return "YouTube";
+  if (platform === "X") return "X";
+  if (platform === "WEBSITE") return "Website";
+  if (platform === "PINTEREST") return "Pinterest";
+  return platform;
+}
+
 export function formatFollowers(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, "")}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1).replace(/\.0$/, "")}K`;

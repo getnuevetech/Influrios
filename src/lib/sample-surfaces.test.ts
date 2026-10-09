@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { cardsFromStoredCollaborationMatches } from "./matching";
+import { platformDisplayName } from "./seed-data";
 
 function source(path: string) {
   return readFileSync(path, "utf8");
@@ -51,6 +52,13 @@ describe("public sample surfaces", () => {
     assert.equal(home.includes("Adobe"), false);
     assert.equal(home.includes("/demo/cta-community.jpg"), false);
     assert.equal(home.includes("categoryImageFor"), false);
+    assert.equal(home.includes("Follow on"), false);
+    assert.match(home, /platformDisplayName/);
+    assert.match(home, /\/c\/\$\{featuredCreator\.slug\}/);
+    assert.equal(platformDisplayName("YOUTUBE"), "YouTube");
+    assert.equal(platformDisplayName("TIKTOK"), "TikTok");
+    assert.equal(platformDisplayName("WEBSITE"), "Website");
+    assert.notEqual(platformDisplayName("YOUTUBE"), platformDisplayName("TIKTOK"));
     assert.match(home, /sponsored\.partners/);
   });
 
