@@ -23,8 +23,8 @@ import { consumeGuestQuota } from "@/lib/guest-usage";
 import { loadGuestSuggestionSample } from "@/lib/guest-suggestions";
 import {
   allDirectoryMatches,
+  cardsFromStoredCollaborationMatches,
   filterMatches,
-  POPULAR_MATCH_CHIPS,
   scoreCreatorPair,
   type CreatorMatch,
 } from "@/lib/matching";
@@ -40,7 +40,6 @@ import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { getDirectory, getDirectoryCreator, indexCreatorsBySlug } from "@/lib/directory";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { isPlanCode, type PlanCode } from "@/lib/entitlements";
-import { normalizeInfluencerRoleTitle } from "@/lib/terminology-copy";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -191,24 +190,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
     .slice(0, 4);
   const heroFaces = directory.creators.slice(0, 6);
   const taxonomy = directory.taxonomy;
-  const popularCards =
-    cms.collaborationMatches.matches.length > 0
-      ? cms.collaborationMatches.matches.map((match) => {
-          const displayTitle = normalizeInfluencerRoleTitle(match.title);
-          const chip = POPULAR_MATCH_CHIPS.find(
-            (row) =>
-              `${row.title} ${row.subtitle}`.includes(displayTitle.split(" + ")[0] ?? "") ||
-              displayTitle.includes(row.title),
-          );
-          const [left, right] = displayTitle.split(/\s*\+\s*/);
-          return {
-            title: left?.trim() || displayTitle,
-            subtitle: right ? `+ ${right.trim()}` : chip?.subtitle || "",
-            specialty: chip?.specialty || match.tags[0]?.toLowerCase() || "lifestyle",
-            image: match.image || chip?.image || "/demo/categories/cat-lifestyle.jpg",
-          };
-        })
-      : POPULAR_MATCH_CHIPS;
+  const popularCards = cardsFromStoredCollaborationMatches(cms.collaborationMatches.matches);
 
   const hero = landing.hero;
   const dual = landing.dualPath;
@@ -331,6 +313,11 @@ export default async function CollaborationPage({ searchParams }: Props) {
             {landing.popularMatches.ctaLabel} <IconArrowRight size={14} className="inline" />
           </Link>
         </div>
+        {popularCards.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-[#E4E9F5] bg-white px-4 py-6 text-sm text-muted">
+            Saved collaboration matches appear here.
+          </p>
+        ) : (
         <FeaturedCarousel stepPx={220}>
           {popularCards.map((chip) => (
             <Link
@@ -357,6 +344,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </Link>
           ))}
         </FeaturedCarousel>
+        )}
       </section>
 
       {/* —— Choose How You Want to Collaborate —— */}

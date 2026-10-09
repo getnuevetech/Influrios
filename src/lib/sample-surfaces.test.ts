@@ -1,10 +1,34 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { cardsFromStoredCollaborationMatches } from "./matching";
 
 function source(path: string) {
   return readFileSync(path, "utf8");
 }
+
+describe("stored collaboration match cards", () => {
+  it("keeps a saved pair and drops an empty title", () => {
+    const cards = cardsFromStoredCollaborationMatches([
+      { title: "Beauty Creator + Skincare Brand", tags: ["beauty"], image: "/uploads/pairs/beauty.jpg" },
+      { title: "   ", tags: ["food"] },
+    ]);
+    assert.equal(cards.length, 1);
+    assert.equal(cards[0]!.title, "Beauty Influencer");
+    assert.equal(cards[0]!.subtitle, "+ Skincare Brand");
+    assert.equal(cards[0]!.specialty, "beauty");
+    assert.equal(cards[0]!.image, "/uploads/pairs/beauty.jpg");
+  });
+
+  it("uses the category image when the saved image is a sample creator photo", () => {
+    const cards = cardsFromStoredCollaborationMatches([
+      { title: "Hair Stylist", tags: ["hair"], image: "/demo/creators/creator-sofia.jpg" },
+    ]);
+    assert.equal(cards.length, 1);
+    assert.equal(cards[0]!.image.includes("/demo/creators/"), false);
+    assert.match(cards[0]!.image, /cat-hair/);
+  });
+});
 
 describe("public sample surfaces", () => {
   it("draws the card page from published creators and saved plans", () => {
@@ -36,12 +60,20 @@ describe("public sample surfaces", () => {
     assert.equal(seed.includes("CREATOR_OPPORTUNITIES"), false);
     assert.equal(seed.includes("SEED_CREATORS"), false);
     assert.equal(seed.includes("prisma.creator.upsert"), false);
+    const collab = source("src/app/collaboration/page.tsx");
+    const hub = source("src/app/collaboration/hub/page.tsx");
+    const matching = source("src/lib/matching.ts");
+    assert.equal(collab.includes("POPULAR_MATCH_CHIPS"), false);
+    assert.equal(hub.includes("POPULAR_MATCH_CHIPS"), false);
+    assert.equal(matching.includes("POPULAR_MATCH_CHIPS"), false);
+    assert.match(collab, /cardsFromStoredCollaborationMatches/);
+    assert.match(hub, /cardsFromStoredCollaborationMatches/);
     const profile = source("src/app/creators/[slug]/page.tsx");
     assert.equal(profile.includes("leading global brands"), false);
     assert.equal(profile.includes("/demo/"), true);
-    const matching = source("src/app/admin/matching/page.tsx");
-    assert.equal(matching.includes("manual pilot"), false);
-    assert.equal(matching.includes("Phase 4 ops"), false);
+    const adminMatching = source("src/app/admin/matching/page.tsx");
+    assert.equal(adminMatching.includes("manual pilot"), false);
+    assert.equal(adminMatching.includes("Phase 4 ops"), false);
   });
 
   it("does not insert a sample introduction", () => {

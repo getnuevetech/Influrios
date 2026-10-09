@@ -165,7 +165,7 @@ export const DEFAULT_COLLABORATION_LANDING: CollaborationLandingConfig = {
   },
   popularMatches: {
     title: "Popular Collaboration Matches",
-    subtitle: "Explore real examples of influencer and brand categories that work great together.",
+    subtitle: "Category pairs saved on this landing.",
     ctaLabel: "View all categories",
     ctaHref: "/categories",
   },
