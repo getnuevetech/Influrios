@@ -10,7 +10,7 @@ describe("onboarding completion", () => {
       bio: "Draft Influencer Card for @new.",
       locationCity: "Your city",
       locationCountry: "Your country",
-      specialties: ["lifestyle"],
+      specialties: [],
     });
     const live = evaluateCompletion({
       stage: "published",

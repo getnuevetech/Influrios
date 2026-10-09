@@ -7,7 +7,7 @@ import { requireAuthSecret } from "@/lib/app-secret";
 import { decideCount, isPlanCode, normalizePlanCode } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { prisma } from "@/lib/db";
-import { advanceClaimStage, evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
+import { advanceClaimStage, completionItemDone, evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
 import {
   defaultAvatarForGender,
   defaultBannerForSeed,
@@ -200,14 +200,36 @@ function platformUrl(platform: SeedSocial["platform"], handle: string) {
   return `https://instagram.com/${handle}`;
 }
 
-function guessSpecialty(handle: string, platform: string): string[] {
+/** A specialty is suggested only when the handle names one. Otherwise the creator chooses. */
+export function guessSpecialty(handle: string, platform: string): string[] {
   const hay = `${handle} ${platform}`.toLowerCase();
   for (const s of SPECIALTY_TAXONOMY) {
     if (hay.includes(s.slug) || hay.includes(s.name.toLowerCase().split(" ")[0]!)) {
       return [s.slug];
     }
   }
-  return ["lifestyle"];
+  return [];
+}
+
+export function claimPublishBlockers(draft: Pick<ClaimDraft, "bio" | "locationCity" | "locationCountry" | "specialties">): string[] {
+  const subject = {
+    stage: "verified" as const,
+    bio: draft.bio,
+    locationCity: draft.locationCity,
+    locationCountry: draft.locationCountry,
+    specialties: draft.specialties,
+  };
+  const blockers: string[] = [];
+  if (!completionItemDone({ key: "location", label: "", hint: "", weight: 0 }, subject)) {
+    blockers.push("Add a city and country. Nothing was published.");
+  }
+  if (!completionItemDone({ key: "bio", label: "", hint: "", weight: 0 }, subject)) {
+    blockers.push("Replace the draft bio. Nothing was published.");
+  }
+  if (!completionItemDone({ key: "specialty", label: "", hint: "", weight: 0 }, subject)) {
+    blockers.push("Choose a specialty. Nothing was published.");
+  }
+  return blockers;
 }
 
 function stageFromState(state: OnboardingState): ClaimStage {
@@ -418,14 +440,12 @@ export async function createDraftFromHandle(
   const displayName = titleCase(handle.replace(/[0-9]+$/g, "")) || "New Influencer";
   const specialty = guessSpecialty(handle, platform);
   const specialtyName =
-    SPECIALTY_TAXONOMY.find((s) => s.slug === specialty[0])?.name ?? "Lifestyle";
+    SPECIALTY_TAXONOMY.find((s) => s.slug === specialty[0])?.name ?? "Influencer";
   const now = new Date().toISOString();
   const socialImage = await resolveSocialAvatar(platform, handle);
   const gender: ProfileGender = "unspecified";
   const image = resolveDefaultAvatar({ socialImage, gender, seed: slug });
   const coverImage = resolveDefaultBanner({ seed: slug });
-  // Demo preview specialties so the temporary card shows a full-card experience.
-  const previewSpecialties = [...new Set([specialty[0], "lifestyle", "travel"].filter(Boolean))].slice(0, 3);
 
   const draft: ClaimDraft = {
     id: `draft_${randomBytes(6).toString("hex")}`,
@@ -438,25 +458,13 @@ export async function createDraftFromHandle(
     bio: `Draft Influencer Profile for @${handle}. Confirm specialties, bio, and location after you claim — nothing publishes until you say so.`,
     locationCity: "Your city",
     locationCountry: "Your country",
-    specialties: previewSpecialties,
+    specialties: specialty,
     socials: [
       {
         platform,
         handle: `@${handle}`,
         url: platformUrl(platform, handle),
-        followers: 12500,
-      },
-      {
-        platform: platform === "INSTAGRAM" ? "TIKTOK" : "INSTAGRAM",
-        handle: `@${handle}`,
-        url: platformUrl(platform === "INSTAGRAM" ? "TIKTOK" : "INSTAGRAM", handle),
-        followers: 8200,
-      },
-      {
-        platform: "YOUTUBE",
-        handle: `@${handle}`,
-        url: platformUrl("YOUTUBE", handle),
-        followers: 4100,
+        followers: 0,
       },
     ],
     image,
@@ -557,27 +565,27 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     bio: draft.bio,
     locationCity: draft.locationCity,
     locationCountry: draft.locationCountry,
-    languages: ["English"],
+    languages: [],
     avatarColor: "#633CFF",
     image: hero,
     coverImage,
     gender: draft.gender,
-    badge: draft.stage === "published" ? "Rising Star" : "Draft preview",
+    badge: draft.stage === "published" ? "Starter" : "Draft preview",
     statusLabel: draft.stage === "published" ? "Open to partnerships" : "Draft — not public yet",
     planTier: draft.planTier === "PLUS" || draft.planTier === "PRO" ? draft.planTier : "STARTER",
     specialties: draft.specialties,
     socials: draft.socials,
     openToCollab: true,
-    verified: draft.stage === "verified" || draft.stage === "published" || draft.stage === "draft",
+    verified: false,
     stats: {
-      engagementRate: "4.8%",
-      engagementDelta: "+0.2%",
-      totalReach: "25K",
-      reachDelta: "+1.1K",
-      avgViews: "18K",
-      viewsDelta: "+900",
-      collaborations: "0",
-      collabDelta: "—",
+      engagementRate: "",
+      engagementDelta: "",
+      totalReach: "",
+      reachDelta: "",
+      avgViews: "",
+      viewsDelta: "",
+      collaborations: "",
+      collabDelta: "",
     },
   };
 }
@@ -667,10 +675,6 @@ export async function verifyDraft(draftId: string, code: string): Promise<ClaimD
   draft.stage = verified.stage;
   draft.verifiedAt = new Date().toISOString();
   draft.updatedAt = draft.verifiedAt;
-  if (draft.locationCity === "Your city") {
-    draft.locationCity = "Lagos";
-    draft.locationCountry = "Nigeria";
-  }
   await writeDraft(draft);
   const { recordVerificationAttempt } = await import("@/lib/claim-persist");
   await recordVerificationAttempt({
@@ -687,6 +691,8 @@ export async function publishDraft(draftId: string): Promise<ClaimDraft> {
   if (!draft) throw new Error("Draft not found");
   const published = advanceClaimStage(draft.stage, "publish");
   if (!published.ok) throw new Error(published.error);
+  const blockers = claimPublishBlockers(draft);
+  if (blockers.length > 0) throw new Error(blockers[0]);
   draft.stage = published.stage;
   draft.publishedAt = new Date().toISOString();
   draft.updatedAt = draft.publishedAt;

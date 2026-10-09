@@ -124,7 +124,7 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
       bio: draft.bio,
       locationCity: draft.locationCity,
       locationCountry: draft.locationCountry,
-      languages: ["English"],
+      languages: [],
       avatarUrl: draft.image,
       coverUrl: draft.coverImage,
       gender: draft.gender,

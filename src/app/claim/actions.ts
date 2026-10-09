@@ -88,6 +88,18 @@ export async function actionPublishDraft(formData: FormData) {
     );
   }
   try {
+    const bio = String(formData.get("bio") ?? "").trim();
+    const locationCity = String(formData.get("locationCity") ?? "").trim();
+    const locationCountry = String(formData.get("locationCountry") ?? "").trim();
+    const specialty = String(formData.get("specialty") ?? "").trim();
+    if (formData.has("bio")) {
+      await updateDraftProfile(draftId, {
+        bio,
+        locationCity,
+        locationCountry,
+        specialties: specialty ? [specialty] : [],
+      });
+    }
     const draft = await publishDraft(draftId);
     await setCreatorSession(draft.id);
     const { getAccountSession } = await import("@/lib/accounts");

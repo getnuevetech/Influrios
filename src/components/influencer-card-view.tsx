@@ -89,7 +89,7 @@ export function InfluencerCardView({
             }`}
           >
             {creator.displayName}
-            <IconVerified size={compact ? 18 : 20} />
+            {creator.verified ? <IconVerified size={compact ? 18 : 20} /> : null}
           </h1>
           <p className={`mt-0.5 text-sm ${shell.muted}`}>{creator.title}</p>
           <p className={`text-sm ${shell.muted}`}>
@@ -171,7 +171,7 @@ export function InfluencerCardView({
                 className="inline-flex items-center gap-1.5"
               >
                 <SocialIcon platform={s.platform} size={compact ? 18 : 20} />
-                {!hideCta ? (
+                {!hideCta && s.followers > 0 ? (
                   <span className={`text-xs font-bold ${elevated ? "text-white" : "text-indigo"}`}>
                     {formatFollowers(s.followers)}
                   </span>
