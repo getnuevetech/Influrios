@@ -7,7 +7,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { SEED_CREATORS, CATEGORY_IMAGES, COLLAB_MATCH_PRESETS } from "@/lib/seed-data";
+import { CATEGORY_IMAGES } from "@/lib/seed-data";
 
 export type BannerSlot = "hero" | "sponsored" | "cta" | "cardPromo";
 
@@ -138,13 +138,7 @@ function defaultCategoryItems(): HomepageCategoryItem[] {
 }
 
 function defaultCollaborationMatches(): HomepageCollabMatch[] {
-  return COLLAB_MATCH_PRESETS.map((match) => ({
-    title: match.title,
-    tags: [...match.tags],
-    leftSlug: match.leftSlug,
-    rightSlug: match.rightSlug,
-    image: match.image,
-  }));
+  return [];
 }
 
 const DEFAULT_CATEGORIES: HomepageCategoriesConfig = {
@@ -189,12 +183,7 @@ const DEFAULT_FEATURES: CardFeatureFlags = {
 };
 
 function defaultCards(): ManagedCard[] {
-  return SEED_CREATORS.map((c, i) => ({
-    slug: c.slug,
-    visible: true,
-    order: i,
-    features: { ...DEFAULT_FEATURES },
-  }));
+  return [];
 }
 
 const DEFAULT_VALUE_PROPOSITION: ValuePropositionStrip = {

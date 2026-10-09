@@ -4,6 +4,7 @@ import {
   assembleSiteCms,
   BANNER_SECTION_KEYS,
   DEFAULT_CMS,
+  DEFAULT_FEATURES,
   mergeBannerConfig,
   mergeFeaturedCards,
   mergeValueProposition,
@@ -34,14 +35,14 @@ describe("cms payload merge", () => {
   it("keeps featured cards and value-prop items when provided", () => {
     const featured = mergeFeaturedCards({
       widthScale: 1.5,
-      cards: [{ slug: "ada", visible: true, order: 0, features: { ...DEFAULT_CMS.featuredCards.cards[0]!.features } }],
+      cards: [{ slug: "ada", visible: true, order: 0, features: { ...DEFAULT_FEATURES } }],
     });
     assert.equal(featured.widthScale, 1.5);
     assert.equal(featured.cards.length, 1);
     assert.equal(featured.cards[0]!.slug, "ada");
 
     const emptyFeatured = mergeFeaturedCards({ widthScale: 2, cards: [] });
-    assert.ok(emptyFeatured.cards.length > 0);
+    assert.equal(emptyFeatured.cards.length, 0);
 
     const strip = mergeValueProposition({
       headline: "Custom",
