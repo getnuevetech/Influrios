@@ -17,7 +17,7 @@ import {
 import { getCms, publicBannerImages } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
-import { formatFollowers, publicStoredImage, specialtyLabel, totalFollowers, type SeedCreator } from "@/lib/seed-data";
+import { formatFollowers, platformDisplayName, publicStoredImage, specialtyLabel, totalFollowers, type SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 
@@ -533,12 +533,15 @@ export default async function HomePage() {
                         className="flex items-center justify-center gap-1.5 rounded-full bg-lavender/70 py-1.5 text-[10px] font-semibold text-violet"
                       >
                         <SocialIcon platform={s.platform} size={12} />
-                        Follow on {s.platform === "INSTAGRAM" ? "Instagram" : "TikTok"}
+                        {platformDisplayName(s.platform)}
                       </div>
                     ))}
-                    <div className="rounded-full brand-gradient py-1.5 text-[10px] font-bold text-white">
-                      Work With Me
-                    </div>
+                    <Link
+                      href={featuredCreator ? `/c/${featuredCreator.slug}` : cardPromo.ctaHref || "/claim"}
+                      className="block rounded-full brand-gradient py-1.5 text-[10px] font-bold text-white"
+                    >
+                      {featuredCreator ? "Work With Me" : "Create your card"}
+                    </Link>
                   </div>
                 </div>
               </div>
