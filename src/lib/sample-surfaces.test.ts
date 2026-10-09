@@ -71,9 +71,9 @@ describe("public sample surfaces", () => {
     const profile = source("src/app/creators/[slug]/page.tsx");
     assert.equal(profile.includes("leading global brands"), false);
     assert.equal(profile.includes("/demo/"), true);
-    const matching = source("src/app/admin/matching/page.tsx");
-    assert.equal(matching.includes("manual pilot"), false);
-    assert.equal(matching.includes("Phase 4 ops"), false);
+    const adminMatching = source("src/app/admin/matching/page.tsx");
+    assert.equal(adminMatching.includes("manual pilot"), false);
+    assert.equal(adminMatching.includes("Phase 4 ops"), false);
   });
 
   it("does not insert a sample introduction", () => {
