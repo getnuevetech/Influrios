@@ -7,7 +7,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { CATEGORY_IMAGES } from "@/lib/seed-data";
+import { CATEGORY_IMAGES, publicStoredImage } from "@/lib/seed-data";
 
 export type BannerSlot = "hero" | "sponsored" | "cta" | "cardPromo";
 
@@ -134,7 +134,7 @@ const CATEGORIES_SECTION_KEY = "categories";
 const COLLABORATION_SECTION_KEY = "collaboration";
 
 function defaultCategoryItems(): HomepageCategoryItem[] {
-  return Object.entries(CATEGORY_IMAGES).map(([slug, image]) => ({ slug, image }));
+  return Object.keys(CATEGORY_IMAGES).map((slug) => ({ slug, image: "" }));
 }
 
 function defaultCollaborationMatches(): HomepageCollabMatch[] {
@@ -295,7 +295,7 @@ const DEFAULT_CMS: SiteCms = {
         "Whether you're an influencer looking for opportunities or a business ready to collaborate, Influrios is your hub.",
       ctaLabel: "Join as an Influencer",
       ctaHref: "/claim",
-      images: ["/demo/cta-community.jpg"],
+      images: [],
       partners: [],
     },
   },
@@ -326,9 +326,59 @@ export function partnerNamesFromText(text: string): string[] {
   return names;
 }
 
-/** Sample creator photos are not a stored campaign. */
+/** Uploaded banner files. Retired /demo/ art is omitted. */
 export function publicBannerImages(images: string[]): string[] {
-  return images.filter((src) => !src.includes("/demo/creators/"));
+  return images.map((src) => publicStoredImage(src)).filter((src) => src.length > 0);
+}
+
+/** Drop retired /demo/ paths from a stored CMS payload. Other fields stay. */
+export function cmsPayloadWithoutDemoMedia(payload: Record<string, unknown>): {
+  payload: Record<string, unknown>;
+  changed: boolean;
+} {
+  let changed = false;
+  const next: Record<string, unknown> = { ...payload };
+
+  if (Array.isArray(payload.images)) {
+    const images = payload.images.flatMap((item) => (typeof item === "string" ? [publicStoredImage(item)] : []));
+    const kept = images.filter((src) => src.length > 0);
+    const before = payload.images.filter((item): item is string => typeof item === "string");
+    if (kept.length !== before.length || kept.some((src, index) => src !== before[index])) {
+      next.images = kept;
+      changed = true;
+    }
+  }
+
+  if (Array.isArray(payload.items)) {
+    next.items = payload.items.map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+      const row = item as Record<string, unknown>;
+      if (typeof row.image !== "string") return item;
+      const image = publicStoredImage(row.image);
+      if (image === row.image) return item;
+      changed = true;
+      return { ...row, image };
+    });
+  }
+
+  if (Array.isArray(payload.matches)) {
+    next.matches = payload.matches.map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+      const row = item as Record<string, unknown>;
+      if (typeof row.image !== "string") return item;
+      const image = publicStoredImage(row.image);
+      if (image === row.image) return item;
+      changed = true;
+      if (!image) {
+        const copy = { ...row };
+        delete copy.image;
+        return copy;
+      }
+      return { ...row, image };
+    });
+  }
+
+  return { payload: next, changed };
 }
 
 /** Merge a stored banner with defaults so empty admin fields do not blank the public CTA. */
@@ -339,7 +389,9 @@ export function mergeBannerConfig(slot: BannerSlot, incoming?: Partial<BannerCon
     ...base,
     ...incoming,
     id: slot,
-    images: Array.isArray(incoming.images) ? [...incoming.images] : [...base.images],
+    images: Array.isArray(incoming.images)
+      ? incoming.images.map((src) => publicStoredImage(src)).filter((src) => src.length > 0)
+      : [...base.images],
     partners: Array.isArray(incoming.partners)
       ? partnerNamesFromText(incoming.partners.join("\n"))
       : [...base.partners],
@@ -374,7 +426,9 @@ export function mergeHomepageCategories(
   return {
     ...DEFAULT_CATEGORIES,
     ...incoming,
-    items: incoming?.items?.length ? incoming.items : structuredClone(DEFAULT_CATEGORIES.items),
+    items: incoming?.items?.length
+      ? incoming.items.map((item) => ({ ...item, image: publicStoredImage(item.image) }))
+      : structuredClone(DEFAULT_CATEGORIES.items),
   };
 }
 
@@ -385,7 +439,15 @@ export function mergeHomepageCollaboration(
     ...DEFAULT_COLLABORATION_MATCHES,
     ...incoming,
     matches: incoming?.matches?.length
-      ? incoming.matches
+      ? incoming.matches.map((match) => {
+          const image = publicStoredImage(match.image);
+          if (!image) {
+            const copy = { ...match };
+            delete copy.image;
+            return copy;
+          }
+          return { ...match, image };
+        })
       : structuredClone(DEFAULT_COLLABORATION_MATCHES.matches),
   };
 }

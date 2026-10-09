@@ -71,6 +71,14 @@ describe("sample directory personas", () => {
     assert.equal(seed.includes("SEED_CREATORS"), false);
     assert.equal(seed.includes("prisma.creator.upsert"), false);
     assert.match(seed, /removeUntouchedSeedCreators/);
+    assert.match(seed, /clearStoredDemoCmsMedia/);
+    const mediaSql = readFileSync(
+      "prisma/migrations/20261009050000_remove_demo_media/migration.sql",
+      "utf8",
+    );
+    assert.match(mediaSql, /\/demo\//);
+    assert.match(mediaSql, /key = 'categories'/);
+    assert.match(mediaSql, /key = 'collaboration'/);
     assert.equal(cms.includes("SEED_CREATORS"), false);
     assert.equal(cms.includes("COLLAB_MATCH_PRESETS"), false);
     for (const creator of SEED_CREATORS) {

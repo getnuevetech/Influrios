@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import {
   CATEGORY_IMAGES,
   SPECIALTY_TAXONOMY,
   categoryImageFor,
   filterCreators,
+  publicStoredImage,
   type SeedCreator,
 } from "./seed-data";
 import { canonicalSpecialty } from "./taxonomy";
@@ -52,17 +51,14 @@ describe("taxonomy synonyms", () => {
 });
 
 describe("category images", () => {
-  it("maps every parent specialty to a distinct on-disk image", () => {
+  it("keeps retired category photos off the public page", () => {
     const images = SPECIALTY_TAXONOMY.map((parent) => categoryImageFor(parent.slug));
     assert.equal(images.length, SPECIALTY_TAXONOMY.length);
     assert.equal(new Set(images).size, SPECIALTY_TAXONOMY.length);
     for (const parent of SPECIALTY_TAXONOMY) {
-      assert.ok(CATEGORY_IMAGES[parent.slug], `missing CATEGORY_IMAGES entry for ${parent.slug}`);
-      const relative = CATEGORY_IMAGES[parent.slug]!;
-      assert.ok(
-        existsSync(join(process.cwd(), "public", relative.replace(/^\//, ""))),
-        `missing file for ${parent.slug}: ${relative}`,
-      );
+      assert.match(CATEGORY_IMAGES[parent.slug] ?? "", /^\/demo\/categories\//);
+      assert.equal(publicStoredImage(categoryImageFor(parent.slug)), "");
     }
+    assert.equal(publicStoredImage("/uploads/banners/beauty.jpg"), "/uploads/banners/beauty.jpg");
   });
 });

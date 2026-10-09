@@ -10,7 +10,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
-import { categoryImageFor } from "@/lib/seed-data";
+import { publicStoredImage } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Homepage · Admin" };
@@ -63,7 +63,7 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
     return {
       slug: node.slug,
       name: node.name,
-      image: managed?.image || categoryImageFor(node.slug, taxonomy),
+      image: publicStoredImage(managed?.image),
     };
   });
 
@@ -176,9 +176,8 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-xl font-bold text-indigo">Categories row</h2>
           <p className="mt-1 text-sm text-muted">
-            Title, CTA, and per-category image paths for the single-row horizontal scroller. Images
-            should be square (~1024×1024) under <code className="text-xs">/demo/categories/</code> or
-            uploads.
+            Title, CTA, and an optional uploaded image for each category. A category without an
+            image shows its name on the brand gradient.
           </p>
         </div>
         <form action={actionSaveHomepageCategories} className="space-y-4 rounded-2xl border border-[#E4EBFF] bg-white p-5">
@@ -219,8 +218,8 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
                 className="flex flex-wrap items-center gap-3 rounded-xl border border-[#EEF2FF] bg-[#F8FAFF] px-3 py-2"
               >
                 <input type="hidden" name="slug" value={item.slug} />
-                <span className="relative h-12 w-12 overflow-hidden rounded-lg ring-1 ring-[#E4EBFF]">
-                  <Image src={item.image} alt="" fill className="object-cover" sizes="48px" />
+                <span className="relative h-12 w-12 overflow-hidden rounded-lg bg-gradient-to-br from-[#111A5A] to-[#633CFF] ring-1 ring-[#E4EBFF]">
+                  {item.image ? <Image src={item.image} alt="" fill className="object-cover" sizes="48px" /> : null}
                 </span>
                 <div className="min-w-[7rem]">
                   <div className="text-sm font-semibold text-indigo">{item.name}</div>
@@ -367,7 +366,7 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
                       name="matchImage"
                       defaultValue={match?.image ?? ""}
                       disabled={!canEdit}
-                      placeholder="/demo/categories/cat-beauty.jpg"
+                      placeholder="/uploads/banners/category.jpg"
                       className="mt-1 block w-full rounded-lg border border-[#E4EBFF] px-2 py-1.5 text-sm text-indigo"
                     />
                   </label>
