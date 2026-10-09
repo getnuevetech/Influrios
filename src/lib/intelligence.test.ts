@@ -144,6 +144,10 @@ describe("niche counts", () => {
     assert.equal(lib.includes("Cap for demo"), false);
     assert.equal(lib.includes("strength:"), false);
     assert.equal(page.includes("synthetic pilot"), false);
+    assert.equal(page.includes("getWorkspace()"), false);
+    assert.match(page, /getAccountSession\(\)/);
+    assert.match(page, /getWorkspace\(account\.id\)/);
+    assert.equal(page.includes("niche demand"), false);
     assert.equal(page.includes("% growth"), false);
     assert.equal(page.includes("sig.strength"), false);
     assert.equal(admin.includes("Rising niches"), false);
