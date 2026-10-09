@@ -20,13 +20,14 @@ describe("stored collaboration match cards", () => {
     assert.equal(cards[0]!.image, "/uploads/pairs/beauty.jpg");
   });
 
-  it("uses the category image when the saved image is a sample creator photo", () => {
+  it("drops a sample photo and keeps an uploaded cover", () => {
     const cards = cardsFromStoredCollaborationMatches([
       { title: "Hair Stylist", tags: ["hair"], image: "/demo/creators/creator-sofia.jpg" },
+      { title: "Beauty Creator", tags: ["beauty"], image: "/uploads/pairs/beauty.jpg" },
     ]);
-    assert.equal(cards.length, 1);
-    assert.equal(cards[0]!.image.includes("/demo/creators/"), false);
-    assert.match(cards[0]!.image, /cat-hair/);
+    assert.equal(cards.length, 2);
+    assert.equal(cards[0]!.image, "");
+    assert.equal(cards[1]!.image, "/uploads/pairs/beauty.jpg");
   });
 });
 
@@ -48,6 +49,8 @@ describe("public sample surfaces", () => {
     assert.equal(home.includes("L'ORÉAL"), false);
     assert.equal(home.includes("Nike"), false);
     assert.equal(home.includes("Adobe"), false);
+    assert.equal(home.includes("/demo/cta-community.jpg"), false);
+    assert.equal(home.includes("categoryImageFor"), false);
     assert.match(home, /sponsored\.partners/);
   });
 

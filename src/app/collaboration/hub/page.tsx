@@ -160,8 +160,10 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 href={`/collaboration/hub?category=${encodeURIComponent(chip.specialty)}`}
                 className="group w-[180px] shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-[#E4E9F5]"
               >
-                <div className="relative h-24 overflow-hidden">
-                  <Image src={chip.image} alt="" fill className="object-cover transition group-hover:scale-105" sizes="180px" />
+                <div className="relative h-24 overflow-hidden bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+                  {chip.image ? (
+                    <Image src={chip.image} alt="" fill className="object-cover transition group-hover:scale-105" sizes="180px" />
+                  ) : null}
                 </div>
                 <div className="p-2.5">
                   <p className="text-xs font-bold text-indigo">{chip.title}</p>

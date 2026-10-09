@@ -325,14 +325,16 @@ export default async function CollaborationPage({ searchParams }: Props) {
               href={`/collaboration?specialty=${encodeURIComponent(chip.specialty)}`}
               className="group w-[200px] shrink-0 overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_rgba(17,26,90,0.08)] ring-1 ring-[#E4E9F5] transition hover:-translate-y-0.5 hover:shadow-lg"
             >
-              <div className="relative h-28 overflow-hidden">
-                <Image
-                  src={chip.image}
-                  alt=""
-                  fill
-                  className="object-cover transition duration-500 group-hover:scale-105"
-                  sizes="200px"
-                />
+              <div className="relative h-28 overflow-hidden bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+                {chip.image ? (
+                  <Image
+                    src={chip.image}
+                    alt=""
+                    fill
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                    sizes="200px"
+                  />
+                ) : null}
               </div>
               <div className="relative px-3 pb-3 pt-5">
                 <span className="absolute -top-4 left-3 flex h-8 w-8 items-center justify-center rounded-lg bg-white text-violet shadow ring-1 ring-[#E4E9F5]">

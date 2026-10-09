@@ -693,7 +693,14 @@ export const COLLAB_MATCH_PRESETS = [
   },
 ];
 
-/** Resolve a specialty slug to the best matching category demo image. */
+/** An uploaded image. Paths under /demo/ are retired sample art and are not shown. */
+export function publicStoredImage(src: string | null | undefined): string {
+  const value = (src ?? "").trim();
+  if (!value || value.includes("/demo/")) return "";
+  return value;
+}
+
+/** Resolve a specialty slug to the retired category photo path. Public pages use publicStoredImage. */
 export function categoryImageFor(
   slug: string,
   taxonomy: { slug: string; children?: { slug: string }[] }[] = SPECIALTY_TAXONOMY,

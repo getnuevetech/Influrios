@@ -5,8 +5,10 @@ import {
   BANNER_SECTION_KEYS,
   DEFAULT_CMS,
   DEFAULT_FEATURES,
+  cmsPayloadWithoutDemoMedia,
   mergeBannerConfig,
   mergeFeaturedCards,
+  mergeHomepageCategories,
   mergeValueProposition,
   partnerNamesFromText,
   publicBannerImages,
@@ -109,5 +111,25 @@ describe("cms payload merge", () => {
     });
     assert.deepEqual(merged.partners, ["Acme", "Northwind"]);
     assert.deepEqual(publicBannerImages(merged.images), ["/uploads/banners/campaign.jpg"]);
+  });
+
+  it("keeps an uploaded image and drops retired demo art", () => {
+    assert.deepEqual(DEFAULT_CMS.banners.cta.images, []);
+    assert.ok(DEFAULT_CMS.categories.items.every((item) => item.image === ""));
+    assert.deepEqual(
+      publicBannerImages(["/demo/cta-community.jpg", "/demo/categories/cat-beauty.jpg", "/uploads/banners/close.jpg"]),
+      ["/uploads/banners/close.jpg"],
+    );
+    const categories = mergeHomepageCategories({
+      items: [{ slug: "beauty", image: "/demo/categories/cat-beauty.jpg" }],
+    });
+    assert.equal(categories.items[0]?.image, "");
+    const stripped = cmsPayloadWithoutDemoMedia({
+      images: ["/demo/cta-community.jpg", "/uploads/banners/close.jpg"],
+      items: [{ slug: "beauty", image: "/demo/categories/cat-beauty.jpg" }],
+    });
+    assert.equal(stripped.changed, true);
+    assert.deepEqual(stripped.payload.images, ["/uploads/banners/close.jpg"]);
+    assert.deepEqual(stripped.payload.items, [{ slug: "beauty", image: "" }]);
   });
 });

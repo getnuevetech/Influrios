@@ -3,6 +3,7 @@
  * only when the name and bio still match that sample.
  */
 import type { Prisma } from "@prisma/client";
+import { cmsPayloadWithoutDemoMedia } from "@/lib/cms";
 import { prisma } from "@/lib/db";
 import { COLLAB_MATCH_PRESETS, SEED_CREATORS } from "@/lib/seed-data";
 
@@ -108,5 +109,25 @@ export async function clearStoredSeedCmsSamples(): Promise<number> {
     cleared += 1;
   }
 
+  return cleared;
+}
+
+/** Clear retired /demo/ banner, category, and match images. Uploaded paths stay. */
+export async function clearStoredDemoCmsMedia(): Promise<number> {
+  const rows = await prisma.cmsSection.findMany({
+    where: { key: { in: ["hero", "sponsored", "cta", "card_promo", "categories", "collaboration"] } },
+  });
+  let cleared = 0;
+  for (const row of rows) {
+    const payload = asRecord(row.payload);
+    if (!payload) continue;
+    const next = cmsPayloadWithoutDemoMedia(payload);
+    if (!next.changed) continue;
+    await prisma.cmsSection.update({
+      where: { key: row.key },
+      data: { payload: next.payload as Prisma.InputJsonValue },
+    });
+    cleared += 1;
+  }
   return cleared;
 }

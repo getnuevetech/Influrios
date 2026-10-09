@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CategoryGlyph, IconArrowRight, IconHeart } from "@/components/icons";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
-import { categoryImageFor, type SeedCreator } from "@/lib/seed-data";
+import { publicStoredImage, type SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Categories · Influrios" };
@@ -26,8 +26,7 @@ export default async function CategoriesPage() {
     .filter((node) => node.active)
     .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
   const imageFor = (slug: string) =>
-    cms.categories.items.find((item) => item.slug === slug)?.image ||
-    categoryImageFor(slug, taxonomy);
+    publicStoredImage(cms.categories.items.find((item) => item.slug === slug)?.image);
   return (
     <div className="bg-[#F7FAFF]">
       <section className="border-b border-[#E4EBFF] bg-gradient-to-br from-[#EEF2FF] via-[#F7FAFF] to-[#E8F4FF]">
@@ -63,15 +62,17 @@ export default async function CategoriesPage() {
               >
                 <Link
                   href={`/discover?specialty=${encodeURIComponent(parent.slug)}`}
-                  className="group relative block aspect-[5/4] overflow-hidden"
+                  className="group relative block aspect-[5/4] overflow-hidden bg-gradient-to-br from-[#111A5A] to-[#633CFF]"
                 >
-                  <Image
-                    src={imageFor(parent.slug)}
-                    alt={parent.name}
-                    fill
-                    className="object-cover transition duration-500 group-hover:scale-105"
-                    sizes="20vw"
-                  />
+                  {imageFor(parent.slug) ? (
+                    <Image
+                      src={imageFor(parent.slug)}
+                      alt={parent.name}
+                      fill
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                      sizes="20vw"
+                    />
+                  ) : null}
                   <div className="absolute inset-0 bg-gradient-to-t from-indigo/85 via-indigo/30 to-transparent" />
                   <span className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-violet shadow" aria-hidden>
                     <IconHeart size={13} />

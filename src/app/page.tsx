@@ -17,7 +17,7 @@ import {
 import { getCms, publicBannerImages } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
-import { categoryImageFor, formatFollowers, specialtyLabel, totalFollowers, type SeedCreator } from "@/lib/seed-data";
+import { formatFollowers, publicStoredImage, specialtyLabel, totalFollowers, type SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +77,7 @@ export default async function HomePage() {
   const sponsoredImages = publicBannerImages(sponsored.images);
   const cardPromo = cms.banners.cardPromo;
   const cta = cms.banners.cta;
+  const ctaImage = publicBannerImages(cta.images)[0] ?? "";
   const valueProposition = cms.valueProposition;
 
   const baseCardWidth = 220;
@@ -263,14 +264,14 @@ export default async function HomePage() {
                       {
                         slug: node.slug,
                         name: node.name,
-                        image: item.image || categoryImageFor(node.slug, taxonomy),
+                        image: publicStoredImage(item.image),
                       },
                     ];
                   })
                 : taxonomy.map((s) => ({
                     slug: s.slug,
                     name: s.name,
-                    image: categoryImageFor(s.slug, taxonomy),
+                    image: "",
                   }))
             ).map((s) => (
               <Link
@@ -278,14 +279,16 @@ export default async function HomePage() {
                 href={`/discover?specialty=${s.slug}`}
                 className="group flex w-[148px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_8px_24px_rgba(17,26,90,0.08)] ring-1 ring-border transition hover:-translate-y-0.5 hover:shadow-lg sm:w-[160px]"
               >
-                <div className="relative aspect-square overflow-hidden">
-                  <Image
-                    src={s.image}
-                    alt={s.name}
-                    fill
-                    className="object-cover transition duration-500 group-hover:scale-110"
-                    sizes="160px"
-                  />
+                <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+                  {s.image ? (
+                    <Image
+                      src={s.image}
+                      alt={s.name}
+                      fill
+                      className="object-cover transition duration-500 group-hover:scale-110"
+                      sizes="160px"
+                    />
+                  ) : null}
                   <div className="absolute inset-0 bg-gradient-to-t from-indigo/70 via-transparent to-transparent" />
                   <span className="absolute bottom-2 left-2 right-2 text-center font-display text-sm font-bold text-white drop-shadow">
                     {s.name}
@@ -558,15 +561,13 @@ export default async function HomePage() {
       {/* —— Bottom CTA (−20% height via CMS) —— */}
       {cta.enabled ? (
         <section className="relative w-full overflow-hidden">
-          <div className="absolute inset-0">
-            <Image
-              src={cta.images[0] ?? "/demo/cta-community.jpg"}
-              alt=""
-              fill
-              className="object-cover"
-              sizes="100vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0B123F]/95 via-[#111A5A]/90 to-[#633CFF]/85" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0B123F] via-[#111A5A] to-[#633CFF]">
+            {ctaImage ? (
+              <>
+                <Image src={ctaImage} alt="" fill className="object-cover" sizes="100vw" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0B123F]/95 via-[#111A5A]/90 to-[#633CFF]/85" />
+              </>
+            ) : null}
           </div>
           <div
             className="relative mx-auto flex w-full max-w-[90rem] flex-col items-center gap-6 px-4 sm:px-6 lg:flex-row lg:justify-between lg:px-10"
