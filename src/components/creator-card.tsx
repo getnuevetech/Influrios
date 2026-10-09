@@ -112,7 +112,7 @@ export async function CreatorCard({
           sizes={widthPx ? `${widthPx}px` : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-indigo/55 via-transparent to-transparent" />
-        {features.showBadge ? (
+        {features.showBadge && badgeLabel.trim() ? (
           <span
             className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold shadow ${badgeClass}`}
           >
@@ -128,7 +128,7 @@ export async function CreatorCard({
             <Link href={`/creators/${creator.slug}`} className="hover:underline">
               {creator.displayName}
             </Link>
-            {features.showVerified && creator.verified !== false ? (
+            {features.showVerified && creator.verified === true ? (
               <IconVerified size={16} />
             ) : null}
           </h3>
@@ -167,7 +167,7 @@ export async function CreatorCard({
               {socials.map((s) => (
                 <span key={s.platform} className="inline-flex items-center gap-1">
                   <SocialIcon platform={s.platform} size={socialIconSize} />
-                  {features.showFollowerCounts ? (
+                  {features.showFollowerCounts && s.followers > 0 ? (
                     <span className="text-xs font-bold text-indigo">
                       {formatFollowers(s.followers)}
                     </span>
@@ -233,9 +233,15 @@ export async function CreatorCard({
         ) : null}
       </div>
 
-      {features.showStatus && !showViewProfile ? (
-        <div className="mt-3 flex items-center justify-center gap-1.5 border-t border-emerald-100 bg-emerald-50/80 px-3 py-2.5 text-[11px] font-semibold text-emerald-700">
-          <IconCheck size={13} className="text-emerald-600" />
+      {features.showStatus && !showViewProfile && creator.statusLabel.trim() ? (
+        <div
+          className={`mt-3 flex items-center justify-center gap-1.5 border-t px-3 py-2.5 text-[11px] font-semibold ${
+            creator.openToCollab
+              ? "border-emerald-100 bg-emerald-50/80 text-emerald-700"
+              : "border-border bg-[#F4F7FF] text-muted"
+          }`}
+        >
+          {creator.openToCollab ? <IconCheck size={13} className="text-emerald-600" /> : null}
           {creator.statusLabel}
         </div>
       ) : (
@@ -304,7 +310,7 @@ export async function CompactInfluencerCard({ creator }: { creator: SeedCreator 
                     ) : null}
                     <div className="flex min-w-0 flex-col">
                       <p className="font-display text-[15px] font-bold leading-none text-indigo sm:text-base">
-                        {formatFollowers(s.followers)}
+                        {s.followers > 0 ? formatFollowers(s.followers) : "—"}
                       </p>
                       <p className="mt-1 whitespace-nowrap text-[10px] font-medium leading-none text-[#8B93A7] sm:text-[11px]">
                         {platformLabel(s.platform)}
