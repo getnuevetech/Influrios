@@ -34,6 +34,8 @@ describe("public sample surfaces", () => {
     const seed = source("prisma/seed.ts");
     assert.equal(seed.includes("BUSINESS_REQUESTS"), false);
     assert.equal(seed.includes("CREATOR_OPPORTUNITIES"), false);
+    assert.equal(seed.includes("SEED_CREATORS"), false);
+    assert.equal(seed.includes("prisma.creator.upsert"), false);
     const profile = source("src/app/creators/[slug]/page.tsx");
     assert.equal(profile.includes("leading global brands"), false);
     assert.equal(profile.includes("/demo/"), true);
