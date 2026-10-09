@@ -250,7 +250,7 @@ export async function setBusinessPlan(plan: string, workspaceId: string) {
 
 export async function addToShortlist(
   creatorSlug: string,
-  note?: string,
+  note: string | undefined,
   workspaceId: string,
 ) {
   const ws = await readWorkspace(workspaceId);
