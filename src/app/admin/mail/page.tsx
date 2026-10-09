@@ -18,10 +18,8 @@ import {
   SMS_BODY_MAX,
   getCommChannelSettings,
   listCommTemplates,
-  smsProviderLabel,
 } from "@/lib/comm-templates";
 import { mailSettingsView } from "@/lib/mail";
-import { twilioSettingsView } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Email · Admin" };
@@ -37,14 +35,7 @@ export default async function AdminMailPage({ searchParams }: Props) {
     emailEnabled: true,
     smsEnabled: false,
   }));
-  const twilio = await twilioSettingsView().catch(() => ({
-    accountSid: "",
-    from: "",
-    hasToken: false,
-    configured: false,
-  }));
   const templates = await listCommTemplates().catch(() => []);
-  const smsLabel = smsProviderLabel(twilio.configured);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -52,12 +43,10 @@ export default async function AdminMailPage({ searchParams }: Props) {
         <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
           ← Admin
         </Link>
-        <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Email &amp; SMS</h1>
+        <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Email</h1>
         <p className="mt-2 text-sm text-muted">
-          Configure SMTP, enable outreach channels, and manage auto/manual templates. Each template has an email body
-          and a short SMS twin (max {SMS_BODY_MAX} characters). SMS delivery:{" "}
-          <span className="font-semibold text-indigo">{smsLabel}</span>. A saved account SID, auth token, and
-          from-number are required before Twilio accepts a message.
+          Configure SMTP and manage auto/manual templates. Each template can keep a short SMS body (max {SMS_BODY_MAX}{" "}
+          characters) for a later provider. SMS is not sent.
         </p>
       </div>
 
@@ -142,56 +131,16 @@ export default async function AdminMailPage({ searchParams }: Props) {
 
       <AdminCollapse
         title="Communication channels"
-        subtitle={`Email ${channels.emailEnabled ? "on" : "off"} · SMS ${channels.smsEnabled ? "on" : "off"}`}
+        subtitle={`Email ${channels.emailEnabled ? "on" : "off"} · SMS off`}
         defaultOpen
       >
         <form action={actionSaveCommChannels} className="space-y-3">
           <p className="text-sm text-muted">
-            Choose which channels the platform may use. Members who prefer SMS and have a phone receive the same
-            invite, verify, and collaboration triggers as email when SMS is enabled. Delivery uses {smsLabel}.
+            Email is sent through SMTP when this channel is on. SMS is not sent.
           </p>
           <label className="flex items-center gap-2 text-sm text-indigo">
             <input name="emailEnabled" type="checkbox" defaultChecked={channels.emailEnabled} disabled={!canEdit} />
             Email enabled
-          </label>
-          <label className="flex items-center gap-2 text-sm text-indigo">
-            <input name="smsEnabled" type="checkbox" defaultChecked={channels.smsEnabled} disabled={!canEdit} />
-            SMS enabled
-          </label>
-          <label className="block text-sm">
-            <span className="font-semibold text-indigo">Twilio account SID</span>
-            <input
-              name="twilioAccountSid"
-              defaultValue={twilio.accountSid}
-              disabled={!canEdit}
-              autoComplete="off"
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="font-semibold text-indigo">Twilio auth token</span>
-            <input
-              name="twilioAuthToken"
-              type="password"
-              autoComplete="new-password"
-              placeholder={twilio.hasToken ? "Saved. Leave blank to keep it." : "Not saved"}
-              disabled={!canEdit}
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="font-semibold text-indigo">Twilio from-number</span>
-            <input
-              name="twilioFrom"
-              defaultValue={twilio.from}
-              disabled={!canEdit}
-              placeholder="+15555550100"
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-            />
-          </label>
-          <label className="flex items-center gap-2 text-sm text-indigo">
-            <input name="clearTwilioToken" type="checkbox" disabled={!canEdit} />
-            Remove the saved auth token
           </label>
           {canEdit ? (
             <button type="submit" className="btn-secondary !py-2 text-sm">
@@ -262,7 +211,7 @@ export default async function AdminMailPage({ searchParams }: Props) {
                 <textarea name="bodyEmail" defaultValue={template.bodyEmail} disabled={!canEdit} rows={5} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
               </label>
               <label className="text-sm font-semibold text-indigo sm:col-span-2">
-                SMS body (max {SMS_BODY_MAX} chars)
+                SMS body (stored, not sent, max {SMS_BODY_MAX} chars)
                 <textarea name="bodySms" defaultValue={template.bodySms} disabled={!canEdit} rows={2} maxLength={SMS_BODY_MAX} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
               </label>
               <label className="flex items-center gap-2 text-sm text-indigo">
@@ -280,23 +229,13 @@ export default async function AdminMailPage({ searchParams }: Props) {
               <div className="mt-4 space-y-3 border-t border-[#E4EBFF] pt-3">
                 <form action={actionSendCommTemplate} className="flex flex-wrap items-end gap-2">
                   <input type="hidden" name="templateId" value={template.id} />
+                  <input type="hidden" name="channel" value="email" />
                   <label className="text-xs font-semibold text-indigo">
                     Email to
                     <input name="to" type="email" defaultValue={session.email} className="mt-1 block rounded-lg border border-border px-2 py-1.5" />
                   </label>
-                  <label className="text-xs font-semibold text-indigo">
-                    SMS phone
-                    <input name="toPhone" type="tel" placeholder="+15551234567" className="mt-1 block rounded-lg border border-border px-2 py-1.5" />
-                  </label>
-                  <label className="text-xs font-semibold text-indigo">
-                    Channel
-                    <select name="channel" defaultValue="email" className="mt-1 block rounded-lg border border-border px-2 py-1.5">
-                      <option value="email">Email</option>
-                      <option value="sms">SMS</option>
-                    </select>
-                  </label>
                   <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                    Send now
+                    Send email
                   </button>
                 </form>
                 <form action={actionDeleteCommTemplate}>
@@ -360,7 +299,7 @@ export default async function AdminMailPage({ searchParams }: Props) {
                 <textarea name="bodyEmail" rows={4} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
               </label>
               <label className="text-sm font-semibold text-indigo sm:col-span-2">
-                SMS body
+                SMS body (stored, not sent)
                 <textarea name="bodySms" rows={2} maxLength={SMS_BODY_MAX} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
               </label>
               <label className="flex items-center gap-2 text-sm text-indigo">

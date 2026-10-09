@@ -187,13 +187,19 @@ async function main() {
     });
   }
 
+  checks.push({
+    id: "sms",
+    label: "SMS is not sent",
+    ok: true,
+    detail: "Twilio is not the provider. Nothing is sent.",
+  });
+
   // Operator-only reminders (always null)
   for (const row of [
     ["smtp", "SMTP invite + verify + job retry"],
     ["stripe", "Stripe sandbox checkout → webhook → plan + duplicate skip"],
     ["social", "One social OAuth consent → callback + metric gate"],
     ["marketplace", "Marketplace hold → release + duplicate skip"],
-    ["sms", "Twilio SMS verify template and message SID"],
     ["meili", "Meilisearch index count equals published creators"],
     ["recurring", "Recurring tranche 2 after the sweep tick"],
     ["team", "Two-creator proposal, both accepts, funding id"],

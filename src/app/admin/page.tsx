@@ -159,10 +159,10 @@ const LINKS: {
   },
   {
     href: "/admin/mail",
-    title: "Email & SMS",
-    blurb: "SMTP, Twilio SMS, templates, and channel preferences.",
+    title: "Email",
+    blurb: "SMTP and email templates. SMS is not sent.",
     module: "mail",
-    meta: () => "Email and SMS",
+    meta: () => "Email",
   },
   {
     href: "/admin/jobs",

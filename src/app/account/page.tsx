@@ -21,7 +21,7 @@ export default async function AccountPage({
   const [user, contracts] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.id },
-      select: { preferredCommChannel: true, phone: true },
+      select: { phone: true },
     }),
     listContractsForUser(session.id).catch(() => []),
   ]);
@@ -72,21 +72,10 @@ export default async function AccountPage({
       <form action={actionSaveCommPreference} className="card-surface mt-4 space-y-3 p-6">
         <h2 className="font-display text-lg font-bold text-indigo">Communication preference</h2>
         <p className="text-sm text-muted">
-          Choose how Influrios should reach you when both email and SMS are available.
+          Influrios reaches this account by email. SMS is not sent.
         </p>
         <label className="block text-sm font-semibold text-indigo">
-          Preferred channel
-          <select
-            name="preferredCommChannel"
-            defaultValue={user?.preferredCommChannel === "sms" ? "sms" : "email"}
-            className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
-          >
-            <option value="email">Email</option>
-            <option value="sms">SMS</option>
-          </select>
-        </label>
-        <label className="block text-sm font-semibold text-indigo">
-          Phone (required for SMS)
+          Phone
           <input
             name="phone"
             defaultValue={user?.phone ?? ""}
