@@ -43,8 +43,9 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
           Your Influencer Card — before you sign up
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Generated from <span className="font-semibold text-indigo">{draft.inputHandle}</span>. This is a
-          temporary full-card preview — nothing is public until you claim, verify, and publish.
+          Generated from <span className="font-semibold text-indigo">{draft.inputHandle}</span>. The card
+          shows that handle only. Follower counts and extra networks are not added. Nothing is public until
+          you claim, verify, and publish.
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
           {STAGES.map((s, i) => (
@@ -74,8 +75,8 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
       <div className="mx-auto mt-8 max-w-sm card-surface space-y-4 p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Claim this Influencer Profile</h2>
         <p className="text-sm text-muted">
-          Attach your email to take ownership. Your temporary card shows the full Influrios experience —
-          publishing starts on the Starter plan.
+          Attach your email to take ownership. Publishing starts on the Starter plan after you add a bio,
+          a city, and a specialty.
         </p>
         <ClaimForm action={actionClaimDraft}>
           <input type="hidden" name="draftId" value={draft.id} />

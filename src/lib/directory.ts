@@ -149,7 +149,7 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
     image: avatar,
     coverImage: cover,
     gender,
-    verified: row.profileState === "VERIFIED" || row.identityVerified === "VERIFIED",
+    verified: row.identityVerified === "VERIFIED",
   };
 }
 

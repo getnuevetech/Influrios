@@ -378,9 +378,10 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 <span className="font-semibold text-indigo">Primary specialty</span>
                 <select
                   name="specialty"
-                  defaultValue={draft.specialties[0] ?? "lifestyle"}
+                  defaultValue={draft.specialties[0] ?? ""}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2"
                 >
+                  <option value="">Choose a specialty</option>
                   {specialtyGroups.map((group) => (
                     <optgroup key={group.slug} label={group.name}>
                       <option value={group.slug}>{group.name}</option>

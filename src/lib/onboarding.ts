@@ -85,14 +85,18 @@ export function completionItemDone(rule: CompletionRule, subject: CompletionSubj
     case "published":
       return subject.stage === "published";
     case "bio":
-      return subject.bio.length > 80 && !subject.bio.includes("Draft Influencer Card");
+      return (
+        subject.bio.length > 80 &&
+        !subject.bio.includes("Draft Influencer Card") &&
+        !subject.bio.includes("Draft Influencer Profile")
+      );
     case "location": {
       const city = subject.locationCity.trim();
       const country = subject.locationCountry.trim();
       return city.length > 0 && country.length > 0 && city !== "Your city" && country !== "Your country";
     }
     case "specialty":
-      return subject.specialties.length > 0 && subject.specialties[0] !== "lifestyle";
+      return subject.specialties.some((specialty) => specialty.trim().length > 0);
     default:
       return false;
   }

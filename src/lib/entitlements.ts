@@ -364,8 +364,3 @@ export function cardShellClasses(chrome: CardChrome) {
   };
 }
 
-/** Full-card chrome for signup draft previews (demo only — not published entitlements). */
-export const DRAFT_PREVIEW_ENTITLEMENTS: EntitlementLimits = {
-  ...PLAN_ENTITLEMENTS.PRO,
-  // Preview shows the full card experience; publishing still starts on Starter.
-};

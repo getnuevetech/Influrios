@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { actionAddDraftSocial, actionPublishDraft } from "@/app/claim/actions";
+import { PlaceFields } from "@/components/place-fields";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
-import { draftToSeedCreator, getDraft } from "@/lib/claim";
+import { claimPublishBlockers, draftToSeedCreator, getDraft } from "@/lib/claim";
+import { SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Publish your Influencer Card" };
@@ -22,6 +24,7 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
 
   const creator = draftToSeedCreator(draft);
   const alreadyLive = draft.stage === "published";
+  const blockers = alreadyLive ? [] : claimPublishBlockers(draft);
 
   return (
     <div className="min-h-[80vh] bg-[radial-gradient(ellipse_at_top,_#EAE4FF,_#F7FAFF_55%,_#D9E8FF)] px-4 py-10">
@@ -58,8 +61,49 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
             </Link>
           </>
         ) : (
-          <form action={actionPublishDraft} className="space-y-3">
+          <form action={actionPublishDraft} className="space-y-3 rounded-2xl border border-border bg-white p-4">
             <input type="hidden" name="draftId" value={draft.id} />
+            <label className="block text-left text-sm font-semibold text-indigo">
+              Bio
+              <textarea
+                name="bio"
+                required
+                rows={4}
+                defaultValue={draft.bio.includes("Draft Influencer") ? "" : draft.bio}
+                placeholder="What you actually make"
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+              />
+            </label>
+            <PlaceFields
+              cityName="locationCity"
+              countryName="locationCountry"
+              defaultCity={draft.locationCity}
+              defaultCountry={draft.locationCountry}
+            />
+            <label className="block text-left text-sm font-semibold text-indigo">
+              Specialty
+              <select
+                name="specialty"
+                required
+                defaultValue={draft.specialties[0] ?? ""}
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+              >
+                <option value="">Choose a specialty</option>
+                {SPECIALTY_TAXONOMY.map((group) => (
+                  <optgroup key={group.slug} label={group.name}>
+                    <option value={group.slug}>{group.name}</option>
+                    {group.children?.map((child) => (
+                      <option key={child.slug} value={child.slug}>
+                        {child.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+            {blockers.length > 0 ? (
+              <p className="text-left text-xs text-muted">Add a bio, a city and country, and a specialty before this card can publish.</p>
+            ) : null}
             <label className="flex items-start gap-2 text-left text-xs text-indigo">
               <input type="checkbox" name="creatorTerms" required className="mt-0.5 accent-violet" />
               <span>
