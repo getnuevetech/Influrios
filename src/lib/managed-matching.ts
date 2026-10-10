@@ -20,6 +20,9 @@ export type ManagedIntro = {
   status: IntroStatus;
   feeExpected?: string;
   feeExpectedCents?: number | null;
+  feeJurisdiction?: string;
+  feeCurrency?: string;
+  feeGrossCents?: number | null;
   feeIntentRef?: string | null;
   feeProviderRef?: string | null;
   feeSettlementAt?: string | null;
@@ -76,6 +79,7 @@ type IntroRow = {
   status: string;
   feeExpected: string | null;
   feeExpectedCents: number | null;
+  feeQuoteJson: unknown;
   feeIntentRef: string | null;
   feeProviderRef: string | null;
   feeSettlementAt: Date | null;
@@ -84,7 +88,27 @@ type IntroRow = {
   events: { status: string; note: string | null; createdAt: Date }[];
 };
 
+/** The currency stored on an intro fee quote. A missing code stays blank. */
+export function introFeeQuoteCurrency(value: unknown): string {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  const currency = (value as { currency?: unknown }).currency;
+  if (typeof currency !== "string") return "";
+  const code = currency.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : "";
+}
+
+function introFeeQuoteFacts(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { jurisdiction: "", currency: "", grossValueCents: null as number | null };
+  }
+  const row = value as { jurisdiction?: unknown; grossValueCents?: unknown };
+  const jurisdiction = typeof row.jurisdiction === "string" ? row.jurisdiction.trim().toUpperCase() : "";
+  const grossValueCents = Number.isInteger(row.grossValueCents) ? (row.grossValueCents as number) : null;
+  return { jurisdiction, currency: introFeeQuoteCurrency(value), grossValueCents };
+}
+
 function mapIntro(row: IntroRow): ManagedIntro {
+  const quote = introFeeQuoteFacts(row.feeQuoteJson);
   return {
     id: row.id,
     businessName: row.businessName,
@@ -95,6 +119,9 @@ function mapIntro(row: IntroRow): ManagedIntro {
     status: asIntroStatus(row.status),
     feeExpected: row.feeExpected ?? undefined,
     feeExpectedCents: row.feeExpectedCents,
+    feeJurisdiction: quote.jurisdiction,
+    feeCurrency: quote.currency,
+    feeGrossCents: quote.grossValueCents,
     feeIntentRef: row.feeIntentRef,
     feeProviderRef: row.feeProviderRef,
     feeSettlementAt: row.feeSettlementAt?.toISOString() ?? null,
@@ -273,8 +300,26 @@ export async function advanceIntro(id: string, status: IntroStatus, note?: strin
 
 const TERMINAL_INTRO_STATUSES = new Set<IntroStatus>(["paid", "declined", "closed"]);
 
-/** Default deal basis for sandbox intro-fee quotes when ops omit a gross. */
-export const DEFAULT_INTRO_FEE_GROSS_CENTS = 10_000;
+/** An intro fee quote uses the jurisdiction and gross that were entered. */
+export function introFeeQuoteInput(input?: {
+  jurisdiction?: string | null;
+  grossValueCents?: number | null;
+}): { ok: true; jurisdiction: string; grossValueCents: number } | { ok: false; error: string } {
+  const jurisdiction = (input?.jurisdiction ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(jurisdiction)) return { ok: false, error: "Enter a jurisdiction." };
+  const gross = input?.grossValueCents;
+  if (!Number.isInteger(gross) || (gross as number) <= 0) {
+    return { ok: false, error: "Enter the gross amount." };
+  }
+  return { ok: true, jurisdiction, grossValueCents: gross as number };
+}
+
+export async function listIntroFeeJurisdictions() {
+  return prisma.collaborationJurisdiction.findMany({
+    orderBy: { label: "asc" },
+    select: { code: true, label: true },
+  });
+}
 
 /**
  * W4 — quote managed_intro fee and open a sandbox settlement intent.
@@ -294,21 +339,27 @@ export async function requestIntroFeeSettlement(
   if (status === "paid" && intro.feeProviderRef) {
     return { ok: false as const, error: "Intro fee already settled." };
   }
-  const gross =
-    Number.isInteger(opts?.grossValueCents) && (opts?.grossValueCents ?? 0) > 0
-      ? (opts!.grossValueCents as number)
-      : DEFAULT_INTRO_FEE_GROSS_CENTS;
+  const entered = introFeeQuoteInput(opts);
+  if (!entered.ok) return entered;
   const { resolveFee } = await import("@/lib/collaboration-fees");
   const quote = await resolveFee({
-    jurisdiction: opts?.jurisdiction || "US",
+    jurisdiction: entered.jurisdiction,
     serviceLevel: "managed_intro",
-    grossValueCents: gross,
+    grossValueCents: entered.grossValueCents,
     fundingMode: "NONE",
     relationshipSource: "managed_intro",
     promotionChannel: "sponsored",
   });
   if (!quote.rule || quote.feeCents <= 0) {
     return { ok: false as const, error: quote.explanation || "No managed introduction fee rule matched." };
+  }
+  const jurisdictionRow = await prisma.collaborationJurisdiction.findUnique({
+    where: { code: entered.jurisdiction },
+    select: { currency: true },
+  });
+  const currency = introFeeQuoteCurrency({ currency: jurisdictionRow?.currency ?? "" });
+  if (!currency) {
+    return { ok: false as const, error: "Enter a jurisdiction." };
   }
   const intentRef = intro.feeIntentRef || `intro_fee_${intro.id}`;
   const now = new Date();
@@ -320,8 +371,9 @@ export async function requestIntroFeeSettlement(
     feeCents: quote.feeCents,
     percentBps: quote.rule.percentBps,
     fixedCents: quote.rule.fixedCents,
-    grossValueCents: gross,
-    jurisdiction: opts?.jurisdiction || "US",
+    grossValueCents: entered.grossValueCents,
+    jurisdiction: entered.jurisdiction,
+    currency,
     explanation: quote.explanation,
     capturedAt: now.toISOString(),
   };
