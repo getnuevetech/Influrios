@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CategoryGlyph, IconArrowRight, IconHeart } from "@/components/icons";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
-import { publicStoredImage, type SeedCreator } from "@/lib/seed-data";
+import { publicCategoryImage, type SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Categories · Influrios" };
@@ -26,7 +26,7 @@ export default async function CategoriesPage() {
     .filter((node) => node.active)
     .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
   const imageFor = (slug: string) =>
-    publicStoredImage(cms.categories.items.find((item) => item.slug === slug)?.image);
+    publicCategoryImage(slug, cms.categories.items.find((item) => item.slug === slug)?.image);
   return (
     <div className="bg-[#F7FAFF]">
       <section className="border-b border-[#E4EBFF] bg-gradient-to-br from-[#EEF2FF] via-[#F7FAFF] to-[#E8F4FF]">

@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { describe, it } from "node:test";
 import {
   CATEGORY_IMAGES,
   SPECIALTY_TAXONOMY,
   categoryImageFor,
   filterCreators,
+  publicCategoryImage,
   publicStoredImage,
   uploadedImages,
   type SeedCreator,
@@ -52,14 +55,20 @@ describe("taxonomy synonyms", () => {
 });
 
 describe("category images", () => {
-  it("shows an uploaded image and hides demo art", () => {
+  it("shows a shipped specialty photo and an uploaded replacement", () => {
     const images = SPECIALTY_TAXONOMY.map((parent) => categoryImageFor(parent.slug));
     assert.equal(images.length, SPECIALTY_TAXONOMY.length);
     assert.equal(new Set(images).size, SPECIALTY_TAXONOMY.length);
     for (const parent of SPECIALTY_TAXONOMY) {
+      const shipped = publicCategoryImage(parent.slug, "");
       assert.match(CATEGORY_IMAGES[parent.slug] ?? "", /^\/demo\/categories\//);
+      assert.equal(shipped, CATEGORY_IMAGES[parent.slug]);
+      assert.equal(existsSync(path.join("public", shipped)), true);
       assert.equal(publicStoredImage(categoryImageFor(parent.slug)), "");
+      assert.equal(publicCategoryImage(parent.slug, "/uploads/banners/beauty.jpg"), "/uploads/banners/beauty.jpg");
     }
+    assert.equal(publicCategoryImage("not-a-specialty", ""), "");
+    assert.equal(publicCategoryImage("beauty", "/demo/creators/creator-sofia.jpg"), CATEGORY_IMAGES.beauty);
     assert.equal(publicStoredImage("/uploads/banners/beauty.jpg"), "/uploads/banners/beauty.jpg");
     assert.deepEqual(
       uploadedImages(["/demo/categories/cat-beauty.jpg", "/uploads/banners/beauty.jpg", ""]),
