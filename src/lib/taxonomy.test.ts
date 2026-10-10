@@ -5,7 +5,10 @@ import {
   SPECIALTY_TAXONOMY,
   categoryImageFor,
   filterCreators,
+  publicCategoryImage,
+  publicNicheImage,
   publicStoredImage,
+  nicheImageForMatchTitle,
   type SeedCreator,
 } from "./seed-data";
 import { canonicalSpecialty } from "./taxonomy";
@@ -51,14 +54,21 @@ describe("taxonomy synonyms", () => {
 });
 
 describe("category images", () => {
-  it("keeps retired category photos off the public page", () => {
+  it("shows the niche photo and hides other demo art", () => {
     const images = SPECIALTY_TAXONOMY.map((parent) => categoryImageFor(parent.slug));
     assert.equal(images.length, SPECIALTY_TAXONOMY.length);
     assert.equal(new Set(images).size, SPECIALTY_TAXONOMY.length);
     for (const parent of SPECIALTY_TAXONOMY) {
       assert.match(CATEGORY_IMAGES[parent.slug] ?? "", /^\/demo\/categories\//);
       assert.equal(publicStoredImage(categoryImageFor(parent.slug)), "");
+      assert.equal(publicCategoryImage(parent.slug), categoryImageFor(parent.slug));
+      assert.equal(publicNicheImage(categoryImageFor(parent.slug)), categoryImageFor(parent.slug));
     }
     assert.equal(publicStoredImage("/uploads/banners/beauty.jpg"), "/uploads/banners/beauty.jpg");
+    assert.equal(publicCategoryImage("beauty", "/uploads/banners/beauty.jpg"), "/uploads/banners/beauty.jpg");
+    assert.equal(publicNicheImage("/demo/creators/creator-sofia.jpg"), "");
+    assert.equal(publicNicheImage("/demo/cta-community.jpg"), "");
+    assert.equal(nicheImageForMatchTitle("Interior Designer + Woodwork Influencer"), "/demo/categories/cat-home.jpg");
+    assert.equal(nicheImageForMatchTitle("Custom pair"), "");
   });
 });

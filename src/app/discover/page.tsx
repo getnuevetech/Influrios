@@ -7,7 +7,7 @@ import { CreatorCard } from "@/components/creator-card";
 import { DiscoverFilters, DiscoverSort } from "@/components/discover-filters";
 import { CategoryGlyph, IconArrowRight, IconSearch } from "@/components/icons";
 import { getDirectory, recordDirectoryEvent, searchDirectory } from "@/lib/directory";
-import { formatFollowers, languageOptionsFor, totalFollowers } from "@/lib/seed-data";
+import { filterCreators, formatFollowers, languageOptionsFor, totalFollowers } from "@/lib/seed-data";
 import { canonicalSpecialty } from "@/lib/taxonomy";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +88,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
   const platforms = list(params.platform);
   const q = first(params.q);
   const sort = first(params.sort) || "relevant";
-  const results = await searchDirectory({
+  const searchQuery = {
     q,
     specialty: specialties,
     country: countries,
@@ -105,7 +105,14 @@ export default async function DiscoverPage({ searchParams }: Props) {
     openToCollab: first(params.openToCollab),
     verified: first(params.verified),
     sort,
-  });
+  };
+  let results;
+  try {
+    results = await searchDirectory(searchQuery);
+  } catch (error) {
+    console.error("discover search failed", error);
+    results = filterCreators(directory.creators, searchQuery, directory.synonyms);
+  }
   await recordDirectoryEvent("influencer_search_submitted", {
     q,
     specialty: specialties.join(","),
@@ -204,7 +211,9 @@ export default async function DiscoverPage({ searchParams }: Props) {
                       : "right-2 top-14 h-40 w-28 rotate-[8deg]"
                 }`}
               >
-                <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="140px" />
+                {creator.image ? (
+                  <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="140px" />
+                ) : null}
                 {creator.specialties[0] ? (
                   <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-8 text-[10px] font-bold uppercase tracking-wide text-white">
                     {creator.specialties[0].replace("-", " ")}
@@ -296,7 +305,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
                     className="w-40 shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-[#E4E9F5]"
                   >
                     <span className="relative block h-28">
-                      <Image src={creator.image} alt="" fill className="object-cover" sizes="160px" />
+                      {creator.image ? <Image src={creator.image} alt="" fill className="object-cover" sizes="160px" /> : null}
                     </span>
                     <span className="block px-3 py-2.5">
                       <span className="block truncate text-sm font-bold text-indigo">{creator.displayName}</span>
@@ -377,7 +386,9 @@ export default async function DiscoverPage({ searchParams }: Props) {
               <div className="relative hidden h-48 lg:block">
                 {directory.creators[0] ? (
                   <div className="absolute right-6 top-0 h-44 w-36 overflow-hidden rounded-2xl ring-2 ring-white/30">
-                    <Image src={directory.creators[0].image} alt="" fill className="object-cover" sizes="144px" />
+                    {directory.creators[0].image ? (
+                      <Image src={directory.creators[0].image} alt="" fill className="object-cover" sizes="144px" />
+                    ) : null}
                   </div>
                 ) : null}
                 <p className="absolute bottom-2 left-0 max-w-[12rem] font-script text-2xl leading-tight text-white">

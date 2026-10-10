@@ -35,6 +35,17 @@ describe("stored collaboration match cards", () => {
     assert.equal(cards[0]!.image, "");
     assert.equal(cards[1]!.image, "/uploads/pairs/beauty.jpg");
   });
+
+  it("shows the niche photo for a saved pair and hides a creator sample photo", () => {
+    const cards = cardsFromStoredCollaborationMatches([
+      { title: "Interior Designer + Woodwork Influencer", tags: ["Design"], image: "" },
+      { title: "Food Influencer + Kitchen Brand", tags: ["Food"], image: "/demo/categories/cat-food.jpg" },
+      { title: "Custom Pair", tags: ["Beauty"], image: "/demo/creators/creator-sofia.jpg" },
+    ]);
+    assert.equal(cards[0]!.image, "/demo/categories/cat-home.jpg");
+    assert.equal(cards[1]!.image, "/demo/categories/cat-food.jpg");
+    assert.equal(cards[2]!.image, "");
+  });
 });
 
 describe("public sample surfaces", () => {
@@ -81,6 +92,8 @@ describe("public sample surfaces", () => {
     const mentors = source("src/app/mentorship/page.tsx");
     assert.equal(home.includes(': "Creator"'), false);
     assert.equal(discover.includes('?? "Influencer"'), false);
+    assert.match(discover, /filterCreators\(directory\.creators/);
+    assert.equal(discover.includes("searchCreators"), false);
     assert.equal(account.includes('|| "Influencer"'), false);
     assert.equal(mentors.includes('?? "Global"'), false);
   });
