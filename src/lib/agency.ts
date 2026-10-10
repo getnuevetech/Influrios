@@ -184,6 +184,11 @@ export async function listAgencyWorkspaces() {
   return prisma.agencyWorkspace.findMany({ orderBy: { name: "asc" } });
 }
 
+/** Notes stay blank until they are entered. */
+export function agencyWorkspaceNotes(notes?: string | null) {
+  return (notes ?? "").trim().slice(0, 400);
+}
+
 export async function createAgencyWorkspace(input: { id: string; name: string; notes?: string }) {
   const id = input.id
     .trim()
@@ -200,7 +205,7 @@ export async function createAgencyWorkspace(input: { id: string; name: string; n
         id,
         name,
         plan: "AGENCY",
-        notes: (input.notes ?? "Admin-created agency workspace.").trim().slice(0, 400),
+        notes: agencyWorkspaceNotes(input.notes),
       },
     });
   } catch (error) {

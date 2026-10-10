@@ -429,7 +429,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
       </section>
 
       <p className="text-xs text-muted">
-        {store.notes} · Public:{" "}
+        {store.notes ? <>{store.notes} · </> : null}
+        Public:{" "}
         <Link href="/agency" className="font-semibold text-violet hover:underline">
           /agency
         </Link>
