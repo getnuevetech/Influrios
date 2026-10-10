@@ -16,7 +16,7 @@ export async function actionSaveSearch(formData: FormData) {
       id: clean(formData.get("id")) || undefined,
       kind: "search",
       code: "meilisearch",
-      name: clean(formData.get("name")) || "Meilisearch",
+      name: clean(formData.get("name")),
       enabled: formData.get("enabled") === "1",
       baseUrl: clean(formData.get("baseUrl")),
       publicKey: "",
