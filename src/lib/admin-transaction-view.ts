@@ -88,6 +88,13 @@ export type FundingTransactionView = {
   audits: FundingAuditRow[];
 };
 
+/** The frozen fee heading uses the stored name and version. A blank name stays blank. */
+export function frozenFeeRuleHeading(ruleName: string | null, ruleVersion: number | null): string {
+  const name = ruleName?.trim() ?? "";
+  const version = ruleVersion != null ? `v${ruleVersion}` : "";
+  return [name, version].filter(Boolean).join(" ");
+}
+
 /** Pure — extracts frozen fee rule fields from feeSnapshotJson. */
 export function feeRuleFromSnapshot(
   snapshot: unknown,
@@ -108,9 +115,10 @@ export function feeRuleFromSnapshot(
     typeof row.calculatedFeeCents === "number" && Number.isInteger(row.calculatedFeeCents)
       ? row.calculatedFeeCents
       : feeCents;
+  const ruleName = typeof row.ruleName === "string" ? row.ruleName.trim() : "";
   return {
     ruleId: typeof row.ruleId === "string" ? row.ruleId : null,
-    ruleName: typeof row.ruleName === "string" ? row.ruleName : null,
+    ruleName: ruleName || null,
     ruleVersion,
     feeType: feeTypeFromFundingSnapshot(snapshot, serviceLevel),
     method: typeof row.method === "string" ? row.method : null,

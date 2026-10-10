@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/app/admin/guard";
-import { getFundingTransactionView } from "@/lib/admin-transaction-view";
+import { frozenFeeRuleHeading, getFundingTransactionView } from "@/lib/admin-transaction-view";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { formatMoney } from "@/lib/money";
 
@@ -77,8 +77,7 @@ export default async function AdminFundingTransactionPage({ params }: Props) {
         <div className="card-surface space-y-2 p-5">
           <h2 className="font-display text-lg font-bold text-indigo">Fee rule (frozen)</h2>
           <p className="text-sm text-indigo">
-            {feeRule.ruleName ?? "Untitled rule"}
-            {feeRule.ruleVersion != null ? ` v${feeRule.ruleVersion}` : ""}
+            {frozenFeeRuleHeading(feeRule.ruleName, feeRule.ruleVersion)}
           </p>
           <p className="text-xs text-muted">
             {feeTypeLabel}
