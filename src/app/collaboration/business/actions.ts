@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
+import { specialtyLabel } from "@/lib/seed-data";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import {
@@ -92,18 +93,24 @@ export async function actionAcceptBusinessTerms(formData: FormData) {
 
 export async function actionSaveCampaignIntent(formData: FormData) {
   const { ws } = await requireBusinessAccount();
-  const fields = buildCampaignIntentFields({
-    title: String(formData.get("title") ?? ""),
-    goal: String(formData.get("goal") ?? ""),
-    specialty: String(formData.get("specialty") ?? ""),
-    budget: String(formData.get("budget") ?? ""),
-    location: String(formData.get("location") ?? ""),
-    platform: String(formData.get("platform") ?? ""),
-    audience: String(formData.get("audience") ?? ""),
-    collabType: String(formData.get("collabType") ?? ""),
-    timeframe: String(formData.get("timeframe") ?? ""),
-    summary: String(formData.get("summary") ?? ""),
-  });
+  let fields;
+  try {
+    fields = buildCampaignIntentFields({
+      title: String(formData.get("title") ?? ""),
+      goal: String(formData.get("goal") ?? ""),
+      specialty: String(formData.get("specialty") ?? ""),
+      budget: String(formData.get("budget") ?? ""),
+      location: String(formData.get("location") ?? ""),
+      platform: String(formData.get("platform") ?? ""),
+      audience: String(formData.get("audience") ?? ""),
+      collabType: String(formData.get("collabType") ?? ""),
+      timeframe: String(formData.get("timeframe") ?? ""),
+      summary: String(formData.get("summary") ?? ""),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the campaign intent.";
+    redirect(`${HUB}?error=${encodeURIComponent(message)}#suggestions`);
+  }
   const briefId = String(formData.get("briefId") ?? "").trim();
   const mode = resolveCampaignIntentSaveMode({
     briefId,
@@ -138,18 +145,23 @@ export async function actionPostBusinessRequest(formData: FormData) {
   if (!brief) {
     redirect(`${HUB}?error=${encodeURIComponent("Save a campaign intent before posting a request.")}`);
   }
-  await upsertBusinessRequest({
-    brand: ws.name,
-    category: brief.specialty,
-    budget: brief.budget,
-    location: brief.location,
-    tags: [brief.goal, brief.platform, brief.specialty].filter(Boolean),
-    summary: brief.summary || `${brief.goal} collaboration for ${ws.name}`,
-    lookingFor: `${brief.specialty} influencers`,
-    status: "published",
-    sortOrder: 0,
-    workspaceId: ws.businessId,
-  });
+  try {
+    await upsertBusinessRequest({
+      brand: ws.name,
+      category: brief.specialty,
+      budget: brief.budget,
+      location: brief.location,
+      tags: [brief.goal, brief.platform, brief.specialty].filter(Boolean),
+      summary: brief.summary,
+      lookingFor: brief.specialty.trim() ? `${specialtyLabel(brief.specialty)} influencers` : "",
+      status: "published",
+      sortOrder: 0,
+      workspaceId: ws.businessId,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not publish the request.";
+    redirect(`${HUB}?error=${encodeURIComponent(message)}#requests`);
+  }
   revalidateHub();
   redirect(`${HUB}?posted=1#requests`);
 }

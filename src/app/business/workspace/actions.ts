@@ -6,6 +6,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import {
   addToShortlist,
+  buildCampaignIntentFields,
   createBrief,
   ensureOwnedBusinessWorkspace,
   getWorkspace,
@@ -76,21 +77,28 @@ export async function actionRemoveShortlist(formData: FormData) {
 
 export async function actionCreateBrief(formData: FormData) {
   const { ws } = await requireBusinessAccount();
-  await createBrief(
-    {
-      title: String(formData.get("title") ?? "Untitled brief"),
-      goal: String(formData.get("goal") ?? "Brand Awareness"),
-      specialty: String(formData.get("specialty") ?? "beauty"),
-      budget: String(formData.get("budget") ?? "$1K – $5K"),
-      location: [String(formData.get("locationCity") ?? ""), String(formData.get("locationCountry") ?? "")]
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .join(", ") || String(formData.get("location") ?? "USA"),
-      platform: String(formData.get("platform") ?? "INSTAGRAM"),
-      summary: String(formData.get("summary") ?? ""),
-    },
-    ws.businessId,
-  );
+  const location =
+    [String(formData.get("locationCity") ?? ""), String(formData.get("locationCountry") ?? "")]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(", ") || String(formData.get("location") ?? "");
+  try {
+    await createBrief(
+      buildCampaignIntentFields({
+        title: String(formData.get("title") ?? ""),
+        goal: String(formData.get("goal") ?? ""),
+        specialty: String(formData.get("specialty") ?? ""),
+        budget: String(formData.get("budget") ?? ""),
+        location,
+        platform: String(formData.get("platform") ?? ""),
+        summary: String(formData.get("summary") ?? ""),
+      }),
+      ws.businessId,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the brief.";
+    redirect(`${BASE}?error=${encodeURIComponent(message)}`);
+  }
   revalidatePath(BASE);
   redirect(`${BASE}?brief=1`);
 }
