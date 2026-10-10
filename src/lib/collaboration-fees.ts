@@ -98,6 +98,152 @@ export function defaultFeeTypeForServiceLevel(serviceLevel: string): FeeType {
   return "collaboration";
 }
 
+function usdToCents(value: string): number | null {
+  const text = value.trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(text)) return null;
+  const cents = Math.round(Number(text) * 100);
+  return Number.isFinite(cents) ? cents : null;
+}
+
+function integerText(value: string): number | null {
+  const text = value.trim();
+  if (!/^\d+$/.test(text)) return null;
+  return Number(text);
+}
+
+/** A fee rule stores only the terms that were entered. */
+export function feeRuleDraft(input: {
+  name?: string | null;
+  priority?: string | null;
+  jurisdiction?: string | null;
+  serviceLevel?: string | null;
+  feeType?: string | null;
+  fundingMode?: string | null;
+  relationshipSource?: string | null;
+  promotionChannel?: string | null;
+  method?: string | null;
+  percentBps?: string | null;
+  fixedUsd?: string | null;
+  minFeeUsd?: string | null;
+  maxFeeUsd?: string | null;
+  payer?: string | null;
+  notes?: string | null;
+  active?: boolean;
+  tierBands?: FeeTierBand[];
+}):
+  | { ok: false; error: string }
+  | {
+      ok: true;
+      name: string;
+      priority: number;
+      jurisdiction: string;
+      serviceLevel: string;
+      feeType: FeeType;
+      fundingMode: string;
+      relationshipSource: string;
+      promotionChannel: string;
+      method: FeeMethod;
+      percentBps: number;
+      fixedCents: number;
+      minFeeCents: number;
+      maxFeeCents: number | null;
+      payer: FeePayer;
+      notes: string;
+      active: boolean;
+      tierBands: FeeTierBand[];
+    } {
+  const name = (input.name ?? "").trim();
+  if (!name) return { ok: false, error: "A rule name is required." };
+  const priority = integerText(input.priority ?? "");
+  if (priority == null) return { ok: false, error: "Enter a priority." };
+  const jurisdiction = (input.jurisdiction ?? "").trim();
+  if (!jurisdiction) return { ok: false, error: "Choose a jurisdiction." };
+  const serviceLevel = (input.serviceLevel ?? "").trim();
+  if (serviceLevel !== "*" && !(SERVICE_LEVELS as readonly string[]).includes(serviceLevel)) {
+    return { ok: false, error: "Choose a service level." };
+  }
+  const feeType = (input.feeType ?? "").trim();
+  if (!(FEE_TYPES as readonly string[]).includes(feeType)) {
+    return { ok: false, error: "Choose a fee type." };
+  }
+  const fundingMode = (input.fundingMode ?? "").trim();
+  if (!(FUNDING_MODE_CONDITIONS as readonly string[]).includes(fundingMode)) {
+    return { ok: false, error: "Choose a funding mode." };
+  }
+  const relationshipSource = (input.relationshipSource ?? "").trim();
+  if (!(RELATIONSHIP_SOURCE_CONDITIONS as readonly string[]).includes(relationshipSource)) {
+    return { ok: false, error: "Choose a relationship source." };
+  }
+  const promotionChannel = (input.promotionChannel ?? "").trim();
+  if (!(PROMOTION_CHANNEL_CONDITIONS as readonly string[]).includes(promotionChannel)) {
+    return { ok: false, error: "Choose a promotion channel." };
+  }
+  const method = (input.method ?? "").trim();
+  if (!(FEE_METHODS as readonly string[]).includes(method)) {
+    return { ok: false, error: "Choose a fee method." };
+  }
+  const payer = (input.payer ?? "").trim();
+  if (payer !== "brand" && payer !== "creator" && payer !== "split") {
+    return { ok: false, error: "Choose who pays the fee." };
+  }
+  const percent = integerText(input.percentBps ?? "");
+  const needsPercent = method === "percent" || method === "percent_plus_fixed";
+  if (needsPercent && percent == null) return { ok: false, error: "Enter the percent in basis points." };
+  if (method === "tiered" && !(input.tierBands ?? []).length) {
+    return { ok: false, error: "Enter tier bands." };
+  }
+  const fixed = usdToCents(input.fixedUsd ?? "");
+  const needsFixed = method === "fixed" || method === "percent_plus_fixed" || method === "custom_enterprise";
+  if (needsFixed && fixed == null) return { ok: false, error: "Enter the fixed amount." };
+  const minFee = (input.minFeeUsd ?? "").trim() ? usdToCents(input.minFeeUsd ?? "") : 0;
+  if (minFee == null) return { ok: false, error: "Enter a minimum fee, or leave it blank." };
+  const maxText = (input.maxFeeUsd ?? "").trim();
+  const maxFee = maxText ? usdToCents(maxText) : null;
+  if (maxText && maxFee == null) return { ok: false, error: "Enter a maximum fee, or leave it blank." };
+  return {
+    ok: true,
+    name,
+    priority,
+    jurisdiction,
+    serviceLevel,
+    feeType: feeType as FeeType,
+    fundingMode,
+    relationshipSource,
+    promotionChannel,
+    method: method as FeeMethod,
+    percentBps: percent ?? 0,
+    fixedCents: fixed ?? 0,
+    minFeeCents: minFee,
+    maxFeeCents: maxFee,
+    payer,
+    notes: (input.notes ?? "").trim(),
+    active: input.active === true,
+    tierBands: input.tierBands ?? [],
+  };
+}
+
+/** The fee simulator uses the jurisdiction, service level, and gross amount that were entered. */
+export function feeSimulationDraft(input: {
+  jurisdiction?: string | null;
+  serviceLevel?: string | null;
+  grossUsd?: string | null;
+}):
+  | { ok: false; error: string }
+  | { ok: true; jurisdiction: string; serviceLevel: ServiceLevel; grossValueCents: number; grossUsd: string } {
+  const jurisdiction = (input.jurisdiction ?? "").trim();
+  if (!jurisdiction) return { ok: false, error: "Choose a jurisdiction." };
+  const serviceLevel = (input.serviceLevel ?? "").trim();
+  if (!(SERVICE_LEVELS as readonly string[]).includes(serviceLevel)) {
+    return { ok: false, error: "Choose a service level." };
+  }
+  const grossUsd = (input.grossUsd ?? "").trim();
+  const grossValueCents = usdToCents(grossUsd);
+  if (grossValueCents == null || grossValueCents <= 0) {
+    return { ok: false, error: "Enter a gross amount." };
+  }
+  return { ok: true, jurisdiction, serviceLevel: serviceLevel as ServiceLevel, grossValueCents, grossUsd };
+}
+
 export type CollaborationFeeRule = {
   id: string;
   name: string;
@@ -781,27 +927,49 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
     }
   }
 
+  if (
+    !input.name.trim() ||
+    input.priority == null ||
+    !Number.isInteger(input.priority) ||
+    !input.jurisdiction?.trim() ||
+    !input.serviceLevel?.trim() ||
+    !input.feeType ||
+    !input.fundingMode ||
+    !input.relationshipSource ||
+    !input.promotionChannel ||
+    !input.method ||
+    input.percentBps == null ||
+    !Number.isInteger(input.percentBps) ||
+    input.fixedCents == null ||
+    input.minFeeCents == null ||
+    !input.payer
+  ) {
+    throw new Error(
+      "A fee rule needs the name, priority, jurisdiction, service level, fee type, conditions, method, amounts, and payer that were entered.",
+    );
+  }
+
   const rule: CollaborationFeeRule = {
     id: input.id || id("rule"),
-    name: input.name,
+    name: input.name.trim(),
     version: 1,
-    active: input.active ?? true,
-    priority: input.priority ?? 100,
-    jurisdiction: input.jurisdiction ?? "*",
-    serviceLevel: input.serviceLevel ?? "contracted",
-    feeType: input.feeType ?? defaultFeeTypeForServiceLevel(input.serviceLevel ?? "contracted"),
-    fundingMode: input.fundingMode ?? "*",
-    relationshipSource: input.relationshipSource ?? "*",
-    promotionChannel: input.promotionChannel ?? "*",
+    active: input.active === true,
+    priority: input.priority,
+    jurisdiction: input.jurisdiction.trim(),
+    serviceLevel: input.serviceLevel.trim(),
+    feeType: input.feeType,
+    fundingMode: input.fundingMode,
+    relationshipSource: input.relationshipSource,
+    promotionChannel: input.promotionChannel,
     minGrossCents: input.minGrossCents,
     maxGrossCents: input.maxGrossCents,
-    method: input.method ?? "percent",
-    percentBps: input.percentBps ?? 1000,
-    fixedCents: input.fixedCents ?? 0,
-    minFeeCents: input.minFeeCents ?? 0,
+    method: input.method,
+    percentBps: input.percentBps,
+    fixedCents: input.fixedCents,
+    minFeeCents: input.minFeeCents,
     maxFeeCents: input.maxFeeCents ?? null,
     tierBands: input.tierBands ?? [],
-    payer: input.payer ?? "brand",
+    payer: input.payer,
     effectiveFrom: input.effectiveFrom ?? now(),
     notes: input.notes ?? "",
   };
