@@ -2,6 +2,7 @@
  * Collab OS P3 — Contract & milestone wizard.
  * Pure gates + financial plan snapshot; funding still goes through marketplace-ledger.
  */
+import { SERVICE_LEVELS } from "@/lib/collaboration-fees";
 import { splitGross } from "@/lib/ledger";
 
 export const CONTRACT_WIZARD_STEPS = [
@@ -292,13 +293,48 @@ export function parseMilestoneDraftsFromForm(raw: {
   for (let i = 0; i < count; i += 1) {
     const title = String(raw.titles[i] ?? "").trim();
     const percent = Number(String(raw.percents[i] ?? "").replace(/[^0-9.]/g, ""));
-    if (!title && !Number.isFinite(percent)) continue;
+    if (!title && (!Number.isFinite(percent) || percent === 0)) continue;
     drafts.push({
       title,
       shareBps: Number.isFinite(percent) ? Math.round(percent * 100) : 0,
     });
   }
   return drafts;
+}
+
+/**
+ * A new contract keeps entered terms. A linked proposal can supply its stored
+ * title, scope, and commercial line. Jurisdiction falls back to the creator's
+ * country only when that country is configured. Gross, service level, and
+ * commercial terms stay blank until they are entered.
+ */
+export function contractWizardFields(input: {
+  title?: string | null;
+  scope?: string | null;
+  commercial?: string | null;
+  jurisdiction?: string | null;
+  serviceLevel?: string | null;
+  gross?: string | null;
+  creatorCountryCode?: string | null;
+  jurisdictionCodes?: readonly string[];
+}) {
+  const title = (input.title ?? "").trim();
+  const scope = (input.scope ?? "").trim();
+  const commercial = (input.commercial ?? "").trim();
+  const codes = new Set((input.jurisdictionCodes ?? []).map((code) => code.trim().toUpperCase()));
+  const creatorCode = (input.creatorCountryCode ?? "").trim().toUpperCase();
+  const jurisdictionProvided = input.jurisdiction !== undefined && input.jurisdiction !== null;
+  const requestedJurisdiction = (input.jurisdiction ?? "").trim().toUpperCase();
+  const jurisdictionCode = jurisdictionProvided
+    ? requestedJurisdiction
+    : creatorCode && codes.has(creatorCode)
+      ? creatorCode
+      : "";
+  const rawLevel = (input.serviceLevel ?? "").trim();
+  const alias = rawLevel === "discovery_only" ? "discovery" : rawLevel;
+  const serviceLevel = (SERVICE_LEVELS as readonly string[]).includes(alias) ? alias : "";
+  const grossRaw = (input.gross ?? "").trim();
+  return { title, scope, commercial, jurisdictionCode, serviceLevel, grossRaw };
 }
 
 export function countryCodeFromLocation(locationCountry: string | null | undefined): string | null {

@@ -6,10 +6,11 @@ import { getAccountSession } from "@/lib/accounts";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace } from "@/lib/business";
 import { collabOsV1Enabled } from "@/lib/collab-os";
-import { resolveFee, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, asServiceLevel } from "@/lib/collaboration-fees";
+import { resolveFee, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
 import {
   buildFinancialPlan,
   CONTRACT_WIZARD_STEPS,
+  contractWizardFields,
   countryCodeFromLocation,
   customMilestonesGate,
   evaluatePreContractGates,
@@ -26,6 +27,7 @@ import {
 import { buildFeeDisclosureSummary } from "@/lib/fee-disclosure";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
+import { publicStoredImage } from "@/lib/seed-data";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
 import {
   buildPayoutFeeFxQuote,
@@ -127,13 +129,22 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     linkedCollab?.initiatorSlug ||
     "";
   const creator = creatorSlug ? await getDirectoryCreator(creatorSlug) : null;
-  const title = (params.title ?? linkedCollab?.title ?? "").trim();
-  const scope = (params.scope ?? linkedCollab?.scope ?? "").trim();
-  const commercial = params.commercial ?? linkedCollab?.commercial ?? "Paid brand partnership";
-  const jurisdictionCode = (params.jurisdiction ?? "US").toUpperCase();
-  const serviceLevelRaw = asServiceLevel(params.serviceLevel ?? "contracted");
-  const serviceLevel = serviceLevelRaw === "*" ? "contracted" : serviceLevelRaw;
-  const grossRaw = params.gross ?? "5000";
+  const entered = contractWizardFields({
+    title: params.title !== undefined ? params.title : linkedCollab?.title,
+    scope: params.scope !== undefined ? params.scope : linkedCollab?.scope,
+    commercial: params.commercial !== undefined ? params.commercial : linkedCollab?.commercial,
+    jurisdiction: params.jurisdiction,
+    serviceLevel: params.serviceLevel,
+    gross: params.gross,
+    creatorCountryCode: countryCodeFromLocation(creator?.locationCountry),
+    jurisdictionCodes: config.jurisdictions.map((row) => row.code),
+  });
+  const title = entered.title;
+  const scope = entered.scope;
+  const commercial = entered.commercial;
+  const jurisdictionCode = entered.jurisdictionCode;
+  const serviceLevel = entered.serviceLevel;
+  const grossRaw = entered.grossRaw;
   const grossCents = dollarsToCents(grossRaw);
   const usingCustom = params.mode === "custom" && entitlements.customMilestones;
   const influencerAccepted = params.influencerAccepted === "1";
@@ -143,13 +154,13 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const templates: MilestoneDraft[] = (config.templates ?? [])
     .filter((row) => row.active)
     .map((row) => ({ title: row.title, shareBps: row.shareBps }));
-  const customDefault: MilestoneDraft[] = [
-    { title: "Kickoff brief", shareBps: 2500 },
-    { title: "Content draft", shareBps: 2500 },
-    { title: "Revisions", shareBps: 2500 },
-    { title: "Published live", shareBps: 2500 },
+  const customBlank: MilestoneDraft[] = [
+    { title: "", shareBps: 0 },
+    { title: "", shareBps: 0 },
+    { title: "", shareBps: 0 },
+    { title: "", shareBps: 0 },
   ];
-  const drafts = usingCustom ? customDefault : templates.length ? templates : customDefault;
+  const drafts = usingCustom ? customBlank : templates;
 
   const creatorCountry =
     countryCodeFromLocation(creator?.locationCountry) ??
@@ -174,9 +185,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const availableServiceLevels = jurisdictionCaps
     ? (allowedServiceLevels(jurisdictionCaps, SERVICE_LEVELS) as typeof SERVICE_LEVELS[number][])
     : [...SERVICE_LEVELS];
-  const effectiveServiceLevel = availableServiceLevels.includes(serviceLevel)
-    ? serviceLevel
-    : availableServiceLevels[0] ?? "contracted";
+  const effectiveServiceLevel: ServiceLevel | "" =
+    availableServiceLevels.find((level) => level === serviceLevel) ?? "";
 
   const payoutProfile = dbCreator
     ? await prisma.influencerPayoutProfile
@@ -241,15 +251,16 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         };
   }
 
+  const enteredMilestones = drafts.filter((row) => row.title.trim().length > 0 || row.shareBps > 0);
   const milestoneGate = customMilestonesGate({
     entitled: entitlements.customMilestones,
     usingCustom,
-    milestones: drafts,
+    milestones: enteredMilestones,
     influencerAccepted,
   });
 
   const quote =
-    grossCents > 0
+    grossCents > 0 && jurisdictionCode && effectiveServiceLevel
       ? await resolveFee({
           jurisdiction: jurisdictionCode,
           serviceLevel: effectiveServiceLevel,
@@ -258,7 +269,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
       : null;
 
   const plan =
-    grossCents > 0 && milestoneGate.ok
+    grossCents > 0 && jurisdictionCode && effectiveServiceLevel && milestoneGate.ok
       ? buildFinancialPlan({
           grossCents,
           currency: jurisdiction?.currency ?? "USD",
@@ -272,7 +283,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           fundingCountry: jurisdictionCode,
           creatorCountry: creatorCountry ?? jurisdictionCode,
           payoutCurrency: jurisdiction?.currency ?? "USD",
-          milestones: drafts,
+          milestones: enteredMilestones,
           milestoneSource: usingCustom ? "custom" : "template",
         })
       : null;
@@ -383,7 +394,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 {influencerOptions.map((c) =>
                   c ? (
                     <option key={c.slug} value={c.slug}>
-                      {c.displayName} · {c.locationCity || "—"}, {c.locationCountry || "—"}
+                      {c.displayName}
+                    {[c.locationCity, c.locationCountry].filter(Boolean).length
+                      ? ` · ${[c.locationCity, c.locationCountry].filter(Boolean).join(", ")}`
+                      : ""}
                     </option>
                   ) : null,
                 )}
@@ -392,8 +406,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             )}
             {creator ? (
               <div className="mt-3 flex items-center gap-3 rounded-xl bg-[#F4F7FF] p-3">
-                <span className="relative h-12 w-12 overflow-hidden rounded-full">
-                  <Image src={creator.image} alt="" fill className="object-cover" sizes="48px" />
+                <span className="relative h-12 w-12 overflow-hidden rounded-full bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+                  {publicStoredImage(creator.image) ? (
+                    <Image src={publicStoredImage(creator.image)} alt="" fill className="object-cover" sizes="48px" />
+                  ) : null}
                 </span>
                 <div>
                   <p className="text-sm font-bold text-indigo">{creator.displayName}</p>
@@ -413,7 +429,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               <input
                 name="title"
                 required
-                defaultValue={title || (creator ? `${ws.name} × ${creator.displayName}` : "")}
+                placeholder="Campaign title"
+                defaultValue={title}
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
               />
             </label>
@@ -423,9 +440,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 name="scope"
                 required
                 rows={4}
-                defaultValue={
-                  scope || "Deliverables, channels, usage rights, and revision limits for this collaboration."
-                }
+                placeholder="Deliverables, channels, and revisions"
+                defaultValue={scope}
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
               />
             </label>
@@ -439,6 +455,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 <input
                   name="grossUsd"
                   required
+                  placeholder="Amount"
                   defaultValue={grossRaw}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
                 />
@@ -447,9 +464,11 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 Jurisdiction
                 <select
                   name="jurisdictionCode"
+                  required
                   defaultValue={jurisdictionCode}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
                 >
+                  <option value=""> </option>
                   {config.jurisdictions.map((row) => (
                     <option key={row.code} value={row.code}>
                       {row.label} ({row.currency})
@@ -461,9 +480,11 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 Collaboration service level
                 <select
                   name="serviceLevel"
+                  required
                   defaultValue={effectiveServiceLevel}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
                 >
+                  <option value=""> </option>
                   {availableServiceLevels.map((level) => (
                     <option key={level} value={level}>
                       {SERVICE_LEVEL_LABELS[level]}
@@ -523,14 +544,20 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   />
                   <input
                     name="milestonePercent"
-                    defaultValue={(row.shareBps / 100).toFixed(0)}
+                    defaultValue={row.shareBps > 0 ? (row.shareBps / 100).toFixed(0) : ""}
                     aria-label="Percent"
                     className="rounded-xl border border-border px-3 py-2 text-sm"
                   />
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-xs text-muted">Percents must total 100. Last share absorbs rounding.</p>
+            <p className="mt-2 text-xs text-muted">
+              {drafts.some((row) => row.title.trim())
+                ? "Percents must total 100. Last share absorbs rounding."
+                : usingCustom
+                  ? "Enter the milestone titles and percents. Blank rows are left out."
+                  : "No milestone templates are saved."}
+            </p>
             {entitlements.customMilestones ? (
               <label className="mt-4 flex items-start gap-2 text-sm text-indigo">
                 <input
@@ -616,7 +643,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             {plan ? (
               <>
                 <p className="mt-1 text-sm text-muted">
-                  Service level <strong>{SERVICE_LEVEL_LABELS[effectiveServiceLevel]}</strong>
+                  Service level{" "}
+                  <strong>
+                    {effectiveServiceLevel ? SERVICE_LEVEL_LABELS[effectiveServiceLevel] : ""}
+                  </strong>
                   {quote?.rule?.feeType ? (
                     <>
                       {" "}
