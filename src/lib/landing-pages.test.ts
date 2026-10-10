@@ -39,6 +39,22 @@ describe("landing-pages CMS defaults", () => {
     });
     assert.equal(business.hero.title, "Custom Biz");
     assert.equal(business.capabilities.items.length, 8);
+    assert.equal(business.recommended.title, "Influencers on Influrios");
+    assert.equal(business.recommended.subtitle.includes("Example matches"), false);
+  });
+
+  it("replaces the retired example-match heading", () => {
+    const business = mergeBusinessLanding({
+      recommended: {
+        title: "Recommended Influencers for Your Business",
+        subtitle: "Example matches from the Influrios directory — open a profile when you are ready.",
+        ctaLabel: "Browse",
+        ctaHref: "/discover",
+      },
+    });
+    assert.equal(business.recommended.title, "Influencers on Influrios");
+    assert.equal(business.recommended.subtitle, "Published directory profiles. Open a profile to see what is stored.");
+    assert.equal(business.recommended.ctaLabel, "Browse");
   });
 
   it("exposes influencer self-description options from the terminology addendum", () => {

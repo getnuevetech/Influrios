@@ -17,13 +17,10 @@ type RecommendedInfluencer = {
   displayName: string;
   title: string;
   image: string;
-  locationCity: string;
-  locationCountry: string;
+  place: string;
   specialty: string;
-  specialtySlug: string;
   followers: string;
   engagement: string;
-  why: string;
   platforms: string[];
 };
 
@@ -102,8 +99,10 @@ export function BusinessMarketingPage({
 
           <div className="relative mx-auto hidden h-[380px] w-full max-w-md lg:block">
             {recommended[0] ? (
-              <div className="absolute inset-y-4 right-0 w-[70%] overflow-hidden rounded-[2rem] shadow-2xl ring-4 ring-white">
-                <Image src={recommended[0].image} alt="" fill className="object-cover" sizes="320px" />
+              <div className="absolute inset-y-4 right-0 w-[70%] overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#111A5A] to-[#633CFF] shadow-2xl ring-4 ring-white">
+                {recommended[0].image ? (
+                  <Image src={recommended[0].image} alt="" fill className="object-cover" sizes="320px" />
+                ) : null}
               </div>
             ) : null}
             {recommended.slice(1, 4).map((item, index) => (
@@ -117,11 +116,11 @@ export function BusinessMarketingPage({
                       : "bottom-4 right-8 w-36"
                 }`}
               >
-                <div className="relative h-20 overflow-hidden rounded-xl">
-                  <Image src={item.image} alt="" fill className="object-cover" sizes="160px" />
+                <div className="relative h-20 overflow-hidden rounded-xl bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+                  {item.image ? <Image src={item.image} alt="" fill className="object-cover" sizes="160px" /> : null}
                 </div>
                 <p className="mt-2 truncate text-xs font-bold text-indigo">{item.displayName}</p>
-                <p className="truncate text-[10px] text-muted">{item.specialty}</p>
+                {item.specialty ? <p className="truncate text-[10px] text-muted">{item.specialty}</p> : null}
               </div>
             ))}
             <div className="absolute left-2 top-1/2 max-w-[170px] -translate-y-1/2 rounded-2xl bg-violet px-3 py-2 text-[11px] font-bold text-white shadow-lg">
@@ -163,39 +162,50 @@ export function BusinessMarketingPage({
               {landing.recommended.ctaLabel} →
             </Link>
           </div>
+          {recommended.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-[#E4E9F5] bg-white px-4 py-6 text-sm text-muted">
+              Published profiles appear here.
+            </p>
+          ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {recommended.map((item) => (
+            {recommended.map((item) => {
+              const stats = [
+                item.followers ? `${item.followers} followers` : "",
+                item.engagement ? `${item.engagement} eng.` : "",
+              ].filter(Boolean);
+              return (
               <article key={item.slug} className="overflow-hidden rounded-2xl border border-[#E4E9F5] bg-white shadow-sm">
-                <div className="relative h-36">
-                  <Image src={item.image} alt="" fill className="object-cover" sizes="280px" />
-                  <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-violet">
-                    {item.specialty}
-                  </span>
+                <div className="relative h-36 bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+                  {item.image ? <Image src={item.image} alt="" fill className="object-cover" sizes="280px" /> : null}
+                  {item.specialty ? (
+                    <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-violet">
+                      {item.specialty}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="p-4">
                   <p className="font-display text-lg font-bold text-indigo">{item.displayName}</p>
-                  <p className="text-xs text-muted">{item.title}</p>
-                  <p className="mt-1 text-[11px] text-muted">
-                    {item.locationCity}, {item.locationCountry}
-                  </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    {item.platforms.slice(0, 4).map((platform) => (
-                      <SocialIcon key={platform} platform={platform} size={14} />
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs font-semibold text-indigo">
-                    {item.followers} followers · {item.engagement} eng.
-                  </p>
-                  <p className="mt-2 rounded-xl bg-[#F4F0FF] p-2 text-[11px] text-muted">
-                    <span className="font-bold text-violet">Why this match?</span> {item.why}
-                  </p>
+                  {item.title ? <p className="text-xs text-muted">{item.title}</p> : null}
+                  {item.place ? <p className="mt-1 text-[11px] text-muted">{item.place}</p> : null}
+                  {item.platforms.length > 0 ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      {item.platforms.slice(0, 4).map((platform) => (
+                        <SocialIcon key={platform} platform={platform} size={14} />
+                      ))}
+                    </div>
+                  ) : null}
+                  {stats.length > 0 ? (
+                    <p className="mt-2 text-xs font-semibold text-indigo">{stats.join(" · ")}</p>
+                  ) : null}
                   <Link href={`/creators/${item.slug}`} className="mt-3 inline-flex text-xs font-bold text-violet">
-                    View Profile →
+                    View profile →
                   </Link>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
+          )}
         </div>
       </section>
 
@@ -355,8 +365,8 @@ export function BusinessMarketingPage({
             </Link>
             <div className="mt-6 flex -space-x-3">
               {recommended.slice(0, 4).map((item) => (
-                <span key={item.slug} className="relative h-12 w-12 overflow-hidden rounded-full ring-2 ring-white">
-                  <Image src={item.image} alt="" fill className="object-cover" sizes="48px" />
+                <span key={item.slug} className="relative h-12 w-12 overflow-hidden rounded-full bg-gradient-to-br from-[#111A5A] to-[#633CFF] ring-2 ring-white">
+                  {item.image ? <Image src={item.image} alt="" fill className="object-cover" sizes="48px" /> : null}
                 </span>
               ))}
             </div>

@@ -157,7 +157,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             {popularCards.map((chip) => (
               <Link
                 key={`${chip.title}-${chip.subtitle}`}
-                href={`/collaboration/hub?category=${encodeURIComponent(chip.specialty)}`}
+                href={chip.specialty ? `/collaboration/hub?category=${encodeURIComponent(chip.specialty)}` : "/collaboration/hub"}
                 className="group w-[180px] shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-[#E4E9F5]"
               >
                 <div className="relative h-24 overflow-hidden bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
