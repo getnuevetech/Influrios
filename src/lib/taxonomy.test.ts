@@ -54,7 +54,7 @@ describe("taxonomy synonyms", () => {
 });
 
 describe("category images", () => {
-  it("keeps retired category photos off the public page", () => {
+  it("shows the niche photo and hides other demo art", () => {
     const images = SPECIALTY_TAXONOMY.map((parent) => categoryImageFor(parent.slug));
     assert.equal(images.length, SPECIALTY_TAXONOMY.length);
     assert.equal(new Set(images).size, SPECIALTY_TAXONOMY.length);
