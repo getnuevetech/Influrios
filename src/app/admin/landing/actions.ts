@@ -2,7 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
+import { saveUploadedImage } from "@/lib/cms";
 import {
+  addBusinessHeroImage,
+  addCollaborationHeroImage,
+  clearBusinessWhyImage,
+  getBusinessLanding,
+  getCollaborationLanding,
+  removeBusinessHeroImage,
+  removeCollaborationHeroImage,
+  setBusinessWhyImage,
   updateBusinessLanding,
   updateCollaborationLanding,
   updateInfluencerIdentity,
@@ -17,9 +26,67 @@ function lines(value: FormDataEntryValue | null): string[] {
     .filter(Boolean);
 }
 
+async function uploadedPageImage(formData: FormData): Promise<string> {
+  const uploaded = await saveUploadedImage(formData.get("file"));
+  if (!uploaded) throw new Error("Choose an image file.");
+  return uploaded;
+}
+
+export async function actionUploadCollaborationHeroImage(formData: FormData) {
+  await requireAdminAction("banners.edit");
+  try {
+    await addCollaborationHeroImage(await uploadedPageImage(formData));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not upload the image";
+    redirect(`/admin/collaboration-landing?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/collaboration-landing?saved=image");
+}
+
+export async function actionRemoveCollaborationHeroImage(formData: FormData) {
+  await requireAdminAction("banners.edit");
+  await removeCollaborationHeroImage(String(formData.get("image") ?? ""));
+  redirect("/admin/collaboration-landing?saved=image");
+}
+
+export async function actionUploadBusinessHeroImage(formData: FormData) {
+  await requireAdminAction("banners.edit");
+  try {
+    await addBusinessHeroImage(await uploadedPageImage(formData));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not upload the image";
+    redirect(`/admin/business-landing?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/business-landing?saved=image");
+}
+
+export async function actionRemoveBusinessHeroImage(formData: FormData) {
+  await requireAdminAction("banners.edit");
+  await removeBusinessHeroImage(String(formData.get("image") ?? ""));
+  redirect("/admin/business-landing?saved=image");
+}
+
+export async function actionUploadBusinessWhyImage(formData: FormData) {
+  await requireAdminAction("banners.edit");
+  try {
+    await setBusinessWhyImage(await uploadedPageImage(formData));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not upload the image";
+    redirect(`/admin/business-landing?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/business-landing?saved=image");
+}
+
+export async function actionRemoveBusinessWhyImage() {
+  await requireAdminAction("banners.edit");
+  await clearBusinessWhyImage();
+  redirect("/admin/business-landing?saved=image");
+}
+
 export async function actionSaveCollaborationLanding(formData: FormData) {
   await requireAdminAction("banners.edit");
   try {
+    const current = await getCollaborationLanding();
     const patch: Partial<CollaborationLandingConfig> = {
       hero: {
         title: String(formData.get("heroTitle") ?? "").trim(),
@@ -35,6 +102,7 @@ export async function actionSaveCollaborationLanding(formData: FormData) {
         searchPlaceholder: String(formData.get("heroSearchPlaceholder") ?? "").trim(),
         tags: lines(formData.get("heroTags")),
         collageLabels: lines(formData.get("heroCollageLabels")),
+        images: current.hero.images,
       },
       popularMatches: {
         title: String(formData.get("popularTitle") ?? "").trim(),
@@ -148,6 +216,7 @@ export async function actionSaveCollaborationLanding(formData: FormData) {
 export async function actionSaveBusinessLanding(formData: FormData) {
   await requireAdminAction("banners.edit");
   try {
+    const current = await getBusinessLanding();
     const capabilityTitles = formData.getAll("capabilityTitle").map(String);
     const capabilityCopy = formData.getAll("capabilityCopy").map(String);
     const stepTitles = formData.getAll("stepTitle").map(String);
@@ -179,6 +248,7 @@ export async function actionSaveBusinessLanding(formData: FormData) {
         tags: lines(formData.get("heroTags")),
         collageNote: String(formData.get("heroCollageNote") ?? "").trim(),
         floatingNotes: lines(formData.get("heroFloatingNotes")),
+        images: current.hero.images,
       },
       capabilities: {
         title: String(formData.get("capabilitiesTitle") ?? "").trim(),
@@ -208,6 +278,7 @@ export async function actionSaveBusinessLanding(formData: FormData) {
         title: String(formData.get("whyTitle") ?? "").trim(),
         items: lines(formData.get("whyItems")),
         photoCaption: String(formData.get("whyCaption") ?? "").trim(),
+        image: current.whyChoose.image,
       },
       plans: {
         title: String(formData.get("plansTitle") ?? "").trim(),

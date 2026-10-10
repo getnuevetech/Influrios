@@ -3,11 +3,13 @@
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import {
+  saveUploadedImage,
   updateHomepageCategories,
   updateHomepageCollaboration,
   type HomepageCategoryItem,
   type HomepageCollabMatch,
 } from "@/lib/cms";
+import { publicStoredImage } from "@/lib/seed-data";
 import { updateHomepageSection, updateMenuItem } from "@/lib/directory";
 import { normalizeInfluencerRoleTitle } from "@/lib/terminology-copy";
 
@@ -51,12 +53,17 @@ export async function actionSaveHomepageCategories(formData: FormData) {
   await requireAdminAction("banners.edit");
   const slugs = formData.getAll("slug").map(String);
   const images = formData.getAll("image").map(String);
-  const items: HomepageCategoryItem[] = slugs
-    .map((slug, index) => ({
-      slug: slug.trim(),
-      image: (images[index] ?? "").trim(),
-    }))
-    .filter((item) => item.slug && item.image);
+  const files = formData.getAll("imageFile");
+  const cleared = new Set(formData.getAll("clearImage").map(String));
+  const items: HomepageCategoryItem[] = [];
+  for (const [index, slug] of slugs.entries()) {
+    const id = slug.trim();
+    if (!id) continue;
+    let image = cleared.has(id) ? "" : (images[index] ?? "").trim();
+    const uploaded = await saveUploadedImage(files[index] ?? null);
+    if (uploaded) image = uploaded;
+    items.push({ slug: id, image: publicStoredImage(image) });
+  }
   try {
     await updateHomepageCategories({
       title: String(formData.get("title") ?? "").trim(),
@@ -78,18 +85,29 @@ export async function actionSaveHomepageCollaboration(formData: FormData) {
   const rightSlugs = formData.getAll("rightSlug").map(String);
   const tagsRaw = formData.getAll("tags").map(String);
   const images = formData.getAll("matchImage").map(String);
-  const matches: HomepageCollabMatch[] = titles
-    .map((title, index) => ({
-      title: normalizeInfluencerRoleTitle(title.trim()),
-      leftSlug: (leftSlugs[index] ?? "").trim(),
-      rightSlug: (rightSlugs[index] ?? "").trim(),
+  const files = formData.getAll("matchFile");
+  const cleared = new Set(formData.getAll("clearMatchImage").map(String));
+  const matches: HomepageCollabMatch[] = [];
+  for (const [index, title] of titles.entries()) {
+    const displayTitle = normalizeInfluencerRoleTitle(title.trim());
+    const leftSlug = (leftSlugs[index] ?? "").trim();
+    const rightSlug = (rightSlugs[index] ?? "").trim();
+    if (!displayTitle || !leftSlug || !rightSlug) continue;
+    let image = cleared.has(String(index)) ? "" : (images[index] ?? "").trim();
+    const uploaded = await saveUploadedImage(files[index] ?? null);
+    if (uploaded) image = uploaded;
+    const stored = publicStoredImage(image);
+    matches.push({
+      title: displayTitle,
+      leftSlug,
+      rightSlug,
       tags: (tagsRaw[index] ?? "")
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean),
-      image: (images[index] ?? "").trim() || undefined,
-    }))
-    .filter((item) => item.title && item.leftSlug && item.rightSlug);
+      image: stored || undefined,
+    });
+  }
   try {
     await updateHomepageCollaboration({
       title: String(formData.get("title") ?? "").trim(),

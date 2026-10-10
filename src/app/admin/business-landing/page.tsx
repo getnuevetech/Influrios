@@ -1,7 +1,14 @@
 import Link from "next/link";
-import { actionSaveBusinessLanding } from "@/app/admin/landing/actions";
+import {
+  actionRemoveBusinessHeroImage,
+  actionRemoveBusinessWhyImage,
+  actionSaveBusinessLanding,
+  actionUploadBusinessHeroImage,
+  actionUploadBusinessWhyImage,
+} from "@/app/admin/landing/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
+import { AdminUploadedImages } from "@/components/admin-uploaded-images";
 import { getBusinessLanding } from "@/lib/landing-pages";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +99,19 @@ export default async function AdminBusinessLandingPage({ searchParams }: Props) 
               <Field label="Floating notes (one per line)" name="heroFloatingNotes" defaultValue={landing.hero.floatingNotes.join("\n")} rows={3} disabled={!canEdit} />
             </div>
           </div>
+          <div className="mt-6 border-t border-[#E4EBFF] pt-4">
+            <h3 className="font-display text-base font-bold text-indigo">Hero images</h3>
+            <p className="mt-1 text-sm text-muted">
+              These photos are the business page collage. Upload them here.
+            </p>
+            <AdminUploadedImages
+              images={landing.hero.images}
+              uploadAction={actionUploadBusinessHeroImage}
+              removeAction={actionRemoveBusinessHeroImage}
+              canEdit={canEdit}
+              emptyLabel="No hero images yet. Upload one below."
+            />
+          </div>
         </section>
 
         <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
@@ -127,6 +147,17 @@ export default async function AdminBusinessLandingPage({ searchParams }: Props) 
             <div className="sm:col-span-2">
               <Field label="Why items (one per line)" name="whyItems" defaultValue={landing.whyChoose.items.join("\n")} rows={6} disabled={!canEdit} />
             </div>
+          </div>
+          <div className="mt-6 border-t border-[#E4EBFF] pt-4 sm:col-span-2">
+            <h3 className="font-display text-base font-bold text-indigo">Section photo</h3>
+            <p className="mt-1 text-sm text-muted">Shown beside the reasons. A missing photo stays the color panel.</p>
+            <AdminUploadedImages
+              images={landing.whyChoose.image ? [landing.whyChoose.image] : []}
+              uploadAction={actionUploadBusinessWhyImage}
+              removeAction={actionRemoveBusinessWhyImage}
+              canEdit={canEdit}
+              emptyLabel="No section photo yet. Upload one below."
+            />
           </div>
         </section>
 

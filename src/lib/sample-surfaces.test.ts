@@ -36,15 +36,15 @@ describe("stored collaboration match cards", () => {
     assert.equal(cards[1]!.image, "/uploads/pairs/beauty.jpg");
   });
 
-  it("shows the niche photo for a saved pair and hides a creator sample photo", () => {
+  it("shows an uploaded cover and hides a file that was not uploaded", () => {
     const cards = cardsFromStoredCollaborationMatches([
       { title: "Interior Designer + Woodwork Influencer", tags: ["Design"], image: "" },
       { title: "Food Influencer + Kitchen Brand", tags: ["Food"], image: "/demo/categories/cat-food.jpg" },
-      { title: "Custom Pair", tags: ["Beauty"], image: "/demo/creators/creator-sofia.jpg" },
+      { title: "Beauty Creator", tags: ["Beauty"], image: "/uploads/banners/beauty.jpg" },
     ]);
-    assert.equal(cards[0]!.image, "/demo/categories/cat-home.jpg");
-    assert.equal(cards[1]!.image, "/demo/categories/cat-food.jpg");
-    assert.equal(cards[2]!.image, "");
+    assert.equal(cards[0]!.image, "");
+    assert.equal(cards[1]!.image, "");
+    assert.equal(cards[2]!.image, "/uploads/banners/beauty.jpg");
   });
 });
 
@@ -94,6 +94,15 @@ describe("public sample surfaces", () => {
     assert.equal(discover.includes('?? "Influencer"'), false);
     assert.match(discover, /filterCreators\(directory\.creators/);
     assert.equal(discover.includes("searchCreators"), false);
+    const categories = source("src/app/categories/page.tsx");
+    const collab = source("src/app/collaboration/page.tsx");
+    const business = source("src/components/business-marketing.tsx");
+    assert.equal(home.includes("publicCategoryImage"), false);
+    assert.equal(categories.includes("publicCategoryImage"), false);
+    assert.equal(collab.includes("directory.creators.slice(0, 6)"), false);
+    assert.match(collab, /hero\.images/);
+    assert.match(business, /hero\.images/);
+    assert.match(business, /whyChoose\.image/);
     assert.equal(account.includes('|| "Influencer"'), false);
     assert.equal(mentors.includes('?? "Global"'), false);
   });

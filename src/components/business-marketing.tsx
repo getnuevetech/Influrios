@@ -98,29 +98,20 @@ export function BusinessMarketingPage({
           </div>
 
           <div className="relative mx-auto hidden h-[380px] w-full max-w-md lg:block">
-            {recommended[0] ? (
-              <div className="absolute inset-y-4 right-0 w-[70%] overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#111A5A] to-[#633CFF] shadow-2xl ring-4 ring-white">
-                {recommended[0].image ? (
-                  <Image src={recommended[0].image} alt="" fill className="object-cover" sizes="320px" />
-                ) : null}
-              </div>
-            ) : null}
-            {recommended.slice(1, 4).map((item, index) => (
+            {hero.images.map((src, index) => (
               <div
-                key={item.slug}
-                className={`absolute overflow-hidden rounded-2xl border border-white bg-white p-2 shadow-xl ${
+                key={src}
+                className={`absolute overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#111A5A] to-[#633CFF] shadow-2xl ring-4 ring-white ${
                   index === 0
-                    ? "left-0 top-8 w-44"
+                    ? "inset-y-4 right-0 w-[70%]"
                     : index === 1
-                      ? "bottom-16 left-4 w-40"
-                      : "bottom-4 right-8 w-36"
+                      ? "left-0 top-8 h-28 w-44"
+                      : index === 2
+                        ? "bottom-16 left-4 h-24 w-40"
+                        : "bottom-4 right-8 h-24 w-36"
                 }`}
               >
-                <div className="relative h-20 overflow-hidden rounded-xl bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
-                  {item.image ? <Image src={item.image} alt="" fill className="object-cover" sizes="160px" /> : null}
-                </div>
-                <p className="mt-2 truncate text-xs font-bold text-indigo">{item.displayName}</p>
-                {item.specialty ? <p className="truncate text-[10px] text-muted">{item.specialty}</p> : null}
+                <Image src={src} alt="" fill className="object-cover" sizes="320px" />
               </div>
             ))}
             <div className="absolute left-2 top-1/2 max-w-[170px] -translate-y-1/2 rounded-2xl bg-violet px-3 py-2 text-[11px] font-bold text-white shadow-lg">
@@ -240,8 +231,8 @@ export function BusinessMarketingPage({
             </ul>
           </div>
           <div className="relative h-72 overflow-hidden rounded-[2rem] shadow-xl">
-            {recommended[1] ? (
-              <Image src={recommended[1].image} alt="" fill className="object-cover" sizes="520px" />
+            {landing.whyChoose.image ? (
+              <Image src={landing.whyChoose.image} alt="" fill className="object-cover" sizes="520px" />
             ) : (
               <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#633CFF] to-[#2979FF] text-white">
                 <IconUsers size={40} />
