@@ -275,7 +275,9 @@ describe("entered fee rule facts", () => {
 
     const actions = readFileSync("src/app/admin/actions.ts", "utf8");
     const page = readFileSync("src/app/admin/fees/page.tsx", "utf8");
+    const funding = readFileSync("src/app/admin/marketplace/[fundingId]/page.tsx", "utf8");
     assert.equal(actions.includes("Untitled rule"), false);
+    assert.equal(funding.includes("Untitled rule"), false);
     assert.equal(actions.includes('|| "US"'), false);
     assert.equal(actions.includes('|| "contracted"'), false);
     assert.equal(actions.includes('|| "brand"'), false);
