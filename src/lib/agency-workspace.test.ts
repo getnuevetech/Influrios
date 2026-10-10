@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { agencyWorkspaceIdForOwner, parsePortfolioMetricLines } from "./agency";
+import { agencyWorkspaceIdForOwner, agencyWorkspaceNotes, parsePortfolioMetricLines } from "./agency";
 
 describe("agency workspace identity", () => {
   it("gives each owner a distinct workspace id and never the shared demo id", () => {
@@ -39,5 +39,9 @@ describe("agency workspace identity", () => {
     assert.equal(admin.includes("Admin added"), false);
     assert.equal(admin.includes('defaultValue="Project"'), false);
     assert.equal(member.includes('defaultValue="Project"'), false);
+    assert.equal(agency.includes("Admin-created agency workspace"), false);
+    assert.equal(agencyWorkspaceNotes("  Roster note  "), "Roster note");
+    assert.equal(agencyWorkspaceNotes("   "), "");
+    assert.equal(agencyWorkspaceNotes(), "");
   });
 });
