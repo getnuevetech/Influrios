@@ -19,6 +19,7 @@ import {
   updateBrief,
   updateInquiryStatus,
   addToShortlist,
+  enteredNote,
 } from "@/lib/business";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import {
@@ -169,7 +170,7 @@ export async function actionPostBusinessRequest(formData: FormData) {
 export async function actionAddShortlist(formData: FormData) {
   const { ws } = await requireBusinessAccount();
   const slug = String(formData.get("slug") ?? "");
-  const note = String(formData.get("note") ?? "") || undefined;
+  const note = enteredNote(String(formData.get("note") ?? ""));
   const result = await addToShortlist(slug, note, ws.businessId);
   revalidateHub();
   revalidatePath(`/creators/${slug}`);
@@ -227,7 +228,7 @@ export async function actionDeclineInquiry(formData: FormData) {
 export async function actionShortlistFromInquiry(formData: FormData) {
   const { ws } = await requireBusinessAccount();
   const slug = String(formData.get("creatorSlug") ?? "");
-  const note = String(formData.get("note") ?? "") || "Shortlisted from inquiry";
+  const note = enteredNote(String(formData.get("note") ?? ""));
   const result = await addToShortlist(slug, note, ws.businessId);
   revalidateHub();
   revalidatePath(`/creators/${slug}`);
@@ -279,7 +280,7 @@ export async function actionInviteCreatorToRequest(formData: FormData) {
       businessRequestId: target.id,
       fromUserId: account.id,
       toSlug: creatorSlug,
-      note: note || `Invitation from ${ws.name}`,
+      note: enteredNote(note),
     });
   } catch (error) {
     redirect(
