@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   buildFinancialPlan,
   canFundContract,
   CONTRACT_WIZARD_STEPS,
+  contractWizardFields,
   countryCodeFromLocation,
   customMilestonesGate,
   evaluatePreContractGates,
@@ -223,5 +225,75 @@ describe("form helpers", () => {
     assert.equal(countryCodeFromLocation("United Kingdom"), "GB");
     assert.equal(countryCodeFromLocation("ng"), "NG");
     assert.equal(countryCodeFromLocation(""), null);
+  });
+
+  it("drops a blank milestone row", () => {
+    assert.deepEqual(
+      parseMilestoneDraftsFromForm({
+        titles: ["Kickoff", "", "Publish"],
+        percents: ["40", "", "60"],
+      }),
+      [
+        { title: "Kickoff", shareBps: 4000 },
+        { title: "Publish", shareBps: 6000 },
+      ],
+    );
+  });
+});
+
+describe("contract wizard fields", () => {
+  it("uses the creator country when it is configured and leaves the rest blank", () => {
+    const fields = contractWizardFields({
+      creatorCountryCode: "NG",
+      jurisdictionCodes: ["US", "NG"],
+    });
+    assert.equal(fields.title, "");
+    assert.equal(fields.scope, "");
+    assert.equal(fields.commercial, "");
+    assert.equal(fields.jurisdictionCode, "NG");
+    assert.equal(fields.serviceLevel, "");
+    assert.equal(fields.grossRaw, "");
+  });
+
+  it("does not invent a jurisdiction, amount, or service level", () => {
+    const fields = contractWizardFields({});
+    assert.equal(fields.jurisdictionCode, "");
+    assert.equal(fields.grossRaw, "");
+    assert.equal(fields.commercial, "");
+    assert.equal(fields.serviceLevel, "");
+  });
+
+  it("keeps the terms that were entered", () => {
+    const fields = contractWizardFields({
+      title: "Spring set",
+      scope: "Two reels",
+      commercial: "Barter",
+      jurisdiction: "gb",
+      serviceLevel: "managed_intro",
+      gross: "1200",
+      creatorCountryCode: "NG",
+      jurisdictionCodes: ["US", "NG", "GB"],
+    });
+    assert.equal(fields.title, "Spring set");
+    assert.equal(fields.scope, "Two reels");
+    assert.equal(fields.commercial, "Barter");
+    assert.equal(fields.jurisdictionCode, "GB");
+    assert.equal(fields.serviceLevel, "managed_intro");
+    assert.equal(fields.grossRaw, "1200");
+  });
+
+  it("does not prefill a sample contract", () => {
+    const files = [
+      "src/app/collaboration/contract/page.tsx",
+      "src/app/collaboration/contract/actions.ts",
+    ];
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      assert.equal(text.includes("Kickoff brief"), false, file);
+      assert.equal(text.includes("Deliverables, channels, usage rights, and revision limits"), false, file);
+      assert.equal(text.includes('?? "5000"'), false, file);
+      assert.equal(text.includes('?? "US"'), false, file);
+      assert.equal(text.includes("Paid brand partnership"), false, file);
+    }
   });
 });

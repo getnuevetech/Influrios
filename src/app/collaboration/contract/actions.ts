@@ -6,11 +6,12 @@ import { getAccountSession } from "@/lib/accounts";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace } from "@/lib/business";
 import { assertCollabOsV1 } from "@/lib/collab-os";
-import { asServiceLevel, resolveFee } from "@/lib/collaboration-fees";
+import { resolveFee } from "@/lib/collaboration-fees";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   buildFinancialPlan,
   canFundContract,
+  contractWizardFields,
   countryCodeFromLocation,
   customMilestonesGate,
   evaluatePreContractGates,
@@ -89,9 +90,11 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const scope = String(formData.get("scope") ?? "").trim();
   const commercial = String(formData.get("commercial") ?? "").trim();
-  const jurisdictionCode = String(formData.get("jurisdictionCode") ?? "US").trim().toUpperCase() || "US";
-  const serviceLevelRaw = asServiceLevel(String(formData.get("serviceLevel") ?? "contracted"));
-  const serviceLevel = serviceLevelRaw === "*" ? "contracted" : serviceLevelRaw;
+  const jurisdictionCode = String(formData.get("jurisdictionCode") ?? "").trim().toUpperCase();
+  const serviceLevel = contractWizardFields({
+    jurisdiction: jurisdictionCode,
+    serviceLevel: String(formData.get("serviceLevel") ?? ""),
+  }).serviceLevel;
   const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
   const usingCustom = formData.get("milestoneMode") === "custom";
   const influencerAccepted = formData.get("influencerAccepted") === "on";
@@ -117,6 +120,8 @@ export async function actionSubmitContractWizard(formData: FormData) {
   if (!creatorSlug || !title || !scope || grossCents <= 0) {
     redirectError("Add the influencer, title, scope, and a gross amount.", qs);
   }
+  if (!jurisdictionCode) redirectError("Choose a jurisdiction.", qs);
+  if (!serviceLevel) redirectError("Choose a collaboration service level.", qs);
 
   const creator = await getDirectoryCreator(creatorSlug);
   if (!creator) redirectError("That influencer was not found in the directory.", qs);
