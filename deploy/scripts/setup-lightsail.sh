@@ -73,7 +73,10 @@ sudo nginx -t
 sudo systemctl enable nginx
 sudo systemctl reload nginx
 
-echo "==> [8/8] Done"
+echo "==> [8/8] Swap for Docker image builds"
+sudo bash "${SCRIPT_DIR}/ensure-swap.sh"
+
+echo "==> [9/9] Done"
 cat <<EOF
 
 Docker is the process manager for Influrios (web + postgres).

@@ -28,6 +28,15 @@ const nextConfig: NextConfig = {
     // so the image route cannot fetch arbitrary hosts.
     remotePatterns: [],
   },
+  webpack: (config, { dev }) => {
+    // The Docker builder has a 1024 MB heap and shares a small Lightsail box
+    // with Postgres. An in-memory webpack cache pushes that build over the edge.
+    if (!dev && dockerBuild) {
+      config.cache = false;
+      config.parallelism = 1;
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -47,9 +47,9 @@ fi
 
 echo "==> Ensure swap (avoids Next.js webpack OOM on small Lightsail)"
 if [[ "$(id -u)" -eq 0 ]]; then
-  bash deploy/scripts/ensure-swap.sh || true
+  bash deploy/scripts/ensure-swap.sh
 else
-  sudo bash deploy/scripts/ensure-swap.sh || true
+  sudo bash deploy/scripts/ensure-swap.sh
 fi
 
 if command -v git >/dev/null 2>&1 && [[ -d .git ]]; then
@@ -59,10 +59,21 @@ if command -v git >/dev/null 2>&1 && [[ -d .git ]]; then
   fi
 fi
 
-echo "==> Build & start containers (postgres + web)"
-docker compose up -d --build postgres
+avail_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)"
+echo "==> Memory available: ${avail_kb} kB"
+# Postgres and Meilisearch stay up across a normal deploy. On a 2 GB box they
+# leave too little RAM for `next build`, and the kernel kills the builder.
+if [[ "${avail_kb}" -lt 2000000 ]]; then
+  echo "==> Stopping web, Postgres, and Meilisearch so the image build can use the RAM."
+  docker compose stop web meilisearch postgres || true
+fi
+
+echo "==> Build web image"
+docker compose build --progress=plain web
+
+echo "==> Start databases, then web"
 bash deploy/scripts/db-up.sh
-docker compose up -d --build web
+docker compose up -d meilisearch web
 
 echo "==> Wait for web healthy on :3000"
 ok=0
