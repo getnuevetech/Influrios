@@ -591,7 +591,6 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                         </p>
                         <form action={actionApplyToBusinessRequest} className="mt-2">
                           <input type="hidden" name="requestId" value={item.id} />
-                          <input type="hidden" name="note" value={`Apply from hub · ${creator.displayName}`} />
                           <button type="submit" className="btn-primary !px-3 !py-1 text-[11px]">
                             Apply
                           </button>
@@ -628,7 +627,6 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                         <form action={actionApplyToCreatorOpportunity} className="mt-2">
                           <input type="hidden" name="opportunityId" value={item.id} />
                           <input type="hidden" name="toSlug" value={item.creatorSlug} />
-                          <input type="hidden" name="note" value={`Connect from hub · ${creator.displayName}`} />
                           <button type="submit" className="btn-primary !px-3 !py-1 text-[11px]">
                             Connect / Apply
                           </button>
@@ -658,9 +656,9 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                       <p className="mt-1 text-[10px] font-semibold uppercase text-violet">
                         {application.status}
                       </p>
-                      <p className="mt-1 line-clamp-2 text-[11px] text-muted">
-                        {application.note ?? "Marketplace application"}
-                      </p>
+                      {application.note?.trim() ? (
+                        <p className="mt-1 line-clamp-2 text-[11px] text-muted">{application.note}</p>
+                      ) : null}
                       <div className="mt-2 flex flex-wrap gap-2">
                         {application.nextStatuses.map((status) => (
                             <form key={status} action={actionCreatorTransitionApplication}>

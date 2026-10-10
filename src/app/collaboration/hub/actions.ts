@@ -6,6 +6,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { consumeGuestQuota } from "@/lib/guest-usage";
+import { enteredNote } from "@/lib/business";
 import {
   createMarketplaceApplication,
   creatorOwnsApplication,
@@ -50,7 +51,7 @@ export async function actionApplyToBusinessRequest(formData: FormData) {
       businessRequestId: requestId,
       fromUserId: account.id,
       fromSlug: draft.slug,
-      note: note || `Application from ${draft.slug}`,
+      note: enteredNote(note),
     });
   } catch (error) {
     redirect(
@@ -90,7 +91,7 @@ export async function actionApplyToCreatorOpportunity(formData: FormData) {
       fromUserId: account.id,
       fromSlug: draft.slug,
       toSlug: toSlug || undefined,
-      note: note || `Connect from hub · ${draft.slug}`,
+      note: enteredNote(note),
     });
   } catch (error) {
     redirect(

@@ -384,8 +384,6 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   const followers = creator.socials.reduce((sum, social) => sum + social.followers, 0);
                   const engagement = creator.stats?.engagementRate?.trim() ?? "";
                   const showEngagement = engagement.length > 0 && engagement !== "—";
-                  const intentTitle = hub.intentBrief?.title?.trim() ?? "";
-                  const intentGoal = hub.intentBrief?.goal?.trim() ?? "";
                   return (
                   <article key={creator.slug} className="overflow-hidden rounded-2xl border border-[#E4E9F5] bg-[#F8FAFF] shadow-sm">
                     <div className="relative h-28 bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
@@ -415,24 +413,23 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                         </Link>
                         <form action={actionAddShortlist}>
                           <input type="hidden" name="slug" value={creator.slug} />
-                          {intentTitle ? (
-                            <input type="hidden" name="note" value={`Suggested for ${intentTitle}`} />
-                          ) : null}
                           <button type="submit" className="btn-secondary !px-3 !py-1.5 text-[11px]">
                             Shortlist
                           </button>
                         </form>
-                        <form action={actionSendInquiry}>
+                        <form action={actionSendInquiry} className="basis-full">
                           <input type="hidden" name="creatorSlug" value={creator.slug} />
                           {hub.intentBrief ? (
                             <input type="hidden" name="briefId" value={hub.intentBrief.id} />
                           ) : null}
-                          <input
-                            type="hidden"
+                          <textarea
                             name="message"
-                            value={`Hi ${creator.displayName} — we'd love to collaborate${intentGoal ? ` on ${intentGoal}` : ""}.`}
+                            required
+                            rows={2}
+                            placeholder="Write a message"
+                            className="w-full rounded-xl border border-border px-2 py-1 text-[11px] font-normal"
                           />
-                          <button type="submit" className="btn-secondary !px-3 !py-1.5 text-[11px]">
+                          <button type="submit" className="btn-secondary mt-1 !px-3 !py-1.5 text-[11px]">
                             Inquire
                           </button>
                         </form>
@@ -446,11 +443,6 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                           <form action={actionInviteCreatorToRequest}>
                             <input type="hidden" name="creatorSlug" value={creator.slug} />
                             <input type="hidden" name="requestId" value={hub.ownRequests[0].id} />
-                            <input
-                              type="hidden"
-                              name="note"
-                              value={intentTitle ? `Invited from suggestions for ${intentTitle}` : "Invited from suggestions"}
-                            />
                             <button type="submit" className="btn-secondary !px-3 !py-1.5 text-[11px]">
                               Invite
                             </button>
@@ -578,9 +570,11 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                         <p className="text-sm font-bold text-indigo">
                           {creator?.displayName ?? application.creatorSlug ?? "Applicant"}
                         </p>
-                        <p className="text-[11px] text-muted">
-                          {application.requestBrand ?? "Request"} · {application.note ?? "Marketplace application"}
-                        </p>
+                        {[application.requestBrand?.trim(), application.note?.trim()].filter(Boolean).length > 0 ? (
+                          <p className="text-[11px] text-muted">
+                            {[application.requestBrand?.trim(), application.note?.trim()].filter(Boolean).join(" · ")}
+                          </p>
+                        ) : null}
                         <p className="mt-1 text-[10px] font-semibold uppercase text-violet">
                           {application.status}
                         </p>
@@ -662,11 +656,6 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             ) : null}
                             <form action={actionShortlistFromInquiry}>
                               <input type="hidden" name="creatorSlug" value={inquiry.creatorSlug} />
-                              <input
-                                type="hidden"
-                                name="note"
-                                value={`From inquiry · ${inquiry.status}`}
-                              />
                               <button type="submit" className="rounded-lg border border-violet/30 px-2.5 py-1 text-[11px] font-bold text-violet">
                                 Shortlist
                               </button>
@@ -687,7 +676,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                       name="message"
                       required
                       rows={2}
-                      defaultValue={`Hi ${hub.suggestions[0].creator.displayName} — we'd love to collaborate${hub.intentBrief?.goal?.trim() ? ` on ${hub.intentBrief.goal.trim()}` : ""}.`}
+                      placeholder="Write a message"
                       className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
                     />
                   </label>
@@ -722,7 +711,12 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                         <Link href={`/creators/${creator.slug}`} className="text-sm font-bold text-indigo hover:underline">
                           {creator.displayName}
                         </Link>
-                        <p className="truncate text-[11px] text-muted">{item.note ?? creator.title}</p>
+                        {creator.title?.trim() ? (
+                          <p className="truncate text-[11px] text-muted">{creator.title}</p>
+                        ) : null}
+                        {item.note?.trim() ? (
+                          <p className="truncate text-[11px] text-muted">{item.note}</p>
+                        ) : null}
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <Link
@@ -735,7 +729,6 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                           <form action={actionInviteCreatorToRequest}>
                             <input type="hidden" name="creatorSlug" value={creator.slug} />
                             <input type="hidden" name="requestId" value={hub.ownRequests[0].id} />
-                            <input type="hidden" name="note" value={`Invited from shortlist`} />
                             <button type="submit" className="text-[11px] font-bold text-violet hover:underline">
                               Invite
                             </button>

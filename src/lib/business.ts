@@ -266,6 +266,12 @@ export async function setBusinessPlan(plan: string, workspaceId: string) {
   return readWorkspace(workspaceId);
 }
 
+/** A shortlist or application note is stored only when it was entered. */
+export function enteredNote(value: string | null | undefined): string | undefined {
+  const note = (value ?? "").trim();
+  return note.length > 0 ? note : undefined;
+}
+
 export async function addToShortlist(
   creatorSlug: string,
   note: string | undefined,
@@ -286,7 +292,7 @@ export async function addToShortlist(
   }
   try {
     await prisma.businessShortlistItem.create({
-      data: { workspaceId, creatorSlug, note },
+      data: { workspaceId, creatorSlug, note: enteredNote(note) ?? null },
     });
   } catch (error) {
     if (!isUnique(error)) throw error;
@@ -433,6 +439,10 @@ export async function sendInquiry(
       error: `Monthly inquiry limit reached (${limits.inquiryMaxPerMonth}). Upgrade for higher limits.`,
     };
   }
+  const message = input.message.trim();
+  if (!message) {
+    return { ok: false as const, error: "Write an inquiry message." };
+  }
   const brief =
     input.briefId && ws.briefs.some((item) => item.id === input.briefId) ? input.briefId : undefined;
   const inquiry = await prisma.businessInquiry.create({
@@ -440,7 +450,7 @@ export async function sendInquiry(
       workspaceId,
       briefId: brief,
       creatorSlug: input.creatorSlug,
-      message: input.message,
+      message,
       status: "sent",
     },
   });
