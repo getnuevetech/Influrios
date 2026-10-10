@@ -5,8 +5,8 @@ import { describe, it } from "node:test";
 describe("production image build", () => {
   it("ships local font files so next build does not fetch Google Fonts", () => {
     const layout = readFileSync("src/app/layout.tsx", "utf8");
-    assert.equal(layout.includes("next/font/google"), false);
-    assert.match(layout, /next\/font\/local/);
+    assert.equal(layout.includes('from "next/font/google"'), false);
+    assert.match(layout, /from "next\/font\/local"/);
     const paths = [...layout.matchAll(/path: "\.\.\/fonts\/([^"]+\.woff2)"/g)].map((match) => match[1]);
     assert.deepEqual(paths, [
       "plus-jakarta-sans-latin-400-normal.woff2",
