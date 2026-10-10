@@ -95,7 +95,13 @@ if [[ "$ok" -ne 1 ]]; then
 fi
 
 echo "OK: app responding on :3000"
-curl -fsSI "http://127.0.0.1/" | head -5 || true
+# A request to http://127.0.0.1/ sends Host 127.0.0.1. That hits nginx's
+# default site, which is a 162-byte 404, and does not reach the app.
+# The Influrios vhost is the public hostname in NEXT_PUBLIC_APP_URL.
+if [[ -n "${NEXT_PUBLIC_APP_URL:-}" ]]; then
+  echo "==> ${NEXT_PUBLIC_APP_URL}"
+  curl -fsSI "${NEXT_PUBLIC_APP_URL}" | head -8 || echo "WARN: ${NEXT_PUBLIC_APP_URL} did not respond"
+fi
 docker compose ps
 
 echo

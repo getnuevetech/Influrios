@@ -23,5 +23,6 @@ cd ${APP_DIR}
 git pull origin main
 bash deploy/scripts/deploy.sh
 curl -fsS http://127.0.0.1:3000/api/health
-curl -I http://127.0.0.1/
+# http://127.0.0.1/ is nginx's default site (404). Check the public host.
+curl -fsSI "\${NEXT_PUBLIC_APP_URL:-https://influrios.com}"
 EOF
