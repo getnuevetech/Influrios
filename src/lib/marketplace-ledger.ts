@@ -42,6 +42,14 @@ import { splitMilestoneRelease } from "@/lib/account-purpose";
 
 const PROVIDER_CODE = "primary";
 
+/** A marketplace provider shows the stored name. A blank name shows the code. */
+export function marketplaceProviderLabel(name: string | null | undefined, code: string): string {
+  const stored = (name ?? "").trim();
+  const storedCode = code.trim();
+  if (stored && storedCode) return `${stored} (${storedCode})`;
+  return stored || storedCode;
+}
+
 let grossCapForTests: number | null = null;
 let changeOrdersForTests: boolean | null = null;
 
@@ -165,7 +173,7 @@ export async function ensureMarketplaceDefaults() {
   await prisma.integrationProvider.upsert({
     where: { kind_code: { kind: "marketplace", code: PROVIDER_CODE } },
     update: {},
-    create: { kind: "marketplace", code: PROVIDER_CODE, name: "Marketplace provider", enabled: false },
+    create: { kind: "marketplace", code: PROVIDER_CODE, name: "", enabled: false },
   });
   const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
   if (settings?.templatesSeeded) return;
@@ -221,14 +229,14 @@ export async function marketplaceConfig() {
     provider: {
       id: provider?.id ?? "",
       code: provider?.code ?? PROVIDER_CODE,
-      name: provider?.name ?? "Marketplace provider",
+      name: provider?.name?.trim() ?? "",
       enabled: provider?.enabled ?? false,
       webhook: provider?.webhookCipher ? ("saved" as const) : ("missing" as const),
       ready: Boolean(provider?.enabled && provider.webhookCipher),
     },
     providers: providers.map((row) => ({
       code: row.code,
-      name: row.name,
+      name: row.name.trim(),
       enabled: row.enabled,
       webhook: row.webhookCipher ? ("saved" as const) : ("missing" as const),
       ready: marketplaceProviderCanConfirm(row.code) && Boolean(row.enabled && row.webhookCipher),

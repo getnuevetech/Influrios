@@ -239,7 +239,7 @@ export async function getFundingTransactionView(
     provider: {
       code: funding.providerCode,
       ready: providerReady,
-      name: providerRow?.name ?? config?.provider?.name ?? null,
+      name: providerRow?.name?.trim() || config?.provider?.name?.trim() || null,
     },
     milestones: funding.milestones.map((m) => ({
       id: m.id,
