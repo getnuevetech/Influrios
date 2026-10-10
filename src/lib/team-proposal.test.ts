@@ -103,8 +103,35 @@ describe("team proposals", () => {
     });
     assert.equal(rows.filter((row) => row.matchType === "BUSINESS_CREATOR_TEAM").length, 2);
     assert.equal(rows.filter((row) => row.matchType === "CREATOR_TEAM").length, 1);
-    assert.equal(rows.every((row) => row.reasons.includes("Team proposal")), true);
-    assert.equal(rows[0]?.why, "Launch the spring set");
+    assert.equal(rows.every((row) => row.why === "Launch the spring set"), true);
+    assert.equal(rows.every((row) => row.score === 0), true);
+    assert.deepEqual(rows[0]?.reasons, ["Launch the spring set"]);
+  });
+
+  it("does not invent a match score or a team-proposal explanation", () => {
+    const rows = teamMatchRows({
+      workspaceId: "ws_1",
+      campaignIntent: "  ",
+      members: [{ creatorSlug: "a" }, { creatorSlug: "b" }],
+    });
+    assert.equal(rows.length, 3);
+    assert.equal(rows.every((row) => row.why === ""), true);
+    assert.equal(rows.every((row) => row.reasons.length === 0), true);
+    assert.equal(rows.every((row) => row.score === 0), true);
+    const href = wizardHrefForProposal({
+      id: "prop_3",
+      status: "accepted",
+      title: "Spring launch",
+      campaignIntent: "",
+      members: [
+        { creatorSlug: "a", status: "accepted", shareBps: 5000 },
+        { creatorSlug: "b", status: "accepted", shareBps: 5000 },
+      ],
+    });
+    assert.equal((href ?? "").includes("scope="), false);
+    const source = readFileSync("src/lib/team-proposal.ts", "utf8");
+    assert.equal(source.includes('|| "Team proposal"'), false);
+    assert.equal(source.includes("score: 80"), false);
   });
 
   it("refuses to drop a member from a sent proposal", () => {
