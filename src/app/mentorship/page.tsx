@@ -157,10 +157,11 @@ export default async function MentorshipPage({ searchParams }: Props) {
                     <p className="text-[11px] text-violet">
                       {EXPERIENCE_BAND_LABELS[mentor.band]} · {formatFollowers(mentor.followers)}
                     </p>
-                    <p className="text-[11px] text-muted">
-                      {mentor.locationCountry ?? "Global"}
-                      {mentor.niches.length ? ` · ${mentor.niches.slice(0, 3).join(", ")}` : ""}
-                    </p>
+                    {mentor.locationCountry || mentor.niches.length ? (
+                      <p className="text-[11px] text-muted">
+                        {[mentor.locationCountry, mentor.niches.slice(0, 3).join(", ")].filter(Boolean).join(" · ")}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 {mentor.headline ? <p className="mt-3 text-sm text-indigo">{mentor.headline}</p> : null}

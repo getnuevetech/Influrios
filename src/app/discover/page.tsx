@@ -205,9 +205,11 @@ export default async function DiscoverPage({ searchParams }: Props) {
                 }`}
               >
                 <Image src={creator.image} alt={creator.displayName} fill className="object-cover" sizes="140px" />
-                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-8 text-[10px] font-bold uppercase tracking-wide text-white">
-                  {creator.specialties[0]?.replace("-", " ") ?? "Influencer"}
-                </span>
+                {creator.specialties[0] ? (
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-8 text-[10px] font-bold uppercase tracking-wide text-white">
+                    {creator.specialties[0].replace("-", " ")}
+                  </span>
+                ) : null}
               </Link>
             ))}
             <p className="absolute bottom-2 right-4 max-w-[10rem] text-right font-script text-xl text-indigo">

@@ -74,6 +74,17 @@ describe("public sample surfaces", () => {
     assert.match(business, /publicStoredImage/);
   });
 
+  it("does not label a blank specialty, title, or country", () => {
+    const home = source("src/app/page.tsx");
+    const discover = source("src/app/discover/page.tsx");
+    const account = source("src/app/creator/page.tsx");
+    const mentors = source("src/app/mentorship/page.tsx");
+    assert.equal(home.includes(': "Creator"'), false);
+    assert.equal(discover.includes('?? "Influencer"'), false);
+    assert.equal(account.includes('|| "Influencer"'), false);
+    assert.equal(mentors.includes('?? "Global"'), false);
+  });
+
   it("does not insert sample marketplace rows on a read", () => {
     const listings = source("src/lib/marketplace-listings.ts");
     assert.equal(listings.includes("await ensureMarketplaceListings()"), false);

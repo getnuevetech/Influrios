@@ -82,7 +82,9 @@ export default async function CreatorHomePage() {
                 <div className="min-w-0 flex-1">
                   <h2 className="font-display text-2xl font-bold">{creator.displayName}</h2>
                   <p className="text-sm text-muted">@{creator.slug}</p>
-                  <p className="mt-1 text-sm text-indigo/80">{creator.title || "Influencer"}</p>
+                  {(creator.title ?? "").trim() ? (
+                    <p className="mt-1 text-sm text-indigo/80">{creator.title}</p>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap gap-2">
                     {creator.specialties.map((row) => (
                       <span key={row.id} className="rounded-full bg-[#E8F0FF] px-2.5 py-1 text-xs font-semibold text-[#2F5FD0]">
