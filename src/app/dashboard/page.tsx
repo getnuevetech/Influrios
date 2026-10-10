@@ -324,15 +324,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 <span className="font-semibold text-indigo">How do you describe yourself?</span>
                 <select
                   name="title"
-                  defaultValue={
-                    selfDescriptions.includes(draft.title)
-                      ? draft.title
-                      : draft.title
-                        ? draft.title
-                        : "Influencer"
-                  }
+                  required
+                  defaultValue={draft.title.trim() ? draft.title : ""}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2"
                 >
+                  <option value="">Choose how you describe yourself</option>
                   {!selfDescriptions.includes(draft.title) && draft.title ? (
                     <option value={draft.title}>{draft.title} (current)</option>
                   ) : null}

@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { claimDraftProfile, claimPublishBlockers, draftToSeedCreator, guessSpecialty, type ClaimDraft } from "./claim";
+import {
+  claimDraftProfile,
+  claimPublishBlockers,
+  draftToSeedCreator,
+  enteredSelfDescription,
+  guessSpecialty,
+  type ClaimDraft,
+} from "./claim";
 
 function draft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
   return {
@@ -67,6 +74,37 @@ describe("claim draft facts", () => {
     assert.equal(claim.includes('handle = "influencer"'), false);
     assert.equal(page.includes("SOCIAL_HINTS[0]"), false);
     assert.equal(preview.includes('? "Influencer"'), false);
+  });
+
+  it("stores the self-description that was chosen", () => {
+    const allowed = ["Influencer", "Content Creator", "Other"];
+    const chosen = enteredSelfDescription("Content Creator", allowed);
+    assert.equal(chosen.ok, true);
+    if (chosen.ok) assert.equal(chosen.title, "Content Creator");
+
+    const exact = enteredSelfDescription("Influencer", allowed);
+    assert.equal(exact.ok, true);
+    if (exact.ok) assert.equal(exact.title, "Influencer");
+
+    const blank = enteredSelfDescription("  ", allowed);
+    assert.equal(blank.ok, false);
+    if (!blank.ok) assert.equal(blank.error, "Choose how you describe yourself.");
+
+    const unknown = enteredSelfDescription("Influencer", ["Content Creator"]);
+    assert.equal(unknown.ok, false);
+    if (!unknown.ok) assert.equal(unknown.error, "Choose how you describe yourself.");
+
+    const current = enteredSelfDescription("Educator", ["Content Creator", "Educator"]);
+    assert.equal(current.ok, true);
+    if (current.ok) assert.equal(current.title, "Educator");
+
+    const actions = readFileSync("src/app/claim/actions.ts", "utf8");
+    const dashboard = readFileSync("src/app/dashboard/page.tsx", "utf8");
+    assert.equal(actions.includes('? "Influencer"'), false);
+    assert.equal(actions.includes(': "Influencer"'), false);
+    assert.equal(actions.includes("selfDescriptions[0]"), false);
+    assert.equal(dashboard.includes('? "Influencer"'), false);
+    assert.equal(dashboard.includes(': "Influencer"'), false);
   });
 
   it("suggests a specialty only when the handle names one", () => {
