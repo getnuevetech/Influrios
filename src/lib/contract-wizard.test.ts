@@ -150,6 +150,7 @@ describe("financial plan snapshot", () => {
   it("locks fee rule version and ignores later rule edits", () => {
     const plan = buildFinancialPlan({
       grossCents: 10_000_00,
+      currency: "USD",
       totalPlatformFeeCents: 750_00,
       feeRuleId: "rule_default_contracted",
       feeRuleVersion: 1,
@@ -167,6 +168,8 @@ describe("financial plan snapshot", () => {
       milestoneSource: "template",
     });
     assert.ok(plan);
+    assert.equal(plan!.contractCurrency, "USD");
+    assert.equal(plan!.payoutCurrency, "USD");
     assert.equal(plan!.grossContractValueCents, 10_000_00);
     assert.equal(
       plan!.milestones.reduce((sum, row) => sum + row.grossCents, 0),
@@ -203,6 +206,45 @@ describe("financial plan snapshot", () => {
     });
     assert.equal(canFundContract({ gates, milestones, accepted: false }).ok, false);
     assert.equal(canFundContract({ gates, milestones, accepted: true }).ok, true);
+  });
+
+  it("keeps the currency that was entered", () => {
+    const plan = buildFinancialPlan({
+      grossCents: 10_000,
+      currency: "gbp",
+      payoutCurrency: "NGN",
+      totalPlatformFeeCents: 0,
+      fundingCountry: "GB",
+      creatorCountry: "NG",
+      milestones: [
+        { title: "Delivery", shareBps: 6000 },
+        { title: "Publish", shareBps: 4000 },
+      ],
+      milestoneSource: "template",
+    });
+    assert.ok(plan);
+    assert.equal(plan!.contractCurrency, "GBP");
+    assert.equal(plan!.payoutCurrency, "NGN");
+    assert.equal(
+      buildFinancialPlan({
+        grossCents: 10_000,
+        totalPlatformFeeCents: 0,
+        fundingCountry: "GB",
+        creatorCountry: "NG",
+        milestones: [
+          { title: "Delivery", shareBps: 6000 },
+          { title: "Publish", shareBps: 4000 },
+        ],
+        milestoneSource: "template",
+      }),
+      null,
+    );
+    const wizard = readFileSync("src/lib/contract-wizard.ts", "utf8");
+    const page = readFileSync("src/app/collaboration/contract/page.tsx", "utf8");
+    const actions = readFileSync("src/app/collaboration/contract/actions.ts", "utf8");
+    assert.equal(wizard.includes('?? "USD"'), false);
+    assert.equal(page.includes('?? "USD"'), false);
+    assert.equal(actions.includes('?? "USD"'), false);
   });
 });
 

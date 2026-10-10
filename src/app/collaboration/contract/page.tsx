@@ -272,7 +272,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     grossCents > 0 && jurisdictionCode && effectiveServiceLevel && milestoneGate.ok
       ? buildFinancialPlan({
           grossCents,
-          currency: jurisdiction?.currency ?? "USD",
+          currency: jurisdiction?.currency,
           feeRuleId: quote?.rule?.id ?? null,
           feeRuleVersion: quote?.rule?.version ?? null,
           feeMethod: quote?.rule?.method ?? null,
@@ -282,27 +282,25 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           feePayer: quote?.rule?.payer ?? "brand",
           fundingCountry: jurisdictionCode,
           creatorCountry: creatorCountry ?? jurisdictionCode,
-          payoutCurrency: jurisdiction?.currency ?? "USD",
+          payoutCurrency: jurisdiction?.currency,
           milestones: enteredMilestones,
           milestoneSource: usingCustom ? "custom" : "template",
         })
       : null;
 
-  const payoutCurrency =
-    (payoutReadiness?.countryCode
-      ? DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === payoutReadiness.countryCode)?.currency
-      : null) ??
-    plan?.payoutCurrency ??
-    jurisdiction?.currency ??
-    "USD";
-  const feeFxQuote = plan
-    ? buildPayoutFeeFxQuote({
-        creatorGrossCents: plan.grossContractValueCents,
-        platformFeeCents: plan.totalPlatformFeeCents,
-        fundingCurrency: plan.contractCurrency,
-        payoutCurrency,
-      })
-    : null;
+  const routeCurrency = payoutReadiness?.countryCode
+    ? DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === payoutReadiness.countryCode)?.currency
+    : "";
+  const payoutCurrency = (routeCurrency || plan?.payoutCurrency || jurisdiction?.currency || "").trim().toUpperCase();
+  const feeFxQuote =
+    plan && /^[A-Z]{3}$/.test(payoutCurrency)
+      ? buildPayoutFeeFxQuote({
+          creatorGrossCents: plan.grossContractValueCents,
+          platformFeeCents: plan.totalPlatformFeeCents,
+          fundingCurrency: plan.contractCurrency,
+          payoutCurrency,
+        })
+      : null;
 
   const shortlisted = ws.shortlist
     .map((item) => creators.find((c) => c.slug === item.creatorSlug))
@@ -728,6 +726,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   })}
                 </ul>
               </>
+            ) : jurisdictionCode && !(jurisdiction?.currency ?? "").trim() ? (
+              <p className="mt-2 text-sm text-muted">That jurisdiction has no currency.</p>
             ) : (
               <p className="mt-2 text-sm text-muted">Complete parties, commercial terms, and valid milestones to preview.</p>
             )}

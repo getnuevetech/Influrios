@@ -178,6 +178,11 @@ export function canFundContract(input: {
   return { ok: true };
 }
 
+function currencyCode(value: string | null | undefined): string {
+  const code = (value ?? "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : "";
+}
+
 /** Build an immutable financial plan. Lock with lockedAt when parties accept. */
 export function buildFinancialPlan(input: {
   grossCents: number;
@@ -204,6 +209,11 @@ export function buildFinancialPlan(input: {
 }): CollaborationFinancialPlan | null {
   if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) return null;
   if (!Number.isInteger(input.totalPlatformFeeCents) || input.totalPlatformFeeCents < 0) return null;
+  const contractCurrency = currencyCode(input.currency);
+  if (!contractCurrency) return null;
+  const payoutRaw = (input.payoutCurrency ?? "").trim();
+  const payoutCurrency = payoutRaw ? currencyCode(payoutRaw) : contractCurrency;
+  if (!payoutCurrency) return null;
   const shares = validateMilestoneShares(input.milestones);
   if (!shares.ok) return null;
   const grossParts = splitGross(input.grossCents, input.milestones.map((m) => m.shareBps));
@@ -237,7 +247,7 @@ export function buildFinancialPlan(input: {
   const totalFee = milestones.reduce((sum, row) => sum + row.platformFeeCents, 0);
 
   return {
-    contractCurrency: (input.currency ?? "USD").toUpperCase(),
+    contractCurrency,
     grossContractValueCents: input.grossCents,
     feeRuleId: input.feeRuleId ?? null,
     feeRuleVersion: input.feeRuleVersion ?? null,
@@ -249,7 +259,7 @@ export function buildFinancialPlan(input: {
     feePayer: input.feePayer ?? "brand",
     fundingCountry: input.fundingCountry.trim().toUpperCase(),
     creatorCountry: input.creatorCountry.trim().toUpperCase(),
-    payoutCurrency: (input.payoutCurrency ?? input.currency ?? "USD").toUpperCase(),
+    payoutCurrency,
     providerRouteVersion: input.providerRouteVersion ?? "v1",
     roundingPolicy: "last_milestone_absorbs",
     contractVersion: input.contractVersion ?? 1,
