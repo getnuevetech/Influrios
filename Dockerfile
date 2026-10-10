@@ -33,15 +33,18 @@ ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
 RUN npx prisma generate
 # Repeat the end of the build log on failure. Docker shows that tail, so a
 # type error or heap OOM is visible instead of only the SWC directory listing.
+# ash on Alpine does not need pipefail here: the log is a redirect, and a
+# failing build always prints the tail. A kernel OOM shows up as "Killed".
 RUN echo "builder: DOCKER_BUILD=$DOCKER_BUILD NODE_OPTIONS=$NODE_OPTIONS" \
   && free -h || true \
   && node -e "require('@next/swc-linux-x64-musl'); console.log('OK: SWC musl')" \
-  && (set -o pipefail; npm run build 2>&1 | tee /tmp/next-build.log) \
+  && npm run build > /tmp/next-build.log 2>&1 \
   || (echo "==== BUILD FAILED — diagnostics ===="; \
-      if grep -q "heap out of memory\|FATAL ERROR\|JavaScript heap" /tmp/next-build.log 2>/dev/null; then \
-        echo "Hint: Node ran out of heap. Pull latest main, run deploy/scripts/ensure-swap.sh, then rebuild."; \
+      if grep -q "heap out of memory\|FATAL ERROR\|JavaScript heap\|^Killed" /tmp/next-build.log 2>/dev/null; then \
+        echo "Hint: the image build ran out of memory. On the host run: sudo bash deploy/scripts/ensure-swap.sh"; \
+        echo "Then stop databases and rebuild: docker compose stop web meilisearch postgres && docker compose build --progress=plain web && docker compose up -d"; \
       fi; \
-      tail -n 100 /tmp/next-build.log || true; \
+      tail -n 120 /tmp/next-build.log || true; \
       free -h || true; \
       exit 1)
 
