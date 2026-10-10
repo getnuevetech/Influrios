@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { PLAN_ENTITLEMENTS } from "./entitlements";
 import {
   COUNTED_PROPOSAL_STATUSES,
+  buildProposalFields,
   commercialChoices,
   decideProposalAllowance,
   normalizeCommercialOptions,
@@ -74,5 +76,51 @@ describe("collaboration admin copy", () => {
     assert.equal(normalizeCommercialOptions(" Paid \n\n Barter "), "Paid\nBarter");
     assert.equal(normalizeCommercialOptions("   "), null);
     assert.equal(commercialChoices("").length, 4);
+  });
+});
+
+describe("proposal fields", () => {
+  it("stores the entered title and scope and leaves a blank role and explanation blank", () => {
+    const fields = buildProposalFields({
+      title: "  Spring set  ",
+      scope: "Two reels and one live",
+      roleInitiator: "",
+      roleRecipient: "   ",
+      why: "",
+    });
+    assert.equal(fields.ok, true);
+    if (!fields.ok) return;
+    assert.equal(fields.title, "Spring set");
+    assert.equal(fields.scope, "Two reels and one live");
+    assert.equal(fields.roleInitiator, "");
+    assert.equal(fields.roleRecipient, "");
+    assert.equal(fields.why, "");
+  });
+
+  it("requires a title and a scope", () => {
+    const missing = buildProposalFields({
+      title: "  ",
+      scope: "Two reels",
+      roleInitiator: "Host",
+      roleRecipient: "Editor",
+      why: "Shared audience",
+    });
+    assert.equal(missing.ok, false);
+    if (!missing.ok) assert.match(missing.error, /title/);
+  });
+
+  it("does not invent a sample proposal on the form or the save path", () => {
+    const files = [
+      "src/lib/collaborations.ts",
+      "src/app/collaboration/propose/page.tsx",
+      "src/app/collaboration/records/[id]/page.tsx",
+    ];
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      assert.equal(text.includes("Joint content series"), false, file);
+      assert.equal(text.includes("Collaboration proposal"), false, file);
+      assert.equal(text.includes('|| "Influencer"'), false, file);
+      assert.equal(text.includes('|| "—"'), false, file);
+    }
   });
 });
