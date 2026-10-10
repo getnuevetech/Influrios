@@ -223,6 +223,18 @@ export function claimDraftProfile(input: string, preferredPlatform?: string):
   };
 }
 
+/** A profile self-description is the title that was chosen. */
+export function enteredSelfDescription(
+  requested: string,
+  allowed: readonly string[],
+): { ok: true; title: string } | { ok: false; error: string } {
+  const title = requested.trim();
+  if (!title || !allowed.includes(title)) {
+    return { ok: false, error: "Choose how you describe yourself." };
+  }
+  return { ok: true, title };
+}
+
 function platformUrl(platform: SeedSocial["platform"], handle: string) {
   if (platform === "TIKTOK") return `https://tiktok.com/@${handle}`;
   if (platform === "YOUTUBE") return `https://youtube.com/@${handle}`;

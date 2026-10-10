@@ -13,6 +13,7 @@ import {
   addDraftSocial,
   claimDraft,
   createDraftFromHandle,
+  enteredSelfDescription,
   publishDraft,
   setCreatorSession,
   updateDraftProfile,
@@ -150,20 +151,14 @@ export async function actionUpdateDashboardProfile(formData: FormData) {
     const draft = await getDraft(draftId);
     if (!draft) throw new Error("Draft not found");
     const identity = await getInfluencerIdentity();
-    const requestedTitle = String(formData.get("title") ?? "").trim();
-    const allowed = new Set(identity.selfDescriptions);
-    if (draft.title) allowed.add(draft.title);
-    const title =
-      requestedTitle && allowed.has(requestedTitle)
-        ? requestedTitle
-        : identity.selfDescriptions.includes("Influencer")
-          ? "Influencer"
-          : identity.selfDescriptions[0];
-    if (!title) throw new Error("Self-description is required");
+    const allowed = [...identity.selfDescriptions];
+    if (draft.title.trim() && !allowed.includes(draft.title)) allowed.push(draft.title);
+    const chosen = enteredSelfDescription(String(formData.get("title") ?? ""), allowed);
+    if (!chosen.ok) throw new Error(chosen.error);
 
     await updateDraftProfile(draftId, {
       displayName: String(formData.get("displayName") ?? "").trim() || undefined,
-      title,
+      title: chosen.title,
       bio: String(formData.get("bio") ?? "").trim() || undefined,
       locationCity: String(formData.get("locationCity") ?? "").trim() || undefined,
       locationCountry: String(formData.get("locationCountry") ?? "").trim() || undefined,
