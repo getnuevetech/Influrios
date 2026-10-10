@@ -63,7 +63,20 @@ const INQUIRY_STATUSES = ["sent", "replied", "declined"] as const;
 
 function asPlan(value: string): string {
   const code = value.trim().toUpperCase();
-  return code || "BUSINESS_PRO";
+  return code || "BUSINESS_FREE";
+}
+
+/** A new workspace starts free. Name and industry stay blank until they are known. */
+export function newBusinessWorkspaceFields(input: {
+  name?: string | null;
+  userName?: string | null;
+  email?: string | null;
+  industry?: string | null;
+}) {
+  const fromEmail = (input.email ?? "").split("@")[0]?.trim() ?? "";
+  const name = (input.name || input.userName || fromEmail || "").trim().slice(0, 120);
+  const industry = (input.industry ?? "").trim().slice(0, 120);
+  return { name, industry, plan: "BUSINESS_FREE" as const };
 }
 
 function asBriefStatus(value: string): CampaignBrief["status"] {
@@ -209,22 +222,27 @@ export async function ensureOwnedBusinessWorkspace(
     where: { id: uid },
     select: { name: true, email: true },
   });
-  const name =
-    (opts?.name || user?.name || user?.email?.split("@")[0] || "Business").trim().slice(0, 120) ||
-    "Business";
-  const industry = (opts?.industry || "General").trim().slice(0, 120) || "General";
+  const fields = newBusinessWorkspaceFields({
+    name: opts?.name,
+    userName: user?.name,
+    email: user?.email,
+    industry: opts?.industry,
+  });
   await prisma.businessProfile.upsert({
     where: { userId: uid },
-    create: { userId: uid, name, industry },
-    update: { name, industry },
+    create: { userId: uid, name: fields.name, industry: fields.industry || null },
+    update: {
+      ...(fields.name ? { name: fields.name } : {}),
+      ...(fields.industry ? { industry: fields.industry } : {}),
+    },
   });
   try {
     const created = await prisma.businessWorkspace.create({
       data: {
         ownerUserId: uid,
-        name,
-        plan: "BUSINESS_PRO",
-        industry,
+        name: fields.name,
+        plan: fields.plan,
+        industry: fields.industry,
       },
     });
     return readWorkspace(created.id);

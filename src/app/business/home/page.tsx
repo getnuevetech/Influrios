@@ -48,7 +48,7 @@ export default async function BusinessHomePage() {
       <section className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)_auto]">
         <div className="rounded-3xl border border-[#E6ECF7] bg-white p-5">
           <p className="text-xs font-bold uppercase tracking-wide text-muted">Workspace</p>
-          <h2 className="mt-1 font-display text-2xl font-bold">{workspace.name || "Business"}</h2>
+          {workspace.name ? <h2 className="mt-1 font-display text-2xl font-bold">{workspace.name}</h2> : null}
           <p className="mt-1 text-sm text-muted">{workspace.industry || "Industry not set"}</p>
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs font-semibold">
