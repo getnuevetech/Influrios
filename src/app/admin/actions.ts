@@ -6,7 +6,7 @@ import { requireAdminAction } from "@/app/admin/guard";
 import {
   addBannerImage,
   removeBannerImage,
-  saveBannerUpload,
+  saveUploadedImage,
   partnerNamesFromText,
   updateBanner,
   updateFeaturedCardsConfig,
@@ -35,12 +35,13 @@ export async function actionUpdateBanner(formData: FormData) {
 export async function actionUploadBannerImage(formData: FormData) {
   await requireAdminAction("banners.edit");
   const id = String(formData.get("id")) as BannerSlot;
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
+  let url: string | null;
+  try {
+    url = await saveUploadedImage(formData.get("file"));
+  } catch {
     redirect(`/admin/banners?error=nofile`);
   }
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const url = await saveBannerUpload(file.name, bytes);
+  if (!url) redirect(`/admin/banners?error=nofile`);
   await addBannerImage(id, url);
   revalidatePath("/");
   revalidatePath("/admin");

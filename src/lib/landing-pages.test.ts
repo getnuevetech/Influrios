@@ -64,6 +64,21 @@ describe("landing-pages CMS defaults", () => {
     assert.equal(DEFAULT_INFLUENCER_IDENTITY.selfDescriptions.length, 13);
   });
 
+  it("keeps an uploaded landing image and drops demo art", () => {
+    const collab = mergeCollaborationLanding({
+      hero: { images: ["/uploads/banners/hero.jpg", "/demo/categories/cat-beauty.jpg"] } as never,
+    });
+    assert.deepEqual(collab.hero.images, ["/uploads/banners/hero.jpg"]);
+    assert.deepEqual(DEFAULT_COLLABORATION_LANDING.hero.images, []);
+    const business = mergeBusinessLanding({
+      hero: { images: ["/demo/cta-community.jpg"] } as never,
+      whyChoose: { image: "/uploads/banners/why.jpg" } as never,
+    });
+    assert.deepEqual(business.hero.images, []);
+    assert.equal(business.whyChoose.image, "/uploads/banners/why.jpg");
+    assert.equal(DEFAULT_BUSINESS_LANDING.whyChoose.image, "");
+  });
+
   it("treats creator / influencer role queries as role-only searches", () => {
     assert.equal(isRoleOnlySearchQuery("creator"), true);
     assert.equal(isRoleOnlySearchQuery("Content Creator"), true);

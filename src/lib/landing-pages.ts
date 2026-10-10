@@ -5,6 +5,7 @@
  */
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { publicStoredImage, uploadedImages } from "@/lib/seed-data";
 
 export type LandingTextItem = { title: string; copy: string };
 export type LandingCta = { label: string; href: string };
@@ -19,6 +20,7 @@ export type CollaborationLandingConfig = {
     searchPlaceholder: string;
     tags: string[];
     collageLabels: string[];
+    images: string[];
   };
   popularMatches: {
     title: string;
@@ -95,6 +97,7 @@ export type BusinessLandingConfig = {
     tags: string[];
     collageNote: string;
     floatingNotes: string[];
+    images: string[];
   };
   capabilities: {
     title: string;
@@ -114,6 +117,7 @@ export type BusinessLandingConfig = {
     title: string;
     items: string[];
     photoCaption: string;
+    image: string;
   };
   plans: {
     title: string;
@@ -162,6 +166,7 @@ export const DEFAULT_COLLABORATION_LANDING: CollaborationLandingConfig = {
       "Influencers: Discover opportunities",
       "Collaborate: Create. Grow. Get Paid.",
     ],
+    images: [],
   },
   popularMatches: {
     title: "Popular Collaboration Matches",
@@ -327,6 +332,7 @@ export const DEFAULT_BUSINESS_LANDING: BusinessLandingConfig = {
       "Find Influencers by what they actually influence",
       "Real Collaborations. Real Results.",
     ],
+    images: [],
   },
   capabilities: {
     title: "What Your Business Can Do on Influrios",
@@ -391,6 +397,7 @@ export const DEFAULT_BUSINESS_LANDING: BusinessLandingConfig = {
       "Campaign analytics",
     ],
     photoCaption: "Great Influencers. Stronger Brands.",
+    image: "",
   },
   plans: {
     title: "Business Account Plans",
@@ -517,10 +524,12 @@ async function readLandingPayload(key: string): Promise<Record<string, unknown> 
 export function mergeCollaborationLanding(
   incoming?: Partial<CollaborationLandingConfig> | null,
 ): CollaborationLandingConfig {
-  return mergeDeep(
+  const merged = mergeDeep(
     DEFAULT_COLLABORATION_LANDING as unknown as Record<string, unknown>,
     incoming as Partial<Record<string, unknown>> | null,
   ) as unknown as CollaborationLandingConfig;
+  merged.hero.images = uploadedImages(merged.hero.images);
+  return merged;
 }
 
 const RETIRED_BUSINESS_DIRECTORY_TITLE = "Recommended Influencers for Your Business";
@@ -538,6 +547,8 @@ export function mergeBusinessLanding(incoming?: Partial<BusinessLandingConfig> |
   if (merged.recommended.subtitle.trim() === RETIRED_BUSINESS_DIRECTORY_SUBTITLE) {
     merged.recommended.subtitle = DEFAULT_BUSINESS_LANDING.recommended.subtitle;
   }
+  merged.hero.images = uploadedImages(merged.hero.images);
+  merged.whyChoose.image = publicStoredImage(merged.whyChoose.image);
   return merged;
 }
 
@@ -612,6 +623,44 @@ export async function updateBusinessLanding(patch: Partial<BusinessLandingConfig
   const next = mergeBusinessLanding({ ...current, ...patch });
   await upsertLandingPayload(BUSINESS_LANDING_KEY, "Business landing", 21, next as unknown as Prisma.InputJsonValue);
   return next;
+}
+
+const PAGE_IMAGE_LIMIT = 6;
+
+export async function addCollaborationHeroImage(imagePath: string): Promise<CollaborationLandingConfig> {
+  const current = await getCollaborationLanding();
+  const images = uploadedImages([...current.hero.images, imagePath]).slice(0, PAGE_IMAGE_LIMIT);
+  return updateCollaborationLanding({ hero: { ...current.hero, images } });
+}
+
+export async function removeCollaborationHeroImage(imagePath: string): Promise<CollaborationLandingConfig> {
+  const current = await getCollaborationLanding();
+  return updateCollaborationLanding({
+    hero: { ...current.hero, images: current.hero.images.filter((src) => src !== imagePath) },
+  });
+}
+
+export async function addBusinessHeroImage(imagePath: string): Promise<BusinessLandingConfig> {
+  const current = await getBusinessLanding();
+  const images = uploadedImages([...current.hero.images, imagePath]).slice(0, PAGE_IMAGE_LIMIT);
+  return updateBusinessLanding({ hero: { ...current.hero, images } });
+}
+
+export async function removeBusinessHeroImage(imagePath: string): Promise<BusinessLandingConfig> {
+  const current = await getBusinessLanding();
+  return updateBusinessLanding({
+    hero: { ...current.hero, images: current.hero.images.filter((src) => src !== imagePath) },
+  });
+}
+
+export async function setBusinessWhyImage(imagePath: string): Promise<BusinessLandingConfig> {
+  const current = await getBusinessLanding();
+  return updateBusinessLanding({ whyChoose: { ...current.whyChoose, image: publicStoredImage(imagePath) } });
+}
+
+export async function clearBusinessWhyImage(): Promise<BusinessLandingConfig> {
+  const current = await getBusinessLanding();
+  return updateBusinessLanding({ whyChoose: { ...current.whyChoose, image: "" } });
 }
 
 export async function updateInfluencerIdentity(

@@ -813,6 +813,17 @@ export async function updateManagedCard(slug: string, patch: Partial<ManagedCard
   return cms.featuredCards.cards.find((c) => c.slug === slug)!;
 }
 
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+
+/** Save one admin-uploaded image. An empty file input returns null. */
+export async function saveUploadedImage(file: FormDataEntryValue | null): Promise<string | null> {
+  if (!(file instanceof File) || file.size === 0) return null;
+  if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+  if (file.size > MAX_UPLOAD_BYTES) throw new Error("Choose an image under 8 MB.");
+  const bytes = Buffer.from(await file.arrayBuffer());
+  return saveBannerUpload(file.name || "image", bytes);
+}
+
 export async function saveBannerUpload(filename: string, bytes: Buffer) {
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
   const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_");

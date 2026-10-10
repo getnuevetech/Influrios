@@ -10,7 +10,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
-import { publicCategoryImage, publicStoredImage } from "@/lib/seed-data";
+import { publicStoredImage } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Homepage · Admin" };
@@ -64,7 +64,6 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
       slug: node.slug,
       name: node.name,
       image: publicStoredImage(managed?.image),
-      preview: publicCategoryImage(node.slug, managed?.image),
     };
   });
 
@@ -177,8 +176,8 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-xl font-bold text-indigo">Categories row</h2>
           <p className="mt-1 text-sm text-muted">
-            Title, CTA, and an optional uploaded image for each category. A category without an
-            uploaded image shows the niche photo.
+            Title, CTA, and an uploaded image for each category. A category without an uploaded
+            image shows its name on the brand gradient.
           </p>
         </div>
         <form action={actionSaveHomepageCategories} className="space-y-4 rounded-2xl border border-[#E4EBFF] bg-white p-5">
@@ -220,21 +219,29 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
               >
                 <input type="hidden" name="slug" value={item.slug} />
                 <span className="relative h-12 w-12 overflow-hidden rounded-lg bg-gradient-to-br from-[#111A5A] to-[#633CFF] ring-1 ring-[#E4EBFF]">
-                  {item.preview ? <Image src={item.preview} alt="" fill className="object-cover" sizes="48px" /> : null}
+                  {item.image ? <Image src={item.image} alt="" fill className="object-cover" sizes="48px" /> : null}
                 </span>
                 <div className="min-w-[7rem]">
                   <div className="text-sm font-semibold text-indigo">{item.name}</div>
                   <div className="text-[11px] text-muted">{item.slug}</div>
                 </div>
+                <input type="hidden" name="image" value={item.image} />
                 <label className="min-w-[16rem] flex-1 text-xs font-semibold text-muted">
-                  Image path
+                  Upload image
                   <input
-                    name="image"
-                    defaultValue={item.image}
+                    type="file"
+                    name="imageFile"
+                    accept="image/*"
                     disabled={!canEdit}
-                    className="mt-1 block w-full rounded-lg border border-[#E4EBFF] px-2 py-1.5 text-sm text-indigo"
+                    className="mt-1 block w-full text-sm text-indigo"
                   />
                 </label>
+                {item.image && canEdit ? (
+                  <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+                    <input type="checkbox" name="clearImage" value={item.slug} className="accent-violet" />
+                    Remove
+                  </label>
+                ) : null}
               </div>
             ))}
           </div>
@@ -251,9 +258,9 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-xl font-bold text-indigo">Collaboration matches row</h2>
           <p className="mt-1 text-sm text-muted">
-            Cards in the homepage horizontal scroller. Pair creator slugs, tags (comma-separated),
-            and optional cover images. Add more rows by appending after save in a follow-up edit —
-            empty trailing fields are ignored; keep unused rows blank.
+            Cards in the homepage horizontal scroller and on the collaboration landing. Pair creator
+            slugs, tags, and an uploaded cover. A pair without a cover stays a gradient. Empty trailing
+            rows are ignored.
           </p>
         </div>
         <form
@@ -361,16 +368,30 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
                       className="mt-1 block w-full rounded-lg border border-[#E4EBFF] px-2 py-1.5 text-sm text-indigo"
                     />
                   </label>
-                  <label className="text-xs font-semibold text-muted">
-                    Cover image (optional)
-                    <input
-                      name="matchImage"
-                      defaultValue={match?.image ?? ""}
-                      disabled={!canEdit}
-                      placeholder="/uploads/banners/category.jpg"
-                      className="mt-1 block w-full rounded-lg border border-[#E4EBFF] px-2 py-1.5 text-sm text-indigo"
-                    />
-                  </label>
+                  <input type="hidden" name="matchImage" value={publicStoredImage(match?.image)} />
+                  <div className="flex items-end gap-3 sm:col-span-2">
+                    <span className="relative h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+                      {publicStoredImage(match?.image) ? (
+                        <Image src={publicStoredImage(match?.image)} alt="" fill className="object-cover" sizes="96px" />
+                      ) : null}
+                    </span>
+                    <label className="min-w-[12rem] flex-1 text-xs font-semibold text-muted">
+                      Upload cover
+                      <input
+                        type="file"
+                        name="matchFile"
+                        accept="image/*"
+                        disabled={!canEdit}
+                        className="mt-1 block w-full text-sm text-indigo"
+                      />
+                    </label>
+                    {publicStoredImage(match?.image) && canEdit ? (
+                      <label className="flex items-center gap-2 pb-2 text-xs font-semibold text-muted">
+                        <input type="checkbox" name="clearMatchImage" value={String(index)} className="accent-violet" />
+                        Remove
+                      </label>
+                    ) : null}
+                  </div>
                 </div>
               ),
             )}

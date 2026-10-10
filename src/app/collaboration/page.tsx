@@ -188,7 +188,6 @@ export default async function CollaborationPage({ searchParams }: Props) {
       return creator ? [{ item, creator }] : [];
     })
     .slice(0, 4);
-  const heroFaces = directory.creators.slice(0, 6);
   const taxonomy = directory.taxonomy;
   const popularCards = cardsFromStoredCollaborationMatches(cms.collaborationMatches.matches);
 
@@ -266,9 +265,9 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </div>
           </div>
           <div className="relative mx-auto hidden h-[340px] w-full max-w-md lg:block">
-            {heroFaces.map((creator, index) => (
+            {hero.images.map((src, index) => (
               <div
-                key={creator.slug}
+                key={src}
                 className={`absolute overflow-hidden rounded-[1.75rem] shadow-2xl ring-2 ring-white ${
                   index === 0
                     ? "left-2 top-6 h-40 w-32 rotate-[-8deg]"
@@ -283,7 +282,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
                             : "left-[8%] top-[48%] h-20 w-20 rotate-[-12deg]"
                 }`}
               >
-                <Image src={creator.image} alt="" fill className="object-cover" sizes="160px" />
+                <Image src={src} alt="" fill className="object-cover" sizes="160px" />
               </div>
             ))}
             <div className="absolute -left-2 bottom-16 max-w-[180px] rounded-2xl bg-violet px-3 py-2 text-[11px] font-bold text-white shadow-lg">

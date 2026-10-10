@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { actionSaveCollaborationLanding } from "@/app/admin/landing/actions";
+import {
+  actionRemoveCollaborationHeroImage,
+  actionSaveCollaborationLanding,
+  actionUploadCollaborationHeroImage,
+} from "@/app/admin/landing/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
+import { AdminUploadedImages } from "@/components/admin-uploaded-images";
 import { getCollaborationLanding } from "@/lib/landing-pages";
 
 export const dynamic = "force-dynamic";
@@ -136,6 +141,19 @@ export default async function AdminCollaborationLandingPage({ searchParams }: Pr
               defaultValue={landing.hero.collageLabels.join("\n")}
               rows={4}
               disabled={!canEdit}
+            />
+          </div>
+          <div className="mt-6 border-t border-[#E4EBFF] pt-4">
+            <h3 className="font-display text-base font-bold text-indigo">Hero images</h3>
+            <p className="mt-1 text-sm text-muted">
+              These photos are the collaboration page collage. Upload them here. A page with no images leaves that area empty.
+            </p>
+            <AdminUploadedImages
+              images={landing.hero.images}
+              uploadAction={actionUploadCollaborationHeroImage}
+              removeAction={actionRemoveCollaborationHeroImage}
+              canEdit={canEdit}
+              emptyLabel="No hero images yet. Upload one below."
             />
           </div>
         </section>

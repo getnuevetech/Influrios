@@ -17,7 +17,7 @@ import {
 import { getCms, publicBannerImages } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
-import { formatFollowers, platformDisplayName, publicCategoryImage, specialtyLabel, totalFollowers, type SeedCreator } from "@/lib/seed-data";
+import { formatFollowers, platformDisplayName, publicStoredImage, specialtyLabel, totalFollowers, type SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 
@@ -268,14 +268,14 @@ export default async function HomePage() {
                       {
                         slug: node.slug,
                         name: node.name,
-                        image: publicCategoryImage(node.slug, item.image),
+                        image: publicStoredImage(item.image),
                       },
                     ];
                   })
                 : taxonomy.map((s) => ({
                     slug: s.slug,
                     name: s.name,
-                    image: publicCategoryImage(s.slug),
+                    image: "",
                   }))
             ).map((s) => (
               <Link

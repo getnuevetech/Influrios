@@ -700,24 +700,12 @@ export function publicStoredImage(src: string | null | undefined): string {
   return value;
 }
 
-/** Niche photo. Uploaded images and /demo/categories/ stay. Other /demo/ art stays hidden. */
-export function publicNicheImage(src: string | null | undefined): string {
-  const value = (src ?? "").trim();
-  if (!value || (value.includes("/demo/") && !value.includes("/demo/categories/"))) return "";
-  return value;
-}
-
-/** Uploaded category image, or the niche photo for that specialty. */
-export function publicCategoryImage(slug: string, stored?: string | null): string {
-  return publicStoredImage(stored) || publicNicheImage(categoryImageFor(slug));
-}
-
-/** Niche photo saved with a collaboration pair title. Unknown titles stay blank. */
-export function nicheImageForMatchTitle(title: string): string {
-  const trimmed = title.trim();
-  if (!trimmed) return "";
-  const preset = COLLAB_MATCH_PRESETS.find((item) => item.title === trimmed);
-  return preset ? publicNicheImage(preset.image) : "";
+/** Uploaded images only. Demo art and blank paths are dropped. */
+export function uploadedImages(images: readonly (string | null | undefined)[] | null | undefined): string[] {
+  return (images ?? []).flatMap((src) => {
+    const kept = publicStoredImage(src);
+    return kept ? [kept] : [];
+  });
 }
 
 /** Resolve a specialty slug to the retired category photo path. Public pages use publicStoredImage. */
