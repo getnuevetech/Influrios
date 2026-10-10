@@ -162,6 +162,36 @@ function cleanText(value: string, max: number) {
   return value.trim().slice(0, max);
 }
 
+/** Title and scope are required. A blank role or match explanation stays blank. */
+export function buildProposalFields(input: {
+  title: string;
+  scope: string;
+  roleInitiator: string;
+  roleRecipient: string;
+  why: string;
+}):
+  | {
+      ok: true;
+      title: string;
+      scope: string;
+      roleInitiator: string;
+      roleRecipient: string;
+      why: string;
+    }
+  | { ok: false; error: string } {
+  const title = cleanText(input.title, 120);
+  const scope = cleanText(input.scope, 2000);
+  if (!title || !scope) return { ok: false, error: "A title and a scope are required." };
+  return {
+    ok: true,
+    title,
+    scope,
+    roleInitiator: cleanText(input.roleInitiator, 200),
+    roleRecipient: cleanText(input.roleRecipient, 200),
+    why: cleanText(input.why, 1000),
+  };
+}
+
 export async function createCollaboration(input: {
   initiatorSlug: string;
   recipientSlug: string;
@@ -184,11 +214,8 @@ export async function createCollaboration(input: {
   if (!initiator || !recipient || initiator.slug === recipient.slug) {
     return { ok: false, error: "Choose two different creators." };
   }
-  const title = cleanText(input.title, 120);
-  const scope = cleanText(input.scope, 2000);
-  const roleInitiator = cleanText(input.roleInitiator, 200);
-  const roleRecipient = cleanText(input.roleRecipient, 200);
-  if (!title || !scope) return { ok: false, error: "A title and a scope are required." };
+  const fields = buildProposalFields(input);
+  if (!fields.ok) return fields;
 
   try {
     const usage = await proposalUsage(initiator.slug, input.plan);
@@ -209,13 +236,13 @@ export async function createCollaboration(input: {
         initiatorSlug: initiator.slug,
         recipientSlug: recipient.slug,
         initiatorUserId: input.initiatorUserId,
-        title,
-        scope,
-        roleInitiator: roleInitiator || initiator.title,
-        roleRecipient: roleRecipient || recipient.title,
+        title: fields.title,
+        scope: fields.scope,
+        roleInitiator: fields.roleInitiator,
+        roleRecipient: fields.roleRecipient,
         commercial: input.commercial,
         status: input.intent,
-        why: cleanText(input.why, 1000) || "Collaboration proposal",
+        why: fields.why,
         reasons: input.reasons as Prisma.InputJsonValue,
         score: Math.max(0, Math.min(100, Math.round(input.score))),
         offerSpecialty: input.offerSpecialty,

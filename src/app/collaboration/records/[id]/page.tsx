@@ -67,17 +67,19 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
         <p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{query.error}</p>
       ) : null}
 
-      <section id="why-this-match" className="mt-6 rounded-2xl bg-lavender/40 p-4">
-        <h2 className="font-semibold text-indigo">Why this match</h2>
-        <p className="mt-2 text-sm text-indigo">{record.why}</p>
-        {reasons.length ? (
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
-            {reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
+      {record.why.trim() || reasons.length ? (
+        <section id="why-this-match" className="mt-6 rounded-2xl bg-lavender/40 p-4">
+          <h2 className="font-semibold text-indigo">Why this match</h2>
+          {record.why.trim() ? <p className="mt-2 text-sm text-indigo">{record.why}</p> : null}
+          {reasons.length ? (
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
+              {reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
 
       <dl className="card-surface mt-6 space-y-3 p-6 text-sm">
         <div>
@@ -98,16 +100,22 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
           <dt className="font-semibold text-indigo">Commercial framing</dt>
           <dd className="mt-1 text-muted">{record.commercial}</dd>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <dt className="font-semibold text-indigo">Offer specialty</dt>
-            <dd className="mt-1 text-muted">{specialtyLabel(record.offerSpecialty ?? "") || "—"}</dd>
+        {record.offerSpecialty || record.needSpecialty ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {record.offerSpecialty ? (
+              <div>
+                <dt className="font-semibold text-indigo">Offer specialty</dt>
+                <dd className="mt-1 text-muted">{specialtyLabel(record.offerSpecialty)}</dd>
+              </div>
+            ) : null}
+            {record.needSpecialty ? (
+              <div>
+                <dt className="font-semibold text-indigo">Need specialty</dt>
+                <dd className="mt-1 text-muted">{specialtyLabel(record.needSpecialty)}</dd>
+              </div>
+            ) : null}
           </div>
-          <div>
-            <dt className="font-semibold text-indigo">Need specialty</dt>
-            <dd className="mt-1 text-muted">{specialtyLabel(record.needSpecialty ?? "") || "—"}</dd>
-          </div>
-        </div>
+        ) : null}
       </dl>
 
       {account && actions.length ? (

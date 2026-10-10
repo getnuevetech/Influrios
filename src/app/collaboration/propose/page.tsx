@@ -14,7 +14,7 @@ import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { scoreCreatorPair } from "@/lib/matching";
 import { getDirectoryCreator } from "@/lib/directory";
 import { consumeGuestQuota } from "@/lib/guest-usage";
-import { specialtyLabel } from "@/lib/seed-data";
+import { publicStoredImage, specialtyLabel } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -62,7 +62,7 @@ async function submitProposal(formData: FormData) {
     roleRecipient: String(formData.get(initiator?.slug === creatorB?.slug ? "roleA" : "roleB") ?? ""),
     commercial: String(formData.get("commercial") ?? ""),
     intent,
-    why: match?.why ?? String(formData.get("scope") ?? ""),
+    why: match?.why ?? "",
     reasons: match?.reasons ?? [],
     score: match?.score ?? 0,
     offerSpecialty: initiator?.specialties[0] ?? null,
@@ -171,12 +171,16 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
       </p>
 
       <div className="mt-6 flex items-center gap-4 rounded-2xl border border-border bg-white p-4">
-        <span className="relative h-14 w-14 overflow-hidden rounded-full">
-          <Image src={initiator.image} alt={initiator.displayName} fill className="object-cover" sizes="56px" />
+        <span className="relative h-14 w-14 overflow-hidden rounded-full bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+          {publicStoredImage(initiator.image) ? (
+            <Image src={publicStoredImage(initiator.image)} alt={initiator.displayName} fill className="object-cover" sizes="56px" />
+          ) : null}
         </span>
         <div className="text-center text-sm font-bold text-violet">×</div>
-        <span className="relative h-14 w-14 overflow-hidden rounded-full">
-          <Image src={recipient.image} alt={recipient.displayName} fill className="object-cover" sizes="56px" />
+        <span className="relative h-14 w-14 overflow-hidden rounded-full bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+          {publicStoredImage(recipient.image) ? (
+            <Image src={publicStoredImage(recipient.image)} alt={recipient.displayName} fill className="object-cover" sizes="56px" />
+          ) : null}
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-bold text-indigo">
@@ -184,7 +188,12 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
           </p>
           {match ? (
             <p className="text-sm text-muted">
-              {match.score}% match · {match.complementarySpecialties[0] ?? specialtyLabel(offerSpecialty)}
+              {match.score}% match
+              {match.complementarySpecialties[0]
+                ? ` · ${match.complementarySpecialties[0]}`
+                : offerSpecialty
+                  ? ` · ${specialtyLabel(offerSpecialty)}`
+                  : ""}
             </p>
           ) : null}
         </div>
@@ -233,7 +242,8 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
           <input
             name="title"
             required
-            defaultValue={`${specialtyLabel(offerSpecialty || "Influencer")} × ${specialtyLabel(needSpecialty || "Influencer")} collab`}
+            placeholder="Project title"
+            defaultValue=""
             className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
           />
         </label>
@@ -244,7 +254,8 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
             name="scope"
             required
             rows={4}
-            defaultValue={match?.why ?? "Joint content series combining both audiences with clear roles and deliverables."}
+            placeholder="Deliverables and timing"
+            defaultValue=""
             className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
           />
         </label>
@@ -254,7 +265,8 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
             Your role
             <input
               name="roleA"
-              defaultValue={initiator.offer ?? initiator.title}
+              placeholder="Your role"
+              defaultValue={initiator.offer?.trim() || initiator.title.trim()}
               className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
             />
           </label>
@@ -262,29 +274,39 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
             Their role
             <input
               name="roleB"
-              defaultValue={recipient.offer ?? recipient.title}
+              placeholder="Their role"
+              defaultValue={recipient.offer?.trim() || recipient.title.trim()}
               className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
             />
           </label>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <p className="text-sm text-indigo">
-            <span className="font-semibold">Offer specialty</span>
-            <span className="mt-1 block font-normal text-muted">{specialtyLabel(offerSpecialty) || "—"}</span>
-          </p>
-          <p className="text-sm text-indigo">
-            <span className="font-semibold">Need specialty</span>
-            <span className="mt-1 block font-normal text-muted">{specialtyLabel(needSpecialty) || "—"}</span>
-          </p>
-        </div>
+        {offerSpecialty || needSpecialty ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {offerSpecialty ? (
+              <p className="text-sm text-indigo">
+                <span className="font-semibold">Offer specialty</span>
+                <span className="mt-1 block font-normal text-muted">{specialtyLabel(offerSpecialty)}</span>
+              </p>
+            ) : null}
+            {needSpecialty ? (
+              <p className="text-sm text-indigo">
+                <span className="font-semibold">Need specialty</span>
+                <span className="mt-1 block font-normal text-muted">{specialtyLabel(needSpecialty)}</span>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <label className="block text-sm font-semibold text-indigo">
           Commercial framing
           <select
             name="commercial"
+            required
+            defaultValue=""
             className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
           >
+            <option value=""> </option>
             {choices.map((choice) => (
               <option key={choice}>{choice}</option>
             ))}
