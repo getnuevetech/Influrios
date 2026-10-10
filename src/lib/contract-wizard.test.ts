@@ -216,7 +216,10 @@ describe("financial plan snapshot", () => {
       totalPlatformFeeCents: 0,
       fundingCountry: "GB",
       creatorCountry: "NG",
-      milestones: [{ title: "Delivery", shareBps: 10000 }],
+      milestones: [
+        { title: "Delivery", shareBps: 6000 },
+        { title: "Publish", shareBps: 4000 },
+      ],
       milestoneSource: "template",
     });
     assert.ok(plan);
@@ -228,7 +231,10 @@ describe("financial plan snapshot", () => {
         totalPlatformFeeCents: 0,
         fundingCountry: "GB",
         creatorCountry: "NG",
-        milestones: [{ title: "Delivery", shareBps: 10000 }],
+        milestones: [
+          { title: "Delivery", shareBps: 6000 },
+          { title: "Publish", shareBps: 4000 },
+        ],
         milestoneSource: "template",
       }),
       null,
