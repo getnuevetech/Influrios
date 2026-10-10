@@ -146,20 +146,23 @@ export async function actionRestoreValueProposition() {
 
 export async function actionSimulateFee(formData: FormData) {
   await requireAdminAction("commerce.view");
-  const jurisdiction = String(formData.get("jurisdiction") || "US");
-  const serviceLevel = String(formData.get("serviceLevel") || "contracted");
-  const gross = Math.round(Number(formData.get("grossUsd") || 0) * 100);
-  const { resolveFee } = await import("@/lib/collaboration-fees");
+  const { feeSimulationDraft, resolveFee } = await import("@/lib/collaboration-fees");
+  const draft = feeSimulationDraft({
+    jurisdiction: String(formData.get("jurisdiction") ?? ""),
+    serviceLevel: String(formData.get("serviceLevel") ?? ""),
+    grossUsd: String(formData.get("grossUsd") ?? ""),
+  });
+  if (!draft.ok) redirect(`/admin/fees?error=${encodeURIComponent(draft.error)}`);
   const result = await resolveFee({
-    jurisdiction,
-    serviceLevel,
-    grossValueCents: gross,
+    jurisdiction: draft.jurisdiction,
+    serviceLevel: draft.serviceLevel,
+    grossValueCents: draft.grossValueCents,
   });
   const q = new URLSearchParams({
     simulated: "1",
-    jurisdiction,
-    serviceLevel,
-    grossUsd: String(formData.get("grossUsd") || "0"),
+    jurisdiction: draft.jurisdiction,
+    serviceLevel: draft.serviceLevel,
+    grossUsd: draft.grossUsd,
     feeCents: String(result.feeCents),
     rule: result.rule?.name ?? "none",
     feeType: result.rule?.feeType ?? "",
@@ -170,14 +173,17 @@ export async function actionSimulateFee(formData: FormData) {
 
 export async function actionFreezeFeeSnapshot(formData: FormData) {
   await requireAdminAction("commerce.manage");
-  const jurisdiction = String(formData.get("jurisdiction") || "US");
-  const serviceLevel = String(formData.get("serviceLevel") || "contracted");
-  const gross = Math.round(Number(formData.get("grossUsd") || 0) * 100);
-  const { createFeeSnapshot } = await import("@/lib/collaboration-fees");
+  const { createFeeSnapshot, feeSimulationDraft } = await import("@/lib/collaboration-fees");
+  const draft = feeSimulationDraft({
+    jurisdiction: String(formData.get("jurisdiction") ?? ""),
+    serviceLevel: String(formData.get("serviceLevel") ?? ""),
+    grossUsd: String(formData.get("grossUsd") ?? ""),
+  });
+  if (!draft.ok) redirect(`/admin/fees?error=${encodeURIComponent(draft.error)}`);
   const snap = await createFeeSnapshot({
-    jurisdiction,
-    serviceLevel,
-    grossValueCents: gross,
+    jurisdiction: draft.jurisdiction,
+    serviceLevel: draft.serviceLevel,
+    grossValueCents: draft.grossValueCents,
   });
   revalidatePath("/admin/fees");
   redirect(`/admin/fees?frozen=${snap.id}`);
@@ -185,7 +191,7 @@ export async function actionFreezeFeeSnapshot(formData: FormData) {
 
 export async function actionSaveFeeRule(formData: FormData) {
   await requireAdminAction("commerce.manage");
-  const { parseTierBands, upsertFeeRule } = await import("@/lib/collaboration-fees");
+  const { parseTierBands } = await import("@/lib/collaboration-fees");
   let tierBands: ReturnType<typeof parseTierBands> = [];
   const rawBands = String(formData.get("tierBandsJson") || "").trim();
   if (rawBands) {
@@ -196,42 +202,46 @@ export async function actionSaveFeeRule(formData: FormData) {
     }
   }
   try {
+    const { feeRuleDraft, upsertFeeRule } = await import("@/lib/collaboration-fees");
+    const draft = feeRuleDraft({
+      name: String(formData.get("name") ?? ""),
+      priority: String(formData.get("priority") ?? ""),
+      jurisdiction: String(formData.get("jurisdiction") ?? ""),
+      serviceLevel: String(formData.get("serviceLevel") ?? ""),
+      feeType: String(formData.get("feeType") ?? ""),
+      fundingMode: String(formData.get("fundingMode") ?? ""),
+      relationshipSource: String(formData.get("relationshipSource") ?? ""),
+      promotionChannel: String(formData.get("promotionChannel") ?? ""),
+      method: String(formData.get("method") ?? ""),
+      percentBps: String(formData.get("percentBps") ?? ""),
+      fixedUsd: String(formData.get("fixedUsd") ?? ""),
+      minFeeUsd: String(formData.get("minFeeUsd") ?? ""),
+      maxFeeUsd: String(formData.get("maxFeeUsd") ?? ""),
+      payer: String(formData.get("payer") ?? ""),
+      notes: String(formData.get("notes") ?? ""),
+      active: formData.get("active") === "on",
+      tierBands,
+    });
+    if (!draft.ok) redirect(`/admin/fees?error=${encodeURIComponent(draft.error)}`);
     await upsertFeeRule({
       id: String(formData.get("id") || "") || undefined,
-      name: String(formData.get("name") || "Untitled rule"),
-      active: formData.get("active") === "on",
-      priority: Number(formData.get("priority") || 100),
-      jurisdiction: String(formData.get("jurisdiction") || "*"),
-      serviceLevel: String(formData.get("serviceLevel") || "contracted"),
-      feeType: String(formData.get("feeType") || "collaboration") as
-        | "platform_service"
-        | "collaboration"
-        | "managed_intro"
-        | "managed_campaign"
-        | "success"
-        | "processing"
-        | "fx"
-        | "cancellation_dispute"
-        | "referral",
-      fundingMode: String(formData.get("fundingMode") || "*"),
-      relationshipSource: String(formData.get("relationshipSource") || "*"),
-      promotionChannel: String(formData.get("promotionChannel") || "*"),
-      method: String(formData.get("method") || "percent") as
-        | "percent"
-        | "fixed"
-        | "percent_plus_fixed"
-        | "waived"
-        | "tiered"
-        | "custom_enterprise",
-      percentBps: Number(formData.get("percentBps") || 0),
-      fixedCents: Math.round(Number(formData.get("fixedUsd") || 0) * 100),
-      minFeeCents: Math.round(Number(formData.get("minFeeUsd") || 0) * 100),
-      maxFeeCents: formData.get("maxFeeUsd")
-        ? Math.round(Number(formData.get("maxFeeUsd")) * 100)
-        : null,
-      tierBands,
-      payer: String(formData.get("payer") || "brand") as "brand" | "creator" | "split",
-      notes: String(formData.get("notes") || ""),
+      name: draft.name,
+      active: draft.active,
+      priority: draft.priority,
+      jurisdiction: draft.jurisdiction,
+      serviceLevel: draft.serviceLevel,
+      feeType: draft.feeType,
+      fundingMode: draft.fundingMode,
+      relationshipSource: draft.relationshipSource,
+      promotionChannel: draft.promotionChannel,
+      method: draft.method,
+      percentBps: draft.percentBps,
+      fixedCents: draft.fixedCents,
+      minFeeCents: draft.minFeeCents,
+      maxFeeCents: draft.maxFeeCents,
+      tierBands: draft.tierBands,
+      payer: draft.payer,
+      notes: draft.notes,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the fee rule.";

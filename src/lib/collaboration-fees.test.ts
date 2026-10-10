@@ -4,6 +4,8 @@ import {
   calculateFeeCents,
   explainFeeWinner,
   feeFromTier,
+  feeRuleDraft,
+  feeSimulationDraft,
   matchesRule,
   parseTierBands,
   pickWinningRule,
@@ -12,6 +14,7 @@ import {
   type CollaborationFeeRule,
   type FeeResolveContext,
 } from "./collaboration-fees";
+import { readFileSync } from "node:fs";
 
 function rule(overrides: Partial<CollaborationFeeRule> = {}): CollaborationFeeRule {
   return {
@@ -202,6 +205,85 @@ describe("fee winner explanation", () => {
     assert.match(text, /Collaboration Fee/);
     assert.match(text, /US contracted/);
     assert.match(text, /Global contracted/);
+  });
+});
+
+describe("entered fee rule facts", () => {
+  it("stores a fee rule and a simulation only from the terms that were entered", () => {
+    const blank = feeRuleDraft({});
+    assert.equal(blank.ok, false);
+    if (!blank.ok) assert.equal(blank.error, "A rule name is required.");
+
+    const missingPercent = feeRuleDraft({
+      name: "Open percent",
+      priority: "100",
+      jurisdiction: "*",
+      serviceLevel: "contracted",
+      feeType: "collaboration",
+      fundingMode: "*",
+      relationshipSource: "*",
+      promotionChannel: "*",
+      method: "percent",
+      percentBps: "",
+      payer: "brand",
+    });
+    assert.equal(missingPercent.ok, false);
+
+    const waived = feeRuleDraft({
+      name: "Discovery",
+      priority: "10",
+      jurisdiction: "*",
+      serviceLevel: "discovery",
+      feeType: "platform_service",
+      fundingMode: "*",
+      relationshipSource: "*",
+      promotionChannel: "*",
+      method: "waived",
+      payer: "creator",
+    });
+    assert.equal(waived.ok, true);
+    if (waived.ok) {
+      assert.equal(waived.percentBps, 0);
+      assert.equal(waived.fixedCents, 0);
+      assert.equal(waived.active, false);
+      assert.equal(waived.notes, "");
+    }
+
+    const zeroPercent = feeRuleDraft({
+      name: "Zero percent",
+      priority: "1",
+      jurisdiction: "NG",
+      serviceLevel: "contracted",
+      feeType: "collaboration",
+      fundingMode: "FULL",
+      relationshipSource: "organic",
+      promotionChannel: "none",
+      method: "percent",
+      percentBps: "0",
+      payer: "split",
+    });
+    assert.equal(zeroPercent.ok, true);
+    if (zeroPercent.ok) assert.equal(zeroPercent.percentBps, 0);
+
+    assert.equal(feeSimulationDraft({ jurisdiction: "", serviceLevel: "contracted", grossUsd: "1000" }).ok, false);
+    const quoted = feeSimulationDraft({ jurisdiction: "NG", serviceLevel: "contracted", grossUsd: "25.50" });
+    assert.equal(quoted.ok, true);
+    if (quoted.ok) {
+      assert.equal(quoted.jurisdiction, "NG");
+      assert.equal(quoted.grossValueCents, 2550);
+    }
+
+    const actions = readFileSync("src/app/admin/actions.ts", "utf8");
+    const page = readFileSync("src/app/admin/fees/page.tsx", "utf8");
+    assert.equal(actions.includes("Untitled rule"), false);
+    assert.equal(actions.includes('|| "US"'), false);
+    assert.equal(actions.includes('|| "contracted"'), false);
+    assert.equal(actions.includes('|| "brand"'), false);
+    assert.equal(page.includes('|| "US"'), false);
+    assert.equal(page.includes('|| "1000"'), false);
+    assert.equal(page.includes("?? 1000"), false);
+    assert.equal(page.includes('?? "contracted"'), false);
+    assert.equal(page.includes('?? "brand"'), false);
   });
 });
 

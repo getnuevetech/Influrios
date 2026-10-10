@@ -113,9 +113,11 @@ export default async function AdminFeesPage({ searchParams }: Props) {
             Jurisdiction
             <select
               name="jurisdiction"
-              defaultValue={params.jurisdiction || "US"}
+              required
+              defaultValue={params.jurisdiction ?? ""}
               className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
             >
+              <option value="">Choose a jurisdiction</option>
               {store.jurisdictions.map((j) => (
                 <option key={j.code} value={j.code}>
                   {j.label}
@@ -127,9 +129,11 @@ export default async function AdminFeesPage({ searchParams }: Props) {
             Service level
             <select
               name="serviceLevel"
-              defaultValue={params.serviceLevel || "contracted"}
+              required
+              defaultValue={params.serviceLevel ?? ""}
               className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
             >
+              <option value="">Choose a service level</option>
               {SERVICE_LEVELS.map((level) => (
                 <option key={level} value={level}>
                   {SERVICE_LEVEL_LABELS[level]}
@@ -142,8 +146,10 @@ export default async function AdminFeesPage({ searchParams }: Props) {
             <input
               name="grossUsd"
               type="number"
+              min="0.01"
               step="0.01"
-              defaultValue={params.grossUsd || "1000"}
+              required
+              defaultValue={params.grossUsd ?? ""}
               className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
             />
           </label>
@@ -174,9 +180,9 @@ export default async function AdminFeesPage({ searchParams }: Props) {
             ) : null}
             {canManage ? (
               <form action={actionFreezeFeeSnapshot} className="mt-3">
-                <input type="hidden" name="jurisdiction" value={params.jurisdiction || "US"} />
-                <input type="hidden" name="serviceLevel" value={params.serviceLevel || "contracted"} />
-                <input type="hidden" name="grossUsd" value={params.grossUsd || "0"} />
+                <input type="hidden" name="jurisdiction" value={params.jurisdiction ?? ""} />
+                <input type="hidden" name="serviceLevel" value={params.serviceLevel ?? ""} />
+                <input type="hidden" name="grossUsd" value={params.grossUsd ?? ""} />
                 <button type="submit" className="btn-secondary !py-1.5 text-xs">
                   Freeze immutable snapshot
                 </button>
@@ -404,24 +410,28 @@ function FeeRuleForm({
         />
       </label>
       <label className="flex items-end gap-2 text-xs font-semibold">
-        <input
-          type="checkbox"
-          name="active"
-          defaultChecked={rule?.active ?? true}
-          disabled={!canManage}
-        />
+        <input type="checkbox" name="active" defaultChecked={rule?.active === true} disabled={!canManage} />
         {rule ? `Active · v${rule.version}` : "Active"}
       </label>
-      <Field name="priority" label="Priority" defaultValue={String(rule?.priority ?? 100)} disabled={!canManage} />
-      <Field name="jurisdiction" label="Jurisdiction" defaultValue={rule?.jurisdiction ?? "*"} disabled={!canManage} />
+      <Field name="priority" label="Priority" defaultValue={rule ? String(rule.priority) : ""} required disabled={!canManage} />
+      <Field
+        name="jurisdiction"
+        label="Jurisdiction"
+        defaultValue={rule?.jurisdiction ?? ""}
+        required
+        placeholder="Code or * for any"
+        disabled={!canManage}
+      />
       <label className="text-xs font-semibold text-muted">
         Service level
         <select
           name="serviceLevel"
-          defaultValue={rule?.serviceLevel ?? "contracted"}
+          required
+          defaultValue={rule?.serviceLevel ?? ""}
           disabled={!canManage}
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
         >
+          <option value="">Choose a service level</option>
           <option value="*">* (any)</option>
           {SERVICE_LEVELS.map((level) => (
             <option key={level} value={level}>
@@ -434,10 +444,12 @@ function FeeRuleForm({
         Fee type
         <select
           name="feeType"
-          defaultValue={rule?.feeType ?? "collaboration"}
+          required
+          defaultValue={rule?.feeType ?? ""}
           disabled={!canManage}
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
         >
+          <option value="">Choose a fee type</option>
           {FEE_TYPES.map((type) => (
             <option key={type} value={type}>
               {FEE_TYPE_LABELS[type]}
@@ -449,10 +461,12 @@ function FeeRuleForm({
         Funding mode
         <select
           name="fundingMode"
-          defaultValue={rule?.fundingMode ?? "*"}
+          required
+          defaultValue={rule?.fundingMode ?? ""}
           disabled={!canManage}
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
         >
+          <option value="">Choose a funding mode</option>
           {FUNDING_MODE_CONDITIONS.map((mode) => (
             <option key={mode} value={mode}>
               {mode === "*" ? "* (any)" : mode}
@@ -464,10 +478,12 @@ function FeeRuleForm({
         Relationship source
         <select
           name="relationshipSource"
-          defaultValue={rule?.relationshipSource ?? "*"}
+          required
+          defaultValue={rule?.relationshipSource ?? ""}
           disabled={!canManage}
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
         >
+          <option value="">Choose a relationship source</option>
           {RELATIONSHIP_SOURCE_CONDITIONS.map((source) => (
             <option key={source} value={source}>
               {source === "*" ? "* (any)" : source}
@@ -479,10 +495,12 @@ function FeeRuleForm({
         Promotion channel
         <select
           name="promotionChannel"
-          defaultValue={rule?.promotionChannel ?? "*"}
+          required
+          defaultValue={rule?.promotionChannel ?? ""}
           disabled={!canManage}
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
         >
+          <option value="">Choose a promotion channel</option>
           {PROMOTION_CHANNEL_CONDITIONS.map((channel) => (
             <option key={channel} value={channel}>
               {channel === "*" ? "* (any)" : channel}
@@ -494,10 +512,12 @@ function FeeRuleForm({
         Method
         <select
           name="method"
-          defaultValue={rule?.method ?? "percent"}
+          required
+          defaultValue={rule?.method ?? ""}
           disabled={!canManage}
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
         >
+          <option value="">Choose a fee method</option>
           {FEE_METHODS.map((method) => (
             <option key={method} value={method}>
               {FEE_METHOD_LABELS[method]}
@@ -505,17 +525,22 @@ function FeeRuleForm({
           ))}
         </select>
       </label>
-      <Field name="percentBps" label="Percent (bps)" defaultValue={String(rule?.percentBps ?? 1000)} disabled={!canManage} />
+      <Field
+        name="percentBps"
+        label="Percent (bps)"
+        defaultValue={rule ? String(rule.percentBps) : ""}
+        disabled={!canManage}
+      />
       <Field
         name="fixedUsd"
         label="Fixed / enterprise USD"
-        defaultValue={String((rule?.fixedCents ?? 0) / 100)}
+        defaultValue={rule ? String(rule.fixedCents / 100) : ""}
         disabled={!canManage}
       />
       <Field
         name="minFeeUsd"
         label="Min fee USD"
-        defaultValue={String((rule?.minFeeCents ?? 0) / 100)}
+        defaultValue={rule ? String(rule.minFeeCents / 100) : ""}
         disabled={!canManage}
       />
       <Field
@@ -535,7 +560,21 @@ function FeeRuleForm({
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 font-mono text-xs text-indigo disabled:bg-[#F3F4F6]"
         />
       </label>
-      <Field name="payer" label="Payer" defaultValue={rule?.payer ?? "brand"} disabled={!canManage} />
+      <label className="text-xs font-semibold text-muted">
+        Payer
+        <select
+          name="payer"
+          required
+          defaultValue={rule?.payer ?? ""}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        >
+          <option value="">Choose who pays</option>
+          <option value="brand">Brand</option>
+          <option value="creator">Creator</option>
+          <option value="split">Split</option>
+        </select>
+      </label>
       <label className="text-xs font-semibold text-muted sm:col-span-3">
         Notes
         <input
@@ -559,11 +598,15 @@ function Field({
   label,
   defaultValue,
   disabled,
+  required,
+  placeholder,
 }: {
   name: string;
   label: string;
   defaultValue: string;
   disabled?: boolean;
+  required?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="text-xs font-semibold text-muted">
@@ -571,6 +614,8 @@ function Field({
       <input
         name={name}
         defaultValue={defaultValue}
+        required={required}
+        placeholder={placeholder}
         disabled={disabled}
         className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo disabled:bg-[#F3F4F6]"
       />
