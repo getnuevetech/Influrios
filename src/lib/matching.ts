@@ -338,7 +338,7 @@ export function cardsFromStoredCollaborationMatches(
       {
         title: left?.trim() || displayTitle,
         subtitle: right?.trim() ? `+ ${right.trim()}` : "",
-        specialty: specialty || "lifestyle",
+        specialty,
         image: publicStoredImage(image),
       },
     ];

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { BusinessMarketingPage } from "@/components/business-marketing";
 import { getAccountSession } from "@/lib/accounts";
-import { getDirectory } from "@/lib/directory";
+import { getDirectory, profilePlace } from "@/lib/directory";
 import { getBusinessLanding } from "@/lib/landing-pages";
-import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
+import { formatFollowers, publicStoredImage, specialtyLabel } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -18,20 +18,22 @@ export default async function BusinessPage() {
     getDirectory().catch(() => null),
     getBusinessLanding(),
   ]);
-  const recommended = (directory?.creators ?? []).slice(0, 4).map((creator) => ({
-    slug: creator.slug,
-    displayName: creator.displayName,
-    title: creator.title,
-    image: creator.image,
-    locationCity: creator.locationCity,
-    locationCountry: creator.locationCountry,
-    specialty: specialtyLabel(creator.specialties[0] ?? "lifestyle"),
-    specialtySlug: creator.specialties[0] ?? "lifestyle",
-    followers: formatFollowers(creator.socials.reduce((sum, social) => sum + social.followers, 0)),
-    engagement: creator.stats?.engagementRate ?? "—",
-    why: `Strong specialty fit for ${specialtyLabel(creator.specialties[0] ?? "lifestyle").toLowerCase()} campaigns and audience-aligned collaborations.`,
-    platforms: creator.socials.map((social) => social.platform),
-  }));
+  const recommended = (directory?.creators ?? []).slice(0, 4).map((creator) => {
+    const specialtySlug = creator.specialties[0]?.trim() ?? "";
+    const followers = creator.socials.reduce((sum, social) => sum + social.followers, 0);
+    const engagement = creator.stats?.engagementRate?.trim() ?? "";
+    return {
+      slug: creator.slug,
+      displayName: creator.displayName,
+      title: creator.title.trim(),
+      image: publicStoredImage(creator.image),
+      place: profilePlace(creator.locationCity, creator.locationCountry),
+      specialty: specialtySlug ? specialtyLabel(specialtySlug) : "",
+      followers: followers > 0 ? formatFollowers(followers) : "",
+      engagement: engagement && engagement !== "—" ? engagement : "",
+      platforms: creator.socials.map((social) => social.platform),
+    };
+  });
 
   return (
     <>

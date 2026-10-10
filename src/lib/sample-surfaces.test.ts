@@ -21,6 +21,11 @@ describe("stored collaboration match cards", () => {
     assert.equal(cards[0]!.image, "/uploads/pairs/beauty.jpg");
   });
 
+  it("leaves a tagless match unlabeled", () => {
+    const cards = cardsFromStoredCollaborationMatches([{ title: "Beauty Creator", tags: [] }]);
+    assert.equal(cards[0]!.specialty, "");
+  });
+
   it("drops a sample photo and keeps an uploaded cover", () => {
     const cards = cardsFromStoredCollaborationMatches([
       { title: "Hair Stylist", tags: ["hair"], image: "/demo/creators/creator-sofia.jpg" },
@@ -60,6 +65,13 @@ describe("public sample surfaces", () => {
     assert.equal(platformDisplayName("WEBSITE"), "Website");
     assert.notEqual(platformDisplayName("YOUTUBE"), platformDisplayName("TIKTOK"));
     assert.match(home, /sponsored\.partners/);
+    const business = source("src/app/business/page.tsx");
+    const marketing = source("src/components/business-marketing.tsx");
+    assert.equal(business.includes("Why this match"), false);
+    assert.equal(business.includes("Strong specialty fit"), false);
+    assert.equal(business.includes('?? "lifestyle"'), false);
+    assert.equal(marketing.includes("Why this match"), false);
+    assert.match(business, /publicStoredImage/);
   });
 
   it("does not insert sample marketplace rows on a read", () => {

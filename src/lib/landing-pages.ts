@@ -366,8 +366,8 @@ export const DEFAULT_BUSINESS_LANDING: BusinessLandingConfig = {
     ],
   },
   recommended: {
-    title: "Recommended Influencers for Your Business",
-    subtitle: "Example matches from the Influrios directory — open a profile when you are ready.",
+    title: "Influencers on Influrios",
+    subtitle: "Published directory profiles. Open a profile to see what is stored.",
     ctaLabel: "View more influencers",
     ctaHref: "/discover",
   },
@@ -523,11 +523,22 @@ export function mergeCollaborationLanding(
   ) as unknown as CollaborationLandingConfig;
 }
 
+const RETIRED_BUSINESS_DIRECTORY_TITLE = "Recommended Influencers for Your Business";
+const RETIRED_BUSINESS_DIRECTORY_SUBTITLE =
+  "Example matches from the Influrios directory — open a profile when you are ready.";
+
 export function mergeBusinessLanding(incoming?: Partial<BusinessLandingConfig> | null): BusinessLandingConfig {
-  return mergeDeep(
+  const merged = mergeDeep(
     DEFAULT_BUSINESS_LANDING as unknown as Record<string, unknown>,
     incoming as Partial<Record<string, unknown>> | null,
   ) as unknown as BusinessLandingConfig;
+  if (merged.recommended.title.trim() === RETIRED_BUSINESS_DIRECTORY_TITLE) {
+    merged.recommended.title = DEFAULT_BUSINESS_LANDING.recommended.title;
+  }
+  if (merged.recommended.subtitle.trim() === RETIRED_BUSINESS_DIRECTORY_SUBTITLE) {
+    merged.recommended.subtitle = DEFAULT_BUSINESS_LANDING.recommended.subtitle;
+  }
+  return merged;
 }
 
 export function mergeInfluencerIdentity(

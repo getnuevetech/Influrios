@@ -108,12 +108,12 @@ export default async function AdminBusinessLandingPage({ searchParams }: Props) 
         </section>
 
         <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
-          <h2 className="font-display text-lg font-bold text-indigo">Recommended + How it works + Why</h2>
+          <h2 className="font-display text-lg font-bold text-indigo">Directory profiles + How it works + Why</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Field label="Recommended title" name="recommendedTitle" defaultValue={landing.recommended.title} disabled={!canEdit} />
-            <Field label="Recommended subtitle" name="recommendedSubtitle" defaultValue={landing.recommended.subtitle} disabled={!canEdit} />
-            <Field label="Recommended CTA label" name="recommendedCtaLabel" defaultValue={landing.recommended.ctaLabel} disabled={!canEdit} />
-            <Field label="Recommended CTA href" name="recommendedCtaHref" defaultValue={landing.recommended.ctaHref} disabled={!canEdit} />
+            <Field label="Directory title" name="recommendedTitle" defaultValue={landing.recommended.title} disabled={!canEdit} />
+            <Field label="Directory subtitle" name="recommendedSubtitle" defaultValue={landing.recommended.subtitle} disabled={!canEdit} />
+            <Field label="Directory CTA label" name="recommendedCtaLabel" defaultValue={landing.recommended.ctaLabel} disabled={!canEdit} />
+            <Field label="Directory CTA href" name="recommendedCtaHref" defaultValue={landing.recommended.ctaHref} disabled={!canEdit} />
             <Field label="How it works title" name="howTitle" defaultValue={landing.howItWorks.title} disabled={!canEdit} />
             <div />
             {landing.howItWorks.steps.map((step, index) => (
