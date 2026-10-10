@@ -2,8 +2,8 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { defaultFeeTypeForServiceLevel, resolveFee } from "@/lib/collaboration-fees";
 import {
-  asLegalReviewStatus,
   capabilitiesFromJurisdictionRow,
+  enteredLegalReviewStatus,
   evaluatePrefundCapabilities,
   serializeApprovedProviderIds,
   parseApprovedProviderIds,
@@ -325,7 +325,7 @@ export async function saveJurisdiction(input: {
   reviewWindowHours?: number | string | null;
   maxRevisions?: number | string | null;
   currency: string;
-  minorDigits: number;
+  minorDigits: number | string;
   providerCode: string;
 }) {
   await ensureMarketplaceDefaults();
@@ -335,16 +335,19 @@ export async function saveJurisdiction(input: {
   if (!label) throw new Error("A jurisdiction label is required.");
   const currency = input.currency.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) throw new Error("Use a three-letter currency.");
-  const minorDigits = Math.round(input.minorDigits);
-  if (!Number.isInteger(minorDigits) || minorDigits < 0 || minorDigits > 4) {
-    throw new Error("Minor digits must be from 0 to 4.");
-  }
+  const digitsText = String(input.minorDigits ?? "").trim();
+  if (!/^\d+$/.test(digitsText)) throw new Error("Enter minor digits from 0 to 4.");
+  const minorDigits = Number(digitsText);
+  if (minorDigits > 4) throw new Error("Minor digits must be from 0 to 4.");
   const providerCode = input.providerCode.trim().toLowerCase();
+  if (!providerCode) throw new Error("Choose a marketplace provider.");
   const assigned = await prisma.integrationProvider.findUnique({
     where: { kind_code: { kind: "marketplace", code: providerCode } },
   });
   if (!assigned) throw new Error("Choose a marketplace provider.");
-  const legalReviewStatus = asLegalReviewStatus(input.legalReviewStatus);
+  const review = enteredLegalReviewStatus(input.legalReviewStatus);
+  if (!review.ok) throw new Error(review.error);
+  const legalReviewStatus = review.status;
   const approvedProviderIds = serializeApprovedProviderIds(parseApprovedProviderIds(input.approvedProviderIds));
   const capabilityNotes = String(input.capabilityNotes ?? "").trim().slice(0, 500);
   const parseOptionalDate = (raw: string | null | undefined) => {
@@ -377,7 +380,7 @@ export async function saveJurisdiction(input: {
     label,
     protectedPaymentsEnabled,
     escrowTermAllowed: input.escrowTermAllowed && protectedPaymentsEnabled,
-    fullPrefundingEnabled: Boolean(input.fullPrefundingEnabled ?? true),
+    fullPrefundingEnabled: Boolean(input.fullPrefundingEnabled),
     stagedPrefundingEnabled: Boolean(input.stagedPrefundingEnabled),
     recurringFundingEnabled: Boolean(input.recurringFundingEnabled),
     managedIntroductionEnabled: Boolean(input.managedIntroductionEnabled),

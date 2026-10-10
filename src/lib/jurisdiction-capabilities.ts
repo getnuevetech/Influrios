@@ -30,6 +30,17 @@ export function asLegalReviewStatus(value: string | null | undefined): LegalRevi
   return "PENDING";
 }
 
+/** A jurisdiction legal review is stored only when it was entered. */
+export function enteredLegalReviewStatus(value: string | null | undefined):
+  | { ok: true; status: LegalReviewStatus }
+  | { ok: false; error: string } {
+  const raw = (value ?? "").trim().toUpperCase();
+  if (!(LEGAL_REVIEW_STATUSES as readonly string[]).includes(raw)) {
+    return { ok: false, error: "Choose a legal review status." };
+  }
+  return { ok: true, status: raw as LegalReviewStatus };
+}
+
 export function parseApprovedProviderIds(raw: unknown): string[] {
   if (Array.isArray(raw)) {
     return raw.map((v) => String(v).trim().toLowerCase()).filter(Boolean);
@@ -259,7 +270,7 @@ export function capabilitiesFromJurisdictionRow(row: {
     managedIntroductionEnabled: Boolean(row.managedIntroductionEnabled),
     managedNegotiationEnabled: Boolean(row.managedNegotiationEnabled),
     approvedProviderIds: parseApprovedProviderIds(row.approvedProviderIds),
-    legalReviewStatus: asLegalReviewStatus(row.legalReviewStatus ?? "APPROVED"),
+    legalReviewStatus: asLegalReviewStatus(row.legalReviewStatus),
     capabilityNotes: row.capabilityNotes ?? "",
     capabilitiesEffectiveFrom: row.capabilitiesEffectiveFrom ?? null,
     capabilitiesEffectiveTo: row.capabilitiesEffectiveTo ?? null,

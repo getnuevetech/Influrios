@@ -64,15 +64,15 @@ export async function actionSaveJurisdiction(formData: FormData) {
       managedIntroductionEnabled: flag(formData, "managedIntroductionEnabled"),
       managedNegotiationEnabled: flag(formData, "managedNegotiationEnabled"),
       approvedProviderIds: String(formData.get("approvedProviderIds") ?? ""),
-      legalReviewStatus: String(formData.get("legalReviewStatus") ?? "APPROVED"),
+      legalReviewStatus: String(formData.get("legalReviewStatus") ?? ""),
       capabilityNotes: String(formData.get("capabilityNotes") ?? ""),
       capabilitiesEffectiveFrom: String(formData.get("capabilitiesEffectiveFrom") ?? "") || null,
       capabilitiesEffectiveTo: String(formData.get("capabilitiesEffectiveTo") ?? "") || null,
       reviewWindowHours: String(formData.get("reviewWindowHours") ?? ""),
       maxRevisions: String(formData.get("maxRevisions") ?? ""),
-      currency: String(formData.get("currency") ?? "USD"),
-      minorDigits: Number(formData.get("minorDigits") ?? 2),
-      providerCode: String(formData.get("providerCode") ?? "primary"),
+      currency: String(formData.get("currency") ?? ""),
+      minorDigits: String(formData.get("minorDigits") ?? ""),
+      providerCode: String(formData.get("providerCode") ?? ""),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the jurisdiction.";

@@ -1504,7 +1504,7 @@ model CollaborationJurisdiction {
   /// JSON string array of approved marketplace provider codes; empty = any assigned provider.
   approvedProviderIds          String    @default("[]")
   /// APPROVED | PENDING | BLOCKED — Dev Addendum §24.
-  legalReviewStatus            String    @default("APPROVED")
+  legalReviewStatus            String    @default("PENDING")
   capabilityNotes              String    @default("")
   capabilitiesEffectiveFrom    DateTime?
   capabilitiesEffectiveTo      DateTime?

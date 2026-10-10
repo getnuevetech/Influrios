@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   allowedServiceLevels,
   asLegalReviewStatus,
   capabilitiesFromJurisdictionRow,
+  enteredLegalReviewStatus,
   evaluatePrefundCapabilities,
   parseApprovedProviderIds,
   providerApprovedByJurisdiction,
@@ -32,6 +34,13 @@ describe("jurisdiction capability parsing", () => {
   it("normalizes legal review and provider ids", () => {
     assert.equal(asLegalReviewStatus("approved"), "APPROVED");
     assert.equal(asLegalReviewStatus("nope"), "PENDING");
+    assert.equal(asLegalReviewStatus(""), "PENDING");
+    assert.equal(asLegalReviewStatus(null), "PENDING");
+    const missing = enteredLegalReviewStatus("");
+    assert.equal(missing.ok, false);
+    const chosen = enteredLegalReviewStatus("blocked");
+    assert.equal(chosen.ok, true);
+    if (chosen.ok) assert.equal(chosen.status, "BLOCKED");
     assert.deepEqual(parseApprovedProviderIds('["primary","wise"]'), ["primary", "wise"]);
     assert.deepEqual(parseApprovedProviderIds("primary, airwallex"), ["primary", "airwallex"]);
     assert.equal(serializeApprovedProviderIds(["Primary", "primary", "wise"]), '["primary","wise"]');
@@ -44,7 +53,27 @@ describe("jurisdiction capability parsing", () => {
     });
     assert.equal(row.fullPrefundingEnabled, true);
     assert.equal(row.stagedPrefundingEnabled, false);
-    assert.equal(row.legalReviewStatus, "APPROVED");
+    assert.equal(row.legalReviewStatus, "PENDING");
+    assert.equal(
+      capabilitiesFromJurisdictionRow({
+        protectedPaymentsEnabled: true,
+        escrowTermAllowed: false,
+        legalReviewStatus: "APPROVED",
+      }).legalReviewStatus,
+      "APPROVED",
+    );
+
+    const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    const capsSource = readFileSync("src/lib/jurisdiction-capabilities.ts", "utf8");
+    assert.equal(actions.includes('?? "APPROVED"'), false);
+    assert.equal(actions.includes('?? "USD"'), false);
+    assert.equal(actions.includes('?? "primary"'), false);
+    assert.equal(actions.includes("?? 2"), false);
+    assert.equal(page.includes('defaultValue="PENDING"'), false);
+    assert.equal(page.includes('defaultValue="USD"'), false);
+    assert.equal(page.includes('defaultValue="primary"'), false);
+    assert.equal(capsSource.includes('?? "APPROVED"'), false);
   });
 });
 
