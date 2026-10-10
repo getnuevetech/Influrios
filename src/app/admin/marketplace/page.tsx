@@ -665,7 +665,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Allow the word escrow
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="fullPrefundingEnabled" defaultChecked className="accent-violet" />
+              <input type="checkbox" name="fullPrefundingEnabled" className="accent-violet" />
               Full prefunding
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
@@ -686,7 +686,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             </label>
             <label className="text-xs font-semibold text-muted">
               Legal review
-              <select name="legalReviewStatus" defaultValue="PENDING" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+              <select name="legalReviewStatus" required defaultValue="" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+                <option value="">Choose a legal review status</option>
                 <option value="APPROVED">APPROVED</option>
                 <option value="PENDING">PENDING</option>
                 <option value="BLOCKED">BLOCKED</option>
@@ -710,15 +711,16 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             </label>
             <label className="text-xs font-semibold text-muted">
               Currency
-              <input name="currency" maxLength={3} defaultValue="USD" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase" />
+              <input name="currency" maxLength={3} required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase" />
             </label>
             <label className="text-xs font-semibold text-muted">
               Minor digits
-              <input name="minorDigits" type="number" min={0} max={4} defaultValue={2} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
+              <input name="minorDigits" type="number" min={0} max={4} required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
             </label>
             <label className="text-xs font-semibold text-muted">
               Provider
-              <select name="providerCode" defaultValue="primary" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
+              <select name="providerCode" required defaultValue="" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
+                <option value="">Choose a provider</option>
                 {config.providers.map((provider) => (
                   <option key={provider.code} value={provider.code}>
                     {provider.name} ({provider.code})
