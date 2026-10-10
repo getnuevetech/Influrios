@@ -6,6 +6,7 @@ import {
   claimPublishBlockers,
   draftToSeedCreator,
   enteredProfilePlatform,
+  storedAccountSocials,
   enteredSelfDescription,
   guessSpecialty,
   type ClaimDraft,
@@ -126,6 +127,11 @@ describe("claim draft facts", () => {
     const claim = readFileSync("src/lib/claim.ts", "utf8");
     const invite = readFileSync("src/app/invite/[token]/page.tsx", "utf8");
     assert.equal(claim.includes('|| "INSTAGRAM"'), false);
+    assert.equal(claim.includes('?? "INSTAGRAM"'), false);
+    assert.deepEqual(storedAccountSocials([{ platform: "TIKTOK", handle: "@ada", url: "", followers: 3 }]), [
+      { platform: "TIKTOK", handle: "@ada", url: "", followers: 3 },
+    ]);
+    assert.deepEqual(storedAccountSocials([{ platform: "  ", handle: "@ada" }]), []);
     assert.match(invite, /opened\.state === "unavailable"/);
   });
 

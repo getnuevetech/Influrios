@@ -534,6 +534,24 @@ export function enteredProfilePlatform(
   return { ok: false, error: "This profile has no social platform." };
 }
 
+/** Social rows already stored on a creator. An unknown platform is left off. */
+export function storedAccountSocials(
+  rows: readonly { platform?: string | null; handle?: string | null; url?: string | null; followers?: number | null }[],
+): SeedSocial[] {
+  const socials: SeedSocial[] = [];
+  for (const row of rows) {
+    const chosen = enteredProfilePlatform([row]);
+    if (!chosen.ok) continue;
+    socials.push({
+      platform: chosen.platform,
+      handle: row.handle ?? "",
+      url: row.url ?? "",
+      followers: row.followers ?? 0,
+    });
+  }
+  return socials;
+}
+
 /** Private draft of an existing directory profile. Reuses a draft already started for that slug. */
 export async function createDraftFromProfile(
   creator: SeedCreator,
@@ -919,25 +937,22 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
   if (session) return draftFromSession(session);
 
   // Published creator without a surviving session row — synthesize a published draft for the dashboard.
+  const chosen = enteredProfilePlatform(creator.socialAccounts);
+  if (!chosen.ok) return null;
   const now = new Date().toISOString();
   return {
     id: `creator_${creator.id}`,
     slug: creator.slug,
     stage: "published",
-    inputHandle: creator.socialAccounts[0]?.handle ?? creator.slug,
-    platform: asPlatform(creator.socialAccounts[0]?.platform ?? "INSTAGRAM"),
+    inputHandle: chosen.handle || creator.slug,
+    platform: chosen.platform,
     displayName: creator.displayName,
     title: creator.title ?? "",
     bio: creator.bio ?? "",
     locationCity: creator.locationCity ?? "",
     locationCountry: creator.locationCountry ?? "",
     specialties: creator.specialties.map((row) => row.specialty.slug),
-    socials: creator.socialAccounts.map((row) => ({
-      platform: asPlatform(row.platform),
-      handle: row.handle,
-      url: row.url ?? "",
-      followers: row.followers ?? 0,
-    })),
+    socials: storedAccountSocials(creator.socialAccounts),
     image: resolveDefaultAvatar({
       socialImage: creator.avatarUrl,
       gender: normalizeProfileGender(creator.gender),
