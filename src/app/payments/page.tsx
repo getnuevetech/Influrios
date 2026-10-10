@@ -185,8 +185,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 name="creatorSlug"
                 required
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                defaultValue={directoryCreators[0]?.slug ?? ""}
+                defaultValue=""
               >
+                <option value=""> </option>
                 {directoryCreators.slice(0, 12).map((creator) => (
                   <option key={creator.slug} value={creator.slug}>
                     {creator.displayName}
@@ -199,8 +200,10 @@ export default async function PaymentsPage({ searchParams }: Props) {
               <select
                 name="jurisdictionCode"
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                defaultValue={homeJurisdiction?.code ?? "US"}
+                required
+                defaultValue=""
               >
+                <option value=""> </option>
                 {jurisdictions.map((row) => (
                   <option key={row.code} value={row.code}>
                     {row.label} · {row.currency} · {fundingTerm(row.escrowTermAllowed)}
@@ -215,7 +218,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 type="number"
                 min={1}
                 step={50}
-                defaultValue={4500}
+                placeholder="Amount"
+                defaultValue=""
                 required
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
               />
@@ -227,8 +231,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 required
                 disabled={paymentServiceLevels.length === 0}
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                defaultValue={paymentServiceLevels[0] ?? ""}
+                defaultValue=""
               >
+                <option value=""> </option>
                 {paymentServiceLevels.length === 0 ? (
                   <option value="">No fundable service level for this jurisdiction</option>
                 ) : null}
@@ -241,7 +246,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
             </label>
             <label className="text-sm">
               <span className="font-semibold text-indigo">Attribution</span>
-              <select name="sourceId" required className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2">
+              <select name="sourceId" required defaultValue="" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2">
+                <option value=""> </option>
                 {sources.filter((source) => source.active).map((source) => (
                   <option key={source.id} value={source.id}>
                     {source.label}
@@ -275,7 +281,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 type="number"
                 min={2}
                 max={Math.max(config?.maxStages ?? 4, config?.maxRecurrences ?? 6)}
-                defaultValue={2}
+                placeholder="2"
+                defaultValue=""
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
               />
             </label>
@@ -288,7 +295,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
               <span className="font-semibold text-indigo">Brief / campaign</span>
               <input
                 name="briefTitle"
-                defaultValue="Product launch collab"
+                placeholder="Brief or campaign"
+                defaultValue=""
                 required
                 className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
               />

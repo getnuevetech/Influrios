@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   FUNDABLE_SERVICE_LEVELS,
@@ -8,6 +9,7 @@ import {
   introStatusDisplayLabel,
   isFundableServiceLevel,
   matchingStageImpliesProtectedPayment,
+  paymentDealDraft,
   requireFundableServiceLevel,
 } from "./matching-product-boundary";
 
@@ -81,5 +83,44 @@ describe("requireFundableServiceLevel (W3.2)", () => {
       ["contracted", "managed_intro"],
     );
     assert.deepEqual(fundableServiceLevelsForUi(["discovery", "platform_match"]), []);
+  });
+});
+
+describe("payment deal draft", () => {
+  it("keeps the entered parties, title, jurisdiction, and amount", () => {
+    const draft = paymentDealDraft({
+      businessName: " Harbor ",
+      creatorSlug: "ada-okonkwo",
+      title: "Spring set · 2 of 4",
+      jurisdictionCode: "ng",
+      grossUsd: "1200",
+      serviceLevel: "managed_campaign",
+    });
+    assert.equal(draft.ok, true);
+    if (!draft.ok) return;
+    assert.equal(draft.businessName, "Harbor");
+    assert.equal(draft.creatorSlug, "ada-okonkwo");
+    assert.equal(draft.title, "Spring set");
+    assert.equal(draft.jurisdictionCode, "NG");
+    assert.equal(draft.grossCents, 120_000);
+    assert.equal(draft.serviceLevel, "managed_campaign");
+  });
+
+  it("does not invent a creator, a US amount, or a sample brief", () => {
+    const draft = paymentDealDraft({ serviceLevel: "contracted" });
+    assert.equal(draft.ok, false);
+    if (!draft.ok) assert.match(draft.error, /business, creator, title, jurisdiction, and gross/);
+  });
+
+  it("does not prefill a sample deal on the payments form", () => {
+    const page = readFileSync("src/app/payments/page.tsx", "utf8");
+    const actions = readFileSync("src/app/payments/actions.ts", "utf8");
+    assert.equal(page.includes("directoryCreators[0]"), false);
+    assert.equal(page.includes("defaultValue={4500}"), false);
+    assert.equal(page.includes("Product launch collab"), false);
+    assert.equal(page.includes('?? "US"'), false);
+    assert.equal(actions.includes('?? "US"'), false);
+    assert.equal(actions.includes('?? "Ambassador"'), false);
+    assert.equal(actions.includes(" ambassador"), false);
   });
 });

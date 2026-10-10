@@ -14,7 +14,7 @@ import {
   stopRecurringSeries,
   submitFundingMilestone,
 } from "@/lib/marketplace-ledger";
-import { requireFundableServiceLevel } from "@/lib/matching-product-boundary";
+import { paymentDealDraft } from "@/lib/matching-product-boundary";
 import { addDisputeEvidence, cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
 
 function dollarsToCents(raw: string) {
@@ -24,26 +24,24 @@ function dollarsToCents(raw: string) {
 }
 
 export async function actionCreateDeal(formData: FormData) {
-  const businessName = String(formData.get("businessName") ?? "").trim();
-  const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
-  const briefTitle = String(formData.get("briefTitle") ?? "").trim();
-  const jurisdictionCode = String(formData.get("jurisdictionCode") ?? "US");
-  const serviceLevelGate = requireFundableServiceLevel(String(formData.get("serviceLevel") ?? ""));
-  if (!serviceLevelGate.ok) {
-    redirect(`/payments?error=${encodeURIComponent(serviceLevelGate.error)}`);
-  }
-  const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
-  const creator = await getDirectoryCreator(creatorSlug);
-  if (!businessName || !creatorSlug || !briefTitle || !creator || grossCents <= 0) {
-    redirect("/payments?error=Add a business, creator, title, and gross amount.");
-  }
+  const draft = paymentDealDraft({
+    businessName: String(formData.get("businessName") ?? ""),
+    creatorSlug: String(formData.get("creatorSlug") ?? ""),
+    title: String(formData.get("briefTitle") ?? ""),
+    jurisdictionCode: String(formData.get("jurisdictionCode") ?? ""),
+    grossUsd: String(formData.get("grossUsd") ?? ""),
+    serviceLevel: String(formData.get("serviceLevel") ?? ""),
+  });
+  if (!draft.ok) redirect(`/payments?error=${encodeURIComponent(draft.error)}`);
+  const creator = await getDirectoryCreator(draft.creatorSlug);
+  if (!creator) redirect("/payments?error=That%20influencer%20was%20not%20found%20in%20the%20directory.");
   const result = await requestPrefund({
-    businessName,
-    creatorSlug,
-    title: briefTitle,
-    jurisdictionCode,
-    grossCents,
-    serviceLevel: serviceLevelGate.serviceLevel,
+    businessName: draft.businessName,
+    creatorSlug: draft.creatorSlug,
+    title: draft.title,
+    jurisdictionCode: draft.jurisdictionCode,
+    grossCents: draft.grossCents,
+    serviceLevel: draft.serviceLevel,
     sourceId: String(formData.get("sourceId") ?? ""),
     repeatOfId: String(formData.get("repeatOfId") ?? ""),
     scheduleKind: String(formData.get("scheduleKind") ?? "once"),
@@ -158,14 +156,22 @@ export async function actionStopSeries(formData: FormData) {
 }
 
 export async function actionConvertAmbassador(formData: FormData) {
-  const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
-  const result = await requestPrefund({
+  const draft = paymentDealDraft({
     businessName: String(formData.get("businessName") ?? ""),
     creatorSlug: String(formData.get("creatorSlug") ?? ""),
-    title: `${String(formData.get("title") ?? "Ambassador").replace(/ · \d+ of \d+$/, "")} ambassador`,
-    jurisdictionCode: String(formData.get("jurisdictionCode") ?? "US"),
-    grossCents,
+    title: String(formData.get("title") ?? ""),
+    jurisdictionCode: String(formData.get("jurisdictionCode") ?? ""),
+    grossUsd: String(formData.get("grossUsd") ?? ""),
     serviceLevel: String(formData.get("serviceLevel") ?? ""),
+  });
+  if (!draft.ok) redirect(`/payments?error=${encodeURIComponent(draft.error)}`);
+  const result = await requestPrefund({
+    businessName: draft.businessName,
+    creatorSlug: draft.creatorSlug,
+    title: draft.title,
+    jurisdictionCode: draft.jurisdictionCode,
+    grossCents: draft.grossCents,
+    serviceLevel: draft.serviceLevel,
     scheduleKind: "recurring",
     occurrenceCount: Number(formData.get("occurrenceCount") ?? 2),
     repeatOfId: String(formData.get("fundingId") ?? ""),

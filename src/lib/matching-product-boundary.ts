@@ -57,6 +57,47 @@ export function requireFundableServiceLevel(
   return { ok: true, serviceLevel: alias as FundableServiceLevel };
 }
 
+/** A new prefund stores the business, creator, title, jurisdiction, amount, and service level that were entered. */
+export function paymentDealDraft(input: {
+  businessName?: string | null;
+  creatorSlug?: string | null;
+  title?: string | null;
+  jurisdictionCode?: string | null;
+  grossUsd?: string | null;
+  serviceLevel?: string | null;
+}):
+  | {
+      ok: true;
+      businessName: string;
+      creatorSlug: string;
+      title: string;
+      jurisdictionCode: string;
+      grossCents: number;
+      serviceLevel: FundableServiceLevel;
+    }
+  | { ok: false; error: string } {
+  const businessName = (input.businessName ?? "").trim().slice(0, 120);
+  const creatorSlug = (input.creatorSlug ?? "").trim();
+  const title = (input.title ?? "").replace(/ · \d+ of \d+$/, "").trim().slice(0, 160);
+  const jurisdictionCode = (input.jurisdictionCode ?? "").trim().toUpperCase();
+  const amount = Number(String(input.grossUsd ?? "").replace(/[^0-9.]/g, ""));
+  const grossCents = Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
+  if (!businessName || !creatorSlug || !title || !jurisdictionCode || grossCents <= 0) {
+    return { ok: false, error: "Add a business, creator, title, jurisdiction, and gross amount." };
+  }
+  const service = requireFundableServiceLevel(input.serviceLevel);
+  if (!service.ok) return service;
+  return {
+    ok: true,
+    businessName,
+    creatorSlug,
+    title,
+    jurisdictionCode,
+    grossCents,
+    serviceLevel: service.serviceLevel,
+  };
+}
+
 /** Payments console / prefund UI — only fundable levels the jurisdiction currently offers. */
 export function fundableServiceLevelsForUi(allowed: readonly string[]): ServiceLevel[] {
   return allowed.filter((level): level is FundableServiceLevel =>
