@@ -518,6 +518,22 @@ export async function createDraftFromHandle(
   return draft;
 }
 
+/** An invited profile stores the social platform already on that profile. */
+export function enteredProfilePlatform(
+  socials: readonly { platform?: string | null; handle?: string | null }[],
+): { ok: true; platform: SeedSocial["platform"]; handle: string } | { ok: false; error: string } {
+  for (const social of socials) {
+    const platform = (social.platform ?? "").trim();
+    if (!PLATFORMS.has(platform)) continue;
+    return {
+      ok: true,
+      platform: platform as SeedSocial["platform"],
+      handle: (social.handle ?? "").trim(),
+    };
+  }
+  return { ok: false, error: "This profile has no social platform." };
+}
+
 /** Private draft of an existing directory profile. Reuses a draft already started for that slug. */
 export async function createDraftFromProfile(
   creator: SeedCreator,
@@ -526,14 +542,15 @@ export async function createDraftFromProfile(
   const existing = await prisma.onboardingSession.findUnique({ where: { draftSlug: creator.slug } });
   if (existing) return draftFromSession(existing);
 
-  const social = creator.socials[0];
+  const chosen = enteredProfilePlatform(creator.socials);
+  if (!chosen.ok) throw new Error(chosen.error);
   const now = new Date().toISOString();
   const draft: ClaimDraft = {
     id: `draft_${randomBytes(6).toString("hex")}`,
     slug: creator.slug,
     stage: "draft",
-    inputHandle: social?.handle || creator.slug,
-    platform: social?.platform || "INSTAGRAM",
+    inputHandle: chosen.handle || creator.slug,
+    platform: chosen.platform,
     displayName: creator.displayName,
     title: creator.title,
     bio: creator.bio,

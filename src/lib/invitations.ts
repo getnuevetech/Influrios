@@ -226,7 +226,15 @@ export async function openInvitation(token: string) {
   const creator = await getDirectoryCreator(invitation.creatorSlug);
   if (!creator) return { state: "missing" as const, invitation };
   const { createDraftFromProfile } = await import("@/lib/claim");
-  const draft = await createDraftFromProfile(creator, `ADMIN_INVITE:${invitation.token}`);
+  let draft: Awaited<ReturnType<typeof createDraftFromProfile>>;
+  try {
+    draft = await createDraftFromProfile(creator, `ADMIN_INVITE:${invitation.token}`);
+  } catch (error) {
+    if (error instanceof Error && error.message === "This profile has no social platform.") {
+      return { state: "unavailable" as const, invitation, message: error.message };
+    }
+    throw error;
+  }
   if (draft.stage === "published" && invitation.status !== "published") {
     await prisma.creatorInvitation.update({
       where: { id: invitation.id },
