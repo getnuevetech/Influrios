@@ -308,9 +308,14 @@ export async function actionSubmitContractWizard(formData: FormData) {
     settingsReviewWindowHours: config.reviewWindowHours,
     settingsMaxRevisions: config.maxRevisions,
   });
+  const currency = (jurisdiction?.currency ?? "").trim();
+  if (!/^[A-Za-z]{3}$/.test(currency)) {
+    qs.set("step", "preview");
+    redirectError("That jurisdiction has no currency.", qs);
+  }
   const plan = buildFinancialPlan({
     grossCents,
-    currency: jurisdiction?.currency ?? "USD",
+    currency,
     feeRuleId: quote?.rule?.id ?? null,
     feeRuleVersion: quote?.rule?.version ?? null,
     feeMethod: quote?.rule?.method ?? null,
@@ -320,7 +325,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     feePayer: quote?.rule?.payer ?? "brand",
     fundingCountry: jurisdictionCode,
     creatorCountry: creatorCountry ?? jurisdictionCode,
-    payoutCurrency: jurisdiction?.currency ?? "USD",
+    payoutCurrency: currency,
     milestones: drafts,
     milestoneSource: usingCustom ? "custom" : "template",
     reviewWindowHours: lifecycle.reviewWindowHours,
