@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { airwallexMentorshipIntentBody } from "./providers/airwallex";
 import { stripeOneTimeCheckoutBody, stripePayoutRouteReady } from "./stripe-admin";
@@ -6,6 +7,7 @@ import {
   EXPERIENCE_BAND_LABELS,
   experienceBandFromFollowers,
   MENTORSHIP_SESSION_CENTS,
+  mentorProfileFields,
   mentorshipFundsIsolated,
   totalFollowersFromSocials,
 } from "./mentorship";
@@ -35,6 +37,57 @@ describe("experience bands", () => {
     assert.equal(EXPERIENCE_BAND_LABELS.emerging, "Emerging Influencer");
     assert.equal(EXPERIENCE_BAND_LABELS.experienced, "Experienced Influencer");
     assert.equal(totalFollowersFromSocials([{ followers: 100 }, { followers: 50 }]), 150);
+  });
+});
+
+describe("mentor profile entered facts", () => {
+  it("stores availability and the mentee cap only when they were entered", () => {
+    const blank = mentorProfileFields({ availability: "", maxActiveMentees: "" });
+    assert.equal(blank.ok, false);
+    if (!blank.ok) assert.equal(blank.error, "Choose availability.");
+
+    const missingMax = mentorProfileFields({ availability: "open", maxActiveMentees: "" });
+    assert.equal(missingMax.ok, false);
+    if (!missingMax.ok) assert.equal(missingMax.error, "Enter a maximum number of active mentees.");
+
+    const zero = mentorProfileFields({ availability: "open", maxActiveMentees: 0 });
+    assert.equal(zero.ok, false);
+    const over = mentorProfileFields({ availability: "paused", maxActiveMentees: "21" });
+    assert.equal(over.ok, false);
+    const fractional = mentorProfileFields({ availability: "closed", maxActiveMentees: "1.5" });
+    assert.equal(fractional.ok, false);
+
+    const entered = mentorProfileFields({
+      availability: "open",
+      maxActiveMentees: 5,
+      headline: "  Growth loops  ",
+      boundaries: "   ",
+      niches: [" beauty ", ""],
+    });
+    assert.equal(entered.ok, true);
+    if (entered.ok) {
+      assert.equal(entered.availability, "open");
+      assert.equal(entered.maxActiveMentees, 5);
+      assert.equal(entered.headline, "Growth loops");
+      assert.equal(entered.boundaries, "");
+      assert.deepEqual(entered.niches, ["beauty"]);
+    }
+    const fromForm = mentorProfileFields({ availability: "paused", maxActiveMentees: "3" });
+    assert.equal(fromForm.ok, true);
+    if (fromForm.ok) {
+      assert.equal(fromForm.availability, "paused");
+      assert.equal(fromForm.maxActiveMentees, 3);
+    }
+
+    const mentorship = readFileSync("src/lib/mentorship.ts", "utf8");
+    const actions = readFileSync("src/app/mentorship/actions.ts", "utf8");
+    const page = readFileSync("src/app/mentorship/page.tsx", "utf8");
+    assert.equal(mentorship.includes(': "open";'), false);
+    assert.equal(/: 5\b/.test(mentorship), false);
+    for (const source of [mentorship, actions, page]) {
+      assert.equal(source.includes('?? "open"'), false);
+      assert.equal(source.includes("?? 5"), false);
+    }
   });
 });
 
@@ -233,6 +286,7 @@ describe("mentorship request lifecycle (db)", () => {
         headline: "Growth loops",
         niches: ["beauty"],
         availability: "open",
+        maxActiveMentees: 5,
       });
       assert.equal(profile.ok, true);
 
