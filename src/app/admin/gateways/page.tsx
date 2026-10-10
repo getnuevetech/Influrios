@@ -282,7 +282,7 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
               <input type="hidden" name="code" value={provider.code} />
               <label className="block text-sm font-semibold text-indigo">
                 Name
-                <input name="name" defaultValue={provider.name} disabled={!canEdit} className={inputClass} />
+                <input name="name" required defaultValue={provider.name} disabled={!canEdit} className={inputClass} />
               </label>
               <label className="block text-sm font-semibold text-indigo">
                 Secret ({provider.secret})
@@ -315,7 +315,7 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
               <input type="hidden" name="code" value={provider.code} />
               <label className="block text-sm font-semibold text-indigo">
                 Name
-                <input name="name" defaultValue={provider.name} disabled={!canEdit} className={inputClass} />
+                <input name="name" required defaultValue={provider.name} disabled={!canEdit} className={inputClass} />
               </label>
               <label className="block text-sm font-semibold text-indigo">
                 {gatewayCredentialLabels(provider.code).publicKey}

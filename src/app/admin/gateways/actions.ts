@@ -47,8 +47,8 @@ export async function actionSaveConnect(formData: FormData) {
     await saveProvider({
       id: clean(formData.get("id")) || undefined,
       kind: "connect",
-      code: clean(formData.get("code")) || "stripe",
-      name: clean(formData.get("name")) || "Stripe Connect",
+      code: clean(formData.get("code")),
+      name: clean(formData.get("name")),
       enabled: formData.get("enabled") === "1",
       baseUrl: "",
       publicKey: "",

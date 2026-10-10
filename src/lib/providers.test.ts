@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { decryptSecret, encryptSecret } from "./provider-secrets";
 import {
@@ -99,6 +100,20 @@ describe("ai function routing", () => {
     assert.equal(aiEndpointAllowed("https://api.anthropic.com"), true);
     assert.equal(aiEndpointAllowed("http://api.openai.com"), false);
     assert.equal(aiEndpointAllowed("https://evil.example"), false);
+  });
+});
+
+describe("entered provider names", () => {
+  it("does not save a blank search or Connect name as a product label", () => {
+    const search = readFileSync("src/app/admin/search/actions.ts", "utf8");
+    const gateways = readFileSync("src/app/admin/gateways/actions.ts", "utf8");
+    const searchPage = readFileSync("src/app/admin/search/page.tsx", "utf8");
+    const gatewayPage = readFileSync("src/app/admin/gateways/page.tsx", "utf8");
+    assert.equal(search.includes('|| "Meilisearch"'), false);
+    assert.equal(gateways.includes('|| "Stripe Connect"'), false);
+    assert.equal(gateways.includes('|| "stripe"'), false);
+    assert.match(searchPage, /name="name" required/);
+    assert.match(gatewayPage, /action=\{actionSaveConnect\}[\s\S]*name="name" required/);
   });
 });
 

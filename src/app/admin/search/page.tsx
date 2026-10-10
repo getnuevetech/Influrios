@@ -51,7 +51,7 @@ export default async function AdminSearchPage({ searchParams }: Props) {
           <input type="hidden" name="id" value={provider.id} />
           <label className="text-sm font-semibold text-indigo">
             Name
-            <input name="name" defaultValue={provider.name} disabled={!canEdit} className={inputClass} />
+            <input name="name" required defaultValue={provider.name} disabled={!canEdit} className={inputClass} />
           </label>
           <label className="text-sm font-semibold text-indigo">
             Host
