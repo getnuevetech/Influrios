@@ -60,7 +60,7 @@ export default async function HomePage() {
   const creatorBySlug = (slug: string) => bySlug.get(slug);
   const heroFloats = directory.creators.slice(0, FLOAT_CLASS.length).map((creator, index) => ({
     creator,
-    label: creator.specialties[0] ? specialtyLabel(creator.specialties[0]) : "Creator",
+    label: creator.specialties[0] ? specialtyLabel(creator.specialties[0]) : "",
     followers: formatFollowers(totalFollowers(creator)),
     platform: creator.socials[0]?.platform,
     className: FLOAT_CLASS[index] ?? "",
@@ -153,10 +153,14 @@ export default async function HomePage() {
                   sizes="160px"
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
-                  <div className="mb-1 flex items-center gap-1 text-white/90">
-                    {item.platform ? <SocialIcon platform={item.platform} size={14} /> : null}
-                    <span className="text-[10px] font-semibold uppercase tracking-wide">{item.label}</span>
-                  </div>
+                  {item.platform || item.label ? (
+                    <div className="mb-1 flex items-center gap-1 text-white/90">
+                      {item.platform ? <SocialIcon platform={item.platform} size={14} /> : null}
+                      {item.label ? (
+                        <span className="text-[10px] font-semibold uppercase tracking-wide">{item.label}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <p className="text-[11px] font-bold text-white">{item.followers} followers</p>
                 </div>
               </div>
