@@ -16,7 +16,7 @@ import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
 import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
-import { SPECIALTY_TAXONOMY, formatFollowers, specialtyLabel } from "@/lib/seed-data";
+import { SPECIALTY_TAXONOMY, formatFollowers, publicStoredImage, specialtyLabel } from "@/lib/seed-data";
 import {
   actionAcceptBusinessTerms,
   actionAddShortlist,
@@ -296,13 +296,24 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             </div>
             <form action={actionSaveCampaignIntent} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {hub.intentBrief ? <input type="hidden" name="briefId" value={hub.intentBrief.id} /> : null}
+              <label className="block text-xs font-bold text-indigo sm:col-span-2 lg:col-span-3">
+                Campaign title
+                <input
+                  name="title"
+                  required
+                  placeholder="Campaign title"
+                  defaultValue={hub.intentBrief?.title ?? ""}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
+                />
+              </label>
               <label className="block text-xs font-bold text-indigo">
                 Campaign objective
                 <select
                   name="goal"
-                  defaultValue={hub.intentBrief?.goal ?? "Brand Awareness"}
+                  defaultValue={hub.intentBrief?.goal ?? ""}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium"
                 >
+                  <option value=""> </option>
                   <option>Brand Awareness</option>
                   <option>Product Launch</option>
                   <option>Content Series</option>
@@ -312,7 +323,8 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               </label>
               <label className="block text-xs font-bold text-indigo">
                 Influencer specialty
-                <select name="specialty" defaultValue={hub.intentBrief?.specialty ?? "beauty"} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium">
+                <select name="specialty" defaultValue={hub.intentBrief?.specialty ?? ""} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium">
+                  <option value=""> </option>
                   {taxonomy.map((item) => (
                     <option key={item.slug} value={item.slug}>
                       {item.name}
@@ -322,15 +334,16 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               </label>
               <label className="block text-xs font-bold text-indigo">
                 Geography
-                <input name="location" defaultValue={hub.intentBrief?.location ?? "Global"} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
+                <input name="location" placeholder="City, country, or region" defaultValue={hub.intentBrief?.location ?? ""} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
               </label>
               <label className="block text-xs font-bold text-indigo">
                 Budget
-                <input name="budget" defaultValue={hub.intentBrief?.budget ?? "$1K – $5K"} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
+                <input name="budget" placeholder="Amount or range" defaultValue={hub.intentBrief?.budget ?? ""} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
               </label>
               <label className="block text-xs font-bold text-indigo">
                 Platform
-                <select name="platform" defaultValue={hub.intentBrief?.platform ?? "INSTAGRAM"} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium">
+                <select name="platform" defaultValue={hub.intentBrief?.platform ?? ""} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium">
+                  <option value=""> </option>
                   <option value="INSTAGRAM">Instagram</option>
                   <option value="TIKTOK">TikTok</option>
                   <option value="YOUTUBE">YouTube</option>
@@ -366,10 +379,17 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               {hub.suggestions.length === 0 ? (
                 <p className="text-sm text-muted sm:col-span-2">Save a campaign intent to see influencer suggestions.</p>
               ) : (
-                hub.suggestions.map(({ creator, score, reasons }) => (
+                hub.suggestions.map(({ creator, score, reasons }) => {
+                  const photo = publicStoredImage(creator.image);
+                  const followers = creator.socials.reduce((sum, social) => sum + social.followers, 0);
+                  const engagement = creator.stats?.engagementRate?.trim() ?? "";
+                  const showEngagement = engagement.length > 0 && engagement !== "—";
+                  const intentTitle = hub.intentBrief?.title?.trim() ?? "";
+                  const intentGoal = hub.intentBrief?.goal?.trim() ?? "";
+                  return (
                   <article key={creator.slug} className="overflow-hidden rounded-2xl border border-[#E4E9F5] bg-[#F8FAFF] shadow-sm">
-                    <div className="relative h-28">
-                      <Image src={creator.image} alt="" fill className="object-cover" sizes="220px" />
+                    <div className="relative h-28 bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+                      {photo ? <Image src={photo} alt="" fill className="object-cover" sizes="220px" /> : null}
                       <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-violet">
                         {score}% fit
                       </span>
@@ -377,20 +397,27 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                     <div className="p-3">
                       <p className="text-sm font-bold text-indigo">{creator.displayName}</p>
                       <p className="text-[11px] text-muted">{creator.title}</p>
-                      <p className="mt-1 text-[11px] font-semibold text-indigo">
-                        {formatFollowers(creator.socials.reduce((sum, s) => sum + s.followers, 0))} ·{" "}
-                        {creator.stats?.engagementRate ?? "—"} eng.
-                      </p>
-                      <p className="mt-2 line-clamp-2 rounded-lg bg-white p-2 text-[11px] text-muted">
-                        {reasons[0] ?? "Strong specialty and market fit for this brief."}
-                      </p>
+                      {followers > 0 || showEngagement ? (
+                        <p className="mt-1 text-[11px] font-semibold text-indigo">
+                          {followers > 0 ? formatFollowers(followers) : null}
+                          {followers > 0 && showEngagement ? " · " : null}
+                          {showEngagement ? `${engagement} eng.` : null}
+                        </p>
+                      ) : null}
+                      {reasons[0] ? (
+                        <p className="mt-2 line-clamp-2 rounded-lg bg-white p-2 text-[11px] text-muted">
+                          {reasons[0]}
+                        </p>
+                      ) : null}
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Link href={`/creators/${creator.slug}`} className="btn-primary !px-3 !py-1.5 text-[11px]">
                           View Profile
                         </Link>
                         <form action={actionAddShortlist}>
                           <input type="hidden" name="slug" value={creator.slug} />
-                          <input type="hidden" name="note" value={`Suggested for ${hub.intentBrief?.title ?? "campaign"}`} />
+                          {intentTitle ? (
+                            <input type="hidden" name="note" value={`Suggested for ${intentTitle}`} />
+                          ) : null}
                           <button type="submit" className="btn-secondary !px-3 !py-1.5 text-[11px]">
                             Shortlist
                           </button>
@@ -403,7 +430,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                           <input
                             type="hidden"
                             name="message"
-                            value={`Hi ${creator.displayName} — we'd love to collaborate on ${hub.intentBrief?.goal ?? "a campaign"}.`}
+                            value={`Hi ${creator.displayName} — we'd love to collaborate${intentGoal ? ` on ${intentGoal}` : ""}.`}
                           />
                           <button type="submit" className="btn-secondary !px-3 !py-1.5 text-[11px]">
                             Inquire
@@ -422,7 +449,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             <input
                               type="hidden"
                               name="note"
-                              value={`Invited from suggestions for ${hub.intentBrief?.title ?? "campaign"}`}
+                              value={intentTitle ? `Invited from suggestions for ${intentTitle}` : "Invited from suggestions"}
                             />
                             <button type="submit" className="btn-secondary !px-3 !py-1.5 text-[11px]">
                               Invite
@@ -432,7 +459,8 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                       </div>
                     </div>
                   </article>
-                ))
+                  );
+                })
               )}
             </div>
             {params.sent ? (
@@ -446,11 +474,11 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             {teamSendControl({ audience: "business" }).visible && hub.suggestions.length >= 2 ? (
               <form action={actionSendTeamProposal} className="mt-4 space-y-2 rounded-xl border border-[#E4E9F5] bg-[#F8FAFF] p-4">
                 <input type="hidden" name="returnTo" value="/collaboration/business" />
-                <input type="hidden" name="title" value={hub.intentBrief?.title || "Team proposal"} />
+                <input type="hidden" name="title" value={hub.intentBrief?.title ?? ""} />
                 <input
                   type="hidden"
                   name="campaignIntent"
-                  value={[hub.intentBrief?.goal, hub.intentBrief?.summary].filter(Boolean).join(" · ") || hub.intentBrief?.title || "Team proposal"}
+                  value={[hub.intentBrief?.goal, hub.intentBrief?.summary].filter(Boolean).join(" · ") || hub.intentBrief?.title || ""}
                 />
                 <fieldset className="space-y-1">
                   <legend className="text-sm font-semibold text-indigo">Send a team proposal</legend>
@@ -659,7 +687,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                       name="message"
                       required
                       rows={2}
-                      defaultValue={`Hi ${hub.suggestions[0].creator.displayName} — we'd love to collaborate on ${hub.intentBrief?.goal ?? "a campaign"}.`}
+                      defaultValue={`Hi ${hub.suggestions[0].creator.displayName} — we'd love to collaborate${hub.intentBrief?.goal?.trim() ? ` on ${hub.intentBrief.goal.trim()}` : ""}.`}
                       className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
                     />
                   </label>

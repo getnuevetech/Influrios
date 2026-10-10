@@ -380,17 +380,15 @@ export function buildCampaignIntentFields(input: {
   timeframe?: string;
   summary?: string;
 }) {
-  const goal = (input.goal ?? "Brand Awareness").trim() || "Brand Awareness";
-  const specialty = (input.specialty ?? "beauty").trim() || "beauty";
-  const title =
-    (input.title ?? "").trim() || `Campaign intent · ${goal} · ${specialty}`;
+  const title = (input.title ?? "").trim();
+  if (!title) throw new Error("A campaign title is required.");
   return {
     title,
-    goal,
-    specialty,
-    budget: (input.budget ?? "$1K – $5K").trim() || "$1K – $5K",
-    location: (input.location ?? "Global").trim() || "Global",
-    platform: (input.platform ?? "INSTAGRAM").trim() || "INSTAGRAM",
+    goal: (input.goal ?? "").trim(),
+    specialty: (input.specialty ?? "").trim(),
+    budget: (input.budget ?? "").trim(),
+    location: (input.location ?? "").trim(),
+    platform: (input.platform ?? "").trim(),
     summary: [input.audience, input.collabType, input.timeframe, input.summary]
       .map((part) => (part ?? "").trim())
       .filter(Boolean)
@@ -533,21 +531,23 @@ function geographyFits(creator: { locationCity: string; locationCountry: string 
   );
 }
 
-/** Explainable business → creator fit for a brief. This is a platform rule. */
+/** Explainable business → creator fit for a brief. Blank brief fields are not scored. */
 export function fitCreatorToBrief(creator: SeedCreator, brief: CampaignBrief): CreatorFit {
-  const specialtyHit =
-    creator.specialties.includes(brief.specialty) ||
-    creator.specialties.some((s) => s.includes(brief.specialty) || brief.specialty.includes(s));
-  const specialtyFit = specialtyHit ? 94 : creator.specialties.length ? 62 : 40;
+  const specialtyAsked = brief.specialty.trim();
+  const specialtyHit = Boolean(
+    specialtyAsked &&
+      (creator.specialties.includes(specialtyAsked) ||
+        creator.specialties.some((item) => item.includes(specialtyAsked) || specialtyAsked.includes(item))),
+  );
+  const specialtyFit = !specialtyAsked ? 0 : specialtyHit ? 94 : creator.specialties.length ? 62 : 40;
 
-  const geoHit = geographyFits(creator, brief.location);
-  const audienceGeo = geoHit ? 90 : 70;
+  const locationAsked = brief.location.trim();
+  const geoHit = locationAsked ? geographyFits(creator, locationAsked) : false;
+  const audienceGeo = !locationAsked ? 0 : geoHit ? 90 : 70;
 
-  const platformFit = creator.socials.some((s) => s.platform === brief.platform)
-    ? 92
-    : creator.socials.length
-      ? 68
-      : 40;
+  const platformAsked = brief.platform.trim();
+  const platformHit = platformAsked ? creator.socials.some((social) => social.platform === platformAsked) : false;
+  const platformFit = !platformAsked ? 0 : platformHit ? 92 : creator.socials.length ? 68 : 40;
 
   const commercialReadiness = creator.openToCollab
     ? creator.planTier === "PRO"
@@ -557,26 +557,31 @@ export function fitCreatorToBrief(creator: SeedCreator, brief: CampaignBrief): C
         : 74
     : 30;
 
-  const score = Math.round(
-    specialtyFit * 0.35 + audienceGeo * 0.2 + platformFit * 0.25 + commercialReadiness * 0.2,
-  );
+  const parts = [
+    specialtyAsked ? { weight: 0.35, value: specialtyFit } : null,
+    locationAsked ? { weight: 0.2, value: audienceGeo } : null,
+    platformAsked ? { weight: 0.25, value: platformFit } : null,
+    { weight: 0.2, value: commercialReadiness },
+  ].filter((part): part is { weight: number; value: number } => part !== null);
+  const weightSum = parts.reduce((sum, part) => sum + part.weight, 0);
+  const score = Math.round(parts.reduce((sum, part) => sum + part.value * part.weight, 0) / weightSum);
 
   const reasons: string[] = [];
-  if (specialtyHit) {
+  if (specialtyAsked && specialtyHit) {
     reasons.push(
-      `Specialty match: ${specialtyLabel(brief.specialty)} aligns with ${creator.specialties
+      `Specialty match: ${specialtyLabel(specialtyAsked)} aligns with ${creator.specialties
         .slice(0, 2)
         .map(specialtyLabel)
         .join(", ")}`,
     );
-  } else {
+  } else if (specialtyAsked) {
     reasons.push(`Partial specialty overlap — consider adjacent niches on ${creator.displayName}'s profile`);
   }
-  if (geoHit) {
-    reasons.push(`Geography fit for ${brief.location}`);
+  if (locationAsked && geoHit) {
+    reasons.push(`Geography fit for ${locationAsked}`);
   }
-  if (creator.socials.some((s) => s.platform === brief.platform)) {
-    reasons.push(`Active on ${brief.platform}`);
+  if (platformHit) {
+    reasons.push(`Active on ${platformAsked}`);
   }
   if (creator.openToCollab) reasons.push("Marked open to collaborations");
   if (creator.offer) reasons.push(`Offers: ${creator.offer}`);
