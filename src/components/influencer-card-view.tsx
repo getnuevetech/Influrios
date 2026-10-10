@@ -47,6 +47,7 @@ export function InfluencerCardView({
   const shell = cardShellClasses(chrome);
   const specialties = creator.specialties.slice(0, entitlements.specialtiesMax);
   const socials = creator.socials.slice(0, entitlements.socialLinksMax);
+  const place = [creator.locationCity, creator.locationCountry].map((part) => part.trim()).filter(Boolean).join(", ");
   const elevated = chrome.elevated;
   const canQr = chrome.showQr;
   const largeQr = qrDisplay === "large";
@@ -91,10 +92,10 @@ export function InfluencerCardView({
             {creator.displayName}
             {creator.verified ? <IconVerified size={compact ? 18 : 20} /> : null}
           </h1>
-          <p className={`mt-0.5 text-sm ${shell.muted}`}>{creator.title}</p>
-          <p className={`text-sm ${shell.muted}`}>
-            {creator.locationCity}, {creator.locationCountry}
-          </p>
+          {creator.title?.trim() ? (
+            <p className={`mt-0.5 text-sm ${shell.muted}`}>{creator.title}</p>
+          ) : null}
+          {place ? <p className={`text-sm ${shell.muted}`}>{place}</p> : null}
         </div>
         <div className="flex flex-wrap justify-center gap-1.5">
           {specialties.map((s) => (
