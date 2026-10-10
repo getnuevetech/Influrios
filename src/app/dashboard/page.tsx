@@ -35,6 +35,7 @@ import {
   getCreatorSessionDraft,
 } from "@/lib/claim";
 import { getInfluencerIdentity } from "@/lib/landing-pages";
+import { listReferralsForCreator, referralRewardLabel } from "@/lib/referrals";
 import { socialConnectState } from "@/lib/social-connect";
 import { PlaceFields } from "@/components/place-fields";
 import { getDirectory } from "@/lib/directory";
@@ -87,6 +88,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       ? await listPendingShortLinkSchedules(shortLink.id).catch(() => [])
       : [];
   const campaignLinks = shortLink ? await listCreatorCampaignLinks(draft.slug).catch(() => []) : [];
+  const referrals = await listReferralsForCreator(draft.slug).catch(() => []);
   const campaignMax = linkLimits?.campaignLinksMax ?? 0;
   const campaignRoom = canAddCampaignLink({
     campaignMax,
@@ -480,6 +482,25 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
             <p>
               Short link: https://{shortHost}/{shortLink.slug}
             </p>
+            <p className="text-xs text-muted">
+              This short link is the referral link. A new account that starts from it is logged with the reward admin
+              saved.
+            </p>
+            {referrals.length === 0 ? (
+              <p className="text-xs text-muted">No referral registrations yet.</p>
+            ) : (
+              <ul className="space-y-1 text-xs text-muted">
+                {referrals.map((row) => {
+                  const reward = referralRewardLabel(row);
+                  return (
+                    <li key={row.id}>
+                      {row.referredEmail}
+                      {reward ? ` · ${reward}` : ""}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
             {linkLimits?.standardQr || linkLimits?.dynamicQr ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={`/api/qr/${draft.slug}?size=160&logo=0`} alt="Influencer Card QR" width={160} height={160} />

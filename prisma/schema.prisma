@@ -82,6 +82,7 @@ model User {
   collaborationsDecided Collaboration[] @relation("CollaborationDecider")
   legalAcceptances  LegalAcceptance[]
   subscriptionStates SubscriptionState[]
+  referralRegistration ReferralRegistration?
 }
 
 model EntitlementPlan {
@@ -296,6 +297,7 @@ model Creator {
   mentorshipProfile  MentorshipProfile?
   mentorshipAsMentor MentorshipRequest[] @relation("MentorshipMentor")
   mentorshipAsMentee MentorshipRequest[] @relation("MentorshipMentee")
+  referralRegistrations ReferralRegistration[]
 }
 
 /// Collab OS P7 — influencer opt-in to mentor others (community mentoring by default).
@@ -1299,6 +1301,38 @@ model ShortLink {
   events          ShortLinkEvent[]
   abuseCases      ShortLinkAbuseCase[]
   destinationHistory ShortLinkDestinationHistory[]
+  referralRegistrations ReferralRegistration[]
+}
+
+/// One admin-configured referral reward. A blank reward is not stored as points or money.
+model ReferralProgram {
+  id          String   @id @default("default")
+  enabled     Boolean  @default(false)
+  rewardKind  String   @default("")
+  points      Int      @default(0)
+  amountCents Int      @default(0)
+  currency    String   @default("")
+  updatedAt   DateTime @updatedAt
+}
+
+/// One new account that registered after visiting an influencer short link.
+model ReferralRegistration {
+  id                String    @id @default(cuid())
+  referrerCreatorId String
+  referrer          Creator   @relation(fields: [referrerCreatorId], references: [id], onDelete: Cascade)
+  shortLinkId       String
+  shortLink         ShortLink @relation(fields: [shortLinkId], references: [id], onDelete: Cascade)
+  referredUserId    String    @unique
+  referredUser      User      @relation(fields: [referredUserId], references: [id], onDelete: Cascade)
+  referredEmail     String
+  rewardKind        String    @default("")
+  points            Int       @default(0)
+  amountCents       Int       @default(0)
+  currency          String    @default("")
+  createdAt         DateTime  @default(now())
+
+  @@index([referrerCreatorId, createdAt])
+  @@index([shortLinkId])
 }
 
 /// Auditable destination changes for Pro dynamic short links (INFLR.me §9).

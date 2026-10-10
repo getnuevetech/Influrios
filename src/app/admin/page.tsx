@@ -263,6 +263,13 @@ const LINKS: {
     meta: () => "inflr.me",
   },
   {
+    href: "/admin/referrals",
+    title: "Referrals",
+    blurb: "Log accounts that register from an influencer short link, and set the points or money reward.",
+    module: "shortlinks",
+    meta: () => "Short link",
+  },
+  {
     href: "/admin/access",
     title: "Access levels",
     blurb: "Create roles from granular features and assign admin users.",
