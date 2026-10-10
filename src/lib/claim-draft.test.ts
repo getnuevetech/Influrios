@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { claimPublishBlockers, draftToSeedCreator, guessSpecialty, type ClaimDraft } from "./claim";
+import { claimDraftProfile, claimPublishBlockers, draftToSeedCreator, guessSpecialty, type ClaimDraft } from "./claim";
 
 function draft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
   return {
@@ -28,6 +28,47 @@ function draft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
 }
 
 describe("claim draft facts", () => {
+  it("stores the handle and platform and leaves the profile blank", () => {
+    const named = claimDraftProfile("https://instagram.com/ada", "instagram");
+    assert.equal(named.ok, true);
+    if (!named.ok) return;
+    assert.equal(named.platform, "INSTAGRAM");
+    assert.equal(named.handle, "ada");
+    assert.equal(named.displayName, "Ada");
+    assert.equal(named.title, "");
+    assert.equal(named.bio, "");
+    assert.equal(named.locationCity, "");
+    assert.equal(named.locationCountry, "");
+    assert.deepEqual(named.specialties, []);
+
+    const fromChip = claimDraftProfile("@beautybyada", "tiktok");
+    assert.equal(fromChip.ok, true);
+    if (fromChip.ok) {
+      assert.equal(fromChip.platform, "TIKTOK");
+      assert.equal(fromChip.handle, "beautybyada");
+      assert.deepEqual(fromChip.specialties, []);
+    }
+
+    const missingPlatform = claimDraftProfile("@ada");
+    assert.equal(missingPlatform.ok, false);
+    if (!missingPlatform.ok) assert.equal(missingPlatform.error, "Choose a social platform.");
+
+    const missingHandle = claimDraftProfile("https://instagram.com/", "instagram");
+    assert.equal(missingHandle.ok, false);
+    if (!missingHandle.ok) assert.equal(missingHandle.error, "Enter a social URL or handle.");
+
+    const claim = readFileSync("src/lib/claim.ts", "utf8");
+    const page = readFileSync("src/app/claim/page.tsx", "utf8");
+    const preview = readFileSync("src/app/claim/preview/[draftId]/page.tsx", "utf8");
+    assert.equal(claim.includes("New Influencer"), false);
+    assert.equal(claim.includes("Your city"), false);
+    assert.equal(claim.includes("Your country"), false);
+    assert.equal(claim.includes("Draft Influencer Profile"), false);
+    assert.equal(claim.includes('handle = "influencer"'), false);
+    assert.equal(page.includes("SOCIAL_HINTS[0]"), false);
+    assert.equal(preview.includes('? "Influencer"'), false);
+  });
+
   it("suggests a specialty only when the handle names one", () => {
     assert.deepEqual(guessSpecialty("ada", "INSTAGRAM"), []);
     assert.deepEqual(guessSpecialty("beautybyada", "INSTAGRAM"), ["beauty"]);
@@ -52,14 +93,25 @@ describe("claim draft facts", () => {
   });
 
   it("does not paint invented reach, a verified badge, or a Lagos location", () => {
-    const card = draftToSeedCreator(draft());
+    const card = draftToSeedCreator(
+      draft({
+        bio: "",
+        locationCity: "",
+        locationCountry: "",
+        title: "",
+        specialties: [],
+      }),
+    );
     assert.equal(card.verified, false);
     assert.equal(card.stats?.engagementRate, "");
     assert.equal(card.stats?.totalReach, "");
     assert.equal(card.languages.length, 0);
     assert.equal(card.socials.length, 1);
     assert.equal(card.socials[0]?.followers, 0);
-    assert.equal(card.locationCity, "Your city");
+    assert.equal(card.locationCity, "");
+    assert.equal(card.locationCountry, "");
+    assert.equal(card.title, "");
+    assert.equal(card.bio, "");
 
     const claim = readFileSync("src/lib/claim.ts", "utf8");
     const directory = readFileSync("src/lib/directory.ts", "utf8");

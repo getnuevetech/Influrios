@@ -29,11 +29,7 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
   const titleOptions = identity.selfDescriptions.length
     ? identity.selfDescriptions
     : ["Influencer", "Blogger", "Creator"];
-  const titleDefault = titleOptions.includes(draft.title)
-    ? draft.title
-    : titleOptions.includes("Influencer")
-      ? "Influencer"
-      : titleOptions[0]!;
+  const titleDefault = titleOptions.includes(draft.title) ? draft.title : "";
 
   return (
     <div className="min-h-[80vh] bg-[radial-gradient(ellipse_at_top,_#EAE4FF,_#F7FAFF_55%,_#D9E8FF)] px-4 py-10">
@@ -94,9 +90,11 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
             How do you describe yourself?
             <select
               name="title"
+              required
               defaultValue={titleDefault}
               className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
             >
+              <option value="">Choose how you describe yourself</option>
               {titleOptions.map((label) => (
                 <option key={label} value={label}>
                   {label}

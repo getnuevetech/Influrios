@@ -168,18 +168,19 @@ function platformFromHint(hint?: string): SeedSocial["platform"] | null {
 function detectPlatform(
   raw: string,
   preferred?: string,
-): { platform: SeedSocial["platform"]; handle: string } {
+): { platform: SeedSocial["platform"] | null; handle: string } {
   const cleaned = raw.trim();
   const lower = cleaned.toLowerCase();
-  let platform: SeedSocial["platform"] = platformFromHint(preferred) ?? "INSTAGRAM";
+  let platform: SeedSocial["platform"] | null = null;
   if (lower.includes("tiktok.com") || lower.includes("tiktok")) platform = "TIKTOK";
   else if (lower.includes("youtube.com") || lower.includes("youtu.be") || lower.includes("youtube"))
     platform = "YOUTUBE";
   else if (lower.includes("x.com") || lower.includes("twitter.com") || lower.startsWith("@x/"))
     platform = "X";
-  else if (platformFromHint(preferred)) platform = platformFromHint(preferred)!;
+  else if (lower.includes("instagram.com")) platform = "INSTAGRAM";
+  else platform = platformFromHint(preferred);
 
-  let handle = cleaned
+  const handle = cleaned
     .replace(/^https?:\/\//, "")
     .replace(/^(www\.)?/, "")
     .replace(/^(instagram|tiktok|youtube|www)\.com\//, "")
@@ -189,8 +190,37 @@ function detectPlatform(
     .split(/[/?#]/)[0]
     .trim();
 
-  if (!handle) handle = "influencer";
   return { platform, handle };
+}
+
+/** A new claim draft stores the handle and platform that were entered. */
+export function claimDraftProfile(input: string, preferredPlatform?: string):
+  | { ok: false; error: string }
+  | {
+      ok: true;
+      platform: SeedSocial["platform"];
+      handle: string;
+      displayName: string;
+      title: "";
+      bio: "";
+      locationCity: "";
+      locationCountry: "";
+      specialties: [];
+    } {
+  const { platform, handle } = detectPlatform(input, preferredPlatform);
+  if (!handle) return { ok: false, error: "Enter a social URL or handle." };
+  if (!platform) return { ok: false, error: "Choose a social platform." };
+  return {
+    ok: true,
+    platform,
+    handle,
+    displayName: titleCase(handle.replace(/[0-9]+$/g, "")) || handle,
+    title: "",
+    bio: "",
+    locationCity: "",
+    locationCountry: "",
+    specialties: [],
+  };
 }
 
 function platformUrl(platform: SeedSocial["platform"], handle: string) {
@@ -224,7 +254,7 @@ export function claimPublishBlockers(draft: Pick<ClaimDraft, "bio" | "locationCi
     blockers.push("Add a city and country. Nothing was published.");
   }
   if (!completionItemDone({ key: "bio", label: "", hint: "", weight: 0 }, subject)) {
-    blockers.push("Replace the draft bio. Nothing was published.");
+    blockers.push("Add a bio. Nothing was published.");
   }
   if (!completionItemDone({ key: "specialty", label: "", hint: "", weight: 0 }, subject)) {
     blockers.push("Choose a specialty. Nothing was published.");
@@ -429,20 +459,17 @@ export async function createDraftFromHandle(
   attribution = "ORGANIC_SIGNUP",
   preferredPlatform?: string,
 ): Promise<ClaimDraft> {
-  const { platform, handle } = detectPlatform(input, preferredPlatform);
-  const baseSlug = slugify(handle) || `creator-${randomBytes(3).toString("hex")}`;
+  const fields = claimDraftProfile(input, preferredPlatform);
+  if (!fields.ok) throw new Error(fields.error);
+  const baseSlug = slugify(fields.handle) || `creator-${randomBytes(3).toString("hex")}`;
   let slug = baseSlug;
   let n = 2;
   while (await slugTaken(slug)) {
     slug = `${baseSlug}-${n++}`;
   }
 
-  const displayName = titleCase(handle.replace(/[0-9]+$/g, "")) || "New Influencer";
-  const specialty = guessSpecialty(handle, platform);
-  const specialtyName =
-    SPECIALTY_TAXONOMY.find((s) => s.slug === specialty[0])?.name ?? "Influencer";
   const now = new Date().toISOString();
-  const socialImage = await resolveSocialAvatar(platform, handle);
+  const socialImage = await resolveSocialAvatar(fields.platform, fields.handle);
   const gender: ProfileGender = "unspecified";
   const image = resolveDefaultAvatar({ socialImage, gender, seed: slug });
   const coverImage = resolveDefaultBanner({ seed: slug });
@@ -452,18 +479,18 @@ export async function createDraftFromHandle(
     slug,
     stage: "draft",
     inputHandle: input.trim(),
-    platform,
-    displayName,
-    title: `${specialtyName} Influencer`,
-    bio: `Draft Influencer Profile for @${handle}. Confirm specialties, bio, and location after you claim — nothing publishes until you say so.`,
-    locationCity: "Your city",
-    locationCountry: "Your country",
-    specialties: specialty,
+    platform: fields.platform,
+    displayName: fields.displayName,
+    title: fields.title,
+    bio: fields.bio,
+    locationCity: fields.locationCity,
+    locationCountry: fields.locationCountry,
+    specialties: fields.specialties,
     socials: [
       {
-        platform,
-        handle: `@${handle}`,
-        url: platformUrl(platform, handle),
+        platform: fields.platform,
+        handle: `@${fields.handle}`,
+        url: platformUrl(fields.platform, fields.handle),
         followers: 0,
       },
     ],

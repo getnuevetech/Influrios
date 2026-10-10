@@ -17,7 +17,7 @@ const SOCIAL_HINTS = [
 
 export default async function ClaimPage({ searchParams }: Props) {
   const params = await searchParams;
-  const platformHint = SOCIAL_HINTS.find((item) => item.platform === params.platform) ?? SOCIAL_HINTS[0];
+  const platformHint = SOCIAL_HINTS.find((item) => item.platform === params.platform) ?? null;
 
   return (
     <div className="mx-auto max-w-xl px-4 py-14 sm:px-6">
@@ -42,7 +42,7 @@ export default async function ClaimPage({ searchParams }: Props) {
             key={item.platform}
             href={`/claim?platform=${item.platform}`}
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${
-              platformHint.platform === item.platform
+              platformHint?.platform === item.platform
                 ? "bg-violet text-white ring-violet"
                 : "bg-white text-indigo ring-[#E4E9F5] hover:bg-[#F4F7FF]"
             }`}
@@ -53,25 +53,29 @@ export default async function ClaimPage({ searchParams }: Props) {
         ))}
       </div>
 
-      <form action={actionCreateDraft} className="card-surface mt-6 space-y-4 p-6">
-        <input type="hidden" name="platform" value={platformHint.platform} />
-        <label className="block text-sm font-semibold text-indigo">
-          {platformHint.label} profile URL or handle
-          <input
-            name="handle"
-            required
-            placeholder={platformHint.placeholder}
-            className="mt-2 w-full rounded-xl border border-border px-4 py-3 font-normal outline-none focus:ring-2 focus:ring-violet"
-          />
-        </label>
-        <p className="text-xs text-muted">
-          We build a private temporary Influencer Card from your social presence — including your profile
-          image when we can resolve it. Preview is private until you claim and publish.
-        </p>
-        <button type="submit" className="btn-primary w-full">
-          Preview my Influencer Card →
-        </button>
-      </form>
+      {platformHint ? (
+        <form action={actionCreateDraft} className="card-surface mt-6 space-y-4 p-6">
+          <input type="hidden" name="platform" value={platformHint.platform} />
+          <label className="block text-sm font-semibold text-indigo">
+            {platformHint.label} profile URL or handle
+            <input
+              name="handle"
+              required
+              placeholder={platformHint.placeholder}
+              className="mt-2 w-full rounded-xl border border-border px-4 py-3 font-normal outline-none focus:ring-2 focus:ring-violet"
+            />
+          </label>
+          <p className="text-xs text-muted">
+            The private card keeps this handle and platform. A profile image is added when it can be
+            resolved. Preview stays private until you claim and publish.
+          </p>
+          <button type="submit" className="btn-primary w-full">
+            Preview my Influencer Card →
+          </button>
+        </form>
+      ) : (
+        <p className="card-surface mt-6 p-6 text-sm text-muted">Choose a platform, then enter the profile URL or handle.</p>
+      )}
 
       <ol className="mt-8 space-y-3 text-sm text-muted">
         <li>
