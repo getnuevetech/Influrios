@@ -221,7 +221,7 @@ export default async function BusinessIntelligencePage() {
                       <div className="min-w-0">
                         <p className="font-display font-bold text-indigo">{sig.title}</p>
                         <p className="mt-0.5 text-xs text-muted">{sig.parties.join(" · ")}</p>
-                        <p className="mt-1 text-sm text-indigo/80">{sig.note}</p>
+                        {sig.note ? <p className="mt-1 text-sm text-indigo/80">{sig.note}</p> : null}
                       </div>
                       <p className="text-[10px] font-semibold uppercase text-muted">{sig.status}</p>
                     </li>

@@ -5,6 +5,7 @@ import {
   buildAudienceSnapshot,
   intelligenceExportToCsv,
   nicheTrendsFromCounts,
+  relationshipSignalNote,
   requestSpecialtiesForCollaboration,
   type IntelligenceExport,
 } from "./intelligence";
@@ -133,6 +134,18 @@ describe("niche counts", () => {
       ["beauty", "travel"],
     );
     assert.deepEqual(requestSpecialtiesForCollaboration({ offerSpecialty: "  ", needSpecialty: null }), []);
+  });
+
+  it("keeps a blank relationship note blank", () => {
+    assert.equal(relationshipSignalNote("  Studio day  "), "Studio day");
+    assert.equal(relationshipSignalNote("   "), "");
+    assert.equal(relationshipSignalNote(undefined), "");
+    const lib = readFileSync("src/lib/intelligence.ts", "utf8");
+    const page = readFileSync("src/app/business/intelligence/page.tsx", "utf8");
+    const admin = readFileSync("src/app/admin/intelligence/page.tsx", "utf8");
+    assert.equal(lib.includes('|| "Managed introduction"'), false);
+    assert.match(page, /sig\.note \?/);
+    assert.match(admin, /s\.note \?/);
   });
 
   it("does not describe niche rows as synthetic demand or scored fits", () => {

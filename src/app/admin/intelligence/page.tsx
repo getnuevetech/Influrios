@@ -151,6 +151,7 @@ export default async function AdminIntelligencePage() {
                 <p className="text-xs text-muted">
                   {s.kind} · {s.parties.join(" / ")}
                 </p>
+                {s.note ? <p className="text-xs text-muted">{s.note}</p> : null}
               </div>
               <span className="rounded-full bg-lavender px-2.5 py-1 text-xs font-bold text-violet">{s.status}</span>
             </li>

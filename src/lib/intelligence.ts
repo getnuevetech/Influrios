@@ -296,6 +296,11 @@ export async function getNicheTrends(): Promise<NicheTrend[]> {
   });
 }
 
+/** A relationship signal shows the note that was entered. */
+export function relationshipSignalNote(notes: string | null | undefined): string {
+  return (notes ?? "").trim();
+}
+
 export async function getRelationshipSignals(): Promise<RelationshipSignal[]> {
   const matching = await getManagedMatching();
   const creators = await listDirectoryCreators();
@@ -306,7 +311,7 @@ export async function getRelationshipSignals(): Promise<RelationshipSignal[]> {
     title: intro.briefTitle,
     parties: [intro.businessName, bySlug.get(intro.creatorSlug)?.displayName ?? intro.creatorSlug],
     status: intro.status,
-    note: intro.notes.trim() || "Managed introduction",
+    note: relationshipSignalNote(intro.notes),
   }));
 }
 
