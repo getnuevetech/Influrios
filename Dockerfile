@@ -31,6 +31,9 @@ ENV DATABASE_URL="postgresql://influrios:influrios@postgres:5432/influrios?schem
 ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
 RUN npx prisma generate
+# Fonts are files in src/fonts via next/font/local. next/font/google fetches
+# fonts.googleapis.com during this build and crashes when that CSS has no
+# font-file extension.
 # Repeat the end of the build log on failure. Docker shows that tail, so a
 # type error or heap OOM is visible instead of only the SWC directory listing.
 # ash on Alpine does not need pipefail here: the log is a redirect, and a

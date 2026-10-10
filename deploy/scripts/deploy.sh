@@ -59,11 +59,13 @@ if command -v git >/dev/null 2>&1 && [[ -d .git ]]; then
   fi
 fi
 
+total_kb="$(awk '/MemTotal:/ {print $2}' /proc/meminfo)"
 avail_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)"
-echo "==> Memory available: ${avail_kb} kB"
-# Postgres and Meilisearch stay up across a normal deploy. On a 2 GB box they
-# leave too little RAM for `next build`, and the kernel kills the builder.
-if [[ "${avail_kb}" -lt 2000000 ]]; then
+echo "==> Memory total: ${total_kb} kB, available: ${avail_kb} kB"
+# A 2 GB Lightsail box cannot run `next build` while Postgres and Meilisearch
+# are resident. Stop them whenever the machine is under ~3.5 GB, or whenever
+# less than 2.5 GB is free, then db-up.sh brings the databases back.
+if [[ "${total_kb}" -lt 3500000 || "${avail_kb}" -lt 2500000 ]]; then
   echo "==> Stopping web, Postgres, and Meilisearch so the image build can use the RAM."
   docker compose stop web meilisearch postgres || true
 fi
