@@ -1,25 +1,42 @@
 import type { Metadata } from "next";
-import { Caveat, Plus_Jakarta_Sans, Sora } from "next/font/google";
+import localFont from "next/font/local";
 import { ChromeFrame } from "@/components/chrome-frame";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import "./globals.css";
 
-const plusJakarta = Plus_Jakarta_Sans({
+// Shipped files, not next/font/google. The image build must not call
+// fonts.googleapis.com: that fetch crashes next/font when the CSS URL has
+// no font extension, and a Lightsail builder often cannot reach Google.
+const plusJakarta = localFont({
+  src: [
+    { path: "../fonts/plus-jakarta-sans-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/plus-jakarta-sans-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/plus-jakarta-sans-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/plus-jakarta-sans-latin-700-normal.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-plus-jakarta",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  adjustFontFallback: "Arial",
 });
 
-const sora = Sora({
+const sora = localFont({
+  src: [
+    { path: "../fonts/sora-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/sora-latin-700-normal.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-sora",
-  subsets: ["latin"],
-  weight: ["600", "700"],
+  display: "swap",
+  adjustFontFallback: "Arial",
 });
 
-const caveat = Caveat({
+const caveat = localFont({
+  src: [
+    { path: "../fonts/caveat-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/caveat-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/caveat-latin-700-normal.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-caveat",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

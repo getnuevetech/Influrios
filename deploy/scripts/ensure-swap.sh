@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Ensure a swap file exists so Next.js Docker builds don't OOM on small Lightsail VMs.
+# Ensure at least 2G of swap so Next.js Docker builds don't OOM on small Lightsail VMs.
+# A tiny swap that is already active is not enough; this adds another file until SwapTotal is 2G.
 set -euo pipefail
 
 SWAP_FILE="${SWAP_FILE:-/swapfile}"
 SWAP_SIZE="${SWAP_SIZE:-2G}"
+MIN_SWAP_KB="${MIN_SWAP_KB:-2000000}"
 
-if swapon --show | grep -q .; then
-  echo "OK: swap already active"
-  swapon --show
+swap_kb="$(awk '/SwapTotal:/ {print $2}' /proc/meminfo)"
+if [[ "${swap_kb}" -ge "${MIN_SWAP_KB}" ]]; then
+  echo "OK: swap already ${swap_kb} kB"
+  swapon --show || true
   free -h
   exit 0
 fi
@@ -17,17 +20,23 @@ if [[ "$(id -u)" -ne 0 ]]; then
   exit 1
 fi
 
-echo "==> Creating ${SWAP_SIZE} swap at ${SWAP_FILE}"
-if [[ ! -f "${SWAP_FILE}" ]]; then
-  fallocate -l "${SWAP_SIZE}" "${SWAP_FILE}" || dd if=/dev/zero of="${SWAP_FILE}" bs=1M count=2048
-  chmod 600 "${SWAP_FILE}"
-  mkswap "${SWAP_FILE}"
+target="${SWAP_FILE}"
+if [[ -e "${target}" ]]; then
+  target="${SWAP_FILE}.extra"
+fi
+if [[ -e "${target}" ]]; then
+  echo "ERROR: ${target} already exists and SwapTotal is only ${swap_kb} kB. Need at least ${MIN_SWAP_KB} kB."
+  exit 1
 fi
 
-swapon "${SWAP_FILE}" || true
+echo "==> Creating ${SWAP_SIZE} swap at ${target} (SwapTotal is ${swap_kb} kB)"
+fallocate -l "${SWAP_SIZE}" "${target}" || dd if=/dev/zero of="${target}" bs=1M count=2048
+chmod 600 "${target}"
+mkswap "${target}"
+swapon "${target}"
 
-if ! grep -q "${SWAP_FILE}" /etc/fstab 2>/dev/null; then
-  echo "${SWAP_FILE} none swap sw 0 0" >> /etc/fstab
+if ! grep -q "${target}" /etc/fstab 2>/dev/null; then
+  echo "${target} none swap sw 0 0" >> /etc/fstab
 fi
 
 echo "OK: swap ready"
