@@ -99,8 +99,9 @@ export function wizardHrefForProposal(proposal: {
     team: proposal.id,
     creator: parties[0]!.creatorSlug,
     title: proposal.title,
-    scope: proposal.campaignIntent || proposal.title,
   });
+  const scope = proposal.campaignIntent.trim();
+  if (scope) params.set("scope", scope);
   return `/collaboration/contract?${params.toString()}`;
 }
 
@@ -142,8 +143,8 @@ export function teamMatchRows(input: {
   const workspaceId = input.workspaceId.trim();
   const slugs = [...new Set(input.members.map((member) => member.creatorSlug.trim()).filter(Boolean))].sort();
   if (!workspaceId || slugs.length < 2) return [];
-  const why = input.campaignIntent.trim() || "Team proposal";
-  const reasons = ["Team proposal", why];
+  const why = input.campaignIntent.trim();
+  const reasons = why ? [why] : [];
   const rows: {
     matchType: TeamMatchType;
     partyASlug: string;
@@ -158,7 +159,7 @@ export function teamMatchRows(input: {
       matchType: "BUSINESS_CREATOR_TEAM",
       partyASlug,
       partyBSlug,
-      score: 80,
+      score: 0,
       why,
       reasons,
     });
@@ -169,7 +170,7 @@ export function teamMatchRows(input: {
         matchType: "CREATOR_TEAM",
         partyASlug: slugs[index]!,
         partyBSlug: slugs[other]!,
-        score: 80,
+        score: 0,
         why,
         reasons,
       });
@@ -244,7 +245,7 @@ export async function createTeamProposal(input: {
   if (!title || !workspaceId || workspaceId === "public") {
     return { ok: false as const, error: "Sign in with a business workspace and add a title." };
   }
-  const campaignIntent = (input.campaignIntent ?? title).trim().slice(0, 240);
+  const campaignIntent = (input.campaignIntent ?? "").trim().slice(0, 240);
   const row = await prisma.teamProposal.create({
     data: {
       workspaceId,
