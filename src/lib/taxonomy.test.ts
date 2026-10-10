@@ -5,7 +5,10 @@ import {
   SPECIALTY_TAXONOMY,
   categoryImageFor,
   filterCreators,
+  publicCategoryImage,
+  publicNicheImage,
   publicStoredImage,
+  nicheImageForMatchTitle,
   type SeedCreator,
 } from "./seed-data";
 import { canonicalSpecialty } from "./taxonomy";
@@ -58,7 +61,14 @@ describe("category images", () => {
     for (const parent of SPECIALTY_TAXONOMY) {
       assert.match(CATEGORY_IMAGES[parent.slug] ?? "", /^\/demo\/categories\//);
       assert.equal(publicStoredImage(categoryImageFor(parent.slug)), "");
+      assert.equal(publicCategoryImage(parent.slug), categoryImageFor(parent.slug));
+      assert.equal(publicNicheImage(categoryImageFor(parent.slug)), categoryImageFor(parent.slug));
     }
     assert.equal(publicStoredImage("/uploads/banners/beauty.jpg"), "/uploads/banners/beauty.jpg");
+    assert.equal(publicCategoryImage("beauty", "/uploads/banners/beauty.jpg"), "/uploads/banners/beauty.jpg");
+    assert.equal(publicNicheImage("/demo/creators/creator-sofia.jpg"), "");
+    assert.equal(publicNicheImage("/demo/cta-community.jpg"), "");
+    assert.equal(nicheImageForMatchTitle("Interior Designer + Woodwork Influencer"), "/demo/categories/cat-home.jpg");
+    assert.equal(nicheImageForMatchTitle("Custom pair"), "");
   });
 });

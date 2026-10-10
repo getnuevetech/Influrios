@@ -10,7 +10,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
-import { publicStoredImage } from "@/lib/seed-data";
+import { publicCategoryImage, publicStoredImage } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Homepage · Admin" };
@@ -64,6 +64,7 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
       slug: node.slug,
       name: node.name,
       image: publicStoredImage(managed?.image),
+      preview: publicCategoryImage(node.slug, managed?.image),
     };
   });
 
@@ -177,7 +178,7 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
           <h2 className="font-display text-xl font-bold text-indigo">Categories row</h2>
           <p className="mt-1 text-sm text-muted">
             Title, CTA, and an optional uploaded image for each category. A category without an
-            image shows its name on the brand gradient.
+            uploaded image shows the niche photo.
           </p>
         </div>
         <form action={actionSaveHomepageCategories} className="space-y-4 rounded-2xl border border-[#E4EBFF] bg-white p-5">
@@ -219,7 +220,7 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
               >
                 <input type="hidden" name="slug" value={item.slug} />
                 <span className="relative h-12 w-12 overflow-hidden rounded-lg bg-gradient-to-br from-[#111A5A] to-[#633CFF] ring-1 ring-[#E4EBFF]">
-                  {item.image ? <Image src={item.image} alt="" fill className="object-cover" sizes="48px" /> : null}
+                  {item.preview ? <Image src={item.preview} alt="" fill className="object-cover" sizes="48px" /> : null}
                 </span>
                 <div className="min-w-[7rem]">
                   <div className="text-sm font-semibold text-indigo">{item.name}</div>

@@ -1,6 +1,6 @@
 import { listDirectoryCreators } from "@/lib/directory";
 import { getEntitlements, type PlanCode } from "@/lib/entitlements";
-import { publicStoredImage, specialtyLabel, type SeedCreator } from "@/lib/seed-data";
+import { nicheImageForMatchTitle, publicNicheImage, specialtyLabel, type SeedCreator } from "@/lib/seed-data";
 import { normalizeInfluencerRoleTitle } from "@/lib/terminology-copy";
 
 export type MatchBreakdown = {
@@ -339,7 +339,7 @@ export function cardsFromStoredCollaborationMatches(
         title: left?.trim() || displayTitle,
         subtitle: right?.trim() ? `+ ${right.trim()}` : "",
         specialty,
-        image: publicStoredImage(image),
+        image: publicNicheImage(image) || nicheImageForMatchTitle(match.title) || nicheImageForMatchTitle(displayTitle),
       },
     ];
   });
