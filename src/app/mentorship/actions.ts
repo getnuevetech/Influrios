@@ -10,7 +10,6 @@ import {
   requestMentorship,
   respondToMentorshipRequest,
   upsertMentorProfile,
-  type MentorshipAvailability,
 } from "@/lib/mentorship";
 
 const BASE = "/mentorship";
@@ -31,14 +30,13 @@ export async function actionBecomeMentor(formData: FormData) {
     .split(",")
     .map((n) => n.trim())
     .filter(Boolean);
-  const availability = String(formData.get("availability") ?? "open") as MentorshipAvailability;
   const result = await upsertMentorProfile({
     creatorId: creator.id,
     headline: String(formData.get("headline") ?? ""),
     boundaries: String(formData.get("boundaries") ?? ""),
     niches,
-    availability,
-    maxActiveMentees: Number(formData.get("maxActiveMentees") ?? 5),
+    availability: String(formData.get("availability") ?? ""),
+    maxActiveMentees: String(formData.get("maxActiveMentees") ?? ""),
   });
   if (!result.ok) {
     redirect(`${BASE}?error=${encodeURIComponent(result.error)}#become`);

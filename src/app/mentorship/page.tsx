@@ -259,9 +259,11 @@ export default async function MentorshipPage({ searchParams }: Props) {
                   Availability
                   <select
                     name="availability"
-                    defaultValue={inbox?.profile?.availability ?? "open"}
+                    required
+                    defaultValue={inbox?.profile?.availability ?? ""}
                     className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm text-indigo"
                   >
+                    <option value="">Choose availability</option>
                     <option value="open">Open</option>
                     <option value="paused">Paused</option>
                     <option value="closed">Closed</option>
@@ -274,7 +276,8 @@ export default async function MentorshipPage({ searchParams }: Props) {
                     type="number"
                     min={1}
                     max={20}
-                    defaultValue={inbox?.profile?.maxActiveMentees ?? 5}
+                    required
+                    defaultValue={inbox?.profile?.maxActiveMentees ?? ""}
                     className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm text-indigo"
                   />
                 </label>

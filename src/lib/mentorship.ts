@@ -42,6 +42,45 @@ export function totalFollowersFromSocials(socials: { followers?: number | null }
   return socials.reduce((sum, row) => sum + (Number.isFinite(row.followers) ? Math.max(0, Number(row.followers)) : 0), 0);
 }
 
+/** Availability and mentee cap are stored only when they were entered. */
+export function mentorProfileFields(input: {
+  headline?: string;
+  boundaries?: string;
+  niches?: string[];
+  availability?: string | null;
+  maxActiveMentees?: number | string | null;
+}):
+  | {
+      ok: true;
+      headline: string;
+      boundaries: string;
+      niches: string[];
+      availability: MentorshipAvailability;
+      maxActiveMentees: number;
+    }
+  | { ok: false; error: string } {
+  const availability = (input.availability ?? "").trim();
+  if (!(MENTORSHIP_AVAILABILITY as readonly string[]).includes(availability)) {
+    return { ok: false, error: "Choose availability." };
+  }
+  const maxText = input.maxActiveMentees == null ? "" : String(input.maxActiveMentees).trim();
+  if (!/^[1-9]\d*$/.test(maxText)) {
+    return { ok: false, error: "Enter a maximum number of active mentees." };
+  }
+  const maxActive = Number(maxText);
+  if (maxActive < 1 || maxActive > 20) {
+    return { ok: false, error: "Enter a maximum number of active mentees." };
+  }
+  return {
+    ok: true,
+    headline: (input.headline ?? "").trim().slice(0, 160),
+    boundaries: (input.boundaries ?? "").trim().slice(0, 800),
+    niches: (input.niches ?? []).map((n) => n.trim()).filter(Boolean).slice(0, 12),
+    availability: availability as MentorshipAvailability,
+    maxActiveMentees: maxActive,
+  };
+}
+
 /**
  * Hard invariant: mentorship money never enters Collaboration Holding unless paid mentoring is on.
  * Community mentoring always returns isolated.
@@ -229,40 +268,33 @@ export async function upsertMentorProfile(input: {
   headline?: string;
   boundaries?: string;
   niches?: string[];
-  availability?: MentorshipAvailability;
-  maxActiveMentees?: number;
+  availability?: string | null;
+  maxActiveMentees?: number | string | null;
 }) {
   const eligibility = await evaluateCreatorMentorshipEligibility(input.creatorId);
   if (!eligibility.ok) {
     return { ok: false as const, error: eligibility.blockers[0] ?? "Not eligible to mentor." };
   }
-  const availability =
-    input.availability && (MENTORSHIP_AVAILABILITY as readonly string[]).includes(input.availability)
-      ? input.availability
-      : "open";
-  const niches = (input.niches ?? []).map((n) => n.trim()).filter(Boolean).slice(0, 12);
-  const maxActive = Math.min(
-    20,
-    Math.max(1, Number.isInteger(input.maxActiveMentees) ? Number(input.maxActiveMentees) : 5),
-  );
+  const fields = mentorProfileFields(input);
+  if (!fields.ok) return fields;
   const profile = await prisma.mentorshipProfile.upsert({
     where: { creatorId: input.creatorId },
     create: {
       creatorId: input.creatorId,
       eligible: true,
-      availability,
-      headline: (input.headline ?? "").trim().slice(0, 160),
-      boundaries: (input.boundaries ?? "").trim().slice(0, 800),
-      nichesJson: niches,
-      maxActiveMentees: maxActive,
+      availability: fields.availability,
+      headline: fields.headline,
+      boundaries: fields.boundaries,
+      nichesJson: fields.niches,
+      maxActiveMentees: fields.maxActiveMentees,
     },
     update: {
       eligible: true,
-      availability,
-      headline: (input.headline ?? "").trim().slice(0, 160),
-      boundaries: (input.boundaries ?? "").trim().slice(0, 800),
-      nichesJson: niches,
-      maxActiveMentees: maxActive,
+      availability: fields.availability,
+      headline: fields.headline,
+      boundaries: fields.boundaries,
+      nichesJson: fields.niches,
+      maxActiveMentees: fields.maxActiveMentees,
     },
   });
   return { ok: true as const, profile, band: eligibility.band };
