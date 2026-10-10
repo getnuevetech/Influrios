@@ -127,6 +127,9 @@ export default async function InvitationPage({ params, searchParams }: Props) {
         {opened.state === "declined" ? (
           <p className="text-sm text-muted">This invitation was declined. You can still create a card from scratch.</p>
         ) : null}
+        {opened.state === "unavailable" ? (
+          <p className="text-sm text-muted">{opened.message}</p>
+        ) : null}
         {opened.state === "declined" || opened.state === "expired" ? (
           <Link href="/claim" className="inline-block text-sm font-semibold text-violet">
             Start a new card

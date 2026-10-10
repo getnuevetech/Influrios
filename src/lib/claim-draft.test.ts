@@ -5,6 +5,7 @@ import {
   claimDraftProfile,
   claimPublishBlockers,
   draftToSeedCreator,
+  enteredProfilePlatform,
   enteredSelfDescription,
   guessSpecialty,
   type ClaimDraft,
@@ -105,6 +106,27 @@ describe("claim draft facts", () => {
     assert.equal(actions.includes("selfDescriptions[0]"), false);
     assert.equal(dashboard.includes('? "Influencer"'), false);
     assert.equal(dashboard.includes(': "Influencer"'), false);
+  });
+
+  it("stores the social platform already on an invited profile", () => {
+    const tiktok = enteredProfilePlatform([{ platform: "TIKTOK", handle: "@ada" }]);
+    assert.equal(tiktok.ok, true);
+    if (tiktok.ok) {
+      assert.equal(tiktok.platform, "TIKTOK");
+      assert.equal(tiktok.handle, "@ada");
+    }
+
+    const blank = enteredProfilePlatform([]);
+    assert.equal(blank.ok, false);
+    if (!blank.ok) assert.equal(blank.error, "This profile has no social platform.");
+
+    const emptyPlatform = enteredProfilePlatform([{ platform: "  ", handle: "@ada" }]);
+    assert.equal(emptyPlatform.ok, false);
+
+    const claim = readFileSync("src/lib/claim.ts", "utf8");
+    const invite = readFileSync("src/app/invite/[token]/page.tsx", "utf8");
+    assert.equal(claim.includes('|| "INSTAGRAM"'), false);
+    assert.match(invite, /opened\.state === "unavailable"/);
   });
 
   it("suggests a specialty only when the handle names one", () => {
