@@ -97,8 +97,8 @@ describe("public sample surfaces", () => {
     const categories = source("src/app/categories/page.tsx");
     const collab = source("src/app/collaboration/page.tsx");
     const business = source("src/components/business-marketing.tsx");
-    assert.equal(home.includes("publicCategoryImage"), false);
-    assert.equal(categories.includes("publicCategoryImage"), false);
+    assert.match(home, /publicCategoryImage/);
+    assert.match(categories, /publicCategoryImage/);
     assert.equal(collab.includes("directory.creators.slice(0, 6)"), false);
     assert.match(collab, /hero\.images/);
     assert.match(business, /hero\.images/);

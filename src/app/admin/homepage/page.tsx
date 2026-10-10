@@ -10,7 +10,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
-import { publicStoredImage } from "@/lib/seed-data";
+import { publicCategoryImage, publicStoredImage } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Homepage · Admin" };
@@ -60,10 +60,12 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
 
   const categoryItems = taxonomy.map((node) => {
     const managed = cms.categories.items.find((item) => item.slug === node.slug);
+    const uploaded = publicStoredImage(managed?.image);
     return {
       slug: node.slug,
       name: node.name,
-      image: publicStoredImage(managed?.image),
+      uploaded,
+      image: publicCategoryImage(node.slug, managed?.image),
     };
   });
 
@@ -176,8 +178,8 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-xl font-bold text-indigo">Categories row</h2>
           <p className="mt-1 text-sm text-muted">
-            Title, CTA, and an uploaded image for each category. A category without an uploaded
-            image shows its name on the brand gradient.
+            Title, CTA, and an uploaded image for each category. A category shows its specialty
+            photo until an upload replaces it. Remove returns to that specialty photo.
           </p>
         </div>
         <form action={actionSaveHomepageCategories} className="space-y-4 rounded-2xl border border-[#E4EBFF] bg-white p-5">
@@ -225,7 +227,7 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
                   <div className="text-sm font-semibold text-indigo">{item.name}</div>
                   <div className="text-[11px] text-muted">{item.slug}</div>
                 </div>
-                <input type="hidden" name="image" value={item.image} />
+                <input type="hidden" name="image" value={item.uploaded} />
                 <label className="min-w-[16rem] flex-1 text-xs font-semibold text-muted">
                   Upload image
                   <input
@@ -236,7 +238,7 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
                     className="mt-1 block w-full text-sm text-indigo"
                   />
                 </label>
-                {item.image && canEdit ? (
+                {item.uploaded && canEdit ? (
                   <label className="flex items-center gap-2 text-xs font-semibold text-muted">
                     <input type="checkbox" name="clearImage" value={item.slug} className="accent-violet" />
                     Remove

@@ -700,6 +700,14 @@ export function publicStoredImage(src: string | null | undefined): string {
   return value;
 }
 
+/** A category tile uses an uploaded image, or the specialty photo shipped for that slug. */
+export function publicCategoryImage(slug: string, stored?: string | null): string {
+  const uploaded = publicStoredImage(stored);
+  if (uploaded) return uploaded;
+  const shipped = CATEGORY_IMAGES[slug] ?? "";
+  return shipped.startsWith("/demo/categories/") ? shipped : "";
+}
+
 /** Uploaded images only. Demo art and blank paths are dropped. */
 export function uploadedImages(images: readonly (string | null | undefined)[] | null | undefined): string[] {
   return (images ?? []).flatMap((src) => {
