@@ -6,6 +6,7 @@ import {
   PUBLIC_BUSINESS_WORKSPACE,
   ensureOwnedBusinessWorkspace,
   getWorkspace,
+  newBusinessWorkspaceFields,
 } from "./business";
 import { listFundingsForBusiness } from "./marketplace-ledger";
 
@@ -132,5 +133,31 @@ describe("business workspace tenancy (W2.3)", () => {
     assert.match(sql, /Luminous Beauty/);
     assert.match(sql, /brief-clean-launch/);
     assert.match(sql, /"ownerUserId" IS NULL/);
+  });
+
+  it("starts a new workspace on the free plan with a blank industry", () => {
+    const named = newBusinessWorkspaceFields({
+      userName: "Ada Okonkwo",
+      email: "ada@example.com",
+    });
+    assert.equal(named.name, "Ada Okonkwo");
+    assert.equal(named.industry, "");
+    assert.equal(named.plan, "BUSINESS_FREE");
+
+    const fromEmail = newBusinessWorkspaceFields({ email: "harbor@example.com" });
+    assert.equal(fromEmail.name, "harbor");
+    assert.equal(fromEmail.industry, "");
+
+    const blank = newBusinessWorkspaceFields({});
+    assert.equal(blank.name, "");
+    assert.equal(blank.industry, "");
+    assert.equal(blank.plan, "BUSINESS_FREE");
+
+    const source = readFileSync("src/lib/business.ts", "utf8");
+    const home = readFileSync("src/app/business/home/page.tsx", "utf8");
+    assert.equal(source.includes('|| "General"'), false);
+    assert.equal(source.includes('|| "Business"'), false);
+    assert.equal(source.includes('plan: "BUSINESS_PRO"'), false);
+    assert.equal(home.includes('|| "Business"'), false);
   });
 });

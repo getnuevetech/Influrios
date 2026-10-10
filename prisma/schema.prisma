@@ -824,7 +824,7 @@ model BusinessWorkspace {
   ownerUserId String?                @unique
   owner       User?                  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
   name        String
-  plan        String                 @default("BUSINESS_PRO")
+  plan        String                 @default("BUSINESS_FREE")
   industry    String
   updatedAt   DateTime               @updatedAt
   briefs      BusinessBrief[]
