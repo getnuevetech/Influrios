@@ -6,6 +6,7 @@ import {
 } from "@/lib/creator-og";
 import { getDirectoryCreator } from "@/lib/directory";
 import { isShortLinkHost } from "@/lib/short-link-hosts";
+import { withReferralParam } from "@/lib/referral-cookie";
 import { brandedFallbackHtml, resolveShortRequest } from "@/lib/short-link";
 import { recordResolverMetric } from "@/lib/short-link-resolver-metrics";
 
@@ -42,6 +43,8 @@ export async function GET(request: NextRequest) {
       "server-timing": `resolve;dur=${Math.max(0, Date.now() - started)}`,
     };
     if (hit.kind === "redirect") {
+      const location =
+        hit.eventType === "alias_redirect" ? hit.location : withReferralParam(hit.location, hit.shortLinkId);
       if (isSocialPreviewBot(userAgent)) {
         const slug = creatorSlugFromDestination(hit.location);
         if (slug) {
@@ -50,7 +53,7 @@ export async function GET(request: NextRequest) {
             return new NextResponse(
               socialPreviewInterstitialHtml({
                 creator,
-                destinationUrl: hit.location,
+                destinationUrl: location,
               }),
               {
                 status: 200,
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
           }
         }
       }
-      return NextResponse.redirect(hit.location, {
+      return NextResponse.redirect(location, {
         status: hit.status,
         headers: { "Cache-Control": hit.cacheControl, ...metricHeaders },
       });

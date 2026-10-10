@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { REFERRAL_COOKIE, referralId } from "@/lib/referral-cookie";
 import { isShortLinkHost, normalizeShortHost } from "@/lib/short-link-hosts";
 
 /** Cookie name must match ADMIN_COOKIE in admin-auth.ts */
@@ -47,6 +48,15 @@ export function middleware(req: NextRequest) {
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 180,
+    });
+  }
+  const referral = referralId(req.nextUrl.searchParams.get("ref"));
+  if (referral && !pathname.startsWith("/admin")) {
+    response.cookies.set(REFERRAL_COOKIE, referral, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
     });
   }
   return response;

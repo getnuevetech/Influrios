@@ -1,6 +1,6 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { safeNextPath } from "@/lib/account-policy";
 import {
@@ -18,6 +18,8 @@ import {
   recordAuthFailure,
   recordAuthSuccess,
 } from "@/lib/auth-lockout";
+import { REFERRAL_COOKIE } from "@/lib/referral-cookie";
+import { recordReferralRegistration } from "@/lib/referrals";
 
 function back(path: string, error: string, next?: string) {
   const url = new URL(path, "http://influrios.local");
@@ -41,13 +43,25 @@ export async function actionRegister(formData: FormData) {
   const locked = lockoutMessage("register", ip, email);
   if (locked) back("/register", AUTH_LOCKOUT_GENERIC_MESSAGE, next);
   try {
-    await registerAccount({
+    const user = await registerAccount({
       email,
       name: String(formData.get("name") ?? ""),
       password: String(formData.get("password") ?? ""),
       source: "register",
       ip: ip === "unknown" ? null : ip,
     });
+    const jar = await cookies();
+    const shortLinkId = jar.get(REFERRAL_COOKIE)?.value ?? "";
+    if (shortLinkId) {
+      await recordReferralRegistration({
+        userId: user.id,
+        email: user.email,
+        shortLinkId,
+      }).catch((error) => {
+        console.error("referral registration", error);
+      });
+      jar.set(REFERRAL_COOKIE, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
+    }
     recordAuthSuccess("register", ip, email);
   } catch (error) {
     recordAuthFailure("register", ip, email);
