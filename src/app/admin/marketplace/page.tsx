@@ -36,7 +36,7 @@ import { scheduleLabel } from "@/lib/schedule";
 import { listFxRates, listRevenueParties } from "@/lib/settlement";
 import { wiseFxConfig } from "@/lib/wise-quote";
 import { formatMoney } from "@/lib/money";
-import { ledgerMonthlyReport, ledgerTotals, listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
+import { ledgerMonthlyReport, ledgerTotals, listFundings, marketplaceConfig, marketplaceProviderLabel } from "@/lib/marketplace-ledger";
 import { productSwitch } from "@/lib/product-switches";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { feeTypeFromFundingSnapshot, type FeeTypeAmount } from "@/lib/ledger";
@@ -134,6 +134,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Name
               <input
                 name="name"
+                required
                 defaultValue={config.provider.name}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               />
@@ -172,6 +173,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Name
               <input
                 name="name"
+                required
                 defaultValue={row.name}
                 disabled={!canManage}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
@@ -211,7 +213,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             </label>
             <label className="text-xs font-semibold text-muted">
               Name
-              <input name="name" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+              <input name="name" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
             </label>
             <label className="text-xs font-semibold text-muted sm:col-span-2">
               Webhook secret
@@ -633,7 +635,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               >
                 {config.providers.map((provider) => (
                   <option key={provider.code} value={provider.code}>
-                    {provider.name} ({provider.code})
+                    {marketplaceProviderLabel(provider.name, provider.code)}
                   </option>
                 ))}
               </select>
@@ -723,7 +725,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 <option value="">Choose a provider</option>
                 {config.providers.map((provider) => (
                   <option key={provider.code} value={provider.code}>
-                    {provider.name} ({provider.code})
+                    {marketplaceProviderLabel(provider.name, provider.code)}
                   </option>
                 ))}
               </select>

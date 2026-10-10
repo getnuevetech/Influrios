@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/app/admin/guard";
 import { frozenFeeRuleHeading, getFundingTransactionView } from "@/lib/admin-transaction-view";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
+import { marketplaceProviderLabel } from "@/lib/marketplace-ledger";
 import { formatMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +71,7 @@ export default async function AdminFundingTransactionPage({ params }: Props) {
         <div className="card-surface space-y-2 p-5">
           <h2 className="font-display text-lg font-bold text-indigo">Provider</h2>
           <p className="text-sm text-indigo">
-            {provider.name ?? provider.code} ({provider.code})
+            {marketplaceProviderLabel(provider.name, provider.code)}
           </p>
           <p className="text-xs text-muted">{provider.ready ? "Ready for signed webhooks" : "Not ready"}</p>
         </div>

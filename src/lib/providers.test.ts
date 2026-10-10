@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { marketplaceProviderLabel } from "./marketplace-ledger";
 import { decryptSecret, encryptSecret } from "./provider-secrets";
 import {
   aiEndpointAllowed,
@@ -114,6 +115,17 @@ describe("entered provider names", () => {
     assert.equal(gateways.includes('|| "stripe"'), false);
     assert.match(searchPage, /name="name" required/);
     assert.match(gatewayPage, /action=\{actionSaveConnect\}[\s\S]*name="name" required/);
+  });
+
+  it("shows a stored marketplace provider name and leaves a blank name as the code", () => {
+    assert.equal(marketplaceProviderLabel("Airwallex", "primary"), "Airwallex (primary)");
+    assert.equal(marketplaceProviderLabel("  ", "primary"), "primary");
+    assert.equal(marketplaceProviderLabel(null, "primary"), "primary");
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    assert.equal(ledger.includes('?? "Marketplace provider"'), false);
+    assert.equal(ledger.includes('name: "Marketplace provider"'), false);
+    assert.match(page, /name="name" required/);
   });
 });
 
