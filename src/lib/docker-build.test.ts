@@ -35,5 +35,7 @@ describe("production image build", () => {
     assert.match(deploy, /MemTotal:/);
     assert.match(deploy, /total_kb\}" -lt 3500000/);
     assert.match(deploy, /docker compose stop web meilisearch postgres/);
+    assert.equal(deploy.includes('curl -fsSI "http://127.0.0.1/"'), false);
+    assert.match(deploy, /NEXT_PUBLIC_APP_URL/);
   });
 });
