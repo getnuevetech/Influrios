@@ -48,10 +48,12 @@ export async function actionAdvanceIntro(formData: FormData) {
 export async function actionRequestIntroFeeSettlement(formData: FormData) {
   await requireAdminAction("matching.advance_intros");
   const id = String(formData.get("id") ?? "");
+  const jurisdiction = String(formData.get("jurisdiction") ?? "");
   const grossRaw = String(formData.get("grossCents") ?? "").trim();
-  const grossValueCents = grossRaw ? Number.parseInt(grossRaw, 10) : undefined;
+  const grossValueCents = grossRaw ? Number(grossRaw) : undefined;
   const result = await requestIntroFeeSettlement(id, {
-    grossValueCents: Number.isFinite(grossValueCents) ? grossValueCents : undefined,
+    jurisdiction,
+    grossValueCents: Number.isInteger(grossValueCents) ? grossValueCents : undefined,
   });
   revalidatePath("/admin/matching");
   revalidatePath("/business");

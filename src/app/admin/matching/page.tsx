@@ -15,6 +15,7 @@ import {
   getManagedMatching,
   getManagedPromotionEnabled,
   INTRO_STATUSES,
+  listIntroFeeJurisdictions,
   listQueuedMatchRequests,
 } from "@/lib/managed-matching";
 import { introStatusDisplayLabel, MATCHING_PRODUCT_BOUNDARY } from "@/lib/matching-product-boundary";
@@ -56,11 +57,13 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
   let store;
   let queue;
   let promotionOn = false;
+  let jurisdictions: { code: string; label: string }[] = [];
   try {
-    [store, queue, promotionOn] = await Promise.all([
+    [store, queue, promotionOn, jurisdictions] = await Promise.all([
       getManagedMatching(),
       listQueuedMatchRequests(),
       getManagedPromotionEnabled(),
+      listIntroFeeJurisdictions(),
     ]);
   } catch {
     return (
@@ -313,8 +316,11 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                       {intro.briefTitle}
                       {intro.feeExpected ? ` · ${intro.feeExpected}` : ""}
                       {intro.feeExpectedCents != null
-                        ? ` · quoted ${formatMoney(intro.feeExpectedCents)}`
+                        ? intro.feeCurrency
+                          ? ` · quoted ${formatMoney(intro.feeExpectedCents, intro.feeCurrency)}`
+                          : ` · quoted ${intro.feeExpectedCents}¢`
                         : ""}
+                      {intro.feeJurisdiction ? ` · ${intro.feeJurisdiction}` : ""}
                       {intro.feeIntentRef ? ` · intent ${intro.feeIntentRef}` : ""}
                       {intro.feeProviderRef ? ` · settled ${intro.feeProviderRef}` : ""}
                     </p>
@@ -336,12 +342,28 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                         <form action={actionRequestIntroFeeSettlement} className="flex flex-wrap items-end gap-2">
                           <input type="hidden" name="id" value={intro.id} />
                           <label className="text-xs">
+                            <span className="font-semibold text-indigo">Jurisdiction</span>
+                            <select
+                              name="jurisdiction"
+                              required
+                              defaultValue=""
+                              className="ml-2 rounded-lg border border-border px-2 py-1 text-sm"
+                            >
+                              <option value="">Choose a jurisdiction</option>
+                              {jurisdictions.map((row) => (
+                                <option key={row.code} value={row.code}>
+                                  {row.label ? `${row.label} (${row.code})` : row.code}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-xs">
                             <span className="font-semibold text-indigo">Deal basis (¢)</span>
                             <input
                               name="grossCents"
                               type="number"
-                              min={100}
-                              placeholder="10000"
+                              min={1}
+                              required
                               className="ml-2 w-28 rounded-lg border border-border px-2 py-1 text-sm"
                             />
                           </label>

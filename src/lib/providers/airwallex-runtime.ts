@@ -133,6 +133,11 @@ export async function openIntroFeeCheckout(introId: string): Promise<
   if (!intro.feeIntentRef || intro.feeExpectedCents == null || intro.feeExpectedCents <= 0) {
     return { ok: false, error: "Request an intro fee quote before opening checkout. Nothing was charged." };
   }
+  const { introFeeQuoteCurrency } = await import("@/lib/managed-matching");
+  const currency = introFeeQuoteCurrency(intro.feeQuoteJson);
+  if (!currency) {
+    return { ok: false, error: "This quote has no currency. Request a new intro fee quote. Nothing was charged." };
+  }
   if (intro.status === "paid") return { ok: false, error: "This intro fee is already settled." };
   const auth = await session();
   if (!auth.ok) return auth;
@@ -142,7 +147,7 @@ export async function openIntroFeeCheckout(introId: string): Promise<
     intentRef: intro.feeIntentRef,
     introId: intro.id,
     amountCents: intro.feeExpectedCents,
-    currency: "USD",
+    currency,
   });
   if (!opened.ok) return opened;
   return opened;
