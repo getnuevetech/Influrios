@@ -17,7 +17,8 @@ import {
 import { getCms, publicBannerImages } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
-import { formatFollowers, platformDisplayName, publicCategoryImage, publicStoredImage, specialtyLabel, totalFollowers, type SeedCreator } from "@/lib/seed-data";
+import { demoCardStrip, demoCollaborationPairs, demoCreators, publicPagesUseLive } from "@/lib/presentation-demo";
+import { formatFollowers, platformDisplayName, publicCategoryImage, specialtyLabel, totalFollowers } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
 
@@ -53,12 +54,14 @@ export default async function HomePage() {
     marketplace?.jurisdictions.find((row) => row.code === "US") ?? marketplace?.jurisdictions[0];
   const protectedPaymentsEnabled = homeJurisdiction?.protectedPaymentsEnabled !== false;
   const escrowTermAllowed = Boolean(homeJurisdiction?.escrowTermAllowed);
+  const livePages = await publicPagesUseLive().catch(() => false);
   const taxonomy = directory.taxonomy
     .filter((node) => node.active)
     .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
   const bySlug = new Map(directory.creators.map((creator) => [creator.slug, creator]));
   const creatorBySlug = (slug: string) => bySlug.get(slug);
-  const heroFloats = directory.creators.slice(0, FLOAT_CLASS.length).map((creator, index) => ({
+  const portraitCreators = livePages ? directory.creators : demoCreators();
+  const heroFloats = portraitCreators.slice(0, FLOAT_CLASS.length).map((creator, index) => ({
     creator,
     label: creator.specialties[0] ? specialtyLabel(creator.specialties[0]) : "",
     followers: formatFollowers(totalFollowers(creator)),
@@ -82,40 +85,23 @@ export default async function HomePage() {
 
   const baseCardWidth = 220;
   const widthPx = Math.round(baseCardWidth * cms.featuredCards.widthScale);
-
-  const featuredItems = [...cms.featuredCards.cards]
-    .filter((c) => c.visible)
-    .sort((a, b) => a.order - b.order)
-    .map((c) => {
-      const creator = creatorBySlug(c.slug);
-      return creator ? { creator, features: c.features } : null;
-    })
-    .filter(Boolean) as { creator: SeedCreator; features: (typeof cms.featuredCards.cards)[0]["features"] }[];
-
-  // Prefer Plus/Pro first if CMS hasn't ordered yet
-  const featured =
-    featuredItems.length > 0
-      ? featuredItems
-      : directory.creators.filter((c) => c.planTier !== "STARTER")
-          .slice(0, 5)
-          .map((creator) => ({
-            creator,
-            features: {
-              showBadge: true,
-              showHeart: true,
-              showVerified: true,
-              showLocation: true,
-              showSpecialties: true,
-              showSocials: true,
-              showFollowerCounts: true,
-              showQr: true,
-              showStatus: true,
-              visiblePlatforms: [] as string[],
-            },
-          }));
-
-  const proofAvatars = directory.creators.slice(0, 5);
-  const featuredCreator = directory.creators[0];
+  const featured = demoCardStrip();
+  const proofAvatars = portraitCreators.slice(0, 5);
+  const featuredCreator = demoCreators()[0];
+  const collabCards = livePages
+    ? cms.collaborationMatches.matches.flatMap((match) => {
+        const left = creatorBySlug(match.leftSlug);
+        const right = creatorBySlug(match.rightSlug);
+        if (!left || !right) return [];
+        return [{ key: match.title, title: match.title, tags: match.tags, left, right }];
+      })
+    : demoCollaborationPairs().map((match) => ({
+        key: match.title,
+        title: match.title,
+        tags: match.tags,
+        left: match.left,
+        right: match.right,
+      }));
   const heroPadY = `${Math.round(4 * hero.heightScale)}rem`;
   const ctaPadY = `${Math.round(4 * cta.heightScale)}rem`;
 
@@ -310,9 +296,12 @@ export default async function HomePage() {
       <section className="w-full bg-gradient-to-b from-[#F7FAFF] to-lavender/40 py-12">
         <Shell>
           <div className="mb-8 flex items-end justify-between gap-4">
-            <h2 className="font-display text-2xl font-bold text-indigo sm:text-3xl">
-              Featured Influencers
-            </h2>
+            <div>
+              <h2 className="font-display text-2xl font-bold text-indigo sm:text-3xl">
+                Featured Influencers
+              </h2>
+              <p className="mt-2 text-sm text-muted">Demo cards. These profiles stay on this strip.</p>
+            </div>
             <Link
               href="/discover"
               className="inline-flex items-center gap-1 text-sm font-semibold text-violet hover:underline"
@@ -415,13 +404,12 @@ export default async function HomePage() {
             </Link>
           </div>
           <FeaturedCarousel stepPx={300}>
-            {cms.collaborationMatches.matches.map((m) => {
-              const left = creatorBySlug(m.leftSlug);
-              const right = creatorBySlug(m.rightSlug);
-              if (!left || !right) return null;
+            {collabCards.map((m) => {
+              const left = m.left;
+              const right = m.right;
               return (
                 <Link
-                  key={m.title}
+                  key={m.key}
                   href="/collaboration"
                   className="group w-[280px] shrink-0 rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
                 >
@@ -509,8 +497,9 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-2">
               {featuredCreator ? <CompactInfluencerCard creator={featuredCreator} /> : null}
+              {featuredCreator ? <p className="text-xs font-semibold text-violet">Demo card</p> : null}
             </div>
 
             <div className="relative mx-auto hidden max-w-[200px] lg:block">
@@ -582,7 +571,7 @@ export default async function HomePage() {
           >
             <div className="hidden shrink-0 lg:block">
               <div className="flex -space-x-4">
-                {directory.creators.slice(0, 3).map((c, i) => (
+                {portraitCreators.slice(0, 3).map((c, i) => (
                   <span
                     key={c.slug}
                     className={`relative h-20 w-20 overflow-hidden rounded-2xl ring-4 ring-white/20 ${
@@ -614,7 +603,7 @@ export default async function HomePage() {
             </div>
             <div className="hidden shrink-0 lg:block">
               <div className="flex -space-x-4">
-                {directory.creators.slice(3, 6).map((c, i) => (
+                {portraitCreators.slice(3, 6).map((c, i) => (
                   <span
                     key={c.slug}
                     className={`relative h-20 w-20 overflow-hidden rounded-2xl ring-4 ring-white/20 ${

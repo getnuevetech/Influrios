@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildBrandedQrSvg } from "@/lib/branded-qr";
 import { getDraftBySlug } from "@/lib/claim";
 import { getDirectoryCreator } from "@/lib/directory";
+import { isDemoCreatorSlug } from "@/lib/presentation-demo";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { qrPayloadForSlug } from "@/lib/short-link";
 
@@ -29,6 +30,17 @@ export async function GET(
   const size = Number.isFinite(sizeRaw) ? Math.min(1024, Math.max(64, Math.round(sizeRaw))) : 512;
   const logoParam = request.nextUrl.searchParams.get("logo");
   const withLogo = logoParam === "0" ? false : logoParam === "1" ? true : size >= 120;
+
+  if (isDemoCreatorSlug(slug)) {
+    const target = `${appOrigin(request)}/creators/${slug}`;
+    const svg = await buildBrandedQrSvg({ target, size, withLogo, margin: 1 });
+    return new NextResponse(svg, {
+      headers: {
+        "Content-Type": "image/svg+xml; charset=utf-8",
+        "Cache-Control": "public, max-age=300",
+      },
+    });
+  }
 
   const creator = await getDirectoryCreator(slug);
   if (creator) {

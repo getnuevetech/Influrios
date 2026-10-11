@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { GuestGateBanner } from "@/components/guest-gate-banner";
-import { consumeGuestQuota } from "@/lib/guest-usage";
+import { consumeGuestQuota, type GuestQuota } from "@/lib/guest-usage";
 import {
   IconBag,
   IconCake,
@@ -32,6 +32,7 @@ import {
 } from "@/lib/seed-data";
 import { directoryLabels, getDirectory, getDirectoryCreator, profilePlace, recordDirectoryEvent } from "@/lib/directory";
 import { creatorShareMetadata } from "@/lib/creator-og";
+import { demoCreatorBySlug, demoCreators } from "@/lib/presentation-demo";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -39,7 +40,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const creator = await getDirectoryCreator(slug);
+  const creator = demoCreatorBySlug(slug) ?? (await getDirectoryCreator(slug));
   if (!creator) return { title: "Influencer not found" };
   return creatorShareMetadata(creator, { surface: "profile" });
 }
@@ -61,22 +62,27 @@ const COLLAB_ICON_MAP: Record<string, typeof IconCamera> = {
 
 export default async function CreatorProfilePage({ params }: Props) {
   const { slug } = await params;
-  const creator = await getDirectoryCreator(slug);
+  const preview = demoCreatorBySlug(slug);
+  const creator = preview ?? (await getDirectoryCreator(slug));
   if (!creator) notFound();
-  const gate = await consumeGuestQuota("profile");
-  if (gate.decision === "hard") {
-    redirect(`/login?next=${encodeURIComponent(`/creators/${slug}`)}&gate=profile`);
+  let gate: GuestQuota = { decision: "allow", copy: "", count: 0 };
+  if (!preview) {
+    gate = await consumeGuestQuota("profile");
+    if (gate.decision === "hard") {
+      redirect(`/login?next=${encodeURIComponent(`/creators/${slug}`)}&gate=profile`);
+    }
+    await recordDirectoryEvent("influencer_profile_viewed", { slug, surface: "profile" });
   }
-  await recordDirectoryEvent("influencer_profile_viewed", { slug, surface: "profile" });
 
-  const directory = await getDirectory();
-  const related = directory.creators.filter((c) => c.slug !== creator.slug).slice(0, 4);
+  const related = preview
+    ? demoCreators().filter((row) => row.slug !== creator.slug).slice(0, 4)
+    : (await getDirectory()).creators.filter((row) => row.slug !== creator.slug).slice(0, 4);
   const content = (creator.featuredContent ?? []).flatMap((item) => {
-    const image = publicStoredImage(item.image);
+    const image = preview ? item.image : publicStoredImage(item.image);
     return image ? [{ ...item, image }] : [];
   });
   const polaroids = (creator.polaroids ?? []).flatMap((item) => {
-    const image = publicStoredImage(item.image);
+    const image = preview ? item.image : publicStoredImage(item.image);
     return image ? [{ ...item, image }] : [];
   });
   const stats = creator.stats;
@@ -133,6 +139,11 @@ export default async function CreatorProfilePage({ params }: Props) {
 
   return (
     <div className="bg-[#F5F8FF]">
+      {preview ? (
+        <p className="bg-[#EAE4FF] px-4 py-2 text-center text-sm font-semibold text-indigo">
+          Demo profile. This card is a preview and is not a live influencer.
+        </p>
+      ) : null}
       <GuestGateBanner copy={gate.decision === "soft" ? gate.copy : ""} next={`/creators/${slug}`} />
       {/* —— Hero banner —— */}
       <section className="relative">

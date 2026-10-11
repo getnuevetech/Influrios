@@ -38,6 +38,15 @@ import {
 } from "@/lib/marketplace-listings";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { getDirectory, getDirectoryCreator, indexCreatorsBySlug } from "@/lib/directory";
+import {
+  demoBusinessRequests,
+  demoCreatorBySlug,
+  demoCreatorMatches,
+  demoCreators,
+  demoOpportunities,
+  demoPopularMatchCards,
+  publicPagesUseLive,
+} from "@/lib/presentation-demo";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { isPlanCode, type PlanCode } from "@/lib/entitlements";
 
@@ -75,16 +84,22 @@ export default async function CollaborationPage({ searchParams }: Props) {
     collabOsV1Enabled().catch(() => true),
   ]);
   const bySlug = indexCreatorsBySlug(directory.creators);
-  const all = await allDirectoryMatches();
-  await persistTopMatches(all).catch(() => 0);
-  const matches = filterMatches(all, {
+  const livePages = await publicPagesUseLive().catch(() => false);
+  let all: CreatorMatch[] = [];
+  if (livePages) {
+    all = await allDirectoryMatches();
+    await persistTopMatches(all).catch(() => 0);
+  }
+  const matchPool = livePages ? all : demoCreatorMatches();
+  const filtered = filterMatches(matchPool, {
     specialty: params.specialty,
     location: params.location,
     platform: params.platform,
     q: params.q,
   });
-  const featured = matches[0] ?? all[0];
-  const sideMatches = (matches.length > 1 ? matches.slice(1, 4) : all.slice(1, 4)).filter(Boolean);
+  const matches = !livePages && filtered.length === 0 ? matchPool : filtered;
+  const featured = matches[0] ?? matchPool[0];
+  const sideMatches = (matches.length > 1 ? matches.slice(1, 4) : matchPool.slice(1, 4)).filter(Boolean);
   const account = await getAccountSession().catch(() => null);
   const draft = account ? await getCreatorSessionDraft().catch(() => null) : null;
 
@@ -189,7 +204,29 @@ export default async function CollaborationPage({ searchParams }: Props) {
     })
     .slice(0, 4);
   const taxonomy = directory.taxonomy;
-  const popularCards = cardsFromStoredCollaborationMatches(cms.collaborationMatches.matches);
+  const popularCards = livePages
+    ? cardsFromStoredCollaborationMatches(cms.collaborationMatches.matches)
+    : demoPopularMatchCards();
+  const collageImages =
+    landing.hero.images.length > 0 || livePages
+      ? landing.hero.images
+      : demoCreators().slice(0, 5).map((creator) => creator.image);
+  const requestCards = livePages
+    ? requests.slice(0, 4).map((item) => ({
+        id: item.id,
+        brand: item.brand,
+        budget: item.budget,
+        location: item.location,
+        summary: item.summary,
+        logoUrl: item.logoUrl,
+      }))
+    : demoBusinessRequests();
+  const opportunityCards = livePages
+    ? visibleOpportunities
+    : demoOpportunities().flatMap((item) => {
+        const creator = demoCreatorBySlug(item.creatorSlug);
+        return creator ? [{ item, creator }] : [];
+      });
 
   const hero = landing.hero;
   const dual = landing.dualPath;
@@ -265,7 +302,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </div>
           </div>
           <div className="relative mx-auto hidden h-[340px] w-full max-w-md lg:block">
-            {hero.images.map((src, index) => (
+            {collageImages.map((src, index) => (
               <div
                 key={src}
                 className={`absolute overflow-hidden rounded-[1.75rem] shadow-2xl ring-2 ring-white ${
@@ -426,12 +463,13 @@ export default async function CollaborationPage({ searchParams }: Props) {
           {featured ? (
             <FeaturedMatchCard
               match={featured}
-              brand={brand ?? null}
+              brand={livePages ? (brand ?? null) : null}
               canRequest={canRequest}
               signedIn={signedIn}
               collabOsOn={collabOsOn}
               viewerSlug={viewer?.slug}
               viewerPlan={viewerPlan}
+              preview={!livePages}
             />
           ) : (
             <div className="rounded-2xl border border-[#E4E9F5] bg-white p-8 text-center text-muted">
@@ -445,7 +483,11 @@ export default async function CollaborationPage({ searchParams }: Props) {
             {sideMatches.map((match) => (
               <Link
                 key={`${match.a.slug}-${match.b.slug}`}
-                href={`/collaboration/propose?a=${encodeURIComponent(match.a.slug)}&b=${encodeURIComponent(match.b.slug)}`}
+                href={
+                  livePages
+                    ? `/collaboration/propose?a=${encodeURIComponent(match.a.slug)}&b=${encodeURIComponent(match.b.slug)}`
+                    : `/creators/${match.a.slug}`
+                }
                 className="flex items-center gap-3 rounded-2xl border border-[#E4E9F5] bg-white p-3 shadow-sm transition hover:border-violet/40"
               >
                 <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full">
@@ -455,7 +497,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
                   <p className="truncate text-sm font-bold text-indigo">
                     {match.a.displayName} × {match.b.displayName}
                   </p>
-                  <p className="text-[11px] text-muted">{match.score}% match</p>
+                  <p className="text-[11px] text-muted">{livePages ? `${match.score}% match` : "Demo preview"}</p>
                 </div>
                 <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full">
                   <Image src={match.b.image} alt="" fill className="object-cover" sizes="48px" />
@@ -479,12 +521,12 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </Link>
           </div>
           <ul className="space-y-3">
-            {requests.length === 0 ? (
+            {requestCards.length === 0 ? (
               <li className="rounded-xl border border-dashed border-[#E8EDF8] px-3 py-4 text-sm text-muted">
                 A published business request appears here.
               </li>
             ) : null}
-            {requests.slice(0, 4).map((item) => (
+            {requestCards.map((item) => (
               <li key={item.id} className="rounded-xl border border-[#E8EDF8] p-3">
                 <div className="flex gap-3">
                   <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-[#F4F7FF]">
@@ -498,20 +540,15 @@ export default async function CollaborationPage({ searchParams }: Props) {
                       {item.budget} · {item.location}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs text-muted">{item.summary}</p>
-                    {signedIn && draft?.slug ? (
+                    {livePages ? (
                       <form action={actionApplyToBusinessRequest} className="mt-2">
                         <input type="hidden" name="requestId" value={item.id} />
                         <button type="submit" className="inline-flex text-[11px] font-bold text-violet">
-                          Apply to request →
+                          {signedIn && draft?.slug ? "Apply to request →" : "Sign in to apply →"}
                         </button>
                       </form>
                     ) : (
-                      <form action={actionApplyToBusinessRequest} className="mt-2">
-                        <input type="hidden" name="requestId" value={item.id} />
-                        <button type="submit" className="inline-flex text-[11px] font-bold text-violet">
-                          Sign in to apply →
-                        </button>
-                      </form>
+                      <p className="mt-2 text-[11px] font-bold text-violet">Demo preview</p>
                     )}
                   </div>
                 </div>
@@ -530,12 +567,12 @@ export default async function CollaborationPage({ searchParams }: Props) {
             </Link>
           </div>
           <ul className="space-y-3">
-            {visibleOpportunities.length === 0 ? (
+            {opportunityCards.length === 0 ? (
               <li className="rounded-xl border border-dashed border-[#E8EDF8] px-3 py-4 text-sm text-muted">
                 A published influencer opportunity appears here.
               </li>
             ) : (
-              visibleOpportunities.map(({ item, creator }) => (
+              opportunityCards.map(({ item, creator }) => (
                 <li key={item.id} className="flex gap-3 rounded-xl border border-[#E8EDF8] p-3">
                   <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full">
                     <Image src={creator.image} alt="" fill className="object-cover" sizes="44px" />
@@ -881,6 +918,7 @@ function FeaturedMatchCard({
   viewerSlug,
   viewerPlan,
   collabOsOn,
+  preview = false,
 }: {
   match: CreatorMatch;
   brand: MarketplaceBusinessRequestRow | null;
@@ -889,6 +927,7 @@ function FeaturedMatchCard({
   viewerSlug?: string;
   viewerPlan: PlanCode;
   collabOsOn: boolean;
+  preview?: boolean;
 }) {
   const factors = [
     ["Audience Alignment", match.breakdown.audienceAlignment],
@@ -962,25 +1001,36 @@ function FeaturedMatchCard({
       </div>
 
       <div className="mt-5 flex flex-wrap gap-3">
-        {signedIn && !canRequest ? (
+        {preview ? (
+          <>
+            <Link href={`/creators/${match.a.slug}`} className="btn-secondary">
+              View {match.a.displayName}
+            </Link>
+            <Link href={`/creators/${match.b.slug}`} className="btn-secondary">
+              View {match.b.displayName}
+            </Link>
+          </>
+        ) : signedIn && !canRequest ? (
           <Link href="/card#pricing" className="btn-secondary">
             Upgrade from {viewerPlan} to request matches
           </Link>
         ) : (
-          <Link href={proposeHref} className="btn-primary">
-            Request Collaboration <IconArrowRight size={14} />
-          </Link>
+          <>
+            <Link href={proposeHref} className="btn-primary">
+              Request Collaboration <IconArrowRight size={14} />
+            </Link>
+            <SaveMatchButton
+              partyASlug={match.a.slug}
+              partyBSlug={match.b.slug}
+              signedIn={signedIn}
+              returnTo={
+                viewerSlug && collabOsOn
+                  ? "/collaboration/hub?saved=1"
+                  : "/collaboration?landing=1&saved=1"
+              }
+            />
+          </>
         )}
-        <SaveMatchButton
-          partyASlug={match.a.slug}
-          partyBSlug={match.b.slug}
-          signedIn={signedIn}
-          returnTo={
-            viewerSlug && collabOsOn
-              ? "/collaboration/hub?saved=1"
-              : "/collaboration?landing=1&saved=1"
-          }
-        />
       </div>
     </article>
   );
