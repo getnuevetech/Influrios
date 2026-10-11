@@ -154,11 +154,46 @@ export async function listCountryActivationCorridors() {
   return prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } });
 }
 
-/** Currency on that country's payment route. A country with no route stays blank. */
+/** Currency on that country's catalog payment route. A country with no route returns null. */
 export function payoutCurrencyForCountry(countryCode: string | null | undefined): string | null {
   const code = (countryCode ?? "").trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(code)) return null;
   return storedCurrencyCode(DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === code)?.currency);
+}
+
+/**
+ * Currency stored on a new payout profile.
+ * A saved corridor wins, then the catalog route, then the admin backup (USD when that backup is blank).
+ */
+export function payoutProfileCurrency(input: {
+  countryCode: string | null | undefined;
+  corridorCurrency?: string | null;
+  fallbackCurrency?: string | null;
+}): string {
+  const code = (input.countryCode ?? "").trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(code)) {
+    const corridor = storedCurrencyCode(input.corridorCurrency);
+    if (corridor) return corridor;
+    const route = payoutCurrencyForCountry(code);
+    if (route) return route;
+  }
+  return storedCurrencyCode(input.fallbackCurrency) ?? "USD";
+}
+
+export async function loadPayoutFallbackCurrency(): Promise<string> {
+  const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
+  return storedCurrencyCode(settings?.payoutFallbackCurrency) ?? "USD";
+}
+
+export async function savePayoutFallbackCurrency(currency: string) {
+  const code = storedCurrencyCode(currency);
+  if (!code) throw new Error("Enter a three-letter backup currency.");
+  await prisma.marketplaceSettings.upsert({
+    where: { id: "default" },
+    update: { payoutFallbackCurrency: code },
+    create: { id: "default", payoutFallbackCurrency: code },
+  });
+  return code;
 }
 
 export async function ensureInfluencerPayoutProfile(input: {
@@ -167,11 +202,20 @@ export async function ensureInfluencerPayoutProfile(input: {
 }) {
   const countryCode = countryCodeFromLocation(input.locationCountry ?? null);
   const method = defaultMethodForCountry(countryCode);
-  const currency = payoutCurrencyForCountry(countryCode);
   const existing = await prisma.influencerPayoutProfile.findUnique({
     where: { creatorId: input.creatorId },
   });
   if (existing) return existing;
+  await ensureCountryActivationCorridors();
+  const corridor = countryCode
+    ? await prisma.countryActivationCorridor.findUnique({ where: { countryCode } })
+    : null;
+  const fallbackCurrency = await loadPayoutFallbackCurrency();
+  const currency = payoutProfileCurrency({
+    countryCode,
+    corridorCurrency: corridor?.currency,
+    fallbackCurrency,
+  });
   return prisma.influencerPayoutProfile.create({
     data: {
       creatorId: input.creatorId,

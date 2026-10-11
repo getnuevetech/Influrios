@@ -1,11 +1,13 @@
 import Link from "next/link";
 import {
+  actionSavePayoutFallback,
   actionToggleCorridor,
   actionUpdateCorridor,
 } from "@/app/admin/corridors/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { listCorridorsForAdmin, payoutMethodOptions } from "@/lib/collab-control-plane";
+import { loadPayoutFallbackCurrency } from "@/lib/payout-readiness";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Country corridors · Admin" };
@@ -17,6 +19,7 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
   const canManage = hasPermission(session, "collab_finance.manage");
   const params = await searchParams;
   const corridors = await listCorridorsForAdmin().catch(() => []);
+  const fallbackCurrency = await loadPayoutFallbackCurrency().catch(() => "USD");
   const methods = payoutMethodOptions();
 
   return (
@@ -28,7 +31,9 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Country activation corridors</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Suspend or update a corridor without a deploy. Inactive corridors block ROUTE_READY for influencers in that
-          country. Fee rule edits stay on Collaboration fees; gateway credentials stay on Payment gateways.
+          country. Fee rule edits stay on Collaboration fees; gateway credentials stay on Payment gateways. A new
+          payout profile stores the currency saved on that country. Kenya starts as KES and the United States starts
+          as USD. An existing profile keeps the currency it already stored.
         </p>
         <p className="mt-2 text-xs text-muted">
           Also see{" "}
@@ -43,6 +48,31 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
         <p className="text-sm font-semibold text-emerald-700">Saved ({params.saved}).</p>
       ) : null}
       {params.error ? <p className="text-sm font-semibold text-amber-800">{params.error}</p> : null}
+
+      <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
+        <h2 className="font-display text-lg font-bold text-indigo">Backup currency</h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted">
+          A country with no corridor uses this code on a new payout profile. It starts as USD.
+        </p>
+        {canManage ? (
+          <form action={actionSavePayoutFallback} className="mt-3 flex flex-wrap items-end gap-3">
+            <label className="text-xs font-semibold text-muted">
+              Backup currency
+              <input
+                name="payoutFallbackCurrency"
+                defaultValue={fallbackCurrency}
+                maxLength={3}
+                className="mt-1 w-28 rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo"
+              />
+            </label>
+            <button type="submit" className="btn-primary !px-4 !py-2 text-xs">
+              Save backup currency
+            </button>
+          </form>
+        ) : (
+          <p className="mt-3 text-sm font-semibold text-indigo">{fallbackCurrency}</p>
+        )}
+      </article>
 
       <div className="space-y-4">
         {corridors.length === 0 ? (

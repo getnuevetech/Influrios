@@ -1517,6 +1517,8 @@ model MarketplaceSettings {
   /// W3.6 — kill fee on current milestone when brand cancels after work began (bps of milestone).
   killFeeBps               Int      @default(2500)
   killFeeFixedCents        Int      @default(0)
+  /// New payout profiles use this code when the country has no corridor.
+  payoutFallbackCurrency   String   @default("USD")
   updatedAt                DateTime @updatedAt
 }
 

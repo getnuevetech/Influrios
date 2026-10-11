@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { setCorridorActive, updateCorridor } from "@/lib/collab-control-plane";
-import { PAYOUT_METHODS } from "@/lib/payout-readiness";
+import { PAYOUT_METHODS, savePayoutFallbackCurrency } from "@/lib/payout-readiness";
 
 function bool(formData: FormData, key: string) {
   return String(formData.get(key) ?? "") === "1" || String(formData.get(key) ?? "") === "on";
@@ -23,6 +23,18 @@ export async function actionToggleCorridor(formData: FormData) {
   revalidatePath("/admin/corridors");
   revalidatePath("/admin/collaboration-ops");
   redirect(`/admin/corridors?saved=${active ? "activated" : "suspended"}`);
+}
+
+export async function actionSavePayoutFallback(formData: FormData) {
+  await requireAdminAction("collab_finance.manage");
+  try {
+    await savePayoutFallbackCurrency(String(formData.get("payoutFallbackCurrency") ?? ""));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the backup currency.";
+    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/corridors");
+  redirect("/admin/corridors?saved=backup");
 }
 
 export async function actionUpdateCorridor(formData: FormData) {
