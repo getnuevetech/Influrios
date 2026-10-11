@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   buildChargebackEvidencePack,
@@ -28,8 +29,26 @@ describe("chargeback evidence pack", () => {
     assert.equal(pack.currency, "USD");
     assert.equal(pack.attachmentUrls.length, 1);
     assert.match(chargebackEvidenceSummary(pack), /case cb_123/);
+    assert.match(chargebackEvidenceSummary(pack), /12500¢ USD/);
     assert.equal(parseChargebackEvidence(null), null);
     assert.equal(parseChargebackEvidence(pack)?.providerReference, "pi_abc");
+  });
+
+  it("keeps a blank currency blank", () => {
+    const pack = buildChargebackEvidencePack({
+      amountCents: 4_000,
+      currency: "  ",
+      recordedBy: "admin@influrios.com",
+    });
+    assert.equal(pack.currency, "");
+    assert.equal(chargebackEvidenceSummary(pack), "4000¢");
+    assert.equal(parseChargebackEvidence({ amountCents: 4_000 })?.currency, "");
+    assert.equal(parseChargebackEvidence({ currency: "gbp" })?.currency, "GBP");
+    const source = readFileSync("src/lib/chargeback-evidence.ts", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    assert.equal(source.includes('|| "USD"'), false);
+    assert.equal(source.includes(': "USD"'), false);
+    assert.match(page, /formatStoredMoney\(funding\.evidence\.amountCents, funding\.evidence\.currency\)/);
   });
 });
 
