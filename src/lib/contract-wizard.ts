@@ -257,7 +257,7 @@ export function buildFinancialPlan(input: {
     feeFixedCents: input.feeFixedCents ?? null,
     totalPlatformFeeCents: totalFee,
     totalCreatorCompensationCents: totalCreator,
-    feePayer: input.feePayer ?? "brand",
+    feePayer: (input.feePayer ?? "").trim(),
     fundingCountry: input.fundingCountry.trim().toUpperCase(),
     creatorCountry: input.creatorCountry.trim().toUpperCase(),
     payoutCurrency,
