@@ -3,7 +3,9 @@
  * Ops can suspend corridors, version thresholds, and inspect account purposes without a deploy.
  */
 import { ACCOUNT_PURPOSES, type AccountPurpose } from "@/lib/account-purpose";
+import { corridorCurrencyOptions, requireCorridorCountry } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
+import { storedCurrencyCode } from "@/lib/money";
 import {
   ensureCountryActivationCorridors,
   listCountryActivationCorridors,
@@ -274,6 +276,125 @@ export async function listCorridorsForAdmin() {
   return listCountryActivationCorridors();
 }
 
+function cleanPayoutMethods(methods: string[]): PayoutMethod[] {
+  return methods
+    .map((method) => String(method).trim())
+    .filter((method): method is PayoutMethod => (PAYOUT_METHODS as readonly string[]).includes(method));
+}
+
+async function assertCollectionRoute(code: string | null, previous: string | null) {
+  if (!code || code === previous) return;
+  const known = await prisma.integrationProvider.findFirst({ where: { kind: "payment", code } });
+  if (!known) throw new Error("Choose a collection route.");
+}
+
+export async function createCorridor(input: {
+  countryCode: string;
+  actor: string;
+  collectionProviderCode?: string | null;
+  payoutMethods?: string[];
+}) {
+  const country = requireCorridorCountry(input.countryCode);
+  await ensureCountryActivationCorridors();
+  const existing = await prisma.countryActivationCorridor.findUnique({ where: { countryCode: country.code } });
+  if (existing) throw new Error(`${country.name} already has a corridor.`);
+  const collectionProviderCode = input.collectionProviderCode?.trim() || null;
+  await assertCollectionRoute(collectionProviderCode, null);
+  const payoutMethods = cleanPayoutMethods(input.payoutMethods ?? []);
+  if (payoutMethods.length === 0) throw new Error("Choose a payout method.");
+  const after = await prisma.countryActivationCorridor.create({
+    data: {
+      countryCode: country.code,
+      active: true,
+      currency: country.currency,
+      collectionProviderCode,
+      payoutMethodsJson: payoutMethods,
+      holdingEnabled: true,
+      fxEnabled: country.currency !== "USD",
+      kycModel: "identity_light",
+      notes: "",
+    },
+  });
+  await prisma.auditLog.create({
+    data: {
+      actor: input.actor.slice(0, 120),
+      action: "corridor.create",
+      objectType: "CountryActivationCorridor",
+      objectId: country.code,
+      after: after as unknown as object,
+    },
+  });
+  return after;
+}
+
+export async function listCorridorGroups() {
+  return prisma.corridorCountryGroup.findMany({
+    include: { members: { orderBy: { countryCode: "asc" } } },
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function saveCorridorGroup(input: { id?: string; name: string; countryCodes: string[]; actor: string }) {
+  const name = input.name.trim().slice(0, 80);
+  if (!name) throw new Error("A group name is required.");
+  const countryCodes = [...new Set(input.countryCodes.map((code) => code.trim().toUpperCase()))]
+    .filter((code) => /^[A-Z]{2}$/.test(code))
+    .sort();
+  if (countryCodes.length === 0) throw new Error("Choose at least one country.");
+  await ensureCountryActivationCorridors();
+  const corridors = await prisma.countryActivationCorridor.findMany({
+    where: { countryCode: { in: countryCodes } },
+  });
+  if (corridors.length !== countryCodes.length) throw new Error("Choose countries that already have a corridor.");
+
+  const group = await prisma.$transaction(async (tx) => {
+    let row = input.id ? await tx.corridorCountryGroup.findUnique({ where: { id: input.id } }) : null;
+    if (input.id && !row) throw new Error("That country group was not found.");
+    if (row) {
+      row = await tx.corridorCountryGroup.update({ where: { id: row.id }, data: { name } });
+    } else {
+      row = await tx.corridorCountryGroup.create({ data: { name } });
+    }
+    await tx.corridorCountryGroupMember.deleteMany({
+      where: { OR: [{ groupId: row.id }, { countryCode: { in: countryCodes } }] },
+    });
+    await tx.corridorCountryGroupMember.createMany({
+      data: countryCodes.map((countryCode) => ({ groupId: row.id, countryCode })),
+    });
+    return row;
+  });
+  await prisma.auditLog.create({
+    data: {
+      actor: input.actor.slice(0, 120),
+      action: "corridor.group",
+      objectType: "CorridorCountryGroup",
+      objectId: group.id,
+      after: { name, countryCodes },
+    },
+  });
+  return group;
+}
+
+export async function deleteCorridorGroup(input: { id: string; actor: string }) {
+  const id = input.id.trim();
+  if (!id) throw new Error("Choose a country group.");
+  const before = await prisma.corridorCountryGroup.findUnique({
+    where: { id },
+    include: { members: true },
+  });
+  if (!before) throw new Error("That country group was not found.");
+  await prisma.corridorCountryGroup.delete({ where: { id } });
+  await prisma.auditLog.create({
+    data: {
+      actor: input.actor.slice(0, 120),
+      action: "corridor.group.delete",
+      objectType: "CorridorCountryGroup",
+      objectId: id,
+      before: { name: before.name, countryCodes: before.members.map((member) => member.countryCode) },
+    },
+  });
+}
+
 export async function setCorridorActive(input: {
   countryCode: string;
   active: boolean;
@@ -318,24 +439,25 @@ export async function updateCorridor(input: {
   const before = await prisma.countryActivationCorridor.findUnique({ where: { countryCode: code } });
   if (!before) throw new Error(`Corridor ${code} was not found.`);
 
-  const currency = (input.currency ?? before.currency).trim().toUpperCase();
-  if (!/^[A-Z]{3}$/.test(currency)) throw new Error("Use a three-letter currency.");
+  const currency = storedCurrencyCode(input.currency ?? before.currency);
+  const allowed = new Set(corridorCurrencyOptions(before.currency));
+  if (!currency || !allowed.has(currency)) throw new Error("Choose a currency.");
 
   const methods =
     input.payoutMethods ??
     (Array.isArray(before.payoutMethodsJson) ? (before.payoutMethodsJson as string[]) : []);
-  const cleanedMethods = methods
-    .map((m) => String(m).trim())
-    .filter((m): m is PayoutMethod => (PAYOUT_METHODS as readonly string[]).includes(m));
+  const cleanedMethods = cleanPayoutMethods(methods);
+  const collectionProviderCode =
+    input.collectionProviderCode === undefined
+      ? before.collectionProviderCode
+      : input.collectionProviderCode?.trim() || null;
+  await assertCollectionRoute(collectionProviderCode, before.collectionProviderCode);
 
   const after = await prisma.countryActivationCorridor.update({
     where: { countryCode: code },
     data: {
       currency,
-      collectionProviderCode:
-        input.collectionProviderCode === undefined
-          ? before.collectionProviderCode
-          : input.collectionProviderCode?.trim() || null,
+      collectionProviderCode,
       holdingEnabled: input.holdingEnabled ?? before.holdingEnabled,
       fxEnabled: input.fxEnabled ?? before.fxEnabled,
       kycModel: (input.kycModel ?? before.kycModel).trim().slice(0, 80) || "identity_light",

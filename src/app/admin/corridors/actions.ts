@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
-import { setCorridorActive, updateCorridor } from "@/lib/collab-control-plane";
+import {
+  createCorridor,
+  deleteCorridorGroup,
+  saveCorridorGroup,
+  setCorridorActive,
+  updateCorridor,
+} from "@/lib/collab-control-plane";
 import { PAYOUT_METHODS, savePayoutFallbackCurrency } from "@/lib/payout-readiness";
 
 function bool(formData: FormData, key: string) {
@@ -23,6 +29,56 @@ export async function actionToggleCorridor(formData: FormData) {
   revalidatePath("/admin/corridors");
   revalidatePath("/admin/collaboration-ops");
   redirect(`/admin/corridors?saved=${active ? "activated" : "suspended"}`);
+}
+
+export async function actionCreateCorridor(formData: FormData) {
+  const session = await requireAdminAction("collab_finance.manage");
+  const methods = formData
+    .getAll("payoutMethod")
+    .map((value) => String(value))
+    .filter((value) => (PAYOUT_METHODS as readonly string[]).includes(value));
+  try {
+    await createCorridor({
+      countryCode: String(formData.get("countryCode") ?? ""),
+      actor: session.email,
+      collectionProviderCode: String(formData.get("collectionProviderCode") ?? "") || null,
+      payoutMethods: methods,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not add that country.";
+    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/corridors");
+  redirect("/admin/corridors?saved=country");
+}
+
+export async function actionSaveCorridorGroup(formData: FormData) {
+  const session = await requireAdminAction("collab_finance.manage");
+  try {
+    await saveCorridorGroup({
+      id: String(formData.get("id") ?? "") || undefined,
+      name: String(formData.get("name") ?? ""),
+      countryCodes: formData.getAll("countryCode").map((value) => String(value)),
+      actor: session.email,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save that country group.";
+    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/corridors");
+  redirect("/admin/corridors?saved=group");
+}
+
+export async function actionDeleteCorridorGroup(formData: FormData) {
+  const session = await requireAdminAction("collab_finance.manage");
+  try {
+    await deleteCorridorGroup({ id: String(formData.get("id") ?? ""), actor: session.email });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not remove that country group.";
+    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/corridors");
+  redirect("/admin/corridors?saved=group-removed");
 }
 
 export async function actionSavePayoutFallback(formData: FormData) {

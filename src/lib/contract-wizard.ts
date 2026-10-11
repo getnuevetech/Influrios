@@ -3,6 +3,7 @@
  * Pure gates + financial plan snapshot; funding still goes through marketplace-ledger.
  */
 import { SERVICE_LEVELS } from "@/lib/collaboration-fees";
+import { corridorCountries } from "@/lib/corridor-countries";
 import { splitGross } from "@/lib/ledger";
 
 export const CONTRACT_WIZARD_STEPS = [
@@ -366,5 +367,8 @@ export function countryCodeFromLocation(locationCountry: string | null | undefin
     KENYA: "KE",
     GHANA: "GH",
   };
-  return map[raw.toUpperCase()] ?? null;
+  const alias = map[raw.toUpperCase()];
+  if (alias) return alias;
+  const named = corridorCountries().find((row) => row.name.toUpperCase() === raw.toUpperCase());
+  return named?.code ?? null;
 }

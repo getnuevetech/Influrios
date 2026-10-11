@@ -380,6 +380,25 @@ model CountryActivationCorridor {
   updatedAt              DateTime @updatedAt
 }
 
+/// Named folder of country corridors. Each country keeps its own currency and route.
+model CorridorCountryGroup {
+  id        String                       @id @default(cuid())
+  name      String
+  createdAt DateTime                     @default(now())
+  updatedAt DateTime                     @updatedAt
+  members   CorridorCountryGroupMember[]
+}
+
+model CorridorCountryGroupMember {
+  groupId     String
+  countryCode String
+  group       CorridorCountryGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, countryCode])
+  @@unique([countryCode])
+  @@index([groupId])
+}
+
 /// Fields a payout provider returned for a country. Unreturned fields stay empty.
 model ProviderCorridorCapability {
   id             String   @id @default(cuid())
