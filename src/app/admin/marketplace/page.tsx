@@ -49,17 +49,17 @@ type Props = { searchParams: Promise<{ saved?: string; error?: string; wiseRate?
 const CANCEL_REASONS = Object.keys(CANCELLATION_REASON_LABELS) as CancellationReason[];
 
 function formatFeesByType(feesByType: FeeTypeAmount[], currency: string, totalCents: number) {
-  if (feesByType.length === 0) return formatMoney(totalCents, currency);
+  if (feesByType.length === 0) return formatStoredMoney(totalCents, currency);
   if (feesByType.length === 1) {
     const only = feesByType[0];
     const label = FEE_TYPE_LABELS[only.feeType as FeeType] ?? only.feeType;
-    return `${label} ${formatMoney(only.amountCents, currency)}`;
+    return `${label} ${formatStoredMoney(only.amountCents, currency)}`;
   }
   const parts = feesByType.map((row) => {
     const label = FEE_TYPE_LABELS[row.feeType as FeeType] ?? row.feeType;
-    return `${label} ${formatMoney(row.amountCents, currency)}`;
+    return `${label} ${formatStoredMoney(row.amountCents, currency)}`;
   });
-  return `${formatMoney(totalCents, currency)} (${parts.join("; ")})`;
+  return `${formatStoredMoney(totalCents, currency)} (${parts.join("; ")})`;
 }
 
 export default async function AdminMarketplacePage({ searchParams }: Props) {
@@ -1401,8 +1401,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         <ul className="mt-3 space-y-2 text-sm text-indigo">
           {totals.map((row) => (
             <li key={row.currency}>
-              {row.currency} · held {formatMoney(row.heldCents, row.currency)} · released {formatMoney(row.releasedCents, row.currency)} · refunded{" "}
-              {formatMoney(row.refundedCents, row.currency)} · fees{" "}
+              {row.currency ? `${row.currency} · ` : ""}held {formatStoredMoney(row.heldCents, row.currency)} · released {formatStoredMoney(row.releasedCents, row.currency)} · refunded{" "}
+              {formatStoredMoney(row.refundedCents, row.currency)} · fees{" "}
               {formatFeesByType(row.feesByType, row.currency, row.feeCents)}
               {row.unbalanced > 0 ? ` · ${row.unbalanced} unbalanced` : ""}
             </li>
@@ -1420,8 +1420,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           <ul className="mt-3 space-y-2 text-sm text-indigo">
             {monthly.map((row) => (
               <li key={`${row.currency}-${row.month}`}>
-                {row.month} · {row.currency} · holds {formatMoney(row.heldCents, row.currency)} · releases{" "}
-                {formatMoney(row.releasedCents, row.currency)} · refunds {formatMoney(row.refundedCents, row.currency)} · fees{" "}
+                {row.month} · {row.currency ? `${row.currency} · ` : ""}holds {formatStoredMoney(row.heldCents, row.currency)} · releases{" "}
+                {formatStoredMoney(row.releasedCents, row.currency)} · refunds {formatStoredMoney(row.refundedCents, row.currency)} · fees{" "}
                 {formatFeesByType(row.feesByType, row.currency, row.feeCents)}
               </li>
             ))}

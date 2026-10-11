@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { prisma } from "./db";
 import { listAttributionSources } from "./deal-attribution";
@@ -55,6 +56,30 @@ describe("gross cap and ledger totals", () => {
     assert.equal(gbp?.heldCents, 7_500);
     assert.equal(gbp?.feeCents, 0);
     assert.deepEqual(gbp?.feesByType, []);
+  });
+
+  it("keeps a blank currency out of the USD total", () => {
+    const totals = summarizeLedger([
+      {
+        currency: "USD",
+        grossCents: 1_000,
+        entries: [{ kind: "hold", amountCents: 1_000 }],
+      },
+      {
+        currency: "",
+        grossCents: 2_000,
+        entries: [{ kind: "hold", amountCents: 2_000 }],
+      },
+    ]);
+    assert.equal(totals.find((row) => row.currency === "USD")?.heldCents, 1_000);
+    assert.equal(totals.find((row) => row.currency === "")?.heldCents, 2_000);
+    const source = readFileSync("src/lib/ledger.ts", "utf8");
+    const marketplace = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    const ops = readFileSync("src/app/admin/collaboration-ops/page.tsx", "utf8");
+    assert.equal(source.includes('|| "USD"'), false);
+    assert.equal(source.includes('?? "USD"'), false);
+    assert.match(marketplace, /formatStoredMoney\(row\.heldCents, row\.currency\)/);
+    assert.match(ops, /formatStoredMoney\(row\.heldCents, row\.currency\)/);
   });
 });
 
