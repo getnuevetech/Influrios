@@ -78,6 +78,29 @@ export function quoteFromWiseRate(input: { usdCents: number; currency: string; r
   };
 }
 
+/** A Wise rate check uses the amount, currency, and minor digits that were entered. */
+export function wiseRateCheckDraft(input: {
+  currency?: string | null;
+  amount?: string | null;
+  minorDigits?: string | null;
+}):
+  | { ok: true; currency: string; usdCents: number; minorDigits: number }
+  | { ok: false; error: string } {
+  const currency = (input.currency ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) return { ok: false, error: "Enter a three-letter currency." };
+  if (currency === "USD") return { ok: false, error: "Enter a non-USD currency." };
+  const amount = (input.amount ?? "").trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(amount)) return { ok: false, error: "Enter a USD amount." };
+  const [whole, frac = ""] = amount.split(".");
+  const usdCents = Number(whole) * 100 + Number(frac.padEnd(2, "0"));
+  if (!Number.isInteger(usdCents) || usdCents <= 0 || usdCents > 100_000_000) {
+    return { ok: false, error: "Enter a USD amount." };
+  }
+  const digits = (input.minorDigits ?? "").trim();
+  if (!/^[0-4]$/.test(digits)) return { ok: false, error: "Enter minor digits from 0 to 4." };
+  return { ok: true, currency, usdCents, minorDigits: Number(digits) };
+}
+
 export function convertFee(
   usdFeeCents: number,
   fx: { currency: string; minorPerUsd: number; rate?: number | null; minorDigits?: number | null },
