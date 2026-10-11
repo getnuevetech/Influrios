@@ -923,7 +923,7 @@ export async function sweepDueRecurrences(now = new Date()) {
       jurisdiction: row.jurisdictionCode,
       serviceLevel: row.serviceLevel,
       grossValueCents: usdCents,
-      fundingMode: row.fundingMode || "FULL",
+      fundingMode: (row.fundingMode ?? "").trim(),
       relationshipSource: "organic",
       promotionChannel: row.serviceLevel.startsWith("managed") ? "sponsored" : "none",
     }).catch(() => null);
@@ -1103,7 +1103,7 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     jurisdiction: funding.jurisdictionCode,
     serviceLevel: funding.serviceLevel,
     grossValueCents: input.grossCents,
-    fundingMode: funding.fundingMode || "FULL",
+    fundingMode: (funding.fundingMode ?? "").trim(),
     relationshipSource: "organic",
     promotionChannel: funding.serviceLevel.startsWith("managed") ? "sponsored" : "none",
   }).catch(() => null);

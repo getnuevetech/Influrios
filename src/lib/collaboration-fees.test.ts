@@ -146,6 +146,11 @@ describe("collaboration fee matching", () => {
     };
     assert.equal(matchesRule(rule({ fundingMode: "STAGED" }), stagedCtx, asOf), true);
     assert.equal(matchesRule(rule({ fundingMode: "FULL" }), stagedCtx, asOf), false);
+    const openCtx: FeeResolveContext = { ...ctx, serviceLevel: "contracted" };
+    assert.equal(matchesRule(rule({ fundingMode: "FULL" }), openCtx, asOf), false);
+    assert.equal(matchesRule(rule({ fundingMode: "FULL" }), { ...openCtx, fundingMode: "" }, asOf), false);
+    assert.equal(matchesRule(rule({ fundingMode: "FULL" }), { ...openCtx, fundingMode: "FULL" }, asOf), true);
+    assert.equal(matchesRule(rule({ fundingMode: "*" }), openCtx, asOf), true);
     assert.equal(matchesRule(rule({ relationshipSource: "referral" }), stagedCtx, asOf), true);
     assert.equal(matchesRule(rule({ relationshipSource: "organic" }), stagedCtx, asOf), false);
     assert.equal(matchesRule(rule({ promotionChannel: "ambassador" }), stagedCtx, asOf), true);
@@ -273,6 +278,10 @@ describe("entered fee rule facts", () => {
       assert.equal(quoted.grossValueCents, 2550);
     }
 
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    const fees = readFileSync("src/lib/collaboration-fees.ts", "utf8");
+    assert.equal(ledger.includes('|| "FULL"'), false);
+    assert.equal(fees.includes('ctx.fundingMode || "FULL"'), false);
     const actions = readFileSync("src/app/admin/actions.ts", "utf8");
     const page = readFileSync("src/app/admin/fees/page.tsx", "utf8");
     const funding = readFileSync("src/app/admin/marketplace/[fundingId]/page.tsx", "utf8");
