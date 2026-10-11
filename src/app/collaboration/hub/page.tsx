@@ -21,7 +21,7 @@ import { collabOsV1Enabled } from "@/lib/collab-os";
 import { loadCreatorHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
 import { getCms } from "@/lib/cms";
 import { getDirectoryCreator, indexCreatorsBySlug, getDirectory } from "@/lib/directory";
-import { formatMoney } from "@/lib/money";
+import { formatStoredMoney } from "@/lib/money";
 import { cardsFromStoredCollaborationMatches } from "@/lib/matching";
 import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
 import { PAYOUT_METHOD_LABELS, type PayoutMethod } from "@/lib/payout-readiness";
@@ -339,7 +339,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             <div className="rounded-2xl border border-[#E4E9F5] bg-gradient-to-br from-[#633CFF] to-[#2979FF] p-4 text-white shadow-sm">
               <p className="text-[11px] font-bold uppercase tracking-wide text-white/80">Available Earnings</p>
               <p className="mt-1 font-display text-2xl font-bold">
-                {hub.earnings.ready ? formatMoney(availableCents) : "—"}
+                {hub.earnings.ready ? formatStoredMoney(availableCents, hub.earnings.currency) : "—"}
               </p>
               <Link href="/payments" className="mt-2 inline-flex text-xs font-bold text-white underline">
                 {hub.earnings.ready ? "View Wallet" : "Protected payments"}
@@ -541,10 +541,10 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                     {hub.earnings.ready ? (
                       <>
                         <p className="mt-4 font-display text-2xl font-bold text-indigo">
-                          {formatMoney(availableCents)}
+                          {formatStoredMoney(availableCents, hub.earnings.currency)}
                         </p>
                         <p className="text-xs text-muted">
-                          Released to you · {formatMoney(hub.earnings.heldCents)} still held
+                          Released to you · {formatStoredMoney(hub.earnings.heldCents, hub.earnings.currency)} still held
                         </p>
                       </>
                     ) : (
@@ -735,7 +735,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                           </>
                         ) : null}
                         {item.feeCents != null && item.currency ? (
-                          <> · fee locked {formatMoney(item.feeCents, item.currency)}</>
+                          <> · fee locked {formatStoredMoney(item.feeCents, item.currency)}</>
                         ) : null}
                         {item.revisionSummary ? <> · {item.revisionSummary}</> : null}
                       </p>

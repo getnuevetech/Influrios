@@ -14,7 +14,7 @@ import { loadBusinessHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
 import { BUSINESS_PLAN_PRICES, isBusinessPlanCode, type BusinessPlanCode } from "@/lib/business-entitlements";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 import { hasCurrentLegalRecord } from "@/lib/legal";
-import { formatMoney } from "@/lib/money";
+import { formatStoredMoney } from "@/lib/money";
 import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
 import { SPECIALTY_TAXONOMY, formatFollowers, publicStoredImage, specialtyLabel } from "@/lib/seed-data";
 import {
@@ -259,8 +259,8 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               ["Active Collaborations", hub.status.active],
               ["Draft Requests", hub.status.draftRequests],
               ["Pending Responses", hub.status.pendingReview],
-              ["Funded Value", formatMoney(hub.spend.fundedCents, hub.spend.currency)],
-              ["Released Spend", formatMoney(hub.spend.releasedCents, hub.spend.currency)],
+              ["Funded Value", formatStoredMoney(hub.spend.fundedCents, hub.spend.currency)],
+              ["Released Spend", formatStoredMoney(hub.spend.releasedCents, hub.spend.currency)],
               ["Completed", hub.status.completed],
             ].map(([label, value]) => (
               <div key={label as string} className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
@@ -772,7 +772,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             </>
                           ) : null}
                           {item.feeCents != null && item.currency
-                            ? ` · fee locked ${formatMoney(item.feeCents, item.currency)}`
+                            ? ` · fee locked ${formatStoredMoney(item.feeCents, item.currency)}`
                             : ""}
                           {item.revisionSummary ? ` · ${item.revisionSummary}` : ""}
                         </p>
@@ -815,7 +815,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 <div key={label as string} className="rounded-xl bg-[#F8FAFF] p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted">{label as string}</p>
                   <p className="mt-1 font-display text-lg font-bold text-indigo">
-                    {formatMoney(cents as number, hub.spend.currency)}
+                    {formatStoredMoney(cents as number, hub.spend.currency)}
                   </p>
                 </div>
               ))}
