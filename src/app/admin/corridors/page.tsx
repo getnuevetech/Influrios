@@ -336,6 +336,13 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
             every country in the group. Each country keeps its own currency and collection route, and you can change
             one country’s KYC type afterward.
           </p>
+          <p className="mt-2 text-xs text-muted">
+            Define the gateway and the government-ID details on{" "}
+            <Link href="/admin/kyc" className="font-semibold text-violet hover:underline">
+              KYC
+            </Link>
+            .
+          </p>
           <ul className="mt-2 max-w-3xl space-y-1 text-xs text-muted">
             {KYC_TYPES.map((type) => (
               <li key={type.code}>

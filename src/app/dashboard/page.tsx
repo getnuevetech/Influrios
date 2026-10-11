@@ -130,7 +130,10 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
             Welcome{draft.ownerName ? `, ${draft.ownerName.split(" ")[0]}` : ""}
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Completeness score and next-best actions for your Influencer Card.
+            Completeness score and next-best actions for your Influencer Card.{" "}
+            <Link href="/dashboard/kyc" className="font-semibold text-violet hover:underline">
+              Identity KYC
+            </Link>
           </p>
         </div>
         <div className="rounded-2xl bg-lavender px-5 py-3 text-center">
