@@ -279,7 +279,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           feePercentBps: quote?.rule?.percentBps ?? null,
           feeFixedCents: quote?.rule?.fixedCents ?? null,
           totalPlatformFeeCents: quote?.feeCents ?? 0,
-          feePayer: quote?.rule?.payer ?? "brand",
+          feePayer: quote?.rule?.payer ?? "",
           fundingCountry: jurisdictionCode,
           creatorCountry: creatorCountry ?? jurisdictionCode,
           payoutCurrency: jurisdiction?.currency,

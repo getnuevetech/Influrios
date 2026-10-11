@@ -245,6 +245,26 @@ describe("financial plan snapshot", () => {
     assert.equal(wizard.includes('?? "USD"'), false);
     assert.equal(page.includes('?? "USD"'), false);
     assert.equal(actions.includes('?? "USD"'), false);
+    assert.equal(plan!.feePayer, "");
+    assert.equal(
+      buildFinancialPlan({
+        grossCents: 10_000,
+        currency: "GBP",
+        totalPlatformFeeCents: 0,
+        feePayer: "creator",
+        fundingCountry: "GB",
+        creatorCountry: "NG",
+        milestones: [
+          { title: "Delivery", shareBps: 6000 },
+          { title: "Publish", shareBps: 4000 },
+        ],
+        milestoneSource: "template",
+      })?.feePayer,
+      "creator",
+    );
+    assert.equal(wizard.includes('?? "brand"'), false);
+    assert.equal(page.includes('?? "brand"'), false);
+    assert.equal(actions.includes('?? "brand"'), false);
   });
 });
 
