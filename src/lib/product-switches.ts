@@ -33,6 +33,12 @@ export const PRODUCT_SWITCHES = [
     description:
       "Collaboration OS hubs and contract wizard. Turned off, signed-in users stay on the public landing plus propose/records.",
   },
+  {
+    key: "public_pages_live",
+    enabled: false,
+    description:
+      "Public homepage (except the influencer card strip), collaboration landing, and business landing use stored profiles. Off shows the demo set. The homepage influencer card strip always shows the demo set.",
+  },
 ] as const;
 
 export type ProductSwitchKey = (typeof PRODUCT_SWITCHES)[number]["key"];

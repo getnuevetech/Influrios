@@ -71,6 +71,8 @@ describe("public sample surfaces", () => {
     assert.equal(home.includes("Follow on"), false);
     assert.match(home, /platformDisplayName/);
     assert.match(home, /\/c\/\$\{featuredCreator\.slug\}/);
+    assert.match(home, /demoCardStrip\(\)/);
+    assert.equal(home.includes('planTier !== "STARTER"'), false);
     assert.equal(platformDisplayName("YOUTUBE"), "YouTube");
     assert.equal(platformDisplayName("TIKTOK"), "TikTok");
     assert.equal(platformDisplayName("WEBSITE"), "Website");

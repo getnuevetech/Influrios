@@ -3,6 +3,7 @@ import { BusinessMarketingPage } from "@/components/business-marketing";
 import { getAccountSession } from "@/lib/accounts";
 import { getDirectory, profilePlace } from "@/lib/directory";
 import { getBusinessLanding } from "@/lib/landing-pages";
+import { demoCreators, publicPagesUseLive } from "@/lib/presentation-demo";
 import { formatFollowers, publicStoredImage, specialtyLabel } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -13,12 +14,14 @@ export const metadata = {
 };
 
 export default async function BusinessPage() {
-  const [account, directory, landing] = await Promise.all([
+  const [account, directory, landing, livePages] = await Promise.all([
     getAccountSession().catch(() => null),
     getDirectory().catch(() => null),
     getBusinessLanding(),
+    publicPagesUseLive().catch(() => false),
   ]);
-  const recommended = (directory?.creators ?? []).slice(0, 4).map((creator) => {
+  const source = livePages ? (directory?.creators ?? []) : demoCreators();
+  const recommended = source.slice(0, 4).map((creator) => {
     const specialtySlug = creator.specialties[0]?.trim() ?? "";
     const followers = creator.socials.reduce((sum, social) => sum + social.followers, 0);
     const engagement = creator.stats?.engagementRate?.trim() ?? "";
@@ -26,7 +29,7 @@ export default async function BusinessPage() {
       slug: creator.slug,
       displayName: creator.displayName,
       title: creator.title.trim(),
-      image: publicStoredImage(creator.image),
+      image: livePages ? publicStoredImage(creator.image) : creator.image,
       place: profilePlace(creator.locationCity, creator.locationCountry),
       specialty: specialtySlug ? specialtyLabel(specialtySlug) : "",
       followers: followers > 0 ? formatFollowers(followers) : "",
@@ -34,6 +37,16 @@ export default async function BusinessPage() {
       platforms: creator.socials.map((social) => social.platform),
     };
   });
+  const landingView =
+    livePages || landing.hero.images.length > 0
+      ? landing
+      : {
+          ...landing,
+          hero: {
+            ...landing.hero,
+            images: demoCreators().slice(0, 4).map((creator) => creator.image),
+          },
+        };
 
   return (
     <>
@@ -49,7 +62,7 @@ export default async function BusinessPage() {
           </div>
         </div>
       ) : null}
-      <BusinessMarketingPage landing={landing} recommended={recommended} />
+      <BusinessMarketingPage landing={landingView} recommended={recommended} />
     </>
   );
 }

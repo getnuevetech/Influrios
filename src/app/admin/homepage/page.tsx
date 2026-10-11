@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   actionSaveHomepageCategories,
   actionSaveHomepageCollaboration,
+  actionSavePresentationMode,
   actionUpdateMenu,
   actionUpdateSection,
 } from "@/app/admin/homepage/actions";
@@ -10,6 +11,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
+import { publicPagesUseLive } from "@/lib/presentation-demo";
 import { publicCategoryImage, publicStoredImage } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +51,11 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
   const session = await requireAdminPage("banners");
   const query = await searchParams;
   const canEdit = hasPermission(session, "banners.edit");
-  const [directory, cms] = await Promise.all([getDirectory(), getCms()]);
+  const [directory, cms, liveProfiles] = await Promise.all([
+    getDirectory(),
+    getCms(),
+    publicPagesUseLive().catch(() => false),
+  ]);
   const sections = [...directory.sections].sort((a, b) => a.sortOrder - b.sortOrder);
   const menus = directory.menus.filter((item) => item.menu === "header" || item.menu === "footer_platform");
   const taxonomy = directory.taxonomy.filter((node) => node.active);
@@ -74,9 +80,11 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
       ? "Categories section saved."
       : query.saved === "collaboration"
         ? "Collaboration matches saved."
-        : query.saved
-          ? "Saved."
-          : null;
+        : query.saved === "presentation"
+          ? "Public page mode saved."
+          : query.saved
+            ? "Saved."
+            : null;
 
   return (
     <div className="mx-auto max-w-5xl space-y-10">
@@ -95,6 +103,32 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
       {query.error ? (
         <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{query.error}</p>
       ) : null}
+
+      <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
+        <h2 className="font-display text-xl font-bold text-indigo">Public pages</h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted">
+          Off shows the demo set on the homepage, the collaboration landing, the business landing, and the
+          influencer card page. On uses stored profiles, and an empty directory stays empty. The Featured
+          Influencers strip and the homepage influencer card always use the demo set.
+        </p>
+        <form action={actionSavePresentationMode} className="mt-4 flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+            <input
+              type="checkbox"
+              name="live"
+              value="on"
+              defaultChecked={liveProfiles}
+              disabled={!canEdit}
+            />
+            Show live profiles
+          </label>
+          {canEdit ? (
+            <button type="submit" className="btn-primary !px-4 !py-2 text-sm">
+              Save
+            </button>
+          ) : null}
+        </form>
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-display text-xl font-bold text-indigo">Content editors</h2>

@@ -11,6 +11,7 @@ import {
 } from "@/lib/cms";
 import { publicStoredImage } from "@/lib/seed-data";
 import { updateHomepageSection, updateMenuItem } from "@/lib/directory";
+import { setProductSwitch } from "@/lib/product-switches";
 import { normalizeInfluencerRoleTitle } from "@/lib/terminology-copy";
 
 export async function actionUpdateSection(formData: FormData) {
@@ -121,4 +122,15 @@ export async function actionSaveHomepageCollaboration(formData: FormData) {
     redirect(`/admin/homepage?error=${encodeURIComponent(message)}`);
   }
   redirect("/admin/homepage?saved=collaboration");
+}
+
+export async function actionSavePresentationMode(formData: FormData) {
+  await requireAdminAction("banners.edit");
+  try {
+    await setProductSwitch("public_pages_live", formData.get("live") === "on");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the public page mode";
+    redirect(`/admin/homepage?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/homepage?saved=presentation");
 }

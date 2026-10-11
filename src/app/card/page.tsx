@@ -4,6 +4,7 @@ import { getDirectory } from "@/lib/directory";
 import { rethrowIfNextDynamicError } from "@/lib/next-dynamic";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { displayPrice } from "@/lib/plan-presentation";
+import { demoCreators, publicPagesUseLive } from "@/lib/presentation-demo";
 import type { SeedCreator } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -12,13 +13,16 @@ export const metadata = {
 };
 
 export default async function CardMarketingPage() {
-  let example: SeedCreator | null = null;
-  try {
-    const directory = await getDirectory();
-    example = directory.creators[0] ?? null;
-  } catch (error) {
-    rethrowIfNextDynamicError(error);
-    console.error("card directory", error);
+  const livePages = await publicPagesUseLive().catch(() => false);
+  let example: SeedCreator | null = livePages ? null : (demoCreators()[0] ?? null);
+  if (livePages) {
+    try {
+      const directory = await getDirectory();
+      example = directory.creators[0] ?? null;
+    } catch (error) {
+      rethrowIfNextDynamicError(error);
+      console.error("card directory", error);
+    }
   }
   const matrix = await loadPlanMatrix("creator");
 
@@ -40,7 +44,7 @@ export default async function CardMarketingPage() {
             </Link>
             {example ? (
               <Link href={`/creators/${example.slug}`} className="btn-secondary">
-                See a live example
+                {livePages ? "See a live example" : "See a demo card"}
               </Link>
             ) : (
               <Link href="/pricing" className="btn-secondary">
