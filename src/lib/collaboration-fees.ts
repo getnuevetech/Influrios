@@ -736,7 +736,8 @@ export function matchesRule(rule: CollaborationFeeRule, ctx: FeeResolveContext, 
   if (rule.effectiveFrom > asOf) return false;
   if (rule.jurisdiction !== "*" && rule.jurisdiction !== ctx.jurisdiction) return false;
   if (rule.serviceLevel !== "*" && rule.serviceLevel !== ctx.serviceLevel) return false;
-  if (rule.fundingMode !== "*" && rule.fundingMode !== (ctx.fundingMode || "FULL")) return false;
+  const fundingMode = (ctx.fundingMode ?? "").trim();
+  if (rule.fundingMode !== "*" && rule.fundingMode !== fundingMode) return false;
   if (rule.relationshipSource !== "*" && rule.relationshipSource !== (ctx.relationshipSource || "organic")) {
     return false;
   }
