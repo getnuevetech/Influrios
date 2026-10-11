@@ -31,6 +31,12 @@ describe("admin product switches", () => {
     assert.equal(rows[0]?.releasedCents, 0);
     assert.equal(rows[1]?.month, "2026-02");
     assert.equal(rows[1]?.releasedCents, 50);
+    const blank = summarizeLedgerReport([
+      { currency: "", kind: "hold", amountCents: 400, createdAt: new Date("2026-03-02T00:00:00.000Z") },
+      { currency: "USD", kind: "hold", amountCents: 100, createdAt: new Date("2026-03-02T00:00:00.000Z") },
+    ]);
+    assert.equal(blank.find((row) => row.currency === "USD")?.heldCents, 100);
+    assert.equal(blank.find((row) => row.currency === "")?.heldCents, 400);
   });
 
   it("breaks monthly fee totals into separate feeType columns", () => {

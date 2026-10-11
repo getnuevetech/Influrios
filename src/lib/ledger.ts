@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { storedCurrencyCode } from "@/lib/money";
 
 export const LEDGER_KINDS = ["hold", "release", "refund", "fee"] as const;
 export type LedgerKind = (typeof LEDGER_KINDS)[number];
@@ -59,7 +60,7 @@ export function summarizeLedgerReport(
   for (const row of rows) {
     if (row.kind !== "hold" && row.kind !== "release" && row.kind !== "refund" && row.kind !== "fee") continue;
     const month = row.createdAt.toISOString().slice(0, 7);
-    const currency = (row.currency || "USD").toUpperCase();
+    const currency = storedCurrencyCode(row.currency) ?? "";
     const key = `${currency}|${month}`;
     const current =
       map.get(key) ??
@@ -260,7 +261,7 @@ export function summarizeLedger(
 ): LedgerCurrencyTotal[] {
   const totals = new Map<string, LedgerCurrencyTotal & { _fees: Map<string, number> }>();
   for (const funding of fundings) {
-    const currency = (funding.currency || "USD").toUpperCase();
+    const currency = storedCurrencyCode(funding.currency) ?? "";
     const row =
       totals.get(currency) ??
       ({
