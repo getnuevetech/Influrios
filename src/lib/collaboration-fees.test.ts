@@ -153,8 +153,14 @@ describe("collaboration fee matching", () => {
     assert.equal(matchesRule(rule({ fundingMode: "*" }), openCtx, asOf), true);
     assert.equal(matchesRule(rule({ relationshipSource: "referral" }), stagedCtx, asOf), true);
     assert.equal(matchesRule(rule({ relationshipSource: "organic" }), stagedCtx, asOf), false);
+    assert.equal(matchesRule(rule({ relationshipSource: "organic" }), openCtx, asOf), false);
+    assert.equal(matchesRule(rule({ relationshipSource: "organic" }), { ...openCtx, relationshipSource: "" }, asOf), false);
+    assert.equal(matchesRule(rule({ relationshipSource: "organic" }), { ...openCtx, relationshipSource: "organic" }, asOf), true);
     assert.equal(matchesRule(rule({ promotionChannel: "ambassador" }), stagedCtx, asOf), true);
     assert.equal(matchesRule(rule({ promotionChannel: "sponsored" }), stagedCtx, asOf), false);
+    assert.equal(matchesRule(rule({ promotionChannel: "none" }), openCtx, asOf), false);
+    assert.equal(matchesRule(rule({ promotionChannel: "none" }), { ...openCtx, promotionChannel: "" }, asOf), false);
+    assert.equal(matchesRule(rule({ promotionChannel: "none" }), { ...openCtx, promotionChannel: "none" }, asOf), true);
     assert.equal(ruleSpecificity(rule({ fundingMode: "STAGED", relationshipSource: "referral" })), 3);
   });
 
@@ -281,7 +287,11 @@ describe("entered fee rule facts", () => {
     const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
     const fees = readFileSync("src/lib/collaboration-fees.ts", "utf8");
     assert.equal(ledger.includes('|| "FULL"'), false);
+    assert.equal(ledger.includes('relationshipSource: "organic"'), false);
+    assert.equal((ledger.match(/startsWith\("managed"\) \? "sponsored" : "none"/g) ?? []).length, 1);
     assert.equal(fees.includes('ctx.fundingMode || "FULL"'), false);
+    assert.equal(fees.includes('|| "organic"'), false);
+    assert.equal(fees.includes('|| "none"'), false);
     const actions = readFileSync("src/app/admin/actions.ts", "utf8");
     const page = readFileSync("src/app/admin/fees/page.tsx", "utf8");
     const funding = readFileSync("src/app/admin/marketplace/[fundingId]/page.tsx", "utf8");
