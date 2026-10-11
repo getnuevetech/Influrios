@@ -402,6 +402,55 @@ model CorridorCountryGroupMember {
   @@index([groupId])
 }
 
+/// Gateway chosen for countries that use KYC through gateway.
+model KycSettings {
+  id                String   @id @default("default")
+  gatewayProviderId String?
+  updatedAt         DateTime @updatedAt
+}
+
+/// Admin-defined detail or document required for KYC through government ID.
+model KycDocumentRequirement {
+  id        String   @id @default(cuid())
+  /// detail | document
+  kind      String
+  label     String
+  required  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+/// One influencer KYC submission. Documents stay off the public site.
+model CreatorKycSubmission {
+  id                String   @id @default(cuid())
+  creatorSlug       String   @unique
+  creatorId         String?
+  countryCode       String   @default("")
+  /// gateway | government_id
+  kycModel          String
+  gatewayProviderId String?
+  /// submitted | verified | rejected | pending_gateway
+  status            String   @default("submitted")
+  detailsJson       Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  documents         CreatorKycDocument[]
+
+  @@index([status])
+}
+
+model CreatorKycDocument {
+  id            String              @id @default(cuid())
+  submissionId  String
+  requirementId String
+  label         String
+  storagePath   String
+  fileName      String
+  submission    CreatorKycSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+}
+
 /// Fields a payout provider returned for a country. Unreturned fields stay empty.
 model ProviderCorridorCapability {
   id             String   @id @default(cuid())

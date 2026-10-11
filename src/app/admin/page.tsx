@@ -235,6 +235,13 @@ const LINKS: {
     meta: () => "P6 corridor control",
   },
   {
+    href: "/admin/kyc",
+    title: "KYC",
+    blurb: "Choose the gateway for gateway KYC, and the details and documents required for government-ID KYC.",
+    module: "collab_finance",
+    meta: () => "Gateway or documents",
+  },
+  {
     href: "/admin/collaboration-ops",
     title: "Collaboration operations",
     blurb: "Dual-approval thresholds, mentorship eligibility, account purposes, audit.",
