@@ -43,6 +43,7 @@ export async function actionCreateCorridor(formData: FormData) {
       actor: session.email,
       collectionProviderCode: String(formData.get("collectionProviderCode") ?? "") || null,
       payoutMethods: methods,
+      kycModel: String(formData.get("kycModel") ?? ""),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not add that country.";
@@ -59,6 +60,7 @@ export async function actionSaveCorridorGroup(formData: FormData) {
       id: String(formData.get("id") ?? "") || undefined,
       name: String(formData.get("name") ?? ""),
       countryCodes: formData.getAll("countryCode").map((value) => String(value)),
+      kycModel: String(formData.get("kycModel") ?? ""),
       actor: session.email,
     });
   } catch (error) {
@@ -108,7 +110,7 @@ export async function actionUpdateCorridor(formData: FormData) {
       collectionProviderCode: String(formData.get("collectionProviderCode") ?? "") || null,
       holdingEnabled: bool(formData, "holdingEnabled"),
       fxEnabled: bool(formData, "fxEnabled"),
-      kycModel: String(formData.get("kycModel") ?? "identity_light"),
+      kycModel: String(formData.get("kycModel") ?? ""),
       notes: String(formData.get("notes") ?? ""),
       payoutMethods: methods,
     });

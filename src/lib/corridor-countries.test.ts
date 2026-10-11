@@ -9,6 +9,7 @@ import {
   countriesAvailableForCorridor,
   requireCorridorCountry,
 } from "./corridor-countries";
+import { kycTypeByCode, requireKycType } from "./kyc-types";
 
 describe("corridor countries", () => {
   it("lists Kenya and the United States with their currency letters", () => {
@@ -53,8 +54,24 @@ describe("corridor countries", () => {
     assert.equal(/<input[^>]*name="currency"/.test(page), false);
     assert.equal(/<input[^>]*name="collectionProviderCode"/.test(page), false);
     assert.equal(page.includes("corridorCountryLabel"), true);
+    assert.match(page, /<select name="kycModel"/);
+    assert.equal(/<input[^>]*name="kycModel"/.test(page), false);
+    assert.equal(page.includes("KYC_TYPES"), true);
+    const kyc = readFileSync("src/lib/kyc-types.ts", "utf8");
+    assert.equal(kyc.includes("KYC through gateway"), true);
+    assert.equal(kyc.includes("KYC through government ID"), true);
     const actions = readFileSync("src/app/admin/corridors/actions.ts", "utf8");
     assert.equal(actions.includes("createCorridor"), true);
     assert.equal(actions.includes("saveCorridorGroup"), true);
+    assert.equal(actions.includes("identity_light"), false);
+  });
+
+  it("accepts only the two KYC types", () => {
+    assert.equal(kycTypeByCode("gateway")?.label, "KYC through gateway");
+    assert.equal(kycTypeByCode("government_id")?.label, "KYC through government ID");
+    assert.equal(kycTypeByCode("identity_light"), null);
+    assert.equal(kycTypeByCode(""), null);
+    assert.equal(requireKycType("gateway").code, "gateway");
+    assert.throws(() => requireKycType("identity_light"), /Choose a KYC type/);
   });
 });
