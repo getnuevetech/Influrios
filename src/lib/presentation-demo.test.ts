@@ -74,6 +74,10 @@ describe("presentation demo catalog", () => {
     assert.ok(profile.indexOf("if (!preview)") < profile.indexOf("await recordDirectoryEvent"));
     const qr = source("src/app/api/qr/[slug]/route.ts");
     assert.ok(qr.indexOf("if (isDemoCreatorSlug") < qr.indexOf("await getDirectoryCreator"));
+    const discover = source("src/app/discover/page.tsx");
+    assert.match(discover, /publicPagesUseLive/);
+    assert.match(discover, /demoCreators\(\)/);
+    assert.ok(discover.indexOf("if (livePages)") < discover.indexOf("await recordDirectoryEvent"));
     const admin = source("src/app/admin/homepage/page.tsx");
     assert.match(admin, /public_pages_live|Show live profiles/);
     assert.match(admin, /actionSavePresentationMode/);

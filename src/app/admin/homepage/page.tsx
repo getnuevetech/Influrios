@@ -107,8 +107,8 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
       <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
         <h2 className="font-display text-xl font-bold text-indigo">Public pages</h2>
         <p className="mt-2 max-w-2xl text-sm text-muted">
-          Off shows the demo set on the homepage, the collaboration landing, the business landing, and the
-          influencer card page. On uses stored profiles, and an empty directory stays empty. The Featured
+          Off shows the demo set on the homepage, Discover, the collaboration landing, the business landing,
+          and the influencer card page. On uses stored profiles, and an empty directory stays empty. The Featured
           Influencers strip and the homepage influencer card always use the demo set.
         </p>
         <form action={actionSavePresentationMode} className="mt-4 flex flex-wrap items-center gap-4">
