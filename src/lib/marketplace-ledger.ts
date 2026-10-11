@@ -36,6 +36,7 @@ import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines } from "@/lib/fx-share";
 import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
+import { storedCurrencyCode } from "@/lib/money";
 import { quoteWiseUserRate } from "@/lib/wise-quote";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
 import { splitMilestoneRelease } from "@/lib/account-purpose";
@@ -548,7 +549,10 @@ export async function requestPrefund(input: {
   const code = input.jurisdictionCode.trim().toUpperCase();
   const jurisdiction = await prisma.collaborationJurisdiction.findUnique({ where: { code } });
   const assignedCode = jurisdiction?.providerCode || PROVIDER_CODE;
-  const currency = (jurisdiction?.currency || "USD").toUpperCase();
+  const currency = storedCurrencyCode(jurisdiction?.currency);
+  if (!currency) {
+    return { ok: false as const, error: "That jurisdiction has no currency. Nothing was funded." };
+  }
   const minorDigits = jurisdiction?.minorDigits ?? 2;
   const [provider, settings, templates, fxRate] = await Promise.all([
     prisma.integrationProvider.findUnique({ where: { kind_code: { kind: "marketplace", code: assignedCode } } }),
@@ -880,7 +884,8 @@ export async function sweepDueRecurrences(now = new Date()) {
     const usdCents = snapshot?.usdCents ?? row.grossCents;
     const cap = grossWithinCap({ grossCents: usdCents, maxGrossCents: activeGrossCap(settings?.maxGrossCents) });
     if (!cap.ok) continue;
-    const currency = (row.currency || "USD").toUpperCase();
+    const currency = storedCurrencyCode(row.currency);
+    if (!currency) continue;
     if (currency !== "USD") {
       const allowed = await prisma.fxRate.findUnique({ where: { currency } });
       if (!allowed?.active) continue;
@@ -1064,7 +1069,10 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
   }
   const cap = grossWithinCap({ grossCents: input.grossCents, maxGrossCents: activeGrossCap(settings?.maxGrossCents) });
   if (!cap.ok) return { ok: false as const, error: "That gross is above the admin cap. Nothing was changed." };
-  const currency = (funding.currency || "USD").toUpperCase();
+  const currency = storedCurrencyCode(funding.currency);
+  if (!currency) {
+    return { ok: false as const, error: "That funding has no currency. Nothing was changed." };
+  }
   if (currency !== "USD") {
     const allowed = await prisma.fxRate.findUnique({ where: { currency } });
     if (!allowed?.active) {
