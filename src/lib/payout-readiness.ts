@@ -3,6 +3,7 @@
  */
 import { prisma } from "@/lib/db";
 import { quoteFx } from "@/lib/fx-share";
+import { storedCurrencyCode } from "@/lib/money";
 import { DEFAULT_PAYMENT_ROUTES, paymentRoutes, type GatewayReadiness } from "@/lib/providers";
 import { countryCodeFromLocation } from "@/lib/contract-wizard";
 
@@ -153,14 +154,20 @@ export async function listCountryActivationCorridors() {
   return prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } });
 }
 
+/** Currency on that country's payment route. A country with no route stays blank. */
+export function payoutCurrencyForCountry(countryCode: string | null | undefined): string | null {
+  const code = (countryCode ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return null;
+  return storedCurrencyCode(DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === code)?.currency);
+}
+
 export async function ensureInfluencerPayoutProfile(input: {
   creatorId: string;
   locationCountry?: string | null;
 }) {
   const countryCode = countryCodeFromLocation(input.locationCountry ?? null);
   const method = defaultMethodForCountry(countryCode);
-  const currency =
-    DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === countryCode)?.currency ?? "USD";
+  const currency = payoutCurrencyForCountry(countryCode);
   const existing = await prisma.influencerPayoutProfile.findUnique({
     where: { creatorId: input.creatorId },
   });

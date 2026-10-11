@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { buildPayoutFeeFxQuote, PAYOUT_METHOD_LABELS } from "./payout-readiness";
+import { buildPayoutFeeFxQuote, PAYOUT_METHOD_LABELS, payoutCurrencyForCountry } from "./payout-readiness";
 import { prisma } from "./db";
 
 const hasDbUrl = Boolean(process.env.DATABASE_URL);
@@ -62,6 +63,17 @@ describe("buildPayoutFeeFxQuote", () => {
   it("exposes friendly payout method labels", () => {
     assert.equal(PAYOUT_METHOD_LABELS.mpesa, "M-Pesa");
     assert.equal(PAYOUT_METHOD_LABELS.local_bank, "Local bank");
+  });
+
+  it("stores the route currency and leaves an unlisted country blank", () => {
+    assert.equal(payoutCurrencyForCountry("KE"), "KES");
+    assert.equal(payoutCurrencyForCountry("us"), "USD");
+    assert.equal(payoutCurrencyForCountry("JP"), null);
+    assert.equal(payoutCurrencyForCountry(null), null);
+    assert.equal(payoutCurrencyForCountry(""), null);
+    const source = readFileSync("src/lib/payout-readiness.ts", "utf8");
+    assert.equal(source.includes('?? "USD"'), false);
+    assert.equal(source.includes('|| "USD"'), false);
   });
 });
 
