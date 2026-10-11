@@ -14,6 +14,7 @@ import {
 } from "@/lib/marketplace-ledger";
 import { saveFxRates, saveRevenueParties } from "@/lib/settlement";
 import { setProductSwitch } from "@/lib/product-switches";
+import { wiseRateCheckDraft } from "@/lib/fx-share";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
 import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep, enqueueScheduledReleaseSweep } from "@/lib/jobs";
 import { scheduleMilestoneRelease } from "@/lib/marketplace-ledger";
@@ -151,14 +152,25 @@ export async function actionSaveWise(formData: FormData) {
 
 export async function actionCheckWiseRate(formData: FormData) {
   await requireAdminAction("marketplace.manage");
-  const currency = String(formData.get("currency") ?? "GBP").trim().toUpperCase();
-  const quoted = await quoteWiseUserRate({ currency, usdCents: 10_000, minorDigits: 2 });
+  const draft = wiseRateCheckDraft({
+    currency: String(formData.get("currency") ?? ""),
+    amount: String(formData.get("amount") ?? ""),
+    minorDigits: String(formData.get("minorDigits") ?? ""),
+  });
+  if (!draft.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(draft.error)}`);
+  }
+  const quoted = await quoteWiseUserRate({
+    currency: draft.currency,
+    usdCents: draft.usdCents,
+    minorDigits: draft.minorDigits,
+  });
   if (!quoted.ok || quoted.source !== "wise") {
     const message = quoted.ok ? "Wise did not return a user rate. Nothing was funded." : quoted.error;
     redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/marketplace");
-  redirect(`/admin/marketplace?saved=wise-rate&wiseCurrency=${encodeURIComponent(currency)}&wiseRate=${encodeURIComponent(String(quoted.rate))}`);
+  redirect(`/admin/marketplace?saved=wise-rate&wiseCurrency=${encodeURIComponent(draft.currency)}&wiseRate=${encodeURIComponent(String(quoted.rate))}`);
 }
 
 export async function actionSaveFxRates(formData: FormData) {

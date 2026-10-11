@@ -795,8 +795,16 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             </form>
             <form action={actionCheckWiseRate} className="mt-3 flex flex-wrap items-end gap-3">
               <label className="text-xs font-semibold text-muted">
-                Check 100.00 USD to
-                <input name="currency" defaultValue="GBP" maxLength={3} className="mt-1 w-24 rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo" />
+                USD amount
+                <input name="amount" inputMode="decimal" className="mt-1 w-28 rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                To currency
+                <input name="currency" maxLength={3} className="mt-1 w-24 rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo" />
+              </label>
+              <label className="text-xs font-semibold text-muted">
+                Minor digits
+                <input name="minorDigits" inputMode="numeric" maxLength={1} className="mt-1 w-24 rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
               </label>
               <button type="submit" className="btn-secondary !py-2 text-sm">
                 Pull Wise user rate

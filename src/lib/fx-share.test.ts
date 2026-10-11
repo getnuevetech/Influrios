@@ -1,16 +1,49 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/marketplace/webhook/route";
 import { resolveFee } from "./collaboration-fees";
 import { prisma } from "./db";
 import { listAttributionSources } from "./deal-attribution";
-import { convertFee, quoteFx, readFxSnapshot, readShareSnapshot, shareLines } from "./fx-share";
+import { convertFee, quoteFx, readFxSnapshot, readShareSnapshot, shareLines, wiseRateCheckDraft } from "./fx-share";
 import { ledgerMovements, marketplaceSignature, reconcileLedger } from "./ledger";
 import { applyMarketplaceEvent, requestPrefund } from "./marketplace-ledger";
 import { encryptSecret } from "./provider-secrets";
 import { listRevenueParties, saveRevenueParties } from "./settlement";
 import { setWiseTransportForTests } from "./wise-quote";
+
+describe("Wise rate check", () => {
+  it("uses the amount, currency, and minor digits that were entered", () => {
+    const blank = wiseRateCheckDraft({ currency: "", amount: "", minorDigits: "" });
+    assert.equal(blank.ok, false);
+    if (!blank.ok) assert.equal(blank.error, "Enter a three-letter currency.");
+    const gbp = wiseRateCheckDraft({ currency: "gbp", amount: "", minorDigits: "2" });
+    assert.equal(gbp.ok, false);
+    if (!gbp.ok) assert.equal(gbp.error, "Enter a USD amount.");
+    const usd = wiseRateCheckDraft({ currency: "USD", amount: "25.50", minorDigits: "2" });
+    assert.equal(usd.ok, false);
+    if (!usd.ok) assert.equal(usd.error, "Enter a non-USD currency.");
+    const digits = wiseRateCheckDraft({ currency: "JPY", amount: "25.50", minorDigits: "" });
+    assert.equal(digits.ok, false);
+    if (!digits.ok) assert.equal(digits.error, "Enter minor digits from 0 to 4.");
+    const quoted = wiseRateCheckDraft({ currency: " jpy ", amount: "25.50", minorDigits: "0" });
+    assert.equal(quoted.ok, true);
+    if (quoted.ok) {
+      assert.equal(quoted.currency, "JPY");
+      assert.equal(quoted.usdCents, 2550);
+      assert.equal(quoted.minorDigits, 0);
+    }
+    const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    assert.equal(actions.includes('?? "GBP"'), false);
+    assert.equal(actions.includes("10_000"), false);
+    assert.equal(page.includes('defaultValue="GBP"'), false);
+    assert.equal(page.includes("Check 100.00 USD to"), false);
+    assert.match(page, /name="amount"/);
+    assert.match(page, /name="minorDigits"/);
+  });
+});
 
 describe("admin FX and revenue shares", () => {
   it("keeps USD as identity and converts other currencies with a saved rate", () => {
