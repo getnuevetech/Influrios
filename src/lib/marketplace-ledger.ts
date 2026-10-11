@@ -34,7 +34,7 @@ import {
 } from "@/lib/ledger";
 import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal-attribution";
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
-import { convertFee, readFxSnapshot, readShareSnapshot, shareLines } from "@/lib/fx-share";
+import { convertFee, readFxSnapshot, readShareSnapshot, shareLines, storedMinorDigits } from "@/lib/fx-share";
 import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
 import { storedCurrencyCode } from "@/lib/money";
 import { quoteWiseUserRate } from "@/lib/wise-quote";
@@ -553,7 +553,10 @@ export async function requestPrefund(input: {
   if (!currency) {
     return { ok: false as const, error: "That jurisdiction has no currency. Nothing was funded." };
   }
-  const minorDigits = jurisdiction?.minorDigits ?? 2;
+  const minorDigits = storedMinorDigits(jurisdiction?.minorDigits);
+  if (minorDigits == null) {
+    return { ok: false as const, error: "That jurisdiction has no minor digits. Nothing was funded." };
+  }
   const [provider, settings, templates, fxRate] = await Promise.all([
     prisma.integrationProvider.findUnique({ where: { kind_code: { kind: "marketplace", code: assignedCode } } }),
     prisma.marketplaceSettings.findUnique({ where: { id: "default" } }),
@@ -906,10 +909,12 @@ export async function sweepDueRecurrences(now = new Date()) {
     });
     const windowHours = lifecycle.reviewWindowHours;
     const revisionLimit = lifecycle.revisionLimit;
+    const minorDigits = storedMinorDigits(jurisdiction?.minorDigits);
+    if (minorDigits == null) continue;
     const fx = await quoteWiseUserRate({
       currency,
       usdCents,
-      minorDigits: jurisdiction?.minorDigits ?? 2,
+      minorDigits,
     });
     if (!fx.ok) continue;
     const milestoneAmounts = splitGross(fx.convertedMinor, shares);
@@ -1080,10 +1085,14 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     }
   }
   const jurisdiction = await prisma.collaborationJurisdiction.findUnique({ where: { code: funding.jurisdictionCode } });
+  const minorDigits = storedMinorDigits(jurisdiction?.minorDigits);
+  if (minorDigits == null) {
+    return { ok: false as const, error: "That jurisdiction has no minor digits. Nothing was changed." };
+  }
   const fx = await quoteWiseUserRate({
     currency,
     usdCents: input.grossCents,
-    minorDigits: jurisdiction?.minorDigits ?? 2,
+    minorDigits,
   });
   if (!fx.ok) return { ok: false as const, error: fx.error.replaceAll("Nothing was funded.", "Nothing was changed.") };
   const pending = funding.milestones.every((milestone) => milestone.status === "pending" && milestone.refundedCents === 0);

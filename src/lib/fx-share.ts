@@ -101,6 +101,12 @@ export function wiseRateCheckDraft(input: {
   return { ok: true, currency, usdCents, minorDigits: Number(digits) };
 }
 
+/** A stored jurisdiction digit count. Zero stays zero. A missing or out-of-range count stays blank. */
+export function storedMinorDigits(value: number | null | undefined): number | null {
+  if (value == null || !Number.isInteger(value) || value < 0 || value > 4) return null;
+  return value;
+}
+
 export function convertFee(
   usdFeeCents: number,
   fx: { currency: string; minorPerUsd: number; rate?: number | null; minorDigits?: number | null },

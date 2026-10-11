@@ -6,7 +6,7 @@ import { POST } from "@/app/api/marketplace/webhook/route";
 import { resolveFee } from "./collaboration-fees";
 import { prisma } from "./db";
 import { listAttributionSources } from "./deal-attribution";
-import { convertFee, quoteFx, readFxSnapshot, readShareSnapshot, shareLines, wiseRateCheckDraft } from "./fx-share";
+import { convertFee, quoteFx, readFxSnapshot, readShareSnapshot, shareLines, storedMinorDigits, wiseRateCheckDraft } from "./fx-share";
 import { ledgerMovements, marketplaceSignature, reconcileLedger } from "./ledger";
 import { applyMarketplaceEvent, requestPrefund } from "./marketplace-ledger";
 import { encryptSecret } from "./provider-secrets";
@@ -42,6 +42,19 @@ describe("Wise rate check", () => {
     assert.equal(page.includes("Check 100.00 USD to"), false);
     assert.match(page, /name="amount"/);
     assert.match(page, /name="minorDigits"/);
+  });
+});
+
+describe("stored minor digits", () => {
+  it("keeps a stored count and rejects a missing count", () => {
+    assert.equal(storedMinorDigits(0), 0);
+    assert.equal(storedMinorDigits(2), 2);
+    assert.equal(storedMinorDigits(null), null);
+    assert.equal(storedMinorDigits(undefined), null);
+    assert.equal(storedMinorDigits(5), null);
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    assert.equal(ledger.includes("jurisdiction?.minorDigits ?? 2"), false);
+    assert.match(ledger, /storedMinorDigits/);
   });
 });
 
