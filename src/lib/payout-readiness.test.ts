@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { buildPayoutFeeFxQuote, PAYOUT_METHOD_LABELS, payoutCurrencyForCountry } from "./payout-readiness";
+import { buildPayoutFeeFxQuote, PAYOUT_METHOD_LABELS, payoutProfileCurrency } from "./payout-readiness";
 import { prisma } from "./db";
 
 const hasDbUrl = Boolean(process.env.DATABASE_URL);
@@ -65,15 +65,35 @@ describe("buildPayoutFeeFxQuote", () => {
     assert.equal(PAYOUT_METHOD_LABELS.local_bank, "Local bank");
   });
 
-  it("stores the route currency and leaves an unlisted country blank", () => {
-    assert.equal(payoutCurrencyForCountry("KE"), "KES");
-    assert.equal(payoutCurrencyForCountry("us"), "USD");
-    assert.equal(payoutCurrencyForCountry("JP"), null);
-    assert.equal(payoutCurrencyForCountry(null), null);
-    assert.equal(payoutCurrencyForCountry(""), null);
+  it("uses the saved corridor currency, then the route, then the backup", () => {
+    assert.equal(
+      payoutProfileCurrency({ countryCode: "KE", corridorCurrency: "KES", fallbackCurrency: "USD" }),
+      "KES",
+    );
+    assert.equal(
+      payoutProfileCurrency({ countryCode: "KE", corridorCurrency: "EUR", fallbackCurrency: "USD" }),
+      "EUR",
+    );
+    assert.equal(
+      payoutProfileCurrency({ countryCode: "us", corridorCurrency: "USD", fallbackCurrency: "GBP" }),
+      "USD",
+    );
+    assert.equal(
+      payoutProfileCurrency({ countryCode: "US", corridorCurrency: "CAD", fallbackCurrency: "GBP" }),
+      "CAD",
+    );
+    assert.equal(payoutProfileCurrency({ countryCode: "KE", corridorCurrency: null, fallbackCurrency: "EUR" }), "KES");
+    assert.equal(payoutProfileCurrency({ countryCode: "JP", corridorCurrency: null, fallbackCurrency: "USD" }), "USD");
+    assert.equal(payoutProfileCurrency({ countryCode: "JP", fallbackCurrency: "gbp" }), "GBP");
+    assert.equal(payoutProfileCurrency({ countryCode: null, fallbackCurrency: "nope" }), "USD");
+    assert.equal(payoutProfileCurrency({ countryCode: "", fallbackCurrency: null }), "USD");
     const source = readFileSync("src/lib/payout-readiness.ts", "utf8");
-    assert.equal(source.includes('?? "USD"'), false);
-    assert.equal(source.includes('|| "USD"'), false);
+    assert.equal(source.includes('storedCurrencyCode(input.fallbackCurrency) ?? "USD"'), true);
+    const page = readFileSync("src/app/admin/corridors/page.tsx", "utf8");
+    assert.equal(page.includes("Backup currency"), true);
+    assert.equal(page.includes("payoutFallbackCurrency"), true);
+    const actions = readFileSync("src/app/admin/corridors/actions.ts", "utf8");
+    assert.equal(actions.includes("savePayoutFallbackCurrency"), true);
   });
 });
 
