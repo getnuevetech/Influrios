@@ -723,9 +723,8 @@ export async function requestPrefund(input: {
       grossValueCents: usdCents,
       attributionStatus: attribution.attributionStatus,
       fundingMode,
-      relationshipSource:
-        attribution.attributionStatus === "pre_existing" ? "pre_existing" : "organic",
-      promotionChannel: serviceLevel.startsWith("managed") ? "sponsored" : "none",
+      relationshipSource: attribution.attributionStatus === "pre_existing" ? "pre_existing" : "",
+      promotionChannel: "",
     }).catch(() => null);
     prepared.push({ gross: fx.convertedMinor, fx, milestoneAmounts, quote });
   }

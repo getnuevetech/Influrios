@@ -288,7 +288,8 @@ describe("entered fee rule facts", () => {
     const fees = readFileSync("src/lib/collaboration-fees.ts", "utf8");
     assert.equal(ledger.includes('|| "FULL"'), false);
     assert.equal(ledger.includes('relationshipSource: "organic"'), false);
-    assert.equal((ledger.match(/startsWith\("managed"\) \? "sponsored" : "none"/g) ?? []).length, 1);
+    assert.equal(ledger.includes(': "organic"'), false);
+    assert.equal(ledger.includes('? "sponsored" : "none"'), false);
     assert.equal(fees.includes('ctx.fundingMode || "FULL"'), false);
     assert.equal(fees.includes('|| "organic"'), false);
     assert.equal(fees.includes('|| "none"'), false);
