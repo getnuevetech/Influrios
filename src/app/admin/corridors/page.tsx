@@ -17,6 +17,7 @@ import {
   corridorCurrencyOptions,
   countriesAvailableForCorridor,
 } from "@/lib/corridor-countries";
+import { KYC_TYPES, kycTypeByCode } from "@/lib/kyc-types";
 import { loadPayoutFallbackCurrency } from "@/lib/payout-readiness";
 import { listProviders } from "@/lib/providers";
 
@@ -43,6 +44,22 @@ function groupSubtitle(codes: string[], corridors: CorridorRow[]) {
   });
   const shown = labels.slice(0, 4).join(", ");
   return labels.length > 4 ? `${codes.length} countries · ${shown}, …` : `${codes.length} countries · ${shown}`;
+}
+
+function KycSelect({ value }: { value: string }) {
+  const current = kycTypeByCode(value);
+  return (
+    <select name="kycModel" required defaultValue={current?.code ?? ""} className={selectClass}>
+      <option value="" disabled>
+        Choose a KYC type
+      </option>
+      {KYC_TYPES.map((type) => (
+        <option key={type.code} value={type.code}>
+          {type.label}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 function CurrencySelect({ value }: { value: string }) {
@@ -103,7 +120,8 @@ function CorridorCard({
         <div>
           <h3 className="font-display text-lg font-bold text-indigo">{corridorHeading(row)}</h3>
           <p className="text-xs text-muted">
-            {row.collectionProviderCode ?? "no collection route"} · KYC {row.kycModel}
+            {row.collectionProviderCode ?? "no collection route"} ·{" "}
+            {kycTypeByCode(row.kycModel)?.label ?? "KYC type not chosen"}
           </p>
           <p className={`mt-1 text-xs font-semibold ${row.active ? "text-emerald-700" : "text-amber-800"}`}>
             {row.active ? "Active" : "Suspended"}
@@ -131,13 +149,9 @@ function CorridorCard({
             Collection route
             <RouteSelect value={row.collectionProviderCode ?? ""} providers={providers} />
           </label>
-          <label className="text-xs font-semibold text-muted">
-            KYC model
-            <input
-              name="kycModel"
-              defaultValue={row.kycModel}
-              className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-            />
+          <label className="text-xs font-semibold text-muted sm:col-span-2">
+            KYC type
+            <KycSelect value={row.kycModel} />
           </label>
           <label className="text-xs font-semibold text-muted">
             Notes
@@ -277,10 +291,14 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
                 ))}
               </select>
             </label>
-            <label className="text-xs font-semibold text-muted">
-              Collection route
-              <RouteSelect value="" providers={providers} />
-            </label>
+          <label className="text-xs font-semibold text-muted">
+            Collection route
+            <RouteSelect value="" providers={providers} />
+          </label>
+          <label className="text-xs font-semibold text-muted sm:col-span-2">
+            KYC type
+            <KycSelect value="" />
+          </label>
             <fieldset className="sm:col-span-2">
               <legend className="text-xs font-semibold text-muted">Payout methods</legend>
               <div className="mt-2 flex flex-wrap gap-3">
@@ -314,14 +332,27 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-lg font-bold text-indigo">Country groups</h2>
           <p className="mt-1 text-sm text-muted">
-            Fold countries into a named group. Each country keeps its own currency and collection route.
+            Fold countries into a named group and choose one KYC type for that group. Saving writes the type onto
+            every country in the group. Each country keeps its own currency and collection route, and you can change
+            one country’s KYC type afterward.
           </p>
+          <ul className="mt-2 max-w-3xl space-y-1 text-xs text-muted">
+            {KYC_TYPES.map((type) => (
+              <li key={type.code}>
+                <span className="font-semibold text-indigo">{type.label}.</span> {type.detail}
+              </li>
+            ))}
+          </ul>
         </div>
         {groups.map((group) => {
           const codes = group.members.map((member) => member.countryCode);
           const members = codes.map((code) => byCode.get(code)).filter((row): row is CorridorRow => Boolean(row));
           return (
-            <AdminCollapse key={group.id} title={group.name} subtitle={groupSubtitle(codes, corridors)}>
+            <AdminCollapse
+              key={group.id}
+              title={group.name}
+              subtitle={`${kycTypeByCode(group.kycModel)?.label ?? "KYC type not chosen"} · ${groupSubtitle(codes, corridors)}`}
+            >
               {canManage ? (
                 <form action={actionSaveCorridorGroup} className="grid gap-3 sm:grid-cols-2">
                   <input type="hidden" name="id" value={group.id} />
@@ -333,6 +364,10 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
                       defaultValue={group.name}
                       className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
                     />
+                  </label>
+                  <label className="text-xs font-semibold text-muted">
+                    KYC type
+                    <KycSelect value={group.kycModel} />
                   </label>
                   <label className="text-xs font-semibold text-muted sm:col-span-2">
                     Countries
@@ -373,6 +408,10 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
                 placeholder="East Africa"
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              KYC type
+              <KycSelect value="" />
             </label>
             <label className="text-xs font-semibold text-muted sm:col-span-2">
               Countries

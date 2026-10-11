@@ -141,7 +141,7 @@ export async function ensureCountryActivationCorridors() {
             : ["local_bank", "usd_bank"],
         holdingEnabled: true,
         fxEnabled: row.currency !== "USD",
-        kycModel: "identity_light",
+        kycModel: "",
         notes: `Seeded from default ${row.gateway} corridor`,
         updatedAt: now,
       },

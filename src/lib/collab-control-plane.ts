@@ -4,6 +4,7 @@
  */
 import { ACCOUNT_PURPOSES, type AccountPurpose } from "@/lib/account-purpose";
 import { corridorCurrencyOptions, requireCorridorCountry } from "@/lib/corridor-countries";
+import { requireKycType } from "@/lib/kyc-types";
 import { prisma } from "@/lib/db";
 import { storedCurrencyCode } from "@/lib/money";
 import {
@@ -293,8 +294,10 @@ export async function createCorridor(input: {
   actor: string;
   collectionProviderCode?: string | null;
   payoutMethods?: string[];
+  kycModel: string;
 }) {
   const country = requireCorridorCountry(input.countryCode);
+  const kyc = requireKycType(input.kycModel);
   await ensureCountryActivationCorridors();
   const existing = await prisma.countryActivationCorridor.findUnique({ where: { countryCode: country.code } });
   if (existing) throw new Error(`${country.name} already has a corridor.`);
@@ -311,7 +314,7 @@ export async function createCorridor(input: {
       payoutMethodsJson: payoutMethods,
       holdingEnabled: true,
       fxEnabled: country.currency !== "USD",
-      kycModel: "identity_light",
+      kycModel: kyc.code,
       notes: "",
     },
   });
@@ -334,9 +337,16 @@ export async function listCorridorGroups() {
   });
 }
 
-export async function saveCorridorGroup(input: { id?: string; name: string; countryCodes: string[]; actor: string }) {
+export async function saveCorridorGroup(input: {
+  id?: string;
+  name: string;
+  countryCodes: string[];
+  kycModel: string;
+  actor: string;
+}) {
   const name = input.name.trim().slice(0, 80);
   if (!name) throw new Error("A group name is required.");
+  const kyc = requireKycType(input.kycModel);
   const countryCodes = [...new Set(input.countryCodes.map((code) => code.trim().toUpperCase()))]
     .filter((code) => /^[A-Z]{2}$/.test(code))
     .sort();
@@ -351,15 +361,19 @@ export async function saveCorridorGroup(input: { id?: string; name: string; coun
     let row = input.id ? await tx.corridorCountryGroup.findUnique({ where: { id: input.id } }) : null;
     if (input.id && !row) throw new Error("That country group was not found.");
     if (row) {
-      row = await tx.corridorCountryGroup.update({ where: { id: row.id }, data: { name } });
+      row = await tx.corridorCountryGroup.update({ where: { id: row.id }, data: { name, kycModel: kyc.code } });
     } else {
-      row = await tx.corridorCountryGroup.create({ data: { name } });
+      row = await tx.corridorCountryGroup.create({ data: { name, kycModel: kyc.code } });
     }
     await tx.corridorCountryGroupMember.deleteMany({
       where: { OR: [{ groupId: row.id }, { countryCode: { in: countryCodes } }] },
     });
     await tx.corridorCountryGroupMember.createMany({
       data: countryCodes.map((countryCode) => ({ groupId: row.id, countryCode })),
+    });
+    await tx.countryActivationCorridor.updateMany({
+      where: { countryCode: { in: countryCodes } },
+      data: { kycModel: kyc.code },
     });
     return row;
   });
@@ -369,7 +383,7 @@ export async function saveCorridorGroup(input: { id?: string; name: string; coun
       action: "corridor.group",
       objectType: "CorridorCountryGroup",
       objectId: group.id,
-      after: { name, countryCodes },
+      after: { name, countryCodes, kycModel: kyc.code },
     },
   });
   return group;
@@ -460,7 +474,7 @@ export async function updateCorridor(input: {
       collectionProviderCode,
       holdingEnabled: input.holdingEnabled ?? before.holdingEnabled,
       fxEnabled: input.fxEnabled ?? before.fxEnabled,
-      kycModel: (input.kycModel ?? before.kycModel).trim().slice(0, 80) || "identity_light",
+      kycModel: requireKycType(input.kycModel ?? before.kycModel).code,
       notes: (input.notes ?? before.notes).trim().slice(0, 500),
       payoutMethodsJson: cleanedMethods,
     },
