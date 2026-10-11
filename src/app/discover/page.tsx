@@ -7,6 +7,7 @@ import { CreatorCard } from "@/components/creator-card";
 import { DiscoverFilters, DiscoverSort } from "@/components/discover-filters";
 import { CategoryGlyph, IconArrowRight, IconSearch } from "@/components/icons";
 import { getDirectory, recordDirectoryEvent, searchDirectory } from "@/lib/directory";
+import { demoCreators, publicPagesUseLive } from "@/lib/presentation-demo";
 import { filterCreators, formatFollowers, languageOptionsFor, totalFollowers } from "@/lib/seed-data";
 import { canonicalSpecialty } from "@/lib/taxonomy";
 
@@ -79,7 +80,11 @@ function discoverReturnPath(params: Record<string, string | string[] | undefined
 
 export default async function DiscoverPage({ searchParams }: Props) {
   const params = await searchParams;
-  const directory = await getDirectory();
+  const [directory, livePages] = await Promise.all([
+    getDirectory(),
+    publicPagesUseLive().catch(() => false),
+  ]);
+  const roster = livePages ? directory.creators : demoCreators();
   const taxonomy = directory.taxonomy
     .filter((node) => node.active)
     .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
@@ -107,20 +112,24 @@ export default async function DiscoverPage({ searchParams }: Props) {
     sort,
   };
   let results;
-  try {
-    results = await searchDirectory(searchQuery);
-  } catch (error) {
-    console.error("discover search failed", error);
-    results = filterCreators(directory.creators, searchQuery, directory.synonyms);
+  if (livePages) {
+    try {
+      results = await searchDirectory(searchQuery);
+    } catch (error) {
+      console.error("discover search failed", error);
+      results = filterCreators(directory.creators, searchQuery, directory.synonyms);
+    }
+    await recordDirectoryEvent("influencer_search_submitted", {
+      q,
+      specialty: specialties.join(","),
+      country: countries.join(","),
+      platform: platforms.join(","),
+      resultCount: results.length,
+      authenticated: false,
+    });
+  } else {
+    results = filterCreators(roster, searchQuery, directory.synonyms);
   }
-  await recordDirectoryEvent("influencer_search_submitted", {
-    q,
-    specialty: specialties.join(","),
-    country: countries.join(","),
-    platform: platforms.join(","),
-    resultCount: results.length,
-    authenticated: false,
-  });
 
   const categories = [...taxonomy].sort((a, b) => {
     const ai = CHIP_ORDER.indexOf(a.slug);
@@ -131,17 +140,17 @@ export default async function DiscoverPage({ searchParams }: Props) {
   const categoryOptions = categories.map((item) => ({
     value: item.slug,
     label: item.name,
-    count: directory.creators.filter((creator) => creator.specialties.includes(item.slug)).length,
+    count: roster.filter((creator) => creator.specialties.includes(item.slug)).length,
   }));
-  const countryNames = [...new Set(directory.creators.map((creator) => creator.locationCountry))].sort();
+  const countryNames = [...new Set(roster.map((creator) => creator.locationCountry))].sort();
   const platformOptions = PLATFORMS.map((platform) => ({
     value: platform.value,
     label: platform.label,
-    count: directory.creators.filter((creator) => creator.socials.some((social) => social.platform === platform.value)).length,
+    count: roster.filter((creator) => creator.socials.some((social) => social.platform === platform.value)).length,
   }));
-  const languages = languageOptionsFor(directory.creators);
+  const languages = languageOptionsFor(roster);
   const topMatches = results.slice(0, 5);
-  const heroCards = directory.creators.slice(0, 3);
+  const heroCards = roster.slice(0, 3);
   const activeChip = specialties[0] ?? "";
   const returnTo = discoverReturnPath({
     ...params,
@@ -149,8 +158,10 @@ export default async function DiscoverPage({ searchParams }: Props) {
     platform: platforms,
     country: countries,
   });
-  const searchGate = await consumeGuestQuota("search");
-  if (searchGate.decision === "hard") {
+  const searchGate = livePages
+    ? await consumeGuestQuota("search")
+    : { decision: "allow" as const, copy: "" };
+  if (livePages && searchGate.decision === "hard") {
     redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=search`);
   }
 
@@ -326,7 +337,11 @@ export default async function DiscoverPage({ searchParams }: Props) {
                 <p className="text-sm text-indigo">
                   Showing <strong>{results.length.toLocaleString()}</strong> influencers
                 </p>
-                <p className="text-xs text-muted">Results based on your filters and search criteria</p>
+                <p className="text-xs text-muted">
+                  {livePages
+                    ? "Results based on your filters and search criteria"
+                    : "Demo profiles. These cards are a preview."}
+                </p>
               </div>
               <DiscoverSort defaultValue={sort} />
             </div>
@@ -349,7 +364,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
                     showBio
                     showViewProfile
                     qrOpensPopup
-                    features={{ showStatus: false }}
+                    features={{ showStatus: false, showHeart: livePages }}
                   />
                 ))}
               </div>
@@ -365,7 +380,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {[
-                    [directory.creators.length.toLocaleString(), "Influencers in directory"],
+                    [roster.length.toLocaleString(), "Influencers in directory"],
                     [countryNames.length.toLocaleString(), "Countries represented"],
                     [taxonomy.length.toLocaleString(), "Active niches"],
                     [results.filter((creator) => creator.openToCollab).length.toLocaleString(), "Open to collaborate"],
@@ -384,10 +399,10 @@ export default async function DiscoverPage({ searchParams }: Props) {
                 </Link>
               </div>
               <div className="relative hidden h-48 lg:block">
-                {directory.creators[0] ? (
+                {roster[0] ? (
                   <div className="absolute right-6 top-0 h-44 w-36 overflow-hidden rounded-2xl ring-2 ring-white/30">
-                    {directory.creators[0].image ? (
-                      <Image src={directory.creators[0].image} alt="" fill className="object-cover" sizes="144px" />
+                    {roster[0].image ? (
+                      <Image src={roster[0].image} alt="" fill className="object-cover" sizes="144px" />
                     ) : null}
                   </div>
                 ) : null}
