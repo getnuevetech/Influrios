@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   PIPELINE_STAGES,
   derivePipelineStage,
   pipelineFundingSurface,
   scoreBusinessRequestForCreator,
+  sharedStoredCurrency,
   summarizeBusinessSpend,
 } from "./collaboration-hub";
 import type { MarketplaceBusinessRequestRow } from "./marketplace-listings";
@@ -140,11 +142,53 @@ describe("business hub spend summary", () => {
     assert.equal(summary.refundedCents, 1_000);
     assert.equal(summary.feeCents, 1_500);
     assert.equal(summary.dealCount, 2);
+    assert.equal(summary.currency, "USD");
   });
 
   it("returns zeroed summary for empty funding lists", () => {
     const summary = summarizeBusinessSpend([]);
     assert.equal(summary.fundedCents, 0);
     assert.equal(summary.dealCount, 0);
+    assert.equal(summary.currency, "");
+  });
+
+  it("keeps a stored currency and leaves a blank or mixed set unlabeled", () => {
+    assert.equal(sharedStoredCurrency(["gbp", "GBP"]), "GBP");
+    assert.equal(sharedStoredCurrency([""]), "");
+    assert.equal(sharedStoredCurrency(["USD", "GBP"]), "");
+    assert.equal(sharedStoredCurrency(["USD", ""]), "");
+    const gbp = summarizeBusinessSpend([
+      {
+        grossCents: 2_000,
+        feeCents: 200,
+        currency: "gbp",
+        ledger: { heldCents: 2_000, releasedCents: 0, refundedCents: 0, heldInCents: 2_000 },
+      },
+    ]);
+    assert.equal(gbp.currency, "GBP");
+    const mixed = summarizeBusinessSpend([
+      {
+        grossCents: 2_000,
+        feeCents: 200,
+        currency: "USD",
+        ledger: { heldCents: 2_000, releasedCents: 0, refundedCents: 0, heldInCents: 2_000 },
+      },
+      {
+        grossCents: 2_000,
+        feeCents: 200,
+        currency: "GBP",
+        ledger: { heldCents: 2_000, releasedCents: 0, refundedCents: 0, heldInCents: 2_000 },
+      },
+    ]);
+    assert.equal(mixed.currency, "");
+    const hub = readFileSync("src/lib/collaboration-hub.ts", "utf8");
+    const creatorHub = readFileSync("src/app/collaboration/hub/page.tsx", "utf8");
+    const businessHub = readFileSync("src/app/collaboration/business/page.tsx", "utf8");
+    assert.equal(hub.includes('currency: "USD"'), false);
+    assert.equal(hub.includes('?? "USD"'), false);
+    assert.equal(creatorHub.includes("formatMoney("), false);
+    assert.equal(businessHub.includes("formatMoney("), false);
+    assert.match(creatorHub, /formatStoredMoney\(availableCents, hub\.earnings\.currency\)/);
+    assert.match(businessHub, /formatStoredMoney\(hub\.spend\.fundedCents, hub\.spend\.currency\)/);
   });
 });

@@ -172,6 +172,16 @@ export function scoreBusinessRequestForCreator(
   return Math.min(98, 68 + hits * 8 + (locationHit ? 6 : 0));
 }
 
+/** One currency code when every funding stored the same code. Otherwise blank. */
+export function sharedStoredCurrency(currencies: Array<string | null | undefined>): string {
+  if (currencies.length === 0) return "";
+  const codes = currencies.map((value) => (value ?? "").trim().toUpperCase());
+  if (codes.some((code) => !/^[A-Z]{3}$/.test(code))) return "";
+  const first = codes[0];
+  if (codes.some((code) => code !== first)) return "";
+  return first;
+}
+
 export function summarizeBusinessSpend(
   fundings: Array<{
     grossCents: number;
@@ -180,6 +190,7 @@ export function summarizeBusinessSpend(
     ledger: { heldCents: number; releasedCents: number; refundedCents: number; heldInCents: number };
   }>,
 ): BusinessSpendSummary {
+  const currency = sharedStoredCurrency(fundings.map((row) => row.currency));
   if (fundings.length === 0) {
     return {
       fundedCents: 0,
@@ -187,7 +198,7 @@ export function summarizeBusinessSpend(
       releasedCents: 0,
       refundedCents: 0,
       feeCents: 0,
-      currency: "USD",
+      currency,
       dealCount: 0,
     };
   }
@@ -197,7 +208,7 @@ export function summarizeBusinessSpend(
     releasedCents: fundings.reduce((sum, row) => sum + row.ledger.releasedCents, 0),
     refundedCents: fundings.reduce((sum, row) => sum + row.ledger.refundedCents, 0),
     feeCents: fundings.reduce((sum, row) => sum + row.feeCents, 0),
-    currency: fundings[0]?.currency ?? "USD",
+    currency,
     dealCount: fundings.length,
   };
 }
@@ -255,7 +266,7 @@ export async function loadCreatorHub(input: {
   const earnings: HubEarnings = {
     heldCents,
     releasedCents,
-    currency: "USD",
+    currency: sharedStoredCurrency(fundings.map((row) => row.currency)),
     ready: heldCents > 0 || releasedCents > 0,
   };
 
