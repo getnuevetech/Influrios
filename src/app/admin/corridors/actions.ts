@@ -98,6 +98,7 @@ export async function actionSavePayoutFallback(formData: FormData) {
 export async function actionUpdateCorridor(formData: FormData) {
   const session = await requireAdminAction("collab_finance.manage");
   const countryCode = String(formData.get("countryCode") ?? "").trim().toUpperCase();
+  const currencyField = formData.get("currency");
   const methods = formData
     .getAll("payoutMethod")
     .map((value) => String(value))
@@ -106,7 +107,7 @@ export async function actionUpdateCorridor(formData: FormData) {
     await updateCorridor({
       countryCode,
       actor: session.email,
-      currency: String(formData.get("currency") ?? "USD"),
+      currency: currencyField == null ? undefined : String(currencyField),
       collectionProviderCode: String(formData.get("collectionProviderCode") ?? "") || null,
       holdingEnabled: bool(formData, "holdingEnabled"),
       fxEnabled: bool(formData, "fxEnabled"),

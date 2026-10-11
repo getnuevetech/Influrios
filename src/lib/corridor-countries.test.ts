@@ -64,6 +64,7 @@ describe("corridor countries", () => {
     assert.equal(actions.includes("createCorridor"), true);
     assert.equal(actions.includes("saveCorridorGroup"), true);
     assert.equal(actions.includes("identity_light"), false);
+    assert.equal(actions.includes('?? "USD"'), false);
   });
 
   it("accepts only the two KYC types", () => {
