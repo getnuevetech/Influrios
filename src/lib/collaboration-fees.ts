@@ -738,12 +738,10 @@ export function matchesRule(rule: CollaborationFeeRule, ctx: FeeResolveContext, 
   if (rule.serviceLevel !== "*" && rule.serviceLevel !== ctx.serviceLevel) return false;
   const fundingMode = (ctx.fundingMode ?? "").trim();
   if (rule.fundingMode !== "*" && rule.fundingMode !== fundingMode) return false;
-  if (rule.relationshipSource !== "*" && rule.relationshipSource !== (ctx.relationshipSource || "organic")) {
-    return false;
-  }
-  if (rule.promotionChannel !== "*" && rule.promotionChannel !== (ctx.promotionChannel || "none")) {
-    return false;
-  }
+  const relationshipSource = (ctx.relationshipSource ?? "").trim();
+  if (rule.relationshipSource !== "*" && rule.relationshipSource !== relationshipSource) return false;
+  const promotionChannel = (ctx.promotionChannel ?? "").trim();
+  if (rule.promotionChannel !== "*" && rule.promotionChannel !== promotionChannel) return false;
   if (rule.minGrossCents != null && ctx.grossValueCents < rule.minGrossCents) return false;
   if (rule.maxGrossCents != null && ctx.grossValueCents > rule.maxGrossCents) return false;
   return true;
