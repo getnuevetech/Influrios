@@ -30,7 +30,10 @@ export function parseChargebackEvidence(value: unknown): ChargebackEvidencePack 
       typeof row.amountCents === "number" && Number.isInteger(row.amountCents) && row.amountCents >= 0
         ? row.amountCents
         : null,
-    currency: typeof row.currency === "string" && row.currency.trim() ? row.currency.trim().toUpperCase().slice(0, 8) : "USD",
+    currency:
+      typeof row.currency === "string" && row.currency.trim()
+        ? row.currency.trim().toUpperCase().slice(0, 8)
+        : "",
     reasonCode: typeof row.reasonCode === "string" ? row.reasonCode.slice(0, 80) : null,
     receivedAt: typeof row.receivedAt === "string" ? row.receivedAt : null,
     notes: typeof row.notes === "string" ? row.notes.slice(0, 1000) : null,
@@ -55,7 +58,7 @@ export function buildChargebackEvidencePack(input: {
     providerCaseId: input.providerCaseId?.trim() || null,
     providerReference: input.providerReference?.trim() || null,
     amountCents: input.amountCents ?? null,
-    currency: input.currency || "USD",
+    currency: input.currency?.trim() || "",
     reasonCode: input.reasonCode?.trim() || null,
     receivedAt: input.receivedAt?.trim() || null,
     notes: input.notes?.trim() || null,
@@ -70,7 +73,11 @@ export function chargebackEvidenceSummary(pack: ChargebackEvidencePack | null): 
   const parts = [
     pack.providerCaseId ? `case ${pack.providerCaseId}` : null,
     pack.providerReference ? `ref ${pack.providerReference}` : null,
-    pack.amountCents != null ? `${pack.amountCents}¢ ${pack.currency}` : null,
+    pack.amountCents != null
+      ? pack.currency
+        ? `${pack.amountCents}¢ ${pack.currency}`
+        : `${pack.amountCents}¢`
+      : null,
     pack.reasonCode ? `code ${pack.reasonCode}` : null,
     pack.attachmentUrls.length ? `${pack.attachmentUrls.length} attachment(s)` : null,
   ].filter(Boolean);

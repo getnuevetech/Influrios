@@ -35,7 +35,7 @@ import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFxRates, listRevenueParties } from "@/lib/settlement";
 import { wiseFxConfig } from "@/lib/wise-quote";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, formatStoredMoney } from "@/lib/money";
 import { ledgerMonthlyReport, ledgerTotals, listFundings, marketplaceConfig, marketplaceProviderLabel } from "@/lib/marketplace-ledger";
 import { productSwitch } from "@/lib/product-switches";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
@@ -1022,7 +1022,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                         : null,
                       funding.evidence.reasonCode ? `code ${funding.evidence.reasonCode}` : null,
                       funding.evidence.amountCents != null
-                        ? `${formatMoney(funding.evidence.amountCents, funding.evidence.currency)}`
+                        ? `${formatStoredMoney(funding.evidence.amountCents, funding.evidence.currency)}`
                         : null,
                     ]
                       .filter(Boolean)
