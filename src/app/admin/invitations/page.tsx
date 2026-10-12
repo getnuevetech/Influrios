@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import {
   actionAddSuppression,
+  actionImportAgencyCsv,
   actionCopyInvitationLink,
   actionCreateInvitation,
   actionQueueInvitation,
@@ -13,6 +14,7 @@ import {
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getDirectory } from "@/lib/directory";
+import { loadAcquisitionReport } from "@/lib/acquisition";
 import { loadInvitationAdmin } from "@/lib/invitations";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +32,7 @@ export default async function AdminInvitationsPage({
   const params = await searchParams;
   const directory = await getDirectory();
   const data = await loadInvitationAdmin().catch(() => null);
+  const acquisition = data ? await loadAcquisitionReport().catch(() => null) : null;
   const headerStore = await headers();
   const host = headerStore.get("x-forwarded-host") || headerStore.get("host") || "";
   const proto = headerStore.get("x-forwarded-proto") || "http";
@@ -205,6 +208,79 @@ export default async function AdminInvitationsPage({
               <input name="name" placeholder="New campaign" className="flex-1 rounded-xl border border-border px-3 py-2" />
               <button type="submit" className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm font-semibold text-indigo">Add</button>
             </form>
+          ) : null}
+
+          <h2 className="mt-10 font-display text-lg font-bold text-indigo">Acquisition</h2>
+          <p className="mt-1 text-sm text-muted">
+            Counts use the first source stored on a draft and the campaign stored on an invitation. A blank source stays blank.
+            {acquisition?.capped ? " Showing the latest 5,000 drafts and invitations." : ""}
+          </p>
+          {acquisition ? (
+            <div className="mt-3 overflow-x-auto rounded-2xl border border-[#E4EBFF] bg-white">
+              <table className="min-w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-muted">
+                  <tr>
+                    <th className="px-4 py-3">Source</th>
+                    <th className="px-4 py-3">Invited</th>
+                    <th className="px-4 py-3">Previewed</th>
+                    <th className="px-4 py-3">Claimed</th>
+                    <th className="px-4 py-3">Verified</th>
+                    <th className="px-4 py-3">Published</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {acquisition.funnel.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-3 text-muted" colSpan={6}>
+                        No invitations or drafts yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    acquisition.funnel.map((row) => (
+                      <tr key={row.source || "blank"} className="border-t border-[#E4EBFF]">
+                        <td className="px-4 py-3 font-semibold text-indigo">{row.source}</td>
+                        <td className="px-4 py-3">{row.invited}</td>
+                        <td className="px-4 py-3">{row.previewed}</td>
+                        <td className="px-4 py-3">{row.claimed}</td>
+                        <td className="px-4 py-3">{row.verified}</td>
+                        <td className="px-4 py-3">{row.published}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-amber-800">The acquisition report could not be read.</p>
+          )}
+
+          <form action={actionImportAgencyCsv} className="mt-4 space-y-3 rounded-2xl border border-[#E4EBFF] bg-white p-4">
+            <h3 className="font-semibold text-indigo">Agency CSV</h3>
+            <p className="text-sm text-muted">
+              Columns are handle, name, email, platform, and source. A row starts a private draft. It does not publish a profile. The email is stored on the import and is not used as a login.
+            </p>
+            <label className="block text-sm font-semibold text-indigo">
+              Source for rows that leave source blank
+              <input name="batchSource" disabled={!canEdit} className={inputClass} />
+            </label>
+            <label className="block text-sm font-semibold text-indigo">
+              CSV
+              <textarea name="csv" rows={6} disabled={!canEdit} className={inputClass} placeholder={"handle,name,email,platform,source"} />
+            </label>
+            {canEdit ? <button type="submit" className="btn-primary">Import rows</button> : null}
+          </form>
+          {acquisition && acquisition.imports.length ? (
+            <ul className="mt-3 space-y-2 text-sm text-indigo">
+              {acquisition.imports.map((row) => (
+                <li key={row.id}>
+                  {row.handle}
+                  {row.name ? ` · ${row.name}` : ""}
+                  {row.email ? ` · ${row.email}` : ""}
+                  {row.source ? ` · ${row.source}` : ""}
+                  {row.error ? ` — ${row.error}` : row.sessionId ? " — draft started" : ""}
+                </li>
+              ))}
+            </ul>
           ) : null}
 
           <h2 className="mt-10 font-display text-lg font-bold text-indigo">Do not contact</h2>

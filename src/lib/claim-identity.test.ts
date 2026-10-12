@@ -57,6 +57,10 @@ describe("claim session mapping", () => {
       emailVerifiedAt: null,
       socialVerifiedAt: null,
       publishedAt: null,
+      firstTouchSource: "",
+      firstTouchAt: null,
+      lastTouchSource: "",
+      lastTouchAt: null,
       verifyMethod: "EMAIL",
       payload: {
         displayName: draft.displayName,
@@ -104,6 +108,10 @@ describe("claim session mapping", () => {
       emailVerifiedAt: new Date("2026-10-01T01:00:00.000Z"),
       socialVerifiedAt: null,
       publishedAt: null,
+      firstTouchSource: "roster",
+      firstTouchAt: new Date("2026-10-01T00:00:00.000Z"),
+      lastTouchSource: "roster",
+      lastTouchAt: new Date("2026-10-01T00:00:00.000Z"),
       verifyMethod: "DEMO_CODE",
       payload: {
         displayName: base.displayName,
@@ -125,6 +133,8 @@ describe("claim session mapping", () => {
       updatedAt: new Date(base.updatedAt),
     } as OnboardingSession;
     assert.equal(draftFromSession(verifiedRow).stage, "verified");
+    assert.equal(draftFromSession(verifiedRow).firstTouchSource, "roster");
+    assert.equal(draftFromSession(verifiedRow).lastTouchSource, "roster");
     assert.equal(draftFromSession(verifiedRow).verificationDelivery, "demo");
 
     const publishedRow = {

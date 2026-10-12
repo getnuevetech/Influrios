@@ -90,6 +90,10 @@ describe("discovery facets", () => {
       emailVerifiedAt: null,
       socialVerifiedAt: null,
       publishedAt: null,
+      firstTouchSource: "",
+      firstTouchAt: null,
+      lastTouchSource: "",
+      lastTouchAt: null,
       verifyMethod: "UNSENT",
       payload: {
         displayName: "Ada",
