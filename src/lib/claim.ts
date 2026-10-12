@@ -22,6 +22,7 @@ import type { OnboardingSession, OnboardingState, Prisma } from "@prisma/client"
 import type { SeedCreator, SeedSocial } from "@/lib/seed-data";
 import { SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 import { facetList } from "@/lib/discovery-facets";
+import { storedProfileNote } from "@/lib/profile-notes";
 
 export type ClaimStage = "draft" | "claimed" | "verified" | "published";
 
@@ -39,6 +40,11 @@ export type ClaimDraft = {
   specialties: string[];
   contentStyles?: string[];
   commercialModes?: string[];
+  /** Undefined until the creator saves this note. A saved blank stays blank. */
+  offer?: string;
+  offerDetails?: string;
+  need?: string;
+  needDetails?: string;
   socials: SeedSocial[];
   image: string;
   coverImage: string;
@@ -74,6 +80,10 @@ type SessionPayload = {
   specialties: string[];
   contentStyles: string[];
   commercialModes: string[];
+  offer?: string;
+  offerDetails?: string;
+  need?: string;
+  needDetails?: string;
   socials: SeedSocial[];
   image: string;
   coverImage: string;
@@ -316,6 +326,10 @@ function readPayload(raw: Prisma.JsonValue): SessionPayload {
     specialties,
     contentStyles: facetList(value.contentStyles),
     commercialModes: facetList(value.commercialModes),
+    offer: "offer" in value ? storedProfileNote(value.offer) : undefined,
+    offerDetails: "offerDetails" in value ? storedProfileNote(value.offerDetails) : undefined,
+    need: "need" in value ? storedProfileNote(value.need) : undefined,
+    needDetails: "needDetails" in value ? storedProfileNote(value.needDetails) : undefined,
     socials,
     image:
       typeof value.image === "string" && !value.image.includes("/demo/creators/")
@@ -337,6 +351,15 @@ function readPayload(raw: Prisma.JsonValue): SessionPayload {
   };
 }
 
+function notePayload(draft: ClaimDraft) {
+  return {
+    ...(draft.offer !== undefined ? { offer: draft.offer } : {}),
+    ...(draft.offerDetails !== undefined ? { offerDetails: draft.offerDetails } : {}),
+    ...(draft.need !== undefined ? { need: draft.need } : {}),
+    ...(draft.needDetails !== undefined ? { needDetails: draft.needDetails } : {}),
+  };
+}
+
 function sessionPayload(draft: ClaimDraft): SessionPayload {
   return {
     displayName: draft.displayName,
@@ -347,6 +370,7 @@ function sessionPayload(draft: ClaimDraft): SessionPayload {
     specialties: draft.specialties,
     contentStyles: draft.contentStyles ?? [],
     commercialModes: draft.commercialModes ?? [],
+    ...notePayload(draft),
     socials: draft.socials,
     image: draft.image,
     coverImage: draft.coverImage,
@@ -406,6 +430,10 @@ export function draftFromSession(row: OnboardingSession): ClaimDraft {
     specialties: payload.specialties,
     contentStyles: payload.contentStyles,
     commercialModes: payload.commercialModes,
+    offer: payload.offer,
+    offerDetails: payload.offerDetails,
+    need: payload.need,
+    needDetails: payload.needDetails,
     socials: payload.socials,
     image:
       payload.image.includes("/demo/creators/")
@@ -592,6 +620,10 @@ export async function createDraftFromProfile(
     specialties: [...creator.specialties],
     contentStyles: [...(creator.contentStyles ?? [])],
     commercialModes: [...(creator.commercialModes ?? [])],
+    offer: creator.offer ?? "",
+    offerDetails: creator.offerDetails ?? "",
+    need: creator.need ?? "",
+    needDetails: creator.needDetails ?? "",
     socials: creator.socials.map((item) => ({ ...item })),
     image: resolveDefaultAvatar({
       socialImage: creator.image,
@@ -667,6 +699,14 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     specialties: draft.specialties,
     contentStyles: draft.contentStyles ?? [],
     commercialModes: draft.commercialModes ?? [],
+    offer: draft.offer ?? "",
+    offerDetails: draft.offerDetails ?? "",
+    offers: draft.offer?.trim()
+      ? [{ summary: draft.offer.trim(), details: (draft.offerDetails ?? "").trim() }]
+      : [],
+    need: draft.need ?? "",
+    needDetails: draft.needDetails ?? "",
+    needs: draft.need?.trim() ? [{ summary: draft.need.trim(), details: (draft.needDetails ?? "").trim() }] : [],
     socials: draft.socials,
     openToCollab: true,
     verified: false,
@@ -829,6 +869,10 @@ export async function updateDraftProfile(
       | "specialties"
       | "contentStyles"
       | "commercialModes"
+      | "offer"
+      | "offerDetails"
+      | "need"
+      | "needDetails"
       | "image"
       | "coverImage"
       | "gender"
@@ -906,6 +950,8 @@ async function syncPublishedCreatorProfile(draft: ClaimDraft) {
     contentStyles: draft.contentStyles ?? [],
     commercialModes: draft.commercialModes ?? [],
   });
+  const { offerNeedPatch, replaceCreatorOfferAndNeed } = await import("@/lib/profile-notes");
+  await replaceCreatorOfferAndNeed(creator.id, offerNeedPatch(draft));
   const { invalidateDirectoryCache } = await import("@/lib/directory");
   invalidateDirectoryCache();
   const { syncCreatorSearch } = await import("@/lib/creator-search");
@@ -959,6 +1005,8 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
       specialties: { include: { specialty: true } },
       socialAccounts: true,
       discoveryFacets: { include: { facet: true } },
+      collabOffers: { orderBy: { createdAt: "asc" } },
+      collabNeeds: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!creator) return null;
@@ -988,6 +1036,10 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
     commercialModes: creator.discoveryFacets
       .filter((link) => link.facet.kind === "commercial_mode" && link.facet.active)
       .map((link) => link.facet.slug),
+    offer: creator.collabOffers[0]?.summary ?? "",
+    offerDetails: creator.collabOffers[0]?.details ?? "",
+    need: creator.collabNeeds[0]?.summary ?? "",
+    needDetails: creator.collabNeeds[0]?.details ?? "",
     socials: storedAccountSocials(creator.socialAccounts),
     image: resolveDefaultAvatar({
       socialImage: creator.avatarUrl,
@@ -1009,13 +1061,41 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
   };
 }
 
+async function withStoredOfferAndNeed(draft: ClaimDraft): Promise<ClaimDraft> {
+  if (
+    draft.offer !== undefined &&
+    draft.offerDetails !== undefined &&
+    draft.need !== undefined &&
+    draft.needDetails !== undefined
+  ) {
+    return draft;
+  }
+  const creator = await prisma.creator.findUnique({
+    where: { slug: draft.slug },
+    include: {
+      collabOffers: { orderBy: { createdAt: "asc" } },
+      collabNeeds: { orderBy: { createdAt: "asc" } },
+    },
+  });
+  if (!creator) return draft;
+  const offer = creator.collabOffers[0];
+  const need = creator.collabNeeds[0];
+  return {
+    ...draft,
+    offer: draft.offer !== undefined ? draft.offer : (offer?.summary ?? ""),
+    offerDetails: draft.offerDetails !== undefined ? draft.offerDetails : (offer?.details ?? ""),
+    need: draft.need !== undefined ? draft.need : (need?.summary ?? ""),
+    needDetails: draft.needDetails !== undefined ? draft.needDetails : (need?.details ?? ""),
+  };
+}
+
 export async function getCreatorSessionDraft(): Promise<ClaimDraft | null> {
   try {
     const { getAccountSession } = await import("@/lib/accounts");
     const account = await getAccountSession();
     if (account) {
       const fromAccount = await draftFromAccountUser(account.id);
-      if (fromAccount) return fromAccount;
+      if (fromAccount) return withStoredOfferAndNeed(fromAccount);
     }
   } catch {
     /* account module unavailable in some scripts */
@@ -1036,7 +1116,8 @@ export async function getCreatorSessionDraft(): Promise<ClaimDraft | null> {
       exp: number;
     };
     if (parsed.exp < Date.now()) return null;
-    return getDraft(parsed.draftId);
+    const draft = await getDraft(parsed.draftId);
+    return draft ? withStoredOfferAndNeed(draft) : null;
   } catch {
     return null;
   }

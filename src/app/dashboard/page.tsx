@@ -6,6 +6,7 @@ import {
   actionUpdateProfileMedia,
 } from "@/app/claim/actions";
 import { actionSaveDiscoveryFacets } from "@/app/dashboard/facet-actions";
+import { actionSaveProfileNotes } from "@/app/dashboard/offer-actions";
 import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
 import { NfcWriter } from "@/app/dashboard/nfc-writer";
 import { ScheduleStartsField } from "@/app/dashboard/schedule-starts-field";
@@ -162,6 +163,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       {params.saved === "facets" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Content style and commercial mode saved.
+        </div>
+      ) : null}
+      {params.saved === "notes" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Offer and need saved.
         </div>
       ) : null}
       {params.saved === "destination" ? (
@@ -414,6 +420,13 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
             commercialModes={facetCatalog.filter((row) => row.kind === COMMERCIAL_MODE && row.active)}
             selectedStyles={draft.contentStyles ?? []}
             selectedModes={draft.commercialModes ?? []}
+          />
+          <ProfileNotesForm
+            draftId={draft.id}
+            offer={draft.offer ?? ""}
+            offerDetails={draft.offerDetails ?? ""}
+            need={draft.need ?? ""}
+            needDetails={draft.needDetails ?? ""}
           />
         </section>
 
@@ -1100,6 +1113,62 @@ function DiscoveryFacetForm({
         </fieldset>
         <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
           Save choices
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function ProfileNotesForm({
+  draftId,
+  offer,
+  offerDetails,
+  need,
+  needDetails,
+}: {
+  draftId: string;
+  offer: string;
+  offerDetails: string;
+  need: string;
+  needDetails: string;
+}) {
+  return (
+    <div className="mt-8">
+      <h2 className="font-display text-xl font-bold text-indigo">I offer and I need</h2>
+      <p className="mt-2 text-sm text-muted">
+        These notes are saved on the profile. A blank note stays blank. An unpublished draft keeps them until the
+        profile is published.
+      </p>
+      <form action={actionSaveProfileNotes} className="mt-4 grid gap-3 sm:grid-cols-2">
+        <input type="hidden" name="draftId" value={draftId} />
+        <label className="text-sm sm:col-span-2">
+          <span className="font-semibold text-indigo">I offer</span>
+          <input name="offer" defaultValue={offer} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
+        </label>
+        <label className="text-sm sm:col-span-2">
+          <span className="font-semibold text-indigo">Offer details</span>
+          <textarea
+            name="offerDetails"
+            rows={3}
+            defaultValue={offerDetails}
+            className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+          />
+        </label>
+        <label className="text-sm sm:col-span-2">
+          <span className="font-semibold text-indigo">I need</span>
+          <input name="need" defaultValue={need} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
+        </label>
+        <label className="text-sm sm:col-span-2">
+          <span className="font-semibold text-indigo">Need details</span>
+          <textarea
+            name="needDetails"
+            rows={3}
+            defaultValue={needDetails}
+            className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+          />
+        </label>
+        <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
+          Save offer and need
         </button>
       </form>
     </div>

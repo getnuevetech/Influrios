@@ -125,6 +125,12 @@ function blankCreator(slug: string, name: string): SeedCreator {
     commercialModes: [],
     commercialModeNames: [],
     socials: [],
+    offer: "",
+    offerDetails: "",
+    offers: [],
+    need: "",
+    needDetails: "",
+    needs: [],
     openToCollab: true,
   };
 }
@@ -134,6 +140,8 @@ type DirectoryRow = Prisma.CreatorGetPayload<{
     specialties: { include: { specialty: true } };
     socialAccounts: true;
     discoveryFacets: { include: { facet: true } };
+    collabOffers: true;
+    collabNeeds: true;
   };
 }>;
 
@@ -148,7 +156,23 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
     handle: social.handle,
     url: social.url,
     followers: social.followers ?? 0,
+    source: social.source,
+    refreshedAt: social.refreshedAt ? social.refreshedAt.toISOString() : null,
   }));
+  const offers = [...row.collabOffers]
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .flatMap((row) => {
+      const summary = row.summary.trim();
+      if (!summary) return [];
+      return [{ summary, details: (row.details ?? "").trim() }];
+    });
+  const needs = [...row.collabNeeds]
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .flatMap((row) => {
+      const summary = row.summary.trim();
+      if (!summary) return [];
+      return [{ summary, details: (row.details ?? "").trim() }];
+    });
   const styleLinks = row.discoveryFacets
     .filter((link) => link.facet.kind === CONTENT_STYLE && link.facet.active)
     .sort((a, b) => a.facet.sortOrder - b.facet.sortOrder);
@@ -174,6 +198,12 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
     commercialModes: modeLinks.map((link) => link.facet.slug),
     commercialModeNames: modeLinks.map((link) => link.facet.name),
     socials,
+    offer: offers[0]?.summary ?? "",
+    offerDetails: offers[0]?.details ?? "",
+    offers,
+    need: needs[0]?.summary ?? "",
+    needDetails: needs[0]?.details ?? "",
+    needs,
     openToCollab: row.openToCollab,
     ...directoryLabels(row.openToCollab),
     image: avatar,
@@ -256,30 +286,6 @@ async function ensureDirectory() {
     }
   }
 
-  await linkOfferNeedsToPrimarySpecialty();
-}
-
-async function linkOfferNeedsToPrimarySpecialty() {
-  const [offers, needs] = await Promise.all([
-    prisma.collaborationOffer.findMany({
-      where: { specialtyId: null },
-      include: { creator: { include: { specialties: { orderBy: { isPrimary: "desc" }, take: 1 } } } },
-    }),
-    prisma.collaborationNeed.findMany({
-      where: { specialtyId: null },
-      include: { creator: { include: { specialties: { orderBy: { isPrimary: "desc" }, take: 1 } } } },
-    }),
-  ]);
-  for (const offer of offers) {
-    const specialtyId = offer.creator.specialties[0]?.specialtyId;
-    if (!specialtyId) continue;
-    await prisma.collaborationOffer.update({ where: { id: offer.id }, data: { specialtyId } });
-  }
-  for (const need of needs) {
-    const specialtyId = need.creator.specialties[0]?.specialtyId;
-    if (!specialtyId) continue;
-    await prisma.collaborationNeed.update({ where: { id: need.id }, data: { specialtyId } });
-  }
 }
 
 async function readDirectory(): Promise<Cache> {
@@ -291,6 +297,8 @@ async function readDirectory(): Promise<Cache> {
         specialties: { include: { specialty: true } },
         socialAccounts: true,
         discoveryFacets: { include: { facet: true } },
+        collabOffers: true,
+        collabNeeds: true,
       },
       orderBy: { displayName: "asc" },
     }),
@@ -386,6 +394,8 @@ export async function loadPublicCreator(slug: string): Promise<SeedCreator | nul
       specialties: { include: { specialty: true } },
       socialAccounts: true,
       discoveryFacets: { include: { facet: true } },
+      collabOffers: true,
+      collabNeeds: true,
     },
   });
   if (!row || row.profileState === "RESTRICTED") return null;
