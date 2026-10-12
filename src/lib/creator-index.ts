@@ -32,6 +32,18 @@ export function creatorIndexFilter(query: CreatorSearchQuery): string | undefine
     .map((value) => value.trim())
     .filter(Boolean);
   if (platforms.length) parts.push(`(${platforms.map((value) => `platforms = ${quote(value)}`).join(" OR ")})`);
+  const contentStyles = (Array.isArray(query.contentStyle) ? query.contentStyle : query.contentStyle ? [query.contentStyle] : [])
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  if (contentStyles.length) parts.push(`(${contentStyles.map((value) => `contentStyles = ${quote(value)}`).join(" OR ")})`);
+  const commercialModes = (
+    Array.isArray(query.commercialMode) ? query.commercialMode : query.commercialMode ? [query.commercialMode] : []
+  )
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  if (commercialModes.length) {
+    parts.push(`(${commercialModes.map((value) => `commercialModes = ${quote(value)}`).join(" OR ")})`);
+  }
   const verified =
     query.verified === true || query.verified === "1" || query.verified === "true" || query.verified === "on";
   if (verified) parts.push("verified = true");
@@ -101,7 +113,16 @@ export async function ensureCreatorIndex(
       method: "PATCH",
       body: JSON.stringify({
         searchableAttributes: ["displayName", "bio", "specialties", "languages", "locationCity", "locationCountry"],
-        filterableAttributes: ["specialties", "locationCountry", "languages", "platforms", "planTier", "verified"],
+        filterableAttributes: [
+          "specialties",
+          "locationCountry",
+          "languages",
+          "platforms",
+          "planTier",
+          "verified",
+          "contentStyles",
+          "commercialModes",
+        ],
         synonyms: meiliSynonymMap(synonyms),
       }),
     },
@@ -117,6 +138,8 @@ export function creatorIndexDocument(creator: SeedCreator) {
     displayName: creator.displayName,
     bio: creator.bio,
     specialties: creator.specialties,
+    contentStyles: creator.contentStyles ?? [],
+    commercialModes: creator.commercialModes ?? [],
     languages: creator.languages,
     locationCity: creator.locationCity,
     locationCountry: creator.locationCountry,

@@ -290,6 +290,7 @@ model Creator {
   card               InfluenceCard?
   collabOffers       CollaborationOffer[]
   collabNeeds        CollaborationNeed[]
+  discoveryFacets    CreatorDiscoveryFacet[]
   socialConnections  SocialConnection[]
   shortLinks         ShortLink[]
   campaignLinks      CampaignLink[]
@@ -535,6 +536,30 @@ model InfluenceCard {
   creator         Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+/// Admin-managed Discover terms. A creator link is stored only when that creator chooses the term.
+model DiscoveryFacet {
+  id        String                  @id @default(cuid())
+  /// content_style | commercial_mode
+  kind      String
+  slug      String
+  name      String
+  active    Boolean                 @default(true)
+  sortOrder Int                     @default(0)
+  createdAt DateTime                @default(now())
+  creators  CreatorDiscoveryFacet[]
+
+  @@unique([kind, slug])
+}
+
+model CreatorDiscoveryFacet {
+  creatorId String
+  facetId   String
+  creator   Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  facet     DiscoveryFacet @relation(fields: [facetId], references: [id], onDelete: Cascade)
+
+  @@id([creatorId, facetId])
 }
 
 model CollaborationOffer {

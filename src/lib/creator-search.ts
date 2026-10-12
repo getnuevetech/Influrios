@@ -43,6 +43,8 @@ export function narrowIndexedCreators(creators: SeedCreator[], query: CreatorSea
     location: query.location,
     openToCollab: query.openToCollab,
     collabType: query.collabType,
+    contentStyle: query.contentStyle,
+    commercialMode: query.commercialMode,
     rate: query.rate,
     sort: query.sort,
   });

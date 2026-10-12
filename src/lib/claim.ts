@@ -21,6 +21,7 @@ import { cookies } from "next/headers";
 import type { OnboardingSession, OnboardingState, Prisma } from "@prisma/client";
 import type { SeedCreator, SeedSocial } from "@/lib/seed-data";
 import { SPECIALTY_TAXONOMY } from "@/lib/seed-data";
+import { facetList } from "@/lib/discovery-facets";
 
 export type ClaimStage = "draft" | "claimed" | "verified" | "published";
 
@@ -36,6 +37,8 @@ export type ClaimDraft = {
   locationCity: string;
   locationCountry: string;
   specialties: string[];
+  contentStyles?: string[];
+  commercialModes?: string[];
   socials: SeedSocial[];
   image: string;
   coverImage: string;
@@ -69,6 +72,8 @@ type SessionPayload = {
   locationCity: string;
   locationCountry: string;
   specialties: string[];
+  contentStyles: string[];
+  commercialModes: string[];
   socials: SeedSocial[];
   image: string;
   coverImage: string;
@@ -309,6 +314,8 @@ function readPayload(raw: Prisma.JsonValue): SessionPayload {
     locationCity: typeof value.locationCity === "string" ? value.locationCity : "",
     locationCountry: typeof value.locationCountry === "string" ? value.locationCountry : "",
     specialties,
+    contentStyles: facetList(value.contentStyles),
+    commercialModes: facetList(value.commercialModes),
     socials,
     image:
       typeof value.image === "string" && !value.image.includes("/demo/creators/")
@@ -338,6 +345,8 @@ function sessionPayload(draft: ClaimDraft): SessionPayload {
     locationCity: draft.locationCity,
     locationCountry: draft.locationCountry,
     specialties: draft.specialties,
+    contentStyles: draft.contentStyles ?? [],
+    commercialModes: draft.commercialModes ?? [],
     socials: draft.socials,
     image: draft.image,
     coverImage: draft.coverImage,
@@ -365,6 +374,8 @@ export function publicClaimPayload(draft: ClaimDraft) {
     locationCity: draft.locationCity,
     locationCountry: draft.locationCountry,
     specialties: draft.specialties,
+    contentStyles: draft.contentStyles ?? [],
+    commercialModes: draft.commercialModes ?? [],
     socials: draft.socials.map((social) => ({
       platform: social.platform,
       handle: social.handle,
@@ -393,6 +404,8 @@ export function draftFromSession(row: OnboardingSession): ClaimDraft {
     locationCity: payload.locationCity,
     locationCountry: payload.locationCountry,
     specialties: payload.specialties,
+    contentStyles: payload.contentStyles,
+    commercialModes: payload.commercialModes,
     socials: payload.socials,
     image:
       payload.image.includes("/demo/creators/")
@@ -498,6 +511,8 @@ export async function createDraftFromHandle(
     locationCity: fields.locationCity,
     locationCountry: fields.locationCountry,
     specialties: fields.specialties,
+    contentStyles: [],
+    commercialModes: [],
     socials: [
       {
         platform: fields.platform,
@@ -575,6 +590,8 @@ export async function createDraftFromProfile(
     locationCity: creator.locationCity,
     locationCountry: creator.locationCountry,
     specialties: [...creator.specialties],
+    contentStyles: [...(creator.contentStyles ?? [])],
+    commercialModes: [...(creator.commercialModes ?? [])],
     socials: creator.socials.map((item) => ({ ...item })),
     image: resolveDefaultAvatar({
       socialImage: creator.image,
@@ -648,6 +665,8 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     statusLabel: draft.stage === "published" ? "Open to partnerships" : "Draft — not public yet",
     planTier: draft.planTier === "PLUS" || draft.planTier === "PRO" ? draft.planTier : "STARTER",
     specialties: draft.specialties,
+    contentStyles: draft.contentStyles ?? [],
+    commercialModes: draft.commercialModes ?? [],
     socials: draft.socials,
     openToCollab: true,
     verified: false,
@@ -808,6 +827,8 @@ export async function updateDraftProfile(
       | "locationCity"
       | "locationCountry"
       | "specialties"
+      | "contentStyles"
+      | "commercialModes"
       | "image"
       | "coverImage"
       | "gender"
@@ -880,6 +901,11 @@ async function syncPublishedCreatorProfile(draft: ClaimDraft) {
       });
     }
   }
+  const { replaceCreatorDiscoveryFacets } = await import("@/lib/discovery-facets");
+  await replaceCreatorDiscoveryFacets(creator.id, {
+    contentStyles: draft.contentStyles ?? [],
+    commercialModes: draft.commercialModes ?? [],
+  });
   const { invalidateDirectoryCache } = await import("@/lib/directory");
   invalidateDirectoryCache();
   const { syncCreatorSearch } = await import("@/lib/creator-search");
@@ -929,7 +955,11 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
 
   const creator = await prisma.creator.findFirst({
     where: { userId },
-    include: { specialties: { include: { specialty: true } }, socialAccounts: true },
+    include: {
+      specialties: { include: { specialty: true } },
+      socialAccounts: true,
+      discoveryFacets: { include: { facet: true } },
+    },
   });
   if (!creator) return null;
 
@@ -952,6 +982,12 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
     locationCity: creator.locationCity ?? "",
     locationCountry: creator.locationCountry ?? "",
     specialties: creator.specialties.map((row) => row.specialty.slug),
+    contentStyles: creator.discoveryFacets
+      .filter((link) => link.facet.kind === "content_style" && link.facet.active)
+      .map((link) => link.facet.slug),
+    commercialModes: creator.discoveryFacets
+      .filter((link) => link.facet.kind === "commercial_mode" && link.facet.active)
+      .map((link) => link.facet.slug),
     socials: storedAccountSocials(creator.socialAccounts),
     image: resolveDefaultAvatar({
       socialImage: creator.avatarUrl,

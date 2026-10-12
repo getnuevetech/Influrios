@@ -7,6 +7,7 @@ import { CreatorCard } from "@/components/creator-card";
 import { DiscoverFilters, DiscoverSort } from "@/components/discover-filters";
 import { CategoryGlyph, IconArrowRight, IconSearch } from "@/components/icons";
 import { getDirectory, recordDirectoryEvent, searchDirectory } from "@/lib/directory";
+import { COMMERCIAL_MODE, CONTENT_STYLE, listDiscoveryFacets } from "@/lib/discovery-facets";
 import { demoCreators, publicPagesUseLive } from "@/lib/presentation-demo";
 import { filterCreators, formatFollowers, languageOptionsFor, totalFollowers } from "@/lib/seed-data";
 import { canonicalSpecialty } from "@/lib/taxonomy";
@@ -65,6 +66,8 @@ function discoverReturnPath(params: Record<string, string | string[] | undefined
     "engagementMin",
     "engagementMax",
     "collabType",
+    "contentStyle",
+    "commercialMode",
     "rate",
     "openToCollab",
     "verified",
@@ -80,9 +83,10 @@ function discoverReturnPath(params: Record<string, string | string[] | undefined
 
 export default async function DiscoverPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [directory, livePages] = await Promise.all([
+  const [directory, livePages, facetCatalog] = await Promise.all([
     getDirectory(),
     publicPagesUseLive().catch(() => false),
+    listDiscoveryFacets().catch(() => []),
   ]);
   const roster = livePages ? directory.creators : demoCreators();
   const taxonomy = directory.taxonomy
@@ -106,6 +110,8 @@ export default async function DiscoverPage({ searchParams }: Props) {
     engagementMin: first(params.engagementMin),
     engagementMax: first(params.engagementMax),
     collabType: first(params.collabType),
+    contentStyle: first(params.contentStyle),
+    commercialMode: first(params.commercialMode),
     rate: first(params.rate),
     openToCollab: first(params.openToCollab),
     verified: first(params.verified),
@@ -149,6 +155,12 @@ export default async function DiscoverPage({ searchParams }: Props) {
     count: roster.filter((creator) => creator.socials.some((social) => social.platform === platform.value)).length,
   }));
   const languages = languageOptionsFor(roster);
+  const contentStyleOptions = facetCatalog
+    .filter((row) => row.kind === CONTENT_STYLE && row.active)
+    .map((row) => ({ value: row.slug, label: row.name }));
+  const commercialModeOptions = facetCatalog
+    .filter((row) => row.kind === COMMERCIAL_MODE && row.active)
+    .map((row) => ({ value: row.slug, label: row.name }));
   const topMatches = results.slice(0, 5);
   const heroCards = roster.slice(0, 3);
   const activeChip = specialties[0] ?? "";
@@ -189,6 +201,12 @@ export default async function DiscoverPage({ searchParams }: Props) {
               {platforms.map((value) => (
                 <input key={value} type="hidden" name="platform" value={value} />
               ))}
+              {first(params.contentStyle) ? (
+                <input type="hidden" name="contentStyle" value={first(params.contentStyle)} />
+              ) : null}
+              {first(params.commercialMode) ? (
+                <input type="hidden" name="commercialMode" value={first(params.commercialMode)} />
+              ) : null}
               <input type="hidden" name="language" value={first(params.language)} />
               <input type="hidden" name="sort" value={sort} />
               <span className="pl-3 text-violet">
@@ -276,6 +294,8 @@ export default async function DiscoverPage({ searchParams }: Props) {
             categories={categoryOptions}
             platforms={platformOptions}
             languages={languages}
+            contentStyles={contentStyleOptions}
+            commercialModes={commercialModeOptions}
             selected={{
               specialties,
               country: first(params.country),
@@ -287,6 +307,8 @@ export default async function DiscoverPage({ searchParams }: Props) {
               engagementMax: Number(first(params.engagementMax) || 0),
               language: first(params.language),
               collabType: first(params.collabType),
+              contentStyle: first(params.contentStyle),
+              commercialMode: first(params.commercialMode),
               rate: first(params.rate),
               verified: first(params.verified) === "1",
               openToCollab: first(params.openToCollab) === "1",

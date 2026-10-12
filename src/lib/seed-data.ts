@@ -34,6 +34,12 @@ export type SeedCreator = {
   statusLabel: string;
   planTier: "STARTER" | "PLUS" | "PRO";
   specialties: string[];
+  /** Chosen content-style slugs. A missing list is not a style. */
+  contentStyles?: string[];
+  contentStyleNames?: string[];
+  /** Chosen commercial-mode slugs. A missing list is not a mode. */
+  commercialModes?: string[];
+  commercialModeNames?: string[];
   socials: SeedSocial[];
   openToCollab: boolean;
   offer?: string;
@@ -770,6 +776,8 @@ export type CreatorSearchQuery = {
   engagementMin?: string | number;
   engagementMax?: string | number;
   collabType?: string;
+  contentStyle?: string | string[];
+  commercialMode?: string | string[];
   rate?: string;
   openToCollab?: string | boolean;
   verified?: string | boolean;
@@ -799,6 +807,8 @@ export function filterCreators(
   const followersMax = Number(query.followersMax || 0) || 0;
   const engagementMin = Number(query.engagementMin || 0) || 0;
   const engagementMax = Number(query.engagementMax || 0) || 0;
+  const contentStyles = queryList(query.contentStyle).map((item) => item.toLowerCase());
+  const commercialModes = queryList(query.commercialMode).map((item) => item.toLowerCase());
   const collabType = query.collabType?.toLowerCase().trim();
   const rate = query.rate?.toLowerCase().trim();
   const openOnly =
@@ -848,6 +858,18 @@ export function filterCreators(
       const engagement = parseFloat(c.stats?.engagementRate ?? "0");
       if (engagementMin && engagement < engagementMin) return false;
       if (engagementMax && engagement > engagementMax) return false;
+    }
+    if (
+      contentStyles.length &&
+      !contentStyles.some((selected) => (c.contentStyles ?? []).some((slug) => slug.toLowerCase() === selected))
+    ) {
+      return false;
+    }
+    if (
+      commercialModes.length &&
+      !commercialModes.some((selected) => (c.commercialModes ?? []).some((slug) => slug.toLowerCase() === selected))
+    ) {
+      return false;
     }
     if (collabType) {
       const hay = `${(c.collabPrefs ?? []).join(" ")} ${c.offer ?? ""} ${c.need ?? ""} ${c.bio}`.toLowerCase();
