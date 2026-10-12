@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { prisma } from "@/lib/db";
-import { clearShortHostCache, makePrimaryDomain, normalizeSlug, setAliasRedirect, setDomainVerification, setShortLinkDestination } from "@/lib/short-link";
+import { clearShortHostCache, makePrimaryDomain, normalizeSlug, setAliasRedirect, setDomainVerification, setShortLinkDestination, setShortLinkStatus } from "@/lib/short-link";
 
 function clean(value: FormDataEntryValue | null, max: number) {
   return String(value ?? "").trim().slice(0, max);
@@ -94,8 +94,8 @@ export async function actionSetLinkStatus(formData: FormData) {
   await requireAdminAction("shortlinks.edit");
   const id = clean(formData.get("id"), 80);
   const status = clean(formData.get("status"), 20);
-  if (!["active", "suspended"].includes(status)) redirect("/admin/short-links?error=Unknown%20status");
-  await prisma.shortLink.update({ where: { id }, data: { status } });
+  const result = await setShortLinkStatus(id, status);
+  if (!result.ok) redirect(`/admin/short-links?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/admin/short-links");
   redirect("/admin/short-links?saved=1");
 }
