@@ -17,6 +17,7 @@ function clean(value: FormDataEntryValue | null, max: number) {
 
 export async function actionSaveMailSettings(formData: FormData) {
   await requireAdminAction("mail.edit");
+  const enabled = formData.get("enabled") === "on";
   try {
     await saveMailSettings({
       host: clean(formData.get("host"), 200),
@@ -24,15 +25,15 @@ export async function actionSaveMailSettings(formData: FormData) {
       username: clean(formData.get("username"), 200),
       fromAddress: clean(formData.get("fromAddress"), 200),
       password: String(formData.get("password") ?? ""),
-      enabled: formData.get("enabled") === "on",
+      enabled,
       clearSecret: formData.get("clearSecret") === "on",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save SMTP settings.";
-    redirect(`/admin/mail?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/mail?error=${encodeURIComponent(message.slice(0, 300))}`);
   }
   revalidatePath("/admin/mail");
-  redirect("/admin/mail?saved=1");
+  redirect(enabled ? "/admin/mail?saved=1" : "/admin/mail?saved=1&warn=enabled");
 }
 
 export async function actionSendMailTest(formData: FormData) {
@@ -44,7 +45,9 @@ export async function actionSendMailTest(formData: FormData) {
   const result = await sendInvitationTest(to);
   revalidatePath("/admin/mail");
   revalidatePath("/admin/jobs");
-  if (!result.ok) redirect(`/admin/mail?error=${encodeURIComponent(result.message)}`);
+  if (!result.ok) {
+    redirect(`/admin/mail?error=${encodeURIComponent(result.message.slice(0, 300))}`);
+  }
   redirect("/admin/mail?sent=1");
 }
 
