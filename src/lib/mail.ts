@@ -1,3 +1,4 @@
+import dns from "node:dns/promises";
 import net from "node:net";
 import tls from "node:tls";
 import { prisma } from "@/lib/db";
@@ -74,7 +75,7 @@ export function resolveMailConfigFromRow(
       source: "none",
     };
   }
-  const host = row.host.trim();
+  const host = normalizeSmtpHost(row.host);
   const from = row.fromAddress.trim();
   const username = row.username.trim();
   if (!host || !from) {
@@ -221,7 +222,7 @@ export async function saveMailSettings(input: {
   enabled: boolean;
   clearSecret: boolean;
 }) {
-  const host = input.host.trim().slice(0, 200);
+  const host = normalizeSmtpHost(input.host).slice(0, 200);
   const fromAddress = input.fromAddress.trim().slice(0, 200);
   const username = input.username.trim().slice(0, 200);
   const port = Number.isFinite(input.port) ? Math.min(65535, Math.max(1, Math.floor(input.port))) : 587;
@@ -344,6 +345,14 @@ function dotStuff(text: string) {
 
 const SMTP_TIMEOUT_MS = 12_000;
 
+/** Gmail/Google Workspace SMTP host. `smtp.google.com` resolves but does not accept mail. */
+export function normalizeSmtpHost(host: string): string {
+  const trimmed = host.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower === "smtp.google.com" || lower === "google.com") return "smtp.gmail.com";
+  return trimmed;
+}
+
 function attachSmtpTimeout(socket: net.Socket, label: string) {
   socket.setTimeout(SMTP_TIMEOUT_MS);
   socket.on("timeout", () => {
@@ -351,10 +360,21 @@ function attachSmtpTimeout(socket: net.Socket, label: string) {
   });
 }
 
+/** Prefer IPv4 — many cloud hosts have broken IPv6 routes that hang SMTP connects. */
+async function resolveSmtpAddress(host: string): Promise<{ host: string; servername: string }> {
+  try {
+    const v4 = await dns.lookup(host, { family: 4 });
+    return { host: v4.address, servername: host };
+  } catch {
+    return { host, servername: host };
+  }
+}
+
 async function openSocket(host: string, port: number): Promise<net.Socket> {
+  const target = await resolveSmtpAddress(host);
   if (port === 465) {
     return await new Promise((resolve, reject) => {
-      const socket = tls.connect({ host, port, servername: host });
+      const socket = tls.connect({ host: target.host, port, servername: target.servername });
       const timer = setTimeout(() => {
         socket.destroy();
         reject(new Error(`SMTP TLS connection to ${host}:${port} timed out.`));
@@ -370,7 +390,7 @@ async function openSocket(host: string, port: number): Promise<net.Socket> {
     });
   }
   return await new Promise((resolve, reject) => {
-    const socket = net.connect({ host, port });
+    const socket = net.connect({ host: target.host, port });
     const timer = setTimeout(() => {
       socket.destroy();
       reject(new Error(`SMTP connection to ${host}:${port} timed out.`));
@@ -431,6 +451,10 @@ async function authenticateSmtp(socket: net.Socket, reader: SmtpReader, config: 
 
 export function formatSmtpDeliveryError(error: unknown, host: string, port: number): string {
   const raw = error instanceof Error ? error.message : "SMTP send failed";
+  const lower = host.trim().toLowerCase();
+  if (lower === "smtp.google.com" || lower === "google.com") {
+    return "Use smtp.gmail.com (not smtp.google.com) on port 587 with your Google account and an App Password.";
+  }
   if (/ENOTFOUND|getaddrinfo/i.test(raw)) {
     return `SMTP host “${host}” could not be found. Check the hostname and save again.`;
   }
@@ -438,7 +462,7 @@ export function formatSmtpDeliveryError(error: unknown, host: string, port: numb
     return `SMTP connection to ${host}:${port} was refused. Check the host and port.`;
   }
   if (/ETIMEDOUT|timed out/i.test(raw)) {
-    return `SMTP connection to ${host}:${port} timed out. Check host, port, and firewall.`;
+    return `SMTP connection to ${host}:${port} timed out. For Gmail use smtp.gmail.com:587. If this host is AWS Lightsail, outbound SMTP may be blocked — use a transactional provider or ask AWS to allow port ${port}.`;
   }
   if (/CERT_|SSL|TLS/i.test(raw)) {
     return `SMTP TLS to ${host}:${port} failed. ${raw}`.slice(0, 400);

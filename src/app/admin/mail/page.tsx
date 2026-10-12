@@ -100,7 +100,17 @@ export default async function AdminMailPage({ searchParams }: Props) {
             )}
             <label className="block text-sm">
               <span className="font-semibold text-indigo">Host</span>
-              <input name="host" defaultValue={settings.host} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
+              <input
+                name="host"
+                defaultValue={settings.host}
+                placeholder="smtp.gmail.com"
+                disabled={!canEdit}
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+              />
+              <span className="mt-1 block text-xs text-muted">
+                Gmail / Google Workspace: use <code>smtp.gmail.com</code> (not smtp.google.com). Port 587 + App
+                Password.
+              </span>
             </label>
             <label className="block text-sm">
               <span className="font-semibold text-indigo">Port</span>
@@ -108,7 +118,13 @@ export default async function AdminMailPage({ searchParams }: Props) {
             </label>
             <label className="block text-sm">
               <span className="font-semibold text-indigo">Username</span>
-              <input name="username" defaultValue={settings.username} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
+              <input
+                name="username"
+                defaultValue={settings.username}
+                placeholder="you@gmail.com"
+                disabled={!canEdit}
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+              />
             </label>
             <label className="block text-sm">
               <span className="font-semibold text-indigo">From address</span>
@@ -117,6 +133,9 @@ export default async function AdminMailPage({ searchParams }: Props) {
             <label className="block text-sm">
               <span className="font-semibold text-indigo">Password</span>
               <input name="password" type="password" autoComplete="new-password" placeholder={settings.hasSecret ? "Saved. Leave blank to keep it." : "Not saved"} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
+              <span className="mt-1 block text-xs text-muted">
+                Gmail requires an App Password (Google Account → Security), not your normal login password.
+              </span>
             </label>
             <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
               <input name="enabled" type="checkbox" defaultChecked={settings.enabled} disabled={!canEdit} />
