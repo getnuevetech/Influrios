@@ -225,7 +225,7 @@ export async function openInvitation(token: string) {
 
   const creator = await getDirectoryCreator(invitation.creatorSlug);
   if (!creator) return { state: "missing" as const, invitation };
-  const { createDraftFromProfile } = await import("@/lib/claim");
+  const { createDraftFromProfile, recordDraftTouch } = await import("@/lib/claim");
   let draft: Awaited<ReturnType<typeof createDraftFromProfile>>;
   try {
     draft = await createDraftFromProfile(creator, `ADMIN_INVITE:${invitation.token}`);
@@ -235,6 +235,8 @@ export async function openInvitation(token: string) {
     }
     throw error;
   }
+  const campaignSource = invitation.campaign?.name?.trim() ?? "";
+  if (campaignSource) await recordDraftTouch(draft.id, campaignSource);
   if (draft.stage === "published" && invitation.status !== "published") {
     await prisma.creatorInvitation.update({
       where: { id: invitation.id },

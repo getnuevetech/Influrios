@@ -6,7 +6,7 @@ export const metadata = {
   title: "Create Your Influrios Profile",
 };
 
-type Props = { searchParams: Promise<{ error?: string; platform?: string }> };
+type Props = { searchParams: Promise<{ error?: string; platform?: string; source?: string; utm_source?: string; utm_campaign?: string }> };
 
 const SOCIAL_HINTS = [
   { platform: "instagram", label: "Instagram", Icon: IconInstagram, placeholder: "instagram.com/you" },
@@ -19,6 +19,17 @@ const SOCIAL_HINTS = [
 export default async function ClaimPage({ searchParams }: Props) {
   const params = await searchParams;
   const platformHint = SOCIAL_HINTS.find((item) => item.platform === params.platform) ?? null;
+  const source = (params.source || params.utm_source || "").trim();
+  const campaign = (params.utm_campaign || "").trim();
+  const claimQuery = (platform: string) => {
+    const query = new URLSearchParams();
+    if (platform) query.set("platform", platform);
+    if (source) query.set("source", source);
+    if (params.utm_source) query.set("utm_source", params.utm_source);
+    if (campaign) query.set("utm_campaign", campaign);
+    const text = query.toString();
+    return text ? `/claim?${text}` : "/claim";
+  };
 
   return (
     <div className="mx-auto max-w-xl px-4 py-14 sm:px-6">
@@ -41,7 +52,7 @@ export default async function ClaimPage({ searchParams }: Props) {
         {SOCIAL_HINTS.map((item) => (
           <Link
             key={item.platform}
-            href={`/claim?platform=${item.platform}`}
+            href={claimQuery(item.platform)}
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${
               platformHint?.platform === item.platform
                 ? "bg-violet text-white ring-violet"
@@ -57,6 +68,9 @@ export default async function ClaimPage({ searchParams }: Props) {
       {platformHint ? (
         <form action={actionCreateDraft} className="card-surface mt-6 space-y-4 p-6">
           <input type="hidden" name="platform" value={platformHint.platform} />
+          {source ? <input type="hidden" name="source" value={source} /> : null}
+          {params.utm_source ? <input type="hidden" name="utm_source" value={params.utm_source} /> : null}
+          {campaign ? <input type="hidden" name="utm_campaign" value={campaign} /> : null}
           <label className="block text-sm font-semibold text-indigo">
             {platformHint.label} profile URL or handle
             <input

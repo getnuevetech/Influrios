@@ -19,6 +19,7 @@ import {
   updateDraftProfile,
   verifyDraft,
 } from "@/lib/claim";
+import { acquisitionSource } from "@/lib/acquisition";
 import { normalizeProfileGender } from "@/lib/profile-media";
 
 function clientIp(headerStore: Headers) {
@@ -28,11 +29,16 @@ function clientIp(headerStore: Headers) {
 export async function actionCreateDraft(formData: FormData) {
   const handle = String(formData.get("handle") ?? "").trim();
   const platformHint = String(formData.get("platform") ?? "").trim();
+  const source = acquisitionSource({
+    source: String(formData.get("source") ?? ""),
+    utmSource: String(formData.get("utm_source") ?? ""),
+    utmCampaign: String(formData.get("utm_campaign") ?? ""),
+  });
   if (!handle) redirect("/claim?error=Enter+a+social+URL+or+handle");
 
   let draftId = "";
   try {
-    const draft = await createDraftFromHandle(handle, "ORGANIC_SIGNUP", platformHint || undefined);
+    const draft = await createDraftFromHandle(handle, "ORGANIC_SIGNUP", platformHint || undefined, source);
     draftId = draft.id;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not create draft";

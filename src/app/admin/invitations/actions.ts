@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { importAgencyCsv } from "@/lib/acquisition";
 import { prisma } from "@/lib/db";
 import { requireAdminSession } from "@/lib/admin-auth";
 import {
@@ -127,6 +128,15 @@ export async function actionAddSuppression(formData: FormData) {
     },
   });
   redirect("/admin/invitations?saved=suppression");
+}
+
+export async function actionImportAgencyCsv(formData: FormData) {
+  await requireAdminSession("invitations.edit");
+  const text = String(formData.get("csv") ?? "");
+  const batchSource = clean(formData.get("batchSource"), 120);
+  const result = await importAgencyCsv(text, batchSource);
+  const notice = result.errors[0] ? `&error=${encodeURIComponent(result.errors[0])}` : "";
+  redirect(`/admin/invitations?saved=import&created=${result.created}${notice}`);
 }
 
 export async function actionRemoveSuppression(formData: FormData) {

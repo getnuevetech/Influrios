@@ -21,6 +21,7 @@ import { cookies } from "next/headers";
 import type { OnboardingSession, OnboardingState, Prisma } from "@prisma/client";
 import type { SeedCreator, SeedSocial } from "@/lib/seed-data";
 import { SPECIALTY_TAXONOMY } from "@/lib/seed-data";
+import { applyTouch } from "@/lib/acquisition";
 import { facetList } from "@/lib/discovery-facets";
 import { storedProfileNote } from "@/lib/profile-notes";
 
@@ -58,6 +59,12 @@ export type ClaimDraft = {
   verifiedAt?: string;
   publishedAt?: string;
   attribution: string;
+  /** First recorded source. A blank value means no source was recorded. */
+  firstTouchSource?: string;
+  firstTouchAt?: string;
+  /** Latest recorded source. A blank value means no source was recorded. */
+  lastTouchSource?: string;
+  lastTouchAt?: string;
   planTier?: string;
   createdAt: string;
   updatedAt: string;
@@ -464,6 +471,10 @@ export function draftFromSession(row: OnboardingSession): ClaimDraft {
     verifiedAt: row.emailVerifiedAt?.toISOString(),
     publishedAt: row.publishedAt?.toISOString(),
     attribution: payload.attribution,
+    firstTouchSource: row.firstTouchSource ?? "",
+    firstTouchAt: row.firstTouchAt ? row.firstTouchAt.toISOString() : undefined,
+    lastTouchSource: row.lastTouchSource ?? "",
+    lastTouchAt: row.lastTouchAt ? row.lastTouchAt.toISOString() : undefined,
     planTier: payload.planTier,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -485,6 +496,10 @@ async function writeDraft(draft: ClaimDraft, userId?: string | null) {
       emailVerifiedAt: draft.verifiedAt ? new Date(draft.verifiedAt) : null,
       publishedAt: draft.publishedAt ? new Date(draft.publishedAt) : null,
       verifyMethod,
+      firstTouchSource: draft.firstTouchSource ?? "",
+      firstTouchAt: draft.firstTouchAt ? new Date(draft.firstTouchAt) : null,
+      lastTouchSource: draft.lastTouchSource ?? "",
+      lastTouchAt: draft.lastTouchAt ? new Date(draft.lastTouchAt) : null,
       payload: sessionPayload(draft) as Prisma.InputJsonValue,
       userId: userId ?? undefined,
     },
@@ -498,6 +513,10 @@ async function writeDraft(draft: ClaimDraft, userId?: string | null) {
       emailVerifiedAt: draft.verifiedAt ? new Date(draft.verifiedAt) : null,
       publishedAt: draft.publishedAt ? new Date(draft.publishedAt) : null,
       verifyMethod,
+      firstTouchSource: draft.firstTouchSource ?? "",
+      firstTouchAt: draft.firstTouchAt ? new Date(draft.firstTouchAt) : null,
+      lastTouchSource: draft.lastTouchSource ?? "",
+      lastTouchAt: draft.lastTouchAt ? new Date(draft.lastTouchAt) : null,
       payload: sessionPayload(draft) as Prisma.InputJsonValue,
       ...(userId ? { userId } : {}),
     },
@@ -515,10 +534,37 @@ async function slugTaken(slug: string, exceptId?: string) {
 }
 
 /** Build a private draft card from one social URL/handle — no signup required. */
+export async function recordDraftTouch(draftId: string, source: string) {
+  const stored = source.trim();
+  if (!stored) return null;
+  const draft = await getDraft(draftId);
+  if (!draft) return null;
+  const touch = applyTouch(
+    {
+      firstSource: draft.firstTouchSource ?? "",
+      firstAt: draft.firstTouchAt ?? "",
+      lastSource: draft.lastTouchSource ?? "",
+      lastAt: draft.lastTouchAt ?? "",
+    },
+    stored,
+    new Date().toISOString(),
+  );
+  const next: ClaimDraft = {
+    ...draft,
+    firstTouchSource: touch.firstSource,
+    firstTouchAt: touch.firstAt || undefined,
+    lastTouchSource: touch.lastSource,
+    lastTouchAt: touch.lastAt || undefined,
+  };
+  await writeDraft(next);
+  return next;
+}
+
 export async function createDraftFromHandle(
   input: string,
   attribution = "ORGANIC_SIGNUP",
   preferredPlatform?: string,
+  touchSource?: string,
 ): Promise<ClaimDraft> {
   const fields = claimDraftProfile(input, preferredPlatform);
   if (!fields.ok) throw new Error(fields.error);
@@ -564,6 +610,15 @@ export async function createDraftFromHandle(
     createdAt: now,
     updatedAt: now,
   };
+  const touch = applyTouch(
+    { firstSource: "", firstAt: "", lastSource: "", lastAt: "" },
+    touchSource ?? "",
+    now,
+  );
+  draft.firstTouchSource = touch.firstSource;
+  draft.firstTouchAt = touch.firstAt || undefined;
+  draft.lastTouchSource = touch.lastSource;
+  draft.lastTouchAt = touch.lastAt || undefined;
 
   await writeDraft(draft);
   return draft;

@@ -55,6 +55,10 @@ export async function syncOnboardingSession(draft: ClaimDraft) {
       emailVerifiedAt: draft.verifiedAt ? new Date(draft.verifiedAt) : null,
       publishedAt: draft.publishedAt ? new Date(draft.publishedAt) : null,
       verifyMethod,
+      firstTouchSource: draft.firstTouchSource ?? "",
+      firstTouchAt: draft.firstTouchAt ? new Date(draft.firstTouchAt) : null,
+      lastTouchSource: draft.lastTouchSource ?? "",
+      lastTouchAt: draft.lastTouchAt ? new Date(draft.lastTouchAt) : null,
       payload: privatePayload(draft),
     },
     update: {
@@ -65,6 +69,10 @@ export async function syncOnboardingSession(draft: ClaimDraft) {
       emailVerifiedAt: draft.verifiedAt ? new Date(draft.verifiedAt) : null,
       publishedAt: draft.publishedAt ? new Date(draft.publishedAt) : null,
       verifyMethod,
+      firstTouchSource: draft.firstTouchSource ?? "",
+      firstTouchAt: draft.firstTouchAt ? new Date(draft.firstTouchAt) : null,
+      lastTouchSource: draft.lastTouchSource ?? "",
+      lastTouchAt: draft.lastTouchAt ? new Date(draft.lastTouchAt) : null,
       payload: privatePayload(draft),
     },
   });

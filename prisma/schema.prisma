@@ -1070,12 +1070,33 @@ model OnboardingSession {
   publishedAt      DateTime?
   verifyMethod     String           @default("DEMO_CODE")
   payload          Json
+  /// First recorded acquisition source. A blank value means no source was recorded.
+  firstTouchSource String           @default("")
+  firstTouchAt     DateTime?
+  /// Latest recorded acquisition source. A blank value means no source was recorded.
+  lastTouchSource  String           @default("")
+  lastTouchAt      DateTime?
   userId           String?
   user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   claims           ProfileClaim[]
   attempts         VerificationAttempt[]
+  agencyImports    AgencyImportRow[]
+}
+
+/// One row from an agency CSV. A blank field stays blank. The draft stays private.
+model AgencyImportRow {
+  id        String             @id @default(cuid())
+  name      String             @default("")
+  email     String             @default("")
+  handle    String
+  platform  String             @default("")
+  source    String             @default("")
+  sessionId String?
+  session   OnboardingSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  error     String             @default("")
+  createdAt DateTime           @default(now())
 }
 
 model ConsentRecord {
