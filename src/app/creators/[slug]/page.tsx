@@ -45,6 +45,11 @@ export async function generateMetadata({ params }: Props) {
   return creatorShareMetadata(creator, { surface: "profile" });
 }
 
+function facetLabels(names: string[] | undefined, slugs: string[] | undefined) {
+  if (names?.length) return names;
+  return (slugs ?? []).filter(Boolean).map((slug) => slug.replace(/-/g, " "));
+}
+
 function socialMetricLabel(platform: string) {
   if (platform === "WEBSITE") return "Monthly Visits";
   if (platform === "YOUTUBE") return "Subscribers";
@@ -276,6 +281,21 @@ export default async function CreatorProfilePage({ params }: Props) {
                     </span>
                   ))}
                 </div>
+                {facetLabels(creator.contentStyleNames, creator.contentStyles).length ||
+                facetLabels(creator.commercialModeNames, creator.commercialModes).length ? (
+                  <div className="mt-2 flex flex-wrap justify-center gap-1.5 sm:justify-start">
+                    {facetLabels(creator.contentStyleNames, creator.contentStyles).map((label) => (
+                      <span key={`style-${label}`} className="profile-tag !text-[10px] !px-2.5 !py-0.5">
+                        {label}
+                      </span>
+                    ))}
+                    {facetLabels(creator.commercialModeNames, creator.commercialModes).map((label) => (
+                      <span key={`mode-${label}`} className="profile-tag !text-[10px] !px-2.5 !py-0.5">
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex w-full shrink-0 flex-col items-center gap-2.5 lg:w-auto lg:items-end">

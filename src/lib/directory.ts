@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { listPublishedClaimCreators } from "@/lib/claim";
 import { prisma } from "@/lib/db";
+import { COMMERCIAL_MODE, CONTENT_STYLE, ensureDiscoveryFacets } from "@/lib/discovery-facets";
 import { rethrowIfNextDynamicError } from "@/lib/next-dynamic";
 import { isPlanCode } from "@/lib/entitlements";
 import {
@@ -119,6 +120,10 @@ function blankCreator(slug: string, name: string): SeedCreator {
     statusLabel: "",
     planTier: "STARTER",
     specialties: [],
+    contentStyles: [],
+    contentStyleNames: [],
+    commercialModes: [],
+    commercialModeNames: [],
     socials: [],
     openToCollab: true,
   };
@@ -128,6 +133,7 @@ type DirectoryRow = Prisma.CreatorGetPayload<{
   include: {
     specialties: { include: { specialty: true } };
     socialAccounts: true;
+    discoveryFacets: { include: { facet: true } };
   };
 }>;
 
@@ -143,6 +149,12 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
     url: social.url,
     followers: social.followers ?? 0,
   }));
+  const styleLinks = row.discoveryFacets
+    .filter((link) => link.facet.kind === CONTENT_STYLE && link.facet.active)
+    .sort((a, b) => a.facet.sortOrder - b.facet.sortOrder);
+  const modeLinks = row.discoveryFacets
+    .filter((link) => link.facet.kind === COMMERCIAL_MODE && link.facet.active)
+    .sort((a, b) => a.facet.sortOrder - b.facet.sortOrder);
   const planTier = isCreatorPlan(row.planTier) ? row.planTier : "STARTER";
   const avatar = row.avatarUrl && !row.avatarUrl.includes("/demo/creators/") ? row.avatarUrl : defaultAvatarForGender(gender);
   const cover = row.coverUrl && !row.coverUrl.includes("/demo/sofia/") ? row.coverUrl : defaultBannerForSeed(row.slug);
@@ -157,6 +169,10 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
     languages: row.languages,
     planTier,
     specialties,
+    contentStyles: styleLinks.map((link) => link.facet.slug),
+    contentStyleNames: styleLinks.map((link) => link.facet.name),
+    commercialModes: modeLinks.map((link) => link.facet.slug),
+    commercialModeNames: modeLinks.map((link) => link.facet.name),
     socials,
     openToCollab: row.openToCollab,
     ...directoryLabels(row.openToCollab),
@@ -213,6 +229,7 @@ async function ensureSpecialties() {
 
 async function ensureDirectory() {
   await ensureSpecialties();
+  await ensureDiscoveryFacets();
 
   const sectionKeys = new Set((await prisma.cmsSection.findMany({ select: { key: true } })).map((row) => row.key));
   for (const section of DEFAULT_HOMEPAGE_SECTIONS) {
@@ -270,7 +287,11 @@ async function readDirectory(): Promise<Cache> {
   const [rows, specialties, synonymRows, sections, menus] = await Promise.all([
     prisma.creator.findMany({
       where: { profileState: { not: "RESTRICTED" } },
-      include: { specialties: { include: { specialty: true } }, socialAccounts: true },
+      include: {
+        specialties: { include: { specialty: true } },
+        socialAccounts: true,
+        discoveryFacets: { include: { facet: true } },
+      },
       orderBy: { displayName: "asc" },
     }),
     prisma.specialty.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
@@ -361,7 +382,11 @@ export { indexCreatorsBySlug } from "@/lib/seed-data";
 export async function loadPublicCreator(slug: string): Promise<SeedCreator | null> {
   const row = await prisma.creator.findUnique({
     where: { slug },
-    include: { specialties: { include: { specialty: true } }, socialAccounts: true },
+    include: {
+      specialties: { include: { specialty: true } },
+      socialAccounts: true,
+      discoveryFacets: { include: { facet: true } },
+    },
   });
   if (!row || row.profileState === "RESTRICTED") return null;
   return mergeCreator(row);

@@ -18,6 +18,8 @@ type Selected = {
   engagementMax: number;
   language: string;
   collabType: string;
+  contentStyle: string;
+  commercialMode: string;
   rate: string;
   verified: boolean;
   openToCollab: boolean;
@@ -74,11 +76,15 @@ export function DiscoverFilters({
   categories,
   platforms,
   languages,
+  contentStyles,
+  commercialModes,
   selected,
 }: {
   categories: FilterOption[];
   platforms: FilterOption[];
   languages: string[];
+  contentStyles: { value: string; label: string }[];
+  commercialModes: { value: string; label: string }[];
   selected: Selected;
 }) {
   const [categoryQuery, setCategoryQuery] = useState("");
@@ -243,6 +249,38 @@ export function DiscoverFilters({
           {languages.map((language) => (
             <option key={language} value={language}>
               {language}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="block text-xs font-bold text-indigo">
+        Content style
+        <select
+          name="contentStyle"
+          defaultValue={selected.contentStyle}
+          className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-violet"
+        >
+          <option value="">Any content style</option>
+          {contentStyles.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="block text-xs font-bold text-indigo">
+        Commercial mode
+        <select
+          name="commercialMode"
+          defaultValue={selected.commercialMode}
+          className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-violet"
+        >
+          <option value="">Any commercial mode</option>
+          {commercialModes.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
             </option>
           ))}
         </select>

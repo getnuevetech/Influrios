@@ -1,8 +1,15 @@
 import Link from "next/link";
-import { actionAddSynonym, actionRemoveSynonym, actionToggleSpecialty } from "@/app/admin/taxonomy/actions";
+import {
+  actionAddDiscoveryFacet,
+  actionAddSynonym,
+  actionRemoveSynonym,
+  actionToggleDiscoveryFacet,
+  actionToggleSpecialty,
+} from "@/app/admin/taxonomy/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getDirectory } from "@/lib/directory";
+import { COMMERCIAL_MODE, CONTENT_STYLE, listDiscoveryFacets } from "@/lib/discovery-facets";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +22,9 @@ export default async function AdminTaxonomyPage({ searchParams }: Props) {
   const query = await searchParams;
   const canEdit = hasPermission(session, "taxonomy.edit");
   const directory = await getDirectory();
+  const facets = await listDiscoveryFacets().catch(() => []);
+  const contentStyles = facets.filter((row) => row.kind === CONTENT_STYLE);
+  const commercialModes = facets.filter((row) => row.kind === COMMERCIAL_MODE);
   const synonyms = await prisma.specialtySynonym.findMany({
     include: { specialty: true },
     orderBy: { term: "asc" },
@@ -125,6 +135,70 @@ export default async function AdminTaxonomyPage({ searchParams }: Props) {
           </li>
         ))}
       </ul>
+
+      <h2 className="mt-8 font-display text-xl font-bold text-indigo">Content style and commercial mode</h2>
+      <p className="mt-2 text-sm text-muted">
+        Discover filters use these terms only when a creator chooses them. A hidden term stays in the catalog
+        and drops out of the filters. A blank choice stays blank.
+      </p>
+      {canEdit ? (
+        <form action={actionAddDiscoveryFacet} className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="text-sm">
+            <span className="font-semibold text-indigo">Name</span>
+            <input name="name" className="mt-1 block rounded-lg border border-[#E4EBFF] px-3 py-2" />
+          </label>
+          <label className="text-sm">
+            <span className="font-semibold text-indigo">Kind</span>
+            <select name="kind" defaultValue="" className="mt-1 block rounded-lg border border-[#E4EBFF] px-3 py-2">
+              <option value="">Choose a kind</option>
+              <option value={CONTENT_STYLE}>Content style</option>
+              <option value={COMMERCIAL_MODE}>Commercial mode</option>
+            </select>
+          </label>
+          <button type="submit" className="rounded-lg bg-violet px-3 py-2 text-sm font-bold text-white">
+            Add
+          </button>
+        </form>
+      ) : null}
+      <FacetTable title="Content styles" rows={contentStyles} canEdit={canEdit} />
+      <FacetTable title="Commercial modes" rows={commercialModes} canEdit={canEdit} />
+    </div>
+  );
+}
+
+function FacetTable({
+  title,
+  rows,
+  canEdit,
+}: {
+  title: string;
+  rows: { id: string; name: string; slug: string; active: boolean }[];
+  canEdit: boolean;
+}) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-[#E4EBFF] bg-white">
+      <p className="border-b border-[#E4EBFF] px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted">{title}</p>
+      <table className="w-full text-left text-sm">
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id} className="border-b border-[#F0F3FA]">
+              <td className="px-4 py-3">
+                <div className="font-semibold text-indigo">{row.name}</div>
+                <div className="text-[11px] text-muted">{row.slug}</div>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <form action={actionToggleDiscoveryFacet}>
+                  <input type="hidden" name="id" value={row.id} />
+                  <input type="hidden" name="active" value={row.active ? "false" : "true"} />
+                  <button type="submit" disabled={!canEdit} className="text-xs font-bold text-violet hover:underline">
+                    {row.active ? "Active" : "Hidden"}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

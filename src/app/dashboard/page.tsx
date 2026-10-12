@@ -5,6 +5,7 @@ import {
   actionUpdateDashboardProfile,
   actionUpdateProfileMedia,
 } from "@/app/claim/actions";
+import { actionSaveDiscoveryFacets } from "@/app/dashboard/facet-actions";
 import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
 import { NfcWriter } from "@/app/dashboard/nfc-writer";
 import { ScheduleStartsField } from "@/app/dashboard/schedule-starts-field";
@@ -39,6 +40,7 @@ import { listReferralsForCreator, referralRewardLabel } from "@/lib/referrals";
 import { socialConnectState } from "@/lib/social-connect";
 import { PlaceFields } from "@/components/place-fields";
 import { getDirectory } from "@/lib/directory";
+import { COMMERCIAL_MODE, CONTENT_STYLE, listDiscoveryFacets } from "@/lib/discovery-facets";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 import { actionAddOwnEvidence, actionOpenOwnDispute, actionRequestOwnChangeOrder, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
 import { readFxSnapshot } from "@/lib/fx-share";
@@ -60,9 +62,10 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const draft = await getCreatorSessionDraft();
   if (!draft) redirect("/claim");
-  const [directory, identity] = await Promise.all([
+  const [directory, identity, facetCatalog] = await Promise.all([
     getDirectory().catch(() => null),
     getInfluencerIdentity().catch(() => null),
+    listDiscoveryFacets().catch(() => []),
   ]);
   const selfDescriptions =
     identity?.selfDescriptions?.length
@@ -154,6 +157,11 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       {params.saved === "1" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Profile saved.
+        </div>
+      ) : null}
+      {params.saved === "facets" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Content style and commercial mode saved.
         </div>
       ) : null}
       {params.saved === "destination" ? (
@@ -400,6 +408,13 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               </button>
             </form>
           </div>
+          <DiscoveryFacetForm
+            draftId={draft.id}
+            contentStyles={facetCatalog.filter((row) => row.kind === CONTENT_STYLE && row.active)}
+            commercialModes={facetCatalog.filter((row) => row.kind === COMMERCIAL_MODE && row.active)}
+            selectedStyles={draft.contentStyles ?? []}
+            selectedModes={draft.commercialModes ?? []}
+          />
         </section>
 
         <section className="card-surface p-6">
@@ -1019,6 +1034,74 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function DiscoveryFacetForm({
+  draftId,
+  contentStyles,
+  commercialModes,
+  selectedStyles,
+  selectedModes,
+}: {
+  draftId: string;
+  contentStyles: { slug: string; name: string }[];
+  commercialModes: { slug: string; name: string }[];
+  selectedStyles: string[];
+  selectedModes: string[];
+}) {
+  if (!contentStyles.length && !commercialModes.length) return null;
+  return (
+    <div className="mt-8">
+      <h2 className="font-display text-xl font-bold text-indigo">Content style and commercial mode</h2>
+      <p className="mt-2 text-sm text-muted">
+        These choices are saved on the profile. An unpublished draft keeps them until the profile is published.
+      </p>
+      <form action={actionSaveDiscoveryFacets} className="mt-4 grid gap-4 sm:grid-cols-2">
+        <input type="hidden" name="draftId" value={draftId} />
+        <fieldset>
+          <legend className="text-sm font-semibold text-indigo">Content style</legend>
+          <ul className="mt-2 space-y-2">
+            {contentStyles.map((row) => (
+              <li key={row.slug}>
+                <label className="flex items-center gap-2 text-sm text-indigo">
+                  <input
+                    type="checkbox"
+                    name="contentStyle"
+                    value={row.slug}
+                    defaultChecked={selectedStyles.includes(row.slug)}
+                    className="h-4 w-4 rounded accent-[#633CFF]"
+                  />
+                  {row.name}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+        <fieldset>
+          <legend className="text-sm font-semibold text-indigo">Commercial mode</legend>
+          <ul className="mt-2 space-y-2">
+            {commercialModes.map((row) => (
+              <li key={row.slug}>
+                <label className="flex items-center gap-2 text-sm text-indigo">
+                  <input
+                    type="checkbox"
+                    name="commercialMode"
+                    value={row.slug}
+                    defaultChecked={selectedModes.includes(row.slug)}
+                    className="h-4 w-4 rounded accent-[#633CFF]"
+                  />
+                  {row.name}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+        <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
+          Save choices
+        </button>
+      </form>
     </div>
   );
 }

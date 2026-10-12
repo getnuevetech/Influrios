@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import { publicClaimPayload, type ClaimDraft } from "@/lib/claim";
+import { replaceCreatorDiscoveryFacets } from "@/lib/discovery-facets";
 import { prisma } from "@/lib/db";
 import type { OnboardingState, Prisma, SocialPlatform } from "@prisma/client";
 
@@ -163,6 +164,11 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
       },
     });
   }
+
+  await replaceCreatorDiscoveryFacets(creator.id, {
+    contentStyles: draft.contentStyles ?? [],
+    commercialModes: draft.commercialModes ?? [],
+  });
 
   await prisma.creatorSpecialty.deleteMany({ where: { creatorId: creator.id } });
   for (const [index, slug] of draft.specialties.entries()) {
