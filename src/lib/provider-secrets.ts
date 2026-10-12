@@ -1,8 +1,26 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypto";
 import { requireAuthSecret } from "@/lib/app-secret";
 
+/**
+ * Derive once per process. scryptSync is intentionally expensive and blocks the
+ * Node event loop — calling it on every encrypt/decrypt freezes the whole app
+ * (admin mail save/send and any concurrent requests) on a single-CPU host.
+ */
+let cachedMaterial: string | null = null;
+let cachedKey: Buffer | null = null;
+
 function secretKey() {
-  return scryptSync(requireAuthSecret("provider"), "influrios-provider-secrets", 32);
+  const material = requireAuthSecret("provider");
+  if (cachedKey && cachedMaterial === material) return cachedKey;
+  cachedKey = scryptSync(material, "influrios-provider-secrets", 32);
+  cachedMaterial = material;
+  return cachedKey;
+}
+
+/** Test helper — clears the cached derived key. */
+export function resetProviderSecretKeyCacheForTests() {
+  cachedMaterial = null;
+  cachedKey = null;
 }
 
 /** AES-GCM ciphertext. The admin UI never receives the plaintext back. */

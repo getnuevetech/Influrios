@@ -61,7 +61,18 @@ export default async function AdminMailPage({ searchParams }: Props) {
           work.
         </p>
       ) : null}
-      {params.sent ? <p className="text-sm font-semibold text-emerald-700">Test send accepted.</p> : null}
+      {params.sent === "started" ? (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          Test send started in the background. Refresh in a few seconds and check Recent test sends below (or{" "}
+          <Link href="/admin/jobs" className="font-semibold underline">
+            Jobs
+          </Link>
+          ).
+        </p>
+      ) : null}
+      {params.sent && params.sent !== "started" ? (
+        <p className="text-sm font-semibold text-emerald-700">Test send accepted.</p>
+      ) : null}
       {params.removed ? <p className="text-sm font-semibold text-emerald-700">Template removed.</p> : null}
       {params.error ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950">

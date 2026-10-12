@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import {
@@ -9,7 +10,7 @@ import {
   saveCommTemplate,
   sendCommTemplateTest,
 } from "@/lib/comm-templates";
-import { saveMailSettings, sendInvitationTest } from "@/lib/mail";
+import { beginMailInvitationTest, saveMailSettings } from "@/lib/mail";
 
 function clean(value: FormDataEntryValue | null, max: number) {
   return String(value ?? "").trim().slice(0, max);
@@ -42,13 +43,17 @@ export async function actionSendMailTest(formData: FormData) {
   if (!to.includes("@")) {
     redirect(`/admin/mail?error=${encodeURIComponent("Enter a valid test recipient email.")}`);
   }
-  const result = await sendInvitationTest(to);
+  const started = await beginMailInvitationTest(to, (work) => {
+    after(() => {
+      void work();
+    });
+  });
   revalidatePath("/admin/mail");
   revalidatePath("/admin/jobs");
-  if (!result.ok) {
-    redirect(`/admin/mail?error=${encodeURIComponent(result.message.slice(0, 300))}`);
+  if (!started.ok) {
+    redirect(`/admin/mail?error=${encodeURIComponent(started.message.slice(0, 300))}`);
   }
-  redirect("/admin/mail?sent=1");
+  redirect("/admin/mail?sent=started");
 }
 
 export async function actionSaveCommChannels(formData: FormData) {
@@ -99,6 +104,8 @@ export async function actionDeleteCommTemplate(formData: FormData) {
 export async function actionSendCommTemplate(formData: FormData) {
   await requireAdminAction("mail.edit");
   const channel = clean(formData.get("channel"), 10) === "sms" ? "sms" : "email";
+  // Template email still runs inline when ready; SMS is rejected quickly.
+  // Invitation SMTP test above is the long path and uses after().
   const result = await sendCommTemplateTest({
     templateId: clean(formData.get("templateId"), 60),
     toEmail: clean(formData.get("to"), 200),
@@ -107,6 +114,6 @@ export async function actionSendCommTemplate(formData: FormData) {
   });
   revalidatePath("/admin/mail");
   revalidatePath("/admin/jobs");
-  if (!result.ok) redirect(`/admin/mail?error=${encodeURIComponent(result.message)}`);
+  if (!result.ok) redirect(`/admin/mail?error=${encodeURIComponent(result.message.slice(0, 300))}`);
   redirect("/admin/mail?sent=template");
 }

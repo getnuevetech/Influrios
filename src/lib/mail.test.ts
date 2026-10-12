@@ -3,10 +3,12 @@ import { describe, it } from "node:test";
 import {
   formatSmtpDeliveryError,
   mailConfigFromEnv,
+  mailSettingsAppearance,
   resolveMailConfig,
   resolveMailConfigFromRow,
   type MailSettingsRow,
 } from "./mail";
+import { encryptSecret, resetProviderSecretKeyCacheForTests } from "./provider-secrets";
 
 function row(partial: Partial<MailSettingsRow> = {}): MailSettingsRow {
   return {
@@ -105,5 +107,35 @@ describe("formatSmtpDeliveryError", () => {
       formatSmtpDeliveryError(new Error("connect ECONNREFUSED 127.0.0.1:587"), "127.0.0.1", 587),
       /refused/,
     );
+  });
+});
+
+describe("mailSettingsAppearance", () => {
+  it("marks an enabled row ready without decrypting the password", () => {
+    const result = mailSettingsAppearance(
+      row({ enabled: true, secretCipher: "v1.not-decrypted" }),
+      false,
+    );
+    assert.equal(result.ready, true);
+    assert.equal(result.readySource, "admin");
+  });
+
+  it("keeps Enabled-off rows not ready when env SMTP is absent", () => {
+    const result = mailSettingsAppearance(row({ enabled: false }), false);
+    assert.equal(result.ready, false);
+    assert.match(result.readyError, /Enabled is off/);
+  });
+});
+
+describe("provider secret key cache", () => {
+  it("keeps later encrypts cheap after the first scrypt derivation", () => {
+    resetProviderSecretKeyCacheForTests();
+    const warm = Date.now();
+    encryptSecret("warm-up");
+    const firstMs = Date.now() - warm;
+    const start = Date.now();
+    for (let i = 0; i < 20; i += 1) encryptSecret(`payload-${i}`);
+    const cachedMs = Date.now() - start;
+    assert.ok(cachedMs < 80, `expected cached encrypts under 80ms, got ${cachedMs}ms after first ${firstMs}ms`);
   });
 });

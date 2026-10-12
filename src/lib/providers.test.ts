@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { marketplaceProviderLabel } from "./marketplace-ledger";
-import { decryptSecret, encryptSecret } from "./provider-secrets";
+import { decryptSecret, encryptSecret, resetProviderSecretKeyCacheForTests } from "./provider-secrets";
 import {
   aiEndpointAllowed,
   assessGateway,
@@ -14,6 +14,7 @@ import {
 
 describe("provider secrets", () => {
   it("round-trips a gateway secret without storing plaintext", () => {
+    resetProviderSecretKeyCacheForTests();
     const cipher = encryptSecret("flw_secret_test");
     assert.equal(cipher.includes("flw_secret_test"), false);
     assert.equal(decryptSecret(cipher), "flw_secret_test");

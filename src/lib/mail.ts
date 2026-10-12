@@ -127,6 +127,52 @@ export function resolveMailConfig(
   return fromRow;
 }
 
+/**
+ * Admin UI readiness without decrypting the password.
+ * Decrypt stays on the send path so a page render cannot block the event loop.
+ */
+export function mailSettingsAppearance(
+  row: MailSettingsRow | null | undefined,
+  envConfigured = Boolean(mailConfigFromEnv()),
+): { ready: boolean; readySource: "admin" | "env" | "none"; readyError: string } {
+  if (!row) {
+    if (envConfigured) return { ready: true, readySource: "env", readyError: "" };
+    return {
+      ready: false,
+      readySource: "none",
+      readyError: "No SMTP settings are saved yet. Fill the form, check Enabled, and save.",
+    };
+  }
+  if (!row.enabled) {
+    if (envConfigured) return { ready: true, readySource: "env", readyError: "" };
+    return {
+      ready: false,
+      readySource: "none",
+      readyError: "SMTP settings are saved but Enabled is off. Check Enabled and save, then send the test again.",
+    };
+  }
+  const host = row.host.trim();
+  const from = row.fromAddress.trim();
+  const username = row.username.trim();
+  if (!host || !from) {
+    if (envConfigured) return { ready: true, readySource: "env", readyError: "" };
+    return {
+      ready: false,
+      readySource: "none",
+      readyError: "Host and from address are required while SMTP is enabled. Nothing was sent.",
+    };
+  }
+  if (username && !row.secretCipher) {
+    if (envConfigured) return { ready: true, readySource: "env", readyError: "" };
+    return {
+      ready: false,
+      readySource: "none",
+      readyError: "SMTP username is set but no password is saved. Enter the password, check Enabled, and save.",
+    };
+  }
+  return { ready: true, readySource: "admin", readyError: "" };
+}
+
 /** Admin row when it is enabled and complete, otherwise the environment. */
 export async function loadMailConfig(): Promise<MailConfig | null> {
   const resolved = await resolveMailConfigStatus();
@@ -150,7 +196,7 @@ export async function mailReady(): Promise<boolean> {
 export async function mailSettingsView() {
   const row = await prisma.mailSettings.findUnique({ where: { id: "default" } });
   const env = mailConfigFromEnv();
-  const resolved = resolveMailConfig(row, env);
+  const appearance = mailSettingsAppearance(row, Boolean(env));
   return {
     host: row?.host ?? "",
     port: row?.port ?? 587,
@@ -160,9 +206,9 @@ export async function mailSettingsView() {
     hasSecret: Boolean(row?.secretCipher),
     envConfigured: Boolean(env),
     envHost: env?.host ?? "",
-    ready: resolved.ok,
-    readySource: resolved.ok ? resolved.source : "none",
-    readyError: resolved.ok ? "" : resolved.error,
+    ready: appearance.ready,
+    readySource: appearance.readySource,
+    readyError: appearance.readyError,
   };
 }
 
@@ -475,10 +521,7 @@ export function previewMailVars(to?: string): Record<string, string> {
   };
 }
 
-/** Send the claim invitation template. No job is recorded when SMTP is not configured. */
-export async function sendInvitationTest(to: string, record = true): Promise<{ ok: boolean; message: string }> {
-  const resolved = await resolveMailConfigStatus();
-  if (!resolved.ok) return { ok: false, message: resolved.error };
+async function invitationTestCopy(to: string) {
   const { DEFAULT_INVITATION_TEMPLATE, renderInvitationCopy } = await import("@/lib/invitations");
   let subject = DEFAULT_INVITATION_TEMPLATE.subject;
   let body = DEFAULT_INVITATION_TEMPLATE.body;
@@ -492,11 +535,18 @@ export async function sendInvitationTest(to: string, record = true): Promise<{ o
     /* use the built-in template */
   }
   const preview = previewMailVars(to);
-  const result = await deliverMail(resolved.config, {
-    to,
+  return {
     subject: renderInvitationCopy(subject, preview),
     text: renderInvitationCopy(body, preview),
-  });
+  };
+}
+
+/** Send the claim invitation template. No job is recorded when SMTP is not configured. */
+export async function sendInvitationTest(to: string, record = true): Promise<{ ok: boolean; message: string }> {
+  const resolved = await resolveMailConfigStatus();
+  if (!resolved.ok) return { ok: false, message: resolved.error };
+  const copy = await invitationTestCopy(to);
+  const result = await deliverMail(resolved.config, { to, ...copy });
   if (record) {
     try {
       await prisma.job.create({
@@ -513,6 +563,57 @@ export async function sendInvitationTest(to: string, record = true): Promise<{ o
   }
   if (result.ok) return { ok: true, message: "SMTP accepted the claim invitation template." };
   return { ok: false, message: result.error };
+}
+
+/**
+ * Create a running mail_test job for the admin UI, then run SMTP outside the
+ * request via the provided scheduler (Next.js `after`) so the page can redirect
+ * without waiting on the SMTP round-trip.
+ */
+export async function beginMailInvitationTest(
+  to: string,
+  schedule: (work: () => Promise<void>) => void,
+): Promise<{ ok: true; jobId: string } | { ok: false; message: string }> {
+  const resolved = await resolveMailConfigStatus();
+  if (!resolved.ok) return { ok: false, message: resolved.error };
+  const safeTo = headerSafe(to);
+  let jobId = "";
+  try {
+    const job = await prisma.job.create({
+      data: {
+        kind: "mail_test",
+        status: "running",
+        attempts: 1,
+        payload: { to: safeTo },
+      },
+    });
+    jobId = job.id;
+  } catch {
+    return { ok: false, message: "Could not record the mail test job. Nothing was sent." };
+  }
+  const config = resolved.config;
+  schedule(async () => {
+    try {
+      const copy = await invitationTestCopy(safeTo);
+      const result = await deliverMail(config, { to: safeTo, ...copy });
+      await prisma.job.update({
+        where: { id: jobId },
+        data: {
+          status: result.ok ? "succeeded" : "failed",
+          lastError: result.ok ? null : result.error.slice(0, 500),
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "SMTP send failed";
+      await prisma.job
+        .update({
+          where: { id: jobId },
+          data: { status: "failed", lastError: message.slice(0, 500) },
+        })
+        .catch(() => undefined);
+    }
+  });
+  return { ok: true, jobId };
 }
 
 export async function listRecentMailTests(limit = 5) {
