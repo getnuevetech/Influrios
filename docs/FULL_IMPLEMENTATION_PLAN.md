@@ -113,7 +113,7 @@ Comparing thin plan v1 to every attached product/design document found these **m
 | D17 | Homepage value-prop strip CMS | `homepage-value-proposition-strip.tsx`, `/admin/value-prop` | Dev Addendum VP001–VP004 (base) |
 | D18 | Category images + CTA deep-links | #75 | Platform CMS |
 | D19 | Hide Contact CTA on claim publish | #79 | Acquisition UX |
-| D20 | Phase M probe/runbook scaffolding | `scripts/staging-evidence-probe.ts`, `docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md` | Ops scaffold (not live evidence) |
+| D20 | Phase M probe/runbook scaffolding | `scripts/staging-evidence-probe.mjs`, `docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md` | Ops scaffold (not live evidence) |
 | D21 | Docker build memory hardening | #69–#70 | Deploy |
 | D22 | Jurisdiction payment capability flags | `CollaborationJurisdiction` full matrix + `jurisdiction-capabilities.ts` + admin marketplace + prefund/wizard gates | Dev Addendum §6; PA004/PA007 |
 | D23 | Legal acceptance versioning | `LegalAcceptance.documentVersion` / `documentHash`; `legal.ts` | Dev Addendum §24 hooks (base) |
