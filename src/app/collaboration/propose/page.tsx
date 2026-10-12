@@ -9,7 +9,7 @@ import {
   proposalDenialMessage,
   proposalUsage,
 } from "@/lib/collaborations";
-import { isPlanCode, type PlanCode } from "@/lib/entitlements";
+import { storedCreatorPlan } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { scoreCreatorPair } from "@/lib/matching";
 import { getDirectoryCreator } from "@/lib/directory";
@@ -39,8 +39,8 @@ async function submitProposal(formData: FormData) {
   const viewer = await getDirectoryCreator(from);
   const initiator = viewer?.slug === creatorB?.slug ? creatorB : creatorA;
   const recipient = initiator?.slug === creatorA?.slug ? creatorB : creatorA;
-  const plan: PlanCode = initiator && isPlanCode(initiator.planTier) ? initiator.planTier : "STARTER";
-  const viewerPlan: PlanCode = viewer && isPlanCode(viewer.planTier) ? viewer.planTier : plan;
+  const plan = initiator ? storedCreatorPlan(initiator.planTier) : "STARTER";
+  const viewerPlan = viewer ? storedCreatorPlan(viewer.planTier) : plan;
   if (viewer && viewer.slug !== initiator?.slug) {
     const viewerLimits = await entitlementsForPlan(viewerPlan);
     if (viewerLimits.proposalsMax <= 0) {
@@ -115,8 +115,8 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
   const initiator = from.slug === creatorB.slug ? creatorB : creatorA;
   const recipient = initiator.slug === creatorA.slug ? creatorB : creatorA;
   const match = scoreCreatorPair(creatorA, creatorB) ?? scoreCreatorPair(initiator, recipient);
-  const plan: PlanCode = isPlanCode(initiator.planTier) ? initiator.planTier : "STARTER";
-  const viewerPlan: PlanCode = isPlanCode(from.planTier) ? from.planTier : plan;
+  const plan = storedCreatorPlan(initiator.planTier);
+  const viewerPlan = storedCreatorPlan(from.planTier);
 
   let usage: Awaited<ReturnType<typeof proposalUsage>> | null = null;
   let dbError = false;

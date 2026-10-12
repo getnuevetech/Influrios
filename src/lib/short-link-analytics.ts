@@ -86,6 +86,12 @@ export type CreatorShortLinkAnalytics = {
   referrerClasses?: Record<string, number>;
 };
 
+/** A detail event is stored only when the plan's analytics level includes it. Visits stay counted. */
+export function analyticsRecordsDetail(level: AnalyticsLevel, eventType: string): boolean {
+  if (eventType === "cta_click" || eventType === "inquiry_conversion") return level === "advanced";
+  return true;
+}
+
 /** Entitlement-gated summary — never leaks advanced fields to lower tiers. */
 export function summarizeShortLinkAnalytics(
   events: ShortLinkEventRow[],

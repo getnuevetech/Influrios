@@ -1,9 +1,10 @@
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
-import type { EntitlementLimits } from "@/lib/entitlements";
+import { storedCreatorPlan, type EntitlementLimits } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { isShortLinkHost, normalizeShortHost } from "@/lib/short-link-hosts";
 import {
+  analyticsRecordsDetail,
   privacyMetaFromHints,
   summarizeAdminShortLinkRollup,
   summarizeShortLinkAnalytics,
@@ -220,7 +221,7 @@ export async function ensureCreatorShortLink(creatorSlug: string) {
     include: { card: true, shortLinks: { where: { status: { not: "archived" } } } },
   });
   if (!creator || creator.profileState === "RESTRICTED") return null;
-  const plan = creator.planTier || "STARTER";
+  const plan = storedCreatorPlan(creator.planTier);
   const entitlements = await entitlementsForPlan(plan);
   if (!entitlements.shortlink || entitlements.shortlinkMax < 1) return null;
   const snapshot = entitlementSnapshotForMint(plan, entitlements);
@@ -628,7 +629,7 @@ export async function changeCreatorSlug(creatorSlug: string, nextSlug: string) {
   }
   const creator = await prisma.creator.findUnique({ where: { slug: creatorSlug } });
   if (!creator) return { ok: false as const, error: "Publish your card before changing the short link." };
-  const plan = creator.planTier || "STARTER";
+  const plan = storedCreatorPlan(creator.planTier);
   const entitlements = await entitlementsForPlan(plan);
   if (!entitlements.customAlias) return { ok: false as const, error: "Custom slugs are not included on this plan." };
   const link = await ensureCreatorShortLink(creatorSlug);
@@ -904,7 +905,7 @@ export async function createCampaignLink(input: {
   });
   const link = creator?.shortLinks[0];
   if (!creator || !link) return { ok: false as const, error: "An active short link is required before a campaign link." };
-  const plan = creator.planTier || "STARTER";
+  const plan = storedCreatorPlan(creator.planTier);
   const entitlements = await entitlementsForPlan(plan);
   const campaignCount = await prisma.campaignLink.count({ where: { creatorId: creator.id, status: { not: "archived" } } });
   if (!canAddCampaignLink({ campaignMax: entitlements.campaignLinksMax, campaignCount })) {
@@ -976,7 +977,7 @@ export async function setCreatorDynamicDestination(creatorSlug: string, destinat
     include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
   });
   if (!creator) return { ok: false as const, error: "Publish your card before changing the destination." };
-  const plan = creator.planTier || "STARTER";
+  const plan = storedCreatorPlan(creator.planTier);
   const entitlements = await entitlementsForPlan(plan);
   const link = creator.shortLinks[0];
   if (!link) return { ok: false as const, error: "This plan does not include a short link." };
@@ -996,7 +997,7 @@ export async function rollbackCreatorDynamicDestination(creatorSlug: string) {
     include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
   });
   if (!creator) return { ok: false as const, error: "Publish your card before changing the destination." };
-  const plan = creator.planTier || "STARTER";
+  const plan = storedCreatorPlan(creator.planTier);
   const entitlements = await entitlementsForPlan(plan);
   const link = creator.shortLinks[0];
   if (!link) return { ok: false as const, error: "This plan does not include a short link." };
@@ -1021,7 +1022,7 @@ export async function getCreatorShortLinkAnalytics(
   if (!creator) return { ok: false, error: "Publish your card before viewing link analytics." };
   const link = creator.shortLinks[0];
   if (!link) return { ok: false, error: "This plan does not include a short link." };
-  const plan = creator.planTier || "STARTER";
+  const plan = storedCreatorPlan(creator.planTier);
   const entitlements = await entitlementsForPlan(plan);
   const events = await prisma.shortLinkEvent.findMany({
     where: { shortLinkId: link.id },
@@ -1048,9 +1049,10 @@ export async function getAdminShortLinkAnalyticsRollup() {
   return summarizeAdminShortLinkRollup(events, abuseOpen);
 }
 
-/** Record a card CTA click against the creator's short link (privacy-safe). */
-export async function recordCreatorCtaClick(
+async function recordPlanDetailEvent(
   creatorSlug: string,
+  eventType: "cta_click" | "inquiry_conversion",
+  meta: Record<string, string>,
   hints?: ShortLinkPrivacyHints | null,
 ) {
   const creator = await prisma.creator.findUnique({
@@ -1058,23 +1060,26 @@ export async function recordCreatorCtaClick(
     include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
   });
   const link = creator?.shortLinks[0];
-  if (!link || link.status !== "active") return { ok: false as const };
-  void recordEvent(link.id, "cta_click", { source: "influencer_card" }, hints);
+  if (!creator || !link || link.status !== "active") return { ok: false as const };
+  const entitlements = await entitlementsForPlan(storedCreatorPlan(creator.planTier));
+  if (!analyticsRecordsDetail(entitlements.analytics, eventType)) return { ok: false as const };
+  void recordEvent(link.id, eventType, meta, hints);
   return { ok: true as const };
+}
+
+/** Record a card CTA click when this plan's analytics level includes it. */
+export async function recordCreatorCtaClick(
+  creatorSlug: string,
+  hints?: ShortLinkPrivacyHints | null,
+) {
+  return recordPlanDetailEvent(creatorSlug, "cta_click", { source: "influencer_card" }, hints);
 }
 
 export async function recordCreatorInquiryConversion(
   creatorSlug: string,
   hints?: ShortLinkPrivacyHints | null,
 ) {
-  const creator = await prisma.creator.findUnique({
-    where: { slug: creatorSlug },
-    include: { shortLinks: { where: { status: { not: "archived" } }, take: 1 } },
-  });
-  const link = creator?.shortLinks[0];
-  if (!link || link.status !== "active") return { ok: false as const };
-  void recordEvent(link.id, "inquiry_conversion", { source: "contact_inquiry" }, hints);
-  return { ok: true as const };
+  return recordPlanDetailEvent(creatorSlug, "inquiry_conversion", { source: "contact_inquiry" }, hints);
 }
 
 export function brandedFallbackHtml(

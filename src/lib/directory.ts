@@ -3,7 +3,7 @@ import { listPublishedClaimCreators } from "@/lib/claim";
 import { prisma } from "@/lib/db";
 import { COMMERCIAL_MODE, CONTENT_STYLE, ensureDiscoveryFacets } from "@/lib/discovery-facets";
 import { rethrowIfNextDynamicError } from "@/lib/next-dynamic";
-import { isPlanCode } from "@/lib/entitlements";
+import { storedCreatorPlan } from "@/lib/entitlements";
 import {
   defaultAvatarForGender,
   defaultBannerForSeed,
@@ -99,10 +99,6 @@ export function profilePlace(city: string, country: string): string {
   return [city.trim(), country.trim()].filter(Boolean).join(", ");
 }
 
-function isCreatorPlan(plan: string): plan is "STARTER" | "PLUS" | "PRO" {
-  return isPlanCode(plan);
-}
-
 function blankCreator(slug: string, name: string): SeedCreator {
   return {
     slug,
@@ -179,7 +175,7 @@ function mergeCreator(row: DirectoryRow): SeedCreator {
   const modeLinks = row.discoveryFacets
     .filter((link) => link.facet.kind === COMMERCIAL_MODE && link.facet.active)
     .sort((a, b) => a.facet.sortOrder - b.facet.sortOrder);
-  const planTier = isCreatorPlan(row.planTier) ? row.planTier : "STARTER";
+  const planTier = storedCreatorPlan(row.planTier);
   const avatar = row.avatarUrl && !row.avatarUrl.includes("/demo/creators/") ? row.avatarUrl : defaultAvatarForGender(gender);
   const cover = row.coverUrl && !row.coverUrl.includes("/demo/sofia/") ? row.coverUrl : defaultBannerForSeed(row.slug);
   return {

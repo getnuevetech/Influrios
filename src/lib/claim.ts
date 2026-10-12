@@ -4,7 +4,7 @@
  */
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from "crypto";
 import { requireAuthSecret } from "@/lib/app-secret";
-import { decideCount, isPlanCode, normalizePlanCode } from "@/lib/entitlements";
+import { decideCount, normalizePlanCode, planLabel, storedCreatorPlan } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { prisma } from "@/lib/db";
 import { advanceClaimStage, completionItemDone, evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
@@ -693,9 +693,9 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     image: hero,
     coverImage,
     gender: draft.gender,
-    badge: draft.stage === "published" ? "Starter" : "Draft preview",
+    badge: draft.stage === "published" ? planLabel(storedCreatorPlan(draft.planTier)) : "Draft preview",
     statusLabel: draft.stage === "published" ? "Open to partnerships" : "Draft — not public yet",
-    planTier: draft.planTier === "PLUS" || draft.planTier === "PRO" ? draft.planTier : "STARTER",
+    planTier: storedCreatorPlan(draft.planTier),
     specialties: draft.specialties,
     contentStyles: draft.contentStyles ?? [],
     commercialModes: draft.commercialModes ?? [],
@@ -842,12 +842,13 @@ export async function publishDraft(draftId: string): Promise<ClaimDraft> {
 export async function addDraftSocial(draftId: string, social: SeedSocial): Promise<ClaimDraft> {
   const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
-  const limits = await entitlementsForPlan("STARTER");
-  const decision = secondSocialDecision(draft.socials.length, limits, "STARTER");
+  const plan = storedCreatorPlan(draft.planTier);
+  const limits = await entitlementsForPlan(plan);
+  const decision = secondSocialDecision(draft.socials.length, limits, plan);
   if (!decision.ok) {
     const upgrade = decision.upgradePlanCode ? ` Upgrade to ${decision.upgradePlanCode}.` : "";
     throw new Error(
-      `card.social_links.max limit ${decision.limit}.${upgrade} Starter includes ${decision.limit} social ${decision.limit === 1 ? "link" : "links"}.`,
+      `card.social_links.max limit ${decision.limit}.${upgrade} This plan includes ${decision.limit} social ${decision.limit === 1 ? "link" : "links"}.`,
     );
   }
   draft.socials.push(social);
@@ -882,9 +883,9 @@ export async function updateDraftProfile(
   const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
   if (patch.specialties) {
-    const plan = draft.planTier || "STARTER";
+    const plan = storedCreatorPlan(draft.planTier);
     const limits = await entitlementsForPlan(plan);
-    const decision = decideCount(limits, "specialtiesMax", patch.specialties.length, isPlanCode(plan) ? plan : "STARTER");
+    const decision = decideCount(limits, "specialtiesMax", patch.specialties.length, plan);
     if (!decision.ok) {
       const upgrade = decision.upgradePlanCode ? ` Upgrade to ${decision.upgradePlanCode}.` : "";
       throw new Error(
