@@ -296,18 +296,47 @@ function dotStuff(text: string) {
     .join("\r\n");
 }
 
+const SMTP_TIMEOUT_MS = 12_000;
+
+function attachSmtpTimeout(socket: net.Socket, label: string) {
+  socket.setTimeout(SMTP_TIMEOUT_MS);
+  socket.on("timeout", () => {
+    socket.destroy(new Error(`${label} timed out after ${SMTP_TIMEOUT_MS / 1000}s.`));
+  });
+}
+
 async function openSocket(host: string, port: number): Promise<net.Socket> {
   if (port === 465) {
     return await new Promise((resolve, reject) => {
       const socket = tls.connect({ host, port, servername: host });
-      socket.once("secureConnect", () => resolve(socket));
-      socket.once("error", reject);
+      const timer = setTimeout(() => {
+        socket.destroy();
+        reject(new Error(`SMTP TLS connection to ${host}:${port} timed out.`));
+      }, SMTP_TIMEOUT_MS);
+      socket.once("secureConnect", () => {
+        clearTimeout(timer);
+        resolve(socket);
+      });
+      socket.once("error", (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
     });
   }
   return await new Promise((resolve, reject) => {
     const socket = net.connect({ host, port });
-    socket.once("connect", () => resolve(socket));
-    socket.once("error", reject);
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(new Error(`SMTP connection to ${host}:${port} timed out.`));
+    }, SMTP_TIMEOUT_MS);
+    socket.once("connect", () => {
+      clearTimeout(timer);
+      resolve(socket);
+    });
+    socket.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
   });
 }
 
@@ -316,10 +345,59 @@ async function upgradeStartTls(socket: net.Socket, reader: SmtpReader, host: str
   reader.detach();
   const secure = tls.connect({ socket, servername: host });
   await new Promise<void>((resolve, reject) => {
-    secure.once("secureConnect", () => resolve());
-    secure.once("error", reject);
+    const timer = setTimeout(() => {
+      secure.destroy();
+      reject(new Error(`SMTP STARTTLS to ${host} timed out.`));
+    }, SMTP_TIMEOUT_MS);
+    secure.once("secureConnect", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    secure.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
   });
   return secure;
+}
+
+function supportsAuth(ehloText: string, mechanism: "PLAIN" | "LOGIN") {
+  const authLine = ehloText
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\d{3}[\s-]/, ""))
+    .find((line) => /^AUTH\b/i.test(line));
+  if (!authLine) return false;
+  return new RegExp(`\\b${mechanism}\\b`, "i").test(authLine);
+}
+
+async function authenticateSmtp(socket: net.Socket, reader: SmtpReader, config: MailConfig, ehloText: string) {
+  if (!config.username) return;
+  const preferPlain = supportsAuth(ehloText, "PLAIN") || !supportsAuth(ehloText, "LOGIN");
+  if (preferPlain) {
+    const payload = Buffer.from(`\0${config.username}\0${config.password}`, "utf8").toString("base64");
+    await command(socket, reader, `AUTH PLAIN ${payload}`, [235], "AUTH PLAIN");
+    return;
+  }
+  await command(socket, reader, "AUTH LOGIN", [334], "AUTH LOGIN");
+  await command(socket, reader, Buffer.from(config.username, "utf8").toString("base64"), [334], "AUTH user");
+  await command(socket, reader, Buffer.from(config.password, "utf8").toString("base64"), [235], "AUTH password");
+}
+
+export function formatSmtpDeliveryError(error: unknown, host: string, port: number): string {
+  const raw = error instanceof Error ? error.message : "SMTP send failed";
+  if (/ENOTFOUND|getaddrinfo/i.test(raw)) {
+    return `SMTP host “${host}” could not be found. Check the hostname and save again.`;
+  }
+  if (/ECONNREFUSED/i.test(raw)) {
+    return `SMTP connection to ${host}:${port} was refused. Check the host and port.`;
+  }
+  if (/ETIMEDOUT|timed out/i.test(raw)) {
+    return `SMTP connection to ${host}:${port} timed out. Check host, port, and firewall.`;
+  }
+  if (/CERT_|SSL|TLS/i.test(raw)) {
+    return `SMTP TLS to ${host}:${port} failed. ${raw}`.slice(0, 400);
+  }
+  return raw.slice(0, 400);
 }
 
 /** Speak SMTP. ok is true only after the server accepts the message with a 2xx code. */
@@ -333,21 +411,18 @@ export async function deliverMail(config: MailConfig, message: MailMessage): Pro
   let socket: net.Socket | null = null;
   try {
     socket = await openSocket(config.host, config.port);
-    socket.setTimeout(12_000);
+    attachSmtpTimeout(socket, `SMTP session with ${config.host}`);
     let reader = new SmtpReader(socket);
     const greeting = await reader.reply();
     expectCode(greeting, [220], "greeting");
     let ehlo = await command(socket, reader, "EHLO influrios.local", [250], "EHLO");
     if (config.port !== 465 && /STARTTLS/i.test(ehlo.text)) {
       socket = await upgradeStartTls(socket, reader, config.host);
+      attachSmtpTimeout(socket, `SMTP STARTTLS session with ${config.host}`);
       reader = new SmtpReader(socket);
       ehlo = await command(socket, reader, "EHLO influrios.local", [250], "EHLO");
     }
-    if (config.username) {
-      await command(socket, reader, "AUTH LOGIN", [334], "AUTH");
-      await command(socket, reader, Buffer.from(config.username, "utf8").toString("base64"), [334], "AUTH user");
-      await command(socket, reader, Buffer.from(config.password, "utf8").toString("base64"), [235], "AUTH password");
-    }
+    await authenticateSmtp(socket, reader, config, ehlo.text);
     await command(socket, reader, `MAIL FROM:<${from}>`, [250], "MAIL FROM");
     await command(socket, reader, `RCPT TO:<${to}>`, [250, 251], "RCPT TO");
     await command(socket, reader, "DATA", [354], "DATA");
@@ -367,8 +442,7 @@ export async function deliverMail(config: MailConfig, message: MailMessage): Pro
     socket.write("QUIT\r\n");
     return { ok: true };
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : "SMTP send failed";
-    return { ok: false, error: messageText.slice(0, 500) };
+    return { ok: false, error: formatSmtpDeliveryError(error, config.host, config.port) };
   } finally {
     socket?.destroy();
   }
@@ -439,4 +513,34 @@ export async function sendInvitationTest(to: string, record = true): Promise<{ o
   }
   if (result.ok) return { ok: true, message: "SMTP accepted the claim invitation template." };
   return { ok: false, message: result.error };
+}
+
+export async function listRecentMailTests(limit = 5) {
+  try {
+    const rows = await prisma.job.findMany({
+      where: { kind: "mail_test" },
+      orderBy: { createdAt: "desc" },
+      take: Math.min(20, Math.max(1, limit)),
+      select: {
+        id: true,
+        status: true,
+        lastError: true,
+        payload: true,
+        createdAt: true,
+      },
+    });
+    return rows.map((row) => {
+      const payload = row.payload && typeof row.payload === "object" ? (row.payload as Record<string, unknown>) : {};
+      const to = typeof payload.to === "string" ? payload.to : "";
+      return {
+        id: row.id,
+        status: row.status,
+        to,
+        lastError: row.lastError ?? "",
+        createdAt: row.createdAt.toISOString(),
+      };
+    });
+  } catch {
+    return [];
+  }
 }

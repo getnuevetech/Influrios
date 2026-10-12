@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  formatSmtpDeliveryError,
   mailConfigFromEnv,
   resolveMailConfig,
   resolveMailConfigFromRow,
@@ -87,5 +88,22 @@ describe("resolveMailConfig", () => {
     const result = resolveMailConfig(row({ enabled: false }), null, () => "secret");
     assert.equal(result.ok, false);
     if (!result.ok) assert.match(result.error, /Enabled is off/);
+  });
+});
+
+describe("formatSmtpDeliveryError", () => {
+  it("explains DNS and timeout failures", () => {
+    assert.match(
+      formatSmtpDeliveryError(new Error("getaddrinfo ENOTFOUND smtp.bad"), "smtp.bad", 587),
+      /could not be found/,
+    );
+    assert.match(
+      formatSmtpDeliveryError(new Error("SMTP connection to smtp.bad:587 timed out."), "smtp.bad", 587),
+      /timed out/,
+    );
+    assert.match(
+      formatSmtpDeliveryError(new Error("connect ECONNREFUSED 127.0.0.1:587"), "127.0.0.1", 587),
+      /refused/,
+    );
   });
 });

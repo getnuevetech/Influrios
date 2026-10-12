@@ -9,6 +9,7 @@ import {
 } from "@/app/admin/mail/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { AdminCollapse } from "@/components/admin-collapse";
+import { AdminSubmitButton } from "@/components/admin-submit-button";
 import { hasPermission } from "@/lib/admin-auth";
 import {
   COMM_AUDIENCES,
@@ -19,18 +20,21 @@ import {
   getCommChannelSettings,
   listCommTemplates,
 } from "@/lib/comm-templates";
-import { mailSettingsView } from "@/lib/mail";
+import { listRecentMailTests, mailSettingsView } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Email · Admin" };
 
-type Props = { searchParams: Promise<{ saved?: string; sent?: string; removed?: string; error?: string }> };
+type Props = {
+  searchParams: Promise<{ saved?: string; sent?: string; removed?: string; error?: string; warn?: string }>;
+};
 
 export default async function AdminMailPage({ searchParams }: Props) {
   const session = await requireAdminPage("mail");
   const canEdit = hasPermission(session, "mail.edit");
   const params = await searchParams;
   const settings = await mailSettingsView().catch(() => null);
+  const recentTests = await listRecentMailTests(5).catch(() => []);
   const channels = await getCommChannelSettings().catch(() => ({
     emailEnabled: true,
     smsEnabled: false,
@@ -51,9 +55,19 @@ export default async function AdminMailPage({ searchParams }: Props) {
       </div>
 
       {params.saved ? <p className="text-sm font-semibold text-emerald-700">Saved.</p> : null}
+      {params.warn === "enabled" ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          Settings are saved, but <strong>Enabled</strong> is off. Check Enabled and save again before Send test will
+          work.
+        </p>
+      ) : null}
       {params.sent ? <p className="text-sm font-semibold text-emerald-700">Test send accepted.</p> : null}
       {params.removed ? <p className="text-sm font-semibold text-emerald-700">Template removed.</p> : null}
-      {params.error ? <p className="text-sm font-semibold text-amber-800">{params.error}</p> : null}
+      {params.error ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950">
+          {params.error}
+        </p>
+      ) : null}
 
       <AdminCollapse
         title="SMTP settings"
@@ -106,22 +120,27 @@ export default async function AdminMailPage({ searchParams }: Props) {
                 ? `Environment SMTP is also set (${settings.envHost}). That path sends when this row is off or incomplete.`
                 : "No SMTP host is set in the environment. Turn on Enabled with host, from address, and password (when a username is set), then save."}
             </p>
-            {canEdit ? (
-              <button type="submit" className="btn-primary !py-2 text-sm">
-                Save SMTP
-              </button>
-            ) : null}
+            {canEdit ? <AdminSubmitButton label="Save SMTP" pendingLabel="Saving…" /> : null}
           </form>
         )}
       </AdminCollapse>
 
-      <AdminCollapse title="Test SMTP (claim invitation)" subtitle="Uses the invitation template" defaultOpen>
+      <AdminCollapse
+        title="Test SMTP (claim invitation)"
+        subtitle={settings?.ready ? "SMTP ready" : "SMTP not ready"}
+        defaultOpen
+      >
         <form action={actionSendMailTest} className="space-y-3">
           <p className="text-sm text-muted">
             Sends the claim invitation template to one address. Preview labels fill the name, expiry, and profile, and
             the link is this site. The message does not claim a profile. SMTP must show Ready above — if Enabled is off
             or the password is missing, the error after submit names the missing step.
           </p>
+          {!settings?.ready ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              {settings?.readyError || "SMTP is not ready. Fix the settings above before sending a test."}
+            </p>
+          ) : null}
           <label className="block text-sm">
             <span className="font-semibold text-indigo">To</span>
             <input
@@ -134,13 +153,30 @@ export default async function AdminMailPage({ searchParams }: Props) {
             />
           </label>
           {canEdit ? (
-            <button type="submit" className="btn-primary !py-2 text-sm">
-              Send test
-            </button>
+            <AdminSubmitButton label="Send test" pendingLabel="Sending test…" />
           ) : (
             <p className="text-xs text-muted">You need mail.edit permission to send a test.</p>
           )}
         </form>
+        {recentTests.length ? (
+          <div className="mt-4 space-y-2 border-t border-[#E4EBFF] pt-4">
+            <p className="text-sm font-semibold text-indigo">Recent test sends</p>
+            <ul className="space-y-2">
+              {recentTests.map((job) => (
+                <li key={job.id} className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-xs text-muted">
+                  <span className="font-semibold text-indigo">{job.status}</span>
+                  {job.to ? ` · ${job.to}` : ""}
+                  {" · "}
+                  {new Date(job.createdAt).toLocaleString()}
+                  {job.lastError ? <span className="mt-1 block text-amber-900">{job.lastError}</span> : null}
+                </li>
+              ))}
+            </ul>
+            <Link href="/admin/jobs" className="text-xs font-semibold text-violet hover:underline">
+              Open jobs →
+            </Link>
+          </div>
+        ) : null}
       </AdminCollapse>
 
       <AdminCollapse
