@@ -480,13 +480,13 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                 </div>
                 <input
                   name="niches"
-                  defaultValue={(opt?.niches ?? c.specialties).join(",")}
+                  defaultValue={(opt?.niches ?? []).join(",")}
                   className="mt-3 w-full rounded-lg border border-border px-2 py-1.5 text-xs"
                   placeholder="niches"
                 />
                 <input
                   name="targetingNotes"
-                  defaultValue={opt?.targetingNotes ?? c.offer ?? ""}
+                  defaultValue={opt?.targetingNotes ?? ""}
                   className="mt-2 w-full rounded-lg border border-border px-2 py-1.5 text-xs"
                   placeholder="Targeting notes"
                 />

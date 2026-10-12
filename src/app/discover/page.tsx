@@ -10,6 +10,7 @@ import { getDirectory, recordDirectoryEvent, searchDirectory } from "@/lib/direc
 import { COMMERCIAL_MODE, CONTENT_STYLE, listDiscoveryFacets } from "@/lib/discovery-facets";
 import { demoCreators, publicPagesUseLive } from "@/lib/presentation-demo";
 import { filterCreators, formatFollowers, languageOptionsFor, totalFollowers } from "@/lib/seed-data";
+import { listActiveSponsoredSlugs, splitSponsoredPlacements } from "@/lib/sponsored-placement";
 import { canonicalSpecialty } from "@/lib/taxonomy";
 
 export const dynamic = "force-dynamic";
@@ -161,7 +162,9 @@ export default async function DiscoverPage({ searchParams }: Props) {
   const commercialModeOptions = facetCatalog
     .filter((row) => row.kind === COMMERCIAL_MODE && row.active)
     .map((row) => ({ value: row.slug, label: row.name }));
-  const topMatches = results.slice(0, 5);
+  const placementSlugs = await listActiveSponsoredSlugs().catch(() => []);
+  const { sponsored, organic } = splitSponsoredPlacements(results, placementSlugs);
+  const topMatches = organic.slice(0, 5);
   const heroCards = roster.slice(0, 3);
   const activeChip = specialties[0] ?? "";
   const returnTo = discoverReturnPath({
@@ -353,11 +356,34 @@ export default async function DiscoverPage({ searchParams }: Props) {
             </section>
           ) : null}
 
+          {sponsored.length ? (
+            <section aria-label="Sponsored">
+              <h2 className="font-display text-xl font-bold text-indigo">Sponsored</h2>
+              <p className="mt-1 text-sm text-muted">These placements are labeled and are not part of the search ranking.</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {sponsored.map((creator) => (
+                  <div key={creator.slug}>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-violet">Sponsored</p>
+                    <CreatorCard
+                      creator={creator}
+                      layout="discover"
+                      showTitle
+                      showBio
+                      showViewProfile
+                      qrOpensPopup
+                      features={{ showStatus: false, showHeart: livePages }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <section id="discover-results">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-indigo">
-                  Showing <strong>{results.length.toLocaleString()}</strong> influencers
+                  Showing <strong>{organic.length.toLocaleString()}</strong> influencers
                 </p>
                 <p className="text-xs text-muted">
                   {livePages
@@ -368,16 +394,18 @@ export default async function DiscoverPage({ searchParams }: Props) {
               <DiscoverSort defaultValue={sort} />
             </div>
 
-            {results.length === 0 ? (
+            {organic.length === 0 ? (
               <div className="rounded-2xl border border-[#E4E9F5] bg-white p-10 text-center">
-                <p className="font-semibold text-indigo">No influencers matched those filters.</p>
+                <p className="font-semibold text-indigo">
+                  {sponsored.length ? "No other influencers matched those filters." : "No influencers matched those filters."}
+                </p>
                 <Link href="/discover" className="mt-4 inline-block text-sm font-semibold text-violet">
                   Clear filters
                 </Link>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {results.map((creator) => (
+                {organic.map((creator) => (
                   <CreatorCard
                     key={creator.slug}
                     creator={creator}

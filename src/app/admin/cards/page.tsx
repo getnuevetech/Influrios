@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { actionUpdateCard, actionUpdateFeaturedGlobals } from "@/app/admin/actions";
+import { actionAddSponsoredPlacement, actionRemoveSponsoredPlacement } from "@/app/admin/placement-actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getCms } from "@/lib/cms";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
+import { listSponsoredPlacements } from "@/lib/sponsored-placement";
 
 export const metadata = { title: "Admin · Cards" };
 
-type Props = { searchParams: Promise<{ saved?: string }> };
+type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 const FEATURE_KEYS = [
   ["showBadge", "Badge"],
@@ -31,6 +33,7 @@ export default async function AdminCardsPage({ searchParams }: Props) {
 
   const directory = await getDirectory().catch(() => null);
   const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
+  const placements = await listSponsoredPlacements().catch(() => []);
 
   return (
     <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6">
@@ -46,6 +49,9 @@ export default async function AdminCardsPage({ searchParams }: Props) {
         </p>
       </div>
 
+      {params.error ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</div>
+      ) : null}
       {params.saved ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Saved: {params.saved}
@@ -111,6 +117,47 @@ export default async function AdminCardsPage({ searchParams }: Props) {
               <dd className="text-muted">{cms.featuredCards.qrSize}px</dd>
             </div>
           </dl>
+        )}
+      </section>
+
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Sponsored placements</h2>
+        <p className="mt-1 text-sm text-muted">
+          A saved placement is labeled Sponsored on Discover and is left out of the search ranking.
+        </p>
+        {canEdit ? (
+          <form action={actionAddSponsoredPlacement} className="mt-4 flex flex-wrap gap-2">
+            <input
+              name="creatorSlug"
+              placeholder="Profile slug"
+              className="min-w-48 flex-1 rounded-xl border border-border px-3 py-2"
+            />
+            <button type="submit" className="btn-primary !py-2 text-sm">
+              Add placement
+            </button>
+          </form>
+        ) : null}
+        {placements.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">No sponsored placements.</p>
+        ) : (
+          <ul className="mt-3 space-y-2 text-sm">
+            {placements.map((placement) => (
+              <li key={placement.id} className="flex items-center justify-between gap-3">
+                <span className="font-semibold text-indigo">
+                  {placement.creatorSlug}
+                  {placement.active ? "" : " · inactive"}
+                </span>
+                {canEdit ? (
+                  <form action={actionRemoveSponsoredPlacement}>
+                    <input type="hidden" name="id" value={placement.id} />
+                    <button type="submit" className="font-semibold text-violet">
+                      Remove
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
