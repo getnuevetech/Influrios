@@ -129,6 +129,19 @@ describe("short link rules", () => {
     assert.equal(html.includes("52.4.214.82"), false);
   });
 
+  it("names inflr.me on the nginx site and on the certificate command", () => {
+    const nginx = readFileSync("deploy/nginx/influrios.conf", "utf8");
+    const site = nginx.match(/server_name[^;]+;/)?.[0] ?? "";
+    for (const host of ["influrios.com", "www.influrios.com", "inflr.me", "www.inflr.me"]) {
+      assert.match(site, new RegExp(`\\b${host.replace(".", "\\.")}\\b`));
+    }
+    for (const doc of ["docs/deploy/FRESH_SERVER_SETUP.md", "docs/deploy/AWS_LIGHTSAIL.md"]) {
+      const text = readFileSync(doc, "utf8");
+      assert.match(text, /certbot --nginx -d influrios\.com -d www\.influrios\.com -d inflr\.me -d www\.inflr\.me/);
+      assert.match(text, /certbot --nginx --expand -d influrios\.com -d www\.influrios\.com -d inflr\.me -d www\.inflr\.me/);
+    }
+  });
+
   it("explains a known short host when the store is down and does not invent a slug", () => {
     const root = hitWhenShortStoreUnavailable("inflr.me", "/");
     assert.equal(root.kind, "page");

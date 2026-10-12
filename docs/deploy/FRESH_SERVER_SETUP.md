@@ -276,19 +276,26 @@ bash deploy/scripts/deploy.sh
 
 ## 11. Domain + HTTPS (after DNS works)
 
-1. DNS A record `@` and `www` → static IP  
-2. Edit `/etc/nginx/sites-available/influrios` → set:
+1. DNS A records for `influrios.com`, `www.influrios.com`, `inflr.me`, and `www.inflr.me` → static IP  
+2. Copy the site file so `inflr.me` is on the same server block:
 
-```nginx
-server_name influrios.com www.influrios.com;
+```bash
+sudo cp deploy/nginx/influrios.conf /etc/nginx/sites-available/influrios
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-3. `sudo nginx -t && sudo systemctl reload nginx`  
-4. Certbot:
+The `server_name` line is `influrios.com www.influrios.com inflr.me www.inflr.me`.  
+3. Certbot, one certificate for all four names:
 
 ```bash
 sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d influrios.com -d www.influrios.com
+sudo certbot --nginx -d influrios.com -d www.influrios.com -d inflr.me -d www.inflr.me
+```
+
+A certificate that already exists for `influrios.com` only is expanded in place:
+
+```bash
+sudo certbot --nginx --expand -d influrios.com -d www.influrios.com -d inflr.me -d www.inflr.me
 ```
 
 If the cert was **issued** but install failed (`matching server block`):
@@ -298,8 +305,8 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo certbot install --cert-name influrios.com --nginx
 ```
 
-5. Set `NEXT_PUBLIC_APP_URL=https://influrios.com` in `.env` → `bash deploy/scripts/deploy.sh`  
-6. Confirm `curl -fsS https://influrios.com/api/health` returns `"ok": true` and `curl -I https://influrios.com` is HTTPS.
+4. Set `NEXT_PUBLIC_APP_URL=https://influrios.com` in `.env` → `bash deploy/scripts/deploy.sh`  
+5. Confirm `curl -fsS https://influrios.com/api/health` returns `"ok": true`, `curl -I https://influrios.com` is HTTPS, and `curl -fsSI https://inflr.me/` succeeds. The certificate for `inflr.me` must list that name.
 
 ---
 
