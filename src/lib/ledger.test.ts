@@ -46,11 +46,14 @@ describe("marketplace ledger rules", () => {
     assert.equal(fundingTerm(true), "Escrow");
   });
 
-  it("reads feeType from funding snapshots and defaults legacy rows by service level", () => {
+  it("reads the fee type stored on a funding snapshot", () => {
     assert.equal(feeTypeFromFundingSnapshot({ feeType: "managed_intro" }), "managed_intro");
-    assert.equal(feeTypeFromFundingSnapshot({ feeCents: 100 }, "managed_campaign"), "managed_campaign");
-    assert.equal(feeTypeFromFundingSnapshot(null, "discovery"), "platform_service");
-    assert.equal(feeTypeFromFundingSnapshot({}), "collaboration");
+    assert.equal(feeTypeFromFundingSnapshot({ feeType: "  " }), "");
+    assert.equal(feeTypeFromFundingSnapshot({ feeCents: 100 }), "");
+    assert.equal(feeTypeFromFundingSnapshot(null), "");
+    assert.equal(feeTypeFromFundingSnapshot({}), "");
+    const funding = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    assert.equal(funding.includes("defaultFeeTypeForServiceLevel"), false);
   });
 
   it("refuses a prefund when the jurisdiction or the provider is not ready", () => {

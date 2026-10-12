@@ -31,11 +31,11 @@ describe("admin transaction view (W2.5)", () => {
     assert.equal(rule.calculatedFeeCents, 1_000);
   });
 
-  it("falls back to funding feeCents and serviceLevel fee type when snapshot is thin", () => {
+  it("uses the funding fee cents when the snapshot has no calculated fee", () => {
     const rule = feeRuleFromSnapshot(null, "managed_intro", 2_500);
     assert.equal(rule.ruleId, null);
     assert.equal(rule.ruleName, null);
-    assert.equal(rule.feeType, "managed_intro");
+    assert.equal(rule.feeType, "");
     assert.equal(rule.calculatedFeeCents, 2_500);
     assert.equal(frozenFeeRuleHeading(rule.ruleName, rule.ruleVersion), "");
     assert.equal(frozenFeeRuleHeading("   ", 3), "v3");
