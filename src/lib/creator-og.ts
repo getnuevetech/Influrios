@@ -150,14 +150,45 @@ export function socialPreviewInterstitialHtml(input: {
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${image}" />
   <meta http-equiv="refresh" content="0;url=${dest}" />
+  <style>
+    @font-face { font-family: "Plus Jakarta Sans"; src: url("/fonts/plus-jakarta-sans-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: "Plus Jakarta Sans"; src: url("/fonts/plus-jakarta-sans-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: Sora; src: url("/fonts/sora-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; color: #fff;
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(980px 560px at 8% 0%, rgba(92, 78, 230, 0.42), transparent 62%),
+        radial-gradient(860px 640px at 82% 100%, rgba(62, 36, 190, 0.5), transparent 62%),
+        linear-gradient(180deg, #16124f 0%, #0c1138 48%, #080b24 100%);
+      display: grid; place-items: center; padding: 32px 20px;
+    }
+    main {
+      width: min(28rem, 100%); padding: 36px 28px 28px; text-align: center; border-radius: 28px;
+      background: linear-gradient(180deg, rgba(32, 28, 92, 0.72), rgba(14, 16, 58, 0.84));
+      border: 1px solid rgba(186, 196, 255, 0.24);
+      box-shadow: 0 30px 80px rgba(3, 6, 28, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    }
+    .brand { margin: 0; letter-spacing: 0.42em; font-size: 13px; font-weight: 600; color: #eceaff; }
+    h1 { margin: 18px 0 8px; font-family: Sora, "Plus Jakarta Sans", sans-serif; font-size: 2rem; letter-spacing: -0.03em; }
+    .specialty, .bio { color: #d7e0fb; line-height: 1.45; }
+    .specialty { margin: 0 0 10px; }
+    .bio { margin: 0; }
+    a.cta {
+      display: inline-flex; margin-top: 22px; padding: 14px 24px; border-radius: 999px;
+      background: linear-gradient(90deg, #7a3dff 0%, #3d7bff 100%);
+      color: #fff; text-decoration: none; font-weight: 700;
+    }
+  </style>
 </head>
-<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0b123f;color:#fff;font-family:Georgia,serif">
-  <main style="max-width:28rem;padding:2rem;text-align:center">
-    <p style="letter-spacing:.18em;text-transform:uppercase;font-size:.75rem;color:#c4b5fd">Influrios</p>
-    <h1 style="font-size:1.8rem;margin:.5rem 0">${escapeHtml(input.creator.displayName)}</h1>
-    ${specialty ? `<p style="color:#dbe4ff">${specialty}</p>` : ""}
-    <p style="color:#dbe4ff;line-height:1.5">${description}</p>
-    <p style="margin-top:1.5rem"><a href="${dest}" style="color:#c4b5fd">Continue to profile</a></p>
+<body>
+  <main>
+    <p class="brand">INFLURIOS</p>
+    <h1>${escapeHtml(input.creator.displayName)}</h1>
+    ${specialty ? `<p class="specialty">${specialty}</p>` : ""}
+    <p class="bio">${description}</p>
+    <a class="cta" href="${dest}">Continue to profile</a>
   </main>
 </body>
 </html>`;
