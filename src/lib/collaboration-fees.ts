@@ -461,6 +461,10 @@ function asFeePayer(value: string): FeePayer {
   return "brand";
 }
 
+function storedRuleCondition(value: string | null | undefined): string {
+  return (value ?? "").trim();
+}
+
 function ruleFromRow(row: {
   id: string;
   name: string;
@@ -494,9 +498,9 @@ function ruleFromRow(row: {
     jurisdiction: row.jurisdiction,
     serviceLevel: row.serviceLevel,
     feeType: asFeeType(row.feeType || defaultFeeTypeForServiceLevel(row.serviceLevel)),
-    fundingMode: row.fundingMode || "*",
-    relationshipSource: row.relationshipSource || "*",
-    promotionChannel: row.promotionChannel || "*",
+    fundingMode: storedRuleCondition(row.fundingMode),
+    relationshipSource: storedRuleCondition(row.relationshipSource),
+    promotionChannel: storedRuleCondition(row.promotionChannel),
     minGrossCents: row.minGrossCents ?? undefined,
     maxGrossCents: row.maxGrossCents ?? undefined,
     method: asFeeMethod(row.method),
@@ -555,9 +559,9 @@ function ruleCreateData(rule: CollaborationFeeRule) {
     jurisdiction: rule.jurisdiction,
     serviceLevel: rule.serviceLevel,
     feeType: rule.feeType,
-    fundingMode: rule.fundingMode || "*",
-    relationshipSource: rule.relationshipSource || "*",
-    promotionChannel: rule.promotionChannel || "*",
+    fundingMode: storedRuleCondition(rule.fundingMode),
+    relationshipSource: storedRuleCondition(rule.relationshipSource),
+    promotionChannel: storedRuleCondition(rule.promotionChannel),
     minGrossCents: rule.minGrossCents ?? null,
     maxGrossCents: rule.maxGrossCents ?? null,
     method: rule.method,
@@ -587,9 +591,9 @@ async function readLegacyStore(): Promise<{
         method: asFeeMethod(rule.method),
         payer: asFeePayer(rule.payer),
         feeType: asFeeType(rule.feeType || defaultFeeTypeForServiceLevel(rule.serviceLevel || "contracted")),
-        fundingMode: rule.fundingMode || "*",
-        relationshipSource: rule.relationshipSource || "*",
-        promotionChannel: rule.promotionChannel || "*",
+        fundingMode: storedRuleCondition(rule.fundingMode),
+        relationshipSource: storedRuleCondition(rule.relationshipSource),
+        promotionChannel: storedRuleCondition(rule.promotionChannel),
         version: Number(rule.version) || 1,
         active: Boolean(rule.active),
         priority: Number(rule.priority) || 100,

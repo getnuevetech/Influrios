@@ -161,6 +161,17 @@ describe("collaboration fee matching", () => {
     assert.equal(matchesRule(rule({ promotionChannel: "none" }), openCtx, asOf), false);
     assert.equal(matchesRule(rule({ promotionChannel: "none" }), { ...openCtx, promotionChannel: "" }, asOf), false);
     assert.equal(matchesRule(rule({ promotionChannel: "none" }), { ...openCtx, promotionChannel: "none" }, asOf), true);
+    assert.equal(matchesRule(rule({ fundingMode: "" }), { ...openCtx, fundingMode: "FULL" }, asOf), false);
+    assert.equal(matchesRule(rule({ relationshipSource: "" }), { ...openCtx, relationshipSource: "organic" }, asOf), false);
+    assert.equal(matchesRule(rule({ promotionChannel: "" }), { ...openCtx, promotionChannel: "none" }, asOf), false);
+    assert.equal(
+      matchesRule(
+        rule({ fundingMode: "*", relationshipSource: "*", promotionChannel: "*" }),
+        { ...openCtx, fundingMode: "FULL", relationshipSource: "organic", promotionChannel: "none" },
+        asOf,
+      ),
+      true,
+    );
     assert.equal(ruleSpecificity(rule({ fundingMode: "STAGED", relationshipSource: "referral" })), 3);
   });
 
@@ -293,6 +304,9 @@ describe("entered fee rule facts", () => {
     assert.equal(fees.includes('ctx.fundingMode || "FULL"'), false);
     assert.equal(fees.includes('|| "organic"'), false);
     assert.equal(fees.includes('|| "none"'), false);
+    assert.equal(fees.includes('fundingMode || "*"'), false);
+    assert.equal(fees.includes('relationshipSource || "*"'), false);
+    assert.equal(fees.includes('promotionChannel || "*"'), false);
     const actions = readFileSync("src/app/admin/actions.ts", "utf8");
     const page = readFileSync("src/app/admin/fees/page.tsx", "utf8");
     const funding = readFileSync("src/app/admin/marketplace/[fundingId]/page.tsx", "utf8");
