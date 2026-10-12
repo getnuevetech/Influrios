@@ -324,7 +324,9 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
                 </div>
               ) : null}
               {link.aliases.length ? (
-                <ul className="mt-3 space-y-1 border-t border-border pt-2 text-xs text-muted">
+                <div className="mt-3 border-t border-border pt-2">
+                  <p className="text-xs font-semibold text-indigo">Slug history</p>
+                <ul className="mt-1 space-y-1 text-xs text-muted">
                   {link.aliases.map((alias) => (
                     <li key={alias.id} className="flex flex-wrap items-center gap-2">
                       <span>
@@ -342,10 +344,11 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
                     </li>
                   ))}
                 </ul>
+                </div>
               ) : null}
             </li>
           ))}
-          {!links.length ? <li className="text-muted">No short links yet. Plus and Pro cards receive one on first use.</li> : null}
+          {!links.length ? <li className="text-muted">No short links yet. A plan that includes a short link receives one on first use.</li> : null}
         </ul>
       </section>
 

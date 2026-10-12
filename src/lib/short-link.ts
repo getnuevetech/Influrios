@@ -432,21 +432,28 @@ async function resolveShortRequestFromStore(
     where: { slug },
     include: { shortLink: true },
   });
-  if (alias && aliasShouldRedirect(alias)) {
-    const hostName = domain.hostname;
-    const cache = redirectCacheFor("alias");
-    void recordEvent(alias.shortLinkId, "alias_redirect", { slug }, hints);
-    return {
-      kind: "redirect",
-      ...cache,
-      location: `https://${hostName}/${alias.shortLink.slug}`,
-      shortLinkId: alias.shortLinkId,
-      eventType: "alias_redirect",
-    };
-  }
-
-  // Spec §20.12 — disabled alias redirects do not resolve (configured alias policy).
   if (alias) {
+    const decision = aliasResolve({ redirect: alias.redirect, linkStatus: alias.shortLink.status });
+    if (decision === "redirect") {
+      const hostName = domain.hostname;
+      const cache = redirectCacheFor("alias");
+      void recordEvent(alias.shortLinkId, "alias_redirect", { slug }, hints);
+      return {
+        kind: "redirect",
+        ...cache,
+        location: `https://${hostName}/${alias.shortLink.slug}`,
+        shortLinkId: alias.shortLinkId,
+        eventType: "alias_redirect",
+      };
+    }
+    if (decision === "suspended") {
+      return {
+        kind: "page",
+        status: 403,
+        title: "Link unavailable",
+        message: "This Influrios link is suspended. The previous name still belongs to that link.",
+      };
+    }
     return {
       kind: "page",
       status: 404,
@@ -564,7 +571,20 @@ async function resolveCampaignCode(
     where: { code },
     include: { shortLink: true },
   });
-  if (!campaign || campaign.status !== "active" || campaign.shortLink.status !== "active") {
+  const campaignDecision = campaignResolve({
+    found: Boolean(campaign),
+    campaignStatus: campaign?.status ?? "",
+    linkStatus: campaign?.shortLink.status ?? "",
+  });
+  if (campaignDecision === "suspended") {
+    return {
+      kind: "page",
+      status: 403,
+      title: "Link unavailable",
+      message: "This Influrios link is suspended.",
+    };
+  }
+  if (!campaign || campaignDecision !== "redirect") {
     return { kind: "page", status: 404, title: "Campaign not found", message: "That Influrios campaign link does not exist." };
   }
   const location = safeRedirectTarget(campaign.destination, allowedHosts, canonicalOrigin);
@@ -652,9 +672,74 @@ export async function changeCreatorSlug(creatorSlug: string, nextSlug: string) {
   return { ok: true as const, slug };
 }
 
+export function storedShortLinkStatus(value: string | null | undefined): "active" | "suspended" | "" {
+  const status = (value ?? "").trim();
+  return status === "active" || status === "suspended" ? status : "";
+}
+
 /** Spec §20.12 — alias redirects follow configured policy (admin can disable). */
 export function aliasShouldRedirect(alias: { redirect: boolean; shortLink: { status: string } }) {
-  return Boolean(alias.redirect && alias.shortLink.status === "active");
+  return aliasResolve({ redirect: alias.redirect, linkStatus: alias.shortLink.status }) === "redirect";
+}
+
+/**
+ * An earlier slug redirects only while that redirect is on and the link is active.
+ * A suspended link stays suspended. A disabled redirect does not resolve.
+ */
+export function aliasResolve(input: {
+  redirect: boolean;
+  linkStatus: string;
+}): "redirect" | "suspended" | "not_found" {
+  if (!input.redirect) return "not_found";
+  const status = storedShortLinkStatus(input.linkStatus);
+  if (status === "active") return "redirect";
+  if (status === "suspended") return "suspended";
+  return "not_found";
+}
+
+/** A missing campaign stays missing. A suspended campaign or parent link stays suspended. */
+export function campaignResolve(input: {
+  found: boolean;
+  campaignStatus: string;
+  linkStatus: string;
+}): "redirect" | "suspended" | "not_found" {
+  if (!input.found) return "not_found";
+  const campaignStatus = storedShortLinkStatus(input.campaignStatus);
+  const linkStatus = storedShortLinkStatus(input.linkStatus);
+  if (campaignStatus === "suspended" || linkStatus === "suspended") return "suspended";
+  if (campaignStatus === "active" && linkStatus === "active") return "redirect";
+  return "not_found";
+}
+
+/** The app-host QR page uses the resolver hit. A suspended QR is not a missing QR. */
+export function qrLandingFromHit(hit: { kind: "redirect" | "page"; status?: number }): "redirect" | "suspended" | "not_found" {
+  if (hit.kind === "redirect") return "redirect";
+  if (hit.status === 403) return "suspended";
+  return "not_found";
+}
+
+/** Admin ops: suspend or restore one short link. The QR identity is left as stored. */
+export async function setShortLinkStatus(id: string, status: string) {
+  const next = storedShortLinkStatus(status);
+  if (next !== "active" && next !== "suspended") return { ok: false as const, error: "Unknown status." };
+  const linkId = id.trim();
+  if (!linkId) return { ok: false as const, error: "Missing short link." };
+  const link = await prisma.shortLink.findUnique({ where: { id: linkId } });
+  if (!link) return { ok: false as const, error: "Short link not found." };
+  if (link.status === next) return { ok: true as const, status: next };
+  await prisma.shortLink.update({ where: { id: link.id }, data: { status: next } });
+  void recordEvent(link.id, "status_change", { from: link.status, to: next });
+  return { ok: true as const, status: next };
+}
+
+export async function listShortLinkSlugHistory(shortLinkId: string) {
+  const id = shortLinkId.trim();
+  if (!id) return [];
+  return prisma.shortLinkAlias.findMany({
+    where: { shortLinkId: id },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
 }
 
 /** Admin ops: enable or disable an old-slug redirect without deleting the alias row. */
@@ -732,7 +817,7 @@ export function canChangeDynamicDestination(input: {
     return { ok: false, error: "Suspended short links cannot change destination." };
   }
   if (input.requireEntitlement && !input.entitlementsDynamicQr) {
-    return { ok: false, error: "Dynamic destinations are included on the Pro plan." };
+    return { ok: false, error: "Dynamic destinations are not included on this plan." };
   }
   return { ok: true };
 }

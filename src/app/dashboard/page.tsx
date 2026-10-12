@@ -30,6 +30,7 @@ import {
   listCreatorCampaignLinks,
   listPendingShortLinkSchedules,
   listShortLinkDestinationHistory,
+  listShortLinkSlugHistory,
   primaryShortHost,
   slugChangeWarning,
 } from "@/lib/short-link";
@@ -100,6 +101,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
       ? await listPendingShortLinkSchedules(shortLink.id).catch(() => [])
       : [];
   const campaignLinks = shortLink ? await listCreatorCampaignLinks(draft.slug).catch(() => []) : [];
+  const slugHistory = shortLink ? await listShortLinkSlugHistory(shortLink.id).catch(() => []) : [];
   const referrals = await listReferralsForCreator(draft.slug).catch(() => []);
   const campaignMax = linkLimits?.campaignLinksMax ?? 0;
   const campaignRoom = canAddCampaignLink({
@@ -567,6 +569,18 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
             <p>
               Short link: https://{shortHost}/{shortLink.slug}
             </p>
+            {slugHistory.length ? (
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-indigo">Earlier names</p>
+                <ul className="space-y-1 text-xs text-muted">
+                  {slugHistory.map((row) => (
+                    <li key={row.id}>
+                      /{row.slug} {row.redirect ? `redirects to /${shortLink.slug}` : "redirect off"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <p className="text-xs text-muted">
               This short link is the referral link. A new account that starts from it is logged with the reward admin
               saved.
@@ -646,7 +660,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 <div>
                   <p className="font-semibold text-indigo">Dynamic destination</p>
                   <p className="mt-1 text-xs text-muted">
-                    Pro can change where the short link and QR resolve without reprinting the QR. Paths stay on
+                    This plan can change where the short link and QR resolve without reprinting the QR. Paths stay on
                     Influrios; https hosts must be allow-listed by admin.
                   </p>
                 </div>
@@ -771,6 +785,27 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 </p>
               )}
             </div>
+          </div>
+        ) : shortLink ? (
+          <div className="mt-3 space-y-2 text-sm text-indigo">
+            <p>
+              Short link: https://{shortHost}/{shortLink.slug}
+            </p>
+            <p className="text-xs text-muted">This short link is suspended. The QR identity is unchanged.</p>
+            {shortLink.qrIdentities[0] ? (
+              <p className="text-xs text-muted">
+                QR: https://{shortHost}/q/{shortLink.qrIdentities[0].token}
+              </p>
+            ) : null}
+            {slugHistory.length ? (
+              <ul className="space-y-1 text-xs text-muted">
+                {slugHistory.map((row) => (
+                  <li key={row.id}>
+                    /{row.slug} {row.redirect ? `redirects to /${shortLink.slug}` : "redirect off"}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : (
           <p className="mt-2 text-sm text-muted">

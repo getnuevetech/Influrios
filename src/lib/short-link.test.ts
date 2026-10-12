@@ -1,16 +1,20 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { isShortLinkHost, normalizeShortHost } from "./short-link-hosts";
 import {
   hitWhenShortStoreUnavailable,
   isReservedSlug,
   normalizeSlug,
+  aliasResolve,
   aliasShouldRedirect,
+  campaignResolve,
   canChangeDynamicDestination,
   destinationKindFor,
   domainCanBePrimary,
   domainCanServe,
   priorDestinationFromHistory,
+  qrLandingFromHit,
   redirectCacheFor,
   safeRedirectTarget,
   shortLinkRootMessage,
@@ -39,6 +43,37 @@ describe("short link rules", () => {
     assert.equal(aliasShouldRedirect({ redirect: true, shortLink: { status: "active" } }), true);
     assert.equal(aliasShouldRedirect({ redirect: false, shortLink: { status: "active" } }), false);
     assert.equal(aliasShouldRedirect({ redirect: true, shortLink: { status: "suspended" } }), false);
+    assert.equal(aliasResolve({ redirect: true, linkStatus: "active" }), "redirect");
+    assert.equal(aliasResolve({ redirect: true, linkStatus: "suspended" }), "suspended");
+    assert.equal(aliasResolve({ redirect: false, linkStatus: "suspended" }), "not_found");
+    assert.equal(aliasResolve({ redirect: false, linkStatus: "active" }), "not_found");
+  });
+
+  it("keeps a suspended campaign suspended and a missing campaign missing", () => {
+    assert.equal(campaignResolve({ found: false, campaignStatus: "", linkStatus: "" }), "not_found");
+    assert.equal(campaignResolve({ found: true, campaignStatus: "suspended", linkStatus: "active" }), "suspended");
+    assert.equal(campaignResolve({ found: true, campaignStatus: "active", linkStatus: "suspended" }), "suspended");
+    assert.equal(campaignResolve({ found: true, campaignStatus: "active", linkStatus: "active" }), "redirect");
+  });
+
+  it("keeps a suspended QR on the same resolver hit and does not split the resolver", () => {
+    assert.equal(qrLandingFromHit({ kind: "redirect", status: 302 }), "redirect");
+    assert.equal(qrLandingFromHit({ kind: "page", status: 403 }), "suspended");
+    assert.equal(qrLandingFromHit({ kind: "page", status: 404 }), "not_found");
+    const page = readFileSync("src/app/q/[token]/page.tsx", "utf8");
+    const middleware = readFileSync("src/middleware.ts", "utf8");
+    const resolver = readFileSync("src/app/api/short/resolve/route.ts", "utf8");
+    const ops = readFileSync("src/lib/short-link.ts", "utf8");
+    assert.match(page, /qrLandingFromHit/);
+    assert.match(page, /resolveQrToken/);
+    assert.equal(page.includes("notFound()"), true);
+    assert.match(middleware, /\/api\/short\/resolve/);
+    assert.equal(middleware.includes("resolveShortRequest"), false);
+    assert.match(resolver, /resolveShortRequest/);
+    const statusFn = ops.slice(ops.indexOf("export async function setShortLinkStatus"));
+    assert.equal(statusFn.slice(0, statusFn.indexOf("export async function listShortLinkSlugHistory")).includes("qrIdentity"), false);
+    const destinationFn = ops.slice(ops.indexOf("export async function setShortLinkDestination"));
+    assert.equal(destinationFn.slice(0, destinationFn.indexOf("export async function listShortLinkDestinationHistory")).includes("qrIdentity"), false);
   });
 
   it("serves and promotes only verified active domains (§20.24)", () => {
