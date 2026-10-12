@@ -298,11 +298,10 @@ A certificate that already exists for `influrios.com` only is expanded in place:
 sudo certbot --nginx --expand -d influrios.com -d www.influrios.com -d inflr.me -d www.inflr.me
 ```
 
-If the cert was **issued** but install failed (`matching server block`):
+If certbot saved the certificate and then reported `Could not automatically find a matching server block for inflr.me`, the live site still names only influrios.com. Add the short domain to that file and install the saved certificate. This leaves the existing HTTPS block in place:
 
 ```bash
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot install --cert-name influrios.com --nginx
+sudo bash deploy/scripts/install-short-link-cert.sh
 ```
 
 4. Set `NEXT_PUBLIC_APP_URL=https://influrios.com` in `.env` → `bash deploy/scripts/deploy.sh`  
@@ -326,6 +325,7 @@ sudo certbot install --cert-name influrios.com --nginx
 | Prisma can't connect | Confirm `DATABASE_URL` uses `127.0.0.1` and container is healthy |
 | `Cannot find package 'c12'` or `effect` during migrate | Pull main and rebuild the web image. The runner copies the Prisma CLI loader packages; an older image stops before it can migrate |
 | Admin save says a Server Action was not found | The open page is from an older image. Reload the page and enter the details again. `deploy.sh` keeps one `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` so the next image build does not change those ids |
+| Certbot: no matching server block for inflr.me | The certificate is already saved. `sudo bash deploy/scripts/install-short-link-cert.sh` adds `inflr.me` to the live `server_name` and runs `certbot install --cert-name influrios.com` |
 
 ---
 
