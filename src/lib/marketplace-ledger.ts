@@ -1329,6 +1329,8 @@ function presentFunding(row: {
   creatorSlug: string;
   title: string;
   currency: string;
+  collectionProviderCode: string;
+  payoutMethod: string;
   grossCents: number;
   feeCents: number;
   fxSnapshotJson: unknown;
