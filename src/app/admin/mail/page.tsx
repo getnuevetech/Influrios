@@ -55,11 +55,24 @@ export default async function AdminMailPage({ searchParams }: Props) {
       {params.removed ? <p className="text-sm font-semibold text-emerald-700">Template removed.</p> : null}
       {params.error ? <p className="text-sm font-semibold text-amber-800">{params.error}</p> : null}
 
-      <AdminCollapse title="SMTP settings" subtitle={settings?.enabled ? "Enabled" : "Disabled"} defaultOpen>
+      <AdminCollapse
+        title="SMTP settings"
+        subtitle={settings?.ready ? `Ready (${settings.readySource})` : settings?.enabled ? "Enabled — not ready" : "Disabled"}
+        defaultOpen
+      >
         {!settings ? (
           <p className="text-sm text-amber-800">Mail settings are unavailable.</p>
         ) : (
           <form action={actionSaveMailSettings} className="space-y-3">
+            {settings.ready ? (
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+                SMTP is ready to send via the {settings.readySource === "env" ? "environment" : "admin"} settings.
+              </p>
+            ) : (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                {settings.readyError || "SMTP is not ready. Nothing will be sent until this is fixed."}
+              </p>
+            )}
             <label className="block text-sm">
               <span className="font-semibold text-indigo">Host</span>
               <input name="host" defaultValue={settings.host} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
@@ -80,9 +93,9 @@ export default async function AdminMailPage({ searchParams }: Props) {
               <span className="font-semibold text-indigo">Password</span>
               <input name="password" type="password" autoComplete="new-password" placeholder={settings.hasSecret ? "Saved. Leave blank to keep it." : "Not saved"} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
             </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
+            <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
               <input name="enabled" type="checkbox" defaultChecked={settings.enabled} disabled={!canEdit} />
-              Enabled
+              Enabled (required for admin SMTP to send)
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input name="clearSecret" type="checkbox" disabled={!canEdit} />
@@ -90,8 +103,8 @@ export default async function AdminMailPage({ searchParams }: Props) {
             </label>
             <p className="text-xs text-muted">
               {settings.envConfigured
-                ? `Environment SMTP is also set (${settings.envHost}). That path sends when this row is off.`
-                : "No SMTP host is set in the environment. Mail stays unsent until this row is enabled or the environment is configured."}
+                ? `Environment SMTP is also set (${settings.envHost}). That path sends when this row is off or incomplete.`
+                : "No SMTP host is set in the environment. Turn on Enabled with host, from address, and password (when a username is set), then save."}
             </p>
             {canEdit ? (
               <button type="submit" className="btn-primary !py-2 text-sm">
@@ -106,8 +119,8 @@ export default async function AdminMailPage({ searchParams }: Props) {
         <form action={actionSendMailTest} className="space-y-3">
           <p className="text-sm text-muted">
             Sends the claim invitation template to one address. Preview labels fill the name, expiry, and profile, and
-            the link is this site. The message does not claim a profile. If SMTP is not configured, you will see an
-            error after submit — the button stays clickable when you have edit access.
+            the link is this site. The message does not claim a profile. SMTP must show Ready above — if Enabled is off
+            or the password is missing, the error after submit names the missing step.
           </p>
           <label className="block text-sm">
             <span className="font-semibold text-indigo">To</span>

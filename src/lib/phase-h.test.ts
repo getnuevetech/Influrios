@@ -72,11 +72,13 @@ describe("mail and jobs", () => {
     if (process.env.SMTP_HOST && process.env.SMTP_FROM) return;
     const { prisma } = await import("./db");
     const row = await prisma.mailSettings.findUnique({ where: { id: "default" } }).catch(() => null);
-    if (row?.enabled && row.secretCipher) return;
+    if (row?.enabled && row.host.trim() && row.fromAddress.trim() && (row.secretCipher || !row.username.trim())) {
+      return;
+    }
     const { sendInvitationTest } = await import("./mail");
     const result = await sendInvitationTest("qa@example.com", false);
     assert.equal(result.ok, false);
-    assert.match(result.message, /Nothing was sent/);
+    assert.match(result.message, /Enabled is off|No SMTP settings|password|Host and from|Nothing was sent|cannot be decrypted/);
   });
 });
 

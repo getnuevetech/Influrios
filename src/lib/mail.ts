@@ -17,6 +17,19 @@ export type MailMessage = {
   text: string;
 };
 
+export type MailSettingsRow = {
+  host: string;
+  port: number;
+  username: string;
+  fromAddress: string;
+  secretCipher: string | null;
+  enabled: boolean;
+};
+
+export type MailConfigResolution =
+  | { ok: true; config: MailConfig; source: "admin" | "env" }
+  | { ok: false; error: string; source: "none" };
+
 export function mailConfigFromEnv(env: {
   SMTP_HOST?: string;
   SMTP_FROM?: string;
@@ -43,26 +56,91 @@ export function mailConfigFromEnv(env: {
   };
 }
 
+/**
+ * Resolve admin SMTP into a sendable config, or a specific reason it cannot send.
+ * Username without a decryptable password is rejected. Password-less SMTP is allowed when username is blank.
+ */
+export function resolveMailConfigFromRow(
+  row: MailSettingsRow | null | undefined,
+  decrypt: (cipher: string) => string | null = decryptSecret,
+): MailConfigResolution {
+  if (!row) {
+    return { ok: false, error: "No SMTP settings are saved yet. Fill the form, check Enabled, and save.", source: "none" };
+  }
+  if (!row.enabled) {
+    return {
+      ok: false,
+      error: "SMTP settings are saved but Enabled is off. Check Enabled and save, then send the test again.",
+      source: "none",
+    };
+  }
+  const host = row.host.trim();
+  const from = row.fromAddress.trim();
+  const username = row.username.trim();
+  if (!host || !from) {
+    return {
+      ok: false,
+      error: "Host and from address are required while SMTP is enabled. Nothing was sent.",
+      source: "none",
+    };
+  }
+  let password = "";
+  if (row.secretCipher) {
+    const plain = decrypt(row.secretCipher);
+    if (!plain) {
+      return {
+        ok: false,
+        error:
+          "The saved SMTP password cannot be decrypted. Re-enter the password and save (AUTH_SECRET may have changed).",
+        source: "none",
+      };
+    }
+    password = plain;
+  } else if (username) {
+    return {
+      ok: false,
+      error: "SMTP username is set but no password is saved. Enter the password, check Enabled, and save.",
+      source: "none",
+    };
+  }
+  return {
+    ok: true,
+    source: "admin",
+    config: {
+      host,
+      port: row.port,
+      username,
+      password,
+      from,
+    },
+  };
+}
+
+export function resolveMailConfig(
+  row: MailSettingsRow | null | undefined,
+  envConfig: MailConfig | null = mailConfigFromEnv(),
+  decrypt: (cipher: string) => string | null = decryptSecret,
+): MailConfigResolution {
+  const fromRow = resolveMailConfigFromRow(row, decrypt);
+  if (fromRow.ok) return fromRow;
+  if (envConfig) return { ok: true, config: envConfig, source: "env" };
+  return fromRow;
+}
+
 /** Admin row when it is enabled and complete, otherwise the environment. */
 export async function loadMailConfig(): Promise<MailConfig | null> {
+  const resolved = await resolveMailConfigStatus();
+  return resolved.ok ? resolved.config : null;
+}
+
+export async function resolveMailConfigStatus(): Promise<MailConfigResolution> {
+  let row: MailSettingsRow | null = null;
   try {
-    const row = await prisma.mailSettings.findUnique({ where: { id: "default" } });
-    if (row?.enabled && row.host.trim() && row.fromAddress.trim() && row.secretCipher) {
-      const password = decryptSecret(row.secretCipher);
-      if (password) {
-        return {
-          host: row.host.trim(),
-          port: row.port,
-          username: row.username.trim(),
-          password,
-          from: row.fromAddress.trim(),
-        };
-      }
-    }
+    row = await prisma.mailSettings.findUnique({ where: { id: "default" } });
   } catch {
     /* table missing or unread — fall through to env */
   }
-  return mailConfigFromEnv();
+  return resolveMailConfig(row, mailConfigFromEnv());
 }
 
 export async function mailReady(): Promise<boolean> {
@@ -72,6 +150,7 @@ export async function mailReady(): Promise<boolean> {
 export async function mailSettingsView() {
   const row = await prisma.mailSettings.findUnique({ where: { id: "default" } });
   const env = mailConfigFromEnv();
+  const resolved = resolveMailConfig(row, env);
   return {
     host: row?.host ?? "",
     port: row?.port ?? 587,
@@ -81,6 +160,9 @@ export async function mailSettingsView() {
     hasSecret: Boolean(row?.secretCipher),
     envConfigured: Boolean(env),
     envHost: env?.host ?? "",
+    ready: resolved.ok,
+    readySource: resolved.ok ? resolved.source : "none",
+    readyError: resolved.ok ? "" : resolved.error,
   };
 }
 
@@ -95,13 +177,17 @@ export async function saveMailSettings(input: {
 }) {
   const host = input.host.trim().slice(0, 200);
   const fromAddress = input.fromAddress.trim().slice(0, 200);
+  const username = input.username.trim().slice(0, 200);
   const port = Number.isFinite(input.port) ? Math.min(65535, Math.max(1, Math.floor(input.port))) : 587;
   const existing = await prisma.mailSettings.findUnique({ where: { id: "default" } });
   let secretCipher = existing?.secretCipher ?? null;
   if (input.clearSecret) secretCipher = null;
   if (input.password.trim()) secretCipher = encryptSecret(input.password.trim());
-  if (input.enabled && (!host || !fromAddress || !secretCipher)) {
-    throw new Error("Host, from address, and a password are required before SMTP can be enabled.");
+  if (input.enabled && (!host || !fromAddress)) {
+    throw new Error("Host and from address are required before SMTP can be enabled.");
+  }
+  if (input.enabled && username && !secretCipher) {
+    throw new Error("Enter the SMTP password before enabling when a username is set.");
   }
   await prisma.mailSettings.upsert({
     where: { id: "default" },
@@ -109,7 +195,7 @@ export async function saveMailSettings(input: {
       id: "default",
       host,
       port,
-      username: input.username.trim().slice(0, 200),
+      username,
       fromAddress,
       secretCipher,
       enabled: input.enabled,
@@ -117,7 +203,7 @@ export async function saveMailSettings(input: {
     update: {
       host,
       port,
-      username: input.username.trim().slice(0, 200),
+      username,
       fromAddress,
       secretCipher,
       enabled: input.enabled,
@@ -289,9 +375,9 @@ export async function deliverMail(config: MailConfig, message: MailMessage): Pro
 }
 
 export async function sendMail(message: MailMessage): Promise<{ ok: true } | { ok: false; error: string }> {
-  const config = await loadMailConfig();
-  if (!config) return { ok: false, error: "SMTP is not configured. Nothing was sent." };
-  return deliverMail(config, message);
+  const resolved = await resolveMailConfigStatus();
+  if (!resolved.ok) return { ok: false, error: resolved.error };
+  return deliverMail(resolved.config, message);
 }
 
 /** Labels for an admin test send. The address is the only real recipient fact. */
@@ -317,8 +403,8 @@ export function previewMailVars(to?: string): Record<string, string> {
 
 /** Send the claim invitation template. No job is recorded when SMTP is not configured. */
 export async function sendInvitationTest(to: string, record = true): Promise<{ ok: boolean; message: string }> {
-  const config = await loadMailConfig();
-  if (!config) return { ok: false, message: "SMTP is not configured. Nothing was sent." };
+  const resolved = await resolveMailConfigStatus();
+  if (!resolved.ok) return { ok: false, message: resolved.error };
   const { DEFAULT_INVITATION_TEMPLATE, renderInvitationCopy } = await import("@/lib/invitations");
   let subject = DEFAULT_INVITATION_TEMPLATE.subject;
   let body = DEFAULT_INVITATION_TEMPLATE.body;
@@ -332,7 +418,7 @@ export async function sendInvitationTest(to: string, record = true): Promise<{ o
     /* use the built-in template */
   }
   const preview = previewMailVars(to);
-  const result = await deliverMail(config, {
+  const result = await deliverMail(resolved.config, {
     to,
     subject: renderInvitationCopy(subject, preview),
     text: renderInvitationCopy(body, preview),
