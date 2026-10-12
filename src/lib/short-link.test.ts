@@ -139,6 +139,7 @@ describe("short link rules", () => {
       const text = readFileSync(doc, "utf8");
       assert.match(text, /certbot --nginx -d influrios\.com -d www\.influrios\.com -d inflr\.me -d www\.inflr\.me/);
       assert.match(text, /certbot --nginx --expand -d influrios\.com -d www\.influrios\.com -d inflr\.me -d www\.inflr\.me/);
+      assert.match(text, /sudo bash deploy\/scripts\/install-short-link-cert\.sh/);
     }
   });
 

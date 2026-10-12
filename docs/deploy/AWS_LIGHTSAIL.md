@@ -190,12 +190,10 @@ sudo certbot --nginx --expand -d influrios.com -d www.influrios.com -d inflr.me 
 ```
 
 If certbot **saved** the certificate but failed with  
-`Could not automatically find a matching server block for influrios.com`:
+`Could not automatically find a matching server block for inflr.me`, the live `server_name` does not list inflr.me yet. This adds it and installs the saved certificate without replacing the HTTPS block:
 
 ```bash
-# Ensure server_name matches (step 2), then install the already-issued cert:
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot install --cert-name influrios.com --nginx
+sudo bash deploy/scripts/install-short-link-cert.sh
 ```
 
 5. Update `.env` `NEXT_PUBLIC_APP_URL` to `https://influrios.com` and redeploy:
