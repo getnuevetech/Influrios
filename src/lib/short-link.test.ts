@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { isShortLinkHost, normalizeShortHost } from "./short-link-hosts";
 import {
+  brandedFallbackHtml,
   hitWhenShortStoreUnavailable,
   isReservedSlug,
   normalizeSlug,
@@ -17,6 +18,7 @@ import {
   qrLandingFromHit,
   redirectCacheFor,
   safeRedirectTarget,
+  publicDirectoryOrigin,
   shortLinkRootMessage,
   slugChangeWarning,
   storeDestinationValue,
@@ -111,6 +113,20 @@ describe("short link rules", () => {
     assert.equal(normalizeShortHost("www.inflr.me."), "www.inflr.me");
     assert.equal(isShortLinkHost("inflr.me, inflr.me"), true);
     assert.equal(isShortLinkHost("influrios.com"), false);
+  });
+
+  it("sends the short-link directory link to influrios.com instead of a server IP", () => {
+    assert.equal(publicDirectoryOrigin("http://52.4.214.82"), "https://influrios.com");
+    assert.equal(publicDirectoryOrigin("https://influrios.com/"), "https://influrios.com");
+    assert.equal(publicDirectoryOrigin("https://www.influrios.com"), "https://www.influrios.com");
+    const message = shortLinkRootMessage("http://52.4.214.82");
+    assert.match(message, /https:\/\/influrios\.com/);
+    assert.equal(message.includes("52.4.214.82"), false);
+    const html = brandedFallbackHtml("Influrios short links", message, {
+      canonicalOrigin: "http://52.4.214.82",
+    });
+    assert.match(html, /href="https:\/\/influrios\.com"/);
+    assert.equal(html.includes("52.4.214.82"), false);
   });
 
   it("explains a known short host when the store is down and does not invent a slug", () => {

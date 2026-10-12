@@ -135,15 +135,14 @@ export function domainCanBePrimary(domain: { verified: boolean; active: boolean 
 }
 
 async function settingsRow() {
-  const canonical =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://influrios.com";
+  const canonical = publicDirectoryOrigin(process.env.NEXT_PUBLIC_APP_URL);
   let canonicalHost = "influrios.com";
   try {
     canonicalHost = new URL(canonical).hostname;
   } catch {
     /* keep default */
   }
-  return prisma.shortLinkSettings.upsert({
+  const row = await prisma.shortLinkSettings.upsert({
     where: { id: "default" },
     update: {},
     create: {
@@ -151,6 +150,12 @@ async function settingsRow() {
       canonicalOrigin: canonical,
       allowedHosts: ["influrios.com", "www.influrios.com", canonicalHost].filter((v, i, a) => a.indexOf(v) === i).join("\n"),
     },
+  });
+  const origin = publicDirectoryOrigin(row.canonicalOrigin);
+  if (row.canonicalOrigin.replace(/\/$/, "") === origin) return row;
+  return prisma.shortLinkSettings.update({
+    where: { id: "default" },
+    data: { canonicalOrigin: origin },
   });
 }
 
@@ -345,8 +350,32 @@ async function recordEvent(
     .catch(() => undefined);
 }
 
+export const PUBLIC_DIRECTORY_ORIGIN = "https://influrios.com";
+
+function isIpHostname(host: string) {
+  const name = host.replace(/^\[|\]$/g, "");
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(name)) return true;
+  return name.includes(":");
+}
+
+/** The public directory visitors should open. A raw IP or non-https origin stays off the page. */
+export function publicDirectoryOrigin(value: string | null | undefined): string {
+  const raw = (value ?? "").trim();
+  if (!raw) return PUBLIC_DIRECTORY_ORIGIN;
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== "https:" || !host.includes(".") || host === "localhost" || isIpHostname(host)) {
+      return PUBLIC_DIRECTORY_ORIGIN;
+    }
+    return url.origin;
+  } catch {
+    return PUBLIC_DIRECTORY_ORIGIN;
+  }
+}
+
 export function shortLinkRootMessage(canonicalOrigin?: string) {
-  const origin = (canonicalOrigin || process.env.NEXT_PUBLIC_APP_URL || "https://influrios.com").replace(/\/$/, "");
+  const origin = publicDirectoryOrigin(canonicalOrigin || process.env.NEXT_PUBLIC_APP_URL);
   return `Influencer profiles stay on Influrios. Open ${origin} to browse the directory.`;
 }
 
@@ -1174,11 +1203,7 @@ export function brandedFallbackHtml(
 ) {
   const safeTitle = escapeHtml(title);
   const safeMessage = escapeHtml(message);
-  const origin = (
-    options?.canonicalOrigin ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "https://influrios.com"
-  ).replace(/\/$/, "");
+  const origin = publicDirectoryOrigin(options?.canonicalOrigin || process.env.NEXT_PUBLIC_APP_URL);
   const safeOrigin = escapeHtml(origin);
   const ctaLabel = escapeHtml(options?.ctaLabel || "Open Influrios");
   const outcome = options?.outcome ? escapeHtml(options.outcome) : "";
