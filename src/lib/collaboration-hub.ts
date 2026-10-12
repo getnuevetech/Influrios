@@ -5,6 +5,7 @@
 import { prisma } from "@/lib/db";
 import {
   getWorkspace,
+  leadIsOpen,
   rankDirectoryCreatorsForBrief,
   type BusinessWorkspace,
   type CampaignBrief,
@@ -367,7 +368,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
   );
   const draftRequests = ws.briefs.filter((brief) => brief.status === "draft").length;
   const activeBriefs = ws.briefs.filter((brief) => brief.status === "active").length;
-  const pendingReview = ws.inquiries.filter((inquiry) => inquiry.status === "sent").length;
+  const pendingReview = ws.inquiries.filter((inquiry) => leadIsOpen(inquiry.status)).length;
   const active = collaborations.filter((row) => row.status === "accepted").length + activeBriefs;
   const completed = fundings.filter((row) => row.status === "completed").length;
 

@@ -32,7 +32,7 @@ export type Inquiry = {
   creatorSlug: string;
   briefId?: string;
   message: string;
-  status: "sent" | "replied" | "declined";
+  status: string;
   createdAt: string;
 };
 
@@ -60,7 +60,55 @@ export const PUBLIC_BUSINESS_WORKSPACE: BusinessWorkspace = {
 };
 
 const BRIEF_STATUSES = ["draft", "active", "closed"] as const;
-const INQUIRY_STATUSES = ["sent", "replied", "declined"] as const;
+
+export const LEAD_STATUSES = ["lead_created", "contacted", "qualified", "won", "lost", "dormant"] as const;
+
+const LEAD_MOVES: Record<string, readonly string[]> = {
+  lead_created: ["contacted", "lost", "dormant"],
+  sent: ["contacted", "lost", "dormant"],
+  contacted: ["qualified", "lost", "dormant"],
+  replied: ["qualified", "lost", "dormant"],
+  qualified: ["won", "lost", "dormant"],
+  dormant: ["contacted", "lost"],
+};
+
+/** The stored status. A blank or unknown value is not renamed. */
+export function storedInquiryStatus(value: string): string {
+  return value.trim();
+}
+
+export function leadLabel(status: string): string {
+  const labels: Record<string, string> = {
+    lead_created: "Lead created",
+    contacted: "Contacted",
+    qualified: "Qualified",
+    won: "Won",
+    lost: "Lost",
+    dormant: "Dormant",
+    sent: "Sent",
+    replied: "Replied",
+    declined: "Declined",
+  };
+  return labels[status] ?? status;
+}
+
+export function leadTransitions(status: string): string[] {
+  return [...(LEAD_MOVES[status.trim()] ?? [])];
+}
+
+export function leadIsOpen(status: string): boolean {
+  return ["lead_created", "sent", "contacted", "replied", "qualified"].includes(status.trim());
+}
+
+/** A lead moves only along the stored path. Won, lost, and declined stay where they are. */
+export function advanceLead(current: string, next: string): { ok: true; status: string } | { ok: false; error: string } {
+  const from = current.trim();
+  const to = next.trim();
+  if (!leadTransitions(from).includes(to)) {
+    return { ok: false, error: "That lead cannot move to that stage." };
+  }
+  return { ok: true, status: to };
+}
 
 function asPlan(value: string): string {
   const code = value.trim().toUpperCase();
@@ -84,8 +132,8 @@ function asBriefStatus(value: string): CampaignBrief["status"] {
   return BRIEF_STATUSES.includes(value as CampaignBrief["status"]) ? (value as CampaignBrief["status"]) : "active";
 }
 
-function asInquiryStatus(value: string): Inquiry["status"] {
-  return INQUIRY_STATUSES.includes(value as Inquiry["status"]) ? (value as Inquiry["status"]) : "sent";
+function asInquiryStatus(value: string): string {
+  return storedInquiryStatus(value);
 }
 
 function isUnique(error: unknown) {
@@ -452,7 +500,7 @@ export async function sendInquiry(
       briefId: brief,
       creatorSlug: input.creatorSlug,
       message,
-      status: "sent",
+      status: "lead_created",
     },
   });
   return {
@@ -473,17 +521,16 @@ export async function updateInquiryStatus(
   status: Inquiry["status"],
   workspaceId: string,
 ) {
-  if (!INQUIRY_STATUSES.includes(status)) {
-    return { ok: false as const, error: "Invalid inquiry status." };
-  }
   await readWorkspace(workspaceId);
   const existing = await prisma.businessInquiry.findFirst({
     where: { id, workspaceId },
   });
   if (!existing) return { ok: false as const, error: "Inquiry not found." };
+  const move = advanceLead(existing.status, status);
+  if (!move.ok) return move;
   const updated = await prisma.businessInquiry.update({
     where: { id },
-    data: { status },
+    data: { status: move.status },
   });
   return {
     ok: true as const,

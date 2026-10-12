@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db";
-import { listDirectoryCreators } from "@/lib/directory";
 
 export type IntroStatus =
   | "draft"
@@ -137,33 +136,8 @@ function mapIntro(row: IntroRow): ManagedIntro {
   };
 }
 
-let managedSeed: Promise<void> | null = null;
-
-async function seedManaged() {
-  const optCount = await prisma.creatorManagedOptIn.count();
-  if (optCount === 0) {
-    const creators = await listDirectoryCreators();
-    await prisma.creatorManagedOptIn.createMany({
-      data: creators.map((creator) => ({
-        creatorSlug: creator.slug,
-        openToManaged: creator.openToCollab && creator.planTier !== "STARTER",
-        targetingNotes: creator.offer ?? "",
-        niches: creator.specialties.slice(0, 3),
-      })),
-      skipDuplicates: true,
-    });
-  }
-
-}
-
 function ensureManaged() {
-  if (!managedSeed) {
-    managedSeed = seedManaged().catch((error) => {
-      managedSeed = null;
-      throw error;
-    });
-  }
-  return managedSeed;
+  return Promise.resolve();
 }
 
 export async function getManagedPromotionEnabled() {
@@ -210,6 +184,18 @@ export async function getManagedMatching(): Promise<ManagedMatchingStore> {
       niches: row.niches,
       updatedAt: row.updatedAt.toISOString(),
     })),
+  };
+}
+
+export async function getCreatorOptIn(creatorSlug: string): Promise<CreatorOptIn | null> {
+  const row = await prisma.creatorManagedOptIn.findUnique({ where: { creatorSlug } });
+  if (!row) return null;
+  return {
+    creatorSlug: row.creatorSlug,
+    openToManaged: row.openToManaged,
+    targetingNotes: row.targetingNotes,
+    niches: row.niches,
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 

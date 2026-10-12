@@ -971,10 +971,18 @@ model BusinessInquiry {
   brief       BusinessBrief?    @relation(fields: [briefId], references: [id], onDelete: SetNull)
   creatorSlug String
   message     String
-  status      String            @default("sent")
+  status      String            @default("lead_created")
   createdAt   DateTime          @default(now())
 
   @@index([workspaceId])
+}
+
+/// A labeled Discover placement. It is not part of organic search rank.
+model SponsoredPlacement {
+  id          String   @id @default(cuid())
+  creatorSlug String   @unique
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
 }
 
 model CreatorManagedOptIn {

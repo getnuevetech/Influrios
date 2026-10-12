@@ -19,6 +19,7 @@ import {
   actionSetCampaignLinkStatus,
   actionSetDynamicDestination,
 } from "@/app/dashboard/short-actions";
+import { actionSaveCreatorOptIn } from "@/app/dashboard/opt-in-actions";
 import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
 import { classifyProfileTopics } from "@/lib/ai-runtime";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
@@ -42,6 +43,7 @@ import { listReferralsForCreator, referralRewardLabel } from "@/lib/referrals";
 import { socialConnectState } from "@/lib/social-connect";
 import { PlaceFields } from "@/components/place-fields";
 import { getDirectory } from "@/lib/directory";
+import { getCreatorOptIn } from "@/lib/managed-matching";
 import { COMMERCIAL_MODE, CONTENT_STYLE, listDiscoveryFacets } from "@/lib/discovery-facets";
 import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 import { actionAddOwnEvidence, actionOpenOwnDispute, actionRequestOwnChangeOrder, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
@@ -68,6 +70,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
     if (!account) redirect("/login?next=/dashboard");
     redirect("/creator");
   }
+  const optIn = await getCreatorOptIn(draft.slug).catch(() => null);
   const [directory, identity, facetCatalog] = await Promise.all([
     getDirectory().catch(() => null),
     getInfluencerIdentity().catch(() => null),
@@ -506,6 +509,52 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
             </button>
           </form>
         )}
+      </section>
+
+      <section className="card-surface p-6">
+        <h2 className="font-display text-xl font-bold text-indigo">Managed introductions</h2>
+        <p className="mt-2 text-sm text-muted">
+          Opt in only for the categories you choose. A category that is not checked is not saved.
+        </p>
+        <form action={actionSaveCreatorOptIn} className="mt-4 space-y-3">
+          <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+            <input type="checkbox" name="openToManaged" defaultChecked={optIn?.openToManaged === true} className="accent-violet" />
+            Open to managed introductions
+          </label>
+          <fieldset>
+            <legend className="text-sm font-semibold text-indigo">Target categories</legend>
+            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+              {specialtyGroups.flatMap((group) =>
+                [group, ...group.children.filter((child) => child.active)].map((item) => (
+                  <li key={item.slug}>
+                    <label className="flex items-center gap-2 text-sm text-indigo">
+                      <input
+                        type="checkbox"
+                        name="niche"
+                        value={item.slug}
+                        defaultChecked={optIn?.niches.includes(item.slug) === true}
+                        className="accent-violet"
+                      />
+                      {item.name}
+                    </label>
+                  </li>
+                )),
+              )}
+            </ul>
+          </fieldset>
+          <label className="block text-sm font-semibold text-indigo">
+            Notes
+            <textarea
+              name="targetingNotes"
+              rows={3}
+              defaultValue={optIn?.targetingNotes ?? ""}
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+            />
+          </label>
+          <button type="submit" className="btn-primary !py-2 text-sm">
+            Save opt-in
+          </button>
+        </form>
       </section>
 
       <section className="card-surface p-6">

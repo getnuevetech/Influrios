@@ -203,6 +203,18 @@ export async function actionSendInquiry(formData: FormData) {
   redirect(`${HUB}?inquiry=1#applicants`);
 }
 
+export async function actionAdvanceLead(formData: FormData) {
+  const { ws } = await requireBusinessAccount();
+  const id = String(formData.get("inquiryId") ?? "");
+  const status = String(formData.get("status") ?? "");
+  const result = await updateInquiryStatus(id, status, ws.businessId);
+  revalidateHub();
+  if (!result.ok) {
+    redirect(`${HUB}?error=${encodeURIComponent(result.error)}#applicants`);
+  }
+  redirect(`${HUB}?lead=${encodeURIComponent(result.inquiry.status)}#applicants`);
+}
+
 export async function actionReplyInquiry(formData: FormData) {
   const { ws } = await requireBusinessAccount();
   const id = String(formData.get("inquiryId") ?? "");

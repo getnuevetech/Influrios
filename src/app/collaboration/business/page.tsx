@@ -10,6 +10,7 @@ import {
 import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { collabOsV1Enabled } from "@/lib/collab-os";
+import { leadLabel, leadTransitions } from "@/lib/business";
 import { loadBusinessHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
 import { BUSINESS_PLAN_PRICES, isBusinessPlanCode, type BusinessPlanCode } from "@/lib/business-entitlements";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
@@ -20,12 +21,11 @@ import { SPECIALTY_TAXONOMY, formatFollowers, publicStoredImage, specialtyLabel 
 import {
   actionAcceptBusinessTerms,
   actionAddShortlist,
-  actionDeclineInquiry,
+  actionAdvanceLead,
   actionInviteCreatorToRequest,
   actionPostBusinessRequest,
   actionRefreshCampaignSuggestions,
   actionRemoveShortlist,
-  actionReplyInquiry,
   actionSaveCampaignIntent,
   actionSendInquiry,
   actionSetPlan,
@@ -627,7 +627,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 })}
                 {hub.inquiries.map((inquiry) => {
                     const creator = bySlug.get(inquiry.creatorSlug);
-                    const open = inquiry.status === "sent";
+                    const nextStages = leadTransitions(inquiry.status);
                     return (
                       <li key={inquiry.id} className="flex gap-3 rounded-xl border border-[#E8EDF8] p-3">
                         <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#F4F7FF]">
@@ -636,24 +636,17 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-bold text-indigo">{creator?.displayName ?? inquiry.creatorSlug}</p>
                           <p className="line-clamp-2 text-xs text-muted">{inquiry.message}</p>
-                          <p className="mt-1 text-[10px] font-semibold uppercase text-violet">{inquiry.status}</p>
+                          <p className="mt-1 text-[10px] font-semibold uppercase text-violet">{leadLabel(inquiry.status)}</p>
                           <div className="mt-2 flex flex-wrap gap-2">
-                            {open ? (
-                              <>
-                                <form action={actionReplyInquiry}>
-                                  <input type="hidden" name="inquiryId" value={inquiry.id} />
-                                  <button type="submit" className="rounded-lg bg-violet px-2.5 py-1 text-[11px] font-bold text-white">
-                                    Mark replied
-                                  </button>
-                                </form>
-                                <form action={actionDeclineInquiry}>
-                                  <input type="hidden" name="inquiryId" value={inquiry.id} />
-                                  <button type="submit" className="rounded-lg border border-border px-2.5 py-1 text-[11px] font-semibold text-muted hover:text-indigo">
-                                    Decline
-                                  </button>
-                                </form>
-                              </>
-                            ) : null}
+                            {nextStages.map((status) => (
+                              <form key={status} action={actionAdvanceLead}>
+                                <input type="hidden" name="inquiryId" value={inquiry.id} />
+                                <input type="hidden" name="status" value={status} />
+                                <button type="submit" className="rounded-lg bg-violet px-2.5 py-1 text-[11px] font-bold text-white">
+                                  {leadLabel(status)}
+                                </button>
+                              </form>
+                            ))}
                             <form action={actionShortlistFromInquiry}>
                               <input type="hidden" name="creatorSlug" value={inquiry.creatorSlug} />
                               <button type="submit" className="rounded-lg border border-violet/30 px-2.5 py-1 text-[11px] font-bold text-violet">
