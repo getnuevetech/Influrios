@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   HTTP_SMOKE_ROUTES,
@@ -44,6 +46,24 @@ describe("L2 HTTP smoke catalog", () => {
     assert.equal(results[0]?.ok, true);
     assert.equal(results[1]?.ok, false);
     assert.match(results[1]?.error || "", /status/);
+  });
+});
+
+describe("staging evidence probe", () => {
+  it("runs with node and does not call tsx", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
+    assert.equal(pkg.scripts["staging:evidence-probe"], "node scripts/staging-evidence-probe.mjs");
+    const probe = readFileSync("scripts/staging-evidence-probe.mjs", "utf8");
+    assert.equal(probe.includes("tsx"), false);
+    const result = spawnSync("node", ["scripts/staging-evidence-probe.mjs", "http://127.0.0.1:9"], {
+      encoding: "utf8",
+      timeout: 15000,
+    });
+    assert.equal(result.error, undefined);
+    assert.match(result.stdout, /Phase M staging evidence probe/);
+    assert.match(result.stdout, /operator-only/);
+    assert.match(result.stdout, /does not mark Phase M complete/);
+    assert.equal(result.status, 1);
   });
 });
 

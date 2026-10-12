@@ -2,27 +2,21 @@
  * Phase M — remote staging evidence probe.
  * Hits a public APP URL and prints markdown-friendly rows for the runbook.
  * Does NOT call SMTP, Stripe Dashboard, or social OAuth (those need operator credentials).
+ * Runs with node on the server. Dev dependencies are not required.
  *
  * Usage:
- *   STAGING_URL=https://staging.example.com npx tsx scripts/staging-evidence-probe.ts
- *   npx tsx scripts/staging-evidence-probe.ts http://52.4.214.82
+ *   node scripts/staging-evidence-probe.mjs https://influrios.com
+ *   npm run staging:evidence-probe -- https://influrios.com
  */
-type Check = {
-  id: string;
-  label: string;
-  ok: boolean | null;
-  detail: string;
-  operatorOnly?: boolean;
-};
 
-function argUrl(): string {
+function argUrl() {
   const fromArg = process.argv[2]?.trim();
   const fromEnv = (process.env.STAGING_URL || process.env.NEXT_PUBLIC_APP_URL || "").trim();
   const raw = fromArg || fromEnv || "http://127.0.0.1:3000";
   return raw.replace(/\/$/, "");
 }
 
-async function fetchText(url: string, init?: RequestInit): Promise<{ status: number; body: string; finalUrl: string }> {
+async function fetchText(url, init) {
   const res = await fetch(url, {
     redirect: "follow",
     headers: { "user-agent": "influrios-staging-evidence-probe/1.0" },
@@ -32,12 +26,12 @@ async function fetchText(url: string, init?: RequestInit): Promise<{ status: num
   return { status: res.status, body, finalUrl: res.url };
 }
 
-function includesAny(hay: string, needles: string[]) {
+function includesAny(hay, needles) {
   const lower = hay.toLowerCase();
   return needles.some((n) => lower.includes(n.toLowerCase()));
 }
 
-function isRawIpOrigin(origin: string): boolean {
+function isRawIpOrigin(origin) {
   try {
     const host = new URL(origin).hostname;
     return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host);
@@ -48,7 +42,7 @@ function isRawIpOrigin(origin: string): boolean {
 
 async function main() {
   const app = argUrl();
-  const checks: Check[] = [];
+  const checks = [];
   const now = new Date().toISOString();
 
   console.log("Influrios Phase M staging evidence probe\n");
@@ -72,18 +66,12 @@ async function main() {
       detail: httpsOk ? "https origin" : "http only — set HTTPS on staging before production cutover",
     });
   }
-  // Health
+
   try {
     const health = await fetchText(`${app}/api/health`);
-    type HealthJson = {
-      ok?: boolean;
-      status?: string;
-      checks?: { db?: { ok?: boolean } };
-      secrets?: { authConfigured?: boolean };
-    };
-    let parsed: HealthJson | null = null;
+    let parsed = null;
     try {
-      parsed = JSON.parse(health.body) as HealthJson;
+      parsed = JSON.parse(health.body);
     } catch {
       parsed = null;
     }
@@ -115,7 +103,6 @@ async function main() {
     });
   }
 
-  // Homepage
   try {
     const home = await fetchText(`${app}/`);
     const okStatus = home.status === 200;
@@ -138,7 +125,6 @@ async function main() {
     });
   }
 
-  // Guest collaboration CTAs (regression for logged-in-looking guests)
   try {
     const collab = await fetchText(`${app}/collaboration`);
     const joinCta =
@@ -150,7 +136,6 @@ async function main() {
       includesAny(collab.body, ["Upgrade from STARTER to request matches"]) ||
       /Upgrade from[\s\S]{0,40}STARTER[\s\S]{0,40}to request matches/i.test(collab.body);
     const legacyProposals = /\/collaboration\/records\?from=/.test(collab.body);
-    // Guest OK when join/request CTA is present and legacy demo-viewer CTAs are absent.
     const guestOk = joinCta && !legacyUpgrade && !legacyProposals;
     checks.push({
       id: "collab_guest",
@@ -169,7 +154,6 @@ async function main() {
     });
   }
 
-  // Admin login surface reachable (does not authenticate)
   try {
     const admin = await fetchText(`${app}/admin/login`);
     checks.push({
@@ -194,7 +178,6 @@ async function main() {
     detail: "Twilio is not the provider. Nothing is sent.",
   });
 
-  // Operator-only reminders (always null)
   for (const row of [
     ["smtp", "SMTP invite + verify + job retry"],
     ["stripe", "Stripe sandbox checkout → webhook → plan + duplicate skip"],
@@ -206,7 +189,7 @@ async function main() {
     ["esign", "DocuSign envelope completed once"],
     ["regional", "Flutterwave or M-Pesa charge paid only by webhook"],
     ["mentorship", "Paid mentorship Checkout id with no CollaborationFunding row"],
-  ] as const) {
+  ]) {
     checks.push({
       id: row[0],
       label: row[1],

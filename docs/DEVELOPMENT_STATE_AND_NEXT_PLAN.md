@@ -235,7 +235,7 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 5. Turn `demo_checkout` off on staging once Stripe path is green.  
 6. Marketplace: one jurisdiction + provider webhook fixture through hold → release.
 
-**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/staging-evidence-probe.ts`, `scripts/marketplace-webhook-fixture.ts`.
+**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/staging-evidence-probe.mjs`, `scripts/marketplace-webhook-fixture.ts`.
 
 **Exit:** staging operator fills the green evidence tables in that runbook; production switches match the policy table. **Not complete until evidence is signed — CI alone does not finish Phase M.** Auto-probe covers health / homepage / guest collab CTAs only.
 

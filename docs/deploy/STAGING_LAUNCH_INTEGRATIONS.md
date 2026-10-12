@@ -27,8 +27,8 @@ npx tsx scripts/staging-checklist.ts
 Remote probe (hits a live staging URL; fills auto-checkable rows only):
 
 ```bash
-STAGING_URL=https://staging.example.com npm run staging:evidence-probe
-# or: npx tsx scripts/staging-evidence-probe.ts http://STATIC_IP
+STAGING_URL=https://influrios.com npm run staging:evidence-probe
+# or: node scripts/staging-evidence-probe.mjs https://influrios.com
 ```
 
 The probe verifies `/api/health`, homepage sections, guest `/collaboration` CTAs, and admin login reachability. It **never** marks SMTP / Stripe / social / marketplace green — those stay operator evidence below.
