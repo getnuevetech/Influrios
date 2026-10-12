@@ -7,7 +7,7 @@ import {
 import { getDirectoryCreator } from "@/lib/directory";
 import { isShortLinkHost } from "@/lib/short-link-hosts";
 import { withReferralParam } from "@/lib/referral-cookie";
-import { brandedFallbackHtml, resolveShortRequest } from "@/lib/short-link";
+import { brandedFallbackHtml, publicDirectoryOrigin, resolveShortRequest } from "@/lib/short-link";
 import { recordResolverMetric } from "@/lib/short-link-resolver-metrics";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     referrer: request.headers.get("referer"),
   };
   const started = Date.now();
-  const canonicalOrigin = (process.env.NEXT_PUBLIC_APP_URL || "https://influrios.com").replace(/\/$/, "");
+  const canonicalOrigin = publicDirectoryOrigin(process.env.NEXT_PUBLIC_APP_URL);
   try {
     const hit = await resolveShortRequest(host, path, hints);
     const outcome = await recordResolverMetric({

@@ -32,7 +32,7 @@ PM2 was an earlier host process manager; it caused incomplete builds / missing T
 ```bash
 bash deploy/scripts/setup-lightsail.sh   # Docker + Nginx
 newgrp docker
-cp .env.example .env                     # POSTGRES_PASSWORD + NEXT_PUBLIC_APP_URL=http://YOUR_IP
+cp .env.example .env                     # POSTGRES_PASSWORD + NEXT_PUBLIC_APP_URL=https://influrios.com
 bash deploy/scripts/deploy.sh            # docker compose up --build
 ```
 

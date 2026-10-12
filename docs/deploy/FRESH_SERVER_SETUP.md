@@ -234,7 +234,7 @@ nano .env
 ```
 
 ```env
-NEXT_PUBLIC_APP_URL=http://STATIC_IP
+NEXT_PUBLIC_APP_URL=https://influrios.com
 POSTGRES_USER=influrios
 POSTGRES_PASSWORD=pick-a-strong-password
 POSTGRES_DB=influrios
