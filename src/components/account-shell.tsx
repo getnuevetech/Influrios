@@ -37,7 +37,7 @@ export async function MemberFrame({
   const path = (await headers()).get("x-pathname") ?? "";
   const account = await getAccountSession().catch(() => null);
   let name = account?.name || account?.email || "Account";
-  let role = audience === "business" ? "Business workspace" : "Influencer";
+  const role = audience === "business" ? "Business workspace" : "Influencer";
   if (audience === "business" && account) {
     const workspace = await getWorkspace(account.id).catch(() => null);
     if (workspace?.name) name = workspace.name;
