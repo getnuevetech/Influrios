@@ -168,19 +168,25 @@ Cron example (daily 03:15 UTC):
 
 ## D. Domain + HTTPS
 
-1. DNS: create **A** records for `@` and `www` → Lightsail static IP  
-2. Edit Nginx `server_name` in `/etc/nginx/sites-available/influrios` to the real hostnames (must match certbot `-d` values):
+1. DNS: create **A** records for `influrios.com`, `www`, `inflr.me`, and `www.inflr.me` → Lightsail static IP  
+2. Copy `deploy/nginx/influrios.conf` to `/etc/nginx/sites-available/influrios`. The `server_name` line must match the certbot `-d` values:
 
 ```nginx
-server_name influrios.com www.influrios.com;
+server_name influrios.com www.influrios.com inflr.me www.inflr.me;
 ```
 
 3. `sudo nginx -t && sudo systemctl reload nginx`  
-4. Install certbot:
+4. Install certbot. One certificate covers the directory and the short domain:
 
 ```bash
 sudo apt-get install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d influrios.com -d www.influrios.com
+sudo certbot --nginx -d influrios.com -d www.influrios.com -d inflr.me -d www.inflr.me
+```
+
+A certificate that already exists for `influrios.com` only:
+
+```bash
+sudo certbot --nginx --expand -d influrios.com -d www.influrios.com -d inflr.me -d www.inflr.me
 ```
 
 If certbot **saved** the certificate but failed with  
@@ -204,6 +210,7 @@ curl -fsS https://influrios.com/api/health
 ```bash
 curl -I https://influrios.com
 curl -I http://influrios.com   # should redirect to https after certbot
+curl -fsSI https://inflr.me/
 ```
 
 Stripe, social callbacks, and marketplace webhooks must use the same https origin.
