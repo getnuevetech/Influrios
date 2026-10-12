@@ -69,6 +69,9 @@ describe("creator OG / social sharing (W5 / INFLR.me §11)", () => {
     assert.match(html, /rel="canonical" href="https:\/\/influrios\.com\/creators\/sofia-martinez"/);
     assert.match(html, /og:site_name" content="Influrios"/);
     assert.match(html, /Sofia Martinez/);
+    assert.match(html, /Continue to profile/);
+    assert.match(html, /href="https:\/\/influrios\.com\/c\/sofia-martinez"/);
+    assert.equal(html.includes("Georgia"), false);
     assert.doesNotMatch(html, /inflr\.me\/sofia/);
   });
 
