@@ -31,6 +31,7 @@ import {
   specialtyLabel,
 } from "@/lib/seed-data";
 import { directoryLabels, getDirectory, getDirectoryCreator, profilePlace, recordDirectoryEvent } from "@/lib/directory";
+import { metricFreshnessLabel, profileNeedLines, profileOfferLines, visibleFollowerCount } from "@/lib/profile-notes";
 import { creatorShareMetadata } from "@/lib/creator-og";
 import { demoCreatorBySlug, demoCreators } from "@/lib/presentation-demo";
 
@@ -97,6 +98,8 @@ export default async function CreatorProfilePage({ params }: Props) {
   const place = profilePlace(creator.locationCity, creator.locationCountry);
   const languages = creator.languages.map((language) => language.trim()).filter(Boolean);
   const bio = creator.bio.trim();
+  const offerLines = profileOfferLines(creator);
+  const needLines = profileNeedLines(creator);
   const partnership = directoryLabels(creator.openToCollab).statusLabel;
   const scriptLines = (
     creator.bannerScriptTags ??
@@ -311,11 +314,14 @@ export default async function CreatorProfilePage({ params }: Props) {
                       <SocialIcon platform={s.platform} size={14} className="text-indigo" />
                       <span className="leading-tight">
                         <span className="block text-[12px] font-bold text-indigo">
-                          {s.followers > 0 ? formatFollowers(s.followers) : "—"}
+                          {visibleFollowerCount(s) ?? "—"}
                         </span>
                         <span className="block text-[9px] font-medium text-muted">
                           {socialMetricLabel(s.platform)}
                         </span>
+                        {metricFreshnessLabel(s) ? (
+                          <span className="block text-[9px] font-medium text-muted">{metricFreshnessLabel(s)}</span>
+                        ) : null}
                       </span>
                     </a>
                   ))}
@@ -534,6 +540,33 @@ export default async function CreatorProfilePage({ params }: Props) {
               </ul>
             </div>
           </section>
+
+          {offerLines.length ? (
+            <section className="rounded-[1.2rem] border border-[#E6ECFF] bg-white p-4 sm:p-5">
+              <h3 className="font-display text-[1rem] font-bold text-indigo">I offer</h3>
+              <ul className="mt-2 space-y-3">
+                {offerLines.map((line) => (
+                  <li key={line.summary}>
+                    <p className="text-[12px] font-semibold text-indigo">{line.summary}</p>
+                    {line.details ? <p className="mt-1 text-[12px] leading-relaxed text-muted">{line.details}</p> : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {needLines.length ? (
+            <section className="rounded-[1.2rem] border border-[#E6ECFF] bg-white p-4 sm:p-5">
+              <h3 className="font-display text-[1rem] font-bold text-indigo">I need</h3>
+              <ul className="mt-2 space-y-3">
+                {needLines.map((line) => (
+                  <li key={line.summary}>
+                    <p className="text-[12px] font-semibold text-indigo">{line.summary}</p>
+                    {line.details ? <p className="mt-1 text-[12px] leading-relaxed text-muted">{line.details}</p> : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       </div>
 

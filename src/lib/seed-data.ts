@@ -5,6 +5,10 @@ export type SeedSocial = {
   handle: string;
   url: string;
   followers: number;
+  /** Stored account source. A missing source is not a verification. */
+  source?: string;
+  /** Stored sync time. A missing time is not a sync. */
+  refreshedAt?: string | null;
 };
 
 export type SeedContent = {
@@ -43,7 +47,11 @@ export type SeedCreator = {
   socials: SeedSocial[];
   openToCollab: boolean;
   offer?: string;
+  offerDetails?: string;
+  offers?: { summary: string; details: string }[];
   need?: string;
+  needDetails?: string;
+  needs?: { summary: string; details: string }[];
   age?: number;
   email?: string;
   verified?: boolean;
