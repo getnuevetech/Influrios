@@ -98,7 +98,7 @@ export function frozenFeeRuleHeading(ruleName: string | null, ruleVersion: numbe
 /** Pure — extracts frozen fee rule fields from feeSnapshotJson. */
 export function feeRuleFromSnapshot(
   snapshot: unknown,
-  serviceLevel: string,
+  _serviceLevel: string,
   feeCents: number,
 ): FundingFeeRuleView {
   const row =
@@ -120,7 +120,7 @@ export function feeRuleFromSnapshot(
     ruleId: typeof row.ruleId === "string" ? row.ruleId : null,
     ruleName: ruleName || null,
     ruleVersion,
-    feeType: feeTypeFromFundingSnapshot(snapshot, serviceLevel),
+    feeType: feeTypeFromFundingSnapshot(snapshot),
     method: typeof row.method === "string" ? row.method : null,
     percentBps,
     fixedCents,

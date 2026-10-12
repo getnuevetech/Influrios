@@ -291,16 +291,13 @@ export function summarizeLedger(
     .sort((a, b) => a.currency.localeCompare(b.currency));
 }
 
-/** Read feeType from a frozen funding snapshot (legacy rows default to collaboration). */
-export function feeTypeFromFundingSnapshot(snapshot: unknown, serviceLevel?: string | null): string {
+/** Read the fee type stored on a funding snapshot. A blank type stays blank. */
+export function feeTypeFromFundingSnapshot(snapshot: unknown): string {
   if (snapshot && typeof snapshot === "object" && "feeType" in snapshot) {
     const raw = (snapshot as { feeType?: unknown }).feeType;
     if (typeof raw === "string" && raw.trim()) return raw.trim();
   }
-  if (serviceLevel === "discovery") return "platform_service";
-  if (serviceLevel === "managed_intro") return "managed_intro";
-  if (serviceLevel === "managed_campaign") return "managed_campaign";
-  return "collaboration";
+  return "";
 }
 
 export function reconcileLedger(entries: LedgerMovement[], grossCents: number) {

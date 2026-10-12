@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
-import { defaultFeeTypeForServiceLevel, resolveFee } from "@/lib/collaboration-fees";
+import { resolveFee } from "@/lib/collaboration-fees";
 import {
   capabilitiesFromJurisdictionRow,
   enteredLegalReviewStatus,
@@ -762,7 +762,7 @@ export async function requestPrefund(input: {
             percentBps: quote?.rule?.percentBps ?? null,
             fixedCents: quote?.rule?.fixedCents ?? null,
             feeCents,
-            feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(serviceLevel),
+            feeType: quote?.rule?.feeType ?? "",
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: new Date().toISOString(),
             ...(input.teamProposalId ? { teamProposalId: input.teamProposalId } : {}),
@@ -947,7 +947,7 @@ export async function sweepDueRecurrences(now = new Date()) {
             percentBps: quote?.rule?.percentBps ?? null,
             fixedCents: quote?.rule?.fixedCents ?? null,
             feeCents,
-            feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(row.serviceLevel),
+            feeType: quote?.rule?.feeType ?? "",
             explanation: quote?.explanation ?? "Fee rules were unavailable.",
             capturedAt: now.toISOString(),
           },
@@ -1114,7 +1114,7 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     percentBps: quote?.rule?.percentBps ?? null,
     fixedCents: quote?.rule?.fixedCents ?? null,
     feeCents,
-    feeType: quote?.rule?.feeType ?? defaultFeeTypeForServiceLevel(funding.serviceLevel),
+    feeType: quote?.rule?.feeType ?? "",
     explanation: quote?.explanation ?? "Fee rules were unavailable.",
     capturedAt: new Date().toISOString(),
   };
@@ -1171,7 +1171,7 @@ export async function ledgerMonthlyReport() {
       kind: true,
       amountCents: true,
       createdAt: true,
-      funding: { select: { currency: true, serviceLevel: true, feeSnapshotJson: true } },
+      funding: { select: { currency: true, feeSnapshotJson: true } },
     },
     orderBy: { createdAt: "desc" },
     take: 5000,
@@ -1182,7 +1182,7 @@ export async function ledgerMonthlyReport() {
       kind: entry.kind,
       amountCents: entry.amountCents,
       createdAt: entry.createdAt,
-      feeType: feeTypeFromFundingSnapshot(entry.funding.feeSnapshotJson, entry.funding.serviceLevel),
+      feeType: feeTypeFromFundingSnapshot(entry.funding.feeSnapshotJson),
     })),
   );
 }
@@ -1192,7 +1192,6 @@ export async function ledgerTotals() {
     select: {
       currency: true,
       grossCents: true,
-      serviceLevel: true,
       feeSnapshotJson: true,
       entries: { select: { kind: true, amountCents: true } },
     },
@@ -1201,7 +1200,7 @@ export async function ledgerTotals() {
     fundings.map((funding) => ({
       currency: funding.currency,
       grossCents: funding.grossCents,
-      feeType: feeTypeFromFundingSnapshot(funding.feeSnapshotJson, funding.serviceLevel),
+      feeType: feeTypeFromFundingSnapshot(funding.feeSnapshotJson),
       entries: funding.entries,
     })),
   );

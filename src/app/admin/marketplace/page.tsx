@@ -1447,7 +1447,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         {fundings.length === 0 ? <p className="text-sm text-muted">No prefunds yet.</p> : null}
         {fundings.map((funding) => {
           const shares = readShareSnapshot(funding.shareSnapshotJson);
-          const feeType = feeTypeFromFundingSnapshot(funding.feeSnapshotJson, funding.serviceLevel);
+          const feeType = feeTypeFromFundingSnapshot(funding.feeSnapshotJson);
           const feeTypeLabel = FEE_TYPE_LABELS[feeType as FeeType] ?? feeType;
           return (
           <article key={funding.id} className="card-surface p-4 text-sm">
