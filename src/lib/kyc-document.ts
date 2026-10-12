@@ -1,7 +1,9 @@
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { gatewayIdentitySessionAllowed } from "@/lib/corridor-checkout";
 import { prisma } from "@/lib/db";
+import { openStripeIdentitySession } from "@/lib/stripe-admin";
 
 const KYC_DIR = path.join(process.cwd(), "data", "kyc");
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -167,6 +169,8 @@ export async function submitDocumentKyc(input: {
       countryCode: input.countryCode,
       kycModel: "government_id",
       gatewayProviderId: null,
+      gatewaySessionId: "",
+      gatewaySessionUrl: "",
       status: "submitted",
       detailsJson: details,
     },
@@ -175,6 +179,8 @@ export async function submitDocumentKyc(input: {
       creatorId: input.creatorId,
       countryCode: input.countryCode,
       kycModel: "government_id",
+      gatewaySessionId: "",
+      gatewaySessionUrl: "",
       status: "submitted",
       detailsJson: details,
     },
@@ -202,6 +208,7 @@ export async function startGatewayKyc(input: {
   slug: string;
   countryCode: string;
   creatorId: string | null;
+  returnUrl: string;
 }) {
   const settings = await loadKycSettings();
   const providerId = settings?.gatewayProviderId ?? "";
@@ -209,6 +216,18 @@ export async function startGatewayKyc(input: {
     ? await prisma.integrationProvider.findFirst({ where: { id: providerId, kind: "payment" } })
     : null;
   if (!provider) throw new Error("A KYC gateway has not been selected.");
+  if (!gatewayIdentitySessionAllowed(provider)) {
+    throw new Error("That KYC gateway is not enabled. No identity session was opened.");
+  }
+  if (provider.code !== "stripe") {
+    throw new Error(`${provider.name} has no identity session. Nothing was opened.`);
+  }
+  const opened = await openStripeIdentitySession({
+    slug: input.slug,
+    countryCode: input.countryCode,
+    returnUrl: input.returnUrl,
+  });
+  if (!opened.ok) throw new Error(opened.error);
   const submission = await prisma.creatorKycSubmission.upsert({
     where: { creatorSlug: input.slug },
     update: {
@@ -216,6 +235,8 @@ export async function startGatewayKyc(input: {
       countryCode: input.countryCode,
       kycModel: "gateway",
       gatewayProviderId: provider.id,
+      gatewaySessionId: opened.id,
+      gatewaySessionUrl: opened.url,
       status: "pending_gateway",
       detailsJson: {},
     },
@@ -225,6 +246,8 @@ export async function startGatewayKyc(input: {
       countryCode: input.countryCode,
       kycModel: "gateway",
       gatewayProviderId: provider.id,
+      gatewaySessionId: opened.id,
+      gatewaySessionUrl: opened.url,
       status: "pending_gateway",
       detailsJson: {},
     },

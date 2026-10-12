@@ -430,6 +430,9 @@ model CreatorKycSubmission {
   /// gateway | government_id
   kycModel          String
   gatewayProviderId String?
+  /// Identity session opened with the selected gateway. Blank until that provider returns one.
+  gatewaySessionId  String   @default("")
+  gatewaySessionUrl String   @default("")
   /// submitted | verified | rejected | pending_gateway
   status            String   @default("submitted")
   detailsJson       Json     @default("{}")
@@ -1761,6 +1764,10 @@ model CollaborationFunding {
   creatorSlug      String
   title            String
   currency         String   @default("USD")
+  /// Collection route copied from the country corridor. Blank when that corridor has none.
+  collectionProviderCode String @default("")
+  /// Payout method chosen from the country corridor. Blank until one is chosen.
+  payoutMethod     String   @default("")
   grossCents       Int
   feeCents         Int      @default(0)
   feeSnapshotJson  Json

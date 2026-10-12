@@ -104,8 +104,9 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           cannot confirm a hold. Cancelling before confirmation posts no ledger entry. Dispute decisions do not
           move the money the provider is holding.
           Attribution is copied onto the prefund and is not rewritten when the source list changes. Staged or recurring
-          prefunds stay unfunded until each tranche has its own confirmation. Gross is entered in USD. Another currency
-          uses the Wise user rate for the saved profile. Revenue-share lines are written when the provider releases a
+          prefunds stay unfunded until each tranche has its own confirmation. Gross is entered in USD. A new prefund
+          uses the currency saved on that country corridor when one is saved, and otherwise the jurisdiction currency.
+          A blank currency is not saved as USD. Revenue-share lines are written when the provider releases a
           milestone. They are not cash.
         </p>
       </div>

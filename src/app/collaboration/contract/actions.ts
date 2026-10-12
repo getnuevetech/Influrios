@@ -421,6 +421,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     collaborationId: linkedCollaborationId,
     teamProposalId: teamProposalId || null,
     creatorShares: teamShares,
+    payoutMethod: String(formData.get("payoutMethod") ?? ""),
   });
   if (!result.ok) {
     qs.set("step", "funding");

@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkoutUsesStoredCorridor } from "@/lib/corridor-checkout";
 import { getDirectoryCreator } from "@/lib/directory";
 import { openFundingCollection } from "@/lib/provider-collection";
-import { resolvePaymentGatewayForCountry } from "@/lib/providers";
 import { prisma } from "@/lib/db";
 import {
   approveFundingMilestone,
@@ -47,6 +47,7 @@ export async function actionCreateDeal(formData: FormData) {
     scheduleKind: String(formData.get("scheduleKind") ?? "once"),
     stageCount: Number(formData.get("scheduleCount") ?? 0),
     occurrenceCount: Number(formData.get("scheduleCount") ?? 0),
+    payoutMethod: String(formData.get("payoutMethod") ?? ""),
   });
   if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");
@@ -63,10 +64,11 @@ export async function actionOpenFundingCheckout(formData: FormData) {
   if (!funding || funding.status !== "awaiting_provider") {
     redirect("/payments?error=This%20funding%20is%20not%20waiting%20for%20a%20provider.");
   }
-  const route = await resolvePaymentGatewayForCountry(funding.jurisdictionCode);
+  const route = checkoutUsesStoredCorridor(funding);
+  if (!route.ok) redirect(`/payments?error=${encodeURIComponent(route.error)}`);
   const origin = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const opened = await openFundingCollection({
-    providerCode: route.providerCode ?? "",
+    providerCode: route.collectionProviderCode,
     fundingId: funding.id,
     amountCents: funding.grossCents,
     currency: funding.currency,
@@ -176,6 +178,7 @@ export async function actionConvertAmbassador(formData: FormData) {
     occurrenceCount: Number(formData.get("occurrenceCount") ?? 2),
     repeatOfId: String(formData.get("fundingId") ?? ""),
     workspaceId: String(formData.get("workspaceId") ?? "") || null,
+    payoutMethod: String(formData.get("payoutMethod") ?? ""),
   });
   if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");

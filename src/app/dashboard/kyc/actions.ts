@@ -56,8 +56,14 @@ export async function actionStartGatewayKyc() {
   if (kyc?.code !== "gateway") {
     redirect("/dashboard/kyc?error=Your%20country%20uses%20a%20different%20KYC%20type.");
   }
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   try {
-    await startGatewayKyc({ slug: draft.slug, countryCode, creatorId: creator?.id ?? null });
+    await startGatewayKyc({
+      slug: draft.slug,
+      countryCode,
+      creatorId: creator?.id ?? null,
+      returnUrl: `${origin}/dashboard/kyc`,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not start gateway KYC.";
     redirect(`/dashboard/kyc?error=${encodeURIComponent(message)}`);
