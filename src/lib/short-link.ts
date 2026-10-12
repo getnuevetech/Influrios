@@ -12,6 +12,7 @@ import {
   type ShortLinkPrivacyHints,
 } from "@/lib/short-link-analytics";
 import { canAddCampaignLink, normalizeCampaignCode, parseShortPath, scheduleStartsInFuture } from "@/lib/short-link-phase4";
+import { shortLinkRootHtml } from "@/lib/short-link-root-html";
 
 export type { ShortLinkPrivacyHints } from "@/lib/short-link-analytics";
 
@@ -1201,9 +1202,15 @@ export function brandedFallbackHtml(
   message: string,
   options?: { canonicalOrigin?: string; ctaLabel?: string; outcome?: string },
 ) {
+  const origin = publicDirectoryOrigin(options?.canonicalOrigin || process.env.NEXT_PUBLIC_APP_URL);
+  if (options?.outcome === "root" || title === "Influrios short links") {
+    return shortLinkRootHtml({
+      origin,
+      ctaLabel: options?.ctaLabel || "Browse influencers on Influrios",
+    });
+  }
   const safeTitle = escapeHtml(title);
   const safeMessage = escapeHtml(message);
-  const origin = publicDirectoryOrigin(options?.canonicalOrigin || process.env.NEXT_PUBLIC_APP_URL);
   const safeOrigin = escapeHtml(origin);
   const ctaLabel = escapeHtml(options?.ctaLabel || "Open Influrios");
   const outcome = options?.outcome ? escapeHtml(options.outcome) : "";

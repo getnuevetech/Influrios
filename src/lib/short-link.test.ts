@@ -126,7 +126,13 @@ describe("short link rules", () => {
       canonicalOrigin: "http://52.4.214.82",
     });
     assert.match(html, /href="https:\/\/influrios\.com"/);
+    assert.match(html, /Browse influencers on Influrios/);
+    assert.match(html, /Go to influrios\.com/);
+    assert.match(html, /Sofia Carter/);
+    assert.match(html, /Lifestyle · Travel · Wellness/);
+    assert.match(html, /src="\/brand\/short-link-landing-portrait\.jpg"/);
     assert.equal(html.includes("52.4.214.82"), false);
+    assert.equal(readFileSync("public/brand/short-link-landing-portrait.jpg").length > 1000, true);
   });
 
   it("names inflr.me on the nginx site and on the certificate command", () => {
