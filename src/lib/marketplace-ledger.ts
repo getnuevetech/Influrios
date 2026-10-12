@@ -36,6 +36,7 @@ import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines, storedMinorDigits } from "@/lib/fx-share";
 import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
+import { corridorPrefundSnapshot } from "@/lib/corridor-checkout";
 import { storedCurrencyCode } from "@/lib/money";
 import { quoteWiseUserRate } from "@/lib/wise-quote";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
@@ -543,13 +544,28 @@ export async function requestPrefund(input: {
   /** Accepted team proposal. One funding row pays every creator from this share list. */
   teamProposalId?: string | null;
   creatorShares?: { label: string; shareBps: number }[] | null;
+  /** Payout method chosen from the country corridor. Blank stays blank. */
+  payoutMethod?: string | null;
 }) {
   await ensureMarketplaceDefaults();
   await ensureSettlementDefaults();
   const code = input.jurisdictionCode.trim().toUpperCase();
-  const jurisdiction = await prisma.collaborationJurisdiction.findUnique({ where: { code } });
+  const [jurisdiction, corridor] = await Promise.all([
+    prisma.collaborationJurisdiction.findUnique({ where: { code } }),
+    prisma.countryActivationCorridor.findUnique({ where: { countryCode: code } }),
+  ]);
   const assignedCode = jurisdiction?.providerCode || PROVIDER_CODE;
-  const currency = storedCurrencyCode(jurisdiction?.currency);
+  const corridorFacts = corridorPrefundSnapshot({
+    corridorCurrency: corridor?.currency,
+    jurisdictionCurrency: jurisdiction?.currency,
+    collectionProviderCode: corridor?.collectionProviderCode,
+    payoutMethods: corridor?.payoutMethodsJson,
+    payoutMethod: input.payoutMethod,
+  });
+  if (corridorFacts.payoutMethodError) {
+    return { ok: false as const, error: corridorFacts.payoutMethodError };
+  }
+  const currency = corridorFacts.currency;
   if (!currency) {
     return { ok: false as const, error: "That jurisdiction has no currency. Nothing was funded." };
   }
@@ -752,6 +768,8 @@ export async function requestPrefund(input: {
           creatorSlug,
           title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
           currency: part.fx.currency,
+          collectionProviderCode: corridorFacts.collectionProviderCode,
+          payoutMethod: corridorFacts.payoutMethod,
           grossCents: part.gross,
           feeCents,
           serviceLevel,
@@ -835,6 +853,8 @@ export async function requestPrefund(input: {
         trancheCount: schedule.trancheCount,
         grossCents: input.grossCents,
         currency,
+        collectionProviderCode: corridorFacts.collectionProviderCode,
+        payoutMethod: corridorFacts.payoutMethod,
         attributionLabel: attribution.attributionLabel,
         repeatOfId: attribution.repeatOfId,
         milestoneSource: customRows && customRows.length > 0 ? "custom" : "template",
@@ -937,6 +957,8 @@ export async function sweepDueRecurrences(now = new Date()) {
           creatorSlug: row.creatorSlug,
           title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
           currency: fx.currency,
+          collectionProviderCode: row.collectionProviderCode,
+          payoutMethod: row.payoutMethod,
           grossCents: fx.convertedMinor,
           feeCents,
           serviceLevel: row.serviceLevel,
@@ -1307,6 +1329,8 @@ function presentFunding(row: {
   creatorSlug: string;
   title: string;
   currency: string;
+  collectionProviderCode: string;
+  payoutMethod: string;
   grossCents: number;
   feeCents: number;
   fxSnapshotJson: unknown;

@@ -18,6 +18,7 @@ import {
   type ContractWizardStep,
   type MilestoneDraft,
 } from "@/lib/contract-wizard";
+import { storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
 import {
@@ -33,6 +34,7 @@ import {
   buildPayoutFeeFxQuote,
   computePayoutReadiness,
   PAYOUT_METHOD_LABELS,
+  PAYOUT_METHODS,
   type PayoutMethod,
 } from "@/lib/payout-readiness";
 import { collectionPayoutReady, DEFAULT_PAYMENT_ROUTES, paymentRoutes } from "@/lib/providers";
@@ -63,6 +65,7 @@ type Props = {
     accepted?: string;
     feeDisclosure?: string;
     contractDocument?: string;
+    payoutMethod?: string;
     error?: string;
   }>;
 };
@@ -112,11 +115,21 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const ws = await getWorkspace(account.id);
   const entitlements = await businessEntitlementsForPlan(ws.plan);
   await ensureMarketplaceDefaults();
-  const [config, creators, routes] = await Promise.all([
+  const [config, creators, routes, corridors] = await Promise.all([
     marketplaceConfig(),
     listDirectoryCreators().catch(() => []),
     paymentRoutes().catch(() => []),
+    prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }).catch(() => []),
   ]);
+  const payoutChoices = corridors.flatMap((row) =>
+    storedPayoutMethodList(row.payoutMethodsJson).map((method) => ({
+      countryCode: row.countryCode,
+      method,
+      label: (PAYOUT_METHODS as readonly string[]).includes(method)
+        ? PAYOUT_METHOD_LABELS[method as PayoutMethod]
+        : method,
+    })),
+  );
 
   const collaborationId = (params.collaboration ?? "").trim();
   const linkedCollab = collaborationId
@@ -470,6 +483,21 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   {config.jurisdictions.map((row) => (
                     <option key={row.code} value={row.code}>
                       {row.label} ({row.currency})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm font-semibold text-indigo sm:col-span-2">
+                Payout method
+                <select
+                  name="payoutMethod"
+                  defaultValue={params.payoutMethod ?? ""}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                >
+                  <option value=""> </option>
+                  {payoutChoices.map((choice) => (
+                    <option key={`${choice.countryCode}:${choice.method}`} value={choice.method}>
+                      {choice.countryCode} · {choice.label}
                     </option>
                   ))}
                 </select>

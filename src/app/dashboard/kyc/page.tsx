@@ -4,6 +4,7 @@ import { getCreatorSessionDraft } from "@/lib/claim";
 import { countryCodeFromLocation } from "@/lib/contract-wizard";
 import { corridorCountryByCode } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
+import { storedIdentitySessionUrl } from "@/lib/corridor-checkout";
 import { kycDetailsRecord, listKycRequirements, loadKycSettings } from "@/lib/kyc-document";
 import { kycTypeByCode } from "@/lib/kyc-types";
 import { redirect } from "next/navigation";
@@ -39,6 +40,7 @@ export default async function DashboardKycPage({ searchParams }: Props) {
         .catch(() => null)
     : null;
   const details = kycDetailsRecord(submission?.detailsJson);
+  const identityUrl = storedIdentitySessionUrl(submission?.gatewaySessionUrl);
   const uploaded = new Set(submission?.kycModel === "government_id" ? submission.documents.map((document) => document.requirementId) : []);
 
   return (
@@ -60,14 +62,21 @@ export default async function DashboardKycPage({ searchParams }: Props) {
       ) : kyc.code === "gateway" ? (
         <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
           <h2 className="font-display text-lg font-bold text-indigo">KYC through gateway</h2>
-          {gateway ? (
+          {gateway?.enabled ? (
             <>
               <p className="mt-2 text-sm text-muted">
                 Your KYC is completed with {gateway.name}. Identity stays unverified until {gateway.name} reports KYC
                 complete.
               </p>
               {submission?.status === "pending_gateway" ? (
-                <p className="mt-3 text-sm font-semibold text-indigo">Waiting on {gateway.name}.</p>
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm font-semibold text-indigo">Waiting on {gateway.name}.</p>
+                  {identityUrl ? (
+                    <a href={identityUrl} className="text-sm font-semibold text-violet hover:underline">
+                      Continue identity check
+                    </a>
+                  ) : null}
+                </div>
               ) : (
                 <form action={actionStartGatewayKyc} className="mt-4">
                   <button type="submit" className="btn-primary !px-4 !py-2 text-sm">
@@ -76,6 +85,8 @@ export default async function DashboardKycPage({ searchParams }: Props) {
                 </form>
               )}
             </>
+          ) : gateway ? (
+            <p className="mt-2 text-sm text-muted">That KYC gateway is not enabled. No identity session was opened.</p>
           ) : (
             <p className="mt-2 text-sm text-muted">A KYC gateway has not been selected.</p>
           )}

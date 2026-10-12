@@ -12,7 +12,9 @@ import {
   actionRequestRevision,
   actionSubmitMilestone,
 } from "@/app/payments/actions";
+import { storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { listAttributionSources, listRepeatCandidates } from "@/lib/deal-attribution";
+import { prisma } from "@/lib/db";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
 import { fundingTerm } from "@/lib/ledger";
@@ -32,7 +34,7 @@ import {
 } from "@/lib/matching-product-boundary";
 import { FUNDING_MODE_LABELS, asFundingMode } from "@/lib/funding-modes";
 import { RIGHTS_STATUS_LABELS, asRightsStatus } from "@/lib/content-rights";
-import { buildPayoutFeeFxQuote } from "@/lib/payout-readiness";
+import { buildPayoutFeeFxQuote, PAYOUT_METHOD_LABELS, PAYOUT_METHODS, type PayoutMethod } from "@/lib/payout-readiness";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Protected Payments" };
@@ -71,13 +73,23 @@ const MILESTONE_COLOR: Record<string, string> = {
 
 export default async function PaymentsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [config, fundings, reasons, sources, repeats] = await Promise.all([
+  const [config, fundings, reasons, sources, repeats, corridors] = await Promise.all([
     marketplaceConfig().catch(() => null),
     listFundings().catch(() => []),
     listDisputeReasons().catch(() => []),
     listAttributionSources().catch(() => []),
     listRepeatCandidates().catch(() => []),
+    prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }).catch(() => []),
   ]);
+  const payoutChoices = corridors.flatMap((row) =>
+    storedPayoutMethodList(row.payoutMethodsJson).map((method) => ({
+      countryCode: row.countryCode,
+      method,
+      label: (PAYOUT_METHODS as readonly string[]).includes(method)
+        ? PAYOUT_METHOD_LABELS[method as PayoutMethod]
+        : method,
+    })),
+  );
   const jurisdictions = config?.jurisdictions ?? [];
   const homeJurisdiction = jurisdictions.find((row) => row.code === "US") ?? jurisdictions[0];
   const homeCaps = homeJurisdiction ? capabilitiesFromJurisdictionRow(homeJurisdiction) : null;
@@ -212,6 +224,17 @@ export default async function PaymentsPage({ searchParams }: Props) {
               </select>
             </label>
             <label className="text-sm">
+              <span className="font-semibold text-indigo">Payout method</span>
+              <select name="payoutMethod" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2" defaultValue="">
+                <option value=""> </option>
+                {payoutChoices.map((choice) => (
+                  <option key={`${choice.countryCode}:${choice.method}`} value={choice.method}>
+                    {choice.countryCode} · {choice.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
               <span className="font-semibold text-indigo">Gross USD</span>
               <input
                 name="grossUsd"
@@ -287,7 +310,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
               />
             </label>
             <p className="text-xs text-muted sm:col-span-2">
-              Gross is entered in USD. Another currency uses the Wise user rate for that jurisdiction. The rate is saved on the prefund.
+              Gross is entered in USD. The prefund uses the currency saved on that country corridor when one is saved, and otherwise the jurisdiction currency. A blank currency is not saved as USD. The collection route and payout method are copied only when they were saved on that corridor.
               Staged splits this gross into that many prefunds now. Recurring uses the same number of occurrences and
               opens only the first. Each one waits for its own provider confirmation.
             </p>
@@ -373,6 +396,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                     <input type="hidden" name="jurisdictionCode" value={deal.jurisdictionCode} />
                     <input type="hidden" name="serviceLevel" value={deal.serviceLevel} />
                     <input type="hidden" name="workspaceId" value={deal.workspaceId ?? ""} />
+                    <input type="hidden" name="payoutMethod" value={deal.payoutMethod} />
                     <label className="text-xs font-semibold text-muted">
                       Ambassador occurrences
                       <input name="occurrenceCount" type="number" min={2} defaultValue={2} className="mt-1 block w-24 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
@@ -413,6 +437,21 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   <span>
                     Provider <strong className="text-indigo">{deal.providerCode}</strong>
                   </span>
+                  {deal.collectionProviderCode ? (
+                    <span>
+                      Collection route <strong className="text-indigo">{deal.collectionProviderCode}</strong>
+                    </span>
+                  ) : null}
+                  {deal.payoutMethod ? (
+                    <span>
+                      Payout method{" "}
+                      <strong className="text-indigo">
+                        {(PAYOUT_METHODS as readonly string[]).includes(deal.payoutMethod)
+                          ? PAYOUT_METHOD_LABELS[deal.payoutMethod as PayoutMethod]
+                          : deal.payoutMethod}
+                      </strong>
+                    </span>
+                  ) : null}
                   {deal.scheduleKind === "recurring" && deal.scheduleId ? (
                     <span>
                       {scheduleLabel({
@@ -465,7 +504,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                       </button>
                     </form>
                     <p className="text-xs text-muted">
-                      Uses the gateway assigned to {deal.jurisdictionCode}. Flutterwave needs the email. M-Pesa needs the phone and short code. Airwallex needs the holding and operations accounts. Nothing is marked paid until the webhook.
+                      Uses the collection route and payout method saved on this prefund. Flutterwave needs the email. M-Pesa needs the phone and short code. Airwallex needs the holding and operations accounts. Nothing is marked paid until the webhook.
                     </p>
                     <p className="text-xs text-muted">
                       Change orders {deal.changeOrderCount} of {deal.changeOrderLimit}.

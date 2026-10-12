@@ -78,6 +78,37 @@ function checkoutId(value: unknown) {
   return typeof value === "string" && /^cs_(test|live)_[A-Za-z0-9]+$/.test(value) ? value : null;
 }
 
+/** A Stripe Identity session is used only when Stripe returned an id and an https URL. */
+export function stripeIdentitySession(payload: Record<string, unknown> | null): { id: string; url: string } | null {
+  if (!payload) return null;
+  const id = typeof payload.id === "string" && /^vs_[A-Za-z0-9]+$/.test(payload.id) ? payload.id : "";
+  const url = typeof payload.url === "string" && payload.url.startsWith("https://") ? payload.url : "";
+  if (!id || !url) return null;
+  return { id, url };
+}
+
+export async function openStripeIdentitySession(input: { slug: string; countryCode: string; returnUrl: string }) {
+  const creds = await stripeCredentials();
+  if (!creds.ok) {
+    return { ok: false as const, error: "Stripe is not ready. No identity session was opened." };
+  }
+  const body = new URLSearchParams({
+    type: "document",
+    "metadata[creator_slug]": input.slug.trim().slice(0, 80),
+    "metadata[country]": input.countryCode.trim().slice(0, 8),
+  });
+  const returnUrl = input.returnUrl.trim();
+  if (returnUrl.startsWith("https://")) body.set("return_url", returnUrl);
+  try {
+    const payload = await stripeCall("POST", "/v1/identity/verification_sessions", creds.secret, body);
+    const session = stripeIdentitySession(payload);
+    if (!session) return { ok: false as const, error: "Stripe did not open an identity session. Nothing was opened." };
+    return { ok: true as const, id: session.id, url: session.url };
+  } catch {
+    return { ok: false as const, error: "Stripe did not open an identity session. Nothing was opened." };
+  }
+}
+
 export async function probeStripeSandbox() {
   const creds = await stripeCredentials();
   if (!creds.ok) {
