@@ -44,7 +44,7 @@ npx tsx scripts/marketplace-webhook-fixture.ts --fundingId=... --secret=... --am
 
 ## 1. Staging environment checklist
 
-Fill once per staging environment.
+Fill once per staging environment. A probe on 2026-10-12 of `https://influrios.com` passed HTTPS, `/api/health` with the database up, `secrets.authConfigured` true (`AUTH_SECRET` or `ADMIN_SESSION_SECRET` is set), the homepage, guest `/collaboration`, and the admin login. That probe does not check the boxes below.
 
 | Check | Value / evidence |
 |-------|------------------|
@@ -189,7 +189,7 @@ Live Stripe keys (`sk_live_`) only after staging evidence above is filled and re
 
 Phase M is **complete** only when every cell below has a real evidence id. A blank cell is not done. The probe does not fill these cells. SMS is not an evidence cell. Twilio is not the provider, and nothing is sent.
 
-Probe of `https://influrios.com` on 2026-10-06T23:01:35Z: HTTPS, homepage, admin login, and database health passed. `secrets.authConfigured` was **false**. E0 is not met until that field is true. SMTP, SMS, Stripe, social, Meilisearch, Airwallex, recurring, team proposals, DocuSign, Flutterwave or M-Pesa, and paid mentorship were not exercised. No sandbox credentials were available to this run.
+Probe of `https://influrios.com` on 2026-10-12: seven automatic checks passed and none failed. HTTPS, `/api/health` with the database up, `secrets.authConfigured` true, the homepage, guest `/collaboration`, and the admin login passed. SMS is not sent. SMTP, Stripe, social, Meilisearch, Airwallex, recurring, team proposals, DocuSign, Flutterwave or M-Pesa, and paid mentorship were not exercised. Those evidence ids stay blank.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|

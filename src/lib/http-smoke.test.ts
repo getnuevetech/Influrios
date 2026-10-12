@@ -64,6 +64,10 @@ describe("staging evidence probe", () => {
     assert.match(result.stdout, /operator-only/);
     assert.match(result.stdout, /does not mark Phase M complete/);
     assert.equal(result.status, 1);
+    const runbook = readFileSync("docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md", "utf8");
+    assert.match(runbook, /2026-10-12/);
+    assert.match(runbook, /secrets\.authConfigured` true/);
+    assert.match(runbook, /\| SMTP \| \| \| \|/);
   });
 });
 
