@@ -12,7 +12,7 @@ import {
   type ShortLinkPrivacyHints,
 } from "@/lib/short-link-analytics";
 import { canAddCampaignLink, normalizeCampaignCode, parseShortPath, scheduleStartsInFuture } from "@/lib/short-link-phase4";
-import { shortLinkRootHtml } from "@/lib/short-link-root-html";
+import { shortLinkRootHtml, shortLinkStatusHtml } from "@/lib/short-link-root-html";
 
 export type { ShortLinkPrivacyHints } from "@/lib/short-link-analytics";
 
@@ -1209,35 +1209,11 @@ export function brandedFallbackHtml(
       ctaLabel: options?.ctaLabel || "Browse influencers on Influrios",
     });
   }
-  const safeTitle = escapeHtml(title);
-  const safeMessage = escapeHtml(message);
-  const safeOrigin = escapeHtml(origin);
-  const ctaLabel = escapeHtml(options?.ctaLabel || "Open Influrios");
-  const outcome = options?.outcome ? escapeHtml(options.outcome) : "";
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${safeTitle} · Influrios</title>
-</head>
-<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(ellipse at top,#1a2460 0%,#0b123f 55%,#070b28 100%);color:#fff;font-family:Georgia,'Times New Roman',serif">
-  <main style="max-width:28rem;padding:2rem;text-align:center">
-    <p style="letter-spacing:.18em;text-transform:uppercase;font-size:.75rem;color:#c4b5fd;margin:0">Influrios</p>
-    <h1 style="font-size:1.8rem;margin:.75rem 0 .5rem;font-weight:700">${safeTitle}</h1>
-    <p style="color:#dbe4ff;line-height:1.55;margin:0 0 1.5rem">${safeMessage}</p>
-    <a href="${safeOrigin}" style="display:inline-block;padding:.7rem 1.25rem;border-radius:.85rem;background:linear-gradient(90deg,#633CFF,#2979FF);color:#fff;text-decoration:none;font-family:system-ui,sans-serif;font-size:.875rem;font-weight:700">${ctaLabel}</a>
-    <p style="margin:1.25rem 0 0;font-family:system-ui,sans-serif;font-size:.7rem;color:#94a3b8">Influencer profiles and collaborations live on Influrios — short links only redirect.</p>
-    ${outcome ? `<p style="margin:.5rem 0 0;font-family:ui-monospace,monospace;font-size:.65rem;color:#64748b" data-resolve-outcome="${outcome}">${outcome}</p>` : ""}
-  </main>
-</body>
-</html>`;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return shortLinkStatusHtml({
+    title,
+    message,
+    origin,
+    ctaLabel: options?.ctaLabel || "Open Influrios",
+    outcome: options?.outcome,
+  });
 }
