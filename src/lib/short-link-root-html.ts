@@ -182,6 +182,110 @@ export function shortLinkRootHtml(options: { origin: string; ctaLabel: string })
 </html>`;
 }
 
+/** Missing, suspended, and unavailable short links. Same chrome as the root, without the destination card. */
+export function shortLinkStatusHtml(options: {
+  title: string;
+  message: string;
+  origin: string;
+  ctaLabel: string;
+  outcome?: string;
+}) {
+  const origin = options.origin;
+  const host = directoryHost(origin);
+  const cta = options.ctaLabel.trim() || "Open Influrios";
+  const outcome = (options.outcome ?? "").trim();
+  const pill = outcome
+    ? `<div class="root-mark"><span></span><em data-resolve-outcome="${escapeHtml(outcome)}">${escapeHtml(outcome.replaceAll("_", " "))}</em><span></span></div>`
+    : "";
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(options.title)} · Influrios</title>
+  <style>
+    @font-face { font-family: "Plus Jakarta Sans"; src: url("/fonts/plus-jakarta-sans-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: "Plus Jakarta Sans"; src: url("/fonts/plus-jakarta-sans-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: Sora; src: url("/fonts/sora-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      color: #fff;
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(980px 560px at 8% 0%, rgba(92, 78, 230, 0.42), transparent 62%),
+        radial-gradient(720px 520px at 96% 12%, rgba(64, 92, 255, 0.28), transparent 58%),
+        radial-gradient(860px 640px at 82% 100%, rgba(62, 36, 190, 0.5), transparent 62%),
+        linear-gradient(180deg, #16124f 0%, #0c1138 48%, #080b24 100%);
+    }
+    .sky { position: relative; min-height: 100vh; overflow: hidden; padding: 42px 24px 36px; display: flex; flex-direction: column; }
+    .ring { position: absolute; border-radius: 50%; border: 1px solid rgba(168, 184, 255, 0.16); pointer-events: none; }
+    .ring-a { width: 520px; height: 520px; left: -180px; top: -160px; }
+    .ring-b { width: 340px; height: 340px; left: -40px; top: 40px; }
+    .ring-c { width: 460px; height: 460px; right: -120px; bottom: -180px; }
+    .brand { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 28px; }
+    .brand p { margin: 0; letter-spacing: 0.42em; font-size: 13px; font-weight: 600; color: #eceaff; }
+    .stage { position: relative; z-index: 1; width: min(560px, 100%); margin: 0 auto; }
+    .panel {
+      padding: 42px 36px 32px; text-align: center; border-radius: 28px;
+      background: linear-gradient(180deg, rgba(32, 28, 92, 0.72), rgba(14, 16, 58, 0.84));
+      border: 1px solid rgba(186, 196, 255, 0.24);
+      box-shadow: 0 30px 80px rgba(3, 6, 28, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 7px 14px; border-radius: 999px;
+      border: 1px solid rgba(190, 198, 255, 0.28);
+      background: rgba(10, 12, 40, 0.35);
+      color: #d5dcf8; font-size: 11px; font-weight: 600; letter-spacing: 0.14em;
+    }
+    h1 { margin: 22px 0 12px; font-family: Sora, "Plus Jakarta Sans", sans-serif; font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; color: #fff; }
+    .lead { margin: 0 auto 26px; max-width: 28rem; color: #d7e0fb; font-size: 1.05rem; line-height: 1.45; }
+    .cta {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-width: min(100%, 280px); padding: 16px 28px; border-radius: 999px;
+      background: linear-gradient(90deg, #7a3dff 0%, #3d7bff 100%);
+      color: #fff; text-decoration: none; font-weight: 700; font-size: 1rem;
+      box-shadow: 0 12px 28px rgba(70, 84, 255, 0.35);
+    }
+    .go { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; color: #c5d0f2; font-size: 0.92rem; text-decoration: none; }
+    .foot { position: relative; z-index: 1; margin-top: auto; padding-top: 28px; text-align: center; }
+    .root-mark { display: flex; align-items: center; justify-content: center; gap: 12px; color: #9aaddd; }
+    .root-mark span { width: 92px; height: 1px; background: rgba(170, 186, 230, 0.35); }
+    .root-mark em {
+      font-style: normal; letter-spacing: 0.16em; font-size: 12px; text-transform: lowercase;
+      padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(170, 186, 230, 0.35);
+    }
+    .foot p { margin: 14px 0 0; color: #9aadd8; font-size: 0.82rem; }
+  </style>
+</head>
+<body>
+  <div class="sky">
+    <div class="ring ring-a"></div>
+    <div class="ring ring-b"></div>
+    <div class="ring ring-c"></div>
+    <header class="brand">
+      ${sparkle(22)}
+      <p>INFLURIOS</p>
+    </header>
+    <div class="stage">
+      <section class="panel">
+        <div class="badge">${linkIcon()} INFLURIOS SHORT LINK</div>
+        <h1>${escapeHtml(options.title)}</h1>
+        <p class="lead">${escapeHtml(options.message)}</p>
+        <a class="cta" href="${escapeHtml(origin)}">${escapeHtml(cta)} <span aria-hidden="true">→</span></a>
+        <div><a class="go" href="${escapeHtml(origin)}">Go to ${escapeHtml(host)} ${externalIcon()}</a></div>
+      </section>
+    </div>
+    <footer class="foot">
+      ${pill}
+      <p>Influencer profiles and collaborations live on Influrios — short links only redirect.</p>
+    </footer>
+  </div>
+</body>
+</html>`;
+}
+
 function directoryHost(origin: string) {
   try {
     return new URL(origin).host;
