@@ -1,4 +1,4 @@
-import { decideCount, PLAN_ENTITLEMENTS, type EntitlementLimits, type PlanCode } from "@/lib/entitlements";
+import { decideCount, PLAN_ENTITLEMENTS, type EntitlementLimits } from "@/lib/entitlements";
 
 export type OnboardingStage = "draft" | "claimed" | "verified" | "published";
 
@@ -128,7 +128,7 @@ export function toPublicProfile<T extends { email?: string }>(creator: T): Omit<
 export function secondSocialDecision(
   currentSocials: number,
   limits: EntitlementLimits = PLAN_ENTITLEMENTS.STARTER,
-  plan: PlanCode = "STARTER",
+  plan: string = "STARTER",
 ) {
   return decideCount(limits, "socialLinksMax", currentSocials + 1, plan);
 }

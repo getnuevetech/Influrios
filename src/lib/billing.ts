@@ -10,7 +10,7 @@ import { setBusinessPlan } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { confirmStripeCheckout, openStripeCheckout, stripeCredentials } from "@/lib/stripe-admin";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
-import type { PlanCode } from "@/lib/entitlements";
+import { storedCreatorPlan, type PlanCode } from "@/lib/entitlements";
 
 export type BillingAudience = "creator" | "business";
 
@@ -126,7 +126,7 @@ export type CheckoutSessionRecord = {
 
 export type CreatorPlanOverride = {
   creatorSlug: string;
-  plan: PlanCode;
+  plan: string;
   updatedAt: string;
   source: "checkout" | "admin" | "demo";
 };
@@ -273,19 +273,23 @@ async function migrateLegacyBillingOnce() {
 
 async function loadCreatorOverrides(): Promise<CreatorPlanOverride[]> {
   const creators = await prisma.creator.findMany({
-    where: { planTier: { in: ["PLUS", "PRO"] } },
+    where: { planTier: { not: "STARTER" } },
     select: { slug: true, planTier: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
     take: 50,
   });
-  return creators
-    .filter((row): row is typeof row & { planTier: "PLUS" | "PRO" } => row.planTier === "PLUS" || row.planTier === "PRO")
-    .map((row) => ({
-      creatorSlug: row.slug,
-      plan: row.planTier,
-      updatedAt: row.updatedAt.toISOString(),
-      source: "checkout" as const,
-    }));
+  return creators.flatMap((row) => {
+    const plan = storedCreatorPlan(row.planTier);
+    if (plan === "STARTER") return [];
+    return [
+      {
+        creatorSlug: row.slug,
+        plan,
+        updatedAt: row.updatedAt.toISOString(),
+        source: "checkout" as const,
+      },
+    ];
+  });
 }
 
 async function loadLastWebhookAt(): Promise<string | undefined> {
@@ -552,13 +556,15 @@ export async function cancelCheckout(sessionId: string) {
   }
 }
 
-export async function getCreatorPlanOverride(slug: string): Promise<PlanCode | null> {
+export async function getCreatorPlanOverride(slug: string): Promise<string | null> {
   const creator = await prisma.creator.findUnique({
     where: { slug },
     select: { planTier: true },
   });
-  if (creator?.planTier === "PLUS" || creator?.planTier === "PRO") return creator.planTier;
-  return null;
+  if (!creator) return null;
+  const plan = storedCreatorPlan(creator.planTier);
+  if (plan === "STARTER") return null;
+  return plan;
 }
 
 export async function markWebhookReceived() {

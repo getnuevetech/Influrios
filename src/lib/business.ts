@@ -1,4 +1,5 @@
 import { isBusinessPlanCode } from "@/lib/business-entitlements";
+import { EMPTY_ENTITLEMENTS, getEntitlements, isPlanCode, type EntitlementLimits } from "@/lib/entitlements";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { managedMatchGate } from "@/lib/business-queue";
 import { directoryHasCreator, listDirectoryCreators } from "@/lib/directory";
@@ -559,6 +560,17 @@ function geographyFits(creator: { locationCity: string; locationCountry: string 
   );
 }
 
+/** Open creators score from lead tracking and collaboration features. A closed creator stays at the closed score. */
+export function commercialReadinessFromEntitlements(
+  openToCollab: boolean,
+  limits: Pick<EntitlementLimits, "leadTracking" | "collabCta">,
+): number {
+  if (!openToCollab) return 30;
+  if (limits.leadTracking) return 95;
+  if (limits.collabCta) return 88;
+  return 74;
+}
+
 /** Explainable business → creator fit for a brief. Blank brief fields are not scored. */
 export function fitCreatorToBrief(creator: SeedCreator, brief: CampaignBrief): CreatorFit {
   const specialtyAsked = brief.specialty.trim();
@@ -577,13 +589,8 @@ export function fitCreatorToBrief(creator: SeedCreator, brief: CampaignBrief): C
   const platformHit = platformAsked ? creator.socials.some((social) => social.platform === platformAsked) : false;
   const platformFit = !platformAsked ? 0 : platformHit ? 92 : creator.socials.length ? 68 : 40;
 
-  const commercialReadiness = creator.openToCollab
-    ? creator.planTier === "PRO"
-      ? 95
-      : creator.planTier === "PLUS"
-        ? 88
-        : 74
-    : 30;
+  const limits = isPlanCode(creator.planTier) ? getEntitlements(creator.planTier) : EMPTY_ENTITLEMENTS;
+  const commercialReadiness = commercialReadinessFromEntitlements(creator.openToCollab, limits);
 
   const parts = [
     specialtyAsked ? { weight: 0.35, value: specialtyFit } : null,

@@ -128,6 +128,29 @@ export function normalizePlanCode(input: string): string | null {
   return code;
 }
 
+/** The plan stored on the creator. A blank value stays the starting Starter plan. */
+export function storedCreatorPlan(value: string | null | undefined): string {
+  return normalizePlanCode(value ?? "") ?? "STARTER";
+}
+
+const LAUNCH_PLAN_LABELS: Record<PlanCode, string> = {
+  STARTER: "Starter",
+  PLUS: "Plus",
+  PRO: "Pro",
+};
+
+/** A label for the stored plan code. A blank code stays blank. */
+export function planLabel(code: string): string {
+  const stored = normalizePlanCode(code);
+  if (!stored) return "";
+  if (isPlanCode(stored)) return LAUNCH_PLAN_LABELS[stored];
+  return stored
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export const PLAN_LIMIT_MAX = 10_000;
 
 export type FeatureValue = {
@@ -260,12 +283,12 @@ export function decideCount(
   limits: EntitlementLimits,
   field: "specialtiesMax" | "socialLinksMax",
   count: number,
-  current: PlanCode,
+  current: string,
 ): EntitlementDecision {
   const limit = limits[field];
   if (count <= limit) return { ok: true };
   const feature = field === "specialtiesMax" ? "card.specialties.max" : "card.social_links.max";
-  const start = PLAN_ORDER.indexOf(current);
+  const start = isPlanCode(current) ? PLAN_ORDER.indexOf(current) : -1;
   let upgradePlanCode: PlanCode | null = null;
   for (let i = start + 1; i < PLAN_ORDER.length; i++) {
     const code = PLAN_ORDER[i];

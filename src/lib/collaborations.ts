@@ -4,6 +4,8 @@ import { getDirectoryCreator } from "@/lib/directory";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import {
   PLAN_ENTITLEMENTS,
+  isPlanCode,
+  storedCreatorPlan,
   type EntitlementDecision,
   type EntitlementLimits,
   type PlanCode,
@@ -56,12 +58,12 @@ export function transitionCollaboration(
 
 export function decideProposalAllowance(
   limits: EntitlementLimits,
-  plan: PlanCode,
+  plan: string,
   used: number,
 ): EntitlementDecision {
   const limit = limits.proposalsMax;
   if (used < limit) return { ok: true };
-  const start = PLAN_ORDER.indexOf(plan);
+  const start = isPlanCode(plan) ? PLAN_ORDER.indexOf(plan) : -1;
   let upgradePlanCode: PlanCode | null = null;
   for (let i = start + 1; i < PLAN_ORDER.length; i++) {
     const code = PLAN_ORDER[i];
@@ -142,7 +144,7 @@ export async function countCountedProposals(initiatorSlug: string, windowDays: n
   });
 }
 
-export async function proposalUsage(initiatorSlug: string, plan: PlanCode) {
+export async function proposalUsage(initiatorSlug: string, plan: string) {
   const [settings, limits] = await Promise.all([
     getCollaborationSettings(),
     entitlementsForPlan(plan),
@@ -207,7 +209,7 @@ export async function createCollaboration(input: {
   score: number;
   offerSpecialty: string | null;
   needSpecialty: string | null;
-  plan: PlanCode;
+  plan: string;
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const initiator = await getDirectoryCreator(input.initiatorSlug);
   const recipient = await getDirectoryCreator(input.recipientSlug);
@@ -269,7 +271,7 @@ export async function advanceCollaboration(input: {
   id: string;
   to: CollaborationStatus;
   actorUserId: string | null;
-  plan?: PlanCode;
+  plan?: string;
   note?: string;
   enforceLimit?: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -281,7 +283,7 @@ export async function advanceCollaboration(input: {
 
     if (input.to === "sent" && input.enforceLimit !== false) {
       const creator = await getDirectoryCreator(row.initiatorSlug);
-      const plan = input.plan ?? (creator?.planTier as PlanCode | undefined) ?? "STARTER";
+      const plan = input.plan ?? storedCreatorPlan(creator?.planTier);
       const usage = await proposalUsage(row.initiatorSlug, plan);
       if (!usage.decision.ok) {
         return { ok: false, error: proposalDenialMessage(usage.decision, usage.settings.windowDays) };

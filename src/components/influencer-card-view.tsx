@@ -9,17 +9,12 @@ import {
 import {
   cardChrome,
   cardShellClasses,
+  EMPTY_ENTITLEMENTS,
   getEntitlements,
   isPlanCode,
+  planLabel,
   type EntitlementLimits,
 } from "@/lib/entitlements";
-
-function planBadge(plan: string) {
-  if (plan === "PLUS") return "Plus";
-  if (plan === "PRO") return "Pro";
-  if (plan === "STARTER") return "Starter";
-  return plan;
-}
 
 export function InfluencerCardView({
   creator,
@@ -42,7 +37,7 @@ export function InfluencerCardView({
 }) {
   const entitlements =
     entitlementOverride ??
-    getEntitlements(isPlanCode(creator.planTier) ? creator.planTier : "STARTER");
+    (isPlanCode(creator.planTier) ? getEntitlements(creator.planTier) : EMPTY_ENTITLEMENTS);
   const chrome = cardChrome(entitlements);
   const shell = cardShellClasses(chrome);
   const specialties = creator.specialties.slice(0, entitlements.specialtiesMax);
@@ -74,7 +69,7 @@ export function InfluencerCardView({
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         {!hideCta ? (
           <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${shell.badge}`}>
-            {planBadge(creator.planTier)}
+            {planLabel(creator.planTier)}
           </span>
         ) : null}
       </div>

@@ -1,5 +1,5 @@
 import { InfluencerCardView } from "@/components/influencer-card-view";
-import { PLAN_ENTITLEMENTS, type EntitlementLimits } from "@/lib/entitlements";
+import { EMPTY_ENTITLEMENTS, isPlanCode, PLAN_ENTITLEMENTS, type EntitlementLimits } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { shortLinkPublicLabel } from "@/lib/short-link";
 import type { SeedCreator } from "@/lib/seed-data";
@@ -19,8 +19,8 @@ export async function PublicInfluencerCard({
   /** Signup draft uses the same plan limits as publish and hides the profile CTA. */
   draftPreview?: boolean;
 }) {
-  const entitlements: EntitlementLimits = await entitlementsForPlan(creator.planTier).catch(
-    () => PLAN_ENTITLEMENTS.STARTER,
+  const entitlements: EntitlementLimits = await entitlementsForPlan(creator.planTier).catch(() =>
+    isPlanCode(creator.planTier) ? PLAN_ENTITLEMENTS[creator.planTier] : EMPTY_ENTITLEMENTS,
   );
   const short = draftPreview ? null : await shortLinkPublicLabel(creator.slug).catch(() => null);
   const linkLabel =

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountSession } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
-import { isPlanCode } from "@/lib/entitlements";
+import { storedCreatorPlan } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { getAdminSession } from "@/lib/admin-auth";
 import { summarizeShortLinkAnalytics } from "@/lib/short-link-analytics";
@@ -36,8 +36,7 @@ export async function GET(
     });
     if (owned) {
       allowed = true;
-      const plan = isPlanCode(owned.planTier) ? owned.planTier : "STARTER";
-      const entitlements = await entitlementsForPlan(plan);
+      const entitlements = await entitlementsForPlan(storedCreatorPlan(owned.planTier));
       level = entitlements.analytics;
     }
   }

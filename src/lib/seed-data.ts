@@ -36,7 +36,7 @@ export type SeedCreator = {
   gender?: "male" | "female" | "unspecified";
   badge: string;
   statusLabel: string;
-  planTier: "STARTER" | "PLUS" | "PRO";
+  planTier: string;
   specialties: string[];
   /** Chosen content-style slugs. A missing list is not a style. */
   contentStyles?: string[];

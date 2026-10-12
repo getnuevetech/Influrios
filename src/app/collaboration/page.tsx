@@ -48,7 +48,7 @@ import {
   publicPagesUseLive,
 } from "@/lib/presentation-demo";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
-import { isPlanCode, type PlanCode } from "@/lib/entitlements";
+import { storedCreatorPlan } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -121,7 +121,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
   const viewerFromParam = params.from ? bySlug.get(params.from) ?? null : null;
   const viewerFromSession = draft?.slug ? bySlug.get(draft.slug) ?? null : null;
   const viewer = viewerFromParam ?? (account ? viewerFromSession : null);
-  const viewerPlan: PlanCode = viewer && isPlanCode(viewer.planTier) ? viewer.planTier : "STARTER";
+  const viewerPlan = viewer ? storedCreatorPlan(viewer.planTier) : "STARTER";
   const viewerLimits = await entitlementsForPlan(viewerPlan);
   const canRequest = !viewer || viewerLimits.proposalsMax > 0;
   const signedIn = Boolean(account);
@@ -925,7 +925,7 @@ function FeaturedMatchCard({
   canRequest: boolean;
   signedIn: boolean;
   viewerSlug?: string;
-  viewerPlan: PlanCode;
+  viewerPlan: string;
   collabOsOn: boolean;
   preview?: boolean;
 }) {

@@ -3,6 +3,7 @@ import { actionUpdateCard, actionUpdateFeaturedGlobals } from "@/app/admin/actio
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getCms } from "@/lib/cms";
+import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 
 export const metadata = { title: "Admin · Cards" };
@@ -126,6 +127,12 @@ export default async function AdminCardsPage({ searchParams }: Props) {
               </div>
               <span className="text-xs font-semibold text-violet">{creator?.planTier}</span>
             </div>
+
+            {creator ? (
+              <div className="mt-4 max-w-sm">
+                <PublicInfluencerCard creator={creator} hideCta />
+              </div>
+            ) : null}
 
             {canEdit ? (
               <form action={actionUpdateCard} className="mt-4 space-y-4">
