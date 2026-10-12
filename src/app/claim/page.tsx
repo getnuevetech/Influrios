@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { actionCreateDraft } from "@/app/claim/actions";
-import { IconInstagram, IconTikTok, IconYouTube, IconX } from "@/components/icons";
+import { IconFacebook, IconInstagram, IconTikTok, IconYouTube, IconX } from "@/components/icons";
 
 export const metadata = {
   title: "Create Your Influrios Profile",
@@ -12,6 +12,7 @@ const SOCIAL_HINTS = [
   { platform: "instagram", label: "Instagram", Icon: IconInstagram, placeholder: "instagram.com/you" },
   { platform: "tiktok", label: "TikTok", Icon: IconTikTok, placeholder: "tiktok.com/@you" },
   { platform: "youtube", label: "YouTube", Icon: IconYouTube, placeholder: "youtube.com/@you" },
+  { platform: "facebook", label: "Facebook", Icon: IconFacebook, placeholder: "facebook.com/you" },
   { platform: "x", label: "X", Icon: IconX, placeholder: "x.com/you" },
 ] as const;
 
@@ -94,7 +95,7 @@ export default async function ClaimPage({ searchParams }: Props) {
 
       <p className="mt-8 text-center text-sm">
         Already published?{" "}
-        <Link href="/dashboard" className="font-semibold text-violet hover:underline">
+        <Link href="/login?next=/dashboard" className="font-semibold text-violet hover:underline">
           Open influencer dashboard
         </Link>
         {" · "}

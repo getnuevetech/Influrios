@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { actionLogin } from "@/app/account/actions";
 import { safeNextPath } from "@/lib/account-policy";
+import { getAccountSession } from "@/lib/accounts";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Log in" };
@@ -10,6 +12,8 @@ type Props = { searchParams: Promise<{ next?: string; error?: string; gate?: str
 export default async function LoginPage({ searchParams }: Props) {
   const params = await searchParams;
   const next = safeNextPath(params.next);
+  const account = await getAccountSession().catch(() => null);
+  if (account) redirect(next);
   return (
     <div className="mx-auto max-w-md px-4 py-14">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>

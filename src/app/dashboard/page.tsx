@@ -36,6 +36,7 @@ import {
   completenessFor,
   getCreatorSessionDraft,
 } from "@/lib/claim";
+import { getAccountSession } from "@/lib/accounts";
 import { getInfluencerIdentity } from "@/lib/landing-pages";
 import { listReferralsForCreator, referralRewardLabel } from "@/lib/referrals";
 import { socialConnectState } from "@/lib/social-connect";
@@ -62,7 +63,11 @@ type Props = {
 export default async function CreatorDashboardPage({ searchParams }: Props) {
   const params = await searchParams;
   const draft = await getCreatorSessionDraft();
-  if (!draft) redirect("/claim");
+  if (!draft) {
+    const account = await getAccountSession().catch(() => null);
+    if (!account) redirect("/login?next=/dashboard");
+    redirect("/creator");
+  }
   const [directory, identity, facetCatalog] = await Promise.all([
     getDirectory().catch(() => null),
     getInfluencerIdentity().catch(() => null),

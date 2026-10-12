@@ -110,6 +110,7 @@ export async function resolveSocialAvatar(
   if (platform === "X") candidates.push(`https://unavatar.io/twitter/${encodeURIComponent(clean)}`);
   if (platform === "YOUTUBE") candidates.push(`https://unavatar.io/youtube/${encodeURIComponent(clean)}`);
   if (platform === "TIKTOK") candidates.push(`https://unavatar.io/tiktok/${encodeURIComponent(clean)}`);
+  if (platform === "FACEBOOK") candidates.push(`https://unavatar.io/facebook/${encodeURIComponent(clean)}`);
   candidates.push(`https://unavatar.io/${encodeURIComponent(clean)}`);
 
   for (const url of candidates) {
@@ -176,6 +177,7 @@ function platformFromHint(hint?: string): SeedSocial["platform"] | null {
   if (key === "tiktok") return "TIKTOK";
   if (key === "youtube") return "YOUTUBE";
   if (key === "x" || key === "twitter") return "X";
+  if (key === "facebook" || key === "fb") return "FACEBOOK";
   if (key === "website") return "WEBSITE";
   return null;
 }
@@ -192,13 +194,18 @@ function detectPlatform(
     platform = "YOUTUBE";
   else if (lower.includes("x.com") || lower.includes("twitter.com") || lower.startsWith("@x/"))
     platform = "X";
+  else if (lower.includes("facebook.com") || lower.includes("fb.com") || lower.includes("fb.me"))
+    platform = "FACEBOOK";
   else if (lower.includes("instagram.com")) platform = "INSTAGRAM";
   else platform = platformFromHint(preferred);
 
   const handle = cleaned
     .replace(/^https?:\/\//, "")
     .replace(/^(www\.)?/, "")
-    .replace(/^(instagram|tiktok|youtube|www)\.com\//, "")
+    .replace(/^(instagram|tiktok|youtube|facebook|www)\.com\//, "")
+    .replace(/^(m\.)?facebook\.com\//, "")
+    .replace(/^fb\.com\//, "")
+    .replace(/^fb\.me\//, "")
     .replace(/^x\.com\//, "")
     .replace(/^twitter\.com\//, "")
     .replace(/^@/, "")
@@ -254,6 +261,7 @@ function platformUrl(platform: SeedSocial["platform"], handle: string) {
   if (platform === "TIKTOK") return `https://tiktok.com/@${handle}`;
   if (platform === "YOUTUBE") return `https://youtube.com/@${handle}`;
   if (platform === "X") return `https://x.com/${handle}`;
+  if (platform === "FACEBOOK") return `https://facebook.com/${handle}`;
   return `https://instagram.com/${handle}`;
 }
 
