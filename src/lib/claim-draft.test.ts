@@ -62,6 +62,16 @@ describe("claim draft facts", () => {
     assert.equal(missingPlatform.ok, false);
     if (!missingPlatform.ok) assert.equal(missingPlatform.error, "Choose a social platform.");
 
+    const facebook = claimDraftProfile("https://www.facebook.com/ada", "facebook");
+    assert.equal(facebook.ok, true);
+    if (facebook.ok) {
+      assert.equal(facebook.platform, "FACEBOOK");
+      assert.equal(facebook.handle, "ada");
+    }
+    const facebookChip = claimDraftProfile("@ada", "facebook");
+    assert.equal(facebookChip.ok, true);
+    if (facebookChip.ok) assert.equal(facebookChip.platform, "FACEBOOK");
+
     const missingHandle = claimDraftProfile("https://instagram.com/", "instagram");
     assert.equal(missingHandle.ok, false);
     if (!missingHandle.ok) assert.equal(missingHandle.error, "Enter a social URL or handle.");
@@ -75,6 +85,12 @@ describe("claim draft facts", () => {
     assert.equal(claim.includes("Draft Influencer Profile"), false);
     assert.equal(claim.includes('handle = "influencer"'), false);
     assert.equal(page.includes("SOCIAL_HINTS[0]"), false);
+    assert.match(page, /platform: "facebook"/);
+    assert.match(page, /href="\/login\?next=\/dashboard"/);
+    assert.match(page, /href="\/discover"/);
+    const dashboard = readFileSync("src/app/dashboard/page.tsx", "utf8");
+    assert.match(dashboard, /redirect\("\/login\?next=\/dashboard"\)/);
+    assert.equal(dashboard.includes('if (!draft) redirect("/claim")'), false);
     assert.equal(preview.includes('? "Influencer"'), false);
   });
 

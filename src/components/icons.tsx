@@ -180,6 +180,18 @@ export function IconYouTube({ size = 20, className }: IconProps) {
   );
 }
 
+export function IconFacebook({ size = 20, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#1877F2" />
+      <path
+        fill="#fff"
+        d="M15.1 12.9h-2v7.1h-2.9v-7.1H8.7v-2.5h1.5V8.8c0-2 1.2-3.1 3-3.1.9 0 1.8.1 1.8.1v2h-1c-1 0-1.3.6-1.3 1.2v1.4h2.4l-.4 2.5Z"
+      />
+    </svg>
+  );
+}
+
 export function IconX({ size = 20, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
@@ -509,6 +521,8 @@ export function SocialIcon({
       return <IconYouTube size={size} className={className} />;
     case "X":
       return <IconX size={size} className={className} />;
+    case "FACEBOOK":
+      return <IconFacebook size={size} className={className} />;
     case "LINKEDIN":
       return <IconLinkedIn size={size} className={className} />;
     case "WEBSITE":

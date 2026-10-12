@@ -1,7 +1,7 @@
 import { samePlace } from "@/lib/place-names";
 
 export type SeedSocial = {
-  platform: "INSTAGRAM" | "TIKTOK" | "YOUTUBE" | "X" | "WEBSITE";
+  platform: "INSTAGRAM" | "TIKTOK" | "YOUTUBE" | "X" | "FACEBOOK" | "WEBSITE";
   handle: string;
   url: string;
   followers: number;
@@ -750,6 +750,7 @@ export function platformDisplayName(platform: string): string {
   if (platform === "TIKTOK") return "TikTok";
   if (platform === "YOUTUBE") return "YouTube";
   if (platform === "X") return "X";
+  if (platform === "FACEBOOK") return "Facebook";
   if (platform === "WEBSITE") return "Website";
   if (platform === "PINTEREST") return "Pinterest";
   return platform;
