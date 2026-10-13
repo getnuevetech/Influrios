@@ -77,15 +77,11 @@ export async function MemberFrame({
       `/account/password?next=${encodeURIComponent(path || (audience === "business" ? "/business/home" : "/creator"))}`,
     );
   }
-  let name = account?.name || account?.email || "Account";
-  let subtitle = audience === "business" ? "Business workspace" : "Influencer";
+  const name = account?.name || account?.email || "Account";
   let company = "";
   if (audience === "business" && account) {
     const workspace = await getWorkspace(account.id).catch(() => null);
-    if (workspace?.name) {
-      company = workspace.name;
-      subtitle = workspace.name;
-    }
+    if (workspace?.name) company = workspace.name;
   }
   const nav = audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
   const home = audience === "business" ? "/business/home" : "/creator";
