@@ -149,8 +149,8 @@ export async function MemberFrame({
           })}
         </nav>
         {upgrade ? (
-          <div className="mx-3 mb-2 shrink-0 rounded-2xl bg-gradient-to-br from-[#6D5EF7] to-[#8B5CF6] p-3 text-white">
-            <div className="flex items-center gap-2 text-sm font-bold">
+          <div className="mx-3 mb-2 shrink-0 rounded-2xl bg-gradient-to-br from-[#6D5EF7] to-[#8B5CF6] p-3 text-white shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-bold text-white">
               <IconCrown size={16} />
               {upgrade.label}
             </div>
@@ -158,7 +158,8 @@ export async function MemberFrame({
             <p className="mt-1 text-[10px] text-white/70">Current: {planLabel(creatorPlan)}</p>
             <Link
               href="/billing"
-              className="mt-2 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-bold !text-[#5B4FE0]"
+              className="mt-2 inline-flex items-center justify-center rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#5B4FE0] hover:bg-[#F5F3FF]"
+              style={{ color: "#5B4FE0" }}
             >
               Upgrade now
             </Link>
