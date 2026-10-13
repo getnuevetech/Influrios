@@ -226,9 +226,9 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 | Slice | Action | Done when |
 |-------|--------|-----------|
-| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: **E4 Stripe** |
-| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: **E4 Stripe** |
-| **E4 Stripe** | Save `whsec_…` on gateway (or `STRIPE_WEBHOOK_SECRET`), register webhook, member checkout with `4242`, resend same event | `cs_test_…`, `CheckoutAttempt` id, plan tier, duplicate skipped |
+| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: finish **E4** |
+| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: finish **E4** |
+| **E4 Stripe** | Webhook secret ready — **still need** `4242` checkout + duplicate `checkout.session.completed` skip · `npm run staging:e4-stripe-evidence` | `cs_test_…`, `CheckoutAttempt` id, plan tier, duplicate skipped |
 
 **Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 complete. **`CRON_SECRET` rotated** (operator confirmed).
 
@@ -293,8 +293,8 @@ npm run staging:e4-stripe-evidence
 Operator path:
 
 1. Confirm Stripe gateway has **sandbox** `sk_test_` / `rkcs_test_` + **Webhook secret** `whsec_…`, and Dashboard endpoint `https://influrios.com/api/billing/webhook` listens for `checkout.session.completed`.
-2. Sign in as a member → `/billing` or `/pricing` → start Checkout → pay with test card **`4242 4242 4242 4242`** (any future expiry, any CVC).
-3. Land on success; confirm plan tier applied. Note `cs_test_…` (Stripe) and local `CheckoutAttempt` id.
+2. If a sandbox **4242** checkout already succeeded earlier on this host, skip a new payment — run the evidence script to print existing `CheckoutAttempt` / `ProcessedWebhook` rows. Otherwise: member `/billing` → Checkout → test card **`4242 4242 4242 4242`**.
+3. Confirm plan tier applied. Note `cs_test_…` and local `CheckoutAttempt` id.
 4. In Stripe Dashboard (or CLI), **resend** the same `checkout.session.completed` event. Expect `{"received":true,"duplicate":true}` and **one** `ProcessedWebhook` row for that `eventId` (plan must not double-upgrade).
 5. `npm run staging:e4-stripe-evidence` and paste the tables into this section / the sign-off Stripe cell.
 
