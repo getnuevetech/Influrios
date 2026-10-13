@@ -226,7 +226,7 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 | Slice | Action | Done when |
 |-------|--------|-----------|
-| **E1 Sweep clock** | Confirm crontab runs `deploy/scripts/sweep-cron.sh` every 5 minutes with `CRON_SECRET`. Wait one interval with no admin session. | `succeeded` job ids for `milestone_auto_approval` and `recurring_cycle_sweep` in `/admin/jobs` |
+| **E1 Sweep clock** | ~~Confirm crontab + succeeded job ids~~ **Done** (`cmv6ufj5m000dut01g2jvu0xh`, `cmv6ufj61000lut013qd0vrgz` at 2026-10-13T15:36:12Z). | Next: **E2 SMTP** |
 | **E2 SMTP** | Admin → Mail: save host/from/secret, send test invite, complete a claim verify, break password → failed job → Retry | Message id + failed→succeeded job evidence |
 | **E4 Stripe** | Save `whsec_…` on gateway (or `STRIPE_WEBHOOK_SECRET`), register webhook, member checkout with `4242`, resend same event | `cs_test_…`, `CheckoutAttempt` id, plan tier, duplicate skipped |
 
