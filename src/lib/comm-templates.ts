@@ -244,13 +244,25 @@ export async function sendCommTemplateTest(input: {
           kind: "mail_test",
           status: result.ok ? "succeeded" : "failed",
           lastError: result.ok ? null : result.error,
-          payload: { to: input.toEmail, templateKey: template.key, channel: "email" },
+          payload: {
+            to: input.toEmail,
+            templateKey: template.key,
+            channel: "email",
+            ...(result.ok && result.smtpResponse ? { smtpResponse: result.smtpResponse } : {}),
+          },
         },
       });
     } catch {
       /* SMTP result still stands */
     }
-    if (result.ok) return { ok: true, message: `SMTP accepted “${template.name}”.` };
+    if (result.ok) {
+      return {
+        ok: true,
+        message: result.smtpResponse
+          ? `SMTP accepted “${template.name}” (${result.smtpResponse}).`
+          : `SMTP accepted “${template.name}”.`,
+      };
+    }
     return { ok: false, message: result.error };
   }
 

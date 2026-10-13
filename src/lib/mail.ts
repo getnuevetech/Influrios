@@ -471,7 +471,10 @@ export function formatSmtpDeliveryError(error: unknown, host: string, port: numb
 }
 
 /** Speak SMTP. ok is true only after the server accepts the message with a 2xx code. */
-export async function deliverMail(config: MailConfig, message: MailMessage): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function deliverMail(
+  config: MailConfig,
+  message: MailMessage,
+): Promise<{ ok: true; smtpResponse: string } | { ok: false; error: string }> {
   const to = headerSafe(message.to);
   const from = headerSafe(config.from);
   const subject = headerSafe(message.subject);
@@ -510,7 +513,9 @@ export async function deliverMail(config: MailConfig, message: MailMessage): Pro
     const accepted = await reader.reply();
     expectCode(accepted, [250], "message");
     socket.write("QUIT\r\n");
-    return { ok: true };
+    // Provider queue id / accept line — Phase M E2 evidence (not a forged Message-ID header).
+    const smtpResponse = accepted.text.replace(/\s+/g, " ").trim().slice(0, 200);
+    return { ok: true, smtpResponse };
   } catch (error) {
     return { ok: false, error: formatSmtpDeliveryError(error, config.host, config.port) };
   } finally {
@@ -518,7 +523,9 @@ export async function deliverMail(config: MailConfig, message: MailMessage): Pro
   }
 }
 
-export async function sendMail(message: MailMessage): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function sendMail(
+  message: MailMessage,
+): Promise<{ ok: true; smtpResponse: string } | { ok: false; error: string }> {
   const resolved = await resolveMailConfigStatus();
   if (!resolved.ok) return { ok: false, error: resolved.error };
   return deliverMail(resolved.config, message);
@@ -578,14 +585,24 @@ export async function sendInvitationTest(to: string, record = true): Promise<{ o
           kind: "mail_test",
           status: result.ok ? "succeeded" : "failed",
           lastError: result.ok ? null : result.error,
-          payload: { to: headerSafe(to) },
+          payload: {
+            to: headerSafe(to),
+            ...(result.ok && result.smtpResponse ? { smtpResponse: result.smtpResponse } : {}),
+          },
         },
       });
     } catch {
       /* the SMTP result still stands */
     }
   }
-  if (result.ok) return { ok: true, message: "SMTP accepted the claim invitation template." };
+  if (result.ok) {
+    return {
+      ok: true,
+      message: result.smtpResponse
+        ? `SMTP accepted the claim invitation template (${result.smtpResponse}).`
+        : "SMTP accepted the claim invitation template.",
+    };
+  }
   return { ok: false, message: result.error };
 }
 
@@ -625,6 +642,14 @@ export async function beginMailInvitationTest(
         data: {
           status: result.ok ? "succeeded" : "failed",
           lastError: result.ok ? null : result.error.slice(0, 500),
+          ...(result.ok
+            ? {
+                payload: {
+                  to: safeTo,
+                  smtpResponse: result.smtpResponse,
+                },
+              }
+            : {}),
         },
       });
     } catch (error) {
@@ -657,10 +682,12 @@ export async function listRecentMailTests(limit = 5) {
     return rows.map((row) => {
       const payload = row.payload && typeof row.payload === "object" ? (row.payload as Record<string, unknown>) : {};
       const to = typeof payload.to === "string" ? payload.to : "";
+      const smtpResponse = typeof payload.smtpResponse === "string" ? payload.smtpResponse : "";
       return {
         id: row.id,
         status: row.status,
         to,
+        smtpResponse,
         lastError: row.lastError ?? "",
         createdAt: row.createdAt.toISOString(),
       };

@@ -198,6 +198,10 @@ export default async function AdminMailPage({ searchParams }: Props) {
                   {job.to ? ` · ${job.to}` : ""}
                   {" · "}
                   {new Date(job.createdAt).toLocaleString()}
+                  <span className="mt-1 block font-mono text-[11px] text-indigo">job {job.id}</span>
+                  {job.smtpResponse ? (
+                    <span className="mt-0.5 block font-mono text-[11px] text-emerald-800">SMTP {job.smtpResponse}</span>
+                  ) : null}
                   {job.lastError ? <span className="mt-1 block text-amber-900">{job.lastError}</span> : null}
                 </li>
               ))}
