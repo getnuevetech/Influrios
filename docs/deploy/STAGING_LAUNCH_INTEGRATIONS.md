@@ -48,16 +48,16 @@ Fill once per staging environment. A probe on 2026-10-12 of `https://influrios.c
 
 | Check | Value / evidence |
 |-------|------------------|
-| Date | |
-| Operator | |
-| `NEXT_PUBLIC_APP_URL` (https) | |
-| DNS A/AAAA → host | ☐ |
-| `AUTH_SECRET` set | ☐ |
-| `ADMIN_SESSION_SECRET` set | ☐ |
-| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` stable across deploys | ☐ |
+| Date | 2026-10-13 |
+| Operator | host recovery + Phase M probe |
+| `NEXT_PUBLIC_APP_URL` (https) | `https://influrios.com` |
+| DNS A/AAAA → host | ☑ (site resolves) |
+| `AUTH_SECRET` set | ☑ `secrets.authConfigured: true` |
+| `ADMIN_SESSION_SECRET` set | ☐ (or covered by AUTH_SECRET) |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` stable across deploys | ☐ confirm in host `.env` |
 | `ADMIN_SUPER_EMAIL` / `ADMIN_SUPER_PASSWORD` known | ☐ |
-| `DATABASE_URL` / Compose Postgres healthy | ☐ |
-| TLS cert valid (browser) | ☐ |
+| `DATABASE_URL` / Compose Postgres healthy | ☑ health `db.ok` · host tools use `127.0.0.1` |
+| TLS cert valid (browser) | ☑ HTTPS probe pass |
 
 ### Webhook & callback URLs
 
@@ -191,24 +191,25 @@ Phase M is **complete** only when every cell below has a real evidence id. A bla
 
 Probe of `https://influrios.com` on 2026-10-12: seven automatic checks passed and none failed. HTTPS, `/api/health` with the database up, `secrets.authConfigured` true, the homepage, guest `/collaboration`, and the admin login passed. SMS is not sent. SMTP, Stripe, social, Meilisearch, Airwallex, recurring, team proposals, DocuSign, Flutterwave or M-Pesa, and paid mentorship were not exercised. Those evidence ids stay blank.
 
-Probe of `https://influrios.com` on 2026-10-13 (Phase M kickoff after #251/#252): **blocked**. Nginx returned **502 Bad Gateway** for `/`, `/api/health`, and `/admin/login`. Auto checks: 2 pass (HTTPS origin, SMS not sent), 5 fail (health, authConfigured, homepage, guest collaboration, admin login). Operator checks were not run. Recover the Compose `web` container before filling any evidence cell:
+Probe of `https://influrios.com` on 2026-10-13 (Phase M kickoff after #251/#252): initially **blocked** by nginx **502 Bad Gateway**. Host recovered (`curl -fsS http://127.0.0.1:3000/api/health` → `ok` / `authConfigured: true`). Re-probe at **2026-10-13T10:22:39Z**: **7/7 auto checks pass** (HTTPS, health+db, authConfigured, homepage, guest `/collaboration`, admin login, SMS not sent). Cron without `CRON_SECRET` correctly returns **401**.
+
+**E4 Stripe (same day):** `POST /api/billing/webhook` returns **501** with  
+`The saved Stripe secret could not be read. Re-save it on Payment gateways.`  
+Ciphertext from an earlier `AUTH_SECRET` (or a seed/`db push` restore) cannot be decrypted. Operator must open **Admin → Payment gateways → Stripe**, paste `sk_test_…` again, enable, Save — then re-check:
 
 ```bash
-cd /var/www/influrios   # or APP_DIR
-bash deploy/scripts/diagnose-502.sh
-git pull origin main
-bash deploy/scripts/deploy.sh
-curl -fsS http://127.0.0.1:3000/api/health
-curl -fsSI https://influrios.com/api/health
+curl -sS -X POST https://influrios.com/api/billing/webhook \
+  -H 'content-type: application/json' -d '{}'
+# Expect 400 missing signature (secret readable), not 501 unreadable.
 ```
 
-After health is green, re-run `node scripts/staging-evidence-probe.mjs https://influrios.com`, then complete §2–§5 and Slice E4–E12 with real evidence ids.
+Host-side Prisma tools should use `DATABASE_URL` with host `127.0.0.1` (not the Compose service name). Prefer `npx prisma migrate deploy` over `db push` on the live host after recovery.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
-| Env, HTTPS, auth secret, cron | | | |
+| Env, HTTPS, auth secret, cron | probe `2026-10-13T10:22:39Z` · health ok · cron 401 without secret | 2026-10-13 | cloud-agent / host |
 | SMTP | | | |
-| Stripe checkout, duplicate skip, portal, Connect | | | |
+| Stripe checkout, duplicate skip, portal, Connect | blocked — gateway secret unreadable until re-saved | 2026-10-13 | |
 | Social OAuth | | | |
 | Meilisearch counts | | | |
 | Airwallex hold and release | | | |
