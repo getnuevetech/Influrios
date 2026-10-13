@@ -9,7 +9,12 @@ import { primaryShortHost } from "@/lib/short-link";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Creator account" };
 
-export default async function CreatorHomePage() {
+export default async function CreatorHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string; published?: string }>;
+}) {
+  const params = await searchParams;
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/creator");
   const [creator, draft, host] = await Promise.all([
@@ -46,26 +51,88 @@ export default async function CreatorHomePage() {
     : [0, 0, 0];
   const completion = draft ? completenessFor(draft) : null;
   const next = completion?.items.find((item) => !item.done);
+  const incomplete = Boolean(completion && completion.score < 100);
   const today = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
   const payoutReady = Boolean(creator?.payoutProfile?.stripeConnectAccountId || creator?.payoutProfile?.providerConnectedAccountId);
+  const profileHref = draft ? "/dashboard" : "/claim";
 
   return (
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">Creator account</h1>
-          <p className="mt-1 text-sm text-muted">Welcome back{account.name ? `, ${account.name.split(" ")[0]}` : ""}. This is the account on {account.email}.</p>
+          <p className="mt-1 text-sm text-muted">Welcome back{account.name ? `, ${account.name.split(" ")[0]}` : ""}. Here&apos;s what&apos;s happening with your creator journey.</p>
         </div>
         <p className="text-xs font-semibold text-muted">{today}</p>
       </div>
 
-      {!creator ? (
+      {params.published ? (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Your Starter card is live{creator ? (
+            <>
+              {" "}
+              at{" "}
+              <Link href={`/c/${creator.slug}`} className="font-semibold underline">
+                /c/{creator.slug}
+              </Link>
+            </>
+          ) : null}
+          .
+        </div>
+      ) : null}
+
+      {incomplete ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <div>
+            <p className="font-semibold">Complete your profile ({completion?.score ?? 0}%)</p>
+            <p className="text-amber-900/80">
+              {params.welcome
+                ? "Your account is ready. Finish the remaining profile steps so brands can find you."
+                : next?.hint || "A few profile details are still missing."}
+            </p>
+          </div>
+          <Link href={profileHref} className="btn-primary !py-2 text-sm">
+            {draft ? "Edit profile" : "Start profile"}
+          </Link>
+        </div>
+      ) : null}
+
+      {!creator && !draft ? (
         <section className="mt-6 rounded-3xl border border-[#E6ECF7] bg-white p-6">
           <h2 className="font-display text-xl font-bold">Create your influencer card</h2>
-          <p className="mt-2 max-w-xl text-sm text-muted">This account does not have a published card yet. Profile, visits, and payouts appear here after the card exists.</p>
+          <p className="mt-2 max-w-xl text-sm text-muted">Your email is verified and this account is active. Start a card whenever you are ready — profile completion is separate from account access.</p>
           <Link href="/claim" className="btn-primary mt-4">Get started free</Link>
         </section>
-      ) : (
+      ) : !creator && draft ? (
+        <section className="mt-6 rounded-3xl border border-[#E6ECF7] bg-white p-6">
+          <h2 className="font-display text-xl font-bold">Finish your influencer card</h2>
+          <p className="mt-2 max-w-xl text-sm text-muted">
+            Your account is verified. Publish when the bio, location, and specialty look right — you can use the rest of
+            Influrios in the meantime.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/dashboard" className="btn-primary">
+              Complete profile
+            </Link>
+            {draft.stage === "verified" || draft.stage === "published" ? (
+              <Link href={`/claim/publish/${draft.id}`} className="btn-secondary">
+                Publish card
+              </Link>
+            ) : null}
+          </div>
+          {completion ? (
+            <div className="mt-5 max-w-md">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span>Profile completion</span>
+                <span>{completion.score}%</span>
+              </div>
+              <div className="mt-2 h-2 rounded-full bg-[#EEF2FA]">
+                <div className="h-2 rounded-full bg-violet" style={{ width: `${completion.score}%` }} />
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : creator ? (
         <>
           <section className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
             <div className="rounded-3xl border border-[#E6ECF7] bg-white p-5">
@@ -93,7 +160,10 @@ export default async function CreatorHomePage() {
                     ))}
                   </div>
                 </div>
-                <Link href="/dashboard" className="btn-secondary !py-2 text-sm">Edit profile</Link>
+                <div className="flex flex-col gap-2">
+                  <Link href="/dashboard" className="btn-primary !py-2 text-sm">Edit profile</Link>
+                  <Link href={`/c/${creator.slug}`} className="btn-secondary !py-2 text-sm">Share card</Link>
+                </div>
               </div>
               {completion ? (
                 <div className="mt-5">
@@ -104,6 +174,7 @@ export default async function CreatorHomePage() {
                   <div className="mt-2 h-2 rounded-full bg-[#EEF2FA]">
                     <div className="h-2 rounded-full bg-violet" style={{ width: `${completion.score}%` }} />
                   </div>
+                  <p className="mt-2 text-xs text-muted">Complete your profile to unlock more brand opportunities.</p>
                 </div>
               ) : null}
               {shortLink ? (
@@ -182,7 +253,7 @@ export default async function CreatorHomePage() {
             </div>
           </section>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

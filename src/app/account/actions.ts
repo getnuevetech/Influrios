@@ -2,15 +2,17 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { safeNextPath } from "@/lib/account-policy";
+import { isDefaultMemberHome, safeNextPath } from "@/lib/account-policy";
 import {
   clearAccountSession,
   getAccountSession,
+  homePathForRole,
   loginAccount,
   registerAccount,
   requestPasswordReset,
   resendAccountVerification,
   resetPassword,
+  setAccountPassword,
   verifyAccountEmail,
 } from "@/lib/accounts";
 import {
@@ -78,8 +80,9 @@ export async function actionLogin(formData: FormData) {
   const ip = clientIp(headerStore);
   const locked = lockoutMessage("account-login", ip, email);
   if (locked) back("/login", AUTH_LOCKOUT_GENERIC_MESSAGE, next);
+  let user: Awaited<ReturnType<typeof loginAccount>> | null = null;
   try {
-    await loginAccount(email, String(formData.get("password") ?? ""));
+    user = await loginAccount(email, String(formData.get("password") ?? ""));
     recordAuthSuccess("account-login", ip, email);
   } catch (error) {
     const coded = error as Error & { code?: string };
@@ -89,7 +92,8 @@ export async function actionLogin(formData: FormData) {
     recordAuthFailure("account-login", ip, email);
     back("/login", coded.message || "Could not log in.", next);
   }
-  redirect(next);
+  const destination = isDefaultMemberHome(next) ? homePathForRole(user?.role) : next;
+  redirect(destination);
 }
 
 export async function actionVerifyEmail(formData: FormData) {
@@ -103,8 +107,9 @@ export async function actionVerifyEmail(formData: FormData) {
       `/account/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(next)}&error=${encodeURIComponent(AUTH_LOCKOUT_GENERIC_MESSAGE)}`,
     );
   }
+  let user: Awaited<ReturnType<typeof verifyAccountEmail>> | null = null;
   try {
-    await verifyAccountEmail(email, String(formData.get("code") ?? ""));
+    user = await verifyAccountEmail(email, String(formData.get("code") ?? ""));
     recordAuthSuccess("account-verify", ip, email);
   } catch (error) {
     recordAuthFailure("account-verify", ip, email);
@@ -113,7 +118,15 @@ export async function actionVerifyEmail(formData: FormData) {
       `/account/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(next)}&error=${encodeURIComponent(message)}`,
     );
   }
-  redirect(next);
+  if (!user?.passwordHash) {
+    redirect(`/account/password?next=${encodeURIComponent(isDefaultMemberHome(next) ? homePathForRole(user?.role) : next)}`);
+  }
+  const destination = isDefaultMemberHome(next) ? homePathForRole(user?.role) : next;
+  // First verification: send incomplete profiles to edit once; login later uses the dashboard.
+  if (destination === "/creator") {
+    redirect(`${destination}?welcome=1`);
+  }
+  redirect(destination);
 }
 
 export async function actionResendVerification(formData: FormData) {
@@ -163,7 +176,28 @@ export async function actionResetPassword(formData: FormData) {
     const message = error instanceof Error ? error.message : "Reset failed.";
     redirect(`/account/reset?token=${encodeURIComponent(token)}&error=${encodeURIComponent(message)}`);
   }
-  redirect("/");
+  const session = await getAccountSession().catch(() => null);
+  redirect(homePathForRole(session?.role));
+}
+
+export async function actionSetPassword(formData: FormData) {
+  const session = await getAccountSession();
+  if (!session) redirect("/login?next=/account/password");
+  const next = safeNextPath(String(formData.get("next") ?? ""), homePathForRole(session.role));
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password !== confirm) {
+    redirect(
+      `/account/password?next=${encodeURIComponent(next)}&error=${encodeURIComponent("Passwords do not match.")}`,
+    );
+  }
+  try {
+    await setAccountPassword(session.id, password);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save password.";
+    redirect(`/account/password?next=${encodeURIComponent(next)}&error=${encodeURIComponent(message)}`);
+  }
+  redirect(next);
 }
 
 export async function actionLogout() {

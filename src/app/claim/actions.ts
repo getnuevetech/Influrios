@@ -84,7 +84,13 @@ export async function actionVerifyDraft(formData: FormData) {
     const message = err instanceof Error ? err.message : "Verification failed";
     redirect(`/claim/verify/${draftId}?error=${encodeURIComponent(message)}`);
   }
-  redirect(`/claim/publish/${draftId}`);
+  const { getAccountSession } = await import("@/lib/accounts");
+  const account = await getAccountSession().catch(() => null);
+  if (account && !account.hasPassword) {
+    redirect(`/account/password?next=${encodeURIComponent("/creator?welcome=1")}`);
+  }
+  // Account exists after email verify; dashboard first, with profile completion prompts.
+  redirect("/creator?welcome=1");
 }
 
 export async function actionPublishDraft(formData: FormData) {
@@ -128,7 +134,7 @@ export async function actionPublishDraft(formData: FormData) {
     const message = err instanceof Error ? err.message : "Publish failed";
     redirect(`/claim/publish/${draftId}?error=${encodeURIComponent(message)}`);
   }
-  redirect(`/dashboard?published=1`);
+  redirect(`/creator?published=1`);
 }
 
 export async function actionAddDraftSocial(formData: FormData) {
@@ -188,9 +194,6 @@ export async function actionUpdateProfileMedia(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
   const intent = String(formData.get("intent") ?? "");
   try {
-    const { nextBrandBanner, defaultAvatarForGender, normalizeProfileGender } = await import(
-      "@/lib/profile-media"
-    );
     const { saveAvatarUpload, saveCoverUpload } = await import("@/lib/profile-uploads");
     const { getDraft } = await import("@/lib/claim");
     const draft = await getDraft(draftId);
@@ -206,16 +209,6 @@ export async function actionUpdateProfileMedia(formData: FormData) {
       if (!(file instanceof File) || file.size <= 0) throw new Error("Choose a banner image.");
       const coverImage = await saveCoverUpload(file);
       await updateDraftProfile(draftId, { coverImage });
-    } else if (intent === "avatar-default") {
-      const gender = normalizeProfileGender(String(formData.get("gender") ?? draft.gender));
-      await updateDraftProfile(draftId, {
-        gender,
-        image: defaultAvatarForGender(gender),
-      });
-    } else if (intent === "cover-next") {
-      await updateDraftProfile(draftId, {
-        coverImage: nextBrandBanner(draft.coverImage, draft.slug),
-      });
     } else {
       throw new Error("Unknown media action.");
     }

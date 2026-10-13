@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { actionSaveAccountPolicy, actionSaveMember } from "@/app/admin/accounts/actions";
+import {
+  actionSaveAccountPolicy,
+  actionSaveMember,
+  actionSendPasswordReset,
+} from "@/app/admin/accounts/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
@@ -12,10 +16,15 @@ export const metadata = { title: "Member accounts" };
 const ROLES = ["CREATOR", "BUSINESS", "AGENCY", "ADMIN"] as const;
 const FALLBACK_PLANS = ["STARTER", "PLUS", "PRO", "BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];
 
+function locationLabel(city?: string | null, country?: string | null) {
+  const parts = [city?.trim(), country?.trim()].filter((part) => part && part !== "Your city" && part !== "Your country");
+  return parts.length ? parts.join(", ") : "Not set";
+}
+
 export default async function AdminAccountsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; reset?: string }>;
 }) {
   const session = await requireAdminPage("accounts");
   const canEdit = hasPermission(session, "accounts.edit");
@@ -26,7 +35,15 @@ export default async function AdminAccountsPage({
     .findMany({
       orderBy: { createdAt: "desc" },
       take: 100,
-      include: { consents: { orderBy: { acceptedAt: "desc" }, take: 1 } },
+      include: {
+        consents: { orderBy: { acceptedAt: "desc" }, take: 1 },
+        creator: { select: { locationCity: true, locationCountry: true, slug: true, displayName: true } },
+        onboardingSessions: {
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+          select: { payload: true, draftSlug: true },
+        },
+      },
     })
     .catch(() => []);
 
@@ -46,6 +63,14 @@ export default async function AdminAccountsPage({
       </p>
       {params.saved === "policy" ? <p className="mt-4 text-sm font-semibold text-emerald-700">Account policy saved.</p> : null}
       {params.saved === "member" ? <p className="mt-4 text-sm font-semibold text-emerald-700">Account updated.</p> : null}
+      {params.reset === "sent" ? (
+        <p className="mt-4 text-sm font-semibold text-emerald-700">Password reset email queued for that member.</p>
+      ) : null}
+      {params.reset === "failed" ? (
+        <p className="mt-4 text-sm font-semibold text-amber-800">
+          Password reset could not be sent. Check SMTP and that the account has an email address.
+        </p>
+      ) : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">That change could not be saved.</p> : null}
 
       <form action={actionSaveAccountPolicy} className="mt-6 space-y-3 rounded-2xl border border-[#E4EBFF] bg-white p-5">
@@ -94,55 +119,94 @@ export default async function AdminAccountsPage({
         <p className="mt-3 text-sm text-muted">No member accounts yet, or the database is unavailable.</p>
       ) : (
         <div className="mt-4 space-y-3">
-          {users.map((user) => (
-            <form key={user.id} action={actionSaveMember} className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-              <input type="hidden" name="userId" value={user.id} />
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-indigo">{user.name || "Unnamed"}</p>
-                  <p className="text-sm text-muted">{user.email}</p>
-                  <p className="mt-1 text-xs text-muted">
-                    Joined {user.createdAt.toISOString().slice(0, 10)} · consent {user.consents[0]?.version || "none"}
-                  </p>
-                </div>
+          {users.map((user) => {
+            const payload =
+              user.onboardingSessions[0]?.payload &&
+              typeof user.onboardingSessions[0].payload === "object" &&
+              !Array.isArray(user.onboardingSessions[0].payload)
+                ? (user.onboardingSessions[0].payload as Record<string, unknown>)
+                : null;
+            const draftCity = typeof payload?.locationCity === "string" ? payload.locationCity : null;
+            const draftCountry = typeof payload?.locationCountry === "string" ? payload.locationCountry : null;
+            const city = user.creator?.locationCity || draftCity;
+            const country = user.creator?.locationCountry || draftCountry;
+            const verified = Boolean(user.emailVerifiedAt);
+
+            return (
+              <div key={user.id} className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
+                <form action={actionSaveMember}>
+                  <input type="hidden" name="userId" value={user.id} />
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-indigo">{user.name || user.creator?.displayName || "Unnamed"}</p>
+                      <p className="text-sm text-muted">{user.email}</p>
+                      <p className="mt-1 text-xs text-muted">
+                        Joined {user.createdAt.toISOString().slice(0, 10)} · consent {user.consents[0]?.version || "none"}
+                        {user.creator?.slug ? ` · @${user.creator.slug}` : ""}
+                      </p>
+                      <p className="mt-1 text-xs text-muted">Location: {locationLabel(city, country)}</p>
+                      <p className="mt-1 text-xs text-muted">
+                        Password: {user.passwordHash ? "Set" : "Not set yet"}
+                      </p>
+                    </div>
+                    {canEdit ? (
+                      <button type="submit" className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm font-semibold text-indigo">
+                        Save
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
+                      Role
+                      <select name="role" defaultValue={user.role} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo">
+                        {ROLES.map((role) => (
+                          <option key={role} value={role}>
+                            {role}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
+                      Plan
+                      <select name="planTier" defaultValue={user.planTier} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo">
+                        {[...new Set([user.planTier, ...catalogPlans])].map((plan) => (
+                          <option key={plan} value={plan}>
+                            {plan}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="self-end pb-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Email status</p>
+                      <p
+                        className={`mt-1 text-sm font-semibold ${verified ? "text-emerald-700" : "text-amber-800"}`}
+                      >
+                        {verified
+                          ? `Verified ${user.emailVerifiedAt?.toISOString().slice(0, 10)}`
+                          : "Not verified"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted">Set by the member verification code. Not editable here.</p>
+                    </div>
+                    <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-indigo">
+                      <input type="checkbox" name="suspended" value="1" defaultChecked={Boolean(user.suspendedAt)} disabled={!canEdit} />
+                      Suspended
+                    </label>
+                  </div>
+                </form>
                 {canEdit ? (
-                  <button type="submit" className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm font-semibold text-indigo">
-                    Save
-                  </button>
+                  <form action={actionSendPasswordReset} className="mt-3 border-t border-[#EEF2FF] pt-3">
+                    <input type="hidden" name="userId" value={user.id} />
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-[#F1ECFF] px-3 py-2 text-sm font-semibold text-violet hover:bg-[#E8E0FF]"
+                    >
+                      Email password reset link
+                    </button>
+                  </form>
                 ) : null}
               </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
-                  Role
-                  <select name="role" defaultValue={user.role} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo">
-                    {ROLES.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
-                  Plan
-                  <select name="planTier" defaultValue={user.planTier} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo">
-                    {[...new Set([user.planTier, ...catalogPlans])].map((plan) => (
-                      <option key={plan} value={plan}>
-                        {plan}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-indigo">
-                  <input type="checkbox" name="verified" value="1" defaultChecked={Boolean(user.emailVerifiedAt)} disabled={!canEdit} />
-                  Email verified
-                </label>
-                <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-indigo">
-                  <input type="checkbox" name="suspended" value="1" defaultChecked={Boolean(user.suspendedAt)} disabled={!canEdit} />
-                  Suspended
-                </label>
-              </div>
-            </form>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

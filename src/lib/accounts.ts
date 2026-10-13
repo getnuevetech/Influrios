@@ -13,7 +13,15 @@ export type AccountSession = {
   email: string;
   name: string | null;
   emailVerifiedAt: Date | null;
+  role: string;
+  hasPassword: boolean;
 };
+
+/** Post-login / post-verify home by role. Creators land on the dashboard, not edit profile. */
+export function homePathForRole(role: string | null | undefined): string {
+  if (role === "BUSINESS" || role === "AGENCY") return "/business/home";
+  return "/creator";
+}
 
 function secret() {
   return requireAuthSecret("account");
@@ -180,9 +188,13 @@ export async function verifyAccountEmail(email: string, code: string) {
   return verified;
 }
 
+/**
+ * Email a reset/setup link. Works for claim users with no password yet so they can set one.
+ * Returns sent:false when mail is unavailable or the address is unknown.
+ */
 export async function requestPasswordReset(email: string) {
   const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
-  if (!user?.passwordHash) return { sent: false };
+  if (!user) return { sent: false };
   const { mailReady } = await import("@/lib/mail");
   if (!(await mailReady())) return { sent: false };
   const token = randomBytes(24).toString("base64url");
@@ -206,6 +218,58 @@ export async function requestPasswordReset(email: string) {
     return { sent: false };
   }
   return { sent: true };
+}
+
+/** Set or replace the member password while already signed in (claim users after email verify). */
+export async function setAccountPassword(userId: string, password: string) {
+  const policy = await getSiteConfig();
+  const problem = passwordError(password, policy.passwordMinLength);
+  if (problem) throw new Error(problem);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: hashAccountPassword(password) },
+  });
+}
+
+/**
+ * After claim email verification: create/link the member User, mark email verified permanently,
+ * and open the account session so nav no longer bounces to login.
+ */
+export async function ensureAccountFromClaimDraft(input: {
+  draftId: string;
+  email: string;
+  name?: string | null;
+  verifiedAt?: string | null;
+}) {
+  const email = input.email.trim().toLowerCase();
+  if (!email.includes("@")) throw new Error("A valid email is required.");
+  const verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : new Date();
+  const existing = await prisma.user.findUnique({ where: { email } });
+  const user = existing
+    ? await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          name: input.name?.trim() || existing.name,
+          emailVerifiedAt: existing.emailVerifiedAt ?? verifiedAt,
+          role: existing.role === "ADMIN" ? existing.role : "CREATOR",
+        },
+      })
+    : await prisma.user.create({
+        data: {
+          email,
+          name: input.name?.trim() || null,
+          role: "CREATOR",
+          planTier: "STARTER",
+          emailVerifiedAt: verifiedAt,
+        },
+      });
+  await prisma.onboardingSession.update({
+    where: { id: input.draftId },
+    data: { userId: user.id },
+  });
+  await setAccountSession(user.id);
+  await attachOnboarding(user.id);
+  return user;
 }
 
 export async function resetPassword(token: string, password: string) {
@@ -273,6 +337,8 @@ export async function getAccountSession(): Promise<AccountSession | null> {
       email: user.email,
       name: user.name,
       emailVerifiedAt: user.emailVerifiedAt,
+      role: user.role,
+      hasPassword: Boolean(user.passwordHash),
     };
   } catch {
     return null;

@@ -55,6 +55,7 @@ import { scheduleLabel } from "@/lib/schedule";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import Image from "next/image";
 import { BRAND_AVATARS, BRAND_BANNERS } from "@/lib/profile-media";
+import { BIO_MIN_CHARS } from "@/lib/onboarding";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Influencer dashboard" };
@@ -68,7 +69,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
   const draft = await getCreatorSessionDraft();
   if (!draft) {
     const account = await getAccountSession().catch(() => null);
-    if (!account) redirect("/login?next=/dashboard");
+    if (!account) redirect("/login?next=/creator");
     redirect("/creator");
   }
   const optIn = await getCreatorOptIn(draft.slug).catch(() => null);
@@ -248,8 +249,8 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
           <div>
             <h2 className="font-display text-xl font-bold text-indigo">Profile photo &amp; banner</h2>
             <p className="mt-1 text-sm text-muted">
-              New profiles start with Influrios brand art. Set your gender for a matching default avatar, upload your own
-              photos, or cycle branded banners anytime.
+              New profiles start with Influrios brand art. Choosing a gender below updates the default avatar
+              automatically. Upload your own photo or banner anytime.
             </p>
             <div className="mt-4 overflow-hidden rounded-2xl border border-border">
               <div className="relative h-28 w-full bg-[#EEF2FF]">
@@ -275,7 +276,6 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 </span>
                 <div className="min-w-0 flex-1 pb-1">
                   <p className="truncate text-sm font-bold text-indigo">{draft.displayName}</p>
-                  <p className="text-xs text-muted">Gender: {draft.gender}</p>
                 </div>
               </div>
             </div>
@@ -306,32 +306,6 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                 />
                 <button type="submit" className="btn-primary w-full !py-2 text-xs">
                   Upload banner
-                </button>
-              </form>
-              <form action={actionUpdateProfileMedia} className="space-y-2 rounded-xl border border-border p-3">
-                <input type="hidden" name="draftId" value={draft.id} />
-                <input type="hidden" name="intent" value="avatar-default" />
-                <p className="text-xs font-bold uppercase tracking-wide text-violet">Use brand avatar</p>
-                <select
-                  name="gender"
-                  defaultValue={draft.gender}
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm"
-                >
-                  <option value="unspecified">Generic Influrios</option>
-                  <option value="female">Female default</option>
-                  <option value="male">Male default</option>
-                </select>
-                <button type="submit" className="btn-secondary w-full !py-2 text-xs">
-                  Apply default avatar
-                </button>
-              </form>
-              <form action={actionUpdateProfileMedia} className="space-y-2 rounded-xl border border-border p-3">
-                <input type="hidden" name="draftId" value={draft.id} />
-                <input type="hidden" name="intent" value="cover-next" />
-                <p className="text-xs font-bold uppercase tracking-wide text-violet">Brand banner</p>
-                <p className="text-xs text-muted">Cycle the Influrios rooftop / lounge banners.</p>
-                <button type="submit" className="btn-secondary w-full !py-2 text-xs">
-                  Next brand banner
                 </button>
               </form>
             </div>
@@ -391,6 +365,9 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
                   defaultValue={draft.bio}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2"
                 />
+                <span className="mt-1 block text-xs font-normal text-muted">
+                  At least {BIO_MIN_CHARS} characters. A brief sentence about what you create is enough.
+                </span>
               </label>
               <PlaceFields
                 cityName="locationCity"

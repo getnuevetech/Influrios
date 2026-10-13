@@ -109,7 +109,7 @@ export default async function ClaimPage({ searchParams }: Props) {
 
       <p className="mt-8 text-center text-sm">
         Already published?{" "}
-        <Link href="/login?next=/dashboard" className="font-semibold text-violet hover:underline">
+        <Link href="/login?next=/creator" className="font-semibold text-violet hover:underline">
           Open influencer dashboard
         </Link>
         {" · "}

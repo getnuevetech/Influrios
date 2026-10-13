@@ -7,7 +7,13 @@ import { requireAuthSecret } from "@/lib/app-secret";
 import { decideCount, normalizePlanCode, planLabel, storedCreatorPlan } from "@/lib/entitlements";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { prisma } from "@/lib/db";
-import { advanceClaimStage, completionItemDone, evaluateCompletion, secondSocialDecision } from "@/lib/onboarding";
+import {
+  advanceClaimStage,
+  bioAcceptanceError,
+  completionItemDone,
+  evaluateCompletion,
+  secondSocialDecision,
+} from "@/lib/onboarding";
 import {
   defaultAvatarForGender,
   defaultBannerForSeed,
@@ -292,13 +298,14 @@ export function claimPublishBlockers(draft: Pick<ClaimDraft, "bio" | "locationCi
   };
   const blockers: string[] = [];
   if (!completionItemDone({ key: "location", label: "", hint: "", weight: 0 }, subject)) {
-    blockers.push("Add a city and country. Nothing was published.");
+    blockers.push("Add a city and country before publishing.");
   }
-  if (!completionItemDone({ key: "bio", label: "", hint: "", weight: 0 }, subject)) {
-    blockers.push("Add a bio. Nothing was published.");
+  const bioProblem = bioAcceptanceError(draft.bio);
+  if (bioProblem) {
+    blockers.push(`${bioProblem} Nothing was published.`);
   }
   if (!completionItemDone({ key: "specialty", label: "", hint: "", weight: 0 }, subject)) {
-    blockers.push("Choose a specialty. Nothing was published.");
+    blockers.push("Choose a specialty before publishing.");
   }
   return blockers;
 }
@@ -879,6 +886,16 @@ export async function verifyDraft(draftId: string, code: string): Promise<ClaimD
     success: true,
     detail: "email code accepted; social account remains unverified",
   });
+  // Email verify creates the member account immediately — publish is no longer required to "exist".
+  if (draft.email) {
+    const { ensureAccountFromClaimDraft } = await import("@/lib/accounts");
+    await ensureAccountFromClaimDraft({
+      draftId: draft.id,
+      email: draft.email,
+      name: draft.ownerName ?? draft.displayName,
+      verifiedAt: draft.verifiedAt,
+    });
+  }
   return draft;
 }
 

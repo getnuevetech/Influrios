@@ -25,9 +25,13 @@ describe("guest gate", () => {
 describe("return path", () => {
   it("keeps an in-app path and drops off-site targets", () => {
     assert.equal(safeNextPath("/creators/sofia-martinez"), "/creators/sofia-martinez");
-    assert.equal(safeNextPath("https://evil.example/creators/sofia"), "/");
-    assert.equal(safeNextPath("//evil.example"), "/");
-    assert.equal(safeNextPath(""), "/");
+    assert.equal(safeNextPath("https://evil.example/creators/sofia"), "/creator");
+    assert.equal(safeNextPath("//evil.example"), "/creator");
+    assert.equal(safeNextPath(""), "/creator");
+    assert.equal(safeNextPath("/"), "/creator");
+    assert.equal(safeNextPath("/dashboard"), "/creator");
+    assert.equal(safeNextPath("/business/home"), "/business/home");
+    assert.equal(safeNextPath("//evil.example", "/admin"), "/admin");
   });
 });
 

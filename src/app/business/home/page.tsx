@@ -36,14 +36,28 @@ export default async function BusinessHomePage() {
     { label: "A saved creator", done: workspace.shortlist.length > 0 },
   ];
   const complete = checks.filter((item) => item.done).length;
+  const setupPercent = Math.round((complete / checks.length) * 100);
   const recent = [...workspace.briefs].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
 
   return (
     <div>
       <h1 className="font-display text-3xl font-bold">Business account</h1>
       <p className="mt-1 text-sm text-muted">
-        Welcome back{account.name ? `, ${account.name.split(" ")[0]}` : ""}. This is {workspace.name || "your workspace"}.
+        Welcome back{account.name ? `, ${account.name.split(" ")[0]}` : ""}. Here&apos;s what&apos;s happening with{" "}
+        {workspace.name || "your workspace"}.
       </p>
+
+      {setupPercent < 100 ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <div>
+            <p className="font-semibold">Complete your company profile ({setupPercent}%)</p>
+            <p className="text-amber-900/80">Finish setup so creators and team members see a complete workspace.</p>
+          </div>
+          <Link href="/account" className="btn-primary !py-2 text-sm">
+            Complete profile →
+          </Link>
+        </div>
+      ) : null}
 
       <section className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)_auto]">
         <div className="rounded-3xl border border-[#E6ECF7] bg-white p-5">
@@ -52,14 +66,15 @@ export default async function BusinessHomePage() {
           <p className="mt-1 text-sm text-muted">{workspace.industry || "Industry not set"}</p>
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs font-semibold">
-              <span>Setup</span>
-              <span>
-                {complete} / {checks.length}
-              </span>
+              <span>Profile completion</span>
+              <span>{setupPercent}%</span>
             </div>
             <div className="mt-2 h-2 rounded-full bg-[#EEF2FA]">
-              <div className="h-2 rounded-full bg-violet" style={{ width: `${(complete / checks.length) * 100}%` }} />
+              <div className="h-2 rounded-full bg-violet" style={{ width: `${setupPercent}%` }} />
             </div>
+            <p className="mt-2 text-xs text-muted">
+              {complete} of {checks.length} setup steps complete.
+            </p>
           </div>
         </div>
         <div className="rounded-3xl border border-[#E6ECF7] bg-white p-5">

@@ -86,10 +86,10 @@ describe("claim draft facts", () => {
     assert.equal(claim.includes('handle = "influencer"'), false);
     assert.equal(page.includes("SOCIAL_HINTS[0]"), false);
     assert.match(page, /platform: "facebook"/);
-    assert.match(page, /href="\/login\?next=\/dashboard"/);
+    assert.match(page, /href="\/login\?next=\/creator"/);
     assert.match(page, /href="\/discover"/);
     const dashboard = readFileSync("src/app/dashboard/page.tsx", "utf8");
-    assert.match(dashboard, /redirect\("\/login\?next=\/dashboard"\)/);
+    assert.match(dashboard, /redirect\("\/login\?next=\/creator"\)/);
     assert.equal(dashboard.includes('if (!draft) redirect("/claim")'), false);
     assert.equal(preview.includes('? "Influencer"'), false);
   });

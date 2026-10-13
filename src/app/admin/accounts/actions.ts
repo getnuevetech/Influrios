@@ -52,16 +52,26 @@ export async function actionSaveMember(formData: FormData) {
   if (current.planTier) allowed.add(current.planTier);
   if (!allowed.has(planTier)) redirect("/admin/accounts?error=member");
 
-  const verified = formData.get("verified") === "1";
   const suspended = formData.get("suspended") === "1";
+  // Email verification is permanent once set by the member code — admin cannot clear it here.
   await prisma.user.update({
     where: { id },
     data: {
       role: role as (typeof ROLES)[number],
       planTier,
-      emailVerifiedAt: verified ? current.emailVerifiedAt ?? new Date() : null,
       suspendedAt: suspended ? current.suspendedAt ?? new Date() : null,
     },
   });
   redirect("/admin/accounts?saved=member");
+}
+
+export async function actionSendPasswordReset(formData: FormData) {
+  await requireAdminSession("accounts.edit");
+  const id = clean(formData.get("userId"), 80);
+  if (!id) redirect("/admin/accounts?reset=failed");
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user?.email) redirect("/admin/accounts?reset=failed");
+  const { requestPasswordReset } = await import("@/lib/accounts");
+  const result = await requestPasswordReset(user.email).catch(() => ({ sent: false }));
+  redirect(result.sent ? "/admin/accounts?reset=sent" : "/admin/accounts?reset=failed");
 }
