@@ -48,16 +48,16 @@ Fill once per staging environment. A probe on 2026-10-12 of `https://influrios.c
 
 | Check | Value / evidence |
 |-------|------------------|
-| Date | |
-| Operator | |
-| `NEXT_PUBLIC_APP_URL` (https) | |
-| DNS A/AAAA → host | ☐ |
-| `AUTH_SECRET` set | ☐ |
-| `ADMIN_SESSION_SECRET` set | ☐ |
-| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` stable across deploys | ☐ |
+| Date | 2026-10-13 |
+| Operator | host recovery + Phase M probe |
+| `NEXT_PUBLIC_APP_URL` (https) | `https://influrios.com` |
+| DNS A/AAAA → host | ☑ (site resolves) |
+| `AUTH_SECRET` set | ☑ `secrets.authConfigured: true` |
+| `ADMIN_SESSION_SECRET` set | ☐ (or covered by AUTH_SECRET) |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` stable across deploys | ☐ confirm in host `.env` |
 | `ADMIN_SUPER_EMAIL` / `ADMIN_SUPER_PASSWORD` known | ☐ |
-| `DATABASE_URL` / Compose Postgres healthy | ☐ |
-| TLS cert valid (browser) | ☐ |
+| `DATABASE_URL` / Compose Postgres healthy | ☑ health `db.ok` · host tools use `127.0.0.1` |
+| TLS cert valid (browser) | ☑ HTTPS probe pass |
 
 ### Webhook & callback URLs
 
@@ -98,10 +98,11 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 
 **Goal:** a sandbox Checkout marks the member plan only after Stripe confirms; a duplicate event does not change the plan again.
 
-1. Save a **sandbox** secret on Admin → Gateways (or `STRIPE_SECRET_KEY=sk_test_...`).
-2. Set `STRIPE_WEBHOOK_SECRET` (CLI `stripe listen --forward-to …/api/billing/webhook` or Dashboard endpoint).
+1. Save a **sandbox** secret on Admin → Gateways (or `STRIPE_SECRET_KEY=sk_test_...`).  
+   If `/api/billing/webhook` returns **501** *“could not be read”*, the stored ciphertext does not match the current `AUTH_SECRET` — paste the secret again and Save (do not only toggle Enabled).
+2. Set webhook secret on the Stripe gateway row (or `STRIPE_WEBHOOK_SECRET`) and register `{APP}/api/billing/webhook` in Stripe Dashboard / CLI.
 3. Optional Price IDs in Admin → Billing or env (`STRIPE_PRICE_*`).
-4. Sign in as a member → `/billing` → pay with Stripe test card `4242…`.
+4. Sign in as a member → `/billing` or `/pricing` → pay with Stripe test card `4242…`.
 5. Confirm success page and `User.planTier` / `SubscriptionState` / `CheckoutAttempt` updated.
 6. Redeploy the same `checkout.session.completed` event (Stripe CLI resend or Dashboard). Plan must **not** double-upgrade (`ProcessedWebhook` unique).
 
@@ -191,24 +192,26 @@ Phase M is **complete** only when every cell below has a real evidence id. A bla
 
 Probe of `https://influrios.com` on 2026-10-12: seven automatic checks passed and none failed. HTTPS, `/api/health` with the database up, `secrets.authConfigured` true, the homepage, guest `/collaboration`, and the admin login passed. SMS is not sent. SMTP, Stripe, social, Meilisearch, Airwallex, recurring, team proposals, DocuSign, Flutterwave or M-Pesa, and paid mentorship were not exercised. Those evidence ids stay blank.
 
-Probe of `https://influrios.com` on 2026-10-13 (Phase M kickoff after #251/#252): **blocked**. Nginx returned **502 Bad Gateway** for `/`, `/api/health`, and `/admin/login`. Auto checks: 2 pass (HTTPS origin, SMS not sent), 5 fail (health, authConfigured, homepage, guest collaboration, admin login). Operator checks were not run. Recover the Compose `web` container before filling any evidence cell:
+Probe of `https://influrios.com` on 2026-10-13 (Phase M kickoff after #251/#252): initially **blocked** by nginx **502 Bad Gateway**. Host recovered (`curl -fsS http://127.0.0.1:3000/api/health` → `ok` / `authConfigured: true`). Re-probe at **2026-10-13T10:22:39Z**: **7/7 auto checks pass** (HTTPS, health+db, authConfigured, homepage, guest `/collaboration`, admin login, SMS not sent). Cron without `CRON_SECRET` correctly returns **401**.
+
+**E4 Stripe (same day):**
+1. API secret was unreadable (**501**) → operator re-saved `sk_test_…` on Payment gateways.
+2. Re-check without a Stripe signature now returns **400** `Missing webhook signature or secret` (or, after deploy of clearer errors, `Missing Stripe-Signature header` once `whsec_…` is saved). That means the **API secret decrypts**; checkout can open.
+3. Still required before plan apply evidence: save **Webhook secret** (`whsec_…`) on the Stripe gateway row (or `STRIPE_WEBHOOK_SECRET`), register `https://influrios.com/api/billing/webhook` in Stripe Dashboard (checkout.session.completed), then member checkout with card `4242`.
 
 ```bash
-cd /var/www/influrios   # or APP_DIR
-bash deploy/scripts/diagnose-502.sh
-git pull origin main
-bash deploy/scripts/deploy.sh
-curl -fsS http://127.0.0.1:3000/api/health
-curl -fsSI https://influrios.com/api/health
+# After API secret is saved — expect 400, not 501:
+curl -sS -X POST https://influrios.com/api/billing/webhook \
+  -H 'content-type: application/json' -d '{}'
 ```
 
-After health is green, re-run `node scripts/staging-evidence-probe.mjs https://influrios.com`, then complete §2–§5 and Slice E4–E12 with real evidence ids.
+Host-side Prisma tools should use `DATABASE_URL` with host `127.0.0.1` (not the Compose service name). Prefer `npx prisma migrate deploy` over `db push` on the live host after recovery.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
-| Env, HTTPS, auth secret, cron | | | |
+| Env, HTTPS, auth secret, cron | probe `2026-10-13T10:22:39Z` · health ok · cron 401 without secret | 2026-10-13 | cloud-agent / host |
 | SMTP | | | |
-| Stripe checkout, duplicate skip, portal, Connect | | | |
+| Stripe checkout, duplicate skip, portal, Connect | API secret readable (webhook 400 without signature). Save whsec_… + run 4242 checkout | 2026-10-13 | |
 | Social OAuth | | | |
 | Meilisearch counts | | | |
 | Airwallex hold and release | | | |
