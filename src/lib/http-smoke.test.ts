@@ -67,8 +67,9 @@ describe("staging evidence probe", () => {
     const runbook = readFileSync("docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md", "utf8");
     assert.match(runbook, /2026-10-12/);
     assert.match(runbook, /secrets\.authConfigured` true/);
-    // Sign-off SMTP cell stays blank until E2 evidence ids are pasted (progress lives in § E2).
-    assert.match(runbook, /\| SMTP \| \| \| \|/);
+    // E2 complete: sign-off SMTP cell holds mail_test + claim_verification evidence ids.
+    assert.match(runbook, /\| SMTP \| `mail_test`=`cmv6wje8100a3o6018frdtn0r`/);
+    assert.match(runbook, /claim_verification_email`=`cmv6evovt005jod0130bnxspo`/);
     assert.equal(pkg.scripts["staging:e2-smtp-evidence"], "bash scripts/staging-e2-smtp-evidence.sh");
     assert.equal(existsSync("scripts/staging-e2-smtp-evidence.sh"), true);
   });

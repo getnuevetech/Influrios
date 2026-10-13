@@ -113,13 +113,14 @@ print_job_table "Recent failed mail jobs (need Admin Retry after fix)" "${FAILED
 echo "Retry model:"
 echo "  - Failures auto-requeue up to 3 attempts (~60s apart)."
 echo "  - Wait until status is failed (not queued/running) before fixing SMTP."
-echo "  - Then Admin → Jobs → Retry (operator recovery). That is the E2 drill."
+echo "  - Admin → Jobs → Retry reuses the SAME job id (resets attempts). After success,"
+echo "    that id shows as succeeded — it will not appear in the failed table above."
 echo
 echo "Operator checklist (fill docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md):"
 echo "  1. Admin → Mail: SMTP Ready, send test invite to your inbox"
 echo "  2. Complete account/claim verify (verification_email or claim_verification_email)"
 echo "  3. Break SMTP password → wait for failed (3 auto attempts) → fix → Admin Retry"
-echo "  4. Re-run this script; paste succeeded job id + SMTP line, and failed→retried id"
+echo "  4. Re-run this script; paste the retried job id (now succeeded) + SMTP line"
 echo
 
 if [[ "${have_success}" -eq 0 ]]; then
@@ -127,8 +128,8 @@ if [[ "${have_success}" -eq 0 ]]; then
   exit 1
 fi
 
-echo "At least one succeeded mail job is present. Confirm inbox delivery + retry drill for full E2."
+echo "At least one succeeded mail job is present."
 if [[ "${have_failed}" -eq 0 ]]; then
-  echo "Note: no failed mail job found — still run the intentional fail→Admin Retry drill."
-  echo "Tip: leave the bad password in place for ~3 minutes so auto-retries exhaust to failed."
+  echo "No currently-failed mail jobs (normal after a successful Admin Retry on the same id)."
+  echo "If you already Retry'd a failed job, record that succeeded id as the E2 retry evidence."
 fi
