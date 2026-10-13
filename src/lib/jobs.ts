@@ -223,11 +223,19 @@ export async function listSweepStatus() {
         where: { kind },
         orderBy: { createdAt: "desc" },
       });
+      const lastSucceeded = await prisma.job.findFirst({
+        where: { kind, status: "succeeded" },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, updatedAt: true },
+      });
       return {
         kind,
         status: latest?.status ?? "never",
         at: latest?.updatedAt.toISOString() ?? null,
         lastError: latest?.lastError ?? null,
+        /** Latest succeeded row id — Phase M E1 evidence. */
+        succeededId: lastSucceeded?.id ?? null,
+        succeededAt: lastSucceeded?.updatedAt.toISOString() ?? null,
       };
     }),
   );
