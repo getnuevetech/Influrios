@@ -1,3 +1,4 @@
+import { corridorCountryByCode } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
 import { setCountryGateway } from "@/lib/providers";
 
@@ -30,7 +31,7 @@ function parseCountryCodes(raw: string[]): string[] {
   for (const value of raw) {
     for (const part of String(value).split(/[\s,;]+/)) {
       const code = part.trim().toUpperCase();
-      if (/^[A-Z]{2}$/.test(code)) codes.add(code);
+      if (corridorCountryByCode(code)) codes.add(code);
     }
   }
   return [...codes].sort();

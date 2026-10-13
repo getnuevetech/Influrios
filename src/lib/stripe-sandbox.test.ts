@@ -13,11 +13,14 @@ function jsonResponse(status: number, body: unknown) {
 }
 
 describe("stripe sandbox", () => {
-  it("accepts sandbox key prefixes and refuses a live key", () => {
+  it("accepts sandbox and live key prefixes, including restricted-key bodies with underscores", () => {
     assert.equal(classifyStripeKey("sk_test_abc"), "sandbox");
     assert.equal(classifyStripeKey("rk_test_abc"), "sandbox");
+    assert.equal(classifyStripeKey("rk_test_abc_def"), "sandbox");
     assert.equal(classifyStripeKey("rkcs_test_abc"), "sandbox");
     assert.equal(classifyStripeKey("sk_live_abc"), "live");
+    assert.equal(classifyStripeKey("sk_live_51ABC-def_01"), "live");
+    assert.equal(classifyStripeKey("pk_test_abc"), null);
     assert.equal(classifyStripeKey("not-a-key"), null);
   });
 

@@ -1,3 +1,4 @@
+import { corridorCountryByCode } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
 import { assembleDocuSignCredentials, openDocuSignEnvelope } from "@/lib/signing/docusign";
@@ -302,7 +303,7 @@ export function gatewayCredentialLabels(code: string): { publicKey: string; secr
       return {
         publicKey: "Publishable key",
         secret: "Secret key",
-        note: "Save a sandbox secret key (sk_test_, rk_test_, or rkcs_test_). A live key is refused.",
+        note: "Save a Stripe secret key (sk_test_… for sandbox or sk_live_… for production). Restricted keys (rk_/rkcs_) are also accepted.",
       };
     default:
       return { publicKey: "Public key", secret: "Secret", note: "" };
@@ -448,8 +449,8 @@ export async function saveProvider(input: {
 }) {
   const code = providerCode(input.code);
   if (!code) throw new Error("A provider code is required.");
-  if (input.kind === "payment" && code === "stripe" && input.secret.trim() && classifyStripeKey(input.secret) !== "sandbox") {
-    throw new Error("Save a Stripe sandbox key. Nothing was charged.");
+  if (input.kind === "payment" && code === "stripe" && input.secret.trim() && !classifyStripeKey(input.secret)) {
+    throw new Error("Save a Stripe secret key (sk_test_… or sk_live_…). Nothing was charged.");
   }
   const name = input.name.trim().slice(0, 80);
   if (!name) throw new Error("A provider name is required.");
@@ -542,19 +543,25 @@ export async function paymentRoutes() {
 }
 
 export async function setCountryGateway(countryCode: string, providerId: string) {
-  const code = countryCode.trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(code)) throw new Error("Use a two-letter country code.");
+  const country = corridorCountryByCode(countryCode);
+  if (!country) throw new Error("Choose a country from the list.");
   const provider = await prisma.integrationProvider.findFirst({ where: { id: providerId, kind: "payment" } });
   if (!provider) throw new Error("Choose a payment gateway.");
   await prisma.country.upsert({
-    where: { code },
-    update: {},
-    create: { code, name: code, currency: "USD", locale: "en", enabled: true },
+    where: { code: country.code },
+    update: { name: country.name, currency: country.currency },
+    create: {
+      code: country.code,
+      name: country.name,
+      currency: country.currency,
+      locale: "en",
+      enabled: true,
+    },
   });
   return prisma.paymentCountryRoute.upsert({
-    where: { countryCode: code },
+    where: { countryCode: country.code },
     update: { providerId: provider.id, active: true },
-    create: { countryCode: code, providerId: provider.id, active: true },
+    create: { countryCode: country.code, providerId: provider.id, active: true },
   });
 }
 
@@ -611,7 +618,8 @@ export function countryDisplayName(countryCode: string, countryName?: string | n
   const code = countryCode.trim().toUpperCase();
   if (countryName?.trim()) return countryName.trim();
   const seeded = DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === code);
-  return seeded?.name ?? code;
+  if (seeded?.name) return seeded.name;
+  return corridorCountryByCode(code)?.name ?? code;
 }
 
 export function buildGatewayRemovalBlockers(input: {

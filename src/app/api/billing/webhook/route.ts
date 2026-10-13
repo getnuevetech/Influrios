@@ -44,16 +44,13 @@ function subscriptionId(object: StripeObject, eventType: string) {
 export async function POST(req: NextRequest) {
   const creds = await stripeCredentials();
   if (!creds.ok) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message:
-          creds.reason === "rejected"
-            ? "Use a Stripe sandbox key. Nothing was charged."
-            : "Stripe is not ready. Nothing was charged.",
-      },
-      { status: 501 },
-    );
+    const message =
+      creds.reason === "unreadable"
+        ? "The saved Stripe secret could not be read. Re-save it on Payment gateways. Nothing was charged."
+        : creds.reason === "rejected"
+          ? "Use a valid Stripe secret key (sk_test_… or sk_live_…). Nothing was charged."
+          : "Stripe is not ready. Nothing was charged.";
+    return NextResponse.json({ ok: false, message }, { status: 501 });
   }
 
   const Stripe = (await import("stripe")).default;

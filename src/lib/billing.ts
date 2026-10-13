@@ -411,10 +411,19 @@ export async function startCheckout(input: {
   }
 
   const creds = await stripeCredentials();
-  if (!creds.ok && creds.reason === "rejected") {
-    return { ok: false, error: "Use a Stripe sandbox key. Nothing was charged." };
-  }
   if (!creds.ok) {
+    if (creds.reason === "unreadable") {
+      return {
+        ok: false,
+        error: "The saved Stripe secret could not be read. Re-save it on Payment gateways. Nothing was charged.",
+      };
+    }
+    if (creds.reason === "rejected") {
+      return {
+        ok: false,
+        error: "Use a valid Stripe secret key (sk_test_… or sk_live_…). Nothing was charged.",
+      };
+    }
     return { ok: false, error: "Stripe is not configured. Nothing was charged." };
   }
 
