@@ -397,6 +397,30 @@ type AirwallexFetch = {
   fetchImpl?: typeof fetch;
 };
 
+/** Never surface HTML/nginx bodies to members — those used to appear as `?error=<!DOCTYPE…`. */
+export function humanizeAirwallexHttpError(status: number, body: string): string {
+  const trimmed = (body ?? "").trim();
+  if (!trimmed) {
+    return `Airwallex returned HTTP ${status}. Check the base URL and API credentials on Payment gateways. Nothing was opened.`;
+  }
+  if (/^</.test(trimmed) || /<!DOCTYPE/i.test(trimmed) || /<html[\s>]/i.test(trimmed)) {
+    return `Airwallex returned HTTP ${status} (HTML instead of JSON). Check the base URL and API credentials on Payment gateways. Nothing was opened.`;
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as { message?: unknown; error?: unknown; code?: unknown };
+    const msg =
+      (typeof parsed.message === "string" && parsed.message.trim()) ||
+      (typeof parsed.error === "string" && parsed.error.trim()) ||
+      (typeof parsed.code === "string" && parsed.code.trim()) ||
+      "";
+    if (msg) return `Airwallex: ${msg.slice(0, 200)}. Nothing was opened.`;
+  } catch {
+    /* not JSON */
+  }
+  const oneLine = trimmed.replace(/\s+/g, " ").slice(0, 200);
+  return `Airwallex returned HTTP ${status}: ${oneLine}. Nothing was opened.`;
+}
+
 async function airwallexRequest(input: AirwallexFetch): Promise<{ ok: true; payload: Record<string, unknown> } | { ok: false; error: string }> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const response = await fetchImpl(`${input.baseUrl.replace(/\/$/, "")}${input.path}`, {
@@ -405,7 +429,7 @@ async function airwallexRequest(input: AirwallexFetch): Promise<{ ok: true; payl
     body: input.body === undefined ? undefined : JSON.stringify(input.body),
   });
   const text = await response.text();
-  if (!response.ok) return { ok: false, error: text.slice(0, 300) || "Airwallex did not accept the request." };
+  if (!response.ok) return { ok: false, error: humanizeAirwallexHttpError(response.status, text) };
   if (!text.trim()) return { ok: true, payload: {} };
   try {
     const payload = JSON.parse(text) as unknown;
@@ -586,6 +610,52 @@ export async function createAirwallexConnectedAccount(input: {
   const nextAction = read.payload.next_action as { url?: string } | undefined;
   const url = typeof nextAction?.url === "string" ? nextAction.url : typeof read.payload.url === "string" ? read.payload.url : undefined;
   return { ok: true, accountId, url };
+}
+
+/** Hosted KYC/onboarding: create flow then authorize to get a short-lived redirect URL. */
+export async function createAirwallexHostedOnboarding(input: {
+  baseUrl: string;
+  token: string;
+  accountId: string;
+  template: string;
+  returnUrl: string;
+  errorUrl: string;
+  fetchImpl?: typeof fetch;
+}): Promise<{ ok: true; url: string; flowId: string } | { ok: false; error: string }> {
+  const template = input.template.trim();
+  if (!template) {
+    return { ok: false, error: "Save the Airwallex hosted flow template id on Payment gateways. Nothing was opened." };
+  }
+  const created = await airwallexRequest({
+    baseUrl: input.baseUrl,
+    token: input.token,
+    path: "/api/v1/hosted_flows/create",
+    method: "POST",
+    body: {
+      account_id: input.accountId,
+      template,
+      return_url: input.returnUrl,
+      error_url: input.errorUrl,
+    },
+    fetchImpl: input.fetchImpl,
+  });
+  if (!created.ok) return created;
+  const flowId = typeof created.payload.id === "string" ? created.payload.id.trim() : "";
+  if (!flowId) return { ok: false, error: "Airwallex did not return a hosted flow id. Nothing was opened." };
+  const authorized = await airwallexRequest({
+    baseUrl: input.baseUrl,
+    token: input.token,
+    path: `/api/v1/hosted_flows/${encodeURIComponent(flowId)}/authorize`,
+    method: "POST",
+    body: {},
+    fetchImpl: input.fetchImpl,
+  });
+  if (!authorized.ok) return authorized;
+  const url = typeof authorized.payload.url === "string" ? authorized.payload.url.trim() : "";
+  if (!url.startsWith("https://")) {
+    return { ok: false, error: "Airwallex did not return a hosted onboarding URL. Nothing was opened." };
+  }
+  return { ok: true, url, flowId };
 }
 
 export async function fetchAirwallexCountryCapability(input: {

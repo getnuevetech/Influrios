@@ -84,6 +84,7 @@ export type ProviderExtra = {
   lastWebhookAt?: string;
   holdingAccountId?: string;
   operationsAccountId?: string;
+  hostedFlowTemplate?: string;
   integrationKey?: string;
   userId?: string;
   oauthBaseUrl?: string;
@@ -102,6 +103,7 @@ export function readProviderExtra(extraJson: unknown): ProviderExtra {
     lastWebhookAt: extraString(raw, "lastWebhookAt"),
     holdingAccountId: extraString(raw, "holdingAccountId"),
     operationsAccountId: extraString(raw, "operationsAccountId"),
+    hostedFlowTemplate: extraString(raw, "hostedFlowTemplate"),
     integrationKey: extraString(raw, "integrationKey"),
     userId: extraString(raw, "userId"),
     oauthBaseUrl: extraString(raw, "oauthBaseUrl"),
@@ -126,6 +128,7 @@ export function mergeProviderExtra(existing: unknown, patch: Partial<ProviderExt
   if (patch.lastWebhookAt !== undefined) putExtraString(next, "lastWebhookAt", patch.lastWebhookAt);
   if (patch.holdingAccountId !== undefined) putExtraString(next, "holdingAccountId", patch.holdingAccountId);
   if (patch.operationsAccountId !== undefined) putExtraString(next, "operationsAccountId", patch.operationsAccountId);
+  if (patch.hostedFlowTemplate !== undefined) putExtraString(next, "hostedFlowTemplate", patch.hostedFlowTemplate);
   if (patch.integrationKey !== undefined) putExtraString(next, "integrationKey", patch.integrationKey);
   if (patch.userId !== undefined) putExtraString(next, "userId", patch.userId);
   if (patch.oauthBaseUrl !== undefined) putExtraString(next, "oauthBaseUrl", patch.oauthBaseUrl);
@@ -135,6 +138,7 @@ export function mergeProviderExtra(existing: unknown, patch: Partial<ProviderExt
     !next.lastWebhookAt &&
     !next.holdingAccountId &&
     !next.operationsAccountId &&
+    !next.hostedFlowTemplate &&
     !next.integrationKey &&
     !next.userId &&
     !next.oauthBaseUrl
@@ -285,7 +289,7 @@ export function gatewayCredentialLabels(code: string): { publicKey: string; secr
       return {
         publicKey: "Client id",
         secret: "API key",
-        note: "Save the holding account id and the operations account id. Milestone splits pay the creator connected account. The fee stays in holding until the release webhook.",
+        note: "Save holding + operations account ids and the hosted flow template id (from your Airwallex Account Manager). Milestone splits pay the creator connected account. Use the demo API host https://api-demo.airwallex.com for sandbox.",
       };
     case "mpesa":
       return {
@@ -421,6 +425,7 @@ export async function listProviders(kind: "ai" | "payment" | "signing" | "connec
       lastWebhookAt: extra.lastWebhookAt ?? "",
       holdingAccountId: extra.holdingAccountId ?? "",
       operationsAccountId: extra.operationsAccountId ?? "",
+      hostedFlowTemplate: extra.hostedFlowTemplate ?? "",
       integrationKey: extra.integrationKey ?? "",
       userId: extra.userId ?? "",
       oauthBaseUrl: extra.oauthBaseUrl ?? "",
@@ -443,6 +448,7 @@ export async function saveProvider(input: {
   clearWebhook?: boolean;
   holdingAccountId?: string;
   operationsAccountId?: string;
+  hostedFlowTemplate?: string;
   integrationKey?: string;
   userId?: string;
   oauthBaseUrl?: string;
@@ -479,6 +485,7 @@ export async function saveProvider(input: {
     model: input.model.trim().slice(0, 80),
     ...(input.holdingAccountId !== undefined ? { holdingAccountId: input.holdingAccountId.slice(0, 120) } : {}),
     ...(input.operationsAccountId !== undefined ? { operationsAccountId: input.operationsAccountId.slice(0, 120) } : {}),
+    ...(input.hostedFlowTemplate !== undefined ? { hostedFlowTemplate: input.hostedFlowTemplate.slice(0, 120) } : {}),
     ...(input.integrationKey !== undefined ? { integrationKey: input.integrationKey.slice(0, 120) } : {}),
     ...(input.userId !== undefined ? { userId: input.userId.slice(0, 120) } : {}),
     ...(input.oauthBaseUrl !== undefined ? { oauthBaseUrl: input.oauthBaseUrl.slice(0, 200) } : {}),

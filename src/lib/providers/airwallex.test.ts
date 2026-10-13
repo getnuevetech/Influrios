@@ -10,10 +10,12 @@ import {
   capabilityPatchFromAirwallex,
   capabilityRowData,
   createAirwallexFunding,
+  createAirwallexHostedOnboarding,
   feeHoldingSnapshot,
   fundingSplitPlan,
   getAirwallexFundingStatus,
   getAirwallexPayoutStatus,
+  humanizeAirwallexHttpError,
   jurisdictionAllowsAirwallexIntent,
   parseAirwallexIntroFeeWebhook,
   parseAirwallexMentorshipWebhook,
@@ -302,5 +304,37 @@ describe("Airwallex adapter", () => {
     assert.deepEqual(hits, []);
     const ledger = readFileSync(path.resolve("src/lib/marketplace-ledger.ts"), "utf8");
     assert.equal(ledger.includes("providers/airwallex"), false);
+  });
+
+  it("never surfaces HTML error bodies from Airwallex HTTP failures", () => {
+    const html = humanizeAirwallexHttpError(502, "<!DOCTYPE html><html lang=\"en\"><head>");
+    assert.match(html, /HTML instead of JSON/i);
+    assert.equal(html.includes("<!DOCTYPE"), false);
+    const json = humanizeAirwallexHttpError(400, JSON.stringify({ message: "invalid client" }));
+    assert.match(json, /invalid client/i);
+  });
+
+  it("creates and authorizes a hosted onboarding URL", async () => {
+    const calls: string[] = [];
+    const result = await createAirwallexHostedOnboarding({
+      baseUrl: "https://api-demo.airwallex.com",
+      token: "token",
+      accountId: "acct_1",
+      template: "tmpl_open",
+      returnUrl: "https://influrios.com/billing?connected=1#payouts",
+      errorUrl: "https://influrios.com/billing#payouts",
+      fetchImpl: async (url, init) => {
+        calls.push(`${init?.method ?? "GET"} ${String(url)}`);
+        if (String(url).endsWith("/hosted_flows/create")) {
+          return new Response(JSON.stringify({ id: "flow_1" }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ url: "https://www.airwallex.com/hostedflow?code=abc" }), { status: 200 });
+      },
+    });
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.flowId, "flow_1");
+    assert.match(result.url, /^https:\/\/www\.airwallex\.com\/hostedflow/);
+    assert.equal(calls.length, 2);
   });
 });

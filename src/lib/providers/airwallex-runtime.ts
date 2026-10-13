@@ -1,3 +1,4 @@
+import { getAppOrigin } from "@/lib/billing";
 import { countryCodeFromLocation } from "@/lib/contract-wizard";
 import { prisma } from "@/lib/db";
 import { readShareSnapshot } from "@/lib/fx-share";
@@ -8,6 +9,7 @@ import {
   cancelAirwallexFunding,
   createAirwallexConnectedAccount,
   createAirwallexFunding,
+  createAirwallexHostedOnboarding,
   createAirwallexIntroFeeIntent,
   fundingSplitPlan,
   getAirwallexFundingStatus,
@@ -164,7 +166,9 @@ export async function openCreatorConnectedAccount(input: { userId: string; email
   if (!creator) {
     return { ok: false, error: "Create your Influencer Card before opening payout setup. Nothing was opened." };
   }
-  const country = countryCodeFromLocation(creator.locationCountry);
+  const fallback = (creator.payoutProfile?.primaryCountryCode ?? "").trim().toUpperCase();
+  const country =
+    countryCodeFromLocation(creator.locationCountry) || (/^[A-Z]{2}$/.test(fallback) ? fallback : null);
   const corridor = country
     ? await prisma.countryActivationCorridor.findUnique({ where: { countryCode: country } })
     : null;
@@ -184,8 +188,6 @@ export async function openCreatorConnectedAccount(input: { userId: string; email
       error: "This corridor is not set to Airwallex and the jurisdiction does not list Airwallex. Nothing was opened.",
     };
   }
-  const existing = creator.payoutProfile?.providerConnectedAccountId?.trim() || "";
-  if (existing) return { ok: true, accountId: existing, linked: true };
   const auth = await session();
   if (!auth.ok) {
     return {
@@ -197,19 +199,49 @@ export async function openCreatorConnectedAccount(input: { userId: string; email
   }
   const email = input.email?.trim() || "";
   if (!email) return { ok: false, error: "An account email is required. Nothing was opened." };
-  const created = await createAirwallexConnectedAccount({
-    baseUrl: auth.settings.baseUrl,
-    token: auth.token,
-    email,
-    requestId: `connect_${creator.id}`,
-  });
-  if (!created.ok) return created;
-  await prisma.influencerPayoutProfile.upsert({
-    where: { creatorId: creator.id },
-    create: { creatorId: creator.id, providerConnectedAccountId: created.accountId },
-    update: { providerConnectedAccountId: created.accountId },
-  });
-  return { ok: true, accountId: created.accountId, linked: false, url: created.url };
+  const origin = getAppOrigin();
+  const returnUrl = `${origin}/billing?connected=1#payouts`;
+  const errorUrl = `${origin}/billing#payouts`;
+  let accountId = creator.payoutProfile?.providerConnectedAccountId?.trim() || "";
+  let linked = Boolean(accountId);
+  let url: string | undefined;
+  if (!accountId) {
+    const created = await createAirwallexConnectedAccount({
+      baseUrl: auth.settings.baseUrl,
+      token: auth.token,
+      email,
+      requestId: `connect_${creator.id}`,
+    });
+    if (!created.ok) return created;
+    accountId = created.accountId;
+    url = created.url;
+    await prisma.influencerPayoutProfile.upsert({
+      where: { creatorId: creator.id },
+      create: { creatorId: creator.id, providerConnectedAccountId: accountId },
+      update: { providerConnectedAccountId: accountId },
+    });
+    linked = false;
+  }
+  if ((!url || !url.startsWith("https://")) && auth.settings.hostedFlowTemplate) {
+    const hosted = await createAirwallexHostedOnboarding({
+      baseUrl: auth.settings.baseUrl,
+      token: auth.token,
+      accountId,
+      template: auth.settings.hostedFlowTemplate,
+      returnUrl,
+      errorUrl,
+    });
+    if (!hosted.ok) return hosted;
+    url = hosted.url;
+  }
+  if (!url || !url.startsWith("https://")) {
+    return {
+      ok: false,
+      error:
+        "Airwallex account is saved, but hosted onboarding is not configured. Add the hosted flow template id on Payment gateways. Nothing was opened.",
+    };
+  }
+  return { ok: true, accountId, linked, url };
 }
 
 async function paymentIdForFunding(fundingId: string) {

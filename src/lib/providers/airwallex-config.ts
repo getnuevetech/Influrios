@@ -9,6 +9,8 @@ export type AirwallexSettings = {
   baseUrl: string;
   holdingAccountId: string;
   operationsAccountId: string;
+  /** Hosted KYC/onboarding template open id from Airwallex Account Manager. */
+  hostedFlowTemplate: string;
 };
 
 type AirwallexSource = {
@@ -19,6 +21,7 @@ type AirwallexSource = {
   baseUrl?: string | null;
   holdingAccountId?: string | null;
   operationsAccountId?: string | null;
+  hostedFlowTemplate?: string | null;
 };
 
 function filled(value: string | null | undefined) {
@@ -41,6 +44,7 @@ export function airwallexSettingsFromSources(input: {
           baseUrl: filled(row.baseUrl).replace(/\/$/, ""),
           holdingAccountId: filled(row.holdingAccountId),
           operationsAccountId: filled(row.operationsAccountId),
+          hostedFlowTemplate: filled(row.hostedFlowTemplate),
         }
       : null;
   if (fromRow) {
@@ -49,6 +53,7 @@ export function airwallexSettingsFromSources(input: {
       webhookSecret: fromRow.webhookSecret || filled(env.AIRWALLEX_WEBHOOK_SECRET),
       holdingAccountId: fromRow.holdingAccountId || filled(env.AIRWALLEX_HOLDING_ACCOUNT_ID),
       operationsAccountId: fromRow.operationsAccountId || filled(env.AIRWALLEX_OPERATIONS_ACCOUNT_ID),
+      hostedFlowTemplate: fromRow.hostedFlowTemplate || filled(env.AIRWALLEX_HOSTED_FLOW_TEMPLATE),
     };
   }
   const clientId = filled(env.AIRWALLEX_CLIENT_ID);
@@ -62,6 +67,7 @@ export function airwallexSettingsFromSources(input: {
     baseUrl: baseUrl.replace(/\/$/, ""),
     holdingAccountId: filled(env.AIRWALLEX_HOLDING_ACCOUNT_ID),
     operationsAccountId: filled(env.AIRWALLEX_OPERATIONS_ACCOUNT_ID),
+    hostedFlowTemplate: filled(env.AIRWALLEX_HOSTED_FLOW_TEMPLATE),
   };
 }
 
@@ -83,6 +89,7 @@ export async function loadAirwallexConfig(): Promise<AirwallexSettings | null> {
             baseUrl: row.baseUrl,
             holdingAccountId: extra.holdingAccountId,
             operationsAccountId: extra.operationsAccountId,
+            hostedFlowTemplate: extra.hostedFlowTemplate,
           }
         : null,
     });
