@@ -9,6 +9,7 @@ import {
   loginAccount,
   registerAccount,
   requestPasswordReset,
+  resendAccountVerification,
   resetPassword,
   verifyAccountEmail,
 } from "@/lib/accounts";
@@ -113,6 +114,32 @@ export async function actionVerifyEmail(formData: FormData) {
     );
   }
   redirect(next);
+}
+
+export async function actionResendVerification(formData: FormData) {
+  const next = safeNextPath(String(formData.get("next") ?? ""));
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const headerStore = await headers();
+  const ip = clientIp(headerStore);
+  const locked = lockoutMessage("account-verify", ip, email);
+  if (locked) {
+    redirect(
+      `/account/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}&error=${encodeURIComponent(AUTH_LOCKOUT_GENERIC_MESSAGE)}`,
+    );
+  }
+  try {
+    await resendAccountVerification(email);
+    recordAuthSuccess("account-verify", ip, email);
+  } catch (error) {
+    recordAuthFailure("account-verify", ip, email);
+    const message = error instanceof Error ? error.message : "Could not resend the code.";
+    redirect(
+      `/account/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}&error=${encodeURIComponent(message)}`,
+    );
+  }
+  redirect(
+    `/account/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}&resent=1`,
+  );
 }
 
 export async function actionRequestReset(formData: FormData) {

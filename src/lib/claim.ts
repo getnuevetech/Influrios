@@ -858,7 +858,8 @@ export async function verifyDraft(draftId: string, code: string): Promise<ClaimD
     });
     throw new Error("SMTP is not configured. Nothing was verified.");
   }
-  if (code.trim() !== draft.verifyCode) {
+  const entered = code.trim().replace(/\s+/g, "");
+  if (entered !== draft.verifyCode) {
     const { recordVerificationAttempt } = await import("@/lib/claim-persist");
     await recordVerificationAttempt({
       draft,

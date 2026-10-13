@@ -46,10 +46,25 @@ function verificationCode() {
   return String(randomInt(100000, 1000000));
 }
 
+export function normalizeVerificationCode(code: string) {
+  return code.trim().replace(/\s+/g, "");
+}
+
+async function activeEmailChallenge(userId: string) {
+  return prisma.emailChallenge.findFirst({
+    where: { userId, usedAt: null, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 /** Stores a code only after SMTP accepts the verification job. The page never reads it. */
-async function issueEmailChallenge(userId: string) {
+async function issueEmailChallenge(userId: string, opts?: { force?: boolean }) {
   const { mailReady } = await import("@/lib/mail");
   if (!(await mailReady())) return null;
+  if (!opts?.force) {
+    const existing = await activeEmailChallenge(userId);
+    if (existing) return existing.demoCode;
+  }
   const code = verificationCode();
   await prisma.emailChallenge.deleteMany({ where: { userId, usedAt: null } });
   const challenge = await prisma.emailChallenge.create({
@@ -72,6 +87,16 @@ async function issueEmailChallenge(userId: string) {
     return null;
   }
   return code;
+}
+
+/** Force a new code and email. Used by the verify-page resend control. */
+export async function resendAccountVerification(email: string) {
+  const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+  if (!user) throw new Error("Account not found.");
+  if (user.emailVerifiedAt) throw new Error("This email is already verified. Log in.");
+  const code = await issueEmailChallenge(user.id, { force: true });
+  if (!code) throw new Error("Could not send a verification code. Check SMTP and try again.");
+  return { sent: true as const };
 }
 
 export async function registerAccount(input: {
@@ -126,8 +151,9 @@ export async function loginAccount(email: string, password: string) {
   }
   if (user.suspendedAt) throw new Error("This account is suspended. Contact Influrios support.");
   if (!user.emailVerifiedAt) {
+    // Reuse an unused challenge so the code already in the inbox still works.
     await issueEmailChallenge(user.id);
-    const error = new Error("Verify your email before logging in.");
+    const error = new Error("Verify your email before logging in. Use the latest code we emailed you.");
     (error as Error & { code?: string }).code = "unverified";
     throw error;
   }
@@ -139,13 +165,10 @@ export async function loginAccount(email: string, password: string) {
 export async function verifyAccountEmail(email: string, code: string) {
   const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
   if (!user) throw new Error("Account not found.");
-  const challenge = await prisma.emailChallenge.findFirst({
-    where: { userId: user.id, usedAt: null, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: "desc" },
-  });
-  if (!challenge) throw new Error("Nothing was sent. Nothing was verified.");
-  if (challenge.demoCode !== code.trim()) {
-    throw new Error("That verification code is not valid.");
+  const challenge = await activeEmailChallenge(user.id);
+  if (!challenge) throw new Error("Nothing was sent. Nothing was verified. Use Resend code if you need a new email.");
+  if (challenge.demoCode !== normalizeVerificationCode(code)) {
+    throw new Error("That verification code is not valid. Check the latest email, or resend a new code.");
   }
   await prisma.emailChallenge.update({ where: { id: challenge.id }, data: { usedAt: new Date() } });
   const verified = await prisma.user.update({
