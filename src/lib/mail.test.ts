@@ -4,6 +4,7 @@ import {
   formatSmtpDeliveryError,
   mailConfigFromEnv,
   mailSettingsAppearance,
+  normalizeSmtpHost,
   resolveMailConfig,
   resolveMailConfigFromRow,
   type MailSettingsRow,
@@ -107,6 +108,20 @@ describe("formatSmtpDeliveryError", () => {
       formatSmtpDeliveryError(new Error("connect ECONNREFUSED 127.0.0.1:587"), "127.0.0.1", 587),
       /refused/,
     );
+  });
+
+  it("points smtp.google.com users at smtp.gmail.com", () => {
+    assert.match(
+      formatSmtpDeliveryError(new Error("timed out"), "smtp.google.com", 587),
+      /smtp\.gmail\.com/,
+    );
+  });
+});
+
+describe("normalizeSmtpHost", () => {
+  it("rewrites smtp.google.com to smtp.gmail.com", () => {
+    assert.equal(normalizeSmtpHost("smtp.google.com"), "smtp.gmail.com");
+    assert.equal(normalizeSmtpHost("SMTP.Gmail.com"), "SMTP.Gmail.com");
   });
 });
 
