@@ -98,10 +98,11 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 
 **Goal:** a sandbox Checkout marks the member plan only after Stripe confirms; a duplicate event does not change the plan again.
 
-1. Save a **sandbox** secret on Admin → Gateways (or `STRIPE_SECRET_KEY=sk_test_...`).
-2. Set `STRIPE_WEBHOOK_SECRET` (CLI `stripe listen --forward-to …/api/billing/webhook` or Dashboard endpoint).
+1. Save a **sandbox** secret on Admin → Gateways (or `STRIPE_SECRET_KEY=sk_test_...`).  
+   If `/api/billing/webhook` returns **501** *“could not be read”*, the stored ciphertext does not match the current `AUTH_SECRET` — paste the secret again and Save (do not only toggle Enabled).
+2. Set webhook secret on the Stripe gateway row (or `STRIPE_WEBHOOK_SECRET`) and register `{APP}/api/billing/webhook` in Stripe Dashboard / CLI.
 3. Optional Price IDs in Admin → Billing or env (`STRIPE_PRICE_*`).
-4. Sign in as a member → `/billing` → pay with Stripe test card `4242…`.
+4. Sign in as a member → `/billing` or `/pricing` → pay with Stripe test card `4242…`.
 5. Confirm success page and `User.planTier` / `SubscriptionState` / `CheckoutAttempt` updated.
 6. Redeploy the same `checkout.session.completed` event (Stripe CLI resend or Dashboard). Plan must **not** double-upgrade (`ProcessedWebhook` unique).
 
