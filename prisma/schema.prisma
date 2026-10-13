@@ -271,6 +271,8 @@ model Creator {
   title              String?
   bio                String?
   locationCity       String?
+  /// Region / state / province when the member provided one (optional).
+  locationState      String?
   locationCountry    String?
   languages          String[]           @default([])
   avatarUrl          String?

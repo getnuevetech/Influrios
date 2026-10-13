@@ -16,8 +16,10 @@ export const metadata = { title: "Member accounts" };
 const ROLES = ["CREATOR", "BUSINESS", "AGENCY", "ADMIN"] as const;
 const FALLBACK_PLANS = ["STARTER", "PLUS", "PRO", "BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];
 
-function locationLabel(city?: string | null, country?: string | null) {
-  const parts = [city?.trim(), country?.trim()].filter((part) => part && part !== "Your city" && part !== "Your country");
+function locationLabel(city?: string | null, state?: string | null, country?: string | null) {
+  const parts = [city?.trim(), state?.trim(), country?.trim()].filter(
+    (part) => part && part !== "Your city" && part !== "Your state" && part !== "Your country",
+  );
   return parts.length ? parts.join(", ") : "Not set";
 }
 
@@ -37,7 +39,15 @@ export default async function AdminAccountsPage({
       take: 100,
       include: {
         consents: { orderBy: { acceptedAt: "desc" }, take: 1 },
-        creator: { select: { locationCity: true, locationCountry: true, slug: true, displayName: true } },
+        creator: {
+          select: {
+            locationCity: true,
+            locationState: true,
+            locationCountry: true,
+            slug: true,
+            displayName: true,
+          },
+        },
         onboardingSessions: {
           orderBy: { updatedAt: "desc" },
           take: 1,
@@ -127,8 +137,10 @@ export default async function AdminAccountsPage({
                 ? (user.onboardingSessions[0].payload as Record<string, unknown>)
                 : null;
             const draftCity = typeof payload?.locationCity === "string" ? payload.locationCity : null;
+            const draftState = typeof payload?.locationState === "string" ? payload.locationState : null;
             const draftCountry = typeof payload?.locationCountry === "string" ? payload.locationCountry : null;
             const city = user.creator?.locationCity || draftCity;
+            const state = user.creator?.locationState || draftState;
             const country = user.creator?.locationCountry || draftCountry;
             const verified = Boolean(user.emailVerifiedAt);
 
@@ -144,7 +156,7 @@ export default async function AdminAccountsPage({
                         Joined {user.createdAt.toISOString().slice(0, 10)} · consent {user.consents[0]?.version || "none"}
                         {user.creator?.slug ? ` · @${user.creator.slug}` : ""}
                       </p>
-                      <p className="mt-1 text-xs text-muted">Location: {locationLabel(city, country)}</p>
+                      <p className="mt-1 text-xs text-muted">Location: {locationLabel(city, state, country)}</p>
                       <p className="mt-1 text-xs text-muted">
                         Password: {user.passwordHash ? "Set" : "Not set yet"}
                       </p>

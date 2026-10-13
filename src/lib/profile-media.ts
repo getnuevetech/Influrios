@@ -130,3 +130,20 @@ export function resolveDefaultBanner(input: { seed: string; coverImage?: string 
   }
   return defaultBannerForSeed(input.seed);
 }
+
+/**
+ * Brand banners rotate automatically by day when the member has not uploaded a custom banner.
+ * Custom uploads are never replaced.
+ */
+export function rotatingBrandBanner(seed: string, at = new Date()): string {
+  const day = Math.floor(at.getTime() / 86_400_000);
+  return defaultBannerForSeed(`${seed}:day:${day}`);
+}
+
+export function resolveDisplayBanner(input: { seed: string; coverImage?: string | null; at?: Date }): string {
+  const cover = input.coverImage?.trim() || null;
+  if (cover && !isBrandDefaultBanner(cover) && !cover.includes("/demo/sofia/")) {
+    return cover;
+  }
+  return rotatingBrandBanner(input.seed, input.at);
+}

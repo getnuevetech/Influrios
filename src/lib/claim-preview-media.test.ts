@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { BRAND_AVATARS, BRAND_BANNERS, defaultAvatarForGender } from "./profile-media";
+import {
+  BRAND_AVATARS,
+  BRAND_BANNERS,
+  defaultAvatarForGender,
+  resolveDisplayBanner,
+} from "./profile-media";
 import { draftToSeedCreator, type ClaimDraft } from "./claim";
 
 function sampleDraft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
@@ -31,9 +36,14 @@ function sampleDraft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
 describe("claim draft preview media", () => {
   it("rewrites legacy SVG avatars and prefers lifestyle cover on draft cards", () => {
     const creator = draftToSeedCreator(sampleDraft());
-    assert.equal(creator.coverImage, BRAND_BANNERS[0]);
-    assert.equal(creator.image, BRAND_BANNERS[0]);
+    const expectedCover = resolveDisplayBanner({
+      seed: "ag-olomola",
+      coverImage: BRAND_BANNERS[0],
+    });
+    assert.equal(creator.coverImage, expectedCover);
+    assert.equal(creator.image, expectedCover);
     assert.notEqual(creator.image, "/brand/avatars/generic.svg");
+    assert.ok((BRAND_BANNERS as readonly string[]).includes(creator.coverImage));
   });
 
   it("keeps a custom uploaded avatar on draft cards", () => {
@@ -50,7 +60,11 @@ describe("claim draft preview media", () => {
         coverImage: BRAND_BANNERS[0]!,
       }),
     );
-    assert.equal(creator.image, BRAND_BANNERS[0]);
+    const expectedCover = resolveDisplayBanner({
+      seed: "ag-olomola",
+      coverImage: BRAND_BANNERS[0],
+    });
+    assert.equal(creator.image, expectedCover);
     assert.equal(creator.image.startsWith("http"), false);
   });
 

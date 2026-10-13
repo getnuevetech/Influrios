@@ -7,25 +7,36 @@ import { getWorkspace } from "@/lib/business";
 const CREATOR_NAV = [
   { href: "/creator", label: "Home" },
   { href: "/dashboard", label: "My Profile" },
-  { href: "/collaboration/hub", label: "Collaborations" },
-  { href: "/mentorship", label: "Mentorship" },
+  { href: "/collaboration/hub", label: "Opportunities" },
+  { href: "/collaboration/hub#pipeline", label: "Collaborations" },
+  { href: "/creator#media-kit", label: "Media Kit" },
+  { href: "/dashboard#analytics", label: "Analytics" },
+  { href: "/payments", label: "Earnings" },
+  { href: "/billing#payouts", label: "Payout Methods" },
   { href: "/billing", label: "Billing & Plan" },
+  { href: "/mentorship", label: "Mentorship" },
   { href: "/account", label: "Settings" },
 ];
 
 const BUSINESS_NAV = [
   { href: "/business/home", label: "Dashboard" },
+  { href: "/business/profile", label: "Company Profile" },
   { href: "/discover", label: "Discover Creators" },
+  { href: "/collaboration/business#shortlist", label: "Saved Creators" },
   { href: "/collaboration/business", label: "Requests" },
-  { href: "/collaboration/records", label: "Collaborations" },
+  { href: "/collaboration/business#suggestions", label: "Collaboration Opportunities" },
+  { href: "/collaboration/records", label: "Active Collaborations" },
   { href: "/business/intelligence", label: "Analytics" },
+  { href: "/collaboration/team", label: "Team" },
   { href: "/business/billing", label: "Billing & Plans" },
+  { href: "/payments", label: "Collaboration Payments" },
   { href: "/account", label: "Settings" },
 ];
 
 function active(href: string, path: string) {
-  if (href === "/creator" || href === "/business/home") return path === href;
-  return path === href || path.startsWith(`${href}/`);
+  const base = href.split("#")[0]!;
+  if (base === "/creator" || base === "/business/home") return path === base;
+  return path === base || path.startsWith(`${base}/`);
 }
 
 export async function MemberFrame({
@@ -38,43 +49,65 @@ export async function MemberFrame({
   const path = (await headers()).get("x-pathname") ?? "";
   const account = await getAccountSession().catch(() => null);
   if (account && !account.hasPassword && !path.startsWith("/account/password")) {
-    redirect(`/account/password?next=${encodeURIComponent(path || (audience === "business" ? "/business/home" : "/creator"))}`);
+    redirect(
+      `/account/password?next=${encodeURIComponent(path || (audience === "business" ? "/business/home" : "/creator"))}`,
+    );
   }
   let name = account?.name || account?.email || "Account";
-  const role = audience === "business" ? "Business workspace" : "Influencer";
+  let subtitle = audience === "business" ? "Business workspace" : "Influencer";
   if (audience === "business" && account) {
     const workspace = await getWorkspace(account.id).catch(() => null);
-    if (workspace?.name) name = workspace.name;
+    if (workspace?.name) {
+      name = account.name || account.email || "Account";
+      subtitle = workspace.name;
+    }
   }
   const nav = audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
   const home = audience === "business" ? "/business/home" : "/creator";
-  const other = audience === "business" ? { href: "/creator", label: "Influencer account" } : { href: "/business/home", label: "Business account" };
+  const other =
+    audience === "business"
+      ? { href: "/creator", label: "Influencer account" }
+      : { href: "/business/home", label: "Business account" };
 
   return (
     <div className="flex min-h-screen bg-[#F4F7FB] text-indigo">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-[#E6ECF7] bg-white lg:flex">
         <Link href={home} className="flex items-center gap-2 px-5 py-5 font-display text-lg font-bold">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white">∞</span>
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white">
+            ∞
+          </span>
           Influrios
         </Link>
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
           {nav.map((item) => {
             const on = active(item.href, path);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block rounded-xl px-3 py-2.5 text-sm font-semibold ${on ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872] hover:bg-[#F7F8FC]"}`}
+                className={`block rounded-xl px-3 py-2.5 text-sm font-semibold ${
+                  on ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872] hover:bg-[#F7F8FC]"
+                }`}
               >
                 {item.label}
               </Link>
             );
           })}
         </nav>
+        {audience === "creator" ? (
+          <div className="mx-3 mb-3 rounded-2xl bg-gradient-to-br from-[#F1ECFF] to-white p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-violet">Upgrade</p>
+            <p className="mt-1 text-sm font-semibold text-indigo">Unlock Plus card tools</p>
+            <Link href="/billing" className="mt-3 inline-block text-sm font-semibold text-violet hover:underline">
+              Upgrade to Plus →
+            </Link>
+          </div>
+        ) : null}
         <div className="border-t border-[#E6ECF7] p-4 text-xs text-muted">
           <Link href={other.href} className="font-semibold text-violet hover:underline">
             {other.label}
           </Link>
+          <p className="mt-2">© {new Date().getFullYear()} Influrios</p>
         </div>
       </aside>
       <div className="min-w-0 flex-1">
@@ -82,14 +115,18 @@ export async function MemberFrame({
           <form action="/discover" className="hidden min-w-0 flex-1 md:block">
             <input
               name="q"
-              placeholder={audience === "business" ? "Search creators, campaigns, or anything..." : "Search creators or collaborations..."}
+              placeholder={
+                audience === "business"
+                  ? "Search creators, campaigns, or anything..."
+                  : "Search opportunities, brands, or anything..."
+              }
               className="w-full max-w-xl rounded-full border border-[#E6ECF7] bg-[#F7F9FD] px-4 py-2 text-sm outline-none focus:border-violet"
             />
           </form>
           <div className="ml-auto flex items-center gap-3">
             <div className="text-right">
               <p className="text-sm font-bold leading-tight">{name}</p>
-              <p className="text-[11px] text-muted">{role}</p>
+              <p className="text-[11px] text-muted">{subtitle}</p>
             </div>
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EDE7FF] text-sm font-bold text-violet">
               {name.slice(0, 1).toUpperCase()}
@@ -101,7 +138,9 @@ export async function MemberFrame({
             <Link
               key={item.href}
               href={item.href}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${active(item.href, path) ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872]"}`}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                active(item.href, path) ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872]"
+              }`}
             >
               {item.label}
             </Link>

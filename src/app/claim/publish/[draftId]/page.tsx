@@ -81,8 +81,10 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
             </label>
             <PlaceFields
               cityName="locationCity"
+              stateName="locationState"
               countryName="locationCountry"
               defaultCity={draft.locationCity}
+              defaultState={draft.locationState ?? ""}
               defaultCountry={draft.locationCountry}
             />
             <label className="block text-left text-sm font-semibold text-indigo">
