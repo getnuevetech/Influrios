@@ -60,7 +60,7 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
       body: `Influrios invitation: ${vars.link}`,
       templateKey: "invitation_email",
     });
-    return;
+    return { externalId: result.smtpResponse };
   }
   if (kind === "verification_email") {
     if (!data.email || !data.code) throw new Error("Verification job is missing an address or code.");
@@ -77,7 +77,7 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
       body: `Your Influrios verification code is ${data.code}. It expires in 30 minutes.`,
       templateKey: "verification_email",
     });
-    return;
+    return { externalId: result.smtpResponse };
   }
   if (kind === "claim_verification_email") {
     if (!data.email || !data.code) throw new Error("Claim verification job is missing an address or code.");
@@ -93,7 +93,7 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
       body: `Your Influrios claim verification code is ${data.code}.`,
       templateKey: "claim_verification_email",
     });
-    return;
+    return { externalId: result.smtpResponse };
   }
   if (kind === "password_reset_email") {
     if (!data.email || !data.token) throw new Error("Password reset job is missing an address or token.");
@@ -105,14 +105,15 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
       text: `Reset your Influrios password: ${link}. This link expires in 30 minutes.`,
     });
     if (!result.ok) throw new Error(result.error);
-    return;
+    return { externalId: result.smtpResponse };
   }
   if (kind === "mail_test") {
     const { sendInvitationTest } = await import("@/lib/mail");
     if (!data.to) throw new Error("Test send is missing a recipient.");
     const result = await sendInvitationTest(data.to, false);
     if (!result.ok) throw new Error(result.message);
-    return;
+    const match = / \((.+)\)\.$/.exec(result.message);
+    return match?.[1] ? { externalId: match[1] } : undefined;
   }
   if (kind === "milestone_auto_approval") {
     const { runAutoApprovalSweep } = await import("@/lib/marketplace-ledger");
