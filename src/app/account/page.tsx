@@ -26,7 +26,7 @@ export default async function AccountPage({
     listContractsForUser(session.id).catch(() => []),
   ]);
   return (
-    <div className="mx-auto max-w-lg px-4 py-14">
+    <div className="mx-auto max-w-lg">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo">{session.name || "Your account"}</h1>
       <p className="mt-2 text-sm text-muted">{session.email}</p>
