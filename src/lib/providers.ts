@@ -289,7 +289,7 @@ export function gatewayCredentialLabels(code: string): { publicKey: string; secr
       return {
         publicKey: "Client id",
         secret: "API key",
-        note: "Save holding + operations account ids and the hosted flow template id (from your Airwallex Account Manager). Milestone splits pay the creator connected account. Use the demo API host https://api-demo.airwallex.com for sandbox.",
+        note: "Save holding + operations account ids and the hosted flow template id (from your Airwallex Account Manager). Milestone splits pay the creator connected account. Pair credentials with the host: sandbox client id/API key → https://api-demo.airwallex.com ; live → https://api.airwallex.com. Mixed pairs return UNAUTHORIZED / credentials_invalid.",
       };
     case "mpesa":
       return {

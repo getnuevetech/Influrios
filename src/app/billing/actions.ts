@@ -70,6 +70,7 @@ function payoutSetupErrorRedirect(error: string): never {
   // Actionable provider/config problems — show on billing so the operator can fix them.
   if (
     /^Airwallex[:\s]/i.test(safe) ||
+    /Airwallex rejected/i.test(safe) ||
     /HTML instead of JSON/i.test(safe) ||
     /hosted onboarding is not configured/i.test(safe) ||
     /hosted flow template/i.test(safe) ||

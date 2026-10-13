@@ -314,6 +314,17 @@ describe("Airwallex adapter", () => {
     assert.match(json, /invalid client/i);
   });
 
+  it("explains credentials_invalid / UNAUTHORIZED with demo vs live pairing", () => {
+    const msg = humanizeAirwallexHttpError(
+      401,
+      JSON.stringify({ code: "credentials_invalid", details: ["Access Denied"], message: "UNAUTHORIZED", source: "" }),
+    );
+    assert.match(msg, /UNAUTHORIZED/i);
+    assert.match(msg, /api-demo\.airwallex\.com/);
+    assert.match(msg, /api\.airwallex\.com/);
+    assert.equal(msg.includes("credentials_invalid"), false);
+  });
+
   it("creates and authorizes a hosted onboarding URL", async () => {
     const calls: string[] = [];
     const result = await createAirwallexHostedOnboarding({
