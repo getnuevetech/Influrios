@@ -22,6 +22,7 @@
     "staging:evidence-probe": "node scripts/staging-evidence-probe.mjs",
     "staging:e1-sweep-evidence": "bash scripts/staging-e1-sweep-evidence.sh",
     "staging:e2-smtp-evidence": "bash scripts/staging-e2-smtp-evidence.sh",
+    "staging:e4-stripe-evidence": "bash scripts/staging-e4-stripe-evidence.sh",
     "staging:marketplace-fixture": "tsx scripts/marketplace-webhook-fixture.ts",
     "postinstall": "prisma generate"
   },

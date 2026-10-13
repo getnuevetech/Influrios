@@ -272,7 +272,9 @@ cd /var/www/influrios
 npm run staging:e2-smtp-evidence
 ```
 
-### E4 Stripe progress (same day)
+### E4 progress (Stripe sandbox) — **in progress**
+
+Webhook path already green (`POST /api/billing/webhook` without signature → `Missing Stripe-Signature header.`). Remaining: member **4242** checkout + plan apply + duplicate event skip.
 
 | Check | Result |
 |-------|--------|
@@ -280,7 +282,21 @@ npm run staging:e2-smtp-evidence
 | Webhook secret saved | ☑ `POST /api/billing/webhook` without signature → `Missing Stripe-Signature header.` |
 | Sandbox checkout `4242` + plan apply | ☐ |
 | Duplicate `checkout.session.completed` skipped | ☐ |
-| Portal / Connect | ☐ (Connect onboarding fixed in #262) |
+| Portal / Connect | ☐ optional this slice (Connect onboarding fixed in #262) |
+
+```bash
+# After 4242 checkout (+ optional resend of the same event):
+cd /var/www/influrios
+npm run staging:e4-stripe-evidence
+```
+
+Operator path:
+
+1. Confirm Stripe gateway has **sandbox** `sk_test_` / `rkcs_test_` + **Webhook secret** `whsec_…`, and Dashboard endpoint `https://influrios.com/api/billing/webhook` listens for `checkout.session.completed`.
+2. Sign in as a member → `/billing` or `/pricing` → start Checkout → pay with test card **`4242 4242 4242 4242`** (any future expiry, any CVC).
+3. Land on success; confirm plan tier applied. Note `cs_test_…` (Stripe) and local `CheckoutAttempt` id.
+4. In Stripe Dashboard (or CLI), **resend** the same `checkout.session.completed` event. Expect `{"received":true,"duplicate":true}` and **one** `ProcessedWebhook` row for that `eventId` (plan must not double-upgrade).
+5. `npm run staging:e4-stripe-evidence` and paste the tables into this section / the sign-off Stripe cell.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
