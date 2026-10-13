@@ -158,7 +158,11 @@ export async function MemberFrame({
             <p className="mt-1 text-[10px] text-white/70">Current: {planLabel(creatorPlan)}</p>
             <Link
               href="/billing"
+<<<<<<< Updated upstream
               className="mt-2 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-bold text-violet"
+=======
+              className="ink-on-light-violet mt-2 inline-flex items-center justify-center rounded-full bg-white px-3 py-1.5 text-xs font-bold hover:bg-[#F5F3FF]"
+>>>>>>> Stashed changes
             >
               Upgrade now
             </Link>
