@@ -240,7 +240,7 @@ Probe auto-check for E1 gate (no secret): `POST /api/cron/sweeps` must return **
 |-------|--------|
 | Probe auto: cron rejects missing secret | ☑ `401` / `unauthorized` |
 | Admin → Jobs shows succeeded sweep **job ids** | ☑ after deploy of this slice |
-| Host script to print E1 ids | `npm run staging:e1-sweep-evidence` (optional `--tick` with `CRON_SECRET`) |
+| Host script to print E1 ids | `npm run staging:e1-sweep-evidence` (plain `node`, no `tsx`; optional `--tick` with `CRON_SECRET`) |
 | Crontab installed + succeeded `milestone_auto_approval` id | ☐ operator |
 | Succeeded `recurring_cycle_sweep` id | ☐ operator |
 

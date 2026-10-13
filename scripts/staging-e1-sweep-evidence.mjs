@@ -1,17 +1,22 @@
 /**
  * Phase M E1 — collect sweep-clock evidence on the host.
+ * Runs with node. Dev dependencies (tsx) are not required.
  *
- * Usage (on Lightsail, from /var/www/influrios with DATABASE_URL pointing at 127.0.0.1):
- *   npx tsx scripts/staging-e1-sweep-evidence.ts
- *   CRON_SECRET=... APP_URL=https://influrios.com npx tsx scripts/staging-e1-sweep-evidence.ts --tick
+ * Usage (on Lightsail, from /var/www/influrios with DATABASE_URL using 127.0.0.1):
+ *   npm run staging:e1-sweep-evidence
+ *   node scripts/staging-e1-sweep-evidence.mjs
+ *   CRON_SECRET=... APP_URL=https://influrios.com npm run staging:e1-sweep-evidence -- --tick
  *
  * Prints latest succeeded job ids for milestone_auto_approval and recurring_cycle_sweep.
  * Does not mark Phase M complete.
  */
 
+import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "@prisma/client";
 
-const REQUIRED = ["milestone_auto_approval", "recurring_cycle_sweep"] as const;
+loadEnv();
+
+const REQUIRED = ["milestone_auto_approval", "recurring_cycle_sweep"];
 
 async function maybeTick() {
   if (!process.argv.includes("--tick")) return null;
@@ -39,6 +44,11 @@ async function maybeTick() {
 async function main() {
   console.log("Influrios Phase M E1 sweep evidence\n");
   console.log(`When: ${new Date().toISOString()}\n`);
+
+  if (!process.env.DATABASE_URL?.trim()) {
+    console.error("DATABASE_URL is missing. Load .env (host tools should use 127.0.0.1).");
+    process.exit(1);
+  }
 
   await maybeTick();
 
