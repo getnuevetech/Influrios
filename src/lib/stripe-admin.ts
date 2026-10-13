@@ -276,13 +276,19 @@ export function stripePayoutRouteReady(input: {
   return true;
 }
 
-async function connectSecret() {
-  const row = await prisma.integrationProvider.findUnique({
-    where: { kind_code: { kind: "connect", code: "stripe" } },
-  });
-  if (!row?.enabled || !row.secretCipher) return null;
-  const secret = decryptSecret(row.secretCipher);
-  return secret || null;
+/**
+ * Connect onboarding uses the platform Stripe secret (Payment gateways / STRIPE_SECRET_KEY).
+ * A separate connect IntegrationProvider row is optional and no longer required.
+ */
+async function connectSecret(): Promise<string | null> {
+  const creds = await stripeCredentials();
+  return creds.ok ? creds.secret : null;
+}
+
+/** True when the product switch is on and a usable Stripe secret is saved. */
+export async function stripeConnectReady() {
+  if (!(await productSwitch("stripe_connect").catch(() => false))) return false;
+  return (await stripeCredentials()).ok;
 }
 
 export async function createStripeExpressAccount(input: { secret: string; email?: string }) {
@@ -410,18 +416,14 @@ export async function openConnectLink(input: { accountId: string; refreshUrl: st
   if (!enabled) return { ok: false as const, error: "Stripe Connect is turned off. Nothing was opened." };
   const account = stripeAccountId(input.accountId);
   if (!account) return { ok: false as const, error: "Enter a Stripe account id. Nothing was opened." };
-  const row = await prisma.integrationProvider.findUnique({
-    where: { kind_code: { kind: "connect", code: "stripe" } },
-  });
-  if (!row?.enabled || !row.secretCipher) {
-    return { ok: false as const, error: "Stripe Connect is not ready. Nothing was opened." };
+  const creds = await stripeCredentials();
+  if (!creds.ok) {
+    return { ok: false as const, error: stripeCredentialError(creds.reason, "opened") };
   }
-  const secret = decryptSecret(row.secretCipher);
-  if (!secret) return { ok: false as const, error: "Stripe Connect is not ready. Nothing was opened." };
   try {
     const payload = await stripeForm(
       "/v1/account_links",
-      secret,
+      creds.secret,
       new URLSearchParams({
         account,
         refresh_url: input.refreshUrl,
