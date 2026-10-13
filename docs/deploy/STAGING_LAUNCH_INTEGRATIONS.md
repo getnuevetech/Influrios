@@ -194,14 +194,15 @@ Probe of `https://influrios.com` on 2026-10-12: seven automatic checks passed an
 
 Probe of `https://influrios.com` on 2026-10-13 (Phase M kickoff after #251/#252): initially **blocked** by nginx **502 Bad Gateway**. Host recovered (`curl -fsS http://127.0.0.1:3000/api/health` → `ok` / `authConfigured: true`). Re-probe at **2026-10-13T10:22:39Z**: **7/7 auto checks pass** (HTTPS, health+db, authConfigured, homepage, guest `/collaboration`, admin login, SMS not sent). Cron without `CRON_SECRET` correctly returns **401**.
 
-**E4 Stripe (same day):** `POST /api/billing/webhook` returns **501** with  
-`The saved Stripe secret could not be read. Re-save it on Payment gateways.`  
-Ciphertext from an earlier `AUTH_SECRET` (or a seed/`db push` restore) cannot be decrypted. Operator must open **Admin → Payment gateways → Stripe**, paste `sk_test_…` again, enable, Save — then re-check:
+**E4 Stripe (same day):**
+1. API secret was unreadable (**501**) → operator re-saved `sk_test_…` on Payment gateways.
+2. Re-check without a Stripe signature now returns **400** `Missing webhook signature or secret` (or, after deploy of clearer errors, `Missing Stripe-Signature header` once `whsec_…` is saved). That means the **API secret decrypts**; checkout can open.
+3. Still required before plan apply evidence: save **Webhook secret** (`whsec_…`) on the Stripe gateway row (or `STRIPE_WEBHOOK_SECRET`), register `https://influrios.com/api/billing/webhook` in Stripe Dashboard (checkout.session.completed), then member checkout with card `4242`.
 
 ```bash
+# After API secret is saved — expect 400, not 501:
 curl -sS -X POST https://influrios.com/api/billing/webhook \
   -H 'content-type: application/json' -d '{}'
-# Expect 400 missing signature (secret readable), not 501 unreadable.
 ```
 
 Host-side Prisma tools should use `DATABASE_URL` with host `127.0.0.1` (not the Compose service name). Prefer `npx prisma migrate deploy` over `db push` on the live host after recovery.
@@ -210,7 +211,7 @@ Host-side Prisma tools should use `DATABASE_URL` with host `127.0.0.1` (not the 
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe `2026-10-13T10:22:39Z` · health ok · cron 401 without secret | 2026-10-13 | cloud-agent / host |
 | SMTP | | | |
-| Stripe checkout, duplicate skip, portal, Connect | blocked — gateway secret unreadable until re-saved | 2026-10-13 | |
+| Stripe checkout, duplicate skip, portal, Connect | API secret readable (webhook 400 without signature). Save whsec_… + run 4242 checkout | 2026-10-13 | |
 | Social OAuth | | | |
 | Meilisearch counts | | | |
 | Airwallex hold and release | | | |

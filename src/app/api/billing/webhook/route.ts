@@ -60,8 +60,17 @@ export async function POST(req: NextRequest) {
 
   const sig = req.headers.get("stripe-signature");
   const secret = await stripeWebhookSecret();
-  if (!sig || !secret) {
-    return NextResponse.json({ error: "Missing webhook signature or secret" }, { status: 400 });
+  if (!secret) {
+    return NextResponse.json(
+      {
+        error:
+          "Stripe webhook secret is not saved. Add whsec_… on Payment gateways (Webhook secret) or set STRIPE_WEBHOOK_SECRET.",
+      },
+      { status: 400 },
+    );
+  }
+  if (!sig) {
+    return NextResponse.json({ error: "Missing Stripe-Signature header." }, { status: 400 });
   }
 
   const body = await req.text();
