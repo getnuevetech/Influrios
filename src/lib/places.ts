@@ -76,7 +76,8 @@ export function searchCities(query: string, country = "", limit = 8): PlaceHit[]
   for (const city of cities()) {
     if (country && !samePlace(city.country, country)) continue;
     if (!city.key.includes(q)) continue;
-    const id = `${city.key}|${canonicalPlaceName(city.country)}|${city.state}`;
+    // One hit per city+country keeps ranking stable; state is attached when available.
+    const id = `${city.key}|${canonicalPlaceName(city.country)}`;
     if (seen.has(id)) continue;
     seen.add(id);
     hits.push({ name: city.name, country: city.country, state: city.state || undefined });
