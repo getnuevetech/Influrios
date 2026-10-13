@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/db";
 import { quoteFx } from "@/lib/fx-share";
 import { storedCurrencyCode } from "@/lib/money";
+import { isConnectedAccountCollectionProvider } from "@/lib/provider-collection";
 import { DEFAULT_PAYMENT_ROUTES, paymentRoutes, type GatewayReadiness } from "@/lib/providers";
 import { countryCodeFromLocation } from "@/lib/contract-wizard";
 
@@ -310,18 +311,18 @@ async function refreshGlobalPayoutReadyFlag(creatorId: string) {
 }
 
 /**
- * Influencer payout *onboarding* rail (Stripe Connect vs Airwallex connected account).
+ * Influencer payout *onboarding* rail (Stripe Connect vs connected-account provider).
  * Driven by the active country corridor's collection route — not by global Connect readiness alone.
  * Plan checkout still uses Payment gateways / Stripe separately.
  */
-export type PayoutOnboardingRail = "stripe" | "airwallex" | "none";
+export type PayoutOnboardingRail = "stripe" | "provider" | "none";
 
 export type PayoutOnboardingChoice = {
   rail: PayoutOnboardingRail;
   countryCode: string | null;
   collectionProviderCode: string | null;
   showStripe: boolean;
-  showAirwallex: boolean;
+  showProvider: boolean;
   reason: string;
 };
 
@@ -330,24 +331,24 @@ export function choosePayoutOnboardingRail(input: {
   corridorActive: boolean;
   collectionProviderCode: string | null | undefined;
   stripeConnectReady: boolean;
-  airwallexReady: boolean;
+  providerReady: boolean;
   hasStripeConnectAccount: boolean;
   hasProviderAccount: boolean;
 }): PayoutOnboardingChoice {
   const collection = (input.collectionProviderCode ?? "").trim().toLowerCase() || null;
   const countryCode = input.countryCode;
 
-  if (input.corridorActive && collection === "airwallex") {
-    const showAirwallex = input.airwallexReady || input.hasProviderAccount;
+  if (input.corridorActive && isConnectedAccountCollectionProvider(collection)) {
+    const showProvider = input.providerReady || input.hasProviderAccount;
     return {
-      rail: showAirwallex ? "airwallex" : "none",
+      rail: showProvider ? "provider" : "none",
       countryCode,
       collectionProviderCode: collection,
       showStripe: false,
-      showAirwallex,
-      reason: showAirwallex
-        ? "Corridor collection route is Airwallex."
-        : "Corridor is Airwallex, but Airwallex credentials are not ready.",
+      showProvider,
+      reason: showProvider
+        ? "Corridor collection route uses a connected-account provider."
+        : "Corridor uses a connected-account provider, but those credentials are not ready.",
     };
   }
 
@@ -358,7 +359,7 @@ export function choosePayoutOnboardingRail(input: {
       countryCode,
       collectionProviderCode: collection,
       showStripe,
-      showAirwallex: false,
+      showProvider: false,
       reason: showStripe
         ? "Corridor collection route is Stripe."
         : "Corridor is Stripe, but Stripe Connect is not ready.",
@@ -371,7 +372,7 @@ export function choosePayoutOnboardingRail(input: {
       countryCode,
       collectionProviderCode: collection,
       showStripe: false,
-      showAirwallex: false,
+      showProvider: false,
       reason: `Corridor collection route is ${collection}; connected-account setup is not used for this rail.`,
     };
   }
@@ -379,12 +380,12 @@ export function choosePayoutOnboardingRail(input: {
   // No corridor route: keep existing accounts reachable; otherwise prefer whichever rail is ready.
   if (input.hasProviderAccount && !input.hasStripeConnectAccount) {
     return {
-      rail: "airwallex",
+      rail: "provider",
       countryCode,
       collectionProviderCode: collection,
       showStripe: false,
-      showAirwallex: true,
-      reason: "Existing Airwallex connected account.",
+      showProvider: true,
+      reason: "Existing connected-account payout profile.",
     };
   }
   if (input.hasStripeConnectAccount && !input.hasProviderAccount) {
@@ -393,7 +394,7 @@ export function choosePayoutOnboardingRail(input: {
       countryCode,
       collectionProviderCode: collection,
       showStripe: true,
-      showAirwallex: false,
+      showProvider: false,
       reason: "Existing Stripe Connect account.",
     };
   }
@@ -403,18 +404,18 @@ export function choosePayoutOnboardingRail(input: {
       countryCode,
       collectionProviderCode: collection,
       showStripe: true,
-      showAirwallex: false,
+      showProvider: false,
       reason: "No corridor rail; Stripe Connect is enabled.",
     };
   }
-  if (input.airwallexReady) {
+  if (input.providerReady) {
     return {
-      rail: "airwallex",
+      rail: "provider",
       countryCode,
       collectionProviderCode: collection,
       showStripe: false,
-      showAirwallex: true,
-      reason: "No corridor rail; Airwallex is enabled.",
+      showProvider: true,
+      reason: "No corridor rail; connected-account provider is enabled.",
     };
   }
   return {
@@ -422,7 +423,7 @@ export function choosePayoutOnboardingRail(input: {
     countryCode,
     collectionProviderCode: collection,
     showStripe: false,
-    showAirwallex: false,
+    showProvider: false,
     reason: "No payout onboarding rail is ready.",
   };
 }
@@ -430,7 +431,7 @@ export function choosePayoutOnboardingRail(input: {
 export async function resolvePayoutOnboardingRail(input: {
   locationCountry?: string | null;
   stripeConnectReady: boolean;
-  airwallexReady: boolean;
+  providerReady: boolean;
   hasStripeConnectAccount: boolean;
   hasProviderAccount: boolean;
 }): Promise<PayoutOnboardingChoice> {
@@ -444,7 +445,7 @@ export async function resolvePayoutOnboardingRail(input: {
     corridorActive: Boolean(corridor?.active),
     collectionProviderCode: corridor?.collectionProviderCode,
     stripeConnectReady: input.stripeConnectReady,
-    airwallexReady: input.airwallexReady,
+    providerReady: input.providerReady,
     hasStripeConnectAccount: input.hasStripeConnectAccount,
     hasProviderAccount: input.hasProviderAccount,
   });
