@@ -60,14 +60,29 @@ export async function actionOpenPortal(formData?: FormData) {
   redirect(result.url);
 }
 
+function payoutSetupErrorRedirect(error: string): never {
+  // Config / readiness failures stay on #payouts without flashing operator copy at the member.
+  if (
+    /Stripe Connect is not ready/i.test(error) ||
+    /Stripe is not ready/i.test(error) ||
+    /turned off/i.test(error) ||
+    /does not list Airwallex/i.test(error) ||
+    /Save and enable the Airwallex/i.test(error) ||
+    (/Nothing was opened/i.test(error) && /Stripe|Airwallex|Connect|portal|jurisdiction/i.test(error))
+  ) {
+    redirect("/billing#payouts");
+  }
+  redirect(`/billing?error=${encodeURIComponent(error)}#payouts`);
+}
+
 export async function actionOpenConnectedAccount() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/billing&gate=connect");
   const { openCreatorConnectedAccount } = await import("@/lib/providers/airwallex-runtime");
   const result = await openCreatorConnectedAccount({ userId: account.id, email: account.email });
-  if (!result.ok) redirect(`/billing?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok) payoutSetupErrorRedirect(result.error);
   if (result.url && result.url.startsWith("https://")) redirect(result.url);
-  redirect("/billing?connected=1");
+  redirect("/billing?connected=1#payouts");
 }
 
 export async function actionOpenConnect() {
@@ -77,9 +92,9 @@ export async function actionOpenConnect() {
   const result = await openCreatorConnectOnboarding({
     userId: account.id,
     email: account.email,
-    refreshUrl: `${origin}/billing`,
-    returnUrl: `${origin}/billing`,
+    refreshUrl: `${origin}/billing#payouts`,
+    returnUrl: `${origin}/billing?connected=1#payouts`,
   });
-  if (!result.ok) redirect(`/billing?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok) payoutSetupErrorRedirect(result.error);
   redirect(result.url);
 }
