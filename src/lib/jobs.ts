@@ -234,6 +234,59 @@ export async function listSweepStatus() {
   return rows;
 }
 
+async function finishQueuedJob(jobId: string): Promise<"succeeded" | "failed" | "queued" | "skipped"> {
+  const claimed = await prisma.job.updateMany({
+    where: { id: jobId, status: "queued" },
+    data: { status: "running", attempts: { increment: 1 } },
+  });
+  if (claimed.count !== 1) return "skipped";
+  const current = await prisma.job.findUnique({ where: { id: jobId } });
+  if (!current) return "skipped";
+  try {
+    const outcome = await runJob(current.kind, current.payload);
+    const clearCode =
+      current.kind === "verification_email" ||
+      current.kind === "claim_verification_email" ||
+      current.kind === "password_reset_email";
+    const nextPayload =
+      current.payload && typeof current.payload === "object" && !Array.isArray(current.payload)
+        ? { ...(current.payload as Record<string, unknown>) }
+        : {};
+    if (clearCode) {
+      delete nextPayload.code;
+      delete nextPayload.token;
+    }
+    if (outcome?.externalId) nextPayload.externalId = outcome.externalId;
+    const payloadChanged = clearCode || Boolean(outcome?.externalId);
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status: "succeeded",
+        lastError: null,
+        ...(payloadChanged ? { payload: nextPayload as Prisma.InputJsonValue } : {}),
+      },
+    });
+    return "succeeded";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Job failed";
+    const status = nextJobStatus(current.attempts, false);
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        status,
+        lastError: message.slice(0, 500),
+        runAfter: status === "queued" ? new Date(Date.now() + 60_000) : new Date(),
+      },
+    });
+    return status === "failed" ? "failed" : "queued";
+  }
+}
+
+/** Run one queued job now — used so verification mail is not stuck behind a sweep backlog. */
+export async function processJobNow(id: string) {
+  return finishQueuedJob(id);
+}
+
 export async function processDueJobs(limit = 8) {
   const due = await prisma.job.findMany({
     where: { status: "queued", runAfter: { lte: new Date() } },
@@ -242,50 +295,8 @@ export async function processDueJobs(limit = 8) {
   });
   let processed = 0;
   for (const job of due) {
-    const claimed = await prisma.job.updateMany({
-      where: { id: job.id, status: "queued" },
-      data: { status: "running", attempts: { increment: 1 } },
-    });
-    if (claimed.count !== 1) continue;
-    const current = await prisma.job.findUnique({ where: { id: job.id } });
-    if (!current) continue;
-    try {
-      const outcome = await runJob(current.kind, current.payload);
-      const clearCode =
-        current.kind === "verification_email" ||
-        current.kind === "claim_verification_email" ||
-        current.kind === "password_reset_email";
-      const nextPayload =
-        current.payload && typeof current.payload === "object" && !Array.isArray(current.payload)
-          ? { ...(current.payload as Record<string, unknown>) }
-          : {};
-      if (clearCode) {
-        delete nextPayload.code;
-        delete nextPayload.token;
-      }
-      if (outcome?.externalId) nextPayload.externalId = outcome.externalId;
-      const payloadChanged = clearCode || Boolean(outcome?.externalId);
-      await prisma.job.update({
-        where: { id: job.id },
-        data: {
-          status: "succeeded",
-          lastError: null,
-          ...(payloadChanged ? { payload: nextPayload as Prisma.InputJsonValue } : {}),
-        },
-      });
-      processed += 1;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Job failed";
-      const status = nextJobStatus(current.attempts, false);
-      await prisma.job.update({
-        where: { id: job.id },
-        data: {
-          status,
-          lastError: message.slice(0, 500),
-          runAfter: status === "queued" ? new Date(Date.now() + 60_000) : new Date(),
-        },
-      });
-    }
+    const result = await finishQueuedJob(job.id);
+    if (result === "succeeded") processed += 1;
   }
   return { processed };
 }
@@ -295,44 +306,44 @@ export async function enqueueVerificationEmail(userId: string, code: string) {
   if (!(await mailReady())) return { queued: false };
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return { queued: false };
-  await prisma.job.create({
+  const job = await prisma.job.create({
     data: {
       kind: "verification_email",
       status: "queued",
       payload: { userId, email: user.email, code },
     },
   });
-  await processDueJobs();
-  return { queued: true };
+  const result = await processJobNow(job.id);
+  return { queued: result === "succeeded" };
 }
 
 /** Claim funnel email before a User row exists. */
 export async function enqueueClaimVerificationEmail(email: string, code: string) {
   const { mailReady } = await import("@/lib/mail");
   if (!(await mailReady())) return { queued: false };
-  await prisma.job.create({
+  const job = await prisma.job.create({
     data: {
       kind: "claim_verification_email",
       status: "queued",
       payload: { email: email.trim().toLowerCase(), code },
     },
   });
-  await processDueJobs();
-  return { queued: true };
+  const result = await processJobNow(job.id);
+  return { queued: result === "succeeded" };
 }
 
 export async function enqueuePasswordResetEmail(email: string, token: string) {
   const { mailReady } = await import("@/lib/mail");
   if (!(await mailReady())) return { queued: false };
-  await prisma.job.create({
+  const job = await prisma.job.create({
     data: {
       kind: "password_reset_email",
       status: "queued",
       payload: { email: email.trim().toLowerCase(), token },
     },
   });
-  await processDueJobs();
-  return { queued: true };
+  const result = await processJobNow(job.id);
+  return { queued: result === "succeeded" };
 }
 
 export async function retryFailedJob(id: string) {
