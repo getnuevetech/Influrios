@@ -61,7 +61,7 @@ export default async function DashboardKycPage({ searchParams }: Props) {
         <p className="text-sm text-muted">This country does not have a KYC type yet.</p>
       ) : kyc.code === "gateway" ? (
         <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <h2 className="font-display text-lg font-bold text-indigo">KYC through gateway</h2>
+          <h2 className="font-display text-lg font-bold text-indigo">{kyc.label}</h2>
           {gateway?.enabled ? (
             <>
               <p className="mt-2 text-sm text-muted">
@@ -93,7 +93,7 @@ export default async function DashboardKycPage({ searchParams }: Props) {
         </article>
       ) : kyc.code === "government_id" ? (
         <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <h2 className="font-display text-lg font-bold text-indigo">KYC through government ID</h2>
+          <h2 className="font-display text-lg font-bold text-indigo">{kyc.label}</h2>
           <p className="mt-2 text-sm text-muted">
             Enter the details and upload the documents configured for this KYC type.
             {submission?.status === "verified"

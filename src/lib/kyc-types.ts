@@ -2,15 +2,15 @@
 export const KYC_TYPES = [
   {
     code: "gateway",
-    label: "KYC through gateway",
+    label: "KYC by Gateway",
     detail:
-      "The creator completes KYC with the payment gateway. The United States can use this through Stripe.",
+      "The creator completes KYC with the payment gateway assigned for this corridor (for example Stripe Connect identity).",
   },
   {
     code: "government_id",
-    label: "KYC through government ID",
+    label: "KYC by Document Upload",
     detail:
-      "The creator uploads 2–3 government-issued IDs and enters the ID details, address, date of birth, and other required information.",
+      "The creator uploads the configured identity documents and enters the required details (ID numbers, address, date of birth, and so on).",
   },
 ] as const;
 

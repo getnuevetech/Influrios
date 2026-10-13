@@ -41,8 +41,8 @@ export default async function AdminKycPage({ searchParams }: Props) {
         </Link>
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">KYC</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          Countries set to KYC through gateway use the gateway selected here. Countries set to KYC through government
-          ID use the details and documents defined here. Choose the country type on{" "}
+          Countries set to KYC by Gateway use the gateway selected here. Countries set to KYC by Document Upload use
+          the details and documents defined here. Choose the country type on{" "}
           <Link href="/admin/corridors" className="font-semibold text-violet hover:underline">
             Country corridors
           </Link>
@@ -54,7 +54,7 @@ export default async function AdminKycPage({ searchParams }: Props) {
       {params.error ? <p className="text-sm font-semibold text-amber-800">{params.error}</p> : null}
 
       <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
-        <h2 className="font-display text-lg font-bold text-indigo">KYC through gateway</h2>
+        <h2 className="font-display text-lg font-bold text-indigo">KYC by Gateway</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted">
           The creator completes KYC with this payment gateway. The United States can use Stripe.
         </p>
@@ -83,10 +83,10 @@ export default async function AdminKycPage({ searchParams }: Props) {
       </article>
 
       <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
-        <h2 className="font-display text-lg font-bold text-indigo">KYC through government ID</h2>
+        <h2 className="font-display text-lg font-bold text-indigo">KYC by Document Upload</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted">
-          Add each detail and each document the creator must provide. A document country shows this list on Identity
-          KYC.
+          Add each detail and each document the creator must provide. A document-upload country shows this list on
+          Identity KYC.
         </p>
         {requirements.length === 0 ? (
           <p className="mt-3 text-sm text-muted">No details or documents have been added.</p>
@@ -155,7 +155,7 @@ export default async function AdminKycPage({ searchParams }: Props) {
                     {submission.creatorSlug} · {submission.countryCode || "no country"} · {submission.status}
                   </p>
                   <p className="mt-1 text-xs text-muted">
-                    {submission.kycModel === "government_id" ? "KYC through government ID" : "KYC through gateway"}
+                    {submission.kycModel === "government_id" ? "KYC by Document Upload" : "KYC by Gateway"}
                   </p>
                   {Object.keys(details).length > 0 ? (
                     <ul className="mt-2 space-y-1 text-xs text-indigo">

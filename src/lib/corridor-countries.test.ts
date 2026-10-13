@@ -58,8 +58,8 @@ describe("corridor countries", () => {
     assert.equal(/<input[^>]*name="kycModel"/.test(page), false);
     assert.equal(page.includes("KYC_TYPES"), true);
     const kyc = readFileSync("src/lib/kyc-types.ts", "utf8");
-    assert.equal(kyc.includes("KYC through gateway"), true);
-    assert.equal(kyc.includes("KYC through government ID"), true);
+    assert.equal(kyc.includes("KYC by Gateway"), true);
+    assert.equal(kyc.includes("KYC by Document Upload"), true);
     const actions = readFileSync("src/app/admin/corridors/actions.ts", "utf8");
     assert.equal(actions.includes("createCorridor"), true);
     assert.equal(actions.includes("saveCorridorGroup"), true);
@@ -68,8 +68,8 @@ describe("corridor countries", () => {
   });
 
   it("accepts only the two KYC types", () => {
-    assert.equal(kycTypeByCode("gateway")?.label, "KYC through gateway");
-    assert.equal(kycTypeByCode("government_id")?.label, "KYC through government ID");
+    assert.equal(kycTypeByCode("gateway")?.label, "KYC by Gateway");
+    assert.equal(kycTypeByCode("government_id")?.label, "KYC by Document Upload");
     assert.equal(kycTypeByCode("identity_light"), null);
     assert.equal(kycTypeByCode(""), null);
     assert.equal(requireKycType("gateway").code, "gateway");

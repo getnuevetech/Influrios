@@ -405,14 +405,14 @@ model CorridorCountryGroupMember {
   @@index([groupId])
 }
 
-/// Gateway chosen for countries that use KYC through gateway.
+/// Gateway chosen for countries that use KYC by Gateway.
 model KycSettings {
   id                String   @id @default("default")
   gatewayProviderId String?
   updatedAt         DateTime @updatedAt
 }
 
-/// Admin-defined detail or document required for KYC through government ID.
+/// Admin-defined detail or document required for KYC by Document Upload.
 model KycDocumentRequirement {
   id        String   @id @default(cuid())
   /// detail | document
