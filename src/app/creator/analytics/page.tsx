@@ -249,7 +249,7 @@ export default async function CreatorAnalyticsPage() {
             <dd className="font-display text-2xl font-bold">{hub?.applications.length ?? 0}</dd>
           </div>
         </dl>
-        <Link href="/collaboration/hub" className="mt-4 inline-flex text-sm font-semibold text-violet hover:underline">
+        <Link href="/collaboration/hub?view=opportunities" className="mt-4 inline-flex text-sm font-semibold text-violet hover:underline">
           Open collaboration hub →
         </Link>
       </Panel>

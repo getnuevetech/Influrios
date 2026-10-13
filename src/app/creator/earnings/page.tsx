@@ -109,7 +109,7 @@ export default async function CreatorEarningsPage() {
         <Link href="/billing#payouts" className="btn-primary !py-2 text-sm">
           Manage payout methods
         </Link>
-        <Link href="/collaboration/hub#pipeline" className="btn-secondary !py-2 text-sm">
+        <Link href="/collaboration/hub?view=collaborations#pipeline" className="btn-secondary !py-2 text-sm">
           Collaboration pipeline
         </Link>
       </div>

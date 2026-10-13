@@ -49,15 +49,22 @@ type Props = {
     app?: string;
     error?: string;
     status?: string;
+    view?: string;
   }>;
 };
 
+type HubView = "opportunities" | "collaborations";
+
+function resolveHubView(raw: string | undefined): HubView {
+  return raw === "collaborations" ? "collaborations" : "opportunities";
+}
+
 const SIDE_LINKS = [
-  { href: "/collaboration/hub", label: "My Collaborations", anchor: null },
-  { href: "/collaboration/hub#matches", label: "Find Matches", anchor: "matches" },
-  { href: "/collaboration/hub#business-requests", label: "Business Requests", anchor: "business-requests" },
-  { href: "/collaboration/hub#saved", label: "Saved Matches", anchor: "saved" },
-  { href: "/collaboration/hub#team-proposals", label: "Team proposals", anchor: "team-proposals" },
+  { href: "/collaboration/hub?view=collaborations", label: "My Collaborations", anchor: null },
+  { href: "/collaboration/hub?view=opportunities#matches", label: "Find Matches", anchor: "matches" },
+  { href: "/collaboration/hub?view=opportunities#business-requests", label: "Business Requests", anchor: "business-requests" },
+  { href: "/collaboration/hub?view=opportunities#saved", label: "Saved Matches", anchor: "saved" },
+  { href: "/collaboration/hub?view=collaborations#team-proposals", label: "Team proposals", anchor: "team-proposals" },
   { href: "/collaboration/records", label: "Contracts & Agreements", anchor: null },
   { href: "/payments", label: "Payments & Wallet", anchor: null },
   { href: "/dashboard", label: "Influencer Profile", anchor: null },
@@ -71,6 +78,8 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
     redirect("/collaboration/propose?notice=collab_os_off");
   }
   const params = await searchParams;
+  const view = resolveHubView(params.view);
+  const isOpportunities = view === "opportunities";
   const account = await getAccountSession().catch(() => null);
   if (!account) {
     redirect(`/login?next=${encodeURIComponent("/collaboration/hub")}&gate=hub`);
@@ -138,41 +147,71 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
   return (
     <div className="bg-[#F4F7FF]">
       <section className="border-b border-[#E4E9F5] bg-gradient-to-r from-[#F7F4FF] via-white to-[#EEF5FF]">
-        <div className="mx-auto grid w-full max-w-[90rem] gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_1.2fr] lg:px-10 lg:py-10">
-          <div>
-            <h1 className="font-display text-3xl font-bold text-indigo sm:text-4xl">My Collaborations</h1>
-            <p className="mt-2 max-w-xl text-sm text-muted sm:text-base">
-              Discover new opportunities, connect with influencers and brands, and manage active collaborations in one place.
-            </p>
-            <Link href="/collaboration?landing=1" className="mt-3 inline-flex text-xs font-bold text-violet hover:underline">
-              View public collaboration landing →
-            </Link>
+        <div className="mx-auto w-full max-w-[90rem] space-y-6 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0 max-w-2xl">
+              <h1 className="font-display text-3xl font-bold text-indigo sm:text-4xl">
+                {isOpportunities ? "Opportunities" : "My Collaborations"}
+              </h1>
+              <p className="mt-2 text-sm text-muted sm:text-base">
+                {isOpportunities
+                  ? "Browse brand requests, creator openings, and recommended matches you can apply to."
+                  : "Track active pipelines, applications, team invitations, and contracts in progress."}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href="/collaboration/hub?view=opportunities"
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    isOpportunities ? "bg-violet text-white" : "bg-white text-violet ring-1 ring-[#E4E9F5]"
+                  }`}
+                >
+                  Opportunities
+                </Link>
+                <Link
+                  href="/collaboration/hub?view=collaborations"
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                    !isOpportunities ? "bg-violet text-white" : "bg-white text-violet ring-1 ring-[#E4E9F5]"
+                  }`}
+                >
+                  Collaborations
+                </Link>
+                <Link href="/collaboration?landing=1" className="inline-flex items-center text-xs font-bold text-violet hover:underline">
+                  Public landing →
+                </Link>
+              </div>
+            </div>
           </div>
-          {popularCards.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-[#E4E9F5] bg-white px-4 py-6 text-sm text-muted">
-              Saved collaboration matches appear here.
-            </p>
-          ) : (
-          <FeaturedCarousel stepPx={200}>
-            {popularCards.map((chip) => (
-              <Link
-                key={`${chip.title}-${chip.subtitle}`}
-                href={chip.specialty ? `/collaboration/hub?category=${encodeURIComponent(chip.specialty)}` : "/collaboration/hub"}
-                className="group w-[180px] shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-[#E4E9F5]"
-              >
-                <div className="relative h-24 overflow-hidden bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
-                  {chip.image ? (
-                    <Image src={chip.image} alt="" fill className="object-cover transition group-hover:scale-105" sizes="180px" />
-                  ) : null}
-                </div>
-                <div className="p-2.5">
-                  <p className="text-xs font-bold text-indigo">{chip.title}</p>
-                  <p className="text-[10px] text-muted">{chip.subtitle}</p>
-                </div>
-              </Link>
-            ))}
-          </FeaturedCarousel>
-          )}
+          {isOpportunities ? (
+            popularCards.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-[#E4E9F5] bg-white px-4 py-6 text-sm text-muted">
+                Category match chips appear here once collaboration matches are published.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {popularCards.map((chip) => (
+                  <Link
+                    key={`${chip.title}-${chip.subtitle}`}
+                    href={
+                      chip.specialty
+                        ? `/collaboration/hub?view=opportunities&category=${encodeURIComponent(chip.specialty)}`
+                        : "/collaboration/hub?view=opportunities"
+                    }
+                    className="group min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-[#E4E9F5]"
+                  >
+                    <div className="relative aspect-[5/3] overflow-hidden bg-gradient-to-br from-[#111A5A] to-[#633CFF]">
+                      {chip.image ? (
+                        <Image src={chip.image} alt="" fill className="object-cover transition group-hover:scale-105" sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 16vw" />
+                      ) : null}
+                    </div>
+                    <div className="p-2.5">
+                      <p className="truncate text-xs font-bold text-indigo">{chip.title}</p>
+                      <p className="truncate text-[10px] text-muted">{chip.subtitle}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )
+          ) : null}
         </div>
       </section>
 
@@ -228,7 +267,15 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
 
           <nav className="rounded-2xl border border-[#E4E9F5] bg-white p-2 shadow-sm">
             {SIDE_LINKS.map((link) => {
-              const active = link.href === "/collaboration/hub" && !link.anchor;
+              const linkView = link.href.includes("view=collaborations")
+                ? "collaborations"
+                : link.href.includes("view=opportunities")
+                  ? "opportunities"
+                  : null;
+              const active =
+                link.label === "My Collaborations"
+                  ? !isOpportunities
+                  : Boolean(link.anchor) && linkView === view;
               return (
                 <Link
                   key={link.label}
@@ -254,8 +301,13 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
           </nav>
         </aside>
 
-        <div className="min-w-0 space-y-6">
-          <section id="team-proposals" className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
+        <div className="flex min-w-0 flex-col gap-6">
+          <section
+            id="team-proposals"
+            className={`rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm ${
+              isOpportunities ? "order-40" : "order-10"
+            }`}
+          >
             <h2 className="font-display text-xl font-bold text-indigo">Team proposals</h2>
             <p className="mt-1 text-sm text-muted">
               Accept or decline a team invitation. The business contract opens only after every creator accepts.
@@ -302,25 +354,25 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             )}
           </section>
           {params.saved ? (
-            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            <p className="order-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
               Match saved to your hub.
             </p>
           ) : null}
           {params.applied ? (
-            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            <p className="order-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
               Application submitted. Track status under Applications.
             </p>
           ) : null}
           {params.app ? (
-            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            <p className="order-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
               Application moved to {params.app}.
             </p>
           ) : null}
           {params.error ? (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</p>
+            <p className="order-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</p>
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-5 ${isOpportunities ? "order-30" : "order-20"}`}>
             {[
               ["Active Collaborations", hub.status.active, "/collaboration/records?from=" + creator.slug],
               ["Pending Invitations", hub.status.pending, "/collaboration/records?from=" + creator.slug],
@@ -356,8 +408,11 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
 
           <form
             action="/collaboration/hub"
-            className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#E4E9F5] bg-white p-3 shadow-sm"
+            className={`flex flex-wrap items-center gap-2 rounded-2xl border border-[#E4E9F5] bg-white p-3 shadow-sm ${
+              isOpportunities ? "order-10" : "order-50"
+            }`}
           >
+            <input type="hidden" name="view" value={view} />
             <span className="pl-2 text-muted">
               <IconSearch size={16} />
             </span>
@@ -392,7 +447,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             </button>
           </form>
 
-          <section id="matches" className="space-y-3">
+          <section id="matches" className={`space-y-3 ${isOpportunities ? "order-20" : "order-60"}`}>
             <div className="flex items-end justify-between gap-3">
               <div>
                 <h2 className="font-display text-xl font-bold text-indigo">Recommended Matches for You</h2>
@@ -436,7 +491,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
           </section>
 
           {hub.creatorMatches.length > 0 ? (
-            <section className="space-y-3">
+            <section className={`space-y-3 ${isOpportunities ? "order-25" : "order-65"}`}>
               <h2 className="font-display text-lg font-bold text-indigo">Influencer × Influencer matches</h2>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {hub.creatorMatches.slice(0, 4).map((match) => {
@@ -475,7 +530,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             </section>
           ) : null}
 
-          <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+          <div className={`grid gap-4 lg:grid-cols-[1fr_280px] ${isOpportunities ? "order-35" : "order-35"}`}>
             <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-[#633CFF] via-[#5B4CFF] to-[#2979FF] p-5 text-white shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -564,7 +619,10 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
             </section>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-3">
+          <div
+            id="opportunities"
+            className={`grid gap-4 xl:grid-cols-3 ${isOpportunities ? "order-22" : "order-70"}`}
+          >
             <section id="business-requests" className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 font-display text-base font-bold text-indigo">
@@ -602,7 +660,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
               </ul>
             </section>
 
-            <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
+            <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm xl:col-span-1">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 font-display text-base font-bold text-indigo">
                   <IconUsers size={16} className="text-violet" /> Influencer Opportunities
@@ -637,8 +695,14 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 })}
               </ul>
             </section>
+          </div>
 
-            <section id="applications" className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm xl:col-span-3">
+            <section
+              id="applications"
+              className={`rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm ${
+                isOpportunities ? "order-28" : "order-22"
+              } ${isOpportunities ? "" : "ring-2 ring-violet/30"}`}
+            >
               <h2 className="mb-3 font-display text-base font-bold text-indigo">My Applications & Invitations</h2>
               <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {hub.applications.length === 0 ? (
@@ -702,7 +766,12 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
               </ul>
             </section>
 
-            <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
+            <section
+              id="pipeline"
+              className={`rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm ${
+                isOpportunities ? "order-29" : "order-24"
+              } ${isOpportunities ? "" : "ring-2 ring-violet/30"}`}
+            >
               <h2 className="mb-3 font-display text-base font-bold text-indigo">Active Collaboration Pipeline</h2>
               <ul className="space-y-4">
                 {hub.pipeline.length === 0 ? (
@@ -760,9 +829,13 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 })}
               </ul>
             </section>
-          </div>
 
-          <section id="saved" className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
+          <section
+            id="saved"
+            className={`rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm ${
+              isOpportunities ? "order-45" : "order-45"
+            }`}
+          >
             <h2 className="mb-3 flex items-center gap-2 font-display text-base font-bold text-indigo">
               <IconHeart size={16} className="text-violet" /> Saved Matches
             </h2>

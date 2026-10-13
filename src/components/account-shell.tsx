@@ -32,8 +32,8 @@ type NavItem = { href: string; label: string; icon: ReactNode };
 const CREATOR_NAV: NavItem[] = [
   { href: "/creator", label: "Home", icon: <IconHome size={18} /> },
   { href: "/dashboard", label: "My Profile", icon: <IconUser size={18} /> },
-  { href: "/collaboration/hub", label: "Opportunities", icon: <IconBriefcase size={18} /> },
-  { href: "/collaboration/hub#pipeline", label: "Collaborations", icon: <IconHandshake size={18} /> },
+  { href: "/collaboration/hub?view=opportunities", label: "Opportunities", icon: <IconBriefcase size={18} /> },
+  { href: "/collaboration/hub?view=collaborations", label: "Collaborations", icon: <IconHandshake size={18} /> },
   { href: "/creator/media-kit", label: "Media Kit", icon: <IconImage size={18} /> },
   { href: "/creator/analytics", label: "Analytics", icon: <IconIntelligence size={18} /> },
   { href: "/creator/messages", label: "Messages", icon: <IconMail size={18} /> },
@@ -72,10 +72,18 @@ function nextCreatorUpgrade(plan: string): { code: PlanCode; label: string; blur
   return { code, label: "Upgrade to Pro", blurb: "Dynamic destinations, deeper analytics, and priority tools." };
 }
 
-function active(href: string, path: string) {
-  const base = href.split("#")[0]!;
+function active(href: string, path: string, search = "") {
+  const url = new URL(href, "http://local.invalid");
+  const base = url.pathname;
   if (base === "/creator" || base === "/business/home") return path === base;
-  return path === base || path.startsWith(`${base}/`);
+  if (!(path === base || path.startsWith(`${base}/`))) return false;
+  const wantView = url.searchParams.get("view");
+  if (wantView) {
+    const current = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("view");
+    // Default hub view is opportunities when no ?view= is present.
+    return (current ?? "opportunities") === wantView;
+  }
+  return true;
 }
 
 export async function MemberFrame({
@@ -85,7 +93,9 @@ export async function MemberFrame({
   audience: "creator" | "business";
   children: React.ReactNode;
 }) {
-  const path = (await headers()).get("x-pathname") ?? "";
+  const headerList = await headers();
+  const path = headerList.get("x-pathname") ?? "";
+  const search = headerList.get("x-search") ?? "";
   const account = await getAccountSession().catch(() => null);
   if (account && !account.hasPassword && !path.startsWith("/account/password")) {
     redirect(
@@ -129,7 +139,7 @@ export async function MemberFrame({
         </Link>
         <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-3">
           {nav.map((item) => {
-            const on = active(item.href, path);
+            const on = active(item.href, path, search);
             return (
               <Link
                 key={item.href}
