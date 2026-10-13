@@ -410,6 +410,16 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                       className={inputClass}
                     />
                   </label>
+                  <label className="block text-sm font-semibold text-indigo sm:col-span-2">
+                    Hosted flow template id
+                    <input
+                      name="hostedFlowTemplate"
+                      defaultValue={provider.hostedFlowTemplate}
+                      placeholder="From Airwallex Account Manager"
+                      disabled={!canEdit}
+                      className={inputClass}
+                    />
+                  </label>
                 </>
               ) : null}
               <label className="block text-sm font-semibold text-indigo">

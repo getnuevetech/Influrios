@@ -61,21 +61,39 @@ export async function actionOpenPortal(formData?: FormData) {
 }
 
 function payoutSetupErrorRedirect(error: string): never {
-  // Config / readiness failures stay on #payouts without flashing operator copy at the member.
+  const trimmed = error.trim();
+  const safe =
+    /^</.test(trimmed) || /<!DOCTYPE/i.test(trimmed) || /<html[\s>]/i.test(trimmed)
+      ? "Payout setup could not reach the payment provider. Check Airwallex credentials and base URL on Payment gateways."
+      : trimmed.slice(0, 300);
+
+  // Actionable provider/config problems — show on billing so the operator can fix them.
   if (
-    /Stripe Connect is not ready/i.test(error) ||
-    /Stripe is not ready/i.test(error) ||
-    /turned off/i.test(error) ||
-    /does not list Airwallex/i.test(error) ||
-    /is not set to Airwallex/i.test(error) ||
-    /Save and enable the Airwallex/i.test(error) ||
-    /corridor collection route/i.test(error) ||
-    /payout setup is not available for this corridor/i.test(error) ||
-    (/Nothing was opened/i.test(error) && /Stripe|Airwallex|Connect|portal|jurisdiction|corridor/i.test(error))
+    /^Airwallex[:\s]/i.test(safe) ||
+    /HTML instead of JSON/i.test(safe) ||
+    /hosted onboarding is not configured/i.test(safe) ||
+    /hosted flow template/i.test(safe) ||
+    /Check the base URL/i.test(safe) ||
+    /Check Airwallex credentials/i.test(safe)
+  ) {
+    redirect(`/billing?error=${encodeURIComponent(safe)}#payouts`);
+  }
+
+  // Quiet readiness failures stay on #payouts without flashing operator copy.
+  if (
+    /Stripe Connect is not ready/i.test(safe) ||
+    /Stripe is not ready/i.test(safe) ||
+    /turned off/i.test(safe) ||
+    /does not list Airwallex/i.test(safe) ||
+    /is not set to Airwallex/i.test(safe) ||
+    /Save and enable the Airwallex/i.test(safe) ||
+    /corridor collection route/i.test(safe) ||
+    /payout setup is not available for this corridor/i.test(safe) ||
+    (/Nothing was opened/i.test(safe) && /Stripe|Connect|portal|jurisdiction|corridor/i.test(safe))
   ) {
     redirect("/billing#payouts");
   }
-  redirect(`/billing?error=${encodeURIComponent(error)}#payouts`);
+  redirect(`/billing?error=${encodeURIComponent(safe)}#payouts`);
 }
 
 async function creatorPayoutRailGuard(userId: string) {

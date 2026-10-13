@@ -19,8 +19,15 @@ type Props = { searchParams: Promise<{ error?: string; connected?: string }> };
 function memberFacingBillingError(raw: string | undefined) {
   const message = raw?.trim() ?? "";
   if (!message) return undefined;
+  // Provider HTML error bodies used to leak into ?error=<!DOCTYPE…>
+  if (/^</.test(message) || /<!DOCTYPE/i.test(message) || /<html[\s>]/i.test(message)) {
+    return "Payout setup could not reach the payment provider. Ask an admin to check Airwallex credentials and base URL on Payment gateways.";
+  }
+  if (/^Airwallex[:\s]/i.test(message)) return message;
+  if (/hosted onboarding is not configured/i.test(message) || /hosted flow template/i.test(message)) return message;
+  if (/HTML instead of JSON/i.test(message) || /Check the base URL/i.test(message)) return message;
   if (/Stripe Connect is not ready/i.test(message)) return undefined;
-  if (/Nothing was opened/i.test(message) && /Stripe|Airwallex|Connect|portal/i.test(message)) return undefined;
+  if (/Nothing was opened/i.test(message) && /Stripe|Connect|portal/i.test(message)) return undefined;
   return message;
 }
 
