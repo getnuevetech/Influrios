@@ -14,22 +14,44 @@ export function setStripeTransportForTests(next: typeof fetch | null) {
 
 export type StripeKeyMode = "sandbox" | "live";
 
-/** Sandbox keys are sk_test_, rk_test_, or a claimable rkcs_test_ key. */
+export type StripeCredentialFailure = "missing" | "rejected" | "unreadable";
+
+/**
+ * Stripe secret keys are sk_/rk_/rkcs_ + test|live + opaque material.
+ * Hyphens and underscores appear in some restricted-key bodies.
+ */
 export function classifyStripeKey(secret: string): StripeKeyMode | null {
   const key = secret.trim();
-  if (/^(sk|rk|rkcs)_test_[A-Za-z0-9]+$/.test(key)) return "sandbox";
-  if (/^(sk|rk|rkcs)_live_[A-Za-z0-9]+$/.test(key)) return "live";
+  if (/^(sk|rk|rkcs)_test_[A-Za-z0-9_-]+$/.test(key)) return "sandbox";
+  if (/^(sk|rk|rkcs)_live_[A-Za-z0-9_-]+$/.test(key)) return "live";
   return null;
+}
+
+function stripeCredentialError(reason: StripeCredentialFailure, action: "charged" | "opened") {
+  if (reason === "missing") {
+    return action === "charged"
+      ? "Stripe is not ready. Nothing was charged."
+      : "Stripe is not ready. Nothing was opened.";
+  }
+  if (reason === "unreadable") {
+    return action === "charged"
+      ? "The saved Stripe secret could not be read. Re-save it on Payment gateways. Nothing was charged."
+      : "The saved Stripe secret could not be read. Re-save it on Payment gateways. Nothing was opened.";
+  }
+  return action === "charged"
+    ? "Use a valid Stripe secret key (sk_test_… or sk_live_…). Nothing was charged."
+    : "Use a valid Stripe secret key (sk_test_… or sk_live_…). Nothing was opened.";
 }
 
 export async function stripeCredentials(): Promise<
   | { ok: true; secret: string; mode: StripeKeyMode }
-  | { ok: false; reason: "missing" | "rejected" }
+  | { ok: false; reason: StripeCredentialFailure }
 > {
   const fromEnv = process.env.STRIPE_SECRET_KEY?.trim() ?? "";
   if (fromEnv) {
     const mode = classifyStripeKey(fromEnv);
-    return mode ? { ok: true, secret: fromEnv, mode } : { ok: false, reason: "rejected" };
+    // A malformed env value must not block the admin-saved payment gateway key.
+    if (mode) return { ok: true, secret: fromEnv, mode };
   }
   let row: { enabled: boolean; secretCipher: string | null } | null = null;
   try {
@@ -37,19 +59,21 @@ export async function stripeCredentials(): Promise<
       where: { kind_code: { kind: "payment", code: "stripe" } },
     });
   } catch {
-    return { ok: false, reason: "missing" };
+    return { ok: false, reason: fromEnv ? "rejected" : "missing" };
   }
-  if (!row?.enabled || !row.secretCipher) return { ok: false, reason: "missing" };
+  if (!row?.enabled || !row.secretCipher) {
+    return { ok: false, reason: fromEnv ? "rejected" : "missing" };
+  }
   const secret = decryptSecret(row.secretCipher);
-  if (!secret) return { ok: false, reason: "rejected" };
-  return classifyStripeKey(secret) === "sandbox"
-    ? { ok: true, secret, mode: "sandbox" }
-    : { ok: false, reason: "rejected" };
+  if (!secret) return { ok: false, reason: "unreadable" };
+  const mode = classifyStripeKey(secret);
+  if (!mode) return { ok: false, reason: "rejected" };
+  return { ok: true, secret, mode };
 }
 
 export async function stripeBillingMode(): Promise<"sandbox" | "live" | "demo" | "rejected"> {
   const creds = await stripeCredentials();
-  if (!creds.ok) return creds.reason === "rejected" ? "rejected" : "demo";
+  if (!creds.ok) return creds.reason === "missing" ? "demo" : "rejected";
   return creds.mode;
 }
 
@@ -114,10 +138,12 @@ export async function probeStripeSandbox() {
   if (!creds.ok) {
     return {
       ok: false as const,
-      error: creds.reason === "missing" ? "Stripe is not ready. Nothing was charged." : "Use a Stripe sandbox key. Nothing was charged.",
+      error: stripeCredentialError(creds.reason, "charged"),
     };
   }
-  if (creds.mode !== "sandbox") return { ok: false as const, error: "Use a Stripe sandbox key. Nothing was charged." };
+  if (creds.mode !== "sandbox") {
+    return { ok: false as const, error: "Use a Stripe sandbox key (sk_test_…) to probe checkout. Nothing was charged." };
+  }
   try {
     const payload = await stripeCall("GET", "/v1/checkout/sessions?limit=1", creds.secret);
     const rows = payload && Array.isArray(payload.data) ? payload.data : null;
@@ -360,7 +386,7 @@ export async function openCustomerPortal(input: { customerId: string; returnUrl:
   if (!creds.ok) {
     return {
       ok: false as const,
-      error: creds.reason === "missing" ? "Stripe is not ready. Nothing was opened." : "Use a Stripe sandbox key. Nothing was opened.",
+      error: stripeCredentialError(creds.reason, "opened"),
     };
   }
   const secret = creds.secret;

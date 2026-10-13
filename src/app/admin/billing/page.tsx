@@ -37,9 +37,9 @@ export default async function AdminBillingPage({ searchParams }: Props) {
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Billing</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          A plan changes only after Stripe confirms Checkout. A Stripe sandbox key (sk_test_ or rkcs_test_) can be saved
-          on the Stripe gateway. Checkout opens Stripe and leaves the plan unpaid until Stripe confirms the session.
-          A live key saved on the gateway is refused.
+          A plan changes only after Stripe confirms Checkout. Save a Stripe secret key on Payment gateways
+          (sk_test_… for sandbox or sk_live_… for production). Checkout opens Stripe and leaves the plan unpaid until
+          Stripe confirms the session.
         </p>
       </div>
 
@@ -80,7 +80,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
           </form>
           <form action={actionCheckStripeSandbox} className="mt-4">
             <p className="text-sm text-muted">
-              Sandbox status: {stripeMode === "sandbox" ? "key ready to check" : stripeMode === "live" ? "server live key" : stripeMode === "rejected" ? "saved key is not a sandbox key" : "no Stripe key"}.
+              Stripe status: {stripeMode === "sandbox" ? "sandbox key ready" : stripeMode === "live" ? "live key ready" : stripeMode === "rejected" ? "saved key invalid or unreadable" : "no Stripe key"}.
             </p>
             <button type="submit" className="btn-secondary mt-2 !py-2 text-sm">
               Check Stripe sandbox
@@ -89,7 +89,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
           </>
         ) : (
           <p className="mt-3 text-sm text-muted">
-            Sandbox status: {stripeMode === "sandbox" ? "key saved" : stripeMode === "live" ? "server live key" : stripeMode === "rejected" ? "saved key is not a sandbox key" : "no Stripe key"}.
+            Stripe status: {stripeMode === "sandbox" ? "sandbox key ready" : stripeMode === "live" ? "live key ready" : stripeMode === "rejected" ? "saved key invalid or unreadable" : "no Stripe key"}.
           </p>
         )}
         <form action={canEdit ? actionSaveBillingPrices : undefined} className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -137,7 +137,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
       <section className="card-surface p-6">
         <h2 className="font-display text-xl font-bold text-indigo">Environment</h2>
         <ul className="mt-3 space-y-1 text-sm text-muted">
-          <li>STRIPE_SECRET_KEY: {process.env.STRIPE_SECRET_KEY ? "set in the environment" : "not set — save a sandbox key on Payment gateways"}</li>
+          <li>STRIPE_SECRET_KEY: {process.env.STRIPE_SECRET_KEY ? "set in the environment" : "not set — save a Stripe secret on Payment gateways"}</li>
           <li>
             STRIPE_WEBHOOK_SECRET: {process.env.STRIPE_WEBHOOK_SECRET ? "set" : "missing"}
           </li>

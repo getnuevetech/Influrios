@@ -11,16 +11,32 @@ import { RemoveGatewayButton } from "@/app/admin/gateways/remove-gateway-button"
 import { requireAdminPage } from "@/app/admin/guard";
 import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
+import { corridorCountries, corridorCountryByCode } from "@/lib/corridor-countries";
 import { listPaymentCountryGroups } from "@/lib/payment-country-groups";
 import { productSwitch } from "@/lib/product-switches";
-import { gatewayCredentialLabels, getDefaultBackupGateway, listProviders, paymentRoutes } from "@/lib/providers";
+import { countryDisplayName, gatewayCredentialLabels, getDefaultBackupGateway, listProviders, paymentRoutes } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Payment gateways · Admin" };
 
 const inputClass = "mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal";
+const selectClass = "mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 font-normal";
 
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
+
+function CountryMultiSelect({ selected }: { selected: string[] }) {
+  const options = corridorCountries();
+  const chosen = new Set(selected.map((code) => code.trim().toUpperCase()));
+  return (
+    <select name="countryCode" multiple required size={10} defaultValue={[...chosen]} className={selectClass}>
+      {options.map((country) => (
+        <option key={country.code} value={country.code}>
+          {country.name} ({country.code})
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export default async function AdminGatewaysPage({ searchParams }: Props) {
   const session = await requireAdminPage("gateways");
@@ -46,6 +62,9 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
     console.error("admin gateways", error);
     dbError = true;
   }
+
+  const routedCodes = new Set(routes.map((route) => route.countryCode));
+  const countriesForNewRoute = corridorCountries().filter((country) => !routedCodes.has(country.code));
 
   const savedMessage =
     params.saved === "removed"
@@ -88,7 +107,7 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                 name="providerId"
                 required
                 defaultValue={defaultBackup?.id ?? ""}
-                className={inputClass}
+                className={selectClass}
               >
                 <option value="" disabled>
                   Choose a gateway…
@@ -117,14 +136,18 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
           <h2 className="font-display text-lg font-bold text-indigo">Country groups</h2>
           <p className="mt-1 text-sm text-muted">
             Group countries and assign one gateway to the whole group. Saving updates each country route to that
-            gateway.
+            gateway. Hold Ctrl/Cmd to select multiple countries.
           </p>
         </div>
         {groups.map((group) => (
           <AdminCollapse
             key={group.id}
             title={group.name}
-            subtitle={`${group.providerName} · ${group.countryCodes.join(", ") || "No countries"}`}
+            subtitle={`${group.providerName} · ${
+              group.countryCodes
+                .map((code) => corridorCountryByCode(code)?.name ?? code)
+                .join(", ") || "No countries"
+            }`}
           >
             {canEdit ? (
               <div className="space-y-3">
@@ -136,7 +159,7 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                   </label>
                   <label className="text-sm font-semibold text-indigo">
                     Gateway
-                    <select name="providerId" defaultValue={group.providerId} className={inputClass}>
+                    <select name="providerId" defaultValue={group.providerId} className={selectClass}>
                       {providers.map((provider) => (
                         <option key={provider.id} value={provider.id}>
                           {provider.name}
@@ -145,14 +168,8 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                     </select>
                   </label>
                   <label className="text-sm font-semibold text-indigo sm:col-span-2">
-                    Country codes (comma-separated)
-                    <input
-                      name="countryCodes"
-                      defaultValue={group.countryCodes.join(", ")}
-                      placeholder="NG, GH, KE"
-                      required
-                      className={inputClass}
-                    />
+                    Countries
+                    <CountryMultiSelect selected={group.countryCodes} />
                   </label>
                   <button type="submit" className="btn-primary w-fit">
                     Save group & routes
@@ -167,7 +184,8 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
               </div>
             ) : (
               <p className="text-sm text-muted">
-                {group.providerName}: {group.countryCodes.join(", ")}
+                {group.providerName}:{" "}
+                {group.countryCodes.map((code) => corridorCountryByCode(code)?.name ?? code).join(", ")}
               </p>
             )}
           </AdminCollapse>
@@ -184,7 +202,7 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
             </label>
             <label className="text-sm font-semibold text-indigo">
               Gateway
-              <select name="providerId" required className={inputClass}>
+              <select name="providerId" required className={selectClass}>
                 {providers.map((provider) => (
                   <option key={provider.id} value={provider.id}>
                     {provider.name}
@@ -193,8 +211,8 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
               </select>
             </label>
             <label className="text-sm font-semibold text-indigo sm:col-span-2">
-              Country codes (comma-separated)
-              <input name="countryCodes" required placeholder="NG, GH, KE" className={inputClass} />
+              Countries
+              <CountryMultiSelect selected={[]} />
             </label>
             <button type="submit" className="btn-secondary w-fit">
               Create group
@@ -221,18 +239,30 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
             <tbody>
               {routes.map((route) => (
                 <tr key={route.countryCode} className="border-b border-[#E4EBFF] last:border-0">
-                  <td className="px-4 py-3 font-semibold text-indigo">{route.countryCode}</td>
+                  <td className="px-4 py-3 font-semibold text-indigo">
+                    {countryDisplayName(route.countryCode)}
+                    <span className="mt-0.5 block text-xs font-normal text-muted">{route.countryCode}</span>
+                  </td>
                   <td className="px-4 py-3">
                     <form action={actionAssignCountryGateway} className="flex items-center gap-2">
                       <input type="hidden" name="countryCode" value={route.countryCode} />
-                      <select name="providerId" defaultValue={providers.find((provider) => provider.code === route.providerCode)?.id} disabled={!canEdit} className="rounded-lg border border-border px-2 py-1">
+                      <select
+                        name="providerId"
+                        defaultValue={providers.find((provider) => provider.code === route.providerCode)?.id}
+                        disabled={!canEdit}
+                        className="rounded-lg border border-border px-2 py-1"
+                      >
                         {providers.map((provider) => (
                           <option key={provider.id} value={provider.id}>
                             {provider.name}
                           </option>
                         ))}
                       </select>
-                      {canEdit ? <button type="submit" className="text-xs font-semibold text-violet">Assign</button> : null}
+                      {canEdit ? (
+                        <button type="submit" className="text-xs font-semibold text-violet">
+                          Assign
+                        </button>
+                      ) : null}
                     </form>
                   </td>
                   <td className="px-4 py-3 text-muted">{route.ready ? "Ready" : route.reason.replace(/_/g, " ")}</td>
@@ -250,14 +280,26 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
         </div>
 
         {canEdit ? (
-          <form action={actionAssignCountryGateway} className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-dashed border-[#E4EBFF] bg-[#F8FAFF] p-4">
+          <form
+            action={actionAssignCountryGateway}
+            className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-dashed border-[#E4EBFF] bg-[#F8FAFF] p-4"
+          >
             <label className="text-sm font-semibold text-indigo">
-              New country
-              <input name="countryCode" required maxLength={2} placeholder="NG" className={inputClass} />
+              Country
+              <select name="countryCode" required defaultValue="" className={selectClass}>
+                <option value="" disabled>
+                  Choose a country…
+                </option>
+                {countriesForNewRoute.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name} ({country.code})
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="text-sm font-semibold text-indigo">
               Gateway
-              <select name="providerId" className={inputClass}>
+              <select name="providerId" required className={selectClass}>
                 {providers.map((provider) => (
                   <option key={provider.id} value={provider.id}>
                     {provider.name}
@@ -265,7 +307,9 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                 ))}
               </select>
             </label>
-            <button type="submit" className="btn-secondary">Assign country</button>
+            <button type="submit" className="btn-secondary">
+              Assign country
+            </button>
           </form>
         ) : null}
       </AdminCollapse>
@@ -277,7 +321,11 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
         </p>
         <div className="mt-3 space-y-4">
           {connectProviders.map((provider) => (
-            <form key={provider.id} action={actionSaveConnect} className="grid gap-3 rounded-2xl border border-[#E4EBFF] bg-[#F8FAFF] p-4 sm:grid-cols-2">
+            <form
+              key={provider.id}
+              action={actionSaveConnect}
+              className="grid gap-3 rounded-2xl border border-[#E4EBFF] bg-[#F8FAFF] p-4 sm:grid-cols-2"
+            >
               <input type="hidden" name="id" value={provider.id} />
               <input type="hidden" name="code" value={provider.code} />
               <label className="block text-sm font-semibold text-indigo">
@@ -286,7 +334,13 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
               </label>
               <label className="block text-sm font-semibold text-indigo">
                 Secret ({provider.secret})
-                <input name="secret" type="password" placeholder="Leave blank to keep" disabled={!canEdit} className={inputClass} />
+                <input
+                  name="secret"
+                  type="password"
+                  placeholder="Leave blank to keep"
+                  disabled={!canEdit}
+                  className={inputClass}
+                />
               </label>
               <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
                 <input type="checkbox" name="enabled" value="1" defaultChecked={provider.enabled} disabled={!canEdit} />
@@ -296,7 +350,11 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                 <input type="checkbox" name="stripe_connect" defaultChecked={connectOn} disabled={!canEdit} />
                 Allow account links
               </label>
-              {canEdit ? <button type="submit" className="btn-primary w-fit">Save Stripe Connect</button> : null}
+              {canEdit ? (
+                <button type="submit" className="btn-primary w-fit">
+                  Save Stripe Connect
+                </button>
+              ) : null}
             </form>
           ))}
         </div>
@@ -323,27 +381,55 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
               </label>
               <label className="block text-sm font-semibold text-indigo sm:col-span-2">
                 API base URL
-                <input name="baseUrl" defaultValue={provider.baseUrl} placeholder="https://" disabled={!canEdit} className={inputClass} />
+                <input
+                  name="baseUrl"
+                  defaultValue={provider.baseUrl}
+                  placeholder="https://"
+                  disabled={!canEdit}
+                  className={inputClass}
+                />
               </label>
               {provider.code === "airwallex" ? (
                 <>
                   <label className="block text-sm font-semibold text-indigo">
                     Holding account id
-                    <input name="holdingAccountId" defaultValue={provider.holdingAccountId} disabled={!canEdit} className={inputClass} />
+                    <input
+                      name="holdingAccountId"
+                      defaultValue={provider.holdingAccountId}
+                      disabled={!canEdit}
+                      className={inputClass}
+                    />
                   </label>
                   <label className="block text-sm font-semibold text-indigo">
                     Operations account id
-                    <input name="operationsAccountId" defaultValue={provider.operationsAccountId} disabled={!canEdit} className={inputClass} />
+                    <input
+                      name="operationsAccountId"
+                      defaultValue={provider.operationsAccountId}
+                      disabled={!canEdit}
+                      className={inputClass}
+                    />
                   </label>
                 </>
               ) : null}
               <label className="block text-sm font-semibold text-indigo">
                 {gatewayCredentialLabels(provider.code).secret} ({provider.secret})
-                <input name="secret" type="password" placeholder="Leave blank to keep" disabled={!canEdit} className={inputClass} />
+                <input
+                  name="secret"
+                  type="password"
+                  placeholder="Leave blank to keep"
+                  disabled={!canEdit}
+                  className={inputClass}
+                />
               </label>
               <label className="block text-sm font-semibold text-indigo">
                 Webhook secret ({provider.webhook})
-                <input name="webhook" type="password" placeholder="Leave blank to keep" disabled={!canEdit} className={inputClass} />
+                <input
+                  name="webhook"
+                  type="password"
+                  placeholder="Leave blank to keep"
+                  disabled={!canEdit}
+                  className={inputClass}
+                />
               </label>
               {gatewayCredentialLabels(provider.code).note ? (
                 <p className="text-xs text-muted sm:col-span-2">{gatewayCredentialLabels(provider.code).note}</p>
@@ -352,7 +438,11 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                 <input type="checkbox" name="enabled" value="1" defaultChecked={provider.enabled} disabled={!canEdit} />
                 Enabled
               </label>
-              {canEdit ? <button type="submit" className="btn-primary w-fit">Save gateway</button> : null}
+              {canEdit ? (
+                <button type="submit" className="btn-primary w-fit">
+                  Save gateway
+                </button>
+              ) : null}
             </form>
             {canEdit ? (
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#E4EBFF] pt-3">
@@ -378,7 +468,10 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
           </AdminCollapse>
         ))}
         {canEdit ? (
-          <form action={actionSaveGateway} className="grid gap-3 rounded-2xl border border-dashed border-[#E4EBFF] bg-white p-4 sm:grid-cols-2">
+          <form
+            action={actionSaveGateway}
+            className="grid gap-3 rounded-2xl border border-dashed border-[#E4EBFF] bg-white p-4 sm:grid-cols-2"
+          >
             <h3 className="font-semibold text-indigo sm:col-span-2">Add a gateway</h3>
             <label className="text-sm font-semibold text-indigo">
               Code
@@ -392,7 +485,9 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
               Secret
               <input name="secret" type="password" className={inputClass} />
             </label>
-            <button type="submit" className="btn-secondary w-fit">Add gateway</button>
+            <button type="submit" className="btn-secondary w-fit">
+              Add gateway
+            </button>
           </form>
         ) : null}
       </section>

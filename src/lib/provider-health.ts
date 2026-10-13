@@ -64,7 +64,7 @@ export async function providerHealth(): Promise<HealthLine[]> {
           : stripeMode === "live"
             ? "Stripe live secret is set."
             : stripeMode === "rejected"
-              ? "The saved Stripe key is not a sandbox key. Nothing is charged."
+              ? "The Stripe secret is invalid or could not be read. Re-save it on Payment gateways."
               : "Stripe secret is not set. Checkout stays closed until a key is saved.",
       detail: paymentDetail,
     },
