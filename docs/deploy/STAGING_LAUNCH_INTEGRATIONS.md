@@ -232,14 +232,20 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 **Recovered:** probes green through **2026-10-13T15:42:14Z** (8/8 auto). E1 complete. Rotate `CRON_SECRET` if it was pasted into a transcript.
 
-### E1 progress — **complete**
+### E1 progress (2026-10-13 afternoon) — **complete**
+
+Tick at **2026-10-13T15:36:12Z**: `POST /api/cron/sweeps` → `{"ok":true,"enqueued":{"queued":10},"processed":{"processed":10}}`. Crontab installed (`*/5` → `deploy/scripts/sweep-cron.sh`).
 
 | Check | Result |
 |-------|--------|
-| Probe auto: cron rejects missing secret | ☑ |
-| Crontab installed | ☑ |
-| Succeeded `milestone_auto_approval` | ☑ `cmv6ufj5m000dut01g2jvu0xh` · 2026-10-13T15:36:12Z |
-| Succeeded `recurring_cycle_sweep` | ☑ `cmv6ufj61000lut013qd0vrgz` · 2026-10-13T15:36:12Z |
+| Probe auto: cron rejects missing secret | ☑ `401` / `unauthorized` |
+| Admin → Jobs shows succeeded sweep **job ids** | ☑ |
+| Host script to print E1 ids | ☑ `npm run staging:e1-sweep-evidence` |
+| Crontab installed | ☑ `crontab -l \| grep sweep-cron` |
+| Succeeded `milestone_auto_approval` id | ☑ `cmv6ufj5m000dut01g2jvu0xh` · 2026-10-13T15:36:12Z |
+| Succeeded `recurring_cycle_sweep` id | ☑ `cmv6ufj61000lut013qd0vrgz` · 2026-10-13T15:36:12Z |
+
+**Rotate `CRON_SECRET` after this evidence** (it was pasted into an operator transcript), then update `.env`, redeploy, and refresh the crontab line.
 
 ### E2 progress (SMTP)
 
@@ -277,7 +283,7 @@ Operator path:
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
-| Env, HTTPS, auth secret, cron | probe 8/8 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` | 2026-10-13 | host + cloud-agent |
+| Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
 | SMTP | | | |
 | Stripe checkout, duplicate skip, portal, Connect | whsec present (`Missing Stripe-Signature header`). Run 4242 checkout + duplicate skip | 2026-10-13 | |
 | Social OAuth | | | |
