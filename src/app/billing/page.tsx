@@ -40,7 +40,13 @@ export default async function BillingPage({ searchParams }: Props) {
             select: {
               planTier: true,
               locationCountry: true,
-              payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true } },
+              payoutProfile: {
+                select: {
+                  stripeConnectAccountId: true,
+                  providerConnectedAccountId: true,
+                  primaryCountryCode: true,
+                },
+              },
             },
           },
         },
@@ -66,6 +72,7 @@ export default async function BillingPage({ searchParams }: Props) {
   const payoutRail = identity?.creator
     ? await resolvePayoutOnboardingRail({
         locationCountry: identity.creator.locationCountry,
+        fallbackCountryCode: identity.creator.payoutProfile?.primaryCountryCode,
         stripeConnectReady: connectReady,
         providerReady: airwallexReady,
         hasStripeConnectAccount: hasConnectAccount,
@@ -126,10 +133,8 @@ export default async function BillingPage({ searchParams }: Props) {
             </Link>
           ) : !showStripe && !showProvider ? (
             <p className="text-xs text-amber-900/80">
-              {payoutRail?.collectionProviderCode === "flutterwave" ||
-              payoutRail?.collectionProviderCode === "mpesa"
-                ? "Your country corridor uses a local payout rail. Complete KYC and add a payout method when prompted — Stripe Connect is not used here."
-                : "Payout onboarding opens here once your country corridor’s collection route is ready."}
+              {payoutRail?.emptyHint ??
+                "Payout onboarding opens here once your country corridor’s collection route is ready."}
             </p>
           ) : null}
         </div>
