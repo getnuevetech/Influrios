@@ -232,13 +232,43 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 Probe auto-check for E1 gate (no secret): `POST /api/cron/sweeps` must return **401**. That only proves the route is mounted — crontab still needs the succeeded job ids above.
 
-**Recovered:** re-probe at **2026-10-13T11:51:40Z** — **8/8 auto checks pass** (HTTPS, health+db, authConfigured, homepage, guest collab, admin login, cron 401 without secret, SMS not sent). E1 still needs crontab `succeeded` job ids.
+**Recovered:** re-probe at **2026-10-13T11:51:40Z** — **8/8 auto checks pass**. Re-confirmed **2026-10-13T14:35:23Z** — still **8/8**.
+
+### E1 progress (2026-10-13 afternoon)
+
+| Check | Result |
+|-------|--------|
+| Probe auto: cron rejects missing secret | ☑ `401` / `unauthorized` |
+| Admin → Jobs shows succeeded sweep **job ids** | ☑ after deploy of this slice |
+| Host script to print E1 ids | `npm run staging:e1-sweep-evidence` (optional `--tick` with `CRON_SECRET`) |
+| Crontab installed + succeeded `milestone_auto_approval` id | ☐ operator |
+| Succeeded `recurring_cycle_sweep` id | ☐ operator |
+
+```bash
+# On Lightsail after deploy:
+cd /var/www/influrios
+crontab -l | grep sweep-cron || echo "install: */5 * * * * CRON_SECRET=… APP_URL=https://influrios.com /var/www/influrios/deploy/scripts/sweep-cron.sh"
+# DATABASE_URL host must be 127.0.0.1 for host-side Prisma:
+npm run staging:e1-sweep-evidence
+# Or force one tick then re-read:
+CRON_SECRET=… APP_URL=https://influrios.com npm run staging:e1-sweep-evidence -- --tick
+```
+
+### E4 Stripe progress (same day)
+
+| Check | Result |
+|-------|--------|
+| API secret decrypts | ☑ earlier (no longer 501 unreadable) |
+| Webhook secret saved | ☑ `POST /api/billing/webhook` without signature → `Missing Stripe-Signature header.` |
+| Sandbox checkout `4242` + plan apply | ☐ |
+| Duplicate `checkout.session.completed` skipped | ☐ |
+| Portal / Connect | ☐ (Connect onboarding fixed in #262) |
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
-| Env, HTTPS, auth secret, cron | probe `2026-10-13T11:51:40Z` · 8/8 auto pass · cron 401 without secret (crontab job ids still blank) | 2026-10-13 | cloud-agent / host |
+| Env, HTTPS, auth secret, cron | probe `2026-10-13T14:35:23Z` · 8/8 auto pass · cron 401 without secret · **E1 succeeded job ids still blank until crontab runs** | 2026-10-13 | cloud-agent / host |
 | SMTP | | | |
-| Stripe checkout, duplicate skip, portal, Connect | API secret readable earlier (webhook 400 without signature). Save whsec_… + run 4242 checkout | 2026-10-13 | |
+| Stripe checkout, duplicate skip, portal, Connect | whsec present (`Missing Stripe-Signature header`). Run 4242 checkout + duplicate skip | 2026-10-13 | |
 | Social OAuth | | | |
 | Meilisearch counts | | | |
 | Airwallex hold and release | | | |

@@ -35,10 +35,18 @@ export default async function AdminJobsPage({ searchParams }: Props) {
             <li key={sweep.kind} className="rounded-xl border border-[#E4EBFF] bg-white px-3 py-2 text-xs text-indigo">
               <span className="font-semibold">{sweep.kind}</span>
               <span className="mt-1 block text-muted">
-                {sweep.status}
+                latest: {sweep.status}
                 {sweep.at ? ` · ${sweep.at}` : ""}
                 {sweep.lastError ? ` · ${sweep.lastError}` : ""}
               </span>
+              {sweep.succeededId ? (
+                <span className="mt-1 block font-mono text-[11px] text-emerald-800">
+                  succeeded id {sweep.succeededId}
+                  {sweep.succeededAt ? ` · ${sweep.succeededAt}` : ""}
+                </span>
+              ) : (
+                <span className="mt-1 block text-amber-800">No succeeded row yet — confirm crontab + CRON_SECRET.</span>
+              )}
             </li>
           ))}
         </ul>
