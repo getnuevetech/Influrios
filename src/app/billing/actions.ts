@@ -95,7 +95,7 @@ async function creatorPayoutRailGuard(userId: string) {
   const rail = await resolvePayoutOnboardingRail({
     locationCountry: creator.locationCountry,
     stripeConnectReady: await stripeConnectReady().catch(() => false),
-    airwallexReady: Boolean(await loadAirwallexConfig().catch(() => null)),
+    providerReady: Boolean(await loadAirwallexConfig().catch(() => null)),
     hasStripeConnectAccount: Boolean(creator.payoutProfile?.stripeConnectAccountId),
     hasProviderAccount: Boolean(creator.payoutProfile?.providerConnectedAccountId),
   });
@@ -107,11 +107,11 @@ export async function actionOpenConnectedAccount() {
   if (!account) redirect("/login?next=/billing&gate=connect");
   const guard = await creatorPayoutRailGuard(account.id);
   if (!guard.ok) payoutSetupErrorRedirect(guard.error);
-  if (!guard.rail.showAirwallex) {
+  if (!guard.rail.showProvider) {
     payoutSetupErrorRedirect(
       guard.rail.collectionProviderCode
         ? `This corridor collection route is ${guard.rail.collectionProviderCode}. Nothing was opened.`
-        : "Airwallex payout setup is not available for this corridor. Nothing was opened.",
+        : "Connected-account payout setup is not available for this corridor. Nothing was opened.",
     );
   }
   const { openCreatorConnectedAccount } = await import("@/lib/providers/airwallex-runtime");
