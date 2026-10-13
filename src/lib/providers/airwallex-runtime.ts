@@ -222,6 +222,8 @@ export async function openCreatorConnectedAccount(input: { userId: string; email
     });
     linked = false;
   }
+  // Hosted KYC is optional until a template id is saved. Without it, keep the prior
+  // behavior: persist the connected account id and return to billing (connected=1).
   if ((!url || !url.startsWith("https://")) && auth.settings.hostedFlowTemplate) {
     const hosted = await createAirwallexHostedOnboarding({
       baseUrl: auth.settings.baseUrl,
@@ -234,14 +236,7 @@ export async function openCreatorConnectedAccount(input: { userId: string; email
     if (!hosted.ok) return hosted;
     url = hosted.url;
   }
-  if (!url || !url.startsWith("https://")) {
-    return {
-      ok: false,
-      error:
-        "Airwallex account is saved, but hosted onboarding is not configured. Add the hosted flow template id on Payment gateways. Nothing was opened.",
-    };
-  }
-  return { ok: true, accountId, linked, url };
+  return { ok: true, accountId, linked, url: url?.startsWith("https://") ? url : undefined };
 }
 
 async function paymentIdForFunding(fundingId: string) {
