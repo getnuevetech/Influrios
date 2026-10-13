@@ -161,7 +161,15 @@ export async function loginAirwallex(input: {
       signal: AbortSignal.timeout(8000),
     });
     const text = await response.text();
-    if (!response.ok) return { ok: false, error: text.slice(0, 300) || "Airwallex did not return a token. Nothing was charged." };
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: humanizeAirwallexHttpError(response.status, text).replace(
+          "Nothing was opened.",
+          "Nothing was charged.",
+        ),
+      };
+    }
     const payload = JSON.parse(text) as { token?: string };
     if (!payload.token) return { ok: false, error: "Airwallex did not return a token. Nothing was charged." };
     return { ok: true, token: payload.token };
@@ -407,13 +415,21 @@ export function humanizeAirwallexHttpError(status: number, body: string): string
     return `Airwallex returned HTTP ${status} (HTML instead of JSON). Check the base URL and API credentials on Payment gateways. Nothing was opened.`;
   }
   try {
-    const parsed = JSON.parse(trimmed) as { message?: unknown; error?: unknown; code?: unknown };
-    const msg =
-      (typeof parsed.message === "string" && parsed.message.trim()) ||
+    const parsed = JSON.parse(trimmed) as { message?: unknown; error?: unknown; code?: unknown; details?: unknown };
+    const code = typeof parsed.code === "string" ? parsed.code.trim() : "";
+    const msg = typeof parsed.message === "string" ? parsed.message.trim() : "";
+    if (/credentials_invalid/i.test(code) || /UNAUTHORIZED/i.test(msg) || /Access Denied/i.test(trimmed)) {
+      return (
+        "Airwallex rejected the client id / API key (UNAUTHORIZED). On Payment gateways use matching sandbox or live pair: " +
+        "demo keys with https://api-demo.airwallex.com, live keys with https://api.airwallex.com. Re-save the secret and enable the gateway. Nothing was opened."
+      );
+    }
+    const detail =
+      msg ||
       (typeof parsed.error === "string" && parsed.error.trim()) ||
-      (typeof parsed.code === "string" && parsed.code.trim()) ||
+      code ||
       "";
-    if (msg) return `Airwallex: ${msg.slice(0, 200)}. Nothing was opened.`;
+    if (detail) return `Airwallex: ${detail.slice(0, 200)}. Nothing was opened.`;
   } catch {
     /* not JSON */
   }
