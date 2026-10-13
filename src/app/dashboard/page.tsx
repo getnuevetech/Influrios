@@ -54,7 +54,7 @@ import { listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-led
 import { scheduleLabel } from "@/lib/schedule";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import Image from "next/image";
-import { BRAND_AVATARS, BRAND_BANNERS } from "@/lib/profile-media";
+import { BRAND_AVATARS, resolveDisplayBanner } from "@/lib/profile-media";
 import { BIO_MIN_CHARS } from "@/lib/onboarding";
 
 export const dynamic = "force-dynamic";
@@ -255,7 +255,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
             <div className="mt-4 overflow-hidden rounded-2xl border border-border">
               <div className="relative h-28 w-full bg-[#EEF2FF]">
                 <Image
-                  src={draft.coverImage || BRAND_BANNERS[0]}
+                  src={resolveDisplayBanner({ seed: draft.slug, coverImage: draft.coverImage })}
                   alt=""
                   fill
                   className="object-cover"
@@ -371,8 +371,10 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
               </label>
               <PlaceFields
                 cityName="locationCity"
+                stateName="locationState"
                 countryName="locationCountry"
                 defaultCity={draft.locationCity}
+                defaultState={draft.locationState ?? ""}
                 defaultCountry={draft.locationCountry}
                 className="contents"
               />
@@ -793,7 +795,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
 
       {linkAnalytics?.ok ? (
         <section className="card-surface p-6">
-          <h2 className="font-display text-xl font-bold text-indigo">Link analytics</h2>
+          <h2 id="analytics" className="font-display text-xl font-bold text-indigo">Link analytics</h2>
           <p className="mt-2 text-sm text-muted">
             Privacy-safe totals for your short link and QR. Depth follows your plan entitlement (
             {linkAnalytics.analytics.level}). Precise location is never stored.
@@ -863,7 +865,7 @@ export default async function CreatorDashboardPage({ searchParams }: Props) {
 
       {social ? (
         <section className="card-surface p-6">
-          <h2 className="font-display text-xl font-bold text-indigo">Social accounts</h2>
+          <h2 id="socials" className="font-display text-xl font-bold text-indigo">Social accounts</h2>
           <p className="mt-1 text-sm text-muted">
             Connecting a network does not change the profile layout. Follower and like counts replace the current
             figure only after that network returns both.

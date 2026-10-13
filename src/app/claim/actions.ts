@@ -103,12 +103,14 @@ export async function actionPublishDraft(formData: FormData) {
   try {
     const bio = String(formData.get("bio") ?? "").trim();
     const locationCity = String(formData.get("locationCity") ?? "").trim();
+    const locationState = String(formData.get("locationState") ?? "").trim();
     const locationCountry = String(formData.get("locationCountry") ?? "").trim();
     const specialty = String(formData.get("specialty") ?? "").trim();
     if (formData.has("bio")) {
       await updateDraftProfile(draftId, {
         bio,
         locationCity,
+        locationState,
         locationCountry,
         specialties: specialty ? [specialty] : [],
       });
@@ -173,6 +175,7 @@ export async function actionUpdateDashboardProfile(formData: FormData) {
       title: chosen.title,
       bio: String(formData.get("bio") ?? "").trim() || undefined,
       locationCity: String(formData.get("locationCity") ?? "").trim() || undefined,
+      locationState: String(formData.get("locationState") ?? "").trim() || undefined,
       locationCountry: String(formData.get("locationCountry") ?? "").trim() || undefined,
       gender: (() => {
         const raw = String(formData.get("gender") ?? "").trim();

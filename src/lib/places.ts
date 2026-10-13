@@ -1,11 +1,16 @@
-import { City, Country } from "country-state-city";
+import { City, Country, State } from "country-state-city";
 import { canonicalPlaceName, samePlace } from "@/lib/place-names";
 
-export type PlaceHit = { name: string; country: string };
+export type PlaceHit = { name: string; country: string; state?: string };
 
-type IndexedCity = { name: string; country: string; key: string };
+type IndexedCity = { name: string; country: string; state: string; key: string };
 
 let cityIndex: IndexedCity[] | null = null;
+
+function stateName(countryCode: string, stateCode: string | undefined) {
+  if (!stateCode) return "";
+  return State.getStateByCodeAndCountry(stateCode, countryCode)?.name ?? stateCode;
+}
 
 function cities(): IndexedCity[] {
   if (cityIndex) return cityIndex;
@@ -13,6 +18,7 @@ function cities(): IndexedCity[] {
   cityIndex = City.getAllCities().map((city) => ({
     name: city.name,
     country: names.get(city.countryCode) ?? city.countryCode,
+    state: stateName(city.countryCode, city.stateCode),
     key: city.name.toLowerCase(),
   }));
   return cityIndex;
@@ -36,6 +42,24 @@ export function searchCountries(query: string, limit = 8): PlaceHit[] {
   return hits.map((country) => ({ name: country.name, country: country.name }));
 }
 
+export function searchStates(query: string, country = "", limit = 8): PlaceHit[] {
+  const q = query.trim().toLowerCase();
+  if (!country.trim()) return [];
+  const match = Country.getAllCountries().find((item) => samePlace(item.name, country));
+  if (!match) return [];
+  const states = State.getStatesOfCountry(match.isoCode) ?? [];
+  const hits = states
+    .filter((state) => !q || state.name.toLowerCase().includes(q))
+    .sort((a, b) => {
+      if (!q) return a.name.localeCompare(b.name);
+      const aStart = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+      const bStart = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+      return aStart - bStart || a.name.localeCompare(b.name);
+    })
+    .slice(0, limit);
+  return hits.map((state) => ({ name: state.name, country: match.name, state: state.name }));
+}
+
 function rankName(name: string, query: string) {
   const key = name.toLowerCase();
   if (key === query) return 0;
@@ -52,10 +76,10 @@ export function searchCities(query: string, country = "", limit = 8): PlaceHit[]
   for (const city of cities()) {
     if (country && !samePlace(city.country, country)) continue;
     if (!city.key.includes(q)) continue;
-    const id = `${city.key}|${canonicalPlaceName(city.country)}`;
+    const id = `${city.key}|${canonicalPlaceName(city.country)}|${city.state}`;
     if (seen.has(id)) continue;
     seen.add(id);
-    hits.push({ name: city.name, country: city.country });
+    hits.push({ name: city.name, country: city.country, state: city.state || undefined });
   }
   hits.sort(
     (a, b) =>

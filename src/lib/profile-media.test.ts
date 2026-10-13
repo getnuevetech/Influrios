@@ -10,6 +10,8 @@ import {
   normalizeProfileGender,
   resolveDefaultAvatar,
   resolveDefaultBanner,
+  resolveDisplayBanner,
+  rotatingBrandBanner,
 } from "./profile-media";
 
 describe("profile gender", () => {
@@ -43,6 +45,21 @@ describe("branded defaults", () => {
     const next = nextBrandBanner(a, "ag-olomola-2");
     assert.notEqual(next, a);
     assert.ok((BRAND_BANNERS as readonly string[]).includes(next));
+  });
+
+  it("rotates brand banners by day and keeps custom uploads", () => {
+    const dayA = rotatingBrandBanner("jenks-ag", new Date("2026-10-13T00:00:00Z"));
+    const dayB = rotatingBrandBanner("jenks-ag", new Date("2026-10-14T00:00:00Z"));
+    assert.ok((BRAND_BANNERS as readonly string[]).includes(dayA));
+    assert.ok((BRAND_BANNERS as readonly string[]).includes(dayB));
+    assert.equal(
+      resolveDisplayBanner({ seed: "jenks-ag", coverImage: "/uploads/covers/custom.png" }),
+      "/uploads/covers/custom.png",
+    );
+    assert.equal(
+      resolveDisplayBanner({ seed: "jenks-ag", coverImage: BRAND_BANNERS[0], at: new Date("2026-10-13T00:00:00Z") }),
+      dayA,
+    );
   });
 
   it("keeps local uploads, rejects remote URLs, and replaces legacy demo headshots", () => {

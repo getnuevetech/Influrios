@@ -21,6 +21,7 @@ import {
   normalizeProfileGender,
   resolveDefaultAvatar,
   resolveDefaultBanner,
+  resolveDisplayBanner,
   type ProfileGender,
 } from "@/lib/profile-media";
 import { cookies } from "next/headers";
@@ -43,6 +44,7 @@ export type ClaimDraft = {
   title: string;
   bio: string;
   locationCity: string;
+  locationState?: string;
   locationCountry: string;
   specialties: string[];
   contentStyles?: string[];
@@ -89,6 +91,7 @@ type SessionPayload = {
   title: string;
   bio: string;
   locationCity: string;
+  locationState?: string;
   locationCountry: string;
   specialties: string[];
   contentStyles: string[];
@@ -238,6 +241,7 @@ export function claimDraftProfile(input: string, preferredPlatform?: string):
       title: "";
       bio: "";
       locationCity: "";
+      locationState: "";
       locationCountry: "";
       specialties: [];
     } {
@@ -252,6 +256,7 @@ export function claimDraftProfile(input: string, preferredPlatform?: string):
     title: "",
     bio: "",
     locationCity: "",
+    locationState: "",
     locationCountry: "",
     specialties: [],
   };
@@ -288,7 +293,9 @@ export function guessSpecialty(handle: string, platform: string): string[] {
   return [];
 }
 
-export function claimPublishBlockers(draft: Pick<ClaimDraft, "bio" | "locationCity" | "locationCountry" | "specialties">): string[] {
+export function claimPublishBlockers(
+  draft: Pick<ClaimDraft, "bio" | "locationCity" | "locationState" | "locationCountry" | "specialties">,
+): string[] {
   const subject = {
     stage: "verified" as const,
     bio: draft.bio,
@@ -343,6 +350,7 @@ function readPayload(raw: Prisma.JsonValue): SessionPayload {
     title: typeof value.title === "string" ? value.title : "",
     bio: typeof value.bio === "string" ? value.bio : "",
     locationCity: typeof value.locationCity === "string" ? value.locationCity : "",
+    locationState: typeof value.locationState === "string" ? value.locationState : "",
     locationCountry: typeof value.locationCountry === "string" ? value.locationCountry : "",
     specialties,
     contentStyles: facetList(value.contentStyles),
@@ -387,6 +395,7 @@ function sessionPayload(draft: ClaimDraft): SessionPayload {
     title: draft.title,
     bio: draft.bio,
     locationCity: draft.locationCity,
+    locationState: draft.locationState ?? "",
     locationCountry: draft.locationCountry,
     specialties: draft.specialties,
     contentStyles: draft.contentStyles ?? [],
@@ -417,6 +426,7 @@ export function publicClaimPayload(draft: ClaimDraft) {
     title: draft.title,
     bio: draft.bio,
     locationCity: draft.locationCity,
+    locationState: draft.locationState ?? "",
     locationCountry: draft.locationCountry,
     specialties: draft.specialties,
     contentStyles: draft.contentStyles ?? [],
@@ -447,6 +457,7 @@ export function draftFromSession(row: OnboardingSession): ClaimDraft {
     title: payload.title,
     bio: payload.bio,
     locationCity: payload.locationCity,
+    locationState: payload.locationState ?? "",
     locationCountry: payload.locationCountry,
     specialties: payload.specialties,
     contentStyles: payload.contentStyles,
@@ -597,6 +608,7 @@ export async function createDraftFromHandle(
     title: fields.title,
     bio: fields.bio,
     locationCity: fields.locationCity,
+    locationState: fields.locationState,
     locationCountry: fields.locationCountry,
     specialties: fields.specialties,
     contentStyles: [],
@@ -685,6 +697,7 @@ export async function createDraftFromProfile(
     title: creator.title,
     bio: creator.bio,
     locationCity: creator.locationCity,
+    locationState: creator.locationState ?? "",
     locationCountry: creator.locationCountry,
     specialties: [...creator.specialties],
     contentStyles: [...(creator.contentStyles ?? [])],
@@ -739,9 +752,7 @@ export async function getPublishedCreatorBySlug(slug: string): Promise<SeedCreat
 
 export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
   const image = normalizeBrandAvatar(draft.image, draft.gender);
-  const coverImage = draft.coverImage?.includes("/demo/sofia/")
-    ? defaultBannerForSeed(draft.slug)
-    : draft.coverImage || defaultBannerForSeed(draft.slug);
+  const coverImage = resolveDisplayBanner({ seed: draft.slug, coverImage: draft.coverImage });
   // Temporary claim cards: when still on a brand default avatar, prefer the lifestyle
   // cover so the hero matches the Influrios branded preview imagery.
   const hero =
@@ -756,6 +767,7 @@ export function draftToSeedCreator(draft: ClaimDraft): SeedCreator {
     title: draft.title,
     bio: draft.bio,
     locationCity: draft.locationCity,
+    locationState: draft.locationState ?? "",
     locationCountry: draft.locationCountry,
     languages: [],
     avatarColor: "#633CFF",
@@ -946,6 +958,7 @@ export async function updateDraftProfile(
       | "title"
       | "bio"
       | "locationCity"
+      | "locationState"
       | "locationCountry"
       | "specialties"
       | "contentStyles"
@@ -984,6 +997,10 @@ export async function updateDraftProfile(
         gender: draft.gender,
         seed: draft.slug,
       });
+      draft.coverImage = resolveDisplayBanner({
+        seed: draft.slug,
+        coverImage: patch.coverImage ?? draft.coverImage,
+      });
     }
   }
   draft.updatedAt = new Date().toISOString();
@@ -1005,6 +1022,7 @@ async function syncPublishedCreatorProfile(draft: ClaimDraft) {
       title: draft.title,
       bio: draft.bio,
       locationCity: draft.locationCity,
+      locationState: draft.locationState ?? "",
       locationCountry: draft.locationCountry,
       avatarUrl: draft.image,
       coverUrl: draft.coverImage,
@@ -1109,6 +1127,7 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
     title: creator.title ?? "",
     bio: creator.bio ?? "",
     locationCity: creator.locationCity ?? "",
+    locationState: creator.locationState ?? "",
     locationCountry: creator.locationCountry ?? "",
     specialties: creator.specialties.map((row) => row.specialty.slug),
     contentStyles: creator.discoveryFacets
