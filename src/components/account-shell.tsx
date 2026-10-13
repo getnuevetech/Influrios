@@ -24,6 +24,8 @@ import {
 } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
+import { prisma } from "@/lib/db";
+import { isPlanCode, planLabel, type PlanCode } from "@/lib/entitlements";
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 
@@ -33,9 +35,9 @@ const CREATOR_NAV: NavItem[] = [
   { href: "/collaboration/hub", label: "Opportunities", icon: <IconBriefcase size={18} /> },
   { href: "/collaboration/hub#pipeline", label: "Collaborations", icon: <IconHandshake size={18} /> },
   { href: "/creator/media-kit", label: "Media Kit", icon: <IconImage size={18} /> },
-  { href: "/dashboard#analytics", label: "Analytics", icon: <IconIntelligence size={18} /> },
+  { href: "/creator/analytics", label: "Analytics", icon: <IconIntelligence size={18} /> },
   { href: "/creator/messages", label: "Messages", icon: <IconMail size={18} /> },
-  { href: "/payments", label: "Earnings", icon: <IconWallet size={18} /> },
+  { href: "/creator/earnings", label: "Earnings", icon: <IconWallet size={18} /> },
   { href: "/billing#payouts", label: "Payout Methods", icon: <IconShieldPay size={18} /> },
   { href: "/billing", label: "Billing & Plan", icon: <IconIdCard size={18} /> },
   { href: "/mentorship", label: "Mentorship", icon: <IconUsers size={18} /> },
@@ -56,6 +58,19 @@ const BUSINESS_NAV: NavItem[] = [
   { href: "/payments", label: "Collaboration Payments", icon: <IconShieldPay size={18} /> },
   { href: "/account", label: "Settings", icon: <IconSettings size={18} /> },
 ];
+
+const PLAN_ORDER: PlanCode[] = ["STARTER", "PLUS", "PRO"];
+
+function nextCreatorUpgrade(plan: string): { code: PlanCode; label: string; blurb: string } | null {
+  const current = isPlanCode(plan) ? plan : "STARTER";
+  const index = PLAN_ORDER.indexOf(current);
+  if (index < 0 || index >= PLAN_ORDER.length - 1) return null;
+  const code = PLAN_ORDER[index + 1]!;
+  if (code === "PLUS") {
+    return { code, label: "Upgrade to Plus", blurb: "Unlock short links, QR, and richer card tools." };
+  }
+  return { code, label: "Upgrade to Pro", blurb: "Dynamic destinations, deeper analytics, and priority tools." };
+}
 
 function active(href: string, path: string) {
   const base = href.split("#")[0]!;
@@ -79,10 +94,19 @@ export async function MemberFrame({
   }
   const name = account?.name || account?.email || "Account";
   let company = "";
+  let creatorPlan = "STARTER";
   if (audience === "business" && account) {
     const workspace = await getWorkspace(account.id).catch(() => null);
     if (workspace?.name) company = workspace.name;
   }
+  if (audience === "creator" && account) {
+    const [user, creator] = await Promise.all([
+      prisma.user.findUnique({ where: { id: account.id }, select: { planTier: true } }).catch(() => null),
+      prisma.creator.findUnique({ where: { userId: account.id }, select: { planTier: true } }).catch(() => null),
+    ]);
+    creatorPlan = creator?.planTier || user?.planTier || "STARTER";
+  }
+  const upgrade = audience === "creator" ? nextCreatorUpgrade(creatorPlan) : null;
   const nav = audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
   const home = audience === "business" ? "/business/home" : "/creator";
   const other =
@@ -97,13 +121,13 @@ export async function MemberFrame({
   return (
     <div className="flex min-h-screen bg-[#F5F7FB] text-indigo">
       <aside className="sticky top-0 hidden h-screen w-[15.5rem] shrink-0 flex-col border-r border-[#E6ECF7] bg-white lg:flex">
-        <Link href={home} className="flex items-center gap-2 px-5 py-5 font-display text-lg font-bold">
+        <Link href={home} className="flex shrink-0 items-center gap-2 px-5 py-5 font-display text-lg font-bold">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white">
             ∞
           </span>
           Influrios
         </Link>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-3">
           {nav.map((item) => {
             const on = active(item.href, path);
             return (
@@ -124,22 +148,27 @@ export async function MemberFrame({
             );
           })}
         </nav>
-        {audience === "creator" ? (
-          <div className="mx-3 mb-3 rounded-2xl bg-gradient-to-br from-[#6D5EF7] to-[#8B5CF6] p-4 text-white">
+        {upgrade ? (
+          <div className="mx-3 mb-2 shrink-0 rounded-2xl bg-gradient-to-br from-[#6D5EF7] to-[#8B5CF6] p-3 text-white">
             <div className="flex items-center gap-2 text-sm font-bold">
               <IconCrown size={16} />
-              Upgrade to Plus
+              {upgrade.label}
             </div>
-            <p className="mt-1 text-xs text-white/85">Unlock short links, QR, and richer card tools.</p>
+            <p className="mt-1 text-[11px] leading-snug text-white/85">{upgrade.blurb}</p>
+            <p className="mt-1 text-[10px] text-white/70">Current: {planLabel(creatorPlan)}</p>
             <Link
               href="/billing"
-              className="mt-3 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-bold text-violet"
+              className="mt-2 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-bold text-violet"
             >
               Upgrade now
             </Link>
           </div>
+        ) : audience === "creator" ? (
+          <div className="mx-3 mb-2 shrink-0 rounded-2xl border border-[#E6ECF7] bg-[#F8F6FF] px-3 py-2.5 text-xs font-semibold text-violet">
+            You’re on {planLabel(creatorPlan)}
+          </div>
         ) : null}
-        <div className="border-t border-[#E6ECF7] p-4 text-[11px] text-muted">
+        <div className="shrink-0 border-t border-[#E6ECF7] p-4 text-[11px] text-muted">
           <Link href={other.href} className="font-semibold text-violet hover:underline">
             {other.label}
           </Link>
