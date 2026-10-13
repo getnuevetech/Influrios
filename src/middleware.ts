@@ -24,6 +24,7 @@ export function middleware(req: NextRequest) {
   }
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
+  requestHeaders.set("x-search", req.nextUrl.search);
   let guest = req.cookies.get(GUEST_COOKIE)?.value;
   const minted = !guest;
   if (!guest) {

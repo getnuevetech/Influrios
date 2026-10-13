@@ -442,7 +442,7 @@ export default async function CreatorHomePage({
           </section>
 
           <section className="grid gap-4 xl:grid-cols-3">
-            <Panel title="Recent opportunities" action={<TextLink href="/collaboration/hub">View all</TextLink>}>
+            <Panel title="Recent opportunities" action={<TextLink href="/collaboration/hub?view=opportunities">View all</TextLink>}>
               {(hub?.brandMatches.length ?? 0) === 0 ? (
                 <p className="text-sm text-muted">No published brand requests are matched to this card yet.</p>
               ) : (
@@ -470,7 +470,7 @@ export default async function CreatorHomePage({
               )}
             </Panel>
 
-            <Panel title="Active collaborations" action={<TextLink href="/collaboration/hub#pipeline">View all</TextLink>}>
+            <Panel title="Active collaborations" action={<TextLink href="/collaboration/hub?view=collaborations">View all</TextLink>}>
               {(hub?.pipeline.length ?? 0) === 0 ? (
                 <p className="text-sm text-muted">No active collaboration pipeline items yet.</p>
               ) : (

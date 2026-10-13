@@ -51,7 +51,7 @@ export default async function CreatorMessagesPage() {
                 mailbox of invented chats.
               </p>
             </div>
-            <Link href="/collaboration/hub" className="btn-primary !py-2 text-sm">
+            <Link href="/collaboration/hub?view=opportunities" className="btn-primary !py-2 text-sm">
               View opportunities
             </Link>
           </div>
@@ -60,7 +60,7 @@ export default async function CreatorMessagesPage() {
             {pipeline.slice(0, 8).map((item) => (
               <li key={item.id}>
                 <Link
-                  href={item.href || "/collaboration/hub#pipeline"}
+                  href={item.href || "/collaboration/hub?view=collaborations#pipeline"}
                   className="flex items-center justify-between gap-3 rounded-xl border border-[#F0F3FA] px-4 py-3 hover:bg-[#F7F8FC]"
                 >
                   <span>
