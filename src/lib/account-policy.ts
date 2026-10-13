@@ -32,13 +32,20 @@ export function decideGuestGate(
 }
 
 /** Only same-site paths may be used as a post-login return URL. */
-export function safeNextPath(raw: string | undefined | null, fallback = "/"): string {
+export function safeNextPath(raw: string | undefined | null, fallback = "/creator"): string {
   if (!raw) return fallback;
   const value = raw.trim();
   if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("://")) {
     return fallback;
   }
+  // Legacy default sent callers to "/" or edit-profile; prefer the creator dashboard.
+  if (value === "/" || value === "/dashboard") return fallback;
   return value;
+}
+
+/** True when the return URL is the generic creator home (role routing may still override). */
+export function isDefaultMemberHome(path: string): boolean {
+  return path === "/creator" || path === "/" || path === "/dashboard";
 }
 
 export function passwordError(password: string, minLength = 8): string | null {

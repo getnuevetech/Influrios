@@ -21,7 +21,11 @@ export default async function LoginPage({ searchParams }: Props) {
       <p className="mt-2 text-sm text-muted">
         {params.gate
           ? "Create an account or log in to continue. We will return you to the page you were opening."
-          : "Use the email and password for your Influrios account."}
+          : "Use the email and password for your Influrios account. After login you land on your dashboard."}
+      </p>
+      <p className="mt-2 text-sm text-muted">
+        Claimed a card with email only? Set a password from the link we email when you use Forgot password, or finish
+        password setup after verifying your email.
       </p>
       {params.error ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

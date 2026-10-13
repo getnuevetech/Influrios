@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { PLAN_ENTITLEMENTS } from "./entitlements";
-import { advanceClaimStage, evaluateCompletion, secondSocialDecision, toPublicProfile } from "./onboarding";
+import {
+  advanceClaimStage,
+  bioAcceptanceError,
+  BIO_MIN_CHARS,
+  evaluateCompletion,
+  secondSocialDecision,
+  toPublicProfile,
+} from "./onboarding";
 
 describe("onboarding completion", () => {
   it("scores a private draft below a published profile", () => {
@@ -22,6 +29,16 @@ describe("onboarding completion", () => {
     assert.equal(draft.score, 0);
     assert.equal(live.score, 100);
     assert.equal(live.items.find((item) => item.id === "email_verified")?.done, true);
+  });
+
+  it("accepts a brief bio and explains when it is too short", () => {
+    assert.equal(bioAcceptanceError("Lifestyle creator in Lagos making weekly reels."), null);
+    const short = "Too short";
+    const err = bioAcceptanceError(short);
+    assert.ok(err);
+    assert.match(String(err), new RegExp(String(BIO_MIN_CHARS)));
+    assert.match(String(err), new RegExp(String(short.length)));
+    assert.ok(BIO_MIN_CHARS < 80);
   });
 });
 

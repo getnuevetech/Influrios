@@ -47,3 +47,4 @@ next-env.d.ts
 
 # Demo / runtime file stores (Business workspace Phase 3)
 /data/
+.meili_data/

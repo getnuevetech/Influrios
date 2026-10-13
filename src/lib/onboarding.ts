@@ -2,6 +2,9 @@ import { decideCount, PLAN_ENTITLEMENTS, type EntitlementLimits } from "@/lib/en
 
 export type OnboardingStage = "draft" | "claimed" | "verified" | "published";
 
+/** Brief bios are allowed; this is the minimum accepted length (characters, not words). */
+export const BIO_MIN_CHARS = 24;
+
 /** Claim funnel. Publish stays published. A draft cannot skip claim or verification. */
 export function advanceClaimStage(
   current: OnboardingStage,
@@ -57,8 +60,8 @@ export const DEFAULT_COMPLETION_RULES: CompletionRule[] = [
   },
   {
     key: "bio",
-    label: "Write a real bio",
-    hint: "Replace the draft placeholder bio",
+    label: "Write a short bio",
+    hint: `At least ${BIO_MIN_CHARS} characters about what you create`,
     weight: 10,
   },
   {
@@ -75,6 +78,22 @@ export const DEFAULT_COMPLETION_RULES: CompletionRule[] = [
   },
 ];
 
+/** Null when the bio is long enough and not a draft placeholder. */
+export function bioAcceptanceError(bio: string): string | null {
+  const trimmed = bio.trim();
+  if (
+    trimmed.includes("Draft Influencer Card") ||
+    trimmed.includes("Draft Influencer Profile") ||
+    !trimmed
+  ) {
+    return `Add a bio of at least ${BIO_MIN_CHARS} characters describing what you create.`;
+  }
+  if (trimmed.length < BIO_MIN_CHARS) {
+    return `Bio needs at least ${BIO_MIN_CHARS} characters (yours has ${trimmed.length}). A brief sentence is enough.`;
+  }
+  return null;
+}
+
 export function completionItemDone(rule: CompletionRule, subject: CompletionSubject): boolean {
   switch (rule.key) {
     case "claimed":
@@ -85,11 +104,7 @@ export function completionItemDone(rule: CompletionRule, subject: CompletionSubj
     case "published":
       return subject.stage === "published";
     case "bio":
-      return (
-        subject.bio.length > 80 &&
-        !subject.bio.includes("Draft Influencer Card") &&
-        !subject.bio.includes("Draft Influencer Profile")
-      );
+      return bioAcceptanceError(subject.bio) === null;
     case "location": {
       const city = subject.locationCity.trim();
       const country = subject.locationCountry.trim();

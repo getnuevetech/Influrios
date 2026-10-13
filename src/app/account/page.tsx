@@ -34,6 +34,20 @@ export default async function AccountPage({
       {params.error ? <p className="mt-3 text-sm font-semibold text-amber-800">{params.error}</p> : null}
       <div className="card-surface mt-6 space-y-3 p-6 text-sm text-indigo">
         <p>Email verified {session.emailVerifiedAt?.toLocaleString() ?? ""}.</p>
+        <p>
+          Password:{" "}
+          {session.hasPassword ? (
+            "Set"
+          ) : (
+            <>
+              Not set.{" "}
+              <Link href="/account/password" className="font-semibold text-violet">
+                Choose a password
+              </Link>{" "}
+              so you can log in again.
+            </>
+          )}
+        </p>
         {draft ? (
           <p>
             Claim in progress for <span className="font-semibold">{draft.displayName}</span> ({draft.stage}).{" "}

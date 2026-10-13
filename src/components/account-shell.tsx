@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 
@@ -36,6 +37,9 @@ export async function MemberFrame({
 }) {
   const path = (await headers()).get("x-pathname") ?? "";
   const account = await getAccountSession().catch(() => null);
+  if (account && !account.hasPassword && !path.startsWith("/account/password")) {
+    redirect(`/account/password?next=${encodeURIComponent(path || (audience === "business" ? "/business/home" : "/creator"))}`);
+  }
   let name = account?.name || account?.email || "Account";
   const role = audience === "business" ? "Business workspace" : "Influencer";
   if (audience === "business" && account) {

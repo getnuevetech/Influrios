@@ -4,6 +4,7 @@ import { actionAddDraftSocial, actionPublishDraft } from "@/app/claim/actions";
 import { PlaceFields } from "@/components/place-fields";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { claimPublishBlockers, draftToSeedCreator, getDraft } from "@/lib/claim";
+import { BIO_MIN_CHARS } from "@/lib/onboarding";
 import { SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -56,8 +57,8 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
             <Link href={`/c/${draft.slug}`} className="btn-primary flex w-full">
               Open live card →
             </Link>
-            <Link href="/dashboard" className="btn-secondary flex w-full">
-              Influencer dashboard
+            <Link href="/creator" className="btn-secondary flex w-full">
+              Creator dashboard
             </Link>
           </>
         ) : (
@@ -69,10 +70,14 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
                 name="bio"
                 required
                 rows={4}
+                minLength={BIO_MIN_CHARS}
                 defaultValue={draft.bio.includes("Draft Influencer") ? "" : draft.bio}
                 placeholder="What you actually make"
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
               />
+              <span className="mt-1 block text-xs font-normal text-muted">
+                At least {BIO_MIN_CHARS} characters. A brief sentence is enough.
+              </span>
             </label>
             <PlaceFields
               cityName="locationCity"
@@ -102,7 +107,10 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
               </select>
             </label>
             {blockers.length > 0 ? (
-              <p className="text-left text-xs text-muted">Add a bio, a city and country, and a specialty before this card can publish.</p>
+              <p className="text-left text-xs text-muted">
+                Add a short bio (at least {BIO_MIN_CHARS} characters), a city and country, and a specialty before this card
+                can publish.
+              </p>
             ) : null}
             <label className="flex items-start gap-2 text-left text-xs text-indigo">
               <input type="checkbox" name="creatorTerms" required className="mt-0.5 accent-violet" />
