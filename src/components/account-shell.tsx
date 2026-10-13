@@ -172,7 +172,7 @@ export async function MemberFrame({
               </span>
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-bold leading-tight">{name}</p>
-                <p className="text-[11px] text-muted">{audience === "business" ? company || subtitle : "Influencer"}</p>
+                <p className="text-[11px] text-muted">{audience === "business" ? company || "Business workspace" : "Influencer"}</p>
               </div>
             </div>
           </div>
