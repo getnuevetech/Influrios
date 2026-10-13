@@ -2,11 +2,6 @@ import Image from "next/image";
 import { actionRecordCardCta } from "@/app/card-cta-actions";
 import { IconVerified, SocialIcon } from "@/components/icons";
 import {
-  formatFollowers,
-  specialtyLabel,
-  type SeedCreator,
-} from "@/lib/seed-data";
-import {
   cardChrome,
   cardShellClasses,
   EMPTY_ENTITLEMENTS,
@@ -15,6 +10,12 @@ import {
   planLabel,
   type EntitlementLimits,
 } from "@/lib/entitlements";
+import { normalizeBrandAvatar } from "@/lib/profile-media";
+import {
+  formatFollowers,
+  specialtyLabel,
+  type SeedCreator,
+} from "@/lib/seed-data";
 
 export function InfluencerCardView({
   creator,
@@ -54,17 +55,19 @@ export function InfluencerCardView({
     (chrome.showShortlink
       ? `INFLR.me/${creator.slug.split("-")[0]}`
       : `influrios.com/c/${creator.slug}`);
+  // Remote http(s) avatars break next/image (remotePatterns is empty). Use brand defaults.
+  const imageSrc = normalizeBrandAvatar(creator.image, creator.gender);
 
   return (
     <div className={`mx-auto w-full max-w-sm overflow-hidden rounded-[1.75rem] shadow-2xl ${shell.root}`}>
       <div className={`relative ${compact ? "h-40" : "h-48"}`}>
         <Image
-          src={creator.image}
+          src={imageSrc}
           alt={creator.displayName}
           fill
           className="object-cover"
           sizes="400px"
-          unoptimized={creator.image.endsWith(".svg") || creator.image.startsWith("data:")}
+          unoptimized={imageSrc.endsWith(".svg") || imageSrc.startsWith("data:")}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         {!hideCta ? (

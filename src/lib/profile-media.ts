@@ -60,9 +60,19 @@ export function defaultAvatarForGender(gender: ProfileGender | null | undefined)
   return BRAND_AVATARS[g];
 }
 
-/** Rewrite retired brand paths (e.g. generic.svg) to the current default. */
+/** Absolute http(s) avatars cannot be shown — `images.remotePatterns` is empty by design. */
+export function isRemoteMediaUrl(path: string | null | undefined): boolean {
+  return /^https?:\/\//i.test(String(path ?? "").trim());
+}
+
+/** Rewrite retired brand paths (e.g. generic.svg) and unusable remote URLs to the current default. */
 export function normalizeBrandAvatar(path: string | null | undefined, gender?: ProfileGender | null): string {
-  if (!path || (LEGACY_BRAND_AVATARS as readonly string[]).includes(path) || path.endsWith("/generic.svg")) {
+  if (
+    !path ||
+    isRemoteMediaUrl(path) ||
+    (LEGACY_BRAND_AVATARS as readonly string[]).includes(path) ||
+    path.endsWith("/generic.svg")
+  ) {
     return defaultAvatarForGender(gender);
   }
   return path;
@@ -91,8 +101,9 @@ export function isBrandDefaultBanner(path: string | null | undefined): boolean {
 }
 
 /**
- * When social avatar lookup fails (or returns legacy demo art), use a branded default.
- * Prefer an explicit gender; otherwise leave unspecified → generic Influrios mark.
+ * When social avatar lookup fails (or returns legacy demo art / a remote URL), use a branded default.
+ * Remote http(s) URLs are rejected: Next image optimization only serves local app paths.
+ * Prefer an explicit gender; otherwise leave unspecified → branded lifestyle still.
  */
 export function resolveDefaultAvatar(input: {
   gender?: ProfileGender | null;
@@ -102,6 +113,7 @@ export function resolveDefaultAvatar(input: {
   const social = input.socialImage?.trim() || null;
   if (
     social &&
+    !isRemoteMediaUrl(social) &&
     !isBrandDefaultAvatar(social) &&
     !social.includes("/demo/creators/") &&
     !social.endsWith(".svg")

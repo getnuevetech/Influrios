@@ -43,6 +43,17 @@ describe("claim draft preview media", () => {
     assert.equal(creator.image, "/uploads/avatars/custom.png");
   });
 
+  it("replaces remote unavatar URLs with branded lifestyle cover on draft cards", () => {
+    const creator = draftToSeedCreator(
+      sampleDraft({
+        image: "https://unavatar.io/facebook/jenks.ag",
+        coverImage: BRAND_BANNERS[0]!,
+      }),
+    );
+    assert.equal(creator.image, BRAND_BANNERS[0]);
+    assert.equal(creator.image.startsWith("http"), false);
+  });
+
   it("uses gender avatar after claim remap path", () => {
     assert.equal(defaultAvatarForGender("unspecified"), BRAND_AVATARS.unspecified);
     assert.ok(BRAND_AVATARS.unspecified.endsWith("generic.png"));

@@ -128,12 +128,11 @@ export async function resolveSocialAvatar(
         signal: AbortSignal.timeout(2500),
         headers: { Accept: "image/*" },
       });
-      if (res.ok) {
-        const type = res.headers.get("content-type") ?? "";
-        if (type.startsWith("image/")) return url;
-        // unavatar often returns image even without a perfect content-type
-        if (res.url && !res.url.includes("fallback")) return url;
-      }
+      if (!res.ok) continue;
+      const type = (res.headers.get("content-type") ?? "").toLowerCase();
+      // Letterfall SVG placeholders and HTML errors are not usable card photos.
+      if (type.includes("svg") || type.includes("html") || type.includes("json")) continue;
+      if (type.startsWith("image/")) return url;
     } catch {
       /* try next */
     }

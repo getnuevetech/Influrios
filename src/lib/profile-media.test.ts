@@ -45,10 +45,14 @@ describe("branded defaults", () => {
     assert.ok((BRAND_BANNERS as readonly string[]).includes(next));
   });
 
-  it("keeps a real social avatar and replaces legacy demo headshots", () => {
+  it("keeps local uploads, rejects remote URLs, and replaces legacy demo headshots", () => {
     assert.equal(
-      resolveDefaultAvatar({ socialImage: "https://cdn.example/me.jpg", gender: "female" }),
-      "https://cdn.example/me.jpg",
+      resolveDefaultAvatar({ socialImage: "/uploads/avatars/custom.png", gender: "female" }),
+      "/uploads/avatars/custom.png",
+    );
+    assert.equal(
+      resolveDefaultAvatar({ socialImage: "https://unavatar.io/facebook/jenks.ag", gender: "unspecified" }),
+      BRAND_AVATARS.unspecified,
     );
     assert.equal(
       resolveDefaultAvatar({ socialImage: "/demo/creators/creator-sofia.jpg", gender: "female" }),
