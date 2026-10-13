@@ -86,7 +86,13 @@ async function creatorPayoutRailGuard(userId: string) {
     where: { userId },
     select: {
       locationCountry: true,
-      payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true } },
+      payoutProfile: {
+        select: {
+          stripeConnectAccountId: true,
+          providerConnectedAccountId: true,
+          primaryCountryCode: true,
+        },
+      },
     },
   });
   if (!creator) {
@@ -94,6 +100,7 @@ async function creatorPayoutRailGuard(userId: string) {
   }
   const rail = await resolvePayoutOnboardingRail({
     locationCountry: creator.locationCountry,
+    fallbackCountryCode: creator.payoutProfile?.primaryCountryCode,
     stripeConnectReady: await stripeConnectReady().catch(() => false),
     providerReady: Boolean(await loadAirwallexConfig().catch(() => null)),
     hasStripeConnectAccount: Boolean(creator.payoutProfile?.stripeConnectAccountId),

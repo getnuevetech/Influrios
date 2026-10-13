@@ -116,6 +116,22 @@ describe("choosePayoutOnboardingRail", () => {
     assert.equal(choice.rail, "provider");
     assert.equal(choice.showStripe, false);
     assert.equal(choice.showProvider, true);
+    assert.equal(choice.emptyHint, null);
+  });
+
+  it("explains when the corridor is ready but provider credentials are not", () => {
+    const choice = choosePayoutOnboardingRail({
+      countryCode: "NG",
+      corridorActive: true,
+      collectionProviderCode: "airwallex",
+      stripeConnectReady: true,
+      providerReady: false,
+      hasStripeConnectAccount: false,
+      hasProviderAccount: false,
+    });
+    assert.equal(choice.rail, "none");
+    assert.equal(choice.showProvider, false);
+    assert.match(choice.emptyHint ?? "", /Payment gateways/i);
   });
 
   it("hides Stripe Connect for Flutterwave/M-Pesa corridors", () => {

@@ -324,7 +324,13 @@ export type PayoutOnboardingChoice = {
   showStripe: boolean;
   showProvider: boolean;
   reason: string;
+  /** Member-facing empty-state when neither CTA should show. */
+  emptyHint: string | null;
 };
+
+function choice(partial: Omit<PayoutOnboardingChoice, "emptyHint"> & { emptyHint?: string | null }): PayoutOnboardingChoice {
+  return { emptyHint: null, ...partial };
+}
 
 export function choosePayoutOnboardingRail(input: {
   countryCode: string | null;
@@ -338,9 +344,21 @@ export function choosePayoutOnboardingRail(input: {
   const collection = (input.collectionProviderCode ?? "").trim().toLowerCase() || null;
   const countryCode = input.countryCode;
 
+  if (!countryCode) {
+    return choice({
+      rail: "none",
+      countryCode: null,
+      collectionProviderCode: collection,
+      showStripe: false,
+      showProvider: false,
+      reason: "Creator country is unknown.",
+      emptyHint: "Add your country on your Influencer Card so we can open the right payout setup.",
+    });
+  }
+
   if (input.corridorActive && isConnectedAccountCollectionProvider(collection)) {
     const showProvider = input.providerReady || input.hasProviderAccount;
-    return {
+    return choice({
       rail: showProvider ? "provider" : "none",
       countryCode,
       collectionProviderCode: collection,
@@ -349,12 +367,15 @@ export function choosePayoutOnboardingRail(input: {
       reason: showProvider
         ? "Corridor collection route uses a connected-account provider."
         : "Corridor uses a connected-account provider, but those credentials are not ready.",
-    };
+      emptyHint: showProvider
+        ? null
+        : "Your country corridor is ready, but the connected-account payment provider is not enabled yet. Ask an admin to enable it on Payment gateways (client id, API key, base URL, and Enabled).",
+    });
   }
 
   if (input.corridorActive && collection === "stripe") {
     const showStripe = input.stripeConnectReady || input.hasStripeConnectAccount;
-    return {
+    return choice({
       rail: showStripe ? "stripe" : "none",
       countryCode,
       collectionProviderCode: collection,
@@ -363,80 +384,94 @@ export function choosePayoutOnboardingRail(input: {
       reason: showStripe
         ? "Corridor collection route is Stripe."
         : "Corridor is Stripe, but Stripe Connect is not ready.",
-    };
+      emptyHint: showStripe
+        ? null
+        : "Your country corridor uses Stripe Connect, but Connect is not enabled yet. Ask an admin to finish Stripe Connect on Payment gateways.",
+    });
   }
 
   if (input.corridorActive && (collection === "flutterwave" || collection === "mpesa")) {
-    return {
+    return choice({
       rail: "none",
       countryCode,
       collectionProviderCode: collection,
       showStripe: false,
       showProvider: false,
       reason: `Corridor collection route is ${collection}; connected-account setup is not used for this rail.`,
-    };
+      emptyHint:
+        "Your country corridor uses a local payout rail. Complete KYC and add a payout method when prompted — Stripe Connect is not used here.",
+    });
   }
 
   // No corridor route: keep existing accounts reachable; otherwise prefer whichever rail is ready.
   if (input.hasProviderAccount && !input.hasStripeConnectAccount) {
-    return {
+    return choice({
       rail: "provider",
       countryCode,
       collectionProviderCode: collection,
       showStripe: false,
       showProvider: true,
       reason: "Existing connected-account payout profile.",
-    };
+    });
   }
   if (input.hasStripeConnectAccount && !input.hasProviderAccount) {
-    return {
+    return choice({
       rail: "stripe",
       countryCode,
       collectionProviderCode: collection,
       showStripe: true,
       showProvider: false,
       reason: "Existing Stripe Connect account.",
-    };
+    });
   }
   if (input.stripeConnectReady) {
-    return {
+    return choice({
       rail: "stripe",
       countryCode,
       collectionProviderCode: collection,
       showStripe: true,
       showProvider: false,
       reason: "No corridor rail; Stripe Connect is enabled.",
-    };
+    });
   }
   if (input.providerReady) {
-    return {
+    return choice({
       rail: "provider",
       countryCode,
       collectionProviderCode: collection,
       showStripe: false,
       showProvider: true,
       reason: "No corridor rail; connected-account provider is enabled.",
-    };
+    });
   }
-  return {
+  return choice({
     rail: "none",
     countryCode,
     collectionProviderCode: collection,
     showStripe: false,
     showProvider: false,
-    reason: "No payout onboarding rail is ready.",
-  };
+    reason: input.corridorActive
+      ? "Corridor has no supported collection route for connected-account or Stripe onboarding."
+      : "No active country corridor for this creator.",
+    emptyHint: input.corridorActive
+      ? "Payout onboarding opens here once your country corridor’s collection route is ready."
+      : "Your country corridor is not active yet. Ask an admin to activate it on Country corridors.",
+  });
 }
 
 export async function resolvePayoutOnboardingRail(input: {
   locationCountry?: string | null;
+  /** ISO country from payout profile when location text does not resolve. */
+  fallbackCountryCode?: string | null;
   stripeConnectReady: boolean;
   providerReady: boolean;
   hasStripeConnectAccount: boolean;
   hasProviderAccount: boolean;
 }): Promise<PayoutOnboardingChoice> {
   await ensureCountryActivationCorridors();
-  const countryCode = countryCodeFromLocation(input.locationCountry ?? null);
+  const fromLocation = countryCodeFromLocation(input.locationCountry ?? null);
+  const fallback = (input.fallbackCountryCode ?? "").trim().toUpperCase();
+  const countryCode = fromLocation || (/^[A-Z]{2}$/.test(fallback) ? fallback : null);
   const corridor = countryCode
     ? await prisma.countryActivationCorridor.findUnique({ where: { countryCode } })
     : null;
