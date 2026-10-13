@@ -103,19 +103,19 @@ describe("buildPayoutFeeFxQuote", () => {
 });
 
 describe("choosePayoutOnboardingRail", () => {
-  it("prefers Airwallex when the corridor collection route is Airwallex", () => {
+  it("prefers the connected-account provider when the corridor collection route is that provider", () => {
     const choice = choosePayoutOnboardingRail({
       countryCode: "NG",
       corridorActive: true,
       collectionProviderCode: "airwallex",
       stripeConnectReady: true,
-      airwallexReady: true,
+      providerReady: true,
       hasStripeConnectAccount: false,
       hasProviderAccount: false,
     });
-    assert.equal(choice.rail, "airwallex");
+    assert.equal(choice.rail, "provider");
     assert.equal(choice.showStripe, false);
-    assert.equal(choice.showAirwallex, true);
+    assert.equal(choice.showProvider, true);
   });
 
   it("hides Stripe Connect for Flutterwave/M-Pesa corridors", () => {
@@ -124,13 +124,13 @@ describe("choosePayoutOnboardingRail", () => {
       corridorActive: true,
       collectionProviderCode: "flutterwave",
       stripeConnectReady: true,
-      airwallexReady: true,
+      providerReady: true,
       hasStripeConnectAccount: false,
       hasProviderAccount: false,
     });
     assert.equal(choice.rail, "none");
     assert.equal(choice.showStripe, false);
-    assert.equal(choice.showAirwallex, false);
+    assert.equal(choice.showProvider, false);
   });
 
   it("uses Stripe when the corridor collection route is Stripe", () => {
@@ -139,13 +139,13 @@ describe("choosePayoutOnboardingRail", () => {
       corridorActive: true,
       collectionProviderCode: "stripe",
       stripeConnectReady: true,
-      airwallexReady: true,
+      providerReady: true,
       hasStripeConnectAccount: false,
       hasProviderAccount: false,
     });
     assert.equal(choice.rail, "stripe");
     assert.equal(choice.showStripe, true);
-    assert.equal(choice.showAirwallex, false);
+    assert.equal(choice.showProvider, false);
   });
 });
 

@@ -67,13 +67,13 @@ export default async function BillingPage({ searchParams }: Props) {
     ? await resolvePayoutOnboardingRail({
         locationCountry: identity.creator.locationCountry,
         stripeConnectReady: connectReady,
-        airwallexReady,
+        providerReady: airwallexReady,
         hasStripeConnectAccount: hasConnectAccount,
         hasProviderAccount,
       }).catch(() => null)
     : null;
   const showStripe = Boolean(payoutRail?.showStripe);
-  const showAirwallex = Boolean(payoutRail?.showAirwallex);
+  const showProvider = Boolean(payoutRail?.showProvider);
 
   return (
     <MemberPlanPage
@@ -108,7 +108,7 @@ export default async function BillingPage({ searchParams }: Props) {
               </button>
             </form>
           ) : null}
-          {identity?.creator && showAirwallex ? (
+          {identity?.creator && showProvider ? (
             <form action={actionOpenConnectedAccount}>
               <p className="text-xs text-amber-900/80">
                 {hasProviderAccount
@@ -124,7 +124,7 @@ export default async function BillingPage({ searchParams }: Props) {
             <Link href="/claim" className="mt-2 inline-block text-sm font-semibold underline">
               Create your card
             </Link>
-          ) : !showStripe && !showAirwallex ? (
+          ) : !showStripe && !showProvider ? (
             <p className="text-xs text-amber-900/80">
               {payoutRail?.collectionProviderCode === "flutterwave" ||
               payoutRail?.collectionProviderCode === "mpesa"

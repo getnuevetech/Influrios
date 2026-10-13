@@ -12,6 +12,11 @@ export function collectionProviderCode(code: string | null | undefined): Collect
   return null;
 }
 
+/** True when the corridor collection route onboards influencers via a connected-account provider. */
+export function isConnectedAccountCollectionProvider(code: string | null | undefined): boolean {
+  return collectionProviderCode(code) === "airwallex";
+}
+
 async function paymentGateway(code: CollectionProvider) {
   const row = await prisma.integrationProvider.findUnique({
     where: { kind_code: { kind: "payment", code } },
