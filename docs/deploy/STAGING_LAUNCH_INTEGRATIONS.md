@@ -226,7 +226,7 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 | Slice | Action | Done when |
 |-------|--------|-----------|
-| **E1 Sweep clock** | Confirm crontab runs `deploy/scripts/sweep-cron.sh` every 5 minutes with `CRON_SECRET`. Wait one interval with no admin session. | `succeeded` job ids for `milestone_auto_approval` and `recurring_cycle_sweep` in `/admin/jobs` |
+| **E1 Sweep clock** | ~~Confirm crontab + succeeded job ids~~ **Done** (`cmv6ufj5m000dut01g2jvu0xh`, `cmv6ufj61000lut013qd0vrgz` at 2026-10-13T15:36:12Z). | Next: **E2 SMTP** |
 | **E2 SMTP** | Admin → Mail: save host/from/secret, send test invite, complete a claim verify, break password → failed job → Retry | Message id + failed→succeeded job evidence |
 | **E4 Stripe** | Save `whsec_…` on gateway (or `STRIPE_WEBHOOK_SECRET`), register webhook, member checkout with `4242`, resend same event | `cs_test_…`, `CheckoutAttempt` id, plan tier, duplicate skipped |
 
@@ -234,15 +234,20 @@ Probe auto-check for E1 gate (no secret): `POST /api/cron/sweeps` must return **
 
 **Recovered:** re-probe at **2026-10-13T11:51:40Z** — **8/8 auto checks pass**. Re-confirmed **2026-10-13T14:35:23Z** — still **8/8**.
 
-### E1 progress (2026-10-13 afternoon)
+### E1 progress (2026-10-13 afternoon) — **complete**
+
+Tick at **2026-10-13T15:36:12Z**: `POST /api/cron/sweeps` → `{"ok":true,"enqueued":{"queued":10},"processed":{"processed":10}}`. Crontab installed (`*/5` → `deploy/scripts/sweep-cron.sh`).
 
 | Check | Result |
 |-------|--------|
 | Probe auto: cron rejects missing secret | ☑ `401` / `unauthorized` |
-| Admin → Jobs shows succeeded sweep **job ids** | ☑ after deploy of this slice |
-| Host script to print E1 ids | `npm run staging:e1-sweep-evidence` (bash + `docker compose exec` Postgres; optional `--tick` with `CRON_SECRET`) |
-| Crontab installed + succeeded `milestone_auto_approval` id | ☐ operator |
-| Succeeded `recurring_cycle_sweep` id | ☐ operator |
+| Admin → Jobs shows succeeded sweep **job ids** | ☑ |
+| Host script to print E1 ids | ☑ `npm run staging:e1-sweep-evidence` |
+| Crontab installed | ☑ `crontab -l \| grep sweep-cron` |
+| Succeeded `milestone_auto_approval` id | ☑ `cmv6ufj5m000dut01g2jvu0xh` · 2026-10-13T15:36:12Z |
+| Succeeded `recurring_cycle_sweep` id | ☑ `cmv6ufj61000lut013qd0vrgz` · 2026-10-13T15:36:12Z |
+
+**Rotate `CRON_SECRET` after this evidence** (it was pasted into an operator transcript), then update `.env`, redeploy, and refresh the crontab line.
 
 ```bash
 # On Lightsail after deploy:
@@ -268,7 +273,7 @@ CRON_SECRET=… APP_URL=https://influrios.com npm run staging:e1-sweep-evidence 
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
-| Env, HTTPS, auth secret, cron | probe `2026-10-13T14:35:23Z` · 8/8 auto pass · cron 401 without secret · **E1 succeeded job ids still blank until crontab runs** | 2026-10-13 | cloud-agent / host |
+| Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
 | SMTP | | | |
 | Stripe checkout, duplicate skip, portal, Connect | whsec present (`Missing Stripe-Signature header`). Run 4242 checkout + duplicate skip | 2026-10-13 | |
 | Social OAuth | | | |
