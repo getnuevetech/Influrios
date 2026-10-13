@@ -240,7 +240,7 @@ Probe auto-check for E1 gate (no secret): `POST /api/cron/sweeps` must return **
 |-------|--------|
 | Probe auto: cron rejects missing secret | ☑ `401` / `unauthorized` |
 | Admin → Jobs shows succeeded sweep **job ids** | ☑ after deploy of this slice |
-| Host script to print E1 ids | `npm run staging:e1-sweep-evidence` (plain `node`, no `tsx`; optional `--tick` with `CRON_SECRET`) |
+| Host script to print E1 ids | `npm run staging:e1-sweep-evidence` (bash + `docker compose exec` Postgres; optional `--tick` with `CRON_SECRET`) |
 | Crontab installed + succeeded `milestone_auto_approval` id | ☐ operator |
 | Succeeded `recurring_cycle_sweep` id | ☐ operator |
 
@@ -252,6 +252,8 @@ crontab -l | grep sweep-cron || echo "install: */5 * * * * CRON_SECRET=… APP_U
 npm run staging:e1-sweep-evidence
 # Or force one tick then re-read:
 CRON_SECRET=… APP_URL=https://influrios.com npm run staging:e1-sweep-evidence -- --tick
+# Equivalent:
+# bash scripts/staging-e1-sweep-evidence.sh
 ```
 
 ### E4 Stripe progress (same day)

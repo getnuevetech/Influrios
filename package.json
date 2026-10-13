@@ -20,7 +20,7 @@
     "db:studio": "prisma studio",
     "staging:checklist": "tsx scripts/staging-checklist.ts",
     "staging:evidence-probe": "node scripts/staging-evidence-probe.mjs",
-    "staging:e1-sweep-evidence": "node scripts/staging-e1-sweep-evidence.mjs",
+    "staging:e1-sweep-evidence": "bash scripts/staging-e1-sweep-evidence.sh",
     "staging:marketplace-fixture": "tsx scripts/marketplace-webhook-fixture.ts",
     "postinstall": "prisma generate"
   },
