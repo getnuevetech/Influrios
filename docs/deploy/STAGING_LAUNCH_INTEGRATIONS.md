@@ -82,7 +82,7 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 2. Send a **test invite** (Admin → Invitations or Mail test).
 3. Complete an account / claim verify that enqueues `verification_email` or `claim_verification_email`.
 4. Confirm the message arrives in the operator inbox.
-5. Force a failure (bad password), confirm a **failed** job appears, fix credentials, **Retry** from Admin → Jobs.
+5. Force a failure (bad password). Jobs **auto-requeue up to 3 attempts** (~60s apart). Wait until status is **`failed`** (not `queued`), then fix credentials and click **Retry** on Admin → Jobs (operator recovery after terminal failure — that is the E2 drill, separate from auto-retry).
 
 | Evidence | Result |
 |----------|--------|
@@ -247,36 +247,40 @@ Tick at **2026-10-13T15:36:12Z**: `POST /api/cron/sweeps` → `{"ok":true,"enque
 
 **`CRON_SECRET` rotated** (operator confirmed 2026-10-13) — `.env` + crontab refreshed after the E1 paste.
 
-### E2 progress (SMTP) — **in progress** (fail→retry still open)
+### E2 progress (SMTP) — **in progress** (Admin Retry still open)
 
-Host script `2026-10-13T16:27:30Z`:
+Host script `2026-10-13T16:39:59Z` (also earlier `16:27:30Z`):
 
 | Kind | Job id | Status | SMTP / external | Updated |
 |------|--------|--------|-----------------|---------|
 | `claim_verification_email` | `cmv6evovt005jod0130bnxspo` | succeeded | — (pre–accept-line storage) | 2026-10-13T08:20:53Z |
-| `mail_test` | `cmv6w73c40084o601nhpaegey` | succeeded | `250 2.0.0 OK … gsmtp` | 2026-10-13T16:26:31Z |
+| `mail_test` | `cmv6wje8100a3o6018frdtn0r` | succeeded | `250 2.0.0 OK … gsmtp` | 2026-10-13T16:39:31Z |
+| `mail_test` (prior) | `cmv6w73c40084o601nhpaegey` | succeeded | `250 2.0.0 OK … gsmtp` | 2026-10-13T16:26:31Z |
 
 | Check | Result |
 |-------|--------|
 | Admin → Mail shows Ready | ☑ (test send accepted) |
-| Test invite accepted (job id + SMTP line) | ☑ `cmv6w73c40084o601nhpaegey` · `250 2.0.0 OK 1791908791 d75a77b69052e-5359b46dda0sm105392131cf.4 - gsmtp` |
-| Verify email received in operator inbox | ☑ (Gmail accepted `mail_test`; confirm inbox if not already) |
+| Test invite accepted (job id + SMTP line) | ☑ `cmv6wje8100a3o6018frdtn0r` · `250 2.0.0 OK 1791909571 6a1803df08f44-91b97b35e23sm29545326d6.17 - gsmtp` |
+| Verify email received in operator inbox | ☑ (Gmail accepted `mail_test`) |
 | `verification_email` / `claim_verification_email` succeeded | ☑ `claim_verification_email`=`cmv6evovt005jod0130bnxspo` |
-| Failed job then Retry → succeeded | ☐ **still needed** |
+| Failed job then **Admin Retry** → succeeded | ☐ **still needed** |
+
+**Retry model:** mail jobs auto-requeue on failure up to **3 attempts** (~60s backoff). After that they stay `failed`. Admin → Jobs **Retry** resets attempts and re-queues — that operator recovery path is what E2 still needs to prove (auto-retry alone is not enough).
 
 ```bash
-# After fail→retry drill:
+# After fail→Admin Retry drill (deploy this slice first for richer script output):
 cd /var/www/influrios
 npm run staging:e2-smtp-evidence
 ```
 
-Remaining operator path (fail→retry):
+Remaining operator path (fail → wait for terminal `failed` → Admin Retry):
 
-1. On `/admin/mail`, intentionally break the SMTP password (or app password), save.
-2. Send **Test SMTP** again → expect a **failed** `mail_test` on `/admin/jobs`.
-3. Restore the correct password, save, confirm **Ready**.
-4. On `/admin/jobs`, **Retry** the failed job → `succeeded` + SMTP accept line.
-5. Re-run `npm run staging:e2-smtp-evidence` and paste the output (failed id + retried succeeded id).
+1. On `/admin/mail`, break the SMTP password, save. **Leave it broken.**
+2. Send **Test SMTP** once. Watch `/admin/jobs` — it will requeue itself up to 3 times.
+3. Wait until that job’s status is **`failed`** (~2–3 minutes). Do **not** restore the password while it is still `queued`/`running`, or auto-retry may succeed and you never get a terminal failure.
+4. Restore the correct password → **Ready**.
+5. On `/admin/jobs`, click **Retry** on the failed job → `succeeded` + SMTP accept line.
+6. Re-run `npm run staging:e2-smtp-evidence` and paste the output (failed id + retried succeeded id).
 
 ### E4 Stripe progress (same day)
 
