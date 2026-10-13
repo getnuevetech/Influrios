@@ -278,7 +278,7 @@ Operator path:
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe 8/8 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` | 2026-10-13 | host + cloud-agent |
-| SMTP | E2 in progress — use `/admin/mail` + `npm run staging:e2-smtp-evidence` | 2026-10-13 | |
+| SMTP | | | |
 | Stripe checkout, duplicate skip, portal, Connect | whsec present (`Missing Stripe-Signature header`). Run 4242 checkout + duplicate skip | 2026-10-13 | |
 | Social OAuth | | | |
 | Meilisearch counts | | | |
