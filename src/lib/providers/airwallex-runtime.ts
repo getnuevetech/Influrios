@@ -165,11 +165,25 @@ export async function openCreatorConnectedAccount(input: { userId: string; email
     return { ok: false, error: "Create your Influencer Card before opening payout setup. Nothing was opened." };
   }
   const country = countryCodeFromLocation(creator.locationCountry);
+  const corridor = country
+    ? await prisma.countryActivationCorridor.findUnique({ where: { countryCode: country } })
+    : null;
+  const corridorAllowsAirwallex =
+    Boolean(corridor?.active) && (corridor?.collectionProviderCode ?? "").trim().toLowerCase() === "airwallex";
   const jurisdiction = country
     ? await prisma.collaborationJurisdiction.findUnique({ where: { code: country } })
     : null;
-  const allowed = jurisdictionAllowsAirwallexIntent(parseApprovedProviderIds(jurisdiction?.approvedProviderIds));
-  if (!allowed.ok) return { ok: false, error: "This jurisdiction does not list Airwallex. Nothing was opened." };
+  const jurisdictionAllowed = jurisdictionAllowsAirwallexIntent(
+    parseApprovedProviderIds(jurisdiction?.approvedProviderIds),
+  );
+  // Country corridor collection route is the admin payout/collection assignment; marketplace
+  // jurisdiction approvedProviderIds remains an alternate allow-list for legacy ops.
+  if (!corridorAllowsAirwallex && !jurisdictionAllowed.ok) {
+    return {
+      ok: false,
+      error: "This corridor is not set to Airwallex and the jurisdiction does not list Airwallex. Nothing was opened.",
+    };
+  }
   const existing = creator.payoutProfile?.providerConnectedAccountId?.trim() || "";
   if (existing) return { ok: true, accountId: existing, linked: true };
   const auth = await session();

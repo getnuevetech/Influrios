@@ -67,17 +67,53 @@ function payoutSetupErrorRedirect(error: string): never {
     /Stripe is not ready/i.test(error) ||
     /turned off/i.test(error) ||
     /does not list Airwallex/i.test(error) ||
+    /is not set to Airwallex/i.test(error) ||
     /Save and enable the Airwallex/i.test(error) ||
-    (/Nothing was opened/i.test(error) && /Stripe|Airwallex|Connect|portal|jurisdiction/i.test(error))
+    /corridor collection route/i.test(error) ||
+    /payout setup is not available for this corridor/i.test(error) ||
+    (/Nothing was opened/i.test(error) && /Stripe|Airwallex|Connect|portal|jurisdiction|corridor/i.test(error))
   ) {
     redirect("/billing#payouts");
   }
   redirect(`/billing?error=${encodeURIComponent(error)}#payouts`);
 }
 
+async function creatorPayoutRailGuard(userId: string) {
+  const { resolvePayoutOnboardingRail } = await import("@/lib/payout-readiness");
+  const { loadAirwallexConfig } = await import("@/lib/providers/airwallex-config");
+  const { stripeConnectReady } = await import("@/lib/stripe-admin");
+  const creator = await prisma.creator.findUnique({
+    where: { userId },
+    select: {
+      locationCountry: true,
+      payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true } },
+    },
+  });
+  if (!creator) {
+    return { ok: false as const, error: "Create your Influencer Card before opening payout setup. Nothing was opened." };
+  }
+  const rail = await resolvePayoutOnboardingRail({
+    locationCountry: creator.locationCountry,
+    stripeConnectReady: await stripeConnectReady().catch(() => false),
+    airwallexReady: Boolean(await loadAirwallexConfig().catch(() => null)),
+    hasStripeConnectAccount: Boolean(creator.payoutProfile?.stripeConnectAccountId),
+    hasProviderAccount: Boolean(creator.payoutProfile?.providerConnectedAccountId),
+  });
+  return { ok: true as const, rail };
+}
+
 export async function actionOpenConnectedAccount() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/billing&gate=connect");
+  const guard = await creatorPayoutRailGuard(account.id);
+  if (!guard.ok) payoutSetupErrorRedirect(guard.error);
+  if (!guard.rail.showAirwallex) {
+    payoutSetupErrorRedirect(
+      guard.rail.collectionProviderCode
+        ? `This corridor collection route is ${guard.rail.collectionProviderCode}. Nothing was opened.`
+        : "Airwallex payout setup is not available for this corridor. Nothing was opened.",
+    );
+  }
   const { openCreatorConnectedAccount } = await import("@/lib/providers/airwallex-runtime");
   const result = await openCreatorConnectedAccount({ userId: account.id, email: account.email });
   if (!result.ok) payoutSetupErrorRedirect(result.error);
@@ -88,6 +124,15 @@ export async function actionOpenConnectedAccount() {
 export async function actionOpenConnect() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/billing&gate=connect");
+  const guard = await creatorPayoutRailGuard(account.id);
+  if (!guard.ok) payoutSetupErrorRedirect(guard.error);
+  if (!guard.rail.showStripe) {
+    payoutSetupErrorRedirect(
+      guard.rail.collectionProviderCode === "airwallex"
+        ? "This corridor collection route is Airwallex. Nothing was opened."
+        : "Stripe Connect payout setup is not available for this corridor. Nothing was opened.",
+    );
+  }
   const origin = getAppOrigin();
   const result = await openCreatorConnectOnboarding({
     userId: account.id,

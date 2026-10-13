@@ -43,8 +43,8 @@ describe("document KYC requirements", () => {
     const page = readFileSync("src/app/admin/kyc/page.tsx", "utf8");
     assert.match(page, /<select name="gatewayProviderId"/);
     assert.match(page, /<select name="kind"/);
-    assert.equal(page.includes("KYC through government ID"), true);
-    assert.equal(page.includes("KYC through gateway"), true);
+    assert.equal(page.includes("KYC by Document Upload"), true);
+    assert.equal(page.includes("KYC by Gateway"), true);
     const user = readFileSync("src/app/dashboard/kyc/page.tsx", "utf8");
     assert.equal(user.includes("government_id"), true);
     assert.equal(user.includes("pending_gateway"), true);

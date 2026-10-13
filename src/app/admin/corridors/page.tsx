@@ -222,10 +222,11 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
         </Link>
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Country activation corridors</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          Add a country from the list. Each option shows the full name and the currency letters stored on a new
-          payout profile. Kenya starts as KES and the United States starts as USD. Change that currency on the
-          country after it is added. The collection route is a gateway saved on Payment gateways. Group countries to
-          keep this list short. An existing payout profile keeps the currency it already stored.
+          Corridors control collaboration collection, influencer payout onboarding, payout methods, and KYC for each
+          country. Add a country from the list (full name + currency letters for a new payout profile). The collection
+          route is a gateway saved on Payment gateways — for example Airwallex for Nigeria routes influencers to
+          Airwallex setup, not Stripe Connect. KYC type is either KYC by Gateway or KYC by Document Upload. Group
+          countries to keep this list short. An existing payout profile keeps the currency it already stored.
         </p>
         <p className="mt-2 text-xs text-muted">
           Also see{" "}

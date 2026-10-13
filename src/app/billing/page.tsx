@@ -5,6 +5,7 @@ import { MemberPlanPage } from "@/components/plans/member-plan-page";
 import { getAccountSession } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
+import { resolvePayoutOnboardingRail } from "@/lib/payout-readiness";
 import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
 import { productSwitch } from "@/lib/product-switches";
 import { stripeConnectReady } from "@/lib/stripe-admin";
@@ -38,6 +39,7 @@ export default async function BillingPage({ searchParams }: Props) {
           creator: {
             select: {
               planTier: true,
+              locationCountry: true,
               payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true } },
             },
           },
@@ -61,6 +63,17 @@ export default async function BillingPage({ searchParams }: Props) {
   const airwallexReady = Boolean(airwallexConfig);
   const hasConnectAccount = Boolean(identity?.creator?.payoutProfile?.stripeConnectAccountId);
   const hasProviderAccount = Boolean(identity?.creator?.payoutProfile?.providerConnectedAccountId);
+  const payoutRail = identity?.creator
+    ? await resolvePayoutOnboardingRail({
+        locationCountry: identity.creator.locationCountry,
+        stripeConnectReady: connectReady,
+        airwallexReady,
+        hasStripeConnectAccount: hasConnectAccount,
+        hasProviderAccount,
+      }).catch(() => null)
+    : null;
+  const showStripe = Boolean(payoutRail?.showStripe);
+  const showAirwallex = Boolean(payoutRail?.showAirwallex);
 
   return (
     <MemberPlanPage
@@ -83,7 +96,7 @@ export default async function BillingPage({ searchParams }: Props) {
       notice={params.connected ? "Connected account saved on your payout profile." : undefined}
       payout={
         <div id="payouts" className="mt-3 space-y-3">
-          {identity?.creator && connectReady ? (
+          {identity?.creator && showStripe ? (
             <form action={actionOpenConnect}>
               <p className="text-xs text-amber-900/80">
                 {hasConnectAccount
@@ -95,7 +108,7 @@ export default async function BillingPage({ searchParams }: Props) {
               </button>
             </form>
           ) : null}
-          {identity?.creator && (airwallexReady || hasProviderAccount) ? (
+          {identity?.creator && showAirwallex ? (
             <form action={actionOpenConnectedAccount}>
               <p className="text-xs text-amber-900/80">
                 {hasProviderAccount
@@ -103,7 +116,7 @@ export default async function BillingPage({ searchParams }: Props) {
                   : "Create the connected account that receives milestone splits. This does not send a payout."}
               </p>
               <button type="submit" className="mt-2 text-sm font-semibold underline">
-                {hasProviderAccount ? "Confirm connected account" : "Create connected account"}
+                {hasProviderAccount ? "Confirm connected account" : "Set up payouts"}
               </button>
             </form>
           ) : null}
@@ -111,9 +124,12 @@ export default async function BillingPage({ searchParams }: Props) {
             <Link href="/claim" className="mt-2 inline-block text-sm font-semibold underline">
               Create your card
             </Link>
-          ) : !connectReady && !airwallexReady && !hasProviderAccount ? (
+          ) : !showStripe && !showAirwallex ? (
             <p className="text-xs text-amber-900/80">
-              Payout onboarding opens here once Stripe Connect or the collaboration payout rail is enabled by admin.
+              {payoutRail?.collectionProviderCode === "flutterwave" ||
+              payoutRail?.collectionProviderCode === "mpesa"
+                ? "Your country corridor uses a local payout rail. Complete KYC and add a payout method when prompted — Stripe Connect is not used here."
+                : "Payout onboarding opens here once your country corridor’s collection route is ready."}
             </p>
           ) : null}
         </div>

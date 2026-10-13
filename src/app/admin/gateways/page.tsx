@@ -86,8 +86,9 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Payment gateways</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        Connect more than one gateway, then assign each country — or a named country group — to one of them. Set one
-        default backup gateway so a country can fall back when its assigned gateway fails.
+        Save gateway credentials here. Plan checkouts use Stripe from this page. Country corridors pick which of these
+        gateways collect collaboration funding and which payout onboarding rail influencers see. Assign each country —
+        or a named country group — to one gateway, and set one default backup for failed country routes.
       </p>
       {savedMessage ? <p className="mt-4 text-sm font-semibold text-emerald-700">{savedMessage}</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}

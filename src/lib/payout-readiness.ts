@@ -308,3 +308,144 @@ async function refreshGlobalPayoutReadyFlag(creatorId: string) {
     locationCountry: creator.locationCountry,
   });
 }
+
+/**
+ * Influencer payout *onboarding* rail (Stripe Connect vs Airwallex connected account).
+ * Driven by the active country corridor's collection route — not by global Connect readiness alone.
+ * Plan checkout still uses Payment gateways / Stripe separately.
+ */
+export type PayoutOnboardingRail = "stripe" | "airwallex" | "none";
+
+export type PayoutOnboardingChoice = {
+  rail: PayoutOnboardingRail;
+  countryCode: string | null;
+  collectionProviderCode: string | null;
+  showStripe: boolean;
+  showAirwallex: boolean;
+  reason: string;
+};
+
+export function choosePayoutOnboardingRail(input: {
+  countryCode: string | null;
+  corridorActive: boolean;
+  collectionProviderCode: string | null | undefined;
+  stripeConnectReady: boolean;
+  airwallexReady: boolean;
+  hasStripeConnectAccount: boolean;
+  hasProviderAccount: boolean;
+}): PayoutOnboardingChoice {
+  const collection = (input.collectionProviderCode ?? "").trim().toLowerCase() || null;
+  const countryCode = input.countryCode;
+
+  if (input.corridorActive && collection === "airwallex") {
+    const showAirwallex = input.airwallexReady || input.hasProviderAccount;
+    return {
+      rail: showAirwallex ? "airwallex" : "none",
+      countryCode,
+      collectionProviderCode: collection,
+      showStripe: false,
+      showAirwallex,
+      reason: showAirwallex
+        ? "Corridor collection route is Airwallex."
+        : "Corridor is Airwallex, but Airwallex credentials are not ready.",
+    };
+  }
+
+  if (input.corridorActive && collection === "stripe") {
+    const showStripe = input.stripeConnectReady || input.hasStripeConnectAccount;
+    return {
+      rail: showStripe ? "stripe" : "none",
+      countryCode,
+      collectionProviderCode: collection,
+      showStripe,
+      showAirwallex: false,
+      reason: showStripe
+        ? "Corridor collection route is Stripe."
+        : "Corridor is Stripe, but Stripe Connect is not ready.",
+    };
+  }
+
+  if (input.corridorActive && (collection === "flutterwave" || collection === "mpesa")) {
+    return {
+      rail: "none",
+      countryCode,
+      collectionProviderCode: collection,
+      showStripe: false,
+      showAirwallex: false,
+      reason: `Corridor collection route is ${collection}; connected-account setup is not used for this rail.`,
+    };
+  }
+
+  // No corridor route: keep existing accounts reachable; otherwise prefer whichever rail is ready.
+  if (input.hasProviderAccount && !input.hasStripeConnectAccount) {
+    return {
+      rail: "airwallex",
+      countryCode,
+      collectionProviderCode: collection,
+      showStripe: false,
+      showAirwallex: true,
+      reason: "Existing Airwallex connected account.",
+    };
+  }
+  if (input.hasStripeConnectAccount && !input.hasProviderAccount) {
+    return {
+      rail: "stripe",
+      countryCode,
+      collectionProviderCode: collection,
+      showStripe: true,
+      showAirwallex: false,
+      reason: "Existing Stripe Connect account.",
+    };
+  }
+  if (input.stripeConnectReady) {
+    return {
+      rail: "stripe",
+      countryCode,
+      collectionProviderCode: collection,
+      showStripe: true,
+      showAirwallex: false,
+      reason: "No corridor rail; Stripe Connect is enabled.",
+    };
+  }
+  if (input.airwallexReady) {
+    return {
+      rail: "airwallex",
+      countryCode,
+      collectionProviderCode: collection,
+      showStripe: false,
+      showAirwallex: true,
+      reason: "No corridor rail; Airwallex is enabled.",
+    };
+  }
+  return {
+    rail: "none",
+    countryCode,
+    collectionProviderCode: collection,
+    showStripe: false,
+    showAirwallex: false,
+    reason: "No payout onboarding rail is ready.",
+  };
+}
+
+export async function resolvePayoutOnboardingRail(input: {
+  locationCountry?: string | null;
+  stripeConnectReady: boolean;
+  airwallexReady: boolean;
+  hasStripeConnectAccount: boolean;
+  hasProviderAccount: boolean;
+}): Promise<PayoutOnboardingChoice> {
+  await ensureCountryActivationCorridors();
+  const countryCode = countryCodeFromLocation(input.locationCountry ?? null);
+  const corridor = countryCode
+    ? await prisma.countryActivationCorridor.findUnique({ where: { countryCode } })
+    : null;
+  return choosePayoutOnboardingRail({
+    countryCode,
+    corridorActive: Boolean(corridor?.active),
+    collectionProviderCode: corridor?.collectionProviderCode,
+    stripeConnectReady: input.stripeConnectReady,
+    airwallexReady: input.airwallexReady,
+    hasStripeConnectAccount: input.hasStripeConnectAccount,
+    hasProviderAccount: input.hasProviderAccount,
+  });
+}

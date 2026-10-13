@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { buildPayoutFeeFxQuote, PAYOUT_METHOD_LABELS, payoutProfileCurrency } from "./payout-readiness";
+import {
+  buildPayoutFeeFxQuote,
+  choosePayoutOnboardingRail,
+  PAYOUT_METHOD_LABELS,
+  payoutProfileCurrency,
+} from "./payout-readiness";
 import { prisma } from "./db";
 
 const hasDbUrl = Boolean(process.env.DATABASE_URL);
@@ -94,6 +99,53 @@ describe("buildPayoutFeeFxQuote", () => {
     assert.equal(page.includes("payoutFallbackCurrency"), true);
     const actions = readFileSync("src/app/admin/corridors/actions.ts", "utf8");
     assert.equal(actions.includes("savePayoutFallbackCurrency"), true);
+  });
+});
+
+describe("choosePayoutOnboardingRail", () => {
+  it("prefers Airwallex when the corridor collection route is Airwallex", () => {
+    const choice = choosePayoutOnboardingRail({
+      countryCode: "NG",
+      corridorActive: true,
+      collectionProviderCode: "airwallex",
+      stripeConnectReady: true,
+      airwallexReady: true,
+      hasStripeConnectAccount: false,
+      hasProviderAccount: false,
+    });
+    assert.equal(choice.rail, "airwallex");
+    assert.equal(choice.showStripe, false);
+    assert.equal(choice.showAirwallex, true);
+  });
+
+  it("hides Stripe Connect for Flutterwave/M-Pesa corridors", () => {
+    const choice = choosePayoutOnboardingRail({
+      countryCode: "NG",
+      corridorActive: true,
+      collectionProviderCode: "flutterwave",
+      stripeConnectReady: true,
+      airwallexReady: true,
+      hasStripeConnectAccount: false,
+      hasProviderAccount: false,
+    });
+    assert.equal(choice.rail, "none");
+    assert.equal(choice.showStripe, false);
+    assert.equal(choice.showAirwallex, false);
+  });
+
+  it("uses Stripe when the corridor collection route is Stripe", () => {
+    const choice = choosePayoutOnboardingRail({
+      countryCode: "US",
+      corridorActive: true,
+      collectionProviderCode: "stripe",
+      stripeConnectReady: true,
+      airwallexReady: true,
+      hasStripeConnectAccount: false,
+      hasProviderAccount: false,
+    });
+    assert.equal(choice.rail, "stripe");
+    assert.equal(choice.showStripe, true);
+    assert.equal(choice.showAirwallex, false);
   });
 });
 
