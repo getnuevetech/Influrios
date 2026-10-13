@@ -226,11 +226,11 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 | Slice | Action | Done when |
 |-------|--------|-----------|
-| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed | Next: **E2 SMTP** |
-| **E2 SMTP** | Admin → Mail: save host/from/secret, send test invite, complete a claim verify, break password → failed job → Retry | Job id + SMTP accept line + failed→succeeded retry |
+| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: finish **E2** fail→retry |
+| **E2 SMTP** | Partial: `mail_test` + `claim_verification_email` succeeded — **still need** intentional fail → Retry | Job id + SMTP accept line + failed→succeeded retry |
 | **E4 Stripe** | Save `whsec_…` on gateway (or `STRIPE_WEBHOOK_SECRET`), register webhook, member checkout with `4242`, resend same event | `cs_test_…`, `CheckoutAttempt` id, plan tier, duplicate skipped |
 
-**Recovered:** probes green through **2026-10-13T15:42:14Z** (8/8 auto). E1 complete. Rotate `CRON_SECRET` if it was pasted into a transcript.
+**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 complete. **`CRON_SECRET` rotated** (operator confirmed).
 
 ### E1 progress (2026-10-13 afternoon) — **complete**
 
@@ -245,31 +245,38 @@ Tick at **2026-10-13T15:36:12Z**: `POST /api/cron/sweeps` → `{"ok":true,"enque
 | Succeeded `milestone_auto_approval` id | ☑ `cmv6ufj5m000dut01g2jvu0xh` · 2026-10-13T15:36:12Z |
 | Succeeded `recurring_cycle_sweep` id | ☑ `cmv6ufj61000lut013qd0vrgz` · 2026-10-13T15:36:12Z |
 
-**Rotate `CRON_SECRET` after this evidence** (it was pasted into an operator transcript), then update `.env`, redeploy, and refresh the crontab line.
+**`CRON_SECRET` rotated** (operator confirmed 2026-10-13) — `.env` + crontab refreshed after the E1 paste.
 
-### E2 progress (SMTP)
+### E2 progress (SMTP) — **in progress** (fail→retry still open)
+
+Host script `2026-10-13T16:27:30Z`:
+
+| Kind | Job id | Status | SMTP / external | Updated |
+|------|--------|--------|-----------------|---------|
+| `claim_verification_email` | `cmv6evovt005jod0130bnxspo` | succeeded | — (pre–accept-line storage) | 2026-10-13T08:20:53Z |
+| `mail_test` | `cmv6w73c40084o601nhpaegey` | succeeded | `250 2.0.0 OK … gsmtp` | 2026-10-13T16:26:31Z |
 
 | Check | Result |
 |-------|--------|
-| Admin → Mail shows Ready | ☐ |
-| Test invite accepted (job id + SMTP line) | ☐ |
-| Verify email received in operator inbox | ☐ |
-| `verification_email` / `claim_verification_email` succeeded | ☐ |
-| Failed job then Retry → succeeded | ☐ |
+| Admin → Mail shows Ready | ☑ (test send accepted) |
+| Test invite accepted (job id + SMTP line) | ☑ `cmv6w73c40084o601nhpaegey` · `250 2.0.0 OK 1791908791 d75a77b69052e-5359b46dda0sm105392131cf.4 - gsmtp` |
+| Verify email received in operator inbox | ☑ (Gmail accepted `mail_test`; confirm inbox if not already) |
+| `verification_email` / `claim_verification_email` succeeded | ☑ `claim_verification_email`=`cmv6evovt005jod0130bnxspo` |
+| Failed job then Retry → succeeded | ☐ **still needed** |
 
 ```bash
-# After deploy of this slice + SMTP test sends:
+# After fail→retry drill:
 cd /var/www/influrios
 npm run staging:e2-smtp-evidence
 ```
 
-Operator path:
+Remaining operator path (fail→retry):
 
-1. Open `https://influrios.com/admin/mail` — save host/port/from/credentials, enable, confirm **Ready**.
-2. Send **Test SMTP (claim invitation)** to your mailbox. Wait for Recent test sends → `succeeded` + SMTP accept line (and job id).
-3. Complete an account or claim verify so `verification_email` or `claim_verification_email` succeeds.
-4. Intentionally break the SMTP password, send again → failed job on `/admin/jobs` → restore password → **Retry** → succeeded.
-5. `npm run staging:e2-smtp-evidence` and paste ids into the evidence table below.
+1. On `/admin/mail`, intentionally break the SMTP password (or app password), save.
+2. Send **Test SMTP** again → expect a **failed** `mail_test` on `/admin/jobs`.
+3. Restore the correct password, save, confirm **Ready**.
+4. On `/admin/jobs`, **Retry** the failed job → `succeeded` + SMTP accept line.
+5. Re-run `npm run staging:e2-smtp-evidence` and paste the output (failed id + retried succeeded id).
 
 ### E4 Stripe progress (same day)
 
