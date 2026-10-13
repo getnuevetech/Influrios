@@ -232,11 +232,13 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 Probe auto-check for E1 gate (no secret): `POST /api/cron/sweeps` must return **401**. That only proves the route is mounted — crontab still needs the succeeded job ids above.
 
+**Recovered:** re-probe at **2026-10-13T11:51:40Z** — **8/8 auto checks pass** (HTTPS, health+db, authConfigured, homepage, guest collab, admin login, cron 401 without secret, SMS not sent). E1 still needs crontab `succeeded` job ids.
+
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
-| Env, HTTPS, auth secret, cron | probe `2026-10-13T10:22:39Z` green · **regressed 502 at `2026-10-13T11:37:41Z`** — recover host then re-probe | 2026-10-13 | cloud-agent / host |
+| Env, HTTPS, auth secret, cron | probe `2026-10-13T11:51:40Z` · 8/8 auto pass · cron 401 without secret (crontab job ids still blank) | 2026-10-13 | cloud-agent / host |
 | SMTP | | | |
-| Stripe checkout, duplicate skip, portal, Connect | API secret readable earlier (webhook 400 without signature). Save whsec_… + run 4242 checkout after host up | 2026-10-13 | |
+| Stripe checkout, duplicate skip, portal, Connect | API secret readable earlier (webhook 400 without signature). Save whsec_… + run 4242 checkout | 2026-10-13 | |
 | Social OAuth | | | |
 | Meilisearch counts | | | |
 | Airwallex hold and release | | | |
