@@ -207,11 +207,36 @@ curl -sS -X POST https://influrios.com/api/billing/webhook \
 
 Host-side Prisma tools should use `DATABASE_URL` with host `127.0.0.1` (not the Compose service name). Prefer `npx prisma migrate deploy` over `db push` on the live host after recovery.
 
+### Phase M continuation (2026-10-13T11:37Z) — host outage again
+
+Re-probe of `https://influrios.com` at **2026-10-13T11:37:41Z** after UX PRs #257–#260: **blocked by nginx 502 Bad Gateway** again. Auto checks cannot progress past E0 while upstream is down. The evidence probe now reports a single outage reason instead of mis-labeling `authConfigured` / guest CTAs as feature failures.
+
+**Host recovery (run on Lightsail):**
+
+```bash
+cd /var/www/influrios
+bash deploy/scripts/diagnose-502.sh
+git pull origin main
+bash deploy/scripts/deploy.sh
+curl -fsS http://127.0.0.1:3000/api/health
+node scripts/staging-evidence-probe.mjs https://influrios.com
+```
+
+**Next operator evidence after recovery (E1 → E2 → E4):**
+
+| Slice | Action | Done when |
+|-------|--------|-----------|
+| **E1 Sweep clock** | Confirm crontab runs `deploy/scripts/sweep-cron.sh` every 5 minutes with `CRON_SECRET`. Wait one interval with no admin session. | `succeeded` job ids for `milestone_auto_approval` and `recurring_cycle_sweep` in `/admin/jobs` |
+| **E2 SMTP** | Admin → Mail: save host/from/secret, send test invite, complete a claim verify, break password → failed job → Retry | Message id + failed→succeeded job evidence |
+| **E4 Stripe** | Save `whsec_…` on gateway (or `STRIPE_WEBHOOK_SECRET`), register webhook, member checkout with `4242`, resend same event | `cs_test_…`, `CheckoutAttempt` id, plan tier, duplicate skipped |
+
+Probe auto-check for E1 gate (no secret): `POST /api/cron/sweeps` must return **401**. That only proves the route is mounted — crontab still needs the succeeded job ids above.
+
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
-| Env, HTTPS, auth secret, cron | probe `2026-10-13T10:22:39Z` · health ok · cron 401 without secret | 2026-10-13 | cloud-agent / host |
+| Env, HTTPS, auth secret, cron | probe `2026-10-13T10:22:39Z` green · **regressed 502 at `2026-10-13T11:37:41Z`** — recover host then re-probe | 2026-10-13 | cloud-agent / host |
 | SMTP | | | |
-| Stripe checkout, duplicate skip, portal, Connect | API secret readable (webhook 400 without signature). Save whsec_… + run 4242 checkout | 2026-10-13 | |
+| Stripe checkout, duplicate skip, portal, Connect | API secret readable earlier (webhook 400 without signature). Save whsec_… + run 4242 checkout after host up | 2026-10-13 | |
 | Social OAuth | | | |
 | Meilisearch counts | | | |
 | Airwallex hold and release | | | |

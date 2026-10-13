@@ -40,10 +40,28 @@ function isRawIpOrigin(origin) {
   }
 }
 
+function gatewayOutage(status, body) {
+  if ([502, 503, 504].includes(status)) {
+    return `upstream ${status} — Nginx is up but the web container is not answering. On the host: bash deploy/scripts/diagnose-502.sh then bash deploy/scripts/deploy.sh`;
+  }
+  if (/bad gateway|service unavailable|gateway time-?out/i.test(body || "")) {
+    return "gateway HTML body — recover the Compose web service before re-running Phase M auto checks";
+  }
+  return null;
+}
+
+function skipBecauseOutage(outage) {
+  return {
+    ok: false,
+    detail: `skipped — host outage: ${outage}`,
+  };
+}
+
 async function main() {
   const app = argUrl();
   const checks = [];
   const now = new Date().toISOString();
+  let outage = null;
 
   console.log("Influrios Phase M staging evidence probe\n");
   console.log(`Target: ${app}`);
@@ -69,31 +87,44 @@ async function main() {
 
   try {
     const health = await fetchText(`${app}/api/health`);
+    outage = gatewayOutage(health.status, health.body);
     let parsed = null;
-    try {
-      parsed = JSON.parse(health.body);
-    } catch {
-      parsed = null;
+    if (!outage) {
+      try {
+        parsed = JSON.parse(health.body);
+      } catch {
+        parsed = null;
+      }
     }
-    const ok = health.status === 200 && Boolean(parsed?.ok);
+    const ok = !outage && health.status === 200 && Boolean(parsed?.ok);
     const dbOk = parsed?.checks?.db?.ok;
     const authConfigured = parsed?.secrets?.authConfigured === true;
     checks.push({
       id: "health",
       label: "/api/health ok (web + db)",
       ok,
-      detail: ok
-        ? `status=${health.status}; db=${dbOk === false ? "fail" : "ok"}`
-        : `status=${health.status}; body=${health.body.slice(0, 160)}`,
+      detail: outage
+        ? outage
+        : ok
+          ? `status=${health.status}; db=${dbOk === false ? "fail" : "ok"}`
+          : `status=${health.status}; body=${health.body.slice(0, 160)}`,
     });
-    checks.push({
-      id: "auth_secret",
-      label: "Health secrets.authConfigured",
-      ok: authConfigured,
-      detail: authConfigured
-        ? "AUTH_SECRET or ADMIN_SESSION_SECRET is set on the host"
-        : "authConfigured is false. Set AUTH_SECRET on the host and redeploy. Phase M E0 is not met.",
-    });
+    if (outage) {
+      checks.push({
+        id: "auth_secret",
+        label: "Health secrets.authConfigured",
+        ...skipBecauseOutage(outage),
+      });
+    } else {
+      checks.push({
+        id: "auth_secret",
+        label: "Health secrets.authConfigured",
+        ok: authConfigured,
+        detail: authConfigured
+          ? "AUTH_SECRET or ADMIN_SESSION_SECRET is set on the host"
+          : "authConfigured is false. Set AUTH_SECRET on the host and redeploy. Phase M E0 is not met.",
+      });
+    }
   } catch (error) {
     checks.push({
       id: "health",
@@ -103,72 +134,118 @@ async function main() {
     });
   }
 
-  try {
-    const home = await fetchText(`${app}/`);
-    const okStatus = home.status === 200;
-    const hasCategories = includesAny(home.body, ["Explore Influencer Categories", 'id="categories"']);
-    const hasCollab = includesAny(home.body, ["Collaboration Matches"]);
-    const categoryCarousel = includesAny(home.body, ["w-[148px]", "w-[160px]"]);
-    const collabCarousel = includesAny(home.body, ["w-[280px]"]);
-    checks.push({
-      id: "homepage",
-      label: "Homepage loads with categories + collab sections",
-      ok: okStatus && hasCategories && hasCollab,
-      detail: `status=${home.status}; categories=${hasCategories}; collab=${hasCollab}; categoryCarousel=${categoryCarousel}; collabCarousel=${collabCarousel}`,
-    });
-  } catch (error) {
-    checks.push({
-      id: "homepage",
-      label: "Homepage loads with categories + collab sections",
-      ok: false,
-      detail: error instanceof Error ? error.message : String(error),
-    });
-  }
+  if (outage) {
+    for (const [id, label] of [
+      ["homepage", "Homepage loads with categories + collab sections"],
+      ["collab_guest", "Guest /collaboration shows Join/Sign in (not plan-upgrade as demo creator)"],
+      ["admin_login", "Admin login page reachable"],
+      ["cron_auth", "Sweep clock rejects missing CRON_SECRET (401)"],
+    ]) {
+      checks.push({ id, label, ...skipBecauseOutage(outage) });
+    }
+  } else {
+    try {
+      const home = await fetchText(`${app}/`);
+      const pageOutage = gatewayOutage(home.status, home.body);
+      const okStatus = home.status === 200;
+      const hasCategories = includesAny(home.body, ["Explore Influencer Categories", 'id="categories"']);
+      const hasCollab = includesAny(home.body, ["Collaboration Matches"]);
+      const categoryCarousel = includesAny(home.body, ["w-[148px]", "w-[160px]"]);
+      const collabCarousel = includesAny(home.body, ["w-[280px]"]);
+      checks.push({
+        id: "homepage",
+        label: "Homepage loads with categories + collab sections",
+        ok: !pageOutage && okStatus && hasCategories && hasCollab,
+        detail: pageOutage
+          ? pageOutage
+          : `status=${home.status}; categories=${hasCategories}; collab=${hasCollab}; categoryCarousel=${categoryCarousel}; collabCarousel=${collabCarousel}`,
+      });
+    } catch (error) {
+      checks.push({
+        id: "homepage",
+        label: "Homepage loads with categories + collab sections",
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
 
-  try {
-    const collab = await fetchText(`${app}/collaboration`);
-    const joinCta =
-      includesAny(collab.body, ["Join to request matches"]) ||
-      includesAny(collab.body, ["Request a Collaboration"]) ||
-      includesAny(collab.body, ["Sign in to apply"]) ||
-      includesAny(collab.body, ["Join as an Influencer"]);
-    const legacyUpgrade =
-      includesAny(collab.body, ["Upgrade from STARTER to request matches"]) ||
-      /Upgrade from[\s\S]{0,40}STARTER[\s\S]{0,40}to request matches/i.test(collab.body);
-    const legacyProposals = /\/collaboration\/records\?from=/.test(collab.body);
-    const guestOk = joinCta && !legacyUpgrade && !legacyProposals;
-    checks.push({
-      id: "collab_guest",
-      label: "Guest /collaboration shows Join/Sign in (not plan-upgrade as demo creator)",
-      ok: guestOk,
-      detail: guestOk
-        ? `join=${joinCta}`
-        : `join=${joinCta}; legacyUpgrade=${legacyUpgrade}; legacyProposals=${legacyProposals} — pull latest main and rebuild web`,
-    });
-  } catch (error) {
-    checks.push({
-      id: "collab_guest",
-      label: "Guest /collaboration shows Join/Sign in (not plan-upgrade as demo creator)",
-      ok: false,
-      detail: error instanceof Error ? error.message : String(error),
-    });
-  }
+    try {
+      const collab = await fetchText(`${app}/collaboration`);
+      const pageOutage = gatewayOutage(collab.status, collab.body);
+      const joinCta =
+        includesAny(collab.body, ["Join to request matches"]) ||
+        includesAny(collab.body, ["Request a Collaboration"]) ||
+        includesAny(collab.body, ["Sign in to apply"]) ||
+        includesAny(collab.body, ["Join as an Influencer"]);
+      const legacyUpgrade =
+        includesAny(collab.body, ["Upgrade from STARTER to request matches"]) ||
+        /Upgrade from[\s\S]{0,40}STARTER[\s\S]{0,40}to request matches/i.test(collab.body);
+      const legacyProposals = /\/collaboration\/records\?from=/.test(collab.body);
+      const guestOk = !pageOutage && joinCta && !legacyUpgrade && !legacyProposals;
+      checks.push({
+        id: "collab_guest",
+        label: "Guest /collaboration shows Join/Sign in (not plan-upgrade as demo creator)",
+        ok: guestOk,
+        detail: pageOutage
+          ? pageOutage
+          : guestOk
+            ? `join=${joinCta}`
+            : `join=${joinCta}; legacyUpgrade=${legacyUpgrade}; legacyProposals=${legacyProposals} — pull latest main and rebuild web`,
+      });
+    } catch (error) {
+      checks.push({
+        id: "collab_guest",
+        label: "Guest /collaboration shows Join/Sign in (not plan-upgrade as demo creator)",
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
 
-  try {
-    const admin = await fetchText(`${app}/admin/login`);
-    checks.push({
-      id: "admin_login",
-      label: "Admin login page reachable",
-      ok: admin.status === 200,
-      detail: `status=${admin.status}`,
-    });
-  } catch (error) {
-    checks.push({
-      id: "admin_login",
-      label: "Admin login page reachable",
-      ok: false,
-      detail: error instanceof Error ? error.message : String(error),
-    });
+    try {
+      const admin = await fetchText(`${app}/admin/login`);
+      const pageOutage = gatewayOutage(admin.status, admin.body);
+      checks.push({
+        id: "admin_login",
+        label: "Admin login page reachable",
+        ok: !pageOutage && admin.status === 200,
+        detail: pageOutage ? pageOutage : `status=${admin.status}`,
+      });
+    } catch (error) {
+      checks.push({
+        id: "admin_login",
+        label: "Admin login page reachable",
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // E1 gate: without Authorization the sweep clock must refuse writes.
+    try {
+      const cron = await fetchText(`${app}/api/cron/sweeps`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      const pageOutage = gatewayOutage(cron.status, cron.body);
+      const ok = !pageOutage && cron.status === 401;
+      checks.push({
+        id: "cron_auth",
+        label: "Sweep clock rejects missing CRON_SECRET (401)",
+        ok,
+        detail: pageOutage
+          ? pageOutage
+          : ok
+            ? "401 without bearer — route is mounted; crontab still needs a succeeded sweep job id"
+            : `status=${cron.status}; body=${cron.body.slice(0, 120)}`,
+      });
+    } catch (error) {
+      checks.push({
+        id: "cron_auth",
+        label: "Sweep clock rejects missing CRON_SECRET (401)",
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   checks.push({
