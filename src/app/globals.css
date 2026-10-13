@@ -67,6 +67,11 @@ button.ink-on-light {
   color: #111a5a;
 }
 
+a.ink-on-light-violet,
+button.ink-on-light-violet {
+  color: #5b4fe0;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
