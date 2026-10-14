@@ -1,69 +1,81 @@
+import Link from "next/link";
 import { actionOpenConnect, actionOpenConnectedAccount } from "@/app/billing/actions";
-import type { PayoutOnboardingChoice } from "@/lib/payout-readiness";
-import { countryDisplayName } from "@/lib/providers";
+import type { ReceivePaymentsAction, ReceivePaymentsView } from "@/lib/receive-payments-checklist";
 
-function maskAccountId(id: string | null | undefined) {
-  const value = (id ?? "").trim();
-  if (!value) return null;
-  if (value.length <= 10) return value;
-  return `${value.slice(0, 7)}…${value.slice(-4)}`;
+function PrimaryAction({ action }: { action: ReceivePaymentsAction }) {
+  if (action.kind === "link") {
+    return (
+      <Link href={action.href} className="btn-primary !py-2 text-sm">
+        {action.label}
+      </Link>
+    );
+  }
+  if (action.kind === "stripe") {
+    return (
+      <form action={actionOpenConnect}>
+        <button type="submit" className="btn-primary !py-2 text-sm">
+          {action.label}
+        </button>
+      </form>
+    );
+  }
+  return (
+    <form action={actionOpenConnectedAccount}>
+      <button type="submit" className="btn-primary !py-2 text-sm">
+        {action.label}
+      </button>
+    </form>
+  );
 }
 
-function railLabel(choice: PayoutOnboardingChoice | null) {
-  if (!choice) return "Unknown";
-  if (choice.rail === "stripe") return "Stripe Connect";
-  if (choice.rail === "provider") {
-    const code = (choice.collectionProviderCode ?? "").trim();
-    if (!code) return "Connected account";
-    return `${code.charAt(0).toUpperCase()}${code.slice(1)} connected account`;
+function SecondaryAction({ action }: { action: ReceivePaymentsAction }) {
+  if (action.kind === "link") {
+    return (
+      <Link href={action.href} className="text-sm font-semibold text-violet hover:underline">
+        {action.label}
+      </Link>
+    );
   }
-  const code = (choice.collectionProviderCode ?? "").trim();
-  if (code === "flutterwave" || code === "mpesa") return `Local rail (${code})`;
-  return "Not configured";
+  if (action.kind === "stripe") {
+    return (
+      <form action={actionOpenConnect}>
+        <button type="submit" className="text-sm font-semibold text-violet hover:underline">
+          {action.label}
+        </button>
+      </form>
+    );
+  }
+  return (
+    <form action={actionOpenConnectedAccount}>
+      <button type="submit" className="text-sm font-semibold text-violet hover:underline">
+        {action.label}
+      </button>
+    </form>
+  );
 }
 
 export function CreatorPayoutMethodsPanel({
-  rail,
-  hasStripeConnectAccount,
-  hasProviderAccount,
-  stripeConnectAccountId,
-  providerConnectedAccountId,
-  locationCountry,
-  identityVerified,
-  payoutReady,
+  view,
   error,
   notice,
 }: {
-  rail: PayoutOnboardingChoice | null;
-  hasStripeConnectAccount: boolean;
-  hasProviderAccount: boolean;
-  stripeConnectAccountId?: string | null;
-  providerConnectedAccountId?: string | null;
-  locationCountry?: string | null;
-  identityVerified?: boolean;
-  payoutReady: boolean;
+  view: ReceivePaymentsView;
   error?: string;
   notice?: string;
 }) {
-  const showStripe = Boolean(rail?.showStripe);
-  const showProvider = Boolean(rail?.showProvider);
-  const countryCode = rail?.countryCode ?? null;
-  const countryLabel = countryCode
-    ? `${countryDisplayName(countryCode, locationCountry)} (${countryCode})`
-    : locationCountry?.trim() || "Not set on your Influencer Card";
-  const accountId = showStripe
-    ? maskAccountId(stripeConnectAccountId)
-    : showProvider
-      ? maskAccountId(providerConnectedAccountId)
-      : null;
+  const tone =
+    view.status === "ready"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+      : view.status === "unavailable"
+        ? "border-amber-200 bg-amber-50 text-amber-950"
+        : "border-[#E6ECF7] bg-[#F7F9FD] text-indigo";
 
   return (
     <section id="payouts" className="space-y-4 rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm">
       <div>
-        <h2 className="font-display text-base font-bold">Payout methods</h2>
+        <h2 className="font-display text-base font-bold">Receive payments</h2>
         <p className="mt-1 text-sm text-muted">
-          Collaboration milestone releases use the payout rail for your country corridor — not your Influrios plan
-          subscription.
+          Collaboration milestone releases are separate from your Influrios plan subscription.
         </p>
       </div>
 
@@ -76,66 +88,44 @@ export function CreatorPayoutMethodsPanel({
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">{notice}</p>
       ) : null}
 
-      <dl className="grid gap-3 text-sm sm:grid-cols-2">
-        <div className="rounded-2xl bg-[#F7F9FD] px-3 py-2.5">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">Country corridor</dt>
-          <dd className="mt-0.5 font-semibold">{countryLabel}</dd>
-        </div>
-        <div className="rounded-2xl bg-[#F7F9FD] px-3 py-2.5">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">Collection rail</dt>
-          <dd className="mt-0.5 font-semibold">{railLabel(rail)}</dd>
-        </div>
-        <div className="rounded-2xl bg-[#F7F9FD] px-3 py-2.5">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">Payout account</dt>
-          <dd className="mt-0.5 font-semibold">
-            {accountId ? (
-              <>
-                Saved <span className="font-mono text-xs font-medium text-muted">{accountId}</span>
-              </>
-            ) : (
-              "Not set up yet"
-            )}
-          </dd>
-        </div>
-        <div className="rounded-2xl bg-[#F7F9FD] px-3 py-2.5">
-          <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">Status</dt>
-          <dd className="mt-0.5 font-semibold">
-            {payoutReady ? "Ready to receive" : identityVerified === false ? "Identity or method still needed" : "Setup needed"}
-          </dd>
-        </div>
-      </dl>
+      <div className={`rounded-2xl border px-3 py-2.5 ${tone}`}>
+        <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">Status</p>
+        <p className="mt-0.5 text-sm font-bold">{view.statusLabel}</p>
+        <p className="mt-1 text-sm opacity-90">{view.summary}</p>
+      </div>
 
-      {showStripe ? (
-        <form action={actionOpenConnect}>
-          <p className="text-sm text-muted">
-            {hasStripeConnectAccount
-              ? "Your Stripe Connect account is on file. Opening it updates onboarding — it does not send a payout."
-              : "Create a Stripe Connect account for this corridor. This does not send a payout."}
-          </p>
-          <button type="submit" className="btn-primary mt-3 !py-2 text-sm">
-            {hasStripeConnectAccount ? "Open Stripe Connect" : "Set up Stripe Connect"}
-          </button>
-        </form>
-      ) : null}
+      <ul className="space-y-3">
+        {view.steps.map((step) => (
+          <li key={step.id} className="flex items-start gap-3 rounded-2xl border border-[#F0F3FA] px-3 py-3">
+            <span
+              className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                step.done
+                  ? "bg-emerald-100 text-emerald-800"
+                  : step.pending
+                    ? "bg-amber-100 text-amber-900"
+                    : "bg-[#EEF1F8] text-[#6B7289]"
+              }`}
+              aria-hidden
+            >
+              {step.done ? "✓" : step.pending ? "…" : "·"}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">{step.label}</p>
+              <p className="mt-0.5 text-sm text-muted">{step.detail}</p>
+              {step.done && step.action ? (
+                <div className="mt-2">
+                  <SecondaryAction action={step.action} />
+                </div>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
 
-      {showProvider ? (
-        <form action={actionOpenConnectedAccount}>
-          <p className="text-sm text-muted">
-            {hasProviderAccount
-              ? "Your connected account is on file. Confirming it does not send a payout."
-              : "Create the connected account that receives milestone splits. This does not send a payout."}
-          </p>
-          <button type="submit" className="btn-primary mt-3 !py-2 text-sm">
-            {hasProviderAccount ? "Confirm connected account" : "Set up connected account"}
-          </button>
-        </form>
-      ) : null}
-
-      {!showStripe && !showProvider ? (
-        <p className="text-sm text-muted">
-          {rail?.emptyHint ??
-            "Payout onboarding opens here once your country corridor’s collection route is ready."}
-        </p>
+      {view.primaryAction ? (
+        <div className="pt-1">
+          <PrimaryAction action={view.primaryAction} />
+        </div>
       ) : null}
     </section>
   );
