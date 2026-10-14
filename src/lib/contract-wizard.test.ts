@@ -12,6 +12,7 @@ import {
   feeRuleChangeAffectsPlan,
   isFinancialPlanLocked,
   lockFinancialPlan,
+  marketplaceProviderGateMessage,
   nextContractStep,
   parseMilestoneDraftsFromForm,
   previousContractStep,
@@ -143,6 +144,28 @@ describe("pre-contract ROUTE_READY gates", () => {
     });
     assert.equal(ready.ok, true);
     assert.equal(ready.status, "ROUTE_READY");
+
+    const connectedAccount = evaluatePreContractGates({
+      businessName: "Acme",
+      creatorSlug: "ada",
+      identityVerified: true,
+      creatorCountryKnown: true,
+      corridorActive: true,
+      paymentRouteReady: false,
+      paymentRouteBlocker: "Influencer has not connected their Airwallex payout account.",
+      jurisdictionProtectedPayments: true,
+      marketplaceProviderReady: true,
+    });
+    assert.equal(connectedAccount.ok, false);
+    assert.match(connectedAccount.blockers.join(" "), /Airwallex payout account/i);
+    assert.equal(connectedAccount.blockers.some((row) => /No ready payment route/i.test(row)), false);
+
+    const marketplace = marketplaceProviderGateMessage(
+      { code: "primary", name: "Primary", ready: false, enabled: true, webhook: "missing" },
+      "primary",
+    );
+    assert.equal(marketplace.ready, false);
+    assert.match(marketplace.blocker ?? "", /webhook secret/i);
   });
 });
 

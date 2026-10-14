@@ -8,6 +8,7 @@ import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
 import { countryCodeFromLocation } from "@/lib/contract-wizard";
 import { prisma } from "@/lib/db";
+import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
 import { kycTypeByCode } from "@/lib/kyc-types";
 import { formatMoney } from "@/lib/money";
 import { resolvePayoutOnboardingRail } from "@/lib/payout-readiness";
@@ -132,11 +133,19 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
       }).catch(() => null)
     : null;
 
+  const identityVerified = identity?.creator
+    ? await resolveCreatorIdentityVerified({
+        creatorId: identity.creator.id,
+        creatorSlug: identity.creator.slug,
+        identityVerified: identity.creator.identityVerified,
+      }).catch(() => identity.creator.identityVerified === "VERIFIED")
+    : false;
+
   const receiveView = identity?.creator
     ? buildReceivePaymentsView({
         rail: payoutRail,
         kycType: kycTypeByCode(corridor?.kycModel)?.code ?? null,
-        identityVerified: identity.creator.identityVerified === "VERIFIED",
+        identityVerified,
         kycSubmission: asKycSubmissionState(kycSubmission?.status),
         hasStripeConnectAccount: hasConnectAccount,
         hasProviderAccount,

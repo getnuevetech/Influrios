@@ -362,6 +362,39 @@ export async function completeGatewayKyc(input: {
   return submission;
 }
 
+/**
+ * Identity for payouts / contract gates: Creator.identityVerified, with a heal from a
+ * verified KYC submission when the account flag was never written.
+ */
+export async function resolveCreatorIdentityVerified(input: {
+  creatorId?: string | null;
+  creatorSlug?: string | null;
+  identityVerified?: string | null;
+}): Promise<boolean> {
+  if (input.identityVerified === "VERIFIED") return true;
+  const slug = (input.creatorSlug ?? "").trim();
+  const submission = input.creatorId
+    ? await prisma.creatorKycSubmission.findFirst({
+        where: {
+          OR: [
+            { creatorId: input.creatorId },
+            ...(slug ? [{ creatorSlug: slug }] : []),
+          ],
+        },
+        orderBy: { updatedAt: "desc" },
+      })
+    : slug
+      ? await prisma.creatorKycSubmission.findUnique({ where: { creatorSlug: slug } })
+      : null;
+  if (!submission || submission.status !== "verified") return false;
+  await applyIdentityDecision({
+    creatorId: input.creatorId ?? submission.creatorId,
+    creatorSlug: submission.creatorSlug,
+    decision: "verified",
+  });
+  return true;
+}
+
 /** Admin can mark any creator's account KYC-complete without a pending submission row. */
 export async function adminSetCreatorKyc(input: {
   creatorSlug: string;

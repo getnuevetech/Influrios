@@ -2,8 +2,9 @@ import { countryCodeFromLocation, evaluatePreContractGates } from "@/lib/contrac
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator } from "@/lib/directory";
 import { shareLines } from "@/lib/fx-share";
+import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
-import { collectionPayoutReady, paymentRoutes } from "@/lib/providers";
+import { collectionPayoutBlocker, collectionPayoutReady, paymentRoutes } from "@/lib/providers";
 
 export type MemberDecision = "invited" | "accepted" | "declined";
 export type TeamMatchType = "CREATOR_TEAM" | "BUSINESS_CREATOR_TEAM";
@@ -345,7 +346,13 @@ export async function teamMemberReadiness(input: {
   const creator = await getDirectoryCreator(input.creatorSlug);
   if (!creator) return { ready: false, blockers: [`${input.creatorSlug} is not in the directory.`] };
   const dbCreator = await prisma.creator.findUnique({ where: { slug: input.creatorSlug } }).catch(() => null);
-  const identityVerified = dbCreator?.identityVerified === "VERIFIED";
+  const identityVerified = dbCreator
+    ? await resolveCreatorIdentityVerified({
+        creatorId: dbCreator.id,
+        creatorSlug: dbCreator.slug,
+        identityVerified: dbCreator.identityVerified,
+      }).catch(() => dbCreator.identityVerified === "VERIFIED")
+    : false;
   const payout = dbCreator
     ? await computePayoutReadiness({
         creatorId: dbCreator.id,
@@ -364,18 +371,21 @@ export async function teamMemberReadiness(input: {
         })
         .catch(() => null)
     : null;
+  const routeGateInput = {
+    providerCode: route?.providerCode,
+    providerName: route?.providerName,
+    routeReady: Boolean(route?.ready),
+    stripeConnectAccountId: profile?.stripeConnectAccountId,
+    providerConnectedAccountId: profile?.providerConnectedAccountId,
+  };
   const gates = evaluatePreContractGates({
     businessName: input.businessName,
     creatorSlug: input.creatorSlug,
     identityVerified,
     creatorCountryKnown: Boolean(country),
     corridorActive: payout ? payout.corridorActive : Boolean(country),
-    paymentRouteReady: collectionPayoutReady({
-      providerCode: route?.providerCode,
-      routeReady: Boolean(route?.ready),
-      stripeConnectAccountId: profile?.stripeConnectAccountId,
-      providerConnectedAccountId: profile?.providerConnectedAccountId,
-    }),
+    paymentRouteReady: collectionPayoutReady(routeGateInput),
+    paymentRouteBlocker: collectionPayoutBlocker(routeGateInput),
     jurisdictionProtectedPayments: input.jurisdictionProtectedPayments,
     marketplaceProviderReady: input.marketplaceProviderReady,
   });

@@ -20,12 +20,14 @@ import {
   customMilestonesGate,
   evaluatePreContractGates,
   isContractWizardStep,
+  marketplaceProviderGateMessage,
   type ContractWizardStep,
   type MilestoneDraft,
 } from "@/lib/contract-wizard";
 import { storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
+import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
 import {
   allowedServiceLevels,
   capabilitiesFromJurisdictionRow,
@@ -42,7 +44,13 @@ import {
   PAYOUT_METHODS,
   type PayoutMethod,
 } from "@/lib/payout-readiness";
-import { collectionPayoutReady, DEFAULT_PAYMENT_ROUTES, paymentRoutes } from "@/lib/providers";
+import {
+  collectionPayoutBlocker,
+  collectionPayoutReady,
+  DEFAULT_PAYMENT_ROUTES,
+  paymentRoutes,
+  providerNeedsConnectedAccount,
+} from "@/lib/providers";
 import {
   creatorAmountsForMilestone,
   teamFundingReady,
@@ -231,7 +239,13 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const dbCreator = creatorSlug
     ? await prisma.creator.findUnique({ where: { slug: creatorSlug } }).catch(() => null)
     : null;
-  const identityVerified = dbCreator?.identityVerified === "VERIFIED";
+  const identityVerified = dbCreator
+    ? await resolveCreatorIdentityVerified({
+        creatorId: dbCreator.id,
+        creatorSlug: dbCreator.slug,
+        identityVerified: dbCreator.identityVerified,
+      }).catch(() => dbCreator.identityVerified === "VERIFIED")
+    : false;
   const payoutReadiness = dbCreator
     ? await computePayoutReadiness({
         creatorId: dbCreator.id,
@@ -241,8 +255,11 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     : null;
 
   const jurisdiction = config.jurisdictions.find((row) => row.code === jurisdictionCode);
+  const assignedProviderCode = jurisdiction?.providerCode || "primary";
   const provider =
-    config.providers.find((row) => row.code === (jurisdiction?.providerCode || "primary")) ?? config.provider;
+    config.providers.find((row) => row.code === assignedProviderCode) ??
+    (assignedProviderCode === "primary" ? config.provider : null);
+  const marketplaceGate = marketplaceProviderGateMessage(provider, assignedProviderCode);
   const jurisdictionCaps = jurisdiction ? capabilitiesFromJurisdictionRow(jurisdiction) : null;
   const availableServiceLevels = jurisdictionCaps
     ? (allowedServiceLevels(jurisdictionCaps, SERVICE_LEVELS) as typeof SERVICE_LEVELS[number][])
@@ -258,20 +275,30 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         })
         .catch(() => null)
     : null;
+  const routeGateInput = {
+    providerCode: route?.providerCode,
+    providerName: route?.providerName,
+    routeReady: Boolean(route?.ready),
+    stripeConnectAccountId: payoutProfile?.stripeConnectAccountId,
+    providerConnectedAccountId: payoutProfile?.providerConnectedAccountId,
+  };
+  const paymentRouteBlocker = collectionPayoutBlocker(routeGateInput);
+  const influencerAccountConnected = providerNeedsConnectedAccount(route?.providerCode)
+    ? Boolean(payoutProfile?.providerConnectedAccountId?.trim())
+    : (route?.providerCode ?? "").toLowerCase() === "stripe"
+      ? Boolean(payoutProfile?.stripeConnectAccountId?.trim())
+      : null;
   let gates = evaluatePreContractGates({
     businessName: ws.name,
     creatorSlug: creatorSlug || "",
     identityVerified: creatorSlug ? identityVerified : false,
     creatorCountryKnown: Boolean(creatorCountry),
     corridorActive: payoutReadiness ? payoutReadiness.corridorActive : Boolean(creatorCountry),
-    paymentRouteReady: collectionPayoutReady({
-      providerCode: route?.providerCode,
-      routeReady: Boolean(route?.ready),
-      stripeConnectAccountId: payoutProfile?.stripeConnectAccountId,
-      providerConnectedAccountId: payoutProfile?.providerConnectedAccountId,
-    }),
+    paymentRouteReady: collectionPayoutReady(routeGateInput),
+    paymentRouteBlocker,
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
-    marketplaceProviderReady: Boolean(provider?.ready),
+    marketplaceProviderReady: marketplaceGate.ready,
+    marketplaceProviderBlocker: marketplaceGate.ready ? null : marketplaceGate.blocker,
   });
 
   const teamId = (params.team ?? "").trim();
@@ -292,7 +319,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             creatorSlug: party.creatorSlug,
             businessName: ws.name,
             jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
-            marketplaceProviderReady: Boolean(provider?.ready),
+            marketplaceProviderReady: marketplaceGate.ready,
           }),
         ),
       )
@@ -693,13 +720,28 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               </li>
               <li>
                 Payment route:{" "}
-                {route?.ready ? `ready (${route.providerName})` : route ? route.reason.replace(/_/g, " ") : "no route"}
+                {route?.ready
+                  ? `ready (${route.providerName})`
+                  : route
+                    ? route.reason.replace(/_/g, " ")
+                    : "no route"}
               </li>
+              {influencerAccountConnected !== null ? (
+                <li>
+                  Influencer payout account:{" "}
+                  {influencerAccountConnected
+                    ? `connected (${route?.providerName ?? route?.providerCode})`
+                    : `not connected (${route?.providerName ?? route?.providerCode} required)`}
+                </li>
+              ) : null}
               <li>
                 Payout method:{" "}
                 {payoutReadiness?.primaryMethod
                   ? `${PAYOUT_METHOD_LABELS[payoutReadiness.primaryMethod as PayoutMethod] ?? payoutReadiness.primaryMethod} (${payoutReadiness.primaryStatus})`
                   : "—"}
+                {payoutReadiness && !payoutReadiness.hasVerifiedMethod
+                  ? " — needed for Global Payout Ready, not for funding"
+                  : ""}
               </li>
               <li>Jurisdiction protected payments: {jurisdiction?.protectedPaymentsEnabled ? "on" : "off"}</li>
               <li>
@@ -708,7 +750,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 {jurisdictionCaps?.managedIntroductionEnabled ? " · managed intro" : ""}
                 {jurisdictionCaps?.managedNegotiationEnabled ? " · managed campaign" : ""}
               </li>
-              <li>Marketplace provider: {provider?.ready ? "ready" : "not ready"}</li>
+              <li>Marketplace provider: {marketplaceGate.detail}</li>
             </ul>
             {!gates.ok ? (
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm font-semibold text-amber-900">
