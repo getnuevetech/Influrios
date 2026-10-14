@@ -108,12 +108,12 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 
 | Evidence | Result |
 |----------|--------|
-| Date / operator | |
-| Stripe session id (`cs_test_…`) | |
-| Local `CheckoutAttempt` id | |
-| Plan after first delivery | |
-| Duplicate delivery skipped | ☐ yes ☐ no |
-| Notes | |
+| Date / operator | 2026-10-13 · host + cloud-agent (script `2026-10-14T01:05:23Z`) |
+| Stripe session id (`cs_test_…`) | `cs_test_a1FGJzvUkZPLgdKGXAqcZtqCuocAW00MJB8H3V8YafY21uzlTtl6VZ4GaA` |
+| Local `CheckoutAttempt` id | `cs_mv6jqy02_g3n8vb` |
+| Plan after first delivery | `creator_plus` · SubscriptionState `cmv6jrmgh0008rg01pc3qajh8` |
+| Duplicate delivery skipped | ☐ yes ☐ no (**resend still needed**) |
+| Notes | Webhook row `cmv6jrmg50006rg01egkiiaip` · event `checkout:cs_mv6jqy02_g3n8vb` |
 
 `demo_checkout` and `legacy_demo_payments` are removed. Checkout stays closed until a Stripe sandbox key is saved. Leave `customer_portal` and `stripe_connect` off unless those paths are the ones under test.
 
@@ -228,7 +228,7 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 |-------|--------|-----------|
 | **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: finish **E4** |
 | **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: finish **E4** |
-| **E4 Stripe** | Webhook secret ready — **still need** `4242` checkout + duplicate `checkout.session.completed` skip · `npm run staging:e4-stripe-evidence` | `cs_test_…`, `CheckoutAttempt` id, plan tier, duplicate skipped |
+| **E4 Stripe** | Partial: `4242`/`creator_plus` applied (`cs_mv6jqy02_g3n8vb`) — **still need** duplicate `checkout.session.completed` resend | duplicate skipped |
 
 **Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 complete. **`CRON_SECRET` rotated** (operator confirmed).
 
@@ -272,37 +272,35 @@ cd /var/www/influrios
 npm run staging:e2-smtp-evidence
 ```
 
-### E4 progress (Stripe sandbox) — **in progress**
+### E4 progress (Stripe sandbox) — **in progress** (duplicate resend still open)
 
-Webhook path already green (`POST /api/billing/webhook` without signature → `Missing Stripe-Signature header.`). Remaining: member **4242** checkout + plan apply + duplicate event skip.
+Host script `2026-10-14T01:05:23Z`. Checkout + plan apply already on host; duplicate event skip still needed.
 
 | Check | Result |
 |-------|--------|
-| API secret decrypts | ☑ earlier (no longer 501 unreadable) |
+| API secret decrypts | ☑ |
 | Webhook secret saved | ☑ `POST /api/billing/webhook` without signature → `Missing Stripe-Signature header.` |
-| Sandbox checkout `4242` + plan apply | ☐ |
-| Duplicate `checkout.session.completed` skipped | ☐ |
+| Sandbox checkout `4242` + plan apply | ☑ Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzvUkZPLgdKGXAqcZtqCuocAW00MJB8H3V8YafY21uzlTtl6VZ4GaA` · sku `creator_plus` · user `cmv6f0eb40061od01b8jvjlpk` · `2026-10-13T10:37:42Z` · webhook `checkout:cs_mv6jqy02_g3n8vb` → `active` · SubscriptionState `cmv6jrmgh0008rg01pc3qajh8` |
+| Duplicate `checkout.session.completed` skipped | ☐ **still needed** |
 | Portal / Connect | ☐ optional this slice (Connect onboarding fixed in #262) |
 
 ```bash
-# After 4242 checkout (+ optional resend of the same event):
 cd /var/www/influrios
 npm run staging:e4-stripe-evidence
 ```
 
-Operator path:
+Remaining operator path (duplicate skip only):
 
-1. Confirm Stripe gateway has **sandbox** `sk_test_` / `rkcs_test_` + **Webhook secret** `whsec_…`, and Dashboard endpoint `https://influrios.com/api/billing/webhook` listens for `checkout.session.completed`.
-2. If a sandbox **4242** checkout already succeeded earlier on this host, skip a new payment — run the evidence script to print existing `CheckoutAttempt` / `ProcessedWebhook` rows. Otherwise: member `/billing` → Checkout → test card **`4242 4242 4242 4242`**.
-3. Confirm plan tier applied. Note `cs_test_…` and local `CheckoutAttempt` id.
-4. In Stripe Dashboard (or CLI), **resend** the same `checkout.session.completed` event. Expect `{"received":true,"duplicate":true}` and **one** `ProcessedWebhook` row for that `eventId` (plan must not double-upgrade).
-5. `npm run staging:e4-stripe-evidence` and paste the tables into this section / the sign-off Stripe cell.
+1. Stripe Dashboard → Developers → Events (or CLI): find `checkout.session.completed` for session `cs_test_a1FGJzvUkZPLgdKGXAqcZtqCuocAW00MJB8H3V8YafY21uzlTtl6VZ4GaA` / local id `cs_mv6jqy02_g3n8vb`.
+2. **Resend** that event to `https://influrios.com/api/billing/webhook`.
+3. Expect response `{"received":true,"duplicate":true}` (or equivalent). Plan stays `creator_plus`; still **one** `ProcessedWebhook` row for event id `checkout:cs_mv6jqy02_g3n8vb`.
+4. Paste the resend response (and optional re-run of `npm run staging:e4-stripe-evidence`) here.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
 | SMTP | `mail_test`=`cmv6wje8100a3o6018frdtn0r` (failed→Admin Retry→`250 … gsmtp`) · `claim_verification_email`=`cmv6evovt005jod0130bnxspo` · prior `cmv6w73c40084o601nhpaegey` | 2026-10-13 | host + cloud-agent |
-| Stripe checkout, duplicate skip, portal, Connect | whsec present (`Missing Stripe-Signature header`). Run 4242 checkout + duplicate skip | 2026-10-13 | |
+| Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus` active · webhook `checkout:cs_mv6jqy02_g3n8vb`. **Duplicate resend still open** | 2026-10-13 | host + cloud-agent |
 | Social OAuth | | | |
 | Meilisearch counts | | | |
 | Airwallex hold and release | | | |
