@@ -312,20 +312,28 @@ export async function ensureOwnedBusinessWorkspace(
 /** Update the company name / industry on the owned workspace + business profile. */
 export async function updateOwnedBusinessProfile(
   userId: string,
-  input: { name?: string; industry?: string },
+  input: { name?: string; industry?: string; geography?: string | null },
 ) {
   const ws = await ensureOwnedBusinessWorkspace(userId);
   const name = (input.name ?? ws.name).trim().slice(0, 120);
   const industry = (input.industry ?? ws.industry).trim().slice(0, 120);
   if (!name) throw new Error("Company name is required.");
+  const geography =
+    input.geography === undefined
+      ? undefined
+      : (input.geography ?? "").trim().slice(0, 200) || null;
   await prisma.businessWorkspace.update({
     where: { id: ws.businessId },
     data: { name, industry },
   });
   await prisma.businessProfile.upsert({
     where: { userId },
-    create: { userId, name, industry: industry || null },
-    update: { name, industry: industry || null },
+    create: { userId, name, industry: industry || null, geography: geography ?? null },
+    update: {
+      name,
+      industry: industry || null,
+      ...(geography !== undefined ? { geography } : {}),
+    },
   });
   return readWorkspace(ws.businessId);
 }

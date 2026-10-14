@@ -1,18 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  IconArrowRight,
-  IconBuilding,
-  IconShieldPay,
-  IconUsers,
-} from "@/components/icons";
+import { IconArrowRight, IconShieldPay, IconUsers } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
-import { getCreatorSessionDraft } from "@/lib/claim";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { leadLabel, leadTransitions, parseLocationParts } from "@/lib/business";
 import { loadBusinessHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
-import { BUSINESS_PLAN_PRICES, isBusinessPlanCode } from "@/lib/business-entitlements";
 import { listCatalogOptions } from "@/lib/catalog-options";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 import { hasCurrentLegalRecord } from "@/lib/legal";
@@ -61,20 +54,6 @@ type Props = {
   }>;
 };
 
-const SIDE_LINKS = [
-  { href: "/collaboration/business", label: "Business Hub" },
-  { href: "/collaboration/business#suggestions", label: "Influencer Suggestions" },
-  { href: "/collaboration/business#requests", label: "My Requests" },
-  { href: "/collaboration/business#applicants", label: "Applicants & Inquiries" },
-  { href: "/collaboration/business#shortlist", label: "Shortlist" },
-  { href: "/collaboration/business#spend", label: "Spend & Fees" },
-  { href: "/collaboration/contract", label: "Contract Wizard" },
-  { href: "/payments", label: "Protected Payments" },
-  { href: "/business/intelligence", label: "Intelligence" },
-  { href: "/discover", label: "Find Influencers" },
-  { href: "/account", label: "Settings" },
-] as const;
-
 export default async function BusinessCollaborationHubPage({ searchParams }: Props) {
   if (!(await collabOsV1Enabled().catch(() => true))) {
     redirect("/collaboration/propose?notice=collab_os_off");
@@ -85,7 +64,6 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
     redirect(`/login?next=${encodeURIComponent("/collaboration/business")}&gate=business`);
   }
 
-  const draft = await getCreatorSessionDraft().catch(() => null);
   let hub;
   try {
   hub = await loadBusinessHub({ intentBriefId: params.intent, userId: account.id });
@@ -128,30 +106,22 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet">Business Collaboration Hub</p>
             <h1 className="mt-1 font-display text-3xl font-bold text-indigo sm:text-4xl">Campaigns & Collaborations</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted">
-              Post requests, get influencer suggestions, manage applicants, and track funded spend — without creator-side chrome.
+              Post requests, review suggestions, manage applicants, and track funded spend for{" "}
+              <span className="font-semibold text-indigo">{hub.workspace.name}</span>.
             </p>
-            {draft?.slug ? (
-              <Link href="/collaboration/hub" className="mt-2 inline-flex text-xs font-bold text-violet hover:underline">
-                Switch to Influencer Hub →
-              </Link>
-            ) : (
-              <Link href="/collaboration?landing=1" className="mt-2 inline-flex text-xs font-bold text-violet hover:underline">
-                View public collaboration landing →
-              </Link>
-            )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/collaboration/business?intent=new#suggestions" className="btn-primary !py-2 text-sm">
+            <Link href="/collaboration/business?intent=new" className="btn-primary !py-2 text-sm">
               Create request <IconArrowRight size={14} />
             </Link>
-            <a href="#drafts" className="btn-secondary !py-2 text-sm">
+            <Link href="/business/campaigns" className="btn-secondary !py-2 text-sm">
               Campaigns & drafts
-            </a>
+            </Link>
             <Link href="/collaboration/team" className="btn-secondary !py-2 text-sm">
               Team proposal
             </Link>
-            <Link href="/collaboration/contract" className="btn-secondary !py-2 text-sm">
-              Start Contract
+            <Link href="/payments" className="btn-secondary !py-2 text-sm">
+              Protected payments
             </Link>
           </div>
           <p className="mt-3 max-w-xl text-[11px] text-muted">
@@ -161,43 +131,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
         </div>
       </section>
 
-      <div className="mx-auto grid w-full max-w-[90rem] gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-10">
-        <aside className="space-y-4">
-          <div className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EAE4FF] text-violet">
-                <IconBuilding size={22} />
-              </span>
-              <div className="min-w-0">
-                <p className="font-display text-lg font-bold text-indigo">{hub.workspace.name}</p>
-                <p className="text-xs text-muted">{hub.workspace.industry}</p>
-                <p className="mt-1 text-[11px] font-semibold text-violet">
-                  {isBusinessPlanCode(hub.workspace.plan) ? BUSINESS_PLAN_PRICES[hub.workspace.plan].label : hub.workspace.plan} plan
-                </p>
-              </div>
-            </div>
-            <Link href="/business" className="btn-secondary mt-4 w-full !py-2 text-center text-xs">
-              Marketing page
-            </Link>
-          </div>
-          <nav className="rounded-2xl border border-[#E4E9F5] bg-white p-2 shadow-sm">
-            {SIDE_LINKS.map((link) => {
-              const active = link.href === "/collaboration/business";
-              return (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className={`block rounded-xl px-3 py-2 text-sm font-semibold ${
-                    active ? "bg-[#EAE4FF] text-violet" : "text-indigo hover:bg-[#F4F7FF]"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
-
+      <div className="mx-auto w-full max-w-[90rem] space-y-6 px-4 py-8 sm:px-6 lg:px-10">
         <div className="min-w-0 space-y-6">
           {params.error ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</p>
@@ -927,25 +861,6 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             <p className="mt-3 text-xs text-muted">
               {hub.spend.dealCount} deal{hub.spend.dealCount === 1 ? "" : "s"} matched to this business name in the ledger.
             </p>
-          </section>
-
-          <section id="pricing" className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-bold text-indigo">Business plan</h2>
-                <p className="mt-1 text-sm text-indigo">
-                  Current plan:{" "}
-                  <span className="font-bold">
-                    {isBusinessPlanCode(hub.workspace.plan)
-                      ? BUSINESS_PLAN_PRICES[hub.workspace.plan].label
-                      : hub.workspace.plan}
-                  </span>
-                </p>
-              </div>
-              <Link href="/business/billing" className="btn-primary !py-2 text-sm">
-                Manage plan <IconArrowRight size={14} />
-              </Link>
-            </div>
           </section>
 
           <section className="overflow-hidden rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
