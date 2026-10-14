@@ -51,8 +51,8 @@ import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { feeTypeFromFundingSnapshot, type FeeTypeAmount } from "@/lib/ledger";
 import { AdminCollapse } from "@/components/admin-collapse";
 import {
+  MARKETPLACE_PROVIDER_CATALOG,
   marketplaceProviderCatalogLabel,
-  marketplaceProvidersAvailableToAdd,
 } from "@/app/admin/marketplace/provider-catalog";
 
 export const dynamic = "force-dynamic";
@@ -109,7 +109,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   );
   const marketplaceProviders = config.providers.filter((row) => row.code !== "demo");
   const demoProvider = config.providers.find((row) => row.code === "demo") ?? null;
-  const providersAvailableToAdd = marketplaceProvidersAvailableToAdd(marketplaceProviders.map((row) => row.code));
+  const providersByCode = new Map(marketplaceProviders.map((row) => [row.code, row]));
 
   return (
     <div className="space-y-6">
@@ -146,152 +146,116 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           <h2 className="font-display text-lg font-bold text-indigo">Marketplace provider</h2>
           <p className="mt-1 max-w-3xl text-sm text-muted">
             This is the ledger webhook that confirms a collaboration prefund — not Payment gateways credentials.
-            Pick a provider from the list, enable it, and paste the signing secret from that provider’s webhook
-            settings. Jurisdictions then assign one of these providers. Ready when status is Enabled and a webhook
-            secret is saved. Default ({marketplaceProviderCatalogLabel(config.provider.code, config.provider.name)}):{" "}
+            Choose which provider to configure, set status to Enabled, and paste that provider’s webhook signing
+            secret. Then assign the same provider on each jurisdiction. Default (
+            {marketplaceProviderCatalogLabel(config.provider.code, config.provider.name)}):{" "}
             {config.provider.ready ? "ready" : "not ready"}.
           </p>
         </div>
 
-        {marketplaceProviders.map((row) => {
-          const label = marketplaceProviderCatalogLabel(row.code, row.name);
-          return (
-            <AdminCollapse
-              key={row.code}
-              title={label}
-              subtitle={`${row.ready ? "Ready" : "Not ready"} · webhook ${row.webhook}${row.code === config.provider.code ? " · default" : ""}`}
-              defaultOpen={row.code === config.provider.code && !row.ready}
-            >
-              {canManage ? (
-                <form action={actionSaveMarketplaceProvider} className="grid gap-3 sm:grid-cols-2">
-                  <input type="hidden" name="code" value={row.code} />
-                  <input type="hidden" name="name" value={label} />
-                  <label className="text-xs font-semibold text-muted">
-                    Provider
-                    <select
-                      disabled
-                      defaultValue={row.code}
-                      className="mt-1 w-full rounded-lg border border-border bg-[#F7FAFF] px-3 py-2 text-sm text-indigo"
-                    >
-                      <option value={row.code}>{label}</option>
-                    </select>
-                  </label>
-                  <label className="text-xs font-semibold text-muted">
-                    Status
-                    <select
-                      name="enabled"
-                      defaultValue={row.enabled ? "1" : "0"}
-                      className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-                    >
-                      <option value="1">Enabled</option>
-                      <option value="0">Disabled</option>
-                    </select>
-                  </label>
-                  <label className="text-xs font-semibold text-muted sm:col-span-2">
-                    Webhook signing secret
-                    <input
-                      name="webhook"
-                      type="password"
-                      autoComplete="off"
-                      placeholder={row.webhook === "saved" ? "Saved — leave blank to keep" : "Paste secret from the provider webhook settings"}
-                      className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-                    />
-                    <span className="mt-1 block text-[11px] font-normal text-muted">
-                      From the provider dashboard for <code className="text-indigo">/api/marketplace/webhook</code>
-                      {" "}(for example Stripe <code className="text-indigo">whsec_…</code>, or the Airwallex webhook
-                      secret). Not the API key from Payment gateways.
-                    </span>
-                  </label>
-                  <label className="text-xs font-semibold text-muted">
-                    Clear saved webhook secret?
-                    <select
-                      name="clearWebhook"
-                      defaultValue="0"
-                      className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-                    >
-                      <option value="0">Keep current secret</option>
-                      <option value="1">Clear saved secret</option>
-                    </select>
-                  </label>
-                  <div className="flex items-end">
-                    <button type="submit" className="btn-primary !py-2 text-sm">
-                      Save {label}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <p className="text-sm text-muted">
-                  {label} · {row.enabled ? "enabled" : "disabled"} · webhook {row.webhook}
-                </p>
-              )}
-            </AdminCollapse>
-          );
-        })}
-
-        {demoProvider ? (
-          <AdminCollapse
-            title="Demo (cannot confirm a prefund)"
-            subtitle={`${demoProvider.ready ? "Ready" : "Not ready"} · webhook ${demoProvider.webhook}`}
+        {canManage ? (
+          <form
+            action={actionSaveMarketplaceProvider}
+            className="grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4 sm:grid-cols-2"
           >
-            <p className="text-sm text-muted">
-              Demo is kept for local testing only. It cannot confirm a real collaboration hold even when a webhook
-              secret is saved. Use Primary marketplace or Airwallex / Stripe / Flutterwave / M-Pesa instead.
-            </p>
-          </AdminCollapse>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Provider
+              <select
+                name="code"
+                required
+                defaultValue={config.provider.ready ? "" : "primary"}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              >
+                <option value="" disabled>
+                  Choose a provider…
+                </option>
+                {MARKETPLACE_PROVIDER_CATALOG.map((row) => {
+                  const configured = providersByCode.get(row.code);
+                  const status = configured
+                    ? configured.ready
+                      ? "ready"
+                      : configured.webhook === "saved"
+                        ? "webhook saved · not enabled"
+                        : "not configured yet"
+                    : "not configured yet";
+                  return (
+                    <option key={row.code} value={row.code}>
+                      {row.name} — {row.detail} ({status})
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Status
+              <select
+                name="enabled"
+                defaultValue="1"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              >
+                <option value="1">Enabled</option>
+                <option value="0">Disabled</option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Clear saved webhook secret?
+              <select
+                name="clearWebhook"
+                defaultValue="0"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              >
+                <option value="0">Keep current secret</option>
+                <option value="1">Clear saved secret</option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Webhook signing secret
+              <input
+                name="webhook"
+                type="password"
+                autoComplete="off"
+                placeholder="Paste secret from the provider webhook settings (leave blank to keep a saved secret)"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+              />
+              <span className="mt-1 block text-[11px] font-normal text-muted">
+                From the provider dashboard for <code className="text-indigo">/api/marketplace/webhook</code>
+                {" "}(for example Stripe <code className="text-indigo">whsec_…</code>, or the Airwallex webhook
+                secret). Not the API key from Payment gateways.
+              </span>
+            </label>
+            <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
+              Save marketplace provider
+            </button>
+          </form>
         ) : null}
 
-        {canManage && providersAvailableToAdd.length > 0 ? (
-          <AdminCollapse title="Add marketplace provider" subtitle="Choose from the supported list">
-            <form action={actionSaveMarketplaceProvider} className="grid gap-3 sm:grid-cols-2">
-              <label className="text-xs font-semibold text-muted sm:col-span-2">
-                Provider
-                <select
-                  name="code"
-                  required
-                  defaultValue=""
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-                >
-                  <option value="" disabled>
-                    Choose a provider…
-                  </option>
-                  {providersAvailableToAdd.map((row) => (
-                    <option key={row.code} value={row.code}>
-                      {row.name} — {row.detail}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-muted">
-                Status
-                <select
-                  name="enabled"
-                  defaultValue="0"
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-                >
-                  <option value="0">Disabled until webhook is saved</option>
-                  <option value="1">Enabled</option>
-                </select>
-              </label>
-              <label className="text-xs font-semibold text-muted">
-                Webhook signing secret
-                <input
-                  name="webhook"
-                  type="password"
-                  autoComplete="off"
-                  placeholder="Paste secret from the provider webhook settings"
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-                />
-              </label>
-              <p className="text-xs text-muted sm:col-span-2">
-                After you add a provider here, assign it on each jurisdiction under Provider. Payment gateways still
-                hold API keys for collection and payouts separately.
-              </p>
-              <button type="submit" className="btn-secondary sm:col-span-2 !py-2 text-sm">
-                Add provider
-              </button>
-            </form>
-          </AdminCollapse>
-        ) : null}
+        <AdminCollapse
+          title="Configured providers"
+          subtitle={`${marketplaceProviders.length} saved · expand for status`}
+          defaultOpen
+        >
+          <ul className="space-y-2 text-sm text-indigo">
+            {MARKETPLACE_PROVIDER_CATALOG.map((row) => {
+              const configured = providersByCode.get(row.code);
+              return (
+                <li key={row.code} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E4EBFF] px-3 py-2">
+                  <span className="font-semibold">{row.name}</span>
+                  <span className="text-xs text-muted">
+                    {configured
+                      ? `${configured.enabled ? "Enabled" : "Disabled"} · webhook ${configured.webhook} · ${configured.ready ? "ready" : "not ready"}`
+                      : "Not saved yet — choose it in Provider above"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {demoProvider ? (
+            <p className="mt-3 text-xs text-muted">
+              Demo is retained for local testing only and cannot confirm a real prefund
+              ({demoProvider.enabled ? "enabled" : "disabled"} · webhook {demoProvider.webhook}).
+            </p>
+          ) : null}
+        </AdminCollapse>
       </section>
 
       <section className="card-surface p-5">
@@ -766,11 +730,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 disabled={!canManage}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               >
-                {config.providers
-                  .filter((provider) => provider.code !== "demo")
-                  .map((provider) => (
+                {MARKETPLACE_PROVIDER_CATALOG.map((provider) => (
                   <option key={provider.code} value={provider.code}>
-                    {marketplaceProviderCatalogLabel(provider.code, provider.name)}
+                    {provider.name}
+                    {providersByCode.get(provider.code)?.ready ? " · ready" : " · configure webhook above first"}
                   </option>
                 ))}
               </select>
@@ -860,11 +823,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Provider
               <select name="providerCode" required defaultValue="" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
                 <option value="">Choose a provider</option>
-                {config.providers
-                  .filter((provider) => provider.code !== "demo")
-                  .map((provider) => (
+                {MARKETPLACE_PROVIDER_CATALOG.map((provider) => (
                   <option key={provider.code} value={provider.code}>
-                    {marketplaceProviderCatalogLabel(provider.code, provider.name)}
+                    {provider.name}
+                    {providersByCode.get(provider.code)?.ready ? " · ready" : " · configure webhook above first"}
                   </option>
                 ))}
               </select>
