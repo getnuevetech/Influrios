@@ -448,22 +448,32 @@ export default async function CreatorHomePage({
               ) : (
                 <ul className="space-y-3">
                   {hub!.brandMatches.slice(0, 4).map(({ request, score }, index) => (
-                    <li key={request.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#F0F3FA] px-3 py-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{request.brand}</p>
-                        <p className="truncate text-xs text-muted">{request.lookingFor || request.category}</p>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {request.tags.slice(0, 2).map((tag) => (
-                            <span key={tag} className="rounded-full bg-[#EEF2FA] px-2 py-0.5 text-[10px] font-semibold text-muted">
-                              {tag}
-                            </span>
-                          ))}
+                    <li key={request.id}>
+                      <Link
+                        href={`/collaboration/requests/${encodeURIComponent(request.id)}`}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-[#F0F3FA] px-3 py-3 hover:border-violet/40 hover:bg-[#F8F6FF]"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{request.brand}</p>
+                          <p className="truncate text-xs text-muted">{request.lookingFor || request.category}</p>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {request.tags.slice(0, 2).map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full bg-[#EEF2FA] px-2 py-0.5 text-[10px] font-semibold text-muted"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-indigo">{request.budget || "—"}</p>
-                        <StatusPill tone={index === 0 ? "success" : "violet"}>{index === 0 ? "New" : `Score ${score}`}</StatusPill>
-                      </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-indigo">{request.budget || "—"}</p>
+                          <StatusPill tone={index === 0 ? "success" : "violet"}>
+                            {index === 0 ? "New" : `Score ${score}`}
+                          </StatusPill>
+                        </div>
+                      </Link>
                     </li>
                   ))}
                 </ul>

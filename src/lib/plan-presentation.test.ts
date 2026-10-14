@@ -137,6 +137,7 @@ describe("plan presentation", () => {
     assert.equal(hidesMarketingChrome("/creator"), true);
     assert.equal(hidesMarketingChrome("/dashboard/profile"), true);
     assert.equal(hidesMarketingChrome("/collaboration/hub"), true);
+    assert.equal(hidesMarketingChrome("/collaboration/requests/req_1"), true);
     assert.equal(hidesMarketingChrome("/business"), false);
     assert.equal(hidesMarketingChrome("/discover"), false);
     const layout = readFileSync("src/app/layout.tsx", "utf8");

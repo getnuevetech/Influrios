@@ -192,3 +192,20 @@ describe("business hub spend summary", () => {
     assert.match(businessHub, /formatStoredMoney\(hub\.spend\.fundedCents, hub\.spend\.currency\)/);
   });
 });
+
+describe("influencer campaign card links", () => {
+  it("opens the campaign request page instead of the public business marketing page", () => {
+    const creatorHub = readFileSync("src/app/collaboration/hub/page.tsx", "utf8");
+    const creatorHome = readFileSync("src/app/creator/page.tsx", "utf8");
+    const requestPage = readFileSync("src/app/collaboration/requests/[id]/page.tsx", "utf8");
+
+    assert.match(creatorHub, /\/collaboration\/requests\/\$\{encodeURIComponent\(request\.id\)\}/);
+    assert.match(creatorHub, /View campaign/);
+    assert.equal(creatorHub.includes('href="/business"'), false);
+    assert.equal(creatorHub.includes("View Match"), false);
+
+    assert.match(creatorHome, /\/collaboration\/requests\/\$\{encodeURIComponent\(request\.id\)\}/);
+    assert.match(requestPage, /Apply to campaign/);
+    assert.match(requestPage, /getPublishedBusinessRequest/);
+  });
+});

@@ -21,7 +21,9 @@ const HUB = "/collaboration/hub";
 function revalidateCreatorSurfaces() {
   revalidatePath(HUB);
   revalidatePath("/collaboration");
+  revalidatePath("/collaboration/requests");
   revalidatePath("/collaboration/business");
+  revalidatePath("/creator");
 }
 
 /** W2.3c — creator applies to a published business request. */
@@ -42,8 +44,17 @@ export async function actionApplyToBusinessRequest(formData: FormData) {
   }
   const requestId = String(formData.get("requestId") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
+  const returnRaw = String(formData.get("returnTo") ?? "").trim();
+  const returnTo =
+    returnRaw.startsWith("/collaboration/requests/") && !returnRaw.includes("//")
+      ? returnRaw.slice(0, 200)
+      : null;
   if (!requestId) {
-    redirect(`${HUB}?error=${encodeURIComponent("Choose a business request to apply to.")}#business-requests`);
+    redirect(
+      `${returnTo ?? HUB}?error=${encodeURIComponent("Choose a business request to apply to.")}${
+        returnTo ? "" : "#business-requests"
+      }`,
+    );
   }
   try {
     await createMarketplaceApplication({
@@ -55,11 +66,13 @@ export async function actionApplyToBusinessRequest(formData: FormData) {
     });
   } catch (error) {
     redirect(
-      `${HUB}?error=${encodeURIComponent(error instanceof Error ? error.message : "Apply failed.")}#business-requests`,
+      `${returnTo ?? HUB}?error=${encodeURIComponent(error instanceof Error ? error.message : "Apply failed.")}${
+        returnTo ? "" : "#business-requests"
+      }`,
     );
   }
   revalidateCreatorSurfaces();
-  redirect(`${HUB}?applied=1#applications`);
+  redirect(returnTo ? `${returnTo}?applied=1` : `${HUB}?applied=1#applications`);
 }
 
 /** W2.3c — creator connects/applies to a published creator opportunity. */
