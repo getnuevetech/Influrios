@@ -38,7 +38,7 @@ export async function loadAdminAccounts(roles: UserRole[]): Promise<AdminAccount
             displayName: true,
           },
         },
-        business: { select: { name: true, geography: true } },
+        business: { select: { name: true, geography: true, contactName: true, contactEmail: true, contactPhone: true } },
         onboardingSessions: {
           orderBy: { updatedAt: "desc" },
           take: 1,
@@ -72,10 +72,15 @@ export async function loadAdminAccounts(roles: UserRole[]): Promise<AdminAccount
         ? geography || (fromCreator !== "Not set" ? fromCreator : "Not set")
         : fromCreator,
       secondaryLabel: isBusiness
-        ? user.business?.name || null
+        ? user.business?.name || user.name || null
         : user.creator?.slug
           ? `@${user.creator.slug}`
           : user.creator?.displayName || null,
+      contactLabel: isBusiness
+        ? [user.business?.contactName, user.business?.contactEmail, user.business?.contactPhone]
+            .filter(Boolean)
+            .join(" · ") || null
+        : null,
     };
   });
 }

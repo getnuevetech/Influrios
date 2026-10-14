@@ -46,20 +46,12 @@ export function BusinessSignupForm({
           />
         </label>
         <label className="block text-xs font-bold text-indigo sm:col-span-2">
-          Contact person full name
-          <input
-            name="contactName"
-            required
-            placeholder="Who should we talk to?"
-            className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
-          />
-        </label>
-        <label className="block text-xs font-bold text-indigo sm:col-span-2">
-          Work Email
+          Business Email
           <input
             name="email"
             type="email"
             required
+            placeholder="Used to sign in to this business account"
             className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
           />
         </label>
@@ -119,6 +111,45 @@ export function BusinessSignupForm({
           />
         </label>
       </div>
+
+      <div className="mt-6 border-t border-[#E4E9F5] pt-5">
+        <p className="text-sm font-bold text-indigo">Contact person</p>
+        <p className="mt-1 text-xs text-muted">
+          Saved on the company profile for reference only. Not used to sign in to this business account.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs font-bold text-indigo sm:col-span-2">
+            Full name
+            <input
+              name="contactName"
+              required
+              placeholder="Who should we talk to?"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
+            />
+          </label>
+          <label className="block text-xs font-bold text-indigo">
+            Mobile
+            <input
+              name="contactPhone"
+              type="tel"
+              required
+              placeholder="+1 555 000 0000"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
+            />
+          </label>
+          <label className="block text-xs font-bold text-indigo">
+            Email address
+            <input
+              name="contactEmail"
+              type="email"
+              required
+              placeholder="contact@example.com"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
+            />
+          </label>
+        </div>
+      </div>
+
       <label className="mt-4 flex items-start gap-2 text-sm text-muted">
         <input type="checkbox" name="consent" required className="mt-1 accent-[#633CFF]" />
         {checkboxLabel}
