@@ -19,6 +19,7 @@ import {
   listQueuedMatchRequests,
 } from "@/lib/managed-matching";
 import { introStatusDisplayLabel, MATCHING_PRODUCT_BOUNDARY } from "@/lib/matching-product-boundary";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
@@ -291,9 +292,10 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
           {store.intros.map((intro) => {
             const creator = bySlug.get(intro.creatorSlug);
             return (
-              <li
-                key={intro.id}
-                className="rounded-2xl border border-border bg-starter-bg p-4"
+              <li key={intro.id}>
+              <AdminCollapse
+                title={`${intro.businessName} ↔ ${creator?.displayName ?? intro.creatorSlug}`}
+                subtitle={`${introStatusDisplayLabel(intro.status)} · ${intro.briefTitle}`}
               >
                 <div className="flex flex-wrap items-start gap-3">
                   <span className="relative h-12 w-12 overflow-hidden rounded-full">
@@ -419,6 +421,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                     </form>
                   </div>
                 ) : null}
+              </AdminCollapse>
               </li>
             );
           })}

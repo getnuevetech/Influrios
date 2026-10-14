@@ -41,4 +41,34 @@ describe("admin integration fields", () => {
       true,
     );
   });
+
+  it("names a missing Airwallex connected account instead of blaming the country route", async () => {
+    const { collectionPayoutBlocker } = await import("./providers");
+    assert.match(
+      collectionPayoutBlocker({
+        providerCode: "airwallex",
+        providerName: "Airwallex",
+        routeReady: true,
+        providerConnectedAccountId: null,
+      }) ?? "",
+      /connected their Airwallex/i,
+    );
+    assert.equal(
+      collectionPayoutBlocker({
+        providerCode: "airwallex",
+        providerName: "Airwallex",
+        routeReady: true,
+        providerConnectedAccountId: "acct_creator",
+      }),
+      null,
+    );
+    assert.match(
+      collectionPayoutBlocker({
+        providerCode: "airwallex",
+        routeReady: false,
+        providerConnectedAccountId: null,
+      }) ?? "",
+      /No ready payment route/i,
+    );
+  });
 });

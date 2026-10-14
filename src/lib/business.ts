@@ -649,6 +649,26 @@ export async function activateBrief(id: string, workspaceId: string) {
   await prisma.businessBrief.update({ where: { id: existing.id }, data: { status: "active" } });
 }
 
+/**
+ * Lock a campaign after influencer acceptance / contract drafting so it can no longer be edited.
+ * Closed briefs stay listed but Edit is unavailable.
+ */
+export async function closeBriefForContract(id: string, workspaceId: string) {
+  await readWorkspace(workspaceId);
+  const existing = await prisma.businessBrief.findFirst({ where: { id, workspaceId } });
+  if (!existing || existing.status === "closed") return existing;
+  return prisma.businessBrief.update({ where: { id: existing.id }, data: { status: "closed" } });
+}
+
+/** Close every active/draft brief on a workspace when a deal advances to contract. */
+export async function closeWorkspaceBriefsForContract(workspaceId: string) {
+  await readWorkspace(workspaceId);
+  await prisma.businessBrief.updateMany({
+    where: { workspaceId, status: { in: ["draft", "active"] } },
+    data: { status: "closed" },
+  });
+}
+
 export async function queuedBriefIds(workspaceId: string) {
   await readWorkspace(workspaceId);
   const rows = await prisma.managedMatchRequest.findMany({

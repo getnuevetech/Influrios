@@ -274,24 +274,157 @@ export async function startGatewayKyc(input: {
     },
   });
   await prisma.creatorKycDocument.deleteMany({ where: { submissionId: submission.id } });
+  if (input.creatorId) {
+    await prisma.creator.update({
+      where: { id: input.creatorId },
+      data: { identityVerified: "PENDING" },
+    });
+  }
   return submission;
 }
 
-export async function reviewDocumentKyc(input: { submissionId: string; decision: "verified" | "rejected" }) {
+async function applyIdentityDecision(input: {
+  creatorId: string | null | undefined;
+  creatorSlug: string;
+  decision: "verified" | "rejected";
+}) {
+  const creator =
+    (input.creatorId
+      ? await prisma.creator.findUnique({ where: { id: input.creatorId } })
+      : null) ?? (await prisma.creator.findUnique({ where: { slug: input.creatorSlug } }));
+  if (!creator) return null;
+  await prisma.creator.update({
+    where: { id: creator.id },
+    data: { identityVerified: input.decision === "verified" ? "VERIFIED" : "REJECTED" },
+  });
+  try {
+    const { computePayoutReadiness } = await import("@/lib/payout-readiness");
+    await computePayoutReadiness({
+      creatorId: creator.id,
+      identityVerified: input.decision === "verified",
+      locationCountry: creator.locationCountry,
+    });
+  } catch {
+    /* payout refresh is best-effort after KYC */
+  }
+  return creator;
+}
+
+/**
+ * Admin (or gateway webhook) marks KYC complete on the submission and mirrors
+ * Creator.identityVerified so payout readiness can clear the identity blocker.
+ */
+export async function reviewDocumentKyc(input: {
+  submissionId: string;
+  decision: "verified" | "rejected";
+  /** When true, allow verifying gateway submissions manually from admin. */
+  allowGateway?: boolean;
+}) {
   const submission = await prisma.creatorKycSubmission.findUnique({ where: { id: input.submissionId } });
   if (!submission) throw new Error("That KYC submission was not found.");
-  if (submission.kycModel !== "government_id") {
+  if (submission.kycModel !== "government_id" && !input.allowGateway) {
     throw new Error("Gateway KYC is completed by the selected gateway.");
   }
-  const creator = await prisma.creator.findUnique({ where: { slug: submission.creatorSlug } });
+  const creator = await applyIdentityDecision({
+    creatorId: submission.creatorId,
+    creatorSlug: submission.creatorSlug,
+    decision: input.decision,
+  });
   await prisma.creatorKycSubmission.update({
     where: { id: submission.id },
     data: { status: input.decision, creatorId: creator?.id ?? submission.creatorId },
   });
-  if (creator) {
-    await prisma.creator.update({
-      where: { id: creator.id },
-      data: { identityVerified: input.decision === "verified" ? "VERIFIED" : "REJECTED" },
-    });
-  }
+}
+
+/** Stripe Identity (or admin) completion for gateway KYC sessions. */
+export async function completeGatewayKyc(input: {
+  sessionId?: string | null;
+  creatorSlug?: string | null;
+  decision: "verified" | "rejected";
+}) {
+  const sessionId = (input.sessionId ?? "").trim();
+  const slug = (input.creatorSlug ?? "").trim();
+  const submission = sessionId
+    ? await prisma.creatorKycSubmission.findFirst({ where: { gatewaySessionId: sessionId } })
+    : slug
+      ? await prisma.creatorKycSubmission.findUnique({ where: { creatorSlug: slug } })
+      : null;
+  if (!submission) throw new Error("That gateway KYC submission was not found.");
+  const creator = await applyIdentityDecision({
+    creatorId: submission.creatorId,
+    creatorSlug: submission.creatorSlug,
+    decision: input.decision,
+  });
+  await prisma.creatorKycSubmission.update({
+    where: { id: submission.id },
+    data: { status: input.decision, creatorId: creator?.id ?? submission.creatorId },
+  });
+  return submission;
+}
+
+/**
+ * Identity for payouts / contract gates: Creator.identityVerified, with a heal from a
+ * verified KYC submission when the account flag was never written.
+ */
+export async function resolveCreatorIdentityVerified(input: {
+  creatorId?: string | null;
+  creatorSlug?: string | null;
+  identityVerified?: string | null;
+}): Promise<boolean> {
+  if (input.identityVerified === "VERIFIED") return true;
+  const slug = (input.creatorSlug ?? "").trim();
+  const submission = input.creatorId
+    ? await prisma.creatorKycSubmission.findFirst({
+        where: {
+          OR: [
+            { creatorId: input.creatorId },
+            ...(slug ? [{ creatorSlug: slug }] : []),
+          ],
+        },
+        orderBy: { updatedAt: "desc" },
+      })
+    : slug
+      ? await prisma.creatorKycSubmission.findUnique({ where: { creatorSlug: slug } })
+      : null;
+  if (!submission || submission.status !== "verified") return false;
+  await applyIdentityDecision({
+    creatorId: input.creatorId ?? submission.creatorId,
+    creatorSlug: submission.creatorSlug,
+    decision: "verified",
+  });
+  return true;
+}
+
+/** Admin can mark any creator's account KYC-complete without a pending submission row. */
+export async function adminSetCreatorKyc(input: {
+  creatorSlug: string;
+  decision: "verified" | "rejected";
+}) {
+  const slug = input.creatorSlug.trim();
+  if (!slug) throw new Error("Choose a creator.");
+  const creator = await applyIdentityDecision({
+    creatorId: null,
+    creatorSlug: slug,
+    decision: input.decision,
+  });
+  if (!creator) throw new Error("That creator was not found.");
+  await prisma.creatorKycSubmission.upsert({
+    where: { creatorSlug: slug },
+    update: {
+      creatorId: creator.id,
+      status: input.decision,
+      kycModel: "government_id",
+    },
+    create: {
+      creatorSlug: slug,
+      creatorId: creator.id,
+      countryCode: "",
+      kycModel: "government_id",
+      gatewaySessionId: "",
+      gatewaySessionUrl: "",
+      status: input.decision,
+      detailsJson: { admin: "Manual admin KYC decision" },
+    },
+  });
+  return creator;
 }

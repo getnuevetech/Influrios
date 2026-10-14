@@ -5,6 +5,7 @@ import {
   ensureStripeAttemptFromMetadata,
   markWebhookReceived,
 } from "@/lib/billing";
+import { completeGatewayKyc } from "@/lib/kyc-document";
 import { confirmMentorshipPayment } from "@/lib/mentorship";
 import { rememberStripeCustomer, stripeCredentials, stripeWebhookSecret } from "@/lib/stripe-admin";
 import { applyPlanOnce, noteWebhook, webhookDisposition } from "@/lib/webhook-idempotency";
@@ -15,12 +16,14 @@ type StripeObject = {
   metadata?: {
     localSessionId?: string;
     creatorSlug?: string;
+    creator_slug?: string;
     sku?: string;
     userId?: string;
     purpose?: string;
     requestId?: string;
   } | null;
   subscription?: string | { id?: string } | null;
+  status?: string | null;
 };
 
 function customerIdOf(object: StripeObject) {
@@ -103,6 +106,35 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    if (
+      event.type === "identity.verification_session.verified" ||
+      event.type === "identity.verification_session.requires_input" ||
+      event.type === "identity.verification_session.canceled"
+    ) {
+      const decision =
+        event.type === "identity.verification_session.verified" ? ("verified" as const) : ("rejected" as const);
+      const sessionId = typeof object.id === "string" ? object.id : "";
+      const creatorSlug =
+        object.metadata?.creator_slug?.trim() || object.metadata?.creatorSlug?.trim() || "";
+      try {
+        await completeGatewayKyc({
+          sessionId: sessionId || null,
+          creatorSlug: creatorSlug || null,
+          decision,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Identity KYC apply failed";
+        return NextResponse.json({ error: message }, { status: 409 });
+      }
+      await noteWebhook({
+        provider: "stripe",
+        eventId: event.id,
+        eventType: event.type,
+        result: decision === "verified" ? "kyc_verified" : "kyc_rejected",
+      });
+      return NextResponse.json({ received: true, kyc: decision });
+    }
+
     if (event.type === "checkout.session.completed" && object.metadata?.purpose === "mentorship") {
       const requestId = object.metadata.requestId?.trim() ?? "";
       if (!requestId || !object.id) {

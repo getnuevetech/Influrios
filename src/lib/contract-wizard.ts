@@ -70,8 +70,12 @@ export type PreContractGateInput = {
   /** Country Activation Corridor is active for the influencer country (P5). */
   corridorActive: boolean;
   paymentRouteReady: boolean;
+  /** Prefer this over the generic route message when the country route is ready but the creator account is not. */
+  paymentRouteBlocker?: string | null;
   jurisdictionProtectedPayments: boolean;
   marketplaceProviderReady: boolean;
+  /** Prefer this when naming which marketplace provider and why it is not ready. */
+  marketplaceProviderBlocker?: string | null;
 };
 
 export type RouteReadyStatus = "ROUTE_READY" | "ROUTE_BLOCKED";
@@ -157,11 +161,60 @@ export function evaluatePreContractGates(input: PreContractGateInput): {
   if (!input.identityVerified) blockers.push("Influencer identity is not verified.");
   if (!input.creatorCountryKnown) blockers.push("Influencer payout country is unknown.");
   if (!input.corridorActive) blockers.push("Country corridor is not activated.");
-  if (!input.paymentRouteReady) blockers.push("No ready payment route for the influencer country.");
+  if (!input.paymentRouteReady) {
+    blockers.push(
+      input.paymentRouteBlocker?.trim() || "No ready payment route for the influencer country.",
+    );
+  }
   if (!input.jurisdictionProtectedPayments) blockers.push("Protected payments are off for this jurisdiction.");
-  if (!input.marketplaceProviderReady) blockers.push("The marketplace provider is not ready.");
+  if (!input.marketplaceProviderReady) {
+    blockers.push(input.marketplaceProviderBlocker?.trim() || "The marketplace provider is not ready.");
+  }
   const ok = blockers.length === 0;
   return { ok, status: ok ? "ROUTE_READY" : "ROUTE_BLOCKED", blockers };
+}
+
+/** Human-readable marketplace provider readiness for the contract wizard. */
+export function marketplaceProviderGateMessage(provider: {
+  code?: string | null;
+  name?: string | null;
+  ready?: boolean;
+  enabled?: boolean;
+  webhook?: "saved" | "missing" | string | null;
+} | null | undefined, assignedCode?: string | null) {
+  const code = (provider?.code || assignedCode || "primary").trim() || "primary";
+  const label = (provider?.name?.trim() || code).trim();
+  if (provider?.ready) return { ready: true as const, label, detail: `${label} ready` };
+  if (!provider) {
+    return {
+      ready: false as const,
+      label: code,
+      detail: `Marketplace provider ${code} is not configured on the Marketplace ledger.`,
+      blocker: `Marketplace provider ${code} is not configured on the Marketplace ledger.`,
+    };
+  }
+  if (provider.webhook === "missing") {
+    return {
+      ready: false as const,
+      label,
+      detail: `${label} — webhook secret missing`,
+      blocker: `Marketplace provider ${label} needs a webhook secret on the Marketplace ledger.`,
+    };
+  }
+  if (provider.enabled === false) {
+    return {
+      ready: false as const,
+      label,
+      detail: `${label} — disabled`,
+      blocker: `Marketplace provider ${label} is disabled.`,
+    };
+  }
+  return {
+    ready: false as const,
+    label,
+    detail: `${label} — not ready`,
+    blocker: `Marketplace provider ${label} is not ready.`,
+  };
 }
 
 export function canFundContract(input: {

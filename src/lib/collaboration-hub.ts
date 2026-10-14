@@ -274,9 +274,15 @@ export async function loadCreatorHub(input: {
   const dbCreator = await prisma.creator.findUnique({ where: { slug } }).catch(() => null);
   let payout: HubPayoutPanel = { readiness: null };
   if (dbCreator) {
+    const { resolveCreatorIdentityVerified } = await import("@/lib/kyc-document");
+    const identityVerified = await resolveCreatorIdentityVerified({
+      creatorId: dbCreator.id,
+      creatorSlug: dbCreator.slug,
+      identityVerified: dbCreator.identityVerified,
+    }).catch(() => dbCreator.identityVerified === "VERIFIED");
     const readiness = await computePayoutReadiness({
       creatorId: dbCreator.id,
-      identityVerified: dbCreator.identityVerified === "VERIFIED",
+      identityVerified,
       locationCountry: dbCreator.locationCountry,
     }).catch(() => null);
     payout = { readiness };

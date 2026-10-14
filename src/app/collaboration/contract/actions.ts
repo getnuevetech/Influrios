@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
-import { getWorkspace } from "@/lib/business";
+import { closeBriefForContract, closeWorkspaceBriefsForContract, getWorkspace } from "@/lib/business";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { resolveFee } from "@/lib/collaboration-fees";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
@@ -16,11 +16,13 @@ import {
   customMilestonesGate,
   evaluatePreContractGates,
   lockFinancialPlan,
+  marketplaceProviderGateMessage,
   parseMilestoneDraftsFromForm,
   type MilestoneDraft,
 } from "@/lib/contract-wizard";
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator } from "@/lib/directory";
+import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
 import {
   capabilitiesFromJurisdictionRow,
   serviceLevelAllowedByJurisdiction,
@@ -40,7 +42,7 @@ import {
 import { creatorAmountsForMilestone } from "@/lib/team-proposal";
 import { ensureMarketplaceDefaults, marketplaceConfig, requestPrefund } from "@/lib/marketplace-ledger";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
-import { collectionPayoutReady, paymentRoutes } from "@/lib/providers";
+import { collectionPayoutBlocker, collectionPayoutReady, paymentRoutes } from "@/lib/providers";
 import {
   memberShareSnapshot,
   teamFundingReady,
@@ -102,10 +104,12 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const feeDisclosureAccepted = formData.get("feeDisclosureAccepted") === "on";
   const intent = String(formData.get("intent") ?? "preview");
 
+  const briefId = String(formData.get("briefId") ?? "").trim();
   const qs = new URLSearchParams();
   qs.set("creator", creatorSlug);
   if (teamProposalId) qs.set("team", teamProposalId);
   if (collaborationId) qs.set("collaboration", collaborationId);
+  if (briefId) qs.set("brief", briefId);
   qs.set("title", title);
   qs.set("scope", scope);
   qs.set("commercial", commercial);
@@ -160,7 +164,13 @@ export async function actionSubmitContractWizard(formData: FormData) {
     : undefined;
 
   const dbCreator = await prisma.creator.findUnique({ where: { slug: creatorSlug } }).catch(() => null);
-  const identityVerified = dbCreator?.identityVerified === "VERIFIED";
+  const identityVerified = dbCreator
+    ? await resolveCreatorIdentityVerified({
+        creatorId: dbCreator.id,
+        creatorSlug: dbCreator.slug,
+        identityVerified: dbCreator.identityVerified,
+      }).catch(() => dbCreator.identityVerified === "VERIFIED")
+    : false;
   const payoutReadiness = dbCreator
     ? await computePayoutReadiness({
         creatorId: dbCreator.id,
@@ -170,8 +180,11 @@ export async function actionSubmitContractWizard(formData: FormData) {
     : null;
 
   const jurisdiction = config.jurisdictions.find((row) => row.code === jurisdictionCode);
+  const assignedProviderCode = jurisdiction?.providerCode || "primary";
   const provider =
-    config.providers.find((row) => row.code === (jurisdiction?.providerCode || "primary")) ?? config.provider;
+    config.providers.find((row) => row.code === assignedProviderCode) ??
+    (assignedProviderCode === "primary" ? config.provider : null);
+  const marketplaceGate = marketplaceProviderGateMessage(provider, assignedProviderCode);
 
   const caps = jurisdiction ? capabilitiesFromJurisdictionRow(jurisdiction) : null;
   if (caps) {
@@ -187,20 +200,24 @@ export async function actionSubmitContractWizard(formData: FormData) {
         })
         .catch(() => null)
     : null;
+  const routeGateInput = {
+    providerCode: route?.providerCode,
+    providerName: route?.providerName,
+    routeReady: Boolean(route?.ready),
+    stripeConnectAccountId: payoutProfile?.stripeConnectAccountId,
+    providerConnectedAccountId: payoutProfile?.providerConnectedAccountId,
+  };
   let gates = evaluatePreContractGates({
     businessName,
     creatorSlug,
     identityVerified,
     creatorCountryKnown: Boolean(creatorCountry),
     corridorActive: payoutReadiness ? payoutReadiness.corridorActive : Boolean(creatorCountry),
-    paymentRouteReady: collectionPayoutReady({
-      providerCode: route?.providerCode,
-      routeReady: Boolean(route?.ready),
-      stripeConnectAccountId: payoutProfile?.stripeConnectAccountId,
-      providerConnectedAccountId: payoutProfile?.providerConnectedAccountId,
-    }),
+    paymentRouteReady: collectionPayoutReady(routeGateInput),
+    paymentRouteBlocker: collectionPayoutBlocker(routeGateInput),
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
-    marketplaceProviderReady: Boolean(provider?.ready),
+    marketplaceProviderReady: marketplaceGate.ready,
+    marketplaceProviderBlocker: marketplaceGate.ready ? null : marketplaceGate.blocker,
   });
 
   let teamShares: { label: string; shareBps: number }[] | null = null;
@@ -396,6 +413,11 @@ export async function actionSubmitContractWizard(formData: FormData) {
       },
     });
     if (!sent.ok) redirectError(sent.error, qs);
+    if (briefId) {
+      await closeBriefForContract(briefId, ws.businessId).catch(() => undefined);
+    } else {
+      await closeWorkspaceBriefsForContract(ws.businessId).catch(() => undefined);
+    }
     redirect(`/collaboration/contracts/${sent.id}`);
   }
 
@@ -434,8 +456,15 @@ export async function actionSubmitContractWizard(formData: FormData) {
     });
   }
 
+  if (briefId) {
+    await closeBriefForContract(briefId, ws.businessId).catch(() => undefined);
+  } else {
+    await closeWorkspaceBriefsForContract(ws.businessId).catch(() => undefined);
+  }
+
   revalidatePath(BASE);
   revalidatePath("/payments");
   revalidatePath("/collaboration/business");
+  revalidatePath("/business/campaigns");
   redirect(`/payments?created=${result.id}`);
 }

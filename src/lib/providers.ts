@@ -245,26 +245,52 @@ export function providerNeedsConnectedAccount(code: string | null | undefined) {
   return (code ?? "").trim().toLowerCase() === "airwallex";
 }
 
+/**
+ * Why collection payout is not ready for this influencer.
+ * Distinguishes a missing country route from a missing creator connected account —
+ * the contract wizard previously labeled both as "No ready payment route".
+ */
+export function collectionPayoutBlocker(input: {
+  providerCode?: string | null;
+  providerName?: string | null;
+  routeReady: boolean;
+  stripeConnectAccountId?: string | null;
+  providerConnectedAccountId?: string | null;
+}): string | null {
+  const code = (input.providerCode ?? "").trim().toLowerCase();
+  const label = (input.providerName ?? input.providerCode ?? "payment provider").trim() || "payment provider";
+  if (!input.routeReady) {
+    return "No ready payment route for the influencer country.";
+  }
+  if (code === "stripe") {
+    if (
+      !stripePayoutRouteReady({
+        providerCode: input.providerCode,
+        routeReady: input.routeReady,
+        stripeConnectAccountId: input.stripeConnectAccountId,
+      })
+    ) {
+      return "Influencer has not connected Stripe for payouts.";
+    }
+    return null;
+  }
+  if (providerNeedsConnectedAccount(input.providerCode)) {
+    if (!input.providerConnectedAccountId?.trim()) {
+      return `Influencer has not connected their ${label} payout account.`;
+    }
+  }
+  return null;
+}
+
 /** Stripe corridors need acct_. This rail needs the stored connected-account reference. */
 export function collectionPayoutReady(input: {
   providerCode?: string | null;
+  providerName?: string | null;
   routeReady: boolean;
   stripeConnectAccountId?: string | null;
   providerConnectedAccountId?: string | null;
 }) {
-  if (
-    !stripePayoutRouteReady({
-      providerCode: input.providerCode,
-      routeReady: input.routeReady,
-      stripeConnectAccountId: input.stripeConnectAccountId,
-    })
-  ) {
-    return false;
-  }
-  if (providerNeedsConnectedAccount(input.providerCode)) {
-    return Boolean(input.providerConnectedAccountId?.trim());
-  }
-  return true;
+  return collectionPayoutBlocker(input) === null;
 }
 
 export function signingCanQueue(input: { enabled: boolean; hasSecret: boolean; collaborationStatus: string }): { ok: true } | { ok: false; error: string } {

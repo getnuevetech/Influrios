@@ -5,6 +5,7 @@ import { IconArrowRight, IconShieldPay, IconUsers } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { leadLabel, leadTransitions, parseLocationParts } from "@/lib/business";
+import { contractHrefFromCampaign } from "@/lib/campaign-contract";
 import { loadBusinessHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
 import { listCatalogOptions } from "@/lib/catalog-options";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
@@ -51,6 +52,7 @@ type Props = {
     invited?: string;
     app?: string;
     drafted?: string;
+    savedBrief?: string;
   }>;
 };
 
@@ -93,9 +95,10 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
   ]);
   const currencyOptions = ["USD", ...fxRates.filter((row) => row.active).map((row) => row.currency)];
 
-  // #13/#15 — the form only appears when explicitly editing a draft (?intent=<id>) or
-  // starting a new one (?intent=new). A bare hub visit never pre-fills a stale draft.
-  const showIntentForm = params.intent === "new" || Boolean(hub.intentBrief);
+  // Form only when intentionally opened (?intent=new|<id>). Save redirects clear intent.
+  const intentLocked = hub.intentBrief?.status === "closed";
+  const showIntentForm =
+    params.intent === "new" || (Boolean(hub.intentBrief) && !intentLocked);
   const intentLocation = parseLocationParts(hub.intentBrief?.location ?? "");
 
   return (
@@ -135,6 +138,11 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
         <div className="min-w-0 space-y-6">
           {params.error ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</p>
+          ) : null}
+          {params.savedBrief ? (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              Campaign saved. Open it from Campaigns & drafts when you want to edit again.
+            </p>
           ) : null}
           {params.refreshed ? (
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
@@ -248,14 +256,18 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="rounded-full bg-[#EAE4FF] px-2 py-0.5 text-[10px] font-bold uppercase text-violet">
-                        {brief.status}
+                        {brief.status === "closed" ? "contracted" : brief.status}
                       </span>
-                      <Link
-                        href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#suggestions`}
-                        className="text-xs font-bold text-violet hover:underline"
-                      >
-                        Edit
-                      </Link>
+                      {brief.status === "closed" ? (
+                        <span className="text-xs font-semibold text-muted">Locked</span>
+                      ) : (
+                        <Link
+                          href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#suggestions`}
+                          className="text-xs font-bold text-violet hover:underline"
+                        >
+                          Edit
+                        </Link>
+                      )}
                     </div>
                   </li>
                 ))
@@ -289,6 +301,11 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 </form>
               ) : null}
             </div>
+            {params.intent && intentLocked ? (
+              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                This campaign is under contract and can no longer be edited.
+              </p>
+            ) : null}
             {showIntentForm ? (
             <form action={actionSaveCampaignIntent} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {hub.intentBrief ? <input type="hidden" name="briefId" value={hub.intentBrief.id} /> : null}
@@ -479,7 +496,10 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                           </button>
                         </form>
                         <Link
-                          href={`/collaboration/contract?creator=${encodeURIComponent(creator.slug)}`}
+                          href={contractHrefFromCampaign({
+                            creatorSlug: creator.slug,
+                            brief: hub.intentBrief ?? hub.briefs.find((b) => b.status !== "closed") ?? null,
+                          })}
                           className="btn-secondary !px-3 !py-1.5 text-[11px]"
                         >
                           Contract
@@ -644,7 +664,14 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             ))}
                           {application.status === "COLLABORATION_DRAFTED" && application.creatorSlug ? (
                             <Link
-                              href={`/collaboration/contract?creator=${encodeURIComponent(application.creatorSlug)}`}
+                              href={contractHrefFromCampaign({
+                                creatorSlug: application.creatorSlug,
+                                brief:
+                                  hub.intentBrief ??
+                                  hub.briefs.find((b) => b.status !== "closed") ??
+                                  hub.briefs[0] ??
+                                  null,
+                              })}
                               className="rounded-lg bg-violet px-2.5 py-1 text-[11px] font-bold text-white"
                             >
                               Open contract
@@ -758,7 +785,14 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <Link
-                          href={`/collaboration/contract?creator=${encodeURIComponent(creator.slug)}`}
+                          href={contractHrefFromCampaign({
+                            creatorSlug: creator.slug,
+                            brief:
+                              hub.intentBrief ??
+                              hub.briefs.find((b) => b.status !== "closed") ??
+                              hub.briefs[0] ??
+                              null,
+                          })}
                           className="text-[11px] font-bold text-violet hover:underline"
                         >
                           Contract

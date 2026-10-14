@@ -4,7 +4,12 @@ import { redirect } from "next/navigation";
 import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
-import { getWorkspace } from "@/lib/business";
+import { getWorkspace, type CampaignBrief } from "@/lib/business";
+import {
+  budgetToGrossDollars,
+  campaignCommercialFromBrief,
+  campaignScopeFromBrief,
+} from "@/lib/campaign-contract";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { resolveFee, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
 import {
@@ -15,12 +20,14 @@ import {
   customMilestonesGate,
   evaluatePreContractGates,
   isContractWizardStep,
+  marketplaceProviderGateMessage,
   type ContractWizardStep,
   type MilestoneDraft,
 } from "@/lib/contract-wizard";
 import { storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
+import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
 import {
   allowedServiceLevels,
   capabilitiesFromJurisdictionRow,
@@ -37,7 +44,13 @@ import {
   PAYOUT_METHODS,
   type PayoutMethod,
 } from "@/lib/payout-readiness";
-import { collectionPayoutReady, DEFAULT_PAYMENT_ROUTES, paymentRoutes } from "@/lib/providers";
+import {
+  collectionPayoutBlocker,
+  collectionPayoutReady,
+  DEFAULT_PAYMENT_ROUTES,
+  paymentRoutes,
+  providerNeedsConnectedAccount,
+} from "@/lib/providers";
 import {
   creatorAmountsForMilestone,
   teamFundingReady,
@@ -54,6 +67,7 @@ type Props = {
     creator?: string;
     collaboration?: string;
     team?: string;
+    brief?: string;
     title?: string;
     scope?: string;
     commercial?: string;
@@ -136,6 +150,31 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     ? await prisma.collaboration.findUnique({ where: { id: collaborationId } }).catch(() => null)
     : null;
 
+  const briefId = (params.brief ?? "").trim();
+  const briefRow = briefId
+    ? await prisma.businessBrief
+        .findFirst({ where: { id: briefId, workspaceId: ws.businessId } })
+        .catch(() => null)
+    : null;
+  const campaignBrief: CampaignBrief | null = briefRow
+    ? {
+        id: briefRow.id,
+        title: briefRow.title,
+        goal: briefRow.goal,
+        specialty: briefRow.specialty,
+        budget: briefRow.budget,
+        budgetCurrency: briefRow.budgetCurrency,
+        collabType: briefRow.collabType,
+        timeframe: briefRow.timeframe,
+        location: briefRow.location,
+        platform: briefRow.platform,
+        summary: briefRow.summary,
+        createdAt: briefRow.createdAt.toISOString(),
+        status: briefRow.status === "closed" || briefRow.status === "draft" ? briefRow.status : "active",
+      }
+    : null;
+  const fromCampaign = Boolean(campaignBrief);
+
   const creatorSlug =
     (params.creator ?? "").trim() ||
     linkedCollab?.recipientSlug ||
@@ -143,12 +182,30 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     "";
   const creator = creatorSlug ? await getDirectoryCreator(creatorSlug) : null;
   const entered = contractWizardFields({
-    title: params.title !== undefined ? params.title : linkedCollab?.title,
-    scope: params.scope !== undefined ? params.scope : linkedCollab?.scope,
-    commercial: params.commercial !== undefined ? params.commercial : linkedCollab?.commercial,
+    title:
+      params.title !== undefined
+        ? params.title
+        : campaignBrief?.title || linkedCollab?.title,
+    scope:
+      params.scope !== undefined
+        ? params.scope
+        : campaignBrief
+          ? campaignScopeFromBrief(campaignBrief)
+          : linkedCollab?.scope,
+    commercial:
+      params.commercial !== undefined
+        ? params.commercial
+        : campaignBrief
+          ? campaignCommercialFromBrief(campaignBrief)
+          : linkedCollab?.commercial,
     jurisdiction: params.jurisdiction,
     serviceLevel: params.serviceLevel,
-    gross: params.gross,
+    gross:
+      params.gross !== undefined
+        ? params.gross
+        : campaignBrief
+          ? budgetToGrossDollars(campaignBrief.budget, campaignBrief.budgetCurrency)
+          : undefined,
     creatorCountryCode: countryCodeFromLocation(creator?.locationCountry),
     jurisdictionCodes: config.jurisdictions.map((row) => row.code),
   });
@@ -182,7 +239,13 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const dbCreator = creatorSlug
     ? await prisma.creator.findUnique({ where: { slug: creatorSlug } }).catch(() => null)
     : null;
-  const identityVerified = dbCreator?.identityVerified === "VERIFIED";
+  const identityVerified = dbCreator
+    ? await resolveCreatorIdentityVerified({
+        creatorId: dbCreator.id,
+        creatorSlug: dbCreator.slug,
+        identityVerified: dbCreator.identityVerified,
+      }).catch(() => dbCreator.identityVerified === "VERIFIED")
+    : false;
   const payoutReadiness = dbCreator
     ? await computePayoutReadiness({
         creatorId: dbCreator.id,
@@ -192,8 +255,11 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     : null;
 
   const jurisdiction = config.jurisdictions.find((row) => row.code === jurisdictionCode);
+  const assignedProviderCode = jurisdiction?.providerCode || "primary";
   const provider =
-    config.providers.find((row) => row.code === (jurisdiction?.providerCode || "primary")) ?? config.provider;
+    config.providers.find((row) => row.code === assignedProviderCode) ??
+    (assignedProviderCode === "primary" ? config.provider : null);
+  const marketplaceGate = marketplaceProviderGateMessage(provider, assignedProviderCode);
   const jurisdictionCaps = jurisdiction ? capabilitiesFromJurisdictionRow(jurisdiction) : null;
   const availableServiceLevels = jurisdictionCaps
     ? (allowedServiceLevels(jurisdictionCaps, SERVICE_LEVELS) as typeof SERVICE_LEVELS[number][])
@@ -209,20 +275,30 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         })
         .catch(() => null)
     : null;
+  const routeGateInput = {
+    providerCode: route?.providerCode,
+    providerName: route?.providerName,
+    routeReady: Boolean(route?.ready),
+    stripeConnectAccountId: payoutProfile?.stripeConnectAccountId,
+    providerConnectedAccountId: payoutProfile?.providerConnectedAccountId,
+  };
+  const paymentRouteBlocker = collectionPayoutBlocker(routeGateInput);
+  const influencerAccountConnected = providerNeedsConnectedAccount(route?.providerCode)
+    ? Boolean(payoutProfile?.providerConnectedAccountId?.trim())
+    : (route?.providerCode ?? "").toLowerCase() === "stripe"
+      ? Boolean(payoutProfile?.stripeConnectAccountId?.trim())
+      : null;
   let gates = evaluatePreContractGates({
     businessName: ws.name,
     creatorSlug: creatorSlug || "",
     identityVerified: creatorSlug ? identityVerified : false,
     creatorCountryKnown: Boolean(creatorCountry),
     corridorActive: payoutReadiness ? payoutReadiness.corridorActive : Boolean(creatorCountry),
-    paymentRouteReady: collectionPayoutReady({
-      providerCode: route?.providerCode,
-      routeReady: Boolean(route?.ready),
-      stripeConnectAccountId: payoutProfile?.stripeConnectAccountId,
-      providerConnectedAccountId: payoutProfile?.providerConnectedAccountId,
-    }),
+    paymentRouteReady: collectionPayoutReady(routeGateInput),
+    paymentRouteBlocker,
     jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
-    marketplaceProviderReady: Boolean(provider?.ready),
+    marketplaceProviderReady: marketplaceGate.ready,
+    marketplaceProviderBlocker: marketplaceGate.ready ? null : marketplaceGate.blocker,
   });
 
   const teamId = (params.team ?? "").trim();
@@ -243,7 +319,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             creatorSlug: party.creatorSlug,
             businessName: ws.name,
             jurisdictionProtectedPayments: Boolean(jurisdiction?.protectedPaymentsEnabled),
-            marketplaceProviderReady: Boolean(provider?.ready),
+            marketplaceProviderReady: marketplaceGate.ready,
           }),
         ),
       )
@@ -359,9 +435,16 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             {params.error}
           </p>
         ) : null}
+        {fromCampaign && campaignBrief ? (
+          <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            Prefilling from campaign “{campaignBrief.title}”. Title, scope, commercial terms, and budget come from
+            that intent — confirm them below rather than re-entering.
+          </p>
+        ) : null}
 
         <form action={actionSubmitContractWizard} className="space-y-8 rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
           <input type="hidden" name="businessName" value={ws.name} />
+          {campaignBrief ? <input type="hidden" name="briefId" value={campaignBrief.id} /> : null}
           {linkedCollab ? <input type="hidden" name="collaborationId" value={linkedCollab.id} /> : null}
           {teamProposal && teamProposal.workspaceId === ws.businessId ? (
             <input type="hidden" name="teamProposalId" value={teamProposal.id} />
@@ -435,14 +518,18 @@ export default async function ContractWizardPage({ searchParams }: Props) {
 
           <section id="scope">
             <h2 className="font-display text-xl font-bold text-indigo">2. Scope</h2>
+            {fromCampaign ? (
+              <p className="mt-1 text-xs text-muted">Carried over from the accepted campaign intent.</p>
+            ) : null}
             <label className="mt-4 block text-sm font-semibold text-indigo">
               Campaign title
               <input
                 name="title"
                 required
+                readOnly={fromCampaign}
                 placeholder="Campaign title"
                 defaultValue={title}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign ? "bg-[#F4F7FF] text-indigo" : ""}`}
               />
             </label>
             <label className="mt-4 block text-sm font-semibold text-indigo">
@@ -450,10 +537,11 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               <textarea
                 name="scope"
                 required
+                readOnly={fromCampaign}
                 rows={4}
                 placeholder="Deliverables, channels, and revisions"
                 defaultValue={scope}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign ? "bg-[#F4F7FF] text-indigo" : ""}`}
               />
             </label>
           </section>
@@ -466,9 +554,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 <input
                   name="grossUsd"
                   required
+                  readOnly={fromCampaign && Boolean(grossRaw)}
                   placeholder="Amount"
                   defaultValue={grossRaw}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                  className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign && grossRaw ? "bg-[#F4F7FF] text-indigo" : ""}`}
                 />
               </label>
               <label className="block text-sm font-semibold text-indigo">
@@ -531,8 +620,9 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 Commercial framing
                 <input
                   name="commercial"
+                  readOnly={fromCampaign && Boolean(commercial)}
                   defaultValue={commercial}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                  className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign && commercial ? "bg-[#F4F7FF] text-indigo" : ""}`}
                 />
               </label>
             </div>
@@ -630,13 +720,28 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               </li>
               <li>
                 Payment route:{" "}
-                {route?.ready ? `ready (${route.providerName})` : route ? route.reason.replace(/_/g, " ") : "no route"}
+                {route?.ready
+                  ? `ready (${route.providerName})`
+                  : route
+                    ? route.reason.replace(/_/g, " ")
+                    : "no route"}
               </li>
+              {influencerAccountConnected !== null ? (
+                <li>
+                  Influencer payout account:{" "}
+                  {influencerAccountConnected
+                    ? `connected (${route?.providerName ?? route?.providerCode})`
+                    : `not connected (${route?.providerName ?? route?.providerCode} required)`}
+                </li>
+              ) : null}
               <li>
                 Payout method:{" "}
                 {payoutReadiness?.primaryMethod
                   ? `${PAYOUT_METHOD_LABELS[payoutReadiness.primaryMethod as PayoutMethod] ?? payoutReadiness.primaryMethod} (${payoutReadiness.primaryStatus})`
                   : "—"}
+                {payoutReadiness && !payoutReadiness.hasVerifiedMethod
+                  ? " — needed for Global Payout Ready, not for funding"
+                  : ""}
               </li>
               <li>Jurisdiction protected payments: {jurisdiction?.protectedPaymentsEnabled ? "on" : "off"}</li>
               <li>
@@ -645,7 +750,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 {jurisdictionCaps?.managedIntroductionEnabled ? " · managed intro" : ""}
                 {jurisdictionCaps?.managedNegotiationEnabled ? " · managed campaign" : ""}
               </li>
-              <li>Marketplace provider: {provider?.ready ? "ready" : "not ready"}</li>
+              <li>Marketplace provider: {marketplaceGate.detail}</li>
             </ul>
             {!gates.ok ? (
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm font-semibold text-amber-900">

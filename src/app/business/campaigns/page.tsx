@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Panel, StatusPill, TextLink } from "@/components/dashboard-ui";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
+import { campaignEditLocked } from "@/lib/campaign-contract";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Campaigns & drafts" };
@@ -95,13 +96,19 @@ export default async function BusinessCampaignsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <StatusPill tone={tone(brief.status)}>{brief.status}</StatusPill>
-                  <Link
-                    href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
-                    className="text-xs font-bold text-violet hover:underline"
-                  >
-                    Open →
-                  </Link>
+                  <StatusPill tone={campaignEditLocked(brief) ? "warn" : tone(brief.status)}>
+                    {campaignEditLocked(brief) ? "contracted" : brief.status}
+                  </StatusPill>
+                  {campaignEditLocked(brief) ? (
+                    <span className="text-xs font-semibold text-muted">Locked</span>
+                  ) : (
+                    <Link
+                      href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
+                      className="text-xs font-bold text-violet hover:underline"
+                    >
+                      Open →
+                    </Link>
+                  )}
                 </div>
               </li>
             ))}

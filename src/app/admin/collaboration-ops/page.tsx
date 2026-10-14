@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionQueueApplicationExpireSweep, actionSaveCollabControlPlane } from "@/app/admin/collaboration-ops/actions";
 import { requireAdminPage } from "@/app/admin/guard";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import {
   accountPurposeCatalog,
@@ -119,8 +120,8 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
         ))}
       </section>
 
-      <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Risk controls & eligibility</h2>
+      <AdminCollapse title="Risk controls & eligibility">
+        <h2 className="sr-only">Risk controls & eligibility</h2>
         <p className="mt-1 text-xs text-muted">
           Dual approval applies to manual financial overrides at or above the threshold. Mentorship and guest collab
           thresholds are enforced by product surfaces that read this plane.
@@ -282,10 +283,10 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
             </button>
           </form>
         ) : null}
-      </section>
+      </AdminCollapse>
 
-      <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Account purposes</h2>
+      <AdminCollapse title="Account purposes">
+        <h2 className="sr-only">Account purposes</h2>
         <p className="mt-1 text-xs text-muted">
           Logical domains from P4. Mapping provider wallets to these purposes is ops-owned; creator funds must not sit
           in Operations except earned fees.
@@ -300,10 +301,10 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
             </li>
           ))}
         </ul>
-      </section>
+      </AdminCollapse>
 
-      <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Financial snapshot</h2>
+      <AdminCollapse title="Financial snapshot">
+        <h2 className="sr-only">Financial snapshot</h2>
         <p className="mt-1 text-xs text-muted">
           Live ledger totals (provider-held). Full monthly report lives on Marketplace ledger when the financial reports
           switch is on.
@@ -322,10 +323,10 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
             ))}
           </ul>
         )}
-      </section>
+      </AdminCollapse>
 
-      <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Recent control-plane audit</h2>
+      <AdminCollapse title="Recent control-plane audit">
+        <h2 className="sr-only">Recent control-plane audit</h2>
         {recentAudits.length === 0 ? (
           <p className="mt-3 text-sm text-muted">No corridor or control-plane audit events yet.</p>
         ) : (
@@ -338,7 +339,7 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
             ))}
           </ul>
         )}
-      </section>
+      </AdminCollapse>
     </div>
   );
 }
