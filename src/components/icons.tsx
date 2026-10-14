@@ -529,6 +529,16 @@ export function IconSettings(props: IconProps) {
   );
 }
 
+export function IconLogout(props: IconProps) {
+  return (
+    <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3" />
+      <path d="M16 17l5-5-5-5" />
+      <path d="M21 12H9" />
+    </svg>
+  );
+}
+
 export function IconWallet(props: IconProps) {
   return (
     <svg {...base(props)} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

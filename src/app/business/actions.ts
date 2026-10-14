@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
+import { prisma } from "@/lib/db";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import {
   addToShortlist,
@@ -31,12 +32,19 @@ async function requireBusinessAccount() {
   return { account, ws };
 }
 
+/** Promote a non-admin account to BUSINESS once it accepts the business terms. */
+async function markAccountBusiness(userId: string, currentRole: string) {
+  if (currentRole === "ADMIN" || currentRole === "BUSINESS") return;
+  await prisma.user.update({ where: { id: userId }, data: { role: "BUSINESS" } });
+}
+
 export async function actionAcceptBusinessTerms(formData: FormData) {
   if (formData.get("acceptBusiness") !== "on") {
     redirect("/business?error=" + encodeURIComponent("Agree to the Business / Brand Terms to continue."));
   }
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business");
+  await markAccountBusiness(account.id, account.role);
   if (await hasCurrentLegalRecord({ documentKey: "business-terms", userId: account.id })) {
     await ensureOwnedBusinessWorkspace(account.id);
     redirect("/business?terms=1");

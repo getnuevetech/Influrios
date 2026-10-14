@@ -113,6 +113,7 @@ export async function registerAccount(input: {
   password: string;
   source: string;
   ip?: string | null;
+  role?: "CREATOR" | "BUSINESS";
 }) {
   const email = input.email.trim().toLowerCase();
   const name = input.name.trim();
@@ -123,6 +124,7 @@ export async function registerAccount(input: {
   if (problem) throw new Error(problem);
 
   const passwordHash = hashAccountPassword(input.password);
+  const role = input.role ?? "CREATOR";
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing?.passwordHash && existing.emailVerifiedAt) {
     throw new Error("An account with that email already exists. Log in.");
@@ -131,10 +133,15 @@ export async function registerAccount(input: {
   const user = existing
     ? await prisma.user.update({
         where: { id: existing.id },
-        data: { name, passwordHash, emailVerifiedAt: null },
+        data: {
+          name,
+          passwordHash,
+          emailVerifiedAt: null,
+          ...(existing.role === "ADMIN" ? {} : { role }),
+        },
       })
     : await prisma.user.create({
-        data: { email, name, passwordHash, role: "CREATOR", planTier: "STARTER" },
+        data: { email, name, passwordHash, role, planTier: "STARTER" },
       });
 
   await prisma.consentRecord.create({

@@ -13,7 +13,10 @@ export const metadata = {
     "Find the right influencers, get AI-powered suggestions, and run protected collaborations on Influrios.",
 };
 
-export default async function BusinessPage() {
+type Props = { searchParams: Promise<{ error?: string }> };
+
+export default async function BusinessPage({ searchParams }: Props) {
+  const params = await searchParams;
   const [account, directory, landing, livePages] = await Promise.all([
     getAccountSession().catch(() => null),
     getDirectory().catch(() => null),
@@ -62,7 +65,7 @@ export default async function BusinessPage() {
           </div>
         </div>
       ) : null}
-      <BusinessMarketingPage landing={landingView} recommended={recommended} />
+      <BusinessMarketingPage landing={landingView} recommended={recommended} error={params.error} />
     </>
   );
 }
