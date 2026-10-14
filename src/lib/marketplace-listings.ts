@@ -115,6 +115,38 @@ export async function ensureMarketplaceListings() {
   };
 }
 
+function mapBusinessRequestRow(row: {
+  id: string;
+  brand: string;
+  category: string;
+  budget: string;
+  location: string;
+  tags: string[];
+  summary: string;
+  lookingFor: string;
+  logoUrl: string | null;
+  imageUrl: string | null;
+  status: string;
+  sortOrder: number;
+  workspaceId: string | null;
+}): MarketplaceBusinessRequestRow {
+  return {
+    id: row.id,
+    brand: row.brand,
+    category: row.category,
+    budget: row.budget,
+    location: row.location,
+    tags: row.tags,
+    summary: row.summary,
+    lookingFor: row.lookingFor,
+    logoUrl: publicListingAsset(row.logoUrl),
+    imageUrl: publicListingAsset(row.imageUrl),
+    status: row.status,
+    sortOrder: row.sortOrder,
+    workspaceId: row.workspaceId,
+  };
+}
+
 export async function listPublishedBusinessRequests(filters?: {
   budget?: string;
   goal?: string;
@@ -124,21 +156,7 @@ export async function listPublishedBusinessRequests(filters?: {
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
   return rows
-    .map((row) => ({
-      id: row.id,
-      brand: row.brand,
-      category: row.category,
-      budget: row.budget,
-      location: row.location,
-      tags: row.tags,
-      summary: row.summary,
-      lookingFor: row.lookingFor,
-      logoUrl: publicListingAsset(row.logoUrl),
-      imageUrl: publicListingAsset(row.imageUrl),
-      status: row.status,
-      sortOrder: row.sortOrder,
-      workspaceId: row.workspaceId,
-    }))
+    .map(mapBusinessRequestRow)
     .filter((item) => !isLaunchSampleBusinessRequest(item))
     .filter((item) => {
       if (filters?.budget && item.budget !== filters.budget) return false;
@@ -148,6 +166,19 @@ export async function listPublishedBusinessRequests(filters?: {
       }
       return true;
     });
+}
+
+/** Single published business campaign/request for influencer campaign detail. */
+export async function getPublishedBusinessRequest(
+  id: string,
+): Promise<MarketplaceBusinessRequestRow | null> {
+  const requestId = id.trim();
+  if (!requestId) return null;
+  const row = await prisma.marketplaceBusinessRequest.findUnique({ where: { id: requestId } });
+  if (!row || row.status !== "published") return null;
+  const mapped = mapBusinessRequestRow(row);
+  if (isLaunchSampleBusinessRequest(mapped)) return null;
+  return mapped;
 }
 
 export async function listPublishedCreatorOpportunities(filters?: {

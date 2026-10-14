@@ -463,27 +463,25 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                     key={request.id}
                     className="relative w-[240px] shrink-0 overflow-hidden rounded-2xl border border-[#E4E9F5] bg-white shadow-sm"
                   >
-                    <div className="relative h-28 bg-[#F4F7FF]">
-                      {request.imageUrl ? (
-                        <Image src={request.imageUrl} alt="" fill className="object-cover" sizes="240px" />
-                      ) : request.logoUrl ? (
-                        <Image src={request.logoUrl} alt="" fill className="object-contain p-6" sizes="240px" />
-                      ) : null}
-                      <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-violet">
-                        {score}% Match
-                      </span>
-                    </div>
-                    <div className="p-3">
-                      <p className="text-sm font-bold text-indigo">{request.brand}</p>
-                      <p className="text-[11px] text-muted">
-                        {request.category} · {request.budget}
-                      </p>
-                      <div className="mt-3 flex items-center gap-2">
-                        <Link href="/business" className="btn-primary !px-3 !py-1.5 text-[11px]">
-                          View Match
-                        </Link>
+                    <Link href={`/collaboration/requests/${encodeURIComponent(request.id)}`} className="block">
+                      <div className="relative h-28 bg-[#F4F7FF]">
+                        {request.imageUrl ? (
+                          <Image src={request.imageUrl} alt="" fill className="object-cover" sizes="240px" />
+                        ) : request.logoUrl ? (
+                          <Image src={request.logoUrl} alt="" fill className="object-contain p-6" sizes="240px" />
+                        ) : null}
+                        <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-violet">
+                          {score}% Match
+                        </span>
                       </div>
-                    </div>
+                      <div className="p-3">
+                        <p className="text-sm font-bold text-indigo">{request.brand}</p>
+                        <p className="text-[11px] text-muted">
+                          {request.category} · {request.budget}
+                        </p>
+                        <span className="btn-primary mt-3 inline-flex !px-3 !py-1.5 text-[11px]">View campaign</span>
+                      </div>
+                    </Link>
                   </article>
                 ))
               )}
@@ -628,7 +626,10 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 <h2 className="flex items-center gap-2 font-display text-base font-bold text-indigo">
                   <IconBuilding size={16} className="text-violet" /> Business Requests
                 </h2>
-                <Link href="/business" className="text-[11px] font-bold text-violet">
+                <Link
+                  href="/collaboration/hub?view=opportunities#business-requests"
+                  className="text-[11px] font-bold text-violet"
+                >
                   View all →
                 </Link>
               </div>
@@ -637,22 +638,38 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 {requests.map((item) => (
                   <li key={item.id} className="rounded-xl border border-[#E8EDF8] p-3">
                     <div className="flex gap-3">
-                      <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#F4F7FF]">
+                      <Link
+                        href={`/collaboration/requests/${encodeURIComponent(item.id)}`}
+                        className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#F4F7FF]"
+                      >
                         {item.logoUrl ? (
                           <Image src={item.logoUrl} alt="" fill className="object-contain p-1" sizes="40px" />
                         ) : null}
-                      </span>
+                      </Link>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-indigo">{item.brand}</p>
+                        <Link
+                          href={`/collaboration/requests/${encodeURIComponent(item.id)}`}
+                          className="text-sm font-bold text-indigo hover:text-violet hover:underline"
+                        >
+                          {item.brand}
+                        </Link>
                         <p className="text-[11px] text-muted">
                           {item.budget} · {item.location}
                         </p>
-                        <form action={actionApplyToBusinessRequest} className="mt-2">
-                          <input type="hidden" name="requestId" value={item.id} />
-                          <button type="submit" className="btn-primary !px-3 !py-1 text-[11px]">
-                            Apply
-                          </button>
-                        </form>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/collaboration/requests/${encodeURIComponent(item.id)}`}
+                            className="btn-secondary !px-3 !py-1 text-[11px]"
+                          >
+                            View campaign
+                          </Link>
+                          <form action={actionApplyToBusinessRequest}>
+                            <input type="hidden" name="requestId" value={item.id} />
+                            <button type="submit" className="btn-primary !px-3 !py-1 text-[11px]">
+                              Apply
+                            </button>
+                          </form>
+                        </div>
                       </div>
                     </div>
                   </li>
