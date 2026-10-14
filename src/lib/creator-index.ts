@@ -86,16 +86,27 @@ async function meili(path: string, init: RequestInit, env: MeiliEnv, fetchImpl: 
   return response.json() as Promise<unknown>;
 }
 
+function taskErrorMessage(task: unknown) {
+  if (!task || typeof task !== "object") return "Search index update failed.";
+  const error = (task as { error?: { message?: string; code?: string } | null }).error;
+  if (!error) return "Search index update failed.";
+  const parts = [error.message, error.code].filter(Boolean);
+  return parts.length ? `Search index update failed: ${parts.join(" · ")}` : "Search index update failed.";
+}
+
 async function finishTask(body: unknown, env: MeiliEnv, fetchImpl: typeof fetch) {
   const uid = body && typeof body === "object" && "taskUid" in body ? Number((body as { taskUid: number }).taskUid) : NaN;
   if (!Number.isFinite(uid)) return;
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  // Delete/create can take more than a second under load — poll with backoff.
+  const waitsMs = [50, 50, 100, 100, 200, 200, 400, 400, 800, 800, 1000, 1000, 1000, 1000, 1000];
+  for (let attempt = 0; attempt < waitsMs.length; attempt += 1) {
     const task = await meili(`/tasks/${uid}`, { method: "GET" }, env, fetchImpl);
     const status = task && typeof task === "object" && "status" in task ? String((task as { status: string }).status) : "";
     if (status === "succeeded") return;
-    if (status === "failed") throw new Error("Search index update failed.");
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    if (status === "failed") throw new Error(taskErrorMessage(task));
+    await new Promise((resolve) => setTimeout(resolve, waitsMs[attempt]));
   }
+  throw new Error(`Search index update timed out (task ${uid}).`);
 }
 
 export async function ensureCreatorIndex(
@@ -210,11 +221,19 @@ export async function replaceCreatorIndex(
   fetchImpl: typeof fetch = fetch,
 ) {
   if (!meiliConfigured(env)) throw new Error("MEILI_HOST is required.");
-  const removed = await meili(`/indexes/${INDEX}`, { method: "DELETE" }, env, fetchImpl).catch((error: Error) => {
-    if (!/404|not found/i.test(error.message)) throw error;
-    return null;
-  });
-  if (removed) await finishTask(removed, env, fetchImpl);
+  // Meilisearch accepts DELETE of a missing index with HTTP 202, then the *task* fails
+  // with index_not_found. Only delete when GET shows the index exists.
+  let indexExists = true;
+  try {
+    await meili(`/indexes/${INDEX}`, { method: "GET" }, env, fetchImpl);
+  } catch (error) {
+    if (!/404|not found|index_not_found/i.test(error instanceof Error ? error.message : "")) throw error;
+    indexExists = false;
+  }
+  if (indexExists) {
+    const removed = await meili(`/indexes/${INDEX}`, { method: "DELETE" }, env, fetchImpl);
+    await finishTask(removed, env, fetchImpl);
+  }
   await ensureCreatorIndex(env, fetchImpl, synonyms);
   if (!creators.length) return { indexed: 0 };
   const saved = await meili(

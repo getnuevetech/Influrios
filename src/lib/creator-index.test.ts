@@ -45,6 +45,9 @@ describe("creator search index", () => {
       const url = String(input);
       const method = init?.method ?? "GET";
       calls.push(`${method} ${url}`);
+      if (method === "GET" && url.endsWith("/indexes/creators")) {
+        return new Response(JSON.stringify({ uid: "creators" }), { status: 200 });
+      }
       if (method === "DELETE" && url.endsWith("/indexes/creators")) {
         return new Response(JSON.stringify({ taskUid: 10 }), { status: 202 });
       }
@@ -63,6 +66,40 @@ describe("creator search index", () => {
     assert.equal(result.indexed, 0);
     assert.ok(calls.some((call) => call.startsWith("GET http://meili:7700/tasks/10")));
     assert.ok(calls.some((call) => call.startsWith("GET http://meili:7700/tasks/11")));
+  });
+
+  it("skips DELETE when the creators index is missing (avoids failed index_not_found task)", async () => {
+    const calls: string[] = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      calls.push(`${method} ${url}`);
+      if (method === "GET" && url.endsWith("/indexes/creators")) {
+        return new Response(JSON.stringify({ message: "Index `creators` not found.", code: "index_not_found" }), {
+          status: 404,
+        });
+      }
+      if (method === "DELETE" && url.endsWith("/indexes/creators")) {
+        return new Response(JSON.stringify({ taskUid: 99 }), { status: 202 });
+      }
+      if (method === "POST" && url.endsWith("/indexes")) {
+        return new Response(JSON.stringify({ taskUid: 11 }), { status: 202 });
+      }
+      if (url.includes("/tasks/")) {
+        return new Response(JSON.stringify({ status: "succeeded" }), { status: 200 });
+      }
+      if (url.includes("/settings")) {
+        return new Response(JSON.stringify({ taskUid: 12 }), { status: 202 });
+      }
+      return new Response("{}", { status: 200 });
+    };
+    const result = await replaceCreatorIndex([], [], { MEILI_HOST: "http://meili:7700" }, fetchImpl);
+    assert.equal(result.indexed, 0);
+    assert.equal(
+      calls.some((call) => call === "DELETE http://meili:7700/indexes/creators"),
+      false,
+    );
+    assert.ok(calls.some((call) => call === "POST http://meili:7700/indexes"));
   });
 
   it("builds a specialty and country filter", () => {
