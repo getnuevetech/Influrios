@@ -17,31 +17,98 @@ const inputClass = "mt-1 w-full rounded-lg border border-border px-3 py-2 text-s
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function DashboardKycPage({ searchParams }: Props) {
-  const draft = await getCreatorSessionDraft();
+  let draft: Awaited<ReturnType<typeof getCreatorSessionDraft>> = null;
+  let params: { saved?: string; error?: string } = {};
+  try {
+    draft = await getCreatorSessionDraft();
+    params = await searchParams;
+  } catch (error) {
+    console.error("dashboard/kyc session", error);
+    return (
+      <div className="mx-auto max-w-3xl space-y-4 px-4 py-10">
+        <h1 className="font-display text-2xl font-bold text-indigo">Identity KYC</h1>
+        <p className="text-sm text-amber-800">Could not load your session. Sign in again, then reopen Identity KYC.</p>
+        <Link href="/login?next=/dashboard/kyc" className="text-sm font-semibold text-violet hover:underline">
+          Sign in
+        </Link>
+      </div>
+    );
+  }
   if (!draft) redirect("/claim");
-  const params = await searchParams;
+
   const countryCode = countryCodeFromLocation(draft.locationCountry) ?? "";
-  const country = corridorCountryByCode(countryCode);
-  const [corridor, requirements, settings, submission, creator] = await Promise.all([
-    countryCode
-      ? prisma.countryActivationCorridor.findUnique({ where: { countryCode } }).catch(() => null)
-      : Promise.resolve(null),
-    listKycRequirements().catch(() => []),
-    loadKycSettings().catch(() => null),
-    prisma.creatorKycSubmission
-      .findUnique({ where: { creatorSlug: draft.slug }, include: { documents: true } })
-      .catch(() => null),
-    prisma.creator.findUnique({ where: { slug: draft.slug } }).catch(() => null),
-  ]);
+  let country = null as ReturnType<typeof corridorCountryByCode>;
+  let corridor = null as { kycModel: string } | null;
+  let requirements = [] as Awaited<ReturnType<typeof listKycRequirements>>;
+  let settings = null as Awaited<ReturnType<typeof loadKycSettings>>;
+  let submission = null as {
+    kycModel: string;
+    status: string;
+    detailsJson: unknown;
+    gatewaySessionUrl: string;
+    documents: { requirementId: string }[];
+  } | null;
+  let creator = null as { id: string } | null;
+  let gateway = null as { name: string; enabled: boolean } | null;
+  let loadError: string | null = null;
+
+  try {
+    country = corridorCountryByCode(countryCode);
+    const loaded = await Promise.all([
+      countryCode
+        ? prisma.countryActivationCorridor.findUnique({ where: { countryCode } }).catch(() => null)
+        : Promise.resolve(null),
+      listKycRequirements().catch(() => [] as Awaited<ReturnType<typeof listKycRequirements>>),
+      loadKycSettings().catch(() => null),
+      prisma.creatorKycSubmission
+        .findUnique({ where: { creatorSlug: draft.slug }, include: { documents: true } })
+        .catch(() => null),
+      prisma.creator.findUnique({ where: { slug: draft.slug }, select: { id: true } }).catch(() => null),
+    ]);
+    corridor = loaded[0];
+    requirements = loaded[1] ?? [];
+    settings = loaded[2];
+    submission = loaded[3]
+      ? {
+          kycModel: loaded[3].kycModel,
+          status: loaded[3].status,
+          detailsJson: loaded[3].detailsJson,
+          gatewaySessionUrl: loaded[3].gatewaySessionUrl,
+          documents: loaded[3].documents ?? [],
+        }
+      : null;
+    creator = loaded[4];
+    gateway = settings?.gatewayProviderId
+      ? await prisma.integrationProvider
+          .findFirst({
+            where: { id: settings.gatewayProviderId, kind: "payment" },
+            select: { name: true, enabled: true },
+          })
+          .catch(() => null)
+      : null;
+  } catch (error) {
+    console.error("dashboard/kyc load", error);
+    loadError = error instanceof Error ? error.message : "Could not load KYC.";
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-4 px-4 py-10">
+        <Link href="/dashboard" className="text-sm font-semibold text-violet hover:underline">
+          ← Dashboard
+        </Link>
+        <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Identity KYC</h1>
+        <p className="text-sm text-amber-800">{loadError}</p>
+      </div>
+    );
+  }
+
   const kyc = kycTypeByCode(corridor?.kycModel);
-  const gateway = settings?.gatewayProviderId
-    ? await prisma.integrationProvider
-        .findFirst({ where: { id: settings.gatewayProviderId, kind: "payment" } })
-        .catch(() => null)
-    : null;
   const details = kycDetailsRecord(submission?.detailsJson);
   const identityUrl = storedIdentitySessionUrl(submission?.gatewaySessionUrl);
-  const uploaded = new Set(submission?.kycModel === "government_id" ? submission.documents.map((document) => document.requirementId) : []);
+  const uploaded = new Set(
+    submission?.kycModel === "government_id" ? (submission.documents ?? []).map((document) => document.requirementId) : [],
+  );
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
@@ -104,6 +171,7 @@ export default async function DashboardKycPage({ searchParams }: Props) {
                   ? " This submission is waiting for review."
                   : ""}
           </p>
+          <p className="mt-2 text-xs text-muted">Each file must be JPG, PNG, WEBP, or PDF and 8 MB or smaller.</p>
           {creator ? null : (
             <p className="mt-2 text-xs text-muted">Your directory profile is created when the card is published.</p>
           )}
