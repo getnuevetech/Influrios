@@ -365,11 +365,46 @@ export async function saveBillingPriceIds(prices: Partial<Record<BillingSku, str
   });
 }
 
+function originIfUsable(raw: string | null | undefined): string | null {
+  const value = (raw ?? "").trim().replace(/\/$/, "");
+  if (!value) return null;
+  try {
+    const url = new URL(value.includes("://") ? value : `https://${value}`);
+    const host = url.hostname.toLowerCase();
+    // Docker standalone sets HOSTNAME=0.0.0.0 — never send browsers there.
+    if (!host || host === "0.0.0.0" || host === "::" || host === "[::]") return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Public site origin for redirects and OAuth return URLs.
+ * Never returns `https://0.0.0.0:3000` (standalone Docker HOSTNAME).
+ */
 export function getAppOrigin(): string {
   return (
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    process.env.APP_URL?.replace(/\/$/, "") ||
+    originIfUsable(process.env.NEXT_PUBLIC_APP_URL) ||
+    originIfUsable(process.env.APP_URL) ||
     "http://localhost:3000"
+  );
+}
+
+/**
+ * Prefer NEXT_PUBLIC_APP_URL / APP_URL. Fall back to forwarded Host headers only when
+ * they are not the Docker bind address.
+ */
+export function resolveAppOrigin(input?: { proto?: string | null; host?: string | null; fallback?: string | null }) {
+  const fromEnv =
+    originIfUsable(process.env.NEXT_PUBLIC_APP_URL) || originIfUsable(process.env.APP_URL);
+  if (fromEnv) return fromEnv;
+  const proto = (input?.proto ?? "https").replace(/:$/, "") || "https";
+  const host = (input?.host ?? "").split(",")[0]?.trim() ?? "";
+  return (
+    originIfUsable(`${proto}://${host}`) ||
+    originIfUsable(input?.fallback) ||
+    getAppOrigin()
   );
 }
 

@@ -101,6 +101,8 @@ describe("staging evidence probe", () => {
     assert.equal(existsSync("scripts/staging-e3-social-evidence.sh"), true);
     assert.match(runbook, /### E3 progress \(Social OAuth\)/);
     assert.match(runbook, /staging:e3-social-evidence/);
+    assert.match(readFileSync("scripts/staging-e3-social-evidence.sh", "utf8"), /0\.0\.0\.0/);
+    assert.match(readFileSync("src/app/api/social/callback/route.ts", "utf8"), /resolveAppOrigin/);
   });
 });
 

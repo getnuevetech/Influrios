@@ -100,16 +100,37 @@ export async function removeKycRequirement(id: string) {
   await prisma.kycDocumentRequirement.delete({ where: { id: requirementId } });
 }
 
+function mimeFromName(fileName: string) {
+  const ext = path.extname(fileName).toLowerCase();
+  if (ext === ".png") return "image/png";
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".pdf") return "application/pdf";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  return "";
+}
+
 async function saveKycFile(slug: string, requirementId: string, file: File) {
-  if (!(file instanceof File) || file.size <= 0) throw new Error("Choose a file to upload.");
+  // Some runtimes hand a Blob-like upload; require a usable File with bytes.
+  if (!file || typeof file !== "object" || typeof file.arrayBuffer !== "function" || file.size <= 0) {
+    throw new Error("Choose a file to upload.");
+  }
   if (file.size > MAX_BYTES) throw new Error("Each document must be 8 MB or smaller.");
-  if (!ALLOWED.has(file.type)) throw new Error("Upload a JPG, PNG, WEBP, or PDF.");
+  const type = (file.type || mimeFromName(file.name || "")).trim().toLowerCase();
+  if (!ALLOWED.has(type)) throw new Error("Upload a JPG, PNG, WEBP, or PDF.");
   const safeSlug = slug.replace(/[^a-z0-9-]/gi, "").slice(0, 80) || "creator";
   const dir = path.join(KYC_DIR, safeSlug);
-  await fs.mkdir(dir, { recursive: true });
-  const name = `${requirementId}-${Date.now()}-${randomBytes(4).toString("hex")}.${extensionFor(file.type)}`;
-  await fs.writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
-  return { storagePath: `${safeSlug}/${name}`, fileName: file.name.slice(0, 180) || name };
+  try {
+    await fs.mkdir(dir, { recursive: true });
+    const name = `${requirementId}-${Date.now()}-${randomBytes(4).toString("hex")}.${extensionFor(type)}`;
+    await fs.writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
+    return { storagePath: `${safeSlug}/${name}`, fileName: (file.name || name).slice(0, 180) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not store the document.";
+    if (/EACCES|EROFS|ENOSPC|EPERM/i.test(message)) {
+      throw new Error("Document storage is not writable on this host. Ask an admin to check /app/data/kyc.");
+    }
+    throw error instanceof Error ? error : new Error("Could not store the document.");
+  }
 }
 
 export async function readKycFile(storagePath: string) {

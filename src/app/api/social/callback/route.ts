@@ -1,29 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveAppOrigin } from "@/lib/billing";
 import { completeSocialCallback } from "@/lib/social-connect";
 
-function originFrom(request: NextRequest) {
-  const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
-  return `${proto}://${host}`;
+function publicOrigin(request: NextRequest) {
+  return resolveAppOrigin({
+    proto: request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", ""),
+    host: request.headers.get("x-forwarded-host") ?? request.headers.get("host"),
+    // Never trust nextUrl.origin alone — Docker HOSTNAME=0.0.0.0 leaks into it.
+    fallback: request.nextUrl.origin,
+  });
 }
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code") ?? undefined;
   const state = request.nextUrl.searchParams.get("state") ?? undefined;
   const providerError = request.nextUrl.searchParams.get("error") ?? undefined;
+  const origin = publicOrigin(request);
   try {
     const result = await completeSocialCallback({
       code,
       state,
       error: providerError,
-      origin: originFrom(request),
+      origin,
     });
-    const target = new URL("/dashboard", request.nextUrl.origin);
+    const target = new URL("/dashboard", origin);
     if (result.ok) target.searchParams.set("social", "connected");
     else target.searchParams.set("error", result.error);
     return NextResponse.redirect(target);
   } catch {
-    const target = new URL("/dashboard", request.nextUrl.origin);
+    const target = new URL("/dashboard", origin);
     target.searchParams.set("error", "The network could not be reached. The profile figures were not changed.");
     return NextResponse.redirect(target);
   }

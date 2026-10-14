@@ -119,7 +119,7 @@ export default async function DashboardKycPage({ searchParams }: Props) {
               ))}
             </ul>
           ) : (
-            <form action={actionSubmitDocumentKyc} className="mt-4 space-y-3">
+            <form action={actionSubmitDocumentKyc} encType="multipart/form-data" className="mt-4 space-y-3">
               {requirements.map((requirement) =>
                 requirement.kind === "detail" ? (
                   <label key={requirement.id} className="block text-xs font-semibold text-muted">

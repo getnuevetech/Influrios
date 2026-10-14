@@ -48,6 +48,7 @@ describe("document KYC requirements", () => {
     const user = readFileSync("src/app/dashboard/kyc/page.tsx", "utf8");
     assert.equal(user.includes("government_id"), true);
     assert.equal(user.includes("pending_gateway"), true);
+    assert.equal(user.includes('encType="multipart/form-data"'), true);
     const actions = readFileSync("src/app/admin/kyc/actions.ts", "utf8");
     assert.equal(actions.includes("saveKycGateway"), true);
     assert.equal(actions.includes("addKycRequirement"), true);
