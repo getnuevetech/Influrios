@@ -112,6 +112,10 @@ describe("staging evidence probe", () => {
     assert.equal(existsSync("scripts/staging-e5-meilisearch-evidence.sh"), true);
     assert.match(runbook, /### E5 progress \(Meilisearch counts\)/);
     assert.match(runbook, /staging:e5-meilisearch-evidence/);
+    // E5 complete: succeeded reindex job + matching counts.
+    assert.match(runbook, /cmv81yjje0002nl01evdvvz01/);
+    assert.match(runbook, /E5 progress \(Meilisearch counts\) — \*\*complete\*\*/);
+    assert.match(runbook, /indexed=3 postgres=3/);
   });
 });
 
