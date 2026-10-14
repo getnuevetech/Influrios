@@ -13,12 +13,17 @@ function clean(value: FormDataEntryValue | null, max: number) {
   return String(value ?? "").trim().slice(0, max);
 }
 
+function sectionPath(formData: FormData) {
+  return formData.get("section") === "business" ? "/admin/business-accounts" : "/admin/accounts";
+}
+
 export async function actionSaveAccountPolicy(formData: FormData) {
   await requireAdminSession("accounts.edit");
+  const base = sectionPath(formData);
   const consentVersion = clean(formData.get("consentVersion"), 40);
   const consentCopy = clean(formData.get("consentCopy"), 400);
   if (!consentVersion || !consentCopy) {
-    redirect("/admin/accounts?error=policy");
+    redirect(`${base}?error=policy`);
   }
   await prisma.siteConfig.upsert({
     where: { id: "default" },
@@ -36,21 +41,22 @@ export async function actionSaveAccountPolicy(formData: FormData) {
     },
   });
   invalidateSiteConfigCache();
-  redirect("/admin/accounts?saved=policy");
+  redirect(`${base}?saved=policy`);
 }
 
 export async function actionSaveMember(formData: FormData) {
   await requireAdminSession("accounts.edit");
+  const base = sectionPath(formData);
   const id = clean(formData.get("userId"), 80);
   const role = clean(formData.get("role"), 32);
   const planTier = clean(formData.get("planTier"), 32);
-  if (!id) redirect("/admin/accounts?error=member");
-  if (!ROLES.includes(role as (typeof ROLES)[number])) redirect("/admin/accounts?error=member");
+  if (!id) redirect(`${base}?error=member`);
+  if (!ROLES.includes(role as (typeof ROLES)[number])) redirect(`${base}?error=member`);
   const allowed = new Set(await assignablePlanCodes().catch(() => FALLBACK_PLANS));
   const current = await prisma.user.findUnique({ where: { id } });
-  if (!current) redirect("/admin/accounts?error=member");
+  if (!current) redirect(`${base}?error=member`);
   if (current.planTier) allowed.add(current.planTier);
-  if (!allowed.has(planTier)) redirect("/admin/accounts?error=member");
+  if (!allowed.has(planTier)) redirect(`${base}?error=member`);
 
   const suspended = formData.get("suspended") === "1";
   // Email verification is permanent once set by the member code — admin cannot clear it here.
@@ -62,16 +68,17 @@ export async function actionSaveMember(formData: FormData) {
       suspendedAt: suspended ? current.suspendedAt ?? new Date() : null,
     },
   });
-  redirect("/admin/accounts?saved=member");
+  redirect(`${base}?saved=member`);
 }
 
 export async function actionSendPasswordReset(formData: FormData) {
   await requireAdminSession("accounts.edit");
+  const base = sectionPath(formData);
   const id = clean(formData.get("userId"), 80);
-  if (!id) redirect("/admin/accounts?reset=failed");
+  if (!id) redirect(`${base}?reset=failed`);
   const user = await prisma.user.findUnique({ where: { id } });
-  if (!user?.email) redirect("/admin/accounts?reset=failed");
+  if (!user?.email) redirect(`${base}?reset=failed`);
   const { requestPasswordReset } = await import("@/lib/accounts");
   const result = await requestPasswordReset(user.email).catch(() => ({ sent: false }));
-  redirect(result.sent ? "/admin/accounts?reset=sent" : "/admin/accounts?reset=failed");
+  redirect(result.sent ? `${base}?reset=sent` : `${base}?reset=failed`);
 }
