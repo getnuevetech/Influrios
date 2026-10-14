@@ -104,9 +104,14 @@ export async function ensureCreatorIndex(
   synonyms: { term: string; slug: string }[] = [],
 ) {
   if (!meiliConfigured(env)) throw new Error("MEILI_HOST is required.");
-  await meili(`/indexes/${INDEX}`, { method: "POST", body: JSON.stringify({ uid: INDEX, primaryKey: "slug" }) }, env, fetchImpl).catch((error: Error) => {
-    if (!/already exists|index_already_exists/i.test(error.message)) throw error;
-  });
+  // Meilisearch creates indexes via POST /indexes (body.uid). POST /indexes/{uid} → 405.
+  const created = await meili(`/indexes`, { method: "POST", body: JSON.stringify({ uid: INDEX, primaryKey: "slug" }) }, env, fetchImpl).catch(
+    (error: Error) => {
+      if (!/already exists|index_already_exists/i.test(error.message)) throw error;
+      return null;
+    },
+  );
+  if (created) await finishTask(created, env, fetchImpl);
   const settings = await meili(
     `/indexes/${INDEX}/settings`,
     {
@@ -205,9 +210,11 @@ export async function replaceCreatorIndex(
   fetchImpl: typeof fetch = fetch,
 ) {
   if (!meiliConfigured(env)) throw new Error("MEILI_HOST is required.");
-  await meili(`/indexes/${INDEX}`, { method: "DELETE" }, env, fetchImpl).catch((error: Error) => {
+  const removed = await meili(`/indexes/${INDEX}`, { method: "DELETE" }, env, fetchImpl).catch((error: Error) => {
     if (!/404|not found/i.test(error.message)) throw error;
+    return null;
   });
+  if (removed) await finishTask(removed, env, fetchImpl);
   await ensureCreatorIndex(env, fetchImpl, synonyms);
   if (!creators.length) return { indexed: 0 };
   const saved = await meili(
