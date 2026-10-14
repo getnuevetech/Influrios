@@ -81,7 +81,9 @@ export default async function BusinessHomePage() {
   ];
   const complete = checks.filter((item) => item.done).length;
   const setupPercent = Math.round((complete / checks.length) * 100);
-  const recentBriefs = [...workspace.briefs].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
+  const sortedBriefs = [...workspace.briefs].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const draftBriefs = sortedBriefs.filter((brief) => brief.status === "draft").slice(0, 5);
+  const recentBriefs = sortedBriefs.filter((brief) => brief.status !== "draft").slice(0, 6);
   const marketplaceRequests = hub?.ownRequests ?? [];
   const suggestions = hub?.suggestions ?? [];
   const applications = hub?.applications ?? [];
@@ -93,7 +95,6 @@ export default async function BusinessHomePage() {
   const monthlySpend = spend ? formatMoney(spend.fundedCents, spend.currency || "USD") : "$0";
   const teamSeats = entitlements?.teamSeats ?? 1;
   const seatsUsed = Math.min(1, teamSeats);
-  const firstName = (account.name || "").split(" ")[0];
   const verifiedBusiness = Boolean(workspace.name.trim() && workspace.industry.trim());
   const bio =
     workspace.industry.trim()
@@ -123,20 +124,22 @@ export default async function BusinessHomePage() {
     responseLabel: string;
     updated: string;
     creators: string[];
+    href: string;
   };
 
   const tableRows: TableRow[] = [
     ...recentBriefs.map((brief) => ({
       id: brief.id,
       title: brief.title,
-      meta: [brief.specialty ? specialtyLabel(brief.specialty) : "", brief.platform]
+      meta: [brief.specialty ? specialtyLabel(brief.specialty) : "", brief.platform, brief.collabType]
         .filter(Boolean)
         .join(" · "),
-      budget: brief.budget || "—",
+      budget: brief.budget ? `${brief.budgetCurrency || "USD"} ${brief.budget}` : "—",
       status: brief.status,
       responseLabel: "—",
       updated: relativeTime(brief.createdAt),
       creators: [] as string[],
+      href: `/collaboration/business?intent=${encodeURIComponent(brief.id)}`,
     })),
     ...marketplaceRequests.slice(0, 5).map((request) => {
       const apps = appsByRequest.get(request.id) ?? [];
@@ -150,6 +153,7 @@ export default async function BusinessHomePage() {
         responseLabel: apps.length ? `${apps.length}` : "0",
         updated: "—",
         creators: creatorSlugs.slice(0, 4),
+        href: "/collaboration/business#requests",
       };
     }),
   ].slice(0, 5);
@@ -185,8 +189,8 @@ export default async function BusinessHomePage() {
       <div>
         <h1 className="font-display text-3xl font-bold text-indigo">Business Account</h1>
         <p className="mt-1 text-sm text-muted">
-          Welcome back{firstName ? `, ${firstName}` : ""}. Here&apos;s what&apos;s happening with{" "}
-          {workspace.name || "your workspace"}.
+          Welcome back to <span className="font-semibold text-indigo">{workspace.name || "your workspace"}</span>
+          {account.name ? <> · contact {account.name}</> : null}.
         </p>
       </div>
 
@@ -247,7 +251,7 @@ export default async function BusinessHomePage() {
             <Link href="/business/profile" className="btn-secondary !py-2.5 text-center text-sm">
               Edit Company Profile
             </Link>
-            <Link href="/collaboration/business" className="btn-primary !py-2.5 text-center text-sm">
+            <Link href="/collaboration/business?intent=new" className="btn-primary !py-2.5 text-center text-sm">
               <span className="inline-flex items-center justify-center gap-1">
                 <IconPlus size={14} /> Create Request
               </span>
@@ -305,12 +309,19 @@ export default async function BusinessHomePage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(18rem,0.8fr)]">
+        <div className="space-y-4">
         <Panel
           title="Recent Collaboration Requests"
-          action={<TextLink href="/collaboration/business">View all requests →</TextLink>}
+          action={<TextLink href="/business/campaigns">View all requests →</TextLink>}
         >
           {tableRows.length === 0 ? (
-            <p className="text-sm text-muted">No requests yet. Create one from the collaboration hub.</p>
+            <p className="text-sm text-muted">
+              No published requests yet.{" "}
+              <Link href="/collaboration/business?intent=new" className="font-semibold text-violet hover:underline">
+                Create one
+              </Link>
+              .
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-sm">
@@ -333,7 +344,9 @@ export default async function BusinessHomePage() {
                             {row.title.slice(0, 1).toUpperCase()}
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-indigo">{row.title}</p>
+                            <Link href={row.href} className="truncate font-semibold text-indigo hover:text-violet hover:underline">
+                              {row.title}
+                            </Link>
                             <p className="truncate text-xs text-muted">{row.meta || "Campaign"}</p>
                           </div>
                         </div>
@@ -374,6 +387,31 @@ export default async function BusinessHomePage() {
           )}
         </Panel>
 
+        {draftBriefs.length > 0 ? (
+          <Panel
+            title={`Drafts (${draftBriefs.length})`}
+            action={<TextLink href="/business/campaigns">Manage drafts →</TextLink>}
+          >
+            <ul className="divide-y divide-[#EEF2FA]">
+              {draftBriefs.map((brief) => (
+                <li key={brief.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-indigo">{brief.title || "Untitled draft"}</p>
+                    <p className="text-xs text-muted">Saved draft — open to continue</p>
+                  </div>
+                  <Link
+                    href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
+                    className="shrink-0 text-xs font-bold text-violet hover:underline"
+                  >
+                    Open →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        ) : null}
+        </div>
+
         <div className="space-y-4">
           <Panel title="Team Members" action={<TextLink href="/collaboration/team">Manage Team</TextLink>}>
             <p className="mb-3 text-xs font-semibold text-muted">
@@ -386,7 +424,7 @@ export default async function BusinessHomePage() {
                 </span>
                 <span>
                   <span className="block text-sm font-semibold">{account.name || account.email}</span>
-                  <span className="text-xs text-muted">Owner</span>
+                  <span className="text-xs text-muted">Owner · {workspace.name}</span>
                 </span>
               </li>
               {teamSeats > 1 ? (
@@ -406,30 +444,9 @@ export default async function BusinessHomePage() {
                 </li>
               ) : (
                 <li className="text-xs text-muted">
-                  Upgrade for more seats. Team proposals invite creators onto a shared deal.
+                  Upgrade for more seats from Billing. Team proposals invite creators onto a shared deal.
                 </li>
               )}
-            </ul>
-          </Panel>
-
-          <Panel title="Billing & Subscription" action={<TextLink href="/business/billing">Manage plan →</TextLink>}>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-display text-xl font-bold">{planName} Plan</p>
-                <p className="text-sm text-muted">
-                  {planPrice}
-                  {planPrice !== "Free" && !planPrice.includes("/") ? " / month" : ""}
-                </p>
-              </div>
-              <StatusPill tone="success">Active</StatusPill>
-            </div>
-            <ul className="mt-4 space-y-2 text-sm text-muted">
-              <li>
-                Next billing date: <span className="font-semibold text-indigo">Managed in billing</span>
-              </li>
-              <li>
-                Payment method: <span className="font-semibold text-indigo">View in billing</span>
-              </li>
             </ul>
           </Panel>
         </div>

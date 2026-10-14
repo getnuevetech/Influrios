@@ -7,10 +7,15 @@ import { updateOwnedBusinessProfile } from "@/lib/business";
 export async function actionSaveBusinessProfile(formData: FormData) {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business/profile");
+  const city = String(formData.get("city") ?? "").trim();
+  const state = String(formData.get("state") ?? "").trim();
+  const country = String(formData.get("country") ?? "").trim();
+  const geography = [city, state, country].filter(Boolean).join(", ");
   try {
     await updateOwnedBusinessProfile(account.id, {
       name: String(formData.get("name") ?? ""),
       industry: String(formData.get("industry") ?? ""),
+      geography,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save company profile.";

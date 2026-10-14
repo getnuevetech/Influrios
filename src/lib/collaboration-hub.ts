@@ -381,11 +381,13 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
 
   const spend = summarizeBusinessSpend(fundings);
 
+  // #13/#15 — the Campaign Intent form is not auto-filled with the latest draft on every visit.
+  // It only loads a brief when the caller explicitly asks for one by id (an Edit link), and
+  // ?intent=new always starts blank.
   const intentBrief: CampaignBrief | null =
-    (input?.intentBriefId ? ws.briefs.find((brief) => brief.id === input.intentBriefId) : null) ??
-    ws.briefs.find((brief) => brief.status === "draft") ??
-    ws.briefs[0] ??
-    null;
+    input?.intentBriefId && input.intentBriefId !== "new"
+      ? ws.briefs.find((brief) => brief.id === input.intentBriefId) ?? null
+      : null;
 
   let suggestions: CreatorFit[] = [];
   if (intentBrief) {

@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   buildCampaignIntentFields,
   fitCreatorToBrief,
+  parseLocationParts,
   resolveCampaignIntentSaveMode,
   type CampaignBrief,
 } from "./business";
@@ -20,6 +21,9 @@ function brief(overrides: Partial<CampaignBrief> = {}): CampaignBrief {
     goal: "",
     specialty: "",
     budget: "",
+    budgetCurrency: "USD",
+    collabType: "",
+    timeframe: "",
     location: "",
     platform: "",
     summary: "",
@@ -90,10 +94,19 @@ describe("campaign intent field builder (W2.3)", () => {
     assert.equal(fields.goal, "");
     assert.equal(fields.specialty, "");
     assert.equal(fields.budget, "");
+    assert.equal(fields.budgetCurrency, "USD");
+    assert.equal(fields.collabType, "Product review");
+    assert.equal(fields.timeframe, "Q4");
     assert.equal(fields.location, "");
     assert.equal(fields.platform, "");
     assert.equal(fields.status, "draft");
-    assert.equal(fields.summary, "Gen Z skincare · Product review · Q4");
+    assert.equal(fields.summary, "Gen Z skincare");
+  });
+
+  it("stores a three-letter budget currency and falls back to USD otherwise", () => {
+    assert.equal(buildCampaignIntentFields({ title: "x", budgetCurrency: "eur" }).budgetCurrency, "EUR");
+    assert.equal(buildCampaignIntentFields({ title: "x", budgetCurrency: "" }).budgetCurrency, "USD");
+    assert.equal(buildCampaignIntentFields({ title: "x", budgetCurrency: "usdx" }).budgetCurrency, "USD");
   });
 
   it("requires a campaign title", () => {
@@ -114,6 +127,19 @@ describe("campaign intent field builder (W2.3)", () => {
     assert.equal(fields.goal, "Product Launch");
     assert.equal(fields.platform, "TIKTOK");
     assert.equal(fields.summary, "Honest routine series");
+  });
+});
+
+describe("campaign intent location parsing", () => {
+  it("splits a stored City, State, Country string for editing", () => {
+    assert.deepEqual(parseLocationParts("Austin, Texas, USA"), {
+      city: "Austin",
+      state: "Texas",
+      country: "USA",
+    });
+    assert.deepEqual(parseLocationParts("London, UK"), { city: "London", state: "", country: "UK" });
+    assert.deepEqual(parseLocationParts("Global"), { city: "Global", state: "", country: "" });
+    assert.deepEqual(parseLocationParts(""), { city: "", state: "", country: "" });
   });
 });
 

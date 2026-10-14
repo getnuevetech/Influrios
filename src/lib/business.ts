@@ -20,6 +20,9 @@ export type CampaignBrief = {
   goal: string;
   specialty: string;
   budget: string;
+  budgetCurrency: string;
+  collabType: string;
+  timeframe: string;
   location: string;
   platform: string;
   summary: string;
@@ -171,6 +174,9 @@ function mapWorkspace(row: WorkspaceRow): BusinessWorkspace {
       goal: brief.goal,
       specialty: brief.specialty,
       budget: brief.budget,
+      budgetCurrency: brief.budgetCurrency,
+      collabType: brief.collabType,
+      timeframe: brief.timeframe,
       location: brief.location,
       platform: brief.platform,
       summary: brief.summary,
@@ -306,20 +312,28 @@ export async function ensureOwnedBusinessWorkspace(
 /** Update the company name / industry on the owned workspace + business profile. */
 export async function updateOwnedBusinessProfile(
   userId: string,
-  input: { name?: string; industry?: string },
+  input: { name?: string; industry?: string; geography?: string | null },
 ) {
   const ws = await ensureOwnedBusinessWorkspace(userId);
   const name = (input.name ?? ws.name).trim().slice(0, 120);
   const industry = (input.industry ?? ws.industry).trim().slice(0, 120);
   if (!name) throw new Error("Company name is required.");
+  const geography =
+    input.geography === undefined
+      ? undefined
+      : (input.geography ?? "").trim().slice(0, 200) || null;
   await prisma.businessWorkspace.update({
     where: { id: ws.businessId },
     data: { name, industry },
   });
   await prisma.businessProfile.upsert({
     where: { userId },
-    create: { userId, name, industry: industry || null },
-    update: { name, industry: industry || null },
+    create: { userId, name, industry: industry || null, geography: geography ?? null },
+    update: {
+      name,
+      industry: industry || null,
+      ...(geography !== undefined ? { geography } : {}),
+    },
   });
   return readWorkspace(ws.businessId);
 }
@@ -390,6 +404,9 @@ export async function createBrief(
       goal: input.goal,
       specialty: input.specialty,
       budget: input.budget,
+      budgetCurrency: input.budgetCurrency || "USD",
+      collabType: input.collabType ?? "",
+      timeframe: input.timeframe ?? "",
       location: input.location,
       platform: input.platform,
       summary: input.summary,
@@ -417,6 +434,9 @@ export async function updateBrief(
       goal: input.goal,
       specialty: input.specialty,
       budget: input.budget,
+      budgetCurrency: input.budgetCurrency || existing.budgetCurrency,
+      collabType: input.collabType ?? existing.collabType,
+      timeframe: input.timeframe ?? existing.timeframe,
       location: input.location,
       platform: input.platform,
       summary: input.summary,
@@ -432,6 +452,9 @@ function presentBrief(brief: {
   goal: string;
   specialty: string;
   budget: string;
+  budgetCurrency: string;
+  collabType: string;
+  timeframe: string;
   location: string;
   platform: string;
   summary: string;
@@ -444,6 +467,9 @@ function presentBrief(brief: {
     goal: brief.goal,
     specialty: brief.specialty,
     budget: brief.budget,
+    budgetCurrency: brief.budgetCurrency,
+    collabType: brief.collabType,
+    timeframe: brief.timeframe,
     location: brief.location,
     platform: brief.platform,
     summary: brief.summary,
@@ -462,11 +488,29 @@ export function resolveCampaignIntentSaveMode(input: {
   return "create";
 }
 
+/** Best-effort split of a stored "City, State, Country" location string for editing. */
+export function parseLocationParts(location: string): { city: string; state: string; country: string } {
+  const parts = location
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length >= 3) return { city: parts[0]!, state: parts[1]!, country: parts.slice(2).join(", ") };
+  if (parts.length === 2) return { city: parts[0]!, state: "", country: parts[1]! };
+  if (parts.length === 1) return { city: parts[0]!, state: "", country: "" };
+  return { city: "", state: "", country: "" };
+}
+
+function asCurrencyCode(value: string | undefined | null): string {
+  const code = (value ?? "").trim().toUpperCase().slice(0, 3);
+  return /^[A-Z]{3}$/.test(code) ? code : "USD";
+}
+
 export function buildCampaignIntentFields(input: {
   title?: string;
   goal?: string;
   specialty?: string;
   budget?: string;
+  budgetCurrency?: string;
   location?: string;
   platform?: string;
   audience?: string;
@@ -476,17 +520,18 @@ export function buildCampaignIntentFields(input: {
 }) {
   const title = (input.title ?? "").trim();
   if (!title) throw new Error("A campaign title is required.");
+  const summary = (input.summary ?? "").trim() || (input.audience ?? "").trim();
   return {
     title,
     goal: (input.goal ?? "").trim(),
     specialty: (input.specialty ?? "").trim(),
     budget: (input.budget ?? "").trim(),
+    budgetCurrency: asCurrencyCode(input.budgetCurrency),
+    collabType: (input.collabType ?? "").trim(),
+    timeframe: (input.timeframe ?? "").trim(),
     location: (input.location ?? "").trim(),
     platform: (input.platform ?? "").trim(),
-    summary: [input.audience, input.collabType, input.timeframe, input.summary]
-      .map((part) => (part ?? "").trim())
-      .filter(Boolean)
-      .join(" · "),
+    summary,
     status: "draft" as const,
   };
 }
@@ -564,6 +609,14 @@ export async function updateInquiryStatus(
       createdAt: updated.createdAt.toISOString(),
     } satisfies Inquiry,
   };
+}
+
+/** Publishing a draft Campaign Intent to the marketplace moves it to active (#13, #15). */
+export async function activateBrief(id: string, workspaceId: string) {
+  await readWorkspace(workspaceId);
+  const existing = await prisma.businessBrief.findFirst({ where: { id, workspaceId } });
+  if (!existing || existing.status !== "draft") return;
+  await prisma.businessBrief.update({ where: { id: existing.id }, data: { status: "active" } });
 }
 
 export async function queuedBriefIds(workspaceId: string) {

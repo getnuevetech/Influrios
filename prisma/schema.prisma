@@ -939,22 +939,41 @@ model BusinessWorkspace {
 }
 
 model BusinessBrief {
-  id          String               @id @default(cuid())
-  workspaceId String
-  workspace   BusinessWorkspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  title       String
-  goal        String
-  specialty   String
-  budget      String
-  location    String
-  platform    String
-  summary     String
-  status      String               @default("active")
-  createdAt   DateTime             @default(now())
-  inquiries   BusinessInquiry[]
-  matchQueue  ManagedMatchRequest[]
+  id              String               @id @default(cuid())
+  workspaceId     String
+  workspace       BusinessWorkspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title           String
+  goal            String
+  specialty       String
+  budget          String
+  budgetCurrency  String               @default("USD")
+  collabType      String               @default("")
+  timeframe       String               @default("")
+  location        String
+  platform        String
+  summary         String
+  status          String               @default("active")
+  createdAt       DateTime             @default(now())
+  inquiries       BusinessInquiry[]
+  matchQueue      ManagedMatchRequest[]
 
   @@index([workspaceId])
+}
+
+/// Admin-managed option lists used on Campaign Intent selects (collaboration type, timeframe).
+model CatalogOption {
+  id        String   @id @default(cuid())
+  /// collab_type | timeframe
+  kind      String
+  label     String
+  value     String
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kind, value])
+  @@index([kind, active, sortOrder])
 }
 
 model BusinessShortlistItem {

@@ -14,6 +14,7 @@ import {
   IconIdCard,
   IconImage,
   IconIntelligence,
+  IconLogout,
   IconMail,
   IconSearch,
   IconSettings,
@@ -22,6 +23,7 @@ import {
   IconUsers,
   IconWallet,
 } from "@/components/icons";
+import { actionLogout } from "@/app/account/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
@@ -48,14 +50,14 @@ const BUSINESS_NAV: NavItem[] = [
   { href: "/business/profile", label: "Company Profile", icon: <IconBuilding size={18} /> },
   { href: "/discover", label: "Discover Creators", icon: <IconSearch size={18} /> },
   { href: "/collaboration/business#shortlist", label: "Saved Creators", icon: <IconBookmark size={18} /> },
-  { href: "/collaboration/business", label: "Requests", icon: <IconBriefcase size={18} /> },
+  { href: "/business/campaigns", label: "Requests", icon: <IconBriefcase size={18} /> },
   { href: "/collaboration/business#suggestions", label: "Collaboration Opportunities", icon: <IconGrid size={18} /> },
   { href: "/collaboration/records", label: "Active Collaborations", icon: <IconHandshake size={18} /> },
   { href: "/business/intelligence", label: "Analytics", icon: <IconIntelligence size={18} /> },
   { href: "/collaboration/team", label: "Team", icon: <IconUsers size={18} /> },
   { href: "/business/billing", label: "Billing & Plans", icon: <IconIdCard size={18} /> },
   { href: "/payments", label: "Collaboration Payments", icon: <IconShieldPay size={18} /> },
-  { href: "/account", label: "Settings", icon: <IconSettings size={18} /> },
+  { href: "/account?audience=business", label: "Settings", icon: <IconSettings size={18} /> },
 ];
 
 const PLAN_ORDER: PlanCode[] = ["STARTER", "PLUS", "PRO"];
@@ -118,10 +120,8 @@ export async function MemberFrame({
   const upgrade = audience === "creator" ? nextCreatorUpgrade(creatorPlan) : null;
   const nav = audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
   const home = audience === "business" ? "/business/home" : "/creator";
-  const other =
-    audience === "business"
-      ? { href: "/creator", label: "Influencer account" }
-      : { href: "/business/home", label: "Business account" };
+  const primaryName = audience === "business" ? company || name : name;
+  const secondaryName = audience === "business" ? name : "Influencer";
   const searchPlaceholder =
     audience === "business"
       ? "Search creators, campaigns, or anything..."
@@ -178,9 +178,15 @@ export async function MemberFrame({
           </div>
         ) : null}
         <div className="shrink-0 border-t border-[#E6ECF7] p-4 text-[11px] text-muted">
-          <Link href={other.href} className="font-semibold text-violet hover:underline">
-            {other.label}
-          </Link>
+          <form action={actionLogout}>
+            <button
+              type="submit"
+              className="flex items-center gap-2 font-semibold text-[#4E5872] hover:text-violet hover:underline"
+            >
+              <IconLogout size={14} />
+              Log out
+            </button>
+          </form>
           <p className="mt-2">© {new Date().getFullYear()} Influrios. All rights reserved.</p>
         </div>
       </aside>
@@ -206,13 +212,23 @@ export async function MemberFrame({
             </span>
             <div className="flex items-center gap-2">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EDE7FF] text-sm font-bold text-violet">
-                {name.slice(0, 1).toUpperCase()}
+                {primaryName.slice(0, 1).toUpperCase()}
               </span>
               <div className="hidden text-right sm:block">
-                <p className="text-sm font-bold leading-tight">{name}</p>
-                <p className="text-[11px] text-muted">{audience === "business" ? company || "Business workspace" : "Influencer"}</p>
+                <p className="text-sm font-bold leading-tight">{primaryName}</p>
+                <p className="text-[11px] text-muted">{secondaryName}</p>
               </div>
             </div>
+            <form action={actionLogout}>
+              <button
+                type="submit"
+                title="Log out"
+                aria-label="Log out"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#E6ECF7] text-[#4E5872] hover:border-violet hover:text-violet"
+              >
+                <IconLogout size={16} />
+              </button>
+            </form>
           </div>
         </header>
 

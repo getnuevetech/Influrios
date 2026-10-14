@@ -25,8 +25,12 @@ import {
   actionEnqueueScheduledReleaseSweep,
   actionScheduleMilestoneRelease,
   actionExecuteHeldCancellation,
+  actionSaveCatalogOption,
+  actionDeactivateCatalogOption,
+  actionActivateCatalogOption,
 } from "@/app/admin/marketplace/actions";
 import { listAttributionClaims, listAttributionSources } from "@/lib/deal-attribution";
+import { listAllCatalogOptions } from "@/lib/catalog-options";
 import { readShareSnapshot } from "@/lib/fx-share";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { CANCELLATION_REASON_LABELS, type CancellationReason } from "@/lib/cancellation-matrix";
@@ -67,7 +71,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const canManage = hasPermission(session, "marketplace.manage");
   const canHighRiskCancel = hasPermission(session, "collab_finance.high_risk");
   const params = await searchParams;
-  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, collabOsOn, paymentRisk] =
+  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, collabOsOn, paymentRisk, collabTypes, timeframes] =
     await Promise.all([
       marketplaceConfig(),
       listFundings(),
@@ -81,6 +85,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       productSwitch("financial_reports"),
       productSwitch("collab_os_v1"),
       listPaymentRiskFundings(),
+      listAllCatalogOptions("collab_type"),
+      listAllCatalogOptions("timeframe"),
     ]);
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
   const cancellable = fundings.filter((f) => f.status === "held" || f.status === "payment_risk");
@@ -415,6 +421,70 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             </form>
           </div>
         ) : null}
+      </section>
+
+      <section id="catalog" className="card-surface space-y-5 p-5">
+        <div>
+          <h2 className="font-display text-lg font-bold text-indigo">Campaign intent catalog</h2>
+          <p className="mt-1 text-xs text-muted">
+            Collaboration type and timeframe options shown on the business Campaign Intent form. Removing an option
+            only hides it from new picks — briefs already saved with it keep the stored value.
+          </p>
+        </div>
+
+        {([
+          { kind: "collab_type" as const, label: "Collaboration types", rows: collabTypes },
+          { kind: "timeframe" as const, label: "Timeframes", rows: timeframes },
+        ]).map((group) => (
+          <div key={group.kind} className="rounded-xl border border-border p-4">
+            <h3 className="font-display text-base font-bold text-indigo">{group.label}</h3>
+            <ul className="mt-3 space-y-2">
+              {group.rows.map((row) => (
+                <li key={row.id} className="flex items-center justify-between gap-3 rounded-lg bg-[#F7FAFF] px-3 py-2">
+                  <span className={`text-sm ${row.active ? "text-indigo" : "text-muted line-through"}`}>
+                    {row.label}
+                  </span>
+                  {canManage ? (
+                    row.active ? (
+                      <form action={actionDeactivateCatalogOption}>
+                        <input type="hidden" name="id" value={row.id} />
+                        <button type="submit" className="text-xs font-semibold text-muted hover:text-rose-600">
+                          Deactivate
+                        </button>
+                      </form>
+                    ) : (
+                      <form action={actionActivateCatalogOption}>
+                        <input type="hidden" name="id" value={row.id} />
+                        <button type="submit" className="text-xs font-semibold text-violet hover:underline">
+                          Restore
+                        </button>
+                      </form>
+                    )
+                  ) : (
+                    <span className="text-xs text-muted">{row.active ? "Active" : "Inactive"}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {canManage ? (
+              <form action={actionSaveCatalogOption} className="mt-3 flex flex-wrap items-end gap-2">
+                <input type="hidden" name="kind" value={group.kind} />
+                <label className="text-xs font-semibold text-muted">
+                  Add option
+                  <input
+                    name="label"
+                    required
+                    placeholder="Label"
+                    className="mt-1 w-56 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                  />
+                </label>
+                <button type="submit" className="btn-secondary !py-2 text-sm">
+                  Add
+                </button>
+              </form>
+            ) : null}
+          </div>
+        ))}
       </section>
 
       <section className="card-surface space-y-4 p-5">

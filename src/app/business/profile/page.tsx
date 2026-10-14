@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionSaveBusinessProfile } from "@/app/business/profile/actions";
+import { PlaceFields } from "@/components/place-fields";
 import { getAccountSession } from "@/lib/accounts";
-import { getWorkspace } from "@/lib/business";
+import { getWorkspace, parseLocationParts } from "@/lib/business";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Company profile" };
@@ -15,7 +17,11 @@ export default async function BusinessProfilePage({
   const params = await searchParams;
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business/profile");
-  const workspace = await getWorkspace(account.id);
+  const [workspace, profile] = await Promise.all([
+    getWorkspace(account.id),
+    prisma.businessProfile.findUnique({ where: { userId: account.id } }).catch(() => null),
+  ]);
+  const location = parseLocationParts(profile?.geography ?? "");
 
   return (
     <div className="mx-auto max-w-xl">
@@ -24,13 +30,14 @@ export default async function BusinessProfilePage({
       </Link>
       <h1 className="mt-2 font-display text-3xl font-bold">Company profile</h1>
       <p className="mt-2 text-sm text-muted">
-        This is the business workspace brands and creators see on collaboration requests.
+        The workspace is listed under the <span className="font-semibold text-indigo">business name</span>. Contact
+        person details stay on the signed-in account and are not used as the company title.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Company profile saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
       <form action={actionSaveBusinessProfile} className="mt-6 space-y-4 rounded-3xl border border-[#E6ECF7] bg-white p-6">
         <label className="block text-sm font-semibold text-indigo">
-          Company name
+          Company / business name
           <input
             name="name"
             required
@@ -47,6 +54,26 @@ export default async function BusinessProfilePage({
             className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
           />
         </label>
+        <div>
+          <p className="text-sm font-semibold text-indigo">Headquarters location</p>
+          <p className="mt-1 text-xs text-muted">Pick from suggestions — do not free-type a country name.</p>
+          <div className="mt-2">
+            <PlaceFields
+              cityName="city"
+              stateName="state"
+              countryName="country"
+              defaultCity={location.city}
+              defaultState={location.state}
+              defaultCountry={location.country}
+            />
+          </div>
+        </div>
+        <div className="rounded-2xl bg-[#F7F8FC] p-4 text-sm">
+          <p className="font-semibold text-indigo">Business contact (account holder)</p>
+          <p className="mt-1 text-muted">{account.name || "—"}</p>
+          <p className="text-muted">{account.email}</p>
+          <p className="mt-2 text-xs text-muted">Change contact name from Settings. It does not rename the company.</p>
+        </div>
         <button type="submit" className="btn-primary">
           Save company profile
         </button>

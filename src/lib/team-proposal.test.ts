@@ -76,8 +76,25 @@ describe("team proposals", () => {
     assert.equal(teamFundingReady({ status: "sent", payoutReady: [true, true] }).ok, false);
     assert.equal(teamFundingReady({ status: "partial", payoutReady: [true, true] }).ok, false);
     assert.equal(teamFundingReady({ status: "accepted", payoutReady: [true, false] }).ok, false);
-    assert.equal(teamFundingReady({ status: "accepted", payoutReady: [true] }).ok, false);
+    assert.equal(teamFundingReady({ status: "accepted", payoutReady: [false] }).ok, false);
+    assert.equal(teamFundingReady({ status: "accepted", payoutReady: [] }).ok, false);
+    assert.equal(teamFundingReady({ status: "accepted", payoutReady: [true] }).ok, true);
     assert.equal(teamFundingReady({ status: "accepted", payoutReady: [true, true] }).ok, true);
+  });
+
+  it("reaches accepted with a single creator proposal (#16 — one creator is allowed)", () => {
+    const solo = [{ creatorSlug: "a", status: "invited", shareBps: 10_000 }];
+    assert.equal(nextProposalStatus(solo, "a", "accepted"), "accepted");
+    assert.deepEqual(equalShareBps(1), [10_000]);
+    const href = wizardHrefForProposal({
+      id: "prop_solo",
+      status: "accepted",
+      title: "Solo launch",
+      campaignIntent: "Launch",
+      members: [{ creatorSlug: "a", status: "accepted", shareBps: 10_000 }],
+    });
+    assert.match(href ?? "", /^\/collaboration\/contract\?team=prop_solo/);
+    assert.match(href ?? "", /creator=a/);
   });
 
   it("splits one milestone across the frozen creator shares", () => {

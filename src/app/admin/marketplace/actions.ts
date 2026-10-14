@@ -13,6 +13,12 @@ import {
   saveMilestoneTemplates,
 } from "@/lib/marketplace-ledger";
 import { saveFxRates, saveRevenueParties } from "@/lib/settlement";
+import {
+  activateCatalogOption,
+  deactivateCatalogOption,
+  isCatalogKind,
+  saveCatalogOption,
+} from "@/lib/catalog-options";
 import { setProductSwitch } from "@/lib/product-switches";
 import { wiseRateCheckDraft } from "@/lib/fx-share";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
@@ -487,5 +493,46 @@ export async function actionScheduleMilestoneRelease(formData: FormData) {
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin/jobs");
   redirect("/admin/marketplace?saved=release_scheduled");
+}
+
+/** Catalog options — admin-managed collaboration type / timeframe picks used on Campaign Intent. */
+export async function actionSaveCatalogOption(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const kind = String(formData.get("kind") ?? "").trim();
+  const label = String(formData.get("label") ?? "").trim();
+  if (!isCatalogKind(kind)) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent("Unknown catalog kind.")}#catalog`);
+  }
+  const result = await saveCatalogOption({ kind, label });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}#catalog`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/collaboration/business");
+  redirect("/admin/marketplace?saved=catalog_option#catalog");
+}
+
+export async function actionDeactivateCatalogOption(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const id = String(formData.get("id") ?? "");
+  const result = await deactivateCatalogOption(id);
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}#catalog`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/collaboration/business");
+  redirect("/admin/marketplace?saved=catalog_option_removed#catalog");
+}
+
+export async function actionActivateCatalogOption(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const id = String(formData.get("id") ?? "");
+  const result = await activateCatalogOption(id);
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}#catalog`);
+  }
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/collaboration/business");
+  redirect("/admin/marketplace?saved=catalog_option_restored#catalog");
 }
 

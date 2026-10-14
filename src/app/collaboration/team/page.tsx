@@ -45,7 +45,7 @@ export default async function TeamProposalPage({ searchParams }: Props) {
           </Link>
           <h1 className="mt-2 font-display text-4xl font-bold">Team proposals</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Invite two or more influencers on one proposal. The contract opens only after every person accepts.
+            Invite one or more influencers on one proposal. The contract opens only after every person accepts.
             Funding waits until every payout route is ready.
           </p>
         </div>

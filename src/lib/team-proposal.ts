@@ -11,7 +11,7 @@ export type TeamMatchType = "CREATOR_TEAM" | "BUSINESS_CREATOR_TEAM";
 const PROPOSAL_LIFE_MS = 14 * 24 * 60 * 60 * 1000;
 
 export function equalShareBps(count: number): number[] | null {
-  if (!Number.isInteger(count) || count < 2) return null;
+  if (!Number.isInteger(count) || count < 1) return null;
   const base = Math.floor(10_000 / count);
   if (base <= 0) return null;
   const shares = Array.from({ length: count }, () => base);
@@ -28,7 +28,7 @@ export function nextProposalStatus(
     member.creatorSlug === slug ? { ...member, status: decision } : member,
   );
   if (next.some((member) => member.status === "declined")) return "declined";
-  if (next.length >= 2 && next.every((member) => member.status === "accepted")) return "accepted";
+  if (next.length >= 1 && next.every((member) => member.status === "accepted")) return "accepted";
   if (next.some((member) => member.status === "accepted")) return "partial";
   return "sent";
 }
@@ -41,7 +41,7 @@ export function teamFundingReady(input: {
   if (input.status !== "accepted") {
     return { ok: false, error: "Every creator must accept before funding." };
   }
-  if (input.payoutReady.length < 2 || input.payoutReady.some((ready) => !ready)) {
+  if (input.payoutReady.length < 1 || input.payoutReady.some((ready) => !ready)) {
     return { ok: false, error: "Every creator needs a ready payout route." };
   }
   return { ok: true };
@@ -50,7 +50,7 @@ export function teamFundingReady(input: {
 export function memberShareSnapshot(
   members: { creatorSlug: string; shareBps: number }[],
 ): { label: string; shareBps: number }[] | null {
-  if (members.length < 2) return null;
+  if (members.length < 1) return null;
   const rows = members.map((member) => ({
     label: member.creatorSlug.trim(),
     shareBps: member.shareBps,
@@ -79,7 +79,7 @@ export function wizardParties(proposal: {
   members: { creatorSlug: string; status: string; shareBps: number }[];
 }): { creatorSlug: string; shareBps: number }[] | null {
   if (proposal.status !== "accepted") return null;
-  if (proposal.members.length < 2) return null;
+  if (proposal.members.length < 1) return null;
   if (proposal.members.some((member) => member.status !== "accepted")) return null;
   const shares = memberShareSnapshot(proposal.members);
   if (!shares) return null;
@@ -142,7 +142,7 @@ export function teamMatchRows(input: {
 }[] {
   const workspaceId = input.workspaceId.trim();
   const slugs = [...new Set(input.members.map((member) => member.creatorSlug.trim()).filter(Boolean))].sort();
-  if (!workspaceId || slugs.length < 2) return [];
+  if (!workspaceId || slugs.length < 1) return [];
   const why = input.campaignIntent.trim();
   const reasons = why ? [why] : [];
   const rows: {
@@ -237,9 +237,9 @@ export async function createTeamProposal(input: {
   creatorSlugs: string[];
 }) {
   const slugs = [...new Set(input.creatorSlugs.map((slug) => slug.trim()).filter(Boolean))];
-  if (slugs.length < 2) return { ok: false as const, error: "Select at least two creators." };
+  if (slugs.length < 1) return { ok: false as const, error: "Select at least one creator." };
   const shares = equalShareBps(slugs.length);
-  if (!shares) return { ok: false as const, error: "Select at least two creators." };
+  if (!shares) return { ok: false as const, error: "Select at least one creator." };
   const title = input.title.trim();
   const workspaceId = input.workspaceId.trim();
   if (!title || !workspaceId || workspaceId === "public") {

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BusinessSignupForm } from "@/components/business-signup-form";
 import {
   CategoryGlyph,
   IconArrowRight,
@@ -28,9 +29,11 @@ type RecommendedInfluencer = {
 export function BusinessMarketingPage({
   landing,
   recommended,
+  error,
 }: {
   landing: BusinessLandingConfig;
   recommended: RecommendedInfluencer[];
+  error?: string;
 }) {
   const hero = landing.hero;
   const tagSlug = (name: string) =>
@@ -281,68 +284,13 @@ export function BusinessMarketingPage({
 
       <section id="create-profile" className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6 lg:px-10">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <form action="/register" method="get" className="rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
-            <input type="hidden" name="next" value="/collaboration/business" />
-            <h2 className="font-display text-2xl font-bold text-indigo">{landing.signup.title}</h2>
-            <p className="mt-1 text-sm text-muted">{landing.signup.subtitle}</p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-bold text-indigo sm:col-span-2">
-                Business Name
-                <input
-                  name="name"
-                  required
-                  placeholder="Your brand or company"
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
-                />
-              </label>
-              <label className="block text-xs font-bold text-indigo sm:col-span-2">
-                Work Email
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
-                />
-              </label>
-              <label className="block text-xs font-bold text-indigo">
-                Country
-                <input
-                  name="country"
-                  placeholder="United States"
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
-                />
-              </label>
-              <label className="block text-xs font-bold text-indigo">
-                Business Type
-                <select name="businessType" className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal">
-                  <option>Brand</option>
-                  <option>Agency</option>
-                  <option>Marketplace</option>
-                  <option>Other</option>
-                </select>
-              </label>
-              <label className="block text-xs font-bold text-indigo sm:col-span-2">
-                Website (optional)
-                <input name="website" className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
-              </label>
-            </div>
-            <label className="mt-4 flex items-start gap-2 text-sm text-muted">
-              <input type="checkbox" name="wantSuggestions" defaultChecked className="mt-1 accent-[#633CFF]" />
-              {landing.signup.checkboxLabel}
-            </label>
-            <Link
-              href="/register?next=%2Fcollaboration%2Fbusiness"
-              className="btn-primary mt-5 flex w-full justify-center"
-            >
-              {landing.signup.submitLabel} <IconArrowRight size={14} />
-            </Link>
-            <p className="mt-3 text-center text-sm text-muted">
-              Already have an account?{" "}
-              <Link href="/login?next=%2Fcollaboration%2Fbusiness&gate=business" className="font-semibold text-violet">
-                Log in
-              </Link>
-            </p>
-          </form>
+          <BusinessSignupForm
+            title={landing.signup.title}
+            subtitle={landing.signup.subtitle}
+            checkboxLabel={landing.signup.checkboxLabel}
+            submitLabel={landing.signup.submitLabel}
+            error={error}
+          />
 
           <aside className="rounded-2xl bg-gradient-to-br from-[#633CFF] to-[#2979FF] p-6 text-white shadow-sm">
             <IconUsers size={22} />
