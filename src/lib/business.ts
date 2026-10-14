@@ -309,10 +309,17 @@ export async function ensureOwnedBusinessWorkspace(
   }
 }
 
-/** Update the company name / industry on the owned workspace + business profile. */
+/** Update the company name / industry / contact on the owned workspace + business profile. */
 export async function updateOwnedBusinessProfile(
   userId: string,
-  input: { name?: string; industry?: string; geography?: string | null },
+  input: {
+    name?: string;
+    industry?: string;
+    geography?: string | null;
+    contactName?: string | null;
+    contactEmail?: string | null;
+    contactPhone?: string | null;
+  },
 ) {
   const ws = await ensureOwnedBusinessWorkspace(userId);
   const name = (input.name ?? ws.name).trim().slice(0, 120);
@@ -322,17 +329,40 @@ export async function updateOwnedBusinessProfile(
     input.geography === undefined
       ? undefined
       : (input.geography ?? "").trim().slice(0, 200) || null;
+  const contactName =
+    input.contactName === undefined
+      ? undefined
+      : (input.contactName ?? "").trim().slice(0, 120) || null;
+  const contactEmail =
+    input.contactEmail === undefined
+      ? undefined
+      : (input.contactEmail ?? "").trim().toLowerCase().slice(0, 254) || null;
+  const contactPhone =
+    input.contactPhone === undefined
+      ? undefined
+      : (input.contactPhone ?? "").trim().slice(0, 40) || null;
   await prisma.businessWorkspace.update({
     where: { id: ws.businessId },
     data: { name, industry },
   });
   await prisma.businessProfile.upsert({
     where: { userId },
-    create: { userId, name, industry: industry || null, geography: geography ?? null },
+    create: {
+      userId,
+      name,
+      industry: industry || null,
+      geography: geography ?? null,
+      contactName: contactName ?? null,
+      contactEmail: contactEmail ?? null,
+      contactPhone: contactPhone ?? null,
+    },
     update: {
       name,
       industry: industry || null,
       ...(geography !== undefined ? { geography } : {}),
+      ...(contactName !== undefined ? { contactName } : {}),
+      ...(contactEmail !== undefined ? { contactEmail } : {}),
+      ...(contactPhone !== undefined ? { contactPhone } : {}),
     },
   });
   return readWorkspace(ws.businessId);

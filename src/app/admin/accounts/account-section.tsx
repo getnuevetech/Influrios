@@ -21,6 +21,8 @@ export type AdminAccountRow = {
   locationLabel: string;
   /** Influencer handle or business company name */
   secondaryLabel: string | null;
+  /** Business profile contact person (reference only; not login) */
+  contactLabel: string | null;
 };
 
 function flash(params: { saved?: string; error?: string; reset?: string }) {
@@ -177,7 +179,7 @@ export function AdminAccountSection({
                       <p className="mt-1 text-xs text-muted">
                         Joined {user.createdAt.toISOString().slice(0, 10)} · consent {user.consentVersion || "none"}
                         {kind === "influencer" && user.secondaryLabel ? ` · ${user.secondaryLabel}` : ""}
-                        {kind === "business" && user.name ? ` · contact ${user.name}` : ""}
+                        {kind === "business" && user.contactLabel ? ` · contact ${user.contactLabel}` : ""}
                       </p>
                       <p className="mt-1 text-xs text-muted">Location: {user.locationLabel}</p>
                       <p className="mt-1 text-xs text-muted">Password: {user.passwordHash ? "Set" : "Not set yet"}</p>

@@ -30,8 +30,8 @@ export default async function BusinessProfilePage({
       </Link>
       <h1 className="mt-2 font-display text-3xl font-bold">Company profile</h1>
       <p className="mt-2 text-sm text-muted">
-        The workspace is listed under the <span className="font-semibold text-indigo">business name</span>. Contact
-        person details stay on the signed-in account and are not used as the company title.
+        The workspace is listed under the <span className="font-semibold text-indigo">business name</span>. The contact
+        person below is reference-only and is not used to sign in.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Company profile saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
@@ -45,6 +45,11 @@ export default async function BusinessProfilePage({
             className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
           />
         </label>
+        <div className="rounded-2xl bg-[#F7F8FC] p-4 text-sm">
+          <p className="font-semibold text-indigo">Business account email</p>
+          <p className="mt-1 text-muted">{account.email}</p>
+          <p className="mt-2 text-xs text-muted">Used to sign in. Change it from Settings if needed.</p>
+        </div>
         <label className="block text-sm font-semibold text-indigo">
           Industry
           <input
@@ -68,11 +73,42 @@ export default async function BusinessProfilePage({
             />
           </div>
         </div>
-        <div className="rounded-2xl bg-[#F7F8FC] p-4 text-sm">
-          <p className="font-semibold text-indigo">Business contact (account holder)</p>
-          <p className="mt-1 text-muted">{account.name || "—"}</p>
-          <p className="text-muted">{account.email}</p>
-          <p className="mt-2 text-xs text-muted">Change contact name from Settings. It does not rename the company.</p>
+        <div className="space-y-3 border-t border-[#E6ECF7] pt-4">
+          <div>
+            <p className="text-sm font-semibold text-indigo">Contact person</p>
+            <p className="mt-1 text-xs text-muted">
+              Saved on this company profile for reference only. Not used for account access.
+            </p>
+          </div>
+          <label className="block text-sm font-semibold text-indigo">
+            Full name
+            <input
+              name="contactName"
+              defaultValue={profile?.contactName ?? ""}
+              placeholder="Who should we talk to?"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+            />
+          </label>
+          <label className="block text-sm font-semibold text-indigo">
+            Mobile
+            <input
+              name="contactPhone"
+              type="tel"
+              defaultValue={profile?.contactPhone ?? ""}
+              placeholder="+1 555 000 0000"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+            />
+          </label>
+          <label className="block text-sm font-semibold text-indigo">
+            Email address
+            <input
+              name="contactEmail"
+              type="email"
+              defaultValue={profile?.contactEmail ?? ""}
+              placeholder="contact@example.com"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+            />
+          </label>
         </div>
         <button type="submit" className="btn-primary">
           Save company profile

@@ -15,6 +15,7 @@ import {
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { loadBusinessHub } from "@/lib/collaboration-hub";
+import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
@@ -55,10 +56,16 @@ function requestStatusLabel(status: string) {
 export default async function BusinessHomePage() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business/home");
-  const [workspace, matrix, hub] = await Promise.all([
+  const [workspace, matrix, hub, profile] = await Promise.all([
     getWorkspace(account.id).catch(() => null),
     loadPlanMatrix("business"),
     loadBusinessHub({ userId: account.id }).catch(() => null),
+    prisma.businessProfile
+      .findUnique({
+        where: { userId: account.id },
+        select: { contactName: true, contactEmail: true, contactPhone: true },
+      })
+      .catch(() => null),
   ]);
   if (!workspace) {
     return (
@@ -68,6 +75,7 @@ export default async function BusinessHomePage() {
       </div>
     );
   }
+  const contactName = profile?.contactName?.trim() || null;
 
   const entitlements = hub?.entitlements ?? null;
   const planColumn = matrix.plans.find((plan) => plan.code === workspace.plan);
@@ -190,7 +198,7 @@ export default async function BusinessHomePage() {
         <h1 className="font-display text-3xl font-bold text-indigo">Business Account</h1>
         <p className="mt-1 text-sm text-muted">
           Welcome back to <span className="font-semibold text-indigo">{workspace.name || "your workspace"}</span>
-          {account.name ? <> · contact {account.name}</> : null}.
+          {contactName ? <> · contact {contactName}</> : null}.
         </p>
       </div>
 

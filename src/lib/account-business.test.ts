@@ -106,10 +106,24 @@ describe("business signup surfaces", () => {
     assert.match(signupActions, /role:\s*"BUSINESS"/);
     assert.match(signupActions, /ensureOwnedBusinessWorkspace/);
     assert.match(signupActions, /\/account\/verify\?email=/);
+    // Account login uses business name + business email; contact person is profile-only.
+    assert.match(signupActions, /name:\s*businessName/);
+    assert.match(signupActions, /contactName/);
+    assert.match(signupActions, /contactEmail/);
+    assert.match(signupActions, /contactPhone/);
+    assert.equal(/name:\s*contactName/.test(signupActions), false);
 
     assert.match(form, /actionRegisterBusiness/);
     assert.match(form, /PlaceFields/);
     assert.match(form, /type="submit"/);
+    assert.match(form, /Business Email/);
+    assert.match(form, /Contact person/);
+    assert.match(form, /name="contactPhone"/);
+    assert.match(form, /name="contactEmail"/);
+    // Contact block must come after business type / website fields.
+    const contactIdx = form.indexOf("Contact person");
+    const businessTypeIdx = form.indexOf('name="businessType"');
+    assert.ok(businessTypeIdx > 0 && contactIdx > businessTypeIdx);
 
     assert.match(marketing, /BusinessSignupForm/);
     // The primary CTA must submit the form, not link out to the generic /register page.
