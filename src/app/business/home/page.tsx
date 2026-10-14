@@ -412,25 +412,15 @@ export default async function BusinessHomePage() {
             </ul>
           </Panel>
 
-          <Panel title="Billing & Subscription" action={<TextLink href="/business/billing">Manage plan →</TextLink>}>
+          <Panel title="Plan">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-display text-xl font-bold">{planName} Plan</p>
-                <p className="text-sm text-muted">
-                  {planPrice}
-                  {planPrice !== "Free" && !planPrice.includes("/") ? " / month" : ""}
-                </p>
-              </div>
-              <StatusPill tone="success">Active</StatusPill>
+              <p className="text-sm text-muted">
+                Current plan: <span className="font-display text-base font-bold text-indigo">{planName}</span>
+              </p>
+              <Link href="/business/billing" className="text-xs font-bold text-violet hover:underline">
+                Manage plan →
+              </Link>
             </div>
-            <ul className="mt-4 space-y-2 text-sm text-muted">
-              <li>
-                Next billing date: <span className="font-semibold text-indigo">Managed in billing</span>
-              </li>
-              <li>
-                Payment method: <span className="font-semibold text-indigo">View in billing</span>
-              </li>
-            </ul>
           </Panel>
         </div>
       </section>

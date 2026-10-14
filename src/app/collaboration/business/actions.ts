@@ -7,6 +7,7 @@ import { specialtyLabel } from "@/lib/seed-data";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import {
+  activateBrief,
   buildCampaignIntentFields,
   createBrief,
   ensureOwnedBusinessWorkspace,
@@ -15,13 +16,11 @@ import {
   requestManagedMatch,
   resolveCampaignIntentSaveMode,
   sendInquiry,
-  setBusinessPlan,
   updateBrief,
   updateInquiryStatus,
   addToShortlist,
   enteredNote,
 } from "@/lib/business";
-import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import {
   businessOwnsApplication,
   createMarketplaceApplication,
@@ -96,12 +95,20 @@ export async function actionSaveCampaignIntent(formData: FormData) {
   const { ws } = await requireBusinessAccount();
   let fields;
   try {
+    const locationParts = [
+      String(formData.get("locationCity") ?? ""),
+      String(formData.get("locationState") ?? ""),
+      String(formData.get("locationCountry") ?? ""),
+    ]
+      .map((part) => part.trim())
+      .filter(Boolean);
     fields = buildCampaignIntentFields({
       title: String(formData.get("title") ?? ""),
       goal: String(formData.get("goal") ?? ""),
       specialty: String(formData.get("specialty") ?? ""),
       budget: String(formData.get("budget") ?? ""),
-      location: String(formData.get("location") ?? ""),
+      budgetCurrency: String(formData.get("budgetCurrency") ?? ""),
+      location: locationParts.join(", "),
       platform: String(formData.get("platform") ?? ""),
       audience: String(formData.get("audience") ?? ""),
       collabType: String(formData.get("collabType") ?? ""),
@@ -163,6 +170,7 @@ export async function actionPostBusinessRequest(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not publish the request.";
     redirect(`${HUB}?error=${encodeURIComponent(message)}#requests`);
   }
+  await activateBrief(brief.id, ws.businessId).catch(() => undefined);
   revalidateHub();
   redirect(`${HUB}?posted=1#requests`);
 }
@@ -250,12 +258,13 @@ export async function actionShortlistFromInquiry(formData: FormData) {
   redirect(`${HUB}?added=${encodeURIComponent(slug)}#shortlist`);
 }
 
-export async function actionSetPlan(formData: FormData) {
-  const { ws } = await requireBusinessAccount();
-  const plan = String(formData.get("plan") ?? "") as BusinessPlanCode;
-  await setBusinessPlan(plan, ws.businessId);
-  revalidateHub();
-  redirect(`${HUB}?plan=1#pricing`);
+/**
+ * The hub no longer sets a plan directly (#12, #4). Plan changes go through checkout on
+ * /business/billing. This action stays only to redirect a stale form submission there.
+ */
+export async function actionSetPlan() {
+  await requireBusinessAccount();
+  redirect(`/business/billing?error=${encodeURIComponent("Manage your plan from Billing.")}`);
 }
 
 export async function actionRequestManagedMatch(formData: FormData) {

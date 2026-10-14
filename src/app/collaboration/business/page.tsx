@@ -10,13 +10,16 @@ import {
 import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { collabOsV1Enabled } from "@/lib/collab-os";
-import { leadLabel, leadTransitions } from "@/lib/business";
+import { leadLabel, leadTransitions, parseLocationParts } from "@/lib/business";
 import { loadBusinessHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
-import { BUSINESS_PLAN_PRICES, isBusinessPlanCode, type BusinessPlanCode } from "@/lib/business-entitlements";
+import { BUSINESS_PLAN_PRICES, isBusinessPlanCode } from "@/lib/business-entitlements";
+import { listCatalogOptions } from "@/lib/catalog-options";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatStoredMoney } from "@/lib/money";
 import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
+import { listFxRates } from "@/lib/settlement";
+import { PlaceFields } from "@/components/place-fields";
 import { SPECIALTY_TAXONOMY, formatFollowers, publicStoredImage, specialtyLabel } from "@/lib/seed-data";
 import {
   actionAcceptBusinessTerms,
@@ -28,7 +31,6 @@ import {
   actionRemoveShortlist,
   actionSaveCampaignIntent,
   actionSendInquiry,
-  actionSetPlan,
   actionShortlistFromInquiry,
   actionTransitionMarketplaceApplication,
 } from "./actions";
@@ -106,6 +108,17 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
   const taxonomy = directory?.taxonomy?.length
     ? directory.taxonomy
     : SPECIALTY_TAXONOMY.map((item) => ({ slug: item.slug, name: item.name }));
+  const [collabTypes, timeframes, fxRates] = await Promise.all([
+    listCatalogOptions("collab_type").catch(() => []),
+    listCatalogOptions("timeframe").catch(() => []),
+    listFxRates().catch(() => []),
+  ]);
+  const currencyOptions = ["USD", ...fxRates.filter((row) => row.active).map((row) => row.currency)];
+
+  // #13/#15 — the form only appears when explicitly editing a draft (?intent=<id>) or
+  // starting a new one (?intent=new). A bare hub visit never pre-fills a stale draft.
+  const showIntentForm = params.intent === "new" || Boolean(hub.intentBrief);
+  const intentLocation = parseLocationParts(hub.intentBrief?.location ?? "");
 
   return (
     <div className="bg-[#F4F7FF]">
@@ -128,11 +141,11 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href="#create-request" className="btn-primary !py-2 text-sm">
-              Post Request <IconArrowRight size={14} />
-            </a>
-            <a href="#suggestions" className="btn-secondary !py-2 text-sm">
-              Get Suggestions
+            <Link href="/collaboration/business?intent=new#suggestions" className="btn-primary !py-2 text-sm">
+              Create request <IconArrowRight size={14} />
+            </Link>
+            <a href="#drafts" className="btn-secondary !py-2 text-sm">
+              Campaigns & drafts
             </a>
             <Link href="/collaboration/team" className="btn-secondary !py-2 text-sm">
               Team proposal
@@ -270,6 +283,52 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             ))}
           </div>
 
+          <section id="drafts" className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-xl font-bold text-indigo">Campaigns & drafts</h2>
+                <p className="text-sm text-muted">
+                  Every Campaign Intent you have saved, draft or active. Edit one to bring back its form.
+                </p>
+              </div>
+              <Link href="/collaboration/business?intent=new#suggestions" className="btn-primary !py-2 text-sm">
+                Create request <IconArrowRight size={14} />
+              </Link>
+            </div>
+            <ul className="mt-4 space-y-2">
+              {hub.briefs.length === 0 ? (
+                <li className="text-sm text-muted">No campaigns yet — create one to start getting suggestions.</li>
+              ) : (
+                hub.briefs.map((brief) => (
+                  <li
+                    key={brief.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E8EDF8] p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-indigo">{brief.title}</p>
+                      <p className="text-[11px] text-muted">
+                        {[brief.goal, brief.budget ? `${brief.budgetCurrency} ${brief.budget}` : ""]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-[#EAE4FF] px-2 py-0.5 text-[10px] font-bold uppercase text-violet">
+                        {brief.status}
+                      </span>
+                      <Link
+                        href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#suggestions`}
+                        className="text-xs font-bold text-violet hover:underline"
+                      >
+                        Edit
+                      </Link>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+          </section>
+
           <section id="suggestions" className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -277,7 +336,9 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 <p className="text-sm text-muted">
                   {hub.intentBrief
                     ? "Update your Campaign Intent or refresh matches as new influencers become available."
-                    : "Save a Campaign Intent, then refresh influencer matches for your brief."}
+                    : showIntentForm
+                      ? "Save a Campaign Intent, then refresh influencer matches for your brief."
+                      : "Create a request or edit a saved draft from Campaigns & drafts to see this form."}
                 </p>
                 {hub.intentBrief ? (
                   <p className="mt-1 text-[11px] font-semibold text-violet">
@@ -294,6 +355,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 </form>
               ) : null}
             </div>
+            {showIntentForm ? (
             <form action={actionSaveCampaignIntent} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {hub.intentBrief ? <input type="hidden" name="briefId" value={hub.intentBrief.id} /> : null}
               <label className="block text-xs font-bold text-indigo sm:col-span-2 lg:col-span-3">
@@ -332,13 +394,39 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   ))}
                 </select>
               </label>
-              <label className="block text-xs font-bold text-indigo">
-                Geography
-                <input name="location" placeholder="City, country, or region" defaultValue={hub.intentBrief?.location ?? ""} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
-              </label>
+              <PlaceFields
+                cityName="locationCity"
+                stateName="locationState"
+                countryName="locationCountry"
+                cityLabel="City"
+                countryLabel="Country"
+                stateLabel="State / region"
+                defaultCity={intentLocation.city}
+                defaultState={intentLocation.state}
+                defaultCountry={intentLocation.country}
+                className="contents"
+              />
               <label className="block text-xs font-bold text-indigo">
                 Budget
-                <input name="budget" placeholder="Amount or range" defaultValue={hub.intentBrief?.budget ?? ""} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
+                <div className="mt-1 flex gap-2">
+                  <select
+                    name="budgetCurrency"
+                    defaultValue={hub.intentBrief?.budgetCurrency ?? "USD"}
+                    className="w-24 rounded-xl border border-border px-2 py-2 text-sm font-medium"
+                  >
+                    {currencyOptions.map((code) => (
+                      <option key={code} value={code}>
+                        {code}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    name="budget"
+                    placeholder="Amount or range"
+                    defaultValue={hub.intentBrief?.budget ?? ""}
+                    className="w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
+                  />
+                </div>
               </label>
               <label className="block text-xs font-bold text-indigo">
                 Platform
@@ -352,7 +440,33 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               </label>
               <label className="block text-xs font-bold text-indigo">
                 Collaboration type
-                <input name="collabType" placeholder="Brand partnership, review…" className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
+                <select
+                  name="collabType"
+                  defaultValue={hub.intentBrief?.collabType ?? ""}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium"
+                >
+                  <option value=""> </option>
+                  {collabTypes.map((option) => (
+                    <option key={option.id} value={option.label}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-xs font-bold text-indigo">
+                Timeframe
+                <select
+                  name="timeframe"
+                  defaultValue={hub.intentBrief?.timeframe ?? ""}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-medium"
+                >
+                  <option value=""> </option>
+                  {timeframes.map((option) => (
+                    <option key={option.id} value={option.label}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="block text-xs font-bold text-indigo sm:col-span-2 lg:col-span-3">
                 Audience / notes
@@ -363,10 +477,6 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
                 />
               </label>
-              <label className="block text-xs font-bold text-indigo sm:col-span-2 lg:col-span-2">
-                Timeframe
-                <input name="timeframe" placeholder="Next 30 days / Q4" className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
-              </label>
               <div className="flex items-end">
                 <button type="submit" className="btn-primary w-full !py-2.5 text-sm">
                   {hub.intentBrief ? "Update intent & suggest" : "Save intent & suggest"}{" "}
@@ -374,6 +484,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 </button>
               </div>
             </form>
+            ) : null}
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {hub.suggestions.length === 0 ? (
@@ -463,7 +574,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 </Link>
               </p>
             ) : null}
-            {teamSendControl({ audience: "business" }).visible && hub.suggestions.length >= 2 ? (
+            {teamSendControl({ audience: "business" }).visible && hub.suggestions.length >= 1 ? (
               <form action={actionSendTeamProposal} className="mt-4 space-y-2 rounded-xl border border-[#E4E9F5] bg-[#F8FAFF] p-4">
                 <input type="hidden" name="returnTo" value="/collaboration/business" />
                 <input type="hidden" name="title" value={hub.intentBrief?.title ?? ""} />
@@ -474,7 +585,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 />
                 <fieldset className="space-y-1">
                   <legend className="text-sm font-semibold text-indigo">Send a team proposal</legend>
-                  <p className="text-xs text-muted">Select two or more suggestions. One proposal, one contract, one funding instruction.</p>
+                  <p className="text-xs text-muted">Select one or more suggestions. One proposal, one contract, one funding instruction.</p>
                   {hub.suggestions.map(({ creator }) => (
                     <label key={creator.slug} className="flex items-center gap-2 text-sm text-indigo">
                       <input type="checkbox" name="creatorSlug" value={creator.slug} />
@@ -819,29 +930,21 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
           </section>
 
           <section id="pricing" className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
-            <h2 className="font-display text-lg font-bold text-indigo">Business plans</h2>
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              {(Object.keys(BUSINESS_PLAN_PRICES) as BusinessPlanCode[]).map((code) => {
-                const price = BUSINESS_PLAN_PRICES[code];
-                const active = hub.workspace.plan === code;
-                return (
-                  <form
-                    key={code}
-                    action={actionSetPlan}
-                    className={`rounded-2xl border p-4 ${active ? "border-violet bg-[#F7F4FF]" : "border-[#E4E9F5]"}`}
-                  >
-                    <input type="hidden" name="plan" value={code} />
-                    <p className="text-xs font-bold uppercase tracking-wide text-violet">{price.label}</p>
-                    <p className="mt-1 font-display text-xl font-bold text-indigo">
-                      {price.price}
-                      <span className="text-sm font-medium text-muted">{price.period}</span>
-                    </p>
-                    <button type="submit" className={`mt-3 w-full !py-2 text-sm ${active ? "btn-secondary" : "btn-primary"}`}>
-                      {active ? "Current plan" : "Use this plan"}
-                    </button>
-                  </form>
-                );
-              })}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-lg font-bold text-indigo">Business plan</h2>
+                <p className="mt-1 text-sm text-indigo">
+                  Current plan:{" "}
+                  <span className="font-bold">
+                    {isBusinessPlanCode(hub.workspace.plan)
+                      ? BUSINESS_PLAN_PRICES[hub.workspace.plan].label
+                      : hub.workspace.plan}
+                  </span>
+                </p>
+              </div>
+              <Link href="/business/billing" className="btn-primary !py-2 text-sm">
+                Manage plan <IconArrowRight size={14} />
+              </Link>
             </div>
           </section>
 
