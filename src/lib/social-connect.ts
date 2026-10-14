@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { getAppOrigin } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { invalidateDirectoryCache } from "@/lib/directory";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
@@ -186,6 +187,11 @@ function redirectUri(origin: string) {
   return `${origin.replace(/\/$/, "")}/api/social/callback`;
 }
 
+/** Exact OAuth redirect URI Google/Meta/etc must whitelist (full https URL). */
+export function socialCallbackUrl(origin = getAppOrigin()) {
+  return redirectUri(origin);
+}
+
 export async function socialConnectState(slug: string) {
   const policy = await getSocialPolicy();
   const networks = await listSocialNetworks();
@@ -268,17 +274,19 @@ export async function beginSocialConnect(input: {
   } catch {
     return { ok: false as const, error: "The connected-account policy could not be recorded. Try again." };
   }
+  // Always use the configured public origin — never request Host / 0.0.0.0 —
+  // so the redirect_uri matches Google/Meta console whitelists.
   const authorizeUrl = buildAuthorizeUrl({
     authorizeUrl: provider!.authorizeUrl,
     authorizeHosts: network.authorizeHosts,
     clientIdParam: network.clientIdParam,
     clientId: provider!.clientId,
-    redirectUri: redirectUri(input.origin),
+    redirectUri: socialCallbackUrl(),
     state,
     scopes: provider!.scopes,
   });
   if (!authorizeUrl) return { ok: false as const, error: "The authorize URL is not on an official host." };
-  return { ok: true as const, authorizeUrl };
+  return { ok: true as const, authorizeUrl, redirectUri: socialCallbackUrl() };
 }
 
 async function readProvider(providerId: string | null, platform: SocialSyncPlatform) {
@@ -454,7 +462,8 @@ export async function completeSocialCallback(input: { code?: string; state?: str
       clientIdParam: ready.network.clientIdParam,
       clientId: ready.clientId,
       clientSecret: ready.secret,
-      redirectUri: redirectUri(input.origin),
+      // Must match the authorize redirect_uri exactly (configured public origin).
+      redirectUri: socialCallbackUrl(),
       code: input.code,
     });
     if (!token.ok) {
@@ -551,7 +560,7 @@ export async function refreshSocialConnection(input: { slug: string; platform: s
         clientIdParam: ready.network.clientIdParam,
         clientId: ready.clientId,
         clientSecret: ready.secret,
-        redirectUri: redirectUri(input.origin),
+        redirectUri: socialCallbackUrl(),
         refreshToken,
       });
       if (!refreshed.ok) {
@@ -611,4 +620,9 @@ export async function disconnectSocial(input: { slug: string; platform: string }
 
 export function callbackPath() {
   return "/api/social/callback";
+}
+
+/** Full callback URL shown in Admin → Social and provider consoles. */
+export function callbackAbsoluteUrl() {
+  return socialCallbackUrl();
 }

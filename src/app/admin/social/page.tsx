@@ -2,7 +2,7 @@ import Link from "next/link";
 import { actionSaveSocialNetwork, actionSaveSocialPolicy } from "@/app/admin/social/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { callbackPath, getSocialPolicy, listSocialNetworks } from "@/lib/social-connect";
+import { callbackAbsoluteUrl, callbackPath, getSocialPolicy, listSocialNetworks } from "@/lib/social-connect";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Social networks · Admin" };
@@ -38,7 +38,12 @@ export default async function AdminSocialPage({ searchParams }: Props) {
         already shown for that account.
       </p>
       <p className="mt-2 text-sm text-muted">
-        Redirect URI for every network app: <span className="font-semibold text-indigo">{callbackPath()}</span>
+        Redirect URI path: <span className="font-semibold text-indigo">{callbackPath()}</span>
+      </p>
+      <p className="mt-1 text-sm text-muted">
+        Paste this <span className="font-semibold text-indigo">exact</span> URL into Google / Meta / TikTok authorized
+        redirect URIs (https, no trailing slash):{" "}
+        <code className="rounded bg-[#F1ECFF] px-1.5 py-0.5 text-xs font-semibold text-violet">{callbackAbsoluteUrl()}</code>
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}

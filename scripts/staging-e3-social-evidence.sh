@@ -38,6 +38,18 @@ echo "Influrios Phase M E3 Social OAuth evidence"
 echo
 echo "When: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo
+echo "OAuth redirect_uri (register this EXACTLY in Google / Meta console):"
+echo "  ${APP_URL}/api/social/callback"
+echo
+
+# Warn when NEXT_PUBLIC_APP_URL looks like Docker bind / localhost — that causes redirect_uri_mismatch.
+case "${APP_URL}" in
+  *0.0.0.0*|*localhost*|*127.0.0.1*)
+    echo "WARNING: APP_URL/NEXT_PUBLIC_APP_URL is ${APP_URL}"
+    echo "         Set NEXT_PUBLIC_APP_URL=https://influrios.com in .env and redeploy before YouTube/Instagram OAuth."
+    echo
+    ;;
+esac
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "ERROR: docker not found on PATH. Run this on the Lightsail host where Compose runs."

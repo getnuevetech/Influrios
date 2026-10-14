@@ -49,4 +49,12 @@ describe("social callback origin wiring", () => {
     assert.equal(source.includes('new URL("/dashboard", request.nextUrl.origin)'), false);
     assert.match(readFileSync("src/app/dashboard/social-actions.ts", "utf8"), /resolveAppOrigin/);
   });
+
+  it("authorizes with socialCallbackUrl from getAppOrigin (not request host)", () => {
+    const connect = readFileSync("src/lib/social-connect.ts", "utf8");
+    assert.match(connect, /socialCallbackUrl\(\)/);
+    assert.match(connect, /callbackAbsoluteUrl/);
+    assert.match(readFileSync("src/app/admin/social/page.tsx", "utf8"), /callbackAbsoluteUrl/);
+    assert.match(readFileSync("next.config.ts", "utf8"), /bodySizeLimit:\s*"10mb"/);
+  });
 });

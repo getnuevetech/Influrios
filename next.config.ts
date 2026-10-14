@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
     webpackMemoryOptimizations: true,
     parallelServerBuildTraces: false,
     staticGenerationMaxConcurrency: 1,
+    // Document KYC uploads (and similar) exceed the 1 MB default and used to
+    // surface as a digest-only Application error on /dashboard/kyc.
+    serverActions: {
+      bodySizeLimit: "10mb",
+      allowedOrigins: ["influrios.com", "www.influrios.com", "localhost:3000"],
+    },
   },
   images: {
     // Creator and CMS media are served from this app. Remote optimization is off
