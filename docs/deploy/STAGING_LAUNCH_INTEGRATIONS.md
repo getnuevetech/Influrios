@@ -228,7 +228,7 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 |-------|--------|-----------|
 | **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: finish **E4** |
 | **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: finish **E4** |
-| **E4 Stripe** | Partial: `4242`/`creator_plus` applied (`cs_mv6jqy02_g3n8vb`) — **still need** duplicate `checkout.session.completed` resend | duplicate skipped |
+| **E4 Stripe** | Partial: `4242`/`creator_plus` applied (`cs_mv6jqy02_g3n8vb`) — **still need** `npm run staging:e4-stripe-duplicate` | duplicate skipped |
 
 **Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 complete. **`CRON_SECRET` rotated** (operator confirmed).
 
@@ -291,10 +291,16 @@ npm run staging:e4-stripe-evidence
 
 Remaining operator path (duplicate skip only):
 
-1. Stripe Dashboard → Developers → Events (or CLI): find `checkout.session.completed` for session `cs_test_a1FGJzvUkZPLgdKGXAqcZtqCuocAW00MJB8H3V8YafY21uzlTtl6VZ4GaA` / local id `cs_mv6jqy02_g3n8vb`.
-2. **Resend** that event to `https://influrios.com/api/billing/webhook`.
-3. Expect response `{"received":true,"duplicate":true}` (or equivalent). Plan stays `creator_plus`; still **one** `ProcessedWebhook` row for event id `checkout:cs_mv6jqy02_g3n8vb`.
-4. Paste the resend response (and optional re-run of `npm run staging:e4-stripe-evidence`) here.
+This checkout was confirmed on the **success page**, which stores a **local** event id `checkout:cs_mv6jqy02_g3n8vb` — not a Stripe Dashboard `evt_…`. That is why Events → Resend has nothing matching. Same idempotency still applies (unique `provider + eventId`).
+
+On the host (after this slice is deployed):
+
+```bash
+cd /var/www/influrios
+npm run staging:e4-stripe-duplicate
+```
+
+Expect: second insert of that webhook row **fails unique**, still **one** row for `checkout:cs_mv6jqy02_g3n8vb`, plan stays `creator_plus`. Paste that output here.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
