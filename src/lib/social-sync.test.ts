@@ -4,6 +4,8 @@ import {
   buildAuthorizeUrl,
   isLiveSocialAccount,
   parseSocialMetrics,
+  parseYoutubeChannelMetrics,
+  prepareSocialProfileUrl,
   socialConnectGate,
   socialHostAllowed,
 } from "./social-sync";
@@ -64,6 +66,26 @@ describe("live social metrics", () => {
 
   it("does not treat a payload as live when likes are missing", () => {
     assert.equal(parseSocialMetrics({ followers: 10 }), null);
+  });
+
+  it("maps YouTube channel subscriberCount + viewCount for the metric gate", () => {
+    const parsed = parseYoutubeChannelMetrics({
+      items: [
+        {
+          id: "UCabc",
+          snippet: { title: "Ada", customUrl: "@ada" },
+          statistics: { subscriberCount: "1200", viewCount: "55000", videoCount: "10" },
+        },
+      ],
+    });
+    assert.deepEqual(parsed, { followers: 1200, likes: 55000, handle: "ada", externalId: "UCabc" });
+    assert.equal(parseYoutubeChannelMetrics({ items: [] }), null);
+  });
+
+  it("adds YouTube channels.list query params when the stored URL is bare", () => {
+    const prepared = prepareSocialProfileUrl("https://www.googleapis.com/youtube/v3/channels", "YOUTUBE");
+    assert.match(prepared, /part=snippet%2Cstatistics|part=snippet,statistics/);
+    assert.match(prepared, /mine=true/);
   });
 
   it("counts an account as live only after a confirmed sync of both numbers", () => {

@@ -38,7 +38,8 @@ export const SOCIAL_NETWORKS = [
     apiHosts: ["oauth2.googleapis.com", "www.googleapis.com"],
     authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
-    profileUrl: "https://www.googleapis.com/youtube/v3/channels",
+    // channels.list requires part + mine (or id). Bare /channels returns HTTP 400.
+    profileUrl: "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
     scopes: "https://www.googleapis.com/auth/youtube.readonly",
   },
   {
@@ -209,6 +210,55 @@ export function parseSocialMetrics(payload: unknown): { followers: number; likes
   return { followers: found.followers, likes: found.likes };
 }
 
+/**
+ * YouTube channels.list does not return a like count. Use subscriberCount as followers
+ * and channel viewCount as the second required engagement metric (stored in likes).
+ */
+export function parseYoutubeChannelMetrics(payload: unknown): {
+  followers: number;
+  likes: number;
+  handle: string | null;
+  externalId: string | null;
+} | null {
+  if (!payload || typeof payload !== "object") return null;
+  const items = (payload as { items?: unknown }).items;
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const channel = items[0];
+  if (!channel || typeof channel !== "object") return null;
+  const record = channel as {
+    id?: unknown;
+    snippet?: { title?: unknown; customUrl?: unknown };
+    statistics?: { subscriberCount?: unknown; viewCount?: unknown };
+  };
+  const followers = asCount(record.statistics?.subscriberCount);
+  const likes = asCount(record.statistics?.viewCount);
+  if (followers == null || likes == null) return null;
+  const customUrl = typeof record.snippet?.customUrl === "string" ? record.snippet.customUrl.trim() : "";
+  const title = typeof record.snippet?.title === "string" ? record.snippet.title.trim() : "";
+  const handle = (customUrl || title || "").replace(/^@/, "") || null;
+  const externalId = typeof record.id === "string" && record.id.trim() ? record.id.trim() : null;
+  return { followers, likes, handle, externalId };
+}
+
+/** Ensure YouTube profile URLs include the required channels.list query params. */
+export function prepareSocialProfileUrl(profileUrl: string, platform?: string | null) {
+  const network = platform ? socialNetwork(platform) : null;
+  const looksYoutube =
+    network?.code === "youtube" || /googleapis\.com\/youtube\/v3\/channels/i.test(profileUrl);
+  if (!looksYoutube) return profileUrl;
+  try {
+    const url = new URL(profileUrl);
+    if (url.hostname !== "www.googleapis.com" && url.hostname !== "googleapis.com") return profileUrl;
+    if (!url.searchParams.get("part")) url.searchParams.set("part", "snippet,statistics");
+    if (!url.searchParams.get("mine") && !url.searchParams.get("id") && !url.searchParams.get("forHandle")) {
+      url.searchParams.set("mine", "true");
+    }
+    return url.toString();
+  } catch {
+    return profileUrl;
+  }
+}
+
 export function buildAuthorizeUrl(input: {
   authorizeUrl: string;
   authorizeHosts: readonly string[];
@@ -217,6 +267,8 @@ export function buildAuthorizeUrl(input: {
   redirectUri: string;
   state: string;
   scopes: string;
+  /** Extra query params (e.g. Google access_type=offline). */
+  extraParams?: Record<string, string>;
 }) {
   if (!socialHostAllowed(input.authorizeUrl, input.authorizeHosts)) return null;
   if (!input.clientId.trim() || !input.state.trim()) return null;
@@ -226,5 +278,8 @@ export function buildAuthorizeUrl(input: {
   url.searchParams.set("response_type", "code");
   url.searchParams.set("state", input.state);
   url.searchParams.set("scope", input.scopes);
+  for (const [key, value] of Object.entries(input.extraParams ?? {})) {
+    if (key && value) url.searchParams.set(key, value);
+  }
   return url.toString();
 }
