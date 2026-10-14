@@ -78,6 +78,9 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /### E4 progress \(Stripe sandbox\)/);
     assert.match(runbook, /staging:e4-stripe-evidence/);
     assert.match(runbook, /staging:e4-stripe-duplicate/);
+    // E4 complete: checkout attempt + duplicate unique proof recorded.
+    assert.match(runbook, /cs_mv6jqy02_g3n8vb/);
+    assert.match(runbook, /E4 progress \(Stripe sandbox\) — \*\*complete\*\*/);
   });
 });
 
