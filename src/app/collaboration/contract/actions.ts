@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
-import { getWorkspace } from "@/lib/business";
+import { closeBriefForContract, closeWorkspaceBriefsForContract, getWorkspace } from "@/lib/business";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { resolveFee } from "@/lib/collaboration-fees";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
@@ -102,10 +102,12 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const feeDisclosureAccepted = formData.get("feeDisclosureAccepted") === "on";
   const intent = String(formData.get("intent") ?? "preview");
 
+  const briefId = String(formData.get("briefId") ?? "").trim();
   const qs = new URLSearchParams();
   qs.set("creator", creatorSlug);
   if (teamProposalId) qs.set("team", teamProposalId);
   if (collaborationId) qs.set("collaboration", collaborationId);
+  if (briefId) qs.set("brief", briefId);
   qs.set("title", title);
   qs.set("scope", scope);
   qs.set("commercial", commercial);
@@ -396,6 +398,11 @@ export async function actionSubmitContractWizard(formData: FormData) {
       },
     });
     if (!sent.ok) redirectError(sent.error, qs);
+    if (briefId) {
+      await closeBriefForContract(briefId, ws.businessId).catch(() => undefined);
+    } else {
+      await closeWorkspaceBriefsForContract(ws.businessId).catch(() => undefined);
+    }
     redirect(`/collaboration/contracts/${sent.id}`);
   }
 
@@ -434,8 +441,15 @@ export async function actionSubmitContractWizard(formData: FormData) {
     });
   }
 
+  if (briefId) {
+    await closeBriefForContract(briefId, ws.businessId).catch(() => undefined);
+  } else {
+    await closeWorkspaceBriefsForContract(ws.businessId).catch(() => undefined);
+  }
+
   revalidatePath(BASE);
   revalidatePath("/payments");
   revalidatePath("/collaboration/business");
+  revalidatePath("/business/campaigns");
   redirect(`/payments?created=${result.id}`);
 }

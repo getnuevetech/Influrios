@@ -1,11 +1,13 @@
 import Link from "next/link";
 import {
   actionAddKycRequirement,
+  actionAdminSetCreatorKyc,
   actionRemoveKycRequirement,
   actionReviewDocumentKyc,
   actionSaveKycGateway,
 } from "@/app/admin/kyc/actions";
 import { requireAdminPage } from "@/app/admin/guard";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import { kycDetailsRecord, listKycRequirements, loadKycSettings } from "@/lib/kyc-document";
 import { prisma } from "@/lib/db";
@@ -22,19 +24,26 @@ export default async function AdminKycPage({ searchParams }: Props) {
   const session = await requireAdminPage("collab_finance");
   const canManage = hasPermission(session, "collab_finance.manage");
   const params = await searchParams;
-  const [settings, requirements, providers, submissions] = await Promise.all([
+  const [settings, requirements, providers, submissions, creators] = await Promise.all([
     loadKycSettings().catch(() => null),
     listKycRequirements().catch(() => []),
     listProviders("payment").catch(() => []),
     prisma.creatorKycSubmission
       .findMany({ orderBy: { updatedAt: "desc" }, include: { documents: true }, take: 50 })
       .catch(() => []),
+    prisma.creator
+      .findMany({
+        orderBy: { slug: "asc" },
+        select: { slug: true, displayName: true, identityVerified: true },
+        take: 200,
+      })
+      .catch(() => []),
   ]);
   const gatewayId = settings?.gatewayProviderId ?? "";
   const gateway = providers.find((provider) => provider.id === gatewayId);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-4">
       <div>
         <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
           ← Admin
@@ -46,17 +55,17 @@ export default async function AdminKycPage({ searchParams }: Props) {
           <Link href="/admin/corridors" className="font-semibold text-violet hover:underline">
             Country corridors
           </Link>
-          .
+          . Approving KYC here sets the creator account to verified so payout readiness can clear.
         </p>
       </div>
 
       {params.saved ? <p className="text-sm font-semibold text-emerald-700">Saved ({params.saved}).</p> : null}
       {params.error ? <p className="text-sm font-semibold text-amber-800">{params.error}</p> : null}
 
-      <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
-        <h2 className="font-display text-lg font-bold text-indigo">KYC by Gateway</h2>
-        <p className="mt-1 max-w-3xl text-sm text-muted">
-          The creator completes KYC with this payment gateway. The United States can use Stripe.
+      <AdminCollapse title="KYC by Gateway" subtitle={gateway?.name ?? "No KYC gateway selected"} defaultOpen>
+        <p className="max-w-3xl text-sm text-muted">
+          The creator completes KYC with this payment gateway. The United States can use Stripe Identity. Completed
+          sessions update the creator account as verified for payouts.
         </p>
         {canManage ? (
           <form action={actionSaveKycGateway} className="mt-3 flex flex-wrap items-end gap-3">
@@ -80,11 +89,13 @@ export default async function AdminKycPage({ searchParams }: Props) {
         ) : (
           <p className="mt-3 text-sm font-semibold text-indigo">{gateway?.name ?? "No KYC gateway selected."}</p>
         )}
-      </article>
+      </AdminCollapse>
 
-      <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
-        <h2 className="font-display text-lg font-bold text-indigo">KYC by Document Upload</h2>
-        <p className="mt-1 max-w-3xl text-sm text-muted">
+      <AdminCollapse
+        title="KYC by Document Upload"
+        subtitle={`${requirements.length} requirement${requirements.length === 1 ? "" : "s"}`}
+      >
+        <p className="max-w-3xl text-sm text-muted">
           Add each detail and each document the creator must provide. A document-upload country shows this list on
           Identity KYC.
         </p>
@@ -139,66 +150,113 @@ export default async function AdminKycPage({ searchParams }: Props) {
             </div>
           </form>
         ) : null}
-      </article>
+      </AdminCollapse>
 
-      <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
-        <h2 className="font-display text-lg font-bold text-indigo">Submissions</h2>
-        {submissions.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No KYC submissions yet.</p>
+      <AdminCollapse
+        title="Manual account KYC"
+        subtitle="Set Creator.identityVerified for payouts without a submission"
+        defaultOpen
+      >
+        <p className="max-w-3xl text-sm text-muted">
+          Use this when document or gateway KYC is complete offline, or to unblock payouts after verifying identity
+          outside Influrios. Verified status is what payout readiness checks.
+        </p>
+        {canManage ? (
+          <form action={actionAdminSetCreatorKyc} className="mt-3 flex flex-wrap items-end gap-3">
+            <label className="text-xs font-semibold text-muted">
+              Creator
+              <select name="creatorSlug" required defaultValue="" className={selectClass}>
+                <option value="" disabled>
+                  Choose a creator
+                </option>
+                {creators.map((creator) => (
+                  <option key={creator.slug} value={creator.slug}>
+                    {creator.displayName || creator.slug} · {creator.identityVerified}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Decision
+              <select name="decision" required defaultValue="verified" className={selectClass}>
+                <option value="verified">Mark KYC completed / verified</option>
+                <option value="rejected">Mark rejected</option>
+              </select>
+            </label>
+            <button type="submit" className="btn-primary !px-4 !py-2 text-xs">
+              Update account KYC
+            </button>
+          </form>
         ) : (
-          <ul className="mt-3 space-y-4">
+          <p className="mt-3 text-sm text-muted">You can view KYC but not change account verification.</p>
+        )}
+      </AdminCollapse>
+
+      <AdminCollapse title="Submissions" subtitle={`${submissions.length} recent`} defaultOpen>
+        {submissions.length === 0 ? (
+          <p className="text-sm text-muted">No KYC submissions yet.</p>
+        ) : (
+          <ul className="space-y-3">
             {submissions.map((submission) => {
               const details = kycDetailsRecord(submission.detailsJson);
+              const pending =
+                submission.status === "submitted" ||
+                submission.status === "pending_gateway" ||
+                submission.status === "PENDING";
               return (
-                <li key={submission.id} className="rounded-xl border border-[#E4EBFF] p-3 text-sm">
-                  <p className="font-semibold text-indigo">
-                    {submission.creatorSlug} · {submission.countryCode || "no country"} · {submission.status}
-                  </p>
-                  <p className="mt-1 text-xs text-muted">
-                    {submission.kycModel === "government_id" ? "KYC by Document Upload" : "KYC by Gateway"}
-                  </p>
-                  {Object.keys(details).length > 0 ? (
-                    <ul className="mt-2 space-y-1 text-xs text-indigo">
-                      {Object.entries(details).map(([key, value]) => (
-                        <li key={key}>{value}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {submission.documents.length > 0 ? (
-                    <ul className="mt-2 space-y-1 text-xs">
-                      {submission.documents.map((document) => (
-                        <li key={document.id}>
-                          <a href={`/admin/kyc/file/${document.id}`} className="font-semibold text-violet hover:underline">
-                            {document.label}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {canManage && submission.kycModel === "government_id" && submission.status === "submitted" ? (
-                    <div className="mt-3 flex gap-2">
-                      <form action={actionReviewDocumentKyc}>
-                        <input type="hidden" name="submissionId" value={submission.id} />
-                        <input type="hidden" name="decision" value="verified" />
-                        <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
-                          Mark verified
-                        </button>
-                      </form>
-                      <form action={actionReviewDocumentKyc}>
-                        <input type="hidden" name="submissionId" value={submission.id} />
-                        <input type="hidden" name="decision" value="rejected" />
-                        <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
-                          Reject
-                        </button>
-                      </form>
-                    </div>
-                  ) : null}
+                <li key={submission.id}>
+                  <AdminCollapse
+                    title={`${submission.creatorSlug} · ${submission.status}`}
+                    subtitle={`${submission.countryCode || "no country"} · ${
+                      submission.kycModel === "government_id" ? "Document upload" : "Gateway"
+                    }`}
+                  >
+                    {Object.keys(details).length > 0 ? (
+                      <ul className="space-y-1 text-xs text-indigo">
+                        {Object.entries(details).map(([key, value]) => (
+                          <li key={key}>{value}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {submission.documents.length > 0 ? (
+                      <ul className="mt-2 space-y-1 text-xs">
+                        {submission.documents.map((document) => (
+                          <li key={document.id}>
+                            <a
+                              href={`/admin/kyc/file/${document.id}`}
+                              className="font-semibold text-violet hover:underline"
+                            >
+                              {document.label}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {canManage && pending ? (
+                      <div className="mt-3 flex gap-2">
+                        <form action={actionReviewDocumentKyc}>
+                          <input type="hidden" name="submissionId" value={submission.id} />
+                          <input type="hidden" name="decision" value="verified" />
+                          <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
+                            Mark verified
+                          </button>
+                        </form>
+                        <form action={actionReviewDocumentKyc}>
+                          <input type="hidden" name="submissionId" value={submission.id} />
+                          <input type="hidden" name="decision" value="rejected" />
+                          <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
+                            Reject
+                          </button>
+                        </form>
+                      </div>
+                    ) : null}
+                  </AdminCollapse>
                 </li>
               );
             })}
           </ul>
         )}
-      </article>
+      </AdminCollapse>
     </div>
   );
 }

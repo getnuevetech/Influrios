@@ -44,6 +44,7 @@ import { ledgerMonthlyReport, ledgerTotals, listFundings, marketplaceConfig, mar
 import { productSwitch } from "@/lib/product-switches";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { feeTypeFromFundingSnapshot, type FeeTypeAmount } from "@/lib/ledger";
+import { AdminCollapse } from "@/components/admin-collapse";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };
@@ -494,7 +495,12 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           Managed introduction and managed campaign stay off until legal review is APPROVED and the matching toggle is on.
         </p>
         {config.jurisdictions.map((row) => (
-          <form key={row.code} action={actionSaveJurisdiction} className="grid gap-3 rounded-xl border border-border p-4 sm:grid-cols-4">
+          <AdminCollapse
+            key={row.code}
+            title={`${row.label} (${row.code})`}
+            subtitle={`${row.currency} · ${row.protectedPaymentsEnabled ? "protected payments on" : "protected payments off"} · legal ${row.legalReviewStatus}`}
+          >
+          <form action={actionSaveJurisdiction} className="grid gap-3 sm:grid-cols-4">
             <input type="hidden" name="code" value={row.code} />
             <label className="text-xs font-semibold text-muted">
               Code
@@ -718,9 +724,11 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               </button>
             ) : null}
           </form>
+          </AdminCollapse>
         ))}
         {canManage ? (
-          <form action={actionSaveJurisdiction} className="grid gap-3 rounded-xl border border-dashed border-border p-4 sm:grid-cols-4">
+          <AdminCollapse title="Add jurisdiction" subtitle="New country capability set">
+          <form action={actionSaveJurisdiction} className="grid gap-3 sm:grid-cols-4">
             <label className="text-xs font-semibold text-muted">
               New code
               <input name="code" maxLength={2} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase" />
@@ -805,11 +813,12 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Add jurisdiction
             </button>
           </form>
+          </AdminCollapse>
         ) : null}
       </section>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Wise user rate</h2>
+      <AdminCollapse title="Wise user rate" subtitle="FX quote tooling">
+        <h2 className="sr-only">Wise user rate</h2>
         <p className="mt-1 text-xs text-muted">
           A non-USD prefund asks Wise for the user rate on this profile. USD stays 1.00. If Wise is not ready, or the
           quote fails, nothing is funded. The returned rate is copied onto the funding. The minor-unit figure below is
@@ -925,10 +934,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </AdminCollapse>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Revenue shares</h2>
+      <AdminCollapse title="Revenue shares" subtitle="Party splits">
+        <h2 className="sr-only">Revenue shares</h2>
         <p className="mt-1 text-xs text-muted">
           Active shares must add up to 100%. The split is copied onto a prefund and written as share lines only when
           the provider releases a milestone. Those lines are not cash, and a later edit does not rewrite a frozen split.
@@ -974,10 +983,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </AdminCollapse>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Milestone templates</h2>
+      <AdminCollapse title="Milestone templates" subtitle="Default contract milestones">
+        <h2 className="sr-only">Milestone templates</h2>
         <p className="mt-1 text-xs text-muted">Active shares must add up to 100%. Later edits do not change an existing prefund.</p>
         {canManage ? (
           <form action={actionSaveTemplates} className="mt-4 space-y-3">
@@ -1024,10 +1033,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </AdminCollapse>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Scheduled release</h2>
+      <AdminCollapse title="Scheduled release" subtitle="Approved milestone payouts">
+        <h2 className="sr-only">Scheduled release</h2>
         <p className="mt-1 text-xs text-muted">
           Dev §8: APPROVED → release_scheduled → release_requested → signed{" "}
           <code className="text-[11px]">payout.released</code>. Authorizing release does not move money; the sweep
@@ -1074,10 +1083,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             {canManage ? "No approved held milestones ready to schedule." : "Ops can authorize releases here."}
           </p>
         )}
-      </section>
+      </AdminCollapse>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Chargebacks &amp; held cancellations</h2>
+      <AdminCollapse title="Chargebacks & held cancellations" subtitle="High-risk ops">
+        <h2 className="sr-only">Chargebacks & held cancellations</h2>
         <p className="mt-1 text-xs text-muted">
           Chargebacks move a held prefund into payment-risk with no automatic refund. Other cancel reasons and
           dispute refund decisions queue a durable provider instruction (
@@ -1231,10 +1240,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             Held cancel / payment-risk needs Collab finance · High-risk plus password step-up.
           </p>
         ) : null}
-      </section>
+      </AdminCollapse>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Dispute reasons</h2>
+      <AdminCollapse title="Dispute reasons" subtitle="Catalog">
+        <h2 className="sr-only">Dispute reasons</h2>
         <p className="mt-1 text-xs text-muted">
           The label is copied onto a dispute when it opens. Later edits do not rename open cases. A decision does not
           move money; the provider webhook does.
@@ -1272,10 +1281,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             ))}
           </ul>
         )}
-      </section>
+      </AdminCollapse>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Attribution</h2>
+      <AdminCollapse title="Attribution" subtitle="Sources and claims">
+        <h2 className="sr-only">Attribution</h2>
         <p className="mt-1 text-xs text-muted">
           Attribution expiry is finite (never forever). A repeat must be the same business and creator, already
           confirmed by the provider, inside this expiry window, and at least the minimum gross. Pre-existing
@@ -1404,10 +1413,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             </li>
           ))}
         </ul>
-      </section>
+      </AdminCollapse>
 
-      <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Funding schedule</h2>
+      <AdminCollapse title="Funding schedule" subtitle="Recurring and staged">
+        <h2 className="sr-only">Funding schedule</h2>
         <p className="mt-1 text-xs text-muted">
           Staged deals split the gross into prefunds now. Recurring deals open only the first prefund. The next one
           is created after the provider confirms the current one and the interval has passed. Neither posts a hold.
@@ -1468,7 +1477,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               : "Recurring off"}
           </p>
         )}
-      </section>
+      </AdminCollapse>
 
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Ledger totals</h2>
@@ -1521,26 +1530,21 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           const feeType = feeTypeFromFundingSnapshot(funding.feeSnapshotJson);
           const feeTypeLabel = FEE_TYPE_LABELS[feeType as FeeType] ?? feeType;
           return (
-          <article key={funding.id} className="card-surface p-4 text-sm">
+          <AdminCollapse
+            key={funding.id}
+            title={`${funding.businessName} → ${funding.creatorSlug}`}
+            subtitle={`${funding.status.replaceAll("_", " ")} · ${funding.title}`}
+          >
+          <article className="text-sm">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-indigo">
-                  <Link
-                    href={`/admin/marketplace/${funding.id}`}
-                    className="hover:text-violet hover:underline"
-                  >
-                    {funding.businessName} → {funding.creatorSlug}
-                  </Link>
-                </p>
-                <p className="text-muted">{funding.title}</p>
                 <Link
                   href={`/admin/marketplace/${funding.id}`}
-                  className="mt-1 inline-block text-xs font-semibold text-violet hover:underline"
+                  className="inline-block text-xs font-semibold text-violet hover:underline"
                 >
                   Open transaction →
                 </Link>
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-violet">{funding.status.replaceAll("_", " ")}</p>
             </div>
             <p className="mt-2 text-muted">
               Gross {formatMoney(funding.grossCents, funding.currency)} · {funding.currency} · provider {funding.providerCode} · fee snapshot{" "}
@@ -1575,6 +1579,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               ))}
             </ul>
           </article>
+          </AdminCollapse>
           );
         })}
       </section>

@@ -12,6 +12,7 @@ import {
   actionSetLinkStatus,
 } from "@/app/admin/short-links/actions";
 import { requireAdminPage } from "@/app/admin/guard";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { ensureShortLinkDefaults, getAdminShortLinkAnalyticsRollup, getShortLinkSettings } from "@/lib/short-link";
@@ -169,8 +170,8 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
         </section>
       ) : null}
 
-      <section className="card-surface mt-6 p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Domains</h2>
+      <AdminCollapse title="Domains" subtitle="Expand to manage">
+        <h2 className="sr-only">Domains</h2>
         <p className="mt-1 text-xs text-muted">
           Ops verifies ownership before a hostname can serve short links or become primary (INFLR.me §20.24). New
           domains start unverified.
@@ -221,7 +222,7 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
             </button>
           </form>
         ) : null}
-      </section>
+      </AdminCollapse>
 
       {settings && canEdit ? (
         <form action={actionSaveShortSettings} className="card-surface mt-4 space-y-3 p-5">
@@ -240,8 +241,8 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
         </form>
       ) : null}
 
-      <section className="card-surface mt-4 p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Reserved names</h2>
+      <AdminCollapse title="Reserved names" subtitle="Expand to manage">
+        <h2 className="sr-only">Reserved names</h2>
         <ul className="mt-3 flex flex-wrap gap-2 text-xs">
           {reserved.map((row) => (
             <li key={row.slug} className="rounded-full bg-lavender px-2 py-1 text-indigo">
@@ -266,7 +267,7 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
             </button>
           </form>
         ) : null}
-      </section>
+      </AdminCollapse>
 
       <section className="card-surface mt-4 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Links</h2>
@@ -276,12 +277,13 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
         </p>
         <ul className="mt-3 space-y-3 text-sm">
           {links.map((link) => (
-            <li key={link.id} className="rounded-xl border border-border p-3">
-              <p className="font-semibold text-indigo">
-                /{link.slug} · {link.status} · {link.dynamic ? "dynamic" : "standard"}
-              </p>
+            <li key={link.id}>
+              <AdminCollapse
+                title={`/${link.slug}`}
+                subtitle={`${link.status} · ${link.dynamic ? "dynamic" : "standard"} · ${link.creator?.displayName ?? "unassigned"}`}
+              >
               <p className="text-xs text-muted">
-                {link.creator?.displayName ?? "unassigned"} · {link.destination}
+                {link.destination}
                 {link.qrIdentities[0] ? ` · QR /q/${link.qrIdentities[0].token}` : ""}
                 {link.nfcIdentities[0] ? ` · NFC /n/${link.nfcIdentities[0].token}` : ""}
               </p>
@@ -346,14 +348,15 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
                 </ul>
                 </div>
               ) : null}
+              </AdminCollapse>
             </li>
           ))}
           {!links.length ? <li className="text-muted">No short links yet. A plan that includes a short link receives one on first use.</li> : null}
         </ul>
       </section>
 
-      <section className="card-surface mt-4 p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Recent events</h2>
+      <AdminCollapse title="Recent events" subtitle="Expand to manage">
+        <h2 className="sr-only">Recent events</h2>
         <ul className="mt-3 space-y-1 text-xs text-muted">
           {events.map((event) => (
             <li key={event.id}>
@@ -377,7 +380,7 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
             </li>
           ))}
         </ul>
-      </section>
+      </AdminCollapse>
     </div>
   );
 }

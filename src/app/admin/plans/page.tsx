@@ -5,6 +5,7 @@ import {
   actionUpdatePlanMeta,
 } from "@/app/admin/plans/actions";
 import { requireAdminPage } from "@/app/admin/guard";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import { BUSINESS_FEATURE_KEYS } from "@/lib/business-entitlements";
 import { EDITABLE_FEATURE_KEYS } from "@/lib/entitlements";
@@ -110,15 +111,12 @@ export default async function AdminPlansPage({ searchParams }: Props) {
 
       <div className="mt-6 space-y-4">
         {plans.map((plan) => (
-          <form key={plan.code} action={actionUpdatePlanMeta} className="card-surface grid gap-3 p-5 sm:grid-cols-4">
-            <div className="sm:col-span-4">
-              <p className="font-display text-lg font-bold text-indigo">
-                {plan.name} <span className="text-sm font-semibold text-muted">{plan.code}</span>
-              </p>
-              <p className="text-xs text-muted">
-                {plan.audience} · {plan.assigned} assigned · {plan.active ? "active" : "hidden from new assignment"}
-              </p>
-            </div>
+          <AdminCollapse
+            key={plan.code}
+            title={`${plan.name} (${plan.code})`}
+            subtitle={`${plan.audience} · ${plan.assigned} assigned · ${plan.active ? "active" : "hidden"}`}
+          >
+          <form action={actionUpdatePlanMeta} className="grid gap-3 sm:grid-cols-4">
             <input type="hidden" name="code" value={plan.code} />
             {plan.code === "STARTER" ? <input type="hidden" name="active" value="1" /> : null}
             <label className="text-xs font-semibold text-indigo">
@@ -165,6 +163,7 @@ export default async function AdminPlansPage({ searchParams }: Props) {
               </div>
             ) : null}
           </form>
+          </AdminCollapse>
         ))}
       </div>
 

@@ -12,7 +12,10 @@ export function webhookDisposition(input: {
   if (
     input.eventType === "checkout.session.completed" ||
     input.eventType === "customer.subscription.deleted" ||
-    input.eventType === "invoice.payment_failed"
+    input.eventType === "invoice.payment_failed" ||
+    input.eventType === "identity.verification_session.verified" ||
+    input.eventType === "identity.verification_session.requires_input" ||
+    input.eventType === "identity.verification_session.canceled"
   ) {
     return "apply";
   }

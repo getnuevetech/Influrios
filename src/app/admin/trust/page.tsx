@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { actionAddLedgerEvidence, actionDecideLedgerDispute } from "@/app/admin/trust/ledger-actions";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
 import { listMilestoneDisputes } from "@/lib/milestone-disputes";
 import { purgeLegacyDemoJsonFiles } from "@/lib/legacy-teardown";
@@ -68,7 +69,12 @@ export default async function AdminTrustPage({ searchParams }: Props) {
         </p>
         {ledgerDisputes.length === 0 ? <p className="text-sm text-muted">No ledger disputes yet.</p> : null}
         {ledgerDisputes.map((dispute) => (
-          <article key={dispute.id} className="rounded-xl border border-border p-4 text-sm">
+          <AdminCollapse
+            key={dispute.id}
+            title={`${dispute.funding.businessName} → ${dispute.funding.creatorSlug}`}
+            subtitle={`${dispute.status.replaceAll("_", " ")} · ${dispute.reasonLabel}`}
+          >
+          <article className="text-sm">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-semibold text-indigo">
@@ -173,6 +179,7 @@ export default async function AdminTrustPage({ searchParams }: Props) {
               </form>
             ) : null}
           </article>
+          </AdminCollapse>
         ))}
       </section>
 

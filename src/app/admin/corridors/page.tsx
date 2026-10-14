@@ -115,18 +115,11 @@ function CorridorCard({
 }) {
   const selected = Array.isArray(row.payoutMethodsJson) ? (row.payoutMethodsJson as string[]) : [];
   return (
-    <article className="rounded-2xl border border-[#E4EBFF] bg-[#F8FAFF] p-4">
+    <AdminCollapse
+      title={corridorHeading(row)}
+      subtitle={`${row.collectionProviderCode ?? "no collection route"} · ${kycTypeByCode(row.kycModel)?.label ?? "KYC type not chosen"} · ${row.active ? "Active" : "Suspended"}`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="font-display text-lg font-bold text-indigo">{corridorHeading(row)}</h3>
-          <p className="text-xs text-muted">
-            {row.collectionProviderCode ?? "no collection route"} ·{" "}
-            {kycTypeByCode(row.kycModel)?.label ?? "KYC type not chosen"}
-          </p>
-          <p className={`mt-1 text-xs font-semibold ${row.active ? "text-emerald-700" : "text-amber-800"}`}>
-            {row.active ? "Active" : "Suspended"}
-          </p>
-        </div>
         {canManage ? (
           <form action={actionToggleCorridor}>
             <input type="hidden" name="countryCode" value={row.countryCode} />
@@ -194,7 +187,7 @@ function CorridorCard({
       ) : (
         <p className="mt-3 text-xs text-muted">{row.notes || "No notes."}</p>
       )}
-    </article>
+    </AdminCollapse>
   );
 }
 

@@ -12,6 +12,7 @@ import {
   actionSaveInvitationTemplate,
 } from "@/app/admin/invitations/actions";
 import { requireAdminPage } from "@/app/admin/guard";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import { getDirectory } from "@/lib/directory";
 import { loadAcquisitionReport } from "@/lib/acquisition";
@@ -123,7 +124,12 @@ export default async function AdminInvitationsPage({
               const link = `${origin}/invite/${invitation.token}`;
               const followUpDue = invitation.followUpAt && invitation.followUpAt.getTime() < Date.now() && (invitation.status === "queued" || invitation.status === "opened");
               return (
-                <article key={invitation.id} className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
+                <AdminCollapse
+                  key={invitation.id}
+                  title={invitation.displayName || invitation.creatorSlug || invitation.id}
+                  subtitle={`${invitation.status} · ${invitation.campaign?.name || "No campaign"}`}
+                >
+                <article className="space-y-2">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-indigo">{invitation.displayName}</p>
@@ -165,6 +171,7 @@ export default async function AdminInvitationsPage({
                     </ul>
                   ) : null}
                 </article>
+                </AdminCollapse>
               );
             })}
           </div>
@@ -173,7 +180,8 @@ export default async function AdminInvitationsPage({
           <p className="mt-1 text-sm text-muted">Placeholders: {"{{name}}"}, {"{{profile}}"}, {"{{link}}"}, {"{{expiry}}"}.</p>
           <div className="mt-3 space-y-3">
             {data.templates.map((template) => (
-              <form key={template.id} action={actionSaveInvitationTemplate} className="space-y-3 rounded-2xl border border-[#E4EBFF] bg-white p-4">
+              <AdminCollapse key={template.id} title={template.name || template.id} subtitle={template.active ? "Active" : "Inactive"}>
+              <form action={actionSaveInvitationTemplate} className="space-y-3">
                 <input type="hidden" name="id" value={template.id} />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block text-sm font-semibold text-indigo">Name<input name="name" defaultValue={template.name} disabled={!canEdit} className={inputClass} /></label>
@@ -185,6 +193,7 @@ export default async function AdminInvitationsPage({
                 </label>
                 {canEdit ? <button type="submit" className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm font-semibold text-indigo">Save template</button> : null}
               </form>
+              </AdminCollapse>
             ))}
             {canEdit ? (
               <form action={actionSaveInvitationTemplate} className="space-y-3 rounded-2xl border border-dashed border-[#C9D4FF] bg-white p-4">

@@ -15,6 +15,10 @@ describe("webhook disposition", () => {
     assert.equal(webhookDisposition({ duplicate: false, eventType: "checkout.session.completed" }), "apply");
     assert.equal(webhookDisposition({ duplicate: false, eventType: "customer.subscription.deleted" }), "apply");
     assert.equal(webhookDisposition({ duplicate: false, eventType: "invoice.payment_failed" }), "apply");
+    assert.equal(
+      webhookDisposition({ duplicate: false, eventType: "identity.verification_session.verified" }),
+      "apply",
+    );
     assert.equal(webhookDisposition({ duplicate: false, eventType: "customer.created" }), "ignore");
   });
 

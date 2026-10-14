@@ -9,6 +9,7 @@ import { assertCollabOsV1 } from "@/lib/collab-os";
 import {
   activateBrief,
   buildCampaignIntentFields,
+  closeWorkspaceBriefsForContract,
   createBrief,
   ensureOwnedBusinessWorkspace,
   getWorkspace,
@@ -21,6 +22,7 @@ import {
   addToShortlist,
   enteredNote,
 } from "@/lib/business";
+import { contractHrefFromCampaign } from "@/lib/campaign-contract";
 import {
   businessOwnsApplication,
   createMarketplaceApplication,
@@ -124,13 +126,22 @@ export async function actionSaveCampaignIntent(formData: FormData) {
     briefId,
     ownedBriefIds: ws.briefs.map((brief) => brief.id),
   });
+  if (mode === "update") {
+    const existing = ws.briefs.find((item) => item.id === briefId);
+    if (existing?.status === "closed") {
+      redirect(
+        `${HUB}?error=${encodeURIComponent("This campaign is under contract and can no longer be edited.")}#drafts`,
+      );
+    }
+  }
   const brief =
     mode === "update"
       ? await updateBrief(briefId, fields, ws.businessId)
       : await createBrief(fields, ws.businessId);
   revalidateHub();
+  // Close the edit form after save — reopen only via an intentional Edit link.
   redirect(
-    `${HUB}?intent=${encodeURIComponent(brief.id)}&suggestions=1&mode=${mode}#suggestions`,
+    `${HUB}?suggestions=1&mode=${mode}&savedBrief=${encodeURIComponent(brief.id)}#suggestions`,
   );
 }
 
@@ -335,12 +346,16 @@ export async function actionTransitionMarketplaceApplication(formData: FormData)
       actorUserId: account.id,
       note: String(formData.get("note") ?? "") || undefined,
     });
+    if (toStatus === "ACCEPTED" || toStatus === "COLLABORATION_DRAFTED") {
+      await closeWorkspaceBriefsForContract(ws.businessId).catch(() => undefined);
+    }
     revalidateHub();
     if (toStatus === "COLLABORATION_DRAFTED") {
       const creator = updated.toSlug || updated.fromSlug;
+      const brief = ws.briefs.find((item) => item.status !== "closed") ?? ws.briefs[0] ?? null;
       redirect(
         creator
-          ? `/collaboration/contract?creator=${encodeURIComponent(creator)}`
+          ? contractHrefFromCampaign({ creatorSlug: creator, brief })
           : `${HUB}?drafted=1#applicants`,
       );
     }

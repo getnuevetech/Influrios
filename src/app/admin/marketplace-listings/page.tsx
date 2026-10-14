@@ -11,6 +11,7 @@ import {
   listAdminBusinessRequests,
   listAdminCreatorOpportunities,
 } from "@/lib/marketplace-listings";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { getDirectory } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
@@ -57,10 +58,14 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
       <section className="space-y-4">
         <h2 className="font-display text-xl font-bold text-indigo">Business requests</h2>
         {requests.map((row) => (
-          <form
+          <AdminCollapse
             key={row.id}
+            title={row.brand || "Business request"}
+            subtitle={`${row.status} · ${row.category || "no category"} · ${row.budget || "no budget"}`}
+          >
+          <form
             action={actionSaveBusinessRequest}
-            className="grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4 sm:grid-cols-2"
+            className="grid gap-3 sm:grid-cols-2"
           >
             <input type="hidden" name="id" value={row.id} />
             {isLaunchSampleBusinessRequest(row) ? (
@@ -126,14 +131,15 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
               </button>
             ) : null}
           </form>
+          </AdminCollapse>
         ))}
 
         {canEdit ? (
+          <AdminCollapse title="Add business request" subtitle="New listing">
           <form
             action={actionSaveBusinessRequest}
-            className="grid gap-3 rounded-2xl border border-dashed border-[#C9D4F5] bg-[#F8FAFF] p-4 sm:grid-cols-2"
+            className="grid gap-3 sm:grid-cols-2"
           >
-            <p className="text-sm font-bold text-indigo sm:col-span-2">Add business request</p>
             <Field label="Brand" name="brand" disabled={!canEdit} />
             <Field label="Category" name="category" disabled={!canEdit} />
             <Field label="Budget" name="budget" disabled={!canEdit} />
@@ -166,16 +172,21 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
               Create request
             </button>
           </form>
+          </AdminCollapse>
         ) : null}
       </section>
 
       <section className="space-y-4">
         <h2 className="font-display text-xl font-bold text-indigo">Influencer opportunities</h2>
         {opportunities.map((row) => (
-          <form
+          <AdminCollapse
             key={row.id}
+            title={row.lookingFor || row.creatorSlug || "Opportunity"}
+            subtitle={`${row.status} · ${row.creatorSlug}`}
+          >
+          <form
             action={actionSaveCreatorOpportunity}
-            className="grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4 sm:grid-cols-2"
+            className="grid gap-3 sm:grid-cols-2"
           >
             <input type="hidden" name="id" value={row.id} />
             {isLaunchSampleCreatorOpportunity(row) ? (
@@ -227,14 +238,15 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
               </button>
             ) : null}
           </form>
+          </AdminCollapse>
         ))}
 
         {canEdit ? (
+          <AdminCollapse title="Add influencer opportunity" subtitle="New listing">
           <form
             action={actionSaveCreatorOpportunity}
-            className="grid gap-3 rounded-2xl border border-dashed border-[#C9D4F5] bg-[#F8FAFF] p-4 sm:grid-cols-2"
+            className="grid gap-3 sm:grid-cols-2"
           >
-            <p className="text-sm font-bold text-indigo sm:col-span-2">Add influencer opportunity</p>
             <label className="block text-xs font-semibold text-muted">
               Influencer
               <select name="creatorSlug" disabled={!canEdit} className={inputClass} defaultValue="">
@@ -266,6 +278,7 @@ export default async function AdminMarketplaceListingsPage({ searchParams }: Pro
               Create opportunity
             </button>
           </form>
+          </AdminCollapse>
         ) : null}
       </section>
     </div>

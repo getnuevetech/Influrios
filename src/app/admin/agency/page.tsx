@@ -12,6 +12,7 @@ import {
   actionSaveAgencySeats,
 } from "@/app/admin/agency/actions";
 import { requireAdminPage } from "@/app/admin/guard";
+import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import {
   agencyStats,
@@ -312,7 +313,8 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
       <section className="space-y-4">
         <h2 className="font-display text-xl font-bold text-indigo">Campaigns</h2>
         {store.campaigns.map((c) => (
-          <article key={c.id} className="card-surface p-5">
+          <AdminCollapse key={c.id} title={c.title || c.id} subtitle={c.status}>
+          <article className="space-y-3">
             <div className="flex flex-wrap justify-between gap-2">
               <div>
                 <p className="text-xs font-bold uppercase text-violet">{c.clientName}</p>
@@ -340,6 +342,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
               ) : null}
             </div>
           </article>
+          </AdminCollapse>
         ))}
         {canManage ? (
           <form action={actionAdminCreateCampaign} className="card-surface grid gap-3 p-5 sm:grid-cols-2">

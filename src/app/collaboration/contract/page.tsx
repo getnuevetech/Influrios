@@ -4,7 +4,12 @@ import { redirect } from "next/navigation";
 import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
-import { getWorkspace } from "@/lib/business";
+import { getWorkspace, type CampaignBrief } from "@/lib/business";
+import {
+  budgetToGrossDollars,
+  campaignCommercialFromBrief,
+  campaignScopeFromBrief,
+} from "@/lib/campaign-contract";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { resolveFee, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
 import {
@@ -54,6 +59,7 @@ type Props = {
     creator?: string;
     collaboration?: string;
     team?: string;
+    brief?: string;
     title?: string;
     scope?: string;
     commercial?: string;
@@ -136,6 +142,31 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     ? await prisma.collaboration.findUnique({ where: { id: collaborationId } }).catch(() => null)
     : null;
 
+  const briefId = (params.brief ?? "").trim();
+  const briefRow = briefId
+    ? await prisma.businessBrief
+        .findFirst({ where: { id: briefId, workspaceId: ws.businessId } })
+        .catch(() => null)
+    : null;
+  const campaignBrief: CampaignBrief | null = briefRow
+    ? {
+        id: briefRow.id,
+        title: briefRow.title,
+        goal: briefRow.goal,
+        specialty: briefRow.specialty,
+        budget: briefRow.budget,
+        budgetCurrency: briefRow.budgetCurrency,
+        collabType: briefRow.collabType,
+        timeframe: briefRow.timeframe,
+        location: briefRow.location,
+        platform: briefRow.platform,
+        summary: briefRow.summary,
+        createdAt: briefRow.createdAt.toISOString(),
+        status: briefRow.status === "closed" || briefRow.status === "draft" ? briefRow.status : "active",
+      }
+    : null;
+  const fromCampaign = Boolean(campaignBrief);
+
   const creatorSlug =
     (params.creator ?? "").trim() ||
     linkedCollab?.recipientSlug ||
@@ -143,12 +174,30 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     "";
   const creator = creatorSlug ? await getDirectoryCreator(creatorSlug) : null;
   const entered = contractWizardFields({
-    title: params.title !== undefined ? params.title : linkedCollab?.title,
-    scope: params.scope !== undefined ? params.scope : linkedCollab?.scope,
-    commercial: params.commercial !== undefined ? params.commercial : linkedCollab?.commercial,
+    title:
+      params.title !== undefined
+        ? params.title
+        : campaignBrief?.title || linkedCollab?.title,
+    scope:
+      params.scope !== undefined
+        ? params.scope
+        : campaignBrief
+          ? campaignScopeFromBrief(campaignBrief)
+          : linkedCollab?.scope,
+    commercial:
+      params.commercial !== undefined
+        ? params.commercial
+        : campaignBrief
+          ? campaignCommercialFromBrief(campaignBrief)
+          : linkedCollab?.commercial,
     jurisdiction: params.jurisdiction,
     serviceLevel: params.serviceLevel,
-    gross: params.gross,
+    gross:
+      params.gross !== undefined
+        ? params.gross
+        : campaignBrief
+          ? budgetToGrossDollars(campaignBrief.budget, campaignBrief.budgetCurrency)
+          : undefined,
     creatorCountryCode: countryCodeFromLocation(creator?.locationCountry),
     jurisdictionCodes: config.jurisdictions.map((row) => row.code),
   });
@@ -359,9 +408,16 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             {params.error}
           </p>
         ) : null}
+        {fromCampaign && campaignBrief ? (
+          <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            Prefilling from campaign “{campaignBrief.title}”. Title, scope, commercial terms, and budget come from
+            that intent — confirm them below rather than re-entering.
+          </p>
+        ) : null}
 
         <form action={actionSubmitContractWizard} className="space-y-8 rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
           <input type="hidden" name="businessName" value={ws.name} />
+          {campaignBrief ? <input type="hidden" name="briefId" value={campaignBrief.id} /> : null}
           {linkedCollab ? <input type="hidden" name="collaborationId" value={linkedCollab.id} /> : null}
           {teamProposal && teamProposal.workspaceId === ws.businessId ? (
             <input type="hidden" name="teamProposalId" value={teamProposal.id} />
@@ -435,14 +491,18 @@ export default async function ContractWizardPage({ searchParams }: Props) {
 
           <section id="scope">
             <h2 className="font-display text-xl font-bold text-indigo">2. Scope</h2>
+            {fromCampaign ? (
+              <p className="mt-1 text-xs text-muted">Carried over from the accepted campaign intent.</p>
+            ) : null}
             <label className="mt-4 block text-sm font-semibold text-indigo">
               Campaign title
               <input
                 name="title"
                 required
+                readOnly={fromCampaign}
                 placeholder="Campaign title"
                 defaultValue={title}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign ? "bg-[#F4F7FF] text-indigo" : ""}`}
               />
             </label>
             <label className="mt-4 block text-sm font-semibold text-indigo">
@@ -450,10 +510,11 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               <textarea
                 name="scope"
                 required
+                readOnly={fromCampaign}
                 rows={4}
                 placeholder="Deliverables, channels, and revisions"
                 defaultValue={scope}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign ? "bg-[#F4F7FF] text-indigo" : ""}`}
               />
             </label>
           </section>
@@ -466,9 +527,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 <input
                   name="grossUsd"
                   required
+                  readOnly={fromCampaign && Boolean(grossRaw)}
                   placeholder="Amount"
                   defaultValue={grossRaw}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                  className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign && grossRaw ? "bg-[#F4F7FF] text-indigo" : ""}`}
                 />
               </label>
               <label className="block text-sm font-semibold text-indigo">
@@ -531,8 +593,9 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 Commercial framing
                 <input
                   name="commercial"
+                  readOnly={fromCampaign && Boolean(commercial)}
                   defaultValue={commercial}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
+                  className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign && commercial ? "bg-[#F4F7FF] text-indigo" : ""}`}
                 />
               </label>
             </div>
