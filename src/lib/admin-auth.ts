@@ -240,10 +240,18 @@ export const ADMIN_PERMISSION_GROUPS: {
   {
     module: "accounts",
     label: "Member accounts",
-    description: "Registered members, consent version, and password rules",
+    description: "Influencer and business accounts, consent version, and password rules",
     permissions: [
-      { id: "accounts.view", label: "View accounts", hint: "Open member accounts and consent settings" },
-      { id: "accounts.edit", label: "Edit accounts", hint: "Verify, suspend, and change account policy" },
+      {
+        id: "accounts.view",
+        label: "View accounts",
+        hint: "Open influencer and business account lists and consent settings",
+      },
+      {
+        id: "accounts.edit",
+        label: "Edit accounts",
+        hint: "Suspend, change role or plan, and update account policy",
+      },
     ],
   },
   {

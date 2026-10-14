@@ -56,9 +56,13 @@ export default async function GuestPolicyPage({
       <h1 className="font-display text-2xl font-bold text-indigo">Guest gates</h1>
       <p className="mt-2 text-sm text-muted">
         Signed-in accounts skip these limits. A hard stop sends the guest to register and back to the page they opened.
-        Member accounts, the consent version, and the password length are on{" "}
+        Influencer and business accounts, the consent version, and the password length are on{" "}
         <a href="/admin/accounts" className="font-semibold text-violet">
-          Member accounts
+          Influencer accounts
+        </a>{" "}
+        and{" "}
+        <a href="/admin/business-accounts" className="font-semibold text-violet">
+          Business accounts
         </a>
         .
       </p>

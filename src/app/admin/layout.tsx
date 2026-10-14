@@ -24,7 +24,8 @@ const SIDE_GROUPS: SideGroup[] = [
   {
     name: "Members & access",
     links: [
-      { href: "/admin/accounts", label: "Member accounts", module: "accounts" },
+      { href: "/admin/accounts", label: "Influencer accounts", module: "accounts" },
+      { href: "/admin/business-accounts", label: "Business accounts", module: "accounts" },
       { href: "/admin/invitations", label: "Invitations", module: "invitations" },
       { href: "/admin/access", label: "Access levels", module: "access" },
       { href: "/admin/agency", label: "Agency", module: "agency" },

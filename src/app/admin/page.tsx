@@ -33,7 +33,8 @@ const LINKS: {
     completedCheckouts: number;
     trustOpen: number;
     agencyRoster: number;
-    memberAccounts: number;
+    influencerAccounts: number;
+    businessAccounts: number;
     stripeMode: "sandbox" | "live" | "demo" | "rejected";
   }) => string;
 }[] = [
@@ -215,10 +216,17 @@ const LINKS: {
   },
   {
     href: "/admin/accounts",
-    title: "Member accounts",
-    blurb: "Registered members, verification, suspension, consent, and password length.",
+    title: "Influencer accounts",
+    blurb: "Creator sign-ins, verification, suspension, consent, and password length.",
     module: "accounts",
-    meta: (c) => `${c.memberAccounts} accounts`,
+    meta: (c) => `${c.influencerAccounts} influencers`,
+  },
+  {
+    href: "/admin/business-accounts",
+    title: "Business accounts",
+    blurb: "Business and agency sign-ins, verification, suspension, and plan.",
+    module: "accounts",
+    meta: (c) => `${c.businessAccounts} businesses`,
   },
   {
     href: "/admin/fees",
@@ -296,8 +304,19 @@ export default async function AdminHomePage({
   const params = await searchParams;
   const account = await getAccountSession().catch(() => null);
   const agencyId = account ? agencyWorkspaceIdForOwner(account.id) : null;
-  const [cms, matching, billing, openDisputes, agency, memberAccounts, health, stripeMode, snapshotsList, trends] =
-    await Promise.all([
+  const [
+    cms,
+    matching,
+    billing,
+    openDisputes,
+    agency,
+    influencerAccounts,
+    businessAccounts,
+    health,
+    stripeMode,
+    snapshotsList,
+    trends,
+  ] = await Promise.all([
       getCms().catch(() => null),
       getManagedMatching().catch(() => null),
       getBillingStore().catch(() => null),
@@ -307,7 +326,8 @@ export default async function AdminHomePage({
         },
       }).catch(() => 0),
       agencyId ? getAgencyStore(agencyId).catch(() => null) : Promise.resolve(null),
-      prisma.user.count().catch(() => 0),
+      prisma.user.count({ where: { role: "CREATOR" } }).catch(() => 0),
+      prisma.user.count({ where: { role: { in: ["BUSINESS", "AGENCY"] } } }).catch(() => 0),
       providerHealth().catch(() => null),
       stripeBillingMode().catch(() => "demo" as const),
       getAllAudienceSnapshots().catch(() => []),
@@ -329,7 +349,8 @@ export default async function AdminHomePage({
     completedCheckouts,
     trustOpen: openDisputes,
     agencyRoster: aStats.roster,
-    memberAccounts,
+    influencerAccounts,
+    businessAccounts,
     stripeMode,
   };
 
