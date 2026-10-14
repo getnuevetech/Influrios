@@ -138,14 +138,14 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 
 | Evidence | Result |
 |----------|--------|
-| Date / operator | |
-| Network | ☐ YouTube ☐ Instagram ☐ other: |
-| Consent completed | ☐ |
-| Callback OK | ☐ |
-| Both metrics present → stored | ☐ / N/A · SocialConnection id · SocialAccount id |
-| Missing metric → no write | ☐ / N/A |
+| Date / operator | 2026-10-14 · host + cloud-agent (script `2026-10-14T10:03:39Z`) |
+| Network | ☑ YouTube ☐ Instagram ☐ other: |
+| Consent completed | ☑ |
+| Callback OK | ☑ redirect URI `https://influrios.com/api/social/callback` · readiness HTTP 307 |
+| Both metrics present → stored | ☑ SocialConnection `cmv7wsjww001qs2015kbcssy4` · SocialAccount `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · followers `6` · likes/views `2531` · `PROVIDER_SYNCED` |
+| Missing metric → no write | ☑ Facebook prior error (no invent) · gate: 1 complete / 0 partial |
 | Host script | `npm run staging:e3-social-evidence` |
-| Notes | |
+| Notes | YouTube channel viewCount stored as the second metric (API has no channel likes) |
 
 ---
 
@@ -227,12 +227,12 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 | Slice | Action | Done when |
 |-------|--------|-----------|
-| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: finish **E3** |
-| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: finish **E3** |
-| **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: finish **E3** |
-| **E3 Social OAuth** | Enable **one** network → creator consent → callback → both metrics synced (or prove missing metric does not write) | SocialConnection + SocialAccount ids |
+| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: later Phase M rows |
+| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: later Phase M rows |
+| **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: later Phase M rows |
+| **E3 Social OAuth** | ~~Done~~ YouTube `cmv7wsjww001qs2015kbcssy4` · account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` | Next: later Phase M rows |
 
-**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 + E4 complete. **Next: E3 Social OAuth.** **`CRON_SECRET` rotated** (operator confirmed).
+**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 + E3 + E4 complete. **`CRON_SECRET` rotated** (operator confirmed).
 
 ### E1 progress (2026-10-13 afternoon) — **complete**
 
@@ -292,37 +292,30 @@ npm run staging:e4-stripe-evidence
 npm run staging:e4-stripe-duplicate
 ```
 
-### E3 progress (Social OAuth) — **in progress**
+### E3 progress (Social OAuth) — **complete**
 
-**Goal:** one enabled network → creator consent → callback → store followers/likes **only when both metrics are present**.
+Host script `2026-10-14T10:03:39Z`. YouTube consent → callback → `PROVIDER_SYNCED` with both metrics. Facebook earlier proved missing metrics do not invent a write.
 
 | Check | Result |
 |-------|--------|
-| Admin → Social: one network Ready | ☐ |
-| Redirect URI `{APP}/api/social/callback` registered | ☐ |
-| Creator consent + OAuth completed | ☐ |
-| Callback lands on `/dashboard` without error | ☐ |
-| Both metrics → `PROVIDER_SYNCED` SocialAccount | ☐ |
-| Missing metric → no invent / no partial PROVIDER_SYNCED | ☐ |
+| Admin → Social: one network Ready | ☑ YouTube (also FB/IG ready; E3 used YouTube) |
+| Redirect URI `{APP}/api/social/callback` registered | ☑ `https://influrios.com/api/social/callback` |
+| Creator consent + OAuth completed | ☑ SocialConnection `cmv7wsjww001qs2015kbcssy4` · status `connected` · consented `2026-10-14T10:02:39Z` |
+| Callback lands on `/dashboard` without error | ☑ readiness HTTP 307 · connected sync `2026-10-14T10:03:04Z` |
+| Both metrics → `PROVIDER_SYNCED` SocialAccount | ☑ `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · followers `6` · likes/views `2531` |
+| Missing metric → no invent / no partial PROVIDER_SYNCED | ☑ gate 1 complete / 0 partial · FB row stayed `error` without inventing counts |
 
 ```bash
 cd /var/www/influrios
 npm run staging:e3-social-evidence
 ```
 
-Operator path:
-1. Admin → **Social**: enable **YouTube or Instagram** (client id + secret + Enabled).
-2. In that provider’s developer console, set redirect URI to `https://influrios.com/api/social/callback`.
-3. Sign in as a creator → **Dashboard** → connect that network → accept terms → complete OAuth.
-4. Confirm `/dashboard?social=connected` (or a clear error if the network omitted a metric).
-5. On the host: `npm run staging:e3-social-evidence` and paste SocialConnection id + SocialAccount id here.
-
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
 | SMTP | `mail_test`=`cmv6wje8100a3o6018frdtn0r` (failed→Admin Retry→`250 … gsmtp`) · `claim_verification_email`=`cmv6evovt005jod0130bnxspo` · prior `cmv6w73c40084o601nhpaegey` | 2026-10-13 | host + cloud-agent |
 | Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · webhook `checkout:cs_mv6jqy02_g3n8vb` · duplicate unique blocked (`2026-10-14T01:30:38Z`) | 2026-10-13/14 | host + cloud-agent |
-| Social OAuth | **in progress** — run `staging:e3-social-evidence` after one network connect | | host + cloud-agent |
+| Social OAuth | YouTube Connection `cmv7wsjww001qs2015kbcssy4` · Account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` (`2026-10-14T10:03:39Z`) | 2026-10-14 | host + cloud-agent |
 | Meilisearch counts | | | |
 | Airwallex hold and release | | | |
 | Recurring tranche 2 | | | |
