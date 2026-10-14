@@ -116,6 +116,12 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /cmv81yjje0002nl01evdvvz01/);
     assert.match(runbook, /E5 progress \(Meilisearch counts\) — \*\*complete\*\*/);
     assert.match(runbook, /indexed=3 postgres=3/);
+    // E6 Marketplace / Airwallex hold → release evidence path.
+    assert.equal(pkg.scripts["staging:e6-marketplace-evidence"], "bash scripts/staging-e6-marketplace-evidence.sh");
+    assert.equal(existsSync("scripts/staging-e6-marketplace-evidence.sh"), true);
+    assert.match(runbook, /### E6 progress \(Marketplace hold → release \/ Airwallex\)/);
+    assert.match(runbook, /staging:e6-marketplace-evidence/);
+    assert.match(readFileSync("scripts/marketplace-webhook-fixture.ts", "utf8"), /format=airwallex/);
   });
 });
 
