@@ -12,12 +12,19 @@ export function BusinessSignupForm({
   checkboxLabel,
   submitLabel,
   error,
+  legalTitles,
 }: {
   title: string;
   subtitle: string;
   checkboxLabel: string;
   submitLabel: string;
   error?: string;
+  legalTitles?: {
+    terms?: string | null;
+    electronicConsent?: string | null;
+    businessTerms?: string | null;
+    privacy?: string | null;
+  };
 }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -150,10 +157,36 @@ export function BusinessSignupForm({
         </div>
       </div>
 
-      <label className="mt-4 flex items-start gap-2 text-sm text-muted">
+      {checkboxLabel.trim() ? (
+        <label className="mt-4 flex items-start gap-2 text-sm text-muted">
+          <input type="checkbox" name="marketingOptIn" className="mt-1 accent-[#633CFF]" />
+          {checkboxLabel}
+        </label>
+      ) : null}
+
+      <label className="mt-4 flex items-start gap-2 text-sm text-indigo">
         <input type="checkbox" name="consent" required className="mt-1 accent-[#633CFF]" />
-        {checkboxLabel}
+        <span>
+          By creating a business account, I agree to the{" "}
+          <Link href="/legal/terms-of-service" className="font-semibold text-violet underline" target="_blank">
+            {legalTitles?.terms ?? "Terms of Service"}
+          </Link>
+          , the{" "}
+          <Link href="/legal/business-terms" className="font-semibold text-violet underline" target="_blank">
+            {legalTitles?.businessTerms ?? "Business / Brand Terms"}
+          </Link>
+          , and the{" "}
+          <Link href="/legal/electronic-consent" className="font-semibold text-violet underline" target="_blank">
+            {legalTitles?.electronicConsent ?? "User Registration & Electronic Consent Agreement"}
+          </Link>
+          , and I acknowledge the{" "}
+          <Link href="/legal/privacy-policy" className="font-semibold text-violet underline" target="_blank">
+            {legalTitles?.privacy ?? "Privacy Policy"}
+          </Link>
+          .
+        </span>
       </label>
+
       <button type="submit" className="btn-primary mt-5 flex w-full justify-center" disabled={mismatch}>
         {submitLabel} <IconArrowRight size={14} />
       </button>

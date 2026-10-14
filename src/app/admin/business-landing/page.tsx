@@ -191,7 +191,12 @@ export default async function AdminBusinessLandingPage({ searchParams }: Props) 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Field label="Title" name="signupTitle" defaultValue={landing.signup.title} disabled={!canEdit} />
             <Field label="Subtitle" name="signupSubtitle" defaultValue={landing.signup.subtitle} disabled={!canEdit} />
-            <Field label="Checkbox label" name="signupCheckbox" defaultValue={landing.signup.checkboxLabel} disabled={!canEdit} />
+            <Field
+              label="Marketing preference checkbox (optional)"
+              name="signupCheckbox"
+              defaultValue={landing.signup.checkboxLabel}
+              disabled={!canEdit}
+            />
             <Field label="Submit label" name="signupSubmit" defaultValue={landing.signup.submitLabel} disabled={!canEdit} />
             <Field label="Aside title" name="asideTitle" defaultValue={landing.signup.asideTitle} disabled={!canEdit} />
             <Field label="Aside copy" name="asideCopy" defaultValue={landing.signup.asideCopy} rows={3} disabled={!canEdit} />

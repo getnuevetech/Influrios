@@ -3,6 +3,7 @@ import { BusinessMarketingPage } from "@/components/business-marketing";
 import { getAccountSession } from "@/lib/accounts";
 import { getDirectory, profilePlace } from "@/lib/directory";
 import { getBusinessLanding } from "@/lib/landing-pages";
+import { currentLegalDocument } from "@/lib/legal";
 import { demoCreators, publicPagesUseLive } from "@/lib/presentation-demo";
 import { formatFollowers, publicStoredImage, specialtyLabel } from "@/lib/seed-data";
 
@@ -17,12 +18,17 @@ type Props = { searchParams: Promise<{ error?: string }> };
 
 export default async function BusinessPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [account, directory, landing, livePages] = await Promise.all([
-    getAccountSession().catch(() => null),
-    getDirectory().catch(() => null),
-    getBusinessLanding(),
-    publicPagesUseLive().catch(() => false),
-  ]);
+  const [account, directory, landing, livePages, terms, electronicConsent, businessTerms, privacy] =
+    await Promise.all([
+      getAccountSession().catch(() => null),
+      getDirectory().catch(() => null),
+      getBusinessLanding(),
+      publicPagesUseLive().catch(() => false),
+      currentLegalDocument("terms-of-service").catch(() => null),
+      currentLegalDocument("electronic-consent").catch(() => null),
+      currentLegalDocument("business-terms").catch(() => null),
+      currentLegalDocument("privacy-policy").catch(() => null),
+    ]);
   const source = livePages ? (directory?.creators ?? []) : demoCreators();
   const recommended = source.slice(0, 4).map((creator) => {
     const specialtySlug = creator.specialties[0]?.trim() ?? "";
@@ -65,7 +71,17 @@ export default async function BusinessPage({ searchParams }: Props) {
           </div>
         </div>
       ) : null}
-      <BusinessMarketingPage landing={landingView} recommended={recommended} error={params.error} />
+      <BusinessMarketingPage
+        landing={landingView}
+        recommended={recommended}
+        error={params.error}
+        legalTitles={{
+          terms: terms?.title,
+          electronicConsent: electronicConsent?.title,
+          businessTerms: businessTerms?.title,
+          privacy: privacy?.title,
+        }}
+      />
     </>
   );
 }

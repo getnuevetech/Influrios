@@ -120,10 +120,20 @@ describe("business signup surfaces", () => {
     assert.match(form, /Contact person/);
     assert.match(form, /name="contactPhone"/);
     assert.match(form, /name="contactEmail"/);
+    // Required account-creation consent with legal document links.
+    assert.match(form, /name="consent"/);
+    assert.match(form, /\/legal\/terms-of-service/);
+    assert.match(form, /\/legal\/business-terms/);
+    assert.match(form, /\/legal\/electronic-consent/);
+    assert.match(form, /\/legal\/privacy-policy/);
+    assert.match(form, /By creating a business account/);
+    // Marketing preference is optional and must not replace legal consent.
+    assert.match(form, /name="marketingOptIn"/);
     // Contact block must come after business type / website fields.
     const contactIdx = form.indexOf("Contact person");
     const businessTypeIdx = form.indexOf('name="businessType"');
     assert.ok(businessTypeIdx > 0 && contactIdx > businessTypeIdx);
+    assert.match(signupActions, /business_registration/);
 
     assert.match(marketing, /BusinessSignupForm/);
     // The primary CTA must submit the form, not link out to the generic /register page.
