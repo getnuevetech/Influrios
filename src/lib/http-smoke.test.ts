@@ -96,6 +96,11 @@ describe("staging evidence probe", () => {
     assert.equal(panel.includes("Collection rail"), false);
     assert.match(panel, /Receive payments/);
     assert.match(readFileSync("src/lib/receive-payments-checklist.ts", "utf8"), /government_id/);
+    // E3 Social OAuth evidence path.
+    assert.equal(pkg.scripts["staging:e3-social-evidence"], "bash scripts/staging-e3-social-evidence.sh");
+    assert.equal(existsSync("scripts/staging-e3-social-evidence.sh"), true);
+    assert.match(runbook, /### E3 progress \(Social OAuth\)/);
+    assert.match(runbook, /staging:e3-social-evidence/);
   });
 });
 
