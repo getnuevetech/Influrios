@@ -103,6 +103,10 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /staging:e3-social-evidence/);
     assert.match(readFileSync("scripts/staging-e3-social-evidence.sh", "utf8"), /0\.0\.0\.0/);
     assert.match(readFileSync("src/app/api/social/callback/route.ts", "utf8"), /resolveAppOrigin/);
+    // E3 complete: YouTube connection + PROVIDER_SYNCED account recorded.
+    assert.match(runbook, /cmv7wsjww001qs2015kbcssy4/);
+    assert.match(runbook, /cmv6f0ebj0065od017gutjrq5/);
+    assert.match(runbook, /E3 progress \(Social OAuth\) — \*\*complete\*\*/);
   });
 });
 
