@@ -36,8 +36,17 @@ The probe verifies `/api/health`, homepage sections, guest `/collaboration` CTAs
 Marketplace signed curl bodies (needs a funding id + provider webhook secret):
 
 ```bash
+# Airwallex shape (preferred for Phase M exit-table Airwallex row)
+npx tsx scripts/marketplace-webhook-fixture.ts --format=airwallex --fundingId=... --secret=... --amountCents=5000 --event=funding.held
+npx tsx scripts/marketplace-webhook-fixture.ts --format=airwallex --fundingId=... --secret=... --amountCents=3000 --event=payout.released --milestoneId=...
+# Or Influrios primary signature
 npx tsx scripts/marketplace-webhook-fixture.ts --fundingId=... --secret=... --amountCents=5000 --event=funding.held
-npx tsx scripts/marketplace-webhook-fixture.ts --fundingId=... --secret=... --amountCents=5000 --event=payout.released
+```
+
+Host evidence (Docker Postgres + curl):
+
+```bash
+npm run staging:e6-marketplace-evidence
 ```
 
 ---
@@ -151,21 +160,26 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 
 ## 5. Marketplace hold → release (one jurisdiction)
 
-**Goal:** one enabled jurisdiction + provider webhook moves a funding through hold → release.
+**Goal:** one enabled jurisdiction + **Airwallex** (or primary) webhook moves a funding through hold → release.
 
-1. Confirm a jurisdiction (e.g. US) and payment provider row with webhook secret in Admin → Gateways / Marketplace.
-2. Create or reuse a collaboration funding in a holdable state.
-3. POST signed `funding.held` then `payout.released` (use `scripts/marketplace-webhook-fixture.ts` for body + `x-influrios-signature`).
-4. Confirm ledger movements and funding status; replay the same event id → no double release.
+1. Admin → **Gateways → Airwallex**: enable · client id · API key · base URL `https://api-demo.airwallex.com` · webhook secret.  
+   (Or Admin → Marketplace → primary provider with webhook secret for the Influrios signature path.)
+2. Confirm **US** jurisdiction: protected payments on, legal **APPROVED** (Admin → Marketplace).
+3. Create a collaboration funding that lands in `awaiting_provider` (business collab / prefund wizard).
+4. Hold: signed Airwallex `payment_intent.succeeded` (maps to `funding.held`) — use fixture or `staging:e6-marketplace-evidence -- --prove-hold`.
+5. Approve the first milestone in the collab UI (status must be `approved` / `release_scheduled` / `release_requested`).
+6. Release: signed `funds_split.released` with `metadata.milestoneId` — `--prove-release`.
+7. Replay the **same** event id → duplicate skip (`ProcessedWebhook` unique on `marketplace:airwallex`).
 
 | Evidence | Result |
 |----------|--------|
 | Date / operator | |
-| Jurisdiction / provider | |
+| Jurisdiction / provider | ☐ US · Airwallex |
 | Funding id | |
 | Held | ☐ |
 | Released | ☐ |
 | Duplicate skipped | ☐ |
+| Host script | `npm run staging:e6-marketplace-evidence` |
 | Notes | |
 
 ---
@@ -223,17 +237,18 @@ curl -fsS http://127.0.0.1:3000/api/health
 node scripts/staging-evidence-probe.mjs https://influrios.com
 ```
 
-**Next operator evidence after recovery (E1 → E2 → E4 → E3 → E5):**
+**Next operator evidence after recovery (E1 → E2 → E4 → E3 → E5 → E6):**
 
 | Slice | Action | Done when |
 |-------|--------|-----------|
-| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: later Phase M rows |
-| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: later Phase M rows |
-| **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: later Phase M rows |
-| **E3 Social OAuth** | ~~Done~~ YouTube `cmv7wsjww001qs2015kbcssy4` · account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` | Next: later Phase M rows |
-| **E5 Meilisearch** | ~~Done~~ health 200 · job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · Discover 200 | Next: later Phase M rows |
+| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: finish **E6** |
+| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: finish **E6** |
+| **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: finish **E6** |
+| **E3 Social OAuth** | ~~Done~~ YouTube `cmv7wsjww001qs2015kbcssy4` · account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` | Next: finish **E6** |
+| **E5 Meilisearch** | ~~Done~~ health 200 · job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · Discover 200 | Next: finish **E6** |
+| **E6 Marketplace hold→release** | Airwallex ready · US jurisdiction · funding held · milestone released · duplicate skipped | funding + event ids |
 
-**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 + E3 + E4 + E5 complete. **`CRON_SECRET` rotated** (operator confirmed).
+**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1–E5 complete. **Next: E6 Airwallex hold → release.** **`CRON_SECRET` rotated** (operator confirmed).
 
 ### E1 progress (2026-10-13 afternoon) — **complete**
 
@@ -331,6 +346,41 @@ cd /var/www/influrios
 npm run staging:e5-meilisearch-evidence
 ```
 
+### E6 progress (Marketplace hold → release / Airwallex) — **in progress**
+
+**Goal:** Airwallex webhook secret ready · US jurisdiction · `funding.held` · milestone `payout.released` · duplicate event skipped.
+
+| Check | Result |
+|-------|--------|
+| Airwallex gateway Ready (client + key + base URL + webhook secret) | ☐ |
+| Unsigned webhook → 401 (or 503 until Ready) | ☐ |
+| US jurisdiction protected + APPROVED | ☐ |
+| Funding `awaiting_provider` → `held` | ☐ funding id · held event id |
+| Milestone approved then `payout.released` | ☐ milestone id · release event id |
+| Duplicate release skipped | ☐ |
+| Ledger hold + release rows | ☐ |
+
+```bash
+cd /var/www/influrios
+npm run staging:e6-marketplace-evidence
+# After Airwallex secret is known on the host:
+AIRWALLEX_WEBHOOK_SECRET=… FUNDING_ID=… npm run staging:e6-marketplace-evidence -- --prove-hold
+# Approve milestone in UI, then:
+AIRWALLEX_WEBHOOK_SECRET=… FUNDING_ID=… MILESTONE_ID=… AMOUNT_CENTS=… \
+  npm run staging:e6-marketplace-evidence -- --prove-release
+AIRWALLEX_WEBHOOK_SECRET=… FUNDING_ID=… MILESTONE_ID=… AMOUNT_CENTS=… EVENT_ID=… \
+  npm run staging:e6-marketplace-evidence -- --prove-duplicate
+```
+
+Operator path:
+1. Admin → **Gateways → Airwallex** → save demo credentials + webhook secret → Enabled.
+2. Admin → **Marketplace** → US: protected payments + legal APPROVED.
+3. As a business, create a collaboration prefund that reaches `awaiting_provider`.
+4. Host: `--prove-hold` with `AIRWALLEX_WEBHOOK_SECRET` + `FUNDING_ID` (or pick latest awaiting).
+5. Approve first milestone in the collab UI.
+6. Host: `--prove-release` then `--prove-duplicate` with the same `EVENT_ID`.
+7. Re-run `staging:e6-marketplace-evidence` and paste ids into this section + the §5 table.
+
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
@@ -338,7 +388,7 @@ npm run staging:e5-meilisearch-evidence
 | Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · webhook `checkout:cs_mv6jqy02_g3n8vb` · duplicate unique blocked (`2026-10-14T01:30:38Z`) | 2026-10-13/14 | host + cloud-agent |
 | Social OAuth | YouTube Connection `cmv7wsjww001qs2015kbcssy4` · Account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` (`2026-10-14T10:03:39Z`) | 2026-10-14 | host + cloud-agent |
 | Meilisearch counts | job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · health 200 · Discover 200 (`2026-10-14T11:55:09Z`) | 2026-10-14 | host + cloud-agent |
-| Airwallex hold and release | | | |
+| Airwallex hold and release | **in progress** — run `staging:e6-marketplace-evidence` after hold/release | | host + cloud-agent |
 | Recurring tranche 2 | | | |
 | Team proposal | | | |
 | DocuSign completed | | | |
