@@ -53,18 +53,26 @@ function requestStatusLabel(status: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function firstName(full: string | null | undefined) {
+  const part = (full || "").trim().split(/\s+/)[0];
+  return part || null;
+}
+
 export default async function BusinessHomePage() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business/home");
-  const [workspace, matrix, hub, profile] = await Promise.all([
+  const [workspace, matrix, hub, profile, subscription] = await Promise.all([
     getWorkspace(account.id).catch(() => null),
     loadPlanMatrix("business"),
     loadBusinessHub({ userId: account.id }).catch(() => null),
     prisma.businessProfile
       .findUnique({
         where: { userId: account.id },
-        select: { contactName: true, contactEmail: true, contactPhone: true },
+        select: { contactName: true, contactEmail: true, contactPhone: true, geography: true },
       })
+      .catch(() => null),
+    prisma.subscriptionState
+      .findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } })
       .catch(() => null),
   ]);
   if (!workspace) {
@@ -76,14 +84,25 @@ export default async function BusinessHomePage() {
     );
   }
   const contactName = profile?.contactName?.trim() || null;
+  const greetName = firstName(contactName) || firstName(account.name) || "there";
+  const companyName = workspace.name.trim() || "your workspace";
 
   const entitlements = hub?.entitlements ?? null;
   const planColumn = matrix.plans.find((plan) => plan.code === workspace.plan);
   const planName = planColumn?.name ?? workspace.plan;
-  const planPrice = planColumn?.priceLabel || "Free";
+  const planPrice = (planColumn?.priceLabel || "Free").trim();
+  const planPriceDisplay =
+    !planPrice || planPrice.toLowerCase() === "free"
+      ? null
+      : planPrice.includes("/") || /mo(nth)?/i.test(planPrice)
+        ? planPrice
+        : `${planPrice} / month`;
+  const planBadgeLabel = planPriceDisplay ? `${planName} ${planPriceDisplay}` : planName;
   const checks = [
     { label: "Company name", done: Boolean(workspace.name.trim()) },
     { label: "Industry", done: Boolean(workspace.industry.trim()) },
+    { label: "Location", done: Boolean(profile?.geography?.trim()) },
+    { label: "Contact person", done: Boolean(contactName) },
     { label: "A brief / request", done: workspace.briefs.length > 0 },
     { label: "A saved creator", done: workspace.shortlist.length > 0 },
   ];
@@ -96,17 +115,18 @@ export default async function BusinessHomePage() {
   const suggestions = hub?.suggestions ?? [];
   const applications = hub?.applications ?? [];
   const spend = hub?.spend;
-  const activeRequests = hub?.status.active ?? workspace.briefs.filter((b) => b.status === "active").length;
+  const activeBriefCount = workspace.briefs.filter((b) => b.status === "active").length;
+  const activeRequests = Math.max(activeBriefCount, hub?.status.active ?? 0);
   const pendingResponses = hub?.status.pendingReview ?? 0;
   const activeCollabs = hub?.pipeline.filter((item) => item.stage !== "Released").length ?? 0;
   const contentInReview = hub?.pipeline.filter((item) => item.stage === "Review").length ?? 0;
   const monthlySpend = spend ? formatMoney(spend.fundedCents, spend.currency || "USD") : "$0";
   const teamSeats = entitlements?.teamSeats ?? 1;
   const seatsUsed = Math.min(1, teamSeats);
-  const verifiedBusiness = Boolean(workspace.name.trim() && workspace.industry.trim());
+  const verifiedBusiness = Boolean(workspace.name.trim() && workspace.industry.trim() && contactName);
   const bio =
     workspace.industry.trim()
-      ? `${workspace.name || "This workspace"} works in ${workspace.industry}. Discover creators, publish requests, and manage collaborations from one place.`
+      ? `${companyName} works in ${workspace.industry}. Discover creators, publish requests, and manage collaborations from one place.`
       : "Add your industry and company details so creators know who they are working with.";
 
   const responded = applications.filter((app) =>
@@ -192,25 +212,28 @@ export default async function BusinessHomePage() {
     })),
   ].slice(0, 5);
 
+  const ownerLabel = contactName || account.email;
+  const planActive = Boolean(subscription?.status === "active" || workspace.plan);
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="font-display text-3xl font-bold text-indigo">Business Account</h1>
         <p className="mt-1 text-sm text-muted">
-          Welcome back to <span className="font-semibold text-indigo">{workspace.name || "your workspace"}</span>
-          {contactName ? <> · contact {contactName}</> : null}.
+          Welcome back, {greetName}. Here&apos;s what&apos;s happening with{" "}
+          <span className="font-semibold text-indigo">{companyName}</span>.
         </p>
       </div>
 
-      <section className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm">
+      <section className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start gap-5">
-          <span className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5B8CFF] to-[#6D5EF7] text-2xl font-bold text-white shadow-sm">
-            {(workspace.name || "B").slice(0, 1).toUpperCase()}
+          <span className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5B8CFF] to-[#6D5EF7] text-2xl font-bold text-white shadow-sm">
+            {companyName.slice(0, 1).toUpperCase()}
           </span>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-display text-2xl font-bold">{workspace.name || "Untitled workspace"}</h2>
+              <h2 className="font-display text-2xl font-bold text-indigo">{companyName}</h2>
               {verifiedBusiness ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                   <IconVerified size={12} /> Verified Business
@@ -221,16 +244,19 @@ export default async function BusinessHomePage() {
                 </span>
               )}
             </div>
-            <p className="mt-2 max-w-2xl text-sm text-indigo/80">{bio}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#4E5872]">{bio}</p>
 
-            <div className="mt-4 flex flex-wrap gap-4">
-              <div className="min-w-[12rem] flex-1 rounded-2xl bg-[#F7F8FC] p-3">
-                <div className="flex items-center justify-between text-xs font-semibold">
+            <div className="mt-4 flex flex-wrap items-end gap-4">
+              <div className="min-w-[14rem] flex-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-indigo">
                   <span>Profile Completion</span>
                   <span>{setupPercent}%</span>
                 </div>
-                <div className="mt-2 h-2 rounded-full bg-white">
-                  <div className="h-2 rounded-full bg-[#5B8CFF]" style={{ width: `${setupPercent}%` }} />
+                <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#EEF2FA]">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#5B8CFF] to-[#6D5EF7]"
+                    style={{ width: `${setupPercent}%` }}
+                  />
                 </div>
                 {setupPercent < 100 ? (
                   <Link href="/business/profile" className="mt-2 inline-block text-xs font-semibold text-violet hover:underline">
@@ -241,21 +267,17 @@ export default async function BusinessHomePage() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-[#E6ECF7] bg-[#F8F6FF] px-4 py-3 sm:min-w-[10rem]">
-                <p className="text-xs font-bold uppercase tracking-wide text-violet">Current Plan</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <IconStar size={16} className="text-violet" />
-                  <p className="font-display text-lg font-bold">{planName}</p>
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-[#E6ECF7] bg-[#F8F6FF] px-3.5 py-2.5">
+                <IconStar size={16} className="text-violet" />
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-violet">Current Plan</p>
+                  <p className="text-sm font-bold text-indigo">{planBadgeLabel}</p>
                 </div>
-                <p className="text-sm text-muted">
-                  {planPrice}
-                  {planPrice !== "Free" && !planPrice.includes("/") ? " / month" : ""}
-                </p>
               </div>
             </div>
           </div>
 
-          <div className="grid w-full grid-cols-1 gap-2 sm:w-[18rem] sm:grid-cols-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[11.5rem]">
             <Link href="/business/profile" className="btn-secondary !py-2.5 text-center text-sm">
               Edit Company Profile
             </Link>
@@ -264,12 +286,14 @@ export default async function BusinessHomePage() {
                 <IconPlus size={14} /> Create Request
               </span>
             </Link>
-            <Link href="/discover" className="btn-secondary !py-2.5 text-center text-sm">
-              Discover Creators
-            </Link>
-            <Link href="/collaboration/team" className="btn-secondary !py-2.5 text-center text-sm">
-              Invite Team
-            </Link>
+            <div className="mt-1 flex flex-wrap justify-center gap-x-4 gap-y-1 sm:flex-col sm:items-center">
+              <Link href="/discover" className="text-sm font-semibold text-violet hover:underline">
+                Discover Creators
+              </Link>
+              <Link href="/collaboration/team" className="text-sm font-semibold text-violet hover:underline">
+                Invite Team
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -316,108 +340,176 @@ export default async function BusinessHomePage() {
         />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(18rem,0.8fr)]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(17.5rem,0.75fr)]">
         <div className="space-y-4">
-        <Panel
-          title="Recent Collaboration Requests"
-          action={<TextLink href="/business/campaigns">View all requests →</TextLink>}
-        >
-          {tableRows.length === 0 ? (
-            <p className="text-sm text-muted">
-              No published requests yet.{" "}
-              <Link href="/collaboration/business?intent=new" className="font-semibold text-violet hover:underline">
-                Create one
-              </Link>
-              .
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
-                <thead className="text-[11px] uppercase tracking-wide text-muted">
-                  <tr>
-                    <th className="pb-3 pr-3 font-semibold">Request</th>
-                    <th className="pb-3 pr-3 font-semibold">Creators</th>
-                    <th className="pb-3 pr-3 font-semibold">Budget</th>
-                    <th className="pb-3 pr-3 font-semibold">Status</th>
-                    <th className="pb-3 pr-3 font-semibold">Responses</th>
-                    <th className="pb-3 font-semibold">Updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableRows.map((row) => (
-                    <tr key={row.id} className="border-t border-[#F0F3FA]">
-                      <td className="py-3 pr-3">
-                        <div className="flex items-center gap-3">
-                          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FA] text-sm font-bold text-violet">
-                            {row.title.slice(0, 1).toUpperCase()}
-                          </span>
-                          <div className="min-w-0">
-                            <Link href={row.href} className="truncate font-semibold text-indigo hover:text-violet hover:underline">
-                              {row.title}
-                            </Link>
-                            <p className="truncate text-xs text-muted">{row.meta || "Campaign"}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 pr-3">
-                        {row.creators.length === 0 ? (
-                          <span className="text-xs text-muted">—</span>
-                        ) : (
-                          <div className="flex -space-x-2">
-                            {row.creators.map((slug) => (
-                              <span
-                                key={slug}
-                                title={slug}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#EDE7FF] text-[10px] font-bold text-violet"
-                              >
-                                {slug.slice(0, 1).toUpperCase()}
-                              </span>
-                            ))}
-                            {Number(row.responseLabel) > row.creators.length ? (
-                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#EEF2FA] text-[10px] font-bold text-muted">
-                                +{Number(row.responseLabel) - row.creators.length}
-                              </span>
-                            ) : null}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 pr-3 font-semibold">{row.budget}</td>
-                      <td className="py-3 pr-3">
-                        <StatusPill tone={requestStatusTone(row.status)}>{requestStatusLabel(row.status)}</StatusPill>
-                      </td>
-                      <td className="py-3 pr-3 text-muted">{row.responseLabel}</td>
-                      <td className="py-3 text-muted">{row.updated}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Panel>
-
-        {draftBriefs.length > 0 ? (
           <Panel
-            title={`Drafts (${draftBriefs.length})`}
-            action={<TextLink href="/business/campaigns">Manage drafts →</TextLink>}
+            title="Recent Collaboration Requests"
+            action={<TextLink href="/business/campaigns">View all requests →</TextLink>}
           >
-            <ul className="divide-y divide-[#EEF2FA]">
-              {draftBriefs.map((brief) => (
-                <li key={brief.id} className="flex items-center justify-between gap-3 py-2.5">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-indigo">{brief.title || "Untitled draft"}</p>
-                    <p className="text-xs text-muted">Saved draft — open to continue</p>
-                  </div>
-                  <Link
-                    href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
-                    className="shrink-0 text-xs font-bold text-violet hover:underline"
-                  >
-                    Open →
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            {tableRows.length === 0 ? (
+              <p className="text-sm text-muted">
+                No published requests yet.{" "}
+                <Link href="/collaboration/business?intent=new" className="font-semibold text-violet hover:underline">
+                  Create one
+                </Link>
+                .
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-left text-sm">
+                  <thead className="text-[11px] uppercase tracking-wide text-muted">
+                    <tr>
+                      <th className="pb-3 pr-3 font-semibold">Request</th>
+                      <th className="pb-3 pr-3 font-semibold">Creators</th>
+                      <th className="pb-3 pr-3 font-semibold">Budget</th>
+                      <th className="pb-3 pr-3 font-semibold">Status</th>
+                      <th className="pb-3 pr-3 font-semibold">Responses</th>
+                      <th className="pb-3 font-semibold">Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableRows.map((row) => (
+                      <tr key={row.id} className="border-t border-[#F0F3FA]">
+                        <td className="py-3 pr-3">
+                          <div className="flex items-center gap-3">
+                            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FA] text-sm font-bold text-violet">
+                              {row.title.slice(0, 1).toUpperCase()}
+                            </span>
+                            <div className="min-w-0">
+                              <Link
+                                href={row.href}
+                                className="truncate font-semibold text-indigo hover:text-violet hover:underline"
+                              >
+                                {row.title}
+                              </Link>
+                              <p className="truncate text-xs text-muted">{row.meta || "Campaign"}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-3">
+                          {row.creators.length === 0 ? (
+                            <span className="text-xs text-muted">—</span>
+                          ) : (
+                            <div className="flex -space-x-2">
+                              {row.creators.map((slug) => (
+                                <span
+                                  key={slug}
+                                  title={slug}
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#EDE7FF] text-[10px] font-bold text-violet"
+                                >
+                                  {slug.slice(0, 1).toUpperCase()}
+                                </span>
+                              ))}
+                              {Number(row.responseLabel) > row.creators.length ? (
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#EEF2FA] text-[10px] font-bold text-muted">
+                                  +{Number(row.responseLabel) - row.creators.length}
+                                </span>
+                              ) : null}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 pr-3 font-semibold">{row.budget}</td>
+                        <td className="py-3 pr-3">
+                          <StatusPill tone={requestStatusTone(row.status)}>{requestStatusLabel(row.status)}</StatusPill>
+                        </td>
+                        <td className="py-3 pr-3 text-muted">{row.responseLabel}</td>
+                        <td className="py-3 text-muted">{row.updated}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Panel>
-        ) : null}
+
+          {draftBriefs.length > 0 ? (
+            <Panel
+              title={`Drafts (${draftBriefs.length})`}
+              action={<TextLink href="/business/campaigns">Manage drafts →</TextLink>}
+            >
+              <ul className="divide-y divide-[#EEF2FA]">
+                {draftBriefs.map((brief) => (
+                  <li key={brief.id} className="flex items-center justify-between gap-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-indigo">{brief.title || "Untitled draft"}</p>
+                      <p className="text-xs text-muted">Saved draft — open to continue</p>
+                    </div>
+                    <Link
+                      href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
+                      className="shrink-0 text-xs font-bold text-violet hover:underline"
+                    >
+                      Open →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
+
+          <Panel title="Suggested Creators for You" action={<TextLink href="/discover">View more creators →</TextLink>}>
+            {suggestions.length === 0 ? (
+              <p className="text-sm text-muted">
+                Suggestions appear after you save a brief. This list does not invent creators.
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {suggestions.slice(0, 4).map((fit) => {
+                  const followers = fit.creator.socials.reduce((sum, social) => sum + (social.followers || 0), 0);
+                  const platforms = [...new Set(fit.creator.socials.map((social) => social.platform))].slice(0, 3);
+                  return (
+                    <div key={fit.creator.slug} className="overflow-hidden rounded-2xl border border-[#F0F3FA] bg-white">
+                      <div className="aspect-[4/3] overflow-hidden bg-[#EEF2FA]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={fit.creator.image} alt="" className="h-full w-full object-cover" />
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center gap-1">
+                          <p className="truncate text-sm font-bold">{fit.creator.displayName}</p>
+                          {fit.creator.verified ? <IconVerified size={14} /> : null}
+                        </div>
+                        <p className="text-xs text-muted">@{fit.creator.slug}</p>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {fit.creator.specialties.slice(0, 2).map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full bg-[#EEF2FA] px-2 py-0.5 text-[10px] font-semibold text-muted"
+                            >
+                              {specialtyLabel(tag)}
+                            </span>
+                          ))}
+                        </div>
+                        {platforms.length > 0 ? (
+                          <div className="mt-2 flex items-center gap-1.5 text-violet">
+                            {platforms.map((platform) => (
+                              <SocialIcon key={platform} platform={platform} size={14} />
+                            ))}
+                          </div>
+                        ) : null}
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted">
+                          <span>
+                            <span className="block font-semibold text-indigo">{formatFollowers(followers)}</span>
+                            Followers
+                          </span>
+                          <span>
+                            <span className="block font-semibold text-indigo">
+                              {fit.creator.stats?.engagementRate || "—"}
+                            </span>
+                            Engagement
+                          </span>
+                        </div>
+                        <Link
+                          href="/collaboration/business#shortlist"
+                          className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-[#F1ECFF] px-3 py-2 text-xs font-bold text-violet hover:bg-[#E8E0FF]"
+                        >
+                          Add to Shortlist
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Panel>
         </div>
 
         <div className="space-y-4">
@@ -428,11 +520,11 @@ export default async function BusinessHomePage() {
             <ul className="space-y-3">
               <li className="flex items-center gap-3">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EDE7FF] text-sm font-bold text-violet">
-                  {(account.name || account.email || "U").slice(0, 1).toUpperCase()}
+                  {ownerLabel.slice(0, 1).toUpperCase()}
                 </span>
                 <span>
-                  <span className="block text-sm font-semibold">{account.name || account.email}</span>
-                  <span className="text-xs text-muted">Owner · {workspace.name}</span>
+                  <span className="block text-sm font-semibold">{ownerLabel}</span>
+                  <span className="text-xs text-muted">Owner</span>
                 </span>
               </li>
               {teamSeats > 1 ? (
@@ -446,101 +538,71 @@ export default async function BusinessHomePage() {
                     </span>
                     <span>
                       <span className="block text-sm font-semibold">Invite Member</span>
-                      <span className="text-xs text-muted">{teamSeats - seatsUsed} seat{teamSeats - seatsUsed === 1 ? "" : "s"} open</span>
+                      <span className="text-xs text-muted">
+                        {teamSeats - seatsUsed} seat{teamSeats - seatsUsed === 1 ? "" : "s"} open
+                      </span>
                     </span>
                   </Link>
                 </li>
               ) : (
-                <li className="text-xs text-muted">
-                  Upgrade for more seats from Billing. Team proposals invite creators onto a shared deal.
-                </li>
+                <li className="text-xs text-muted">Upgrade for more seats from Billing & Plans.</li>
               )}
             </ul>
           </Panel>
-        </div>
-      </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(18rem,0.8fr)]">
-        <Panel title="Suggested Creators for You" action={<TextLink href="/discover">Discover more →</TextLink>}>
-          {suggestions.length === 0 ? (
-            <p className="text-sm text-muted">
-              Suggestions appear after you save a brief. This list does not invent creators.
-            </p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {suggestions.slice(0, 4).map((fit) => {
-                const followers = fit.creator.socials.reduce((sum, social) => sum + (social.followers || 0), 0);
-                const primarySocial = fit.creator.socials[0];
-                return (
-                  <div key={fit.creator.slug} className="overflow-hidden rounded-2xl border border-[#F0F3FA] bg-white">
-                    <div className="aspect-[4/3] overflow-hidden bg-[#EEF2FA]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={fit.creator.image} alt="" className="h-full w-full object-cover" />
-                    </div>
-                    <div className="p-3">
-                      <div className="flex items-center gap-1">
-                        <p className="truncate text-sm font-bold">{fit.creator.displayName}</p>
-                        {fit.creator.verified ? <IconVerified size={14} /> : null}
-                      </div>
-                      <p className="text-xs text-muted">@{fit.creator.slug}</p>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {fit.creator.specialties.slice(0, 2).map((tag) => (
-                          <span key={tag} className="rounded-full bg-[#EEF2FA] px-2 py-0.5 text-[10px] font-semibold text-muted">
-                            {specialtyLabel(tag)}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-muted">
-                        <span>
-                          <span className="font-semibold text-indigo">{formatFollowers(followers)}</span> followers
-                        </span>
-                        {primarySocial ? (
-                          <span className="text-violet">
-                            <SocialIcon platform={primarySocial.platform} size={14} />
-                          </span>
-                        ) : null}
-                      </div>
-                      {fit.creator.stats?.engagementRate ? (
-                        <p className="mt-1 text-xs text-muted">
-                          Engagement <span className="font-semibold text-indigo">{fit.creator.stats.engagementRate}</span>
-                        </p>
-                      ) : (
-                        <p className="mt-1 text-xs text-muted">Fit score {fit.score}</p>
-                      )}
-                      <Link
-                        href="/collaboration/business#shortlist"
-                        className="btn-secondary mt-3 !w-full !py-2 text-center text-xs"
-                      >
-                        Add to Shortlist
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
+          <Panel title="Billing & Subscription" action={<TextLink href="/business/billing">Manage plan →</TextLink>}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-indigo">{planName}</p>
+                <p className="mt-0.5 text-sm text-muted">{planPriceDisplay ?? "Free"}</p>
+              </div>
+              {planActive ? <StatusPill tone="success">Active</StatusPill> : <StatusPill tone="neutral">Free</StatusPill>}
             </div>
-          )}
-        </Panel>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted">Workspace plan</dt>
+                <dd className="font-semibold text-indigo">{planName}</dd>
+              </div>
+              {subscription?.status ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted">Subscription</dt>
+                  <dd className="font-semibold capitalize text-indigo">{subscription.status}</dd>
+                </div>
+              ) : null}
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted">Billing</dt>
+                <dd className="font-semibold text-indigo">
+                  <Link href="/business/billing" className="text-violet hover:underline">
+                    Open billing
+                  </Link>
+                </dd>
+              </div>
+            </dl>
+          </Panel>
 
-        <Panel title="Recent Activity" action={<TextLink href="/collaboration/business">View all activity →</TextLink>}>
-          {activity.length === 0 ? (
-            <p className="text-sm text-muted">Activity from requests, applications, and collaborations will show here.</p>
-          ) : (
-            <ul className="space-y-4">
-              {activity.map((item) => (
-                <li key={item.id} className="flex gap-3">
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EDE7FF] text-xs font-bold text-violet">
-                    {item.initial}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-indigo">{item.title}</p>
-                    <p className="truncate text-xs text-muted">{item.detail}</p>
-                    <p className="mt-0.5 text-[11px] text-muted">{item.when}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+          <Panel title="Recent Activity" action={<TextLink href="/collaboration/business">View all activity →</TextLink>}>
+            {activity.length === 0 ? (
+              <p className="text-sm text-muted">
+                Activity from requests, applications, and collaborations will show here.
+              </p>
+            ) : (
+              <ul className="space-y-4">
+                {activity.map((item) => (
+                  <li key={item.id} className="flex gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EDE7FF] text-xs font-bold text-violet">
+                      {item.initial}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-indigo">{item.title}</p>
+                      <p className="truncate text-xs text-muted">{item.detail}</p>
+                      <p className="mt-0.5 text-[11px] text-muted">{item.when}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
       </section>
     </div>
   );

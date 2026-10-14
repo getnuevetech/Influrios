@@ -105,10 +105,17 @@ export async function MemberFrame({
   }
   const name = account?.name || account?.email || "Account";
   let company = "";
+  let contactPerson = "";
   let creatorPlan = "STARTER";
   if (audience === "business" && account) {
-    const workspace = await getWorkspace(account.id).catch(() => null);
+    const [workspace, profile] = await Promise.all([
+      getWorkspace(account.id).catch(() => null),
+      prisma.businessProfile
+        .findUnique({ where: { userId: account.id }, select: { contactName: true } })
+        .catch(() => null),
+    ]);
     if (workspace?.name) company = workspace.name;
+    contactPerson = profile?.contactName?.trim() || "";
   }
   if (audience === "creator" && account) {
     const [user, creator] = await Promise.all([
@@ -120,8 +127,9 @@ export async function MemberFrame({
   const upgrade = audience === "creator" ? nextCreatorUpgrade(creatorPlan) : null;
   const nav = audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
   const home = audience === "business" ? "/business/home" : "/creator";
-  const primaryName = audience === "business" ? company || name : name;
-  const secondaryName = audience === "business" ? name : "Influencer";
+  // Approved business chrome: signed-in contact person first, company name second.
+  const primaryName = audience === "business" ? contactPerson || company || name : name;
+  const secondaryName = audience === "business" ? company || "Business" : "Influencer";
   const searchPlaceholder =
     audience === "business"
       ? "Search creators, campaigns, or anything..."
