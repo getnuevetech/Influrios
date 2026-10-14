@@ -432,10 +432,10 @@ export default async function CreatorHomePage({
               </p>
               <ul className="mt-3 space-y-2 text-sm">
                 <ChecklistItem done={identityDone} label="Identity verified" href="/dashboard/kyc" />
-                <ChecklistItem done={payoutReady} label="Payout method added" href="/billing#payouts" />
-                <ChecklistItem done={payoutReady} label="Ready to receive payments" href="/billing#payouts" />
+                <ChecklistItem done={payoutReady} label="Payout method added" href="/creator/earnings#payouts" />
+                <ChecklistItem done={payoutReady} label="Ready to receive payments" href="/creator/earnings#payouts" />
               </ul>
-              <Link href="/billing#payouts" className="btn-secondary mt-4 !py-2 text-sm">
+              <Link href="/creator/earnings#payouts" className="btn-secondary mt-4 !py-2 text-sm">
                 Manage payout methods
               </Link>
             </Panel>

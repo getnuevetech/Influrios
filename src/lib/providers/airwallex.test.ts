@@ -332,8 +332,8 @@ describe("Airwallex adapter", () => {
       token: "token",
       accountId: "acct_1",
       template: "tmpl_open",
-      returnUrl: "https://influrios.com/billing?connected=1#payouts",
-      errorUrl: "https://influrios.com/billing#payouts",
+      returnUrl: "https://influrios.com/creator/earnings?connected=1#payouts",
+      errorUrl: "https://influrios.com/creator/earnings#payouts",
       fetchImpl: async (url, init) => {
         calls.push(`${init?.method ?? "GET"} ${String(url)}`);
         if (String(url).endsWith("/hosted_flows/create")) {
