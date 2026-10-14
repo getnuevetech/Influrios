@@ -55,15 +55,14 @@ psql() {
 echo "### Callback readiness"
 echo
 echo "GET ${APP_URL}/api/social/callback (no code/state → redirect to dashboard with error)"
-CALLBACK_CODE="$(
-  curl -sS -o /tmp/influrios-e3-social-callback.body -w '%{http_code}' \
-    -L --max-redirs 0 \
-    "${APP_URL}/api/social/callback" 2>/dev/null || true
-)"
-# Expect redirect (3xx) to /dashboard?error=…
-LOCATION="$(curl -sS -D - -o /dev/null -L --max-redirs 0 "${APP_URL}/api/social/callback" 2>/dev/null | tr -d '\r' | awk -F': ' 'tolower($1)=="location"{print $2; exit}')"
+# Do not follow redirects; Docker HOSTNAME=0.0.0.0 must not appear in Location.
+HEADERS="$(curl -sS -m 15 -D - -o /dev/null "${APP_URL}/api/social/callback" 2>/dev/null || true)"
+CALLBACK_CODE="$(printf '%s\n' "${HEADERS}" | awk 'NR==1 {print $2; exit}')"
+LOCATION="$(printf '%s\n' "${HEADERS}" | tr -d '\r' | awk -F': ' 'tolower($1)=="location"{print $2; exit}')"
 echo "HTTP ${CALLBACK_CODE:-?} Location: ${LOCATION:-—}"
-if [[ "${LOCATION}" == *"/dashboard"* ]]; then
+if [[ "${LOCATION}" == *"0.0.0.0"* ]]; then
+  echo "ERROR: callback redirects to 0.0.0.0 — set NEXT_PUBLIC_APP_URL to the public https origin and redeploy."
+elif [[ "${LOCATION}" == *"/dashboard"* ]]; then
   echo "Callback route is reachable (redirects to dashboard without inventing metrics)."
 else
   echo "Note: unexpected callback response — confirm the app is up and NEXT_PUBLIC_APP_URL matches."

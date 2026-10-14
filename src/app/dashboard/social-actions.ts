@@ -2,14 +2,16 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { resolveAppOrigin } from "@/lib/billing";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { beginSocialConnect, disconnectSocial, refreshSocialConnection } from "@/lib/social-connect";
 
 async function origin() {
   const headerList = await headers();
-  const proto = headerList.get("x-forwarded-proto") ?? "http";
-  const host = headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "127.0.0.1:3000";
-  return `${proto}://${host}`;
+  return resolveAppOrigin({
+    proto: headerList.get("x-forwarded-proto") ?? "https",
+    host: headerList.get("x-forwarded-host") ?? headerList.get("host"),
+  });
 }
 
 async function ownedSlug() {

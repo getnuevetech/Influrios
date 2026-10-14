@@ -463,17 +463,21 @@ export async function completeSocialCallback(input: { code?: string; state?: str
     }
     const metrics = await fetchMetrics(ready.extra.profileUrl, ready.network.apiHosts, token.accessToken);
     if (!metrics.ok) {
+      const metricError =
+        connection.platform === "FACEBOOK"
+          ? "Facebook did not return both a follower count and likes. Try YouTube or Instagram for Phase M evidence."
+          : metrics.error;
       await prisma.socialConnection.update({
         where: { id: connection.id },
         data: {
           status: "error",
-          lastError: metrics.error,
+          lastError: metricError,
           tokenCipher: encryptSecret(token.accessToken),
           refreshCipher: token.refreshToken ? encryptSecret(token.refreshToken) : null,
           tokenExpiresAt: token.expiresAt,
         },
       });
-      return { ok: false as const, error: metrics.error, slug };
+      return { ok: false as const, error: metricError, slug };
     }
     const written = await writeLiveAccount({
       creatorId: connection.creatorId,
