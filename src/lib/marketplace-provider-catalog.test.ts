@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import {
   marketplaceProviderCatalogLabel,
   marketplaceProvidersAvailableToAdd,
-} from "./marketplace-ledger";
+} from "@/app/admin/marketplace/provider-catalog";
 
 describe("marketplace provider catalog", () => {
   it("labels known codes without inventing free-text names", () => {

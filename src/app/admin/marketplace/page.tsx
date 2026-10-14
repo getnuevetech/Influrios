@@ -45,13 +45,15 @@ import {
   ledgerTotals,
   listFundings,
   marketplaceConfig,
-  marketplaceProviderCatalogLabel,
-  marketplaceProvidersAvailableToAdd,
 } from "@/lib/marketplace-ledger";
 import { productSwitch } from "@/lib/product-switches";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { feeTypeFromFundingSnapshot, type FeeTypeAmount } from "@/lib/ledger";
 import { AdminCollapse } from "@/components/admin-collapse";
+import {
+  marketplaceProviderCatalogLabel,
+  marketplaceProvidersAvailableToAdd,
+} from "@/app/admin/marketplace/provider-catalog";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };

@@ -44,66 +44,12 @@ import { splitMilestoneRelease } from "@/lib/account-purpose";
 
 const PROVIDER_CODE = "primary";
 
-/**
- * Known marketplace ledger providers an admin can enable.
- * Codes match Payment gateways / jurisdiction assignment — admins pick from this list
- * instead of inventing free-text codes like "eu-provider".
- */
-export const MARKETPLACE_PROVIDER_CATALOG = [
-  {
-    code: "primary",
-    name: "Primary marketplace",
-    detail: "Default when a jurisdiction does not assign another provider",
-  },
-  {
-    code: "airwallex",
-    name: "Airwallex",
-    detail: "Assign on jurisdictions that fund through Airwallex",
-  },
-  {
-    code: "stripe",
-    name: "Stripe",
-    detail: "Assign on jurisdictions that fund through Stripe",
-  },
-  {
-    code: "flutterwave",
-    name: "Flutterwave",
-    detail: "Assign on jurisdictions that fund through Flutterwave",
-  },
-  {
-    code: "mpesa",
-    name: "M-Pesa",
-    detail: "Assign on jurisdictions that fund through M-Pesa",
-  },
-] as const;
-
-export type MarketplaceProviderCatalogEntry = (typeof MARKETPLACE_PROVIDER_CATALOG)[number];
-
-export function marketplaceProviderCatalogEntry(code: string | null | undefined) {
-  const normalized = (code ?? "").trim().toLowerCase();
-  return MARKETPLACE_PROVIDER_CATALOG.find((row) => row.code === normalized) ?? null;
-}
-
-/** Display name for a marketplace provider code (catalog first, then stored name). */
-export function marketplaceProviderCatalogLabel(code: string, storedName?: string | null) {
-  const entry = marketplaceProviderCatalogEntry(code);
-  if (entry) return entry.name;
-  const stored = (storedName ?? "").trim();
-  return stored || code.trim() || "Marketplace provider";
-}
-
 /** A marketplace provider shows the stored name. A blank name shows the code. */
 export function marketplaceProviderLabel(name: string | null | undefined, code: string): string {
   const stored = (name ?? "").trim();
   const storedCode = code.trim();
   if (stored && storedCode) return `${stored} (${storedCode})`;
   return stored || storedCode;
-}
-
-/** Codes still available to add on the Marketplace provider admin form. */
-export function marketplaceProvidersAvailableToAdd(configuredCodes: string[]) {
-  const taken = new Set(configuredCodes.map((code) => code.trim().toLowerCase()).filter(Boolean));
-  return MARKETPLACE_PROVIDER_CATALOG.filter((row) => !taken.has(row.code));
 }
 
 let grossCapForTests: number | null = null;
@@ -516,8 +462,7 @@ export async function saveMarketplaceProvider(input: {
   if (code === "demo") {
     throw new Error("Demo cannot confirm a prefund. Choose another marketplace provider.");
   }
-  const catalog = marketplaceProviderCatalogEntry(code);
-  const name = (input.name?.trim() || catalog?.name || code).slice(0, 80);
+  const name = (input.name?.trim() || code).slice(0, 80);
   if (!name) throw new Error("A provider name is required.");
   const existing = await prisma.integrationProvider.findUnique({
     where: { kind_code: { kind: "marketplace", code } },
