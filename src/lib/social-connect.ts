@@ -8,6 +8,8 @@ import {
   buildAuthorizeUrl,
   isLiveSocialAccount,
   parseSocialMetrics,
+  parseYoutubeChannelMetrics,
+  prepareSocialProfileUrl,
   socialConnectGate,
   socialHostAllowed,
   socialNetwork,
@@ -284,6 +286,10 @@ export async function beginSocialConnect(input: {
     redirectUri: socialCallbackUrl(),
     state,
     scopes: provider!.scopes,
+    extraParams:
+      network.code === "youtube"
+        ? { access_type: "offline", include_granted_scopes: "true", prompt: "consent" }
+        : undefined,
   });
   if (!authorizeUrl) return { ok: false as const, error: "The authorize URL is not on an official host." };
   return { ok: true as const, authorizeUrl, redirectUri: socialCallbackUrl() };
@@ -342,18 +348,59 @@ async function requestToken(input: {
   };
 }
 
-async function fetchMetrics(profileUrl: string, apiHosts: readonly string[], accessToken: string) {
-  if (!socialHostAllowed(profileUrl, apiHosts)) return { ok: false as const, error: "The profile URL is not on an official host." };
-  const response = await fetch(profileUrl, {
+async function fetchMetrics(
+  profileUrl: string,
+  apiHosts: readonly string[],
+  accessToken: string,
+  platform?: SocialSyncPlatform,
+) {
+  const requestUrl = prepareSocialProfileUrl(profileUrl, platform ?? null);
+  if (!socialHostAllowed(requestUrl, apiHosts)) {
+    return { ok: false as const, error: "The profile URL is not on an official host." };
+  }
+  const response = await fetch(requestUrl, {
     redirect: "error",
     headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" },
     signal: AbortSignal.timeout(8000),
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok) return { ok: false as const, error: "The network rejected the profile request." };
+  if (!response.ok) {
+    const detail =
+      payload && typeof payload === "object" && "error" in payload
+        ? typeof (payload as { error?: { message?: unknown } }).error?.message === "string"
+          ? String((payload as { error: { message: string } }).error.message).slice(0, 120)
+          : ""
+        : "";
+    return {
+      ok: false as const,
+      error: detail
+        ? `The network rejected the profile request (${response.status}: ${detail}).`
+        : `The network rejected the profile request (HTTP ${response.status}).`,
+    };
+  }
+  if (platform === "YOUTUBE") {
+    const youtube = parseYoutubeChannelMetrics(payload);
+    if (!youtube) {
+      return {
+        ok: false as const,
+        error: "YouTube did not return channel subscriber and view counts for this account.",
+      };
+    }
+    return {
+      ok: true as const,
+      metrics: { followers: youtube.followers, likes: youtube.likes },
+      handle: youtube.handle ?? undefined,
+      externalId: youtube.externalId ?? undefined,
+    };
+  }
   const metrics = parseSocialMetrics(payload);
   if (!metrics) return { ok: false as const, error: "The network did not return a follower count and likes." };
-  return { ok: true as const, metrics, handle: findString(payload, ["username", "handle"]), externalId: findString(payload, ["id"]) };
+  return {
+    ok: true as const,
+    metrics,
+    handle: findString(payload, ["username", "handle", "customurl", "title"]),
+    externalId: findString(payload, ["id"]),
+  };
 }
 
 function findString(value: unknown, keys: string[], depth = 0): string | undefined {
@@ -470,7 +517,12 @@ export async function completeSocialCallback(input: { code?: string; state?: str
       await prisma.socialConnection.update({ where: { id: connection.id }, data: { status: "error", lastError: token.error } });
       return { ok: false as const, error: token.error, slug };
     }
-    const metrics = await fetchMetrics(ready.extra.profileUrl, ready.network.apiHosts, token.accessToken);
+    const metrics = await fetchMetrics(
+      ready.extra.profileUrl,
+      ready.network.apiHosts,
+      token.accessToken,
+      connection.platform as SocialSyncPlatform,
+    );
     if (!metrics.ok) {
       const metricError =
         connection.platform === "FACEBOOK"
@@ -577,7 +629,12 @@ export async function refreshSocialConnection(input: { slug: string; platform: s
         },
       });
     }
-    const metrics = await fetchMetrics(ready.extra.profileUrl, ready.network.apiHosts, accessToken);
+    const metrics = await fetchMetrics(
+      ready.extra.profileUrl,
+      ready.network.apiHosts,
+      accessToken,
+      network.platform,
+    );
     if (!metrics.ok) {
       await prisma.socialConnection.update({ where: { id: connection.id }, data: { status: "error", lastError: metrics.error } });
       return { ok: false as const, error: metrics.error };
