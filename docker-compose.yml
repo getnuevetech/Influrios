@@ -69,7 +69,9 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:-}
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-}
       CRON_SECRET: ${CRON_SECRET:-}
-      MEILI_HOST: ${MEILI_HOST:-http://meilisearch:7700}
+      # Always the Compose service DNS name. Host .env often uses http://127.0.0.1:7700
+      # for host scripts; that address is wrong inside the web container.
+      MEILI_HOST: http://meilisearch:7700
       MEILI_API_KEY: ${MEILI_API_KEY:-influrios-meili-dev-key}
       ADMIN_SUPER_EMAIL: ${ADMIN_SUPER_EMAIL:-}
       ADMIN_SUPER_PASSWORD: ${ADMIN_SUPER_PASSWORD:-}

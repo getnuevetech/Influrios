@@ -333,8 +333,8 @@ npm run staging:e5-meilisearch-evidence
 
 Operator path:
 1. `docker compose ps meilisearch` → running (Compose service on `127.0.0.1:7700`).
-2. Confirm `.env` has `MEILI_HOST=http://meilisearch:7700` and `MEILI_API_KEY=…` (web container), **or** Admin → Meilisearch enabled.
-3. Admin → **Meilisearch** → **Reindex** → wait for succeeded.
+2. Web container uses Compose DNS `http://meilisearch:7700` (host `.env` may show `127.0.0.1:7700` for scripts only). Confirm `MEILI_API_KEY` matches.
+3. Admin → **Meilisearch** → **Reindex** → wait for succeeded (prior `Search index 405` was a create-index path bug; fixed on this branch).
 4. Browser: open `/discover?q=creator` (or a known specialty) and confirm cards.
 5. Host: `npm run staging:e5-meilisearch-evidence` — paste health, postgres count, index count, reindex job id.
 
