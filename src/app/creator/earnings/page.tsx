@@ -67,6 +67,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         select: {
           creator: {
             select: {
+              id: true,
               slug: true,
               locationCountry: true,
               identityVerified: true,
@@ -133,12 +134,13 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
       }).catch(() => null)
     : null;
 
-  const identityVerified = identity?.creator
+  const creatorRow = identity?.creator ?? null;
+  const identityVerified = creatorRow
     ? await resolveCreatorIdentityVerified({
-        creatorId: identity.creator.id,
-        creatorSlug: identity.creator.slug,
-        identityVerified: identity.creator.identityVerified,
-      }).catch(() => identity.creator.identityVerified === "VERIFIED")
+        creatorId: creatorRow.id,
+        creatorSlug: creatorRow.slug,
+        identityVerified: creatorRow.identityVerified,
+      }).catch(() => creatorRow.identityVerified === "VERIFIED")
     : false;
 
   const receiveView = identity?.creator
