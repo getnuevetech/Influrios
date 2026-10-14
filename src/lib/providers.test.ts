@@ -132,6 +132,9 @@ describe("entered provider names", () => {
     assert.match(page, /name="code"/);
     assert.match(page, /name="enabled"/);
     assert.match(page, /Webhook signing secret/);
+    assert.match(page, /Choose a provider/);
+    assert.equal(page.includes("disabled\n                      defaultValue={row.code}"), false);
+    assert.equal(page.includes("disabled\n                      defaultValue"), false);
   });
 });
 
