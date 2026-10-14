@@ -84,11 +84,18 @@ describe("staging evidence probe", () => {
     // Payout setup lives on Earnings, not Billing & plan.
     const earnings = readFileSync("src/app/creator/earnings/page.tsx", "utf8");
     const billing = readFileSync("src/app/billing/page.tsx", "utf8");
+    const panel = readFileSync("src/components/creator-payout-methods.tsx", "utf8");
     assert.match(earnings, /CreatorPayoutMethodsPanel/);
+    assert.match(earnings, /buildReceivePaymentsView/);
     assert.match(billing, /Open Earnings → Payout methods/);
     assert.equal(billing.includes("actionOpenConnect"), false);
     assert.match(readFileSync("src/components/account-shell.tsx", "utf8"), /href: "\/creator\/earnings"/);
     assert.equal(readFileSync("src/components/account-shell.tsx", "utf8").includes('label: "Payout Methods"'), false);
+    // Member checklist: no country / rail / account-id dump.
+    assert.equal(panel.includes("Country corridor"), false);
+    assert.equal(panel.includes("Collection rail"), false);
+    assert.match(panel, /Receive payments/);
+    assert.match(readFileSync("src/lib/receive-payments-checklist.ts", "utf8"), /government_id/);
   });
 });
 

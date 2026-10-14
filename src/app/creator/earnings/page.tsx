@@ -6,10 +6,16 @@ import { IconWallet } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
 import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
+import { countryCodeFromLocation } from "@/lib/contract-wizard";
 import { prisma } from "@/lib/db";
+import { kycTypeByCode } from "@/lib/kyc-types";
 import { formatMoney } from "@/lib/money";
 import { resolvePayoutOnboardingRail } from "@/lib/payout-readiness";
 import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
+import {
+  buildReceivePaymentsView,
+  type KycSubmissionState,
+} from "@/lib/receive-payments-checklist";
 import { stripeConnectReady } from "@/lib/stripe-admin";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +38,20 @@ function memberFacingPayoutError(raw: string | undefined) {
   return message;
 }
 
+function asKycSubmissionState(status: string | null | undefined): KycSubmissionState {
+  const value = (status ?? "").trim();
+  if (
+    value === "submitted" ||
+    value === "pending_gateway" ||
+    value === "verified" ||
+    value === "rejected" ||
+    value === "draft"
+  ) {
+    return value;
+  }
+  return "none";
+}
+
 export default async function CreatorEarningsPage({ searchParams }: Props) {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/creator/earnings");
@@ -46,6 +66,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         select: {
           creator: {
             select: {
+              slug: true,
               locationCountry: true,
               identityVerified: true,
               payoutProfile: {
@@ -53,6 +74,8 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
                   stripeConnectAccountId: true,
                   providerConnectedAccountId: true,
                   primaryCountryCode: true,
+                  primaryStatus: true,
+                  secondaryStatus: true,
                 },
               },
             },
@@ -74,13 +97,33 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
   const held = hub?.earnings.heldCents ?? 0;
   const currency = hub?.earnings.currency || "USD";
   const pipeline = hub?.pipeline ?? [];
-  const payoutReady = Boolean(hub?.payout.readiness?.globalPayoutReady || hub?.payout.readiness?.hasVerifiedMethod);
+
+  const locationCountry = identity?.creator?.locationCountry ?? null;
+  const countryCode =
+    countryCodeFromLocation(locationCountry) ||
+    (identity?.creator?.payoutProfile?.primaryCountryCode ?? "").trim().toUpperCase() ||
+    null;
+  const creatorSlug = identity?.creator?.slug || creator?.slug || draft?.slug || null;
+
+  const [corridor, kycSubmission] = await Promise.all([
+    countryCode
+      ? prisma.countryActivationCorridor.findUnique({ where: { countryCode } }).catch(() => null)
+      : Promise.resolve(null),
+    creatorSlug
+      ? prisma.creatorKycSubmission.findUnique({ where: { creatorSlug }, select: { status: true } }).catch(() => null)
+      : Promise.resolve(null),
+  ]);
 
   const hasConnectAccount = Boolean(identity?.creator?.payoutProfile?.stripeConnectAccountId);
   const hasProviderAccount = Boolean(identity?.creator?.payoutProfile?.providerConnectedAccountId);
+  const hasVerifiedPayoutMethod =
+    identity?.creator?.payoutProfile?.primaryStatus === "VERIFIED" ||
+    identity?.creator?.payoutProfile?.secondaryStatus === "VERIFIED" ||
+    Boolean(hub?.payout.readiness?.hasVerifiedMethod);
+
   const payoutRail = identity?.creator
     ? await resolvePayoutOnboardingRail({
-        locationCountry: identity.creator.locationCountry,
+        locationCountry,
         fallbackCountryCode: identity.creator.payoutProfile?.primaryCountryCode,
         stripeConnectReady: connectReady,
         providerReady: Boolean(airwallexConfig),
@@ -88,6 +131,20 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         hasProviderAccount,
       }).catch(() => null)
     : null;
+
+  const receiveView = identity?.creator
+    ? buildReceivePaymentsView({
+        rail: payoutRail,
+        kycType: kycTypeByCode(corridor?.kycModel)?.code ?? null,
+        identityVerified: identity.creator.identityVerified === "VERIFIED",
+        kycSubmission: asKycSubmissionState(kycSubmission?.status),
+        hasStripeConnectAccount: hasConnectAccount,
+        hasProviderAccount,
+        hasVerifiedPayoutMethod,
+      })
+    : null;
+
+  const payoutReady = receiveView?.status === "ready";
 
   return (
     <div className="space-y-5">
@@ -116,30 +173,28 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         />
         <StatCard
           label="Payout status"
-          value={payoutReady ? "Ready" : "Setup needed"}
-          note={payoutReady ? "Identity and payout method on file" : "Finish payout methods to receive funds"}
-          tone={payoutReady ? "violet" : "blue"}
+          value={receiveView?.statusLabel ?? (payoutReady ? "Ready" : "Setup needed")}
+          note={
+            receiveView?.summary ??
+            (payoutReady ? "Identity and payout method on file" : "Finish setup to receive funds")
+          }
+          tone={
+            receiveView?.status === "ready" ? "violet" : receiveView?.status === "unavailable" ? "amber" : "blue"
+          }
           icon={<IconWallet size={16} />}
         />
       </section>
 
-      {identity?.creator ? (
+      {receiveView ? (
         <CreatorPayoutMethodsPanel
-          rail={payoutRail}
-          hasStripeConnectAccount={hasConnectAccount}
-          hasProviderAccount={hasProviderAccount}
-          stripeConnectAccountId={identity.creator.payoutProfile?.stripeConnectAccountId}
-          providerConnectedAccountId={identity.creator.payoutProfile?.providerConnectedAccountId}
-          locationCountry={identity.creator.locationCountry}
-          identityVerified={identity.creator.identityVerified === "VERIFIED"}
-          payoutReady={payoutReady}
+          view={receiveView}
           error={memberFacingPayoutError(params.error)}
-          notice={params.connected ? "Connected account saved on your payout profile." : undefined}
+          notice={params.connected ? "Payout account saved." : undefined}
         />
       ) : (
         <section id="payouts" className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm">
-          <h2 className="font-display text-base font-bold">Payout methods</h2>
-          <p className="mt-1 text-sm text-muted">Create your Influencer Card first, then open payout setup here.</p>
+          <h2 className="font-display text-base font-bold">Receive payments</h2>
+          <p className="mt-1 text-sm text-muted">Create your Influencer Card first, then finish payout setup here.</p>
           <Link href="/claim" className="btn-primary mt-3 inline-flex !py-2 text-sm">
             Create your card
           </Link>
@@ -154,7 +209,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         ) : (
           <ul className="space-y-3">
             {pipeline.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#F0F3FA] px-3 py-3">
+              <li key={item.id} className="flex items-start justify-between gap-3 rounded-xl border border-[#F0F3FA] px-3 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{item.title}</p>
                   <p className="text-xs text-muted">{item.counterparty}</p>
@@ -184,7 +239,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
 
       <div className="flex flex-wrap gap-2">
         <Link href="/creator/earnings#payouts" className="btn-secondary !py-2 text-sm">
-          Jump to payout methods
+          Jump to receive payments
         </Link>
         <Link href="/collaboration/hub?view=collaborations#pipeline" className="btn-secondary !py-2 text-sm">
           Collaboration pipeline
