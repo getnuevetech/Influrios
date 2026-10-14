@@ -200,8 +200,8 @@ export async function openCreatorConnectedAccount(input: { userId: string; email
   const email = input.email?.trim() || "";
   if (!email) return { ok: false, error: "An account email is required. Nothing was opened." };
   const origin = getAppOrigin();
-  const returnUrl = `${origin}/billing?connected=1#payouts`;
-  const errorUrl = `${origin}/billing#payouts`;
+  const returnUrl = `${origin}/creator/earnings?connected=1#payouts`;
+  const errorUrl = `${origin}/creator/earnings#payouts`;
   let accountId = creator.payoutProfile?.providerConnectedAccountId?.trim() || "";
   let linked = Boolean(accountId);
   let url: string | undefined;

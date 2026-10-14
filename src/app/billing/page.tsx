@@ -1,31 +1,26 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { actionOpenConnect, actionOpenConnectedAccount } from "@/app/billing/actions";
 import { MemberPlanPage } from "@/components/plans/member-plan-page";
 import { getAccountSession } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
-import { resolvePayoutOnboardingRail } from "@/lib/payout-readiness";
-import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
 import { productSwitch } from "@/lib/product-switches";
-import { stripeConnectReady } from "@/lib/stripe-admin";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Billing & plan" };
 
 type Props = { searchParams: Promise<{ error?: string; connected?: string }> };
 
-/** Operator/config errors that should not surface on the member billing page. */
+/** Plan/checkout errors only — payout setup lives on Earnings. */
 function memberFacingBillingError(raw: string | undefined) {
   const message = raw?.trim() ?? "";
   if (!message) return undefined;
-  // Provider HTML error bodies used to leak into ?error=<!DOCTYPE…>
   if (/^</.test(message) || /<!DOCTYPE/i.test(message) || /<html[\s>]/i.test(message)) {
-    return "Payout setup could not reach the payment provider. Ask an admin to check Airwallex credentials and base URL on Payment gateways.";
+    return undefined;
   }
-  if (/^Airwallex[:\s]/i.test(message) || /Airwallex rejected/i.test(message)) return message;
-  if (/hosted onboarding is not configured/i.test(message) || /hosted flow template/i.test(message)) return message;
-  if (/HTML instead of JSON/i.test(message) || /Check the base URL/i.test(message)) return message;
+  if (/^Airwallex[:\s]/i.test(message) || /Airwallex rejected/i.test(message)) return undefined;
+  if (/hosted onboarding is not configured/i.test(message) || /hosted flow template/i.test(message)) return undefined;
+  if (/HTML instead of JSON/i.test(message) || /Check the base URL/i.test(message)) return undefined;
   if (/Stripe Connect is not ready/i.test(message)) return undefined;
   if (/Nothing was opened/i.test(message) && /Stripe|Connect|portal/i.test(message)) return undefined;
   return message;
@@ -35,7 +30,7 @@ export default async function BillingPage({ searchParams }: Props) {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/billing");
   const params = await searchParams;
-  const [matrix, identity, portalOn, connectReady, airwallexConfig, attempts, subscription] = await Promise.all([
+  const [matrix, identity, portalOn, attempts, subscription] = await Promise.all([
     loadPlanMatrix("creator"),
     prisma.user
       .findUnique({
@@ -46,22 +41,12 @@ export default async function BillingPage({ searchParams }: Props) {
           creator: {
             select: {
               planTier: true,
-              locationCountry: true,
-              payoutProfile: {
-                select: {
-                  stripeConnectAccountId: true,
-                  providerConnectedAccountId: true,
-                  primaryCountryCode: true,
-                },
-              },
             },
           },
         },
       })
       .catch(() => null),
     productSwitch("customer_portal").catch(() => false),
-    stripeConnectReady().catch(() => false),
-    loadAirwallexConfig().catch(() => null),
     prisma.checkoutAttempt
       .findMany({
         where: { userId: account.id, status: "completed" },
@@ -73,21 +58,6 @@ export default async function BillingPage({ searchParams }: Props) {
   ]);
   const currentCode = identity?.creator?.planTier || identity?.planTier || null;
   const names = new Map(matrix.plans.flatMap((plan) => [[plan.sku, plan.name], [plan.code, plan.name]] as const));
-  const airwallexReady = Boolean(airwallexConfig);
-  const hasConnectAccount = Boolean(identity?.creator?.payoutProfile?.stripeConnectAccountId);
-  const hasProviderAccount = Boolean(identity?.creator?.payoutProfile?.providerConnectedAccountId);
-  const payoutRail = identity?.creator
-    ? await resolvePayoutOnboardingRail({
-        locationCountry: identity.creator.locationCountry,
-        fallbackCountryCode: identity.creator.payoutProfile?.primaryCountryCode,
-        stripeConnectReady: connectReady,
-        providerReady: airwallexReady,
-        hasStripeConnectAccount: hasConnectAccount,
-        hasProviderAccount,
-      }).catch(() => null)
-    : null;
-  const showStripe = Boolean(payoutRail?.showStripe);
-  const showProvider = Boolean(payoutRail?.showProvider);
 
   return (
     <MemberPlanPage
@@ -107,43 +77,15 @@ export default async function BillingPage({ searchParams }: Props) {
       hasCustomer={Boolean(identity?.stripeCustomerId)}
       subscriptionStatus={subscription?.status ?? null}
       error={memberFacingBillingError(params.error)}
-      notice={params.connected ? "Connected account saved on your payout profile." : undefined}
+      notice={params.connected ? "Payout setup moved to Earnings." : undefined}
       payout={
-        <div id="payouts" className="mt-3 space-y-3">
-          {identity?.creator && showStripe ? (
-            <form action={actionOpenConnect}>
-              <p className="text-xs text-amber-900/80">
-                {hasConnectAccount
-                  ? "Stripe Connect is saved. Opening it does not send a payout."
-                  : "Create the Stripe Connect account for this card. This does not send a payout."}
-              </p>
-              <button type="submit" className="mt-2 text-sm font-semibold underline">
-                {hasConnectAccount ? "Open payout account" : "Set up payouts"}
-              </button>
-            </form>
-          ) : null}
-          {identity?.creator && showProvider ? (
-            <form action={actionOpenConnectedAccount}>
-              <p className="text-xs text-amber-900/80">
-                {hasProviderAccount
-                  ? "A collaboration connected account is saved. Milestone splits pay that account."
-                  : "Create the connected account that receives milestone splits. This does not send a payout."}
-              </p>
-              <button type="submit" className="mt-2 text-sm font-semibold underline">
-                {hasProviderAccount ? "Confirm connected account" : "Set up payouts"}
-              </button>
-            </form>
-          ) : null}
-          {!identity?.creator ? (
-            <Link href="/claim" className="mt-2 inline-block text-sm font-semibold underline">
-              Create your card
-            </Link>
-          ) : !showStripe && !showProvider ? (
-            <p className="text-xs text-amber-900/80">
-              {payoutRail?.emptyHint ??
-                "Payout onboarding opens here once your country corridor’s collection route is ready."}
-            </p>
-          ) : null}
+        <div id="payouts" className="mt-3">
+          <p className="text-xs text-amber-900/80">
+            Set up Stripe Connect or your corridor connected account under Earnings — not on this plan page.
+          </p>
+          <Link href="/creator/earnings#payouts" className="mt-2 inline-block text-sm font-semibold underline">
+            Open Earnings → Payout methods
+          </Link>
         </div>
       }
     />

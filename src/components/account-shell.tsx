@@ -38,7 +38,6 @@ const CREATOR_NAV: NavItem[] = [
   { href: "/creator/analytics", label: "Analytics", icon: <IconIntelligence size={18} /> },
   { href: "/creator/messages", label: "Messages", icon: <IconMail size={18} /> },
   { href: "/creator/earnings", label: "Earnings", icon: <IconWallet size={18} /> },
-  { href: "/billing#payouts", label: "Payout Methods", icon: <IconShieldPay size={18} /> },
   { href: "/billing", label: "Billing & Plan", icon: <IconIdCard size={18} /> },
   { href: "/mentorship", label: "Mentorship", icon: <IconUsers size={18} /> },
   { href: "/account", label: "Settings", icon: <IconSettings size={18} /> },

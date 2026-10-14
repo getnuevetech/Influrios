@@ -78,6 +78,14 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /### E4 progress \(Stripe sandbox\)/);
     assert.match(runbook, /staging:e4-stripe-evidence/);
     assert.match(runbook, /staging:e4-stripe-duplicate/);
+    // Payout setup lives on Earnings, not Billing & plan.
+    const earnings = readFileSync("src/app/creator/earnings/page.tsx", "utf8");
+    const billing = readFileSync("src/app/billing/page.tsx", "utf8");
+    assert.match(earnings, /CreatorPayoutMethodsPanel/);
+    assert.match(billing, /Open Earnings → Payout methods/);
+    assert.equal(billing.includes("actionOpenConnect"), false);
+    assert.match(readFileSync("src/components/account-shell.tsx", "utf8"), /href: "\/creator\/earnings"/);
+    assert.equal(readFileSync("src/components/account-shell.tsx", "utf8").includes('label: "Payout Methods"'), false);
   });
 });
 

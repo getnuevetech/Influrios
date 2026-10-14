@@ -60,6 +60,8 @@ export async function actionOpenPortal(formData?: FormData) {
   redirect(result.url);
 }
 
+const PAYOUT_SETUP_PATH = "/creator/earnings";
+
 function payoutSetupErrorRedirect(error: string): never {
   const trimmed = error.trim();
   const safe =
@@ -67,7 +69,7 @@ function payoutSetupErrorRedirect(error: string): never {
       ? "Payout setup could not reach the payment provider. Check Airwallex credentials and base URL on Payment gateways."
       : trimmed.slice(0, 300);
 
-  // Actionable provider/config problems — show on billing so the operator can fix them.
+  // Actionable provider/config problems — show on Earnings payout setup.
   if (
     /^Airwallex[:\s]/i.test(safe) ||
     /Airwallex rejected/i.test(safe) ||
@@ -77,7 +79,7 @@ function payoutSetupErrorRedirect(error: string): never {
     /Check the base URL/i.test(safe) ||
     /Check Airwallex credentials/i.test(safe)
   ) {
-    redirect(`/billing?error=${encodeURIComponent(safe)}#payouts`);
+    redirect(`${PAYOUT_SETUP_PATH}?error=${encodeURIComponent(safe)}#payouts`);
   }
 
   // Quiet readiness failures stay on #payouts without flashing operator copy.
@@ -92,9 +94,9 @@ function payoutSetupErrorRedirect(error: string): never {
     /payout setup is not available for this corridor/i.test(safe) ||
     (/Nothing was opened/i.test(safe) && /Stripe|Connect|portal|jurisdiction|corridor/i.test(safe))
   ) {
-    redirect("/billing#payouts");
+    redirect(`${PAYOUT_SETUP_PATH}#payouts`);
   }
-  redirect(`/billing?error=${encodeURIComponent(safe)}#payouts`);
+  redirect(`${PAYOUT_SETUP_PATH}?error=${encodeURIComponent(safe)}#payouts`);
 }
 
 async function creatorPayoutRailGuard(userId: string) {
@@ -130,7 +132,7 @@ async function creatorPayoutRailGuard(userId: string) {
 
 export async function actionOpenConnectedAccount() {
   const account = await getAccountSession();
-  if (!account) redirect("/login?next=/billing&gate=connect");
+  if (!account) redirect(`/login?next=${encodeURIComponent(PAYOUT_SETUP_PATH)}&gate=connect`);
   const guard = await creatorPayoutRailGuard(account.id);
   if (!guard.ok) payoutSetupErrorRedirect(guard.error);
   if (!guard.rail.showProvider) {
@@ -144,12 +146,12 @@ export async function actionOpenConnectedAccount() {
   const result = await openCreatorConnectedAccount({ userId: account.id, email: account.email });
   if (!result.ok) payoutSetupErrorRedirect(result.error);
   if (result.url && result.url.startsWith("https://")) redirect(result.url);
-  redirect("/billing?connected=1#payouts");
+  redirect(`${PAYOUT_SETUP_PATH}?connected=1#payouts`);
 }
 
 export async function actionOpenConnect() {
   const account = await getAccountSession();
-  if (!account) redirect("/login?next=/billing&gate=connect");
+  if (!account) redirect(`/login?next=${encodeURIComponent(PAYOUT_SETUP_PATH)}&gate=connect`);
   const guard = await creatorPayoutRailGuard(account.id);
   if (!guard.ok) payoutSetupErrorRedirect(guard.error);
   if (!guard.rail.showStripe) {
@@ -163,8 +165,8 @@ export async function actionOpenConnect() {
   const result = await openCreatorConnectOnboarding({
     userId: account.id,
     email: account.email,
-    refreshUrl: `${origin}/billing#payouts`,
-    returnUrl: `${origin}/billing?connected=1#payouts`,
+    refreshUrl: `${origin}${PAYOUT_SETUP_PATH}#payouts`,
+    returnUrl: `${origin}${PAYOUT_SETUP_PATH}?connected=1#payouts`,
   });
   if (!result.ok) payoutSetupErrorRedirect(result.error);
   redirect(result.url);
