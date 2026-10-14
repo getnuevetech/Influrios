@@ -73,9 +73,11 @@ describe("staging evidence probe", () => {
     assert.equal(pkg.scripts["staging:e2-smtp-evidence"], "bash scripts/staging-e2-smtp-evidence.sh");
     assert.equal(existsSync("scripts/staging-e2-smtp-evidence.sh"), true);
     assert.equal(pkg.scripts["staging:e4-stripe-evidence"], "bash scripts/staging-e4-stripe-evidence.sh");
+    assert.equal(pkg.scripts["staging:e4-stripe-duplicate"], "bash scripts/staging-e4-stripe-evidence.sh --prove-duplicate");
     assert.equal(existsSync("scripts/staging-e4-stripe-evidence.sh"), true);
     assert.match(runbook, /### E4 progress \(Stripe sandbox\)/);
     assert.match(runbook, /staging:e4-stripe-evidence/);
+    assert.match(runbook, /staging:e4-stripe-duplicate/);
   });
 });
 
