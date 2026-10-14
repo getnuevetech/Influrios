@@ -112,7 +112,7 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 | Stripe session id (`cs_test_…`) | `cs_test_a1FGJzvUkZPLgdKGXAqcZtqCuocAW00MJB8H3V8YafY21uzlTtl6VZ4GaA` |
 | Local `CheckoutAttempt` id | `cs_mv6jqy02_g3n8vb` |
 | Plan after first delivery | `creator_plus` · SubscriptionState `cmv6jrmgh0008rg01pc3qajh8` |
-| Duplicate delivery skipped | ☐ yes ☐ no (**resend still needed**) |
+| Duplicate delivery skipped | ☑ yes (`staging:e4-stripe-duplicate` · unique blocked · 1 row · planTier `PLUS` unchanged) |
 | Notes | Webhook row `cmv6jrmg50006rg01egkiiaip` · event `checkout:cs_mv6jqy02_g3n8vb` |
 
 `demo_checkout` and `legacy_demo_payments` are removed. Checkout stays closed until a Stripe sandbox key is saved. Leave `customer_portal` and `stripe_connect` off unless those paths are the ones under test.
@@ -226,11 +226,11 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 | Slice | Action | Done when |
 |-------|--------|-----------|
-| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: finish **E4** |
-| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: finish **E4** |
-| **E4 Stripe** | Partial: `4242`/`creator_plus` applied (`cs_mv6jqy02_g3n8vb`) — **still need** `npm run staging:e4-stripe-duplicate` | duplicate skipped |
+| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: later Phase M rows |
+| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: later Phase M rows |
+| **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: later Phase M rows |
 
-**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 complete. **`CRON_SECRET` rotated** (operator confirmed).
+**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 + E4 complete. **`CRON_SECRET` rotated** (operator confirmed).
 
 ### E1 progress (2026-10-13 afternoon) — **complete**
 
@@ -272,41 +272,29 @@ cd /var/www/influrios
 npm run staging:e2-smtp-evidence
 ```
 
-### E4 progress (Stripe sandbox) — **in progress** (duplicate resend still open)
+### E4 progress (Stripe sandbox) — **complete**
 
-Host script `2026-10-14T01:05:23Z`. Checkout + plan apply already on host; duplicate event skip still needed.
+Host scripts `2026-10-14T01:05:23Z` (checkout) and `2026-10-14T01:30:38Z` (duplicate proof). Success-page confirm used local event id `checkout:cs_mv6jqy02_g3n8vb` (not a Stripe Dashboard `evt_…`); duplicate skip proven via unique `ProcessedWebhook` key.
 
 | Check | Result |
 |-------|--------|
 | API secret decrypts | ☑ |
 | Webhook secret saved | ☑ `POST /api/billing/webhook` without signature → `Missing Stripe-Signature header.` |
-| Sandbox checkout `4242` + plan apply | ☑ Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzvUkZPLgdKGXAqcZtqCuocAW00MJB8H3V8YafY21uzlTtl6VZ4GaA` · sku `creator_plus` · user `cmv6f0eb40061od01b8jvjlpk` · `2026-10-13T10:37:42Z` · webhook `checkout:cs_mv6jqy02_g3n8vb` → `active` · SubscriptionState `cmv6jrmgh0008rg01pc3qajh8` |
-| Duplicate `checkout.session.completed` skipped | ☐ **still needed** |
-| Portal / Connect | ☐ optional this slice (Connect onboarding fixed in #262) |
+| Sandbox checkout `4242` + plan apply | ☑ Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzvUkZPLgdKGXAqcZtqCuocAW00MJB8H3V8YafY21uzlTtl6VZ4GaA` · sku `creator_plus` · user `cmv6f0eb40061od01b8jvjlpk` · `2026-10-13T10:37:42Z` · webhook `checkout:cs_mv6jqy02_g3n8vb` → `active` · SubscriptionState `cmv6jrmgh0008rg01pc3qajh8` · `planTier=PLUS` |
+| Duplicate `checkout.session.completed` skipped | ☑ `staging:e4-stripe-duplicate` · unique violation on `(stripe, checkout:cs_mv6jqy02_g3n8vb)` · 1 webhook row · `planTier` stayed `PLUS` |
+| Portal / Connect | ☐ optional (Connect onboarding fixed in #262; not required to close E4) |
 
 ```bash
 cd /var/www/influrios
 npm run staging:e4-stripe-evidence
-```
-
-Remaining operator path (duplicate skip only):
-
-This checkout was confirmed on the **success page**, which stores a **local** event id `checkout:cs_mv6jqy02_g3n8vb` — not a Stripe Dashboard `evt_…`. That is why Events → Resend has nothing matching. Same idempotency still applies (unique `provider + eventId`).
-
-On the host (after this slice is deployed):
-
-```bash
-cd /var/www/influrios
 npm run staging:e4-stripe-duplicate
 ```
-
-Expect: second insert of that webhook row **fails unique**, still **one** row for `checkout:cs_mv6jqy02_g3n8vb`, plan stays `creator_plus`. Paste that output here.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
 | SMTP | `mail_test`=`cmv6wje8100a3o6018frdtn0r` (failed→Admin Retry→`250 … gsmtp`) · `claim_verification_email`=`cmv6evovt005jod0130bnxspo` · prior `cmv6w73c40084o601nhpaegey` | 2026-10-13 | host + cloud-agent |
-| Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus` active · webhook `checkout:cs_mv6jqy02_g3n8vb`. **Duplicate resend still open** | 2026-10-13 | host + cloud-agent |
+| Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · webhook `checkout:cs_mv6jqy02_g3n8vb` · duplicate unique blocked (`2026-10-14T01:30:38Z`) | 2026-10-13/14 | host + cloud-agent |
 | Social OAuth | | | |
 | Meilisearch counts | | | |
 | Airwallex hold and release | | | |
