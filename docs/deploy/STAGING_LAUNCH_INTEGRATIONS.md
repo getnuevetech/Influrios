@@ -227,13 +227,13 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 | Slice | Action | Done when |
 |-------|--------|-----------|
-| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: finish **E5** |
-| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: finish **E5** |
-| **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: finish **E5** |
-| **E3 Social OAuth** | ~~Done~~ YouTube `cmv7wsjww001qs2015kbcssy4` · account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` | Next: finish **E5** |
-| **E5 Meilisearch** | Health 200 · Reindex succeeded · postgres count ≈ index documents · Discover search OK | counts + job id |
+| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: later Phase M rows |
+| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: later Phase M rows |
+| **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: later Phase M rows |
+| **E3 Social OAuth** | ~~Done~~ YouTube `cmv7wsjww001qs2015kbcssy4` · account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` | Next: later Phase M rows |
+| **E5 Meilisearch** | ~~Done~~ health 200 · job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · Discover 200 | Next: later Phase M rows |
 
-**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 + E3 + E4 complete. **Next: E5 Meilisearch.** **`CRON_SECRET` rotated** (operator confirmed).
+**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 + E3 + E4 + E5 complete. **`CRON_SECRET` rotated** (operator confirmed).
 
 ### E1 progress (2026-10-13 afternoon) — **complete**
 
@@ -313,30 +313,23 @@ npm run staging:e3-social-evidence
 
 **Instagram / Meta note:** put `https://influrios.com/api/social/callback` under **Facebook Login → Valid OAuth Redirect URIs** (or Instagram product OAuth settings). Do **not** use Meta **Webhooks** for this URL — that screen expects a `hub.challenge` verifier; our callback is OAuth-only (`code`/`state`) and will fail webhook validation.
 
-### E5 progress (Meilisearch counts) — **in progress**
+### E5 progress (Meilisearch counts) — **complete**
 
-**Goal:** Meilisearch healthy · creator index rebuilt · Discover search uses the index · postgres count ≈ index documents.
+Host script `2026-10-14T11:55:09Z`. Health 200 · Reindex succeeded · postgres 3 = index 3 · Discover HTTP 200. Prior failures: create-index `405` (#288) and delete-missing `index_not_found` task (#289).
 
 | Check | Result |
 |-------|--------|
-| `meilisearch` container running | ☐ |
-| `GET /health` → 200 | ☐ |
-| Admin → Meilisearch host/key Ready (or `MEILI_HOST` in `.env`) | ☐ |
-| Reindex succeeded (`reindex_creators` job id) | ☐ |
-| Index documents ≈ Postgres public creators | ☐ |
-| `/discover?q=…` returns creators | ☐ |
+| `meilisearch` container running | ☑ |
+| `GET /health` → 200 | ☑ `{"status":"available"}` |
+| Admin → Meilisearch host/key Ready (or `MEILI_HOST` in `.env`) | ☑ web Compose DNS `http://meilisearch:7700` · host probe `127.0.0.1:7700` |
+| Reindex succeeded (`reindex_creators` job id) | ☑ `cmv81yjje0002nl01evdvvz01` · `indexed=3 postgres=3` · `2026-10-14T11:54:43Z` |
+| Index documents ≈ Postgres public creators | ☑ 3 = 3 |
+| `/discover?q=…` returns creators | ☑ `GET /discover?q=creator` → HTTP 200 |
 
 ```bash
 cd /var/www/influrios
 npm run staging:e5-meilisearch-evidence
 ```
-
-Operator path:
-1. `docker compose ps meilisearch` → running (Compose service on `127.0.0.1:7700`).
-2. Web container uses Compose DNS `http://meilisearch:7700` (host `.env` may show `127.0.0.1:7700` for scripts only). Confirm `MEILI_API_KEY` matches.
-3. Admin → **Meilisearch** → **Reindex** → wait for succeeded (prior `Search index 405` was a create-index path bug; fixed on this branch).
-4. Browser: open `/discover?q=creator` (or a known specialty) and confirm cards.
-5. Host: `npm run staging:e5-meilisearch-evidence` — paste health, postgres count, index count, reindex job id.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
@@ -344,7 +337,7 @@ Operator path:
 | SMTP | `mail_test`=`cmv6wje8100a3o6018frdtn0r` (failed→Admin Retry→`250 … gsmtp`) · `claim_verification_email`=`cmv6evovt005jod0130bnxspo` · prior `cmv6w73c40084o601nhpaegey` | 2026-10-13 | host + cloud-agent |
 | Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · webhook `checkout:cs_mv6jqy02_g3n8vb` · duplicate unique blocked (`2026-10-14T01:30:38Z`) | 2026-10-13/14 | host + cloud-agent |
 | Social OAuth | YouTube Connection `cmv7wsjww001qs2015kbcssy4` · Account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` (`2026-10-14T10:03:39Z`) | 2026-10-14 | host + cloud-agent |
-| Meilisearch counts | **in progress** — run `staging:e5-meilisearch-evidence` after Reindex | | host + cloud-agent |
+| Meilisearch counts | job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · health 200 · Discover 200 (`2026-10-14T11:55:09Z`) | 2026-10-14 | host + cloud-agent |
 | Airwallex hold and release | | | |
 | Recurring tranche 2 | | | |
 | Team proposal | | | |
