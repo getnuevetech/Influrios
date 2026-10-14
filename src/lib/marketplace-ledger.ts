@@ -451,15 +451,18 @@ export async function saveMilestoneTemplates(rows: { id?: string; title: string;
 
 export async function saveMarketplaceProvider(input: {
   code?: string;
-  name: string;
+  name?: string;
   enabled: boolean;
   webhook: string;
   clearWebhook?: boolean;
 }) {
   await ensureMarketplaceDefaults();
   const code = (input.code || PROVIDER_CODE).trim().toLowerCase();
-  if (!/^[a-z][a-z0-9-]{1,31}$/.test(code)) throw new Error("Use a short provider code.");
-  const name = input.name.trim().slice(0, 80);
+  if (!/^[a-z][a-z0-9-]{1,31}$/.test(code)) throw new Error("Choose a marketplace provider from the list.");
+  if (code === "demo") {
+    throw new Error("Demo cannot confirm a prefund. Choose another marketplace provider.");
+  }
+  const name = (input.name?.trim() || code).slice(0, 80);
   if (!name) throw new Error("A provider name is required.");
   const existing = await prisma.integrationProvider.findUnique({
     where: { kind_code: { kind: "marketplace", code } },

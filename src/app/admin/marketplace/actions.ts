@@ -120,13 +120,18 @@ export async function actionSaveTemplates(formData: FormData) {
 
 export async function actionSaveMarketplaceProvider(formData: FormData) {
   await requireAdminAction("marketplace.manage");
+  const enabledRaw = String(formData.get("enabled") ?? "").trim().toLowerCase();
+  const clearRaw = String(formData.get("clearWebhook") ?? "").trim().toLowerCase();
+  const code = String(formData.get("code") ?? "");
+  const enteredName = String(formData.get("name") ?? "").trim();
+  const { marketplaceProviderCatalogLabel } = await import("@/app/admin/marketplace/provider-catalog");
   try {
     await saveMarketplaceProvider({
-      code: String(formData.get("code") ?? ""),
-      name: String(formData.get("name") ?? ""),
-      enabled: flag(formData, "enabled"),
+      code,
+      name: enteredName || marketplaceProviderCatalogLabel(code),
+      enabled: enabledRaw === "1" || enabledRaw === "on" || enabledRaw === "true",
       webhook: String(formData.get("webhook") ?? ""),
-      clearWebhook: flag(formData, "clearWebhook"),
+      clearWebhook: clearRaw === "1" || clearRaw === "on" || clearRaw === "true",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the provider.";
