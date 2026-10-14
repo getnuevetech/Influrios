@@ -30,10 +30,17 @@ export function BusinessMarketingPage({
   landing,
   recommended,
   error,
+  legalTitles,
 }: {
   landing: BusinessLandingConfig;
   recommended: RecommendedInfluencer[];
   error?: string;
+  legalTitles?: {
+    terms?: string | null;
+    electronicConsent?: string | null;
+    businessTerms?: string | null;
+    privacy?: string | null;
+  };
 }) {
   const hero = landing.hero;
   const tagSlug = (name: string) =>
@@ -290,6 +297,7 @@ export function BusinessMarketingPage({
             checkboxLabel={landing.signup.checkboxLabel}
             submitLabel={landing.signup.submitLabel}
             error={error}
+            legalTitles={legalTitles}
           />
 
           <aside className="rounded-2xl bg-gradient-to-br from-[#633CFF] to-[#2979FF] p-6 text-white shadow-sm">

@@ -21,7 +21,7 @@ function cleanEmail(value: string) {
 /** Business marketing signup: creates the User (role BUSINESS) + owned workspace in one step. */
 export async function actionRegisterBusiness(formData: FormData) {
   if (formData.get("consent") !== "on") {
-    back("Agree to the Terms of Service and Privacy Policy to continue.");
+    back("Agree to the business account terms and privacy policy to continue.");
   }
 
   const businessName = String(formData.get("businessName") ?? "").trim().slice(0, 120);
@@ -77,6 +77,16 @@ export async function actionRegisterBusiness(formData: FormData) {
         contactEmail,
         contactPhone,
       },
+    });
+    // registerAccount already records registration docs; also accept business-terms at signup.
+    const { recordLegalEvent } = await import("@/lib/legal");
+    await recordLegalEvent({
+      trigger: "business_registration",
+      context: "business_registration",
+      userId,
+      userRole: "BUSINESS",
+      ip: ip === "unknown" ? null : ip,
+      extraKeys: ["terms-of-service", "privacy-policy"],
     });
   } catch (error) {
     back(error instanceof Error ? error.message : "Could not set up the business workspace.");
