@@ -24,6 +24,7 @@
     "staging:e2-smtp-evidence": "bash scripts/staging-e2-smtp-evidence.sh",
     "staging:e4-stripe-evidence": "bash scripts/staging-e4-stripe-evidence.sh",
     "staging:e4-stripe-duplicate": "bash scripts/staging-e4-stripe-evidence.sh --prove-duplicate",
+    "staging:e3-social-evidence": "bash scripts/staging-e3-social-evidence.sh",
     "staging:marketplace-fixture": "tsx scripts/marketplace-webhook-fixture.ts",
     "postinstall": "prisma generate"
   },
