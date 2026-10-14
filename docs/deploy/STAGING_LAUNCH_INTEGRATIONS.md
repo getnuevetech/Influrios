@@ -131,7 +131,7 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 **Goal:** consent → callback → store followers/likes **only when both metrics are present**.
 
 1. Admin → Social: enable **one** network (prefer YouTube or Instagram).
-2. Register `{APP}/api/social/callback` on the provider app.
+2. Register `{APP}/api/social/callback` as the provider **OAuth redirect URI** (Meta: Facebook Login → Valid OAuth Redirect URIs — not Webhooks).
 3. From a creator dashboard / connect flow, complete consent.
 4. Confirm callback lands on the app without error.
 5. Confirm metrics: if either followers or likes is missing, the sync must **not** invent numbers.
@@ -223,16 +223,17 @@ curl -fsS http://127.0.0.1:3000/api/health
 node scripts/staging-evidence-probe.mjs https://influrios.com
 ```
 
-**Next operator evidence after recovery (E1 → E2 → E4 → E3):**
+**Next operator evidence after recovery (E1 → E2 → E4 → E3 → E5):**
 
 | Slice | Action | Done when |
 |-------|--------|-----------|
-| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: later Phase M rows |
-| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: later Phase M rows |
-| **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: later Phase M rows |
-| **E3 Social OAuth** | ~~Done~~ YouTube `cmv7wsjww001qs2015kbcssy4` · account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` | Next: later Phase M rows |
+| **E1 Sweep clock** | ~~Done~~ tick `2026-10-13T15:36:12Z` · `cmv6ufj5m000dut01g2jvu0xh` / `cmv6ufj61000lut013qd0vrgz` · crontab installed · `CRON_SECRET` rotated | Next: finish **E5** |
+| **E2 SMTP** | ~~Done~~ `mail_test` `cmv6wje8100a3o6018frdtn0r` (failed → Admin Retry → `250 … gsmtp`) · `claim_verification_email` `cmv6evovt005jod0130bnxspo` | Next: finish **E5** |
+| **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: finish **E5** |
+| **E3 Social OAuth** | ~~Done~~ YouTube `cmv7wsjww001qs2015kbcssy4` · account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` | Next: finish **E5** |
+| **E5 Meilisearch** | Health 200 · Reindex succeeded · postgres count ≈ index documents · Discover search OK | counts + job id |
 
-**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 + E3 + E4 complete. **`CRON_SECRET` rotated** (operator confirmed).
+**Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1 + E2 + E3 + E4 complete. **Next: E5 Meilisearch.** **`CRON_SECRET` rotated** (operator confirmed).
 
 ### E1 progress (2026-10-13 afternoon) — **complete**
 
@@ -310,13 +311,40 @@ cd /var/www/influrios
 npm run staging:e3-social-evidence
 ```
 
+**Instagram / Meta note:** put `https://influrios.com/api/social/callback` under **Facebook Login → Valid OAuth Redirect URIs** (or Instagram product OAuth settings). Do **not** use Meta **Webhooks** for this URL — that screen expects a `hub.challenge` verifier; our callback is OAuth-only (`code`/`state`) and will fail webhook validation.
+
+### E5 progress (Meilisearch counts) — **in progress**
+
+**Goal:** Meilisearch healthy · creator index rebuilt · Discover search uses the index · postgres count ≈ index documents.
+
+| Check | Result |
+|-------|--------|
+| `meilisearch` container running | ☐ |
+| `GET /health` → 200 | ☐ |
+| Admin → Meilisearch host/key Ready (or `MEILI_HOST` in `.env`) | ☐ |
+| Reindex succeeded (`reindex_creators` job id) | ☐ |
+| Index documents ≈ Postgres public creators | ☐ |
+| `/discover?q=…` returns creators | ☐ |
+
+```bash
+cd /var/www/influrios
+npm run staging:e5-meilisearch-evidence
+```
+
+Operator path:
+1. `docker compose ps meilisearch` → running (Compose service on `127.0.0.1:7700`).
+2. Confirm `.env` has `MEILI_HOST=http://meilisearch:7700` and `MEILI_API_KEY=…` (web container), **or** Admin → Meilisearch enabled.
+3. Admin → **Meilisearch** → **Reindex** → wait for succeeded.
+4. Browser: open `/discover?q=creator` (or a known specialty) and confirm cards.
+5. Host: `npm run staging:e5-meilisearch-evidence` — paste health, postgres count, index count, reindex job id.
+
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
 | SMTP | `mail_test`=`cmv6wje8100a3o6018frdtn0r` (failed→Admin Retry→`250 … gsmtp`) · `claim_verification_email`=`cmv6evovt005jod0130bnxspo` · prior `cmv6w73c40084o601nhpaegey` | 2026-10-13 | host + cloud-agent |
 | Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · webhook `checkout:cs_mv6jqy02_g3n8vb` · duplicate unique blocked (`2026-10-14T01:30:38Z`) | 2026-10-13/14 | host + cloud-agent |
 | Social OAuth | YouTube Connection `cmv7wsjww001qs2015kbcssy4` · Account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` (`2026-10-14T10:03:39Z`) | 2026-10-14 | host + cloud-agent |
-| Meilisearch counts | | | |
+| Meilisearch counts | **in progress** — run `staging:e5-meilisearch-evidence` after Reindex | | host + cloud-agent |
 | Airwallex hold and release | | | |
 | Recurring tranche 2 | | | |
 | Team proposal | | | |

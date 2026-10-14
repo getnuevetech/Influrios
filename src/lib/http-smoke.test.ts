@@ -107,6 +107,11 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /cmv7wsjww001qs2015kbcssy4/);
     assert.match(runbook, /cmv6f0ebj0065od017gutjrq5/);
     assert.match(runbook, /E3 progress \(Social OAuth\) — \*\*complete\*\*/);
+    // E5 Meilisearch evidence path.
+    assert.equal(pkg.scripts["staging:e5-meilisearch-evidence"], "bash scripts/staging-e5-meilisearch-evidence.sh");
+    assert.equal(existsSync("scripts/staging-e5-meilisearch-evidence.sh"), true);
+    assert.match(runbook, /### E5 progress \(Meilisearch counts\)/);
+    assert.match(runbook, /staging:e5-meilisearch-evidence/);
   });
 });
 
