@@ -36,6 +36,7 @@ export async function loadAdminAccounts(roles: UserRole[]): Promise<AdminAccount
             locationCountry: true,
             slug: true,
             displayName: true,
+            identityVerified: true,
           },
         },
         business: { select: { name: true, geography: true, contactName: true, contactEmail: true, contactPhone: true } },
@@ -81,6 +82,34 @@ export async function loadAdminAccounts(roles: UserRole[]): Promise<AdminAccount
             .filter(Boolean)
             .join(" · ") || null
         : null,
+      creatorSlug: user.creator?.slug ?? null,
+      identityVerified: user.creator?.identityVerified ?? null,
+      kycSubmissionStatus: null as string | null,
     };
+  });
+}
+
+/** Attach latest document/gateway KYC submission status for influencer rows. */
+export async function attachKycSubmissionStatus(rows: AdminAccountRow[]): Promise<AdminAccountRow[]> {
+  const slugs = rows.map((row) => row.creatorSlug).filter((slug): slug is string => Boolean(slug));
+  if (slugs.length === 0) return rows;
+  const submissions = await prisma.creatorKycSubmission
+    .findMany({
+      where: { creatorSlug: { in: slugs } },
+      select: { creatorSlug: true, status: true, kycModel: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    })
+    .catch(() => []);
+  const latest = new Map<string, { status: string; kycModel: string }>();
+  for (const row of submissions) {
+    if (latest.has(row.creatorSlug)) continue;
+    latest.set(row.creatorSlug, { status: row.status, kycModel: row.kycModel });
+  }
+  return rows.map((row) => {
+    if (!row.creatorSlug) return row;
+    const hit = latest.get(row.creatorSlug);
+    if (!hit) return row;
+    const model = hit.kycModel === "government_id" ? "document" : "gateway";
+    return { ...row, kycSubmissionStatus: `${hit.status} · ${model}` };
   });
 }

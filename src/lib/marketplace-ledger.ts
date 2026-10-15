@@ -44,6 +44,35 @@ import { splitMilestoneRelease } from "@/lib/account-purpose";
 
 const PROVIDER_CODE = "primary";
 
+/**
+ * Ensure a marketplace IntegrationProvider row exists for this code.
+ * Payment gateways and marketplace webhooks share codes but are different kind rows —
+ * jurisdiction assignment needs the marketplace kind.
+ */
+export async function ensureMarketplaceProviderForCode(input: {
+  code: string;
+  name?: string | null;
+}) {
+  const code = input.code.trim().toLowerCase();
+  if (!code || code === "demo") {
+    throw new Error("Choose a marketplace provider from the list.");
+  }
+  if (!marketplaceProviderCanConfirm(code)) {
+    throw new Error("That marketplace provider cannot confirm a prefund.");
+  }
+  const existing = await prisma.integrationProvider.findUnique({
+    where: { kind_code: { kind: "marketplace", code } },
+  });
+  if (existing) return existing;
+  const payment = await prisma.integrationProvider.findUnique({
+    where: { kind_code: { kind: "payment", code } },
+  });
+  const name = (input.name?.trim() || payment?.name?.trim() || code).slice(0, 80);
+  return prisma.integrationProvider.create({
+    data: { kind: "marketplace", code, name, enabled: false, webhookCipher: null },
+  });
+}
+
 /** A marketplace provider shows the stored name. A blank name shows the code. */
 export function marketplaceProviderLabel(name: string | null | undefined, code: string): string {
   const stored = (name ?? "").trim();
@@ -351,9 +380,7 @@ export async function saveJurisdiction(input: {
   if (minorDigits > 4) throw new Error("Minor digits must be from 0 to 4.");
   const providerCode = input.providerCode.trim().toLowerCase();
   if (!providerCode) throw new Error("Choose a marketplace provider.");
-  const assigned = await prisma.integrationProvider.findUnique({
-    where: { kind_code: { kind: "marketplace", code: providerCode } },
-  });
+  const assigned = await ensureMarketplaceProviderForCode({ code: providerCode });
   if (!assigned) throw new Error("Choose a marketplace provider.");
   const review = enteredLegalReviewStatus(input.legalReviewStatus);
   if (!review.ok) throw new Error(review.error);
@@ -457,27 +484,17 @@ export async function saveMarketplaceProvider(input: {
   clearWebhook?: boolean;
 }) {
   await ensureMarketplaceDefaults();
-  const code = (input.code || PROVIDER_CODE).trim().toLowerCase();
+  const code = (input.code ?? "").trim().toLowerCase();
+  if (!code) throw new Error("Choose a marketplace provider from the list.");
   if (!/^[a-z][a-z0-9-]{1,31}$/.test(code)) throw new Error("Choose a marketplace provider from the list.");
   if (code === "demo") {
     throw new Error("Demo cannot confirm a prefund. Choose another marketplace provider.");
   }
   const name = (input.name?.trim() || code).slice(0, 80);
   if (!name) throw new Error("A provider name is required.");
-  const existing = await prisma.integrationProvider.findUnique({
-    where: { kind_code: { kind: "marketplace", code } },
-  });
-  if (!existing) {
-    let webhookCipher: string | null = null;
-    if (input.webhook.trim()) {
-      const { encryptSecret } = await import("@/lib/provider-secrets");
-      webhookCipher = encryptSecret(input.webhook.trim());
-    }
-    return prisma.integrationProvider.create({
-      data: { kind: "marketplace", code, name, enabled: input.enabled, webhookCipher },
-    });
-  }
-  let webhookCipher = existing?.webhookCipher ?? null;
+  // Never fall back to Primary when another code was intended — empty code already rejected above.
+  const existing = await ensureMarketplaceProviderForCode({ code, name });
+  let webhookCipher = existing.webhookCipher ?? null;
   if (input.clearWebhook) webhookCipher = null;
   if (input.webhook.trim()) {
     const { encryptSecret } = await import("@/lib/provider-secrets");

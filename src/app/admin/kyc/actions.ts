@@ -13,10 +13,12 @@ import {
 
 function revalidateKycSurfaces() {
   revalidatePath("/admin/kyc");
+  revalidatePath("/admin/accounts");
   revalidatePath("/dashboard/kyc");
   revalidatePath("/creator");
   revalidatePath("/creator/earnings");
   revalidatePath("/collaboration/hub");
+  revalidatePath("/collaboration/contract");
 }
 
 export async function actionSaveKycGateway(formData: FormData) {

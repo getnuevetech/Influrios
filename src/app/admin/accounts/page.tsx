@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AdminAccountSection } from "@/app/admin/accounts/account-section";
-import { loadAdminAccounts } from "@/app/admin/accounts/load-accounts";
+import { attachKycSubmissionStatus, loadAdminAccounts } from "@/app/admin/accounts/load-accounts";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { assignablePlanCodes } from "@/lib/entitlements-db";
@@ -25,7 +25,7 @@ export default async function AdminInfluencerAccountsPage({
   const influencerPlans = catalogPlans.filter(
     (code) => !code.startsWith("BUSINESS") && code !== "AGENCY",
   );
-  const users = await loadAdminAccounts([...INFLUENCER_ROLES]);
+  const users = await attachKycSubmissionStatus(await loadAdminAccounts([...INFLUENCER_ROLES]));
 
   return (
     <AdminAccountSection
@@ -33,7 +33,11 @@ export default async function AdminInfluencerAccountsPage({
       title="Influencer accounts"
       blurb={
         <>
-          Creator sign-ins only. Business and agency accounts are on{" "}
+          Creator sign-ins only. Set Identity KYC on each account below (or review document uploads on{" "}
+          <Link href="/admin/kyc" className="font-semibold text-violet">
+            KYC
+          </Link>
+          ). Business and agency accounts are on{" "}
           <Link href="/admin/business-accounts" className="font-semibold text-violet">
             Business accounts
           </Link>

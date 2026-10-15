@@ -59,7 +59,9 @@ import { listProviders } from "@/lib/providers";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };
 
-type Props = { searchParams: Promise<{ saved?: string; error?: string; wiseRate?: string; wiseCurrency?: string }> };
+type Props = {
+  searchParams: Promise<{ saved?: string; error?: string; code?: string; wiseRate?: string; wiseCurrency?: string }>;
+};
 
 const CANCEL_REASONS = Object.keys(CANCELLATION_REASON_LABELS) as CancellationReason[];
 
@@ -116,6 +118,14 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
     paymentGateways,
     configuredMarketplace: marketplaceProviders,
   });
+  const providerCodes = new Set(providerOptions.map((row) => row.code));
+  // Keep the last-saved provider selected after redirect — empty defaultValue made browsers fall back to Primary.
+  const requestedProviderCode = (params.code ?? "").trim().toLowerCase();
+  const providerFormDefault = providerCodes.has(requestedProviderCode)
+    ? requestedProviderCode
+    : providerCodes.has(config.provider.code)
+      ? config.provider.code
+      : providerOptions[0]?.code ?? "primary";
 
   return (
     <div className="space-y-6">
@@ -157,7 +167,9 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Payment gateways
             </Link>{" "}
             (plus Primary), so a new gateway for another country appears here automatically. Enable it, paste that
-            provider’s webhook signing secret, then assign the same provider on each jurisdiction. Default (
+            provider’s webhook signing secret, then assign the <strong>same</strong> provider on each jurisdiction below —
+            jurisdictions still on Primary keep using Primary even after you configure Stripe or Airwallex here.
+            Platform default (
             {marketplaceProviderCatalogLabel(config.provider.code, config.provider.name, providerOptions)}):{" "}
             {config.provider.ready ? "ready" : "not ready"}.
           </p>
@@ -173,12 +185,9 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               <select
                 name="code"
                 required
-                defaultValue={config.provider.ready ? "" : "primary"}
+                defaultValue={providerFormDefault}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               >
-                <option value="" disabled>
-                  Choose a provider…
-                </option>
                 {providerOptions.map((row) => {
                   const configured = providersByCode.get(row.code);
                   const status = configured
@@ -742,7 +751,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Provider
               <select
                 name="providerCode"
-                defaultValue={row.providerCode}
+                defaultValue={providerCodes.has(row.providerCode) ? row.providerCode : providerFormDefault}
                 disabled={!canManage}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               >
@@ -753,6 +762,12 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                   </option>
                 ))}
               </select>
+              <span className="mt-1 block text-[11px] font-normal text-muted">
+                Contract payment readiness uses this jurisdiction assignment — not only the webhook form above.
+                {providersByCode.get(row.providerCode)?.ready
+                  ? ""
+                  : " Save webhook + Enabled for this provider above before funding."}
+              </span>
             </label>
             <p className="text-sm text-muted sm:col-span-2">Shown as {fundingTerm(row.escrowTermAllowed)}.</p>
             {canManage ? (

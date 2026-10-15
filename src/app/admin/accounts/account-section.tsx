@@ -4,6 +4,7 @@ import {
   actionSaveAccountPolicy,
   actionSaveMember,
   actionSendPasswordReset,
+  actionSetInfluencerIdentityKyc,
 } from "@/app/admin/accounts/actions";
 import { DEFAULT_SITE_CONFIG } from "@/lib/site-config";
 
@@ -23,6 +24,12 @@ export type AdminAccountRow = {
   secondaryLabel: string | null;
   /** Business profile contact person (reference only; not login) */
   contactLabel: string | null;
+  /** Creator slug when this login has an influencer profile */
+  creatorSlug?: string | null;
+  /** Creator.identityVerified — payout / contract identity gate */
+  identityVerified?: string | null;
+  /** Latest document or gateway KYC submission status, if any */
+  kycSubmissionStatus?: string | null;
 };
 
 function flash(params: { saved?: string; error?: string; reset?: string }) {
@@ -30,6 +37,14 @@ function flash(params: { saved?: string; error?: string; reset?: string }) {
     <>
       {params.saved === "policy" ? <p className="mt-4 text-sm font-semibold text-emerald-700">Account policy saved.</p> : null}
       {params.saved === "member" ? <p className="mt-4 text-sm font-semibold text-emerald-700">Account updated.</p> : null}
+      {params.saved === "kyc-verified" ? (
+        <p className="mt-4 text-sm font-semibold text-emerald-700">
+          Identity marked verified. Document KYC on Admin → KYC is linked to this account.
+        </p>
+      ) : null}
+      {params.saved === "kyc-rejected" ? (
+        <p className="mt-4 text-sm font-semibold text-emerald-700">Identity marked rejected.</p>
+      ) : null}
       {params.reset === "sent" ? (
         <p className="mt-4 text-sm font-semibold text-emerald-700">Password reset email queued for that member.</p>
       ) : null}
@@ -41,6 +56,14 @@ function flash(params: { saved?: string; error?: string; reset?: string }) {
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">That change could not be saved.</p> : null}
     </>
   );
+}
+
+function identityLabel(status: string | null | undefined) {
+  const value = (status ?? "UNVERIFIED").toUpperCase();
+  if (value === "VERIFIED") return { text: "Verified", className: "text-emerald-700" };
+  if (value === "PENDING") return { text: "Pending review", className: "text-amber-800" };
+  if (value === "REJECTED") return { text: "Rejected", className: "text-amber-800" };
+  return { text: "Not verified", className: "text-amber-800" };
 }
 
 export function AccountPolicyForm({
@@ -243,6 +266,52 @@ export function AdminAccountSection({
                     </label>
                   </div>
                 </form>
+                {kind === "influencer" && user.creatorSlug ? (
+                  <div className="mt-3 border-t border-[#EEF2FF] pt-3">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Identity KYC</p>
+                        <p className={`mt-1 text-sm font-semibold ${identityLabel(user.identityVerified).className}`}>
+                          {identityLabel(user.identityVerified).text}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          {user.kycSubmissionStatus
+                            ? `Document/gateway submission: ${user.kycSubmissionStatus}`
+                            : "No document or gateway submission yet — manual verify still clears payout readiness."}{" "}
+                          Review uploads on{" "}
+                          <Link href="/admin/kyc" className="font-semibold text-violet hover:underline">
+                            Admin → KYC
+                          </Link>
+                          .
+                        </p>
+                      </div>
+                      {canEdit ? (
+                        <form action={actionSetInfluencerIdentityKyc} className="flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="userId" value={user.id} />
+                          <input type="hidden" name="creatorSlug" value={user.creatorSlug} />
+                          <input type="hidden" name="section" value={kind} />
+                          <label className="text-xs font-semibold text-muted">
+                            Decision
+                            <select
+                              name="decision"
+                              defaultValue="verified"
+                              className="mt-1 rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo"
+                            >
+                              <option value="verified">Mark verified</option>
+                              <option value="rejected">Mark rejected</option>
+                            </select>
+                          </label>
+                          <button
+                            type="submit"
+                            className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm font-semibold text-indigo"
+                          >
+                            Update identity
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
                 {canEdit ? (
                   <form action={actionSendPasswordReset} className="mt-3 border-t border-[#EEF2FF] pt-3">
                     <input type="hidden" name="userId" value={user.id} />
