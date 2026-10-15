@@ -128,7 +128,9 @@ describe("entered provider names", () => {
     assert.equal(ledger.includes('?? "Marketplace provider"'), false);
     assert.equal(ledger.includes('name: "Marketplace provider"'), false);
     assert.equal(ledger.includes("airwallex"), false);
-    assert.match(catalog, /MARKETPLACE_PROVIDER_CATALOG/);
+    assert.match(catalog, /buildMarketplaceProviderOptions/);
+    assert.match(catalog, /paymentGateways/);
+    assert.match(page, /listProviders\("payment"\)/);
     assert.match(page, /name="code"/);
     assert.match(page, /name="enabled"/);
     assert.match(page, /Webhook signing secret/);

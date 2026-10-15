@@ -51,9 +51,10 @@ import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { feeTypeFromFundingSnapshot, type FeeTypeAmount } from "@/lib/ledger";
 import { AdminCollapse } from "@/components/admin-collapse";
 import {
-  MARKETPLACE_PROVIDER_CATALOG,
+  buildMarketplaceProviderOptions,
   marketplaceProviderCatalogLabel,
 } from "@/app/admin/marketplace/provider-catalog";
+import { listProviders } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };
@@ -81,7 +82,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const canManage = hasPermission(session, "marketplace.manage");
   const canHighRiskCancel = hasPermission(session, "collab_finance.high_risk");
   const params = await searchParams;
-  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, collabOsOn, paymentRisk, collabTypes, timeframes] =
+  const [config, fundings, totals, reasons, sources, claims, rates, parties, wise, reportsOn, collabOsOn, paymentRisk, collabTypes, timeframes, paymentGateways] =
     await Promise.all([
       marketplaceConfig(),
       listFundings(),
@@ -97,6 +98,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       listPaymentRiskFundings(),
       listAllCatalogOptions("collab_type"),
       listAllCatalogOptions("timeframe"),
+      listProviders("payment").catch(() => []),
     ]);
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
   const cancellable = fundings.filter((f) => f.status === "held" || f.status === "payment_risk");
@@ -110,6 +112,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const marketplaceProviders = config.providers.filter((row) => row.code !== "demo");
   const demoProvider = config.providers.find((row) => row.code === "demo") ?? null;
   const providersByCode = new Map(marketplaceProviders.map((row) => [row.code, row]));
+  const providerOptions = buildMarketplaceProviderOptions({
+    paymentGateways,
+    configuredMarketplace: marketplaceProviders,
+  });
 
   return (
     <div className="space-y-6">
@@ -145,10 +151,14 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-lg font-bold text-indigo">Marketplace provider</h2>
           <p className="mt-1 max-w-3xl text-sm text-muted">
-            This is the ledger webhook that confirms a collaboration prefund — not Payment gateways credentials.
-            Choose which provider to configure, set status to Enabled, and paste that provider’s webhook signing
-            secret. Then assign the same provider on each jurisdiction. Default (
-            {marketplaceProviderCatalogLabel(config.provider.code, config.provider.name)}):{" "}
+            This is the ledger webhook that confirms a collaboration prefund — not Payment gateways API keys.
+            The Provider list comes from{" "}
+            <Link href="/admin/gateways" className="font-semibold text-violet hover:underline">
+              Payment gateways
+            </Link>{" "}
+            (plus Primary), so a new gateway for another country appears here automatically. Enable it, paste that
+            provider’s webhook signing secret, then assign the same provider on each jurisdiction. Default (
+            {marketplaceProviderCatalogLabel(config.provider.code, config.provider.name, providerOptions)}):{" "}
             {config.provider.ready ? "ready" : "not ready"}.
           </p>
         </div>
@@ -169,7 +179,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 <option value="" disabled>
                   Choose a provider…
                 </option>
-                {MARKETPLACE_PROVIDER_CATALOG.map((row) => {
+                {providerOptions.map((row) => {
                   const configured = providersByCode.get(row.code);
                   const status = configured
                     ? configured.ready
@@ -231,11 +241,11 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
 
         <AdminCollapse
           title="Configured providers"
-          subtitle={`${marketplaceProviders.length} saved · expand for status`}
+          subtitle={`${marketplaceProviders.length} saved · ${providerOptions.length} available from gateways`}
           defaultOpen
         >
           <ul className="space-y-2 text-sm text-indigo">
-            {MARKETPLACE_PROVIDER_CATALOG.map((row) => {
+            {providerOptions.map((row) => {
               const configured = providersByCode.get(row.code);
               return (
                 <li key={row.code} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E4EBFF] px-3 py-2">
@@ -249,6 +259,12 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               );
             })}
           </ul>
+          {paymentGateways.length === 0 ? (
+            <p className="mt-3 text-xs text-amber-800">
+              No Payment gateways found yet. Add Stripe, Airwallex, or another gateway on Payment gateways, then
+              return here to save its marketplace webhook.
+            </p>
+          ) : null}
           {demoProvider ? (
             <p className="mt-3 text-xs text-muted">
               Demo is retained for local testing only and cannot confirm a real prefund
@@ -730,7 +746,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 disabled={!canManage}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               >
-                {MARKETPLACE_PROVIDER_CATALOG.map((provider) => (
+                {providerOptions.map((provider) => (
                   <option key={provider.code} value={provider.code}>
                     {provider.name}
                     {providersByCode.get(provider.code)?.ready ? " · ready" : " · configure webhook above first"}
@@ -823,7 +839,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               Provider
               <select name="providerCode" required defaultValue="" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
                 <option value="">Choose a provider</option>
-                {MARKETPLACE_PROVIDER_CATALOG.map((provider) => (
+                {providerOptions.map((provider) => (
                   <option key={provider.code} value={provider.code}>
                     {provider.name}
                     {providersByCode.get(provider.code)?.ready ? " · ready" : " · configure webhook above first"}

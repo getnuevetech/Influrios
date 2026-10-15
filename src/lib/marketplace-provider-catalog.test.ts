@@ -1,29 +1,48 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  MARKETPLACE_PROVIDER_CATALOG,
+  buildMarketplaceProviderOptions,
   marketplaceProviderCatalogLabel,
-  marketplaceProvidersAvailableToAdd,
 } from "@/app/admin/marketplace/provider-catalog";
 
-describe("marketplace provider catalog", () => {
-  it("labels known codes without inventing free-text names", () => {
-    assert.equal(marketplaceProviderCatalogLabel("primary"), "Primary marketplace");
-    assert.equal(marketplaceProviderCatalogLabel("airwallex"), "Airwallex");
-    assert.equal(marketplaceProviderCatalogLabel("custom", "Harbor"), "Harbor");
-  });
-
-  it("lists every supported provider for the admin dropdown", () => {
+describe("marketplace provider options from gateways", () => {
+  it("always includes Primary and merges live Payment gateways", () => {
+    const options = buildMarketplaceProviderOptions({
+      paymentGateways: [
+        { code: "airwallex", name: "Airwallex", enabled: true },
+        { code: "stripe", name: "Stripe", enabled: false },
+        { code: "demo", name: "Demo", enabled: true },
+      ],
+    });
     assert.deepEqual(
-      MARKETPLACE_PROVIDER_CATALOG.map((row) => row.code),
-      ["primary", "airwallex", "stripe", "flutterwave", "mpesa"],
+      options.map((row) => row.code),
+      ["primary", "airwallex", "stripe"],
     );
+    assert.match(options.find((row) => row.code === "airwallex")?.detail ?? "", /Payment gateways/);
+    assert.match(options.find((row) => row.code === "stripe")?.detail ?? "", /disabled/);
   });
 
-  it("offers only providers that are not already configured", () => {
-    const available = marketplaceProvidersAvailableToAdd(["primary", "airwallex"]);
-    assert.equal(available.some((row) => row.code === "primary"), false);
-    assert.equal(available.some((row) => row.code === "airwallex"), false);
-    assert.equal(available.some((row) => row.code === "stripe"), true);
+  it("keeps a saved marketplace provider that is not on Payment gateways yet", () => {
+    const options = buildMarketplaceProviderOptions({
+      paymentGateways: [{ code: "stripe", name: "Stripe", enabled: true }],
+      configuredMarketplace: [{ code: "harbor", name: "Harbor" }],
+    });
+    assert.equal(options.some((row) => row.code === "harbor"), true);
+    assert.equal(marketplaceProviderCatalogLabel("harbor", null, options), "Harbor");
+    assert.equal(marketplaceProviderCatalogLabel("primary"), "Primary marketplace");
+  });
+
+  it("picks up a newly added gateway code automatically", () => {
+    const before = buildMarketplaceProviderOptions({
+      paymentGateways: [{ code: "stripe", name: "Stripe", enabled: true }],
+    });
+    assert.equal(before.some((row) => row.code === "paystack"), false);
+    const after = buildMarketplaceProviderOptions({
+      paymentGateways: [
+        { code: "stripe", name: "Stripe", enabled: true },
+        { code: "paystack", name: "Paystack", enabled: true },
+      ],
+    });
+    assert.equal(after.some((row) => row.code === "paystack"), true);
   });
 });
