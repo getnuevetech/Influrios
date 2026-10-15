@@ -1,53 +1,74 @@
 /**
- * Admin-only catalog for Marketplace ledger provider dropdowns.
+ * Admin-only helpers for Marketplace ledger provider dropdowns.
+ * Options come from Payment gateways (+ Primary), so a new gateway appears here
+ * for per-country / jurisdiction assignment without inventing free-text codes.
  * Kept out of collaboration domain modules so provider brand names stay on the admin surface.
  */
 
-export const MARKETPLACE_PROVIDER_CATALOG = [
-  {
-    code: "primary",
-    name: "Primary marketplace",
-    detail: "Default when a jurisdiction does not assign another provider",
-  },
-  {
-    code: "airwallex",
-    name: "Airwallex",
-    detail: "Assign on jurisdictions that fund through Airwallex",
-  },
-  {
-    code: "stripe",
-    name: "Stripe",
-    detail: "Assign on jurisdictions that fund through Stripe",
-  },
-  {
-    code: "flutterwave",
-    name: "Flutterwave",
-    detail: "Assign on jurisdictions that fund through Flutterwave",
-  },
-  {
-    code: "mpesa",
-    name: "M-Pesa",
-    detail: "Assign on jurisdictions that fund through M-Pesa",
-  },
-] as const;
+export type MarketplaceProviderOption = {
+  code: string;
+  name: string;
+  detail: string;
+};
 
-export type MarketplaceProviderCatalogEntry = (typeof MARKETPLACE_PROVIDER_CATALOG)[number];
+export const PRIMARY_MARKETPLACE_PROVIDER: MarketplaceProviderOption = {
+  code: "primary",
+  name: "Primary marketplace",
+  detail: "Default when a jurisdiction does not assign another provider",
+};
 
-export function marketplaceProviderCatalogEntry(code: string | null | undefined) {
-  const normalized = (code ?? "").trim().toLowerCase();
-  return MARKETPLACE_PROVIDER_CATALOG.find((row) => row.code === normalized) ?? null;
+/**
+ * Build the Provider dropdown from live Payment gateways, always including Primary.
+ * Already-saved marketplace rows that are not (yet) on Payment gateways stay listed
+ * so existing jurisdiction assignments remain visible.
+ */
+export function buildMarketplaceProviderOptions(input: {
+  paymentGateways: { code: string; name: string; enabled?: boolean }[];
+  configuredMarketplace?: { code: string; name: string }[];
+}): MarketplaceProviderOption[] {
+  const byCode = new Map<string, MarketplaceProviderOption>();
+  byCode.set(PRIMARY_MARKETPLACE_PROVIDER.code, { ...PRIMARY_MARKETPLACE_PROVIDER });
+
+  for (const gateway of input.paymentGateways) {
+    const code = gateway.code.trim().toLowerCase();
+    if (!code || code === "demo" || code === "primary") continue;
+    const name = gateway.name.trim() || code;
+    byCode.set(code, {
+      code,
+      name,
+      detail: gateway.enabled
+        ? "From Payment gateways — use on jurisdictions that fund on this rail"
+        : "From Payment gateways (disabled there until you enable it)",
+    });
+  }
+
+  for (const row of input.configuredMarketplace ?? []) {
+    const code = row.code.trim().toLowerCase();
+    if (!code || code === "demo" || byCode.has(code)) continue;
+    byCode.set(code, {
+      code,
+      name: row.name.trim() || code,
+      detail: "Already saved on Marketplace ledger",
+    });
+  }
+
+  return [...byCode.values()].sort((a, b) => {
+    if (a.code === "primary") return -1;
+    if (b.code === "primary") return 1;
+    return a.name.localeCompare(b.name);
+  });
 }
 
-/** Display name for a marketplace provider code (catalog first, then stored name). */
-export function marketplaceProviderCatalogLabel(code: string, storedName?: string | null) {
-  const entry = marketplaceProviderCatalogEntry(code);
-  if (entry) return entry.name;
+/** Display name for a marketplace provider code (options first, then stored name). */
+export function marketplaceProviderCatalogLabel(
+  code: string,
+  storedName?: string | null,
+  options?: MarketplaceProviderOption[],
+) {
+  const normalized = code.trim().toLowerCase();
+  if (normalized === "primary") return PRIMARY_MARKETPLACE_PROVIDER.name;
+  const fromOptions = options?.find((row) => row.code === normalized);
+  if (fromOptions) return fromOptions.name;
   const stored = (storedName ?? "").trim();
   return stored || code.trim() || "Marketplace provider";
-}
-
-/** Codes still available to add on the Marketplace provider admin form. */
-export function marketplaceProvidersAvailableToAdd(configuredCodes: string[]) {
-  const taken = new Set(configuredCodes.map((code) => code.trim().toLowerCase()).filter(Boolean));
-  return MARKETPLACE_PROVIDER_CATALOG.filter((row) => !taken.has(row.code));
 }

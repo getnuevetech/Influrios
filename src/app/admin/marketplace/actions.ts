@@ -6,6 +6,7 @@ import { requireAdminAction } from "@/app/admin/guard";
 import { saveAttributionPolicy, saveAttributionSources, fileAttributionClaim, resolveAttributionClaim } from "@/lib/deal-attribution";
 import { saveDisputeReasons } from "@/lib/milestone-disputes";
 import {
+  marketplaceConfig,
   saveFundingSchedule,
   saveJurisdiction,
   saveMarketplaceProvider,
@@ -124,11 +125,23 @@ export async function actionSaveMarketplaceProvider(formData: FormData) {
   const clearRaw = String(formData.get("clearWebhook") ?? "").trim().toLowerCase();
   const code = String(formData.get("code") ?? "");
   const enteredName = String(formData.get("name") ?? "").trim();
-  const { marketplaceProviderCatalogLabel } = await import("@/app/admin/marketplace/provider-catalog");
+  const [{ buildMarketplaceProviderOptions, marketplaceProviderCatalogLabel }, { listProviders }] =
+    await Promise.all([
+      import("@/app/admin/marketplace/provider-catalog"),
+      import("@/lib/providers"),
+    ]);
+  const [paymentGateways, config] = await Promise.all([
+    listProviders("payment").catch(() => []),
+    marketplaceConfig().catch(() => null),
+  ]);
+  const options = buildMarketplaceProviderOptions({
+    paymentGateways,
+    configuredMarketplace: (config?.providers ?? []).filter((row) => row.code !== "demo"),
+  });
   try {
     await saveMarketplaceProvider({
       code,
-      name: enteredName || marketplaceProviderCatalogLabel(code),
+      name: enteredName || marketplaceProviderCatalogLabel(code, null, options),
       enabled: enabledRaw === "1" || enabledRaw === "on" || enabledRaw === "true",
       webhook: String(formData.get("webhook") ?? ""),
       clearWebhook: clearRaw === "1" || clearRaw === "on" || clearRaw === "true",
@@ -138,6 +151,7 @@ export async function actionSaveMarketplaceProvider(formData: FormData) {
     redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/gateways");
   redirect("/admin/marketplace?saved=provider");
 }
 
