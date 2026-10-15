@@ -35,7 +35,7 @@ export default async function AdminKycPage({ searchParams }: Props) {
       .findMany({
         orderBy: { slug: "asc" },
         select: { slug: true, displayName: true, identityVerified: true },
-        take: 200,
+        take: 500,
       })
       .catch(() => []),
   ]);
@@ -154,12 +154,18 @@ export default async function AdminKycPage({ searchParams }: Props) {
 
       <AdminCollapse
         title="Manual account KYC"
-        subtitle="Set Creator.identityVerified for payouts without a submission"
+        subtitle="Set Creator.identityVerified for payouts — also available on each Influencer account"
         defaultOpen
       >
         <p className="max-w-3xl text-sm text-muted">
           Use this when document or gateway KYC is complete offline, or to unblock payouts after verifying identity
-          outside Influrios. Verified status is what payout readiness checks.
+          outside Influrios. Verified status is what payout readiness and the contract wizard check. Manual verify also
+          writes a linked document-KYC submission row so Submissions below stay in sync. You can also set identity on
+          each row under{" "}
+          <Link href="/admin/accounts" className="font-semibold text-violet hover:underline">
+            Influencer accounts
+          </Link>
+          .
         </p>
         {canManage ? (
           <form action={actionAdminSetCreatorKyc} className="mt-3 flex flex-wrap items-end gap-3">

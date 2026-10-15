@@ -82,3 +82,33 @@ export async function actionSendPasswordReset(formData: FormData) {
   const result = await requestPasswordReset(user.email).catch(() => ({ sent: false }));
   redirect(result.sent ? `${base}?reset=sent` : `${base}?reset=failed`);
 }
+
+/**
+ * Manual identity verification on Influencer accounts.
+ * Writes Creator.identityVerified and upserts a document-KYC submission row so Admin → KYC stays in sync.
+ */
+export async function actionSetInfluencerIdentityKyc(formData: FormData) {
+  await requireAdminSession("accounts.edit");
+  const base = sectionPath(formData);
+  if (base !== "/admin/accounts") redirect(`${base}?error=member`);
+  const userId = clean(formData.get("userId"), 80);
+  const creatorSlug = clean(formData.get("creatorSlug"), 80);
+  const decision = clean(formData.get("decision"), 20);
+  if (!userId || !creatorSlug || (decision !== "verified" && decision !== "rejected")) {
+    redirect(`${base}?error=member`);
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { creator: { select: { slug: true } } },
+  });
+  if (!user || user.role !== "CREATOR" || user.creator?.slug !== creatorSlug) {
+    redirect(`${base}?error=member`);
+  }
+  try {
+    const { adminSetCreatorKyc } = await import("@/lib/kyc-document");
+    await adminSetCreatorKyc({ creatorSlug, decision });
+  } catch {
+    redirect(`${base}?error=member`);
+  }
+  redirect(`${base}?saved=kyc-${decision}`);
+}

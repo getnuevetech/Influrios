@@ -152,7 +152,10 @@ export async function actionSaveMarketplaceProvider(formData: FormData) {
   }
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin/gateways");
-  redirect("/admin/marketplace?saved=provider");
+  const savedCode = code.trim().toLowerCase();
+  redirect(
+    `/admin/marketplace?saved=provider${savedCode ? `&code=${encodeURIComponent(savedCode)}` : ""}`,
+  );
 }
 
 export async function actionSaveWise(formData: FormData) {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   buildMarketplaceProviderOptions,
@@ -44,5 +45,18 @@ describe("marketplace provider options from gateways", () => {
       ],
     });
     assert.equal(after.some((row) => row.code === "paystack"), true);
+  });
+});
+
+describe("marketplace provider save does not silently use Primary", () => {
+  it("requires an explicit provider code on save and keeps the selection after redirect", () => {
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    assert.equal(ledger.includes("(input.code || PROVIDER_CODE)"), false);
+    assert.match(ledger, /if \(!code\) throw new Error\("Choose a marketplace provider from the list\."\)/);
+    assert.match(actions, /code=\$\{encodeURIComponent\(savedCode\)\}/);
+    assert.match(page, /providerFormDefault/);
+    assert.match(page, /params\.code/);
   });
 });
