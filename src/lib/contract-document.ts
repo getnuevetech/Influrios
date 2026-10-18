@@ -379,24 +379,28 @@ export async function sendCollaborationContract(input: {
   const renderedBody = renderContractBody(template.body, input.render);
   const pdfBytes = renderContractPdf(renderedBody);
   const provider = await activeSigningProvider();
-  const secret = provider?.secretCipher ? decryptSecret(provider.secretCipher) : "";
-  const mode = resolveSigningMode(
-    provider?.code ?? "influrios",
-    provider
-      ? {
-          integrationKey: provider.integrationKey,
-          userId: provider.userId,
-          accountId: provider.publicKey,
-          privateKey: secret ?? "",
-          baseUrl: provider.baseUrl,
-        }
-      : null,
-  );
+  if (!provider) {
+    return {
+      ok: false as const,
+      error:
+        "Enable Influrios in-app signing or DocuSign in Admin → Document signing. Only one channel can be active. Nothing was signed.",
+    };
+  }
+  const secret = provider.secretCipher ? decryptSecret(provider.secretCipher) : "";
+  const mode = resolveSigningMode(provider.code, {
+    integrationKey: provider.integrationKey,
+    userId: provider.userId,
+    accountId: provider.publicKey,
+    privateKey: secret ?? "",
+    baseUrl: provider.baseUrl,
+  });
 
   let signingChannel: "native" | "docusign" = "native";
   let envelopeId = "";
 
-  if (mode === "docusign" && provider) {
+  if (mode === "native") {
+    signingChannel = "native";
+  } else if (mode === "docusign") {
     const credentials = assembleDocuSignCredentials({
       stored: {
         integrationKey: provider.integrationKey,
@@ -421,10 +425,13 @@ export async function sendCollaborationContract(input: {
     if (!opened.ok) return { ok: false as const, error: `${opened.error} Nothing was signed.` };
     signingChannel = "docusign";
     envelopeId = opened.envelopeId;
-  } else if (mode === "unconfigured" && provider && !isNativeSigningCode(provider.code)) {
+  } else if (isNativeSigningCode(provider.code)) {
+    signingChannel = "native";
+  } else {
     return {
       ok: false as const,
-      error: "DocuSign credentials are incomplete. Enable Influrios in-app signing, or finish DocuSign setup. Nothing was signed.",
+      error:
+        "DocuSign credentials are incomplete. Finish DocuSign setup, or enable Influrios in-app signing instead (only one can be active). Nothing was signed.",
     };
   }
 

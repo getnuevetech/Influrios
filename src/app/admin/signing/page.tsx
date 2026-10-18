@@ -69,11 +69,17 @@ export default async function AdminSigningPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Document signing</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        <strong className="text-indigo">Influrios in-app signing</strong> is primary: parties type their legal name on
-        the contract page — no DocuSign required. DocuSign stays optional: enable it and save the integration key, user
-        id, account id, RSA private key, and API base URL only when you want that channel. Active mode:{" "}
-        <span className="font-semibold text-indigo">{signingModeLabel(activeCode, signingIdentity(providers.find((provider) => provider.enabled) ?? providers[0]))}</span>.
-        DocuSign webhook (when used): <code className="text-xs">POST /api/signing/webhook</code>.
+        Choose <strong className="text-indigo">one</strong> signing channel. Enable Influrios in-app signing{" "}
+        <em>or</em> DocuSign — not both. Enabling one automatically disables the other. Influrios needs no API keys
+        (parties type their legal name on the contract page). DocuSign needs the integration key, user id, account id,
+        RSA private key, and API base URL. Active:{" "}
+        <span className="font-semibold text-indigo">
+          {providers.some((p) => p.enabled)
+            ? signingModeLabel(activeCode, signingIdentity(providers.find((provider) => provider.enabled)))
+            : "None — enable one channel below"}
+        </span>
+        . DocuSign webhook (when DocuSign is the active channel):{" "}
+        <code className="text-xs">POST /api/signing/webhook</code>.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
@@ -128,12 +134,20 @@ export default async function AdminSigningPage({ searchParams }: Props) {
             </label>
               </>
             )}
-            <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+            <label className="flex items-center gap-2 text-sm font-semibold text-indigo sm:col-span-2">
               <input type="checkbox" name="enabled" value="1" defaultChecked={provider.enabled} disabled={!canEdit} />
-              Enabled
+              Enabled (turns off every other signing channel)
             </label>
-            <p className="text-xs text-muted sm:col-span-2">{signingModeLabel(provider.code, signingIdentity(provider))}</p>
-            {canEdit ? <button type="submit" className="btn-primary w-fit">{isNative ? "Save in-app signing" : "Save signing API"}</button> : null}
+            <p className="text-xs text-muted sm:col-span-2">
+              {provider.enabled
+                ? `Active channel · ${signingModeLabel(provider.code, signingIdentity(provider))}`
+                : `Off · ${signingModeLabel(provider.code, signingIdentity(provider))}`}
+            </p>
+            {canEdit ? (
+              <button type="submit" className="btn-primary w-fit">
+                {isNative ? "Save in-app signing" : "Save DocuSign"}
+              </button>
+            ) : null}
           </form>
           );
         })}

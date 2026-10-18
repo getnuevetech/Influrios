@@ -203,9 +203,9 @@ const LINKS: {
   {
     href: "/admin/signing",
     title: "Document signing",
-    blurb: "Influrios in-app signing (primary) and optional DocuSign credentials.",
+    blurb: "Enable Influrios in-app signing or DocuSign — only one at a time.",
     module: "signing",
-    meta: () => "Native primary · DocuSign optional",
+    meta: () => "One active channel",
   },
   {
     href: "/admin/social",
