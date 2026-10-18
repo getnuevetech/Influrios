@@ -272,6 +272,54 @@ export function isMessageAudience(value: string): value is MessageAudience {
   return value === "party" || value === "all_parties" || value === "admin" || value === "contract_manager";
 }
 
+/** Match a logged-in account to a contract party by user id, then by email (case-insensitive). */
+export function resolveContractPartyForAccount<T extends { id: string; userId: string | null; email: string }>(
+  parties: T[],
+  account: { id: string; email: string },
+): T | undefined {
+  const byUser = parties.find((party) => party.userId && party.userId === account.id);
+  if (byUser) return byUser;
+  const email = account.email.trim().toLowerCase();
+  if (!email) return undefined;
+  return parties.find((party) => party.email.trim().toLowerCase() === email);
+}
+
+/**
+ * Recipients who should be notified when a contract message is posted.
+ * Admin / contract_manager audiences stay in-app for staff (no party email blast).
+ */
+export function contractMessageNotifyEmails(input: {
+  audience: MessageAudience;
+  parties: { id: string; email: string; userId: string | null }[];
+  recipientPartyId?: string | null;
+  senderUserId?: string | null;
+  senderEmail?: string | null;
+}): string[] {
+  const senderEmail = (input.senderEmail ?? "").trim().toLowerCase();
+  const skip = (email: string, userId: string | null) => {
+    const cleaned = email.trim().toLowerCase();
+    if (!cleaned || !cleaned.includes("@")) return true;
+    if (input.senderUserId && userId && userId === input.senderUserId) return true;
+    if (senderEmail && cleaned === senderEmail) return true;
+    return false;
+  };
+  if (input.audience === "all_parties") {
+    return [
+      ...new Set(
+        input.parties
+          .filter((party) => !skip(party.email, party.userId))
+          .map((party) => party.email.trim().toLowerCase()),
+      ),
+    ];
+  }
+  if (input.audience === "party") {
+    const recipient = input.parties.find((party) => party.id === input.recipientPartyId);
+    if (!recipient || skip(recipient.email, recipient.userId)) return [];
+    return [recipient.email.trim().toLowerCase()];
+  }
+  return [];
+}
+
 export function messageVisible(input: {
   audience: string;
   recipientPartyId: string | null;
@@ -285,7 +333,10 @@ export function messageVisible(input: {
   if (input.viewer.kind === "admin" && input.senderAdminId && input.senderAdminId === input.viewer.userId) return true;
   if (input.viewer.kind === "admin") {
     if (input.viewer.roleId === "role_super" || input.viewer.permissions.includes("contracts.message")) return true;
-    if (input.viewer.permissions.includes("contracts.manage") && input.audience === "contract_manager") return true;
+    // Contract managers see threads addressed to them and party-wide conversation.
+    if (input.viewer.permissions.includes("contracts.manage")) {
+      return input.audience === "contract_manager" || input.audience === "all_parties";
+    }
     return false;
   }
   if (input.audience === "all_parties") return true;
@@ -470,6 +521,14 @@ export async function sendCollaborationContract(input: {
     });
   }
 
+  await notifyContractStage({
+    documentId: document.id,
+    title: input.render.title.slice(0, 160),
+    stage: "sent",
+    signingChannel,
+    parties: input.render.parties.map((party) => ({ email: party.email, name: party.name })),
+  }).catch(() => undefined);
+
   return { ok: true as const, id: document.id, envelopeId, signingChannel };
 }
 
@@ -479,6 +538,7 @@ export async function sendCollaborationContract(input: {
 export async function signNativeContractParty(input: {
   documentId: string;
   userId: string;
+  email?: string | null;
   typedName: string;
 }) {
   const typedName = input.typedName.trim();
@@ -507,11 +567,21 @@ export async function signNativeContractParty(input: {
     return { ok: false as const, error: `This agreement cannot be signed while it is “${document.status}”.` };
   }
 
-  const partyIndex = document.parties.findIndex((row) => row.userId === input.userId);
-  if (partyIndex < 0) {
+  const matched = resolveContractPartyForAccount(document.parties, {
+    id: input.userId,
+    email: input.email ?? "",
+  });
+  const partyIndex = matched ? document.parties.findIndex((row) => row.id === matched.id) : -1;
+  if (partyIndex < 0 || !matched) {
     return { ok: false as const, error: "You are not a party on this agreement. Nothing was signed." };
   }
-  const party = document.parties[partyIndex]!;
+  if (matched.userId !== input.userId) {
+    await prisma.contractParty.update({
+      where: { id: matched.id },
+      data: { userId: input.userId },
+    });
+  }
+  const party = { ...matched, userId: input.userId };
   if (party.status === "signed") {
     const allDone = document.parties.every((row) => row.status === "signed" || row.id === party.id);
     return {
@@ -555,6 +625,39 @@ export async function signNativeContractParty(input: {
     }),
   ]);
 
+  const partyEmails = document.parties.map((row) => ({ email: row.email, name: row.name }));
+  if (documentStatus === "signed") {
+    await notifyContractStage({
+      documentId: document.id,
+      title: document.title,
+      stage: "completed",
+      signingChannel: "native",
+      parties: partyEmails,
+    }).catch(() => undefined);
+  } else {
+    await notifyContractStage({
+      documentId: document.id,
+      title: document.title,
+      stage: "party_signed",
+      signingChannel: "native",
+      parties: partyEmails,
+      actorName: typedName,
+      excludeEmails: [party.email],
+    }).catch(() => undefined);
+    // Remind remaining pending parties to sign.
+    const pending = document.parties.filter((row) => row.id !== party.id && row.status === "pending");
+    if (pending.length > 0) {
+      await notifyContractStage({
+        documentId: document.id,
+        title: document.title,
+        stage: "signature_reminder",
+        signingChannel: "native",
+        parties: pending.map((row) => ({ email: row.email, name: row.name })),
+        actorName: typedName,
+      }).catch(() => undefined);
+    }
+  }
+
   return { ok: true as const, id: document.id, status: documentStatus as "sent" | "signed" };
 }
 
@@ -588,16 +691,50 @@ export async function applyContractEnvelopeEvent(input: {
           }),
         ]),
   ]);
+  if (input.status === "completed" || input.status === "declined" || input.status === "voided") {
+    await notifyContractStage({
+      documentId: document.id,
+      title: document.title,
+      stage: input.status === "completed" ? "completed" : input.status,
+      signingChannel: "docusign",
+      parties: document.parties.map((row) => ({ email: row.email, name: row.name })),
+    }).catch(() => undefined);
+  }
   return { ok: true as const, applied: true, id: document.id, status: next.documentStatus };
 }
 
-export async function listContractsForUser(userId: string) {
+export async function listContractsForUser(userId: string, email?: string | null) {
+  const emailNorm = (email ?? "").trim().toLowerCase();
   return prisma.contractDocument.findMany({
-    where: { parties: { some: { userId } } },
+    where: {
+      OR: [
+        { parties: { some: { userId } } },
+        ...(emailNorm ? [{ parties: { some: { email: { equals: emailNorm, mode: "insensitive" as const } } } }] : []),
+      ],
+    },
     include: { parties: { orderBy: { createdAt: "asc" } } },
     orderBy: { createdAt: "desc" },
     take: 30,
   });
+}
+
+/** Resolve the caller's party row and heal a stale/missing userId when email matches. */
+export async function resolveContractPartyForSession(
+  documentId: string,
+  account: { id: string; email: string } | null | undefined,
+) {
+  if (!account) return null;
+  const parties = await prisma.contractParty.findMany({ where: { documentId } });
+  const party = resolveContractPartyForAccount(parties, account);
+  if (!party) return null;
+  if (party.userId !== account.id) {
+    await prisma.contractParty.update({
+      where: { id: party.id },
+      data: { userId: account.id },
+    });
+    return { ...party, userId: account.id };
+  }
+  return party;
 }
 
 export async function postContractMessage(input: {
@@ -608,6 +745,7 @@ export async function postContractMessage(input: {
   senderName: string;
   senderUserId?: string | null;
   senderAdminId?: string | null;
+  senderEmail?: string | null;
   viewerPartyId?: string | null;
   admin?: { roleId: string; permissions: string[] } | null;
 }) {
@@ -637,5 +775,145 @@ export async function postContractMessage(input: {
       senderAdminId: input.senderAdminId || null,
     },
   });
-  return { ok: true as const, id: row.id };
+
+  const notifyEmails = contractMessageNotifyEmails({
+    audience: input.audience,
+    parties: document.parties,
+    recipientPartyId: input.recipientPartyId,
+    senderUserId: input.senderUserId,
+    senderEmail: input.senderEmail,
+  });
+  if (notifyEmails.length > 0) {
+    await notifyContractStage({
+      documentId: document.id,
+      title: document.title,
+      stage: "message",
+      signingChannel: document.signingChannel === "docusign" ? "docusign" : "native",
+      parties: notifyEmails.map((email) => ({ email, name: "" })),
+      actorName: input.senderName,
+      messageBody: body.slice(0, 400),
+    }).catch(() => undefined);
+  }
+
+  return { ok: true as const, id: row.id, notified: notifyEmails.length };
+}
+
+export type ContractNotifyStage =
+  | "sent"
+  | "party_signed"
+  | "signature_reminder"
+  | "completed"
+  | "declined"
+  | "voided"
+  | "message";
+
+export function contractStageEmailCopy(input: {
+  stage: ContractNotifyStage;
+  title: string;
+  link: string;
+  signingChannel?: string;
+  actorName?: string;
+  messageBody?: string;
+}): { subject: string; text: string; notificationKind: string } {
+  const title = input.title.slice(0, 80);
+  const actor = (input.actorName ?? "A party").trim() || "A party";
+  const native = (input.signingChannel ?? "native") !== "docusign";
+  switch (input.stage) {
+    case "sent":
+      return {
+        subject: `Action needed: sign “${title}”`,
+        text: native
+          ? `You are a party on the collaboration agreement “${input.title}”.\n\nOpen the contract and sign with your legal name:\n${input.link}\n\nFunding cannot start until every party has signed.`
+          : `You are a party on the collaboration agreement “${input.title}”.\n\nComplete your DocuSign envelope, then you can follow progress here:\n${input.link}\n\nFunding cannot start until every party has signed.`,
+        notificationKind: "contract_sent",
+      };
+    case "party_signed":
+      return {
+        subject: `Signature progress on “${title}”`,
+        text: `${actor} signed “${input.title}”.\n\nOpen the contract to see who still needs to sign:\n${input.link}`,
+        notificationKind: "contract_party_signed",
+      };
+    case "signature_reminder":
+      return {
+        subject: `Still needed: your signature on “${title}”`,
+        text: `${actor} signed “${input.title}”. Your signature is still needed.\n\nSign here:\n${input.link}`,
+        notificationKind: "contract_signature_reminder",
+      };
+    case "completed":
+      return {
+        subject: `Fully signed: “${title}”`,
+        text: `Every party has signed “${input.title}”. Funding can start.\n\nOpen the signed agreement:\n${input.link}`,
+        notificationKind: "contract_completed",
+      };
+    case "declined":
+      return {
+        subject: `Contract declined: “${title}”`,
+        text: `The agreement “${input.title}” was declined.\n\nView status:\n${input.link}`,
+        notificationKind: "contract_declined",
+      };
+    case "voided":
+      return {
+        subject: `Contract voided: “${title}”`,
+        text: `The agreement “${input.title}” was voided.\n\nView status:\n${input.link}`,
+        notificationKind: "contract_voided",
+      };
+    case "message":
+      return {
+        subject: `New message on contract “${title}”`,
+        text: `${actor} wrote on “${input.title}”:\n\n${input.messageBody ?? ""}\n\nOpen the contract to reply: ${input.link}`,
+        notificationKind: "contract_message",
+      };
+  }
+}
+
+/** Email every listed party for a contract lifecycle stage (skips blank addresses). */
+export async function notifyContractStage(input: {
+  documentId: string;
+  title: string;
+  stage: ContractNotifyStage;
+  signingChannel?: string;
+  parties: { email: string; name?: string }[];
+  actorName?: string;
+  messageBody?: string;
+  excludeEmails?: string[];
+}) {
+  const { getAppOrigin } = await import("@/lib/billing");
+  const { processDueJobs } = await import("@/lib/jobs");
+  const { mailReady } = await import("@/lib/mail");
+  if (!(await mailReady())) return { queued: 0 };
+  const exclude = new Set((input.excludeEmails ?? []).map((email) => email.trim().toLowerCase()).filter(Boolean));
+  const emails = [
+    ...new Set(
+      input.parties
+        .map((party) => party.email.trim().toLowerCase())
+        .filter((email) => email.includes("@") && !exclude.has(email)),
+    ),
+  ];
+  if (emails.length === 0) return { queued: 0 };
+  const link = `${getAppOrigin()}/collaboration/contracts/${input.documentId}`;
+  const copy = contractStageEmailCopy({
+    stage: input.stage,
+    title: input.title,
+    link,
+    signingChannel: input.signingChannel,
+    actorName: input.actorName,
+    messageBody: input.messageBody,
+  });
+  for (const to of emails) {
+    await prisma.job.create({
+      data: {
+        kind: "collab_notification",
+        status: "queued",
+        payload: {
+          to,
+          subject: copy.subject,
+          text: copy.text,
+          notificationKind: copy.notificationKind,
+          documentId: input.documentId,
+        },
+      },
+    });
+  }
+  await processDueJobs().catch(() => undefined);
+  return { queued: emails.length };
 }
