@@ -8,6 +8,7 @@ import {
   classifyContractPdfLines,
   contractMessageNotifyEmails,
   contractStageEmailCopy,
+  displayServiceLevel,
   fundingAllowedBySignature,
   messageVisible,
   renderContractBody,
@@ -130,10 +131,11 @@ describe("contract documents", () => {
   });
 
   it("describes in-app signing in the default template and stamps native attestations", () => {
-    assert.match(DEFAULT_CONTRACT_TEMPLATE, /signs this agreement in Influrios/);
-    assert.equal(DEFAULT_CONTRACT_TEMPLATE.includes("A button inside Influrios does not sign"), false);
+    assert.match(DEFAULT_CONTRACT_TEMPLATE, /19\. Electronic Signature/);
+    assert.match(DEFAULT_CONTRACT_TEMPLATE, /page-endorsement initials/);
+    assert.match(DEFAULT_CONTRACT_TEMPLATE, /Commercial Summary/);
     const stamped = applyNativeSignatureAnchor(
-      "Agreement\n/sig1/\n",
+      "Agreement\nBusiness  North  north@example.com  Pending Signature\n[[SIG_INK:1]]\n/sig1/\n",
       1,
       formatNativeAttestation({
         role: "business",
@@ -143,7 +145,39 @@ describe("contract documents", () => {
       }),
     );
     assert.match(stamped, /Signed in Influrios/);
+    assert.match(stamped, /Page endorsement initials/);
+    assert.equal(stamped.includes("[[SIG:"), false);
+    assert.match(stamped, /\[\[SIG_INK:1\]\]/);
     assert.equal(stamped.includes("/sig1/"), false);
+    assert.match(stamped, /Signed\s*\n\s*\[\[SIG_INK:1\]\]/);
+    assert.equal(/Pending Signature/.test(stamped), false);
+  });
+
+  it("draws signature ink and page endorsement markers into the PDF stream", () => {
+    const body = "COLLABORATION AGREEMENT\n\n1. Parties\n[[SIG_INK:1]]\nSigned in Influrios - business: North Co\n";
+    const pdf = renderContractPdf(body, {
+      agreementId: "doc_test",
+      signatures: [
+        {
+          partyIndex: 1,
+          typedName: "North Co",
+          role: "business",
+          email: "north@example.com",
+          signedAt: "2026-10-18T12:00:00.000Z",
+        },
+      ],
+      pageEndorsements: true,
+    });
+    const raw = pdf.toString("latin1");
+    assert.match(raw, /Page endorsement/);
+    assert.match(raw, /\(INFLURIOS/);
+    assert.match(raw, /Page endorsement \/ initials/);
+    assert.ok(/[\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ c/.test(raw));
+  });
+
+  it("maps service level enums to display labels", () => {
+    assert.equal(displayServiceLevel("managed_campaign"), "Managed campaign");
+    assert.equal(displayServiceLevel("contracted"), "Contracted collaboration");
   });
 
   it("shows each message only to the chosen readers", () => {
