@@ -7,6 +7,7 @@ import {
   asciiForPdf as asciiForPdfImpl,
   classifyContractPdfLines as classifyContractPdfLinesImpl,
   renderContractPdf as renderContractPdfImpl,
+  endorsementSlotsFromParties,
   signaturesFromParties,
   wrapContractLines as wrapContractLinesImpl,
   type ContractPdfLine,
@@ -376,6 +377,165 @@ export function renderContractPdf(text: string, options: ContractPdfOptions = {}
   return renderContractPdfImpl(text, options);
 }
 
+/** True when the stored body predates the approved Influrios chrome template. */
+export function isLegacyContractBody(body: string): boolean {
+  const text = body ?? "";
+  if (!text.trim()) return true;
+  const hasChrome =
+    text.includes("19. Electronic Signature") &&
+    text.includes("Commercial Summary") &&
+    text.includes("[[SIG_INK:");
+  return !hasChrome;
+}
+
+function fieldFromLegacy(body: string, label: string): string {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = body.match(new RegExp(`${escaped}:\\s*(.+)`, "i"));
+  return match?.[1]?.trim() ?? "";
+}
+
+function parseLegacyMilestones(body: string): ContractRenderInput["milestones"] {
+  const section = body.split(/\n\s*4\.\s+Milestones\b/i)[1]?.split(/\n\s*5\.\s+/i)[0] ?? "";
+  if (!section.trim() || /none scheduled/i.test(section)) return [];
+  const blocks = section.split(/\n(?=\d+\.\s+)/).map((block) => block.trim()).filter(Boolean);
+  const rows: ContractRenderInput["milestones"] = [];
+  for (const block of blocks) {
+    const title = block.match(/^\d+\.\s+(.+)/)?.[1]?.trim() ?? "";
+    if (!title || /none scheduled/i.test(title)) continue;
+    rows.push({
+      title: title.split("\n")[0].trim(),
+      shareLabel: fieldFromLegacy(block, "Share") || "—",
+      grossLabel: fieldFromLegacy(block, "Gross") || "—",
+      feeLabel: fieldFromLegacy(block, "Platform fee") || "—",
+      creatorShares: fieldFromLegacy(block, "Creator payout") || "—",
+    });
+  }
+  return rows;
+}
+
+export type ContractChromeDocument = {
+  id: string;
+  title: string;
+  status: string;
+  renderedBody: string;
+  signingChannel?: string | null;
+  createdAt?: Date | string | null;
+  parties: {
+    role: string;
+    name: string;
+    email: string;
+    userId?: string | null;
+    creatorSlug?: string | null;
+    shareBps?: number | null;
+    status: string;
+    attestation?: string | null;
+    signedAt?: Date | string | null;
+  }[];
+};
+
+/**
+ * Rebuild a legacy agreement into the approved Influrios template chrome,
+ * preserving commercial fields parsed from the old body and re-stamping
+ * any signatures already recorded on party rows.
+ */
+export function upgradeLegacyContractBody(document: ContractChromeDocument): string {
+  const body = document.renderedBody || "";
+  if (!isLegacyContractBody(body)) return body;
+
+  const business = document.parties.find((party) => party.role === "business");
+  const creators = document.parties.filter((party) => party.role === "creator" || party.role === "influencer");
+  const parties: ContractPartyInput[] = [
+    ...(business
+      ? [
+          {
+            role: "business" as const,
+            name: business.name,
+            email: business.email,
+            userId: business.userId,
+            shareBps: business.shareBps ?? 0,
+          },
+        ]
+      : []),
+    ...creators.map((party) => ({
+      role: "creator" as const,
+      name: party.name,
+      email: party.email,
+      userId: party.userId,
+      creatorSlug: party.creatorSlug,
+      shareBps: party.shareBps ?? 0,
+    })),
+  ];
+
+  const statusLabel =
+    document.status === "signed"
+      ? "Fully Executed"
+      : document.status === "sent"
+        ? "Ready for Signature"
+        : document.status === "draft"
+          ? "Draft"
+          : document.status;
+
+  const input: ContractRenderInput = {
+    title: document.title || fieldFromLegacy(body, "campaign") || "Collaboration agreement",
+    scope: fieldFromLegacy(body, "Scope") || "Per campaign record",
+    commercial: fieldFromLegacy(body, "Commercial terms") || "Per campaign record",
+    jurisdiction: fieldFromLegacy(body, "Jurisdiction") || "Per campaign record",
+    serviceLevel: fieldFromLegacy(body, "Service level") || "contracted",
+    currency: fieldFromLegacy(body, "Currency") || "USD",
+    grossLabel: fieldFromLegacy(body, "Gross contract value") || "—",
+    platformFeeLabel: fieldFromLegacy(body, "Platform fee") || "—",
+    creatorCompensationLabel: fieldFromLegacy(body, "Creator compensation") || "—",
+    businessName: business?.name || fieldFromLegacy(body, "Business")?.replace(/\s*\(.*\)$/, "") || "Business",
+    businessEmail: business?.email || "",
+    parties,
+    milestones: parseLegacyMilestones(body),
+    feeDisclosure: body.match(/Fee rule[^\n]*/i)?.[0]?.trim() || "Per campaign fee disclosure",
+    generatedAt:
+      (typeof document.createdAt === "string" ? document.createdAt : document.createdAt?.toISOString()) ||
+      fieldFromLegacy(body, "Generated") ||
+      new Date().toISOString(),
+    agreementId: document.id,
+    agreementStatus: statusLabel,
+    esignProvider:
+      document.signingChannel === "docusign" ? "DocuSign" : "Influrios in-app signing",
+  };
+
+  let next = renderContractBody(DEFAULT_CONTRACT_TEMPLATE, input);
+
+  // Re-apply recorded signatures onto the new ink anchors.
+  document.parties.forEach((party, index) => {
+    if (party.status !== "signed") return;
+    const typedName = (party.attestation || party.name || "").trim();
+    if (!typedName) return;
+    const signedAt =
+      party.signedAt instanceof Date
+        ? party.signedAt
+        : party.signedAt
+          ? new Date(party.signedAt)
+          : new Date();
+    const attestation = formatNativeAttestation({
+      role: party.role === "influencer" ? "creator" : party.role,
+      typedName,
+      email: party.email,
+      signedAt: Number.isNaN(signedAt.getTime()) ? new Date() : signedAt,
+    });
+    next = applyNativeSignatureAnchor(next, index + 1, attestation);
+  });
+
+  return next;
+}
+
+/** Always return chrome-ready body text (upgrades legacy stores in memory). */
+export function resolveContractBodyForChrome(document: ContractChromeDocument): {
+  body: string;
+  upgraded: boolean;
+} {
+  if (!isLegacyContractBody(document.renderedBody)) {
+    return { body: document.renderedBody, upgraded: false };
+  }
+  return { body: upgradeLegacyContractBody(document), upgraded: true };
+}
+
 export function fundingAllowedBySignature(status: string): { ok: true } | { ok: false; error: string } {
   if (status === "signed") return { ok: true };
   return {
@@ -567,6 +727,14 @@ export async function sendCollaborationContract(input: {
     title: input.render.title,
     agreementId: input.render.agreementId,
     signatures: [],
+    endorsementSlots: endorsementSlotsFromParties(
+      input.render.parties.map((party) => ({
+        role: party.role,
+        attestation: null,
+        status: "pending",
+        name: party.name,
+      })),
+    ),
     pageEndorsements: true,
   });
   const provider = await activeSigningProvider();
@@ -742,7 +910,17 @@ export async function signNativeContractParty(input: {
     email: party.email,
     signedAt,
   });
-  const nextBody = applyNativeSignatureAnchor(document.renderedBody, partyIndex + 1, attestation);
+  // Upgrade legacy bodies first so /sigN/ and [[SIG_INK:N]] anchors match the new chrome.
+  const chromeReady = resolveContractBodyForChrome({
+    id: document.id,
+    title: document.title,
+    status: document.status,
+    renderedBody: document.renderedBody,
+    signingChannel: document.signingChannel,
+    createdAt: document.createdAt,
+    parties: document.parties,
+  }).body;
+  const nextBody = applyNativeSignatureAnchor(chromeReady, partyIndex + 1, attestation);
   const nextParties = document.parties.map((row) =>
     row.id === party.id
       ? { ...row, status: "signed", attestation: typedName.slice(0, 160), signedAt }
@@ -753,6 +931,7 @@ export async function signNativeContractParty(input: {
     title: document.title,
     agreementId: document.id,
     signatures: signaturesFromParties(nextParties),
+    endorsementSlots: endorsementSlotsFromParties(nextParties),
     pageEndorsements: true,
   });
 

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
-import { renderContractPdf, resolveContractPartyForAccount } from "@/lib/contract-document";
-import { signaturesFromParties } from "@/lib/contract-pdf";
+import {
+  renderContractPdf,
+  resolveContractBodyForChrome,
+  resolveContractPartyForAccount,
+} from "@/lib/contract-document";
+import { endorsementSlotsFromParties, signaturesFromParties } from "@/lib/contract-pdf";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +29,12 @@ export async function GET(_request: Request, { params }: Props) {
             userId: true,
             email: true,
             role: true,
+            name: true,
             status: true,
             attestation: true,
             signedAt: true,
+            creatorSlug: true,
+            shareBps: true,
           },
         },
       },
@@ -48,13 +55,36 @@ export async function GET(_request: Request, { params }: Props) {
     return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
   }
 
-  // Always render from the stored agreement text so layout fixes apply to older contracts too.
-  const pdf = renderContractPdf(document.renderedBody || "Collaboration agreement", {
+  // Upgrade legacy bodies to the approved chrome template, then always re-render.
+  const { body, upgraded } = resolveContractBodyForChrome({
+    id: document.id,
+    title: document.title,
+    status: document.status,
+    renderedBody: document.renderedBody || "Collaboration agreement",
+    signingChannel: document.signingChannel,
+    createdAt: document.createdAt,
+    parties: document.parties,
+  });
+  const pdf = renderContractPdf(body, {
     title: document.title,
     agreementId: document.id,
     signatures: signaturesFromParties(document.parties),
+    endorsementSlots: endorsementSlotsFromParties(document.parties),
     pageEndorsements: true,
   });
+
+  if (upgraded || !document.pdfBytes?.length) {
+    await prisma.contractDocument
+      .update({
+        where: { id: document.id },
+        data: {
+          renderedBody: body,
+          pdfBytes: new Uint8Array(pdf),
+        },
+      })
+      .catch(() => undefined);
+  }
+
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "content-type": "application/pdf",

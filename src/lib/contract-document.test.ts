@@ -10,12 +10,15 @@ import {
   contractStageEmailCopy,
   displayServiceLevel,
   fundingAllowedBySignature,
+  isLegacyContractBody,
   messageVisible,
   renderContractBody,
   renderContractPdf,
   renderContractTemplate,
+  resolveContractBodyForChrome,
   resolveContractPartyForAccount,
   signatureBlock,
+  upgradeLegacyContractBody,
   wrapContractLines,
 } from "./contract-document";
 import { applyNativeSignatureAnchor, formatNativeAttestation } from "./signing/native";
@@ -178,6 +181,101 @@ describe("contract documents", () => {
   it("maps service level enums to display labels", () => {
     assert.equal(displayServiceLevel("managed_campaign"), "Managed campaign");
     assert.equal(displayServiceLevel("contracted"), "Contracted collaboration");
+  });
+
+  it("upgrades legacy contract bodies into the approved chrome template", () => {
+    const legacy = `COLLABORATION AGREEMENT
+
+Generated: 2026-10-07T00:00:00.000Z
+
+1. Parties
+This agreement is made for the campaign "Spring launch".
+
+Business: North Co (north@example.com)
+
+1. Creator: Ada
+   Email: ada@example.com
+   Share: 100.00%
+
+2. Campaign
+Scope: Three films
+Commercial terms: Net 15
+Jurisdiction: US
+Service level: managed_campaign
+
+3. Money
+Currency: USD
+Gross contract value: $1,000.00
+Platform fee: $100.00
+Creator compensation: $900.00
+
+4. Milestones
+1. Delivery
+   Share: 100%
+   Gross: $1,000.00
+   Platform fee: $100.00
+   Creator payout: ada $900.00
+
+5. Creator shares
+- Ada (ada@example.com): 100.00%
+
+7. Signatures
+1. Business: North Co
+   Email: north@example.com
+   Signature:
+   /sig1/
+
+2. Creator: Ada
+   Email: ada@example.com
+   Signature:
+   Signed in Influrios - creator: Ada <ada@example.com> at 2026-10-18T12:00:00.000Z
+`;
+    assert.equal(isLegacyContractBody(legacy), true);
+    const upgraded = upgradeLegacyContractBody({
+      id: "doc_legacy_1",
+      title: "Spring launch",
+      status: "sent",
+      renderedBody: legacy,
+      signingChannel: "native",
+      createdAt: "2026-10-07T00:00:00.000Z",
+      parties: [
+        {
+          role: "business",
+          name: "North Co",
+          email: "north@example.com",
+          status: "signed",
+          attestation: "North Co",
+          signedAt: "2026-10-18T12:00:00.000Z",
+        },
+        {
+          role: "creator",
+          name: "Ada",
+          email: "ada@example.com",
+          creatorSlug: "ada",
+          shareBps: 10000,
+          status: "pending",
+          attestation: "",
+        },
+      ],
+    });
+    assert.match(upgraded, /Commercial Summary/);
+    assert.match(upgraded, /19\. Electronic Signature/);
+    assert.match(upgraded, /\[\[SIG_INK:1\]\]/);
+    assert.match(upgraded, /\[\[SIG_INK:2\]\]/);
+    assert.match(upgraded, /Managed campaign/);
+    assert.match(upgraded, /\$1,000\.00/);
+    assert.match(upgraded, /Signed in Influrios - business: North Co/);
+    assert.match(upgraded, /\/sig2\//);
+    assert.equal(upgraded.includes("/sig1/"), false);
+    const resolved = resolveContractBodyForChrome({
+      id: "doc_legacy_1",
+      title: "Spring launch",
+      status: "sent",
+      renderedBody: upgraded,
+      parties: [],
+    });
+    assert.equal(resolved.upgraded, false);
+    assert.equal(isLegacyContractBody(upgraded), false);
   });
 
   it("shows each message only to the chosen readers", () => {

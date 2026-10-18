@@ -7,6 +7,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import {
   adminCanOpenContractMessages,
   messageVisible,
+  resolveContractBodyForChrome,
   resolveContractPartyForAccount,
 } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
@@ -81,6 +82,26 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
     : document.envelopeId
       ? `DocuSign ${document.envelopeId}`
       : "DocuSign";
+
+  // Old contracts must show the approved Influrios chrome template (persist when upgraded).
+  const chrome = resolveContractBodyForChrome({
+    id: document.id,
+    title: document.title,
+    status: document.status,
+    renderedBody: document.renderedBody,
+    signingChannel: document.signingChannel,
+    createdAt: document.createdAt,
+    parties: document.parties,
+  });
+  if (chrome.upgraded) {
+    await prisma.contractDocument
+      .update({
+        where: { id: document.id },
+        data: { renderedBody: chrome.body },
+      })
+      .catch(() => undefined);
+  }
+  const agreementBody = chrome.body;
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -255,9 +276,17 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
           ) : null}
         </section>
 
-        <section className="rounded-2xl border border-[#E4E9F5] bg-white p-5">
-          <h2 className="font-display text-xl font-bold text-indigo">Agreement</h2>
-          <pre className="mt-3 whitespace-pre-wrap font-sans text-sm text-indigo">{document.renderedBody}</pre>
+        <section className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-[0_10px_30px_rgba(40,50,100,0.06)]">
+          <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[#E4E9F5] pb-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet">
+                Influrios · Collaboration agreement
+              </p>
+              <h2 className="mt-1 font-display text-xl font-bold text-indigo">Agreement</h2>
+            </div>
+            <p className="text-xs text-muted">ID {document.id.slice(0, 12)}…</p>
+          </div>
+          <pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-relaxed text-indigo">{agreementBody}</pre>
         </section>
 
         <section className="rounded-2xl border border-[#E4E9F5] bg-white p-5">
