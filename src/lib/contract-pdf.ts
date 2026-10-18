@@ -52,10 +52,18 @@ export type ContractPdfSignature = {
   signedAt: string;
 };
 
+export type ContractPdfEndorsementSlot = {
+  partyIndex: number;
+  role: string;
+  typedName?: string;
+};
+
 export type ContractPdfOptions = {
   agreementId?: string;
   title?: string;
   signatures?: ContractPdfSignature[];
+  /** All parties (signed + pending) for the page endorsement strip. */
+  endorsementSlots?: ContractPdfEndorsementSlot[];
   /** When true, stamp initials endorsement strip on every content page. */
   pageEndorsements?: boolean;
 };
@@ -270,6 +278,7 @@ function footerCommands(input: {
   pageCount: number;
   agreementId?: string;
   signatures?: ContractPdfSignature[];
+  endorsementSlots?: ContractPdfEndorsementSlot[];
   pageEndorsements: boolean;
 }): string[] {
   const commands: string[] = [];
@@ -286,15 +295,31 @@ function footerCommands(input: {
     commands.push("(Page endorsement / initials) Tj");
     commands.push("ET");
 
-    const parties = [...(input.signatures ?? [])].sort((a, b) => a.partyIndex - b.partyIndex);
-    // Always reserve space for at least business + one influencer slots when unsigned.
+    const fromSlots = (input.endorsementSlots ?? [])
+      .slice()
+      .sort((a, b) => a.partyIndex - b.partyIndex)
+      .map((slot) => ({
+        partyIndex: slot.partyIndex,
+        role: slot.role,
+        typedName: slot.typedName ?? "",
+      }));
+    const fromSignatures = [...(input.signatures ?? [])]
+      .sort((a, b) => a.partyIndex - b.partyIndex)
+      .map((row) => ({
+        partyIndex: row.partyIndex,
+        role: row.role,
+        typedName: row.typedName,
+      }));
+    // Prefer explicit slots (includes pending parties); fall back to signed-only, then blanks.
     const slots =
-      parties.length > 0
-        ? parties
-        : [
-            { partyIndex: 1, typedName: "", role: "business", email: "", signedAt: "" },
-            { partyIndex: 2, typedName: "", role: "creator", email: "", signedAt: "" },
-          ];
+      fromSlots.length > 0
+        ? fromSlots
+        : fromSignatures.length > 0
+          ? fromSignatures
+          : [
+              { partyIndex: 1, typedName: "", role: "business" },
+              { partyIndex: 2, typedName: "", role: "creator" },
+            ];
     let x = 160;
     for (const slot of slots.slice(0, 4)) {
       const label = slot.role === "business" ? "Business" : "Influencer";
@@ -339,6 +364,7 @@ export function renderContractPdf(text: string, options: ContractPdfOptions = {}
   const kids: number[] = [];
   const pageEndorsements = options.pageEndorsements !== false;
   const signatures = options.signatures ?? [];
+  const endorsementSlots = options.endorsementSlots;
 
   pages.forEach((pageLines, index) => {
     const pageId = 3 + index * 2;
@@ -435,6 +461,7 @@ export function renderContractPdf(text: string, options: ContractPdfOptions = {}
         pageCount: pages.length,
         agreementId: options.agreementId,
         signatures,
+        endorsementSlots,
         pageEndorsements,
       }),
     );
@@ -479,18 +506,38 @@ export function renderContractPdf(text: string, options: ContractPdfOptions = {}
 
 /** Collect PDF signature overlays from party rows (signed parties only). */
 export function signaturesFromParties(
-  parties: { role: string; email: string; attestation: string | null; signedAt: Date | null; status: string }[],
+  parties: {
+    role: string;
+    email: string;
+    attestation: string | null;
+    signedAt: Date | null;
+    status: string;
+    name?: string | null;
+  }[],
 ): ContractPdfSignature[] {
   const out: ContractPdfSignature[] = [];
   parties.forEach((party, index) => {
-    if (party.status !== "signed" || !party.attestation) return;
+    if (party.status !== "signed") return;
+    const typedName = (party.attestation || party.name || "").trim();
+    if (!typedName) return;
     out.push({
       partyIndex: index + 1,
-      typedName: party.attestation,
+      typedName,
       role: party.role,
       email: party.email,
       signedAt: party.signedAt?.toISOString() ?? "",
     });
   });
   return out;
+}
+
+/** Page-endorsement slots for every party (blank line until signed). */
+export function endorsementSlotsFromParties(
+  parties: { role: string; attestation: string | null; status: string; name?: string | null }[],
+): ContractPdfEndorsementSlot[] {
+  return parties.map((party, index) => ({
+    partyIndex: index + 1,
+    role: party.role,
+    typedName: party.status === "signed" ? (party.attestation || party.name || "").trim() : "",
+  }));
 }
