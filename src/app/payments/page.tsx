@@ -12,7 +12,6 @@ import {
   actionRequestRevision,
   actionSubmitMilestone,
 } from "@/app/payments/actions";
-import { storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { listAttributionSources, listRepeatCandidates } from "@/lib/deal-attribution";
 import { prisma } from "@/lib/db";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
@@ -35,7 +34,13 @@ import {
 import { FUNDING_MODE_LABELS, asFundingMode } from "@/lib/funding-modes";
 import { RIGHTS_STATUS_LABELS, asRightsStatus } from "@/lib/content-rights";
 import { JurisdictionPayoutMethodFields } from "@/app/payments/jurisdiction-payout-method-fields";
-import { buildPayoutFeeFxQuote, PAYOUT_METHOD_LABELS, PAYOUT_METHODS, type PayoutMethod } from "@/lib/payout-readiness";
+import {
+  buildPayoutFeeFxQuote,
+  PAYOUT_METHOD_LABELS,
+  PAYOUT_METHODS,
+  payoutMethodsCompatibleWithCollection,
+  type PayoutMethod,
+} from "@/lib/payout-readiness";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Protected Payments" };
@@ -82,14 +87,12 @@ export default async function PaymentsPage({ searchParams }: Props) {
     listRepeatCandidates().catch(() => []),
     prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }).catch(() => []),
   ]);
-  // Only methods saved on each corridor — never invent Flutterwave/Stripe by country.
+  // Methods for each corridor, filtered to match that corridor's collection rail (Stripe ≠ Flutterwave).
   const payoutChoices = corridors.flatMap((row) =>
-    storedPayoutMethodList(row.payoutMethodsJson).map((method) => ({
+    payoutMethodsCompatibleWithCollection(row.collectionProviderCode, row.payoutMethodsJson).map((method) => ({
       countryCode: row.countryCode,
       method,
-      label: (PAYOUT_METHODS as readonly string[]).includes(method)
-        ? PAYOUT_METHOD_LABELS[method as PayoutMethod]
-        : method,
+      label: PAYOUT_METHOD_LABELS[method],
     })),
   );
   const jurisdictions = config?.jurisdictions ?? [];

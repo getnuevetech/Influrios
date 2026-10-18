@@ -24,12 +24,38 @@ function isPayoutMethod(value: string): value is PayoutMethod {
   return (PAYOUT_METHODS as readonly string[]).includes(value);
 }
 
-/** First payout method configured on the corridor — never invent a gateway by country. */
-export function primaryMethodFromCorridor(payoutMethodsJson: unknown): PayoutMethod | null {
-  for (const method of storedPayoutMethodList(payoutMethodsJson)) {
-    if (isPayoutMethod(method)) return method;
-  }
-  return null;
+/**
+ * Withdrawal methods allowed for a corridor's collection rail.
+ * Stripe/Airwallex collect via Connect-style accounts — not Flutterwave/M-Pesa payout brands.
+ * Flutterwave/M-Pesa corridors keep local rails. Never invent a rail by country code.
+ */
+export function payoutMethodsCompatibleWithCollection(
+  collectionProviderCode: string | null | undefined,
+  payoutMethodsJson: unknown,
+): PayoutMethod[] {
+  const listed = storedPayoutMethodList(payoutMethodsJson).filter(isPayoutMethod);
+  const collection = (collectionProviderCode ?? "").trim().toLowerCase();
+  const railAllow: PayoutMethod[] | null =
+    collection === "stripe" || collection === "airwallex"
+      ? ["usd_bank", "local_bank"]
+      : collection === "flutterwave"
+        ? ["flutterwave_payout", "local_bank", "mpesa"]
+        : collection === "mpesa"
+          ? ["mpesa", "local_bank"]
+          : null;
+  if (!railAllow) return listed;
+  const filtered = listed.filter((method) => railAllow.includes(method));
+  // Corridor still lists a brand method that does not match collection (legacy seed) — use the rail defaults.
+  return filtered.length > 0 ? filtered : railAllow;
+}
+
+/** First compatible payout method on the corridor for its collection rail. */
+export function primaryMethodFromCorridor(
+  payoutMethodsJson: unknown,
+  collectionProviderCode?: string | null,
+): PayoutMethod | null {
+  const methods = payoutMethodsCompatibleWithCollection(collectionProviderCode, payoutMethodsJson);
+  return methods[0] ?? null;
 }
 
 export type PayoutReadiness = {
@@ -189,10 +215,17 @@ type InfluencerPayoutProfileRow = Awaited<
 async function syncInfluencerPayoutProfileToCorridor(input: {
   profile: NonNullable<InfluencerPayoutProfileRow>;
   countryCode: string | null;
-  corridor: { currency: string | null; payoutMethodsJson: unknown } | null;
+  corridor: {
+    currency: string | null;
+    payoutMethodsJson: unknown;
+    collectionProviderCode?: string | null;
+  } | null;
   fallbackCurrency: string;
 }): Promise<NonNullable<InfluencerPayoutProfileRow>> {
-  const allowed = storedPayoutMethodList(input.corridor?.payoutMethodsJson).filter(isPayoutMethod);
+  const allowed = payoutMethodsCompatibleWithCollection(
+    input.corridor?.collectionProviderCode,
+    input.corridor?.payoutMethodsJson,
+  );
   const currency = payoutProfileCurrency({
     countryCode: input.countryCode,
     corridorCurrency: input.corridor?.currency,
@@ -207,7 +240,7 @@ async function syncInfluencerPayoutProfileToCorridor(input: {
   const methodChanged = nextMethod != null && nextMethod !== input.profile.primaryMethod;
   const countryChanged = (input.profile.primaryCountryCode ?? null) !== (input.countryCode ?? null);
   const currencyChanged = (input.profile.primaryCurrency ?? null) !== currency;
-  // Drop a method that is not on this corridor (e.g. sticky Flutterwave after country is US).
+  // Drop Flutterwave/M-Pesa (or any method) that does not match this corridor's collection rail.
   const clearStaleMethod =
     allowed.length > 0 && !allowed.includes(input.profile.primaryMethod as PayoutMethod);
   if (!methodChanged && !countryChanged && !currencyChanged && !clearStaleMethod) {
@@ -243,7 +276,10 @@ export async function ensureInfluencerPayoutProfile(input: {
     corridorCurrency: corridor?.currency,
     fallbackCurrency,
   });
-  const methodFromCorridor = primaryMethodFromCorridor(corridor?.payoutMethodsJson);
+  const methodFromCorridor = primaryMethodFromCorridor(
+    corridor?.payoutMethodsJson,
+    corridor?.collectionProviderCode,
+  );
   const existing = await prisma.influencerPayoutProfile.findUnique({
     where: { creatorId: input.creatorId },
   });
@@ -305,8 +341,18 @@ export async function computePayoutReadiness(input: {
   const routes = await paymentRoutes().catch(() => [] as GatewayReadiness[]);
   const gateway = countryCode ? routes.find((row) => row.countryCode === countryCode) ?? null : null;
 
+  const collection = (corridor?.collectionProviderCode ?? "").trim().toLowerCase();
+  const connectedAccountReady =
+    collection === "stripe"
+      ? Boolean(profile.stripeConnectAccountId?.trim())
+      : isConnectedAccountCollectionProvider(collection)
+        ? Boolean(profile.providerConnectedAccountId?.trim())
+        : false;
+  // Stripe/Airwallex Global Payout Ready follows Connect — not a Flutterwave withdrawal brand.
   const hasVerifiedMethod =
-    profile.primaryStatus === "VERIFIED" || profile.secondaryStatus === "VERIFIED";
+    profile.primaryStatus === "VERIFIED" ||
+    profile.secondaryStatus === "VERIFIED" ||
+    connectedAccountReady;
   const blockers: string[] = [];
   if (!input.identityVerified) blockers.push("Influencer identity is not verified.");
   if (!countryCode) blockers.push("Influencer payout country is unknown.");
@@ -314,7 +360,13 @@ export async function computePayoutReadiness(input: {
   if (countryCode && corridor?.active && !gateway?.ready) {
     blockers.push(`Payment route not ready (${gateway?.reason ?? "no_route"}).`);
   }
-  if (!hasVerifiedMethod) blockers.push("No verified payout method (primary or secondary).");
+  if (!hasVerifiedMethod) {
+    blockers.push(
+      collection === "stripe" || isConnectedAccountCollectionProvider(collection)
+        ? "Influencer payout account is not connected for this corridor."
+        : "No verified payout method (primary or secondary).",
+    );
+  }
 
   const globalPayoutReady = blockers.length === 0;
 

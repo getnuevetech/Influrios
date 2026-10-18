@@ -733,12 +733,14 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 </li>
               ) : null}
               <li>
-                Payout method:{" "}
-                {payoutReadiness?.primaryMethod
-                  ? `${PAYOUT_METHOD_LABELS[payoutReadiness.primaryMethod as PayoutMethod] ?? payoutReadiness.primaryMethod} (${payoutReadiness.primaryStatus})`
-                  : "—"}
+                Withdrawal method (Global Payout Ready):{" "}
+                {influencerAccountConnected
+                  ? `via connected account (${route?.providerName ?? route?.providerCode})`
+                  : payoutReadiness?.primaryMethod
+                    ? `${PAYOUT_METHOD_LABELS[payoutReadiness.primaryMethod as PayoutMethod] ?? payoutReadiness.primaryMethod} (${payoutReadiness.primaryStatus})`
+                    : "—"}
                 {payoutReadiness && !payoutReadiness.hasVerifiedMethod
-                  ? " — needed for Global Payout Ready, not for funding"
+                  ? " — needed to withdraw released balance, not for funding"
                   : ""}
               </li>
               <li>Jurisdiction protected payments: {jurisdiction?.protectedPaymentsEnabled ? "on" : "off"}</li>
@@ -761,8 +763,9 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             )}
             {payoutReadiness && !payoutReadiness.globalPayoutReady ? (
               <p className="mt-2 text-xs text-muted">
-                Funding can proceed when ROUTE_READY. Global Payout Ready still needs a verified payout method
-                before the influencer can withdraw released balance.
+                Funding can proceed when ROUTE_READY. Global Payout Ready is separate: after milestones release,
+                the influencer withdraws through the corridor’s collection rail (Stripe Connect, etc.) — not through
+                the marketplace webhook that confirms the prefund.
               </p>
             ) : null}
           </section>

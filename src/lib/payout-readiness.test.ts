@@ -5,6 +5,7 @@ import {
   buildPayoutFeeFxQuote,
   choosePayoutOnboardingRail,
   PAYOUT_METHOD_LABELS,
+  payoutMethodsCompatibleWithCollection,
   payoutProfileCurrency,
   primaryMethodFromCorridor,
 } from "./payout-readiness";
@@ -73,9 +74,18 @@ describe("buildPayoutFeeFxQuote", () => {
 
   it("picks the primary method only from corridor config — never by country", () => {
     assert.equal(primaryMethodFromCorridor(["usd_bank", "local_bank"]), "usd_bank");
-    assert.equal(primaryMethodFromCorridor(["flutterwave_payout"]), "flutterwave_payout");
+    assert.equal(primaryMethodFromCorridor(["flutterwave_payout"], "flutterwave"), "flutterwave_payout");
     assert.equal(primaryMethodFromCorridor([]), null);
     assert.equal(primaryMethodFromCorridor(null), null);
+    // Stripe collection must not keep a legacy Flutterwave withdrawal brand.
+    assert.deepEqual(payoutMethodsCompatibleWithCollection("stripe", ["flutterwave_payout", "usd_bank"]), [
+      "usd_bank",
+    ]);
+    assert.equal(primaryMethodFromCorridor(["flutterwave_payout", "local_bank"], "stripe"), "local_bank");
+    assert.deepEqual(payoutMethodsCompatibleWithCollection("stripe", ["flutterwave_payout"]), [
+      "usd_bank",
+      "local_bank",
+    ]);
     const source = readFileSync("src/lib/payout-readiness.ts", "utf8");
     assert.equal(source.includes('return "flutterwave_payout"'), false);
     assert.equal(source.includes('return "mpesa"'), false);
@@ -87,6 +97,7 @@ describe("buildPayoutFeeFxQuote", () => {
     assert.equal(providers.includes('gateway: "stripe"'), false);
     const payments = readFileSync("src/app/payments/page.tsx", "utf8");
     assert.match(payments, /JurisdictionPayoutMethodFields/);
+    assert.match(payments, /payoutMethodsCompatibleWithCollection/);
   });
 
   it("uses the saved corridor currency, then the route, then the backup", () => {
@@ -199,8 +210,8 @@ describe("payout readiness corridors (db)", () => {
       update: {
         active: true,
         currency: "KES",
-        collectionProviderCode: null,
-        payoutMethodsJson: ["mpesa", "local_bank"],
+        collectionProviderCode: "flutterwave",
+        payoutMethodsJson: ["mpesa", "local_bank", "flutterwave_payout"],
         holdingEnabled: true,
         fxEnabled: true,
         kycModel: "government_id",
@@ -210,12 +221,36 @@ describe("payout readiness corridors (db)", () => {
         countryCode: "KE",
         active: true,
         currency: "KES",
-        collectionProviderCode: null,
-        payoutMethodsJson: ["mpesa", "local_bank"],
+        collectionProviderCode: "flutterwave",
+        payoutMethodsJson: ["mpesa", "local_bank", "flutterwave_payout"],
         holdingEnabled: true,
         fxEnabled: true,
         kycModel: "government_id",
         notes: "test corridor",
+      },
+    });
+    await prisma.countryActivationCorridor.upsert({
+      where: { countryCode: "US" },
+      update: {
+        active: true,
+        currency: "USD",
+        collectionProviderCode: "stripe",
+        payoutMethodsJson: ["flutterwave_payout", "usd_bank"],
+        holdingEnabled: true,
+        fxEnabled: false,
+        kycModel: "government_id",
+        notes: "test us corridor with legacy flutterwave method",
+      },
+      create: {
+        countryCode: "US",
+        active: true,
+        currency: "USD",
+        collectionProviderCode: "stripe",
+        payoutMethodsJson: ["flutterwave_payout", "usd_bank"],
+        holdingEnabled: true,
+        fxEnabled: false,
+        kycModel: "government_id",
+        notes: "test us corridor with legacy flutterwave method",
       },
     });
 
@@ -245,7 +280,7 @@ describe("payout readiness corridors (db)", () => {
       // Sticky wrong method from another country must resync to this corridor.
       await prisma.influencerPayoutProfile.update({
         where: { creatorId: creator.id },
-        data: { primaryMethod: "flutterwave_payout", primaryLabel: "Flutterwave payout", primaryStatus: "UNVERIFIED" },
+        data: { primaryMethod: "usd_bank", primaryLabel: "USD bank", primaryStatus: "UNVERIFIED" },
       });
       const synced = await ensureInfluencerPayoutProfile({
         creatorId: creator.id,
@@ -253,10 +288,29 @@ describe("payout readiness corridors (db)", () => {
       });
       assert.equal(synced.primaryMethod, "mpesa");
 
+      // Stripe US corridor must drop legacy Flutterwave withdrawal brand.
+      const usSynced = await ensureInfluencerPayoutProfile({
+        creatorId: creator.id,
+        locationCountry: "United States",
+      });
+      assert.equal(usSynced.primaryMethod, "usd_bank");
+      assert.notEqual(usSynced.primaryMethod, "flutterwave_payout");
+
+      // Restore Kenya corridor profile for the Global Payout Ready checks below.
+      await prisma.influencerPayoutProfile.update({
+        where: { creatorId: creator.id },
+        data: {
+          primaryMethod: "mpesa",
+          primaryLabel: "M-Pesa",
+          primaryStatus: "UNVERIFIED",
+          primaryCountryCode: "KE",
+        },
+      });
+
       const blocked = await computePayoutReadiness({
         creatorId: creator.id,
         identityVerified: true,
-        locationCountry: creator.locationCountry,
+        locationCountry: "Kenya",
       });
       assert.equal(blocked.globalPayoutReady, false);
       assert.ok(blocked.blockers.some((b) => /verified payout method/i.test(b)));
@@ -271,7 +325,7 @@ describe("payout readiness corridors (db)", () => {
       const ready = await computePayoutReadiness({
         creatorId: creator.id,
         identityVerified: true,
-        locationCountry: creator.locationCountry,
+        locationCountry: "Kenya",
       });
       if (ready.gateway?.ready) {
         assert.equal(ready.globalPayoutReady, true);
