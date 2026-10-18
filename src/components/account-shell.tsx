@@ -25,7 +25,8 @@ import {
   IconWallet,
 } from "@/components/icons";
 import { actionLogout } from "@/app/account/actions";
-import { getAccountSession } from "@/lib/accounts";
+import { accountAudience, type AccountAudience } from "@/lib/account-audience";
+import { getAccountSession, homePathForRole } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { isPlanCode, planLabel, type PlanCode } from "@/lib/entitlements";
@@ -91,16 +92,27 @@ function active(href: string, path: string, search = "") {
 }
 
 export async function MemberFrame({
-  audience,
+  audience: audienceHint,
   children,
 }: {
-  audience: "creator" | "business";
+  /**
+   * Optional hint from a layout. Chrome always follows User.role — never a missing
+   * creator profile. When the hint conflicts with role on an exclusive shell, callers
+   * should use requireBusinessSession / requireCreatorSession before rendering.
+   */
+  audience?: AccountAudience;
   children: React.ReactNode;
 }) {
   const headerList = await headers();
   const path = headerList.get("x-pathname") ?? "";
   const search = headerList.get("x-search") ?? "";
   const account = await getAccountSession().catch(() => null);
+  // Role is the only source of truth for influencer vs business chrome.
+  const audience = accountAudience(account);
+  if (account && audienceHint && audienceHint !== audience) {
+    // Layout asked for the wrong shell — send the member to their real home.
+    redirect(homePathForRole(account.role));
+  }
   if (account && !account.hasPassword && !path.startsWith("/account/password")) {
     redirect(
       `/account/password?next=${encodeURIComponent(path || (audience === "business" ? "/business/home" : "/creator"))}`,

@@ -246,16 +246,34 @@ export async function removeUntouchedDemoBusinessWorkspace(): Promise<number> {
 export async function getWorkspace(userId?: string | null): Promise<BusinessWorkspace> {
   const id = userId?.trim();
   if (!id) return PUBLIC_BUSINESS_WORKSPACE;
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { role: true },
+  });
+  // Influencer/creator accounts must never receive a business workspace shell.
+  if (!user || (user.role !== "BUSINESS" && user.role !== "AGENCY" && user.role !== "ADMIN")) {
+    const existing = await prisma.businessWorkspace.findUnique({ where: { ownerUserId: id } });
+    if (existing) return readWorkspace(existing.id);
+    return PUBLIC_BUSINESS_WORKSPACE;
+  }
   return ensureOwnedBusinessWorkspace(id);
 }
 
-/** Ensure BusinessProfile + owned BusinessWorkspace for a user (W2.3 tenancy). */
+/** Ensure BusinessProfile + owned BusinessWorkspace for a business/agency user (W2.3 tenancy). */
 export async function ensureOwnedBusinessWorkspace(
   userId: string,
   opts?: { name?: string; industry?: string },
 ): Promise<BusinessWorkspace> {
   const uid = userId.trim();
   if (!uid) throw new Error("userId is required.");
+  const user = await prisma.user.findUnique({
+    where: { id: uid },
+    select: { name: true, email: true, role: true },
+  });
+  if (!user) throw new Error("Account not found.");
+  if (user.role !== "BUSINESS" && user.role !== "AGENCY" && user.role !== "ADMIN") {
+    throw new Error("Only business or agency accounts can own a company workspace.");
+  }
   const existing = await prisma.businessWorkspace.findUnique({ where: { ownerUserId: uid } });
   if (existing) {
     await prisma.businessProfile.upsert({
@@ -273,14 +291,10 @@ export async function ensureOwnedBusinessWorkspace(
     return readWorkspace(existing.id);
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: uid },
-    select: { name: true, email: true },
-  });
   const fields = newBusinessWorkspaceFields({
     name: opts?.name,
-    userName: user?.name,
-    email: user?.email,
+    userName: user.name,
+    email: user.email,
     industry: opts?.industry,
   });
   await prisma.businessProfile.upsert({

@@ -119,6 +119,27 @@ describe("business workspace tenancy (W2.3)", () => {
     assert.notEqual(demo.businessId, "demo-business");
   });
 
+  it("does not provision a company workspace for influencer accounts", async (t) => {
+    if (!(await requireDb(t))) return;
+    const stamp = Date.now().toString(36);
+    const creatorUser = await prisma.user.create({
+      data: {
+        email: `creator-ws-${stamp}@example.com`,
+        name: `Creator ${stamp}`,
+        role: "CREATOR",
+      },
+    });
+    const ws = await getWorkspace(creatorUser.id);
+    assert.equal(ws.businessId, PUBLIC_BUSINESS_WORKSPACE.businessId);
+    const owned = await prisma.businessWorkspace.findUnique({ where: { ownerUserId: creatorUser.id } });
+    assert.equal(owned, null);
+    await assert.rejects(
+      () => ensureOwnedBusinessWorkspace(creatorUser.id, { name: "Should Fail" }),
+      /business or agency/i,
+    );
+    await prisma.user.delete({ where: { id: creatorUser.id } });
+  });
+
   it("does not create the retired sample workspace", () => {
     const source = readFileSync("src/lib/business.ts", "utf8");
     const seed = readFileSync("prisma/seed.ts", "utf8");

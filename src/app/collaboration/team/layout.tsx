@@ -1,10 +1,9 @@
 import { MemberFrame } from "@/components/account-shell";
+import { accountAudience } from "@/lib/account-audience";
 import { getAccountSession } from "@/lib/accounts";
 
-/** Team proposals are a business tool — keep business chrome when signed in as BUSINESS. */
+/** Team proposals — chrome follows User.role only. */
 export default async function TeamLayout({ children }: { children: React.ReactNode }) {
   const account = await getAccountSession().catch(() => null);
-  const audience =
-    account?.role === "BUSINESS" || account?.role === "AGENCY" ? "business" : "creator";
-  return <MemberFrame audience={audience}>{children}</MemberFrame>;
+  return <MemberFrame audience={accountAudience(account)}>{children}</MemberFrame>;
 }

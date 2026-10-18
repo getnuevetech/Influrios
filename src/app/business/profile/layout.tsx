@@ -1,5 +1,7 @@
 import { MemberFrame } from "@/components/account-shell";
+import { requireBusinessSession } from "@/lib/account-audience";
 
-export default function BusinessProfileLayout({ children }: { children: React.ReactNode }) {
+export default async function BusinessProfileLayout({ children }: { children: React.ReactNode }) {
+  await requireBusinessSession("/business/profile");
   return <MemberFrame audience="business">{children}</MemberFrame>;
 }

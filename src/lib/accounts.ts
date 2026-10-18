@@ -339,12 +339,18 @@ export async function getAccountSession(): Promise<AccountSession | null> {
     if (parsed.exp < Date.now()) return null;
     const user = await prisma.user.findUnique({ where: { id: parsed.userId } });
     if (!user?.emailVerifiedAt || user.suspendedAt) return null;
+    let role = user.role;
+    if (role === "BUSINESS" || role === "AGENCY") {
+      const { repairMistakenBusinessRole } = await import("@/lib/account-audience");
+      const repaired = await repairMistakenBusinessRole(user.id).catch(() => null);
+      if (repaired) role = repaired;
+    }
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       emailVerifiedAt: user.emailVerifiedAt,
-      role: user.role,
+      role,
       hasPassword: Boolean(user.passwordHash),
     };
   } catch {

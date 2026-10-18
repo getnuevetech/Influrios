@@ -48,8 +48,12 @@ export default async function BusinessPage({ searchParams }: Props) {
     };
   });
   // Signed-in business accounts stay in MemberFrame chrome, not the marketing landing.
+  // Influencer accounts never enter the business product from this page.
   if (account?.role === "BUSINESS" || account?.role === "AGENCY") {
     redirect("/business/home");
+  }
+  if (account?.role === "CREATOR") {
+    redirect("/creator");
   }
 
   const landingView =
