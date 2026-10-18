@@ -382,13 +382,16 @@ describe("contract wizard fields", () => {
     }
   });
 
-  it("keeps funding wizard and Request funding CTA business-only", () => {
+  it("keeps Start funding CTA business-only", () => {
     const detail = readFileSync("src/app/collaboration/contracts/[id]/page.tsx", "utf8");
-    assert.match(detail, /canRequestFunding = Boolean\(party && party\.role === "business"\)/);
+    assert.match(detail, /canStartFunding = Boolean\(party && party\.role === "business"\)/);
     assert.match(detail, /The business starts funding from their side/);
-    assert.match(detail, /canRequestFunding \? \([\s\S]*Request funding/);
+    assert.match(detail, /canStartFunding \? \([\s\S]*Start funding/);
+    assert.equal(detail.includes("Request funding"), false);
     const page = readFileSync("src/app/collaboration/contract/page.tsx", "utf8");
     const actions = readFileSync("src/app/collaboration/contract/actions.ts", "utf8");
+    assert.match(page, /Start funding →/);
+    assert.equal(page.includes("Request funding"), false);
     assert.match(page, /requireBusinessSession\("\/collaboration\/contract"\)/);
     assert.match(actions, /requireBusinessSession\(BASE\)/);
   });

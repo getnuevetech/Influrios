@@ -944,13 +944,13 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               Send for signature
             </button>
             <button type="submit" name="intent" value="fund" className="btn-primary flex-1">
-              Request funding →
+              Start funding →
             </button>
           </div>
         </form>
 
         <p className="mt-6 text-center text-xs text-muted">
-          After funding is requested, manage milestones on{" "}
+          After funding starts, manage milestones on{" "}
           <Link href="/payments" className="font-semibold text-violet hover:underline">
             Protected Payments
           </Link>
