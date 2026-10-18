@@ -720,7 +720,7 @@ model ContractTemplate {
   updatedAt DateTime @updatedAt
 }
 
-/// One generated agreement. Signed only after DocuSign reports every party complete.
+/// One generated agreement. Native in-app signing is primary; DocuSign is optional.
 model ContractDocument {
   id              String            @id @default(cuid())
   workspaceId     String?
@@ -732,6 +732,8 @@ model ContractDocument {
   pdfBytes        Bytes
   /// draft | sent | signed | declined | voided
   status          String            @default("draft")
+  /// native | docusign
+  signingChannel  String            @default("native")
   envelopeId      String            @default("")
   createdByUserId String?
   sourceJson      Json?
@@ -757,6 +759,8 @@ model ContractParty {
   shareBps    Int              @default(0)
   /// pending | signed | declined
   status      String           @default("pending")
+  /// Typed legal name recorded when the party signs in-app.
+  attestation String           @default("")
   signedAt    DateTime?
   createdAt   DateTime         @default(now())
 

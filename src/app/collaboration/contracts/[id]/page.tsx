@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { actionPostContractMessage } from "@/app/collaboration/contracts/[id]/actions";
+import { actionPostContractMessage, actionSignNativeContract } from "@/app/collaboration/contracts/[id]/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
 import { adminCanOpenContractMessages, messageVisible } from "@/lib/contract-document";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; sent?: string }>;
+  searchParams: Promise<{ error?: string; sent?: string; signed?: string }>;
 };
 
 export default async function ContractDocumentPage({ params, searchParams }: Props) {
@@ -55,6 +55,13 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
   );
   const source = document.sourceJson && typeof document.sourceJson === "object" ? (document.sourceJson as Record<string, string>) : {};
   const returnQuery = new URLSearchParams({ ...source, contractDocument: document.id });
+  const isNative = document.signingChannel === "native";
+  const canSignNative = Boolean(party && isNative && document.status === "sent" && party.status === "pending");
+  const channelLabel = isNative
+    ? "Influrios in-app"
+    : document.envelopeId
+      ? `DocuSign ${document.envelopeId}`
+      : "DocuSign";
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -64,11 +71,13 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
           <h1 className="mt-1 font-display text-3xl font-bold text-indigo">{document.title}</h1>
           <p className="mt-2 text-sm text-muted">
             Status: <strong className="text-indigo">{document.status}</strong>
-            {document.envelopeId ? ` · DocuSign ${document.envelopeId}` : ""}
+            {" · "}
+            {channelLabel}
           </p>
           <p className="mt-2 text-sm text-muted">
-            This agreement is signed when DocuSign reports every party complete. A click in Influrios does not sign it.
-            The PDF is stored on each party&apos;s account.
+            {isNative
+              ? "Each party signs in Influrios by typing their legal name below. The agreement is signed when every party has completed their signature. The PDF is stored on each party's account."
+              : "This agreement was sent through DocuSign. It is signed when DocuSign reports every party complete. The PDF is stored on each party's account."}
           </p>
           <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
             <Link href={`/collaboration/contracts/${document.id}/pdf`} className="text-violet hover:underline">
@@ -89,13 +98,58 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
       </section>
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
         {query.error ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{query.error}</p> : null}
+        {query.signed === "1" ? (
+          <p className="text-sm font-semibold text-emerald-700">Every party has signed. Funding can start.</p>
+        ) : null}
+        {query.signed === "0" ? (
+          <p className="text-sm font-semibold text-emerald-700">Your signature was recorded. Waiting for the other parties.</p>
+        ) : null}
         {query.sent ? <p className="text-sm font-semibold text-emerald-700">Message saved on this contract.</p> : null}
+        {canSignNative ? (
+          <section className="rounded-2xl border border-[#E4E9F5] bg-white p-5">
+            <h2 className="font-display text-xl font-bold text-indigo">Sign this agreement</h2>
+            <p className="mt-1 text-sm text-muted">
+              Type your legal name exactly as you intend to bind this agreement. This records your signature on the
+              stored PDF.
+            </p>
+            <form action={actionSignNativeContract} className="mt-4 space-y-3">
+              <input type="hidden" name="documentId" value={document.id} />
+              <label className="block text-sm font-semibold text-indigo">
+                Legal name
+                <input
+                  name="typedName"
+                  required
+                  minLength={2}
+                  maxLength={160}
+                  defaultValue={party?.name ?? ""}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+                />
+              </label>
+              <label className="flex items-start gap-2 text-sm text-indigo">
+                <input type="checkbox" name="agree" value="1" required className="mt-0.5 accent-violet" />
+                <span>
+                  I agree to the terms of this agreement and intend this typed name to be my electronic signature.
+                </span>
+              </label>
+              <button type="submit" className="btn-primary !py-2 text-sm">
+                Sign agreement
+              </button>
+            </form>
+          </section>
+        ) : null}
+        {party && isNative && party.status === "signed" && document.status !== "signed" ? (
+          <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            You signed this agreement{party.signedAt ? ` on ${party.signedAt.toISOString()}` : ""}. Waiting for the
+            other parties.
+          </p>
+        ) : null}
         <section className="rounded-2xl border border-[#E4E9F5] bg-white p-5">
           <h2 className="font-display text-xl font-bold text-indigo">Parties</h2>
           <ul className="mt-3 space-y-2 text-sm text-indigo">
             {document.parties.map((row) => (
               <li key={row.id}>
                 {row.role} · {row.name} · {row.email} · {row.status}
+                {row.attestation ? ` · signed as “${row.attestation}”` : ""}
                 {row.shareBps ? ` · ${(row.shareBps / 100).toFixed(2)}%` : ""}
               </li>
             ))}

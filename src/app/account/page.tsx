@@ -67,8 +67,8 @@ export default async function AccountPage({
       <section id="contracts" className="card-surface mt-4 space-y-3 p-6">
         <h2 className="font-display text-lg font-bold text-indigo">Contracts</h2>
         <p className="text-sm text-muted">
-          Each agreement sent for signature is stored here for every party. It is signed when DocuSign reports every
-          party complete.
+          Each agreement sent for signature is stored here for every party. Sign in Influrios on the contract page
+          (primary). DocuSign remains available when an admin enables that optional channel.
         </p>
         {contracts.length === 0 ? <p className="text-sm text-muted">No contracts on this account yet.</p> : null}
         <ul className="space-y-2 text-sm">

@@ -1,5 +1,5 @@
 /**
- * Document signing lifecycle. A request is signed only when DocuSign reports it.
+ * Document signing lifecycle. Native in-app signing is primary; DocuSign is optional.
  * Status stays a free-form string on SignatureRequest (no Prisma enum).
  */
 import { createHmac, timingSafeEqual } from "crypto";
@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/provider-secrets";
 import { activeSigningProvider } from "@/lib/providers";
 import { docuSignCredentialsReady } from "@/lib/signing/docusign";
+import { isNativeSigningCode } from "@/lib/signing/native";
 
 export const SIGNATURE_STATUSES = [
   "queued",
@@ -44,13 +45,14 @@ export type SigningIdentity = {
   baseUrl?: string;
 };
 
-/** DocuSign stays unconfigured until the saved or env credentials are complete. A demo code does not send. */
+/** Native in-app signing is always ready. DocuSign needs complete credentials. */
 export function resolveSigningMode(
   providerCode: string,
   credentials?: SigningIdentity | null,
   env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
-): "docusign" | "unconfigured" {
+): "native" | "docusign" | "unconfigured" {
   const code = providerCode.trim().toLowerCase();
+  if (!code || isNativeSigningCode(code)) return "native";
   if (code === "demo" || code === "demo_sign") return "unconfigured";
   const ready = docuSignCredentialsReady({
     integrationKey: credentials?.integrationKey || env.DOCUSIGN_INTEGRATION_KEY || "",
@@ -64,8 +66,9 @@ export function resolveSigningMode(
 }
 
 export function signingModeLabel(providerCode?: string | null, credentials?: SigningIdentity | null) {
-  if (!providerCode) return "No signing provider";
+  if (!providerCode) return "Influrios in-app signing";
   const mode = resolveSigningMode(providerCode, credentials);
+  if (mode === "native") return "Influrios in-app signing";
   if (mode === "docusign") return "DocuSign";
   return "DocuSign credentials are not saved";
 }
@@ -78,7 +81,7 @@ export async function advanceSignatureRequest(input: {
   if (input.to === "signed") {
     return {
       ok: false,
-      error: "A contract is signed when DocuSign reports every party complete. An admin form cannot sign it.",
+      error: "A contract is signed when every party completes their signature. An admin form cannot sign it.",
     };
   }
   const row = await prisma.signatureRequest.findUnique({ where: { id: input.id } });

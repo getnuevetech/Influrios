@@ -4,8 +4,35 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
-import { isMessageAudience, postContractMessage } from "@/lib/contract-document";
+import { isMessageAudience, postContractMessage, signNativeContractParty } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
+
+export async function actionSignNativeContract(formData: FormData) {
+  const documentId = String(formData.get("documentId") ?? "").trim();
+  const account = await getAccountSession().catch(() => null);
+  if (!account) {
+    redirect(`/login?next=${encodeURIComponent(`/collaboration/contracts/${documentId}`)}`);
+  }
+  const agreed = formData.get("agree") === "on" || formData.get("agree") === "1";
+  if (!agreed) {
+    redirect(
+      `/collaboration/contracts/${documentId}?error=${encodeURIComponent("Confirm that you agree before signing.")}`,
+    );
+  }
+  const result = await signNativeContractParty({
+    documentId,
+    userId: account.id,
+    typedName: String(formData.get("typedName") ?? ""),
+  });
+  if (!result.ok) {
+    redirect(`/collaboration/contracts/${documentId}?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath(`/collaboration/contracts/${documentId}`);
+  revalidatePath("/account");
+  revalidatePath("/collaboration/contract");
+  const signed = result.status === "signed" ? "1" : "0";
+  redirect(`/collaboration/contracts/${documentId}?signed=${signed}`);
+}
 
 export async function actionPostContractMessage(formData: FormData) {
   const documentId = String(formData.get("documentId") ?? "").trim();

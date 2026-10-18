@@ -25,9 +25,9 @@ export default async function AdminContractsPage({ searchParams }: Props) {
     <div>
       <h1 className="font-display text-3xl font-bold text-indigo">Contract template</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        The text below is the agreement. Variables in double braces are filled when a contract is sent. The PDF and
-        the DocuSign envelope use that filled agreement. A contract is signed only when DocuSign reports every party
-        complete, and the PDF is stored on each party&apos;s account.
+        The text below is the agreement. Variables in double braces are filled when a contract is sent. Parties sign
+        in Influrios by default (typed legal name on the contract page). DocuSign is optional when enabled under
+        Document signing. The PDF is stored on each party&apos;s account.
       </p>
       {params.saved ? <p className="mt-3 text-sm font-semibold text-emerald-700">Template saved.</p> : null}
       {params.error ? <p className="mt-3 text-sm font-semibold text-amber-800">{params.error}</p> : null}

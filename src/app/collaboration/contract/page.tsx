@@ -929,12 +929,13 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               />
               <span>
                 I accept this financial plan on behalf of {ws.name}. This checkbox does not sign the agreement. Funding
-                freezes the fee rule version after DocuSign reports every party complete.
+                freezes the fee rule version after every party has signed in Influrios (or DocuSign, when that optional
+                channel is used).
               </span>
             </label>
             <p className="mt-3 text-sm text-muted">
-              The agreement is signed when DocuSign reports every party complete. Until then it stays unsigned, and
-              funding does not start. The PDF is stored on each party&apos;s account.
+              Send for signature stores the PDF and asks each party to sign in Influrios. The agreement is signed when
+              every party has completed their signature. Until then it stays unsigned, and funding does not start.
             </p>
           </section>
 

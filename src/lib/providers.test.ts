@@ -147,9 +147,20 @@ describe("entered provider names", () => {
 });
 
 describe("document signing", () => {
-  it("queues only an accepted collaboration with a connected provider", () => {
+  it("queues only an accepted collaboration; native needs no secret", () => {
     assert.equal(signingCanQueue({ enabled: true, hasSecret: true, collaborationStatus: "sent" }).ok, false);
-    assert.equal(signingCanQueue({ enabled: false, hasSecret: false, collaborationStatus: "accepted" }).ok, false);
-    assert.equal(signingCanQueue({ enabled: true, hasSecret: true, collaborationStatus: "accepted" }).ok, true);
+    assert.equal(
+      signingCanQueue({ enabled: false, hasSecret: false, collaborationStatus: "accepted", providerCode: "docusign" }).ok,
+      false,
+    );
+    assert.equal(
+      signingCanQueue({ enabled: true, hasSecret: true, collaborationStatus: "accepted", providerCode: "docusign" }).ok,
+      true,
+    );
+    assert.equal(
+      signingCanQueue({ enabled: true, hasSecret: false, collaborationStatus: "accepted", providerCode: "influrios" }).ok,
+      true,
+    );
+    assert.equal(signingCanQueue({ enabled: true, hasSecret: false, collaborationStatus: "accepted" }).ok, true);
   });
 });

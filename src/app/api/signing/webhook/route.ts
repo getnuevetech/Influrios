@@ -13,7 +13,7 @@ const STATUS_EVENT = {
 } as const;
 
 /**
- * DocuSign Connect webhook. A contract is signed only from a verified DocuSign event.
+ * DocuSign Connect webhook (optional channel). Native in-app signatures are recorded on the contract page.
  */
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -48,7 +48,10 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { error: "A signature is recorded when DocuSign reports every party complete. Nothing was signed." },
+    {
+      error:
+        "This webhook accepts DocuSign events only. Native signatures are recorded in Influrios. Nothing was signed.",
+    },
     { status: 400 },
   );
 }
