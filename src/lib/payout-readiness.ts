@@ -26,7 +26,7 @@ function isPayoutMethod(value: string): value is PayoutMethod {
 
 /**
  * Withdrawal methods allowed for a corridor's collection rail.
- * Stripe/Airwallex collect via Connect-style accounts — not Flutterwave/M-Pesa payout brands.
+ * Stripe and connected-account collection rails use bank methods — not Flutterwave/M-Pesa brands.
  * Flutterwave/M-Pesa corridors keep local rails. Never invent a rail by country code.
  */
 export function payoutMethodsCompatibleWithCollection(
@@ -36,7 +36,7 @@ export function payoutMethodsCompatibleWithCollection(
   const listed = storedPayoutMethodList(payoutMethodsJson).filter(isPayoutMethod);
   const collection = (collectionProviderCode ?? "").trim().toLowerCase();
   const railAllow: PayoutMethod[] | null =
-    collection === "stripe" || collection === "airwallex"
+    collection === "stripe" || isConnectedAccountCollectionProvider(collection)
       ? ["usd_bank", "local_bank"]
       : collection === "flutterwave"
         ? ["flutterwave_payout", "local_bank", "mpesa"]
@@ -348,7 +348,7 @@ export async function computePayoutReadiness(input: {
       : isConnectedAccountCollectionProvider(collection)
         ? Boolean(profile.providerConnectedAccountId?.trim())
         : false;
-  // Stripe/Airwallex Global Payout Ready follows Connect — not a Flutterwave withdrawal brand.
+  // Stripe / connected-account Global Payout Ready follows Connect — not a Flutterwave withdrawal brand.
   const hasVerifiedMethod =
     profile.primaryStatus === "VERIFIED" ||
     profile.secondaryStatus === "VERIFIED" ||
