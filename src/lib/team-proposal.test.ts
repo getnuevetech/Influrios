@@ -9,6 +9,7 @@ import {
   refuseMemberRemoval,
   teamFundingReady,
   teamMatchRows,
+  teamMemberStatusLabel,
   teamSendControl,
   wizardHrefForProposal,
   wizardParties,
@@ -22,6 +23,12 @@ describe("team proposals", () => {
 
   it("moves to partial when one creator accepts", () => {
     assert.equal(nextProposalStatus(members, "a", "accepted"), "partial");
+  });
+
+  it("labels personal member status so accepted invites do not still read as invited", () => {
+    assert.equal(teamMemberStatusLabel("invited"), "Pending your response");
+    assert.equal(teamMemberStatusLabel("accepted"), "You accepted");
+    assert.equal(teamMemberStatusLabel("declined"), "You declined");
   });
 
   it("opens the wizard only when both accept", () => {

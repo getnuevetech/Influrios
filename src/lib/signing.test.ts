@@ -18,11 +18,11 @@ describe("signing lifecycle", () => {
     assert.equal(canAdvanceSignatureStatus("queued", "signed"), false);
   });
 
-  it("resolves native as primary and DocuSign only when credentials are complete", () => {
+  it("resolves mode from the admin-enabled provider only", () => {
     const empty: Record<string, string | undefined> = {};
     assert.equal(resolveSigningMode("influrios", null, empty), "native");
     assert.equal(resolveSigningMode("native", null, empty), "native");
-    assert.equal(resolveSigningMode("", null, empty), "native");
+    assert.equal(resolveSigningMode("", null, empty), "unconfigured");
     assert.equal(resolveSigningMode("demo", null, empty), "unconfigured");
     assert.equal(resolveSigningMode("demo_sign", null, empty), "unconfigured");
     assert.equal(resolveSigningMode("docusign", null, empty), "unconfigured");
@@ -40,6 +40,13 @@ describe("signing lifecycle", () => {
       ),
       "docusign",
     );
+  });
+
+  it("documents that enabling a signing provider disables the others", () => {
+    const providers = readFileSync("src/lib/providers.ts", "utf8");
+    assert.match(providers, /Signing channels are mutually exclusive/);
+    assert.match(providers, /kind: "signing"/);
+    assert.match(providers, /enabled: false/);
   });
 
   it("rejects a webhook that has no secret", () => {

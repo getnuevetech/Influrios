@@ -45,14 +45,15 @@ export type SigningIdentity = {
   baseUrl?: string;
 };
 
-/** Native in-app signing is always ready. DocuSign needs complete credentials. */
+/** Mode follows the single admin-enabled signing provider. Native needs no credentials; DocuSign does. */
 export function resolveSigningMode(
   providerCode: string,
   credentials?: SigningIdentity | null,
   env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
 ): "native" | "docusign" | "unconfigured" {
   const code = providerCode.trim().toLowerCase();
-  if (!code || isNativeSigningCode(code)) return "native";
+  if (!code) return "unconfigured";
+  if (isNativeSigningCode(code)) return "native";
   if (code === "demo" || code === "demo_sign") return "unconfigured";
   const ready = docuSignCredentialsReady({
     integrationKey: credentials?.integrationKey || env.DOCUSIGN_INTEGRATION_KEY || "",
@@ -66,7 +67,7 @@ export function resolveSigningMode(
 }
 
 export function signingModeLabel(providerCode?: string | null, credentials?: SigningIdentity | null) {
-  if (!providerCode) return "Influrios in-app signing";
+  if (!providerCode) return "No signing channel enabled";
   const mode = resolveSigningMode(providerCode, credentials);
   if (mode === "native") return "Influrios in-app signing";
   if (mode === "docusign") return "DocuSign";

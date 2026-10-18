@@ -26,9 +26,12 @@ import {
   actionSaveCampaignIntent,
   actionSendInquiry,
   actionShortlistFromInquiry,
-  actionTransitionMarketplaceApplication,
 } from "./actions";
-import { applicationTransitionLabel } from "@/lib/marketplace-listings";
+import {
+  applicationIsAcceptedPipeline,
+  applicationIsInvitation,
+  applicationKindLabel,
+} from "@/lib/marketplace-listings";
 import { actionSendTeamProposal } from "@/app/collaboration/team/actions";
 import { teamSendControl } from "@/lib/team-proposal";
 
@@ -614,6 +617,9 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
 
             <section id="applicants" className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
               <h2 className="font-display text-lg font-bold text-indigo">Applicants & Inquiries</h2>
+              <p className="mt-1 text-xs text-muted">
+                Open each application to review details. Status actions only appear on the detail page.
+              </p>
               <ul className="mt-3 space-y-3">
                 {hub.applications.length === 0 && hub.inquiries.length === 0 ? (
                   <li className="text-sm text-muted">
@@ -624,6 +630,8 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   const creator = application.creatorSlug
                     ? bySlug.get(application.creatorSlug)
                     : null;
+                  const invite = applicationIsInvitation(application);
+                  const accepted = applicationIsAcceptedPipeline(application.status);
                   return (
                     <li key={application.id} className="flex gap-3 rounded-xl border border-[#E8EDF8] p-3">
                       <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#F4F7FF]">
@@ -632,6 +640,10 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                         ) : null}
                       </span>
                       <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-violet">
+                          {applicationKindLabel(application)}
+                          {accepted ? " · Accepted" : ""}
+                        </p>
                         <p className="text-sm font-bold text-indigo">
                           {creator?.displayName ?? application.creatorSlug ?? "Applicant"}
                         </p>
@@ -641,58 +653,18 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                           </p>
                         ) : null}
                         <p className="mt-1 text-[10px] font-semibold uppercase text-violet">
-                          {application.status}
+                          {application.status.replaceAll("_", " ")}
                         </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {application.nextStatuses.map((status) => (
-                              <form key={status} action={actionTransitionMarketplaceApplication}>
-                                <input type="hidden" name="applicationId" value={application.id} />
-                                <input type="hidden" name="toStatus" value={status} />
-                                <button
-                                  type="submit"
-                                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold ${
-                                    status === "DECLINED" || status === "WITHDRAWN" || status === "EXPIRED"
-                                      ? "border border-border text-muted"
-                                      : status === "COLLABORATION_DRAFTED" || status === "ACCEPTED"
-                                        ? "bg-violet text-white"
-                                        : "border border-violet/30 text-violet"
-                                  }`}
-                                >
-                                  {applicationTransitionLabel(status)}
-                                </button>
-                              </form>
-                            ))}
-                          {application.status === "COLLABORATION_DRAFTED" && application.creatorSlug ? (
-                            <Link
-                              href={contractHrefFromCampaign({
-                                creatorSlug: application.creatorSlug,
-                                brief:
-                                  hub.intentBrief ??
-                                  hub.briefs.find((b) => b.status !== "closed") ??
-                                  hub.briefs[0] ??
-                                  null,
-                              })}
-                              className="rounded-lg bg-violet px-2.5 py-1 text-[11px] font-bold text-white"
-                            >
-                              Open contract
-                            </Link>
-                          ) : null}
-                        </div>
-                        {application.events.length > 0 ? (
-                          <ol className="mt-2 space-y-1 border-t border-[#E8EDF8] pt-2">
-                            {application.events.map((event) => (
-                              <li key={event.id} className="text-[10px] text-muted">
-                                <span className="font-semibold text-indigo">
-                                  {event.fromStatus ? `${event.fromStatus} → ` : ""}
-                                  {event.toStatus}
-                                </span>
-                                {event.note ? ` · ${event.note}` : ""}
-                                {" · "}
-                                {new Date(event.createdAt).toLocaleString()}
-                              </li>
-                            ))}
-                          </ol>
-                        ) : null}
+                        <Link
+                          href={`/collaboration/applications/${application.id}`}
+                          className="mt-2 inline-flex text-[11px] font-bold text-violet hover:underline"
+                        >
+                          {accepted
+                            ? "View collaboration →"
+                            : invite
+                              ? "View invitation →"
+                              : "View application →"}
+                        </Link>
                       </div>
                     </li>
                   );

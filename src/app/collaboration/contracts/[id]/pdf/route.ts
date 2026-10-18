@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
+import { resolveContractPartyForAccount } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +16,15 @@ export async function GET(_request: Request, { params }: Props) {
     getAdminSession().catch(() => null),
     prisma.contractDocument.findUnique({
       where: { id },
-      include: { parties: { select: { userId: true } } },
+      include: { parties: { select: { id: true, userId: true, email: true } } },
     }),
   ]);
   if (!document) return NextResponse.json({ error: "Contract not found." }, { status: 404 });
-  const isParty = Boolean(account && document.parties.some((party) => party.userId === account.id));
+  const party = account ? resolveContractPartyForAccount(document.parties, account) : null;
+  if (party && account && party.userId !== account.id) {
+    await prisma.contractParty.update({ where: { id: party.id }, data: { userId: account.id } }).catch(() => undefined);
+  }
+  const isParty = Boolean(party);
   const adminAllowed = Boolean(
     admin &&
       (admin.roleId === "role_super" ||

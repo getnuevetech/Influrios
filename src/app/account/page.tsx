@@ -23,7 +23,7 @@ export default async function AccountPage({
       where: { id: session.id },
       select: { phone: true },
     }),
-    listContractsForUser(session.id).catch(() => []),
+    listContractsForUser(session.id, session.email).catch(() => []),
   ]);
   return (
     <div className="mx-auto max-w-lg">
@@ -65,21 +65,47 @@ export default async function AccountPage({
       </div>
 
       <section id="contracts" className="card-surface mt-4 space-y-3 p-6">
-        <h2 className="font-display text-lg font-bold text-indigo">Contracts</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-bold text-indigo">Contracts</h2>
+          <Link href="/collaboration/contracts" className="text-sm font-semibold text-violet hover:underline">
+            Open contracts inbox →
+          </Link>
+        </div>
         <p className="text-sm text-muted">
-          Each agreement sent for signature is stored here for every party. Sign in Influrios on the contract page
-          (primary). DocuSign remains available when an admin enables that optional channel.
+          Signed and pending agreements for this account. Prefer the Contracts inbox in your sidebar for the full list.
         </p>
         {contracts.length === 0 ? <p className="text-sm text-muted">No contracts on this account yet.</p> : null}
         <ul className="space-y-2 text-sm">
-          {contracts.map((contract) => (
-            <li key={contract.id}>
-              <Link href={`/collaboration/contracts/${contract.id}`} className="font-semibold text-violet hover:underline">
-                {contract.title}
-              </Link>{" "}
-              · {contract.status}
-            </li>
-          ))}
+          {contracts.map((contract) => {
+            const yourParty = contract.parties.find(
+              (row) =>
+                row.userId === session.id ||
+                row.email.trim().toLowerCase() === session.email.trim().toLowerCase(),
+            );
+            const needsYourSignature =
+              contract.signingChannel === "native" &&
+              (contract.status === "sent" || contract.status === "draft") &&
+              yourParty?.status === "pending";
+            return (
+              <li key={contract.id} className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={`/collaboration/contracts/${contract.id}${needsYourSignature ? "#sign" : ""}`}
+                  className="font-semibold text-violet hover:underline"
+                >
+                  {contract.title}
+                </Link>
+                <span className="text-muted">· {contract.status}</span>
+                {needsYourSignature ? (
+                  <Link
+                    href={`/collaboration/contracts/${contract.id}#sign`}
+                    className="rounded-full bg-violet/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-violet"
+                  >
+                    Sign now
+                  </Link>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       </section>
 

@@ -28,7 +28,8 @@ export type MarketplaceApplicationStatus = (typeof MARKETPLACE_APPLICATION_STATU
 
 const APPLICATION_TRANSITIONS: Record<MarketplaceApplicationStatus, MarketplaceApplicationStatus[]> = {
   REQUESTED: ["VIEWED", "DECLINED", "EXPIRED", "WITHDRAWN"],
-  VIEWED: ["RESPONDED", "DECLINED", "EXPIRED", "WITHDRAWN"],
+  // ACCEPTED from VIEWED lets an invitee accept after opening the detail (auto-VIEWED).
+  VIEWED: ["RESPONDED", "ACCEPTED", "DECLINED", "EXPIRED", "WITHDRAWN"],
   RESPONDED: ["NEGOTIATING", "ACCEPTED", "DECLINED", "EXPIRED", "WITHDRAWN"],
   NEGOTIATING: ["ACCEPTED", "DECLINED", "EXPIRED", "WITHDRAWN"],
   ACCEPTED: ["COLLABORATION_DRAFTED", "WITHDRAWN"],
@@ -468,6 +469,98 @@ export function nextApplicationStatuses(from: string): MarketplaceApplicationSta
   return [...APPLICATION_TRANSITIONS[from]];
 }
 
+/**
+ * Whether this row is a business→creator invitation (toSlug set, creator did not apply as fromSlug).
+ * Creator-submitted applications set fromSlug; business invites set toSlug.
+ */
+export function applicationIsInvitation(application: {
+  fromSlug?: string | null;
+  toSlug?: string | null;
+}): boolean {
+  const to = (application.toSlug ?? "").trim();
+  if (!to) return false;
+  const from = (application.fromSlug ?? "").trim();
+  return !from || from !== to;
+}
+
+/** Creator role on an application they own. */
+export function creatorApplicationRole(
+  application: { fromSlug?: string | null; toSlug?: string | null },
+  creatorSlug: string,
+): "applicant" | "invitee" | null {
+  const slug = creatorSlug.trim();
+  if (!slug) return null;
+  if (application.fromSlug === slug) return "applicant";
+  if (application.toSlug === slug) return "invitee";
+  return null;
+}
+
+const BUSINESS_ONLY_TRANSITIONS: MarketplaceApplicationStatus[] = [
+  "VIEWED",
+  "RESPONDED",
+  "NEGOTIATING",
+  "EXPIRED",
+  "COLLABORATION_DRAFTED",
+];
+
+/**
+ * Statuses a business may advance from the application detail page.
+ * VIEWED is applied automatically when the business opens the detail — not a button.
+ */
+export function businessApplicationTransitions(from: string): MarketplaceApplicationStatus[] {
+  return nextApplicationStatuses(from).filter((status) => status !== "VIEWED");
+}
+
+/**
+ * Statuses a creator may advance from the application detail page.
+ * Invitees must open the detail (auto-VIEWED) before Accept/Decline appear.
+ * Applicants may only withdraw their own submission.
+ */
+export function creatorApplicationTransitions(
+  from: string,
+  role: "applicant" | "invitee",
+): MarketplaceApplicationStatus[] {
+  const next = nextApplicationStatuses(from);
+  if (role === "applicant") {
+    return next.filter((status) => status === "WITHDRAWN");
+  }
+  // Invitee: no business-ops transitions; Accept/Decline only after the invite was opened (VIEWED+).
+  if (from === "REQUESTED") return [];
+  return next.filter(
+    (status) =>
+      status === "ACCEPTED" ||
+      status === "DECLINED" ||
+      status === "WITHDRAWN" ||
+      status === "NEGOTIATING",
+  );
+}
+
+/** Human-readable kind for list/detail chrome. */
+export function applicationKindLabel(application: {
+  fromSlug?: string | null;
+  toSlug?: string | null;
+  kind?: string | null;
+}): string {
+  if (applicationIsInvitation(application)) return "Invitation";
+  if (application.kind === "creator_opportunity") return "Opportunity application";
+  return "Campaign application";
+}
+
+/** Open statuses that still belong under “invitations / applications” lists. */
+export function applicationIsOpenPipeline(status: string): boolean {
+  return (
+    status === "REQUESTED" ||
+    status === "VIEWED" ||
+    status === "RESPONDED" ||
+    status === "NEGOTIATING"
+  );
+}
+
+/** Accepted / drafted — no longer an “invite”; show under progressing collaborations. */
+export function applicationIsAcceptedPipeline(status: string): boolean {
+  return status === "ACCEPTED" || status === "COLLABORATION_DRAFTED";
+}
+
 /** Pure — workspace owns a request only via durable workspaceId (not brand substring). */
 export function isWorkspaceOwnedRequest(
   request: { workspaceId?: string | null },
@@ -612,12 +705,77 @@ export async function getMarketplaceApplication(id: string): Promise<Marketplace
   const row = await prisma.marketplaceApplication.findUnique({
     where: { id },
     include: {
-      businessRequest: { select: { brand: true } },
-      opportunity: { select: { lookingFor: true } },
+      businessRequest: {
+        select: {
+          brand: true,
+          summary: true,
+          lookingFor: true,
+          budget: true,
+          location: true,
+          category: true,
+          logoUrl: true,
+          imageUrl: true,
+          workspaceId: true,
+          status: true,
+        },
+      },
+      opportunity: { select: { lookingFor: true, summary: true, creatorSlug: true } },
       events: { orderBy: { createdAt: "asc" } },
     },
   });
   return row ? mapApplication(row) : null;
+}
+
+export type MarketplaceApplicationDetail = MarketplaceApplicationRow & {
+  requestSummary: string | null;
+  requestLookingFor: string | null;
+  requestBudget: string | null;
+  requestLocation: string | null;
+  requestCategory: string | null;
+  requestLogoUrl: string | null;
+  requestImageUrl: string | null;
+  requestWorkspaceId: string | null;
+  opportunitySummary: string | null;
+};
+
+/** Full detail payload for the application review page. */
+export async function getMarketplaceApplicationDetail(
+  id: string,
+): Promise<MarketplaceApplicationDetail | null> {
+  const row = await prisma.marketplaceApplication.findUnique({
+    where: { id },
+    include: {
+      businessRequest: {
+        select: {
+          brand: true,
+          summary: true,
+          lookingFor: true,
+          budget: true,
+          location: true,
+          category: true,
+          logoUrl: true,
+          imageUrl: true,
+          workspaceId: true,
+        },
+      },
+      opportunity: { select: { lookingFor: true, summary: true } },
+      events: { orderBy: { createdAt: "asc" } },
+    },
+  });
+  if (!row) return null;
+  const base = mapApplication(row);
+  return {
+    ...base,
+    requestSummary: row.businessRequest?.summary ?? null,
+    requestLookingFor: row.businessRequest?.lookingFor ?? null,
+    requestBudget: row.businessRequest?.budget ?? null,
+    requestLocation: row.businessRequest?.location ?? null,
+    requestCategory: row.businessRequest?.category ?? null,
+    requestLogoUrl: row.businessRequest?.logoUrl ?? null,
+    requestImageUrl: row.businessRequest?.imageUrl ?? null,
+    requestWorkspaceId: row.businessRequest?.workspaceId ?? null,
+    opportunitySummary: row.opportunity?.summary ?? null,
+  };
 }
 
 export async function listMarketplaceApplications(input?: {

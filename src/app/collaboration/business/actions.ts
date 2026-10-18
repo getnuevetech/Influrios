@@ -24,6 +24,7 @@ import {
 } from "@/lib/business";
 import { contractHrefFromCampaign } from "@/lib/campaign-contract";
 import {
+  businessApplicationTransitions,
   businessOwnsApplication,
   createMarketplaceApplication,
   getMarketplaceApplication,
@@ -339,6 +340,14 @@ export async function actionTransitionMarketplaceApplication(formData: FormData)
       `${HUB}?error=${encodeURIComponent("You can only manage applications on your published requests.")}#applicants`,
     );
   }
+  const allowed = businessApplicationTransitions(existing.status);
+  if (!allowed.includes(toStatus)) {
+    redirect(
+      `/collaboration/applications/${applicationId}?error=${encodeURIComponent(
+        "Open this application to review details before taking that action.",
+      )}`,
+    );
+  }
   try {
     const updated = await transitionMarketplaceApplication({
       id: applicationId,
@@ -359,10 +368,12 @@ export async function actionTransitionMarketplaceApplication(formData: FormData)
           : `${HUB}?drafted=1#applicants`,
       );
     }
-    redirect(`${HUB}?app=${encodeURIComponent(toStatus)}#applicants`);
+    redirect(`/collaboration/applications/${applicationId}?app=${encodeURIComponent(toStatus)}`);
   } catch (error) {
     redirect(
-      `${HUB}?error=${encodeURIComponent(error instanceof Error ? error.message : "Transition failed.")}#applicants`,
+      `/collaboration/applications/${applicationId}?error=${encodeURIComponent(
+        error instanceof Error ? error.message : "Transition failed.",
+      )}`,
     );
   }
 }

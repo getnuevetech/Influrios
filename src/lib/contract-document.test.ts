@@ -4,11 +4,14 @@ import {
   DEFAULT_CONTRACT_TEMPLATE,
   applyEnvelopeToParties,
   buildContractValues,
+  contractMessageNotifyEmails,
+  contractStageEmailCopy,
   fundingAllowedBySignature,
   messageVisible,
   renderContractBody,
   renderContractPdf,
   renderContractTemplate,
+  resolveContractPartyForAccount,
   signatureBlock,
 } from "./contract-document";
 import { applyNativeSignatureAnchor, formatNativeAttestation } from "./signing/native";
@@ -143,6 +146,77 @@ describe("contract documents", () => {
     assert.equal(messageVisible({ ...base, audience: "admin", senderUserId: "user_c", viewer: granted }), true);
     assert.equal(messageVisible({ ...base, audience: "admin", senderUserId: "user_c", viewer: locked }), false);
     assert.equal(messageVisible({ ...base, audience: "contract_manager", senderUserId: "user_c", viewer: manager }), true);
-    assert.equal(messageVisible({ ...base, audience: "all_parties", senderUserId: "user_c", viewer: manager }), false);
+    assert.equal(messageVisible({ ...base, audience: "all_parties", senderUserId: "user_c", viewer: manager }), true);
+    assert.equal(messageVisible({ ...base, audience: "admin", senderUserId: "user_c", viewer: manager }), false);
+  });
+
+  it("matches a party by email when userId is missing or stale", () => {
+    const parties = [
+      { id: "p1", userId: null as string | null, email: "Ada@Example.com" },
+      { id: "p2", userId: "user_biz", email: "biz@example.com" },
+    ];
+    assert.equal(resolveContractPartyForAccount(parties, { id: "new_user", email: "ada@example.com" })?.id, "p1");
+    assert.equal(resolveContractPartyForAccount(parties, { id: "user_biz", email: "other@example.com" })?.id, "p2");
+    assert.equal(resolveContractPartyForAccount(parties, { id: "x", email: "missing@example.com" }), undefined);
+  });
+
+  it("routes notify emails to all parties or one recipient, skipping the sender", () => {
+    const parties = [
+      { id: "biz", email: "biz@example.com", userId: "u_biz" },
+      { id: "ada", email: "ada@example.com", userId: "u_ada" },
+      { id: "bea", email: "bea@example.com", userId: null },
+    ];
+    assert.deepEqual(
+      contractMessageNotifyEmails({
+        audience: "all_parties",
+        parties,
+        senderUserId: "u_biz",
+        senderEmail: "biz@example.com",
+      }),
+      ["ada@example.com", "bea@example.com"],
+    );
+    assert.deepEqual(
+      contractMessageNotifyEmails({
+        audience: "party",
+        parties,
+        recipientPartyId: "ada",
+        senderUserId: "u_biz",
+        senderEmail: "biz@example.com",
+      }),
+      ["ada@example.com"],
+    );
+    assert.deepEqual(
+      contractMessageNotifyEmails({
+        audience: "admin",
+        parties,
+        senderUserId: "u_biz",
+      }),
+      [],
+    );
+  });
+
+  it("writes clear email copy for each contract stage", () => {
+    const sent = contractStageEmailCopy({
+      stage: "sent",
+      title: "Spring launch",
+      link: "https://app.example/collaboration/contracts/c1",
+      signingChannel: "native",
+    });
+    assert.match(sent.subject, /Action needed/);
+    assert.match(sent.text, /Sign here|sign with your legal name/i);
+    const done = contractStageEmailCopy({
+      stage: "completed",
+      title: "Spring launch",
+      link: "https://app.example/collaboration/contracts/c1",
+    });
+    assert.match(done.subject, /Fully signed/);
+    assert.match(done.text, /Funding can start/);
+    const remind = contractStageEmailCopy({
+      stage: "signature_reminder",
+      title: "Spring launch",
+      link: "https://app.example/c1",
+      actorName: "North Co",
+    });
+    assert.match(remind.text, /Your signature is still needed/);
   });
 });

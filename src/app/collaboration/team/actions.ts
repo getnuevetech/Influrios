@@ -9,6 +9,9 @@ import { createTeamProposal, respondToTeamProposal } from "@/lib/team-proposal";
 
 function safeReturn(value: string) {
   if (value === "/collaboration/business" || value === "/collaboration/hub") return value;
+  if (value.startsWith("/collaboration/team/") && !value.includes("//")) {
+    return value.slice(0, 200);
+  }
   return "/collaboration/team";
 }
 

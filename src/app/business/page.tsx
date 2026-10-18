@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { BusinessMarketingPage } from "@/components/business-marketing";
 import { getAccountSession } from "@/lib/accounts";
 import { getDirectory, profilePlace } from "@/lib/directory";
@@ -46,6 +47,11 @@ export default async function BusinessPage({ searchParams }: Props) {
       platforms: creator.socials.map((social) => social.platform),
     };
   });
+  // Signed-in business accounts stay in MemberFrame chrome, not the marketing landing.
+  if (account?.role === "BUSINESS" || account?.role === "AGENCY") {
+    redirect("/business/home");
+  }
+
   const landingView =
     livePages || landing.hero.images.length > 0
       ? landing
@@ -63,10 +69,10 @@ export default async function BusinessPage({ searchParams }: Props) {
         <div className="border-b border-[#E4EBFF] bg-[#EAE4FF]">
           <div className="mx-auto flex w-full max-w-[90rem] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
             <p className="text-sm font-medium text-indigo">
-              You are signed in — open your Business Collaboration Hub to manage campaigns.
+              You are signed in — open your account home to continue.
             </p>
-            <Link href="/business/home" className="btn-primary !px-4 !py-2 text-sm">
-              Open business account →
+            <Link href="/creator" className="btn-primary !px-4 !py-2 text-sm">
+              Open account →
             </Link>
           </div>
         </div>

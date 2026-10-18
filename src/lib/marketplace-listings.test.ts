@@ -3,7 +3,14 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   applicationIsStaleForExpire,
+  applicationIsAcceptedPipeline,
+  applicationIsInvitation,
+  applicationIsOpenPipeline,
+  applicationKindLabel,
   applicationTransitionLabel,
+  businessApplicationTransitions,
+  creatorApplicationRole,
+  creatorApplicationTransitions,
   businessOwnsApplication,
   canTransitionApplication,
   createMarketplaceApplication,
@@ -163,6 +170,31 @@ describe("marketplace application state machine", () => {
     assert.equal(applicationTransitionLabel("COLLABORATION_DRAFTED"), "Draft contract");
     assert.equal(applicationTransitionLabel("VIEWED"), "Mark viewed");
     assert.equal(applicationTransitionLabel("EXPIRED"), "Mark expired");
+  });
+
+  it("scopes creator vs business actions and invitation labels", () => {
+    assert.equal(applicationIsInvitation({ toSlug: "maya", fromSlug: null }), true);
+    assert.equal(applicationIsInvitation({ toSlug: "maya", fromSlug: "maya" }), false);
+    assert.equal(applicationIsInvitation({ fromSlug: "maya", toSlug: null }), false);
+    assert.equal(applicationKindLabel({ toSlug: "maya" }), "Invitation");
+    assert.equal(applicationKindLabel({ fromSlug: "maya", kind: "business_request" }), "Campaign application");
+    assert.equal(creatorApplicationRole({ fromSlug: "maya" }, "maya"), "applicant");
+    assert.equal(creatorApplicationRole({ toSlug: "maya" }, "maya"), "invitee");
+    assert.deepEqual(creatorApplicationTransitions("REQUESTED", "invitee"), []);
+    assert.deepEqual(creatorApplicationTransitions("VIEWED", "invitee").sort(), [
+      "ACCEPTED",
+      "DECLINED",
+      "WITHDRAWN",
+    ]);
+    assert.ok(!creatorApplicationTransitions("VIEWED", "invitee").includes("RESPONDED"));
+    assert.deepEqual(creatorApplicationTransitions("VIEWED", "applicant"), ["WITHDRAWN"]);
+    assert.ok(!businessApplicationTransitions("REQUESTED").includes("VIEWED"));
+    assert.ok(businessApplicationTransitions("REQUESTED").includes("DECLINED"));
+    assert.ok(canTransitionApplication("VIEWED", "ACCEPTED"));
+    assert.equal(applicationIsOpenPipeline("VIEWED"), true);
+    assert.equal(applicationIsAcceptedPipeline("ACCEPTED"), true);
+    assert.equal(applicationIsAcceptedPipeline("COLLABORATION_DRAFTED"), true);
+    assert.equal(applicationIsOpenPipeline("ACCEPTED"), false);
   });
 
   it("detects stale applications for auto-expire", () => {

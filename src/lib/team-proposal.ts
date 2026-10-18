@@ -337,6 +337,30 @@ export async function listTeamProposalsForCreator(creatorSlug: string) {
   });
 }
 
+export async function getTeamProposal(id: string) {
+  await expireDueProposals();
+  const proposalId = id.trim();
+  if (!proposalId) return null;
+  return prisma.teamProposal.findUnique({
+    where: { id: proposalId },
+    include: { members: { orderBy: { createdAt: "asc" } } },
+  });
+}
+
+/** Personal member status label so an accepted invite does not still read as “invited”. */
+export function teamMemberStatusLabel(status: string): string {
+  switch (status) {
+    case "invited":
+      return "Pending your response";
+    case "accepted":
+      return "You accepted";
+    case "declined":
+      return "You declined";
+    default:
+      return status;
+  }
+}
+
 export async function teamMemberReadiness(input: {
   creatorSlug: string;
   businessName: string;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { actionRespondTeamProposal, actionSendTeamProposal } from "@/app/collaboration/team/actions";
+import { actionSendTeamProposal } from "@/app/collaboration/team/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
@@ -138,24 +138,30 @@ export default async function TeamProposalPage({ searchParams }: Props) {
 
         <section className="space-y-3">
           <h2 className="font-display text-xl font-bold text-indigo">Invitations for you</h2>
+          <p className="text-sm text-muted">
+            Open each invitation to review campaign details before accepting or declining.
+          </p>
           {incoming.length === 0 ? <p className="text-sm text-muted">No team invitations on this account.</p> : null}
-          {incoming.map((proposal) => (
-            <article key={proposal.id} className="card-surface p-4">
-              <p className="font-semibold text-indigo">{proposal.title}</p>
-              <p className="mt-1 text-xs uppercase tracking-wide text-violet">{proposal.status}</p>
-              {proposal.status === "sent" && creator ? (
-                <form action={actionRespondTeamProposal} className="mt-3 flex gap-2">
-                  <input type="hidden" name="proposalId" value={proposal.id} />
-                  <button name="decision" value="accepted" className="btn-primary !py-1.5 text-xs">
-                    Accept
-                  </button>
-                  <button name="decision" value="declined" className="btn-secondary !py-1.5 text-xs">
-                    Decline
-                  </button>
-                </form>
-              ) : null}
-            </article>
-          ))}
+          {incoming.map((proposal) => {
+            const mine = creator
+              ? proposal.members.find((member) => member.creatorSlug === creator.slug)
+              : null;
+            return (
+              <article key={proposal.id} className="card-surface p-4">
+                <p className="font-semibold text-indigo">{proposal.title}</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-violet">
+                  Proposal: {proposal.status}
+                  {mine ? ` · ${mine.status === "invited" ? "Pending your response" : mine.status}` : ""}
+                </p>
+                <Link
+                  href={`/collaboration/team/${proposal.id}`}
+                  className="mt-3 inline-block text-xs font-bold text-violet hover:underline"
+                >
+                  {mine?.status === "invited" ? "View invitation →" : "View details →"}
+                </Link>
+              </article>
+            );
+          })}
         </section>
       </div>
     </div>
