@@ -9,6 +9,8 @@ import { consumeGuestQuota } from "@/lib/guest-usage";
 import { enteredNote } from "@/lib/business";
 import {
   createMarketplaceApplication,
+  creatorApplicationRole,
+  creatorApplicationTransitions,
   creatorOwnsApplication,
   getMarketplaceApplication,
   MARKETPLACE_APPLICATION_STATUSES,
@@ -131,6 +133,15 @@ export async function actionCreatorTransitionApplication(formData: FormData) {
   if (!existing || !creatorOwnsApplication(existing, draft.slug)) {
     redirect(`${HUB}?error=${encodeURIComponent("You can only manage your own applications.")}#applications`);
   }
+  const role = creatorApplicationRole(existing, draft.slug);
+  const allowed = role ? creatorApplicationTransitions(existing.status, role) : [];
+  if (!allowed.includes(toStatus)) {
+    redirect(
+      `/collaboration/applications/${applicationId}?error=${encodeURIComponent(
+        "Open this invitation to review details before taking that action.",
+      )}`,
+    );
+  }
   try {
     await transitionMarketplaceApplication({
       id: applicationId,
@@ -140,12 +151,14 @@ export async function actionCreatorTransitionApplication(formData: FormData) {
     });
     revalidateCreatorSurfaces();
     if (toStatus === "COLLABORATION_DRAFTED") {
-      redirect(`/collaboration/contract?creator=${encodeURIComponent(draft.slug)}`);
+      redirect("/collaboration/contracts");
     }
-    redirect(`${HUB}?app=${encodeURIComponent(toStatus)}#applications`);
+    redirect(`/collaboration/applications/${applicationId}?app=${encodeURIComponent(toStatus)}`);
   } catch (error) {
     redirect(
-      `${HUB}?error=${encodeURIComponent(error instanceof Error ? error.message : "Transition failed.")}#applications`,
+      `/collaboration/applications/${applicationId}?error=${encodeURIComponent(
+        error instanceof Error ? error.message : "Transition failed.",
+      )}`,
     );
   }
 }

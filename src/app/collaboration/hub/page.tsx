@@ -26,14 +26,17 @@ import { cardsFromStoredCollaborationMatches } from "@/lib/matching";
 import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
 import { PAYOUT_METHOD_LABELS, type PayoutMethod } from "@/lib/payout-readiness";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
-import { applicationTransitionLabel } from "@/lib/marketplace-listings";
+import {
+  applicationIsAcceptedPipeline,
+  applicationIsInvitation,
+  applicationIsOpenPipeline,
+  applicationKindLabel,
+} from "@/lib/marketplace-listings";
 import {
   actionApplyToBusinessRequest,
   actionApplyToCreatorOpportunity,
-  actionCreatorTransitionApplication,
 } from "./actions";
-import { actionRespondTeamProposal } from "@/app/collaboration/team/actions";
-import { listTeamProposalsForCreator } from "@/lib/team-proposal";
+import { listTeamProposalsForCreator, teamMemberStatusLabel } from "@/lib/team-proposal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Collaborations · Hub" };
@@ -310,46 +313,39 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
           >
             <h2 className="font-display text-xl font-bold text-indigo">Team proposals</h2>
             <p className="mt-1 text-sm text-muted">
-              Accept or decline a team invitation. The business contract opens only after every creator accepts.
+              Open an invitation to review campaign details before accepting. The business contract opens only after
+              every creator accepts.
             </p>
             {params.status ? <p className="mt-2 text-sm font-semibold text-indigo">Status: {params.status}</p> : null}
             {teamProposals.length === 0 ? (
               <p className="mt-3 text-sm text-muted">No team invitations.</p>
             ) : (
               <ul className="mt-3 space-y-3">
-                {teamProposals.map((proposal) => (
-                  <li key={proposal.id} className="rounded-xl bg-[#F4F7FF] p-3">
-                    <p className="font-semibold text-indigo">{proposal.title}</p>
-                    <p className="text-xs uppercase tracking-wide text-violet">{proposal.status}</p>
-                    <ul className="mt-1 text-sm text-muted">
-                      {proposal.members.map((member) => (
-                        <li key={member.id}>
-                          {member.creatorSlug} · {member.status}
-                        </li>
-                      ))}
-                    </ul>
-                    {proposal.status === "sent" || proposal.status === "partial" ? (
-                      proposal.members.some(
-                        (member) => member.creatorSlug === creator.slug && member.status === "invited",
-                      ) ? (
-                        <form action={actionRespondTeamProposal} className="mt-2 flex gap-2">
-                          <input type="hidden" name="proposalId" value={proposal.id} />
-                          <input type="hidden" name="returnTo" value="/collaboration/hub" />
-                          <button name="decision" value="accepted" className="btn-primary !py-1.5 text-xs">
-                            Accept
-                          </button>
-                          <button name="decision" value="declined" className="btn-secondary !py-1.5 text-xs">
-                            Decline
-                          </button>
-                        </form>
-                      ) : null
-                    ) : proposal.status === "declined" ? (
-                      <p className="mt-2 text-xs text-muted">This proposal is closed. A new proposal is required to change the team.</p>
-                    ) : proposal.status === "accepted" ? (
-                      <p className="mt-2 text-xs text-muted">Every creator accepted. The business can open the contract.</p>
-                    ) : null}
-                  </li>
-                ))}
+                {teamProposals.map((proposal) => {
+                  const mine = proposal.members.find((member) => member.creatorSlug === creator.slug);
+                  return (
+                    <li key={proposal.id} className="rounded-xl bg-[#F4F7FF] p-3">
+                      <p className="font-semibold text-indigo">{proposal.title}</p>
+                      <p className="text-xs uppercase tracking-wide text-violet">
+                        Proposal: {proposal.status}
+                        {mine ? ` · ${teamMemberStatusLabel(mine.status)}` : ""}
+                      </p>
+                      <ul className="mt-1 text-sm text-muted">
+                        {proposal.members.map((member) => (
+                          <li key={member.id}>
+                            {member.creatorSlug} · {member.status}
+                          </li>
+                        ))}
+                      </ul>
+                      <Link
+                        href={`/collaboration/team/${proposal.id}`}
+                        className="mt-2 inline-block text-xs font-bold text-violet hover:underline"
+                      >
+                        {mine?.status === "invited" ? "View invitation →" : "View details →"}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>
@@ -721,64 +717,49 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
               } ${isOpportunities ? "" : "ring-2 ring-violet/30"}`}
             >
               <h2 className="mb-3 font-display text-base font-bold text-indigo">My Applications & Invitations</h2>
+              <p className="mb-3 text-xs text-muted">
+                Open each item to review full details. Accept, decline, and other actions only appear on the detail page.
+              </p>
               <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {hub.applications.length === 0 ? (
                   <li className="text-sm text-muted sm:col-span-2">
                     No applications yet — Apply on a business request above.
                   </li>
                 ) : (
-                  hub.applications.map((application) => (
-                    <li key={application.id} className="rounded-xl border border-[#E8EDF8] p-3">
-                      <p className="text-sm font-bold text-indigo">
-                        {application.requestBrand ??
-                          application.opportunityLookingFor ??
-                          (application.kind === "creator_opportunity" ? "Creator opportunity" : "Business request")}
-                      </p>
-                      <p className="mt-1 text-[10px] font-semibold uppercase text-violet">
-                        {application.status}
-                      </p>
-                      {application.note?.trim() ? (
-                        <p className="mt-1 line-clamp-2 text-[11px] text-muted">{application.note}</p>
-                      ) : null}
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {application.nextStatuses.map((status) => (
-                            <form key={status} action={actionCreatorTransitionApplication}>
-                              <input type="hidden" name="applicationId" value={application.id} />
-                              <input type="hidden" name="toStatus" value={status} />
-                              <button
-                                type="submit"
-                                className="rounded-lg border border-violet/30 px-2.5 py-1 text-[11px] font-bold text-violet"
-                              >
-                                {applicationTransitionLabel(status)}
-                              </button>
-                            </form>
-                          ))}
-                        {application.status === "COLLABORATION_DRAFTED" ? (
-                          <Link
-                            href={`/collaboration/contract?creator=${encodeURIComponent(creator.slug)}`}
-                            className="rounded-lg bg-violet px-2.5 py-1 text-[11px] font-bold text-white"
-                          >
-                            Open contract
-                          </Link>
+                  hub.applications.map((application) => {
+                    const invite = applicationIsInvitation(application);
+                    const accepted = applicationIsAcceptedPipeline(application.status);
+                    const open = applicationIsOpenPipeline(application.status);
+                    return (
+                      <li key={application.id} className="rounded-xl border border-[#E8EDF8] p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-violet">
+                          {applicationKindLabel(application)}
+                          {accepted ? " · Accepted" : open && invite ? " · Needs review" : ""}
+                        </p>
+                        <p className="mt-1 text-sm font-bold text-indigo">
+                          {application.requestBrand ??
+                            application.opportunityLookingFor ??
+                            (application.kind === "creator_opportunity" ? "Creator opportunity" : "Business request")}
+                        </p>
+                        <p className="mt-1 text-[10px] font-semibold uppercase text-violet">
+                          {application.status.replaceAll("_", " ")}
+                        </p>
+                        {application.note?.trim() ? (
+                          <p className="mt-1 line-clamp-2 text-[11px] text-muted">{application.note}</p>
                         ) : null}
-                      </div>
-                      {application.events.length > 0 ? (
-                        <ol className="mt-2 space-y-1 border-t border-[#E8EDF8] pt-2">
-                          {application.events.map((event) => (
-                            <li key={event.id} className="text-[10px] text-muted">
-                              <span className="font-semibold text-indigo">
-                                {event.fromStatus ? `${event.fromStatus} → ` : ""}
-                                {event.toStatus}
-                              </span>
-                              {event.note ? ` · ${event.note}` : ""}
-                              {" · "}
-                              {new Date(event.createdAt).toLocaleString()}
-                            </li>
-                          ))}
-                        </ol>
-                      ) : null}
-                    </li>
-                  ))
+                        <Link
+                          href={`/collaboration/applications/${application.id}`}
+                          className="mt-3 inline-flex text-[11px] font-bold text-violet hover:underline"
+                        >
+                          {accepted
+                            ? "View collaboration →"
+                            : invite
+                              ? "View invitation →"
+                              : "View application →"}
+                        </Link>
+                      </li>
+                    );
+                  })
                 )}
               </ul>
             </section>

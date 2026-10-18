@@ -135,10 +135,10 @@ export default async function CreatorCampaignRequestPage({ params, searchParams 
                   <p className="mt-1 text-xs text-muted">Status: {existing.status.replaceAll("_", " ")}</p>
                 </div>
                 <Link
-                  href="/collaboration/hub?view=collaborations#applications"
+                  href={`/collaboration/applications/${existing.id}`}
                   className="btn-secondary !py-2 text-sm"
                 >
-                  View applications
+                  View application
                 </Link>
               </div>
             ) : (

@@ -138,6 +138,7 @@ describe("plan presentation", () => {
     assert.equal(hidesMarketingChrome("/dashboard/profile"), true);
     assert.equal(hidesMarketingChrome("/collaboration/hub"), true);
     assert.equal(hidesMarketingChrome("/collaboration/requests/req_1"), true);
+    assert.equal(hidesMarketingChrome("/collaboration/applications/app_1"), true);
     assert.equal(hidesMarketingChrome("/business"), false);
     assert.equal(hidesMarketingChrome("/discover"), true);
     assert.equal(hidesMarketingChrome("/collaboration/contract"), true);
