@@ -41,6 +41,9 @@ async function requireBusinessSession() {
   await assertCollabOsV1();
   const account = await getAccountSession().catch(() => null);
   if (!account) redirect(`/login?next=${encodeURIComponent(HUB)}&gate=business`);
+  if (account.role !== "BUSINESS" && account.role !== "AGENCY") {
+    redirect("/creator");
+  }
   const accepted = await hasCurrentLegalRecord({
     documentKey: "business-terms",
     userId: account.id,
@@ -55,6 +58,9 @@ async function requireBusinessAccount() {
   await assertCollabOsV1();
   const account = await getAccountSession().catch(() => null);
   if (!account) redirect(`/login?next=${encodeURIComponent(HUB)}&gate=business`);
+  if (account.role !== "BUSINESS" && account.role !== "AGENCY") {
+    redirect("/creator");
+  }
   const accepted = await hasCurrentLegalRecord({
     documentKey: "business-terms",
     userId: account.id,

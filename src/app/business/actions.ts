@@ -21,6 +21,9 @@ import type { BusinessPlanCode } from "@/lib/business-entitlements";
 async function requireBusinessAccount() {
   const account = await getAccountSession().catch(() => null);
   if (!account) redirect("/login?next=/business");
+  if (account.role !== "BUSINESS" && account.role !== "AGENCY") {
+    redirect("/creator");
+  }
   const accepted = await hasCurrentLegalRecord({
     documentKey: "business-terms",
     userId: account.id,
@@ -32,9 +35,18 @@ async function requireBusinessAccount() {
   return { account, ws };
 }
 
-/** Promote a non-admin account to BUSINESS once it accepts the business terms. */
+/**
+ * Promote to BUSINESS only for accounts that are not already influencers.
+ * Creator/influencer accounts stay CREATOR — they must use a separate business signup.
+ */
 async function markAccountBusiness(userId: string, currentRole: string) {
-  if (currentRole === "ADMIN" || currentRole === "BUSINESS") return;
+  if (currentRole === "ADMIN" || currentRole === "BUSINESS" || currentRole === "AGENCY") return;
+  const creator = await prisma.creator.findUnique({ where: { userId }, select: { id: true } });
+  if (creator || currentRole === "CREATOR") {
+    throw new Error(
+      "This is an influencer account. Sign up separately as a business to use company tools and business plans.",
+    );
+  }
   await prisma.user.update({ where: { id: userId }, data: { role: "BUSINESS" } });
 }
 
@@ -44,10 +56,18 @@ export async function actionAcceptBusinessTerms(formData: FormData) {
   }
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business");
-  await markAccountBusiness(account.id, account.role);
+  try {
+    await markAccountBusiness(account.id, account.role);
+  } catch (error) {
+    redirect(
+      `/creator?error=${encodeURIComponent(
+        error instanceof Error ? error.message : "Influencer accounts cannot become business workspaces.",
+      )}`,
+    );
+  }
   if (await hasCurrentLegalRecord({ documentKey: "business-terms", userId: account.id })) {
     await ensureOwnedBusinessWorkspace(account.id);
-    redirect("/business?terms=1");
+    redirect("/business/home?terms=1");
   }
   await recordLegalEvent({
     trigger: "business_registration",
@@ -57,7 +77,7 @@ export async function actionAcceptBusinessTerms(formData: FormData) {
     extraKeys: ["terms-of-service", "privacy-policy"],
   });
   await ensureOwnedBusinessWorkspace(account.id);
-  redirect("/business?terms=1");
+  redirect("/business/home?terms=1");
 }
 
 export async function actionAddShortlist(formData: FormData) {
