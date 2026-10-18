@@ -3,7 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { actionPostContractMessage, actionSignNativeContract } from "@/app/collaboration/contracts/[id]/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
-import { adminCanOpenContractMessages, messageVisible } from "@/lib/contract-document";
+import {
+  adminCanOpenContractMessages,
+  messageVisible,
+  resolveContractPartyForAccount,
+} from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -28,14 +32,20 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
     }),
   ]);
   if (!document) notFound();
-  const party = account ? document.parties.find((row) => row.userId === account.id) : undefined;
+  let party = account ? resolveContractPartyForAccount(document.parties, account) : undefined;
+  // Heal stale party userId so later list/sign lookups stay consistent.
+  if (party && account && party.userId !== account.id) {
+    await prisma.contractParty.update({ where: { id: party.id }, data: { userId: account.id } }).catch(() => undefined);
+    party = { ...party, userId: account.id };
+  }
   const adminOpen = admin
     ? adminCanOpenContractMessages(admin) || admin.permissions.includes("contracts.manage") || admin.permissions.includes("contracts.view")
     : false;
   if (!party && !adminOpen) redirect("/login?next=/collaboration/contracts/" + id);
 
-  const viewer = party
-    ? ({ kind: "party", userId: account!.id, partyId: party.id } as const)
+  // Prefer party viewer whenever the account matches a party (never demote to admin).
+  const viewer = party && account
+    ? ({ kind: "party", userId: account.id, partyId: party.id } as const)
     : admin
       ? ({ kind: "admin", userId: admin.userId, roleId: admin.roleId, permissions: admin.permissions } as const)
       : null;
@@ -162,8 +172,10 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
         <section className="rounded-2xl border border-[#E4E9F5] bg-white p-5">
           <h2 className="font-display text-xl font-bold text-indigo">Messages</h2>
           <p className="mt-1 text-sm text-muted">
-            Choose one party, every party, an admin, or the contract manager. Super Admin can read every message.
-            Another admin can read them only after Super Admin grants contract messages on that access level.
+            <strong className="text-indigo">All parties</strong> is visible to every business and influencer on this
+            contract (and emails them). <strong className="text-indigo">One party</strong> goes only to the person you
+            select. Admin / contract manager stay with staff. Super Admin can read every message; other admins need the
+            contract-messages grant (managers also see all-parties threads).
           </p>
           {messages.length === 0 ? <p className="mt-3 text-sm text-muted">No messages you can read yet.</p> : null}
           <ul className="mt-3 space-y-3">
@@ -181,15 +193,15 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
               <input type="hidden" name="documentId" value={document.id} />
               <label className="block text-sm font-semibold text-indigo">
                 Who can read this
-                <select name="audience" className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal">
-                  <option value="all_parties">All parties</option>
-                  <option value="party">One party</option>
-                  <option value="admin">Admin</option>
-                  <option value="contract_manager">Contract manager</option>
+                <select name="audience" defaultValue="all_parties" className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal">
+                  <option value="all_parties">All parties (business + every influencer)</option>
+                  <option value="party">One party only</option>
+                  <option value="admin">Admin only</option>
+                  <option value="contract_manager">Contract manager only</option>
                 </select>
               </label>
               <label className="block text-sm font-semibold text-indigo">
-                Party, when you chose one party
+                Party (required when you chose one party)
                 <select name="recipientPartyId" className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal">
                   <option value="">Select a party</option>
                   {document.parties.map((row) => (
@@ -204,7 +216,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                 <textarea name="body" required rows={4} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
               </label>
               <button type="submit" className="btn-primary !py-2 text-sm">
-                Save on this contract
+                Send on this contract
               </button>
             </form>
           ) : (

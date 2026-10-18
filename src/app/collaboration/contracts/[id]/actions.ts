@@ -4,8 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
-import { isMessageAudience, postContractMessage, signNativeContractParty } from "@/lib/contract-document";
-import { prisma } from "@/lib/db";
+import {
+  isMessageAudience,
+  postContractMessage,
+  resolveContractPartyForSession,
+  signNativeContractParty,
+} from "@/lib/contract-document";
 
 export async function actionSignNativeContract(formData: FormData) {
   const documentId = String(formData.get("documentId") ?? "").trim();
@@ -22,6 +26,7 @@ export async function actionSignNativeContract(formData: FormData) {
   const result = await signNativeContractParty({
     documentId,
     userId: account.id,
+    email: account.email,
     typedName: String(formData.get("typedName") ?? ""),
   });
   if (!result.ok) {
@@ -42,8 +47,7 @@ export async function actionPostContractMessage(formData: FormData) {
   }
   const account = await getAccountSession().catch(() => null);
   const admin = await getAdminSession().catch(() => null);
-  const parties = await prisma.contractParty.findMany({ where: { documentId } });
-  const party = account ? parties.find((row) => row.userId === account.id) : undefined;
+  const party = account ? await resolveContractPartyForSession(documentId, account) : null;
   const result = await postContractMessage({
     documentId,
     body: String(formData.get("body") ?? ""),
@@ -52,6 +56,7 @@ export async function actionPostContractMessage(formData: FormData) {
     senderName: party?.name || admin?.name || account?.name || "Influrios",
     senderUserId: party ? account?.id : null,
     senderAdminId: party ? null : admin?.userId,
+    senderEmail: party?.email || account?.email || null,
     viewerPartyId: party?.id,
     admin: admin ? { roleId: admin.roleId, permissions: admin.permissions } : null,
   });
@@ -59,5 +64,7 @@ export async function actionPostContractMessage(formData: FormData) {
     redirect(`/collaboration/contracts/${documentId}?error=${encodeURIComponent(result.error)}`);
   }
   revalidatePath(`/collaboration/contracts/${documentId}`);
+  revalidatePath("/creator/messages");
+  revalidatePath("/account");
   redirect(`/collaboration/contracts/${documentId}?sent=1`);
 }

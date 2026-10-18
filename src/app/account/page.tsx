@@ -23,7 +23,7 @@ export default async function AccountPage({
       where: { id: session.id },
       select: { phone: true },
     }),
-    listContractsForUser(session.id).catch(() => []),
+    listContractsForUser(session.id, session.email).catch(() => []),
   ]);
   return (
     <div className="mx-auto max-w-lg">
