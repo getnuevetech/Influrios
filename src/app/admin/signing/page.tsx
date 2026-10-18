@@ -69,17 +69,22 @@ export default async function AdminSigningPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Document signing</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        Enable DocuSign and save the integration key, user id, account id, RSA private key, and API base URL. Mode:{" "}
+        <strong className="text-indigo">Influrios in-app signing</strong> is primary: parties type their legal name on
+        the contract page — no DocuSign required. DocuSign stays optional: enable it and save the integration key, user
+        id, account id, RSA private key, and API base URL only when you want that channel. Active mode:{" "}
         <span className="font-semibold text-indigo">{signingModeLabel(activeCode, signingIdentity(providers.find((provider) => provider.enabled) ?? providers[0]))}</span>.
-        An accepted collaboration sends the envelope with those saved credentials. Webhook:{" "}
-        <code className="text-xs">POST /api/signing/webhook</code>.
+        DocuSign webhook (when used): <code className="text-xs">POST /api/signing/webhook</code>.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
       {dbError ? <p className="mt-4 text-sm text-amber-800">The database is unavailable.</p> : null}
 
       <section className="mt-6 space-y-4">
-        {providers.map((provider) => (
+        {providers.map((provider) => {
+          const code = provider.code.trim().toLowerCase();
+          const isNative =
+            code === "influrios" || code === "native" || code === "in_app" || code === "in-app";
+          return (
           <form key={provider.id} action={actionSaveSigningProvider} className="grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4 sm:grid-cols-2">
             <input type="hidden" name="id" value={provider.id} />
             <input type="hidden" name="code" value={provider.code} />
@@ -87,6 +92,12 @@ export default async function AdminSigningPage({ searchParams }: Props) {
               Name
               <input name="name" defaultValue={provider.name} disabled={!canEdit} className={inputClass} />
             </label>
+            {isNative ? (
+              <p className="text-sm text-muted sm:col-span-1">
+                Code <code className="text-xs">{provider.code}</code>. Parties sign on the contract page — no API keys.
+              </p>
+            ) : (
+              <>
             <label className="text-sm font-semibold text-indigo">
               Integration key
               <input name="integrationKey" defaultValue={provider.integrationKey} disabled={!canEdit} className={inputClass} />
@@ -115,14 +126,17 @@ export default async function AdminSigningPage({ searchParams }: Props) {
               Webhook secret ({provider.webhook})
               <input name="webhook" type="password" placeholder="Leave blank to keep" disabled={!canEdit} className={inputClass} />
             </label>
+              </>
+            )}
             <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
               <input type="checkbox" name="enabled" value="1" defaultChecked={provider.enabled} disabled={!canEdit} />
               Enabled
             </label>
             <p className="text-xs text-muted sm:col-span-2">{signingModeLabel(provider.code, signingIdentity(provider))}</p>
-            {canEdit ? <button type="submit" className="btn-primary w-fit">Save signing API</button> : null}
+            {canEdit ? <button type="submit" className="btn-primary w-fit">{isNative ? "Save in-app signing" : "Save signing API"}</button> : null}
           </form>
-        ))}
+          );
+        })}
         {canEdit ? (
           <form action={actionSaveSigningProvider} className="grid gap-3 rounded-2xl border border-dashed border-[#E4EBFF] bg-white p-4 sm:grid-cols-2">
             <h2 className="font-display text-lg font-bold text-indigo sm:col-span-2">Add a signing API</h2>

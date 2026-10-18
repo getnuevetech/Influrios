@@ -297,9 +297,23 @@ export function collectionPayoutReady(input: {
   return collectionPayoutBlocker(input) === null;
 }
 
-export function signingCanQueue(input: { enabled: boolean; hasSecret: boolean; collaborationStatus: string }): { ok: true } | { ok: false; error: string } {
+export function signingCanQueue(input: {
+  enabled: boolean;
+  hasSecret: boolean;
+  collaborationStatus: string;
+  /** When native/influrios, no API secret is required. */
+  providerCode?: string;
+}): { ok: true } | { ok: false; error: string } {
   if (input.collaborationStatus !== "accepted") {
     return { ok: false, error: "A proposal can be sent for signature after it is accepted." };
+  }
+  const code = (input.providerCode ?? "").trim().toLowerCase();
+  const native = code === "" || code === "influrios" || code === "native" || code === "in_app" || code === "in-app";
+  if (native) {
+    if (input.enabled === false && code) {
+      return { ok: false, error: "Enable Influrios in-app signing in admin, or leave DocuSign disabled so native stays primary." };
+    }
+    return { ok: true };
   }
   if (!input.enabled || !input.hasSecret) {
     return { ok: false, error: "Document signing is not connected. Add the API details in admin and enable the provider." };
@@ -338,14 +352,14 @@ export function gatewayCredentialLabels(code: string): { publicKey: string; secr
   }
 }
 
-async function ensureProviderShell(kind: string, code: string, name: string) {
+async function ensureProviderShell(kind: string, code: string, name: string, enabled = false) {
   const existing = await prisma.integrationProvider.findUnique({
     where: { kind_code: { kind, code } },
   });
   if (existing) return;
   try {
     await prisma.integrationProvider.create({
-      data: { kind, code, name, enabled: false },
+      data: { kind, code, name, enabled },
     });
   } catch (error) {
     const prismaCode = typeof error === "object" && error && "code" in error ? String(error.code) : "";
@@ -381,6 +395,8 @@ async function seedIntegrationCatalog() {
   }
   // Payment gateways are added only from Admin → Payment gateways (no baked Stripe/Flutterwave shells).
   await ensureProviderShell("search", "meilisearch", "Meilisearch");
+  // Native in-app signing is primary and enabled by default; DocuSign stays optional.
+  await ensureProviderShell("signing", "influrios", "Influrios in-app signing", true);
   await ensureProviderShell("signing", "docusign", "DocuSign");
   for (const fn of AI_FUNCTIONS) {
     await prisma.aiFunctionRoute.upsert({
@@ -784,10 +800,18 @@ export async function assignAiFunction(functionKey: string, providerId: string) 
 
 export async function activeSigningProvider() {
   await ensureIntegrationCatalog();
-  const provider = await prisma.integrationProvider.findFirst({
+  const enabled = await prisma.integrationProvider.findMany({
     where: { kind: "signing", enabled: true },
     orderBy: { updatedAt: "desc" },
   });
+  // Prefer native Influrios signing when both native and DocuSign are enabled.
+  const provider =
+    enabled.find((row) => {
+      const code = row.code.trim().toLowerCase();
+      return code === "influrios" || code === "native" || code === "in_app" || code === "in-app";
+    }) ??
+    enabled[0] ??
+    null;
   if (!provider) return null;
   const extra = readProviderExtra(provider.extraJson);
   return {
@@ -835,17 +859,20 @@ async function askSigningProvider(input: { baseUrl: string; secret: string; titl
 
 export async function queueSignatureRequest(input: { collaborationId: string; title: string; collaborationStatus: string }) {
   const provider = await activeSigningProvider();
+  const code = (provider?.code ?? "influrios").trim().toLowerCase();
   const gate = signingCanQueue({
-    enabled: Boolean(provider?.enabled),
+    enabled: provider ? provider.enabled : true,
     hasSecret: Boolean(provider?.hasSecret),
     collaborationStatus: input.collaborationStatus,
+    providerCode: code,
   });
   if (!gate.ok) return gate;
-  const secret = provider!.secretCipher ? decryptSecret(provider!.secretCipher) : null;
-  const code = provider!.code.trim().toLowerCase();
+  const secret = provider?.secretCipher ? decryptSecret(provider.secretCipher) : null;
   let externalId = "";
   if (code === "demo" || code === "demo_sign") {
-    return { ok: false as const, error: "DocuSign is the signing provider. Nothing was sent." };
+    return { ok: false as const, error: "Use Influrios in-app signing or DocuSign. Nothing was sent." };
+  } else if (code === "influrios" || code === "native" || code === "in_app" || code === "in-app") {
+    externalId = `native_${input.collaborationId.slice(0, 40)}`;
   } else if (code === "docusign" || code.includes("docusign")) {
     const collab = await prisma.collaboration.findUnique({
       where: { id: input.collaborationId },
@@ -898,12 +925,17 @@ export async function queueSignatureRequest(input: { collaborationId: string; ti
   const row = await prisma.signatureRequest.create({
     data: {
       collaborationId: input.collaborationId,
-      providerId: provider!.id,
+      providerId: provider?.id ?? null,
       status: "sent",
       title: input.title.slice(0, 160),
       externalId,
       lastError: null,
     },
   });
-  return { ok: true as const, id: row.id, status: row.status, providerName: provider!.name };
+  return {
+    ok: true as const,
+    id: row.id,
+    status: row.status,
+    providerName: provider?.name ?? "Influrios in-app signing",
+  };
 }

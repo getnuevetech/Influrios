@@ -203,9 +203,9 @@ const LINKS: {
   {
     href: "/admin/signing",
     title: "Document signing",
-    blurb: "DocuSign integration key, user id, account id, and private key.",
+    blurb: "Influrios in-app signing (primary) and optional DocuSign credentials.",
     module: "signing",
-    meta: () => "Saved DocuSign credentials",
+    meta: () => "Native primary · DocuSign optional",
   },
   {
     href: "/admin/social",

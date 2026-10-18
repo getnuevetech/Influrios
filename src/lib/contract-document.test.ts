@@ -11,6 +11,7 @@ import {
   renderContractTemplate,
   signatureBlock,
 } from "./contract-document";
+import { applyNativeSignatureAnchor, formatNativeAttestation } from "./signing/native";
 
 const parties = [
   { role: "business" as const, name: "North Co", email: "north@example.com", shareBps: 0 },
@@ -94,9 +95,29 @@ describe("contract documents", () => {
     assert.equal(fundingAllowedBySignature("sent").ok, false);
     assert.equal(fundingAllowedBySignature("draft").ok, false);
     assert.equal(fundingAllowedBySignature("signed").ok, true);
+    const blocked = fundingAllowedBySignature("sent");
+    assert.equal(blocked.ok, false);
+    if (!blocked.ok) assert.match(blocked.error, /every party/);
     assert.equal(applyEnvelopeToParties([{ status: "pending" }, { status: "pending" }], "completed").documentStatus, "signed");
     assert.equal(applyEnvelopeToParties([{ status: "pending" }], "declined").documentStatus, "declined");
     assert.equal(applyEnvelopeToParties([{ status: "pending" }], "sent").documentStatus, "sent");
+  });
+
+  it("describes in-app signing in the default template and stamps native attestations", () => {
+    assert.match(DEFAULT_CONTRACT_TEMPLATE, /signs this agreement in Influrios/);
+    assert.equal(DEFAULT_CONTRACT_TEMPLATE.includes("A button inside Influrios does not sign"), false);
+    const stamped = applyNativeSignatureAnchor(
+      "Agreement\n/sig1/\n",
+      1,
+      formatNativeAttestation({
+        role: "business",
+        typedName: "North Co",
+        email: "north@example.com",
+        signedAt: new Date("2026-10-18T12:00:00.000Z"),
+      }),
+    );
+    assert.match(stamped, /Signed in Influrios/);
+    assert.equal(stamped.includes("/sig1/"), false);
   });
 
   it("shows each message only to the chosen readers", () => {

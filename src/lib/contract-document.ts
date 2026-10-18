@@ -1,9 +1,16 @@
 /**
  * Collaboration agreements: admin template, filled document, PDF, and who may read a message.
- * A contract is signed only when DocuSign reports every party complete.
+ * Native in-app signing is primary; DocuSign is an optional channel when enabled with credentials.
  */
 import { prisma } from "@/lib/db";
 import { assembleDocuSignCredentials, openDocuSignEnvelope } from "@/lib/signing/docusign";
+import {
+  applyNativeSignatureAnchor,
+  formatNativeAttestation,
+  isNativeSigningCode,
+  nativeEnvelopeId,
+} from "@/lib/signing/native";
+import { resolveSigningMode } from "@/lib/signing";
 import { activeSigningProvider } from "@/lib/providers";
 import { decryptSecret } from "@/lib/provider-secrets";
 
@@ -68,7 +75,7 @@ The platform fee is earned only when a milestone is released. Creator compensati
 Influrios stores this agreement, including this PDF, on the account of every party. Each party can open it from their account. Messages about this agreement stay on the agreement.
 
 7. Signatures
-A button inside Influrios does not sign this agreement. It is signed only when DocuSign reports that every party below has completed the envelope. Until then the agreement stays unsigned and funding cannot start.
+Each party signs this agreement in Influrios by typing their legal name on the contract page. The agreement is signed when every party below has completed their signature. Until then it stays unsigned and funding cannot start. DocuSign may be used instead when an admin enables that optional channel.
 
 {{signature_block}}
 `;
@@ -255,7 +262,7 @@ export function fundingAllowedBySignature(status: string): { ok: true } | { ok: 
   if (status === "signed") return { ok: true };
   return {
     ok: false,
-    error: "The contract is signed when DocuSign reports every party complete. Nothing was funded.",
+    error: "The contract is signed when every party has completed their signature. Nothing was funded.",
   };
 }
 
@@ -372,32 +379,55 @@ export async function sendCollaborationContract(input: {
   const renderedBody = renderContractBody(template.body, input.render);
   const pdfBytes = renderContractPdf(renderedBody);
   const provider = await activeSigningProvider();
-  if (!provider) {
-    return { ok: false as const, error: "Save DocuSign in admin before sending the contract. Nothing was signed." };
+  const secret = provider?.secretCipher ? decryptSecret(provider.secretCipher) : "";
+  const mode = resolveSigningMode(
+    provider?.code ?? "influrios",
+    provider
+      ? {
+          integrationKey: provider.integrationKey,
+          userId: provider.userId,
+          accountId: provider.publicKey,
+          privateKey: secret ?? "",
+          baseUrl: provider.baseUrl,
+        }
+      : null,
+  );
+
+  let signingChannel: "native" | "docusign" = "native";
+  let envelopeId = "";
+
+  if (mode === "docusign" && provider) {
+    const credentials = assembleDocuSignCredentials({
+      stored: {
+        integrationKey: provider.integrationKey,
+        userId: provider.userId,
+        accountId: provider.publicKey,
+        privateKey: secret ?? "",
+        baseUrl: provider.baseUrl,
+        oauthBaseUrl: provider.oauthBaseUrl,
+      },
+    });
+    if (!credentials.ok) return credentials;
+    const opened = await openDocuSignEnvelope({
+      credentials,
+      request: {
+        collaborationId: input.collaborationId || input.workspaceId,
+        title: input.render.title.slice(0, 160),
+        documentHtml: renderedBody,
+        documentPdf: pdfBytes,
+        parties: input.render.parties.map((party) => ({ name: party.name, email: party.email })),
+      },
+    });
+    if (!opened.ok) return { ok: false as const, error: `${opened.error} Nothing was signed.` };
+    signingChannel = "docusign";
+    envelopeId = opened.envelopeId;
+  } else if (mode === "unconfigured" && provider && !isNativeSigningCode(provider.code)) {
+    return {
+      ok: false as const,
+      error: "DocuSign credentials are incomplete. Enable Influrios in-app signing, or finish DocuSign setup. Nothing was signed.",
+    };
   }
-  const secret = provider.secretCipher ? decryptSecret(provider.secretCipher) : "";
-  const credentials = assembleDocuSignCredentials({
-    stored: {
-      integrationKey: provider.integrationKey,
-      userId: provider.userId,
-      accountId: provider.publicKey,
-      privateKey: secret ?? "",
-      baseUrl: provider.baseUrl,
-      oauthBaseUrl: provider.oauthBaseUrl,
-    },
-  });
-  if (!credentials.ok) return credentials;
-  const opened = await openDocuSignEnvelope({
-    credentials,
-    request: {
-      collaborationId: input.collaborationId || input.workspaceId,
-      title: input.render.title.slice(0, 160),
-      documentHtml: renderedBody,
-      documentPdf: pdfBytes,
-      parties: input.render.parties.map((party) => ({ name: party.name, email: party.email })),
-    },
-  });
-  if (!opened.ok) return { ok: false as const, error: `${opened.error} Nothing was signed.` };
+
   const document = await prisma.contractDocument.create({
     data: {
       workspaceId: input.workspaceId,
@@ -407,7 +437,8 @@ export async function sendCollaborationContract(input: {
       renderedBody,
       pdfBytes: new Uint8Array(pdfBytes),
       status: "sent",
-      envelopeId: opened.envelopeId,
+      signingChannel,
+      envelopeId,
       createdByUserId: input.createdByUserId,
       sourceJson: input.source,
       parties: {
@@ -423,7 +454,101 @@ export async function sendCollaborationContract(input: {
       },
     },
   });
-  return { ok: true as const, id: document.id, envelopeId: opened.envelopeId };
+
+  if (signingChannel === "native" && !envelopeId) {
+    envelopeId = nativeEnvelopeId(document.id);
+    await prisma.contractDocument.update({
+      where: { id: document.id },
+      data: { envelopeId },
+    });
+  }
+
+  return { ok: true as const, id: document.id, envelopeId, signingChannel };
+}
+
+/**
+ * Record an in-app signature for one party. Completes the document when every party has signed.
+ */
+export async function signNativeContractParty(input: {
+  documentId: string;
+  userId: string;
+  typedName: string;
+}) {
+  const typedName = input.typedName.trim();
+  if (typedName.length < 2) {
+    return { ok: false as const, error: "Type your legal name to sign. Nothing was signed." };
+  }
+  if (typedName.length > 160) {
+    return { ok: false as const, error: "Keep the typed name under 160 characters. Nothing was signed." };
+  }
+
+  const document = await prisma.contractDocument.findUnique({
+    where: { id: input.documentId },
+    include: { parties: { orderBy: { createdAt: "asc" } } },
+  });
+  if (!document) return { ok: false as const, error: "Contract not found." };
+  if (document.signingChannel !== "native") {
+    return {
+      ok: false as const,
+      error: "This agreement was sent through DocuSign. Sign it there, or ask for a new in-app send. Nothing was signed.",
+    };
+  }
+  if (document.status === "signed") {
+    return { ok: true as const, id: document.id, status: "signed" as const, alreadyComplete: true };
+  }
+  if (document.status !== "sent" && document.status !== "draft") {
+    return { ok: false as const, error: `This agreement cannot be signed while it is “${document.status}”.` };
+  }
+
+  const partyIndex = document.parties.findIndex((row) => row.userId === input.userId);
+  if (partyIndex < 0) {
+    return { ok: false as const, error: "You are not a party on this agreement. Nothing was signed." };
+  }
+  const party = document.parties[partyIndex]!;
+  if (party.status === "signed") {
+    const allDone = document.parties.every((row) => row.status === "signed" || row.id === party.id);
+    return {
+      ok: true as const,
+      id: document.id,
+      status: allDone ? ("signed" as const) : ("sent" as const),
+      alreadySigned: true,
+    };
+  }
+  if (party.status === "declined") {
+    return { ok: false as const, error: "You declined this agreement. Nothing was signed." };
+  }
+
+  const signedAt = new Date();
+  const attestation = formatNativeAttestation({
+    role: party.role,
+    typedName,
+    email: party.email,
+    signedAt,
+  });
+  const nextBody = applyNativeSignatureAnchor(document.renderedBody, partyIndex + 1, attestation);
+  const nextParties = document.parties.map((row) =>
+    row.id === party.id ? { ...row, status: "signed" } : row,
+  );
+  const documentStatus = nextParties.every((row) => row.status === "signed") ? "signed" : "sent";
+  const pdfBytes = renderContractPdf(nextBody);
+
+  await prisma.$transaction([
+    prisma.contractParty.update({
+      where: { id: party.id },
+      data: { status: "signed", attestation: typedName.slice(0, 160), signedAt },
+    }),
+    prisma.contractDocument.update({
+      where: { id: document.id },
+      data: {
+        status: documentStatus,
+        renderedBody: nextBody,
+        pdfBytes: new Uint8Array(pdfBytes),
+        envelopeId: document.envelopeId || nativeEnvelopeId(document.id),
+      },
+    }),
+  ]);
+
+  return { ok: true as const, id: document.id, status: documentStatus as "sent" | "signed" };
 }
 
 export async function applyContractEnvelopeEvent(input: {
