@@ -213,18 +213,24 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {[
-              ["Active Collaborations", hub.status.active],
-              ["Draft Requests", hub.status.draftRequests],
-              ["Pending Responses", hub.status.pendingReview],
-              ["Funded Value", formatStoredMoney(hub.spend.fundedCents, hub.spend.currency)],
-              ["Released Spend", formatStoredMoney(hub.spend.releasedCents, hub.spend.currency)],
-              ["Completed", hub.status.completed],
-            ].map(([label, value]) => (
-              <div key={label as string} className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted">{label as string}</p>
-                <p className="mt-1 font-display text-2xl font-bold text-indigo">{value as string | number}</p>
-              </div>
+            {(
+              [
+                ["Active Collaborations", hub.status.active, "/collaboration/records"],
+                ["Draft Requests", hub.status.draftRequests, "/collaboration/business#drafts"],
+                ["Pending Responses", hub.status.pendingReview, "/collaboration/business#applicants"],
+                ["Funded Value", formatStoredMoney(hub.spend.fundedCents, hub.spend.currency), "/payments"],
+                ["Released Spend", formatStoredMoney(hub.spend.releasedCents, hub.spend.currency), "/payments"],
+                ["Completed", hub.status.completed, "/collaboration/records"],
+              ] as const
+            ).map(([label, value, href]) => (
+              <Link
+                key={label}
+                href={href}
+                className="rounded-2xl border border-[#E4E9F5] bg-white p-4 shadow-sm hover:border-violet"
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted">{label}</p>
+                <p className="mt-1 font-display text-2xl font-bold text-indigo">{value}</p>
+              </Link>
             ))}
           </div>
 

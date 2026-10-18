@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { actionAdvanceCollaboration, actionQueueSignature } from "@/app/collaboration/records/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { COLLABORATION_STATUSES, getCollaboration, reasonList, type CollaborationStatus } from "@/lib/collaborations";
@@ -38,7 +38,10 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
   }
   if (!record) notFound();
 
-  const account = await getAccountSession();
+  const account = await getAccountSession().catch(() => null);
+  if (!account) {
+    redirect(`/login?next=${encodeURIComponent(`/collaboration/records/${id}`)}`);
+  }
   const initiator = await getDirectoryCreator(record.initiatorSlug);
   const recipient = await getDirectoryCreator(record.recipientSlug);
   const reasons = reasonList(record.reasons);
@@ -53,8 +56,8 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
-      <Link href={`/collaboration/records?from=${record.initiatorSlug}`} className="text-sm font-semibold text-violet">
-        ← Proposals
+      <Link href="/collaboration/records" className="text-sm font-semibold text-violet hover:underline">
+        ← Active Collaborations
       </Link>
       <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-violet">{status}</p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo">{record.title}</h1>
