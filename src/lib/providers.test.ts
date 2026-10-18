@@ -23,7 +23,7 @@ describe("provider secrets", () => {
 });
 
 describe("payment country routes", () => {
-  it("assigns Flutterwave to Nigeria and Stripe to the United States when each is ready", () => {
+  it("marks a configured gateway ready when enabled with a secret — assignment is admin-only", () => {
     const nigeria = assessGateway({
       countryCode: "ng",
       providerCode: "flutterwave",
@@ -43,6 +43,9 @@ describe("payment country routes", () => {
     assert.equal(nigeria.ready, true);
     assert.equal(nigeria.providerCode, "flutterwave");
     assert.equal(us.providerCode, "stripe");
+    const catalog = readFileSync("src/lib/providers.ts", "utf8");
+    assert.equal(catalog.includes('gateway: "flutterwave"'), false);
+    assert.equal(catalog.includes("GATEWAY_SHELLS"), false);
   });
 
   it("does not call a disabled or keyless gateway ready", () => {

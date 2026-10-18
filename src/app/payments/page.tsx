@@ -34,6 +34,7 @@ import {
 } from "@/lib/matching-product-boundary";
 import { FUNDING_MODE_LABELS, asFundingMode } from "@/lib/funding-modes";
 import { RIGHTS_STATUS_LABELS, asRightsStatus } from "@/lib/content-rights";
+import { JurisdictionPayoutMethodFields } from "@/app/payments/jurisdiction-payout-method-fields";
 import { buildPayoutFeeFxQuote, PAYOUT_METHOD_LABELS, PAYOUT_METHODS, type PayoutMethod } from "@/lib/payout-readiness";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +82,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
     listRepeatCandidates().catch(() => []),
     prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }).catch(() => []),
   ]);
+  // Only methods saved on each corridor — never invent Flutterwave/Stripe by country.
   const payoutChoices = corridors.flatMap((row) =>
     storedPayoutMethodList(row.payoutMethodsJson).map((method) => ({
       countryCode: row.countryCode,
@@ -207,33 +209,15 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 ))}
               </select>
             </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Jurisdiction</span>
-              <select
-                name="jurisdictionCode"
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                required
-                defaultValue=""
-              >
-                <option value=""> </option>
-                {jurisdictions.map((row) => (
-                  <option key={row.code} value={row.code}>
-                    {row.label} · {row.currency} · {fundingTerm(row.escrowTermAllowed)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Payout method</span>
-              <select name="payoutMethod" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2" defaultValue="">
-                <option value=""> </option>
-                {payoutChoices.map((choice) => (
-                  <option key={`${choice.countryCode}:${choice.method}`} value={choice.method}>
-                    {choice.countryCode} · {choice.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <JurisdictionPayoutMethodFields
+              jurisdictions={jurisdictions.map((row) => ({
+                code: row.code,
+                label: row.label,
+                currency: row.currency,
+                fundingTerm: fundingTerm(row.escrowTermAllowed),
+              }))}
+              payoutChoices={payoutChoices}
+            />
             <label className="text-sm">
               <span className="font-semibold text-indigo">Gross USD</span>
               <input

@@ -7,7 +7,7 @@ import { INVITATION_STATUSES } from "@/lib/invitations";
 import { nextJobStatus } from "@/lib/jobs";
 import { mailConfigFromEnv } from "@/lib/mail";
 import { advanceClaimStage } from "@/lib/onboarding";
-import { AI_FUNCTIONS, assessGateway, DEFAULT_PAYMENT_ROUTES, routeAiFunction } from "@/lib/providers";
+import { AI_FUNCTIONS, assessGateway, routeAiFunction } from "@/lib/providers";
 import { filterCreators, type SeedCreator } from "@/lib/seed-data";
 import { canonicalSpecialty } from "@/lib/taxonomy";
 import { webhookDisposition } from "@/lib/webhook-idempotency";
@@ -127,8 +127,7 @@ export const SECTION_33: GateItem[] = [
     id: 8,
     name: "Payment provider registry",
     check: () => {
-      const stripe = DEFAULT_PAYMENT_ROUTES.find((route) => route.countryCode === "US");
-      if (stripe?.gateway !== "stripe") return "The United States route is not Stripe.";
+      // Gateways are assigned per country in admin — only the readiness rules are fixed here.
       const ready = assessGateway({
         countryCode: "US",
         providerCode: "stripe",
