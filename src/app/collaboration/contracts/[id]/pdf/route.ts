@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
-import { renderContractPdf, resolveContractPartyForAccount } from "@/lib/contract-document";
+import {
+  buildContractChromePdf,
+  resolveContractPartyForAccount,
+} from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +19,23 @@ export async function GET(_request: Request, { params }: Props) {
     getAdminSession().catch(() => null),
     prisma.contractDocument.findUnique({
       where: { id },
-      include: { parties: { select: { id: true, userId: true, email: true } } },
+      include: {
+        parties: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            userId: true,
+            email: true,
+            role: true,
+            name: true,
+            status: true,
+            attestation: true,
+            signedAt: true,
+            creatorSlug: true,
+            shareBps: true,
+          },
+        },
+      },
     }),
   ]);
   if (!document) return NextResponse.json({ error: "Contract not found." }, { status: 404 });
@@ -34,13 +53,36 @@ export async function GET(_request: Request, { params }: Props) {
     return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
   }
 
-  // Always render from the stored agreement text so layout fixes apply to older contracts too.
-  const pdf = renderContractPdf(document.renderedBody || "Collaboration agreement");
+  // Never serve stored pdfBytes — always rebuild chrome (upgrades legacy bodies first).
+  const { body, upgraded, pdf } = buildContractChromePdf({
+    id: document.id,
+    title: document.title,
+    status: document.status,
+    renderedBody: document.renderedBody || "Collaboration agreement",
+    signingChannel: document.signingChannel,
+    createdAt: document.createdAt,
+    parties: document.parties,
+  });
+
+  // Persist chrome body + PDF so the next view/download matches what was served.
+  await prisma.contractDocument
+    .update({
+      where: { id: document.id },
+      data: {
+        renderedBody: body,
+        pdfBytes: new Uint8Array(pdf),
+      },
+    })
+    .catch(() => undefined);
+
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `inline; filename="contract-${document.id}.pdf"`,
-      "cache-control": "private, no-store",
+      "content-disposition": `inline; filename="influrios-contract-${document.id}.pdf"`,
+      "cache-control": "private, no-store, no-cache, must-revalidate",
+      pragma: "no-cache",
+      "x-influrios-contract-chrome": upgraded ? "upgraded" : "current",
+      "x-influrios-contract-template": "influrios-collab-v1",
     },
   });
 }

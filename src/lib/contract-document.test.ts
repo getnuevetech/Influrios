@@ -4,17 +4,22 @@ import {
   DEFAULT_CONTRACT_TEMPLATE,
   asciiForPdf,
   applyEnvelopeToParties,
+  buildContractChromePdf,
   buildContractValues,
   classifyContractPdfLines,
   contractMessageNotifyEmails,
   contractStageEmailCopy,
+  displayServiceLevel,
   fundingAllowedBySignature,
+  isLegacyContractBody,
   messageVisible,
   renderContractBody,
   renderContractPdf,
   renderContractTemplate,
+  resolveContractBodyForChrome,
   resolveContractPartyForAccount,
   signatureBlock,
+  upgradeLegacyContractBody,
   wrapContractLines,
 } from "./contract-document";
 import { applyNativeSignatureAnchor, formatNativeAttestation } from "./signing/native";
@@ -130,10 +135,11 @@ describe("contract documents", () => {
   });
 
   it("describes in-app signing in the default template and stamps native attestations", () => {
-    assert.match(DEFAULT_CONTRACT_TEMPLATE, /signs this agreement in Influrios/);
-    assert.equal(DEFAULT_CONTRACT_TEMPLATE.includes("A button inside Influrios does not sign"), false);
+    assert.match(DEFAULT_CONTRACT_TEMPLATE, /19\. Electronic Signature/);
+    assert.match(DEFAULT_CONTRACT_TEMPLATE, /page-endorsement initials/);
+    assert.match(DEFAULT_CONTRACT_TEMPLATE, /Commercial Summary/);
     const stamped = applyNativeSignatureAnchor(
-      "Agreement\n/sig1/\n",
+      "Agreement\nBusiness  North  north@example.com  Pending Signature\n[[SIG_INK:1]]\n/sig1/\n",
       1,
       formatNativeAttestation({
         role: "business",
@@ -143,7 +149,169 @@ describe("contract documents", () => {
       }),
     );
     assert.match(stamped, /Signed in Influrios/);
+    assert.match(stamped, /Page endorsement initials/);
+    assert.equal(stamped.includes("[[SIG:"), false);
+    assert.match(stamped, /\[\[SIG_INK:1\]\]/);
     assert.equal(stamped.includes("/sig1/"), false);
+    assert.match(stamped, /Signed\s*\n\s*\[\[SIG_INK:1\]\]/);
+    assert.equal(/Pending Signature/.test(stamped), false);
+  });
+
+  it("draws signature ink and page endorsement markers into the PDF stream", () => {
+    const body = "COLLABORATION AGREEMENT\n\n1. Parties\n[[SIG_INK:1]]\nSigned in Influrios - business: North Co\n";
+    const pdf = renderContractPdf(body, {
+      agreementId: "doc_test",
+      signatures: [
+        {
+          partyIndex: 1,
+          typedName: "North Co",
+          role: "business",
+          email: "north@example.com",
+          signedAt: "2026-10-18T12:00:00.000Z",
+        },
+      ],
+      pageEndorsements: true,
+    });
+    const raw = pdf.toString("latin1");
+    assert.match(raw, /Page endorsement/);
+    assert.match(raw, /\(INFLURIOS/);
+    assert.match(raw, /Page endorsement \/ initials/);
+    assert.ok(/[\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ c/.test(raw));
+  });
+
+  it("maps service level enums to display labels", () => {
+    assert.equal(displayServiceLevel("managed_campaign"), "Managed campaign");
+    assert.equal(displayServiceLevel("contracted"), "Contracted collaboration");
+  });
+
+  it("upgrades legacy contract bodies into the approved chrome template", () => {
+    const legacy = `COLLABORATION AGREEMENT
+
+Generated: 2026-10-07T00:00:00.000Z
+
+1. Parties
+This agreement is made for the campaign "Spring launch".
+
+Business: North Co (north@example.com)
+
+1. Creator: Ada
+   Email: ada@example.com
+   Share: 100.00%
+
+2. Campaign
+Scope: Three films
+Commercial terms: Net 15
+Jurisdiction: US
+Service level: managed_campaign
+
+3. Money
+Currency: USD
+Gross contract value: $1,000.00
+Platform fee: $100.00
+Creator compensation: $900.00
+
+4. Milestones
+1. Delivery
+   Share: 100%
+   Gross: $1,000.00
+   Platform fee: $100.00
+   Creator payout: ada $900.00
+
+5. Creator shares
+- Ada (ada@example.com): 100.00%
+
+7. Signatures
+1. Business: North Co
+   Email: north@example.com
+   Signature:
+   /sig1/
+
+2. Creator: Ada
+   Email: ada@example.com
+   Signature:
+   Signed in Influrios - creator: Ada <ada@example.com> at 2026-10-18T12:00:00.000Z
+`;
+    assert.equal(isLegacyContractBody(legacy), true);
+    const upgraded = upgradeLegacyContractBody({
+      id: "doc_legacy_1",
+      title: "Spring launch",
+      status: "sent",
+      renderedBody: legacy,
+      signingChannel: "native",
+      createdAt: "2026-10-07T00:00:00.000Z",
+      parties: [
+        {
+          role: "business",
+          name: "North Co",
+          email: "north@example.com",
+          status: "signed",
+          attestation: "North Co",
+          signedAt: "2026-10-18T12:00:00.000Z",
+        },
+        {
+          role: "creator",
+          name: "Ada",
+          email: "ada@example.com",
+          creatorSlug: "ada",
+          shareBps: 10000,
+          status: "pending",
+          attestation: "",
+        },
+      ],
+    });
+    assert.match(upgraded, /Commercial Summary/);
+    assert.match(upgraded, /19\. Electronic Signature/);
+    assert.match(upgraded, /\[\[SIG_INK:1\]\]/);
+    assert.match(upgraded, /\[\[SIG_INK:2\]\]/);
+    assert.match(upgraded, /Managed campaign/);
+    assert.match(upgraded, /\$1,000\.00/);
+    assert.match(upgraded, /Signed in Influrios - business: North Co/);
+    assert.match(upgraded, /\/sig2\//);
+    assert.equal(upgraded.includes("/sig1/"), false);
+    const resolved = resolveContractBodyForChrome({
+      id: "doc_legacy_1",
+      title: "Spring launch",
+      status: "sent",
+      renderedBody: upgraded,
+      parties: [],
+    });
+    assert.equal(resolved.upgraded, false);
+    assert.equal(isLegacyContractBody(upgraded), false);
+
+    const chromePdf = buildContractChromePdf({
+      id: "doc_legacy_1",
+      title: "Spring launch",
+      status: "sent",
+      renderedBody: legacy,
+      signingChannel: "native",
+      createdAt: "2026-10-07T00:00:00.000Z",
+      parties: [
+        {
+          role: "business",
+          name: "North Co",
+          email: "north@example.com",
+          status: "signed",
+          attestation: "North Co",
+          signedAt: "2026-10-18T12:00:00.000Z",
+        },
+        {
+          role: "creator",
+          name: "Ada",
+          email: "ada@example.com",
+          creatorSlug: "ada",
+          shareBps: 10000,
+          status: "pending",
+          attestation: "",
+        },
+      ],
+    });
+    assert.equal(chromePdf.upgraded, true);
+    assert.match(chromePdf.body, /Commercial Summary/);
+    const raw = chromePdf.pdf.toString("latin1");
+    assert.match(raw, /^%PDF-1.4/);
+    assert.match(raw, /\(INFLURIOS/);
+    assert.match(raw, /Page endorsement/);
+    assert.match(raw, /Commercial Summary/);
   });
 
   it("shows each message only to the chosen readers", () => {
