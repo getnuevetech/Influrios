@@ -50,10 +50,13 @@ import { productSwitch } from "@/lib/product-switches";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { feeTypeFromFundingSnapshot, type FeeTypeAmount } from "@/lib/ledger";
 import { AdminCollapse } from "@/components/admin-collapse";
+import { ApprovedProvidersField } from "@/app/admin/marketplace/approved-providers-field";
 import {
+  approvedProviderPickerOptions,
   buildMarketplaceProviderOptions,
   marketplaceProviderCatalogLabel,
 } from "@/app/admin/marketplace/provider-catalog";
+import { parseApprovedProviderIds } from "@/lib/jurisdiction-capabilities";
 import { listProviders } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
@@ -643,25 +646,14 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 <option value="BLOCKED">BLOCKED</option>
               </select>
             </label>
-            <label className="text-xs font-semibold text-muted sm:col-span-3">
-              Approved provider ids (comma or JSON; empty = any assigned)
-              <input
-                name="approvedProviderIds"
-                defaultValue={
-                  (() => {
-                    try {
-                      const parsed = JSON.parse(row.approvedProviderIds || "[]") as unknown;
-                      return Array.isArray(parsed) ? parsed.join(", ") : row.approvedProviderIds;
-                    } catch {
-                      return row.approvedProviderIds;
-                    }
-                  })()
-                }
-                disabled={!canManage}
-                placeholder="primary, airwallex"
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-              />
-            </label>
+            <ApprovedProvidersField
+              options={approvedProviderPickerOptions(
+                providerOptions,
+                parseApprovedProviderIds(row.approvedProviderIds),
+              )}
+              selected={parseApprovedProviderIds(row.approvedProviderIds)}
+              disabled={!canManage}
+            />
             <label className="text-xs font-semibold text-muted">
               Effective from
               <input
@@ -826,10 +818,10 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 <option value="BLOCKED">BLOCKED</option>
               </select>
             </label>
-            <label className="text-xs font-semibold text-muted sm:col-span-3">
-              Approved provider ids
-              <input name="approvedProviderIds" placeholder="primary" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
-            </label>
+            <ApprovedProvidersField
+              options={approvedProviderPickerOptions(providerOptions)}
+              selected={[]}
+            />
             <label className="text-xs font-semibold text-muted">
               Effective from
               <input name="capabilitiesEffectiveFrom" type="date" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />

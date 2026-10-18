@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
+  approvedProviderPickerOptions,
   buildMarketplaceProviderOptions,
   marketplaceProviderCatalogLabel,
 } from "@/app/admin/marketplace/provider-catalog";
@@ -58,5 +59,31 @@ describe("marketplace provider save does not silently use Primary", () => {
     assert.match(actions, /code=\$\{encodeURIComponent\(savedCode\)\}/);
     assert.match(page, /providerFormDefault/);
     assert.match(page, /params\.code/);
+  });
+});
+
+describe("approved provider picker from gateways", () => {
+  it("lists gateways and keeps a legacy selected code that is not on gateways yet", () => {
+    const base = buildMarketplaceProviderOptions({
+      paymentGateways: [
+        { code: "stripe", name: "Stripe", enabled: true },
+        { code: "paystack", name: "Paystack", enabled: true },
+      ],
+    });
+    const options = approvedProviderPickerOptions(base, ["harbor", "stripe"]);
+    assert.equal(options.some((row) => row.code === "paystack"), true);
+    assert.equal(options.some((row) => row.code === "harbor"), true);
+    assert.equal(options.some((row) => row.code === "primary"), true);
+  });
+
+  it("saves approved providers from checkbox multi-select, not free text", () => {
+    const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    const field = readFileSync("src/app/admin/marketplace/approved-providers-field.tsx", "utf8");
+    assert.match(actions, /formData\.getAll\("approvedProviderIds"\)/);
+    assert.match(page, /ApprovedProvidersField/);
+    assert.equal(page.includes("comma or JSON"), false);
+    assert.match(field, /name="approvedProviderIds"/);
+    assert.match(field, /type="checkbox"/);
   });
 });
