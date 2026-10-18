@@ -283,7 +283,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 <Link
                   key={link.label}
                   href={
-                    link.label === "Contracts & Agreements"
+                    link.label === "Active Collaborations"
                       ? `/collaboration/records?from=${encodeURIComponent(creator.slug)}`
                       : link.href
                   }
