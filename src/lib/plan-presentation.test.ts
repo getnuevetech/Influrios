@@ -139,7 +139,10 @@ describe("plan presentation", () => {
     assert.equal(hidesMarketingChrome("/collaboration/hub"), true);
     assert.equal(hidesMarketingChrome("/collaboration/requests/req_1"), true);
     assert.equal(hidesMarketingChrome("/business"), false);
-    assert.equal(hidesMarketingChrome("/discover"), false);
+    assert.equal(hidesMarketingChrome("/discover"), true);
+    assert.equal(hidesMarketingChrome("/collaboration/contract"), true);
+    assert.equal(hidesMarketingChrome("/collaboration/contracts/abc"), true);
+    assert.equal(hidesMarketingChrome("/business/intelligence"), true);
     const layout = readFileSync("src/app/layout.tsx", "utf8");
     const frame = readFileSync("src/components/chrome-frame.tsx", "utf8");
     assert.match(layout, /ChromeFrame/);

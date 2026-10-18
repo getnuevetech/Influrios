@@ -199,8 +199,21 @@ export default async function AdminSigningPage({ searchParams }: Props) {
         ) : null}
       </section>
 
+      <section className="mt-8 rounded-2xl border border-[#E4EBFF] bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-bold text-indigo">Live contract agreements</h2>
+          <Link href="/admin/contracts" className="text-sm font-semibold text-violet hover:underline">
+            Open Contracts →
+          </Link>
+        </div>
+        <p className="mt-1 text-sm text-muted">
+          In-app and DocuSign agreements with party signature progress. Full list and template live on Contracts.
+        </p>
+        <ContractDocumentsPreview />
+      </section>
+
       <section className="mt-8">
-        <h2 className="font-display text-lg font-bold text-indigo">Requests</h2>
+        <h2 className="font-display text-lg font-bold text-indigo">Legacy signature requests</h2>
         <ul className="mt-3 space-y-3">
           {requests.map((request) => (
             <li key={request.id} className="rounded-2xl border border-[#E4EBFF] bg-white px-4 py-3 text-sm">
@@ -231,9 +244,43 @@ export default async function AdminSigningPage({ searchParams }: Props) {
               </div>
             </li>
           ))}
-          {requests.length === 0 && !dbError ? <li className="text-sm text-muted">No signature requests yet. Send one after a collaboration is accepted.</li> : null}
+          {requests.length === 0 && !dbError ? (
+            <li className="text-sm text-muted">No legacy signature requests. New agreements appear under Contracts.</li>
+          ) : null}
         </ul>
       </section>
     </div>
+  );
+}
+
+async function ContractDocumentsPreview() {
+  const documents = await prisma.contractDocument
+    .findMany({
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      include: { parties: { select: { name: true, status: true } } },
+    })
+    .catch(() => []);
+  if (documents.length === 0) {
+    return <p className="mt-3 text-sm text-muted">No contract agreements sent yet.</p>;
+  }
+  return (
+    <ul className="mt-3 space-y-2 text-sm">
+      {documents.map((document) => {
+        const signed = document.parties.filter((party) => party.status === "signed").length;
+        return (
+          <li key={document.id} className="rounded-xl bg-[#F7F9FF] px-3 py-2">
+            <Link href={`/collaboration/contracts/${document.id}`} className="font-semibold text-violet hover:underline">
+              {document.title}
+            </Link>
+            <span className="text-muted">
+              {" "}
+              · {document.status} · {signed}/{document.parties.length} signed ·{" "}
+              {document.signingChannel === "docusign" ? "DocuSign" : "In-app"}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

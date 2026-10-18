@@ -16,6 +16,7 @@ import {
 import { getAccountSession } from "@/lib/accounts";
 import { completenessFor, draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
+import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
@@ -54,7 +55,7 @@ export default async function CreatorHomePage({
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/creator");
 
-  const [creator, draft, host] = await Promise.all([
+  const [creator, draft, host, contracts] = await Promise.all([
     prisma.creator
       .findUnique({
         where: { userId: account.id },
@@ -76,6 +77,7 @@ export default async function CreatorHomePage({
       .catch(() => null),
     getCreatorSessionDraft().catch(() => null),
     primaryShortHost().catch(() => "inflr.me"),
+    listContractsForUser(account.id, account.email).catch(() => []),
   ]);
 
   const shortLink = creator?.shortLinks[0] ?? null;
@@ -165,6 +167,48 @@ export default async function CreatorHomePage({
           </div>
         </div>
       </div>
+
+      {contracts.length > 0 ? (
+        <Panel
+          title="Contracts"
+          action={<TextLink href="/collaboration/contracts">View all →</TextLink>}
+        >
+          <ul className="space-y-2 text-sm">
+            {contracts.slice(0, 5).map((contract) => {
+              const yours = contract.parties.find(
+                (row) =>
+                  row.userId === account.id ||
+                  row.email.trim().toLowerCase() === account.email.trim().toLowerCase(),
+              );
+              const needsSign =
+                contract.signingChannel === "native" &&
+                (contract.status === "sent" || contract.status === "draft") &&
+                yours?.status === "pending";
+              const progress = contractPartyProgress(contract.parties);
+              return (
+                <li key={contract.id}>
+                  <Link
+                    href={`/collaboration/contracts/${contract.id}${needsSign ? "#sign" : ""}`}
+                    className={`flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 hover:bg-[#F1ECFF] ${
+                      needsSign ? "bg-[#F4F0FF]" : "bg-[#F7F8FC]"
+                    }`}
+                  >
+                    <span>
+                      <span className="font-semibold text-indigo">{contract.title}</span>
+                      <span className="ml-2 text-xs text-muted">
+                        {contract.status} · {progress.label}
+                      </span>
+                    </span>
+                    <span className="text-xs font-semibold text-violet">
+                      {needsSign ? "Sign now →" : "Open →"}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+      ) : null}
 
       {params.published ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">

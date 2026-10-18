@@ -65,10 +65,14 @@ export default async function AccountPage({
       </div>
 
       <section id="contracts" className="card-surface mt-4 space-y-3 p-6">
-        <h2 className="font-display text-lg font-bold text-indigo">Contracts</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-bold text-indigo">Contracts</h2>
+          <Link href="/collaboration/contracts" className="text-sm font-semibold text-violet hover:underline">
+            Open contracts inbox →
+          </Link>
+        </div>
         <p className="text-sm text-muted">
-          Each agreement sent for signature is stored here for every party. The active signing channel is chosen in
-          admin (Influrios in-app or DocuSign — only one at a time).
+          Signed and pending agreements for this account. Prefer the Contracts inbox in your sidebar for the full list.
         </p>
         {contracts.length === 0 ? <p className="text-sm text-muted">No contracts on this account yet.</p> : null}
         <ul className="space-y-2 text-sm">

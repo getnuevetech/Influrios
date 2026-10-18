@@ -208,6 +208,13 @@ const LINKS: {
     meta: () => "One active channel",
   },
   {
+    href: "/admin/contracts",
+    title: "Contracts",
+    blurb: "Sent agreements, signature progress, and the collaboration template.",
+    module: "contracts",
+    meta: () => "Signed + awaiting",
+  },
+  {
     href: "/admin/social",
     title: "Social networks",
     blurb: "Live follower and like sync. Influencers accept the terms before a network connects.",

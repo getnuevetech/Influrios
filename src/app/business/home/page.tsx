@@ -15,6 +15,7 @@ import {
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { loadBusinessHub } from "@/lib/collaboration-hub";
+import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
@@ -61,7 +62,7 @@ function firstName(full: string | null | undefined) {
 export default async function BusinessHomePage() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business/home");
-  const [workspace, matrix, hub, profile, subscription] = await Promise.all([
+  const [workspace, matrix, hub, profile, subscription, contracts] = await Promise.all([
     getWorkspace(account.id).catch(() => null),
     loadPlanMatrix("business"),
     loadBusinessHub({ userId: account.id }).catch(() => null),
@@ -74,6 +75,7 @@ export default async function BusinessHomePage() {
     prisma.subscriptionState
       .findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } })
       .catch(() => null),
+    listContractsForUser(account.id, account.email).catch(() => []),
   ]);
   if (!workspace) {
     return (
@@ -215,6 +217,19 @@ export default async function BusinessHomePage() {
   const ownerLabel = contactName || account.email;
   const planActive = Boolean(subscription?.status === "active" || workspace.plan);
 
+  const signedContracts = contracts.filter((row) => row.status === "signed");
+  const pendingContracts = contracts.filter((row) => {
+    const yours = row.parties.find(
+      (party) =>
+        party.userId === account.id || party.email.trim().toLowerCase() === account.email.trim().toLowerCase(),
+    );
+    return (
+      row.signingChannel === "native" &&
+      (row.status === "sent" || row.status === "draft") &&
+      yours?.status === "pending"
+    );
+  });
+
   return (
     <div className="space-y-5">
       <div>
@@ -224,6 +239,42 @@ export default async function BusinessHomePage() {
           <span className="font-semibold text-indigo">{companyName}</span>.
         </p>
       </div>
+
+      <Panel
+        title="Contracts"
+        action={<TextLink href="/collaboration/contracts">View all →</TextLink>}
+      >
+        {contracts.length === 0 ? (
+          <p className="text-sm text-muted">No contracts yet. Sent agreements appear here for every party.</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {[...pendingContracts, ...signedContracts, ...contracts.filter((c) => !pendingContracts.includes(c) && !signedContracts.includes(c))]
+              .slice(0, 5)
+              .map((contract) => {
+                const progress = contractPartyProgress(contract.parties);
+                const needsSign = pendingContracts.some((row) => row.id === contract.id);
+                return (
+                  <li key={contract.id}>
+                    <Link
+                      href={`/collaboration/contracts/${contract.id}${needsSign ? "#sign" : ""}`}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#F7F8FC] px-3 py-2 hover:bg-[#F1ECFF]"
+                    >
+                      <span>
+                        <span className="font-semibold text-indigo">{contract.title}</span>
+                        <span className="ml-2 text-xs text-muted">
+                          {contract.status} · {progress.label}
+                        </span>
+                      </span>
+                      <span className="text-xs font-semibold text-violet">
+                        {needsSign ? "Sign now →" : "Open →"}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+          </ul>
+        )}
+      </Panel>
 
       <section className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start gap-5">

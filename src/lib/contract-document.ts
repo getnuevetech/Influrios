@@ -705,17 +705,35 @@ export async function applyContractEnvelopeEvent(input: {
 
 export async function listContractsForUser(userId: string, email?: string | null) {
   const emailNorm = (email ?? "").trim().toLowerCase();
+  const workspace = await prisma.businessWorkspace
+    .findUnique({ where: { ownerUserId: userId }, select: { id: true } })
+    .catch(() => null);
   return prisma.contractDocument.findMany({
     where: {
       OR: [
         { parties: { some: { userId } } },
+        { createdByUserId: userId },
+        ...(workspace ? [{ workspaceId: workspace.id }] : []),
         ...(emailNorm ? [{ parties: { some: { email: { equals: emailNorm, mode: "insensitive" as const } } } }] : []),
       ],
     },
     include: { parties: { orderBy: { createdAt: "asc" } } },
     orderBy: { createdAt: "desc" },
-    take: 30,
+    take: 40,
   });
+}
+
+/** Shared status label for account + admin contract lists. */
+export function contractPartyProgress(parties: { status: string }[]): {
+  signed: number;
+  total: number;
+  label: string;
+} {
+  const total = parties.length;
+  const signed = parties.filter((party) => party.status === "signed").length;
+  if (total === 0) return { signed: 0, total: 0, label: "No parties" };
+  if (signed >= total) return { signed, total, label: "Fully signed" };
+  return { signed, total, label: `${signed}/${total} signed` };
 }
 
 /** Resolve the caller's party row and heal a stale/missing userId when email matches. */
