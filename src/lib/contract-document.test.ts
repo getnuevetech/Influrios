@@ -4,6 +4,7 @@ import {
   DEFAULT_CONTRACT_TEMPLATE,
   asciiForPdf,
   applyEnvelopeToParties,
+  buildContractChromePdf,
   buildContractValues,
   classifyContractPdfLines,
   contractMessageNotifyEmails,
@@ -276,6 +277,41 @@ Creator compensation: $900.00
     });
     assert.equal(resolved.upgraded, false);
     assert.equal(isLegacyContractBody(upgraded), false);
+
+    const chromePdf = buildContractChromePdf({
+      id: "doc_legacy_1",
+      title: "Spring launch",
+      status: "sent",
+      renderedBody: legacy,
+      signingChannel: "native",
+      createdAt: "2026-10-07T00:00:00.000Z",
+      parties: [
+        {
+          role: "business",
+          name: "North Co",
+          email: "north@example.com",
+          status: "signed",
+          attestation: "North Co",
+          signedAt: "2026-10-18T12:00:00.000Z",
+        },
+        {
+          role: "creator",
+          name: "Ada",
+          email: "ada@example.com",
+          creatorSlug: "ada",
+          shareBps: 10000,
+          status: "pending",
+          attestation: "",
+        },
+      ],
+    });
+    assert.equal(chromePdf.upgraded, true);
+    assert.match(chromePdf.body, /Commercial Summary/);
+    const raw = chromePdf.pdf.toString("latin1");
+    assert.match(raw, /^%PDF-1.4/);
+    assert.match(raw, /\(INFLURIOS/);
+    assert.match(raw, /Page endorsement/);
+    assert.match(raw, /Commercial Summary/);
   });
 
   it("shows each message only to the chosen readers", () => {

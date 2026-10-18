@@ -256,19 +256,22 @@ function drawInk(commands: string[], signature: RenderedSignature, x: number, y:
 
 function headerCommands(pageIndex: number, title?: string): string[] {
   const commands: string[] = [];
+  // Solid brand bar so every downloaded page clearly uses Influrios chrome.
   commands.push("q");
-  commands.push("0.15 0.2 0.45 RG");
-  commands.push("1.2 w");
-  commands.push("50 748 m 562 748 l S");
+  commands.push("0.12 0.16 0.42 rg");
+  commands.push("0 760 612 32 re");
+  commands.push("f");
   commands.push("Q");
   commands.push("BT");
-  commands.push("/F2 8 Tf");
-  commands.push("50 755 Td");
+  commands.push("/F2 9 Tf");
+  commands.push("1 1 1 rg");
+  commands.push("50 771 Td");
   const label =
     pageIndex === 0
       ? "INFLURIOS  |  COLLABORATION AGREEMENT"
       : `INFLURIOS  |  COLLABORATION AGREEMENT  |  ${(title ?? "GENERATED CONTRACT").slice(0, 40).toUpperCase()}`;
   commands.push(`(${pdfEscape(label)}) Tj`);
+  commands.push("0 0 0 rg");
   commands.push("ET");
   return commands;
 }

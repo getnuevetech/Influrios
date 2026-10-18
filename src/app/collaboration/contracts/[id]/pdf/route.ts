@@ -2,11 +2,9 @@ import { NextResponse } from "next/server";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
 import {
-  renderContractPdf,
-  resolveContractBodyForChrome,
+  buildContractChromePdf,
   resolveContractPartyForAccount,
 } from "@/lib/contract-document";
-import { endorsementSlotsFromParties, signaturesFromParties } from "@/lib/contract-pdf";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -55,8 +53,8 @@ export async function GET(_request: Request, { params }: Props) {
     return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
   }
 
-  // Upgrade legacy bodies to the approved chrome template, then always re-render.
-  const { body, upgraded } = resolveContractBodyForChrome({
+  // Never serve stored pdfBytes — always rebuild chrome (upgrades legacy bodies first).
+  const { body, upgraded, pdf } = buildContractChromePdf({
     id: document.id,
     title: document.title,
     status: document.status,
@@ -65,31 +63,26 @@ export async function GET(_request: Request, { params }: Props) {
     createdAt: document.createdAt,
     parties: document.parties,
   });
-  const pdf = renderContractPdf(body, {
-    title: document.title,
-    agreementId: document.id,
-    signatures: signaturesFromParties(document.parties),
-    endorsementSlots: endorsementSlotsFromParties(document.parties),
-    pageEndorsements: true,
-  });
 
-  if (upgraded || !document.pdfBytes?.length) {
-    await prisma.contractDocument
-      .update({
-        where: { id: document.id },
-        data: {
-          renderedBody: body,
-          pdfBytes: new Uint8Array(pdf),
-        },
-      })
-      .catch(() => undefined);
-  }
+  // Persist chrome body + PDF so the next view/download matches what was served.
+  await prisma.contractDocument
+    .update({
+      where: { id: document.id },
+      data: {
+        renderedBody: body,
+        pdfBytes: new Uint8Array(pdf),
+      },
+    })
+    .catch(() => undefined);
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `inline; filename="contract-${document.id}.pdf"`,
-      "cache-control": "private, no-store",
+      "content-disposition": `inline; filename="influrios-contract-${document.id}.pdf"`,
+      "cache-control": "private, no-store, no-cache, must-revalidate",
+      pragma: "no-cache",
+      "x-influrios-contract-chrome": upgraded ? "upgraded" : "current",
+      "x-influrios-contract-template": "influrios-collab-v1",
     },
   });
 }

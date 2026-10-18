@@ -536,6 +536,47 @@ export function resolveContractBodyForChrome(document: ContractChromeDocument): 
   return { body: upgradeLegacyContractBody(document), upgraded: true };
 }
 
+/**
+ * Build the downloadable chrome PDF for any contract (legacy or new).
+ * Always upgrades legacy bodies and always stamps page endorsements / signature ink.
+ */
+export function buildContractChromePdf(document: ContractChromeDocument): {
+  body: string;
+  upgraded: boolean;
+  pdf: Buffer;
+} {
+  const { body, upgraded } = resolveContractBodyForChrome(document);
+  const pdf = renderContractPdf(body, {
+    title: document.title,
+    agreementId: document.id,
+    signatures: signaturesFromParties(
+      document.parties.map((party) => ({
+        role: party.role,
+        email: party.email,
+        attestation: party.attestation ?? null,
+        signedAt:
+          party.signedAt instanceof Date
+            ? party.signedAt
+            : party.signedAt
+              ? new Date(party.signedAt)
+              : null,
+        status: party.status,
+        name: party.name,
+      })),
+    ),
+    endorsementSlots: endorsementSlotsFromParties(
+      document.parties.map((party) => ({
+        role: party.role,
+        attestation: party.attestation ?? null,
+        status: party.status,
+        name: party.name,
+      })),
+    ),
+    pageEndorsements: true,
+  });
+  return { body, upgraded, pdf };
+}
+
 export function fundingAllowedBySignature(status: string): { ok: true } | { ok: false; error: string } {
   if (status === "signed") return { ok: true };
   return {

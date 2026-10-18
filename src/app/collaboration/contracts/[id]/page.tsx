@@ -137,7 +137,10 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                 Sign this agreement →
               </a>
             ) : null}
-            <Link href={`/collaboration/contracts/${document.id}/pdf`} className="text-violet hover:underline">
+            <Link
+              href={`/collaboration/contracts/${document.id}/pdf?v=chrome-v1`}
+              className="text-violet hover:underline"
+            >
               Download PDF
             </Link>
             {document.status === "signed" ? (
