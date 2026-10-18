@@ -77,8 +77,8 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
   const youSigned = Boolean(party && party.status === "signed");
   const pendingParties = document.parties.filter((row) => row.status === "pending");
   const signedCount = document.parties.filter((row) => row.status === "signed").length;
-  /** Funding wizard is business-only — influencers must not hit /collaboration/contract. */
-  const canRequestFunding = Boolean(party && party.role === "business");
+  /** Business starts funding — influencers must not hit /collaboration/contract. */
+  const canStartFunding = Boolean(party && party.role === "business");
   const channelLabel = isNative
     ? "Influrios in-app"
     : document.envelopeId
@@ -130,7 +130,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
             </p>
           ) : document.status === "signed" ? (
             <p className="mt-2 text-sm font-semibold text-emerald-700">
-              {canRequestFunding
+              {canStartFunding
                 ? "Every party has signed. Funding can start."
                 : "Every party has signed. Waiting for the business to start funding."}
             </p>
@@ -150,9 +150,9 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
               Download PDF
             </Link>
             {document.status === "signed" ? (
-              canRequestFunding ? (
+              canStartFunding ? (
                 <Link href={`/collaboration/contract?${returnQuery.toString()}`} className="text-violet hover:underline">
-                  Request funding
+                  Start funding
                 </Link>
               ) : (
                 <span className="text-muted">The business starts funding from their side.</span>
@@ -171,7 +171,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
         {query.error ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{query.error}</p> : null}
         {query.signed === "1" ? (
           <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-            {canRequestFunding
+            {canStartFunding
               ? "Every party has signed. Funding can start."
               : "Every party has signed. Waiting for the business to start funding."}
           </p>
