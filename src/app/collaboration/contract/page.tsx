@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions";
-import { getAccountSession } from "@/lib/accounts";
+import { requireBusinessSession } from "@/lib/account-audience";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace, type CampaignBrief } from "@/lib/business";
 import {
@@ -106,10 +106,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     redirect("/collaboration/propose?notice=collab_os_off");
   }
   const params = await searchParams;
-  const account = await getAccountSession().catch(() => null);
-  if (!account) {
-    redirect(`/login?next=${encodeURIComponent("/collaboration/contract")}&gate=business`);
-  }
+  /** Creators must never enter this wizard — bounce to influencer home, not business terms. */
+  const account = await requireBusinessSession("/collaboration/contract");
 
   const termsOk = await hasCurrentLegalRecord({
     documentKey: "business-terms",
