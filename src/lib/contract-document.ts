@@ -538,7 +538,7 @@ export function resolveContractBodyForChrome(document: ContractChromeDocument): 
 
 /**
  * Build the downloadable chrome PDF for any contract (legacy or new).
- * Always upgrades legacy bodies and always stamps page endorsements / signature ink.
+ * Uses the approved Influrios logo template layout (not a plain text dump).
  */
 export function buildContractChromePdf(document: ContractChromeDocument): {
   body: string;
@@ -546,24 +546,29 @@ export function buildContractChromePdf(document: ContractChromeDocument): {
   pdf: Buffer;
 } {
   const { body, upgraded } = resolveContractBodyForChrome(document);
-  const pdf = renderContractPdf(body, {
+  // Lazy import avoids a circular init with template-values ↔ document types.
+  const { templateValuesFromChromeDocument } = require("@/lib/contract-template-values") as typeof import("@/lib/contract-template-values");
+  const { renderInfluriosTemplatePdf } = require("@/lib/contract-template-pdf") as typeof import("@/lib/contract-template-pdf");
+  const values = templateValuesFromChromeDocument({ ...document, renderedBody: body });
+  const signatures = signaturesFromParties(
+    document.parties.map((party) => ({
+      role: party.role,
+      email: party.email,
+      attestation: party.attestation ?? null,
+      signedAt:
+        party.signedAt instanceof Date
+          ? party.signedAt
+          : party.signedAt
+            ? new Date(party.signedAt)
+            : null,
+      status: party.status,
+      name: party.name,
+    })),
+  );
+  const pdf = renderInfluriosTemplatePdf(values, {
     title: document.title,
     agreementId: document.id,
-    signatures: signaturesFromParties(
-      document.parties.map((party) => ({
-        role: party.role,
-        email: party.email,
-        attestation: party.attestation ?? null,
-        signedAt:
-          party.signedAt instanceof Date
-            ? party.signedAt
-            : party.signedAt
-              ? new Date(party.signedAt)
-              : null,
-        status: party.status,
-        name: party.name,
-      })),
-    ),
+    signatures,
     endorsementSlots: endorsementSlotsFromParties(
       document.parties.map((party) => ({
         role: party.role,
@@ -764,7 +769,12 @@ export async function sendCollaborationContract(input: {
     agreementStatus: input.render.agreementStatus ?? "Ready for Signature",
     esignProvider: input.render.esignProvider,
   });
-  const pdfBytes = renderContractPdf(renderedBody, {
+  const { templateValuesFromRenderInput } = require("@/lib/contract-template-values") as typeof import("@/lib/contract-template-values");
+  const { renderInfluriosTemplatePdf } = require("@/lib/contract-template-pdf") as typeof import("@/lib/contract-template-pdf");
+  const pdfBytes = renderInfluriosTemplatePdf(templateValuesFromRenderInput({
+    ...input.render,
+    agreementStatus: input.render.agreementStatus ?? "Ready for Signature",
+  }), {
     title: input.render.title,
     agreementId: input.render.agreementId,
     signatures: [],
@@ -968,13 +978,16 @@ export async function signNativeContractParty(input: {
       : row,
   );
   const documentStatus = nextParties.every((row) => row.status === "signed") ? "signed" : "sent";
-  const pdfBytes = renderContractPdf(nextBody, {
+  const chromePdf = buildContractChromePdf({
+    id: document.id,
     title: document.title,
-    agreementId: document.id,
-    signatures: signaturesFromParties(nextParties),
-    endorsementSlots: endorsementSlotsFromParties(nextParties),
-    pageEndorsements: true,
+    status: documentStatus,
+    renderedBody: nextBody,
+    signingChannel: document.signingChannel,
+    createdAt: document.createdAt,
+    parties: nextParties,
   });
+  const pdfBytes = chromePdf.pdf;
 
   await prisma.$transaction([
     prisma.contractParty.update({

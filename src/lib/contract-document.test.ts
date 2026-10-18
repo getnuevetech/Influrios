@@ -309,9 +309,11 @@ Creator compensation: $900.00
     assert.match(chromePdf.body, /Commercial Summary/);
     const raw = chromePdf.pdf.toString("latin1");
     assert.match(raw, /^%PDF-1.4/);
-    assert.match(raw, /\(INFLURIOS/);
-    assert.match(raw, /Page endorsement/);
     assert.match(raw, /Commercial Summary/);
+    assert.match(raw, /Page endorsement/);
+    assert.match(raw, /\/LogoLg/);
+    assert.match(raw, /DCTDecode/);
+    assert.match(raw, /COLLABORATION AGREEMENT/);
   });
 
   it("shows each message only to the chosen readers", () => {
