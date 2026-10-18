@@ -86,6 +86,8 @@ describe("signing lifecycle", () => {
     });
     assert.match(line, /Signed in Influrios/);
     assert.match(line, /North Co/);
+    assert.equal(line.includes("[[SIG:"), false);
+    assert.match(line, /Page endorsement initials: NC/);
     assert.equal(applyNativeSignatureAnchor("Hello\n/sig1/\nBye", 1, line), `Hello\n${line}\nBye`);
   });
 });

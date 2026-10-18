@@ -3,6 +3,17 @@
  * Native in-app signing is primary; DocuSign is an optional channel when enabled with credentials.
  */
 import { prisma } from "@/lib/db";
+import {
+  asciiForPdf as asciiForPdfImpl,
+  classifyContractPdfLines as classifyContractPdfLinesImpl,
+  renderContractPdf as renderContractPdfImpl,
+  signaturesFromParties,
+  wrapContractLines as wrapContractLinesImpl,
+  type ContractPdfLine,
+  type ContractPdfLineStyle,
+  type ContractPdfOptions,
+  type ContractPdfSignature,
+} from "@/lib/contract-pdf";
 import { assembleDocuSignCredentials, openDocuSignEnvelope } from "@/lib/signing/docusign";
 import {
   applyNativeSignatureAnchor,
@@ -13,8 +24,10 @@ import {
 import { resolveSigningMode } from "@/lib/signing";
 import { activeSigningProvider } from "@/lib/providers";
 import { decryptSecret } from "@/lib/provider-secrets";
+import { SERVICE_LEVEL_LABELS, type ServiceLevel } from "@/lib/collaboration-fees";
 
 export const CONTRACT_TEMPLATE_ID = "collaboration";
+export const CONTRACT_TEMPLATE_VERSION = "influrios-collab-v1";
 
 export const CONTRACT_VARIABLES = [
   "title",
@@ -34,64 +47,193 @@ export const CONTRACT_VARIABLES = [
   "fee_disclosure",
   "generated_at",
   "signature_block",
+  "usage_block",
+  "esign_provider",
 ] as const;
 
 export type ContractVariable = (typeof CONTRACT_VARIABLES)[number];
 
+/**
+ * Approved Influrios collaboration agreement template (structured for PDF layout).
+ * Placeholders map through buildContractValues; optional rows stay blank-safe.
+ */
 export const DEFAULT_CONTRACT_TEMPLATE = `COLLABORATION AGREEMENT
+{{title}}
 
-Generated: {{generated_at}}
+Agreement ID Status Generated Jurisdiction
+{{agreement_id}} {{agreement_status}} {{generated_at}} {{jurisdiction}}
+
+Agreement purpose
+This Collaboration Agreement sets out the campaign scope, commercial terms, milestone payments, content rights, approvals, obligations and signatures between the Business and the Influencer(s) identified below. Influrios provides the platform workflow and records associated with the collaboration.
+
+Commercial Summary
+Item  Agreed Terms
+Campaign  {{title}}
+Business  {{business_name}}
+Service Level  {{service_level}}
+Currency  {{currency}}
+Gross Contract Value  {{gross}}
+Influrios Platform Fee  {{platform_fee}}
+Influencer Compensation Pool  {{creator_compensation}}
+Campaign Period  {{campaign_period}}
 
 1. Parties
-This agreement is made for the campaign "{{title}}" between the business and every creator named below. Each person is a party. Removing a party after this document is sent requires a new agreement.
+This Collaboration Agreement (the "Agreement") is entered into by and between the following parties for the campaign identified above.
 
-Business: {{business_name}} ({{business_email}})
-
+Party Type  Legal / Display Name  Email
+Business  {{business_name}}  {{business_email}}
 {{parties_block}}
 
-2. Campaign
-Scope: {{scope}}
-Commercial terms: {{commercial}}
-Jurisdiction: {{jurisdiction}}
-Service level: {{service_level}}
+Multiple Influencers. If more than one Influencer participates, each listed Influencer is a party to this Agreement only to the extent of that Influencer's assigned deliverables, compensation share, rights and obligations.
 
-3. Money
-Currency: {{currency}}
-Gross contract value: {{gross}}
-Platform fee: {{platform_fee}}
-Creator compensation: {{creator_compensation}}
+2. Campaign Scope and Deliverables
+Field  Agreement Detail
+Campaign Objective  {{commercial}}
+Scope of Work  {{scope}}
+Creative Requirements  Per campaign record
+Usage / Licensing Package  {{usage_block}}
+Exclusivity, if any  {{exclusivity}}
 
-The platform fee is earned only when a milestone is released. Creator compensation is split by the shares in this document. One funding instruction pays those shares. A later change to a fee rule does not change this agreement.
+The Influencer will create and submit the agreed deliverables in accordance with this Agreement, the campaign brief, applicable law, platform rules and any written brand requirements incorporated into the campaign record.
 
-{{fee_disclosure}}
+3. Compensation and Platform Fee
+The Business agrees to fund the Gross Contract Value shown in the Commercial Summary. The Gross Contract Value consists of the Influencer compensation and the applicable Influrios platform fee allocated under the milestone schedule.
 
-4. Milestones
+Commercial Item  Amount / Rule
+Gross Contract Value  {{gross}}
+Influrios Platform Fee  {{platform_fee}}
+Influencer Compensation Pool  {{creator_compensation}}
+Fee Rule  {{fee_disclosure}}
+
+Fee Earning Rule. The applicable portion of the platform fee is earned only when the corresponding milestone is released or otherwise becomes earned under the campaign rules.
+
+No retroactive fee change. The fee rule recorded when this Agreement becomes binding controls this collaboration. A later Admin or platform pricing change will not retroactively alter the fee terms of this Agreement unless all required parties agree to an amendment.
+
+4. Milestone Schedule
 {{milestones_block}}
 
-5. Creator shares
+For collaborations with more or fewer milestones, Influrios will render the complete milestone schedule from the campaign record. The milestone percentages should total 100% unless the campaign explicitly uses a different approved structure.
+
+5. Influencer Share Allocation
 {{party_shares_block}}
 
-6. Records
-Influrios stores this agreement, including this PDF, on the account of every party. Each party can open it from their account. Messages about this agreement stay on the agreement.
+If multiple Influencers participate, the compensation pool is allocated according to the percentages shown above. Influrios may generate a single funding instruction while maintaining separate ledger allocations for each Influencer.
 
-7. Signatures
-Each party signs this agreement in Influrios by typing their legal name on the contract page. The agreement is signed when every party below has completed their signature. Until then it stays unsigned and funding cannot start. DocuSign may be used instead when an admin enables that optional channel.
+6. Funding, Release and Payout
+- The Business must fund the collaboration through the payment method or provider made available by Influrios before any milestone that requires funded status may begin.
+- Amounts designated for the collaboration remain separate from Influrios operating revenue until the applicable fee or other amount becomes earned under the campaign and platform rules.
+- Influencer compensation associated with a milestone becomes payable only after the milestone is approved, auto-approved under the configured campaign rule, or otherwise released following the applicable dispute process.
+- The corresponding allocated portion of the Influrios platform fee becomes earned when the milestone is released or otherwise satisfies the applicable earning rule.
+- Payment-provider processing, payout, foreign exchange, tax, withholding or similar charges may apply where disclosed in the campaign or provider flow.
+- A failed payout does not cancel an earned Influencer amount. The payable remains subject to verification, compliance review and successful payout processing.
 
+7. Submission, Review and Revisions
+- The Influencer will submit each deliverable through the method specified in the campaign record.
+- The Business will review submitted work within {{approval_period}}.
+- The Business may request revisions reasonably within the agreed campaign scope and revision allowance: {{revision_allowance}}.
+- A request that materially expands scope, channels, usage rights or deliverables may require a written amendment and additional compensation.
+- If the campaign uses auto-approval, the applicable timer and conditions will be displayed in the campaign record.
+
+8. Content Rights and Usage
+Unless the campaign expressly provides for a buyout or assignment, the Influencer retains ownership of the Influencer's original content. The Influencer grants the Business only the usage rights expressly selected for this campaign:
+
+{{usage_block}}
+
+No usage right not expressly stated in this Agreement is granted. Expanded use, extended term, new territory, paid-media use, sublicensing or ownership transfer outside the agreed rights requires a separate written agreement or amendment.
+
+9. Advertising Disclosure and Platform Compliance
+Each Influencer is responsible for making clear and conspicuous advertising, sponsorship or material-connection disclosures required by applicable law and the rules of the social platform on which content is published. The Business will not instruct an Influencer to conceal a required disclosure.
+- Influencers must use campaign-required disclosures, hashtags, labels or platform tools.
+- Content must not contain unlawful, knowingly false, defamatory or infringing material.
+- The Business is responsible for the accuracy and substantiation of factual claims or product information it supplies to the Influencer.
+- The Influencer remains responsible for the Influencer's own statements, conduct and compliance with applicable platform rules.
+
+10. Confidentiality
+A party receiving non-public business, campaign, product, pricing, customer, technical or personal information from another party will use that information only for this collaboration and will not disclose it except to personnel or advisers who need it and are subject to appropriate confidentiality obligations, or where disclosure is required by law.
+
+11. Representations and Warranties
+Each party represents that:
+- it has authority to enter into this Agreement and perform its obligations;
+- its performance will not knowingly violate another binding agreement;
+- materials it supplies for the campaign are owned by it or properly licensed for the intended use; and
+- information it supplies for payment, tax, verification and contracting purposes is materially accurate.
+
+The Influencer additionally represents that original content supplied by the Influencer will not knowingly infringe third-party intellectual-property or publicity rights, except to the extent the allegedly infringing element was supplied or specifically required by the Business.
+
+12. Cancellation and Termination
+Cancellation and termination will be handled according to the campaign status, completed work, earned fees, approved milestones and applicable refund rules. Unless a campaign-specific term states otherwise:
+- unearned future milestone amounts should remain refundable to the funding party, subject to provider limitations and legitimate deductions;
+- completed or approved work and earned platform fees remain payable and are not automatically reversed by cancellation;
+- a material breach reasonably capable of cure should be given the applicable cure period: {{cure_period}};
+- Influrios may suspend or restrict a collaboration where fraud, sanctions, prohibited activity, material security risk or payment abuse is reasonably suspected.
+
+13. Disputes
+A party disputing a milestone, deliverable, release or payment must use the collaboration dispute process within {{dispute_window}}. The disputed amount may remain on hold while the dispute is reviewed. Undisputed amounts should continue through the normal release process where operationally possible.
+
+Influrios may provide administrative tools, records and workflow support for a dispute but does not guarantee a particular legal outcome unless a separate written service expressly states otherwise.
+
+14. Platform Role
+Influrios provides technology and operational workflow for discovery, collaboration administration, records, payment orchestration and related services. Unless Influrios is expressly named as a contracting service provider for a separate managed service, Influrios is not the employer, agent, partner or joint venturer of the Business or Influencer, and it does not control the manner and means by which the Influencer creates content.
+
+Nothing in this Agreement should be interpreted as describing collaboration funds as bank deposits or regulated escrow unless the applicable licensed payment arrangement expressly provides that status.
+
+15. Indemnification and Liability
+Each party is responsible for losses arising from its own breach of this Agreement, unlawful conduct, fraud, willful misconduct or infringement caused by materials it supplied. Any broader indemnity, liability cap or exclusion of consequential damages should follow the governing Influrios Terms and any campaign-specific enterprise terms incorporated by reference.
+
+Platform terms. The current Influrios Terms of Service, Privacy Policy and any applicable payment/provider terms are incorporated by reference to the extent they govern account use, payment processing, platform conduct, privacy or limitations not specifically addressed here.
+
+16. Governing Law and Venue
+This Agreement is governed by the law stated in the campaign record: {{jurisdiction}}. Any court venue, arbitration requirement or dispute forum applicable to this collaboration is: {{dispute_forum}}.
+
+17. Notices, Records and Electronic Communications
+- Influrios will store the executed agreement and relevant audit record on the account of each party, subject to account access and retention rules.
+- Campaign messages, notices and approvals recorded in Influrios may form part of the collaboration record.
+- System timestamps should be shown in a human-readable format with the applicable timezone.
+- A party should promptly update its contact information if the email or account information used for notices changes.
+
+18. Amendments, Assignment and Entire Agreement
+Material changes to the parties, compensation, milestone amounts, usage rights, service level or core scope require a written amendment or replacement agreement accepted by all affected parties. No party may assign this Agreement in a manner that materially increases another party's obligations without any consent required by applicable law or the governing terms. This Agreement, together with incorporated campaign records and applicable Influrios terms, constitutes the agreement of the parties regarding this collaboration and supersedes inconsistent prior campaign communications.
+
+19. Electronic Signature
+This Agreement becomes executed when all required signers complete the electronic-signature process through {{esign_provider}} and the signature provider confirms completion. Each party signs by typing their legal name; Influrios converts that name into a handwritten signature mark and stamps page-endorsement initials on every page of this Agreement.
+
+Party  Signer  Email  Signature Status
 {{signature_block}}
+
+Signature Audit Record
+Field  Recorded Value
+E-sign Provider  {{esign_provider}}
+Template Version  ${CONTRACT_TEMPLATE_VERSION}
+Agreement Status  {{agreement_status}}
+
+END OF COLLABORATION AGREEMENT
 `;
 
-/** Map common Unicode punctuation to PDF-safe ASCII. Newlines must stay intact. */
 export function asciiForPdf(value: string): string {
+  return asciiForPdfImpl(value);
+}
+
+export function displayServiceLevel(value: string): string {
+  const key = value.trim().toLowerCase() as ServiceLevel;
+  if (key in SERVICE_LEVEL_LABELS) return SERVICE_LEVEL_LABELS[key];
   return value
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
-    .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
-    .replace(/[\u2013\u2014\u2212]/g, "-")
-    .replace(/\u2026/g, "...")
-    .replace(/[\u00B7\u2022\u2023\u2043]/g, "-")
-    .replace(/\u00A0/g, " ")
-    .replace(/[^\x09\x0A\x20-\x7E]/g, "?");
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+export function formatContractDisplayDate(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return typeof value === "string" ? value : "—";
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
 }
 
 export type ContractPartyInput = {
@@ -119,6 +261,17 @@ export type ContractRenderInput = {
   milestones: { title: string; shareLabel: string; grossLabel: string; feeLabel: string; creatorShares: string }[];
   feeDisclosure: string;
   generatedAt: string;
+  agreementId?: string;
+  agreementStatus?: string;
+  campaignPeriod?: string;
+  usageSummary?: string;
+  exclusivity?: string;
+  approvalPeriod?: string;
+  revisionAllowance?: string;
+  curePeriod?: string;
+  disputeWindow?: string;
+  disputeForum?: string;
+  esignProvider?: string;
 };
 
 export function renderContractTemplate(template: string, values: Record<string, string>): string {
@@ -132,56 +285,72 @@ export function renderContractTemplate(template: string, values: Record<string, 
 export function signatureBlock(parties: ContractPartyInput[]): string {
   return parties
     .map((party, index) => {
-      const share = party.shareBps ? ` - ${(party.shareBps / 100).toFixed(2)}%` : "";
-      const role = party.role === "business" ? "Business" : "Creator";
-      return `${index + 1}. ${role}: ${party.name}\n   Email: ${party.email}${share}\n   Signature:\n   /sig${index + 1}/`;
+      const role = party.role === "business" ? "Business" : "Influencer";
+      return `${role}  ${party.name}  ${party.email}  Pending Signature\n[[SIG_INK:${index + 1}]]\n/sig${index + 1}/`;
     })
     .join("\n\n");
 }
 
 export function buildContractValues(input: ContractRenderInput): Record<string, string> {
-  const partiesBlock = input.parties
-    .map((party, index) => {
-      const label = party.role === "business" ? "Business contact" : "Creator";
-      const share =
-        party.role === "creator" && party.shareBps
-          ? `\n   Share: ${(party.shareBps / 100).toFixed(2)}%`
-          : "";
-      const slug = party.creatorSlug ? `\n   Profile: ${party.creatorSlug}` : "";
-      return `${index + 1}. ${label}: ${party.name}\n   Email: ${party.email}${slug}${share}`;
+  const influencers = input.parties.filter((party) => party.role === "creator");
+  const partiesBlock = influencers
+    .map((party) => {
+      const handle = party.creatorSlug ? `@${party.creatorSlug}` : "—";
+      return `Influencer  ${party.name} (${handle})  ${party.email}`;
     })
-    .join("\n\n");
+    .join("\n");
   const milestonesBlock =
     input.milestones.length === 0
-      ? "(None scheduled.)"
-      : input.milestones
-          .map(
+      ? "Milestone  Share  Gross Amount  Platform Fee  Influencer Amount\n(None scheduled.)"
+      : [
+          "Milestone  Share  Gross Amount  Platform Fee  Influencer Amount",
+          ...input.milestones.map(
             (row, index) =>
-              `${index + 1}. ${row.title}\n   Share: ${row.shareLabel}\n   Gross: ${row.grossLabel}\n   Platform fee: ${row.feeLabel}\n   Creator payout: ${row.creatorShares}`,
-          )
-          .join("\n\n");
-  const sharesBlock = input.parties
-    .filter((party) => party.role === "creator")
-    .map((party) => `- ${party.name} (${party.email}): ${((party.shareBps ?? 0) / 100).toFixed(2)}%`)
-    .join("\n");
+              `${index + 1}. ${row.title}  ${row.shareLabel}  ${row.grossLabel}  ${row.feeLabel}  ${row.creatorShares}`,
+          ),
+        ].join("\n");
+  const sharesBlock =
+    influencers.length === 0
+      ? "Influencer  Platform Handle  Share of Influencer Compensation\n(No influencer shares listed.)"
+      : [
+          "Influencer  Platform Handle  Share of Influencer Compensation",
+          ...influencers.map((party) => {
+            const handle = party.creatorSlug ? `@${party.creatorSlug}` : "—";
+            return `${party.name}  ${handle}  ${((party.shareBps ?? 0) / 100).toFixed(2)}%`;
+          }),
+        ].join("\n");
+  const usage =
+    input.usageSummary?.trim() ||
+    "Usage Field  Agreed Right\nOrganic Brand Use  Per campaign record\nPaid Advertising / Whitelisting  Not granted unless stated in the campaign record\nTerritory  Per campaign record\nDuration  Per campaign record\nEditing / Adaptation  Per campaign record\nOwnership / Buyout  Influencer retains ownership; license only as stated";
   return {
     title: input.title,
     scope: input.scope,
     commercial: input.commercial,
     jurisdiction: input.jurisdiction,
-    service_level: input.serviceLevel,
+    service_level: displayServiceLevel(input.serviceLevel),
     currency: input.currency,
     gross: input.grossLabel,
     platform_fee: input.platformFeeLabel,
     creator_compensation: input.creatorCompensationLabel,
     business_name: input.businessName,
     business_email: input.businessEmail,
-    parties_block: partiesBlock,
+    parties_block: partiesBlock || "Influencer  (listed in campaign record)  —",
     milestones_block: milestonesBlock,
-    party_shares_block: sharesBlock || "(No creator shares listed.)",
+    party_shares_block: sharesBlock,
     fee_disclosure: input.feeDisclosure,
-    generated_at: input.generatedAt,
+    generated_at: formatContractDisplayDate(input.generatedAt),
     signature_block: signatureBlock(input.parties),
+    agreement_id: input.agreementId?.trim() || "Pending assignment",
+    agreement_status: input.agreementStatus?.trim() || "Ready for Signature",
+    campaign_period: input.campaignPeriod?.trim() || "Per campaign record",
+    usage_block: usage,
+    exclusivity: input.exclusivity?.trim() || "None",
+    approval_period: input.approvalPeriod?.trim() || "Per campaign workflow",
+    revision_allowance: input.revisionAllowance?.trim() || "Per campaign workflow",
+    cure_period: input.curePeriod?.trim() || "Per campaign workflow",
+    dispute_window: input.disputeWindow?.trim() || "Per campaign workflow",
+    dispute_forum: input.disputeForum?.trim() || input.jurisdiction || "Per campaign record",
+    esign_provider: input.esignProvider?.trim() || "Influrios in-app signing",
   };
 }
 
@@ -192,237 +361,19 @@ export function renderContractBody(template: string, input: ContractRenderInput)
   return `${rendered}\n\n${values.signature_block}`;
 }
 
-function pdfEscape(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-}
+export type { ContractPdfLine, ContractPdfLineStyle, ContractPdfOptions, ContractPdfSignature };
 
-export type ContractPdfLineStyle = "title" | "heading" | "meta" | "body" | "indent" | "signature" | "spacer";
-
-export type ContractPdfLine = { text: string; style: ContractPdfLineStyle };
-
-const PDF_LINE_WIDTH: Record<ContractPdfLineStyle, number> = {
-  title: 62,
-  heading: 78,
-  meta: 88,
-  body: 88,
-  indent: 84,
-  signature: 84,
-  spacer: 88,
-};
-
-/** Keep newlines; only strip/replace non-ASCII inside each line. */
 export function wrapContractLines(text: string, width = 88): string[] {
-  const lines: string[] = [];
-  for (const raw of asciiForPdf(text).split("\n")) {
-    if (!raw.trim()) {
-      lines.push("");
-      continue;
-    }
-    let rest = raw;
-    while (rest.length > width) {
-      let cut = rest.lastIndexOf(" ", width);
-      if (cut < 20) cut = width;
-      lines.push(rest.slice(0, cut).trimEnd());
-      rest = rest.slice(cut).trimStart();
-    }
-    lines.push(rest);
-  }
-  return lines.length > 0 ? lines : [""];
+  return wrapContractLinesImpl(text, width);
 }
 
-function isSectionHeading(line: string): boolean {
-  return /^\d+\.\s+\S/.test(line.trim());
-}
-
-function isTitleLine(line: string, seenBody: boolean): boolean {
-  if (seenBody) return false;
-  const trimmed = line.trim();
-  if (trimmed.length < 8 || trimmed.length > 72) return false;
-  return /^[A-Z0-9][A-Z0-9 ,.'&/\-]{7,}$/.test(trimmed);
-}
-
-/** Classify agreement lines so the PDF can use title / heading / body hierarchy. */
 export function classifyContractPdfLines(text: string): ContractPdfLine[] {
-  const rawLines = wrapContractLines(text, 88);
-  const out: ContractPdfLine[] = [];
-  let seenBody = false;
-  let titleUsed = false;
-  for (const line of rawLines) {
-    if (!line.trim()) {
-      out.push({ text: "", style: "spacer" });
-      continue;
-    }
-    if (!titleUsed && isTitleLine(line, seenBody)) {
-      out.push({ text: line.trim(), style: "title" });
-      titleUsed = true;
-      continue;
-    }
-    if (/^Generated:/i.test(line.trim())) {
-      out.push({ text: line.trim(), style: "meta" });
-      seenBody = true;
-      continue;
-    }
-    if (isSectionHeading(line)) {
-      out.push({ text: line.trim(), style: "heading" });
-      seenBody = true;
-      continue;
-    }
-    if (/^Signed in Influrios/i.test(line.trim()) || /\/sig\d+\//i.test(line)) {
-      out.push({ text: line, style: "signature" });
-      seenBody = true;
-      continue;
-    }
-    if (/^\s{2,}/.test(line) || /^[-*]\s/.test(line.trim())) {
-      out.push({ text: line.replace(/^\s+/, "    "), style: "indent" });
-      seenBody = true;
-      continue;
-    }
-    // Re-wrap body against style width when needed.
-    const width = PDF_LINE_WIDTH.body;
-    let rest = line;
-    while (rest.length > width) {
-      let cut = rest.lastIndexOf(" ", width);
-      if (cut < 20) cut = width;
-      out.push({ text: rest.slice(0, cut).trimEnd(), style: "body" });
-      rest = rest.slice(cut).trimStart();
-    }
-    out.push({ text: rest, style: "body" });
-    seenBody = true;
-  }
-  return out.length > 0 ? out : [{ text: "", style: "spacer" }];
+  return classifyContractPdfLinesImpl(text);
 }
 
-function pdfFontAndSize(style: ContractPdfLineStyle): { font: "F1" | "F2" | "F3"; size: number; leading: number } {
-  switch (style) {
-    case "title":
-      return { font: "F2", size: 18, leading: 26 };
-    case "heading":
-      return { font: "F2", size: 12, leading: 20 };
-    case "meta":
-      return { font: "F3", size: 9, leading: 13 };
-    case "signature":
-      return { font: "F3", size: 10, leading: 14 };
-    case "indent":
-      return { font: "F1", size: 10, leading: 14 };
-    case "spacer":
-      return { font: "F1", size: 10, leading: 10 };
-    default:
-      return { font: "F1", size: 10, leading: 14 };
-  }
-}
-
-function paginateContractLines(lines: ContractPdfLine[]): ContractPdfLine[][] {
-  const pages: ContractPdfLine[][] = [];
-  const top = 742;
-  const bottom = 56;
-  let current: ContractPdfLine[] = [];
-  let y = top;
-  for (const line of lines) {
-    const { leading } = pdfFontAndSize(line.style);
-    if (current.length > 0 && y - leading < bottom) {
-      pages.push(current);
-      current = [];
-      y = top;
-    }
-    current.push(line);
-    y -= leading;
-  }
-  if (current.length > 0 || pages.length === 0) pages.push(current.length ? current : [{ text: "", style: "spacer" }]);
-  return pages;
-}
-
-/** Multi-page Helvetica PDF with title/heading hierarchy. Text stays uncompressed for read-back. */
-export function renderContractPdf(text: string): Buffer {
-  const classified = classifyContractPdfLines(text);
-  const pages = paginateContractLines(classified);
-  const fontRegularId = 3 + pages.length * 2;
-  const fontBoldId = fontRegularId + 1;
-  const fontObliqueId = fontRegularId + 2;
-  const parts: { id: number; body: string }[] = [];
-  const kids: number[] = [];
-
-  pages.forEach((pageLines, index) => {
-    const pageId = 3 + index * 2;
-    const contentId = pageId + 1;
-    kids.push(pageId);
-    const commands: string[] = ["BT"];
-    let y = 742;
-    let currentFont: string | null = null;
-    let currentSize: number | null = null;
-    pageLines.forEach((line, lineIndex) => {
-      const { font, size, leading } = pdfFontAndSize(line.style);
-      if (lineIndex === 0) {
-        commands.push(`/${font} ${size} Tf`);
-        commands.push(`50 ${y} Td`);
-        currentFont = font;
-        currentSize = size;
-      } else {
-        if (font !== currentFont || size !== currentSize) {
-          commands.push(`/${font} ${size} Tf`);
-          currentFont = font;
-          currentSize = size;
-        }
-        commands.push(`0 -${leading} Td`);
-        y -= leading;
-      }
-      if (line.style === "title") {
-        // Approximate center for title on letter width with 50pt margins.
-        const approxChar = size * 0.5;
-        const textWidth = line.text.length * approxChar;
-        const shift = Math.max(0, Math.floor((512 - textWidth) / 2));
-        if (shift > 0) commands.push(`${shift} 0 Td`);
-        commands.push(`(${pdfEscape(line.text)}) Tj`);
-        if (shift > 0) commands.push(`${-shift} 0 Td`);
-      } else if (line.style === "spacer") {
-        commands.push(`() Tj`);
-      } else {
-        commands.push(`(${pdfEscape(line.text)}) Tj`);
-      }
-      if (lineIndex === 0) y -= leading;
-    });
-    // Footer page number
-    commands.push("ET");
-    commands.push("BT");
-    commands.push(`/F3 8 Tf`);
-    commands.push(`50 36 Td`);
-    commands.push(`(${pdfEscape(`Influrios collaboration agreement  -  page ${index + 1} of ${pages.length}`)}) Tj`);
-    commands.push("ET");
-    const stream = commands.join("\n");
-    parts.push({
-      id: contentId,
-      body: `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
-    });
-    parts.push({
-      id: pageId,
-      body: `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${contentId} 0 R /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R /F3 ${fontObliqueId} 0 R >> >> >>`,
-    });
-  });
-
-  const objects = [
-    { id: 1, body: "<< /Type /Catalog /Pages 2 0 R >>" },
-    {
-      id: 2,
-      body: `<< /Type /Pages /Kids [${kids.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages.length} >>`,
-    },
-    ...parts,
-    { id: fontRegularId, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>" },
-    { id: fontBoldId, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>" },
-    { id: fontObliqueId, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>" },
-  ].sort((a, b) => a.id - b.id);
-
-  let out = "%PDF-1.4\n";
-  const offsets: number[] = [];
-  for (const object of objects) {
-    offsets[object.id] = Buffer.byteLength(out);
-    out += `${object.id} 0 obj\n${object.body}\nendobj\n`;
-  }
-  const xrefAt = Buffer.byteLength(out);
-  let xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  for (let id = 1; id <= objects.length; id += 1) {
-    xref += `${String(offsets[id]).padStart(10, "0")} 00000 n \n`;
-  }
-  xref += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefAt}\n%%EOF`;
-  return Buffer.from(out + xref, "utf8");
+/** Multi-page PDF with title/heading hierarchy, signature ink, and page endorsements. */
+export function renderContractPdf(text: string, options: ContractPdfOptions = {}): Buffer {
+  return renderContractPdfImpl(text, options);
 }
 
 export function fundingAllowedBySignature(status: string): { ok: true } | { ok: false; error: string } {
@@ -531,14 +482,27 @@ export function applyEnvelopeToParties(
 
 export async function ensureContractTemplate() {
   const existing = await prisma.contractTemplate.findUnique({ where: { id: CONTRACT_TEMPLATE_ID } });
-  if (existing) return existing;
-  return prisma.contractTemplate.create({
-    data: {
-      id: CONTRACT_TEMPLATE_ID,
-      name: "Collaboration agreement",
-      body: DEFAULT_CONTRACT_TEMPLATE,
-    },
-  });
+  if (!existing) {
+    return prisma.contractTemplate.create({
+      data: {
+        id: CONTRACT_TEMPLATE_ID,
+        name: "Collaboration agreement",
+        body: DEFAULT_CONTRACT_TEMPLATE,
+      },
+    });
+  }
+  // Upgrade legacy short templates to the approved Influrios layout (admin custom bodies are kept).
+  const looksLegacy =
+    !existing.body.includes("19. Electronic Signature") &&
+    existing.body.includes("COLLABORATION AGREEMENT") &&
+    existing.body.includes("{{signature_block}}");
+  if (looksLegacy && existing.body.length < 2500) {
+    return prisma.contractTemplate.update({
+      where: { id: CONTRACT_TEMPLATE_ID },
+      data: { body: DEFAULT_CONTRACT_TEMPLATE, name: "Collaboration agreement" },
+    });
+  }
+  return existing;
 }
 
 export async function saveContractTemplate(body: string) {
@@ -594,8 +558,17 @@ export async function sendCollaborationContract(input: {
     return { ok: false as const, error: "The agreement needs the business and at least one creator email. Nothing was signed." };
   }
   const template = await ensureContractTemplate();
-  const renderedBody = renderContractBody(template.body, input.render);
-  const pdfBytes = renderContractPdf(renderedBody);
+  const renderedBody = renderContractBody(template.body, {
+    ...input.render,
+    agreementStatus: input.render.agreementStatus ?? "Ready for Signature",
+    esignProvider: input.render.esignProvider,
+  });
+  const pdfBytes = renderContractPdf(renderedBody, {
+    title: input.render.title,
+    agreementId: input.render.agreementId,
+    signatures: [],
+    pageEndorsements: true,
+  });
   const provider = await activeSigningProvider();
   if (!provider) {
     return {
@@ -771,10 +744,17 @@ export async function signNativeContractParty(input: {
   });
   const nextBody = applyNativeSignatureAnchor(document.renderedBody, partyIndex + 1, attestation);
   const nextParties = document.parties.map((row) =>
-    row.id === party.id ? { ...row, status: "signed" } : row,
+    row.id === party.id
+      ? { ...row, status: "signed", attestation: typedName.slice(0, 160), signedAt }
+      : row,
   );
   const documentStatus = nextParties.every((row) => row.status === "signed") ? "signed" : "sent";
-  const pdfBytes = renderContractPdf(nextBody);
+  const pdfBytes = renderContractPdf(nextBody, {
+    title: document.title,
+    agreementId: document.id,
+    signatures: signaturesFromParties(nextParties),
+    pageEndorsements: true,
+  });
 
   await prisma.$transaction([
     prisma.contractParty.update({
