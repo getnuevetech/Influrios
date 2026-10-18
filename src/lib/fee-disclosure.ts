@@ -26,30 +26,32 @@ export type FeeDisclosureRecord = FeeDisclosureInput & {
 };
 
 export function buildFeeDisclosureSummary(input: FeeDisclosureInput): string {
-  const parts: string[] = [];
-  parts.push(`Jurisdiction ${input.jurisdiction.toUpperCase()}`);
-  parts.push(`service ${input.serviceLevel}`);
-  parts.push(`gross ${input.grossCents}¢`);
-  if (input.feeType) parts.push(`type ${input.feeType}`);
+  const lines: string[] = ["Fee schedule (locked for this agreement):"];
+  lines.push(`- Jurisdiction: ${input.jurisdiction.toUpperCase()}`);
+  lines.push(`- Service level: ${input.serviceLevel}`);
+  lines.push(`- Gross (cents): ${input.grossCents}`);
+  if (input.feeType) lines.push(`- Fee type: ${input.feeType}`);
   if (input.method === "percent" && input.percentBps != null) {
-    parts.push(`${(input.percentBps / 100).toFixed(2)}%`);
+    lines.push(`- Rate: ${(input.percentBps / 100).toFixed(2)}%`);
   } else if (input.method === "fixed" && input.fixedCents != null) {
-    parts.push(`fixed ${input.fixedCents}¢`);
+    lines.push(`- Rate: fixed ${input.fixedCents} cents`);
   } else if (input.method === "percent_plus_fixed") {
-    parts.push(
-      `${((input.percentBps ?? 0) / 100).toFixed(2)}% + ${input.fixedCents ?? 0}¢`,
+    lines.push(
+      `- Rate: ${((input.percentBps ?? 0) / 100).toFixed(2)}% + ${input.fixedCents ?? 0} cents`,
     );
   } else if (input.method === "waived") {
-    parts.push("waived");
+    lines.push("- Rate: waived");
   } else if (input.method === "tiered") {
-    parts.push("tiered");
+    lines.push("- Rate: tiered");
   } else if (input.method === "custom_enterprise" && input.fixedCents != null) {
-    parts.push(`enterprise ${input.fixedCents}¢`);
+    lines.push(`- Rate: enterprise ${input.fixedCents} cents`);
   }
-  parts.push(`fee ${input.feeCents}¢`);
-  if (input.ruleId) parts.push(`rule ${input.ruleId} v${input.ruleVersion ?? "?"}`);
-  if (input.payer) parts.push(`payer ${input.payer}`);
-  return parts.join(" · ");
+  lines.push(`- Platform fee (cents): ${input.feeCents}`);
+  if (input.ruleId) lines.push(`- Rule: ${input.ruleId} v${input.ruleVersion ?? "n/a"}`);
+  if (input.ruleName) lines.push(`- Rule name: ${input.ruleName}`);
+  if (input.payer) lines.push(`- Payer: ${input.payer}`);
+  if (input.explanation?.trim()) lines.push(`- Note: ${input.explanation.trim()}`);
+  return lines.join("\n");
 }
 
 export function requireFeeDisclosureAccepted(input: {

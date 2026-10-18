@@ -80,6 +80,20 @@ Each party signs this agreement in Influrios by typing their legal name on the c
 {{signature_block}}
 `;
 
+/** Map common Unicode punctuation to PDF-safe ASCII. Newlines must stay intact. */
+export function asciiForPdf(value: string): string {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+    .replace(/[\u2013\u2014\u2212]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/[\u00B7\u2022\u2023\u2043]/g, "-")
+    .replace(/\u00A0/g, " ")
+    .replace(/[^\x09\x0A\x20-\x7E]/g, "?");
+}
+
 export type ContractPartyInput = {
   role: "business" | "creator";
   name: string;
@@ -118,8 +132,9 @@ export function renderContractTemplate(template: string, values: Record<string, 
 export function signatureBlock(parties: ContractPartyInput[]): string {
   return parties
     .map((party, index) => {
-      const share = party.shareBps ? ` · ${(party.shareBps / 100).toFixed(2)}%` : "";
-      return `${index + 1}. ${party.role} — ${party.name} — ${party.email}${share}\n/sig${index + 1}/`;
+      const share = party.shareBps ? ` - ${(party.shareBps / 100).toFixed(2)}%` : "";
+      const role = party.role === "business" ? "Business" : "Creator";
+      return `${index + 1}. ${role}: ${party.name}\n   Email: ${party.email}${share}\n   Signature:\n   /sig${index + 1}/`;
     })
     .join("\n\n");
 }
@@ -127,23 +142,27 @@ export function signatureBlock(parties: ContractPartyInput[]): string {
 export function buildContractValues(input: ContractRenderInput): Record<string, string> {
   const partiesBlock = input.parties
     .map((party, index) => {
-      const share = party.role === "creator" && party.shareBps ? ` · share ${(party.shareBps / 100).toFixed(2)}%` : "";
-      const slug = party.creatorSlug ? ` · profile ${party.creatorSlug}` : "";
-      return `${index + 1}. ${party.role}: ${party.name} <${party.email}>${slug}${share}`;
+      const label = party.role === "business" ? "Business contact" : "Creator";
+      const share =
+        party.role === "creator" && party.shareBps
+          ? `\n   Share: ${(party.shareBps / 100).toFixed(2)}%`
+          : "";
+      const slug = party.creatorSlug ? `\n   Profile: ${party.creatorSlug}` : "";
+      return `${index + 1}. ${label}: ${party.name}\n   Email: ${party.email}${slug}${share}`;
     })
-    .join("\n");
+    .join("\n\n");
   const milestonesBlock =
     input.milestones.length === 0
-      ? "—"
+      ? "(None scheduled.)"
       : input.milestones
           .map(
             (row, index) =>
-              `${index + 1}. ${row.title} · ${row.shareLabel} · gross ${row.grossLabel} · fee ${row.feeLabel}\n   ${row.creatorShares}`,
+              `${index + 1}. ${row.title}\n   Share: ${row.shareLabel}\n   Gross: ${row.grossLabel}\n   Platform fee: ${row.feeLabel}\n   Creator payout: ${row.creatorShares}`,
           )
-          .join("\n");
+          .join("\n\n");
   const sharesBlock = input.parties
     .filter((party) => party.role === "creator")
-    .map((party) => `${party.name} (${party.email}) · ${((party.shareBps ?? 0) / 100).toFixed(2)}%`)
+    .map((party) => `- ${party.name} (${party.email}): ${((party.shareBps ?? 0) / 100).toFixed(2)}%`)
     .join("\n");
   return {
     title: input.title,
@@ -159,7 +178,7 @@ export function buildContractValues(input: ContractRenderInput): Record<string, 
     business_email: input.businessEmail,
     parties_block: partiesBlock,
     milestones_block: milestonesBlock,
-    party_shares_block: sharesBlock,
+    party_shares_block: sharesBlock || "(No creator shares listed.)",
     fee_disclosure: input.feeDisclosure,
     generated_at: input.generatedAt,
     signature_block: signatureBlock(input.parties),
@@ -177,13 +196,24 @@ function pdfEscape(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 }
 
-function toPdfText(value: string): string {
-  return value.replace(/[^\x20-\x7E]/g, "?");
-}
+export type ContractPdfLineStyle = "title" | "heading" | "meta" | "body" | "indent" | "signature" | "spacer";
 
-export function wrapContractLines(text: string, width = 85): string[] {
+export type ContractPdfLine = { text: string; style: ContractPdfLineStyle };
+
+const PDF_LINE_WIDTH: Record<ContractPdfLineStyle, number> = {
+  title: 62,
+  heading: 78,
+  meta: 88,
+  body: 88,
+  indent: 84,
+  signature: 84,
+  spacer: 88,
+};
+
+/** Keep newlines; only strip/replace non-ASCII inside each line. */
+export function wrapContractLines(text: string, width = 88): string[] {
   const lines: string[] = [];
-  for (const raw of toPdfText(text).split("\n")) {
+  for (const raw of asciiForPdf(text).split("\n")) {
     if (!raw.trim()) {
       lines.push("");
       continue;
@@ -200,28 +230,162 @@ export function wrapContractLines(text: string, width = 85): string[] {
   return lines.length > 0 ? lines : [""];
 }
 
-/** Multi-page Helvetica PDF. Text is stored uncompressed so the agreement can be read back. */
-export function renderContractPdf(text: string): Buffer {
-  const lines = wrapContractLines(text);
-  const pageSize = 46;
-  const pages: string[][] = [];
-  for (let index = 0; index < lines.length; index += pageSize) {
-    pages.push(lines.slice(index, index + pageSize));
-  }
-  if (pages.length === 0) pages.push([""]);
+function isSectionHeading(line: string): boolean {
+  return /^\d+\.\s+\S/.test(line.trim());
+}
 
-  const fontId = 3 + pages.length * 2;
+function isTitleLine(line: string, seenBody: boolean): boolean {
+  if (seenBody) return false;
+  const trimmed = line.trim();
+  if (trimmed.length < 8 || trimmed.length > 72) return false;
+  return /^[A-Z0-9][A-Z0-9 ,.'&/\-]{7,}$/.test(trimmed);
+}
+
+/** Classify agreement lines so the PDF can use title / heading / body hierarchy. */
+export function classifyContractPdfLines(text: string): ContractPdfLine[] {
+  const rawLines = wrapContractLines(text, 88);
+  const out: ContractPdfLine[] = [];
+  let seenBody = false;
+  let titleUsed = false;
+  for (const line of rawLines) {
+    if (!line.trim()) {
+      out.push({ text: "", style: "spacer" });
+      continue;
+    }
+    if (!titleUsed && isTitleLine(line, seenBody)) {
+      out.push({ text: line.trim(), style: "title" });
+      titleUsed = true;
+      continue;
+    }
+    if (/^Generated:/i.test(line.trim())) {
+      out.push({ text: line.trim(), style: "meta" });
+      seenBody = true;
+      continue;
+    }
+    if (isSectionHeading(line)) {
+      out.push({ text: line.trim(), style: "heading" });
+      seenBody = true;
+      continue;
+    }
+    if (/^Signed in Influrios/i.test(line.trim()) || /\/sig\d+\//i.test(line)) {
+      out.push({ text: line, style: "signature" });
+      seenBody = true;
+      continue;
+    }
+    if (/^\s{2,}/.test(line) || /^[-*]\s/.test(line.trim())) {
+      out.push({ text: line.replace(/^\s+/, "    "), style: "indent" });
+      seenBody = true;
+      continue;
+    }
+    // Re-wrap body against style width when needed.
+    const width = PDF_LINE_WIDTH.body;
+    let rest = line;
+    while (rest.length > width) {
+      let cut = rest.lastIndexOf(" ", width);
+      if (cut < 20) cut = width;
+      out.push({ text: rest.slice(0, cut).trimEnd(), style: "body" });
+      rest = rest.slice(cut).trimStart();
+    }
+    out.push({ text: rest, style: "body" });
+    seenBody = true;
+  }
+  return out.length > 0 ? out : [{ text: "", style: "spacer" }];
+}
+
+function pdfFontAndSize(style: ContractPdfLineStyle): { font: "F1" | "F2" | "F3"; size: number; leading: number } {
+  switch (style) {
+    case "title":
+      return { font: "F2", size: 18, leading: 26 };
+    case "heading":
+      return { font: "F2", size: 12, leading: 20 };
+    case "meta":
+      return { font: "F3", size: 9, leading: 13 };
+    case "signature":
+      return { font: "F3", size: 10, leading: 14 };
+    case "indent":
+      return { font: "F1", size: 10, leading: 14 };
+    case "spacer":
+      return { font: "F1", size: 10, leading: 10 };
+    default:
+      return { font: "F1", size: 10, leading: 14 };
+  }
+}
+
+function paginateContractLines(lines: ContractPdfLine[]): ContractPdfLine[][] {
+  const pages: ContractPdfLine[][] = [];
+  const top = 742;
+  const bottom = 56;
+  let current: ContractPdfLine[] = [];
+  let y = top;
+  for (const line of lines) {
+    const { leading } = pdfFontAndSize(line.style);
+    if (current.length > 0 && y - leading < bottom) {
+      pages.push(current);
+      current = [];
+      y = top;
+    }
+    current.push(line);
+    y -= leading;
+  }
+  if (current.length > 0 || pages.length === 0) pages.push(current.length ? current : [{ text: "", style: "spacer" }]);
+  return pages;
+}
+
+/** Multi-page Helvetica PDF with title/heading hierarchy. Text stays uncompressed for read-back. */
+export function renderContractPdf(text: string): Buffer {
+  const classified = classifyContractPdfLines(text);
+  const pages = paginateContractLines(classified);
+  const fontRegularId = 3 + pages.length * 2;
+  const fontBoldId = fontRegularId + 1;
+  const fontObliqueId = fontRegularId + 2;
   const parts: { id: number; body: string }[] = [];
   const kids: number[] = [];
+
   pages.forEach((pageLines, index) => {
     const pageId = 3 + index * 2;
     const contentId = pageId + 1;
     kids.push(pageId);
-    const commands = ["BT", "/F1 11 Tf", "50 742 Td"];
+    const commands: string[] = ["BT"];
+    let y = 742;
+    let currentFont: string | null = null;
+    let currentSize: number | null = null;
     pageLines.forEach((line, lineIndex) => {
-      if (lineIndex > 0) commands.push("0 -14 Td");
-      commands.push(`(${pdfEscape(line)}) Tj`);
+      const { font, size, leading } = pdfFontAndSize(line.style);
+      if (lineIndex === 0) {
+        commands.push(`/${font} ${size} Tf`);
+        commands.push(`50 ${y} Td`);
+        currentFont = font;
+        currentSize = size;
+      } else {
+        if (font !== currentFont || size !== currentSize) {
+          commands.push(`/${font} ${size} Tf`);
+          currentFont = font;
+          currentSize = size;
+        }
+        commands.push(`0 -${leading} Td`);
+        y -= leading;
+      }
+      if (line.style === "title") {
+        // Approximate center for title on letter width with 50pt margins.
+        const approxChar = size * 0.5;
+        const textWidth = line.text.length * approxChar;
+        const shift = Math.max(0, Math.floor((512 - textWidth) / 2));
+        if (shift > 0) commands.push(`${shift} 0 Td`);
+        commands.push(`(${pdfEscape(line.text)}) Tj`);
+        if (shift > 0) commands.push(`${-shift} 0 Td`);
+      } else if (line.style === "spacer") {
+        commands.push(`() Tj`);
+      } else {
+        commands.push(`(${pdfEscape(line.text)}) Tj`);
+      }
+      if (lineIndex === 0) y -= leading;
     });
+    // Footer page number
+    commands.push("ET");
+    commands.push("BT");
+    commands.push(`/F3 8 Tf`);
+    commands.push(`50 36 Td`);
+    commands.push(`(${pdfEscape(`Influrios collaboration agreement  -  page ${index + 1} of ${pages.length}`)}) Tj`);
     commands.push("ET");
     const stream = commands.join("\n");
     parts.push({
@@ -230,9 +394,10 @@ export function renderContractPdf(text: string): Buffer {
     });
     parts.push({
       id: pageId,
-      body: `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${contentId} 0 R /Resources << /Font << /F1 ${fontId} 0 R >> >> >>`,
+      body: `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${contentId} 0 R /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R /F3 ${fontObliqueId} 0 R >> >> >>`,
     });
   });
+
   const objects = [
     { id: 1, body: "<< /Type /Catalog /Pages 2 0 R >>" },
     {
@@ -240,7 +405,9 @@ export function renderContractPdf(text: string): Buffer {
       body: `<< /Type /Pages /Kids [${kids.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages.length} >>`,
     },
     ...parts,
-    { id: fontId, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>" },
+    { id: fontRegularId, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>" },
+    { id: fontBoldId, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>" },
+    { id: fontObliqueId, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>" },
   ].sort((a, b) => a.id - b.id);
 
   let out = "%PDF-1.4\n";

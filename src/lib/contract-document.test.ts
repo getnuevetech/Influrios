@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   DEFAULT_CONTRACT_TEMPLATE,
+  asciiForPdf,
   applyEnvelopeToParties,
   buildContractValues,
+  classifyContractPdfLines,
   contractMessageNotifyEmails,
   contractStageEmailCopy,
   fundingAllowedBySignature,
@@ -13,6 +15,7 @@ import {
   renderContractTemplate,
   resolveContractPartyForAccount,
   signatureBlock,
+  wrapContractLines,
 } from "./contract-document";
 import { applyNativeSignatureAnchor, formatNativeAttestation } from "./signing/native";
 
@@ -92,6 +95,26 @@ describe("contract documents", () => {
     assert.match(text, /Spring launch/);
     assert.match(text, /\/sig1\//);
     assert.match(text, /%%EOF/);
+    assert.match(text, /Helvetica-Bold/);
+  });
+
+  it("keeps newlines when mapping Unicode so PDF text is not a wall of question marks", () => {
+    const sample = "COLLABORATION AGREEMENT\n\n1. Parties\nBusiness · North — Ada\n";
+    assert.equal(asciiForPdf(sample).includes("\n"), true);
+    assert.equal(asciiForPdf(sample).includes("?"), false);
+    assert.match(asciiForPdf(sample), /Business - North - Ada/);
+    const wrapped = wrapContractLines(sample);
+    assert.ok(wrapped.includes("COLLABORATION AGREEMENT"));
+    assert.ok(wrapped.includes("1. Parties"));
+    assert.ok(wrapped.some((line) => line === ""));
+    const classified = classifyContractPdfLines(sample);
+    assert.equal(classified[0]?.style, "title");
+    assert.ok(classified.some((line) => line.style === "heading" && line.text.startsWith("1. Parties")));
+    const pdf = renderContractPdf(sample);
+    const raw = pdf.toString("latin1");
+    assert.match(raw, /COLLABORATION AGREEMENT/);
+    assert.match(raw, /1\. Parties/);
+    assert.equal(/\?\?/.test(raw.replace(/%PDF[\s\S]*?obj/g, "")), false);
   });
 
   it("allows funding only after every party is signed", () => {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
-import { resolveContractPartyForAccount } from "@/lib/contract-document";
+import { renderContractPdf, resolveContractPartyForAccount } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -30,12 +30,17 @@ export async function GET(_request: Request, { params }: Props) {
       (admin.roleId === "role_super" ||
         admin.permissions.some((permission) => permission.startsWith("contracts."))),
   );
-  if (!isParty && !adminAllowed) return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
-  const body = Buffer.from(document.pdfBytes);
-  return new NextResponse(body, {
+  if (!isParty && !adminAllowed) {
+    return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
+  }
+
+  // Always render from the stored agreement text so layout fixes apply to older contracts too.
+  const pdf = renderContractPdf(document.renderedBody || "Collaboration agreement");
+  return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "content-type": "application/pdf",
-      "content-disposition": `attachment; filename="contract-${document.id}.pdf"`,
+      "content-disposition": `inline; filename="contract-${document.id}.pdf"`,
+      "cache-control": "private, no-store",
     },
   });
 }
