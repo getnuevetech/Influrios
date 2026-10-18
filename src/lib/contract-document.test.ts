@@ -5,6 +5,7 @@ import {
   applyEnvelopeToParties,
   buildContractValues,
   contractMessageNotifyEmails,
+  contractStageEmailCopy,
   fundingAllowedBySignature,
   messageVisible,
   renderContractBody,
@@ -192,5 +193,30 @@ describe("contract documents", () => {
       }),
       [],
     );
+  });
+
+  it("writes clear email copy for each contract stage", () => {
+    const sent = contractStageEmailCopy({
+      stage: "sent",
+      title: "Spring launch",
+      link: "https://app.example/collaboration/contracts/c1",
+      signingChannel: "native",
+    });
+    assert.match(sent.subject, /Action needed/);
+    assert.match(sent.text, /Sign here|sign with your legal name/i);
+    const done = contractStageEmailCopy({
+      stage: "completed",
+      title: "Spring launch",
+      link: "https://app.example/collaboration/contracts/c1",
+    });
+    assert.match(done.subject, /Fully signed/);
+    assert.match(done.text, /Funding can start/);
+    const remind = contractStageEmailCopy({
+      stage: "signature_reminder",
+      title: "Spring launch",
+      link: "https://app.example/c1",
+      actorName: "North Co",
+    });
+    assert.match(remind.text, /Your signature is still needed/);
   });
 });

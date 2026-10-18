@@ -50,11 +50,17 @@ export default async function CreatorMessagesPage() {
                 (row) =>
                   row.userId === account.id || row.email.trim().toLowerCase() === account.email.trim().toLowerCase(),
               );
+              const needsYourSignature =
+                contract.signingChannel === "native" &&
+                (contract.status === "sent" || contract.status === "draft") &&
+                partyStatus?.status === "pending";
               return (
                 <li key={contract.id}>
                   <Link
-                    href={`/collaboration/contracts/${contract.id}`}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-[#F0F3FA] px-4 py-3 hover:bg-[#F7F8FC]"
+                    href={`/collaboration/contracts/${contract.id}${needsYourSignature ? "#sign" : ""}`}
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 hover:bg-[#F7F8FC] ${
+                      needsYourSignature ? "border-violet/40 bg-[#F4F0FF]" : "border-[#F0F3FA]"
+                    }`}
                   >
                     <span>
                       <span className="block text-sm font-semibold">{contract.title}</span>
@@ -63,9 +69,12 @@ export default async function CreatorMessagesPage() {
                         {partyStatus ? ` · you: ${partyStatus.status}` : ""}
                         {" · "}
                         {contract.parties.length} parties
+                        {needsYourSignature ? " · signature required" : ""}
                       </span>
                     </span>
-                    <span className="text-xs font-semibold text-violet">Open thread →</span>
+                    <span className="text-xs font-semibold text-violet">
+                      {needsYourSignature ? "Sign now →" : "Open thread →"}
+                    </span>
                   </Link>
                 </li>
               );

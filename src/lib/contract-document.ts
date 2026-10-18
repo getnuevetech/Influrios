@@ -521,6 +521,14 @@ export async function sendCollaborationContract(input: {
     });
   }
 
+  await notifyContractStage({
+    documentId: document.id,
+    title: input.render.title.slice(0, 160),
+    stage: "sent",
+    signingChannel,
+    parties: input.render.parties.map((party) => ({ email: party.email, name: party.name })),
+  }).catch(() => undefined);
+
   return { ok: true as const, id: document.id, envelopeId, signingChannel };
 }
 
@@ -617,6 +625,39 @@ export async function signNativeContractParty(input: {
     }),
   ]);
 
+  const partyEmails = document.parties.map((row) => ({ email: row.email, name: row.name }));
+  if (documentStatus === "signed") {
+    await notifyContractStage({
+      documentId: document.id,
+      title: document.title,
+      stage: "completed",
+      signingChannel: "native",
+      parties: partyEmails,
+    }).catch(() => undefined);
+  } else {
+    await notifyContractStage({
+      documentId: document.id,
+      title: document.title,
+      stage: "party_signed",
+      signingChannel: "native",
+      parties: partyEmails,
+      actorName: typedName,
+      excludeEmails: [party.email],
+    }).catch(() => undefined);
+    // Remind remaining pending parties to sign.
+    const pending = document.parties.filter((row) => row.id !== party.id && row.status === "pending");
+    if (pending.length > 0) {
+      await notifyContractStage({
+        documentId: document.id,
+        title: document.title,
+        stage: "signature_reminder",
+        signingChannel: "native",
+        parties: pending.map((row) => ({ email: row.email, name: row.name })),
+        actorName: typedName,
+      }).catch(() => undefined);
+    }
+  }
+
   return { ok: true as const, id: document.id, status: documentStatus as "sent" | "signed" };
 }
 
@@ -650,6 +691,15 @@ export async function applyContractEnvelopeEvent(input: {
           }),
         ]),
   ]);
+  if (input.status === "completed" || input.status === "declined" || input.status === "voided") {
+    await notifyContractStage({
+      documentId: document.id,
+      title: document.title,
+      stage: input.status === "completed" ? "completed" : input.status,
+      signingChannel: "docusign",
+      parties: document.parties.map((row) => ({ email: row.email, name: row.name })),
+    }).catch(() => undefined);
+  }
   return { ok: true as const, applied: true, id: document.id, status: next.documentStatus };
 }
 
@@ -734,47 +784,136 @@ export async function postContractMessage(input: {
     senderEmail: input.senderEmail,
   });
   if (notifyEmails.length > 0) {
-    await queueContractMessageNotifications({
+    await notifyContractStage({
       documentId: document.id,
       title: document.title,
-      senderName: input.senderName,
-      body: body.slice(0, 400),
-      emails: notifyEmails,
+      stage: "message",
+      signingChannel: document.signingChannel === "docusign" ? "docusign" : "native",
+      parties: notifyEmails.map((email) => ({ email, name: "" })),
+      actorName: input.senderName,
+      messageBody: body.slice(0, 400),
     }).catch(() => undefined);
   }
 
   return { ok: true as const, id: row.id, notified: notifyEmails.length };
 }
 
-async function queueContractMessageNotifications(input: {
+export type ContractNotifyStage =
+  | "sent"
+  | "party_signed"
+  | "signature_reminder"
+  | "completed"
+  | "declined"
+  | "voided"
+  | "message";
+
+export function contractStageEmailCopy(input: {
+  stage: ContractNotifyStage;
+  title: string;
+  link: string;
+  signingChannel?: string;
+  actorName?: string;
+  messageBody?: string;
+}): { subject: string; text: string; notificationKind: string } {
+  const title = input.title.slice(0, 80);
+  const actor = (input.actorName ?? "A party").trim() || "A party";
+  const native = (input.signingChannel ?? "native") !== "docusign";
+  switch (input.stage) {
+    case "sent":
+      return {
+        subject: `Action needed: sign “${title}”`,
+        text: native
+          ? `You are a party on the collaboration agreement “${input.title}”.\n\nOpen the contract and sign with your legal name:\n${input.link}\n\nFunding cannot start until every party has signed.`
+          : `You are a party on the collaboration agreement “${input.title}”.\n\nComplete your DocuSign envelope, then you can follow progress here:\n${input.link}\n\nFunding cannot start until every party has signed.`,
+        notificationKind: "contract_sent",
+      };
+    case "party_signed":
+      return {
+        subject: `Signature progress on “${title}”`,
+        text: `${actor} signed “${input.title}”.\n\nOpen the contract to see who still needs to sign:\n${input.link}`,
+        notificationKind: "contract_party_signed",
+      };
+    case "signature_reminder":
+      return {
+        subject: `Still needed: your signature on “${title}”`,
+        text: `${actor} signed “${input.title}”. Your signature is still needed.\n\nSign here:\n${input.link}`,
+        notificationKind: "contract_signature_reminder",
+      };
+    case "completed":
+      return {
+        subject: `Fully signed: “${title}”`,
+        text: `Every party has signed “${input.title}”. Funding can start.\n\nOpen the signed agreement:\n${input.link}`,
+        notificationKind: "contract_completed",
+      };
+    case "declined":
+      return {
+        subject: `Contract declined: “${title}”`,
+        text: `The agreement “${input.title}” was declined.\n\nView status:\n${input.link}`,
+        notificationKind: "contract_declined",
+      };
+    case "voided":
+      return {
+        subject: `Contract voided: “${title}”`,
+        text: `The agreement “${input.title}” was voided.\n\nView status:\n${input.link}`,
+        notificationKind: "contract_voided",
+      };
+    case "message":
+      return {
+        subject: `New message on contract “${title}”`,
+        text: `${actor} wrote on “${input.title}”:\n\n${input.messageBody ?? ""}\n\nOpen the contract to reply: ${input.link}`,
+        notificationKind: "contract_message",
+      };
+  }
+}
+
+/** Email every listed party for a contract lifecycle stage (skips blank addresses). */
+export async function notifyContractStage(input: {
   documentId: string;
   title: string;
-  senderName: string;
-  body: string;
-  emails: string[];
+  stage: ContractNotifyStage;
+  signingChannel?: string;
+  parties: { email: string; name?: string }[];
+  actorName?: string;
+  messageBody?: string;
+  excludeEmails?: string[];
 }) {
   const { getAppOrigin } = await import("@/lib/billing");
   const { processDueJobs } = await import("@/lib/jobs");
   const { mailReady } = await import("@/lib/mail");
   if (!(await mailReady())) return { queued: 0 };
+  const exclude = new Set((input.excludeEmails ?? []).map((email) => email.trim().toLowerCase()).filter(Boolean));
+  const emails = [
+    ...new Set(
+      input.parties
+        .map((party) => party.email.trim().toLowerCase())
+        .filter((email) => email.includes("@") && !exclude.has(email)),
+    ),
+  ];
+  if (emails.length === 0) return { queued: 0 };
   const link = `${getAppOrigin()}/collaboration/contracts/${input.documentId}`;
-  const subject = `New message on contract “${input.title.slice(0, 80)}”`;
-  const text = `${input.senderName} wrote on “${input.title}”:\n\n${input.body}\n\nOpen the contract to reply: ${link}`;
-  for (const to of input.emails) {
+  const copy = contractStageEmailCopy({
+    stage: input.stage,
+    title: input.title,
+    link,
+    signingChannel: input.signingChannel,
+    actorName: input.actorName,
+    messageBody: input.messageBody,
+  });
+  for (const to of emails) {
     await prisma.job.create({
       data: {
         kind: "collab_notification",
         status: "queued",
         payload: {
           to,
-          subject,
-          text,
-          notificationKind: "contract_message",
+          subject: copy.subject,
+          text: copy.text,
+          notificationKind: copy.notificationKind,
           documentId: input.documentId,
         },
       },
     });
   }
   await processDueJobs().catch(() => undefined);
-  return { queued: input.emails.length };
+  return { queued: emails.length };
 }

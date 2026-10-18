@@ -72,14 +72,36 @@ export default async function AccountPage({
         </p>
         {contracts.length === 0 ? <p className="text-sm text-muted">No contracts on this account yet.</p> : null}
         <ul className="space-y-2 text-sm">
-          {contracts.map((contract) => (
-            <li key={contract.id}>
-              <Link href={`/collaboration/contracts/${contract.id}`} className="font-semibold text-violet hover:underline">
-                {contract.title}
-              </Link>{" "}
-              · {contract.status}
-            </li>
-          ))}
+          {contracts.map((contract) => {
+            const yourParty = contract.parties.find(
+              (row) =>
+                row.userId === session.id ||
+                row.email.trim().toLowerCase() === session.email.trim().toLowerCase(),
+            );
+            const needsYourSignature =
+              contract.signingChannel === "native" &&
+              (contract.status === "sent" || contract.status === "draft") &&
+              yourParty?.status === "pending";
+            return (
+              <li key={contract.id} className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={`/collaboration/contracts/${contract.id}${needsYourSignature ? "#sign" : ""}`}
+                  className="font-semibold text-violet hover:underline"
+                >
+                  {contract.title}
+                </Link>
+                <span className="text-muted">· {contract.status}</span>
+                {needsYourSignature ? (
+                  <Link
+                    href={`/collaboration/contracts/${contract.id}#sign`}
+                    className="rounded-full bg-violet/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-violet"
+                  >
+                    Sign now
+                  </Link>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       </section>
 
