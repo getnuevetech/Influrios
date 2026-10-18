@@ -42,12 +42,12 @@ import {
   computePayoutReadiness,
   PAYOUT_METHOD_LABELS,
   PAYOUT_METHODS,
+  payoutCurrencyForCountry,
   type PayoutMethod,
 } from "@/lib/payout-readiness";
 import {
   collectionPayoutBlocker,
   collectionPayoutReady,
-  DEFAULT_PAYMENT_ROUTES,
   paymentRoutes,
   providerNeedsConnectedAccount,
 } from "@/lib/providers";
@@ -377,9 +377,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         })
       : null;
 
-  const routeCurrency = payoutReadiness?.countryCode
-    ? DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === payoutReadiness.countryCode)?.currency
-    : "";
+  const routeCurrency = payoutCurrencyForCountry(payoutReadiness?.countryCode) ?? "";
   const payoutCurrency = (routeCurrency || plan?.payoutCurrency || jurisdiction?.currency || "").trim().toUpperCase();
   const feeFxQuote =
     plan && /^[A-Z]{3}$/.test(payoutCurrency)

@@ -2,10 +2,12 @@
  * Collab OS P5 — payout readiness & country activation corridors.
  */
 import { prisma } from "@/lib/db";
+import { storedPayoutMethodList } from "@/lib/corridor-checkout";
+import { corridorCountryByCode } from "@/lib/corridor-countries";
 import { quoteFx } from "@/lib/fx-share";
 import { storedCurrencyCode } from "@/lib/money";
 import { isConnectedAccountCollectionProvider } from "@/lib/provider-collection";
-import { DEFAULT_PAYMENT_ROUTES, paymentRoutes, type GatewayReadiness } from "@/lib/providers";
+import { paymentRoutes, type GatewayReadiness } from "@/lib/providers";
 import { countryCodeFromLocation } from "@/lib/contract-wizard";
 
 export const PAYOUT_METHODS = ["local_bank", "usd_bank", "mpesa", "flutterwave_payout"] as const;
@@ -17,6 +19,18 @@ export const PAYOUT_METHOD_LABELS: Record<PayoutMethod, string> = {
   mpesa: "M-Pesa",
   flutterwave_payout: "Flutterwave payout",
 };
+
+function isPayoutMethod(value: string): value is PayoutMethod {
+  return (PAYOUT_METHODS as readonly string[]).includes(value);
+}
+
+/** First payout method configured on the corridor — never invent a gateway by country. */
+export function primaryMethodFromCorridor(payoutMethodsJson: unknown): PayoutMethod | null {
+  for (const method of storedPayoutMethodList(payoutMethodsJson)) {
+    if (isPayoutMethod(method)) return method;
+  }
+  return null;
+}
 
 export type PayoutReadiness = {
   countryCode: string | null;
@@ -114,52 +128,23 @@ export function buildPayoutFeeFxQuote(input: {
   };
 }
 
-function defaultMethodForCountry(countryCode: string | null): PayoutMethod {
-  if (countryCode === "KE") return "mpesa";
-  if (countryCode && ["NG", "GH", "ZA", "UG", "RW", "TZ", "CM"].includes(countryCode)) {
-    return "flutterwave_payout";
-  }
-  if (countryCode === "US") return "usd_bank";
-  return "local_bank";
-}
-
+/**
+ * Corridors are created only from Admin → Country corridors.
+ * Do not seed gateways or payout methods by country.
+ */
 export async function ensureCountryActivationCorridors() {
-  const existing = await prisma.countryActivationCorridor.count();
-  if (existing > 0) return;
-  const now = new Date();
-  for (const row of DEFAULT_PAYMENT_ROUTES) {
-    await prisma.countryActivationCorridor.upsert({
-      where: { countryCode: row.countryCode },
-      update: {},
-      create: {
-        countryCode: row.countryCode,
-        active: true,
-        currency: row.currency,
-        collectionProviderCode: row.gateway,
-        payoutMethodsJson:
-          row.gateway === "flutterwave"
-            ? ["flutterwave_payout", "local_bank", "mpesa"]
-            : ["local_bank", "usd_bank"],
-        holdingEnabled: true,
-        fxEnabled: row.currency !== "USD",
-        kycModel: "",
-        notes: `Seeded from default ${row.gateway} corridor`,
-        updatedAt: now,
-      },
-    });
-  }
+  return;
 }
 
 export async function listCountryActivationCorridors() {
-  await ensureCountryActivationCorridors();
   return prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } });
 }
 
-/** Currency on that country's catalog payment route. A country with no route returns null. */
+/** Currency for that country from the corridor catalog (ISO), not a baked payment route. */
 export function payoutCurrencyForCountry(countryCode: string | null | undefined): string | null {
   const code = (countryCode ?? "").trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(code)) return null;
-  return storedCurrencyCode(DEFAULT_PAYMENT_ROUTES.find((row) => row.countryCode === code)?.currency);
+  return storedCurrencyCode(corridorCountryByCode(code)?.currency);
 }
 
 /**
@@ -197,17 +182,58 @@ export async function savePayoutFallbackCurrency(currency: string) {
   return code;
 }
 
+type InfluencerPayoutProfileRow = Awaited<
+  ReturnType<typeof prisma.influencerPayoutProfile.findUnique>
+>;
+
+async function syncInfluencerPayoutProfileToCorridor(input: {
+  profile: NonNullable<InfluencerPayoutProfileRow>;
+  countryCode: string | null;
+  corridor: { currency: string | null; payoutMethodsJson: unknown } | null;
+  fallbackCurrency: string;
+}): Promise<NonNullable<InfluencerPayoutProfileRow>> {
+  const allowed = storedPayoutMethodList(input.corridor?.payoutMethodsJson).filter(isPayoutMethod);
+  const currency = payoutProfileCurrency({
+    countryCode: input.countryCode,
+    corridorCurrency: input.corridor?.currency,
+    fallbackCurrency: input.fallbackCurrency,
+  });
+  const nextMethod =
+    allowed.length > 0
+      ? allowed.includes(input.profile.primaryMethod as PayoutMethod)
+        ? (input.profile.primaryMethod as PayoutMethod)
+        : allowed[0]!
+      : null;
+  const methodChanged = nextMethod != null && nextMethod !== input.profile.primaryMethod;
+  const countryChanged = (input.profile.primaryCountryCode ?? null) !== (input.countryCode ?? null);
+  const currencyChanged = (input.profile.primaryCurrency ?? null) !== currency;
+  // Drop a method that is not on this corridor (e.g. sticky Flutterwave after country is US).
+  const clearStaleMethod =
+    allowed.length > 0 && !allowed.includes(input.profile.primaryMethod as PayoutMethod);
+  if (!methodChanged && !countryChanged && !currencyChanged && !clearStaleMethod) {
+    return input.profile;
+  }
+  return prisma.influencerPayoutProfile.update({
+    where: { creatorId: input.profile.creatorId },
+    data: {
+      ...(nextMethod
+        ? {
+            primaryMethod: nextMethod,
+            primaryLabel: PAYOUT_METHOD_LABELS[nextMethod],
+            ...(methodChanged || clearStaleMethod ? { primaryStatus: "UNVERIFIED" } : {}),
+          }
+        : {}),
+      primaryCountryCode: input.countryCode,
+      primaryCurrency: currency,
+    },
+  });
+}
+
 export async function ensureInfluencerPayoutProfile(input: {
   creatorId: string;
   locationCountry?: string | null;
 }) {
   const countryCode = countryCodeFromLocation(input.locationCountry ?? null);
-  const method = defaultMethodForCountry(countryCode);
-  const existing = await prisma.influencerPayoutProfile.findUnique({
-    where: { creatorId: input.creatorId },
-  });
-  if (existing) return existing;
-  await ensureCountryActivationCorridors();
   const corridor = countryCode
     ? await prisma.countryActivationCorridor.findUnique({ where: { countryCode } })
     : null;
@@ -217,11 +243,25 @@ export async function ensureInfluencerPayoutProfile(input: {
     corridorCurrency: corridor?.currency,
     fallbackCurrency,
   });
+  const methodFromCorridor = primaryMethodFromCorridor(corridor?.payoutMethodsJson);
+  const existing = await prisma.influencerPayoutProfile.findUnique({
+    where: { creatorId: input.creatorId },
+  });
+  if (existing) {
+    return syncInfluencerPayoutProfileToCorridor({
+      profile: existing,
+      countryCode,
+      corridor,
+      fallbackCurrency,
+    });
+  }
+  // No corridor methods yet — store a neutral placeholder until admin configures the corridor.
+  const method = methodFromCorridor ?? "local_bank";
   return prisma.influencerPayoutProfile.create({
     data: {
       creatorId: input.creatorId,
       primaryMethod: method,
-      primaryLabel: PAYOUT_METHOD_LABELS[method],
+      primaryLabel: methodFromCorridor ? PAYOUT_METHOD_LABELS[method] : "Not configured on corridor",
       primaryStatus: "UNVERIFIED",
       primaryCountryCode: countryCode,
       primaryCurrency: currency,

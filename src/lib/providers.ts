@@ -35,23 +35,27 @@ export type AiFunctionKey = (typeof AI_FUNCTIONS)[number]["key"];
 
 export const AI_CALL_HOSTS = ["api.openai.com", "api.anthropic.com"] as const;
 
-export const DEFAULT_PAYMENT_ROUTES: { countryCode: string; name: string; currency: string; gateway: "stripe" | "flutterwave" }[] = [
-  { countryCode: "US", name: "United States", currency: "USD", gateway: "stripe" },
-  { countryCode: "GB", name: "United Kingdom", currency: "GBP", gateway: "stripe" },
-  { countryCode: "CA", name: "Canada", currency: "CAD", gateway: "stripe" },
-  { countryCode: "DE", name: "Germany", currency: "EUR", gateway: "stripe" },
-  { countryCode: "FR", name: "France", currency: "EUR", gateway: "stripe" },
-  { countryCode: "NL", name: "Netherlands", currency: "EUR", gateway: "stripe" },
-  { countryCode: "AU", name: "Australia", currency: "AUD", gateway: "stripe" },
-  { countryCode: "AE", name: "United Arab Emirates", currency: "AED", gateway: "stripe" },
-  { countryCode: "NG", name: "Nigeria", currency: "NGN", gateway: "flutterwave" },
-  { countryCode: "GH", name: "Ghana", currency: "GHS", gateway: "flutterwave" },
-  { countryCode: "KE", name: "Kenya", currency: "KES", gateway: "flutterwave" },
-  { countryCode: "ZA", name: "South Africa", currency: "ZAR", gateway: "flutterwave" },
-  { countryCode: "UG", name: "Uganda", currency: "UGX", gateway: "flutterwave" },
-  { countryCode: "RW", name: "Rwanda", currency: "RWF", gateway: "flutterwave" },
-  { countryCode: "TZ", name: "Tanzania", currency: "TZS", gateway: "flutterwave" },
-  { countryCode: "CM", name: "Cameroon", currency: "XAF", gateway: "flutterwave" },
+/**
+ * @deprecated Geographic labels only — never assign a payment gateway from this list.
+ * Prefer corridorCountryByCode / Admin → Payment gateways country routes.
+ */
+export const DEFAULT_PAYMENT_ROUTES: { countryCode: string; name: string; currency: string }[] = [
+  { countryCode: "US", name: "United States", currency: "USD" },
+  { countryCode: "GB", name: "United Kingdom", currency: "GBP" },
+  { countryCode: "CA", name: "Canada", currency: "CAD" },
+  { countryCode: "DE", name: "Germany", currency: "EUR" },
+  { countryCode: "FR", name: "France", currency: "EUR" },
+  { countryCode: "NL", name: "Netherlands", currency: "EUR" },
+  { countryCode: "AU", name: "Australia", currency: "AUD" },
+  { countryCode: "AE", name: "United Arab Emirates", currency: "AED" },
+  { countryCode: "NG", name: "Nigeria", currency: "NGN" },
+  { countryCode: "GH", name: "Ghana", currency: "GHS" },
+  { countryCode: "KE", name: "Kenya", currency: "KES" },
+  { countryCode: "ZA", name: "South Africa", currency: "ZAR" },
+  { countryCode: "UG", name: "Uganda", currency: "UGX" },
+  { countryCode: "RW", name: "Rwanda", currency: "RWF" },
+  { countryCode: "TZ", name: "Tanzania", currency: "TZS" },
+  { countryCode: "CM", name: "Cameroon", currency: "XAF" },
 ];
 
 export type GatewayReadiness = {
@@ -303,12 +307,6 @@ export function signingCanQueue(input: { enabled: boolean; hasSecret: boolean; c
   return { ok: true };
 }
 
-const GATEWAY_SHELLS = [
-  { code: "stripe", name: "Stripe" },
-  { code: "flutterwave", name: "Flutterwave" },
-  { code: "mpesa", name: "M-Pesa" },
-] as const;
-
 export function gatewayCredentialLabels(code: string): { publicKey: string; secret: string; note: string } {
   switch (code) {
     case "airwallex":
@@ -381,47 +379,9 @@ async function seedIntegrationCatalog() {
       if (code !== "P2002") throw error;
     }
   }
-  await ensureProviderShell("payment", "airwallex", "Airwallex");
+  // Payment gateways are added only from Admin → Payment gateways (no baked Stripe/Flutterwave shells).
   await ensureProviderShell("search", "meilisearch", "Meilisearch");
   await ensureProviderShell("signing", "docusign", "DocuSign");
-  const gateways = await prisma.integrationProvider.findMany({ where: { kind: "payment" } });
-  // Do not recreate shells after an admin removed one; only seed shells on an empty catalog.
-  if (gateways.length === 0) {
-    for (const shell of GATEWAY_SHELLS) {
-      try {
-        await prisma.integrationProvider.create({
-          data: { kind: "payment", code: shell.code, name: shell.name, enabled: false },
-        });
-      } catch (error) {
-        const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
-        if (code !== "P2002") throw error;
-      }
-    }
-  }
-  const paymentGateways =
-    gateways.length === 0
-      ? await prisma.integrationProvider.findMany({ where: { kind: "payment" } })
-      : gateways;
-  const byCode = new Map(paymentGateways.map((row) => [row.code, row]));
-  for (const country of DEFAULT_PAYMENT_ROUTES) {
-    await prisma.country.upsert({
-      where: { code: country.countryCode },
-      update: {},
-      create: { code: country.countryCode, name: country.name, currency: country.currency, locale: "en", enabled: true },
-    });
-    const provider = byCode.get(country.gateway);
-    if (!provider) continue;
-    const existing = await prisma.paymentCountryRoute.findUnique({ where: { countryCode: country.countryCode } });
-    if (existing) continue;
-    try {
-      await prisma.paymentCountryRoute.create({
-        data: { countryCode: country.countryCode, providerId: provider.id, active: true },
-      });
-    } catch (error) {
-      const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
-      if (code !== "P2002") throw error;
-    }
-  }
   for (const fn of AI_FUNCTIONS) {
     await prisma.aiFunctionRoute.upsert({
       where: { functionKey: fn.key },
