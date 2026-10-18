@@ -72,3 +72,29 @@ export function marketplaceProviderCatalogLabel(
   const stored = (storedName ?? "").trim();
   return stored || code.trim() || "Marketplace provider";
 }
+
+/**
+ * Options for the jurisdiction "Approved providers" multi-select.
+ * Starts from Payment gateways (+ Primary), then keeps any already-saved codes
+ * that are not on gateways yet so a save does not drop them.
+ */
+export function approvedProviderPickerOptions(
+  options: MarketplaceProviderOption[],
+  selectedCodes: string[] = [],
+): MarketplaceProviderOption[] {
+  const byCode = new Map(options.map((row) => [row.code, row]));
+  for (const raw of selectedCodes) {
+    const code = raw.trim().toLowerCase();
+    if (!code || code === "demo" || byCode.has(code)) continue;
+    byCode.set(code, {
+      code,
+      name: code,
+      detail: "Already saved on this jurisdiction",
+    });
+  }
+  return [...byCode.values()].sort((a, b) => {
+    if (a.code === "primary") return -1;
+    if (b.code === "primary") return 1;
+    return a.name.localeCompare(b.name);
+  });
+}

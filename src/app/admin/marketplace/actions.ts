@@ -71,7 +71,7 @@ export async function actionSaveJurisdiction(formData: FormData) {
       recurringFundingEnabled: flag(formData, "recurringFundingEnabled"),
       managedIntroductionEnabled: flag(formData, "managedIntroductionEnabled"),
       managedNegotiationEnabled: flag(formData, "managedNegotiationEnabled"),
-      approvedProviderIds: String(formData.get("approvedProviderIds") ?? ""),
+      approvedProviderIds: formData.getAll("approvedProviderIds").map((value) => String(value)),
       legalReviewStatus: String(formData.get("legalReviewStatus") ?? ""),
       capabilityNotes: String(formData.get("capabilityNotes") ?? ""),
       capabilitiesEffectiveFrom: String(formData.get("capabilitiesEffectiveFrom") ?? "") || null,
