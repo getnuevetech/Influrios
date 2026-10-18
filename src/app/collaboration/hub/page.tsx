@@ -68,7 +68,7 @@ const SIDE_LINKS = [
   { href: "/collaboration/hub?view=opportunities#business-requests", label: "Business Requests", anchor: "business-requests" },
   { href: "/collaboration/hub?view=opportunities#saved", label: "Saved Matches", anchor: "saved" },
   { href: "/collaboration/hub?view=collaborations#team-proposals", label: "Team proposals", anchor: "team-proposals" },
-  { href: "/collaboration/records", label: "Contracts & Agreements", anchor: null },
+  { href: "/collaboration/records", label: "Active Collaborations", anchor: null },
   { href: "/payments", label: "Payments & Wallet", anchor: null },
   { href: "/dashboard", label: "Influencer Profile", anchor: null },
   { href: "/claim", label: "My Content Kit", anchor: null },
@@ -283,7 +283,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
                 <Link
                   key={link.label}
                   href={
-                    link.label === "Contracts & Agreements"
+                    link.label === "Active Collaborations"
                       ? `/collaboration/records?from=${encodeURIComponent(creator.slug)}`
                       : link.href
                   }

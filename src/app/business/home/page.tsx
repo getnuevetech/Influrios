@@ -364,13 +364,15 @@ export default async function BusinessHomePage() {
           tone="blue"
           icon={<IconBookmark size={16} />}
         />
-        <StatCard
-          label="Active Collaborations"
-          value={String(activeCollabs)}
-          note={`${contentInReview} content in review`}
-          tone="emerald"
-          icon={<IconUsers size={16} />}
-        />
+        <Link href="/collaboration/records" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
+          <StatCard
+            label="Active Collaborations"
+            value={String(activeCollabs)}
+            note={`${contentInReview} content in review · Open inbox →`}
+            tone="emerald"
+            icon={<IconUsers size={16} />}
+          />
+        </Link>
         <StatCard
           label="Monthly Spend"
           value={monthlySpend}
