@@ -25,7 +25,9 @@ describe("fee disclosure (W3.12)", () => {
     const summary = buildFeeDisclosureSummary(disclosure);
     assert.match(summary, /rule_default_contracted/);
     assert.match(summary, /10\.00%/);
-    assert.match(summary, /fee 1000¢/);
+    assert.match(summary, /Platform fee \(cents\): 1000/);
+    assert.match(summary, /Fee schedule/);
+    assert.equal(summary.includes("·"), false);
     assert.ok(FEE_DISCLOSURE_LEGAL_KEYS.includes("marketplace-terms"));
   });
 

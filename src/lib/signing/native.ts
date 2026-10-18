@@ -24,7 +24,7 @@ export function formatNativeAttestation(input: {
   signedAt: Date;
 }): string {
   const name = input.typedName.trim().slice(0, 160);
-  return `Signed in Influrios — ${input.role}: ${name} <${input.email}> at ${input.signedAt.toISOString()}`;
+  return `Signed in Influrios - ${input.role}: ${name} <${input.email}> at ${input.signedAt.toISOString()}`;
 }
 
 /** Replace /sigN/ (1-based) with the attestation, or append when the anchor is missing. */
