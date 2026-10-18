@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getAccountSession } from "@/lib/accounts";
+import { requireBusinessSession } from "@/lib/account-audience";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { closeBriefForContract, closeWorkspaceBriefsForContract, getWorkspace } from "@/lib/business";
 import { assertCollabOsV1 } from "@/lib/collab-os";
@@ -72,8 +72,7 @@ function readDrafts(formData: FormData, usingCustom: boolean, templates: Milesto
 
 export async function actionSubmitContractWizard(formData: FormData) {
   await assertCollabOsV1();
-  const account = await getAccountSession().catch(() => null);
-  if (!account) redirect(`/login?next=${encodeURIComponent(BASE)}&gate=business`);
+  const account = await requireBusinessSession(BASE);
 
   const termsOk = await hasCurrentLegalRecord({
     documentKey: "business-terms",

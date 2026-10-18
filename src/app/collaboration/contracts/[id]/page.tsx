@@ -77,6 +77,8 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
   const youSigned = Boolean(party && party.status === "signed");
   const pendingParties = document.parties.filter((row) => row.status === "pending");
   const signedCount = document.parties.filter((row) => row.status === "signed").length;
+  /** Funding wizard is business-only — influencers must not hit /collaboration/contract. */
+  const canRequestFunding = Boolean(party && party.role === "business");
   const channelLabel = isNative
     ? "Influrios in-app"
     : document.envelopeId
@@ -127,7 +129,11 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                   : "Complete your DocuSign envelope. This page tracks status for every party."}
             </p>
           ) : document.status === "signed" ? (
-            <p className="mt-2 text-sm font-semibold text-emerald-700">Every party has signed. Funding can start.</p>
+            <p className="mt-2 text-sm font-semibold text-emerald-700">
+              {canRequestFunding
+                ? "Every party has signed. Funding can start."
+                : "Every party has signed. Waiting for the business to start funding."}
+            </p>
           ) : (
             <p className="mt-2 text-sm text-muted">This agreement is {document.status}.</p>
           )}
@@ -144,9 +150,13 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
               Download PDF
             </Link>
             {document.status === "signed" ? (
-              <Link href={`/collaboration/contract?${returnQuery.toString()}`} className="text-violet hover:underline">
-                Request funding
-              </Link>
+              canRequestFunding ? (
+                <Link href={`/collaboration/contract?${returnQuery.toString()}`} className="text-violet hover:underline">
+                  Request funding
+                </Link>
+              ) : (
+                <span className="text-muted">The business starts funding from their side.</span>
+              )
             ) : (
               <span className="text-muted">Funding waits until every party has signed.</span>
             )}
@@ -161,7 +171,9 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
         {query.error ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{query.error}</p> : null}
         {query.signed === "1" ? (
           <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-            Every party has signed. Funding can start.
+            {canRequestFunding
+              ? "Every party has signed. Funding can start."
+              : "Every party has signed. Waiting for the business to start funding."}
           </p>
         ) : null}
         {query.signed === "0" ? (
