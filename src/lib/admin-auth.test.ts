@@ -7,6 +7,8 @@ import {
   decodeSession,
   encodeSession,
   hasPermission,
+  resolveAdminSession,
+  type AdminAuthStore,
   type AdminSession,
 } from "./admin-auth";
 
@@ -18,7 +20,43 @@ function sampleSession(overrides: Partial<AdminSession> = {}): AdminSession {
     roleId: "role_super",
     roleName: "Super Admin",
     permissions: [...ADMIN_PERMISSIONS],
+    permissionVersion: 1,
     exp: Date.now() + 60_000,
+    ...overrides,
+  };
+}
+
+function sampleStore(overrides: Partial<AdminAuthStore> = {}): AdminAuthStore {
+  return {
+    roles: [
+      {
+        id: "role_super",
+        name: "Super Admin",
+        description: "",
+        permissions: [...ADMIN_PERMISSIONS],
+        system: true,
+      },
+      {
+        id: "role_content",
+        name: "Content Admin",
+        description: "",
+        permissions: ["banners.view", "banners.edit"],
+      },
+    ],
+    users: [
+      {
+        id: "user_super",
+        email: "admin@influrios.com",
+        name: "Super Admin",
+        roleId: "role_super",
+        passwordHash: "x",
+        passwordSalt: "y",
+        active: true,
+        permissionVersion: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
     ...overrides,
   };
 }
@@ -50,6 +88,42 @@ describe("admin session cookie", () => {
     const token = encodeSession(sampleSession());
     const [payload] = token.split(".");
     assert.equal(decodeSession(`${payload}.not-a-real-signature`), null);
+  });
+});
+
+describe("admin session revalidation", () => {
+  it("refreshes live role permissions and rejects demote / deactivate / version bump", () => {
+    const store = sampleStore();
+    const session = sampleSession({
+      permissions: ["banners.view"],
+      permissionVersion: 1,
+    });
+    const live = resolveAdminSession(session, store);
+    assert.ok(live);
+    assert.ok(live.permissions.includes("access.manage_users"));
+
+    store.users[0]!.roleId = "role_content";
+    const demoted = resolveAdminSession(session, store);
+    assert.ok(demoted);
+    assert.equal(demoted.roleId, "role_content");
+    assert.equal(demoted.permissions.includes("access.manage_users"), false);
+    assert.ok(demoted.permissions.includes("banners.view"));
+
+    store.users[0]!.permissionVersion = 2;
+    assert.equal(resolveAdminSession(session, store), null);
+
+    store.users[0]!.permissionVersion = 1;
+    store.users[0]!.active = false;
+    assert.equal(resolveAdminSession(session, store), null);
+  });
+
+  it("grandfathers cookies minted before permissionVersion existed", () => {
+    const store = sampleStore();
+    const legacy = sampleSession({ permissionVersion: undefined });
+    delete legacy.permissionVersion;
+    const live = resolveAdminSession(legacy, store);
+    assert.ok(live);
+    assert.equal(live.permissionVersion, 1);
   });
 });
 
