@@ -53,8 +53,9 @@ describe("W0–W2 security gates", () => {
     const runbook = src("docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md");
     assert.match(runbook, /Host outage \(2026-11-02\)/);
     assert.match(runbook, /502 Bad Gateway/);
-    assert.match(runbook, /flapped to 502 again/);
+    assert.match(runbook, /flapped to \*\*502\*\* again|flapped to 502 again/);
     assert.match(runbook, /8\/8 auto checks pass/);
+    assert.match(runbook, /2026-11-02T06:55:20Z/);
     assert.match(runbook, /Signature did not match/);
     assert.match(runbook, /watch-health\.sh/);
     assert.match(runbook, /Start funding/);
