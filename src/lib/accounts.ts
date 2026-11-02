@@ -1,7 +1,8 @@
 import { createHash, createHmac, randomBytes, randomInt, scryptSync, timingSafeEqual } from "crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { passwordError } from "@/lib/account-policy";
+import { cookieIsSecure } from "@/lib/admin-auth";
 import { requireAuthSecret } from "@/lib/app-secret";
 import { getSiteConfig } from "@/lib/site-config";
 
@@ -308,9 +309,11 @@ export async function setAccountSession(userId: string) {
   const body = Buffer.from(JSON.stringify({ userId, exp }), "utf8").toString("base64url");
   const token = `${body}.${sign(body)}`;
   const jar = await cookies();
+  const headerStore = await headers();
   jar.set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
+    secure: cookieIsSecure(headerStore.get("x-forwarded-proto")),
     path: "/",
     maxAge: SESSION_DAYS * 86400,
   });
