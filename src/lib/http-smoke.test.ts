@@ -122,8 +122,9 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /### E6 progress \(Marketplace hold → release \/ Airwallex\)/);
     assert.match(runbook, /staging:e6-marketplace-evidence/);
     assert.match(readFileSync("scripts/marketplace-webhook-fixture.ts", "utf8"), /format=airwallex/);
-    // W2: E6 blocked while host 502; script must refuse prove without health.
+    // W2: host recovered; E6 script still refuses prove without health.
     assert.match(runbook, /Host outage \(2026-11-02\)/);
+    assert.match(runbook, /\*\*recovered\*\*/);
     assert.match(readFileSync("scripts/staging-e6-marketplace-evidence.sh", "utf8"), /ERROR: web is not healthy/);
   });
 
