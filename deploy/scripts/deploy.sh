@@ -45,6 +45,11 @@ if command -v pm2 >/dev/null 2>&1; then
   pm2 save >/dev/null 2>&1 || true
 fi
 
+# Keep watch-health.sh from restarting mid-build (cleared on exit).
+DEPLOY_LOCK="${WATCH_HEALTH_DEPLOY_LOCK:-/tmp/influrios-deploy.lock}"
+printf '%s\n' "$$" >"${DEPLOY_LOCK}"
+trap 'rm -f "${DEPLOY_LOCK}"' EXIT
+
 echo "==> Ensure swap (avoids Next.js webpack OOM on small Lightsail)"
 if [[ "$(id -u)" -eq 0 ]]; then
   bash deploy/scripts/ensure-swap.sh
