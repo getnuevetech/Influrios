@@ -2,70 +2,54 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getAccountSession } from "@/lib/accounts";
+import { isBusinessRole } from "@/lib/account-audience";
 import { checkoutUsesStoredCorridor } from "@/lib/corridor-checkout";
-import { getDirectoryCreator } from "@/lib/directory";
+import { assertFundingAccess, requireBusinessFundingAccess } from "@/lib/funding-access";
 import { openFundingCollection } from "@/lib/provider-collection";
 import { prisma } from "@/lib/db";
 import {
   approveFundingMilestone,
   requestChangeOrder,
   requestFundingRevision,
-  requestPrefund,
   stopRecurringSeries,
   submitFundingMilestone,
 } from "@/lib/marketplace-ledger";
-import { paymentDealDraft } from "@/lib/matching-product-boundary";
 import { addDisputeEvidence, cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
 
-function dollarsToCents(raw: string) {
-  const amount = Number(String(raw).replace(/[^0-9.]/g, ""));
-  if (!Number.isFinite(amount) || amount <= 0) return 0;
-  return Math.round(amount * 100);
+const LOGIN = "/login?next=/payments&gate=payments";
+
+async function requirePaymentsAccount() {
+  const account = await getAccountSession().catch(() => null);
+  if (!account) redirect(LOGIN);
+  return account;
 }
 
-export async function actionCreateDeal(formData: FormData) {
-  const draft = paymentDealDraft({
-    businessName: String(formData.get("businessName") ?? ""),
-    creatorSlug: String(formData.get("creatorSlug") ?? ""),
-    title: String(formData.get("briefTitle") ?? ""),
-    jurisdictionCode: String(formData.get("jurisdictionCode") ?? ""),
-    grossUsd: String(formData.get("grossUsd") ?? ""),
-    serviceLevel: String(formData.get("serviceLevel") ?? ""),
-  });
-  if (!draft.ok) redirect(`/payments?error=${encodeURIComponent(draft.error)}`);
-  const creator = await getDirectoryCreator(draft.creatorSlug);
-  if (!creator) redirect("/payments?error=That%20influencer%20was%20not%20found%20in%20the%20directory.");
-  const result = await requestPrefund({
-    businessName: draft.businessName,
-    creatorSlug: draft.creatorSlug,
-    title: draft.title,
-    jurisdictionCode: draft.jurisdictionCode,
-    grossCents: draft.grossCents,
-    serviceLevel: draft.serviceLevel,
-    sourceId: String(formData.get("sourceId") ?? ""),
-    repeatOfId: String(formData.get("repeatOfId") ?? ""),
-    scheduleKind: String(formData.get("scheduleKind") ?? "once"),
-    stageCount: Number(formData.get("scheduleCount") ?? 0),
-    occurrenceCount: Number(formData.get("scheduleCount") ?? 0),
-    payoutMethod: String(formData.get("payoutMethod") ?? ""),
-  });
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
-  revalidatePath("/payments");
-  revalidatePath("/admin/marketplace");
-  redirect(`/payments?created=${result.id}`);
+function fail(message: string): never {
+  redirect(`/payments?error=${encodeURIComponent(message)}`);
+}
+
+/** Public create-deal path is closed — fund only from a signed contract. */
+export async function actionCreateDeal() {
+  await requirePaymentsAccount();
+  fail("Fund from a signed collaboration contract. Open the contract and use Start funding.");
 }
 
 export async function actionOpenFundingCheckout(formData: FormData) {
+  const account = await requirePaymentsAccount();
   const fundingId = String(formData.get("dealId") ?? "").trim();
+  const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
+  if (!access.ok) fail(access.error);
+
   const funding = await prisma.collaborationFunding.findUnique({
-    where: { id: fundingId },
+    where: { id: access.funding.id },
     include: { milestones: true },
   });
   if (!funding || funding.status !== "awaiting_provider") {
-    redirect("/payments?error=This%20funding%20is%20not%20waiting%20for%20a%20provider.");
+    fail("This funding is not waiting for a provider.");
   }
   const route = checkoutUsesStoredCorridor(funding);
-  if (!route.ok) redirect(`/payments?error=${encodeURIComponent(route.error)}`);
+  if (!route.ok) fail(route.error);
   const origin = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const opened = await openFundingCollection({
     providerCode: route.collectionProviderCode,
@@ -77,21 +61,25 @@ export async function actionOpenFundingCheckout(formData: FormData) {
     milestones: funding.milestones.map((milestone) => ({ id: milestone.id, amountCents: milestone.amountCents })),
     origin,
   });
-  if (!opened.ok) redirect(`/payments?error=${encodeURIComponent(opened.error)}`);
+  if (!opened.ok) fail(opened.error);
   if (opened.url) redirect(opened.url);
   revalidatePath("/payments");
   redirect(`/payments?checkout=${encodeURIComponent(opened.reference)}`);
 }
 
 export async function actionRequestChangeOrder(formData: FormData) {
+  const account = await requirePaymentsAccount();
   const fundingId = String(formData.get("dealId") ?? "");
-  const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
+  const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
+  if (!access.ok) fail(access.error);
+  const grossCents = Number(String(formData.get("grossUsd") ?? "").replace(/[^0-9.]/g, ""));
+  const cents = Number.isFinite(grossCents) && grossCents > 0 ? Math.round(grossCents * 100) : 0;
   const result = await requestChangeOrder({
-    fundingId,
-    grossCents,
+    fundingId: access.funding.id,
+    grossCents: cents,
     note: String(formData.get("note") ?? ""),
   });
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok) fail(result.error);
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   revalidatePath("/admin/marketplace");
@@ -99,51 +87,67 @@ export async function actionRequestChangeOrder(formData: FormData) {
 }
 
 export async function actionSubmitMilestone(formData: FormData) {
+  const account = await requirePaymentsAccount();
   const fundingId = String(formData.get("dealId") ?? "");
   const milestoneId = String(formData.get("milestoneId") ?? "");
-  const result = await submitFundingMilestone(fundingId, milestoneId);
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  const access = await assertFundingAccess(account, fundingId);
+  if (!access.ok) fail(access.error);
+  const result = await submitFundingMilestone(access.funding.id, milestoneId);
+  if (!result.ok) fail(result.error);
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   redirect("/payments?submitted=1");
 }
 
 export async function actionRequestRevision(formData: FormData) {
+  const account = await requirePaymentsAccount();
   const fundingId = String(formData.get("dealId") ?? "");
   const milestoneId = String(formData.get("milestoneId") ?? "");
-  const result = await requestFundingRevision(fundingId, milestoneId, String(formData.get("note") ?? ""));
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
+  if (!access.ok) fail(access.error);
+  const result = await requestFundingRevision(access.funding.id, milestoneId, String(formData.get("note") ?? ""));
+  if (!result.ok) fail(result.error);
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   redirect("/payments?revised=1");
 }
 
 export async function actionApproveMilestone(formData: FormData) {
+  const account = await requirePaymentsAccount();
   const fundingId = String(formData.get("dealId") ?? "");
   const milestoneId = String(formData.get("milestoneId") ?? "");
-  const result = await approveFundingMilestone(fundingId, milestoneId);
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
+  if (!access.ok) fail(access.error);
+  const result = await approveFundingMilestone(access.funding.id, milestoneId);
+  if (!result.ok) fail(result.error);
   revalidatePath("/payments");
   redirect("/payments?approved=1");
 }
 
 export async function actionCancelPrefund(formData: FormData) {
+  const account = await requirePaymentsAccount();
   const fundingId = String(formData.get("dealId") ?? "");
-  const result = await cancelUnconfirmedFunding(fundingId);
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
+  if (!access.ok) fail(access.error);
+  const result = await cancelUnconfirmedFunding(access.funding.id);
+  if (!result.ok) fail(result.error);
   revalidatePath("/payments");
   redirect("/payments?cancelled=1");
 }
 
 export async function actionAddEvidence(formData: FormData) {
+  const account = await requirePaymentsAccount();
+  const fundingId = String(formData.get("dealId") ?? "");
+  const access = await assertFundingAccess(account, fundingId);
+  if (!access.ok) fail(access.error);
   const result = await addDisputeEvidence({
     disputeId: String(formData.get("disputeId") ?? ""),
-    fundingId: String(formData.get("dealId") ?? ""),
-    author: "business",
+    fundingId: access.funding.id,
+    author: access.audience === "business" ? "business" : "creator",
     body: String(formData.get("body") ?? ""),
     url: String(formData.get("url") ?? ""),
   });
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok) fail(result.error);
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   revalidatePath("/admin/trust");
@@ -151,49 +155,45 @@ export async function actionAddEvidence(formData: FormData) {
 }
 
 export async function actionStopSeries(formData: FormData) {
-  const result = await stopRecurringSeries(String(formData.get("scheduleId") ?? ""));
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  const account = await requirePaymentsAccount();
+  if (!isBusinessRole(account.role)) fail("Only the business on this funding can do that.");
+  const scheduleId = String(formData.get("scheduleId") ?? "").trim();
+  if (!scheduleId) fail("Choose a schedule.");
+  const workspace = await prisma.businessWorkspace.findUnique({
+    where: { ownerUserId: account.id },
+    select: { id: true },
+  });
+  if (!workspace?.id) fail("You do not have access to that funding.");
+  const owned = await prisma.collaborationFunding.findFirst({
+    where: { scheduleId, workspaceId: workspace.id },
+    select: { id: true },
+  });
+  if (!owned) fail("You do not have access to that funding.");
+  const result = await stopRecurringSeries(scheduleId);
+  if (!result.ok) fail(result.error);
   revalidatePath("/payments");
   redirect("/payments?stopped=1");
 }
 
-export async function actionConvertAmbassador(formData: FormData) {
-  const draft = paymentDealDraft({
-    businessName: String(formData.get("businessName") ?? ""),
-    creatorSlug: String(formData.get("creatorSlug") ?? ""),
-    title: String(formData.get("title") ?? ""),
-    jurisdictionCode: String(formData.get("jurisdictionCode") ?? ""),
-    grossUsd: String(formData.get("grossUsd") ?? ""),
-    serviceLevel: String(formData.get("serviceLevel") ?? ""),
-  });
-  if (!draft.ok) redirect(`/payments?error=${encodeURIComponent(draft.error)}`);
-  const result = await requestPrefund({
-    businessName: draft.businessName,
-    creatorSlug: draft.creatorSlug,
-    title: draft.title,
-    jurisdictionCode: draft.jurisdictionCode,
-    grossCents: draft.grossCents,
-    serviceLevel: draft.serviceLevel,
-    scheduleKind: "recurring",
-    occurrenceCount: Number(formData.get("occurrenceCount") ?? 2),
-    repeatOfId: String(formData.get("fundingId") ?? ""),
-    workspaceId: String(formData.get("workspaceId") ?? "") || null,
-    payoutMethod: String(formData.get("payoutMethod") ?? ""),
-  });
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
-  revalidatePath("/payments");
-  redirect("/payments?ambassador=1");
+/** Ambassador / unsigned follow-on prefunds stay closed on the public payments UI. */
+export async function actionConvertAmbassador() {
+  await requirePaymentsAccount();
+  fail("Fund from a signed collaboration contract. Open the contract and use Start funding.");
 }
 
 export async function actionOpenDispute(formData: FormData) {
+  const account = await requirePaymentsAccount();
+  const fundingId = String(formData.get("dealId") ?? "");
+  const access = await assertFundingAccess(account, fundingId);
+  if (!access.ok) fail(access.error);
   const result = await openMilestoneDispute({
-    fundingId: String(formData.get("dealId") ?? ""),
+    fundingId: access.funding.id,
     milestoneId: String(formData.get("milestoneId") ?? ""),
-    openedBy: "business",
+    openedBy: access.audience === "business" ? "business" : "creator",
     reasonId: String(formData.get("reasonId") ?? ""),
     details: String(formData.get("details") ?? ""),
   });
-  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok) fail(result.error);
   revalidatePath("/payments");
   revalidatePath("/admin/trust");
   revalidatePath("/trust");

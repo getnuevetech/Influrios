@@ -1,10 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   actionAddEvidence,
   actionApproveMilestone,
   actionCancelPrefund,
-  actionConvertAmbassador,
-  actionCreateDeal,
   actionOpenFundingCheckout,
   actionOpenDispute,
   actionStopSeries,
@@ -12,33 +11,24 @@ import {
   actionRequestRevision,
   actionSubmitMilestone,
 } from "@/app/payments/actions";
-import { listAttributionSources, listRepeatCandidates } from "@/lib/deal-attribution";
+import { isBusinessRole } from "@/lib/account-audience";
+import { getAccountSession } from "@/lib/accounts";
+import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
 import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
-import { listFundings, marketplaceConfig } from "@/lib/marketplace-ledger";
+import { listFundingsForBusiness, listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 import { FUNDING_BADGE_CLASS, fundingBadge } from "@/lib/funding-badge";
-import { SERVICE_LEVEL_LABELS } from "@/lib/collaboration-fees";
-import {
-  allowedServiceLevels,
-  capabilitiesFromJurisdictionRow,
-} from "@/lib/jurisdiction-capabilities";
-import {
-  FUNDABLE_SERVICE_LEVELS,
-  fundableServiceLevelsForUi,
-} from "@/lib/matching-product-boundary";
 import { FUNDING_MODE_LABELS, asFundingMode } from "@/lib/funding-modes";
 import { RIGHTS_STATUS_LABELS, asRightsStatus } from "@/lib/content-rights";
-import { JurisdictionPayoutMethodFields } from "@/app/payments/jurisdiction-payout-method-fields";
 import {
   buildPayoutFeeFxQuote,
   PAYOUT_METHOD_LABELS,
   PAYOUT_METHODS,
-  payoutMethodsCompatibleWithCollection,
   type PayoutMethod,
 } from "@/lib/payout-readiness";
 
@@ -79,31 +69,25 @@ const MILESTONE_COLOR: Record<string, string> = {
 
 export default async function PaymentsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [config, fundings, reasons, sources, repeats, corridors] = await Promise.all([
+  const account = await getAccountSession().catch(() => null);
+  if (!account) redirect("/login?next=/payments&gate=payments");
+  const businessViewer = isBusinessRole(account.role);
+  const creator = businessViewer
+    ? null
+    : await prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } }).catch(() => null);
+  const workspace = businessViewer ? await getWorkspace(account.id).catch(() => null) : null;
+
+  const [config, fundings, reasons] = await Promise.all([
     marketplaceConfig().catch(() => null),
-    listFundings().catch(() => []),
+    businessViewer && workspace?.businessId && workspace.businessId !== "public"
+      ? listFundingsForBusiness(workspace.businessId).catch(() => [])
+      : creator?.slug
+        ? listFundingsForCreator(creator.slug).catch(() => [])
+        : Promise.resolve([]),
     listDisputeReasons().catch(() => []),
-    listAttributionSources().catch(() => []),
-    listRepeatCandidates().catch(() => []),
-    prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }).catch(() => []),
   ]);
-  // Methods for each corridor, filtered to match that corridor's collection rail (Stripe ≠ Flutterwave).
-  const payoutChoices = corridors.flatMap((row) =>
-    payoutMethodsCompatibleWithCollection(row.collectionProviderCode, row.payoutMethodsJson).map((method) => ({
-      countryCode: row.countryCode,
-      method,
-      label: PAYOUT_METHOD_LABELS[method],
-    })),
-  );
   const jurisdictions = config?.jurisdictions ?? [];
   const homeJurisdiction = jurisdictions.find((row) => row.code === "US") ?? jurisdictions[0];
-  const homeCaps = homeJurisdiction ? capabilitiesFromJurisdictionRow(homeJurisdiction) : null;
-  // W3.2 — only fundable levels the jurisdiction allows; never invent contracted.
-  const paymentServiceLevels = homeCaps
-    ? fundableServiceLevelsForUi(allowedServiceLevels(homeCaps, FUNDABLE_SERVICE_LEVELS))
-    : [];
-  const stagedAllowed = Boolean(config?.stagedFundingEnabled && homeCaps?.stagedPrefundingEnabled);
-  const recurringAllowed = Boolean(config?.recurringFundingEnabled && homeCaps?.recurringFundingEnabled);
   const term = fundingTerm(Boolean(homeJurisdiction?.escrowTermAllowed));
   const usdFundings = fundings.filter((row) => row.currency === "USD");
   const mixedCurrency = fundings.some((row) => row.currency !== "USD");
@@ -120,8 +104,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">Protected payments</p>
           <h1 className="mt-2 font-display text-4xl font-bold">{term} & milestones</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Request a prefund, track deliverables, and release each milestone only after the marketplace provider
-            confirms the money is held.
+            Track deliverables and release each milestone only after the marketplace provider confirms the money is
+            held. New funding starts from a signed collaboration contract.
           </p>
         </div>
       </section>
@@ -173,153 +157,37 @@ export default async function PaymentsPage({ searchParams }: Props) {
         ) : null}
 
         <section className="card-surface p-6">
-          <h2 className="font-display text-xl font-bold text-indigo">Start a protected deal</h2>
+          <h2 className="font-display text-xl font-bold text-indigo">Start funding</h2>
           <p className="mt-1 text-sm text-muted">
+            Prefunds open only after every party has signed. Use <strong>Start funding</strong> on a signed contract —
+            this page tracks held money and milestones for deals you already own.
             {config?.provider.ready
-              ? "The provider is ready to confirm a prefund. Creating a deal does not mark it funded."
-              : "The marketplace provider is not ready. A deal cannot be funded until an admin saves its webhook secret."}
-            {config?.templates.length
-              ? ` Milestones follow the admin template: ${config.templates
-                  .filter((row) => row.active)
-                  .map((row) => `${row.title} ${row.shareBps / 100}%`)
-                  .join(", ")}.`
-              : ""}
-            {config && config.maxGrossCents > 0 ? ` The admin cap on a new prefund is ${formatMoney(config.maxGrossCents)}.` : ""}
+              ? " The marketplace provider is ready to confirm a held prefund."
+              : " The marketplace provider is not ready until an admin saves its webhook secret."}
           </p>
-          <form action={actionCreateDeal} className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Business</span>
-              <input
-                name="businessName"
-                placeholder="Business name"
-                required
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Influencer</span>
-              <select
-                name="creatorSlug"
-                required
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                defaultValue=""
-              >
-                <option value=""> </option>
-                {directoryCreators.slice(0, 12).map((creator) => (
-                  <option key={creator.slug} value={creator.slug}>
-                    {creator.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <JurisdictionPayoutMethodFields
-              jurisdictions={jurisdictions.map((row) => ({
-                code: row.code,
-                label: row.label,
-                currency: row.currency,
-                fundingTerm: fundingTerm(row.escrowTermAllowed),
-              }))}
-              payoutChoices={payoutChoices}
-            />
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Gross USD</span>
-              <input
-                name="grossUsd"
-                type="number"
-                min={1}
-                step={50}
-                placeholder="Amount"
-                defaultValue=""
-                required
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Service level</span>
-              <select
-                name="serviceLevel"
-                required
-                disabled={paymentServiceLevels.length === 0}
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                defaultValue=""
-              >
-                <option value=""> </option>
-                {paymentServiceLevels.length === 0 ? (
-                  <option value="">No fundable service level for this jurisdiction</option>
-                ) : null}
-                {paymentServiceLevels.map((level) => (
-                  <option key={level} value={level}>
-                    {SERVICE_LEVEL_LABELS[level]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Attribution</span>
-              <select name="sourceId" required defaultValue="" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2">
-                <option value=""> </option>
-                {sources.filter((source) => source.active).map((source) => (
-                  <option key={source.id} value={source.id}>
-                    {source.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Repeat a confirmed deal</span>
-              <select name="repeatOfId" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2" defaultValue="">
-                <option value="">New introduction</option>
-                {repeats.map((prior) => (
-                  <option key={prior.id} value={prior.id}>
-                    {prior.businessName} → {prior.creatorSlug} · {prior.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Schedule</span>
-              <select name="scheduleKind" className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2" defaultValue="once">
-                {homeCaps?.fullPrefundingEnabled !== false ? <option value="once">One prefund</option> : null}
-                {stagedAllowed ? <option value="staged">Staged</option> : null}
-                {recurringAllowed ? <option value="recurring">Recurring</option> : null}
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="font-semibold text-indigo">Stages or occurrences</span>
-              <input
-                name="scheduleCount"
-                type="number"
-                min={2}
-                max={Math.max(config?.maxStages ?? 4, config?.maxRecurrences ?? 6)}
-                placeholder="2"
-                defaultValue=""
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-              />
-            </label>
-            <p className="text-xs text-muted sm:col-span-2">
-              Gross is entered in USD. The prefund uses the currency saved on that country corridor when one is saved, and otherwise the jurisdiction currency. A blank currency is not saved as USD. The collection route and payout method are copied only when they were saved on that corridor.
-              Staged splits this gross into that many prefunds now. Recurring uses the same number of occurrences and
-              opens only the first. Each one waits for its own provider confirmation.
-            </p>
-            <label className="text-sm sm:col-span-2">
-              <span className="font-semibold text-indigo">Brief / campaign</span>
-              <input
-                name="briefTitle"
-                placeholder="Brief or campaign"
-                defaultValue=""
-                required
-                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-              />
-            </label>
-            <button type="submit" className="btn-primary sm:col-span-2 !py-2.5 text-sm">
-              Request prefund →
-            </button>
-          </form>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/collaboration/contracts" className="btn-primary !py-2.5 text-sm">
+              Open contracts →
+            </Link>
+            {businessViewer ? (
+              <Link href="/collaboration/business" className="btn-secondary !py-2.5 text-sm">
+                Business hub
+              </Link>
+            ) : (
+              <Link href="/creator" className="btn-secondary !py-2.5 text-sm">
+                Creator home
+              </Link>
+            )}
+          </div>
         </section>
 
         <section className="space-y-4">
           <h2 className="font-display text-2xl font-bold text-indigo">Active deals</h2>
-          {fundings.length === 0 ? <p className="text-sm text-muted">No deals yet — request a prefund above.</p> : null}
+          {fundings.length === 0 ? (
+            <p className="text-sm text-muted">
+              No deals on this account yet. Fund from a signed collaboration contract.
+            </p>
+          ) : null}
           {fundings.map((deal) => {
             const creator = bySlug.get(deal.creatorSlug);
             const jurisdiction = jurisdictions.find((row) => row.code === deal.jurisdictionCode);
@@ -366,34 +234,11 @@ export default async function PaymentsPage({ searchParams }: Props) {
                     </span>
                   </div>
                 </div>
-                {deal.scheduleKind === "recurring" && deal.scheduleId && !deal.seriesStopped ? (
+                {businessViewer && deal.scheduleKind === "recurring" && deal.scheduleId && !deal.seriesStopped ? (
                   <form action={actionStopSeries} className="mt-4">
                     <input type="hidden" name="scheduleId" value={deal.scheduleId} />
                     <button type="submit" className="btn-secondary !py-1.5 text-xs">
                       Stop future tranches
-                    </button>
-                  </form>
-                ) : null}
-                {deal.scheduleKind === "once" && (deal.status === "completed" || deal.status === "released") ? (
-                  <form action={actionConvertAmbassador} className="mt-4 flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="fundingId" value={deal.id} />
-                    <input type="hidden" name="businessName" value={deal.businessName} />
-                    <input type="hidden" name="creatorSlug" value={deal.creatorSlug} />
-                    <input type="hidden" name="title" value={deal.title} />
-                    <input type="hidden" name="jurisdictionCode" value={deal.jurisdictionCode} />
-                    <input type="hidden" name="serviceLevel" value={deal.serviceLevel} />
-                    <input type="hidden" name="workspaceId" value={deal.workspaceId ?? ""} />
-                    <input type="hidden" name="payoutMethod" value={deal.payoutMethod} />
-                    <label className="text-xs font-semibold text-muted">
-                      Ambassador occurrences
-                      <input name="occurrenceCount" type="number" min={2} defaultValue={2} className="mt-1 block w-24 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
-                    </label>
-                    <label className="text-xs font-semibold text-muted">
-                      Gross USD
-                      <input name="grossUsd" type="number" min={1} defaultValue={Math.max(1, Math.round(deal.grossCents / 100))} className="mt-1 block w-28 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
-                    </label>
-                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                      Start ambassador series
                     </button>
                   </form>
                 ) : null}
@@ -474,7 +319,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                     </span>
                   ) : null}
                 </div>
-                {deal.status === "awaiting_provider" ? (
+                {businessViewer && deal.status === "awaiting_provider" ? (
                   <div className="mt-4 space-y-3">
                     <form action={actionOpenFundingCheckout} className="flex flex-wrap items-end gap-2">
                       <input type="hidden" name="dealId" value={deal.id} />
@@ -586,7 +431,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                             </button>
                           </form>
                         ) : null}
-                        {milestone.status === "submitted" ? (
+                        {businessViewer && milestone.status === "submitted" ? (
                           <form action={actionApproveMilestone} className="space-y-2">
                             <input type="hidden" name="dealId" value={deal.id} />
                             <input type="hidden" name="milestoneId" value={milestone.id} />
@@ -614,7 +459,10 @@ export default async function PaymentsPage({ searchParams }: Props) {
                             </button>
                           </form>
                         ) : null}
-                        {deal.status === "held" && milestone.status === "submitted" && milestone.revisionCount < milestone.revisionLimit ? (
+                        {businessViewer &&
+                        deal.status === "held" &&
+                        milestone.status === "submitted" &&
+                        milestone.revisionCount < milestone.revisionLimit ? (
                           <form action={actionRequestRevision} className="flex flex-wrap items-center gap-2">
                             <input type="hidden" name="dealId" value={deal.id} />
                             <input type="hidden" name="milestoneId" value={milestone.id} />
