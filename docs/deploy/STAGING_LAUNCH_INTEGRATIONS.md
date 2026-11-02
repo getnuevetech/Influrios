@@ -354,8 +354,9 @@ Probe of `https://influrios.com` at **2026-11-02T04:45:41Z** (America/Chicago No
 - **12:47 AM CT** (`2026-11-02T06:47:42Z`) — brief **8/8** recovery; Airwallex unsigned webhook **401**.
 - **12:48 AM CT** (`2026-11-02T06:48:42Z`) — flapped to **502** again (nginx up, web not answering).
 - **12:55 AM CT** (`2026-11-02T06:55:20Z`) — **8/8 auto checks pass** again (HTTPS, health+db, authConfigured, homepage, guest `/collaboration`, admin login, cron **401**, SMS not sent). `/payments` → **307** `/login?next=/payments&gate=payments`. Airwallex unsigned → **401** `Signature did not match.`
+- **4:47 AM CT** (`2026-11-02T10:47:43Z`) — post-**#323** deploy probe **8/8** (health+db, authConfigured, homepage, guest collab, admin login, cron **401**). `/payments` → **307** login. Airwallex unsigned → **401**. `AdminUser.permissionVersion` migration expected via entrypoint `prisma migrate deploy`.
 
-Compose `restart: unless-stopped` does not recover a hung-but-Up container; install `deploy/scripts/watch-health.sh` on a 2-minute cron (see diagnose-502 output) so the next flap self-heals.
+Compose `restart: unless-stopped` does not recover a hung-but-Up container; keep `deploy/scripts/watch-health.sh` on a 2-minute cron (see diagnose-502 output) so the next flap self-heals.
 
 ```bash
 # If 502 returns on Lightsail (try restart before full redeploy):
@@ -380,7 +381,7 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 | Check | Result |
 |-------|--------|
 | Airwallex gateway Ready (client + key + base URL + webhook secret) | ☑ inferred — unsigned webhook returns **401** (not 503) |
-| Unsigned webhook → 401 (or 503 until Ready) | ☑ `POST /api/marketplace/webhook` + `x-influrios-provider: airwallex` → **401** `Signature did not match.` · 2026-11-02T06:47Z |
+| Unsigned webhook → 401 (or 503 until Ready) | ☑ `POST /api/marketplace/webhook` + `x-influrios-provider: airwallex` → **401** `Signature did not match.` · reconfirmed `2026-11-02T10:47Z` |
 | US jurisdiction protected + APPROVED | ☐ confirm on host `staging:e6-marketplace-evidence` |
 | Funding `awaiting_provider` → `held` | ☐ funding id · held event id |
 | Milestone approved then `payout.released` | ☐ milestone id · release event id |
@@ -415,7 +416,7 @@ Operator path:
 | Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · webhook `checkout:cs_mv6jqy02_g3n8vb` · duplicate unique blocked (`2026-10-14T01:30:38Z`) | 2026-10-13/14 | host + cloud-agent |
 | Social OAuth | YouTube Connection `cmv7wsjww001qs2015kbcssy4` · Account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` (`2026-10-14T10:03:39Z`) | 2026-10-14 | host + cloud-agent |
 | Meilisearch counts | job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · health 200 · Discover 200 (`2026-10-14T11:55:09Z`) | 2026-10-14 | host + cloud-agent |
-| Airwallex hold and release | **in progress** — host 8/8 again at 06:55Z · unsigned webhook **401** · install `watch-health.sh` cron against flaps · still need held/release/duplicate ids via `--prove-*` | 2026-11-02 | host + cloud-agent |
+| Airwallex hold and release | **in progress** — post-#323 deploy 8/8 at 10:47Z · unsigned webhook **401** · still need US jurisdiction + held/release/duplicate ids via `staging:e6-marketplace-evidence --prove-*` | 2026-11-02 | host + cloud-agent |
 | Recurring tranche 2 | | | |
 | Team proposal | | | |
 | DocuSign completed | | | |
