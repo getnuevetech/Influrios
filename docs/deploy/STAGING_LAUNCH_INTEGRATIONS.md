@@ -346,9 +346,30 @@ cd /var/www/influrios
 npm run staging:e5-meilisearch-evidence
 ```
 
-### E6 progress (Marketplace hold → release / Airwallex) — **in progress**
+### Host outage (2026-11-02) — blocks E6
+
+Probe of `https://influrios.com` at **2026-11-02T04:45:41Z** (America/Chicago Nov 1, 10:45 PM CT): **nginx 502 Bad Gateway**. Auto checks **2/8** (HTTPS origin + SMS-not-sent only). `/api/health`, homepage, guest collab, admin login, and cron 401 were skipped as host outage.
+
+`main` is at AuthZ hardening (#317 payments lock + #318 AuthLockout migration). Recover and deploy before any E6 prove:
+
+```bash
+cd /var/www/influrios
+bash deploy/scripts/diagnose-502.sh
+git fetch origin main && git checkout main && git pull origin main
+bash deploy/scripts/deploy.sh   # entrypoint runs prisma migrate deploy (AuthLockout)
+curl -fsS http://127.0.0.1:3000/api/health
+# expect: {"ok":true,...,"secrets":{"authConfigured":true},...}
+node scripts/staging-evidence-probe.mjs https://influrios.com
+# expect: auto checks pass (8/8 or 7/7 + cron 401)
+```
+
+Confirm deploy SHA matches `git rev-parse --short origin/main` on the host. E6 cannot start while upstream is 502.
+
+### E6 progress (Marketplace hold → release / Airwallex) — **blocked on host recovery**
 
 **Goal:** Airwallex webhook secret ready · US jurisdiction · `funding.held` · milestone `payout.released` · duplicate event skipped.
+
+**Prefund path (post-#317):** do **not** use `/payments` Create deal (removed). Business signs the contract, then **Start funding** on `/collaboration/contracts/[id]` → `/collaboration/contract` wizard until `awaiting_provider`.
 
 | Check | Result |
 |-------|--------|
