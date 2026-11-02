@@ -126,6 +126,7 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /Host outage \(2026-11-02\)/);
     assert.match(runbook, /flapped to \*\*502\*\* again|flapped to 502 again/);
     assert.match(runbook, /2026-11-02T06:55:20Z/);
+    assert.match(runbook, /2026-11-02T10:47:43Z/);
     assert.match(runbook, /watch-health\.sh/);
     assert.match(readFileSync("scripts/staging-e6-marketplace-evidence.sh", "utf8"), /ERROR: web is not healthy/);
     assert.equal(existsSync("deploy/scripts/watch-health.sh"), true);
