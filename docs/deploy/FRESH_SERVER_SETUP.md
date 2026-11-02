@@ -317,8 +317,8 @@ sudo bash deploy/scripts/install-short-link-cert.sh
 | `Repository not found` | Deploy key is on wrong repo, or no access to private repo |
 | `npm run build` killed / OOM | Pull latest `main` (needs `DOCKER_BUILD=1` in the Dockerfile). `deploy.sh` adds 2 GB swap and skips eslint/tsc inside the image build (CI covers those). Confirm `swapon --show` and `grep DOCKER_BUILD Dockerfile`. If still killed, move to a 4 GB instance |
 | Dockerfile build exits 1 after `OK: SWC musl` | The native compiler loaded. The failure is the Next build, usually a type error printed just above `BUILD FAILED`. Pull main and rebuild |
-| Site 502 Bad Gateway | App not running: `docker compose ps` / `docker compose logs web` · `bash deploy/scripts/diagnose-502.sh` |
-| Health not green | `curl -fsS http://127.0.0.1:3000/api/health` · check Postgres: `docker compose logs postgres` |
+| Site 502 Bad Gateway | App not answering: `docker compose ps` / `docker compose logs web` · `bash deploy/scripts/diagnose-502.sh` · hung-but-Up web: `bash deploy/scripts/watch-health.sh` (or install the 2-min cron printed by diagnose-502) |
+| Health not green | `curl -fsS http://127.0.0.1:3000/api/health` · check Postgres: `docker compose logs postgres` · optional auto-restart: `deploy/scripts/watch-health.sh` |
 | Cannot SSH to Lightsail | Check Lightsail networking port 22 + correct `.pem` |
 | `permission denied` for docker | Run `newgrp docker` or re-SSH after `usermod -aG docker` |
 | Postgres not ready | `docker compose logs postgres` · check password match in `.env` |

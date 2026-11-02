@@ -49,18 +49,23 @@ describe("W0–W2 security gates", () => {
     assert.match(exportRoute, /429/);
   });
 
-  it("records host 502 recovery and fails E6 script without health", () => {
+  it("records host 502 flap + watch-health and fails E6 script without health", () => {
     const runbook = src("docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md");
     assert.match(runbook, /Host outage \(2026-11-02\)/);
     assert.match(runbook, /502 Bad Gateway/);
-    assert.match(runbook, /\*\*recovered\*\*/);
+    assert.match(runbook, /flapped to 502 again/);
     assert.match(runbook, /8\/8 auto checks pass/);
     assert.match(runbook, /Signature did not match/);
+    assert.match(runbook, /watch-health\.sh/);
     assert.match(runbook, /Start funding/);
     const e6 = src("scripts/staging-e6-marketplace-evidence.sh");
     assert.match(e6, /\/api\/health/);
     assert.match(e6, /ERROR: web is not healthy/);
     assert.match(src("deploy/scripts/diagnose-502.sh"), /staging-evidence-probe/);
+    assert.match(src("deploy/scripts/diagnose-502.sh"), /watch-health\.sh/);
+    assert.equal(existsSync("deploy/scripts/watch-health.sh"), true);
+    assert.match(src("deploy/scripts/watch-health.sh"), /docker compose restart web/);
+    assert.match(src("deploy/scripts/deploy.sh"), /influrios-deploy\.lock/);
   });
 
   it("sets Secure on account session cookies over HTTPS", () => {

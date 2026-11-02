@@ -122,10 +122,12 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /### E6 progress \(Marketplace hold → release \/ Airwallex\)/);
     assert.match(runbook, /staging:e6-marketplace-evidence/);
     assert.match(readFileSync("scripts/marketplace-webhook-fixture.ts", "utf8"), /format=airwallex/);
-    // W2: host recovered; E6 script still refuses prove without health.
+    // Host briefly recovered then flapped; E6 script still refuses prove without health.
     assert.match(runbook, /Host outage \(2026-11-02\)/);
-    assert.match(runbook, /\*\*recovered\*\*/);
+    assert.match(runbook, /flapped to 502 again/);
+    assert.match(runbook, /watch-health\.sh/);
     assert.match(readFileSync("scripts/staging-e6-marketplace-evidence.sh", "utf8"), /ERROR: web is not healthy/);
+    assert.equal(existsSync("deploy/scripts/watch-health.sh"), true);
   });
 
   it("requires health + payments auth bounce in the live smoke catalog", () => {

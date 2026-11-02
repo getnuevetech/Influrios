@@ -346,23 +346,29 @@ cd /var/www/influrios
 npm run staging:e5-meilisearch-evidence
 ```
 
-### Host outage (2026-11-02) — **recovered**
+### Host outage (2026-11-02) — recovered then **flapped to 502 again**
 
 Probe of `https://influrios.com` at **2026-11-02T04:45:41Z** (America/Chicago Nov 1, 10:45 PM CT): **nginx 502 Bad Gateway**. Auto checks **2/8**.
 
-**Recovered:** re-probe at **2026-11-02T06:47:42Z** (America/Chicago Nov 2, 12:47 AM CT): **8/8 auto checks pass** (HTTPS, health+db, authConfigured, homepage, guest `/collaboration`, admin login, cron **401** without secret, SMS not sent). Live L2 smoke **8/8** including `/api/health` and unauthenticated `/payments` → **307** `/login?next=/payments&gate=payments`.
+**Brief recovery:** re-probe at **2026-11-02T06:47:42Z** (America/Chicago Nov 2, 12:47 AM CT): **8/8 auto checks pass** (HTTPS, health+db, authConfigured, homepage, guest `/collaboration`, admin login, cron **401** without secret, SMS not sent). Live L2 smoke **8/8** including `/api/health` and unauthenticated `/payments` → **307** `/login?next=/payments&gate=payments`. Unsigned Airwallex webhook → **401** `Signature did not match.`
+
+**Flap:** ~**2026-11-02T06:48:42Z** (America/Chicago Nov 2, 12:48 AM CT) — `/api/health` **502** again (nginx up, web not answering). Compose `restart: unless-stopped` does not recover a hung-but-Up container; install `deploy/scripts/watch-health.sh` on a 2-minute cron (see diagnose-502 output).
 
 ```bash
-# Recovery that was required (Lightsail):
+# Recovery on Lightsail (try restart before full redeploy):
 cd /var/www/influrios
 bash deploy/scripts/diagnose-502.sh
+bash deploy/scripts/watch-health.sh          # restarts web after consecutive local health fails
+# If still down:
 git fetch origin main && git checkout main && git pull origin main
 bash deploy/scripts/deploy.sh   # entrypoint runs prisma migrate deploy (AuthLockout)
 curl -fsS http://127.0.0.1:3000/api/health
 node scripts/staging-evidence-probe.mjs https://influrios.com
+# Optional cron (hung web → auto restart):
+# */2 * * * * APP_DIR=/var/www/influrios /var/www/influrios/deploy/scripts/watch-health.sh >>/var/log/influrios-watch-health.log 2>&1
 ```
 
-### E6 progress (Marketplace hold → release / Airwallex) — **in progress**
+### E6 progress (Marketplace hold → release / Airwallex) — **blocked on host health** (Airwallex secret path was ready during brief recovery)
 
 **Goal:** Airwallex webhook secret ready · US jurisdiction · `funding.held` · milestone `payout.released` · duplicate event skipped.
 
@@ -406,7 +412,7 @@ Operator path:
 | Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · webhook `checkout:cs_mv6jqy02_g3n8vb` · duplicate unique blocked (`2026-10-14T01:30:38Z`) | 2026-10-13/14 | host + cloud-agent |
 | Social OAuth | YouTube Connection `cmv7wsjww001qs2015kbcssy4` · Account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` (`2026-10-14T10:03:39Z`) | 2026-10-14 | host + cloud-agent |
 | Meilisearch counts | job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · health 200 · Discover 200 (`2026-10-14T11:55:09Z`) | 2026-10-14 | host + cloud-agent |
-| Airwallex hold and release | **in progress** — unsigned webhook **401** (secret path ready) · host recovered 8/8 · still need held/release/duplicate ids via `staging:e6-marketplace-evidence --prove-*` | 2026-11-02 | host + cloud-agent |
+| Airwallex hold and release | **blocked on host** — brief 8/8 + unsigned webhook **401** at 06:47Z CT, then 502 flap at 06:48Z · install `watch-health.sh` cron · still need held/release/duplicate ids via `--prove-*` after health returns | 2026-11-02 | host + cloud-agent |
 | Recurring tranche 2 | | | |
 | Team proposal | | | |
 | DocuSign completed | | | |
