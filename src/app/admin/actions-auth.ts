@@ -31,16 +31,16 @@ export async function actionAdminLogin(formData: FormData) {
   const next = String(formData.get("next") ?? "/admin");
   const headerStore = await headers();
   const ip = clientIp(headerStore);
-  const locked = lockoutMessage("admin-login", ip, email);
+  const locked = await lockoutMessage("admin-login", ip, email);
   if (locked) {
     redirect(`/admin/login?error=${encodeURIComponent(AUTH_LOCKOUT_GENERIC_MESSAGE)}&next=${encodeURIComponent(next)}`);
   }
   const result = await loginAdmin(email, password);
   if (!result.ok) {
-    recordAuthFailure("admin-login", ip, email);
+    await recordAuthFailure("admin-login", ip, email);
     redirect(`/admin/login?error=${encodeURIComponent(result.error)}&next=${encodeURIComponent(next)}`);
   }
-  recordAuthSuccess("admin-login", ip, email);
+  await recordAuthSuccess("admin-login", ip, email);
   const jar = await cookies();
   jar.set(ADMIN_COOKIE, result.token, await adminCookieOptions());
   redirect(next.startsWith("/admin") ? next : "/admin");

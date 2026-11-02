@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isBusinessRole } from "@/lib/account-audience";
 import { getAccountSession } from "@/lib/accounts";
+import {
+  AUTH_LOCKOUT_GENERIC_MESSAGE,
+  lockoutMessage,
+  recordAuthFailure,
+} from "@/lib/auth-lockout";
 import {
   buildIntelligenceExport,
   intelligenceExportToCsv,
@@ -8,7 +14,7 @@ import { getWorkspace } from "@/lib/business";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 
 /**
- * Intelligence export. The viewer's owned workspace plan is the gate.
+ * Intelligence export. Business plan entitlements + per-account rate limit.
  */
 export async function GET(req: NextRequest) {
   const account = await getAccountSession();
@@ -18,6 +24,16 @@ export async function GET(req: NextRequest) {
       { status: 401 },
     );
   }
+  if (!isBusinessRole(account.role)) {
+    return NextResponse.json({ error: "Intelligence exports are for business accounts." }, { status: 403 });
+  }
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const locked = await lockoutMessage("intelligence-export", ip, account.id);
+  if (locked) {
+    return NextResponse.json({ error: AUTH_LOCKOUT_GENERIC_MESSAGE }, { status: 429 });
+  }
+
   const ws = await getWorkspace(account.id);
   const entitlements = await businessEntitlementsForPlan(ws.plan);
 
@@ -30,6 +46,8 @@ export async function GET(req: NextRequest) {
       { status: 403 },
     );
   }
+
+  await recordAuthFailure("intelligence-export", ip, account.id);
 
   const { searchParams } = new URL(req.url);
   const format = (searchParams.get("format") ?? "json").toLowerCase();

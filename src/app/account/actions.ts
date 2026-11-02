@@ -43,7 +43,7 @@ export async function actionRegister(formData: FormData) {
   }
   const headerStore = await headers();
   const ip = clientIp(headerStore);
-  const locked = lockoutMessage("register", ip, email);
+  const locked = await lockoutMessage("register", ip, email);
   if (locked) back("/register", AUTH_LOCKOUT_GENERIC_MESSAGE, next);
   try {
     const user = await registerAccount({
@@ -65,9 +65,9 @@ export async function actionRegister(formData: FormData) {
       });
       jar.set(REFERRAL_COOKIE, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
     }
-    recordAuthSuccess("register", ip, email);
+    await recordAuthSuccess("register", ip, email);
   } catch (error) {
-    recordAuthFailure("register", ip, email);
+    await recordAuthFailure("register", ip, email);
     back("/register", error instanceof Error ? error.message : "Could not register.", next);
   }
   redirect(`/account/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(next)}`);
@@ -78,18 +78,18 @@ export async function actionLogin(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const headerStore = await headers();
   const ip = clientIp(headerStore);
-  const locked = lockoutMessage("account-login", ip, email);
+  const locked = await lockoutMessage("account-login", ip, email);
   if (locked) back("/login", AUTH_LOCKOUT_GENERIC_MESSAGE, next);
   let user: Awaited<ReturnType<typeof loginAccount>> | null = null;
   try {
     user = await loginAccount(email, String(formData.get("password") ?? ""));
-    recordAuthSuccess("account-login", ip, email);
+    await recordAuthSuccess("account-login", ip, email);
   } catch (error) {
     const coded = error as Error & { code?: string };
     if (coded.code === "unverified") {
       redirect(`/account/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(next)}`);
     }
-    recordAuthFailure("account-login", ip, email);
+    await recordAuthFailure("account-login", ip, email);
     back("/login", coded.message || "Could not log in.", next);
   }
   const destination = isDefaultMemberHome(next) ? homePathForRole(user?.role) : next;
@@ -101,7 +101,7 @@ export async function actionVerifyEmail(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const headerStore = await headers();
   const ip = clientIp(headerStore);
-  const locked = lockoutMessage("account-verify", ip, email);
+  const locked = await lockoutMessage("account-verify", ip, email);
   if (locked) {
     redirect(
       `/account/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(next)}&error=${encodeURIComponent(AUTH_LOCKOUT_GENERIC_MESSAGE)}`,
@@ -110,9 +110,9 @@ export async function actionVerifyEmail(formData: FormData) {
   let user: Awaited<ReturnType<typeof verifyAccountEmail>> | null = null;
   try {
     user = await verifyAccountEmail(email, String(formData.get("code") ?? ""));
-    recordAuthSuccess("account-verify", ip, email);
+    await recordAuthSuccess("account-verify", ip, email);
   } catch (error) {
-    recordAuthFailure("account-verify", ip, email);
+    await recordAuthFailure("account-verify", ip, email);
     const message = error instanceof Error ? error.message : "Verification failed.";
     redirect(
       `/account/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(next)}&error=${encodeURIComponent(message)}`,
@@ -134,7 +134,7 @@ export async function actionResendVerification(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const headerStore = await headers();
   const ip = clientIp(headerStore);
-  const locked = lockoutMessage("account-verify", ip, email);
+  const locked = await lockoutMessage("account-verify", ip, email);
   if (locked) {
     redirect(
       `/account/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}&error=${encodeURIComponent(AUTH_LOCKOUT_GENERIC_MESSAGE)}`,
@@ -142,9 +142,9 @@ export async function actionResendVerification(formData: FormData) {
   }
   try {
     await resendAccountVerification(email);
-    recordAuthSuccess("account-verify", ip, email);
+    await recordAuthSuccess("account-verify", ip, email);
   } catch (error) {
-    recordAuthFailure("account-verify", ip, email);
+    await recordAuthFailure("account-verify", ip, email);
     const message = error instanceof Error ? error.message : "Could not resend the code.";
     redirect(
       `/account/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}&error=${encodeURIComponent(message)}`,
@@ -159,12 +159,12 @@ export async function actionRequestReset(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const headerStore = await headers();
   const ip = clientIp(headerStore);
-  const locked = lockoutMessage("password-reset", ip, email);
+  const locked = await lockoutMessage("password-reset", ip, email);
   if (locked) {
     redirect("/account/reset?sent=1");
   }
   await requestPasswordReset(email).catch(() => null);
-  recordAuthFailure("password-reset", ip, email);
+  await recordAuthFailure("password-reset", ip, email);
   redirect("/account/reset?sent=1");
 }
 

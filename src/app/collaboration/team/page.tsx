@@ -19,8 +19,12 @@ type Props = { searchParams: Promise<{ error?: string; sent?: string; status?: s
 
 export default async function TeamProposalPage({ searchParams }: Props) {
   const params = await searchParams;
-  const account = await getAccountSession();
-  const ws = await getWorkspace(account?.id);
+  const account = await getAccountSession().catch(() => null);
+  if (!account) {
+    const { redirect } = await import("next/navigation");
+    redirect("/login?next=/collaboration/team&gate=team");
+  }
+  const ws = await getWorkspace(account.id);
   const creator = account
     ? await prisma.creator.findFirst({ where: { userId: account.id }, select: { slug: true } })
     : null;

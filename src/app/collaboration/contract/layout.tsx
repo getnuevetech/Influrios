@@ -1,9 +1,8 @@
 import { MemberFrame } from "@/components/account-shell";
-import { accountAudience } from "@/lib/account-audience";
-import { getAccountSession } from "@/lib/accounts";
+import { requireBusinessSession } from "@/lib/account-audience";
 
-/** Contract wizard — chrome follows User.role only (never hardcode business). */
+/** Contract / funding wizard — business only (page + actions already gated). */
 export default async function ContractWizardLayout({ children }: { children: React.ReactNode }) {
-  const account = await getAccountSession().catch(() => null);
-  return <MemberFrame audience={accountAudience(account)}>{children}</MemberFrame>;
+  await requireBusinessSession("/collaboration/contract");
+  return <MemberFrame audience="business">{children}</MemberFrame>;
 }
