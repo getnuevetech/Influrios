@@ -7,6 +7,7 @@ import { createHmac, timingSafeEqual, randomBytes, scryptSync } from "crypto";
 import { promises as fs } from "fs";
 import { cookies, headers } from "next/headers";
 import path from "path";
+import { ADMIN_SESSION_COOKIE } from "@/lib/admin-session-edge";
 import { requireAuthSecret } from "@/lib/app-secret";
 import { prisma } from "@/lib/db";
 
@@ -416,7 +417,7 @@ export type AdminSession = {
 const DATA_DIR = path.join(process.cwd(), "data");
 const LEGACY_STORE_PATH = path.join(DATA_DIR, "admin-auth.json");
 const LEGACY_MIGRATED_PATH = path.join(DATA_DIR, "admin-auth.json.migrated");
-const COOKIE_NAME = "influrios_admin_session";
+const COOKIE_NAME = ADMIN_SESSION_COOKIE;
 const SESSION_DAYS = 7;
 
 /** Map legacy coarse permissions → granular set (store migration). */
