@@ -38,7 +38,9 @@ export default async function BusinessIntelligencePage() {
 
   const snapshots = locked ? [] : (await getAllAudienceSnapshots()).slice(0, 6);
   const trends = locked ? [] : await getNicheTrends();
-  const signals = locked ? [] : await getRelationshipSignals();
+  const signals = locked
+    ? []
+    : await getRelationshipSignals({ workspaceId: ws.businessId, includeNotes: true });
   const directory = await getDirectory().catch(() => null);
   const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
 
