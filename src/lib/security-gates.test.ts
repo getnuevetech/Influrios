@@ -78,4 +78,17 @@ describe("W0–W2 security gates", () => {
     assert.match(accounts, /cookieIsSecure/);
     assert.match(accounts, /secure:\s*cookieIsSecure/);
   });
+
+  it("revalidates admin sessions against live RBAC + permissionVersion", () => {
+    assert.match(src("prisma/schema.prisma"), /permissionVersion/);
+    assert.equal(
+      existsSync("prisma/migrations/20261102080000_admin_permission_version/migration.sql"),
+      true,
+    );
+    const adminAuth = src("src/lib/admin-auth.ts");
+    assert.match(adminAuth, /resolveAdminSession/);
+    assert.match(adminAuth, /bumpPermissionVersion/);
+    assert.match(adminAuth, /permissionVersion/);
+    assert.match(adminAuth, /getAdminSession[\s\S]*resolveAdminSession/);
+  });
 });

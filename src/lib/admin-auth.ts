@@ -390,6 +390,8 @@ export type AdminUser = {
   passwordHash: string;
   passwordSalt: string;
   active: boolean;
+  /** Bumped when role or active changes; must match the cookie stamp. */
+  permissionVersion: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -407,6 +409,8 @@ export type AdminSession = {
   roleName: string;
   permissions: AdminPermission[];
   exp: number;
+  /** Optional for cookies minted before this field existed. */
+  permissionVersion?: number;
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -603,6 +607,13 @@ function normalizeStore(store: AdminAuthStore): AdminAuthStore {
       ...role,
       permissions: expandPermissions(role.permissions as string[]),
     })),
+    users: store.users.map((user) => ({
+      ...user,
+      permissionVersion:
+        typeof user.permissionVersion === "number" && user.permissionVersion >= 1
+          ? user.permissionVersion
+          : 1,
+    })),
   };
 }
 
@@ -625,6 +636,7 @@ function defaultStore(): AdminAuthStore {
         passwordHash: hashPassword(password, salt),
         passwordSalt: salt,
         active: true,
+        permissionVersion: 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -656,6 +668,7 @@ function userFromDb(row: {
   passwordHash: string;
   passwordSalt: string;
   active: boolean;
+  permissionVersion?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }): AdminUser {
@@ -667,6 +680,10 @@ function userFromDb(row: {
     passwordHash: row.passwordHash,
     passwordSalt: row.passwordSalt,
     active: row.active,
+    permissionVersion:
+      typeof row.permissionVersion === "number" && row.permissionVersion >= 1
+        ? row.permissionVersion
+        : 1,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -715,6 +732,7 @@ async function writeStoreToDb(store: AdminAuthStore) {
           passwordHash: user.passwordHash,
           passwordSalt: user.passwordSalt,
           active: user.active,
+          permissionVersion: user.permissionVersion,
           createdAt: new Date(user.createdAt),
           updatedAt: new Date(user.updatedAt),
         },
@@ -725,6 +743,7 @@ async function writeStoreToDb(store: AdminAuthStore) {
           passwordHash: user.passwordHash,
           passwordSalt: user.passwordSalt,
           active: user.active,
+          permissionVersion: user.permissionVersion,
           updatedAt: new Date(user.updatedAt),
         },
       });
@@ -846,14 +865,50 @@ export async function loginAdmin(email: string, password: string): Promise<
     roleId: role.id,
     roleName: role.name,
     permissions: expandPermissions(role.permissions as string[]),
+    permissionVersion: user.permissionVersion,
     exp: Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000,
   };
   return { ok: true, token: encodeSession(session), session };
 }
 
+/**
+ * Re-check the signed cookie against live AdminUser / AdminRole.
+ * Demote, deactivate, or a permissionVersion bump invalidates the session
+ * without waiting for exp. Live role permissions replace the cookie copy.
+ */
+export function resolveAdminSession(
+  decoded: AdminSession | null | undefined,
+  store: AdminAuthStore,
+): AdminSession | null {
+  if (!decoded?.userId) return null;
+  const user = store.users.find((u) => u.id === decoded.userId);
+  if (!user || !user.active) return null;
+  if (
+    typeof decoded.permissionVersion === "number" &&
+    decoded.permissionVersion !== user.permissionVersion
+  ) {
+    return null;
+  }
+  const role = store.roles.find((r) => r.id === user.roleId);
+  if (!role) return null;
+  return {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    roleId: role.id,
+    roleName: role.name,
+    permissions: expandPermissions(role.permissions as string[]),
+    permissionVersion: user.permissionVersion,
+    exp: decoded.exp,
+  };
+}
+
 export async function getAdminSession(): Promise<AdminSession | null> {
   const jar = await cookies();
-  return decodeSession(jar.get(COOKIE_NAME)?.value);
+  const decoded = decodeSession(jar.get(COOKIE_NAME)?.value);
+  if (!decoded) return null;
+  const store = await ensureStore();
+  return resolveAdminSession(decoded, store);
 }
 
 export function hasPermission(
@@ -984,12 +1039,18 @@ export async function createAdminUser(input: {
     passwordHash: hashPassword(input.password, salt),
     passwordSalt: salt,
     active: true,
+    permissionVersion: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
   store.users.push(user);
   await saveStore(store);
   return { id: user.id, email: user.email, name: user.name, roleId: user.roleId };
+}
+
+function bumpPermissionVersion(user: AdminUser) {
+  user.permissionVersion = (user.permissionVersion || 1) + 1;
+  user.updatedAt = new Date().toISOString();
 }
 
 export async function setAdminUserActive(userId: string, active: boolean) {
@@ -1001,7 +1062,7 @@ export async function setAdminUserActive(userId: string, active: boolean) {
     if (supers.length <= 1) throw new Error("Cannot deactivate the last Super Admin");
   }
   user.active = active;
-  user.updatedAt = new Date().toISOString();
+  bumpPermissionVersion(user);
   await saveStore(store);
 }
 
@@ -1011,7 +1072,7 @@ export async function updateAdminUserRole(userId: string, roleId: string) {
   if (!user) throw new Error("User not found");
   if (!store.roles.some((r) => r.id === roleId)) throw new Error("Unknown role");
   user.roleId = roleId;
-  user.updatedAt = new Date().toISOString();
+  bumpPermissionVersion(user);
   await saveStore(store);
 }
 
