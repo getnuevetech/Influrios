@@ -31,6 +31,22 @@ export const HTTP_SMOKE_ROUTES: SmokeRoute[] = [
   },
   { id: "pricing", path: "/pricing", name: "Pricing", expectStatus: [200], expectBody: "Plan", live: true },
   {
+    id: "health",
+    path: "/api/health",
+    name: "Health (web + db)",
+    expectStatus: [200],
+    expectBody: '"ok":true',
+    live: true,
+  },
+  {
+    id: "payments_auth",
+    path: "/payments",
+    name: "Protected payments requires login",
+    // Unauthenticated visitors must bounce to login (manual redirect follow off).
+    expectStatus: [302, 303, 307],
+    live: true,
+  },
+  {
     id: "short_resolve_root",
     path: "/api/short/resolve?path=/&host=inflr.me",
     name: "Short-link resolver root",
@@ -67,7 +83,15 @@ export function assertSmokeCatalog(routes: SmokeRoute[] = HTTP_SMOKE_ROUTES): {
       return { ok: false, error: `Smoke route ${route.id} needs expectStatus` };
     }
   }
-  const required = ["landing", "discover", "claim", "collaboration", "short_resolve_root"];
+  const required = [
+    "landing",
+    "discover",
+    "claim",
+    "collaboration",
+    "health",
+    "payments_auth",
+    "short_resolve_root",
+  ];
   for (const id of required) {
     if (!ids.has(id)) return { ok: false, error: `Missing required smoke route: ${id}` };
   }

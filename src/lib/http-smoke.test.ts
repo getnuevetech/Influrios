@@ -122,6 +122,16 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /### E6 progress \(Marketplace hold → release \/ Airwallex\)/);
     assert.match(runbook, /staging:e6-marketplace-evidence/);
     assert.match(readFileSync("scripts/marketplace-webhook-fixture.ts", "utf8"), /format=airwallex/);
+    // W2: E6 blocked while host 502; script must refuse prove without health.
+    assert.match(runbook, /Host outage \(2026-11-02\)/);
+    assert.match(readFileSync("scripts/staging-e6-marketplace-evidence.sh", "utf8"), /ERROR: web is not healthy/);
+  });
+
+  it("requires health + payments auth bounce in the live smoke catalog", () => {
+    assert.ok(HTTP_SMOKE_ROUTES.some((route) => route.id === "health"));
+    assert.ok(HTTP_SMOKE_ROUTES.some((route) => route.id === "payments_auth"));
+    const payments = HTTP_SMOKE_ROUTES.find((route) => route.id === "payments_auth");
+    assert.ok(payments?.expectStatus.some((code) => code >= 300 && code < 400));
   });
 });
 
