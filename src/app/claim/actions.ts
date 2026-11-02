@@ -71,16 +71,16 @@ export async function actionVerifyDraft(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
   const headerStore = await headers();
   const ip = clientIp(headerStore);
-  const locked = lockoutMessage("claim-verify", ip, draftId);
+  const locked = await lockoutMessage("claim-verify", ip, draftId);
   if (locked) {
     redirect(`/claim/verify/${draftId}?error=${encodeURIComponent(AUTH_LOCKOUT_GENERIC_MESSAGE)}`);
   }
   try {
     await verifyDraft(draftId, String(formData.get("code") ?? ""));
     await setCreatorSession(draftId);
-    recordAuthSuccess("claim-verify", ip, draftId);
+    await recordAuthSuccess("claim-verify", ip, draftId);
   } catch (err) {
-    recordAuthFailure("claim-verify", ip, draftId);
+    await recordAuthFailure("claim-verify", ip, draftId);
     const message = err instanceof Error ? err.message : "Verification failed";
     redirect(`/claim/verify/${draftId}?error=${encodeURIComponent(message)}`);
   }

@@ -1197,6 +1197,21 @@ model SiteConfig {
   updatedAt         DateTime @updatedAt
 }
 
+/// Durable auth attempt lockout (login / register / verify / claim / admin). Survives process restart.
+model AuthLockout {
+  id            String    @id @default(cuid())
+  scope         String
+  ip            String
+  subject       String
+  fails         Int       @default(0)
+  windowStarted DateTime
+  lockedUntil   DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([scope, ip, subject])
+  @@index([lockedUntil])
+}
+
 model GuestUsagePolicy {
   id              String   @id @default("default")
   profileViewSoft Int      @default(3)
