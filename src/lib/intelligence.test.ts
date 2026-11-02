@@ -6,6 +6,7 @@ import {
   intelligenceExportToCsv,
   nicheTrendsFromCounts,
   relationshipSignalNote,
+  relationshipSignalsFromIntros,
   requestSpecialtiesForCollaboration,
   type IntelligenceExport,
 } from "./intelligence";
@@ -67,6 +68,52 @@ describe("intelligence snapshots", () => {
     assert.equal(empty.topLocations.length, 0);
     assert.equal(empty.engagementRate, "");
     assert.ok(empty.totalReach);
+  });
+});
+
+describe("intelligence relationship tenant scope", () => {
+  it("keeps only the workspace intros and can redact notes", () => {
+    const intros = [
+      {
+        id: "a",
+        businessId: "ws_a",
+        businessName: "Acme",
+        creatorSlug: "ada",
+        briefTitle: "Acme brief",
+        notes: "secret-a",
+        status: "introduced",
+      },
+      {
+        id: "b",
+        businessId: "ws_b",
+        businessName: "Beta",
+        creatorSlug: "bee",
+        briefTitle: "Beta brief",
+        notes: "secret-b",
+        status: "outreach",
+      },
+    ];
+    const names = new Map([
+      ["ada", "Ada Maker"],
+      ["bee", "Bee Creator"],
+    ]);
+    const scoped = relationshipSignalsFromIntros(intros, names, {
+      workspaceId: "ws_a",
+      includeNotes: true,
+    });
+    assert.equal(scoped.length, 1);
+    assert.equal(scoped[0]?.id, "intro-a");
+    assert.equal(scoped[0]?.note, "secret-a");
+    assert.deepEqual(scoped[0]?.parties, ["Acme", "Ada Maker"]);
+
+    const redacted = relationshipSignalsFromIntros(intros, names, {
+      workspaceId: "ws_a",
+      includeNotes: false,
+    });
+    assert.equal(redacted[0]?.note, "");
+
+    const all = relationshipSignalsFromIntros(intros, names, { includeNotes: true });
+    assert.equal(all.length, 2);
   });
 });
 

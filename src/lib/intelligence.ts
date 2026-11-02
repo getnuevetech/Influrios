@@ -301,18 +301,48 @@ export function relationshipSignalNote(notes: string | null | undefined): string
   return (notes ?? "").trim();
 }
 
-export async function getRelationshipSignals(): Promise<RelationshipSignal[]> {
-  const matching = await getManagedMatching();
-  const creators = await listDirectoryCreators();
-  const bySlug = new Map(creators.map((creator) => [creator.slug, creator]));
-  return matching.intros.map((intro) => ({
+export type RelationshipSignalIntro = {
+  id: string;
+  businessId: string;
+  businessName: string;
+  creatorSlug: string;
+  briefTitle: string;
+  notes: string;
+  status: string;
+};
+
+/**
+ * Build relationship rows. Pass `workspaceId` to keep only that business's
+ * intros (tenant scope). Business exports omit ops notes; admin keeps them.
+ */
+export function relationshipSignalsFromIntros(
+  intros: RelationshipSignalIntro[],
+  displayNames: Map<string, string>,
+  opts?: { workspaceId?: string; includeNotes?: boolean },
+): RelationshipSignal[] {
+  const workspaceId = opts?.workspaceId?.trim() || "";
+  const includeNotes = opts?.includeNotes !== false;
+  const rows = workspaceId
+    ? intros.filter((intro) => intro.businessId === workspaceId)
+    : intros;
+  return rows.map((intro) => ({
     id: `intro-${intro.id}`,
     kind: "intro_pipeline" as const,
     title: intro.briefTitle,
-    parties: [intro.businessName, bySlug.get(intro.creatorSlug)?.displayName ?? intro.creatorSlug],
+    parties: [intro.businessName, displayNames.get(intro.creatorSlug) ?? intro.creatorSlug],
     status: intro.status,
-    note: relationshipSignalNote(intro.notes),
+    note: includeNotes ? relationshipSignalNote(intro.notes) : "",
   }));
+}
+
+export async function getRelationshipSignals(opts?: {
+  workspaceId?: string;
+  includeNotes?: boolean;
+}): Promise<RelationshipSignal[]> {
+  const matching = await getManagedMatching();
+  const creators = await listDirectoryCreators();
+  const bySlug = new Map(creators.map((creator) => [creator.slug, creator.displayName]));
+  return relationshipSignalsFromIntros(matching.intros, bySlug, opts);
 }
 
 export type IntelligenceExport = {
@@ -323,13 +353,35 @@ export type IntelligenceExport = {
   signals: RelationshipSignal[];
 };
 
-export async function buildIntelligenceExport(opts?: {
+export type BuildIntelligenceExportOpts = {
   slug?: string;
-}): Promise<IntelligenceExport> {
-  const snapshots = opts?.slug
-    ? ([await getAudienceSnapshot(opts.slug)].filter(Boolean) as AudienceSnapshot[])
-    : await getAllAudienceSnapshots();
-  const signals = await getRelationshipSignals();
+  /** When set, signals are limited to this workspace's managed intros. */
+  workspaceId?: string;
+  /** Admin keeps ops notes; business exports redact them (default true when unscoped). */
+  includeNotes?: boolean;
+};
+
+export async function buildIntelligenceExport(
+  opts: BuildIntelligenceExportOpts = {},
+): Promise<IntelligenceExport> {
+  const slug = opts.slug?.trim() || undefined;
+  const workspaceId = opts.workspaceId?.trim() || undefined;
+  const includeNotes = opts.includeNotes ?? !workspaceId;
+
+  let snapshots: AudienceSnapshot[];
+  if (slug) {
+    const one = await getAudienceSnapshot(slug);
+    if (!one) {
+      const err = new Error("Creator not found.");
+      (err as Error & { code?: string }).code = "slug_not_found";
+      throw err;
+    }
+    snapshots = [one];
+  } else {
+    snapshots = await getAllAudienceSnapshots();
+  }
+
+  const signals = await getRelationshipSignals({ workspaceId, includeNotes });
   await markIntelligenceExport();
   return {
     exportedAt: new Date().toISOString(),

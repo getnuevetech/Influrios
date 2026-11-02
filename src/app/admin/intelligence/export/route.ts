@@ -27,7 +27,16 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const format = (searchParams.get("format") ?? "json").toLowerCase();
   const slug = searchParams.get("slug") ?? undefined;
-  const payload = await buildIntelligenceExport({ slug });
+  let payload;
+  try {
+    // Admin catalog export — all intros + ops notes (not workspace-scoped).
+    payload = await buildIntelligenceExport({ slug, includeNotes: true });
+  } catch (err) {
+    if (err instanceof Error && (err as Error & { code?: string }).code === "slug_not_found") {
+      return NextResponse.json({ error: "Creator not found." }, { status: 404 });
+    }
+    throw err;
+  }
 
   if (format === "csv") {
     const csv = intelligenceExportToCsv(payload);

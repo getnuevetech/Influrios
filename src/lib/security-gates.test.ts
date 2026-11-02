@@ -47,6 +47,10 @@ describe("W0–W2 security gates", () => {
     assert.match(exportRoute, /isBusinessRole/);
     assert.match(exportRoute, /intelligence-export/);
     assert.match(exportRoute, /429/);
+    assert.match(exportRoute, /workspaceId:\s*ws\.businessId/);
+    assert.match(src("src/lib/intelligence.ts"), /relationshipSignalsFromIntros/);
+    assert.match(src("src/lib/intelligence.ts"), /workspaceId/);
+    assert.match(src("src/app/business/intelligence/page.tsx"), /workspaceId:\s*ws\.businessId/);
   });
 
   it("records host 502 flap + watch-health and fails E6 script without health", () => {
