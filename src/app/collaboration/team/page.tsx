@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { actionSendTeamProposal } from "@/app/collaboration/team/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
@@ -20,11 +21,10 @@ type Props = { searchParams: Promise<{ error?: string; sent?: string; status?: s
 export default async function TeamProposalPage({ searchParams }: Props) {
   const params = await searchParams;
   const account = await getAccountSession().catch(() => null);
-  if (!account) {
-    const { redirect } = await import("next/navigation");
-    redirect("/login?next=/collaboration/team&gate=team");
-  }
-  const ws = await getWorkspace(account.id);
+  if (!account) redirect("/login?next=/collaboration/team&gate=team");
+  // Layout also requires a session; redirect() above ends the request.
+  const session = account!;
+  const ws = await getWorkspace(session.id);
   const creator = account
     ? await prisma.creator.findFirst({ where: { userId: account.id }, select: { slug: true } })
     : null;
