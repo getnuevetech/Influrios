@@ -44,6 +44,9 @@ APP_URL="${APP_URL%/}"
 echo "Influrios Phase M E6 Marketplace hold → release evidence"
 echo
 echo "When: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+if command -v git >/dev/null 2>&1 && [[ -d .git ]]; then
+  echo "Git:  $(git rev-parse --short HEAD) ($(git rev-parse --abbrev-ref HEAD))"
+fi
 echo
 echo "Webhook: ${APP_URL}/api/marketplace/webhook"
 echo
@@ -56,6 +59,21 @@ if ! docker compose ps postgres --status running >/dev/null 2>&1; then
   echo "ERROR: postgres container is not running. Start the Compose stack, then retry."
   exit 1
 fi
+
+echo "### Host health"
+echo
+HEALTH_CODE="$(curl -sS -m 10 -o /tmp/influrios-e6-health.json -w '%{http_code}' "${APP_URL}/api/health" 2>/dev/null || true)"
+HEALTH_BODY="$(tr -d '\n' </tmp/influrios-e6-health.json 2>/dev/null | cut -c1-240 || true)"
+echo "GET ${APP_URL}/api/health → HTTP ${HEALTH_CODE:-?}"
+echo "Body: ${HEALTH_BODY:-—}"
+if [[ "${HEALTH_CODE}" != "200" ]]; then
+  echo "ERROR: web is not healthy (often nginx 502). On the host:"
+  echo "  bash deploy/scripts/diagnose-502.sh"
+  echo "  git pull origin main && bash deploy/scripts/deploy.sh"
+  echo "E6 prove steps require a live /api/health before posting webhooks."
+  exit 1
+fi
+echo
 
 psql() {
   docker compose exec -T postgres psql -U "${PGUSER}" -d "${PGDB}" -v ON_ERROR_STOP=1 "$@"
