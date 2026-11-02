@@ -25,13 +25,11 @@ describe("admin session edge cookie verify", () => {
   });
 
   it("accepts cookies signed by Node encodeSession and rejects junk", async () => {
-    const secret = edgeAdminSessionSecret({ NODE_ENV: "test" })!;
+    const secret = "edge-hmac-test-secret";
     const prevAuth = process.env.AUTH_SECRET;
     const prevAdmin = process.env.ADMIN_SESSION_SECRET;
-    const prevNode = process.env.NODE_ENV;
     process.env.AUTH_SECRET = secret;
     process.env.ADMIN_SESSION_SECRET = "";
-    process.env.NODE_ENV = "test";
     try {
       const session: AdminSession = {
         userId: "user_super",
@@ -60,8 +58,6 @@ describe("admin session edge cookie verify", () => {
       else process.env.AUTH_SECRET = prevAuth;
       if (prevAdmin === undefined) delete process.env.ADMIN_SESSION_SECRET;
       else process.env.ADMIN_SESSION_SECRET = prevAdmin;
-      if (prevNode === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = prevNode;
     }
   });
 });
