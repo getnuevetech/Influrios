@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { canAccessModule, getAdminSession, type AdminModule } from "@/lib/admin-auth";
 import { AdminShell, AdminSidebar, AdminTopBar, type AdminNavGroup } from "@/components/admin-shell";
 
@@ -131,7 +132,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       topBar={
         <AdminTopBar name={session.name} email={session.email} roleName={session.roleName} />
       }
-      sidebar={<AdminSidebar groups={groups} roleName={session.roleName} />}
+      sidebar={
+        <Suspense fallback={<div className="w-[240px] shrink-0 border-r border-[#E4EBFF] bg-white" />}>
+          <AdminSidebar groups={groups} roleName={session.roleName} />
+        </Suspense>
+      }
     >
       {children}
     </AdminShell>
