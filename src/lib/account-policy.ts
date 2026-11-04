@@ -38,14 +38,15 @@ export function safeNextPath(raw: string | undefined | null, fallback = "/creato
   if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("://")) {
     return fallback;
   }
-  // Legacy default sent callers to "/" or edit-profile; prefer the creator dashboard.
-  if (value === "/" || value === "/dashboard") return fallback;
+  // Legacy bare "/" sent callers to edit-profile; prefer creator Home.
+  // /dashboard is My Profile and must remain a valid return path.
+  if (value === "/") return fallback;
   return value;
 }
 
 /** True when the return URL is the generic creator home (role routing may still override). */
 export function isDefaultMemberHome(path: string): boolean {
-  return path === "/creator" || path === "/" || path === "/dashboard";
+  return path === "/creator" || path === "/";
 }
 
 export function passwordError(password: string, minLength = 8): string | null {

@@ -21,5 +21,5 @@ export async function actionSaveCreatorOptIn(formData: FormData) {
     niches,
     targetingNotes: String(formData.get("targetingNotes") ?? "").trim(),
   });
-  redirect("/dashboard?saved=optin");
+  redirect("/dashboard/preferences?saved=optin#introductions");
 }

@@ -32,9 +32,9 @@ export async function actionConnectSocial(formData: FormData) {
       origin: await origin(),
     });
   } catch {
-    redirect("/dashboard?error=" + encodeURIComponent("Social connection is unavailable. Nothing was connected."));
+    redirect("/dashboard/social?error=" + encodeURIComponent("Social connection is unavailable. Nothing was connected."));
   }
-  if (!result.ok) redirect(`/dashboard?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok) redirect(`/dashboard/social?error=${encodeURIComponent(result.error)}`);
   redirect(result.authorizeUrl);
 }
 
@@ -43,11 +43,11 @@ export async function actionRefreshSocial(formData: FormData) {
   const platform = String(formData.get("platform") ?? "");
   try {
     const result = await refreshSocialConnection({ slug, platform, origin: await origin() });
-    if (!result.ok) redirect(`/dashboard?error=${encodeURIComponent(result.error)}`);
+    if (!result.ok) redirect(`/dashboard/social?error=${encodeURIComponent(result.error)}`);
   } catch {
-    redirect("/dashboard?error=" + encodeURIComponent("The network could not be reached. The profile figures were not changed."));
+    redirect("/dashboard/social?error=" + encodeURIComponent("The network could not be reached. The profile figures were not changed."));
   }
-  redirect("/dashboard?social=synced");
+  redirect("/dashboard/social?social=synced");
 }
 
 export async function actionDisconnectSocial(formData: FormData) {
@@ -55,9 +55,9 @@ export async function actionDisconnectSocial(formData: FormData) {
   const platform = String(formData.get("platform") ?? "");
   try {
     const result = await disconnectSocial({ slug, platform });
-    if (!result.ok) redirect(`/dashboard?error=${encodeURIComponent(result.error)}`);
+    if (!result.ok) redirect(`/dashboard/social?error=${encodeURIComponent(result.error)}`);
   } catch {
-    redirect("/dashboard?error=" + encodeURIComponent("Social connection is unavailable. Nothing was disconnected."));
+    redirect("/dashboard/social?error=" + encodeURIComponent("Social connection is unavailable. Nothing was disconnected."));
   }
-  redirect("/dashboard?social=disconnected");
+  redirect("/dashboard/social?social=disconnected");
 }
