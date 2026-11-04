@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { canAccessModule, getAdminSession, type AdminModule } from "@/lib/admin-auth";
 import { AdminShell, AdminSidebar, AdminTopBar, type AdminNavGroup } from "@/components/admin-shell";
 
@@ -45,6 +46,8 @@ const SIDE_GROUPS: SideGroup[] = [
         module: "accounts",
         icon: "bizAccounts",
       },
+      { href: "/admin/accounts?tab=all", label: "All accounts", module: "accounts", icon: "agency" },
+      { href: "/admin/accounts?tab=admin", label: "Admin accounts", module: "access", icon: "access" },
       { href: "/admin/invitations", label: "Invitations", module: "invitations", icon: "invites" },
       { href: "/admin/access", label: "Access levels", module: "access", icon: "access" },
       { href: "/admin/agency", label: "Agency", module: "agency", icon: "agency" },
@@ -129,7 +132,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       topBar={
         <AdminTopBar name={session.name} email={session.email} roleName={session.roleName} />
       }
-      sidebar={<AdminSidebar groups={groups} roleName={session.roleName} />}
+      sidebar={
+        <Suspense fallback={<div className="w-[240px] shrink-0 border-r border-[#E4EBFF] bg-white" />}>
+          <AdminSidebar groups={groups} roleName={session.roleName} />
+        </Suspense>
+      }
     >
       {children}
     </AdminShell>
