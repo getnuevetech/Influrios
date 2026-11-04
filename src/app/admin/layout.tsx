@@ -45,6 +45,8 @@ const SIDE_GROUPS: SideGroup[] = [
         module: "accounts",
         icon: "bizAccounts",
       },
+      { href: "/admin/accounts?tab=all", label: "All accounts", module: "accounts", icon: "agency" },
+      { href: "/admin/accounts?tab=admin", label: "Admin accounts", module: "access", icon: "access" },
       { href: "/admin/invitations", label: "Invitations", module: "invitations", icon: "invites" },
       { href: "/admin/access", label: "Access levels", module: "access", icon: "access" },
       { href: "/admin/agency", label: "Agency", module: "agency", icon: "agency" },

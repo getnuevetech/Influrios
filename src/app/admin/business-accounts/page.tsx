@@ -1,56 +1,90 @@
-import Link from "next/link";
-import { AdminAccountSection } from "@/app/admin/accounts/account-section";
-import { loadAdminAccounts } from "@/app/admin/accounts/load-accounts";
+import { AdminUserAccountsView } from "@/components/admin-accounts-ui";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
+import {
+  loadAccountById,
+  loadAccountDetailExtras,
+  loadAccountKpis,
+  loadAccountTable,
+} from "@/lib/admin-accounts";
 import { assignablePlanCodes } from "@/lib/entitlements-db";
 import { getSiteConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Business accounts" };
+export const metadata = { title: "Business Accounts · Admin" };
 
-const BUSINESS_ROLES = ["BUSINESS", "AGENCY"] as const;
 const FALLBACK_PLANS = ["BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];
+
+type Search = {
+  q?: string;
+  status?: string;
+  plan?: string;
+  page?: string;
+  id?: string;
+  saved?: string;
+  error?: string;
+  reset?: string;
+};
 
 export default async function AdminBusinessAccountsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string; reset?: string }>;
+  searchParams: Promise<Search>;
 }) {
   const session = await requireAdminPage("accounts");
   const canEdit = hasPermission(session, "accounts.edit");
   const params = await searchParams;
+  const page = Math.max(1, Number(params.page) || 1);
   const policy = await getSiteConfig();
   const catalogPlans = await assignablePlanCodes().catch(() => FALLBACK_PLANS);
   const businessPlans = catalogPlans.filter(
     (code) => code.startsWith("BUSINESS") || code === "AGENCY",
   );
-  const users = await loadAdminAccounts([...BUSINESS_ROLES]);
+
+  const [kpis, table] = await Promise.all([
+    loadAccountKpis(),
+    loadAccountTable({
+      tab: "business",
+      q: params.q,
+      status: (params.status as "active" | "suspended" | "all") || "all",
+      plan: params.plan,
+      page,
+      pageSize: 8,
+      selectedId: params.id,
+    }),
+  ]);
+
+  let selectedRow =
+    (params.id ? table.rows.find((r) => r.id === params.id) : table.rows[0]) || null;
+  if (params.id && (!selectedRow || selectedRow.id !== params.id)) {
+    selectedRow = await loadAccountById(params.id);
+    if (selectedRow && selectedRow.role === "CREATOR") selectedRow = null;
+  }
+  const detail = selectedRow ? await loadAccountDetailExtras(selectedRow.id) : null;
 
   return (
-    <AdminAccountSection
-      kind="business"
-      title="Business accounts"
-      blurb={
-        <>
-          Business and agency sign-ins only. Influencer accounts are on{" "}
-          <Link href="/admin/accounts" className="font-semibold text-violet">
-            Influencer accounts
-          </Link>
-          . Guest view and search limits are on{" "}
-          <Link href="/admin/guests" className="font-semibold text-violet">
-            Guest gates
-          </Link>
-          . The admin console itself is managed under Access levels.
-        </>
-      }
-      otherHref="/admin/accounts"
-      otherLabel="Influencer accounts"
-      users={users}
-      roleOptions={[...BUSINESS_ROLES]}
+    <AdminUserAccountsView
+      tab="business"
+      basePath="/admin/business-accounts"
+      kpis={kpis}
+      rows={table.rows}
+      total={table.total}
+      page={table.page}
+      pageSize={table.pageSize}
+      filters={{
+        q: params.q,
+        status: params.status,
+        plan: params.plan,
+      }}
+      selected={selectedRow}
+      detail={detail}
       planOptions={businessPlans.length ? businessPlans : FALLBACK_PLANS}
+      roleOptions={["BUSINESS", "AGENCY"]}
       canEdit={canEdit}
-      params={params}
+      canManageAdmins={false}
+      adminRows={[]}
+      adminRoles={[]}
+      flash={{ saved: params.saved, error: params.error, reset: params.reset }}
       policy={{
         consentVersion: policy.consentVersion,
         consentCopy: policy.consentCopy,
