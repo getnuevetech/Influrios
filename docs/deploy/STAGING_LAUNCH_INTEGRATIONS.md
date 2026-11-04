@@ -179,8 +179,8 @@ Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the 
 | Held | ☐ |
 | Released | ☐ |
 | Duplicate skipped | ☐ |
-| Host script | `npm run staging:e6-marketplace-evidence` |
-| Notes | |
+| Host script | `npm run staging:e6-check-ready` then `staging:e6-marketplace-evidence` |
+| Notes | Phase M closeout — E6 is the active row |
 
 ---
 
@@ -372,7 +372,20 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 # */2 * * * * APP_DIR=/var/www/influrios /var/www/influrios/deploy/scripts/watch-health.sh >>/var/log/influrios-watch-health.log 2>&1
 ```
 
-### E6 progress (Marketplace hold → release / Airwallex) — **in progress** (host healthy; Airwallex secret path ready)
+### Phase M closeout — **active** (E6 first)
+
+E1–E5 are complete. Remaining Phase M exit-table work, in order:
+
+1. **E6** Airwallex hold → release + duplicate (this section)  
+2. Recurring tranche 2  
+3. Team proposal (two creators accept + funding id)  
+4. DocuSign envelope completed once  
+5. Flutterwave or M-Pesa charge paid only by webhook  
+6. Intro fee + paid mentorship Checkout (no CollaborationFunding row)
+
+Do not start Phase O product polish until this exit table is signed.
+
+### E6 progress (Marketplace hold → release / Airwallex) — **in progress** (Phase M closeout)
 
 **Goal:** Airwallex webhook secret ready · US jurisdiction · `funding.held` · milestone `payout.released` · duplicate event skipped.
 
@@ -382,7 +395,7 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 |-------|--------|
 | Airwallex gateway Ready (client + key + base URL + webhook secret) | ☑ inferred — unsigned webhook returns **401** (not 503) |
 | Unsigned webhook → 401 (or 503 until Ready) | ☑ `POST /api/marketplace/webhook` + `x-influrios-provider: airwallex` → **401** `Signature did not match.` · reconfirmed `2026-11-02T10:47Z` |
-| US jurisdiction protected + APPROVED | ☐ confirm on host `staging:e6-marketplace-evidence` |
+| US jurisdiction protected + APPROVED | ☐ `npm run staging:e6-check-ready` on host |
 | Funding `awaiting_provider` → `held` | ☐ funding id · held event id |
 | Milestone approved then `payout.released` | ☐ milestone id · release event id |
 | Duplicate release skipped | ☐ |
@@ -390,6 +403,8 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 
 ```bash
 cd /var/www/influrios
+# Closeout gate — exit 0 only when health + Airwallex 401 + US protected + APPROVED:
+npm run staging:e6-check-ready
 npm run staging:e6-marketplace-evidence
 # After Airwallex secret is known on the host:
 AIRWALLEX_WEBHOOK_SECRET=… FUNDING_ID=… npm run staging:e6-marketplace-evidence -- --prove-hold
@@ -403,11 +418,12 @@ AIRWALLEX_WEBHOOK_SECRET=… FUNDING_ID=… MILESTONE_ID=… AMOUNT_CENTS=… EV
 Operator path:
 1. Admin → **Gateways → Airwallex** → save demo credentials + webhook secret → Enabled.
 2. Admin → **Marketplace** → US: protected payments + legal APPROVED.
-3. As a business, create a collaboration prefund that reaches `awaiting_provider`.
-4. Host: `--prove-hold` with `AIRWALLEX_WEBHOOK_SECRET` + `FUNDING_ID` (or pick latest awaiting).
-5. Approve first milestone in the collab UI.
-6. Host: `--prove-release` then `--prove-duplicate` with the same `EVENT_ID`.
-7. Re-run `staging:e6-marketplace-evidence` and paste ids into this section + the §5 table.
+3. Host: `npm run staging:e6-check-ready` (must exit 0).
+4. As a business, create a collaboration prefund that reaches `awaiting_provider`.
+5. Host: `--prove-hold` with `AIRWALLEX_WEBHOOK_SECRET` + `FUNDING_ID` (or pick latest awaiting).
+6. Approve first milestone in the collab UI.
+7. Host: `--prove-release` then `--prove-duplicate` with the same `EVENT_ID`.
+8. Re-run `staging:e6-marketplace-evidence` and paste ids into this section + the §5 table.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|

@@ -5,6 +5,7 @@
 # Usage (from /var/www/influrios):
 #   npm run staging:e6-marketplace-evidence
 #   bash scripts/staging-e6-marketplace-evidence.sh
+#   npm run staging:e6-check-ready          # Phase M closeout gate (exit 0 only when ready)
 #
 # Optional prove (posts signed webhooks; needs a funding in awaiting_provider):
 #   FUNDING_ID=… AIRWALLEX_WEBHOOK_SECRET=… bash scripts/staging-e6-marketplace-evidence.sh --prove-hold
@@ -22,6 +23,7 @@ MODE="collect"
 if [[ "${1:-}" == "--prove-hold" ]]; then MODE="prove-hold"; fi
 if [[ "${1:-}" == "--prove-release" ]]; then MODE="prove-release"; fi
 if [[ "${1:-}" == "--prove-duplicate" ]]; then MODE="prove-duplicate"; fi
+if [[ "${1:-}" == "--check-ready" ]]; then MODE="check-ready"; fi
 
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "${APP_DIR}"
@@ -160,6 +162,63 @@ else
   done
 fi
 echo
+
+if [[ "${MODE}" == "check-ready" ]]; then
+  echo "### Phase M E6 readiness (closeout gate)"
+  echo
+  READY=1
+  US_ROW="$(psql -At -F '|' -c "
+SELECT
+  CASE WHEN \"protectedPaymentsEnabled\" THEN 'yes' ELSE 'no' END,
+  \"legalReviewStatus\",
+  COALESCE(NULLIF(\"providerCode\", ''), '—')
+FROM \"CollaborationJurisdiction\"
+WHERE code = 'US'
+LIMIT 1;
+" 2>/dev/null || true)"
+  if [[ -z "${US_ROW}" ]]; then
+    echo "| Gate | Result | Detail |"
+    echo "|------|--------|--------|"
+    echo "| US jurisdiction row | FAIL | no CollaborationJurisdiction code=US |"
+    READY=0
+  else
+    IFS='|' read -r us_protected us_legal us_provider <<<"${US_ROW}"
+    echo "| Gate | Result | Detail |"
+    echo "|------|--------|--------|"
+    echo "| Host /api/health | pass | HTTP ${HEALTH_CODE} |"
+    if [[ "${WH_CODE}" == "401" ]]; then
+      echo "| Airwallex unsigned webhook | pass | HTTP 401 (secret path ready) |"
+    elif [[ "${WH_CODE}" == "503" ]]; then
+      echo "| Airwallex unsigned webhook | FAIL | HTTP 503 — enable Airwallex + webhook secret |"
+      READY=0
+    else
+      echo "| Airwallex unsigned webhook | FAIL | HTTP ${WH_CODE:-?} — expected 401 |"
+      READY=0
+    fi
+    if [[ "${us_protected}" == "yes" ]]; then
+      echo "| US protected payments | pass | enabled |"
+    else
+      echo "| US protected payments | FAIL | Admin → Marketplace → US: turn on protected payments |"
+      READY=0
+    fi
+    if [[ "${us_legal}" == "APPROVED" ]]; then
+      echo "| US legal review | pass | APPROVED |"
+    else
+      echo "| US legal review | FAIL | status=${us_legal:-?} — set legal APPROVED |"
+      READY=0
+    fi
+    echo "| US provider code | note | ${us_provider} (prefer airwallex) |"
+  fi
+  AWAITING="$(psql -At -c "SELECT count(*)::text FROM \"CollaborationFunding\" WHERE status = 'awaiting_provider';" 2>/dev/null || echo 0)"
+  echo "| Fundings awaiting_provider | note | ${AWAITING} (need ≥1 before --prove-hold) |"
+  echo
+  if [[ "${READY}" -eq 1 ]]; then
+    echo "E6 READY — next: create awaiting_provider funding (if none), then --prove-hold / --prove-release / --prove-duplicate."
+    exit 0
+  fi
+  echo "E6 NOT READY — fix FAIL rows above, then re-run: npm run staging:e6-check-ready"
+  exit 1
+fi
 
 echo "### Recent CollaborationFunding"
 echo
