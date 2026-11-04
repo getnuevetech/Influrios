@@ -1,8 +1,12 @@
-import Link from "next/link";
-import { actionAdminLogout } from "@/app/admin/actions-auth";
 import { canAccessModule, getAdminSession, type AdminModule } from "@/lib/admin-auth";
+import { AdminShell, AdminSidebar, AdminTopBar, type AdminNavGroup } from "@/components/admin-shell";
 
-type SideLink = { href: string; label: string; module?: AdminModule | "dashboard" };
+type SideLink = {
+  href: string;
+  label: string;
+  module?: AdminModule | "dashboard";
+  icon?: string;
+};
 
 type SideGroup = { name: string; links: SideLink[] };
 
@@ -10,75 +14,100 @@ const SIDE_GROUPS: SideGroup[] = [
   {
     name: "Main menu",
     links: [
-      { href: "/admin", label: "Dashboard", module: "dashboard" },
-      { href: "/admin/banners", label: "Banners", module: "banners" },
-      { href: "/admin/value-prop", label: "Value proposition", module: "banners" },
-      { href: "/admin/homepage", label: "Homepage", module: "banners" },
-      { href: "/admin/collaboration-landing", label: "Collaboration landing", module: "banners" },
-      { href: "/admin/business-landing", label: "Business landing", module: "banners" },
-      { href: "/admin/faq", label: "FAQ", module: "banners" },
-      { href: "/admin/stats", label: "Site stats", module: "banners" },
-      { href: "/admin/cards", label: "Influencer cards", module: "cards" },
+      { href: "/admin", label: "Dashboard", module: "dashboard", icon: "home" },
+      { href: "/admin/banners", label: "Banners", module: "banners", icon: "banners" },
+      { href: "/admin/value-prop", label: "Value proposition", module: "banners", icon: "value" },
+      { href: "/admin/homepage", label: "Homepage", module: "banners", icon: "homepage" },
+      {
+        href: "/admin/collaboration-landing",
+        label: "Collaboration landing",
+        module: "banners",
+        icon: "collab",
+      },
+      {
+        href: "/admin/business-landing",
+        label: "Business landing",
+        module: "banners",
+        icon: "business",
+      },
+      { href: "/admin/faq", label: "FAQ", module: "banners", icon: "faq" },
+      { href: "/admin/stats", label: "Site stats", module: "banners", icon: "stats" },
+      { href: "/admin/cards", label: "Influencer cards", module: "cards", icon: "cards" },
     ],
   },
   {
     name: "Members & access",
     links: [
-      { href: "/admin/accounts", label: "Influencer accounts", module: "accounts" },
-      { href: "/admin/business-accounts", label: "Business accounts", module: "accounts" },
-      { href: "/admin/invitations", label: "Invitations", module: "invitations" },
-      { href: "/admin/access", label: "Access levels", module: "access" },
-      { href: "/admin/agency", label: "Agency", module: "agency" },
-      { href: "/admin/guests", label: "Guest gates", module: "plans" },
+      { href: "/admin/accounts", label: "Influencer accounts", module: "accounts", icon: "accounts" },
+      {
+        href: "/admin/business-accounts",
+        label: "Business accounts",
+        module: "accounts",
+        icon: "bizAccounts",
+      },
+      { href: "/admin/invitations", label: "Invitations", module: "invitations", icon: "invites" },
+      { href: "/admin/access", label: "Access levels", module: "access", icon: "access" },
+      { href: "/admin/agency", label: "Agency", module: "agency", icon: "agency" },
+      { href: "/admin/guests", label: "Guest gates", module: "plans", icon: "guests" },
     ],
   },
   {
     name: "Plans & billing",
     links: [
-      { href: "/admin/billing", label: "Billing", module: "billing" },
-      { href: "/admin/plans", label: "Plan entitlements", module: "plans" },
+      { href: "/admin/billing", label: "Billing", module: "billing", icon: "billing" },
+      { href: "/admin/plans", label: "Plan entitlements", module: "plans", icon: "plans" },
     ],
   },
   {
     name: "Collaborations",
     links: [
-      { href: "/admin/collaborations", label: "Collaborations", module: "collaborations" },
-      { href: "/admin/marketplace-listings", label: "Marketplace listings", module: "collaborations" },
-      { href: "/admin/marketplace", label: "Marketplace ledger", module: "marketplace" },
-      { href: "/admin/matching", label: "Managed Matching", module: "matching" },
-      { href: "/admin/intelligence", label: "Intelligence", module: "intelligence" },
-      { href: "/admin/collaboration-ops", label: "Collaboration ops", module: "collab_finance" },
-      { href: "/admin/trust", label: "Trust & Disputes", module: "trust" },
+      { href: "/admin/collaborations", label: "Collaborations", module: "collaborations", icon: "collab" },
+      {
+        href: "/admin/marketplace-listings",
+        label: "Marketplace listings",
+        module: "collaborations",
+        icon: "default",
+      },
+      { href: "/admin/marketplace", label: "Marketplace ledger", module: "marketplace", icon: "billing" },
+      { href: "/admin/matching", label: "Managed Matching", module: "matching", icon: "agency" },
+      { href: "/admin/intelligence", label: "Intelligence", module: "intelligence", icon: "stats" },
+      {
+        href: "/admin/collaboration-ops",
+        label: "Collaboration ops",
+        module: "collab_finance",
+        icon: "collab",
+      },
+      { href: "/admin/trust", label: "Trust & Disputes", module: "trust", icon: "access" },
     ],
   },
   {
     name: "Payments & finance",
     links: [
-      { href: "/admin/gateways", label: "Payment gateways", module: "gateways" },
-      { href: "/admin/search", label: "Meilisearch", module: "gateways" },
-      { href: "/admin/fees", label: "Collaboration fees", module: "commerce" },
-      { href: "/admin/corridors", label: "Corridors", module: "collab_finance" },
-      { href: "/admin/kyc", label: "KYC", module: "collab_finance" },
+      { href: "/admin/gateways", label: "Payment gateways", module: "gateways", icon: "billing" },
+      { href: "/admin/search", label: "Meilisearch", module: "gateways", icon: "stats" },
+      { href: "/admin/fees", label: "Collaboration fees", module: "commerce", icon: "billing" },
+      { href: "/admin/corridors", label: "Corridors", module: "collab_finance", icon: "business" },
+      { href: "/admin/kyc", label: "KYC", module: "collab_finance", icon: "cards" },
     ],
   },
   {
     name: "Integrations & ops",
     links: [
-      { href: "/admin/ai", label: "AI pipelines", module: "ai" },
-      { href: "/admin/signing", label: "Document signing", module: "signing" },
-      { href: "/admin/contracts", label: "Contracts", module: "contracts" },
-      { href: "/admin/social", label: "Social networks", module: "social" },
-      { href: "/admin/legal", label: "Legal documents", module: "legal" },
-      { href: "/admin/short-links", label: "Short links", module: "shortlinks" },
-      { href: "/admin/referrals", label: "Referrals", module: "shortlinks" },
-      { href: "/admin/mail", label: "Email", module: "mail" },
-      { href: "/admin/jobs", label: "Jobs", module: "jobs" },
-      { href: "/admin/taxonomy", label: "Taxonomy", module: "taxonomy" },
+      { href: "/admin/ai", label: "AI pipelines", module: "ai", icon: "value" },
+      { href: "/admin/signing", label: "Document signing", module: "signing", icon: "faq" },
+      { href: "/admin/contracts", label: "Contracts", module: "contracts", icon: "faq" },
+      { href: "/admin/social", label: "Social networks", module: "social", icon: "agency" },
+      { href: "/admin/legal", label: "Legal documents", module: "legal", icon: "faq" },
+      { href: "/admin/short-links", label: "Short links", module: "shortlinks", icon: "homepage" },
+      { href: "/admin/referrals", label: "Referrals", module: "shortlinks", icon: "invites" },
+      { href: "/admin/mail", label: "Email", module: "mail", icon: "invites" },
+      { href: "/admin/jobs", label: "Jobs", module: "jobs", icon: "stats" },
+      { href: "/admin/taxonomy", label: "Taxonomy", module: "taxonomy", icon: "cards" },
     ],
   },
 ];
 
-/** Signed-in admin chrome with left sidebar (login page stays clean when no session). */
+/** Signed-in admin chrome with design top bar + left sidebar (login stays clean). */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getAdminSession();
 
@@ -86,69 +115,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return <div>{children}</div>;
   }
 
-  const groups = SIDE_GROUPS.map((group) => ({
-    ...group,
-    links: group.links.filter((l) =>
-      l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule),
-    ),
+  const groups: AdminNavGroup[] = SIDE_GROUPS.map((group) => ({
+    name: group.name,
+    links: group.links
+      .filter((l) =>
+        l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule),
+      )
+      .map((l) => ({ href: l.href, label: l.label, icon: l.icon })),
   })).filter((group) => group.links.length > 0);
 
   return (
-    <div className="min-h-screen bg-[#F5F8FF]">
-      <div className="flex min-h-screen">
-        <aside className="sticky top-0 flex h-screen w-[240px] shrink-0 flex-col border-r border-[#E4EBFF] bg-white">
-          <div className="border-b border-[#E4EBFF] px-4 py-4">
-            <Link href="/admin" className="font-display text-[15px] font-bold text-indigo">
-              Influrios Admin
-            </Link>
-            <p className="mt-1 truncate text-[11px] text-muted">
-              {session.name} · {session.roleName}
-            </p>
-          </div>
-          <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
-            {groups.map((group) => (
-              <div key={group.name}>
-                <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted">
-                  {group.name}
-                </p>
-                <div className="space-y-0.5">
-                  {group.links.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="block rounded-lg px-3 py-2 text-[13px] font-semibold text-indigo/80 hover:bg-[#EEF2FF] hover:text-violet"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </nav>
-          <div className="space-y-2 border-t border-[#E4EBFF] px-3 py-3">
-            <Link href="/" className="block text-[12px] font-semibold text-violet hover:underline">
-              ← View site
-            </Link>
-            <form action={actionAdminLogout}>
-              <button
-                type="submit"
-                className="w-full rounded-lg border border-[#E4EBFF] bg-white px-3 py-2 text-left text-[12px] font-semibold text-muted hover:text-indigo"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          <div className="border-b border-[#E4EBFF] bg-white/90 px-4 py-2.5 sm:px-6">
-            <p className="text-[12px] text-muted">
-              Admin portal · <span className="font-semibold text-indigo">{session.email}</span>
-            </p>
-          </div>
-          <div className="px-4 py-6 sm:px-6 lg:px-8">{children}</div>
-        </div>
-      </div>
-    </div>
+    <AdminShell
+      topBar={
+        <AdminTopBar name={session.name} email={session.email} roleName={session.roleName} />
+      }
+      sidebar={<AdminSidebar groups={groups} roleName={session.roleName} />}
+    >
+      {children}
+    </AdminShell>
   );
 }
