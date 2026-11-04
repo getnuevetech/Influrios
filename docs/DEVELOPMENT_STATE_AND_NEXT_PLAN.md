@@ -224,20 +224,22 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 
 **Exit met for admin + CMS + billing + intelligence + fee rules:** fresh Compose with empty `data/` boots those paths from Postgres. Remaining JSON demos (`protected-payments`, `trust`) stay quarantined / optional.
 
-### Phase M — Launch integrations — RUNBOOK + PROBE SHIPPED (evidence pending)
+### Phase M — Launch integrations — **CLOSEOUT IN PROGRESS** (E6 active)
 
 **Proves:** Spec §33 items 8–10 with real providers in a staging environment.
 
-1. Staging env checklist (secrets, DNS, webhook URLs).  
-2. SMTP: invite + verify delivered; jobs retry visible.  
-3. Stripe sandbox: Checkout → webhook → `User.planTier` / entitlement snapshot; duplicate webhook skipped.  
-4. One social OAuth: consent → callback → followers/likes only when both present.  
-5. Turn `demo_checkout` off on staging once Stripe path is green.  
-6. Marketplace: one jurisdiction + provider webhook fixture through hold → release.
+1. ~~Staging env checklist (secrets, DNS, webhook URLs).~~ **Done** (probe 8/8).  
+2. ~~SMTP: invite + verify delivered; jobs retry visible.~~ **Done (E2).**  
+3. ~~Stripe sandbox: Checkout → webhook → plan; duplicate skipped.~~ **Done (E4).**  
+4. ~~One social OAuth.~~ **Done (E3).**  
+5. ~~Meilisearch counts.~~ **Done (E5).** · Sweep clock **Done (E1).**  
+6. **Marketplace hold → release (E6)** — **active closeout** · `npm run staging:e6-check-ready` then `--prove-*`.
 
-**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/staging-evidence-probe.mjs`, `scripts/marketplace-webhook-fixture.ts`.
+**Closeout order (remaining exit-table rows after E6):** Airwallex hold/release → recurring tranche 2 → team proposal → DocuSign → Flutterwave/M-Pesa → intro fee + paid mentorship.
 
-**Exit:** staging operator fills the green evidence tables in that runbook; production switches match the policy table. **Not complete until evidence is signed — CI alone does not finish Phase M.** Auto-probe covers health / homepage / guest collab CTAs only.
+**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/staging-evidence-probe.mjs`, `scripts/marketplace-webhook-fixture.ts`, `scripts/staging-e6-marketplace-evidence.sh`.
+
+**Exit:** staging operator fills every green evidence cell in that runbook; production switches match the policy table. **Not complete until evidence is signed — CI alone does not finish Phase M.** Phase O polish waits until this exit is signed.
 
 ### Phase N — Hardening & observability — DONE (code + docs)
 

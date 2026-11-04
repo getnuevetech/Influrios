@@ -118,17 +118,24 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /indexed=3 postgres=3/);
     // E6 Marketplace / Airwallex hold → release evidence path.
     assert.equal(pkg.scripts["staging:e6-marketplace-evidence"], "bash scripts/staging-e6-marketplace-evidence.sh");
+    assert.equal(pkg.scripts["staging:e6-check-ready"], "bash scripts/staging-e6-marketplace-evidence.sh --check-ready");
     assert.equal(existsSync("scripts/staging-e6-marketplace-evidence.sh"), true);
     assert.match(runbook, /### E6 progress \(Marketplace hold → release \/ Airwallex\)/);
+    assert.match(runbook, /Phase M closeout — \*\*active\*\*/);
     assert.match(runbook, /staging:e6-marketplace-evidence/);
+    assert.match(runbook, /staging:e6-check-ready/);
     assert.match(readFileSync("scripts/marketplace-webhook-fixture.ts", "utf8"), /format=airwallex/);
+    const e6 = readFileSync("scripts/staging-e6-marketplace-evidence.sh", "utf8");
+    assert.match(e6, /--check-ready/);
+    assert.match(e6, /E6 READY/);
+    assert.match(e6, /legalReviewStatus/);
     // Host flapped then recovered again; E6 script still refuses prove without health.
     assert.match(runbook, /Host outage \(2026-11-02\)/);
     assert.match(runbook, /flapped to \*\*502\*\* again|flapped to 502 again/);
     assert.match(runbook, /2026-11-02T06:55:20Z/);
     assert.match(runbook, /2026-11-02T10:47:43Z/);
     assert.match(runbook, /watch-health\.sh/);
-    assert.match(readFileSync("scripts/staging-e6-marketplace-evidence.sh", "utf8"), /ERROR: web is not healthy/);
+    assert.match(e6, /ERROR: web is not healthy/);
     assert.equal(existsSync("deploy/scripts/watch-health.sh"), true);
   });
 

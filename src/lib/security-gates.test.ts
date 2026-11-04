@@ -65,9 +65,13 @@ describe("W0–W2 security gates", () => {
     assert.match(runbook, /Signature did not match/);
     assert.match(runbook, /watch-health\.sh/);
     assert.match(runbook, /Start funding/);
+    assert.match(runbook, /Phase M closeout — \*\*active\*\*/);
+    assert.match(runbook, /staging:e6-check-ready/);
     const e6 = src("scripts/staging-e6-marketplace-evidence.sh");
     assert.match(e6, /\/api\/health/);
     assert.match(e6, /ERROR: web is not healthy/);
+    assert.match(e6, /--check-ready/);
+    assert.match(e6, /E6 READY/);
     assert.match(src("deploy/scripts/diagnose-502.sh"), /staging-evidence-probe/);
     assert.match(src("deploy/scripts/diagnose-502.sh"), /watch-health\.sh/);
     assert.equal(existsSync("deploy/scripts/watch-health.sh"), true);
