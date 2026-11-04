@@ -29,7 +29,8 @@ describe("return path", () => {
     assert.equal(safeNextPath("//evil.example"), "/creator");
     assert.equal(safeNextPath(""), "/creator");
     assert.equal(safeNextPath("/"), "/creator");
-    assert.equal(safeNextPath("/dashboard"), "/creator");
+    assert.equal(safeNextPath("/dashboard"), "/dashboard");
+    assert.equal(safeNextPath("/dashboard/details"), "/dashboard/details");
     assert.equal(safeNextPath("/business/home"), "/business/home");
     assert.equal(safeNextPath("//evil.example", "/admin"), "/admin");
   });

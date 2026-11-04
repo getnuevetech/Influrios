@@ -1114,15 +1114,17 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
   if (session) return draftFromSession(session);
 
   // Published creator without a surviving session row — synthesize a published draft for the dashboard.
+  // Socials are optional here: My Profile must still open before networks are connected.
   const chosen = enteredProfilePlatform(creator.socialAccounts);
-  if (!chosen.ok) return null;
+  const platform = chosen.ok ? chosen.platform : ("INSTAGRAM" as SeedSocial["platform"]);
+  const handle = chosen.ok ? chosen.handle || creator.slug : creator.slug;
   const now = new Date().toISOString();
   return {
     id: `creator_${creator.id}`,
     slug: creator.slug,
     stage: "published",
-    inputHandle: chosen.handle || creator.slug,
-    platform: chosen.platform,
+    inputHandle: handle,
+    platform,
     displayName: creator.displayName,
     title: creator.title ?? "",
     bio: creator.bio ?? "",
