@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  ADMIN_SESSION_COOKIE,
+  adminSessionCookieLooksValid,
+  edgeAdminSessionSecret,
+} from "@/lib/admin-session-edge";
 import { REFERRAL_COOKIE, referralId } from "@/lib/referral-cookie";
 import { isShortLinkHost, normalizeShortHost } from "@/lib/short-link-hosts";
 
-/** Cookie name must match ADMIN_COOKIE in admin-auth.ts */
-const ADMIN_COOKIE = "influrios_admin_session";
 const GUEST_COOKIE = "influrios_guest";
 
 /**
- * Edge-safe gate: require an admin session cookie for /admin/* except login.
- * Also mint a guest id so profile and search limits can be counted in Node.
+ * Edge-safe gate: require a valid signed admin session cookie for /admin/*
+ * (except login). Also mint a guest id so profile and search limits can be
+ * counted in Node.
  */
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
   if (isShortLinkHost(host)) {
@@ -36,10 +40,18 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/admin") &&
     pathname !== "/admin/login" &&
     !pathname.startsWith("/admin/login/");
-  const response =
-    needsAdmin && !req.cookies.get(ADMIN_COOKIE)?.value
-      ? NextResponse.redirect(new URL(`/admin/login?next=${encodeURIComponent(pathname)}`, req.url))
-      : NextResponse.next({ request: { headers: requestHeaders } });
+  if (needsAdmin) {
+    const token = req.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+    const secret = edgeAdminSessionSecret();
+    const ok = await adminSessionCookieLooksValid(token, secret);
+    if (!ok) {
+      return NextResponse.redirect(
+        new URL(`/admin/login?next=${encodeURIComponent(pathname)}`, req.url),
+      );
+    }
+  }
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
 
   // Do not mint a cookie on /admin. That response is also the login action, and a
   // second Set-Cookie here was competing with the admin session cookie.

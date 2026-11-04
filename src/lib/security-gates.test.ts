@@ -93,4 +93,15 @@ describe("W0–W2 security gates", () => {
     assert.match(adminAuth, /permissionVersion/);
     assert.match(adminAuth, /getAdminSession[\s\S]*resolveAdminSession/);
   });
+
+  it("verifies admin cookie HMAC at the Edge middleware (not presence alone)", () => {
+    const middleware = src("src/middleware.ts");
+    assert.match(middleware, /adminSessionCookieLooksValid/);
+    assert.match(middleware, /edgeAdminSessionSecret/);
+    assert.match(middleware, /ADMIN_SESSION_COOKIE/);
+    assert.equal(middleware.includes("!req.cookies.get(ADMIN_COOKIE)?.value"), false);
+    assert.equal(existsSync("src/lib/admin-session-edge.ts"), true);
+    assert.match(src("src/lib/admin-session-edge.ts"), /crypto\.subtle/);
+    assert.match(src("src/lib/admin-auth.ts"), /ADMIN_SESSION_COOKIE/);
+  });
 });
