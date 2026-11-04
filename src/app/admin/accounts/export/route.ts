@@ -19,9 +19,6 @@ export async function GET(request: Request) {
   await requireAdminPage("accounts");
   const url = new URL(request.url);
   const tab = parseTab(url.searchParams.get("tab"));
-  if (tab === "admin") {
-    return NextResponse.json({ error: "Use Access levels for admin export." }, { status: 400 });
-  }
   const q = url.searchParams.get("q") || undefined;
   const status = (url.searchParams.get("status") as "active" | "suspended" | "all") || "all";
   const plan = url.searchParams.get("plan") || undefined;

@@ -7,7 +7,6 @@ describe("admin accounts helpers", () => {
     const cases: Array<[AccountsTab, string]> = [
       ["influencer", "/admin/accounts"],
       ["all", "/admin/accounts"],
-      ["admin", "/admin/accounts"],
       ["business", "/admin/business-accounts"],
     ];
     for (const [tab, path] of cases) {

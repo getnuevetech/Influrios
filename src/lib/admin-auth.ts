@@ -1017,6 +1017,40 @@ export async function createAdminRole(input: {
   return role;
 }
 
+export async function updateAdminRole(input: {
+  roleId: string;
+  name: string;
+  description: string;
+  permissions: AdminPermission[];
+}) {
+  const store = await ensureStore();
+  const role = store.roles.find((r) => r.id === input.roleId);
+  if (!role) throw new Error("Role not found");
+  if (role.system) throw new Error("System roles cannot be renamed or have permissions rewritten here");
+  const permissions = expandPermissions(input.permissions);
+  if (!permissions.length) throw new Error("Select at least one feature permission");
+  role.name = input.name.trim();
+  role.description = input.description.trim();
+  role.permissions = permissions;
+  // Force sessions on this role to re-auth after permission changes.
+  for (const user of store.users) {
+    if (user.roleId === role.id) bumpPermissionVersion(user);
+  }
+  await saveStore(store);
+  return role;
+}
+
+export async function duplicateAdminRole(roleId: string) {
+  const store = await ensureStore();
+  const source = store.roles.find((r) => r.id === roleId);
+  if (!source) throw new Error("Role not found");
+  return createAdminRole({
+    name: `${source.name} (copy)`,
+    description: source.description,
+    permissions: [...source.permissions],
+  });
+}
+
 export async function createAdminUser(input: {
   email: string;
   name: string;
