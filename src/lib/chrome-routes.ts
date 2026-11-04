@@ -29,5 +29,7 @@ export function hidesMarketingChrome(pathname: string): boolean {
   if (pathname.startsWith("/business/intelligence")) return true;
   if (pathname.startsWith("/payments")) return true;
   if (pathname.startsWith("/account")) return true;
+  // Admin draws AdminTopBar + sidebar; avoid stacking the marketing SiteHeader.
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return true;
   return false;
 }
