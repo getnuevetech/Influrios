@@ -81,9 +81,6 @@ export default async function AdminBusinessAccountsPage({
       planOptions={businessPlans.length ? businessPlans : FALLBACK_PLANS}
       roleOptions={["BUSINESS", "AGENCY"]}
       canEdit={canEdit}
-      canManageAdmins={false}
-      adminRows={[]}
-      adminRoles={[]}
       flash={{ saved: params.saved, error: params.error, reset: params.reset }}
       policy={{
         consentVersion: policy.consentVersion,

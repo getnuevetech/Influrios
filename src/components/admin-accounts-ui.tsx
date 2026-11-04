@@ -16,12 +16,10 @@ import type {
   AccountKpis,
   AccountTableRow,
   AccountsTab,
-  AdminConsoleRow,
 } from "@/lib/admin-accounts";
 import {
   IconArrowRight,
   IconBuilding,
-  IconCheck,
   IconDots,
   IconIdCard,
   IconMail,
@@ -113,9 +111,6 @@ export function AdminUserAccountsView({
   planOptions,
   roleOptions,
   canEdit,
-  canManageAdmins,
-  adminRows,
-  adminRoles,
   flash,
   policy,
 }: {
@@ -137,9 +132,6 @@ export function AdminUserAccountsView({
   planOptions: string[];
   roleOptions: string[];
   canEdit: boolean;
-  canManageAdmins: boolean;
-  adminRows: AdminConsoleRow[];
-  adminRoles: { id: string; name: string }[];
   flash: { saved?: string; error?: string; reset?: string };
   policy: { consentVersion: string; consentCopy: string; passwordMinLength: number };
 }) {
@@ -296,13 +288,12 @@ export function AdminUserAccountsView({
         })}
       </section>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {(
           [
             ["influencer", "Influencer Accounts", "/admin/accounts"],
             ["business", "Business Accounts", "/admin/business-accounts"],
             ["all", "All Accounts", "/admin/accounts?tab=all"],
-            ["admin", "Admin Accounts", "/admin/accounts?tab=admin"],
           ] as const
         ).map(([id, label, href]) => (
           <Link
@@ -317,16 +308,15 @@ export function AdminUserAccountsView({
             {label}
           </Link>
         ))}
+        <Link
+          href="/admin/admin-users"
+          className="rounded-full border border-dashed border-[#E4EBFF] px-4 py-2 text-[13px] font-semibold text-violet hover:border-violet/40"
+        >
+          Admin users →
+        </Link>
       </div>
 
-      {tab === "admin" ? (
-        <AdminAccountsPanel
-          rows={adminRows}
-          roles={adminRoles}
-          canManage={canManageAdmins}
-        />
-      ) : (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="min-w-0 space-y-3">
             <form
               className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#E4EBFF] bg-white p-3 shadow-sm"
@@ -589,8 +579,7 @@ export function AdminUserAccountsView({
               </div>
             )}
           </aside>
-        </div>
-      )}
+      </div>
 
       <details className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
         <summary className="cursor-pointer font-display text-sm font-bold text-indigo">
@@ -980,86 +969,6 @@ function RowLink({
           {linkLabel}
         </Link>
       ) : null}
-    </div>
-  );
-}
-
-function AdminAccountsPanel({
-  rows,
-  roles,
-  canManage,
-}: {
-  rows: AdminConsoleRow[];
-  roles: { id: string; name: string }[];
-  canManage: boolean;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted">
-          Console operators (AdminUser). Role permissions are edited on Access levels.
-        </p>
-        <Link href="/admin/access" className="text-[12px] font-semibold text-violet hover:underline">
-          Open Access levels →
-        </Link>
-      </div>
-      <div className="overflow-hidden rounded-2xl border border-[#E4EBFF] bg-white shadow-sm">
-        <table className="min-w-full text-left text-[13px]">
-          <thead className="bg-[#F7F9FF] text-[11px] font-bold uppercase tracking-wide text-muted">
-            <tr>
-              <th className="px-4 py-3">Admin</th>
-              <th className="px-4 py-3">Access level</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Joined</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-t border-[#EEF2FF]">
-                <td className="px-4 py-3">
-                  <p className="font-semibold text-indigo">{row.name}</p>
-                  <p className="text-[11px] text-muted">{row.email}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="rounded-full bg-[#EEE8FF] px-2 py-0.5 text-[11px] font-semibold text-violet">
-                    {row.roleName}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      row.active ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
-                    }`}
-                  >
-                    {row.active ? "Active" : "Disabled"}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-muted">{row.createdAt.slice(0, 10)}</td>
-                <td className="px-4 py-3">
-                  {canManage ? (
-                    <Link href="/admin/access" className="text-[12px] font-semibold text-violet">
-                      Manage
-                    </Link>
-                  ) : (
-                    <span className="text-[12px] text-muted">View only</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {roles.length ? (
-        <p className="text-[11px] text-muted">
-          {roles.length} access level{roles.length === 1 ? "" : "s"} defined · create admins on Access
-          levels.
-        </p>
-      ) : null}
-      <div className="flex items-center gap-2 text-[12px] text-muted">
-        <IconCheck size={14} className="text-emerald-600" />
-        Same design language as member accounts — manage operators without leaving Account Management.
-      </div>
     </div>
   );
 }

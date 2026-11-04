@@ -5,7 +5,7 @@
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
-export type AccountsTab = "influencer" | "business" | "all" | "admin";
+export type AccountsTab = "influencer" | "business" | "all";
 
 export type AccountListFilters = {
   tab: AccountsTab;
@@ -124,11 +124,10 @@ function daysAgo(n: number) {
   return d;
 }
 
-function rolesForTab(tab: AccountsTab): UserRole[] | null {
+function rolesForTab(tab: AccountsTab): UserRole[] {
   if (tab === "influencer") return ["CREATOR"];
   if (tab === "business") return ["BUSINESS", "AGENCY"];
-  if (tab === "all") return ["CREATOR", "BUSINESS", "AGENCY"];
-  return null;
+  return ["CREATOR", "BUSINESS", "AGENCY"];
 }
 
 function publicAccountId(role: string, id: string) {
@@ -207,9 +206,6 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
   pageSize: number;
 }> {
   const roles = rolesForTab(filters.tab);
-  if (!roles) {
-    return { rows: [], total: 0, page: 1, pageSize: filters.pageSize ?? 8 };
-  }
 
   const pageSize = Math.min(Math.max(filters.pageSize ?? 8, 1), 50);
   const page = Math.max(filters.page ?? 1, 1);

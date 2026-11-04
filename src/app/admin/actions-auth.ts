@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -8,10 +9,12 @@ import {
   adminCookieOptions,
   createAdminRole,
   createAdminUser,
+  duplicateAdminRole,
   loginAdmin,
   requireAdminSession,
   setAdminUserActive,
   type AdminPermission,
+  updateAdminRole,
   updateAdminUserRole,
 } from "@/lib/admin-auth";
 import {
@@ -20,9 +23,32 @@ import {
   recordAuthFailure,
   recordAuthSuccess,
 } from "@/lib/auth-lockout";
+import { prisma } from "@/lib/db";
 
 function clientIp(headerStore: Headers) {
   return headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
+function safeAdminPath(raw: string | null | undefined, fallback: string) {
+  const next = String(raw ?? "").trim();
+  if (next.startsWith("/admin/admin-users") || next.startsWith("/admin/access")) {
+    return next.split("#")[0] || fallback;
+  }
+  return fallback;
+}
+
+async function writeAccessAudit(actor: string, action: string, objectId: string, after?: unknown) {
+  await prisma.auditLog
+    .create({
+      data: {
+        actor,
+        action,
+        objectType: "AdminAccess",
+        objectId,
+        after: after as never,
+      },
+    })
+    .catch(() => null);
 }
 
 export async function actionAdminLogin(formData: FormData) {
@@ -41,6 +67,7 @@ export async function actionAdminLogin(formData: FormData) {
     redirect(`/admin/login?error=${encodeURIComponent(result.error)}&next=${encodeURIComponent(next)}`);
   }
   await recordAuthSuccess("admin-login", ip, email);
+  await writeAccessAudit(email, "admin.login", result.session.userId, { ip });
   const jar = await cookies();
   jar.set(ADMIN_COOKIE, result.token, await adminCookieOptions());
   redirect(next.startsWith("/admin") ? next : "/admin");
@@ -53,60 +80,122 @@ export async function actionAdminLogout() {
 }
 
 export async function actionCreateRole(formData: FormData) {
-  await requireAdminSession("access.manage_roles");
+  const session = await requireAdminSession("access.manage_roles");
+  const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/access");
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const permissions = ADMIN_PERMISSIONS.filter((p) => formData.get(`perm_${p}`) === "on");
   if (!name || permissions.length === 0) {
-    redirect("/admin/access?error=Role+name+and+at+least+one+feature+permission+required");
+    redirect(`${base}?error=${encodeURIComponent("Role name and at least one feature permission required")}`);
   }
   try {
-    await createAdminRole({ name, description, permissions: permissions as AdminPermission[] });
+    const role = await createAdminRole({
+      name,
+      description,
+      permissions: permissions as AdminPermission[],
+    });
+    await writeAccessAudit(session.email, "access.role_create", role.id, { name, permissions });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create role";
-    redirect(`/admin/access?error=${encodeURIComponent(message)}`);
+    redirect(`${base}?error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/access?created=role");
+  redirect(`${base}?created=role`);
+}
+
+export async function actionUpdateRole(formData: FormData) {
+  const session = await requireAdminSession("access.manage_roles");
+  const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/access");
+  const roleId = String(formData.get("roleId") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const permissions = ADMIN_PERMISSIONS.filter((p) => formData.get(`perm_${p}`) === "on");
+  if (!roleId || !name || permissions.length === 0) {
+    redirect(`${base}?error=${encodeURIComponent("Role name and at least one feature permission required")}&edit=${roleId}`);
+  }
+  try {
+    await updateAdminRole({
+      roleId,
+      name,
+      description,
+      permissions: permissions as AdminPermission[],
+    });
+    await writeAccessAudit(session.email, "access.role_update", roleId, { name, permissions });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to update role";
+    redirect(`${base}?error=${encodeURIComponent(message)}&edit=${roleId}`);
+  }
+  redirect(`${base}?updated=role&edit=${roleId}`);
+}
+
+export async function actionDuplicateRole(formData: FormData) {
+  const session = await requireAdminSession("access.manage_roles");
+  const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/access");
+  const roleId = String(formData.get("roleId") ?? "").trim();
+  try {
+    const role = await duplicateAdminRole(roleId);
+    await writeAccessAudit(session.email, "access.role_duplicate", role.id, { from: roleId });
+    redirect(`${base}?created=role&edit=${role.id}`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to duplicate role";
+    redirect(`${base}?error=${encodeURIComponent(message)}`);
+  }
 }
 
 export async function actionCreateAdminUser(formData: FormData) {
-  await requireAdminSession("access.manage_users");
+  const session = await requireAdminSession("access.manage_users");
+  const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/admin-users");
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const roleId = String(formData.get("roleId") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim().slice(0, 250);
+  let password = String(formData.get("password") ?? "").trim();
+  if (!password) password = `Tmp-${randomBytes(6).toString("base64url")}!`;
   try {
-    await createAdminUser({
-      email: String(formData.get("email") ?? ""),
-      name: String(formData.get("name") ?? ""),
-      password: String(formData.get("password") ?? ""),
-      roleId: String(formData.get("roleId") ?? ""),
+    const user = await createAdminUser({ email, name, password, roleId });
+    await writeAccessAudit(session.email, "access.admin_invite", user.id, {
+      email: user.email,
+      roleId,
+      notes: notes || undefined,
+      tempPasswordIssued: true,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create admin";
-    redirect(`/admin/access?error=${encodeURIComponent(message)}`);
+    redirect(`${base}?error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/access?created=user");
+  redirect(`${base}?created=user`);
 }
 
 export async function actionToggleAdminActive(formData: FormData) {
-  await requireAdminSession("access.manage_users");
+  const session = await requireAdminSession("access.manage_users");
+  const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/admin-users");
   const userId = String(formData.get("userId") ?? "");
   const active = String(formData.get("active") ?? "") === "1";
   try {
     await setAdminUserActive(userId, active);
+    await writeAccessAudit(
+      session.email,
+      active ? "access.admin_enable" : "access.admin_suspend",
+      userId,
+      { active },
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to update user";
-    redirect(`/admin/access?error=${encodeURIComponent(message)}`);
+    redirect(`${base}?error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/access?updated=1");
+  redirect(`${base}?updated=1`);
 }
 
 export async function actionSetAdminRole(formData: FormData) {
-  await requireAdminSession("access.manage_users");
+  const session = await requireAdminSession("access.manage_users");
+  const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/admin-users");
   const userId = String(formData.get("userId") ?? "");
   const roleId = String(formData.get("roleId") ?? "");
   try {
     await updateAdminUserRole(userId, roleId);
+    await writeAccessAudit(session.email, "access.admin_role_change", userId, { roleId });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to update role";
-    redirect(`/admin/access?error=${encodeURIComponent(message)}`);
+    redirect(`${base}?error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/access?updated=1");
+  redirect(`${base}?updated=1`);
 }
