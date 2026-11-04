@@ -1,1266 +1,320 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import {
-  actionPublishDraft,
-  actionUpdateDashboardProfile,
-  actionUpdateProfileMedia,
-} from "@/app/claim/actions";
-import { actionSaveDiscoveryFacets } from "@/app/dashboard/facet-actions";
-import { actionSaveProfileNotes } from "@/app/dashboard/offer-actions";
-import { actionConnectSocial, actionDisconnectSocial, actionRefreshSocial } from "@/app/dashboard/social-actions";
-import { NfcWriter } from "@/app/dashboard/nfc-writer";
-import { ScheduleStartsField } from "@/app/dashboard/schedule-starts-field";
-import {
-  actionCancelSchedule,
-  actionChangeShortSlug,
-  actionCreateCampaignLink,
-  actionRollbackDynamicDestination,
-  actionScheduleDestination,
-  actionSetCampaignLinkStatus,
-  actionSetDynamicDestination,
-} from "@/app/dashboard/short-actions";
-import { actionSaveCreatorOptIn } from "@/app/dashboard/opt-in-actions";
-import { actionConfirmSpecialties } from "@/app/dashboard/specialty-actions";
-import { classifyProfileTopics } from "@/lib/ai-runtime";
-import { entitlementsForPlan } from "@/lib/entitlements-db";
-import { canAddCampaignLink } from "@/lib/short-link-phase4";
-import {
-  ensureCreatorShortLink,
-  getCreatorShortLinkAnalytics,
-  listCreatorCampaignLinks,
-  listPendingShortLinkSchedules,
-  listShortLinkDestinationHistory,
-  listShortLinkSlugHistory,
-  primaryShortHost,
-  slugChangeWarning,
-} from "@/lib/short-link";
-import {
-  completenessFor,
-  getCreatorSessionDraft,
-} from "@/lib/claim";
-import { getAccountSession } from "@/lib/accounts";
-import { getInfluencerIdentity } from "@/lib/landing-pages";
-import { listReferralsForCreator, referralRewardLabel } from "@/lib/referrals";
-import { socialConnectState } from "@/lib/social-connect";
-import { PlaceFields } from "@/components/place-fields";
-import { getDirectory } from "@/lib/directory";
-import { getCreatorOptIn } from "@/lib/managed-matching";
-import { COMMERCIAL_MODE, CONTENT_STYLE, listDiscoveryFacets } from "@/lib/discovery-facets";
-import { formatFollowers, SPECIALTY_TAXONOMY } from "@/lib/seed-data";
-import { actionAddOwnEvidence, actionOpenOwnDispute, actionRequestOwnChangeOrder, actionSubmitOwnMilestone } from "@/app/dashboard/funding-actions";
-import { readFxSnapshot } from "@/lib/fx-share";
-import { formatMoney } from "@/lib/money";
-import { listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
-import { scheduleLabel } from "@/lib/schedule";
-import { listDisputeReasons } from "@/lib/milestone-disputes";
-import Image from "next/image";
-import { BRAND_AVATARS, resolveDisplayBanner } from "@/lib/profile-media";
-import { BIO_MIN_CHARS } from "@/lib/onboarding";
+import { actionPublishDraft } from "@/app/claim/actions";
+import { Chip, ProfileSummaryCard } from "@/components/creator-profile/summary-card";
+import { CreatorProfileShell, ProfileFlash } from "@/components/creator-profile/profile-shell";
+import { loadCreatorProfileBundle } from "@/lib/creator-profile-data";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Influencer dashboard" };
+export const metadata = { title: "My profile" };
 
 type Props = {
-  searchParams: Promise<{ published?: string; saved?: string; error?: string; social?: string; confirmSlug?: string }>;
+  searchParams: Promise<{
+    published?: string;
+    saved?: string;
+    error?: string;
+    social?: string;
+  }>;
 };
 
-export default async function CreatorDashboardPage({ searchParams }: Props) {
-  const params = await searchParams;
-  const draft = await getCreatorSessionDraft();
-  if (!draft) {
-    const account = await getAccountSession().catch(() => null);
-    if (!account) redirect("/login?next=/creator");
-    redirect("/creator");
-  }
-  const optIn = await getCreatorOptIn(draft.slug).catch(() => null);
-  const [directory, identity, facetCatalog] = await Promise.all([
-    getDirectory().catch(() => null),
-    getInfluencerIdentity().catch(() => null),
-    listDiscoveryFacets().catch(() => []),
-  ]);
-  const selfDescriptions =
-    identity?.selfDescriptions?.length
-      ? identity.selfDescriptions
-      : ["Influencer", "Content Creator", "Other"];
-  const specialtyGroups = (directory?.taxonomy ?? SPECIALTY_TAXONOMY.map((parent) => ({
-    slug: parent.slug,
-    name: parent.name,
-    active: true,
-    children: (parent.children ?? []).map((child) => ({ ...child, active: true })),
-  }))).filter((parent) => parent.active);
-  const social = await socialConnectState(draft.slug).catch(() => null);
-  const planCode = draft.planTier || "STARTER";
-  const linkLimits = await entitlementsForPlan(planCode).catch(() => null);
-  const shortLink = draft.stage === "published" ? await ensureCreatorShortLink(draft.slug).catch(() => null) : null;
-  const shortHost = await primaryShortHost().catch(() => "inflr.me");
-  const destinationHistory =
-    shortLink && linkLimits?.dynamicQr
-      ? await listShortLinkDestinationHistory(shortLink.id, 5).catch(() => [])
-      : [];
-  const pendingSchedules =
-    shortLink && linkLimits?.dynamicQr && shortLink.dynamic
-      ? await listPendingShortLinkSchedules(shortLink.id).catch(() => [])
-      : [];
-  const campaignLinks = shortLink ? await listCreatorCampaignLinks(draft.slug).catch(() => []) : [];
-  const slugHistory = shortLink ? await listShortLinkSlugHistory(shortLink.id).catch(() => []) : [];
-  const referrals = await listReferralsForCreator(draft.slug).catch(() => []);
-  const campaignMax = linkLimits?.campaignLinksMax ?? 0;
-  const campaignRoom = canAddCampaignLink({
-    campaignMax,
-    campaignCount: campaignLinks.length,
-  });
-  const linkAnalytics =
-    shortLink && shortLink.status === "active"
-      ? await getCreatorShortLinkAnalytics(draft.slug).catch(() => null)
-      : null;
-  const topics = await classifyProfileTopics(`${draft.title}\n${draft.bio}`).catch(() => ({
-    suggestions: [],
-    source: "fallback" as const,
-    providerError: undefined as string | undefined,
-  }));
-  const suggestionRows = new Map<string, { slug: string; name: string; reason?: string }>();
-  for (const item of topics.suggestions) suggestionRows.set(item.slug, item);
-  for (const slug of draft.specialties) {
-    if (!suggestionRows.has(slug)) suggestionRows.set(slug, { slug, name: slug });
-  }
-  const specialtyCap = linkLimits?.specialtiesMax ?? 1;
-  const [fundings, disputeReasons, marketplace] = await Promise.all([
-    listFundingsForCreator(draft.slug).catch(() => []),
-    listDisputeReasons().catch(() => []),
-    marketplaceConfig().catch(() => null),
-  ]);
-  const activeReasons = disputeReasons.filter((reason) => reason.active);
+function nextActionHref(id: string, draftId: string) {
+  if (id === "verified" || id === "email_verified") return `/claim/verify/${draftId}`;
+  if (id === "claimed") return `/claim/preview/${draftId}`;
+  if (id === "specialty") return "/dashboard/preferences";
+  if (id === "bio" || id === "location") return "/dashboard/details";
+  return "/dashboard/details";
+}
 
-  const { score, items } = completenessFor(draft);
-  const nextAction = items.find((i) => !i.done);
+function paymentStatus(fundings: { status: string }[]) {
+  if (!fundings.length) return { label: "Not configured", tone: "muted" as const };
+  if (fundings.some((f) => f.status === "awaiting_provider" || f.status === "held")) {
+    return { label: "Action required", tone: "blue" as const };
+  }
+  if (fundings.some((f) => f.status === "completed" || f.status === "held")) {
+    return { label: "Ready", tone: "emerald" as const };
+  }
+  return { label: "Action required", tone: "blue" as const };
+}
+
+export default async function CreatorProfileOverviewPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const data = await loadCreatorProfileBundle();
+  const {
+    draft,
+    optIn,
+    activeIntros,
+    social,
+    shortLink,
+    shortHost,
+    score,
+    nextActions,
+    items,
+    fundings,
+    specialtyName,
+    contentStyles,
+    commercialModes,
+  } = data;
+
+  const specialtyChips = draft.specialties.map(specialtyName);
+  const nicheNames = (optIn?.niches ?? []).map(specialtyName);
+  const nichePreview =
+    nicheNames.length === 0
+      ? "No target categories"
+      : nicheNames.length <= 3
+        ? nicheNames.join(", ")
+        : `${nicheNames.slice(0, 3).join(", ")} +${nicheNames.length - 3}`;
+
+  const styleNames = (draft.contentStyles ?? [])
+    .map((slug) => contentStyles.find((r) => r.slug === slug)?.name ?? slug)
+    .slice(0, 6);
+  const modeNames = (draft.commercialModes ?? [])
+    .map((slug) => commercialModes.find((r) => r.slug === slug)?.name ?? slug)
+    .slice(0, 6);
+
+  const payments = paymentStatus(fundings);
+  const qrReady = Boolean(
+    shortLink &&
+      shortLink.status === "active" &&
+      (data.linkLimits?.standardQr || data.linkLimits?.dynamicQr),
+  );
+  const pendingChecklist = items.filter((i) => !i.done);
+  const doneChecklist = items.filter((i) => i.done);
 
   return (
-    <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 sm:px-6 lg:px-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">
-            Creator profile
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-bold text-indigo">
-            Welcome{draft.ownerName ? `, ${draft.ownerName.split(" ")[0]}` : ""}
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            Completeness score and next-best actions for your Influencer Card.{" "}
-            <Link href="/dashboard/kyc" className="font-semibold text-violet hover:underline">
-              Identity KYC
-            </Link>
-          </p>
-        </div>
-        <div className="rounded-2xl bg-lavender px-5 py-3 text-center">
-          <p className="font-display text-3xl font-bold text-violet">{score}%</p>
-          <p className="text-xs font-semibold text-indigo">Profile completeness</p>
-        </div>
-      </div>
-
-      {params.published ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Published! Your Starter card is live at{" "}
-          <Link href={`/c/${draft.slug}`} className="font-semibold underline">
-            /c/{draft.slug}
-          </Link>
-          .
-        </div>
-      ) : null}
-      {params.saved === "1" ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Profile saved.
-        </div>
-      ) : null}
-      {params.saved === "facets" ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Content style and commercial mode saved.
-        </div>
-      ) : null}
-      {params.saved === "notes" ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Offer and need saved.
-        </div>
-      ) : null}
-      {params.saved === "destination" ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Short-link destination updated. The printed QR is unchanged.
-        </div>
-      ) : null}
-      {params.saved === "schedule" ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Destination schedule updated. The QR and NFC tokens stay the same.
-        </div>
-      ) : null}
-      {params.saved === "campaign" ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Campaign link updated.
-        </div>
-      ) : null}
-      {params.error ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {params.error}
-        </div>
-      ) : null}
-
-      {nextAction ? (
-        <div className="card-surface flex flex-wrap items-center justify-between gap-4 p-5">
+    <CreatorProfileShell
+      draft={draft}
+      score={score}
+      flash={<ProfileFlash params={params} />}
+    >
+      <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5 shadow-[0_8px_24px_rgba(17,26,90,0.04)]">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-violet">Next best action</p>
-            <p className="mt-1 font-display text-lg font-bold text-indigo">{nextAction.label}</p>
-            <p className="text-sm text-muted">{nextAction.hint}</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-violet">
+              Next best actions
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              Only the next useful steps stay up top. Completed items move down.
+            </p>
           </div>
-          {nextAction.id === "published" ? (
-            <form action={actionPublishDraft}>
-              <input type="hidden" name="draftId" value={draft.id} />
-              <button type="submit" className="btn-primary !py-2 text-sm">
-                Publish now →
-              </button>
-            </form>
-          ) : nextAction.id === "verified" || nextAction.id === "email_verified" ? (
-            <Link href={`/claim/verify/${draft.id}`} className="btn-primary !py-2 text-sm">
-              Verify →
-            </Link>
-          ) : nextAction.id === "claimed" ? (
-            <Link href={`/claim/preview/${draft.id}`} className="btn-primary !py-2 text-sm">
-              Claim →
+          {draft.stage === "published" ? (
+            <Link href={`/c/${draft.slug}`} className="text-[12px] font-semibold text-violet hover:underline">
+              Open live card →
             </Link>
           ) : (
-            <a href="#profile" className="btn-secondary !py-2 text-sm">
-              Edit profile
-            </a>
+            <Link href={`/claim/preview/${draft.id}`} className="text-[12px] font-semibold text-violet hover:underline">
+              View draft card →
+            </Link>
           )}
         </div>
-      ) : (
-        <div className="card-surface p-5 text-sm text-emerald-800">
-          Card looks complete. Share{" "}
-          <Link href={`/c/${draft.slug}`} className="font-semibold text-violet underline">
-            /c/{draft.slug}
-          </Link>{" "}
-          or{" "}
-          <Link href="/billing" className="font-semibold text-violet underline">
-            upgrade to Plus
-          </Link>{" "}
-          for shortlink + QR.
-        </div>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <section id="profile" className="card-surface space-y-6 p-6">
-          <div>
-            <h2 className="font-display text-xl font-bold text-indigo">Profile photo &amp; banner</h2>
-            <p className="mt-1 text-sm text-muted">
-              New profiles start with Influrios brand art. Choosing a gender below updates the default avatar
-              automatically. Upload your own photo or banner anytime.
-            </p>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-              <div className="relative h-28 w-full bg-[#EEF2FF]">
-                <Image
-                  src={resolveDisplayBanner({ seed: draft.slug, coverImage: draft.coverImage })}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  sizes="640px"
-                  unoptimized={draft.coverImage?.endsWith(".svg")}
-                />
-              </div>
-              <div className="flex items-end gap-4 bg-white p-4">
-                <span className="relative -mt-10 h-20 w-20 overflow-hidden rounded-full ring-4 ring-white">
-                  <Image
-                    src={draft.image || BRAND_AVATARS.unspecified}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="80px"
-                    unoptimized={draft.image?.endsWith(".svg")}
-                  />
-                </span>
-                <div className="min-w-0 flex-1 pb-1">
-                  <p className="truncate text-sm font-bold text-indigo">{draft.displayName}</p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <form action={actionUpdateProfileMedia} encType="multipart/form-data" className="space-y-2 rounded-xl border border-border p-3">
-                <input type="hidden" name="draftId" value={draft.id} />
-                <input type="hidden" name="intent" value="avatar" />
-                <p className="text-xs font-bold uppercase tracking-wide text-violet">Profile photo</p>
-                <input
-                  type="file"
-                  name="avatar"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo"
-                />
-                <button type="submit" className="btn-primary w-full !py-2 text-xs">
-                  Upload photo
-                </button>
-              </form>
-              <form action={actionUpdateProfileMedia} encType="multipart/form-data" className="space-y-2 rounded-xl border border-border p-3">
-                <input type="hidden" name="draftId" value={draft.id} />
-                <input type="hidden" name="intent" value="cover" />
-                <p className="text-xs font-bold uppercase tracking-wide text-violet">Banner</p>
-                <input
-                  type="file"
-                  name="cover"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo"
-                />
-                <button type="submit" className="btn-primary w-full !py-2 text-xs">
-                  Upload banner
-                </button>
-              </form>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="font-display text-xl font-bold text-indigo">Edit profile</h2>
-            <form action={actionUpdateDashboardProfile} className="mt-4 grid gap-3 sm:grid-cols-2">
-              <input type="hidden" name="draftId" value={draft.id} />
-              <label className="text-sm sm:col-span-2">
-                <span className="font-semibold text-indigo">Display name</span>
-                <input
-                  name="displayName"
-                  defaultValue={draft.displayName}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-                />
-              </label>
-              <label className="text-sm sm:col-span-2">
-                <span className="font-semibold text-indigo">How do you describe yourself?</span>
-                <select
-                  name="title"
-                  required
-                  defaultValue={draft.title.trim() ? draft.title : ""}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-                >
-                  <option value="">Choose how you describe yourself</option>
-                  {!selfDescriptions.includes(draft.title) && draft.title ? (
-                    <option value={draft.title}>{draft.title} (current)</option>
-                  ) : null}
-                  {selfDescriptions.map((label) => (
-                    <option key={label} value={label}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-xs font-normal text-muted">
-                  Platform role stays Influencer. Pick a self-description from the admin-managed list.
-                </span>
-              </label>
-              <label className="text-sm sm:col-span-2">
-                <span className="font-semibold text-indigo">Gender (for default avatar)</span>
-                <select
-                  name="gender"
-                  defaultValue={draft.gender}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-                >
-                  <option value="unspecified">Prefer not to say / unknown</option>
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                </select>
-              </label>
-              <label className="text-sm sm:col-span-2">
-                <span className="font-semibold text-indigo">Bio</span>
-                <textarea
-                  name="bio"
-                  rows={3}
-                  defaultValue={draft.bio}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-                />
-                <span className="mt-1 block text-xs font-normal text-muted">
-                  At least {BIO_MIN_CHARS} characters. A brief sentence about what you create is enough.
-                </span>
-              </label>
-              <PlaceFields
-                cityName="locationCity"
-                stateName="locationState"
-                countryName="locationCountry"
-                defaultCity={draft.locationCity}
-                defaultState={draft.locationState ?? ""}
-                defaultCountry={draft.locationCountry}
-                className="contents"
-              />
-              <label className="text-sm sm:col-span-2">
-                <span className="font-semibold text-indigo">Primary specialty</span>
-                <select
-                  name="specialty"
-                  defaultValue={draft.specialties[0] ?? ""}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-                >
-                  <option value="">Choose a specialty</option>
-                  {specialtyGroups.map((group) => (
-                    <optgroup key={group.slug} label={group.name}>
-                      <option value={group.slug}>{group.name}</option>
-                      {group.children.filter((child) => child.active).map((child) => (
-                        <option key={child.slug} value={child.slug}>
-                          {child.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </label>
-              <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
-                Save profile
-              </button>
-            </form>
-          </div>
-          <DiscoveryFacetForm
-            draftId={draft.id}
-            contentStyles={facetCatalog.filter((row) => row.kind === CONTENT_STYLE && row.active)}
-            commercialModes={facetCatalog.filter((row) => row.kind === COMMERCIAL_MODE && row.active)}
-            selectedStyles={draft.contentStyles ?? []}
-            selectedModes={draft.commercialModes ?? []}
-          />
-          <ProfileNotesForm
-            draftId={draft.id}
-            offer={draft.offer ?? ""}
-            offerDetails={draft.offerDetails ?? ""}
-            need={draft.need ?? ""}
-            needDetails={draft.needDetails ?? ""}
-          />
-        </section>
-
-        <section className="card-surface p-6">
-          <h2 className="font-display text-xl font-bold text-indigo">Checklist</h2>
-          <ul className="mt-4 divide-y divide-border">
-            {items.map((item) => (
-              <li key={item.id} className="flex items-start justify-between gap-3 py-3 text-sm">
+        {nextActions.length ? (
+          <ul className="mt-4 space-y-3">
+            {nextActions.map((action) => (
+              <li
+                key={action.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#EEF2FF] bg-[#FBFBFF] px-4 py-3"
+              >
                 <div>
-                  <p className={`font-semibold ${item.done ? "text-emerald-700" : "text-indigo"}`}>
-                    {item.done ? "✓ " : "○ "}
-                    {item.label}
-                  </p>
-                  <p className="text-xs text-muted">{item.hint}</p>
+                  <p className="font-semibold text-indigo">{action.label}</p>
+                  <p className="text-[12px] text-muted">{action.hint}</p>
                 </div>
-                <span className="shrink-0 text-xs font-bold text-muted">{item.weight}%</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-6 space-y-2">
-            <Link href={`/claim/preview/${draft.id}`} className="btn-secondary flex w-full !py-2 text-sm">
-              View draft card
-            </Link>
-            {draft.stage === "published" ? (
-              <Link href={`/c/${draft.slug}`} className="btn-primary flex w-full !py-2 text-sm">
-                Open live card →
-              </Link>
-            ) : null}
-            <Link href="/payments" className="block text-center text-xs font-semibold text-violet hover:underline">
-              Protected payments (escrow)
-            </Link>
-            <Link href="/billing" className="block text-center text-xs font-semibold text-violet hover:underline">
-              Upgrade for shortlink + QR
-            </Link>
-          </div>
-        </section>
-      </div>
-
-      <section className="card-surface p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Specialty suggestions</h2>
-        <p className="mt-2 text-sm text-muted">
-          {topics.source === "provider"
-            ? "The assigned provider suggested these. They are saved only when you confirm."
-            : "These are a rules result from keyword matching on the profile text. They are not model output. They are saved only when you confirm."}
-          {" "}This plan keeps {specialtyCap} {specialtyCap === 1 ? "specialty" : "specialties"}.
-        </p>
-        {topics.providerError ? (
-          <p className="mt-2 text-sm text-amber-800">The provider did not answer. The rules result is shown instead.</p>
-        ) : null}
-        {suggestionRows.size === 0 ? (
-          <p className="mt-3 text-sm text-muted">No specialty keywords matched this profile yet.</p>
-        ) : (
-          <form action={actionConfirmSpecialties} className="mt-4 space-y-2">
-            <input type="hidden" name="draftId" value={draft.id} />
-            {[...suggestionRows.values()].map((item) => (
-              <label key={item.slug} className="flex items-start gap-2 text-sm text-indigo">
-                <input
-                  type="checkbox"
-                  name="specialty"
-                  value={item.slug}
-                  defaultChecked={draft.specialties.includes(item.slug)}
-                />
-                <span>
-                  <span className="font-semibold">{item.name}</span>
-                  {item.reason ? <span className="mt-0.5 block text-xs text-muted">{item.reason}</span> : null}
-                </span>
-              </label>
-            ))}
-            <button type="submit" className="btn-secondary !py-2 text-sm">
-              Confirm specialties
-            </button>
-          </form>
-        )}
-      </section>
-
-      <section className="card-surface p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Managed introductions</h2>
-        <p className="mt-2 text-sm text-muted">
-          Opt in only for the categories you choose. A category that is not checked is not saved.
-        </p>
-        <form action={actionSaveCreatorOptIn} className="mt-4 space-y-3">
-          <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
-            <input type="checkbox" name="openToManaged" defaultChecked={optIn?.openToManaged === true} className="accent-violet" />
-            Open to managed introductions
-          </label>
-          <fieldset>
-            <legend className="text-sm font-semibold text-indigo">Target categories</legend>
-            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-              {specialtyGroups.flatMap((group) =>
-                [group, ...group.children.filter((child) => child.active)].map((item) => (
-                  <li key={item.slug}>
-                    <label className="flex items-center gap-2 text-sm text-indigo">
-                      <input
-                        type="checkbox"
-                        name="niche"
-                        value={item.slug}
-                        defaultChecked={optIn?.niches.includes(item.slug) === true}
-                        className="accent-violet"
-                      />
-                      {item.name}
-                    </label>
-                  </li>
-                )),
-              )}
-            </ul>
-          </fieldset>
-          <label className="block text-sm font-semibold text-indigo">
-            Notes
-            <textarea
-              name="targetingNotes"
-              rows={3}
-              defaultValue={optIn?.targetingNotes ?? ""}
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
-            />
-          </label>
-          <button type="submit" className="btn-primary !py-2 text-sm">
-            Save opt-in
-          </button>
-        </form>
-      </section>
-
-      <section className="card-surface p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Your links</h2>
-        <p className="mt-2 text-sm text-indigo">
-          Canonical profile: influrios.com/c/{draft.slug}
-        </p>
-        {shortLink && shortLink.status === "active" ? (
-          <div className="mt-3 space-y-3 text-sm text-indigo">
-            <p>
-              Short link: https://{shortHost}/{shortLink.slug}
-            </p>
-            {slugHistory.length ? (
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-indigo">Earlier names</p>
-                <ul className="space-y-1 text-xs text-muted">
-                  {slugHistory.map((row) => (
-                    <li key={row.id}>
-                      /{row.slug} {row.redirect ? `redirects to /${shortLink.slug}` : "redirect off"}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            <p className="text-xs text-muted">
-              This short link is the referral link. A new account that starts from it is logged with the reward admin
-              saved.
-            </p>
-            {referrals.length === 0 ? (
-              <p className="text-xs text-muted">No referral registrations yet.</p>
-            ) : (
-              <ul className="space-y-1 text-xs text-muted">
-                {referrals.map((row) => {
-                  const reward = referralRewardLabel(row);
-                  return (
-                    <li key={row.id}>
-                      {row.referredEmail}
-                      {reward ? ` · ${reward}` : ""}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {linkLimits?.standardQr || linkLimits?.dynamicQr ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={`/api/qr/${draft.slug}?size=160&logo=0`} alt="Influencer Card QR" width={160} height={160} />
-            ) : null}
-            {shortLink.nfcIdentities[0] ? (
-              <div className="space-y-2">
-                <p>
-                  NFC URL: https://{shortHost}/n/{shortLink.nfcIdentities[0].token}
-                </p>
-                <NfcWriter url={`https://${shortHost}/n/${shortLink.nfcIdentities[0].token}`} />
-                <p className="text-xs text-muted">
-                  A tap opens the current destination. Changing the destination does not require writing the tag again.{" "}
-                  <Link href="/faq?audience=creator#nfc-write" className="font-semibold text-violet hover:underline">
-                    NFC instructions
-                  </Link>
-                </p>
-              </div>
-            ) : null}
-            {linkLimits?.customAlias ? (
-              <div className="space-y-2">
-                {params.confirmSlug && params.confirmSlug !== shortLink.slug ? (
-                  <form action={actionChangeShortSlug} className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-                    <p className="text-xs font-semibold text-indigo">Confirm short link change</p>
-                    <p className="text-xs text-muted">{slugChangeWarning(shortLink.slug, params.confirmSlug)}</p>
-                    <input type="hidden" name="slug" value={params.confirmSlug} />
-                    <input type="hidden" name="acknowledged" value="1" />
-                    <div className="flex flex-wrap gap-2">
-                      <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                        Yes, change to /{params.confirmSlug}
-                      </button>
-                      <Link href="/dashboard" className="btn-secondary !py-1.5 text-xs">
-                        Cancel
-                      </Link>
-                    </div>
+                {action.id === "published" ? (
+                  <form action={actionPublishDraft}>
+                    <input type="hidden" name="draftId" value={draft.id} />
+                    <button type="submit" className="btn-primary !py-2 text-sm">
+                      Publish now →
+                    </button>
                   </form>
                 ) : (
-                  <form action={actionChangeShortSlug} className="space-y-2">
-                    <p className="text-xs text-muted">
-                      Changing this name keeps the printed QR. You will confirm before the old name starts redirecting
-                      to the new one.
-                    </p>
-                    <input
-                      name="slug"
-                      defaultValue={shortLink.slug}
-                      className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
-                    />
-                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                      Update short link
-                    </button>
-                  </form>
+                  <Link href={nextActionHref(action.id, draft.id)} className="btn-secondary !py-2 text-sm">
+                    Continue →
+                  </Link>
                 )}
-              </div>
-            ) : (
-              <p className="text-xs text-muted">A custom short name follows the plan entitlement.</p>
-            )}
-            {linkLimits?.dynamicQr && shortLink.dynamic ? (
-              <div className="space-y-3 border-t border-border pt-3">
-                <div>
-                  <p className="font-semibold text-indigo">Dynamic destination</p>
-                  <p className="mt-1 text-xs text-muted">
-                    This plan can change where the short link and QR resolve without reprinting the QR. Paths stay on
-                    Influrios; https hosts must be allow-listed by admin.
-                  </p>
-                </div>
-                <p className="text-xs text-muted">
-                  Current: <span className="font-semibold text-indigo">{shortLink.destination}</span>
-                </p>
-                <form action={actionSetDynamicDestination} className="space-y-2">
-                  <input
-                    name="destination"
-                    defaultValue={shortLink.destination}
-                    placeholder={`/c/${draft.slug} or https://influrios.com/...`}
-                    className="w-full max-w-md rounded-xl border border-border px-3 py-2"
-                  />
-                  <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                    Update destination
-                  </button>
-                </form>
-                {destinationHistory.length ? (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-indigo">Recent changes</p>
-                    <ul className="space-y-1 text-xs text-muted">
-                      {destinationHistory.map((row) => (
-                        <li key={row.id}>
-                          {row.createdAt.toISOString().slice(0, 16).replace("T", " ")} · {row.reason} ·{" "}
-                          {row.previousDestination} → {row.destination}
-                        </li>
-                      ))}
-                    </ul>
-                    <form action={actionRollbackDynamicDestination}>
-                      <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                        Roll back to prior destination
-                      </button>
-                    </form>
-                  </div>
-                ) : null}
-                <form action={actionScheduleDestination} className="space-y-2">
-                  <p className="text-xs font-semibold text-indigo">Schedule a destination</p>
-                  <p className="text-xs text-muted">
-                    The change applies at the chosen time. The QR and NFC tokens stay the same. One pending change at a time.
-                  </p>
-                  <input
-                    name="destination"
-                    placeholder={`/c/${draft.slug} or https://influrios.com/...`}
-                    className="w-full max-w-md rounded-xl border border-border px-3 py-2"
-                  />
-                  <ScheduleStartsField />
-                  <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                    Schedule destination
-                  </button>
-                </form>
-                {pendingSchedules.length ? (
-                  <ul className="space-y-2 text-xs text-muted">
-                    {pendingSchedules.map((row) => (
-                      <li key={row.id} className="flex flex-wrap items-center gap-2">
-                        <span>
-                          {row.startsAt.toISOString().slice(0, 16).replace("T", " ")} UTC → {row.destination}
-                        </span>
-                        <form action={actionCancelSchedule}>
-                          <input type="hidden" name="scheduleId" value={row.id} />
-                          <button type="submit" className="btn-secondary !py-0.5 text-[11px]">
-                            Cancel
-                          </button>
-                        </form>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            ) : null}
-            <div className="space-y-3 border-t border-border pt-3">
-              <div>
-                <p className="font-semibold text-indigo">Campaign links</p>
-                <p className="mt-1 text-xs text-muted">
-                  A campaign link is https://{shortHost}/c/your-code and keeps its own destination. Visits are counted on this short link. This plan allows {campaignMax} campaign {campaignMax === 1 ? "link" : "links"}. That number is a plan feature, separate from the profile short link.
-                </p>
-              </div>
-              {campaignLinks.length ? (
-                <ul className="space-y-2">
-                  {campaignLinks.map((row) => (
-                    <li key={row.id} className="rounded-xl border border-border p-3 text-xs">
-                      <p className="font-semibold text-indigo">
-                        https://{shortHost}/c/{row.code} · {row.label} · {row.status}
-                      </p>
-                      <p className="mt-1 text-muted">{row.destination}</p>
-                      <form action={actionSetCampaignLinkStatus} className="mt-2">
-                        <input type="hidden" name="campaignId" value={row.id} />
-                        <input type="hidden" name="status" value={row.status === "active" ? "suspended" : "active"} />
-                        <button type="submit" className="btn-secondary !py-1 text-xs">
-                          {row.status === "active" ? "Suspend" : "Activate"}
-                        </button>
-                      </form>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {campaignRoom ? (
-                <form action={actionCreateCampaignLink} className="space-y-2">
-                  <input
-                    name="code"
-                    placeholder="spring-launch"
-                    className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
-                  />
-                  <input
-                    name="label"
-                    placeholder="Spring launch"
-                    className="w-full max-w-md rounded-xl border border-border px-3 py-2"
-                  />
-                  <input
-                    name="destination"
-                    placeholder={`/c/${draft.slug} or https://influrios.com/...`}
-                    className="w-full max-w-md rounded-xl border border-border px-3 py-2"
-                  />
-                  <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                    Add campaign link
-                  </button>
-                </form>
-              ) : (
-                <p className="text-xs text-muted">
-                  {campaignLinks.length
-                    ? `All ${campaignMax} campaign ${campaignMax === 1 ? "link" : "links"} on this plan are in use.`
-                    : "This plan’s campaign-link count is 0. An admin can raise it without changing the short link."}
-                </p>
-              )}
-            </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-emerald-800">
+            Card looks complete. Share{" "}
+            <Link href={`/c/${draft.slug}`} className="font-semibold text-violet underline">
+              /c/{draft.slug}
+            </Link>{" "}
+            or{" "}
+            <Link href="/billing" className="font-semibold text-violet underline">
+              upgrade to Plus
+            </Link>{" "}
+            for shortlink + QR.
+          </p>
+        )}
+        {doneChecklist.length ? (
+          <details className="mt-4">
+            <summary className="cursor-pointer text-[12px] font-semibold text-muted">
+              {doneChecklist.length} completed checklist items
+            </summary>
+            <ul className="mt-2 space-y-1 text-[12px] text-muted">
+              {doneChecklist.map((item) => (
+                <li key={item.id}>✓ {item.label}</li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
+        {pendingChecklist.length > 5 ? (
+          <p className="mt-2 text-[11px] text-muted">
+            {pendingChecklist.length - 5} more open items live in Profile Details and Preferences.
+          </p>
+        ) : null}
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <ProfileSummaryCard
+          title="Specialties & niches"
+          status={`${draft.specialties.length} selected · plan keeps ${data.specialtyCap}`}
+          href="/dashboard/preferences#specialties"
+          actionLabel="Edit"
+        >
+          <div className="flex flex-wrap gap-1.5">
+            {specialtyChips.slice(0, 6).map((name) => (
+              <Chip key={name}>{name}</Chip>
+            ))}
+            {specialtyChips.length > 6 ? <Chip tone="muted">+{specialtyChips.length - 6} more</Chip> : null}
+            {!specialtyChips.length ? <span className="text-muted">No specialties yet.</span> : null}
           </div>
-        ) : shortLink ? (
-          <div className="mt-3 space-y-2 text-sm text-indigo">
-            <p>
-              Short link: https://{shortHost}/{shortLink.slug}
+        </ProfileSummaryCard>
+
+        <ProfileSummaryCard
+          title="Managed introductions"
+          status={
+            optIn?.openToManaged
+              ? `Enabled · ${optIn.niches.length} target categories · ${activeIntros.length} active`
+              : "Not enabled"
+          }
+          href="/dashboard/preferences#introductions"
+        >
+          <p className="text-sm text-indigo">{nichePreview}</p>
+          {optIn?.updatedAt ? (
+            <p className="mt-2 text-[11px] text-muted">
+              Last updated {new Date(optIn.updatedAt).toLocaleString()}
             </p>
-            <p className="text-xs text-muted">This short link is suspended. The QR identity is unchanged.</p>
-            {shortLink.qrIdentities[0] ? (
-              <p className="text-xs text-muted">
-                QR: https://{shortHost}/q/{shortLink.qrIdentities[0].token}
-              </p>
-            ) : null}
-            {slugHistory.length ? (
-              <ul className="space-y-1 text-xs text-muted">
-                {slugHistory.map((row) => (
-                  <li key={row.id}>
-                    /{row.slug} {row.redirect ? `redirects to /${shortLink.slug}` : "redirect off"}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ) : (
-          <p className="mt-2 text-sm text-muted">
-            This plan uses the canonical profile link. A short link and QR appear when the plan entitlements include them.
-          </p>
-        )}
-      </section>
-
-      {linkAnalytics?.ok ? (
-        <section className="card-surface p-6">
-          <h2 id="analytics" className="font-display text-xl font-bold text-indigo">Link analytics</h2>
-          <p className="mt-2 text-sm text-muted">
-            Privacy-safe totals for your short link and QR. Depth follows your plan entitlement (
-            {linkAnalytics.analytics.level}). Precise location is never stored.
-          </p>
-          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-muted">Total visits</dt>
-              <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.totalVisits}</dd>
-            </div>
-            {linkAnalytics.analytics.qrScans != null ? (
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">QR scans</dt>
-                <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.qrScans}</dd>
-              </div>
-            ) : null}
-            {linkAnalytics.analytics.directVisits != null ? (
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Direct short-link visits</dt>
-                <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.directVisits}</dd>
-              </div>
-            ) : null}
-            {linkAnalytics.analytics.ctaClicks != null ? (
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Card CTA clicks</dt>
-                <dd className="font-display text-2xl font-bold text-indigo">{linkAnalytics.analytics.ctaClicks}</dd>
-              </div>
-            ) : null}
-            {linkAnalytics.analytics.inquiryConversions != null ? (
-              <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Inquiry conversions</dt>
-                <dd className="font-display text-2xl font-bold text-indigo">
-                  {linkAnalytics.analytics.inquiryConversions}
-                </dd>
-              </div>
-            ) : null}
-          </dl>
-          {linkAnalytics.analytics.deviceClasses || linkAnalytics.analytics.referrerClasses ? (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 text-sm text-indigo">
-              {linkAnalytics.analytics.deviceClasses ? (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Device class</p>
-                  <ul className="mt-1 space-y-1">
-                    {Object.entries(linkAnalytics.analytics.deviceClasses).map(([key, count]) => (
-                      <li key={key}>
-                        {key}: {count}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {linkAnalytics.analytics.referrerClasses ? (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">Referrer class</p>
-                  <ul className="mt-1 space-y-1">
-                    {Object.entries(linkAnalytics.analytics.referrerClasses).map(([key, count]) => (
-                      <li key={key}>
-                        {key}: {count}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      {social ? (
-        <section className="card-surface p-6">
-          <h2 id="socials" className="font-display text-xl font-bold text-indigo">Social accounts</h2>
-          <p className="mt-1 text-sm text-muted">
-            Connecting a network does not change the profile layout. Follower and like counts replace the current
-            figure only after that network returns both.
-          </p>
-          {params.social === "connected" || params.social === "synced" ? (
-            <p className="mt-3 text-sm font-semibold text-emerald-700">The network returned a follower count and likes.</p>
-          ) : null}
-          {params.social === "disconnected" ? (
-            <p className="mt-3 text-sm font-semibold text-emerald-700">Disconnected. Further sync has stopped.</p>
-          ) : null}
-          {!social.creatorId ? (
-            <p className="mt-4 text-sm text-muted">Publish your card before connecting a network.</p>
           ) : (
-            <div className="mt-4 space-y-4">
-              {social.accounts.some((account) => account.ready && account.status !== "connected") ? (
-                <div className="rounded-xl bg-lavender/40 p-4 text-sm text-indigo">
-                  <p className="font-semibold">Before the network login</p>
-                  <p className="mt-2">
-                    Accepting the Influencer Terms does not authorize a social account. This step explains the permissions
-                    and asks you to acknowledge the{" "}
-                    <Link href="/legal/connected-social-data-policy" className="font-semibold underline" target="_blank">
-                      Connected Social Data & API Policy
-                    </Link>
-                    . The{" "}
-                    <Link href="/legal/social-platform-integration-terms" className="font-semibold underline" target="_blank">
-                      Social Platform Integration Terms
-                    </Link>{" "}
-                    stay a separate agreement.
-                  </p>
-                </div>
-              ) : null}
-              {social.accounts.map((account) => {
-                const connected = account.status === "connected";
-                return (
-                  <div key={account.platform} className="rounded-xl border border-border p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-indigo">{account.name}</p>
-                        {connected ? (
-                          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-800">
-                            Connected
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="text-xs text-muted">
-                        {connected && account.live && account.followers != null && account.likes != null
-                          ? `${formatFollowers(account.followers)} followers · ${formatFollowers(account.likes)} likes`
-                          : connected
-                            ? account.live
-                              ? "Connected · waiting for follower and like counts"
-                              : "Connected"
-                            : account.ready
-                              ? "Not connected"
-                              : "Not ready in admin"}
-                      </p>
-                    </div>
-                    {account.lastError ? <p className="mt-2 text-xs text-amber-800">{account.lastError}</p> : null}
-                    {connected ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <form action={actionRefreshSocial}>
-                          <input type="hidden" name="platform" value={account.platform} />
-                          <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                            Sync now
-                          </button>
-                        </form>
-                        <form action={actionDisconnectSocial}>
-                          <input type="hidden" name="platform" value={account.platform} />
-                          <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                            Disconnect
-                          </button>
-                        </form>
-                      </div>
-                    ) : account.ready ? (
-                      <form action={actionConnectSocial} className="mt-3 flex flex-wrap items-center gap-3">
-                        <input type="hidden" name="platform" value={account.platform} />
-                        <label className="flex items-start gap-2 text-xs text-indigo">
-                          <input type="checkbox" name="acceptTerms" className="mt-0.5 accent-violet" required />
-                          <span>
-                            I acknowledge the Connected Social Data & API Policy and authorize Influrios to start the{" "}
-                            {account.name} login
-                            {account.scopes ? ` for: ${account.scopes}` : ""}. This is not granted by the Influencer
-                            Terms.
-                          </span>
-                        </label>
-                        <button type="submit" className="btn-primary !py-1.5 text-xs">
-                          Connect {account.name}
-                        </button>
-                      </form>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
+            <p className="mt-2 text-[11px] text-muted">Opt in to receive category-matched brand intros.</p>
           )}
-        </section>
-      ) : null}
+        </ProfileSummaryCard>
 
-      <section className="card-surface p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Protected payments</h2>
-        <p className="mt-1 text-sm text-muted">
-          Submit a milestone after the marketplace provider confirms the prefund. A revision sends it back to you. Approval does not release the money. A change order amends the gross only while the prefund is still waiting for the provider.
-        </p>
-        {params.saved === "milestone" ? (
-          <p className="mt-3 text-sm font-semibold text-emerald-700">Milestone submitted for review.</p>
-        ) : null}
-        {params.saved === "evidence" ? (
-          <p className="mt-3 text-sm font-semibold text-emerald-700">Evidence saved. Nothing was released or refunded.</p>
-        ) : null}
-        {params.saved === "dispute" ? (
-          <p className="mt-3 text-sm font-semibold text-emerald-700">
-            Dispute opened. Release waits until it is resolved.
+        <ProfileSummaryCard
+          title="Content style & commercial mode"
+          href="/dashboard/preferences#style"
+          actionLabel="Edit"
+        >
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-1.5">
+              {styleNames.map((name) => (
+                <Chip key={`s-${name}`} tone="blue">
+                  {name}
+                </Chip>
+              ))}
+              {!styleNames.length ? <Chip tone="muted">No content styles</Chip> : null}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {modeNames.map((name) => (
+                <Chip key={`m-${name}`} tone="emerald">
+                  {name}
+                </Chip>
+              ))}
+              {!modeNames.length ? <Chip tone="muted">No commercial modes</Chip> : null}
+            </div>
+          </div>
+        </ProfileSummaryCard>
+
+        <ProfileSummaryCard title="I offer" href="/dashboard/preferences#offer-need" actionLabel="Edit">
+          <p className="font-semibold text-indigo">{draft.offer || "Not set"}</p>
+          {draft.offerDetails ? (
+            <p className="mt-1 line-clamp-3 text-[12px] text-muted">{draft.offerDetails}</p>
+          ) : null}
+        </ProfileSummaryCard>
+
+        <ProfileSummaryCard title="I need" href="/dashboard/preferences#offer-need" actionLabel="Edit">
+          <p className="font-semibold text-indigo">{draft.need || "Not set"}</p>
+          {draft.needDetails ? (
+            <p className="mt-1 line-clamp-3 text-[12px] text-muted">{draft.needDetails}</p>
+          ) : null}
+        </ProfileSummaryCard>
+
+        <ProfileSummaryCard
+          title="Social accounts"
+          href="/dashboard/social"
+          status={
+            social?.accounts?.length
+              ? `${social.accounts.filter((a) => a.status === "connected").length} connected`
+              : undefined
+          }
+        >
+          <ul className="space-y-1.5 text-sm">
+            {(social?.accounts ?? []).map((account) => (
+              <li key={account.platform} className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-indigo">{account.name}</span>
+                <span
+                  className={
+                    account.status === "connected" ? "font-semibold text-emerald-700" : "text-muted"
+                  }
+                >
+                  {account.status === "connected" ? "✓ Connected" : "— Connect"}
+                </span>
+              </li>
+            ))}
+            {!social?.accounts?.length ? (
+              <li className="text-muted">Publish your card to connect networks.</li>
+            ) : null}
+          </ul>
+        </ProfileSummaryCard>
+
+        <ProfileSummaryCard
+          title="Protected payments"
+          status={<Chip tone={payments.tone}>{payments.label}</Chip>}
+          href="/creator/earnings"
+          actionLabel="Open earnings"
+        >
+          <p className="text-sm text-muted">
+            Payment readiness and payout setup live in Earnings. Escrow deals stay under{" "}
+            <Link href="/payments" className="font-semibold text-violet hover:underline">
+              Protected payments
+            </Link>
+            .
           </p>
-        ) : null}
-        {params.saved === "change" ? (
-          <p className="mt-3 text-sm font-semibold text-emerald-700">
-            Change order recorded. The earlier fee snapshot stays on that record. Nothing was held.
+          {fundings.length ? (
+            <p className="mt-2 text-[12px] text-indigo">{fundings.length} deal(s) on this card.</p>
+          ) : null}
+        </ProfileSummaryCard>
+
+        <ProfileSummaryCard
+          title="Your links"
+          href="/dashboard/links"
+          status={qrReady ? "QR ready" : shortLink ? "Short link available" : "Canonical only"}
+        >
+          <ul className="space-y-1 text-sm text-indigo">
+            <li>
+              Canonical:{" "}
+              <span className="font-semibold">influrios.com/c/{draft.slug}</span>
+            </li>
+            <li>
+              Short link:{" "}
+              <span className="font-semibold">
+                {shortLink?.status === "active"
+                  ? `https://${shortHost}/${shortLink.slug}`
+                  : "Not active on this plan"}
+              </span>
+            </li>
+            <li>QR: {qrReady ? "Active" : "Not included"}</li>
+          </ul>
+        </ProfileSummaryCard>
+
+        <ProfileSummaryCard title="Media kit" href="/creator/media-kit" actionLabel="Open">
+          <p className="text-sm text-muted">
+            Public presentation assets and media kit live in their own workspace.
           </p>
-        ) : null}
-        {fundings.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">No protected payments for this card yet.</p>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {fundings.map((funding) => (
-              <li key={funding.id} className="rounded-xl border border-border p-4">
-                <p className="font-semibold text-indigo">{funding.title}</p>
-                <p className="text-xs text-muted">
-                  {funding.businessName} · {funding.status.replaceAll("_", " ")} · held{" "}
-                  {formatMoney(funding.ledger.heldCents, funding.currency)}
-                  {readFxSnapshot(funding.fxSnapshotJson)?.source === "wise" ? " · Wise user rate" : ""}
-                  {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
-                  {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
-                  {scheduleLabel(funding) ? ` · ${scheduleLabel(funding)}` : ""}
-                  {funding.status === "awaiting_provider"
-                    ? ` · change orders ${funding.changeOrderCount} of ${funding.changeOrderLimit}`
-                    : ""}
-                </p>
-                {funding.changeOrders.map((order) => (
-                  <p key={order.id} className="mt-1 text-xs text-indigo">
-                    Change order {formatMoney(order.previousUsdCents)} → {formatMoney(order.nextUsdCents)}. {order.note}
-                  </p>
-                ))}
-                {funding.status === "awaiting_provider" &&
-                marketplace?.changeOrdersEnabled !== false &&
-                funding.changeOrderCount < funding.changeOrderLimit ? (
-                  <form action={actionRequestOwnChangeOrder} className="mt-3 flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="fundingId" value={funding.id} />
-                    <label className="text-xs font-semibold text-muted">
-                      New gross USD
-                      <input
-                        name="grossUsd"
-                        type="number"
-                        min={1}
-                        step={1}
-                        required
-                        className="mt-1 w-32 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-muted">
-                      What changed
-                      <input
-                        name="note"
-                        required
-                        minLength={8}
-                        placeholder="What the amendment covers"
-                        className="mt-1 w-56 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
-                      />
-                    </label>
-                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                      Record change order
-                    </button>
-                  </form>
-                ) : null}
-                <div className="mt-3 space-y-2">
-                  {funding.milestones.map((milestone) => (
-                    <div key={milestone.id} className="rounded-lg border border-border px-3 py-2 text-sm">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span>
-                          {milestone.title} · {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status}
-                          {milestone.refundedCents > 0
-                            ? ` · refunded ${formatMoney(milestone.refundedCents, funding.currency)} · ${formatMoney(milestone.amountCents - milestone.refundedCents, funding.currency)} left`
-                            : ""}
-                          {milestone.revisionCount > 0 ? ` · revision ${milestone.revisionCount} of ${milestone.revisionLimit}` : ""}
-                        </span>
-                        {funding.status === "held" && milestone.status === "pending" ? (
-                          <form action={actionSubmitOwnMilestone}>
-                            <input type="hidden" name="fundingId" value={funding.id} />
-                            <input type="hidden" name="milestoneId" value={milestone.id} />
-                            <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                              Submit work
-                            </button>
-                          </form>
-                        ) : null}
-                      </div>
-                      {milestone.revisionNote && milestone.status === "pending" ? (
-                        <p className="mt-1 text-xs text-indigo">Revision: {milestone.revisionNote}</p>
-                      ) : null}
-                      {funding.status === "held" &&
-                      milestone.status !== "released" &&
-                      milestone.status !== "refunded" &&
-                      activeReasons.length > 0 ? (
-                        funding.disputes?.find((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null) ? (
-                          <div className="mt-2 space-y-2">
-                            {funding.disputes
-                              .filter((dispute) => dispute.milestoneId === milestone.id || dispute.milestoneId == null)
-                              .map((dispute) => (
-                                <div key={dispute.id} className="space-y-2">
-                                  <p className="text-xs text-muted">
-                                    Dispute open. Release waits until it is resolved.
-                                    {dispute.evidenceLimit > 0
-                                      ? ` Evidence ${dispute.notes.length} of ${dispute.evidenceLimit}.`
-                                      : " No further evidence."}
-                                  </p>
-                                  {dispute.notes.map((note) => (
-                                    <p key={note.id} className="text-xs text-indigo">
-                                      {note.author}: {note.body}
-                                      {note.url ? (
-                                        <>
-                                          {" "}
-                                          <a href={note.url} className="font-semibold text-violet hover:underline" rel="noreferrer" target="_blank">
-                                            Link
-                                          </a>
-                                        </>
-                                      ) : null}
-                                    </p>
-                                  ))}
-                                  {dispute.notes.length < dispute.evidenceLimit ? (
-                                    <form action={actionAddOwnEvidence} className="flex flex-wrap items-center gap-2">
-                                      <input type="hidden" name="fundingId" value={funding.id} />
-                                      <input type="hidden" name="disputeId" value={dispute.id} />
-                                      <input name="body" required minLength={8} placeholder="Evidence" className="rounded-lg border border-border px-2 py-1 text-xs" />
-                                      <input name="url" placeholder="https link" className="rounded-lg border border-border px-2 py-1 text-xs" />
-                                      <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                                        Add evidence
-                                      </button>
-                                    </form>
-                                  ) : null}
-                                </div>
-                              ))}
-                          </div>
-                        ) : (
-                        <form action={actionOpenOwnDispute} className="mt-2 flex flex-wrap items-center gap-2">
-                          <input type="hidden" name="fundingId" value={funding.id} />
-                          <input type="hidden" name="milestoneId" value={milestone.id} />
-                          <select name="reasonId" className="rounded-lg border border-border px-2 py-1 text-xs" required>
-                            {activeReasons.map((reason) => (
-                              <option key={reason.id} value={reason.id}>
-                                {reason.label}
-                              </option>
-                            ))}
-                          </select>
-                          <input
-                            name="details"
-                            required
-                            minLength={8}
-                            placeholder="What happened"
-                            className="rounded-lg border border-border px-2 py-1 text-xs"
-                          />
-                          <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                            Open dispute
-                          </button>
-                        </form>
-                        )
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
-  );
-}
+        </ProfileSummaryCard>
+      </div>
 
-function DiscoveryFacetForm({
-  draftId,
-  contentStyles,
-  commercialModes,
-  selectedStyles,
-  selectedModes,
-}: {
-  draftId: string;
-  contentStyles: { slug: string; name: string }[];
-  commercialModes: { slug: string; name: string }[];
-  selectedStyles: string[];
-  selectedModes: string[];
-}) {
-  if (!contentStyles.length && !commercialModes.length) return null;
-  return (
-    <div className="mt-8">
-      <h2 className="font-display text-xl font-bold text-indigo">Content style and commercial mode</h2>
-      <p className="mt-2 text-sm text-muted">
-        These choices are saved on the profile. An unpublished draft keeps them until the profile is published.
+      <p className="text-center text-[12px] text-muted">
+        Deep configuration stays one click away in the tabs above — nothing was removed from your profile tools.
       </p>
-      <form action={actionSaveDiscoveryFacets} className="mt-4 grid gap-4 sm:grid-cols-2">
-        <input type="hidden" name="draftId" value={draftId} />
-        <fieldset>
-          <legend className="text-sm font-semibold text-indigo">Content style</legend>
-          <ul className="mt-2 space-y-2">
-            {contentStyles.map((row) => (
-              <li key={row.slug}>
-                <label className="flex items-center gap-2 text-sm text-indigo">
-                  <input
-                    type="checkbox"
-                    name="contentStyle"
-                    value={row.slug}
-                    defaultChecked={selectedStyles.includes(row.slug)}
-                    className="h-4 w-4 rounded accent-[#633CFF]"
-                  />
-                  {row.name}
-                </label>
-              </li>
-            ))}
-          </ul>
-        </fieldset>
-        <fieldset>
-          <legend className="text-sm font-semibold text-indigo">Commercial mode</legend>
-          <ul className="mt-2 space-y-2">
-            {commercialModes.map((row) => (
-              <li key={row.slug}>
-                <label className="flex items-center gap-2 text-sm text-indigo">
-                  <input
-                    type="checkbox"
-                    name="commercialMode"
-                    value={row.slug}
-                    defaultChecked={selectedModes.includes(row.slug)}
-                    className="h-4 w-4 rounded accent-[#633CFF]"
-                  />
-                  {row.name}
-                </label>
-              </li>
-            ))}
-          </ul>
-        </fieldset>
-        <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
-          Save choices
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function ProfileNotesForm({
-  draftId,
-  offer,
-  offerDetails,
-  need,
-  needDetails,
-}: {
-  draftId: string;
-  offer: string;
-  offerDetails: string;
-  need: string;
-  needDetails: string;
-}) {
-  return (
-    <div className="mt-8">
-      <h2 className="font-display text-xl font-bold text-indigo">I offer and I need</h2>
-      <p className="mt-2 text-sm text-muted">
-        These notes are saved on the profile. A blank note stays blank. An unpublished draft keeps them until the
-        profile is published.
-      </p>
-      <form action={actionSaveProfileNotes} className="mt-4 grid gap-3 sm:grid-cols-2">
-        <input type="hidden" name="draftId" value={draftId} />
-        <label className="text-sm sm:col-span-2">
-          <span className="font-semibold text-indigo">I offer</span>
-          <input name="offer" defaultValue={offer} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
-        </label>
-        <label className="text-sm sm:col-span-2">
-          <span className="font-semibold text-indigo">Offer details</span>
-          <textarea
-            name="offerDetails"
-            rows={3}
-            defaultValue={offerDetails}
-            className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-          />
-        </label>
-        <label className="text-sm sm:col-span-2">
-          <span className="font-semibold text-indigo">I need</span>
-          <input name="need" defaultValue={need} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
-        </label>
-        <label className="text-sm sm:col-span-2">
-          <span className="font-semibold text-indigo">Need details</span>
-          <textarea
-            name="needDetails"
-            rows={3}
-            defaultValue={needDetails}
-            className="mt-1 w-full rounded-xl border border-border px-3 py-2"
-          />
-        </label>
-        <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
-          Save offer and need
-        </button>
-      </form>
-    </div>
+    </CreatorProfileShell>
   );
 }

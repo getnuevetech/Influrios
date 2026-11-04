@@ -188,9 +188,9 @@ export async function actionUpdateDashboardProfile(formData: FormData) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Save failed";
-    redirect(`/dashboard?error=${encodeURIComponent(message)}`);
+    redirect(`/dashboard/details?error=${encodeURIComponent(message)}`);
   }
-  redirect("/dashboard?saved=1");
+  redirect("/dashboard/details?saved=1");
 }
 
 export async function actionUpdateProfileMedia(formData: FormData) {
@@ -217,7 +217,7 @@ export async function actionUpdateProfileMedia(formData: FormData) {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not update images";
-    redirect(`/dashboard?error=${encodeURIComponent(message)}`);
+    redirect(`/dashboard/details?error=${encodeURIComponent(message)}`);
   }
-  redirect("/dashboard?saved=1");
+  redirect("/dashboard/details?saved=1");
 }

@@ -14,13 +14,12 @@ export async function actionSubmitOwnMilestone(formData: FormData) {
   const milestoneId = String(formData.get("milestoneId") ?? "");
   const funding = await prisma.collaborationFunding.findUnique({ where: { id: fundingId } });
   if (!funding || funding.creatorSlug !== draft.slug) {
-    redirect("/dashboard?error=That milestone is not on your card.");
+    redirect("/payments?error=That milestone is not on your card.");
   }
   const result = await submitFundingMilestone(fundingId, milestoneId);
-  if (!result.ok) redirect(`/dashboard?error=${encodeURIComponent(result.error)}`);
-  revalidatePath("/dashboard");
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");
-  redirect("/dashboard?saved=milestone");
+  redirect("/payments?submitted=1");
 }
 
 function dollarsToCents(raw: string) {
@@ -35,18 +34,17 @@ export async function actionRequestOwnChangeOrder(formData: FormData) {
   const fundingId = String(formData.get("fundingId") ?? "");
   const funding = await prisma.collaborationFunding.findUnique({ where: { id: fundingId } });
   if (!funding || funding.creatorSlug !== draft.slug) {
-    redirect("/dashboard?error=That prefund is not on your card.");
+    redirect("/payments?error=That prefund is not on your card.");
   }
   const result = await requestChangeOrder({
     fundingId,
     grossCents: dollarsToCents(String(formData.get("grossUsd") ?? "")),
     note: String(formData.get("note") ?? ""),
   });
-  if (!result.ok) redirect(`/dashboard?error=${encodeURIComponent(result.error)}`);
-  revalidatePath("/dashboard");
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");
   revalidatePath("/admin/marketplace");
-  redirect("/dashboard?saved=change");
+  redirect("/payments?changed=1");
 }
 
 export async function actionAddOwnEvidence(formData: FormData) {
@@ -55,7 +53,7 @@ export async function actionAddOwnEvidence(formData: FormData) {
   const fundingId = String(formData.get("fundingId") ?? "");
   const funding = await prisma.collaborationFunding.findUnique({ where: { id: fundingId } });
   if (!funding || funding.creatorSlug !== draft.slug) {
-    redirect("/dashboard?error=That dispute is not on your card.");
+    redirect("/payments?error=That dispute is not on your card.");
   }
   const result = await addDisputeEvidence({
     disputeId: String(formData.get("disputeId") ?? ""),
@@ -64,11 +62,10 @@ export async function actionAddOwnEvidence(formData: FormData) {
     body: String(formData.get("body") ?? ""),
     url: String(formData.get("url") ?? ""),
   });
-  if (!result.ok) redirect(`/dashboard?error=${encodeURIComponent(result.error)}`);
-  revalidatePath("/dashboard");
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");
   revalidatePath("/admin/trust");
-  redirect("/dashboard?saved=evidence");
+  redirect("/payments?evidence=1");
 }
 
 export async function actionOpenOwnDispute(formData: FormData) {
@@ -78,7 +75,7 @@ export async function actionOpenOwnDispute(formData: FormData) {
   const milestoneId = String(formData.get("milestoneId") ?? "");
   const funding = await prisma.collaborationFunding.findUnique({ where: { id: fundingId } });
   if (!funding || funding.creatorSlug !== draft.slug) {
-    redirect("/dashboard?error=That milestone is not on your card.");
+    redirect("/payments?error=That milestone is not on your card.");
   }
   const result = await openMilestoneDispute({
     fundingId,
@@ -87,9 +84,8 @@ export async function actionOpenOwnDispute(formData: FormData) {
     reasonId: String(formData.get("reasonId") ?? ""),
     details: String(formData.get("details") ?? ""),
   });
-  if (!result.ok) redirect(`/dashboard?error=${encodeURIComponent(result.error)}`);
-  revalidatePath("/dashboard");
+  if (!result.ok) redirect(`/payments?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/payments");
   revalidatePath("/admin/trust");
-  redirect("/dashboard?saved=dispute");
+  redirect("/payments?disputed=1");
 }

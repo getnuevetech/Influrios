@@ -199,6 +199,17 @@ export async function getCreatorOptIn(creatorSlug: string): Promise<CreatorOptIn
   };
 }
 
+export async function listIntrosForCreator(creatorSlug: string): Promise<ManagedIntro[]> {
+  await ensureManaged();
+  const rows = await prisma.managedIntro.findMany({
+    where: { creatorSlug },
+    include: { events: true },
+    orderBy: { updatedAt: "desc" },
+    take: 50,
+  });
+  return rows.map(mapIntro);
+}
+
 export async function setCreatorOptIn(
   creatorSlug: string,
   patch: Partial<Omit<CreatorOptIn, "creatorSlug">>,
