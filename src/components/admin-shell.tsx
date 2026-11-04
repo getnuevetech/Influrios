@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ComponentType, ReactNode } from "react";
 import { actionAdminLogout } from "@/app/admin/actions-auth";
 import {
@@ -110,6 +110,7 @@ export function AdminTopBar({
         </nav>
 
         <form action="/admin/accounts" method="get" className="mx-auto hidden min-w-0 max-w-xl flex-1 md:block">
+          <input type="hidden" name="tab" value="all" />
           <label className="relative block">
             <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
               <IconSearch size={16} />
@@ -117,7 +118,7 @@ export function AdminTopBar({
             <input
               name="q"
               type="search"
-              placeholder="Search Influrios (e.g. users, collaborations, ledger...)"
+              placeholder="Search Influrios (users, businesses, campaigns, invoices...)"
               className="w-full rounded-full border border-[#E4EBFF] bg-[#F7F9FF] py-2 pl-9 pr-4 text-[13px] text-indigo outline-none ring-violet/30 placeholder:text-muted/80 focus:border-violet focus:bg-white focus:ring-2"
             />
           </label>
@@ -170,6 +171,7 @@ export function AdminSidebar({
   roleName: string;
 }) {
   const pathname = usePathname() || "/admin";
+  const searchParams = useSearchParams();
 
   return (
     <aside className="sticky top-[57px] flex h-[calc(100vh-57px)] w-[240px] shrink-0 flex-col border-r border-[#E4EBFF] bg-white">
@@ -187,10 +189,20 @@ export function AdminSidebar({
             </p>
             <div className="space-y-0.5">
               {group.links.map((item) => {
-                const active =
-                  item.href === "/admin"
-                    ? pathname === "/admin"
-                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const itemUrl = new URL(item.href, "https://influrios.local");
+                const itemTab = itemUrl.searchParams.get("tab");
+                const currentTab = searchParams?.get("tab");
+                let active = false;
+                if (item.href === "/admin") {
+                  active = pathname === "/admin";
+                } else if (itemTab) {
+                  active = pathname === itemUrl.pathname && currentTab === itemTab;
+                } else if (itemUrl.pathname === "/admin/accounts") {
+                  active = pathname === "/admin/accounts" && !currentTab;
+                } else {
+                  active =
+                    pathname === itemUrl.pathname || pathname.startsWith(`${itemUrl.pathname}/`);
+                }
                 return (
                   <Link
                     key={item.href}

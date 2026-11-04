@@ -1,60 +1,136 @@
-import Link from "next/link";
-import { AdminAccountSection } from "@/app/admin/accounts/account-section";
-import { attachKycSubmissionStatus, loadAdminAccounts } from "@/app/admin/accounts/load-accounts";
+import { AdminUserAccountsView } from "@/components/admin-accounts-ui";
 import { requireAdminPage } from "@/app/admin/guard";
-import { hasPermission } from "@/lib/admin-auth";
+import { canAccessModule, getAdminAuthStore, hasPermission } from "@/lib/admin-auth";
+import {
+  loadAccountById,
+  loadAccountDetailExtras,
+  loadAccountKpis,
+  loadAccountTable,
+  loadAdminConsoleRows,
+  type AccountsTab,
+} from "@/lib/admin-accounts";
 import { assignablePlanCodes } from "@/lib/entitlements-db";
 import { getSiteConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Influencer accounts" };
+export const metadata = { title: "User Accounts · Admin" };
 
-const INFLUENCER_ROLES = ["CREATOR"] as const;
-const FALLBACK_PLANS = ["STARTER", "PLUS", "PRO"];
+const FALLBACK_INFLUENCER = ["STARTER", "PLUS", "PRO"];
+const FALLBACK_BUSINESS = ["BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];
 
-export default async function AdminInfluencerAccountsPage({
+type Search = {
+  tab?: string;
+  q?: string;
+  status?: string;
+  plan?: string;
+  kyc?: string;
+  page?: string;
+  id?: string;
+  saved?: string;
+  error?: string;
+  reset?: string;
+};
+
+function parseTab(raw: string | undefined): AccountsTab {
+  if (raw === "business" || raw === "all" || raw === "admin") return raw;
+  return "influencer";
+}
+
+export default async function AdminAccountsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string; reset?: string }>;
+  searchParams: Promise<Search>;
 }) {
   const session = await requireAdminPage("accounts");
   const canEdit = hasPermission(session, "accounts.edit");
   const params = await searchParams;
+  const tab = parseTab(params.tab);
+  const page = Math.max(1, Number(params.page) || 1);
   const policy = await getSiteConfig();
-  const catalogPlans = await assignablePlanCodes().catch(() => FALLBACK_PLANS);
+  const catalogPlans = await assignablePlanCodes().catch(() => [
+    ...FALLBACK_INFLUENCER,
+    ...FALLBACK_BUSINESS,
+  ]);
   const influencerPlans = catalogPlans.filter(
     (code) => !code.startsWith("BUSINESS") && code !== "AGENCY",
   );
-  const users = await attachKycSubmissionStatus(await loadAdminAccounts([...INFLUENCER_ROLES]));
+  const businessPlans = catalogPlans.filter(
+    (code) => code.startsWith("BUSINESS") || code === "AGENCY",
+  );
+  const planOptions =
+    tab === "business"
+      ? businessPlans.length
+        ? businessPlans
+        : FALLBACK_BUSINESS
+      : tab === "all"
+        ? catalogPlans
+        : influencerPlans.length
+          ? influencerPlans
+          : FALLBACK_INFLUENCER;
+
+  const roleOptions =
+    tab === "business"
+      ? ["BUSINESS", "AGENCY"]
+      : tab === "all"
+        ? ["CREATOR", "BUSINESS", "AGENCY"]
+        : ["CREATOR"];
+
+  const [kpis, table, adminRows, authStore] = await Promise.all([
+    loadAccountKpis(),
+    tab === "admin"
+      ? Promise.resolve({ rows: [], total: 0, page: 1, pageSize: 8 })
+      : loadAccountTable({
+          tab,
+          q: params.q,
+          status: (params.status as "active" | "suspended" | "all") || "all",
+          plan: params.plan,
+          kyc: (params.kyc as "verified" | "pending" | "unverified" | "rejected" | "all") || "all",
+          page,
+          pageSize: 8,
+          selectedId: params.id,
+        }),
+    tab === "admin" ? loadAdminConsoleRows() : Promise.resolve([]),
+    tab === "admin" ? getAdminAuthStore() : Promise.resolve(null),
+  ]);
+
+  let selectedRow =
+    tab === "admin"
+      ? null
+      : params.id
+        ? table.rows.find((r) => r.id === params.id) || (await loadAccountById(params.id))
+        : table.rows[0] || null;
+  if (selectedRow && params.id && selectedRow.id !== params.id) {
+    selectedRow = await loadAccountById(params.id);
+  }
+
+  const detail = selectedRow ? await loadAccountDetailExtras(selectedRow.id) : null;
+  const canManageAdmins =
+    canAccessModule(session, "access") && hasPermission(session, "access.manage_users");
 
   return (
-    <AdminAccountSection
-      kind="influencer"
-      title="Influencer accounts"
-      blurb={
-        <>
-          Creator sign-ins only. Set Identity KYC on each account below (or review document uploads on{" "}
-          <Link href="/admin/kyc" className="font-semibold text-violet">
-            KYC
-          </Link>
-          ). Business and agency accounts are on{" "}
-          <Link href="/admin/business-accounts" className="font-semibold text-violet">
-            Business accounts
-          </Link>
-          . Guest view and search limits are on{" "}
-          <Link href="/admin/guests" className="font-semibold text-violet">
-            Guest gates
-          </Link>
-          . The admin console itself is managed under Access levels.
-        </>
-      }
-      otherHref="/admin/business-accounts"
-      otherLabel="Business accounts"
-      users={users}
-      roleOptions={[...INFLUENCER_ROLES]}
-      planOptions={influencerPlans.length ? influencerPlans : FALLBACK_PLANS}
+    <AdminUserAccountsView
+      tab={tab}
+      basePath="/admin/accounts"
+      kpis={kpis}
+      rows={table.rows}
+      total={table.total}
+      page={table.page}
+      pageSize={table.pageSize}
+      filters={{
+        q: params.q,
+        status: params.status,
+        plan: params.plan,
+        kyc: params.kyc,
+      }}
+      selected={selectedRow}
+      detail={detail}
+      planOptions={planOptions}
+      roleOptions={roleOptions}
       canEdit={canEdit}
-      params={params}
+      canManageAdmins={canManageAdmins}
+      adminRows={adminRows}
+      adminRoles={(authStore?.roles || []).map((r) => ({ id: r.id, name: r.name }))}
+      flash={{ saved: params.saved, error: params.error, reset: params.reset }}
       policy={{
         consentVersion: policy.consentVersion,
         consentCopy: policy.consentCopy,
