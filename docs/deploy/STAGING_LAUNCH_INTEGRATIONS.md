@@ -77,6 +77,7 @@ Replace `APP` with `NEXT_PUBLIC_APP_URL` (no trailing slash).
 | Stripe billing webhook | `{APP}/api/billing/webhook` |
 | Marketplace provider webhook | `{APP}/api/marketplace/webhook` |
 | Social OAuth callback | `{APP}/api/social/callback` |
+| Meta Instagram / Facebook webhook | `{APP}/api/social/meta/webhook` |
 
 Register these in Stripe CLI/Dashboard, the marketplace provider admin, and the social app console **before** running §3–§6.
 
@@ -326,7 +327,7 @@ cd /var/www/influrios
 npm run staging:e3-social-evidence
 ```
 
-**Instagram / Meta note:** put `https://influrios.com/api/social/callback` under **Facebook Login → Valid OAuth Redirect URIs** (or Instagram product OAuth settings). Do **not** use Meta **Webhooks** for this URL — that screen expects a `hub.challenge` verifier; our callback is OAuth-only (`code`/`state`) and will fail webhook validation.
+**Instagram / Meta note:** put `https://influrios.com/api/social/callback` under **Facebook Login → Valid OAuth Redirect URIs** (or Instagram product OAuth settings). For Meta **Webhooks**, use `https://influrios.com/api/social/meta/webhook` with the verify token saved in Admin → Social (or `META_WEBHOOK_VERIFY_TOKEN`). Do **not** put the OAuth callback on the Webhooks screen — that handshake expects `hub.challenge` plain text, which only the Meta webhook route returns.
 
 ### E5 progress (Meilisearch counts) — **complete**
 

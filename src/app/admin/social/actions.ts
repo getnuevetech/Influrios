@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
+import { saveMetaWebhookConfig } from "@/lib/meta-webhook";
 import { saveSocialNetwork, saveSocialPolicy } from "@/lib/social-connect";
 
 function clean(value: FormDataEntryValue | null) {
@@ -21,6 +22,22 @@ export async function actionSaveSocialPolicy(formData: FormData) {
     redirect(`/admin/social?error=${encodeURIComponent(message)}`);
   }
   redirect("/admin/social?saved=terms");
+}
+
+export async function actionSaveMetaWebhook(formData: FormData) {
+  await requireAdminAction("social.edit");
+  try {
+    await saveMetaWebhookConfig({
+      verifyToken: clean(formData.get("verifyToken")),
+      clearVerifyToken: formData.get("clearVerifyToken") === "1",
+      appSecret: clean(formData.get("appSecret")),
+      clearAppSecret: formData.get("clearAppSecret") === "1",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save Meta webhook settings.";
+    redirect(`/admin/social?error=${encodeURIComponent(message)}`);
+  }
+  redirect("/admin/social?saved=meta-webhook");
 }
 
 export async function actionSaveSocialNetwork(formData: FormData) {
