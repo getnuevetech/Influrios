@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { actionSaveSocialNetwork, actionSaveSocialPolicy } from "@/app/admin/social/actions";
+import {
+  actionSaveMetaWebhook,
+  actionSaveSocialNetwork,
+  actionSaveSocialPolicy,
+} from "@/app/admin/social/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
+import { getMetaWebhookConfig, metaWebhookPath } from "@/lib/meta-webhook";
 import { callbackAbsoluteUrl, callbackPath, getSocialPolicy, listSocialNetworks } from "@/lib/social-connect";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +22,14 @@ export default async function AdminSocialPage({ searchParams }: Props) {
   const params = await searchParams;
   let policy: Awaited<ReturnType<typeof getSocialPolicy>> | null = null;
   let networks: Awaited<ReturnType<typeof listSocialNetworks>> = [];
+  let metaWebhook: Awaited<ReturnType<typeof getMetaWebhookConfig>> | null = null;
   let dbError = false;
   try {
-    [policy, networks] = await Promise.all([getSocialPolicy(), listSocialNetworks()]);
+    [policy, networks, metaWebhook] = await Promise.all([
+      getSocialPolicy(),
+      listSocialNetworks(),
+      getMetaWebhookConfig(),
+    ]);
   } catch (error) {
     console.error("admin social", error);
     dbError = true;
@@ -33,21 +43,83 @@ export default async function AdminSocialPage({ searchParams }: Props) {
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Social networks</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
         Each network stays off until a client id and secret are saved and the provider is enabled. A creator must accept
-        the current terms and policy before Influrios starts that network’s login. Follower and like counts are written
-        only when the network returns both. Public pages keep their current layout; a confirmed sync updates the figure
-        already shown for that account.
+        the current terms and policy before Influrios starts that network&apos;s login. Follower and like counts are
+        written only when that network returns both. Public pages keep their current layout; a confirmed sync updates
+        the figure already shown for that account.
       </p>
       <p className="mt-2 text-sm text-muted">
-        Redirect URI path: <span className="font-semibold text-indigo">{callbackPath()}</span>
+        OAuth redirect path: <span className="font-semibold text-indigo">{callbackPath()}</span>
       </p>
       <p className="mt-1 text-sm text-muted">
         Paste this <span className="font-semibold text-indigo">exact</span> URL into Google / Meta / TikTok authorized
         redirect URIs (https, no trailing slash):{" "}
         <code className="rounded bg-[#F1ECFF] px-1.5 py-0.5 text-xs font-semibold text-violet">{callbackAbsoluteUrl()}</code>
       </p>
+      <p className="mt-2 text-sm text-muted">
+        Meta webhook path: <span className="font-semibold text-indigo">{metaWebhookPath()}</span>
+      </p>
+      <p className="mt-1 text-sm text-muted">
+        Paste this into Meta → Instagram → Configure webhooks (not the OAuth redirect URI):{" "}
+        <code className="rounded bg-[#F1ECFF] px-1.5 py-0.5 text-xs font-semibold text-violet">
+          {metaWebhook?.webhookUrl ?? "https://influrios.com/api/social/meta/webhook"}
+        </code>
+      </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
       {dbError ? <p className="mt-4 text-sm text-amber-800">The database is unavailable.</p> : null}
+
+      {metaWebhook ? (
+        <form action={actionSaveMetaWebhook} className="mt-6 grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4">
+          <h2 className="font-display text-lg font-bold text-indigo">Meta webhooks (Instagram / Facebook)</h2>
+          <p className="text-sm text-muted">
+            Separate from OAuth login. Meta sends a GET verification with{" "}
+            <code className="text-xs">hub.verify_token</code> and{" "}
+            <code className="text-xs">hub.challenge</code>; Influrios returns the challenge as plain text. POST events
+            must be signed with the Meta app secret. Do not paste an Instagram user access token into Verify token.
+          </p>
+          <p className="text-xs text-muted">
+            Verify token {metaWebhook.verifyTokenStatus}
+            {metaWebhook.usingInstagramAppSecret
+              ? " · App secret falls back to the Instagram client secret when no Meta override is saved"
+              : ` · App secret ${metaWebhook.appSecretStatus}`}
+          </p>
+          <label className="block text-sm font-semibold text-indigo">
+            Verify token ({metaWebhook.verifyTokenStatus})
+            <input
+              name="verifyToken"
+              type="password"
+              placeholder="Leave blank to keep the saved verify token"
+              disabled={!canEdit}
+              className={inputClass}
+              autoComplete="off"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+            <input type="checkbox" name="clearVerifyToken" value="1" disabled={!canEdit} />
+            Clear saved verify token
+          </label>
+          <label className="block text-sm font-semibold text-indigo">
+            Meta app secret override ({metaWebhook.appSecretStatus})
+            <input
+              name="appSecret"
+              type="password"
+              placeholder="Optional — leave blank to use Instagram client secret"
+              disabled={!canEdit}
+              className={inputClass}
+              autoComplete="off"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+            <input type="checkbox" name="clearAppSecret" value="1" disabled={!canEdit} />
+            Clear Meta app secret override
+          </label>
+          {canEdit ? (
+            <button type="submit" className="btn-primary w-fit">
+              Save Meta webhook settings
+            </button>
+          ) : null}
+        </form>
+      ) : null}
 
       {policy ? (
         <form action={actionSaveSocialPolicy} className="mt-6 grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4">
@@ -79,7 +151,10 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             <input type="hidden" name="code" value={network.code} />
             <div className="sm:col-span-2">
               <p className="font-semibold text-indigo">{network.name}</p>
-              <p className="text-xs text-muted">{network.ready ? "Ready for creator consent and login" : "Not ready — no live sync"} · secret {network.secret}</p>
+              <p className="text-xs text-muted">
+                {network.ready ? "Ready for creator consent and login" : "Not ready — no live sync"} · secret{" "}
+                {network.secret}
+              </p>
             </div>
             <label className="block text-sm font-semibold text-indigo sm:col-span-2">
               Client id
