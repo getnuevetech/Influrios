@@ -7,13 +7,9 @@ const TABS = [
   { href: "/dashboard", label: "Overview", match: (p: string) => p === "/dashboard" },
   {
     href: "/dashboard/details",
-    label: "Profile Details",
-    match: (p: string) => p.startsWith("/dashboard/details"),
-  },
-  {
-    href: "/dashboard/preferences",
-    label: "Opportunities & Preferences",
-    match: (p: string) => p.startsWith("/dashboard/preferences"),
+    label: "Details & Preferences",
+    match: (p: string) =>
+      p.startsWith("/dashboard/details") || p.startsWith("/dashboard/preferences"),
   },
   {
     href: "/dashboard/social",
@@ -35,23 +31,21 @@ const TABS = [
 export function CreatorProfileTabs() {
   const pathname = usePathname() || "/dashboard";
   return (
-    <nav
-      className="flex gap-1 overflow-x-auto rounded-2xl border border-[#E4EBFF] bg-white p-1 shadow-sm"
-      aria-label="Profile sections"
-    >
+    <nav className="flex gap-5 overflow-x-auto border-b border-[#E6ECF7]" aria-label="Profile sections">
       {TABS.map((tab) => {
         const active = tab.match(pathname);
         return (
           <Link
             key={tab.href}
             href={tab.href}
-            className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-[13px] font-semibold transition ${
-              active
-                ? "bg-[#EEE8FF] text-violet"
-                : "text-muted hover:bg-[#F7F9FF] hover:text-indigo"
+            className={`relative whitespace-nowrap pb-3 text-[13px] font-semibold transition ${
+              active ? "text-violet" : "text-muted hover:text-indigo"
             }`}
           >
             {tab.label}
+            {active ? (
+              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-violet" />
+            ) : null}
           </Link>
         );
       })}

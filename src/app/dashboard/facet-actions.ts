@@ -17,5 +17,5 @@ export async function actionSaveDiscoveryFacets(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not save those choices";
     redirect(`/dashboard?error=${encodeURIComponent(message)}`);
   }
-  redirect("/dashboard/preferences?saved=facets#style");
+  redirect("/dashboard/details?saved=facets#style");
 }

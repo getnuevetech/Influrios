@@ -34,6 +34,9 @@ export default async function ProfileLinksPage({ searchParams }: Props) {
     campaignRoom,
     linkAnalytics,
     fundings,
+    primaryNiche,
+    kycVerified,
+    planCode,
   } = data;
 
   const paymentLabel = !fundings.length
@@ -46,8 +49,9 @@ export default async function ProfileLinksPage({ searchParams }: Props) {
     <CreatorProfileShell
       draft={draft}
       score={score}
-      title="Links & payments"
-      subtitle="Canonical URL, short link, QR, and payment readiness — without duplicating the full payout workflow."
+      primaryNiche={primaryNiche}
+      planLabel={planCode}
+      kycVerified={kycVerified}
       flash={<ProfileFlash params={params} />}
     >
       <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5 shadow-[0_8px_24px_rgba(17,26,90,0.04)]">

@@ -3,29 +3,54 @@ import {
   actionUpdateDashboardProfile,
   actionUpdateProfileMedia,
 } from "@/app/claim/actions";
+import { DiscoveryFacetForm, ProfileNotesForm } from "@/components/creator-profile/forms";
+import { ManagedIntrosPanel } from "@/components/creator-profile/managed-intros-panel";
 import { CreatorProfileShell, ProfileFlash } from "@/components/creator-profile/profile-shell";
+import { SpecialtyPicker } from "@/components/creator-profile/specialty-picker";
 import { PlaceFields } from "@/components/place-fields";
 import { loadCreatorProfileBundle } from "@/lib/creator-profile-data";
 import { BIO_MIN_CHARS } from "@/lib/onboarding";
 import { BRAND_AVATARS, resolveDisplayBanner } from "@/lib/profile-media";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Profile details" };
+export const metadata = { title: "Details & Preferences" };
 
 type Props = {
-  searchParams: Promise<{ saved?: string; error?: string; published?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; published?: string; tab?: string }>;
 };
 
 export default async function ProfileDetailsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const { draft, score, selfDescriptions, specialtyGroups } = await loadCreatorProfileBundle();
+  const data = await loadCreatorProfileBundle();
+  const {
+    draft,
+    score,
+    selfDescriptions,
+    specialtyGroups,
+    specialtyCap,
+    topics,
+    suggestionRows,
+    optIn,
+    activeIntros,
+    historyIntros,
+    contentStyles,
+    commercialModes,
+    primaryNiche,
+    kycVerified,
+    planCode,
+  } = data;
+  const introTab =
+    params.tab === "active" || params.tab === "history" || params.tab === "preferences"
+      ? params.tab
+      : "preferences";
 
   return (
     <CreatorProfileShell
       draft={draft}
       score={score}
-      title="Profile details"
-      subtitle="Identity and public profile content for your Influencer Card."
+      primaryNiche={primaryNiche}
+      planLabel={planCode}
+      kycVerified={kycVerified}
       flash={<ProfileFlash params={params} />}
     >
       <section id="profile" className="card-surface space-y-6 p-6">
@@ -196,6 +221,68 @@ export default async function ProfileDetailsPage({ searchParams }: Props) {
             </button>
           </form>
         </div>
+      </section>
+
+      <section id="specialties" className="card-surface space-y-4 p-6">
+        <div>
+          <h2 className="font-display text-xl font-bold text-indigo">Specialties & niches</h2>
+          <p className="mt-2 text-sm text-muted">
+            Overview shows selected chips only. Edit opens a searchable picker with groups, selected-only filter,
+            and clear/reset. This plan keeps {specialtyCap}{" "}
+            {specialtyCap === 1 ? "specialty" : "specialties"}.
+          </p>
+          {topics.providerError ? (
+            <p className="mt-2 text-sm text-amber-800">
+              The provider did not answer. The rules result is shown instead.
+            </p>
+          ) : null}
+        </div>
+        <SpecialtyPicker
+          draftId={draft.id}
+          specialtyCap={specialtyCap}
+          groups={specialtyGroups}
+          selected={draft.specialties}
+          suggested={[...suggestionRows.values()]}
+        />
+      </section>
+
+      <section id="introductions" className="card-surface space-y-4 p-6">
+        <div>
+          <h2 className="font-display text-xl font-bold text-indigo">Managed introductions</h2>
+          <p className="mt-2 text-sm text-muted">
+            Preferences, active introductions, and history — not a long checkbox list on Overview.
+          </p>
+        </div>
+        <ManagedIntrosPanel
+          openToManaged={optIn?.openToManaged === true}
+          niches={optIn?.niches ?? []}
+          targetingNotes={optIn?.targetingNotes ?? ""}
+          updatedAt={optIn?.updatedAt}
+          groups={specialtyGroups}
+          activeIntros={activeIntros}
+          historyIntros={historyIntros}
+          initialTab={introTab}
+        />
+      </section>
+
+      <section id="style" className="card-surface p-6">
+        <DiscoveryFacetForm
+          draftId={draft.id}
+          contentStyles={contentStyles}
+          commercialModes={commercialModes}
+          selectedStyles={draft.contentStyles ?? []}
+          selectedModes={draft.commercialModes ?? []}
+        />
+      </section>
+
+      <section id="offer-need" className="card-surface p-6">
+        <ProfileNotesForm
+          draftId={draft.id}
+          offer={draft.offer ?? ""}
+          offerDetails={draft.offerDetails ?? ""}
+          need={draft.need ?? ""}
+          needDetails={draft.needDetails ?? ""}
+        />
       </section>
     </CreatorProfileShell>
   );
