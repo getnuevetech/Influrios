@@ -21,5 +21,5 @@ export async function actionSaveProfileNotes(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not save the offer and need";
     redirect(`/dashboard?error=${encodeURIComponent(message)}`);
   }
-  redirect("/dashboard/preferences?saved=notes#offer-need");
+  redirect("/dashboard/details?saved=notes#offer-need");
 }

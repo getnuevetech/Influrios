@@ -118,6 +118,48 @@ export async function loadCreatorProfileBundle() {
   );
   const historyIntros = intros.filter((i) => ["declined", "closed"].includes(i.status));
 
+  const connectedSocialCount = social?.accounts.filter((a) => a.status === "connected").length ?? 0;
+  const primaryNiche = draft.specialties[0] ? specialtyName(draft.specialties[0]) : null;
+
+  const [kycVerified, activeCollaborations, opportunityMatches] = await Promise.all([
+    (async () => {
+      try {
+        const { resolveCreatorIdentityVerified } = await import("@/lib/kyc-document");
+        const { prisma } = await import("@/lib/db");
+        const row = await prisma.creator.findUnique({
+          where: { slug: draft.slug },
+          select: { id: true, identityVerified: true },
+        });
+        if (!row) return false;
+        return resolveCreatorIdentityVerified({
+          creatorId: row.id,
+          creatorSlug: draft.slug,
+          identityVerified: row.identityVerified,
+        });
+      } catch {
+        return false;
+      }
+    })(),
+    (async () => {
+      try {
+        const { listCollaborations } = await import("@/lib/collaborations");
+        const rows = await listCollaborations({ slug: draft.slug });
+        return rows.filter((row) => row.status === "accepted").length;
+      } catch {
+        return 0;
+      }
+    })(),
+    (async () => {
+      try {
+        const { findDirectoryMatchesFor } = await import("@/lib/matching");
+        const matches = await findDirectoryMatchesFor(draft.slug);
+        return matches.length;
+      } catch {
+        return 0;
+      }
+    })(),
+  ]);
+
   return {
     draft,
     optIn,
@@ -151,6 +193,11 @@ export async function loadCreatorProfileBundle() {
     contentStyles,
     commercialModes,
     specialtyName,
+    connectedSocialCount,
+    primaryNiche,
+    kycVerified,
+    activeCollaborations,
+    opportunityMatches,
   };
 }
 

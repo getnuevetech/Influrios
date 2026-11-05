@@ -11,14 +11,15 @@ type Props = {
 
 export default async function ProfileSocialPage({ searchParams }: Props) {
   const params = await searchParams;
-  const { draft, score, social } = await loadCreatorProfileBundle();
+  const { draft, score, social, primaryNiche, kycVerified, planCode } = await loadCreatorProfileBundle();
 
   return (
     <CreatorProfileShell
       draft={draft}
       score={score}
-      title="Social accounts"
-      subtitle="Connect networks, manage permissions, sync followers, and review errors."
+      primaryNiche={primaryNiche}
+      planLabel={planCode}
+      kycVerified={kycVerified}
       flash={<ProfileFlash params={params} />}
     >
       <SocialConnectionsPanel social={social} />
