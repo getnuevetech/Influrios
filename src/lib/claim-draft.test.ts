@@ -88,8 +88,11 @@ describe("claim draft facts", () => {
     assert.match(page, /platform: "facebook"/);
     assert.match(page, /href="\/login\?next=\/creator"/);
     assert.match(page, /href="\/discover"/);
+    const creatorHome = readFileSync("src/app/creator/page.tsx", "utf8");
+    const profileData = readFileSync("src/lib/creator-profile-data.ts", "utf8");
     const dashboard = readFileSync("src/app/dashboard/page.tsx", "utf8");
-    assert.match(dashboard, /redirect\("\/login\?next=\/creator"\)/);
+    assert.match(creatorHome, /redirect\("\/login\?next=\/creator"\)/);
+    assert.match(profileData, /redirect\("\/login\?next=\/creator"\)/);
     assert.equal(dashboard.includes('if (!draft) redirect("/claim")'), false);
     assert.equal(preview.includes('? "Influencer"'), false);
   });
