@@ -331,7 +331,11 @@ npm run staging:e3-social-evidence
 
 **Facebook Page:** connects via `/me/accounts`. Scopes are locked in code. On **Facebook Login for Business** apps, paste the Meta **Configuration ID** in Admin → Social (Influrios sends `config_id=` and omits freeform `scope=`). Sending `pages_show_list` / `pages_read_engagement` as `scope=` on those apps produces Meta’s **Invalid Scopes** error. OAuth success marks the network **Connected** even when Page metrics are missing.
 
-**Instagram Professional:** uses **Instagram Login** (`www.instagram.com/oauth/authorize` + `instagram_business_basic` + `graph.instagram.com/me`) — not Facebook Page-linked Login. Personal/consumer Instagram accounts cannot sync. Meta Graph defaults use `v22.0`.
+**Instagram Professional:** two Meta surfaces:
+1. **Instagram Login** (older apps with an Instagram App ID): `www.instagram.com/oauth/authorize` + `instagram_business_basic` + `graph.instagram.com/me`. Using the Meta App ID here returns **Invalid platform app**.
+2. **Unified Login** (newer apps — “API setup with Instagram login is not available”): Meta App ID/Secret + Facebook Login for Business **Configuration ID** (`config_id=`). Influrios then authorizes via Facebook dialog and reads Page-linked `instagram_business_account`.
+
+Personal/consumer Instagram accounts cannot sync. Meta Graph defaults use `v22.0`.
 
 **Ops blockers outside Influrios:** Meta “Feature Unavailable / updating additional details” means the Facebook Login product is locked until app details / verification are finished in Meta for Developers. Google “hasn't verified this app” is normal for Testing-mode OAuth clients — listed testers click Continue.
 
