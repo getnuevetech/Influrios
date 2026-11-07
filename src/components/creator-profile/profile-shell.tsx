@@ -55,9 +55,14 @@ export function ProfileFlash({
           Campaign link updated.
         </div>
       ) : null}
-      {params.social === "connected" || params.social === "synced" ? (
+      {params.social === "synced" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          The network returned a follower count and likes.
+          Connected and audience statistics were synced.
+        </div>
+      ) : null}
+      {params.social === "connected" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Connected. If audience statistics are missing, use Sync now after setup is complete.
         </div>
       ) : null}
       {params.social === "disconnected" ? (

@@ -24,8 +24,11 @@ export async function GET(request: NextRequest) {
       origin,
     });
     const target = new URL("/dashboard", origin);
-    if (result.ok) target.searchParams.set("social", "connected");
-    else target.searchParams.set("error", result.error);
+    if (result.ok) {
+      target.searchParams.set("social", result.metricsSynced ? "synced" : "connected");
+    } else {
+      target.searchParams.set("error", result.error);
+    }
     return NextResponse.redirect(target);
   } catch {
     const target = new URL("/dashboard", origin);
