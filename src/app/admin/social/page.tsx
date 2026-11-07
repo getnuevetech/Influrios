@@ -70,25 +70,61 @@ export default async function AdminSocialPage({ searchParams }: Props) {
 
       {metaWebhook ? (
         <form action={actionSaveMetaWebhook} className="mt-6 grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <h2 className="font-display text-lg font-bold text-indigo">Meta webhooks (Instagram / Facebook)</h2>
+          <h2 className="font-display text-lg font-bold text-indigo">Meta / Instagram Unified Login · Webhooks</h2>
           <p className="text-sm text-muted">
-            Separate from OAuth login. Meta sends a GET verification with{" "}
-            <code className="text-xs">hub.verify_token</code> and{" "}
-            <code className="text-xs">hub.challenge</code>; Influrios returns the challenge as plain text. POST events
-            must be signed with the Meta app secret. Do not paste an Instagram user access token into Verify token.
+            Your Meta app uses <span className="font-semibold">API setup with Unified login</span>. OAuth uses a{" "}
+            <code className="text-xs">config_id</code> on Facebook/Instagram network rows below (not freeform scopes).
+            Webhooks are separate: Meta GETs the callback with your verify token; Influrios returns{" "}
+            <code className="text-xs">hub.challenge</code> as plain text.
           </p>
-          <p className="text-xs text-muted">
-            Verify token {metaWebhook.verifyTokenStatus}
-            {metaWebhook.usingInstagramAppSecret
-              ? " · App secret falls back to the Instagram client secret when no Meta override is saved"
-              : ` · App secret ${metaWebhook.appSecretStatus}`}
+          <div className="grid gap-2 rounded-xl bg-[#F8F6FF] px-3 py-2 text-xs text-indigo sm:grid-cols-2">
+            <p>
+              OAuth callback (read-only):{" "}
+              <code className="font-semibold text-violet">{callbackAbsoluteUrl()}</code>
+            </p>
+            <p>
+              Webhook URL (read-only):{" "}
+              <code className="font-semibold text-violet">{metaWebhook.webhookUrl}</code>
+            </p>
+            <p>
+              Webhook verify token:{" "}
+              <span className="font-semibold">
+                {metaWebhook.verifyTokenStatus === "saved" ? "Configured ✓" : "Missing — Meta Verify and save will fail"}
+              </span>
+            </p>
+            <p>
+              Meta app secret for signatures:{" "}
+              <span className="font-semibold">
+                {metaWebhook.appSecretStatus === "saved" ? "Configured ✓" : "Missing (optional until POST events)"}
+              </span>
+            </p>
+          </div>
+          <p className="text-xs text-amber-900">
+            Do <span className="font-semibold">not</span> paste a Meta access token (values starting with{" "}
+            <code>EAA…</code>). Create a private string, e.g.{" "}
+            <code className="text-[11px]">openssl rand -hex 32</code>, save it here, then paste the{" "}
+            <span className="font-semibold">same</span> string into Meta → Configure webhooks → Verify token. If an
+            access token was pasted into Meta already, revoke/regenerate it.
           </p>
+          {metaWebhook.verifyTokenStatus === "saved" ? (
+            <p className="text-xs text-muted">
+              After saving, probe locally should return only <code>123456</code>:{" "}
+              <code className="break-all text-[11px]">
+                {metaWebhook.webhookUrl}?hub.mode=subscribe&hub.verify_token=YOUR_VERIFY_TOKEN&hub.challenge=123456
+              </code>
+            </p>
+          ) : (
+            <p className="text-xs text-amber-900">
+              Production currently answers <code>503 Meta webhook verify token is not configured</code> until you save a
+              verify token here. That is why Meta shows “callback URL or verify token couldn&apos;t be validated”.
+            </p>
+          )}
           <label className="block text-sm font-semibold text-indigo">
             Verify token ({metaWebhook.verifyTokenStatus})
             <input
               name="verifyToken"
               type="password"
-              placeholder="Leave blank to keep the saved verify token"
+              placeholder="Private string you create — not an EAA… access token"
               disabled={!canEdit}
               className={inputClass}
               autoComplete="off"
@@ -103,7 +139,7 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             <input
               name="appSecret"
               type="password"
-              placeholder="Optional — leave blank to use Instagram client secret"
+              placeholder="Optional — leave blank to use Instagram/Facebook client secret"
               disabled={!canEdit}
               className={inputClass}
               autoComplete="off"

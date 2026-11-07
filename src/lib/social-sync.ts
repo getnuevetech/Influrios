@@ -660,6 +660,23 @@ export function resolveSocialScopes(platform: string | null | undefined, _scopes
   return network?.scopes ?? "";
 }
 
+/** Accept a bare Configuration ID or a full Meta login URL that contains config_id=. */
+export function normalizeMetaConfigId(raw: string | null | undefined) {
+  const value = (raw ?? "").trim();
+  if (!value) return "";
+  if (/^\d{6,}$/.test(value)) return value.slice(0, 120);
+  try {
+    const url = new URL(value);
+    const fromQuery = url.searchParams.get("config_id")?.trim();
+    if (fromQuery) return fromQuery.slice(0, 120);
+  } catch {
+    // not a URL
+  }
+  const match = value.match(/config_id=([^&\s#]+)/i);
+  if (match?.[1]) return decodeURIComponent(match[1]).slice(0, 120);
+  return value.slice(0, 120);
+}
+
 /**
  * Instagram has two Meta-supported login surfaces:
  * - Instagram Login (legacy apps with a dedicated Instagram App ID)

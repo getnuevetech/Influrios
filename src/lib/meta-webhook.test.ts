@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "crypto";
 import { describe, it } from "node:test";
 import {
+  looksLikeMetaAccessToken,
   metaWebhookPath,
   parseMetaWebhookPayload,
   verifyMetaSubscriptionChallenge,
@@ -51,6 +52,17 @@ describe("meta webhook verification", () => {
     assert.equal(verifyMetaWebhookSignature(body, signature, secret), true);
     assert.equal(verifyMetaWebhookSignature(body, signature, "other"), false);
     assert.equal(verifyMetaWebhookSignature(body, null, secret), false);
+  });
+
+  it("rejects Meta access tokens as webhook verify tokens", () => {
+    assert.equal(
+      looksLikeMetaAccessToken(
+        "EAAMrlF58fekBSZCEiEFDA9ukORJZAV5wblNGR3wButilaQdS277ZCyvvRdh9wtZCYdnkdfnOL9RbsMnABCfdZA9nDWBXnxilw6c4TpO2MaL",
+      ),
+      true,
+    );
+    assert.equal(looksLikeMetaAccessToken("influrios-meta-webhook-a1b2c3d4e5f6"), false);
+    assert.equal(looksLikeMetaAccessToken("openssl-style-hex-deadbeef"), false);
   });
 });
 

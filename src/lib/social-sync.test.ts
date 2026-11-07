@@ -11,6 +11,7 @@ import {
   parseSocialMetrics,
   parseYoutubeChannelMetrics,
   prepareSocialProfileUrl,
+  normalizeMetaConfigId,
   resolveLockedOAuthEndpoints,
   resolveSocialScopes,
   socialConnectGate,
@@ -194,6 +195,14 @@ describe("live social metrics", () => {
     assert.equal(unified?.mode, "unified_config");
     assert.match(unified?.authorizeUrl ?? "", /facebook\.com\/.*\/dialog\/oauth/);
     assert.match(unified?.profileUrl ?? "", /instagram_business_account/);
+
+    assert.equal(normalizeMetaConfigId("123456789012345"), "123456789012345");
+    assert.equal(
+      normalizeMetaConfigId(
+        "https://www.facebook.com/v22.0/dialog/oauth?client_id=1&config_id=99887766&response_type=code",
+      ),
+      "99887766",
+    );
   });
 
   it("keeps OAuth success notices separate from hard metric failure", () => {
