@@ -48,7 +48,8 @@ describe("profile offer, need, and metric freshness", () => {
     const profile = readFileSync("src/app/creators/[slug]/page.tsx", "utf8");
     const profileSave = readFileSync("src/app/claim/actions.ts", "utf8");
     const notesSave = readFileSync("src/app/dashboard/offer-actions.ts", "utf8");
-    const dashboard = readFileSync("src/app/dashboard/page.tsx", "utf8");
+    const offerForm = readFileSync("src/components/creator-profile/forms.tsx", "utf8");
+    const details = readFileSync("src/app/dashboard/details/page.tsx", "utf8");
     assert.equal(directory.includes("collaborationOffer.update"), false);
     assert.equal(directory.includes('|| "Collaboration"'), false);
     assert.match(profile, /profileOfferLines/);
@@ -58,8 +59,9 @@ describe("profile offer, need, and metric freshness", () => {
       profileSave.indexOf("export async function actionUpdateProfileMedia"),
     );
     assert.equal(dashboardSave.includes("offer"), false);
-    assert.match(dashboard, /name="offer"/);
-    assert.match(dashboard, /name="need"/);
+    assert.match(offerForm, /name="offer"/);
+    assert.match(offerForm, /name="need"/);
+    assert.match(details, /id="offer-need"/);
     assert.match(notesSave, /get\("offerDetails"\)/);
     assert.match(notesSave, /get\("need"\)/);
   });
