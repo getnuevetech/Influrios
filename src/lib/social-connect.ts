@@ -157,6 +157,16 @@ export async function listSocialNetworks() {
     const row = rows.find((item) => item.code === network.code);
     const extra = extraOf(row?.extraJson, network);
     const ready = Boolean(row?.enabled && row.publicKey && row.secretCipher);
+    const locked = resolveLockedOAuthEndpoints(network.platform, extra.configId);
+    const loginMode = locked?.mode ?? "default";
+    const consentDetail =
+      network.code === "instagram" && loginMode === "unified_config"
+        ? "Meta Unified Login (Facebook dialog + Configuration ID — required for newer Meta apps)"
+        : network.code === "instagram" && loginMode === "instagram_login"
+          ? "Instagram Login (instagram_business_basic)"
+          : network.code === "facebook" && extra.configId
+            ? "Meta Unified Login (Facebook dialog + Configuration ID)"
+            : extra.scopes;
     return {
       id: row?.id ?? "",
       code: network.code,
@@ -166,6 +176,8 @@ export async function listSocialNetworks() {
       clientId: row?.publicKey ?? "",
       secret: secretStatus(row?.secretCipher),
       ready,
+      loginMode,
+      consentDetail,
       ...extra,
     };
   });

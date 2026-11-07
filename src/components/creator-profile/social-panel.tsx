@@ -12,6 +12,8 @@ type SocialAccount = {
   likes?: number | null;
   lastError?: string | null;
   scopes?: string | null;
+  consentDetail?: string | null;
+  loginMode?: string | null;
   metricLabels?: { primary: string; secondary: string };
   audienceStatus?: "synced" | "unavailable" | "idle";
 };
@@ -118,12 +120,24 @@ export function SocialConnectionsPanel({
                 ) : account.ready ? (
                   <form action={actionConnectSocial} className="mt-3 flex flex-wrap items-center gap-3">
                     <input type="hidden" name="platform" value={account.platform} />
+                    {account.loginMode === "unified_config" ? (
+                      <p className="w-full text-xs text-muted">
+                        Connect opens <span className="font-semibold text-indigo">Facebook / Meta Unified Login</span>{" "}
+                        (not the Instagram website). That is required for newer Meta apps that only support Unified
+                        Login Configuration IDs.
+                      </p>
+                    ) : null}
                     <label className="flex items-start gap-2 text-xs text-indigo">
                       <input type="checkbox" name="acceptTerms" className="mt-0.5 accent-violet" required />
                       <span>
                         I acknowledge the Connected Social Data & API Policy and authorize Influrios to start the{" "}
-                        {account.name} login
-                        {account.scopes ? ` for: ${account.scopes}` : ""}. This is not granted by the Influencer Terms.
+                        {account.name} connection
+                        {account.consentDetail
+                          ? ` via ${account.consentDetail}`
+                          : account.scopes
+                            ? ` for: ${account.scopes}`
+                            : ""}
+                        . This is not granted by the Influencer Terms.
                       </span>
                     </label>
                     <button type="submit" className="btn-primary !py-1.5 text-xs">

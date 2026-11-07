@@ -260,18 +260,21 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             ) : null}
             {network.code === "instagram" ? (
               <p className="sm:col-span-2 text-xs text-muted">
-                <span className="font-semibold">Invalid platform app</span> usually means the Meta App ID was used on{" "}
-                <code className="text-[11px]">www.instagram.com/oauth/authorize</code>. Two supported setups:
-                <br />
-                1) Older apps with “API setup with Instagram login”: paste the{" "}
-                <span className="font-semibold">Instagram App ID / Secret</span> (Instagram product panel), leave
-                Configuration ID empty.
-                <br />
-                2) Newer apps that only offer Unified Login: paste the{" "}
-                <span className="font-semibold">Meta App ID / Secret</span> plus a Facebook Login for Business{" "}
-                <span className="font-semibold">Configuration ID</span> that includes Instagram assets (
-                <code className="text-[11px]">{network.configPermissions}</code>). Influrios then uses{" "}
-                <code className="text-[11px]">config_id</code> instead of Instagram Login.
+                {network.configId ? (
+                  <>
+                    <span className="font-semibold text-indigo">Active mode: Unified Login.</span> “Connect Instagram”
+                    opens the <span className="font-semibold">Facebook / Meta</span> dialog on purpose (config_id). It
+                    will not open instagram.com. Use a Facebook user that is an App Role admin/tester while the app is
+                    in Development, then pick the Instagram Professional asset.
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold text-indigo">Active mode: Instagram Login.</span> Connect uses{" "}
+                    <code className="text-[11px]">www.instagram.com/oauth/authorize</code> with the{" "}
+                    <span className="font-semibold">Instagram App ID</span> (not the Meta App ID). If Meta only offers
+                    Unified Login, paste a Configuration ID above instead — Connect will then use Facebook login.
+                  </>
+                )}
               </p>
             ) : null}
             {network.code === "youtube" ? (
