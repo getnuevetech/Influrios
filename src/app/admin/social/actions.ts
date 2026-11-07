@@ -51,6 +51,7 @@ export async function actionSaveSocialNetwork(formData: FormData) {
       clearSecret: formData.get("clearSecret") === "1",
       configId: clean(formData.get("configId")),
       clearConfigId: formData.get("clearConfigId") === "1",
+      classicInstagramLogin: formData.get("classicInstagramLogin") === "1",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the social network.";
