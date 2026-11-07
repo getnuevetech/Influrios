@@ -180,6 +180,15 @@ export default async function AdminSocialPage({ searchParams }: Props) {
               Scopes
               <input name="scopes" defaultValue={network.scopes} disabled={!canEdit} className={inputClass} />
             </label>
+            {network.code === "facebook" ? (
+              <p className="sm:col-span-2 text-xs text-muted">
+                Facebook needs a Page the creator manages. Use{" "}
+                <code className="text-[11px]">me/accounts?fields=id,name,username,followers_count,fan_count</code> and
+                scopes <code className="text-[11px]">public_profile,pages_show_list,pages_read_engagement</code>.{" "}
+                <code className="text-[11px]">public_profile</code> alone never returns follower counts. Enable those
+                permissions on the Meta app (App Review for Live).
+              </p>
+            ) : null}
             <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
               <input type="checkbox" name="enabled" value="1" defaultChecked={network.enabled} disabled={!canEdit} />
               Enabled

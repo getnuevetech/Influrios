@@ -65,8 +65,9 @@ export const SOCIAL_NETWORKS = [
     apiHosts: ["graph.facebook.com"],
     authorizeUrl: "https://www.facebook.com/v21.0/dialog/oauth",
     tokenUrl: "https://graph.facebook.com/v21.0/oauth/access_token",
-    profileUrl: "https://graph.facebook.com/v21.0/me",
-    scopes: "public_profile",
+    // Personal /me never returns audience counts. Page list + fields is required.
+    profileUrl: "https://graph.facebook.com/v21.0/me/accounts?fields=id,name,username,followers_count,fan_count",
+    scopes: "public_profile,pages_show_list,pages_read_engagement",
   },
   {
     code: "linkedin",
@@ -100,7 +101,11 @@ export type SocialNetworkCode = (typeof SOCIAL_NETWORKS)[number]["code"];
 export type SocialSyncPlatform = (typeof SOCIAL_NETWORKS)[number]["platform"];
 
 const FOLLOWER_KEYS = ["followers", "follower_count", "followers_count", "subscribercount", "subscriber_count"];
-const LIKE_KEYS = ["likes", "like_count", "likes_count", "total_likes", "like_total"];
+const LIKE_KEYS = ["likes", "like_count", "likes_count", "total_likes", "like_total", "fan_count"];
+
+/** Legacy Admin → Social Facebook rows that cannot sync audience counts. */
+export const FACEBOOK_WEAK_SCOPES = new Set(["", "public_profile"]);
+export const FACEBOOK_WEAK_PROFILE_PATHS = new Set(["/me", "/v21.0/me"]);
 
 export function socialNetwork(codeOrPlatform: string) {
   const key = codeOrPlatform.trim().toLowerCase();
@@ -240,23 +245,96 @@ export function parseYoutubeChannelMetrics(payload: unknown): {
   return { followers, likes, handle, externalId };
 }
 
-/** Ensure YouTube profile URLs include the required channels.list query params. */
+/**
+ * Facebook personal /me never returns audience counts. Influrios syncs the first Page the
+ * user manages: followers_count → followers, fan_count (Page likes) → likes.
+ */
+export function parseFacebookPageMetrics(payload: unknown): {
+  followers: number;
+  likes: number;
+  handle: string | null;
+  externalId: string | null;
+  emptyPages: boolean;
+} | null {
+  if (!payload || typeof payload !== "object") return null;
+  const data = (payload as { data?: unknown }).data;
+  if (!Array.isArray(data)) return null;
+  if (data.length === 0) return { followers: 0, likes: 0, handle: null, externalId: null, emptyPages: true };
+  for (const page of data) {
+    if (!page || typeof page !== "object" || Array.isArray(page)) continue;
+    const record = page as {
+      id?: unknown;
+      name?: unknown;
+      username?: unknown;
+      followers_count?: unknown;
+      fan_count?: unknown;
+    };
+    const followersCount = asCount(record.followers_count);
+    const fanCount = asCount(record.fan_count);
+    const followers = followersCount ?? fanCount;
+    const likes = fanCount ?? followersCount;
+    if (followers == null || likes == null) continue;
+    const username = typeof record.username === "string" ? record.username.trim() : "";
+    const name = typeof record.name === "string" ? record.name.trim() : "";
+    const handle = (username || name || "").replace(/^@/, "") || null;
+    const externalId = typeof record.id === "string" && record.id.trim() ? record.id.trim() : null;
+    return { followers, likes, handle, externalId, emptyPages: false };
+  }
+  return null;
+}
+
+/** Upgrade weak Facebook Admin rows and ensure YouTube channels.list query params. */
 export function prepareSocialProfileUrl(profileUrl: string, platform?: string | null) {
   const network = platform ? socialNetwork(platform) : null;
   const looksYoutube =
     network?.code === "youtube" || /googleapis\.com\/youtube\/v3\/channels/i.test(profileUrl);
-  if (!looksYoutube) return profileUrl;
+  if (looksYoutube) {
+    try {
+      const url = new URL(profileUrl);
+      if (url.hostname !== "www.googleapis.com" && url.hostname !== "googleapis.com") return profileUrl;
+      if (!url.searchParams.get("part")) url.searchParams.set("part", "snippet,statistics");
+      if (!url.searchParams.get("mine") && !url.searchParams.get("id") && !url.searchParams.get("forHandle")) {
+        url.searchParams.set("mine", "true");
+      }
+      return url.toString();
+    } catch {
+      return profileUrl;
+    }
+  }
+
+  const looksFacebook =
+    network?.code === "facebook" || /graph\.facebook\.com/i.test(profileUrl);
+  if (!looksFacebook) return profileUrl;
   try {
     const url = new URL(profileUrl);
-    if (url.hostname !== "www.googleapis.com" && url.hostname !== "googleapis.com") return profileUrl;
-    if (!url.searchParams.get("part")) url.searchParams.set("part", "snippet,statistics");
-    if (!url.searchParams.get("mine") && !url.searchParams.get("id") && !url.searchParams.get("forHandle")) {
-      url.searchParams.set("mine", "true");
+    if (url.hostname !== "graph.facebook.com") return profileUrl;
+    const path = url.pathname.replace(/\/+$/, "") || "/";
+    const weakPath =
+      FACEBOOK_WEAK_PROFILE_PATHS.has(path) ||
+      /^\/v\d+\.\d+\/me$/.test(path) ||
+      path === "/me";
+    if (weakPath || /\/me\/accounts$/i.test(path)) {
+      const versionMatch = path.match(/^\/(v\d+\.\d+)\//);
+      const version = versionMatch?.[1] ?? "v21.0";
+      url.pathname = `/${version}/me/accounts`;
+      if (!url.searchParams.get("fields")) {
+        url.searchParams.set("fields", "id,name,username,followers_count,fan_count");
+      }
+      return url.toString();
     }
     return url.toString();
   } catch {
     return profileUrl;
   }
+}
+
+/** Prefer Page-capable Facebook scopes when Admin still has public_profile only. */
+export function resolveSocialScopes(platform: string | null | undefined, scopes: string) {
+  const network = platform ? socialNetwork(platform) : null;
+  if (network?.code !== "facebook") return scopes;
+  const trimmed = scopes.trim();
+  if (FACEBOOK_WEAK_SCOPES.has(trimmed)) return network.scopes;
+  return trimmed || network.scopes;
 }
 
 export function buildAuthorizeUrl(input: {

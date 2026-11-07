@@ -3,9 +3,11 @@ import { describe, it } from "node:test";
 import {
   buildAuthorizeUrl,
   isLiveSocialAccount,
+  parseFacebookPageMetrics,
   parseSocialMetrics,
   parseYoutubeChannelMetrics,
   prepareSocialProfileUrl,
+  resolveSocialScopes,
   socialConnectGate,
   socialHostAllowed,
 } from "./social-sync";
@@ -86,6 +88,39 @@ describe("live social metrics", () => {
     const prepared = prepareSocialProfileUrl("https://www.googleapis.com/youtube/v3/channels", "YOUTUBE");
     assert.match(prepared, /part=snippet%2Cstatistics|part=snippet,statistics/);
     assert.match(prepared, /mine=true/);
+  });
+
+  it("maps Facebook Page followers_count + fan_count for the metric gate", () => {
+    const parsed = parseFacebookPageMetrics({
+      data: [
+        { id: "111", name: "Ada Page", username: "adapage", followers_count: 900, fan_count: 880 },
+        { id: "222", name: "Other", followers_count: 1, fan_count: 1 },
+      ],
+    });
+    assert.deepEqual(parsed, {
+      followers: 900,
+      likes: 880,
+      handle: "adapage",
+      externalId: "111",
+      emptyPages: false,
+    });
+    assert.equal(parseFacebookPageMetrics({ data: [] })?.emptyPages, true);
+    assert.equal(parseFacebookPageMetrics({ data: [{ id: "1", name: "No counts" }] }), null);
+  });
+
+  it("upgrades weak Facebook /me profile URLs and public_profile scopes", () => {
+    const prepared = prepareSocialProfileUrl("https://graph.facebook.com/v21.0/me", "FACEBOOK");
+    assert.match(prepared, /\/me\/accounts/);
+    assert.match(prepared, /followers_count/);
+    assert.match(prepared, /fan_count/);
+    assert.equal(
+      resolveSocialScopes("FACEBOOK", "public_profile"),
+      "public_profile,pages_show_list,pages_read_engagement",
+    );
+    assert.equal(
+      resolveSocialScopes("FACEBOOK", "public_profile,pages_show_list,pages_read_engagement"),
+      "public_profile,pages_show_list,pages_read_engagement",
+    );
   });
 
   it("counts an account as live only after a confirmed sync of both numbers", () => {
