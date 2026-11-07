@@ -329,7 +329,11 @@ npm run staging:e3-social-evidence
 
 **Instagram / Meta note:** put `https://influrios.com/api/social/callback` under **Facebook Login → Valid OAuth Redirect URIs** (or Instagram product OAuth settings). For Meta **Webhooks**, use `https://influrios.com/api/social/meta/webhook` with the verify token saved in Admin → Social (or `META_WEBHOOK_VERIFY_TOKEN`). Do **not** put the OAuth callback on the Webhooks screen — that handshake expects `hub.challenge` plain text, which only the Meta webhook route returns.
 
-**Facebook Page metrics:** Connect uses `me/accounts` with scopes `public_profile,pages_show_list,pages_read_engagement`. The creator must manage at least one Facebook Page — a personal profile with only `public_profile` never returns follower/like counts.
+**Facebook Page metrics:** Connect uses `me/accounts` with scopes `public_profile,pages_show_list,pages_read_engagement`. The creator must manage at least one Facebook Page — a personal profile with only `public_profile` never returns follower/like counts. OAuth success marks the network **Connected** even when Page metrics are missing; audience sync is separate.
+
+**Instagram Professional:** uses Page → `instagram_business_account`. Personal/consumer Instagram accounts cannot sync. Meta Graph defaults use `v22.0`.
+
+**Ops blockers outside Influrios:** Meta “Feature Unavailable / updating additional details” means the Facebook Login product is locked until app details / verification are finished in Meta for Developers. Google “hasn't verified this app” is normal for Testing-mode OAuth clients — listed testers click Continue.
 
 ### E5 progress (Meilisearch counts) — **complete**
 

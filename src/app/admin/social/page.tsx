@@ -186,7 +186,23 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                 <code className="text-[11px]">me/accounts?fields=id,name,username,followers_count,fan_count</code> and
                 scopes <code className="text-[11px]">public_profile,pages_show_list,pages_read_engagement</code>.{" "}
                 <code className="text-[11px]">public_profile</code> alone never returns follower counts. Enable those
-                permissions on the Meta app (App Review for Live).
+                permissions on the Meta app (App Review for Live). If Meta shows “Facebook Login is currently
+                unavailable… updating additional details”, finish required app details / Business verification in
+                Meta for Developers first.
+              </p>
+            ) : null}
+            {network.code === "instagram" ? (
+              <p className="sm:col-span-2 text-xs text-muted">
+                Instagram requires a Professional (Business/Creator) account linked to a Facebook Page. Profile URL
+                should walk <code className="text-[11px]">me/accounts</code> with{" "}
+                <code className="text-[11px]">instagram_business_account{"{…}"}</code>. Personal Instagram accounts
+                cannot sync audience statistics via Facebook Login.
+              </p>
+            ) : null}
+            {network.code === "youtube" ? (
+              <p className="sm:col-span-2 text-xs text-muted">
+                YouTube stores subscribers + channel views. Google’s unverified-app interstitial is expected while the
+                OAuth client is in Testing — testers can click Continue. The Google account must own a YouTube channel.
               </p>
             ) : null}
             <label className="flex items-center gap-2 text-sm font-semibold text-indigo">

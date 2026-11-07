@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  META_GRAPH_VERSION,
   buildAuthorizeUrl,
+  interpretSocialProfile,
   isLiveSocialAccount,
   parseFacebookPageMetrics,
+  parseInstagramBusinessMetrics,
   parseSocialMetrics,
   parseYoutubeChannelMetrics,
   prepareSocialProfileUrl,
   resolveSocialScopes,
   socialConnectGate,
   socialHostAllowed,
+  socialMetricLabels,
 } from "./social-sync";
 
 describe("social consent gate", () => {
@@ -59,18 +63,15 @@ describe("social consent gate", () => {
 });
 
 describe("live social metrics", () => {
-  it("reads followers and likes from a provider payload", () => {
+  it("reads followers and optional secondary counts from a provider payload", () => {
     assert.deepEqual(parseSocialMetrics({ data: { follower_count: 1200, likes_count: "45" } }), {
       followers: 1200,
       likes: 45,
     });
+    assert.deepEqual(parseSocialMetrics({ followers: 10 }), { followers: 10, likes: null });
   });
 
-  it("does not treat a payload as live when likes are missing", () => {
-    assert.equal(parseSocialMetrics({ followers: 10 }), null);
-  });
-
-  it("maps YouTube channel subscriberCount + viewCount for the metric gate", () => {
+  it("maps YouTube channel identity separately from subscriber/view metrics", () => {
     const parsed = parseYoutubeChannelMetrics({
       items: [
         {
@@ -80,8 +81,13 @@ describe("live social metrics", () => {
         },
       ],
     });
-    assert.deepEqual(parsed, { followers: 1200, likes: 55000, handle: "ada", externalId: "UCabc" });
-    assert.equal(parseYoutubeChannelMetrics({ items: [] }), null);
+    assert.deepEqual(parsed, {
+      identity: { handle: "ada", externalId: "UCabc" },
+      metrics: { primary: 1200, secondary: 55000 },
+      emptyChannel: false,
+    });
+    assert.equal(parseYoutubeChannelMetrics({ items: [] })?.emptyChannel, true);
+    assert.equal(socialMetricLabels("YOUTUBE").secondary, "views");
   });
 
   it("adds YouTube channels.list query params when the stored URL is bare", () => {
@@ -90,42 +96,84 @@ describe("live social metrics", () => {
     assert.match(prepared, /mine=true/);
   });
 
-  it("maps Facebook Page followers_count + fan_count for the metric gate", () => {
-    const parsed = parseFacebookPageMetrics({
+  it("maps Facebook Page identity even when audience counts are missing", () => {
+    const withCounts = parseFacebookPageMetrics({
       data: [
         { id: "111", name: "Ada Page", username: "adapage", followers_count: 900, fan_count: 880 },
-        { id: "222", name: "Other", followers_count: 1, fan_count: 1 },
       ],
     });
-    assert.deepEqual(parsed, {
-      followers: 900,
-      likes: 880,
-      handle: "adapage",
-      externalId: "111",
+    assert.deepEqual(withCounts, {
+      identity: { handle: "adapage", externalId: "111" },
+      metrics: { primary: 900, secondary: 880 },
       emptyPages: false,
     });
     assert.equal(parseFacebookPageMetrics({ data: [] })?.emptyPages, true);
-    assert.equal(parseFacebookPageMetrics({ data: [{ id: "1", name: "No counts" }] }), null);
+    const identityOnly = parseFacebookPageMetrics({
+      data: [{ id: "1", name: "No counts" }],
+    });
+    assert.equal(identityOnly?.identity?.externalId, "1");
+    assert.equal(identityOnly?.metrics, null);
   });
 
-  it("upgrades weak Facebook /me profile URLs and public_profile scopes", () => {
-    const prepared = prepareSocialProfileUrl("https://graph.facebook.com/v21.0/me", "FACEBOOK");
-    assert.match(prepared, /\/me\/accounts/);
-    assert.match(prepared, /followers_count/);
-    assert.match(prepared, /fan_count/);
+  it("maps Instagram Professional accounts linked to Pages", () => {
+    const parsed = parseInstagramBusinessMetrics({
+      data: [
+        {
+          id: "page1",
+          name: "Brand",
+          instagram_business_account: {
+            id: "1784",
+            username: "ada.creates",
+            followers_count: 4200,
+            media_count: 88,
+          },
+        },
+      ],
+    });
+    assert.deepEqual(parsed, {
+      identity: { handle: "ada.creates", externalId: "1784" },
+      metrics: { primary: 4200, secondary: 88 },
+      emptyAccounts: false,
+    });
+    assert.equal(parseInstagramBusinessMetrics({ data: [{ id: "page1", name: "No IG" }] })?.identity, null);
+  });
+
+  it("upgrades weak Facebook / Instagram profile URLs and scopes", () => {
+    const facebook = prepareSocialProfileUrl("https://graph.facebook.com/v21.0/me", "FACEBOOK");
+    assert.match(facebook, /\/me\/accounts/);
+    assert.match(facebook, /followers_count/);
+    const instagram = prepareSocialProfileUrl("https://graph.facebook.com/v21.0/me", "INSTAGRAM");
+    assert.match(instagram, /instagram_business_account/);
     assert.equal(
       resolveSocialScopes("FACEBOOK", "public_profile"),
       "public_profile,pages_show_list,pages_read_engagement",
     );
     assert.equal(
-      resolveSocialScopes("FACEBOOK", "public_profile,pages_show_list,pages_read_engagement"),
-      "public_profile,pages_show_list,pages_read_engagement",
+      resolveSocialScopes("INSTAGRAM", "instagram_basic,pages_show_list"),
+      "instagram_basic,pages_show_list,pages_read_engagement",
     );
+    assert.match(META_GRAPH_VERSION, /^v\d+\.\d+$/);
   });
 
-  it("counts an account as live only after a confirmed sync of both numbers", () => {
+  it("keeps OAuth success notices separate from hard metric failure", () => {
+    const youtubeEmpty = interpretSocialProfile("YOUTUBE", { items: [] });
+    assert.equal(youtubeEmpty.identity, null);
+    assert.equal(youtubeEmpty.metrics, null);
+    assert.match(youtubeEmpty.metricsNotice ?? "", /couldn't find a YouTube channel/i);
+    assert.equal(/Phase M/i.test(youtubeEmpty.metricsNotice ?? ""), false);
+
+    const facebookEmpty = interpretSocialProfile("FACEBOOK", { data: [] });
+    assert.match(facebookEmpty.metricsNotice ?? "", /no eligible Facebook Page/i);
+    assert.equal(/Phase M/i.test(facebookEmpty.metricsNotice ?? ""), false);
+  });
+
+  it("counts an account as live after a confirmed primary audience sync", () => {
     assert.equal(
       isLiveSocialAccount({ source: "PROVIDER_SYNCED", refreshedAt: new Date(), followers: 10, likes: 2 }),
+      true,
+    );
+    assert.equal(
+      isLiveSocialAccount({ source: "PROVIDER_SYNCED", refreshedAt: new Date(), followers: 10, likes: null }),
       true,
     );
     assert.equal(

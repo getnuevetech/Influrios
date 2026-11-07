@@ -1,5 +1,8 @@
 import { formatFollowers } from "@/lib/seed-data";
 
+/** Current Meta Graph API version used for Instagram / Facebook defaults. */
+export const META_GRAPH_VERSION = "v22.0";
+
 /** Official authorize and API hosts. Admin URLs must stay on these. */
 export const SOCIAL_NETWORKS = [
   {
@@ -10,10 +13,11 @@ export const SOCIAL_NETWORKS = [
     tokenStyle: "form",
     authorizeHosts: ["www.facebook.com", "api.instagram.com"],
     apiHosts: ["graph.facebook.com", "graph.instagram.com"],
-    authorizeUrl: "https://www.facebook.com/v21.0/dialog/oauth",
-    tokenUrl: "https://graph.facebook.com/v21.0/oauth/access_token",
-    profileUrl: "https://graph.facebook.com/v21.0/me",
-    scopes: "instagram_basic,pages_show_list",
+    authorizeUrl: `https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`,
+    tokenUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token`,
+    // Professional IG is linked to a Facebook Page — not a personal IG consumer account.
+    profileUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?fields=id,name,instagram_business_account{id,username,name,followers_count,media_count}`,
+    scopes: "instagram_basic,pages_show_list,pages_read_engagement",
   },
   {
     code: "tiktok",
@@ -63,10 +67,10 @@ export const SOCIAL_NETWORKS = [
     tokenStyle: "form",
     authorizeHosts: ["www.facebook.com"],
     apiHosts: ["graph.facebook.com"],
-    authorizeUrl: "https://www.facebook.com/v21.0/dialog/oauth",
-    tokenUrl: "https://graph.facebook.com/v21.0/oauth/access_token",
+    authorizeUrl: `https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`,
+    tokenUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token`,
     // Personal /me never returns audience counts. Page list + fields is required.
-    profileUrl: "https://graph.facebook.com/v21.0/me/accounts?fields=id,name,username,followers_count,fan_count",
+    profileUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?fields=id,name,username,followers_count,fan_count`,
     scopes: "public_profile,pages_show_list,pages_read_engagement",
   },
   {
@@ -100,12 +104,53 @@ export const SOCIAL_NETWORKS = [
 export type SocialNetworkCode = (typeof SOCIAL_NETWORKS)[number]["code"];
 export type SocialSyncPlatform = (typeof SOCIAL_NETWORKS)[number]["platform"];
 
+export type SocialMetricLabels = {
+  primary: string;
+  secondary: string;
+};
+
+/** Customer-facing labels for the two stored counters (followers / likes columns). */
+export function socialMetricLabels(platform: string | null | undefined): SocialMetricLabels {
+  const key = (platform ?? "").toUpperCase();
+  if (key === "YOUTUBE") return { primary: "subscribers", secondary: "views" };
+  if (key === "FACEBOOK") return { primary: "followers", secondary: "Page likes" };
+  if (key === "INSTAGRAM") return { primary: "followers", secondary: "posts" };
+  if (key === "TIKTOK") return { primary: "followers", secondary: "likes" };
+  return { primary: "followers", secondary: "likes" };
+}
+
+export type SocialIdentity = {
+  handle: string | null;
+  externalId: string | null;
+};
+
+export type SocialAudienceMetrics = {
+  /** Stored in SocialAccount.followers */
+  primary: number;
+  /** Stored in SocialAccount.likes when the platform exposes a second counter */
+  secondary: number | null;
+};
+
+/**
+ * Result of a platform profile fetch after OAuth.
+ * Connection can succeed with identity (or even token-only + notice) without full metrics.
+ */
+export type SocialProfileResult = {
+  identity: SocialIdentity | null;
+  metrics: SocialAudienceMetrics | null;
+  /** Soft customer message — does not mark the connection as failed. */
+  metricsNotice: string | null;
+};
+
 const FOLLOWER_KEYS = ["followers", "follower_count", "followers_count", "subscribercount", "subscriber_count"];
-const LIKE_KEYS = ["likes", "like_count", "likes_count", "total_likes", "like_total", "fan_count"];
+const LIKE_KEYS = ["likes", "like_count", "likes_count", "total_likes", "like_total", "fan_count", "media_count"];
 
 /** Legacy Admin → Social Facebook rows that cannot sync audience counts. */
 export const FACEBOOK_WEAK_SCOPES = new Set(["", "public_profile"]);
-export const FACEBOOK_WEAK_PROFILE_PATHS = new Set(["/me", "/v21.0/me"]);
+export const FACEBOOK_WEAK_PROFILE_PATHS = new Set(["/me", "/v21.0/me", "/v22.0/me"]);
+
+/** Legacy Instagram Admin rows that never walk Pages → IG Professional. */
+export const INSTAGRAM_WEAK_SCOPES = new Set(["", "instagram_basic", "instagram_basic,pages_show_list"]);
 
 export function socialNetwork(codeOrPlatform: string) {
   const key = codeOrPlatform.trim().toLowerCase();
@@ -144,31 +189,31 @@ export function socialConnectGate(input: {
   return { ok: true };
 }
 
+/** Live audience requires a confirmed primary count. Secondary is platform-specific and optional. */
 export function isLiveSocialAccount(row: {
   source: string;
   refreshedAt: Date | string | null;
   followers: number | null;
-  likes: number | null;
+  likes?: number | null;
 }) {
   return (
     row.source === "PROVIDER_SYNCED" &&
     row.refreshedAt != null &&
     typeof row.followers === "number" &&
-    row.followers >= 0 &&
-    typeof row.likes === "number" &&
-    row.likes >= 0
+    row.followers >= 0
   );
 }
 
 export function socialAudienceLabel(
-  social: { followers: number; likes?: number | null; live?: boolean } | null | undefined,
+  social: { followers: number; likes?: number | null; live?: boolean; platform?: string } | null | undefined,
   options?: { withLikes?: boolean },
 ) {
   if (!social?.live) return "Not synced";
+  const labels = socialMetricLabels(social.platform);
   if (options?.withLikes && social.likes != null) {
-    return `${formatFollowers(social.followers)} · ${formatFollowers(social.likes)} likes`;
+    return `${formatFollowers(social.followers)} ${labels.primary} · ${formatFollowers(social.likes)} ${labels.secondary}`;
   }
-  return formatFollowers(social.followers);
+  return `${formatFollowers(social.followers)} ${labels.primary}`;
 }
 
 function asCount(value: unknown): number | null {
@@ -192,7 +237,7 @@ function walk(value: unknown, depth: number): { followers: number | null; likes:
   if (Array.isArray(value)) {
     for (const item of value) {
       const found = walk(item, depth + 1);
-      if (found.followers != null && found.likes != null) return found;
+      if (found.followers != null) return found;
     }
     return { followers: null, likes: null };
   }
@@ -208,58 +253,69 @@ function walk(value: unknown, depth: number): { followers: number | null; likes:
   return { followers, likes };
 }
 
-/** Both numbers must be present. A missing field is not a successful sync. */
-export function parseSocialMetrics(payload: unknown): { followers: number; likes: number } | null {
+/** Generic fallback: primary audience required; secondary optional. */
+export function parseSocialMetrics(payload: unknown): { followers: number; likes: number | null } | null {
   const found = walk(payload, 0);
-  if (found.followers == null || found.likes == null) return null;
+  if (found.followers == null) return null;
   return { followers: found.followers, likes: found.likes };
 }
 
 /**
- * YouTube channels.list does not return a like count. Use subscriberCount as followers
- * and channel viewCount as the second required engagement metric (stored in likes).
+ * YouTube channels.list — identity from snippet; metrics are subscribers + views
+ * (views stored in the likes column, labeled "views" in the UI).
  */
 export function parseYoutubeChannelMetrics(payload: unknown): {
-  followers: number;
-  likes: number;
-  handle: string | null;
-  externalId: string | null;
+  identity: SocialIdentity;
+  metrics: SocialAudienceMetrics | null;
+  emptyChannel: boolean;
 } | null {
   if (!payload || typeof payload !== "object") return null;
   const items = (payload as { items?: unknown }).items;
-  if (!Array.isArray(items) || items.length === 0) return null;
+  if (!Array.isArray(items)) return null;
+  if (items.length === 0) {
+    return {
+      identity: { handle: null, externalId: null },
+      metrics: null,
+      emptyChannel: true,
+    };
+  }
   const channel = items[0];
   if (!channel || typeof channel !== "object") return null;
   const record = channel as {
     id?: unknown;
     snippet?: { title?: unknown; customUrl?: unknown };
-    statistics?: { subscriberCount?: unknown; viewCount?: unknown };
+    statistics?: { subscriberCount?: unknown; viewCount?: unknown; videoCount?: unknown };
   };
-  const followers = asCount(record.statistics?.subscriberCount);
-  const likes = asCount(record.statistics?.viewCount);
-  if (followers == null || likes == null) return null;
   const customUrl = typeof record.snippet?.customUrl === "string" ? record.snippet.customUrl.trim() : "";
   const title = typeof record.snippet?.title === "string" ? record.snippet.title.trim() : "";
   const handle = (customUrl || title || "").replace(/^@/, "") || null;
   const externalId = typeof record.id === "string" && record.id.trim() ? record.id.trim() : null;
-  return { followers, likes, handle, externalId };
+  const subscribers = asCount(record.statistics?.subscriberCount);
+  const views = asCount(record.statistics?.viewCount);
+  const metrics =
+    subscribers != null ? { primary: subscribers, secondary: views } : null;
+  return {
+    identity: { handle, externalId },
+    metrics,
+    emptyChannel: false,
+  };
 }
 
 /**
- * Facebook personal /me never returns audience counts. Influrios syncs the first Page the
- * user manages: followers_count → followers, fan_count (Page likes) → likes.
+ * Facebook Page list from /me/accounts.
+ * Personal profiles are not eligible for audience sync.
  */
 export function parseFacebookPageMetrics(payload: unknown): {
-  followers: number;
-  likes: number;
-  handle: string | null;
-  externalId: string | null;
+  identity: SocialIdentity | null;
+  metrics: SocialAudienceMetrics | null;
   emptyPages: boolean;
 } | null {
   if (!payload || typeof payload !== "object") return null;
   const data = (payload as { data?: unknown }).data;
   if (!Array.isArray(data)) return null;
-  if (data.length === 0) return { followers: 0, likes: 0, handle: null, externalId: null, emptyPages: true };
+  if (data.length === 0) {
+    return { identity: null, metrics: null, emptyPages: true };
+  }
   for (const page of data) {
     if (!page || typeof page !== "object" || Array.isArray(page)) continue;
     const record = page as {
@@ -269,21 +325,197 @@ export function parseFacebookPageMetrics(payload: unknown): {
       followers_count?: unknown;
       fan_count?: unknown;
     };
-    const followersCount = asCount(record.followers_count);
-    const fanCount = asCount(record.fan_count);
-    const followers = followersCount ?? fanCount;
-    const likes = fanCount ?? followersCount;
-    if (followers == null || likes == null) continue;
     const username = typeof record.username === "string" ? record.username.trim() : "";
     const name = typeof record.name === "string" ? record.name.trim() : "";
     const handle = (username || name || "").replace(/^@/, "") || null;
     const externalId = typeof record.id === "string" && record.id.trim() ? record.id.trim() : null;
-    return { followers, likes, handle, externalId, emptyPages: false };
+    if (!handle && !externalId) continue;
+    const followersCount = asCount(record.followers_count);
+    const fanCount = asCount(record.fan_count);
+    const primary = followersCount ?? fanCount;
+    const secondary = fanCount ?? null;
+    return {
+      identity: { handle, externalId },
+      metrics: primary != null ? { primary, secondary } : null,
+      emptyPages: false,
+    };
+  }
+  return { identity: null, metrics: null, emptyPages: false };
+}
+
+/**
+ * Instagram Professional accounts linked to Pages the user manages.
+ * Consumer/personal Instagram accounts are not supported by Meta's Facebook Login IG APIs.
+ */
+export function parseInstagramBusinessMetrics(payload: unknown): {
+  identity: SocialIdentity | null;
+  metrics: SocialAudienceMetrics | null;
+  emptyAccounts: boolean;
+} | null {
+  if (!payload || typeof payload !== "object") return null;
+  const data = (payload as { data?: unknown }).data;
+  if (!Array.isArray(data)) return null;
+  const linked: Array<{
+    identity: SocialIdentity;
+    metrics: SocialAudienceMetrics | null;
+  }> = [];
+  for (const page of data) {
+    if (!page || typeof page !== "object" || Array.isArray(page)) continue;
+    const ig = (page as { instagram_business_account?: unknown }).instagram_business_account;
+    if (!ig || typeof ig !== "object" || Array.isArray(ig)) continue;
+    const record = ig as {
+      id?: unknown;
+      username?: unknown;
+      name?: unknown;
+      followers_count?: unknown;
+      media_count?: unknown;
+    };
+    const username = typeof record.username === "string" ? record.username.trim() : "";
+    const name = typeof record.name === "string" ? record.name.trim() : "";
+    const handle = (username || name || "").replace(/^@/, "") || null;
+    const externalId = typeof record.id === "string" && record.id.trim() ? record.id.trim() : null;
+    if (!handle && !externalId) continue;
+    const followers = asCount(record.followers_count);
+    const media = asCount(record.media_count);
+    linked.push({
+      identity: { handle, externalId },
+      metrics: followers != null ? { primary: followers, secondary: media } : null,
+    });
+  }
+  if (!linked.length) {
+    return { identity: null, metrics: null, emptyAccounts: data.length >= 0 };
+  }
+  return { ...linked[0]!, emptyAccounts: false };
+}
+
+export function interpretSocialProfile(
+  platform: SocialSyncPlatform | string | null | undefined,
+  payload: unknown,
+): SocialProfileResult {
+  const key = (platform ?? "").toUpperCase();
+
+  if (key === "YOUTUBE") {
+    const youtube = parseYoutubeChannelMetrics(payload);
+    if (!youtube) {
+      return {
+        identity: null,
+        metrics: null,
+        metricsNotice:
+          "Your Google account was authorized, but YouTube did not return a usable channel profile. Try Sync now or another Google account.",
+      };
+    }
+    if (youtube.emptyChannel) {
+      return {
+        identity: null,
+        metrics: null,
+        metricsNotice:
+          "Your Google account was authorized, but we couldn't find a YouTube channel. Create a channel or choose another Google account, then sync again.",
+      };
+    }
+    return {
+      identity: youtube.identity.handle || youtube.identity.externalId ? youtube.identity : null,
+      metrics: youtube.metrics,
+      metricsNotice: youtube.metrics
+        ? null
+        : "Your YouTube channel is connected, but subscriber statistics were not available yet. Try Sync now later.",
+    };
+  }
+
+  if (key === "FACEBOOK") {
+    const facebook = parseFacebookPageMetrics(payload);
+    if (!facebook) {
+      return {
+        identity: null,
+        metrics: null,
+        metricsNotice:
+          "Your Facebook login was authorized, but Influrios could not read Page details. Confirm Page permissions and try Sync now.",
+      };
+    }
+    if (facebook.emptyPages) {
+      return {
+        identity: null,
+        metrics: null,
+        metricsNotice:
+          "Your Facebook account was authorized, but no eligible Facebook Page was found. Connect a Page you manage to display Facebook audience statistics.",
+      };
+    }
+    return {
+      identity: facebook.identity,
+      metrics: facebook.metrics,
+      metricsNotice: facebook.metrics
+        ? null
+        : "Your Facebook Page is connected, but audience statistics were not available yet. Confirm pages_read_engagement and try Sync now.",
+    };
+  }
+
+  if (key === "INSTAGRAM") {
+    const instagram = parseInstagramBusinessMetrics(payload);
+    if (!instagram) {
+      return {
+        identity: null,
+        metrics: null,
+        metricsNotice:
+          "Your Instagram login was authorized, but Influrios could not read a Professional account. Link an Instagram Business or Creator account to a Facebook Page you manage.",
+      };
+    }
+    if (instagram.emptyAccounts || !instagram.identity) {
+      return {
+        identity: null,
+        metrics: null,
+        metricsNotice:
+          "Your Instagram login was authorized, but no Instagram Professional account linked to a Facebook Page was found. Personal Instagram accounts cannot sync audience statistics.",
+      };
+    }
+    return {
+      identity: instagram.identity,
+      metrics: instagram.metrics,
+      metricsNotice: instagram.metrics
+        ? null
+        : "Your Instagram Professional account is connected, but follower statistics were not available yet. Try Sync now later.",
+    };
+  }
+
+  const generic = parseSocialMetrics(payload);
+  const handle = findProfileString(payload, ["username", "handle", "customurl", "title", "name"]);
+  const externalId = findProfileString(payload, ["id"]);
+  if (!generic) {
+    return {
+      identity: handle || externalId ? { handle, externalId } : null,
+      metrics: null,
+      metricsNotice:
+        "This account is connected, but audience statistics were not returned. You can keep it connected and try Sync now later.",
+    };
+  }
+  return {
+    identity: handle || externalId ? { handle, externalId } : { handle: null, externalId: null },
+    metrics: { primary: generic.followers, secondary: generic.likes },
+    metricsNotice: null,
+  };
+}
+
+function findProfileString(value: unknown, keys: string[], depth = 0): string | null {
+  if (!value || typeof value !== "object" || depth > 4) return null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findProfileString(item, keys, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  for (const [key, child] of Object.entries(record)) {
+    if (!keys.includes(key.toLowerCase())) continue;
+    if (typeof child === "string" && child.trim()) return child.trim();
+    if (typeof child === "number" && Number.isFinite(child)) return String(child);
+  }
+  for (const child of Object.values(record)) {
+    const found = findProfileString(child, keys, depth + 1);
+    if (found) return found;
   }
   return null;
 }
 
-/** Upgrade weak Facebook Admin rows and ensure YouTube channels.list query params. */
+/** Upgrade weak Facebook/Instagram Admin rows and ensure YouTube channels.list query params. */
 export function prepareSocialProfileUrl(profileUrl: string, platform?: string | null) {
   const network = platform ? socialNetwork(platform) : null;
   const looksYoutube =
@@ -302,20 +534,33 @@ export function prepareSocialProfileUrl(profileUrl: string, platform?: string | 
     }
   }
 
-  const looksFacebook =
-    network?.code === "facebook" || /graph\.facebook\.com/i.test(profileUrl);
-  if (!looksFacebook) return profileUrl;
+  const looksMetaGraph =
+    network?.code === "facebook" ||
+    network?.code === "instagram" ||
+    /graph\.facebook\.com/i.test(profileUrl);
+  if (!looksMetaGraph) return profileUrl;
   try {
     const url = new URL(profileUrl);
     if (url.hostname !== "graph.facebook.com") return profileUrl;
     const path = url.pathname.replace(/\/+$/, "") || "/";
-    const weakPath =
-      FACEBOOK_WEAK_PROFILE_PATHS.has(path) ||
-      /^\/v\d+\.\d+\/me$/.test(path) ||
-      path === "/me";
-    if (weakPath || /\/me\/accounts$/i.test(path)) {
-      const versionMatch = path.match(/^\/(v\d+\.\d+)\//);
-      const version = versionMatch?.[1] ?? "v21.0";
+    const versionMatch = path.match(/^\/(v\d+\.\d+)\//);
+    const version = versionMatch?.[1] ?? META_GRAPH_VERSION;
+    const weakUserPath =
+      FACEBOOK_WEAK_PROFILE_PATHS.has(path) || /^\/v\d+\.\d+\/me$/.test(path) || path === "/me";
+    const accountsPath = /\/me\/accounts$/i.test(path);
+
+    if (network?.code === "instagram" || (!network && /instagram_business_account/i.test(url.search))) {
+      if (weakUserPath || accountsPath) {
+        url.pathname = `/${version}/me/accounts`;
+        url.searchParams.set(
+          "fields",
+          "id,name,instagram_business_account{id,username,name,followers_count,media_count}",
+        );
+        return url.toString();
+      }
+    }
+
+    if (weakUserPath || accountsPath) {
       url.pathname = `/${version}/me/accounts`;
       if (!url.searchParams.get("fields")) {
         url.searchParams.set("fields", "id,name,username,followers_count,fan_count");
@@ -328,12 +573,13 @@ export function prepareSocialProfileUrl(profileUrl: string, platform?: string | 
   }
 }
 
-/** Prefer Page-capable Facebook scopes when Admin still has public_profile only. */
+/** Prefer Page / IG Professional scopes when Admin still has a weak default. */
 export function resolveSocialScopes(platform: string | null | undefined, scopes: string) {
   const network = platform ? socialNetwork(platform) : null;
-  if (network?.code !== "facebook") return scopes;
+  if (!network) return scopes;
   const trimmed = scopes.trim();
-  if (FACEBOOK_WEAK_SCOPES.has(trimmed)) return network.scopes;
+  if (network.code === "facebook" && FACEBOOK_WEAK_SCOPES.has(trimmed)) return network.scopes;
+  if (network.code === "instagram" && INSTAGRAM_WEAK_SCOPES.has(trimmed)) return network.scopes;
   return trimmed || network.scopes;
 }
 

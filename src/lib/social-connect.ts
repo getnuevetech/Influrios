@@ -6,14 +6,13 @@ import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secre
 import {
   SOCIAL_NETWORKS,
   buildAuthorizeUrl,
+  interpretSocialProfile,
   isLiveSocialAccount,
-  parseFacebookPageMetrics,
-  parseSocialMetrics,
-  parseYoutubeChannelMetrics,
   prepareSocialProfileUrl,
   resolveSocialScopes,
   socialConnectGate,
   socialHostAllowed,
+  socialMetricLabels,
   socialNetwork,
   type SocialSyncPlatform,
 } from "@/lib/social-sync";
@@ -24,7 +23,7 @@ const DEFAULT_TERMS =
   "I agree to connect this social account to Influrios. Influrios may read the account identity, follower count, and likes, and show those figures on my Influrios profile. Influrios will not post, message, or spend on my behalf. I can disconnect at any time.";
 
 const DEFAULT_POLICY =
-  "Influrios connects a social account only after the creator accepts the current integration terms. A follower count and likes are saved only when that network returns both numbers. Until then the profile keeps its current layout and figures. Disconnecting stops further sync and removes the synced counts.";
+  "Influrios connects a social account only after the creator accepts the current integration terms. OAuth success keeps the network Connected even when audience statistics are unavailable. Platform-specific counts (for example YouTube subscribers and views, or Facebook Page followers) are saved when the network returns them. Disconnecting stops further sync and clears synced counts.";
 
 type SocialExtra = {
   authorizeUrl: string;
@@ -213,6 +212,7 @@ export async function socialConnectState(slug: string) {
     const connection = creator?.socialConnections.find((item) => item.platform === network.platform);
     const account = creator?.socialAccounts.find((item) => item.platform === network.platform);
     const live = account ? isLiveSocialAccount(account) : false;
+    const labels = socialMetricLabels(network.platform);
     return {
       ...network,
       status: connection?.status ?? "needs_consent",
@@ -220,6 +220,8 @@ export async function socialConnectState(slug: string) {
       consentCurrent: connection?.consentVersion === policy.version && connection.consentedAt != null,
       followers: live ? account?.followers ?? null : null,
       likes: live ? account?.likes ?? null : null,
+      metricLabels: labels,
+      audienceStatus: live ? ("synced" as const) : connection?.status === "connected" ? ("unavailable" as const) : ("idle" as const),
       live,
       syncedAt: live ? account?.refreshedAt?.toISOString() ?? null : null,
     };
@@ -356,7 +358,11 @@ async function requestToken(input: {
   };
 }
 
-async function fetchMetrics(
+/**
+ * Hard failures only (bad host / HTTP reject). Missing audience stats are soft notices
+ * so OAuth can still mark the network Connected.
+ */
+async function fetchSocialProfile(
   profileUrl: string,
   apiHosts: readonly string[],
   accessToken: string,
@@ -386,82 +392,8 @@ async function fetchMetrics(
         : `The network rejected the profile request (HTTP ${response.status}).`,
     };
   }
-  if (platform === "YOUTUBE") {
-    const items = payload && typeof payload === "object" ? (payload as { items?: unknown }).items : null;
-    if (Array.isArray(items) && items.length === 0) {
-      return {
-        ok: false as const,
-        error:
-          "This Google account has no YouTube channel. Create or choose a channel on YouTube, then connect again.",
-      };
-    }
-    const youtube = parseYoutubeChannelMetrics(payload);
-    if (!youtube) {
-      return {
-        ok: false as const,
-        error: "YouTube did not return channel subscriber and view counts for this account.",
-      };
-    }
-    return {
-      ok: true as const,
-      metrics: { followers: youtube.followers, likes: youtube.likes },
-      handle: youtube.handle ?? undefined,
-      externalId: youtube.externalId ?? undefined,
-    };
-  }
-  if (platform === "FACEBOOK") {
-    const facebook = parseFacebookPageMetrics(payload);
-    if (facebook?.emptyPages) {
-      return {
-        ok: false as const,
-        error:
-          "Facebook returned no Pages for this account. Connect a Facebook Page you manage — personal profiles do not expose follower counts.",
-      };
-    }
-    if (!facebook) {
-      return {
-        ok: false as const,
-        error:
-          "Facebook did not return Page follower and like counts. Confirm pages_show_list + pages_read_engagement are granted, then reconnect.",
-      };
-    }
-    return {
-      ok: true as const,
-      metrics: { followers: facebook.followers, likes: facebook.likes },
-      handle: facebook.handle ?? undefined,
-      externalId: facebook.externalId ?? undefined,
-    };
-  }
-  const metrics = parseSocialMetrics(payload);
-  if (!metrics) return { ok: false as const, error: "The network did not return a follower count and likes." };
-  return {
-    ok: true as const,
-    metrics,
-    handle: findString(payload, ["username", "handle", "customurl", "title"]),
-    externalId: findString(payload, ["id"]),
-  };
-}
-
-function findString(value: unknown, keys: string[], depth = 0): string | undefined {
-  if (!value || typeof value !== "object" || depth > 4) return undefined;
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = findString(item, keys, depth + 1);
-      if (found) return found;
-    }
-    return undefined;
-  }
-  const record = value as Record<string, unknown>;
-  for (const [key, child] of Object.entries(record)) {
-    if (!keys.includes(key.toLowerCase())) continue;
-    if (typeof child === "string" && child.trim()) return child.trim();
-    if (typeof child === "number" && Number.isFinite(child)) return String(child);
-  }
-  for (const child of Object.values(record)) {
-    const found = findString(child, keys, depth + 1);
-    if (found) return found;
-  }
-  return undefined;
+  const profile = interpretSocialProfile(platform, payload);
+  return { ok: true as const, ...profile };
 }
 
 function officialProfileUrl(platform: string, handle: string) {
@@ -475,13 +407,50 @@ function officialProfileUrl(platform: string, handle: string) {
   return `https://www.instagram.com/${name}`;
 }
 
+async function writeConnectedIdentity(input: {
+  creatorId: string;
+  platform: SocialSyncPlatform;
+  handle?: string | null;
+  externalId?: string | null;
+}) {
+  const existing = await prisma.socialAccount.findUnique({
+    where: { creatorId_platform: { creatorId: input.creatorId, platform: input.platform } },
+  });
+  const handle = input.handle
+    ? `@${input.handle.replace(/^@/, "")}`
+    : existing?.handle;
+  if (!handle) return { ok: false as const, error: "The network did not return an account name." };
+  const url = existing?.url || officialProfileUrl(input.platform, handle);
+  await prisma.socialAccount.upsert({
+    where: { creatorId_platform: { creatorId: input.creatorId, platform: input.platform } },
+    update: {
+      handle,
+      url,
+      // Keep prior live counts if this reconnect only refreshed identity.
+      source: existing?.source === "PROVIDER_SYNCED" ? "PROVIDER_SYNCED" : "CREATOR_CLAIMED",
+    },
+    create: {
+      creatorId: input.creatorId,
+      platform: input.platform,
+      handle,
+      url,
+      followers: null,
+      likes: null,
+      source: "CREATOR_CLAIMED",
+      refreshedAt: null,
+    },
+  });
+  invalidateDirectoryCache();
+  return { ok: true as const };
+}
+
 async function writeLiveAccount(input: {
   creatorId: string;
   platform: SocialSyncPlatform;
   followers: number;
-  likes: number;
-  handle?: string;
-  externalId?: string;
+  likes: number | null;
+  handle?: string | null;
+  externalId?: string | null;
 }) {
   const existing = await prisma.socialAccount.findUnique({
     where: { creatorId_platform: { creatorId: input.creatorId, platform: input.platform } },
@@ -556,52 +525,80 @@ export async function completeSocialCallback(input: { code?: string; state?: str
       await prisma.socialConnection.update({ where: { id: connection.id }, data: { status: "error", lastError: token.error } });
       return { ok: false as const, error: token.error, slug };
     }
-    const metrics = await fetchMetrics(
+    const profile = await fetchSocialProfile(
       ready.extra.profileUrl,
       ready.network.apiHosts,
       token.accessToken,
       connection.platform as SocialSyncPlatform,
     );
-    if (!metrics.ok) {
+    const tokenFields = {
+      tokenCipher: encryptSecret(token.accessToken),
+      refreshCipher: token.refreshToken ? encryptSecret(token.refreshToken) : null,
+      tokenExpiresAt: token.expiresAt,
+    };
+    if (!profile.ok) {
+      // OAuth succeeded — keep Connected and surface the profile fetch as a soft notice.
       await prisma.socialConnection.update({
         where: { id: connection.id },
         data: {
-          status: "error",
-          lastError: metrics.error,
-          tokenCipher: encryptSecret(token.accessToken),
-          refreshCipher: token.refreshToken ? encryptSecret(token.refreshToken) : null,
-          tokenExpiresAt: token.expiresAt,
+          status: "connected",
+          lastError: profile.error,
+          lastSyncedAt: null,
+          ...tokenFields,
         },
       });
-      return { ok: false as const, error: metrics.error, slug };
+      return { ok: true as const, slug, metricsSynced: false as const, notice: profile.error };
     }
-    const written = await writeLiveAccount({
-      creatorId: connection.creatorId,
-      platform: connection.platform as SocialSyncPlatform,
-      followers: metrics.metrics.followers,
-      likes: metrics.metrics.likes,
-      handle: metrics.handle,
-      externalId: metrics.externalId,
-    });
-    if (!written.ok) {
-      await prisma.socialConnection.update({ where: { id: connection.id }, data: { status: "error", lastError: written.error } });
-      return { ok: false as const, error: written.error, slug };
+
+    let metricsSynced = false;
+    if (profile.identity?.handle || profile.identity?.externalId) {
+      if (profile.metrics) {
+        const written = await writeLiveAccount({
+          creatorId: connection.creatorId,
+          platform: connection.platform as SocialSyncPlatform,
+          followers: profile.metrics.primary,
+          likes: profile.metrics.secondary,
+          handle: profile.identity.handle,
+          externalId: profile.identity.externalId,
+        });
+        if (!written.ok) {
+          await writeConnectedIdentity({
+            creatorId: connection.creatorId,
+            platform: connection.platform as SocialSyncPlatform,
+            handle: profile.identity.handle,
+            externalId: profile.identity.externalId,
+          }).catch(() => null);
+        } else {
+          metricsSynced = true;
+        }
+      } else if (profile.identity.handle) {
+        await writeConnectedIdentity({
+          creatorId: connection.creatorId,
+          platform: connection.platform as SocialSyncPlatform,
+          handle: profile.identity.handle,
+          externalId: profile.identity.externalId,
+        });
+      }
     }
+
     await prisma.socialConnection.update({
       where: { id: connection.id },
       data: {
         status: "connected",
-        lastError: null,
-        lastSyncedAt: new Date(),
-        externalId: metrics.externalId ?? null,
-        tokenCipher: encryptSecret(token.accessToken),
-        refreshCipher: token.refreshToken ? encryptSecret(token.refreshToken) : connection.refreshCipher,
-        tokenExpiresAt: token.expiresAt,
+        lastError: profile.metricsNotice,
+        lastSyncedAt: metricsSynced ? new Date() : null,
+        externalId: profile.identity?.externalId ?? null,
+        ...tokenFields,
       },
     });
     const { syncCreatorSearch } = await import("@/lib/creator-search");
     await syncCreatorSearch(slug);
-    return { ok: true as const, slug };
+    return {
+      ok: true as const,
+      slug,
+      metricsSynced,
+      notice: profile.metricsNotice,
+    };
   } catch {
     await prisma.socialConnection.update({
       where: { id: connection.id },
@@ -664,28 +661,62 @@ export async function refreshSocialConnection(input: { slug: string; platform: s
         },
       });
     }
-    const metrics = await fetchMetrics(
+    const profile = await fetchSocialProfile(
       ready.extra.profileUrl,
       ready.network.apiHosts,
       accessToken,
       network.platform,
     );
-    if (!metrics.ok) {
-      await prisma.socialConnection.update({ where: { id: connection.id }, data: { status: "error", lastError: metrics.error } });
-      return { ok: false as const, error: metrics.error };
+    if (!profile.ok) {
+      await prisma.socialConnection.update({
+        where: { id: connection.id },
+        data: { status: "connected", lastError: profile.error },
+      });
+      return { ok: false as const, error: profile.error };
     }
-    const written = await writeLiveAccount({
-      creatorId: creator.id,
-      platform: network.platform,
-      followers: metrics.metrics.followers,
-      likes: metrics.metrics.likes,
-      handle: metrics.handle,
-    });
-    if (!written.ok) return written;
-    await prisma.socialConnection.update({
-      where: { id: connection.id },
-      data: { status: "connected", lastError: null, lastSyncedAt: new Date() },
-    });
+    if (profile.metrics && (profile.identity?.handle || connection.externalId)) {
+      const written = await writeLiveAccount({
+        creatorId: creator.id,
+        platform: network.platform,
+        followers: profile.metrics.primary,
+        likes: profile.metrics.secondary,
+        handle: profile.identity?.handle,
+        externalId: profile.identity?.externalId,
+      });
+      if (!written.ok) return written;
+      await prisma.socialConnection.update({
+        where: { id: connection.id },
+        data: {
+          status: "connected",
+          lastError: null,
+          lastSyncedAt: new Date(),
+          externalId: profile.identity?.externalId ?? connection.externalId,
+        },
+      });
+    } else {
+      if (profile.identity?.handle) {
+        await writeConnectedIdentity({
+          creatorId: creator.id,
+          platform: network.platform,
+          handle: profile.identity.handle,
+          externalId: profile.identity.externalId,
+        });
+      }
+      await prisma.socialConnection.update({
+        where: { id: connection.id },
+        data: {
+          status: "connected",
+          lastError: profile.metricsNotice,
+          externalId: profile.identity?.externalId ?? connection.externalId,
+        },
+      });
+      return {
+        ok: false as const,
+        error:
+          profile.metricsNotice ??
+          "This account is connected, but audience statistics were not available yet.",
+      };
+    }
     const { syncCreatorSearch } = await import("@/lib/creator-search");
     await syncCreatorSearch(input.slug);
     return { ok: true as const };
