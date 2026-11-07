@@ -11,16 +11,40 @@ function publicOrigin(request: NextRequest) {
   });
 }
 
+/** Instagram sometimes appends `#_` to the redirect; strip it from the code param. */
+function cleanOAuthCode(code: string | null) {
+  if (!code) return undefined;
+  return code.replace(/#_*$/, "").trim() || undefined;
+}
+
+function friendlyProviderError(error: string | undefined, description: string | undefined) {
+  const blob = `${error ?? ""} ${description ?? ""}`.toLowerCase();
+  if (blob.includes("invalid platform app")) {
+    return "Instagram rejected this app id (Invalid platform app). In Admin → Social → Instagram, use the Instagram App ID — or for newer Meta apps, paste a Unified Login Configuration ID with the Meta App ID.";
+  }
+  if (blob.includes("invalid scopes")) {
+    return "Meta rejected the requested permissions (Invalid Scopes). For Facebook/Instagram on Login for Business apps, paste a Configuration ID in Admin → Social instead of freeform scopes.";
+  }
+  if (description?.trim()) return description.trim().slice(0, 300);
+  if (error?.trim()) return error.trim().slice(0, 300);
+  return undefined;
+}
+
 export async function GET(request: NextRequest) {
-  const code = request.nextUrl.searchParams.get("code") ?? undefined;
+  const code = cleanOAuthCode(request.nextUrl.searchParams.get("code"));
   const state = request.nextUrl.searchParams.get("state") ?? undefined;
   const providerError = request.nextUrl.searchParams.get("error") ?? undefined;
+  const providerDescription =
+    request.nextUrl.searchParams.get("error_description") ??
+    request.nextUrl.searchParams.get("error_message") ??
+    undefined;
   const origin = publicOrigin(request);
   try {
+    const mapped = friendlyProviderError(providerError, providerDescription);
     const result = await completeSocialCallback({
       code,
       state,
-      error: providerError,
+      error: mapped || providerError,
       origin,
     });
     const target = new URL("/dashboard", origin);

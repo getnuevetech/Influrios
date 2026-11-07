@@ -9,6 +9,7 @@ import {
   interpretSocialProfile,
   isLiveSocialAccount,
   prepareSocialProfileUrl,
+  resolveLockedOAuthEndpoints,
   resolveSocialScopes,
   socialConnectGate,
   socialHostAllowed,
@@ -45,13 +46,19 @@ function isUnique(error: unknown) {
 function extraOf(value: unknown, fallback: (typeof SOCIAL_NETWORKS)[number]): SocialExtra {
   const record = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const configId = typeof record.configId === "string" ? record.configId.trim().slice(0, 120) : "";
+  const resolvedConfigId = fallback.supportsConfigId ? configId : "";
   if (fallback.locksOAuthEndpoints) {
-    return {
+    const locked = resolveLockedOAuthEndpoints(fallback.platform, resolvedConfigId) ?? {
       authorizeUrl: fallback.authorizeUrl,
       tokenUrl: fallback.tokenUrl,
       profileUrl: fallback.profileUrl,
+    };
+    return {
+      authorizeUrl: locked.authorizeUrl,
+      tokenUrl: locked.tokenUrl,
+      profileUrl: locked.profileUrl,
       scopes: fallback.scopes,
-      configId: fallback.supportsConfigId ? configId : "",
+      configId: resolvedConfigId,
       configPermissions: fallback.configPermissions,
       supportsConfigId: fallback.supportsConfigId,
       scopesLocked: true,
@@ -65,7 +72,7 @@ function extraOf(value: unknown, fallback: (typeof SOCIAL_NETWORKS)[number]): So
     tokenUrl: typeof record.tokenUrl === "string" && record.tokenUrl ? record.tokenUrl : fallback.tokenUrl,
     profileUrl: prepareSocialProfileUrl(storedProfile, fallback.platform),
     scopes: resolveSocialScopes(fallback.platform),
-    configId: fallback.supportsConfigId ? configId : "",
+    configId: resolvedConfigId,
     configPermissions: fallback.configPermissions,
     supportsConfigId: fallback.supportsConfigId,
     scopesLocked: true,
@@ -179,23 +186,6 @@ export async function saveSocialNetwork(input: {
 }) {
   const network = socialNetwork(input.code);
   if (!network) throw new Error("Unknown social network.");
-  const authorizeUrl = network.locksOAuthEndpoints
-    ? network.authorizeUrl
-    : (input.authorizeUrl?.trim() || network.authorizeUrl);
-  const tokenUrl = network.locksOAuthEndpoints ? network.tokenUrl : (input.tokenUrl?.trim() || network.tokenUrl);
-  const profileUrl = network.locksOAuthEndpoints
-    ? network.profileUrl
-    : prepareSocialProfileUrl(input.profileUrl?.trim() || network.profileUrl, network.platform);
-  const scopes = resolveSocialScopes(network.platform);
-  if (!socialHostAllowed(authorizeUrl, network.authorizeHosts)) {
-    throw new Error(`${network.name} authorize URL must use an official https host.`);
-  }
-  if (!socialHostAllowed(tokenUrl, network.apiHosts)) {
-    throw new Error(`${network.name} token URL must use an official https host.`);
-  }
-  if (!socialHostAllowed(profileUrl, network.apiHosts)) {
-    throw new Error(`${network.name} profile URL must use an official https host.`);
-  }
   const existingExtra =
     (await prisma.integrationProvider.findUnique({
       where: { kind_code: { kind: "social", code: network.code } },
@@ -208,8 +198,25 @@ export async function saveSocialNetwork(input: {
       : input.configId?.trim()
         ? input.configId.trim().slice(0, 120)
         : previous.configId;
-  if (network.supportsConfigId && network.code === "facebook" && !configId) {
-    // Soft warning only — classic Facebook Login can still use locked scopes.
+  const locked = resolveLockedOAuthEndpoints(network.platform, configId);
+  const authorizeUrl = network.locksOAuthEndpoints
+    ? (locked?.authorizeUrl ?? network.authorizeUrl)
+    : (input.authorizeUrl?.trim() || network.authorizeUrl);
+  const tokenUrl = network.locksOAuthEndpoints
+    ? (locked?.tokenUrl ?? network.tokenUrl)
+    : (input.tokenUrl?.trim() || network.tokenUrl);
+  const profileUrl = network.locksOAuthEndpoints
+    ? (locked?.profileUrl ?? network.profileUrl)
+    : prepareSocialProfileUrl(input.profileUrl?.trim() || network.profileUrl, network.platform);
+  const scopes = resolveSocialScopes(network.platform);
+  if (!socialHostAllowed(authorizeUrl, network.authorizeHosts)) {
+    throw new Error(`${network.name} authorize URL must use an official https host.`);
+  }
+  if (!socialHostAllowed(tokenUrl, network.apiHosts)) {
+    throw new Error(`${network.name} token URL must use an official https host.`);
+  }
+  if (!socialHostAllowed(profileUrl, network.apiHosts)) {
+    throw new Error(`${network.name} profile URL must use an official https host.`);
   }
   await ensureSocialCatalog();
   const existing = await prisma.integrationProvider.findUnique({
@@ -333,16 +340,22 @@ export async function beginSocialConnect(input: {
   }
   // Always use the configured public origin — never request Host / 0.0.0.0 —
   // so the redirect_uri matches Google/Meta console whitelists.
+  const configId = provider!.supportsConfigId ? provider!.configId || null : null;
+  if (network.code === "instagram" && !configId) {
+    // Soft guidance only — Instagram Login requires the Instagram App ID.
+    // Using the Meta App ID on www.instagram.com yields “Invalid platform app”.
+  }
+  const locked = resolveLockedOAuthEndpoints(network.platform, configId);
   const authorizeUrl = buildAuthorizeUrl({
-    authorizeUrl: provider!.authorizeUrl,
-    authorizeHosts: network.authorizeHosts,
+    authorizeUrl: locked?.authorizeUrl ?? provider!.authorizeUrl,
+    authorizeHosts: locked?.authorizeHosts ?? network.authorizeHosts,
     clientIdParam: network.clientIdParam,
     clientId: provider!.clientId,
     redirectUri: socialCallbackUrl(),
     state,
     scopes: provider!.scopes,
-    // Facebook Login for Business: config_id replaces scope= (avoids Invalid Scopes).
-    configId: provider!.supportsConfigId ? provider!.configId || null : null,
+    // Login for Business / Unified Login: config_id replaces scope=.
+    configId,
     extraParams:
       network.code === "youtube"
         ? { access_type: "offline", include_granted_scopes: "true", prompt: "consent" }

@@ -13,15 +13,19 @@ export const SOCIAL_NETWORKS = [
     tokenStyle: "form" as const,
     /** Endpoints + scopes are code-owned so Admin cannot break Meta OAuth with freeform values. */
     locksOAuthEndpoints: true,
-    supportsConfigId: false,
-    authorizeHosts: ["www.instagram.com", "api.instagram.com"],
-    apiHosts: ["api.instagram.com", "graph.instagram.com"],
-    // Instagram API with Instagram Login (Professional accounts) — not Facebook Page-linked Login.
+    /**
+     * Newer Meta apps have no Instagram App ID (“API setup with Instagram login is not available”).
+     * Those apps must use Facebook Login for Business / Unified Login with config_id.
+     */
+    supportsConfigId: true,
+    authorizeHosts: ["www.instagram.com", "api.instagram.com", "www.facebook.com"],
+    apiHosts: ["api.instagram.com", "graph.instagram.com", "graph.facebook.com"],
+    // Default path: Instagram Login (requires Instagram App ID — not the Meta App ID).
     authorizeUrl: "https://www.instagram.com/oauth/authorize",
     tokenUrl: "https://api.instagram.com/oauth/access_token",
     profileUrl: `https://graph.instagram.com/${META_GRAPH_VERSION}/me?fields=user_id,username,name,account_type,followers_count,media_count`,
     scopes: "instagram_business_basic",
-    configPermissions: "instagram_business_basic",
+    configPermissions: "instagram_basic,instagram_manage_insights",
   },
   {
     code: "tiktok",
@@ -656,6 +660,50 @@ export function resolveSocialScopes(platform: string | null | undefined, _scopes
   return network?.scopes ?? "";
 }
 
+/**
+ * Instagram has two Meta-supported login surfaces:
+ * - Instagram Login (legacy apps with a dedicated Instagram App ID)
+ * - Unified Login / Facebook Login for Business (newer apps → config_id only)
+ *
+ * Using the Meta App ID on www.instagram.com/oauth/authorize yields
+ * “Invalid platform app”.
+ */
+export function resolveLockedOAuthEndpoints(
+  platform: string | null | undefined,
+  configId?: string | null,
+): {
+  authorizeUrl: string;
+  tokenUrl: string;
+  profileUrl: string;
+  authorizeHosts: readonly string[];
+  apiHosts: readonly string[];
+  mode: "instagram_login" | "unified_config" | "default";
+} | null {
+  const network = platform ? socialNetwork(platform) : null;
+  if (!network) return null;
+  const hasConfig = Boolean(configId?.trim()) && network.supportsConfigId;
+
+  if (network.code === "instagram" && hasConfig) {
+    return {
+      mode: "unified_config",
+      authorizeUrl: `https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`,
+      tokenUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token`,
+      profileUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?fields=id,name,instagram_business_account{id,username,name,followers_count,media_count}`,
+      authorizeHosts: network.authorizeHosts,
+      apiHosts: network.apiHosts,
+    };
+  }
+
+  return {
+    mode: network.code === "instagram" ? "instagram_login" : "default",
+    authorizeUrl: network.authorizeUrl,
+    tokenUrl: network.tokenUrl,
+    profileUrl: network.profileUrl,
+    authorizeHosts: network.authorizeHosts,
+    apiHosts: network.apiHosts,
+  };
+}
+
 export function buildAuthorizeUrl(input: {
   authorizeUrl: string;
   authorizeHosts: readonly string[];
@@ -665,8 +713,8 @@ export function buildAuthorizeUrl(input: {
   state: string;
   scopes: string;
   /**
-   * Facebook Login for Business configuration id. When set, Meta rejects freeform `scope=`
-   * (Invalid Scopes) — send config_id instead and omit scope.
+   * Facebook Login for Business / Unified Login configuration id.
+   * When set, Meta rejects freeform `scope=` — send config_id instead and omit scope.
    */
   configId?: string | null;
   /** Extra query params (e.g. Google access_type=offline). */
@@ -682,6 +730,8 @@ export function buildAuthorizeUrl(input: {
   const configId = input.configId?.trim() ?? "";
   if (configId) {
     url.searchParams.set("config_id", configId);
+    // Required for some Login for Business / system-user configurations.
+    url.searchParams.set("override_default_response_type", "true");
   } else if (input.scopes.trim()) {
     url.searchParams.set("scope", input.scopes);
   }

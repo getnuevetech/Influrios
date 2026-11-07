@@ -11,6 +11,7 @@ import {
   parseSocialMetrics,
   parseYoutubeChannelMetrics,
   prepareSocialProfileUrl,
+  resolveLockedOAuthEndpoints,
   resolveSocialScopes,
   socialConnectGate,
   socialHostAllowed,
@@ -168,6 +169,7 @@ describe("live social metrics", () => {
       configId: "1234567890",
     });
     assert.ok(withConfig?.includes("config_id=1234567890"));
+    assert.ok(withConfig?.includes("override_default_response_type=true"));
     assert.equal(withConfig?.includes("scope="), false);
 
     const classic = buildAuthorizeUrl({
@@ -181,6 +183,17 @@ describe("live social metrics", () => {
     });
     assert.ok(classic?.includes("scope="));
     assert.equal(classic?.includes("config_id="), false);
+  });
+
+  it("switches Instagram to Unified Login endpoints when a config_id is present", () => {
+    const login = resolveLockedOAuthEndpoints("INSTAGRAM", null);
+    assert.equal(login?.mode, "instagram_login");
+    assert.match(login?.authorizeUrl ?? "", /www\.instagram\.com\/oauth\/authorize/);
+
+    const unified = resolveLockedOAuthEndpoints("INSTAGRAM", "998877");
+    assert.equal(unified?.mode, "unified_config");
+    assert.match(unified?.authorizeUrl ?? "", /facebook\.com\/.*\/dialog\/oauth/);
+    assert.match(unified?.profileUrl ?? "", /instagram_business_account/);
   });
 
   it("keeps OAuth success notices separate from hard metric failure", () => {

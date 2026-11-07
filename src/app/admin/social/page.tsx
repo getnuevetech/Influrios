@@ -157,11 +157,19 @@ export default async function AdminSocialPage({ searchParams }: Props) {
               </p>
             </div>
             <label className="block text-sm font-semibold text-indigo sm:col-span-2">
-              Client id
+              {network.code === "instagram"
+                ? network.configId
+                  ? "Meta App ID (Unified Login)"
+                  : "Instagram App ID (not the Meta App ID)"
+                : "Client id"}
               <input name="clientId" defaultValue={network.clientId} disabled={!canEdit} className={inputClass} />
             </label>
             <label className="block text-sm font-semibold text-indigo sm:col-span-2">
-              Client secret ({network.secret})
+              {network.code === "instagram"
+                ? network.configId
+                  ? `Meta App Secret (${network.secret})`
+                  : `Instagram App Secret (${network.secret})`
+                : `Client secret (${network.secret})`}
               <input name="secret" type="password" placeholder="Leave blank to keep the saved secret" disabled={!canEdit} className={inputClass} />
             </label>
             <div className="sm:col-span-2 rounded-xl bg-[#F8F6FF] px-3 py-2 text-xs text-muted">
@@ -184,7 +192,9 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             </div>
             {network.supportsConfigId ? (
               <label className="block text-sm font-semibold text-indigo sm:col-span-2">
-                Facebook Login for Business · Configuration ID
+                {network.code === "instagram"
+                  ? "Unified Login · Configuration ID (required for newer Meta apps)"
+                  : "Facebook Login for Business · Configuration ID"}
                 <input
                   name="configId"
                   defaultValue={network.configId}
@@ -198,7 +208,7 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             {network.supportsConfigId ? (
               <label className="flex items-center gap-2 text-sm font-semibold text-indigo sm:col-span-2">
                 <input type="checkbox" name="clearConfigId" value="1" disabled={!canEdit} />
-                Clear saved Configuration ID (falls back to classic scope= — often rejected on Business apps)
+                Clear saved Configuration ID
               </label>
             ) : null}
             {network.code === "facebook" ? (
@@ -214,10 +224,18 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             ) : null}
             {network.code === "instagram" ? (
               <p className="sm:col-span-2 text-xs text-muted">
-                Uses <span className="font-semibold">Instagram Login</span> (
-                <code className="text-[11px]">instagram_business_basic</code>) for Professional accounts — not Facebook
-                Page-linked Login. Enable Instagram API with Instagram Login on the Meta app and add the same OAuth
-                redirect URI. Personal consumer Instagram accounts cannot sync.
+                <span className="font-semibold">Invalid platform app</span> usually means the Meta App ID was used on{" "}
+                <code className="text-[11px]">www.instagram.com/oauth/authorize</code>. Two supported setups:
+                <br />
+                1) Older apps with “API setup with Instagram login”: paste the{" "}
+                <span className="font-semibold">Instagram App ID / Secret</span> (Instagram product panel), leave
+                Configuration ID empty.
+                <br />
+                2) Newer apps that only offer Unified Login: paste the{" "}
+                <span className="font-semibold">Meta App ID / Secret</span> plus a Facebook Login for Business{" "}
+                <span className="font-semibold">Configuration ID</span> that includes Instagram assets (
+                <code className="text-[11px]">{network.configPermissions}</code>). Influrios then uses{" "}
+                <code className="text-[11px]">config_id</code> instead of Instagram Login.
               </p>
             ) : null}
             {network.code === "youtube" ? (
