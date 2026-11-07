@@ -49,10 +49,8 @@ export async function actionSaveSocialNetwork(formData: FormData) {
       clientId: clean(formData.get("clientId")),
       secret: clean(formData.get("secret")),
       clearSecret: formData.get("clearSecret") === "1",
-      authorizeUrl: clean(formData.get("authorizeUrl")),
-      tokenUrl: clean(formData.get("tokenUrl")),
-      profileUrl: clean(formData.get("profileUrl")),
-      scopes: clean(formData.get("scopes")),
+      configId: clean(formData.get("configId")),
+      clearConfigId: formData.get("clearConfigId") === "1",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the social network.";

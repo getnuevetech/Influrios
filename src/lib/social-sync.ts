@@ -10,34 +10,43 @@ export const SOCIAL_NETWORKS = [
     platform: "INSTAGRAM",
     name: "Instagram",
     clientIdParam: "client_id",
-    tokenStyle: "form",
-    authorizeHosts: ["www.facebook.com", "api.instagram.com"],
-    apiHosts: ["graph.facebook.com", "graph.instagram.com"],
-    authorizeUrl: `https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`,
-    tokenUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token`,
-    // Professional IG is linked to a Facebook Page — not a personal IG consumer account.
-    profileUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?fields=id,name,instagram_business_account{id,username,name,followers_count,media_count}`,
-    scopes: "instagram_basic,pages_show_list,pages_read_engagement",
+    tokenStyle: "form" as const,
+    /** Endpoints + scopes are code-owned so Admin cannot break Meta OAuth with freeform values. */
+    locksOAuthEndpoints: true,
+    supportsConfigId: false,
+    authorizeHosts: ["www.instagram.com", "api.instagram.com"],
+    apiHosts: ["api.instagram.com", "graph.instagram.com"],
+    // Instagram API with Instagram Login (Professional accounts) — not Facebook Page-linked Login.
+    authorizeUrl: "https://www.instagram.com/oauth/authorize",
+    tokenUrl: "https://api.instagram.com/oauth/access_token",
+    profileUrl: `https://graph.instagram.com/${META_GRAPH_VERSION}/me?fields=user_id,username,name,account_type,followers_count,media_count`,
+    scopes: "instagram_business_basic",
+    configPermissions: "instagram_business_basic",
   },
   {
     code: "tiktok",
     platform: "TIKTOK",
     name: "TikTok",
     clientIdParam: "client_key",
-    tokenStyle: "json",
+    tokenStyle: "json" as const,
+    locksOAuthEndpoints: true,
+    supportsConfigId: false,
     authorizeHosts: ["www.tiktok.com"],
     apiHosts: ["open.tiktokapis.com"],
     authorizeUrl: "https://www.tiktok.com/v2/auth/authorize/",
     tokenUrl: "https://open.tiktokapis.com/v2/oauth/token/",
     profileUrl: "https://open.tiktokapis.com/v2/user/info/",
     scopes: "user.info.basic,user.info.stats",
+    configPermissions: "user.info.basic,user.info.stats",
   },
   {
     code: "youtube",
     platform: "YOUTUBE",
     name: "YouTube",
     clientIdParam: "client_id",
-    tokenStyle: "form",
+    tokenStyle: "form" as const,
+    locksOAuthEndpoints: true,
+    supportsConfigId: false,
     authorizeHosts: ["accounts.google.com"],
     apiHosts: ["oauth2.googleapis.com", "www.googleapis.com"],
     authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -45,59 +54,74 @@ export const SOCIAL_NETWORKS = [
     // channels.list requires part + mine (or id). Bare /channels returns HTTP 400.
     profileUrl: "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
     scopes: "https://www.googleapis.com/auth/youtube.readonly",
+    configPermissions: "https://www.googleapis.com/auth/youtube.readonly",
   },
   {
     code: "x",
     platform: "X",
     name: "X",
     clientIdParam: "client_id",
-    tokenStyle: "form",
+    tokenStyle: "form" as const,
+    locksOAuthEndpoints: true,
+    supportsConfigId: false,
     authorizeHosts: ["twitter.com", "x.com"],
     apiHosts: ["api.twitter.com", "api.x.com"],
     authorizeUrl: "https://twitter.com/i/oauth2/authorize",
     tokenUrl: "https://api.twitter.com/2/oauth2/token",
     profileUrl: "https://api.twitter.com/2/users/me",
     scopes: "users.read tweet.read",
+    configPermissions: "users.read tweet.read",
   },
   {
     code: "facebook",
     platform: "FACEBOOK",
     name: "Facebook",
     clientIdParam: "client_id",
-    tokenStyle: "form",
+    tokenStyle: "form" as const,
+    locksOAuthEndpoints: true,
+    /** Newer Meta apps use Facebook Login for Business + config_id instead of freeform scope=. */
+    supportsConfigId: true,
     authorizeHosts: ["www.facebook.com"],
     apiHosts: ["graph.facebook.com"],
     authorizeUrl: `https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`,
     tokenUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token`,
     // Personal /me never returns audience counts. Page list + fields is required.
     profileUrl: `https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?fields=id,name,username,followers_count,fan_count`,
+    // Classic Facebook Login fallback only. Prefer Admin → Facebook Login config_id for Business apps.
     scopes: "public_profile,pages_show_list,pages_read_engagement",
+    configPermissions: "pages_show_list,pages_read_engagement",
   },
   {
     code: "linkedin",
     platform: "LINKEDIN",
     name: "LinkedIn",
     clientIdParam: "client_id",
-    tokenStyle: "form",
+    tokenStyle: "form" as const,
+    locksOAuthEndpoints: true,
+    supportsConfigId: false,
     authorizeHosts: ["www.linkedin.com"],
     apiHosts: ["api.linkedin.com", "www.linkedin.com"],
     authorizeUrl: "https://www.linkedin.com/oauth/v2/authorization",
     tokenUrl: "https://www.linkedin.com/oauth/v2/accessToken",
     profileUrl: "https://api.linkedin.com/v2/userinfo",
     scopes: "openid profile",
+    configPermissions: "openid profile",
   },
   {
     code: "pinterest",
     platform: "PINTEREST",
     name: "Pinterest",
     clientIdParam: "client_id",
-    tokenStyle: "form",
+    tokenStyle: "form" as const,
+    locksOAuthEndpoints: true,
+    supportsConfigId: false,
     authorizeHosts: ["www.pinterest.com"],
     apiHosts: ["api.pinterest.com"],
     authorizeUrl: "https://www.pinterest.com/oauth/",
     tokenUrl: "https://api.pinterest.com/v5/oauth/token",
     profileUrl: "https://api.pinterest.com/v5/user_account",
     scopes: "user_accounts:read",
+    configPermissions: "user_accounts:read",
   },
 ] as const;
 
@@ -149,8 +173,13 @@ const LIKE_KEYS = ["likes", "like_count", "likes_count", "total_likes", "like_to
 export const FACEBOOK_WEAK_SCOPES = new Set(["", "public_profile"]);
 export const FACEBOOK_WEAK_PROFILE_PATHS = new Set(["/me", "/v21.0/me", "/v22.0/me"]);
 
-/** Legacy Instagram Admin rows that never walk Pages → IG Professional. */
-export const INSTAGRAM_WEAK_SCOPES = new Set(["", "instagram_basic", "instagram_basic,pages_show_list"]);
+/** Legacy Instagram Admin rows that used Facebook Login instead of Instagram Login. */
+export const INSTAGRAM_WEAK_SCOPES = new Set([
+  "",
+  "instagram_basic",
+  "instagram_basic,pages_show_list",
+  "instagram_basic,pages_show_list,pages_read_engagement",
+]);
 
 export function socialNetwork(codeOrPlatform: string) {
   const key = codeOrPlatform.trim().toLowerCase();
@@ -344,8 +373,46 @@ export function parseFacebookPageMetrics(payload: unknown): {
 }
 
 /**
- * Instagram Professional accounts linked to Pages the user manages.
- * Consumer/personal Instagram accounts are not supported by Meta's Facebook Login IG APIs.
+ * Instagram Login `/me` payload (graph.instagram.com) for Professional accounts.
+ * Prefer this over the legacy Facebook Page → instagram_business_account walk.
+ */
+export function parseInstagramLoginProfile(payload: unknown): {
+  identity: SocialIdentity | null;
+  metrics: SocialAudienceMetrics | null;
+} | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const record = payload as {
+    user_id?: unknown;
+    id?: unknown;
+    username?: unknown;
+    name?: unknown;
+    followers_count?: unknown;
+    media_count?: unknown;
+    error?: unknown;
+  };
+  if (record.error) return null;
+  const username = typeof record.username === "string" ? record.username.trim() : "";
+  const name = typeof record.name === "string" ? record.name.trim() : "";
+  const handle = (username || name || "").replace(/^@/, "") || null;
+  const rawId = record.user_id ?? record.id;
+  const externalId =
+    typeof rawId === "string" && rawId.trim()
+      ? rawId.trim()
+      : typeof rawId === "number" && Number.isFinite(rawId)
+        ? String(rawId)
+        : null;
+  if (!handle && !externalId) return null;
+  const followers = asCount(record.followers_count);
+  const media = asCount(record.media_count);
+  return {
+    identity: { handle, externalId },
+    metrics: followers != null ? { primary: followers, secondary: media } : null,
+  };
+}
+
+/**
+ * Legacy Facebook Login path: Instagram Professional accounts linked to Pages.
+ * Kept for interpreting older Admin profile URLs until rows are re-saved.
  */
 export function parseInstagramBusinessMetrics(payload: unknown): {
   identity: SocialIdentity | null;
@@ -449,29 +516,31 @@ export function interpretSocialProfile(
   }
 
   if (key === "INSTAGRAM") {
-    const instagram = parseInstagramBusinessMetrics(payload);
-    if (!instagram) {
+    const direct = parseInstagramLoginProfile(payload);
+    if (direct?.identity) {
       return {
-        identity: null,
-        metrics: null,
-        metricsNotice:
-          "Your Instagram login was authorized, but Influrios could not read a Professional account. Link an Instagram Business or Creator account to a Facebook Page you manage.",
+        identity: direct.identity,
+        metrics: direct.metrics,
+        metricsNotice: direct.metrics
+          ? null
+          : "Your Instagram Professional account is connected, but follower statistics were not available yet. Try Sync now later.",
       };
     }
-    if (instagram.emptyAccounts || !instagram.identity) {
+    const legacy = parseInstagramBusinessMetrics(payload);
+    if (legacy?.identity) {
       return {
-        identity: null,
-        metrics: null,
-        metricsNotice:
-          "Your Instagram login was authorized, but no Instagram Professional account linked to a Facebook Page was found. Personal Instagram accounts cannot sync audience statistics.",
+        identity: legacy.identity,
+        metrics: legacy.metrics,
+        metricsNotice: legacy.metrics
+          ? null
+          : "Your Instagram Professional account is connected, but follower statistics were not available yet. Try Sync now later.",
       };
     }
     return {
-      identity: instagram.identity,
-      metrics: instagram.metrics,
-      metricsNotice: instagram.metrics
-        ? null
-        : "Your Instagram Professional account is connected, but follower statistics were not available yet. Try Sync now later.",
+      identity: null,
+      metrics: null,
+      metricsNotice:
+        "Your Instagram login was authorized, but Influrios could not read a Professional account. Use an Instagram Business or Creator account with Instagram Login enabled for this app.",
     };
   }
 
@@ -515,9 +584,11 @@ function findProfileString(value: unknown, keys: string[], depth = 0): string | 
   return null;
 }
 
-/** Upgrade weak Facebook/Instagram Admin rows and ensure YouTube channels.list query params. */
+/** Upgrade weak Facebook Admin rows, Instagram Login /me, and YouTube channels.list params. */
 export function prepareSocialProfileUrl(profileUrl: string, platform?: string | null) {
   const network = platform ? socialNetwork(platform) : null;
+  if (network?.locksOAuthEndpoints) return network.profileUrl;
+
   const looksYoutube =
     network?.code === "youtube" || /googleapis\.com\/youtube\/v3\/channels/i.test(profileUrl);
   if (looksYoutube) {
@@ -534,11 +605,29 @@ export function prepareSocialProfileUrl(profileUrl: string, platform?: string | 
     }
   }
 
-  const looksMetaGraph =
-    network?.code === "facebook" ||
-    network?.code === "instagram" ||
-    /graph\.facebook\.com/i.test(profileUrl);
-  if (!looksMetaGraph) return profileUrl;
+  if (network?.code === "instagram" || /graph\.instagram\.com/i.test(profileUrl)) {
+    try {
+      const url = new URL(profileUrl);
+      if (url.hostname === "graph.instagram.com") {
+        const path = url.pathname.replace(/\/+$/, "") || "/";
+        if (path === "/me" || /^\/v\d+\.\d+\/me$/.test(path)) {
+          if (!url.searchParams.get("fields")) {
+            url.searchParams.set(
+              "fields",
+              "user_id,username,name,account_type,followers_count,media_count",
+            );
+          }
+          return url.toString();
+        }
+      }
+    } catch {
+      return profileUrl;
+    }
+  }
+
+  const looksFacebook =
+    network?.code === "facebook" || /graph\.facebook\.com/i.test(profileUrl);
+  if (!looksFacebook) return profileUrl;
   try {
     const url = new URL(profileUrl);
     if (url.hostname !== "graph.facebook.com") return profileUrl;
@@ -548,18 +637,6 @@ export function prepareSocialProfileUrl(profileUrl: string, platform?: string | 
     const weakUserPath =
       FACEBOOK_WEAK_PROFILE_PATHS.has(path) || /^\/v\d+\.\d+\/me$/.test(path) || path === "/me";
     const accountsPath = /\/me\/accounts$/i.test(path);
-
-    if (network?.code === "instagram" || (!network && /instagram_business_account/i.test(url.search))) {
-      if (weakUserPath || accountsPath) {
-        url.pathname = `/${version}/me/accounts`;
-        url.searchParams.set(
-          "fields",
-          "id,name,instagram_business_account{id,username,name,followers_count,media_count}",
-        );
-        return url.toString();
-      }
-    }
-
     if (weakUserPath || accountsPath) {
       url.pathname = `/${version}/me/accounts`;
       if (!url.searchParams.get("fields")) {
@@ -573,14 +650,10 @@ export function prepareSocialProfileUrl(profileUrl: string, platform?: string | 
   }
 }
 
-/** Prefer Page / IG Professional scopes when Admin still has a weak default. */
-export function resolveSocialScopes(platform: string | null | undefined, scopes: string) {
+/** Scopes are always owned by code — Admin freeform values are ignored. */
+export function resolveSocialScopes(platform: string | null | undefined, _scopes?: string) {
   const network = platform ? socialNetwork(platform) : null;
-  if (!network) return scopes;
-  const trimmed = scopes.trim();
-  if (network.code === "facebook" && FACEBOOK_WEAK_SCOPES.has(trimmed)) return network.scopes;
-  if (network.code === "instagram" && INSTAGRAM_WEAK_SCOPES.has(trimmed)) return network.scopes;
-  return trimmed || network.scopes;
+  return network?.scopes ?? "";
 }
 
 export function buildAuthorizeUrl(input: {
@@ -591,6 +664,11 @@ export function buildAuthorizeUrl(input: {
   redirectUri: string;
   state: string;
   scopes: string;
+  /**
+   * Facebook Login for Business configuration id. When set, Meta rejects freeform `scope=`
+   * (Invalid Scopes) — send config_id instead and omit scope.
+   */
+  configId?: string | null;
   /** Extra query params (e.g. Google access_type=offline). */
   extraParams?: Record<string, string>;
 }) {
@@ -601,7 +679,12 @@ export function buildAuthorizeUrl(input: {
   url.searchParams.set("redirect_uri", input.redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("state", input.state);
-  url.searchParams.set("scope", input.scopes);
+  const configId = input.configId?.trim() ?? "";
+  if (configId) {
+    url.searchParams.set("config_id", configId);
+  } else if (input.scopes.trim()) {
+    url.searchParams.set("scope", input.scopes);
+  }
   for (const [key, value] of Object.entries(input.extraParams ?? {})) {
     if (key && value) url.searchParams.set(key, value);
   }

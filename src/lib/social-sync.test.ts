@@ -7,6 +7,7 @@ import {
   isLiveSocialAccount,
   parseFacebookPageMetrics,
   parseInstagramBusinessMetrics,
+  parseInstagramLoginProfile,
   parseSocialMetrics,
   parseYoutubeChannelMetrics,
   prepareSocialProfileUrl,
@@ -115,8 +116,18 @@ describe("live social metrics", () => {
     assert.equal(identityOnly?.metrics, null);
   });
 
-  it("maps Instagram Professional accounts linked to Pages", () => {
-    const parsed = parseInstagramBusinessMetrics({
+  it("maps Instagram Login /me Professional profiles", () => {
+    const parsed = parseInstagramLoginProfile({
+      user_id: "1784",
+      username: "ada.creates",
+      followers_count: 4200,
+      media_count: 88,
+    });
+    assert.deepEqual(parsed, {
+      identity: { handle: "ada.creates", externalId: "1784" },
+      metrics: { primary: 4200, secondary: 88 },
+    });
+    const legacy = parseInstagramBusinessMetrics({
       data: [
         {
           id: "page1",
@@ -130,29 +141,46 @@ describe("live social metrics", () => {
         },
       ],
     });
-    assert.deepEqual(parsed, {
-      identity: { handle: "ada.creates", externalId: "1784" },
-      metrics: { primary: 4200, secondary: 88 },
-      emptyAccounts: false,
-    });
-    assert.equal(parseInstagramBusinessMetrics({ data: [{ id: "page1", name: "No IG" }] })?.identity, null);
+    assert.equal(legacy?.identity?.handle, "ada.creates");
   });
 
-  it("upgrades weak Facebook / Instagram profile URLs and scopes", () => {
+  it("locks Facebook/Instagram endpoints and scopes in code", () => {
     const facebook = prepareSocialProfileUrl("https://graph.facebook.com/v21.0/me", "FACEBOOK");
     assert.match(facebook, /\/me\/accounts/);
     assert.match(facebook, /followers_count/);
     const instagram = prepareSocialProfileUrl("https://graph.facebook.com/v21.0/me", "INSTAGRAM");
-    assert.match(instagram, /instagram_business_account/);
-    assert.equal(
-      resolveSocialScopes("FACEBOOK", "public_profile"),
-      "public_profile,pages_show_list,pages_read_engagement",
-    );
-    assert.equal(
-      resolveSocialScopes("INSTAGRAM", "instagram_basic,pages_show_list"),
-      "instagram_basic,pages_show_list,pages_read_engagement",
-    );
+    assert.match(instagram, /graph\.instagram\.com/);
+    assert.match(instagram, /instagram_business_basic|user_id,username/);
+    assert.equal(resolveSocialScopes("FACEBOOK", "public_profile"), "public_profile,pages_show_list,pages_read_engagement");
+    assert.equal(resolveSocialScopes("INSTAGRAM", "instagram_basic,pages_show_list"), "instagram_business_basic");
     assert.match(META_GRAPH_VERSION, /^v\d+\.\d+$/);
+  });
+
+  it("uses Meta config_id instead of scope for Facebook Login for Business", () => {
+    const withConfig = buildAuthorizeUrl({
+      authorizeUrl: "https://www.facebook.com/v22.0/dialog/oauth",
+      authorizeHosts: ["www.facebook.com"],
+      clientIdParam: "client_id",
+      clientId: "app",
+      redirectUri: "https://influrios.com/api/social/callback",
+      state: "state",
+      scopes: "pages_show_list,pages_read_engagement",
+      configId: "1234567890",
+    });
+    assert.ok(withConfig?.includes("config_id=1234567890"));
+    assert.equal(withConfig?.includes("scope="), false);
+
+    const classic = buildAuthorizeUrl({
+      authorizeUrl: "https://www.facebook.com/v22.0/dialog/oauth",
+      authorizeHosts: ["www.facebook.com"],
+      clientIdParam: "client_id",
+      clientId: "app",
+      redirectUri: "https://influrios.com/api/social/callback",
+      state: "state",
+      scopes: "public_profile,pages_show_list,pages_read_engagement",
+    });
+    assert.ok(classic?.includes("scope="));
+    assert.equal(classic?.includes("config_id="), false);
   });
 
   it("keeps OAuth success notices separate from hard metric failure", () => {

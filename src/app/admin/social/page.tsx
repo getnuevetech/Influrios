@@ -42,10 +42,10 @@ export default async function AdminSocialPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Social networks</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        Each network stays off until a client id and secret are saved and the provider is enabled. A creator must accept
-        the current terms and policy before Influrios starts that network&apos;s login. Follower and like counts are
-        written only when that network returns both. Public pages keep their current layout; a confirmed sync updates
-        the figure already shown for that account.
+        Each network stays off until a client id and secret are saved and the provider is enabled. OAuth endpoints and
+        permission scopes are locked in code — do not paste arbitrary Meta permission names. Audience statistics sync
+        separately after a successful login. A creator must accept the current terms before Influrios starts that
+        network&apos;s login.
       </p>
       <p className="mt-2 text-sm text-muted">
         OAuth redirect path: <span className="font-semibold text-indigo">{callbackPath()}</span>
@@ -164,39 +164,60 @@ export default async function AdminSocialPage({ searchParams }: Props) {
               Client secret ({network.secret})
               <input name="secret" type="password" placeholder="Leave blank to keep the saved secret" disabled={!canEdit} className={inputClass} />
             </label>
-            <label className="block text-sm font-semibold text-indigo sm:col-span-2">
-              Authorize URL
-              <input name="authorizeUrl" defaultValue={network.authorizeUrl} disabled={!canEdit} className={inputClass} />
-            </label>
-            <label className="block text-sm font-semibold text-indigo">
-              Token URL
-              <input name="tokenUrl" defaultValue={network.tokenUrl} disabled={!canEdit} className={inputClass} />
-            </label>
-            <label className="block text-sm font-semibold text-indigo">
-              Profile URL
-              <input name="profileUrl" defaultValue={network.profileUrl} disabled={!canEdit} className={inputClass} />
-            </label>
-            <label className="block text-sm font-semibold text-indigo sm:col-span-2">
-              Scopes
-              <input name="scopes" defaultValue={network.scopes} disabled={!canEdit} className={inputClass} />
-            </label>
+            <div className="sm:col-span-2 rounded-xl bg-[#F8F6FF] px-3 py-2 text-xs text-muted">
+              <p>
+                <span className="font-semibold text-indigo">Authorize</span>{" "}
+                <code className="text-[11px]">{network.authorizeUrl}</code>
+              </p>
+              <p className="mt-1">
+                <span className="font-semibold text-indigo">Token</span>{" "}
+                <code className="text-[11px]">{network.tokenUrl}</code>
+              </p>
+              <p className="mt-1">
+                <span className="font-semibold text-indigo">Profile</span>{" "}
+                <code className="text-[11px]">{network.profileUrl}</code>
+              </p>
+              <p className="mt-1">
+                <span className="font-semibold text-indigo">Locked scopes</span>{" "}
+                <code className="text-[11px]">{network.scopes}</code>
+              </p>
+            </div>
+            {network.supportsConfigId ? (
+              <label className="block text-sm font-semibold text-indigo sm:col-span-2">
+                Facebook Login for Business · Configuration ID
+                <input
+                  name="configId"
+                  defaultValue={network.configId}
+                  disabled={!canEdit}
+                  className={inputClass}
+                  placeholder="Paste config_id from Meta → Facebook Login for Business → Configurations"
+                  autoComplete="off"
+                />
+              </label>
+            ) : null}
+            {network.supportsConfigId ? (
+              <label className="flex items-center gap-2 text-sm font-semibold text-indigo sm:col-span-2">
+                <input type="checkbox" name="clearConfigId" value="1" disabled={!canEdit} />
+                Clear saved Configuration ID (falls back to classic scope= — often rejected on Business apps)
+              </label>
+            ) : null}
             {network.code === "facebook" ? (
               <p className="sm:col-span-2 text-xs text-muted">
-                Facebook needs a Page the creator manages. Use{" "}
-                <code className="text-[11px]">me/accounts?fields=id,name,username,followers_count,fan_count</code> and
-                scopes <code className="text-[11px]">public_profile,pages_show_list,pages_read_engagement</code>.{" "}
-                <code className="text-[11px]">public_profile</code> alone never returns follower counts. Enable those
-                permissions on the Meta app (App Review for Live). If Meta shows “Facebook Login is currently
-                unavailable… updating additional details”, finish required app details / Business verification in
-                Meta for Developers first.
+                Connects a <span className="font-semibold">Facebook Page</span> via{" "}
+                <code className="text-[11px]">/me/accounts</code>. On Facebook Login for Business apps, Meta returns{" "}
+                <span className="font-semibold">Invalid Scopes: pages_show_list, pages_read_engagement</span> if Influrios
+                sends those as freeform <code className="text-[11px]">scope=</code>. Create a Login configuration that
+                includes <code className="text-[11px]">{network.configPermissions}</code>, then paste its Configuration
+                ID above. Without a config id, classic <code className="text-[11px]">scope=</code> is used only for older
+                Facebook Login apps.
               </p>
             ) : null}
             {network.code === "instagram" ? (
               <p className="sm:col-span-2 text-xs text-muted">
-                Instagram requires a Professional (Business/Creator) account linked to a Facebook Page. Profile URL
-                should walk <code className="text-[11px]">me/accounts</code> with{" "}
-                <code className="text-[11px]">instagram_business_account{"{…}"}</code>. Personal Instagram accounts
-                cannot sync audience statistics via Facebook Login.
+                Uses <span className="font-semibold">Instagram Login</span> (
+                <code className="text-[11px]">instagram_business_basic</code>) for Professional accounts — not Facebook
+                Page-linked Login. Enable Instagram API with Instagram Login on the Meta app and add the same OAuth
+                redirect URI. Personal consumer Instagram accounts cannot sync.
               </p>
             ) : null}
             {network.code === "youtube" ? (

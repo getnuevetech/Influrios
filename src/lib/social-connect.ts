@@ -30,6 +30,10 @@ type SocialExtra = {
   tokenUrl: string;
   profileUrl: string;
   scopes: string;
+  configId: string;
+  configPermissions: string;
+  supportsConfigId: boolean;
+  scopesLocked: true;
 };
 
 let catalogTask: Promise<void> | null = null;
@@ -40,15 +44,31 @@ function isUnique(error: unknown) {
 
 function extraOf(value: unknown, fallback: (typeof SOCIAL_NETWORKS)[number]): SocialExtra {
   const record = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const configId = typeof record.configId === "string" ? record.configId.trim().slice(0, 120) : "";
+  if (fallback.locksOAuthEndpoints) {
+    return {
+      authorizeUrl: fallback.authorizeUrl,
+      tokenUrl: fallback.tokenUrl,
+      profileUrl: fallback.profileUrl,
+      scopes: fallback.scopes,
+      configId: fallback.supportsConfigId ? configId : "",
+      configPermissions: fallback.configPermissions,
+      supportsConfigId: fallback.supportsConfigId,
+      scopesLocked: true,
+    };
+  }
   const storedProfile =
     typeof record.profileUrl === "string" && record.profileUrl ? record.profileUrl : fallback.profileUrl;
-  const storedScopes = typeof record.scopes === "string" && record.scopes ? record.scopes : fallback.scopes;
   return {
-    authorizeUrl: typeof record.authorizeUrl === "string" && record.authorizeUrl ? record.authorizeUrl : fallback.authorizeUrl,
+    authorizeUrl:
+      typeof record.authorizeUrl === "string" && record.authorizeUrl ? record.authorizeUrl : fallback.authorizeUrl,
     tokenUrl: typeof record.tokenUrl === "string" && record.tokenUrl ? record.tokenUrl : fallback.tokenUrl,
-    // Upgrade legacy Facebook /me + public_profile Admin rows so Connect can sync Page counts.
     profileUrl: prepareSocialProfileUrl(storedProfile, fallback.platform),
-    scopes: resolveSocialScopes(fallback.platform, storedScopes),
+    scopes: resolveSocialScopes(fallback.platform),
+    configId: fallback.supportsConfigId ? configId : "",
+    configPermissions: fallback.configPermissions,
+    supportsConfigId: fallback.supportsConfigId,
+    scopesLocked: true,
   };
 }
 
@@ -149,23 +169,47 @@ export async function saveSocialNetwork(input: {
   clientId: string;
   secret: string;
   clearSecret?: boolean;
-  authorizeUrl: string;
-  tokenUrl: string;
-  profileUrl: string;
-  scopes: string;
+  authorizeUrl?: string;
+  tokenUrl?: string;
+  profileUrl?: string;
+  /** Ignored — scopes are locked in code. */
+  scopes?: string;
+  configId?: string;
+  clearConfigId?: boolean;
 }) {
   const network = socialNetwork(input.code);
   if (!network) throw new Error("Unknown social network.");
-  if (!socialHostAllowed(input.authorizeUrl, network.authorizeHosts)) {
+  const authorizeUrl = network.locksOAuthEndpoints
+    ? network.authorizeUrl
+    : (input.authorizeUrl?.trim() || network.authorizeUrl);
+  const tokenUrl = network.locksOAuthEndpoints ? network.tokenUrl : (input.tokenUrl?.trim() || network.tokenUrl);
+  const profileUrl = network.locksOAuthEndpoints
+    ? network.profileUrl
+    : prepareSocialProfileUrl(input.profileUrl?.trim() || network.profileUrl, network.platform);
+  const scopes = resolveSocialScopes(network.platform);
+  if (!socialHostAllowed(authorizeUrl, network.authorizeHosts)) {
     throw new Error(`${network.name} authorize URL must use an official https host.`);
   }
-  if (!socialHostAllowed(input.tokenUrl, network.apiHosts)) {
+  if (!socialHostAllowed(tokenUrl, network.apiHosts)) {
     throw new Error(`${network.name} token URL must use an official https host.`);
   }
-  const profileUrl = prepareSocialProfileUrl(input.profileUrl.trim() || network.profileUrl, network.platform);
-  const scopes = resolveSocialScopes(network.platform, input.scopes.trim().slice(0, 300) || network.scopes);
   if (!socialHostAllowed(profileUrl, network.apiHosts)) {
     throw new Error(`${network.name} profile URL must use an official https host.`);
+  }
+  const existingExtra =
+    (await prisma.integrationProvider.findUnique({
+      where: { kind_code: { kind: "social", code: network.code } },
+    }))?.extraJson ?? null;
+  const previous = extraOf(existingExtra, network);
+  const configId = !network.supportsConfigId
+    ? ""
+    : input.clearConfigId
+      ? ""
+      : input.configId?.trim()
+        ? input.configId.trim().slice(0, 120)
+        : previous.configId;
+  if (network.supportsConfigId && network.code === "facebook" && !configId) {
+    // Soft warning only — classic Facebook Login can still use locked scopes.
   }
   await ensureSocialCatalog();
   const existing = await prisma.integrationProvider.findUnique({
@@ -182,10 +226,11 @@ export async function saveSocialNetwork(input: {
     publicKey: input.clientId.trim().slice(0, 200) || null,
     secretCipher: secretCipher ?? null,
     extraJson: {
-      authorizeUrl: input.authorizeUrl.trim(),
-      tokenUrl: input.tokenUrl.trim(),
+      authorizeUrl,
+      tokenUrl,
       profileUrl,
       scopes,
+      ...(network.supportsConfigId ? { configId: configId || null } : {}),
     },
   };
   if (existing) return prisma.integrationProvider.update({ where: { id: existing.id }, data });
@@ -296,6 +341,8 @@ export async function beginSocialConnect(input: {
     redirectUri: socialCallbackUrl(),
     state,
     scopes: provider!.scopes,
+    // Facebook Login for Business: config_id replaces scope= (avoids Invalid Scopes).
+    configId: provider!.supportsConfigId ? provider!.configId || null : null,
     extraParams:
       network.code === "youtube"
         ? { access_type: "offline", include_granted_scopes: "true", prompt: "consent" }
