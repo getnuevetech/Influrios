@@ -77,6 +77,15 @@ export async function getMetaWebhookConfig() {
   };
 }
 
+/** Meta user/page access tokens look like EAAG… / EAAM… — never valid as webhook verify tokens. */
+export function looksLikeMetaAccessToken(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (/^EAA[A-Za-z0-9]/i.test(trimmed)) return true;
+  if (trimmed.length > 80 && /^[A-Za-z0-9+/=_-]+$/.test(trimmed) && /EAA/i.test(trimmed)) return true;
+  return false;
+}
+
 export async function saveMetaWebhookConfig(input: {
   verifyToken?: string;
   clearVerifyToken?: boolean;
@@ -84,10 +93,16 @@ export async function saveMetaWebhookConfig(input: {
   clearAppSecret?: boolean;
 }) {
   const existing = await ensureMetaWebhookProvider();
+  const nextVerify = input.verifyToken?.trim() ?? "";
+  if (!input.clearVerifyToken && nextVerify && looksLikeMetaAccessToken(nextVerify)) {
+    throw new Error(
+      "That value looks like a Meta access token (starts with EAA…). The webhook Verify token must be a private string you create — the same string in Influrios Admin and Meta → Webhooks. Generate one with: openssl rand -hex 32",
+    );
+  }
   const webhookCipher = input.clearVerifyToken
     ? null
-    : input.verifyToken?.trim()
-      ? encryptSecret(input.verifyToken.trim().slice(0, 500))
+    : nextVerify
+      ? encryptSecret(nextVerify.slice(0, 500))
       : existing.webhookCipher;
   const secretCipher = input.clearAppSecret
     ? null

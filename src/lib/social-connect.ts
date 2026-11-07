@@ -9,6 +9,7 @@ import {
   interpretSocialProfile,
   isLiveSocialAccount,
   prepareSocialProfileUrl,
+  normalizeMetaConfigId,
   resolveLockedOAuthEndpoints,
   resolveSocialScopes,
   socialConnectGate,
@@ -196,7 +197,7 @@ export async function saveSocialNetwork(input: {
     : input.clearConfigId
       ? ""
       : input.configId?.trim()
-        ? input.configId.trim().slice(0, 120)
+        ? normalizeMetaConfigId(input.configId)
         : previous.configId;
   const locked = resolveLockedOAuthEndpoints(network.platform, configId);
   const authorizeUrl = network.locksOAuthEndpoints
