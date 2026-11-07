@@ -5,6 +5,7 @@ import {
   buildAuthorizeUrl,
   interpretSocialProfile,
   isLiveSocialAccount,
+  isMetaFacebookDialogUrl,
   parseFacebookPageMetrics,
   parseInstagramBusinessMetrics,
   parseInstagramLoginProfile,
@@ -203,6 +204,21 @@ describe("live social metrics", () => {
       ),
       "99887766",
     );
+    assert.equal(normalizeMetaConfigId("Configuration ID: 112233445566"), "112233445566");
+    assert.equal(isMetaFacebookDialogUrl("https://www.facebook.com/v22.0/dialog/oauth"), true);
+    assert.equal(isMetaFacebookDialogUrl("https://www.instagram.com/oauth/authorize"), false);
+
+    const missingConfig = buildAuthorizeUrl({
+      authorizeUrl: "https://www.facebook.com/v22.0/dialog/oauth",
+      authorizeHosts: ["www.facebook.com"],
+      clientIdParam: "client_id",
+      clientId: "app",
+      redirectUri: "https://influrios.com/api/social/callback",
+      state: "state",
+      scopes: "pages_show_list",
+      configId: "5544332211",
+    });
+    assert.ok(missingConfig?.includes("config_id=5544332211"));
   });
 
   it("keeps OAuth success notices separate from hard metric failure", () => {

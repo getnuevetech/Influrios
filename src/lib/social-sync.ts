@@ -668,13 +668,31 @@ export function normalizeMetaConfigId(raw: string | null | undefined) {
   try {
     const url = new URL(value);
     const fromQuery = url.searchParams.get("config_id")?.trim();
-    if (fromQuery) return fromQuery.slice(0, 120);
+    if (fromQuery) return fromQuery.replace(/\D/g, "").slice(0, 120) || fromQuery.slice(0, 120);
   } catch {
     // not a URL
   }
   const match = value.match(/config_id=([^&\s#]+)/i);
-  if (match?.[1]) return decodeURIComponent(match[1]).slice(0, 120);
+  if (match?.[1]) {
+    const decoded = decodeURIComponent(match[1]).trim();
+    return decoded.replace(/\D/g, "").slice(0, 120) || decoded.slice(0, 120);
+  }
+  const labeled = value.match(/(?:config(?:uration)?[\s_-]*id)\s*[:=#-]?\s*(\d{6,})/i);
+  if (labeled?.[1]) return labeled[1].slice(0, 120);
+  const digits = value.match(/\b(\d{10,})\b/);
+  if (digits?.[1]) return digits[1].slice(0, 120);
   return value.slice(0, 120);
+}
+
+/** True when the authorize URL will open Meta's Facebook Login dialog. */
+export function isMetaFacebookDialogUrl(authorizeUrl: string | null | undefined) {
+  if (!authorizeUrl) return false;
+  try {
+    const host = new URL(authorizeUrl).hostname.toLowerCase();
+    return host === "www.facebook.com" || host === "facebook.com" || host.endsWith(".facebook.com");
+  } catch {
+    return /facebook\.com/i.test(authorizeUrl);
+  }
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   buildAuthorizeUrl,
   interpretSocialProfile,
   isLiveSocialAccount,
+  isMetaFacebookDialogUrl,
   prepareSocialProfileUrl,
   normalizeMetaConfigId,
   resolveLockedOAuthEndpoints,
@@ -35,6 +36,8 @@ type SocialExtra = {
   configId: string;
   configPermissions: string;
   supportsConfigId: boolean;
+  /** Legacy Instagram Login (instagram.com) — only for older apps with an Instagram App ID. */
+  classicInstagramLogin: boolean;
   scopesLocked: true;
 };
 
@@ -44,10 +47,21 @@ function isUnique(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && String(error.code) === "P2002";
 }
 
+/** Read Configuration ID from the dedicated field or recover it from a pasted Meta login URL. */
+function storedMetaConfigId(record: Record<string, unknown>, supportsConfigId: boolean) {
+  if (!supportsConfigId) return "";
+  const direct = record.configId;
+  if (typeof direct === "string" && direct.trim()) return normalizeMetaConfigId(direct);
+  if (typeof direct === "number" && Number.isFinite(direct)) return normalizeMetaConfigId(String(direct));
+  const authorizeUrl = typeof record.authorizeUrl === "string" ? record.authorizeUrl : "";
+  return authorizeUrl ? normalizeMetaConfigId(authorizeUrl) : "";
+}
+
 function extraOf(value: unknown, fallback: (typeof SOCIAL_NETWORKS)[number]): SocialExtra {
   const record = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-  const configId = typeof record.configId === "string" ? record.configId.trim().slice(0, 120) : "";
-  const resolvedConfigId = fallback.supportsConfigId ? configId : "";
+  const resolvedConfigId = storedMetaConfigId(record, fallback.supportsConfigId);
+  const classicInstagramLogin =
+    fallback.code === "instagram" && record.classicInstagramLogin === true && !resolvedConfigId;
   if (fallback.locksOAuthEndpoints) {
     const locked = resolveLockedOAuthEndpoints(fallback.platform, resolvedConfigId) ?? {
       authorizeUrl: fallback.authorizeUrl,
@@ -62,6 +76,7 @@ function extraOf(value: unknown, fallback: (typeof SOCIAL_NETWORKS)[number]): So
       configId: resolvedConfigId,
       configPermissions: fallback.configPermissions,
       supportsConfigId: fallback.supportsConfigId,
+      classicInstagramLogin,
       scopesLocked: true,
     };
   }
@@ -76,6 +91,7 @@ function extraOf(value: unknown, fallback: (typeof SOCIAL_NETWORKS)[number]): So
     configId: resolvedConfigId,
     configPermissions: fallback.configPermissions,
     supportsConfigId: fallback.supportsConfigId,
+    classicInstagramLogin,
     scopesLocked: true,
   };
 }
@@ -196,6 +212,8 @@ export async function saveSocialNetwork(input: {
   scopes?: string;
   configId?: string;
   clearConfigId?: boolean;
+  /** Legacy Instagram Login path for older apps with an Instagram App ID. */
+  classicInstagramLogin?: boolean;
 }) {
   const network = socialNetwork(input.code);
   if (!network) throw new Error("Unknown social network.");
@@ -211,6 +229,18 @@ export async function saveSocialNetwork(input: {
       : input.configId?.trim()
         ? normalizeMetaConfigId(input.configId)
         : previous.configId;
+  const classicInstagramLogin =
+    network.code === "instagram" && Boolean(input.classicInstagramLogin) && !configId;
+  if (network.code === "instagram" && input.enabled && !configId && !classicInstagramLogin) {
+    throw new Error(
+      "Instagram needs a Facebook Login for Business Configuration ID (config_id). Meta returns “config_id is required” without it. Paste the Configuration ID from Meta → Facebook Login for Business → Configurations, or enable classic Instagram Login for older apps that still have an Instagram App ID.",
+    );
+  }
+  if (network.code === "facebook" && input.enabled && !configId) {
+    throw new Error(
+      "Facebook needs a Facebook Login for Business Configuration ID (config_id). Meta returns “Invalid parameter: config_id is required” when Connect opens the Facebook dialog without it.",
+    );
+  }
   const locked = resolveLockedOAuthEndpoints(network.platform, configId);
   const authorizeUrl = network.locksOAuthEndpoints
     ? (locked?.authorizeUrl ?? network.authorizeUrl)
@@ -251,6 +281,7 @@ export async function saveSocialNetwork(input: {
       profileUrl,
       scopes,
       ...(network.supportsConfigId ? { configId: configId || null } : {}),
+      ...(network.code === "instagram" ? { classicInstagramLogin } : {}),
     },
   };
   if (existing) return prisma.integrationProvider.update({ where: { id: existing.id }, data });
@@ -305,7 +336,8 @@ export async function beginSocialConnect(input: {
   const policy = await getSocialPolicy();
   const creator = await prisma.creator.findUnique({ where: { slug: input.slug } });
   if (!creator) return { ok: false as const, error: "Publish your card before connecting a network." };
-  const provider = (await listSocialNetworks()).find((item) => item.platform === network.platform);
+  const networks = await listSocialNetworks();
+  const provider = networks.find((item) => item.platform === network.platform);
   const gate = socialConnectGate({
     accepted: input.accepted,
     acceptedVersion: input.accepted ? policy.version : null,
@@ -353,14 +385,25 @@ export async function beginSocialConnect(input: {
   }
   // Always use the configured public origin — never request Host / 0.0.0.0 —
   // so the redirect_uri matches Google/Meta console whitelists.
-  const configId = provider!.supportsConfigId ? provider!.configId || null : null;
-  if (network.code === "instagram" && !configId) {
-    // Soft guidance only — Instagram Login requires the Instagram App ID.
-    // Using the Meta App ID on www.instagram.com yields “Invalid platform app”.
+  const configId = resolveConnectConfigId(provider!, networks);
+  if (network.code === "instagram" && !configId && !provider!.classicInstagramLogin) {
+    return {
+      ok: false as const,
+      error:
+        "Instagram Connect needs a Meta Configuration ID. Admin → Social → Instagram: paste the Facebook Login for Business config_id (Meta error: “config_id is required”).",
+    };
   }
   const locked = resolveLockedOAuthEndpoints(network.platform, configId);
+  const authorizeBase = locked?.authorizeUrl ?? provider!.authorizeUrl;
+  if (isMetaFacebookDialogUrl(authorizeBase) && !configId) {
+    return {
+      ok: false as const,
+      error:
+        "Meta requires config_id for this app. Admin → Social: paste the Facebook Login for Business Configuration ID on Instagram/Facebook, then try Connect again.",
+    };
+  }
   const authorizeUrl = buildAuthorizeUrl({
-    authorizeUrl: locked?.authorizeUrl ?? provider!.authorizeUrl,
+    authorizeUrl: authorizeBase,
     authorizeHosts: locked?.authorizeHosts ?? network.authorizeHosts,
     clientIdParam: network.clientIdParam,
     clientId: provider!.clientId,
@@ -375,7 +418,34 @@ export async function beginSocialConnect(input: {
         : undefined,
   });
   if (!authorizeUrl) return { ok: false as const, error: "The authorize URL is not on an official host." };
+  if (isMetaFacebookDialogUrl(authorizeUrl) && !authorizeUrl.includes("config_id=")) {
+    return {
+      ok: false as const,
+      error:
+        "Meta OAuth URL was missing config_id. Save a Configuration ID under Admin → Social and try Connect again.",
+    };
+  }
   return { ok: true as const, authorizeUrl, redirectUri: socialCallbackUrl() };
+}
+
+/** Prefer this network's config_id; fall back to the sibling Meta network when App IDs match. */
+function resolveConnectConfigId(
+  provider: {
+    code: string;
+    clientId: string;
+    configId: string;
+    supportsConfigId: boolean;
+  },
+  networks: Awaited<ReturnType<typeof listSocialNetworks>>,
+) {
+  if (!provider.supportsConfigId) return null;
+  const own = normalizeMetaConfigId(provider.configId);
+  if (own) return own;
+  const siblingCode = provider.code === "instagram" ? "facebook" : provider.code === "facebook" ? "instagram" : null;
+  if (!siblingCode || !provider.clientId) return null;
+  const sibling = networks.find((item) => item.code === siblingCode);
+  if (!sibling?.configId || !sibling.clientId || sibling.clientId !== provider.clientId) return null;
+  return normalizeMetaConfigId(sibling.configId) || null;
 }
 
 async function readProvider(providerId: string | null, platform: SocialSyncPlatform) {

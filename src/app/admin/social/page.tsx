@@ -72,8 +72,10 @@ export default async function AdminSocialPage({ searchParams }: Props) {
         <form action={actionSaveMetaWebhook} className="mt-6 grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4">
           <h2 className="font-display text-lg font-bold text-indigo">Meta / Instagram Unified Login · Webhooks</h2>
           <p className="text-sm text-muted">
-            Your Meta app uses <span className="font-semibold">API setup with Unified login</span>. OAuth uses a{" "}
-            <code className="text-xs">config_id</code> on Facebook/Instagram network rows below (not freeform scopes).
+            Your Meta app uses <span className="font-semibold">API setup with Unified login</span>. OAuth{" "}
+            <span className="font-semibold">requires</span> a <code className="text-xs">config_id</code> on the
+            Facebook and Instagram rows below — without it Meta shows{" "}
+            <span className="font-semibold">Invalid parameter: config_id is required</span> (Development and Live).
             Webhooks are separate: Meta GETs the callback with your verify token; Influrios returns{" "}
             <code className="text-xs">hub.challenge</code> as plain text.
           </p>
@@ -229,15 +231,16 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             {network.supportsConfigId ? (
               <label className="block text-sm font-semibold text-indigo sm:col-span-2">
                 {network.code === "instagram"
-                  ? "Unified Login · Configuration ID (required for newer Meta apps)"
-                  : "Facebook Login for Business · Configuration ID"}
+                  ? "Unified Login · Configuration ID (required — Meta error without it: config_id is required)"
+                  : "Facebook Login for Business · Configuration ID (required)"}
                 <input
                   name="configId"
                   defaultValue={network.configId}
                   disabled={!canEdit}
                   className={inputClass}
-                  placeholder="Paste config_id from Meta → Facebook Login for Business → Configurations"
+                  placeholder="Paste config_id or the full Meta login URL that contains config_id="
                   autoComplete="off"
+                  required={network.enabled && !(network.code === "instagram" && network.classicInstagramLogin)}
                 />
               </label>
             ) : null}
@@ -247,15 +250,27 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                 Clear saved Configuration ID
               </label>
             ) : null}
+            {network.code === "instagram" ? (
+              <label className="flex items-center gap-2 text-sm font-semibold text-indigo sm:col-span-2">
+                <input
+                  type="checkbox"
+                  name="classicInstagramLogin"
+                  value="1"
+                  defaultChecked={network.classicInstagramLogin}
+                  disabled={!canEdit}
+                />
+                Use classic Instagram Login (legacy Instagram App ID only — leave Configuration ID empty)
+              </label>
+            ) : null}
             {network.code === "facebook" ? (
               <p className="sm:col-span-2 text-xs text-muted">
                 Connects a <span className="font-semibold">Facebook Page</span> via{" "}
-                <code className="text-[11px]">/me/accounts</code>. On Facebook Login for Business apps, Meta returns{" "}
-                <span className="font-semibold">Invalid Scopes: pages_show_list, pages_read_engagement</span> if Influrios
-                sends those as freeform <code className="text-[11px]">scope=</code>. Create a Login configuration that
-                includes <code className="text-[11px]">{network.configPermissions}</code>, then paste its Configuration
-                ID above. Without a config id, classic <code className="text-[11px]">scope=</code> is used only for older
-                Facebook Login apps.
+                <code className="text-[11px]">/me/accounts</code>. Newer Meta apps reject freeform{" "}
+                <code className="text-[11px]">scope=</code> and show{" "}
+                <span className="font-semibold">Invalid parameter: config_id is required</span> unless you paste a
+                Facebook Login for Business Configuration ID that includes{" "}
+                <code className="text-[11px]">{network.configPermissions}</code>. Development vs Live mode does not remove
+                that requirement.
               </p>
             ) : null}
             {network.code === "instagram" ? (
@@ -263,16 +278,23 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                 {network.configId ? (
                   <>
                     <span className="font-semibold text-indigo">Active mode: Unified Login.</span> “Connect Instagram”
-                    opens the <span className="font-semibold">Facebook / Meta</span> dialog on purpose (config_id). It
-                    will not open instagram.com. Use a Facebook user that is an App Role admin/tester while the app is
-                    in Development, then pick the Instagram Professional asset.
+                    opens the <span className="font-semibold">Facebook / Meta</span> dialog with{" "}
+                    <code className="text-[11px]">config_id</code>. Create the configuration under Meta → Use cases →
+                    Instagram → API setup with Unified login (or Facebook Login for Business → Configurations), then
+                    paste the ID above. App Role admin/tester is still required while the app is in Development.
+                  </>
+                ) : network.classicInstagramLogin ? (
+                  <>
+                    <span className="font-semibold text-indigo">Active mode: classic Instagram Login.</span> Connect uses{" "}
+                    <code className="text-[11px]">www.instagram.com/oauth/authorize</code> with the{" "}
+                    <span className="font-semibold">Instagram App ID</span> (not the Meta App ID). Newer Meta apps that
+                    only offer Unified Login will fail — uncheck classic login and paste a Configuration ID instead.
                   </>
                 ) : (
                   <>
-                    <span className="font-semibold text-indigo">Active mode: Instagram Login.</span> Connect uses{" "}
-                    <code className="text-[11px]">www.instagram.com/oauth/authorize</code> with the{" "}
-                    <span className="font-semibold">Instagram App ID</span> (not the Meta App ID). If Meta only offers
-                    Unified Login, paste a Configuration ID above instead — Connect will then use Facebook login.
+                    <span className="font-semibold text-indigo">Configuration ID required.</span> Meta’s{" "}
+                    <span className="font-semibold">“config_id is required”</span> error means this field is empty.
+                    Paste the Configuration ID before enabling Instagram Connect.
                   </>
                 )}
               </p>
