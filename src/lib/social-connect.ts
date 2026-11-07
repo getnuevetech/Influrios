@@ -7,9 +7,11 @@ import {
   SOCIAL_NETWORKS,
   buildAuthorizeUrl,
   isLiveSocialAccount,
+  parseFacebookPageMetrics,
   parseSocialMetrics,
   parseYoutubeChannelMetrics,
   prepareSocialProfileUrl,
+  resolveSocialScopes,
   socialConnectGate,
   socialHostAllowed,
   socialNetwork,
@@ -39,11 +41,15 @@ function isUnique(error: unknown) {
 
 function extraOf(value: unknown, fallback: (typeof SOCIAL_NETWORKS)[number]): SocialExtra {
   const record = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const storedProfile =
+    typeof record.profileUrl === "string" && record.profileUrl ? record.profileUrl : fallback.profileUrl;
+  const storedScopes = typeof record.scopes === "string" && record.scopes ? record.scopes : fallback.scopes;
   return {
     authorizeUrl: typeof record.authorizeUrl === "string" && record.authorizeUrl ? record.authorizeUrl : fallback.authorizeUrl,
     tokenUrl: typeof record.tokenUrl === "string" && record.tokenUrl ? record.tokenUrl : fallback.tokenUrl,
-    profileUrl: typeof record.profileUrl === "string" && record.profileUrl ? record.profileUrl : fallback.profileUrl,
-    scopes: typeof record.scopes === "string" && record.scopes ? record.scopes : fallback.scopes,
+    // Upgrade legacy Facebook /me + public_profile Admin rows so Connect can sync Page counts.
+    profileUrl: prepareSocialProfileUrl(storedProfile, fallback.platform),
+    scopes: resolveSocialScopes(fallback.platform, storedScopes),
   };
 }
 
@@ -157,7 +163,9 @@ export async function saveSocialNetwork(input: {
   if (!socialHostAllowed(input.tokenUrl, network.apiHosts)) {
     throw new Error(`${network.name} token URL must use an official https host.`);
   }
-  if (!socialHostAllowed(input.profileUrl, network.apiHosts)) {
+  const profileUrl = prepareSocialProfileUrl(input.profileUrl.trim() || network.profileUrl, network.platform);
+  const scopes = resolveSocialScopes(network.platform, input.scopes.trim().slice(0, 300) || network.scopes);
+  if (!socialHostAllowed(profileUrl, network.apiHosts)) {
     throw new Error(`${network.name} profile URL must use an official https host.`);
   }
   await ensureSocialCatalog();
@@ -177,8 +185,8 @@ export async function saveSocialNetwork(input: {
     extraJson: {
       authorizeUrl: input.authorizeUrl.trim(),
       tokenUrl: input.tokenUrl.trim(),
-      profileUrl: input.profileUrl.trim(),
-      scopes: input.scopes.trim().slice(0, 300) || network.scopes,
+      profileUrl,
+      scopes,
     },
   };
   if (existing) return prisma.integrationProvider.update({ where: { id: existing.id }, data });
@@ -379,6 +387,14 @@ async function fetchMetrics(
     };
   }
   if (platform === "YOUTUBE") {
+    const items = payload && typeof payload === "object" ? (payload as { items?: unknown }).items : null;
+    if (Array.isArray(items) && items.length === 0) {
+      return {
+        ok: false as const,
+        error:
+          "This Google account has no YouTube channel. Create or choose a channel on YouTube, then connect again.",
+      };
+    }
     const youtube = parseYoutubeChannelMetrics(payload);
     if (!youtube) {
       return {
@@ -391,6 +407,29 @@ async function fetchMetrics(
       metrics: { followers: youtube.followers, likes: youtube.likes },
       handle: youtube.handle ?? undefined,
       externalId: youtube.externalId ?? undefined,
+    };
+  }
+  if (platform === "FACEBOOK") {
+    const facebook = parseFacebookPageMetrics(payload);
+    if (facebook?.emptyPages) {
+      return {
+        ok: false as const,
+        error:
+          "Facebook returned no Pages for this account. Connect a Facebook Page you manage — personal profiles do not expose follower counts.",
+      };
+    }
+    if (!facebook) {
+      return {
+        ok: false as const,
+        error:
+          "Facebook did not return Page follower and like counts. Confirm pages_show_list + pages_read_engagement are granted, then reconnect.",
+      };
+    }
+    return {
+      ok: true as const,
+      metrics: { followers: facebook.followers, likes: facebook.likes },
+      handle: facebook.handle ?? undefined,
+      externalId: facebook.externalId ?? undefined,
     };
   }
   const metrics = parseSocialMetrics(payload);
@@ -524,21 +563,17 @@ export async function completeSocialCallback(input: { code?: string; state?: str
       connection.platform as SocialSyncPlatform,
     );
     if (!metrics.ok) {
-      const metricError =
-        connection.platform === "FACEBOOK"
-          ? "Facebook did not return both a follower count and likes. Try YouTube or Instagram for Phase M evidence."
-          : metrics.error;
       await prisma.socialConnection.update({
         where: { id: connection.id },
         data: {
           status: "error",
-          lastError: metricError,
+          lastError: metrics.error,
           tokenCipher: encryptSecret(token.accessToken),
           refreshCipher: token.refreshToken ? encryptSecret(token.refreshToken) : null,
           tokenExpiresAt: token.expiresAt,
         },
       });
-      return { ok: false as const, error: metricError, slug };
+      return { ok: false as const, error: metrics.error, slug };
     }
     const written = await writeLiveAccount({
       creatorId: connection.creatorId,

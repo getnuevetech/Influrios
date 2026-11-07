@@ -329,6 +329,8 @@ npm run staging:e3-social-evidence
 
 **Instagram / Meta note:** put `https://influrios.com/api/social/callback` under **Facebook Login → Valid OAuth Redirect URIs** (or Instagram product OAuth settings). For Meta **Webhooks**, use `https://influrios.com/api/social/meta/webhook` with the verify token saved in Admin → Social (or `META_WEBHOOK_VERIFY_TOKEN`). Do **not** put the OAuth callback on the Webhooks screen — that handshake expects `hub.challenge` plain text, which only the Meta webhook route returns.
 
+**Facebook Page metrics:** Connect uses `me/accounts` with scopes `public_profile,pages_show_list,pages_read_engagement`. The creator must manage at least one Facebook Page — a personal profile with only `public_profile` never returns follower/like counts.
+
 ### E5 progress (Meilisearch counts) — **complete**
 
 Host script `2026-10-14T11:55:09Z`. Health 200 · Reindex succeeded · postgres 3 = index 3 · Discover HTTP 200. Prior failures: create-index `405` (#288) and delete-missing `index_not_found` task (#289).
