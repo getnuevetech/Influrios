@@ -373,6 +373,19 @@ describe("social provider hosts", () => {
     assert.equal((tiktok ?? "").includes("scope=user.info.basic%2C"), false);
     const parsed = new URL(tiktok ?? "https://www.tiktok.com/");
     assert.equal(parsed.searchParams.get("redirect_uri"), "https://influrios.com/api/social/callback");
+    const slashed = buildAuthorizeUrl({
+      authorizeUrl: "https://www.tiktok.com/v2/auth/authorize/",
+      authorizeHosts: ["www.tiktok.com"],
+      clientIdParam: "client_key",
+      clientId: "sbawexampleclientkey",
+      redirectUri: "https://influrios.com/api/social/callback/",
+      state: "state",
+      scopes: "user.info.basic,user.info.stats",
+      tiktokQuery: true,
+    });
+    const slashedReport = reportAuthorizeUrl(slashed ?? "", "client_key");
+    assert.equal(slashedReport.redirectUri, "https://influrios.com/api/social/callback/");
+    assert.equal(slashedReport.redirectEncoding, "once");
     assert.equal(parsed.searchParams.get("scope"), "user.info.basic,user.info.stats");
     assert.equal(SOCIAL_NETWORKS.find((network) => network.code === "tiktok")?.tokenStyle, "form");
     const xNetwork = SOCIAL_NETWORKS.find((network) => network.code === "x");

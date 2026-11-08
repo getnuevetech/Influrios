@@ -34,6 +34,15 @@ const nextConfig: NextConfig = {
     // so the image route cannot fetch arbitrary hosts.
     remotePatterns: [],
   },
+  async redirects() {
+    return [
+      {
+        source: "/api/social/callback/",
+        destination: "/api/social/callback",
+        permanent: false,
+      },
+    ];
+  },
   webpack: (config, { dev }) => {
     // The Docker builder has a 1024 MB heap and shares a small Lightsail box
     // with Postgres. An in-memory webpack cache pushes that build over the edge.

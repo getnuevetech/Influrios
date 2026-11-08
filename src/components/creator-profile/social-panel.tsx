@@ -153,9 +153,8 @@ export function SocialConnectionsPanel({
                     </button>
                     {account.sandboxClient && account.authorizeRedirect ? (
                       <p className="w-full text-xs leading-relaxed text-indigo">
-                        This client key is a TikTok sandbox key. TikTok checks the redirect on the sandbox Login Kit,
-                        not the production app. In the sandbox, add this exact URL under Login Kit → Web, and add the
-                        TikTok account as a target user:{" "}
+                        This client key is a TikTok sandbox key. In the sandbox, open Login Kit → Web and register this URL,
+                        including the final slash. Add the TikTok account as a target user:{" "}
                         <code className="font-semibold">{account.authorizeRedirect}</code>
                       </p>
                     ) : null}
