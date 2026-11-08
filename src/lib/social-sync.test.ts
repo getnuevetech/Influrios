@@ -11,10 +11,12 @@ import {
   metaTokenRedirectMismatch,
   normalizeMetaAppId,
   normalizeMetaConfigId,
+  TIKTOK_USER_INFO_FIELDS,
   parseFacebookPageMetrics,
   parseInstagramBusinessMetrics,
   parseInstagramLoginProfile,
   parseSocialMetrics,
+  parseTikTokUserInfo,
   parseYoutubeChannelMetrics,
   prepareSocialProfileUrl,
   resolveLockedOAuthEndpoints,
@@ -103,6 +105,44 @@ describe("live social metrics", () => {
     const prepared = prepareSocialProfileUrl("https://www.googleapis.com/youtube/v3/channels", "YOUTUBE");
     assert.match(prepared, /part=snippet%2Cstatistics|part=snippet,statistics/);
     assert.match(prepared, /mine=true/);
+  });
+
+  it("requires TikTok user.info fields aligned to basic + stats scopes", () => {
+    const bare = prepareSocialProfileUrl("https://open.tiktokapis.com/v2/user/info/", "TIKTOK");
+    assert.match(bare, /fields=/);
+    assert.match(bare, /open_id/);
+    assert.match(bare, /follower_count/);
+    assert.match(bare, /likes_count/);
+    assert.equal(bare.includes("username"), false);
+    assert.equal(bare.includes("bio_description"), false);
+    assert.match(TIKTOK_USER_INFO_FIELDS, /^open_id,/);
+
+    const parsed = parseTikTokUserInfo({
+      error: { code: "ok", message: "" },
+      data: {
+        user: {
+          open_id: "tiktok-open-1",
+          display_name: "Ada Creates",
+          avatar_url: "https://example.com/a.png",
+          follower_count: 4200,
+          following_count: 12,
+          likes_count: 99000,
+          video_count: 40,
+        },
+      },
+    });
+    assert.deepEqual(parsed, {
+      identity: { handle: "Ada Creates", externalId: "tiktok-open-1" },
+      metrics: { primary: 4200, secondary: 99000 },
+    });
+
+    const interpreted = interpretSocialProfile("TIKTOK", {
+      error: { code: "ok" },
+      data: { user: { open_id: "x", display_name: "Ada", follower_count: 10, likes_count: 3 } },
+    });
+    assert.equal(interpreted.identity?.externalId, "x");
+    assert.equal(interpreted.metrics?.primary, 10);
+    assert.equal(interpreted.metricsNotice, null);
   });
 
   it("maps Facebook Page identity even when audience counts are missing", () => {
