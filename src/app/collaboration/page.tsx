@@ -28,10 +28,11 @@ import {
   scoreCreatorPair,
   type CreatorMatch,
 } from "@/lib/matching";
-import { actionApplyToBusinessRequest } from "@/app/collaboration/hub/actions";
 import {
+  listMarketplaceApplications,
   listPublishedBusinessRequests,
   listPublishedCreatorOpportunities,
+  listingApplicationHidesApply,
   persistTopMatches,
   saveMatchForUser,
   type MarketplaceBusinessRequestRow,
@@ -221,6 +222,19 @@ export default async function CollaborationPage({ searchParams }: Props) {
         logoUrl: item.logoUrl,
       }))
     : demoBusinessRequests();
+  const appliedRows =
+    livePages && draft?.slug
+      ? await listMarketplaceApplications({
+          creatorSlug: draft.slug,
+          businessRequestIds: requestCards.map((item) => item.id),
+          limit: 20,
+        }).catch(() => [])
+      : [];
+  const appliedByRequest = new Map(
+    appliedRows
+      .filter((row) => row.businessRequestId && listingApplicationHidesApply(row.status))
+      .map((row) => [row.businessRequestId as string, row.id]),
+  );
   const opportunityCards = livePages
     ? visibleOpportunities
     : demoOpportunities().flatMap((item) => {
@@ -541,12 +555,15 @@ export default async function CollaborationPage({ searchParams }: Props) {
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs text-muted">{item.summary}</p>
                     {livePages ? (
-                      <form action={actionApplyToBusinessRequest} className="mt-2">
-                        <input type="hidden" name="requestId" value={item.id} />
-                        <button type="submit" className="inline-flex text-[11px] font-bold text-violet">
-                          {signedIn && draft?.slug ? "Apply to request →" : "Sign in to apply →"}
-                        </button>
-                      </form>
+                      appliedByRequest.get(item.id) ? (
+                        <Link href={`/collaboration/applications/${appliedByRequest.get(item.id)}`} className="mt-2 inline-flex text-[11px] font-bold text-violet">
+                          Applied · View application
+                        </Link>
+                      ) : (
+                        <Link href={`/collaboration/requests/${item.id}`} className="mt-2 inline-flex text-[11px] font-bold text-violet">
+                          View details →
+                        </Link>
+                      )
                     ) : (
                       <p className="mt-2 text-[11px] font-bold text-violet">Demo preview</p>
                     )}
