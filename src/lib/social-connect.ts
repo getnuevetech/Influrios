@@ -9,6 +9,9 @@ import {
   interpretSocialProfile,
   isLiveSocialAccount,
   isMetaFacebookDialogUrl,
+  isMetaGraphTokenUrl,
+  metaOAuthErrorMessage,
+  metaTokenRedirectMismatch,
   normalizeMetaAppId,
   normalizeMetaConfigId,
   prepareSocialProfileUrl,
@@ -476,6 +479,91 @@ async function readProvider(providerId: string | null, platform: SocialSyncPlatf
   return { network, row, secret, extra: extraOf(row.extraJson, network), clientId: row.publicKey };
 }
 
+function tokenFromPayload(payload: Record<string, unknown> | null) {
+  const accessToken = typeof payload?.access_token === "string" ? payload.access_token : "";
+  const refreshToken = typeof payload?.refresh_token === "string" ? payload.refresh_token : undefined;
+  const expiresIn = typeof payload?.expires_in === "number" ? payload.expires_in : null;
+  return {
+    accessToken,
+    refreshToken,
+    expiresAt: accessToken && expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
+  };
+}
+
+function tokenFailureMessage(payload: Record<string, unknown> | null, fallback: string) {
+  const detail = metaOAuthErrorMessage(payload);
+  if (!detail) return fallback;
+  if (metaTokenRedirectMismatch(detail)) {
+    return `${detail} Ensure the Facebook Login for Business Configuration uses the same OAuth redirect URI as Influrios (${socialCallbackUrl()}).`;
+  }
+  return detail;
+}
+
+/**
+ * Meta Graph `/oauth/access_token` expects GET query params (no grant_type).
+ * Login for Business configs can also reject redirect_uri on exchange — retry without it.
+ */
+async function requestMetaGraphToken(input: {
+  tokenUrl: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  code?: string;
+  refreshToken?: string;
+}) {
+  const attempts: Array<Record<string, string>> = [];
+  if (input.refreshToken) {
+    attempts.push({
+      grant_type: "fb_exchange_token",
+      client_id: input.clientId,
+      client_secret: input.clientSecret,
+      fb_exchange_token: input.refreshToken,
+    });
+  } else if (input.code) {
+    attempts.push({
+      client_id: input.clientId,
+      client_secret: input.clientSecret,
+      redirect_uri: input.redirectUri,
+      code: input.code,
+    });
+    // Some Login for Business / system-user configurations reject redirect_uri on exchange.
+    attempts.push({
+      client_id: input.clientId,
+      client_secret: input.clientSecret,
+      code: input.code,
+    });
+  } else {
+    return { ok: false as const, error: "The network did not return an access token." };
+  }
+
+  let lastPayload: Record<string, unknown> | null = null;
+  for (const params of attempts) {
+    const url = new URL(input.tokenUrl);
+    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      redirect: "error",
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    lastPayload = payload;
+    const parsed = tokenFromPayload(payload);
+    if (response.ok && parsed.accessToken) {
+      return { ok: true as const, ...parsed, accessToken: parsed.accessToken };
+    }
+    const detail = metaOAuthErrorMessage(payload);
+    // Only fall through to the no-redirect_uri attempt on redirect mismatch.
+    if (params.redirect_uri && metaTokenRedirectMismatch(detail)) continue;
+    break;
+  }
+
+  return {
+    ok: false as const,
+    error: tokenFailureMessage(lastPayload, "The network did not return an access token."),
+  };
+}
+
 async function requestToken(input: {
   tokenUrl: string;
   apiHosts: readonly string[];
@@ -488,6 +576,13 @@ async function requestToken(input: {
   refreshToken?: string;
 }) {
   if (!socialHostAllowed(input.tokenUrl, input.apiHosts)) return { ok: false as const, error: "The token URL is not on an official host." };
+  if (isMetaGraphTokenUrl(input.tokenUrl) && !input.refreshToken) {
+    return requestMetaGraphToken(input);
+  }
+  if (isMetaGraphTokenUrl(input.tokenUrl) && input.refreshToken) {
+    // Long-lived user token exchange still uses Graph GET semantics.
+    return requestMetaGraphToken(input);
+  }
   const grant = input.refreshToken ? "refresh_token" : "authorization_code";
   const fields: Record<string, string> = {
     grant_type: grant,
@@ -505,17 +600,18 @@ async function requestToken(input: {
     signal: AbortSignal.timeout(8000),
   });
   const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
-  const accessToken = typeof payload?.access_token === "string" ? payload.access_token : "";
-  if (!response.ok || !accessToken) {
-    return { ok: false as const, error: "The network did not return an access token." };
+  const parsed = tokenFromPayload(payload);
+  if (!response.ok || !parsed.accessToken) {
+    return {
+      ok: false as const,
+      error: tokenFailureMessage(payload, "The network did not return an access token."),
+    };
   }
-  const refreshToken = typeof payload?.refresh_token === "string" ? payload.refresh_token : undefined;
-  const expiresIn = typeof payload?.expires_in === "number" ? payload.expires_in : null;
   return {
     ok: true as const,
-    accessToken,
-    refreshToken,
-    expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
+    accessToken: parsed.accessToken,
+    refreshToken: parsed.refreshToken,
+    expiresAt: parsed.expiresAt,
   };
 }
 

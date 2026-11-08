@@ -779,6 +779,48 @@ export function isMetaFacebookDialogUrl(authorizeUrl: string | null | undefined)
   }
 }
 
+/** Meta Graph OAuth token endpoint (Facebook + Instagram Unified Login). */
+export function isMetaGraphTokenUrl(tokenUrl: string | null | undefined) {
+  if (!tokenUrl) return false;
+  try {
+    const url = new URL(tokenUrl);
+    const host = url.hostname.toLowerCase();
+    return (
+      (host === "graph.facebook.com" || host === "graph.instagram.com") &&
+      /\/oauth\/access_token\/?$/i.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Pull a human-readable message from a Meta token or Graph error payload. */
+export function metaOAuthErrorMessage(payload: unknown) {
+  if (!payload || typeof payload !== "object") return "";
+  const record = payload as Record<string, unknown>;
+  if (typeof record.error_description === "string" && record.error_description.trim()) {
+    return record.error_description.trim().slice(0, 240);
+  }
+  if (typeof record.error_message === "string" && record.error_message.trim()) {
+    return record.error_message.trim().slice(0, 240);
+  }
+  const nested = record.error;
+  if (typeof nested === "string" && nested.trim()) return nested.trim().slice(0, 240);
+  if (nested && typeof nested === "object") {
+    const err = nested as Record<string, unknown>;
+    if (typeof err.message === "string" && err.message.trim()) return err.message.trim().slice(0, 240);
+    if (typeof err.error_user_msg === "string" && err.error_user_msg.trim()) {
+      return err.error_user_msg.trim().slice(0, 240);
+    }
+  }
+  return "";
+}
+
+export function metaTokenRedirectMismatch(message: string) {
+  const blob = message.toLowerCase();
+  return blob.includes("redirect_uri") || blob.includes("36007") || blob.includes("36008");
+}
+
 /**
  * Instagram has two Meta-supported login surfaces:
  * - Instagram Login (legacy apps with a dedicated Instagram App ID)
