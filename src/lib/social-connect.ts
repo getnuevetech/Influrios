@@ -619,29 +619,44 @@ async function requestToken(input: {
  * Hard failures only (bad host / HTTP reject). Missing audience stats are soft notices
  * so OAuth can still mark the network Connected.
  */
+function profileRequest(requestUrl: string, accessToken: string) {
+  try {
+    const url = new URL(requestUrl);
+    const host = url.hostname.toLowerCase();
+    // Meta Graph expects access_token as a query param; Bearer alone can yield
+    // “Invalid OAuth access token - Cannot parse access token” on some hosts.
+    if (host === "graph.facebook.com" || host === "graph.instagram.com") {
+      url.searchParams.set("access_token", accessToken);
+      return { url: url.toString(), headers: { accept: "application/json" } as Record<string, string> };
+    }
+  } catch {
+    // fall through
+  }
+  return {
+    url: requestUrl,
+    headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" } as Record<string, string>,
+  };
+}
+
 async function fetchSocialProfile(
   profileUrl: string,
   apiHosts: readonly string[],
   accessToken: string,
   platform?: SocialSyncPlatform,
 ) {
-  const requestUrl = prepareSocialProfileUrl(profileUrl, platform ?? null);
-  if (!socialHostAllowed(requestUrl, apiHosts)) {
+  const prepared = prepareSocialProfileUrl(profileUrl, platform ?? null);
+  if (!socialHostAllowed(prepared, apiHosts)) {
     return { ok: false as const, error: "The profile URL is not on an official host." };
   }
-  const response = await fetch(requestUrl, {
+  const request = profileRequest(prepared, accessToken);
+  const response = await fetch(request.url, {
     redirect: "error",
-    headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" },
+    headers: request.headers,
     signal: AbortSignal.timeout(8000),
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    const detail =
-      payload && typeof payload === "object" && "error" in payload
-        ? typeof (payload as { error?: { message?: unknown } }).error?.message === "string"
-          ? String((payload as { error: { message: string } }).error.message).slice(0, 120)
-          : ""
-        : "";
+    const detail = metaOAuthErrorMessage(payload);
     return {
       ok: false as const,
       error: detail

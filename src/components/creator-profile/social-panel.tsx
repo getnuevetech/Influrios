@@ -101,7 +101,12 @@ export function SocialConnectionsPanel({
                   </div>
                   <p className="text-xs text-muted">{audienceLine(account)}</p>
                 </div>
-                {account.lastError ? <p className="mt-2 text-xs text-amber-800">{account.lastError}</p> : null}
+                {account.lastError ? (
+                  <p className="mt-2 text-xs text-amber-800">
+                    {connected ? "Audience sync note: " : ""}
+                    {account.lastError}
+                  </p>
+                ) : null}
                 {connected ? (
                   <div className="mt-3 flex flex-wrap gap-2">
                     <form action={actionRefreshSocial}>

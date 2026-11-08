@@ -472,7 +472,7 @@ export function interpretSocialProfile(
         identity: null,
         metrics: null,
         metricsNotice:
-          "Your Google account was authorized, but YouTube did not return a usable channel profile. Try Sync now or another Google account.",
+          "Connected without audience stats: YouTube did not return a usable channel profile. Use a Google account that owns a YouTube channel, then Sync now.",
       };
     }
     if (youtube.emptyChannel) {
@@ -480,7 +480,7 @@ export function interpretSocialProfile(
         identity: null,
         metrics: null,
         metricsNotice:
-          "Your Google account was authorized, but we couldn't find a YouTube channel. Create a channel or choose another Google account, then sync again.",
+          "Connected without audience stats: this Google account has no YouTube channel (or YouTube Data API returned none). Create a channel on that Google account, enable YouTube Data API v3 on the Google Cloud project, then Sync now.",
       };
     }
     return {
@@ -499,7 +499,7 @@ export function interpretSocialProfile(
         identity: null,
         metrics: null,
         metricsNotice:
-          "Your Facebook login was authorized, but Influrios could not read Page details. Confirm Page permissions and try Sync now.",
+          "Connected without audience stats: Facebook login worked, but Page details were not readable. Confirm the Login configuration includes pages_show_list / pages_read_engagement, then Sync now.",
       };
     }
     if (facebook.emptyPages) {
@@ -507,7 +507,7 @@ export function interpretSocialProfile(
         identity: null,
         metrics: null,
         metricsNotice:
-          "Your Facebook account was authorized, but no eligible Facebook Page was found. Connect a Page you manage to display Facebook audience statistics.",
+          "Connected without audience stats: no Facebook Page was shared. In Meta’s dialog pick a Page you manage, and use a Configuration that includes Page assets (pages_show_list).",
       };
     }
     return {
@@ -588,30 +588,36 @@ function findProfileString(value: unknown, keys: string[], depth = 0): string | 
   return null;
 }
 
-/** Upgrade weak Facebook Admin rows, Instagram Login /me, and YouTube channels.list params. */
+/**
+ * Upgrade weak Admin/profile URLs while preserving Instagram Unified Login’s
+ * graph.facebook.com profile path (Facebook user tokens are invalid on graph.instagram.com).
+ */
 export function prepareSocialProfileUrl(profileUrl: string, platform?: string | null) {
   const network = platform ? socialNetwork(platform) : null;
-  if (network?.locksOAuthEndpoints) return network.profileUrl;
+  const candidate =
+    network?.locksOAuthEndpoints && profileUrl && !socialHostAllowed(profileUrl, network.apiHosts)
+      ? network.profileUrl
+      : profileUrl || network?.profileUrl || "";
 
   const looksYoutube =
-    network?.code === "youtube" || /googleapis\.com\/youtube\/v3\/channels/i.test(profileUrl);
+    network?.code === "youtube" || /googleapis\.com\/youtube\/v3\/channels/i.test(candidate);
   if (looksYoutube) {
     try {
-      const url = new URL(profileUrl);
-      if (url.hostname !== "www.googleapis.com" && url.hostname !== "googleapis.com") return profileUrl;
+      const url = new URL(candidate);
+      if (url.hostname !== "www.googleapis.com" && url.hostname !== "googleapis.com") return candidate;
       if (!url.searchParams.get("part")) url.searchParams.set("part", "snippet,statistics");
       if (!url.searchParams.get("mine") && !url.searchParams.get("id") && !url.searchParams.get("forHandle")) {
         url.searchParams.set("mine", "true");
       }
       return url.toString();
     } catch {
-      return profileUrl;
+      return candidate;
     }
   }
 
-  if (network?.code === "instagram" || /graph\.instagram\.com/i.test(profileUrl)) {
+  if (network?.code === "instagram" || /graph\.(instagram|facebook)\.com/i.test(candidate)) {
     try {
-      const url = new URL(profileUrl);
+      const url = new URL(candidate);
       if (url.hostname === "graph.instagram.com") {
         const path = url.pathname.replace(/\/+$/, "") || "/";
         if (path === "/me" || /^\/v\d+\.\d+\/me$/.test(path)) {
@@ -624,17 +630,34 @@ export function prepareSocialProfileUrl(profileUrl: string, platform?: string | 
           return url.toString();
         }
       }
+      if (network?.code === "instagram" && url.hostname === "graph.facebook.com") {
+        const path = url.pathname.replace(/\/+$/, "") || "/";
+        const versionMatch = path.match(/^\/(v\d+\.\d+)\//);
+        const version = versionMatch?.[1] ?? META_GRAPH_VERSION;
+        const weakUserPath =
+          FACEBOOK_WEAK_PROFILE_PATHS.has(path) || /^\/v\d+\.\d+\/me$/.test(path) || path === "/me";
+        const accountsPath = /\/me\/accounts$/i.test(path);
+        if (weakUserPath || accountsPath) {
+          url.pathname = `/${version}/me/accounts`;
+          url.searchParams.set(
+            "fields",
+            "id,name,instagram_business_account{id,username,name,followers_count,media_count}",
+          );
+          return url.toString();
+        }
+        return url.toString();
+      }
     } catch {
-      return profileUrl;
+      return candidate;
     }
   }
 
   const looksFacebook =
-    network?.code === "facebook" || /graph\.facebook\.com/i.test(profileUrl);
-  if (!looksFacebook) return profileUrl;
+    network?.code === "facebook" || /graph\.facebook\.com/i.test(candidate);
+  if (!looksFacebook) return candidate;
   try {
-    const url = new URL(profileUrl);
-    if (url.hostname !== "graph.facebook.com") return profileUrl;
+    const url = new URL(candidate);
+    if (url.hostname !== "graph.facebook.com") return candidate;
     const path = url.pathname.replace(/\/+$/, "") || "/";
     const versionMatch = path.match(/^\/(v\d+\.\d+)\//);
     const version = versionMatch?.[1] ?? META_GRAPH_VERSION;
@@ -650,7 +673,7 @@ export function prepareSocialProfileUrl(profileUrl: string, platform?: string | 
     }
     return url.toString();
   } catch {
-    return profileUrl;
+    return candidate;
   }
 }
 

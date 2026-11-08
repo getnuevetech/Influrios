@@ -156,9 +156,19 @@ describe("live social metrics", () => {
     const facebook = prepareSocialProfileUrl("https://graph.facebook.com/v21.0/me", "FACEBOOK");
     assert.match(facebook, /\/me\/accounts/);
     assert.match(facebook, /followers_count/);
-    const instagram = prepareSocialProfileUrl("https://graph.facebook.com/v21.0/me", "INSTAGRAM");
-    assert.match(instagram, /graph\.instagram\.com/);
-    assert.match(instagram, /instagram_business_basic|user_id,username/);
+    // Unified Login keeps graph.facebook.com (Facebook user tokens fail on graph.instagram.com).
+    const instagramUnified = prepareSocialProfileUrl(
+      "https://graph.facebook.com/v22.0/me/accounts?fields=id,name,instagram_business_account{id,username}",
+      "INSTAGRAM",
+    );
+    assert.match(instagramUnified, /graph\.facebook\.com/);
+    assert.match(instagramUnified, /instagram_business_account/);
+    const instagramWeak = prepareSocialProfileUrl("https://graph.facebook.com/v22.0/me", "INSTAGRAM");
+    assert.match(instagramWeak, /graph\.facebook\.com\/v22\.0\/me\/accounts/);
+    assert.match(instagramWeak, /instagram_business_account/);
+    const instagramClassic = prepareSocialProfileUrl("https://evil.example/x", "INSTAGRAM");
+    assert.match(instagramClassic, /graph\.instagram\.com/);
+    assert.match(instagramClassic, /user_id,username/);
     assert.equal(resolveSocialScopes("FACEBOOK", "public_profile"), "public_profile,pages_show_list,pages_read_engagement");
     assert.equal(resolveSocialScopes("INSTAGRAM", "instagram_basic,pages_show_list"), "instagram_business_basic");
     assert.match(META_GRAPH_VERSION, /^v\d+\.\d+$/);
@@ -254,11 +264,11 @@ describe("live social metrics", () => {
     const youtubeEmpty = interpretSocialProfile("YOUTUBE", { items: [] });
     assert.equal(youtubeEmpty.identity, null);
     assert.equal(youtubeEmpty.metrics, null);
-    assert.match(youtubeEmpty.metricsNotice ?? "", /couldn't find a YouTube channel/i);
+    assert.match(youtubeEmpty.metricsNotice ?? "", /no YouTube channel|YouTube Data API/i);
     assert.equal(/Phase M/i.test(youtubeEmpty.metricsNotice ?? ""), false);
 
     const facebookEmpty = interpretSocialProfile("FACEBOOK", { data: [] });
-    assert.match(facebookEmpty.metricsNotice ?? "", /no eligible Facebook Page/i);
+    assert.match(facebookEmpty.metricsNotice ?? "", /no Facebook Page was shared|Page assets/i);
     assert.equal(/Phase M/i.test(facebookEmpty.metricsNotice ?? ""), false);
   });
 
