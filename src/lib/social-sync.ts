@@ -985,12 +985,19 @@ export function buildAuthorizeUrl(input: {
   configId?: string | null;
   /** Extra query params (e.g. Google access_type=offline). */
   extraParams?: Record<string, string>;
+  /**
+   * TikTok Login Kit compares scope as a raw comma list. URLSearchParams encodes
+   * commas as %2C, and TikTok then reports the request as a bad redirect_uri.
+   */
+  plainScopeCommas?: boolean;
 }) {
   if (!socialHostAllowed(input.authorizeUrl, input.authorizeHosts)) return null;
   if (!input.clientId.trim() || !input.state.trim()) return null;
+  const redirectUri = input.redirectUri.trim();
+  if (!redirectUri || redirectUri.includes("#") || redirectUri.includes("?")) return null;
   const url = new URL(input.authorizeUrl);
   url.searchParams.set(input.clientIdParam, input.clientId.trim());
-  url.searchParams.set("redirect_uri", input.redirectUri);
+  url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("state", input.state);
   const configId = input.configId?.trim() ?? "";
@@ -999,10 +1006,14 @@ export function buildAuthorizeUrl(input: {
     // Required for some Login for Business / system-user configurations.
     url.searchParams.set("override_default_response_type", "true");
   } else if (input.scopes.trim()) {
-    url.searchParams.set("scope", input.scopes);
+    url.searchParams.set("scope", input.scopes.trim());
   }
   for (const [key, value] of Object.entries(input.extraParams ?? {})) {
     if (key && value) url.searchParams.set(key, value);
   }
-  return url.toString();
+  const built = url.toString();
+  if (!input.plainScopeCommas) return built;
+  return built.replace(/([?&]scope=)([^&]*)/i, (_, prefix: string, value: string) => {
+    return prefix + value.replace(/%2C/gi, ",");
+  });
 }

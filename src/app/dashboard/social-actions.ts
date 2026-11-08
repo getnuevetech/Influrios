@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { resolveAppOrigin } from "@/lib/billing";
+import { oauthAppOrigin } from "@/lib/billing";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { beginSocialConnect, disconnectSocial, refreshSocialConnection } from "@/lib/social-connect";
 
@@ -18,7 +18,7 @@ function isNextRedirect(error: unknown) {
 
 async function origin() {
   const headerList = await headers();
-  return resolveAppOrigin({
+  return oauthAppOrigin({
     proto: headerList.get("x-forwarded-proto") ?? "https",
     host: headerList.get("x-forwarded-host") ?? headerList.get("host"),
   });

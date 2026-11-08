@@ -347,6 +347,31 @@ describe("social provider hosts", () => {
       scopes: "user.info.stats",
     });
     assert.ok(url?.includes("client_key=client"));
+    const tiktok = buildAuthorizeUrl({
+      authorizeUrl: "https://www.tiktok.com/v2/auth/authorize/",
+      authorizeHosts: ["www.tiktok.com"],
+      clientIdParam: "client_key",
+      clientId: "client",
+      redirectUri: "https://influrios.com/api/social/callback",
+      state: "state",
+      scopes: "user.info.basic,user.info.stats",
+      plainScopeCommas: true,
+    });
+    assert.match(tiktok ?? "", /scope=user\.info\.basic,user\.info\.stats/);
+    assert.match(tiktok ?? "", /redirect_uri=https%3A%2F%2Finflurios\.com%2Fapi%2Fsocial%2Fcallback/);
+    assert.equal((tiktok ?? "").includes("scope=user.info.basic%2C"), false);
+    assert.equal(
+      buildAuthorizeUrl({
+        authorizeUrl: "https://www.tiktok.com/v2/auth/authorize/",
+        authorizeHosts: ["www.tiktok.com"],
+        clientIdParam: "client_key",
+        clientId: "client",
+        redirectUri: "https://influrios.com/api/social/callback?next=1",
+        state: "state",
+        scopes: "user.info.basic",
+      }),
+      null,
+    );
     assert.equal(
       buildAuthorizeUrl({
         authorizeUrl: "https://evil.example/authorize",

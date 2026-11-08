@@ -132,12 +132,23 @@ export async function MemberFrame({
     if (workspace?.name) company = workspace.name;
     contactPerson = profile?.contactName?.trim() || "";
   }
+  let unsignedContracts = 0;
   if (audience === "creator" && account) {
-    const [user, creator] = await Promise.all([
+    const [user, creator, pending] = await Promise.all([
       prisma.user.findUnique({ where: { id: account.id }, select: { planTier: true } }).catch(() => null),
       prisma.creator.findUnique({ where: { userId: account.id }, select: { planTier: true } }).catch(() => null),
+      prisma.contractParty
+        .count({
+          where: {
+            status: "pending",
+            document: { status: { in: ["sent", "draft"] }, signingChannel: "native" },
+            OR: [{ userId: account.id }, { email: { equals: account.email, mode: "insensitive" } }],
+          },
+        })
+        .catch(() => 0),
     ]);
     creatorPlan = creator?.planTier || user?.planTier || "STARTER";
+    unsignedContracts = pending;
   }
   const upgrade = audience === "creator" ? nextCreatorUpgrade(creatorPlan) : null;
   const nav = audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
@@ -173,8 +184,10 @@ export async function MemberFrame({
                 {on ? <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-violet" /> : null}
                 <span className={on ? "text-violet" : "text-[#8A93A8]"}>{item.icon}</span>
                 <span className="truncate">{item.label}</span>
-                {item.href === "/creator/messages" ? (
-                  <span className="ml-auto h-2 w-2 rounded-full bg-rose-500" aria-hidden />
+                {item.href === "/creator/messages" && unsignedContracts > 0 ? (
+                  <span className="ml-auto rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
+                    {unsignedContracts > 9 ? "9+" : unsignedContracts}
+                  </span>
                 ) : null}
               </Link>
             );

@@ -30,6 +30,10 @@ ENV DATABASE_URL="postgresql://influrios:influrios@postgres:5432/influrios?schem
 # deploy.sh writes one key into .env and passes it here on later builds.
 ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+# NEXT_PUBLIC_* is inlined into the client bundle at build. The server reads
+# the runtime env via computed process.env access; this ARG keeps the bundle aligned.
+ARG NEXT_PUBLIC_APP_URL=https://influrios.com
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 RUN npx prisma generate
 # Fonts are files in src/fonts via next/font/local. next/font/google fetches
 # fonts.googleapis.com during this build and crashes when that CSS has no

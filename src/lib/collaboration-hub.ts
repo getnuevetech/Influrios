@@ -156,20 +156,31 @@ export function pipelineFundingSurface(input: {
   };
 }
 
+/** Specialty tokens that actually appear on the request. A blank specialty never counts. */
+export function requestSpecialtyHits(request: MarketplaceBusinessRequestRow, creator: SeedCreator): number {
+  const hay = `${request.category} ${request.tags.join(" ")} ${request.lookingFor} ${request.summary}`.toLowerCase();
+  let hits = 0;
+  for (const specialty of creator.specialties) {
+    const raw = specialty.trim().toLowerCase();
+    const token = raw.replace(/-/g, " ");
+    if (token.length < 3) continue;
+    if (hay.includes(raw) || hay.includes(token)) hits += 1;
+  }
+  return hits;
+}
+
 export function scoreBusinessRequestForCreator(
   request: MarketplaceBusinessRequestRow,
   creator: SeedCreator,
 ): number {
-  const hay = `${request.category} ${request.tags.join(" ")} ${request.lookingFor} ${request.summary}`.toLowerCase();
-  let hits = 0;
-  for (const specialty of creator.specialties) {
-    const token = specialty.replace(/-/g, " ");
-    if (hay.includes(specialty) || hay.includes(token)) hits += 1;
-  }
+  const hits = requestSpecialtyHits(request, creator);
+  if (hits === 0) return 0;
   const locationHit =
     request.location.toLowerCase().includes("global") ||
-    request.location.toLowerCase().includes(creator.locationCountry.toLowerCase()) ||
-    request.location.toLowerCase().includes(creator.locationCity.toLowerCase());
+    (creator.locationCountry.trim().length > 0 &&
+      request.location.toLowerCase().includes(creator.locationCountry.toLowerCase())) ||
+    (creator.locationCity.trim().length > 0 &&
+      request.location.toLowerCase().includes(creator.locationCity.toLowerCase()));
   return Math.min(98, 68 + hits * 8 + (locationHit ? 6 : 0));
 }
 
@@ -336,6 +347,7 @@ export async function loadCreatorHub(input: {
       request,
       score: scoreBusinessRequestForCreator(request, input.creator),
     }))
+    .filter((row) => row.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 8);
 

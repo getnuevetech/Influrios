@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { getAppOrigin, resolveAppOrigin } from "./billing";
+import { getAppOrigin, isPublicHttpsOrigin, oauthAppOrigin, resolveAppOrigin } from "./billing";
 
 describe("getAppOrigin / resolveAppOrigin", () => {
   it("prefers NEXT_PUBLIC_APP_URL and never returns Docker 0.0.0.0", () => {
@@ -42,17 +42,40 @@ describe("getAppOrigin / resolveAppOrigin", () => {
   });
 });
 
+describe("oauthAppOrigin", () => {
+  it("keeps a public https env and ignores a localhost env in favor of the browser host", () => {
+    const prevPublic = process.env.NEXT_PUBLIC_APP_URL;
+    const prevApp = process.env.APP_URL;
+    try {
+      process.env.NEXT_PUBLIC_APP_URL = "https://influrios.com";
+      process.env.APP_URL = "http://localhost:3000";
+      assert.equal(oauthAppOrigin({ proto: "https", host: "evil.example" }), "https://influrios.com");
+      assert.equal(isPublicHttpsOrigin("https://influrios.com"), true);
+      assert.equal(isPublicHttpsOrigin("http://localhost:3000"), false);
+      process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
+      process.env.APP_URL = "";
+      assert.equal(oauthAppOrigin({ proto: "https", host: "influrios.com" }), "https://influrios.com");
+    } finally {
+      if (prevPublic === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = prevPublic;
+      if (prevApp === undefined) delete process.env.APP_URL;
+      else process.env.APP_URL = prevApp;
+    }
+  });
+});
+
 describe("social callback origin wiring", () => {
-  it("uses resolveAppOrigin instead of request.nextUrl.origin alone", () => {
+  it("uses oauthAppOrigin instead of request.nextUrl.origin alone", () => {
     const source = readFileSync("src/app/api/social/callback/route.ts", "utf8");
-    assert.match(source, /resolveAppOrigin/);
+    assert.match(source, /oauthAppOrigin/);
     assert.equal(source.includes('new URL("/dashboard", request.nextUrl.origin)'), false);
-    assert.match(readFileSync("src/app/dashboard/social-actions.ts", "utf8"), /resolveAppOrigin/);
+    assert.match(readFileSync("src/app/dashboard/social-actions.ts", "utf8"), /oauthAppOrigin/);
   });
 
-  it("authorizes with socialCallbackUrl from getAppOrigin (not request host)", () => {
+  it("authorizes with the caller origin so TikTok gets the public callback", () => {
     const connect = readFileSync("src/lib/social-connect.ts", "utf8");
-    assert.match(connect, /socialCallbackUrl\(\)/);
+    assert.match(connect, /socialCallbackUrl\(input\.origin\)/);
+    assert.match(connect, /plainScopeCommas: network\.code === "tiktok"/);
     assert.match(connect, /callbackAbsoluteUrl/);
     assert.match(readFileSync("src/app/admin/social/page.tsx", "utf8"), /callbackAbsoluteUrl/);
     assert.match(readFileSync("next.config.ts", "utf8"), /bodySizeLimit:\s*"10mb"/);

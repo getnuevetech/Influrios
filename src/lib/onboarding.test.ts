@@ -4,6 +4,7 @@ import { PLAN_ENTITLEMENTS } from "./entitlements";
 import {
   advanceClaimStage,
   bioAcceptanceError,
+  isPlaceholderBio,
   BIO_MIN_CHARS,
   evaluateCompletion,
   secondSocialDecision,
@@ -33,6 +34,12 @@ describe("onboarding completion", () => {
 
   it("accepts a brief bio and explains when it is too short", () => {
     assert.equal(bioAcceptanceError("Lifestyle creator in Lagos making weekly reels."), null);
+    assert.ok(
+      isPlaceholderBio(
+        "Influencer Profile for @ag.olomola-2. Confirm specialties, bio, and location after you claim — nothing publishes until you say so.",
+      ),
+    );
+    assert.ok(bioAcceptanceError("Influencer Profile for @ada. Confirm specialties, bio, and location after you claim."));
     const short = "Too short";
     const err = bioAcceptanceError(short);
     assert.ok(err);
