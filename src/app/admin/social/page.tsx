@@ -7,7 +7,7 @@ import {
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getMetaWebhookConfig, metaWebhookPath } from "@/lib/meta-webhook";
-import { callbackAbsoluteUrl, callbackPath, getSocialPolicy, listSocialNetworks, tiktokCallbackUrl } from "@/lib/social-connect";
+import { callbackAbsoluteUrl, callbackPath, getSocialPolicy, listSocialNetworks } from "@/lib/social-connect";
 import { providerAuthorizePreview, socialNetwork } from "@/lib/social-sync";
 
 export const dynamic = "force-dynamic";
@@ -377,12 +377,12 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                   defaultValue={network.oauthRedirectUri}
                   disabled={!canEdit}
                   className={inputClass}
-                  placeholder={network.code === "tiktok" ? tiktokCallbackUrl() : callbackAbsoluteUrl()}
+                  placeholder={callbackAbsoluteUrl()}
                   autoComplete="off"
                 />
                 <span className="mt-1 block text-xs font-normal text-muted">
-                  Leave blank to send {network.code === "tiktok" ? tiktokCallbackUrl() : callbackAbsoluteUrl()}. Paste
-                  the portal value when it differs. No query or hash.
+                  Leave blank to send {callbackAbsoluteUrl()}. Paste the portal value when it differs, including a
+                  trailing slash. No query or hash.
                 </span>
               </label>
             ) : null}
@@ -398,7 +398,7 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                       authorizeHosts: spec.authorizeHosts,
                       clientIdParam: spec.clientIdParam,
                       clientId: network.clientId,
-                      redirectUri: network.oauthRedirectUri || (network.code === "tiktok" ? tiktokCallbackUrl() : callbackAbsoluteUrl()),
+                      redirectUri: network.oauthRedirectUri || callbackAbsoluteUrl(),
                       scopes: network.scopes,
                     }) ?? "Authorize preview is unavailable."
                   );
@@ -408,18 +408,17 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             {network.code === "tiktok" ? (
               <p className="sm:col-span-2 text-xs text-muted">
                 TikTok compares the decoded redirect with Login Kit → Web. The request sends{" "}
-                <code className="text-[11px]">{network.oauthRedirectUri || tiktokCallbackUrl()}</code>
+                <code className="text-[11px]">{network.oauthRedirectUri || callbackAbsoluteUrl()}</code>
                 {network.clientId.startsWith("sbaw") ? (
                   <>
                     . This client key starts with <code className="text-[11px]">sbaw</code>, so it is the sandbox key.
-                    Register that URL on the sandbox Login Kit, and add the TikTok account as a target user. The
+                    Register that exact URL on the sandbox Login Kit, and add the TikTok account as a target user. The
                     production key starts with <code className="text-[11px]">aw</code> and does not share the sandbox
                     redirect list.
                   </>
                 ) : (
                   <>
-                    . Register that exact URL, including the trailing slash, under Login Kit → Web. The website URL
-                    field is not the redirect list.
+                    . Register that exact URL under Login Kit → Web. The website URL field is not the redirect list.
                   </>
                 )}{" "}
                 A TikTok page that lists <span className="font-semibold">redirect_uri</span> means that list does not

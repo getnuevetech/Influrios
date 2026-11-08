@@ -327,19 +327,13 @@ function redirectUri(origin: string) {
 
 function callbackFor(code: string, override: string | null | undefined, origin: string) {
   if ((code === "tiktok" || code === "x") && override) return override;
-  if (code === "tiktok") return tiktokCallbackUrl(origin);
   return socialCallbackUrl(origin);
 }
 
-/** Exact OAuth redirect URI Google, Meta, and X must whitelist (full URL, no trailing slash). */
+/** Exact OAuth redirect URI providers must whitelist (full URL, no trailing slash). */
 export function socialCallbackUrl(origin?: string | null) {
   const raw = origin?.trim() ? origin.trim().replace(/\/$/, "") : getAppOrigin();
   return redirectUri(canonicalOAuthOrigin(raw));
-}
-
-/** Login Kit’s documented Web redirect keeps the trailing slash. Next redirects that request onto the callback route. */
-export function tiktokCallbackUrl(origin?: string | null) {
-  return `${socialCallbackUrl(origin)}/`;
 }
 
 export async function socialConnectState(slug: string) {
@@ -354,7 +348,7 @@ export async function socialConnectState(slug: string) {
     const account = creator?.socialAccounts.find((item) => item.platform === network.platform);
     const live = account ? isLiveSocialAccount(account) : false;
     const labels = socialMetricLabels(network.platform);
-    const redirectUri = network.oauthRedirectUri || (network.code === "tiktok" ? tiktokCallbackUrl() : socialCallbackUrl());
+    const redirectUri = network.oauthRedirectUri || socialCallbackUrl();
     const { clientId, ...safeNetwork } = network;
     return {
       ...safeNetwork,
