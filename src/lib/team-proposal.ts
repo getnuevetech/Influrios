@@ -297,6 +297,7 @@ export async function respondToTeamProposal(input: {
   if (!member) return { ok: false as const, error: "You are not on this proposal." };
   if (member.status !== "invited") return { ok: false as const, error: "You already responded." };
   const settled = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TeamProposal" WHERE "id" = ${row.id} FOR UPDATE`;
     const write = await tx.teamProposalMember.updateMany({
       where: { id: member.id, status: "invited" },
       data: { status: input.decision },

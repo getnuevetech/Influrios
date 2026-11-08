@@ -340,14 +340,8 @@ export async function loadCreatorHome(userId: string) {
     creator?.payoutProfile?.primaryStatus === "PENDING" ||
     creator?.payoutProfile?.secondaryStatus === "VERIFIED" ||
     creator?.payoutProfile?.secondaryStatus === "PENDING";
-  const payoutReady = Boolean(
-    creator?.payoutProfile?.stripeConnectAccountId ||
-      creator?.payoutProfile?.providerConnectedAccountId ||
-      methodSubmitted ||
-      hub?.payout.readiness?.accountOnFile ||
-      hub?.payout.readiness?.globalPayoutReady ||
-      hub?.payout.readiness?.hasVerifiedMethod,
-  );
+  const payoutReady = Boolean(hub?.payout.readiness?.globalPayoutReady);
+  const payoutBlocker = hub?.payout.readiness?.blockers[0] ?? "";
   const identityDone = Boolean(hub?.payout.readiness?.identityVerified || creator?.identityVerified === "VERIFIED");
   const published = creator?.card?.published === true || draft?.stage === "published";
   const claimed = Boolean(creator || (draft && draft.stage !== "draft"));
@@ -370,7 +364,16 @@ export async function loadCreatorHome(userId: string) {
     { id: "location", label: "Set location", done: locationDone, href: profileHref },
     { id: "specialty", label: "Confirm specialty", done: specialties.length > 0, href: profileHref },
     { id: "social", label: "Connect a social account", done: oauthConnected, href: "/dashboard#socials" },
-    { id: "payout", label: "Add a payout method", done: payoutReady, href: "/creator/earnings#payouts" },
+    {
+      id: "payout",
+      label: payoutReady
+        ? "Payouts ready"
+        : methodSubmitted || hub?.payout.readiness?.hasVerifiedMethod
+          ? payoutBlocker || "Finish identity and payout-region checks"
+          : "Add a payout method",
+      done: payoutReady,
+      href: "/creator/earnings#payouts",
+    },
   ];
 
   const completion = draft ? completenessFor(draft) : null;

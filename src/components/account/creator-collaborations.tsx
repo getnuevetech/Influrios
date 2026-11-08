@@ -8,7 +8,7 @@ import type { listTeamProposalsForCreator } from "@/lib/team-proposal";
 
 type Hub = Awaited<ReturnType<typeof loadCreatorHub>>;
 type Proposals = Awaited<ReturnType<typeof listTeamProposalsForCreator>>;
-type Tab = "overview" | "applications" | "invitations" | "active" | "proposals" | "completed" | "saved";
+type Tab = "overview" | "applications" | "invitations" | "active" | "proposals" | "completed" | "history" | "saved";
 
 function shortDate(value: string | Date | null | undefined) {
   if (!value) return "";
@@ -44,6 +44,7 @@ export function CreatorCollaborations({
   dueThisWeek = 0,
   tab = "overview",
   query = "",
+  page = 1,
   savedMatches = [],
 }: {
   hub: Hub;
@@ -55,10 +56,17 @@ export function CreatorCollaborations({
   dueThisWeek?: number;
   tab?: string;
   query?: string;
+  page?: number;
   savedMatches?: { id: string; title: string; detail: string; href: string }[];
 }) {
   const current: Tab =
-    tab === "applications" || tab === "invitations" || tab === "active" || tab === "proposals" || tab === "completed" || tab === "saved"
+    tab === "applications" ||
+    tab === "invitations" ||
+    tab === "active" ||
+    tab === "proposals" ||
+    tab === "completed" ||
+    tab === "history" ||
+    tab === "saved"
       ? tab
       : "overview";
   const q = query.trim().toLowerCase();
@@ -72,11 +80,16 @@ export function CreatorCollaborations({
   });
   const active = hub.pipeline.filter((row) => row.stage !== "Released" && row.stage !== "Match");
   const completed = hub.pipeline.filter((row) => row.stage === "Released");
+  const history = hub.history ?? [];
   const invitationCount = invitations.length + openProposals.length + hub.status.pending;
   const payoutAccountOnFile = Boolean(hub.payout.readiness?.accountOnFile || hub.payout.readiness?.hasVerifiedMethod);
   const payoutReady = Boolean(hub.payout.readiness?.globalPayoutReady);
   const matches = (text: string) => !q || text.toLowerCase().includes(q);
   const visibleActive = active.filter((row) => matches(`${row.title} ${names[row.counterparty] || row.counterparty}`));
+  const pageSize = 8;
+  const pageCount = Math.max(1, Math.ceil(visibleActive.length / pageSize));
+  const safePage = Math.min(pageCount, Math.max(1, page));
+  const pagedActive = visibleActive.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return (
     <div className="space-y-4">
@@ -118,6 +131,7 @@ export function CreatorCollaborations({
             ["active", "Active", active.length],
             ["proposals", "Team proposals", openProposals.length],
             ["completed", "Completed", completed.length],
+            ["history", "History", history.length],
             ["saved", "Saved matches", savedMatches.length],
           ] as const
         ).map(([key, label, count]) => (
@@ -133,6 +147,12 @@ export function CreatorCollaborations({
           </Link>
         ))}
       </div>
+
+      {hub.degraded?.length ? (
+        <p className="rounded-2xl border border-[#F3D7A1] bg-[#FFF8EC] px-4 py-3 text-sm text-[#8A5A12]">
+          Could not load {hub.degraded.join(", ")}. Refresh this page to try again. Nothing here was treated as an empty account.
+        </p>
+      ) : null}
 
       {current === "overview" || current === "active" ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.72fr)]">
@@ -154,7 +174,7 @@ export function CreatorCollaborations({
               <p className="mt-4 text-sm text-[#667085]">Agreed work appears here after setup is complete.</p>
             ) : (
               <ul className="mt-2 divide-y divide-[#EEF2F7]">
-                {visibleActive.map((row) => {
+                {pagedActive.map((row) => {
                   const brand = names[row.counterparty] || row.counterparty || row.title;
                   const pct =
                     row.obligationTotal && row.obligationTotal > 0
@@ -190,13 +210,19 @@ export function CreatorCollaborations({
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#98A2B3]">Agreed fee</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#98A2B3]">Influencer compensation</p>
                         <p className="text-sm font-semibold text-[#1B1464]">
-                          {row.grossCents != null && row.currency ? formatStoredMoney(row.grossCents, row.currency) : "—"}
+                          {row.netCents != null && row.currency ? formatStoredMoney(row.netCents, row.currency) : "—"}
                         </p>
+                        {row.grossCents != null && row.currency ? (
+                          <p className="text-[11px] text-[#667085]">
+                            Gross {formatStoredMoney(row.grossCents, row.currency)}
+                            {row.feeCents != null ? ` · fee ${formatStoredMoney(row.feeCents, row.currency)}` : ""}
+                          </p>
+                        ) : null}
                       </div>
                       <Link
-                        href={row.stage === "Contract" ? "/collaboration/contracts" : row.href}
+                        href={row.stage === "Contract" ? row.contractHref || row.href : row.href}
                         className={`inline-flex justify-center rounded-full px-3 py-2 text-xs font-semibold ${
                           row.stage === "Contract" ? "bg-[#6D4AFF] text-white" : "border border-[#E7ECF5] text-[#6D4AFF]"
                         }`}
@@ -208,7 +234,15 @@ export function CreatorCollaborations({
                 })}
               </ul>
             )}
-            {active.length > 0 ? (
+            {pageCount > 1 ? (
+              <div className="mt-3 flex items-center justify-between text-sm font-semibold text-[#6D4AFF]">
+                <Link href={`/collaboration/hub?view=collaborations&tab=${current}&page=${Math.max(1, safePage - 1)}`}>Previous</Link>
+                <span className="text-xs text-[#667085]">
+                  {safePage} of {pageCount}
+                </span>
+                <Link href={`/collaboration/hub?view=collaborations&tab=${current}&page=${Math.min(pageCount, safePage + 1)}`}>Next</Link>
+              </div>
+            ) : active.length > 0 && current === "overview" ? (
               <Link href="/collaboration/hub?view=collaborations&tab=active" className="mt-2 inline-flex text-sm font-semibold text-[#6D4AFF]">
                 View all {active.length} collaborations →
               </Link>
@@ -389,6 +423,29 @@ export function CreatorCollaborations({
                   meta="Completed"
                   href={row.href}
                   action="Open workspace →"
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      {current === "history" ? (
+        <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-5">
+          <h2 className="font-display text-lg font-bold text-[#1B1464]">History</h2>
+          <p className="mt-1 text-sm text-[#667085]">Declined, withdrawn, and expired work stays here. It is not completed delivery.</p>
+          {history.length === 0 ? (
+            <p className="mt-3 text-sm text-[#667085]">Closed proposals and applications appear here.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-[#EEF2F7]">
+              {history.map((row) => (
+                <InviteRow
+                  key={`${row.source}-${row.id}`}
+                  brand={names[row.counterparty] || row.title}
+                  title={row.title}
+                  meta={row.counterparty === "Expired" || row.counterparty === "Withdrawn" || row.counterparty === "Declined" ? row.counterparty : "Closed"}
+                  href={row.href}
+                  action="Open record →"
                 />
               ))}
             </ul>
