@@ -93,10 +93,16 @@ export function shortLinkRootHtml(options: { origin: string; ctaLabel: string })
     }
     .avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; background: #1a1748; }
     .check { position: absolute; right: 2px; bottom: 6px; width: 22px; height: 22px; }
-    .card h2 { margin: 0; font-size: 1.15rem; font-weight: 700; }
-    .niches { margin: 4px 0 14px; color: #c5d0f4; font-size: 0.78rem; }
-    .socials { display: flex; justify-content: center; gap: 8px; }
-    .socials span { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; }
+    .wordmark { display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; font-size: 13px; }
+    .card h2 { margin: 10px 0 0; font-size: 1.35rem; font-weight: 700; }
+    .handle, .where { margin: 2px 0 0; color: #d5def8; font-size: 0.78rem; }
+    .niches { margin: 8px 0 12px; color: #c5d0f4; font-size: 0.78rem; }
+    .socials { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .socials > span { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 2px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: #fff; font-size: 9px; }
+    .socials > span > span { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; }
+    .qr-plate { margin: 12px auto 0; width: 132px; background: #fff; border-radius: 14px; padding: 8px; }
+    .qr-plate svg { width: 100%; height: auto; display: block; }
+    .card-link { margin: 12px 0 0; letter-spacing: 0.12em; font-size: 11px; font-weight: 700; }
     .ig { background: linear-gradient(135deg, #f7ce68, #e1306c 55%, #6a3de8); }
     .tt { background: #111; }
     .yt { background: #ff0033; }
@@ -151,24 +157,23 @@ export function shortLinkRootHtml(options: { origin: string; ctaLabel: string })
         </svg>
       </section>
       <aside class="card">
-        <div class="card-menu" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="wordmark"><span aria-hidden="true">∞</span> Influrios</div>
         <div class="avatar-wrap">
           <div class="avatar"><img src="${PORTRAIT}" alt="Sofia Carter" width="104" height="104" /></div>
           <span class="check">${checkIcon()}</span>
         </div>
         <h2>Sofia Carter</h2>
+        <p class="handle">@sofia</p>
         <p class="niches">Lifestyle · Travel · Wellness</p>
+        <p class="where">Houston, TX</p>
         <div class="socials" aria-hidden="true">
-          <span class="ig">${instagramIcon()}</span>
-          <span class="tt">${tiktokIcon()}</span>
-          <span class="yt">${youtubeIcon()}</span>
-          <span class="x">${xIcon()}</span>
+          <span><span class="ig">${instagramIcon()}</span>Instagram</span>
+          <span><span class="tt">${tiktokIcon()}</span>TikTok</span>
+          <span><span class="yt">${youtubeIcon()}</span>YouTube</span>
+          <span><span class="x">${xIcon()}</span>X</span>
         </div>
-        <div class="dest">
-          ${linkIcon()}
-          <b>${escapeHtml(host)}/sofia</b>
-          ${qrIcon()}
-        </div>
+        <div class="qr-plate">${qrIcon()}</div>
+        <p class="card-link">INFLR.me/sofia</p>
         <svg class="spark spark-a" viewBox="0 0 24 24" aria-hidden="true">${starPath()}</svg>
         <svg class="spark spark-b" viewBox="0 0 24 24" aria-hidden="true">${starPath()}</svg>
       </aside>

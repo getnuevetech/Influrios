@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { GuestGateBanner } from "@/components/guest-gate-banner";
+import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { consumeGuestQuota, type GuestQuota } from "@/lib/guest-usage";
 import {
   IconBag,
@@ -359,111 +360,7 @@ export default async function CreatorProfilePage({ params }: Props) {
       <div className="mx-auto mt-5 grid max-w-[90rem] gap-5 px-4 sm:px-6 lg:mt-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-6 lg:px-10">
         {/* Horizontal glass Influencer Card */}
         <aside>
-          <div className="overflow-hidden rounded-[1.35rem] bg-gradient-to-br from-[#FFE4F1] via-[#E8F0FF] to-[#DCE8FF] p-4 shadow-[0_16px_40px_rgba(99,60,255,0.12)] ring-1 ring-[#E8D4FF] sm:p-5">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-display text-[1rem] font-bold text-indigo">Influencer Card</h3>
-                <p className="mt-0.5 max-w-[260px] text-[10px] leading-snug text-muted">
-                  Social links, specialties, and a QR that opens this card.
-                </p>
-              </div>
-              <Link
-                href={`/c/${creator.slug}`}
-                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-[10px] font-semibold text-violet backdrop-blur"
-              >
-                <IconEye size={12} />
-                Preview
-              </Link>
-            </div>
-
-            <div className="rounded-[1.1rem] bg-white p-3 shadow-sm sm:p-3.5">
-              <div className="flex gap-3">
-                <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl sm:h-[100px] sm:w-[100px]">
-                  <Image
-                    src={creator.image}
-                    alt={creator.displayName}
-                    fill
-                    className="object-cover"
-                    sizes="100px"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-1">
-                    <p className="text-[13px] font-bold text-indigo sm:text-[14px]">
-                      {creator.displayName}
-                    </p>
-                    {creator.verified ? <IconVerified size={13} /> : null}
-                  </div>
-                  {creator.title.trim() ? (
-                    <p className="text-[10px] text-muted sm:text-[11px]">{creator.title}</p>
-                  ) : null}
-                  {place ? (
-                    <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted">
-                      <IconMapPin size={10} className="text-[#F97316]" />
-                      {place}
-                    </p>
-                  ) : null}
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    {creator.specialties.slice(0, 4).map((s) => (
-                      <span
-                        key={s}
-                        className="rounded-full bg-[#EAE4FF] px-2 py-0.5 text-[9px] font-semibold text-violet"
-                      >
-                        {specialtyLabel(s)}
-                      </span>
-                    ))}
-                  </div>
-                  {bio ? (
-                    <p className="mt-1.5 line-clamp-2 text-[10px] leading-snug text-muted sm:text-[11px]">
-                      {bio}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="hidden shrink-0 flex-col items-center sm:flex">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`/api/qr/${creator.slug}?size=160&logo=1&v=2`}
-                    alt={`${creator.displayName} QR`}
-                    width={72}
-                    height={72}
-                    className="rounded-md border border-[#E6ECFF] bg-white p-1"
-                  />
-                  <p className="mt-1 max-w-[76px] text-center text-[8px] font-medium leading-tight text-muted">
-                    Scan to view my full card
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-wide text-muted">
-                  Connect with me
-                </p>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {creator.socials.slice(0, 5).map((s) => (
-                    <a
-                      key={s.platform}
-                      href={s.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/80 text-indigo shadow-sm ring-1 ring-white"
-                    >
-                      <SocialIcon platform={s.platform} size={13} />
-                    </a>
-                  ))}
-                </div>
-              </div>
-              <p className="font-script max-w-[130px] text-right text-[15px] font-semibold leading-tight text-violet sm:text-[17px]">
-                One Card
-                <br />
-                Endless Opportunities
-                <span className="mt-0.5 block text-[12px] text-[#E879F9]" aria-hidden>
-                  ♡
-                </span>
-              </p>
-            </div>
-          </div>
+          <PublicInfluencerCard creator={creator} qrDisplay="large" hideCta />
         </aside>
 
         <div className="space-y-4">

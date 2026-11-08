@@ -129,6 +129,9 @@ describe("short link rules", () => {
     assert.match(html, /Browse influencers on Influrios/);
     assert.match(html, /Go to influrios\.com/);
     assert.match(html, /Sofia Carter/);
+    assert.match(html, /@sofia/);
+    assert.match(html, /INFLR\.me\/sofia/);
+    assert.match(html, /Houston, TX/);
     assert.match(html, /Lifestyle · Travel · Wellness/);
     assert.match(html, /src="\/brand\/short-link-landing-portrait\.jpg"/);
     assert.equal(html.includes("52.4.214.82"), false);

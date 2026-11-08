@@ -53,6 +53,8 @@ export type HubPipelineItem = {
   /** W2.5 — Product §16 funding badge when a ledger row is linked. */
   fundingBadge?: FundingBadge | null;
   feeCents?: number | null;
+  /** Stored campaign gross when a funding row is linked. */
+  grossCents?: number | null;
   currency?: string | null;
   /** e.g. "1/2 revisions used on Delivery" */
   revisionSummary?: string | null;
@@ -133,7 +135,7 @@ export function pipelineFundingSurface(input: {
   heldCents?: number;
   releasedCents?: number;
   milestones?: Array<{ title: string; revisionCount: number; revisionLimit: number; status: string }>;
-}): Pick<HubPipelineItem, "fundingBadge" | "feeCents" | "currency" | "revisionSummary"> {
+}): Pick<HubPipelineItem, "fundingBadge" | "feeCents" | "grossCents" | "currency" | "revisionSummary"> {
   const badge = fundingBadge({
     status: input.status,
     heldCents: input.heldCents,
@@ -151,6 +153,7 @@ export function pipelineFundingSurface(input: {
   return {
     fundingBadge: badge,
     feeCents: input.feeCents,
+    grossCents: input.grossCents,
     currency: input.currency,
     revisionSummary,
   };
@@ -330,7 +333,7 @@ export async function loadCreatorHub(input: {
             releasedCents: funding.ledger?.releasedCents,
             milestones: funding.milestones,
           })
-        : { fundingBadge: null, feeCents: null, currency: null, revisionSummary: null };
+        : { fundingBadge: null, feeCents: null, grossCents: null, currency: null, revisionSummary: null };
       return {
         id: row.id,
         title: row.title,

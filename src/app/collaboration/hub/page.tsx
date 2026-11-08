@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CreatorCollaborations } from "@/components/account/creator-collaborations";
 import { FeaturedCarousel } from "@/components/featured-carousel";
 import {
   IconArrowRight,
@@ -20,6 +21,7 @@ import { getCreatorSessionDraft } from "@/lib/claim";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { loadCreatorHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
 import { getCms } from "@/lib/cms";
+import { prisma } from "@/lib/db";
 import { getDirectoryCreator, indexCreatorsBySlug, getDirectory } from "@/lib/directory";
 import { formatStoredMoney } from "@/lib/money";
 import { cardsFromStoredCollaborationMatches } from "@/lib/matching";
@@ -143,6 +145,49 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
   });
 
   const popularCards = cardsFromStoredCollaborationMatches(cms?.collaborationMatches.matches ?? []);
+
+  if (!isOpportunities) {
+    const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const milestones = await prisma.fundingMilestone
+      .findMany({
+        where: {
+          releaseScheduledAt: { not: null },
+          funding: { creatorSlug: draft.slug },
+        },
+        orderBy: { releaseScheduledAt: "asc" },
+        take: 8,
+        select: {
+          id: true,
+          title: true,
+          releaseScheduledAt: true,
+          funding: { select: { title: true, businessName: true } },
+        },
+      })
+      .catch(() => []);
+    const deadlines = milestones
+      .filter((row) => row.releaseScheduledAt && row.releaseScheduledAt.getTime() >= Date.now())
+      .map((row) => ({
+        id: row.id,
+        title: row.funding.businessName || row.funding.title,
+        detail: row.title,
+        at: row.releaseScheduledAt as Date,
+      }));
+    const names: Record<string, string> = {};
+    for (const row of hub.pipeline) {
+      const creatorRow = bySlug.get(row.counterparty);
+      if (creatorRow) names[row.counterparty] = creatorRow.displayName;
+    }
+    return (
+      <CreatorCollaborations
+        hub={hub}
+        proposals={teamProposals}
+        creatorSlug={draft.slug}
+        names={names}
+        deadlines={deadlines}
+        dueThisWeek={deadlines.filter((row) => row.at.getTime() <= weekEnd.getTime()).length}
+      />
+    );
+  }
 
   const availableCents = hub.earnings.releasedCents;
   const totalFollowers = syncedFollowerTotal(creator.socials);

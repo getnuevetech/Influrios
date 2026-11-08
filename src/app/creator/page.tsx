@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChecklistItem, Panel, StatCard, StatusPill, TextLink } from "@/components/dashboard-ui";
+import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import {
   IconArrowRight,
   IconCamera,
-  IconCopy,
   IconEye,
   IconLink,
   IconShare,
@@ -14,6 +14,8 @@ import {
   SocialIcon,
 } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
+import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
+import { getDirectoryCreator } from "@/lib/directory";
 import { contractNeedsSignature, contractPartyProgress, loadCreatorHome } from "@/lib/creator-home";
 import { formatMoney } from "@/lib/money";
 import { formatFollowers } from "@/lib/seed-data";
@@ -35,6 +37,9 @@ export default async function CreatorHomePage({
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/creator");
   const home = await loadCreatorHome(account.id);
+  const directoryCreator = home.slug ? await getDirectoryCreator(home.slug).catch(() => null) : null;
+  const draft = directoryCreator ? null : await getCreatorSessionDraft().catch(() => null);
+  const cardCreator = directoryCreator ?? (draft ? draftToSeedCreator(draft) : null);
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -206,46 +211,12 @@ export default async function CreatorHomePage({
               </div>
             </div>
 
-            <div className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-display text-lg font-bold">My INFLR.me Card</h2>
-                <Link href={home.cardHref} className="text-muted hover:text-violet">
-                  <IconArrowRight size={16} />
-                </Link>
-              </div>
-              <div className="overflow-hidden rounded-2xl border border-[#E6ECF7] bg-gradient-to-br from-[#F7F4FF] to-white p-4">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-12 w-12 overflow-hidden rounded-full bg-[#EDE7FF]">
-                    {home.avatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={home.avatar} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center font-bold text-violet">
-                        {home.displayName.slice(0, 1)}
-                      </span>
-                    )}
-                  </span>
-                  <div>
-                    <p className="font-semibold">{home.displayName}</p>
-                    <p className="text-xs text-muted">{home.title || "Title not set"}</p>
-                  </div>
-                </div>
-                {home.cardPlatforms.length ? (
-                  <div className="mt-3 flex gap-2 text-violet">
-                    {home.cardPlatforms.slice(0, 4).map((platform) => (
-                      <span key={platform} className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white">
-                        <SocialIcon platform={platform} size={14} />
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-3 text-xs text-muted">No social profile is saved on this card yet.</p>
-                )}
-                <div className="mt-4 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs font-semibold text-indigo">
-                  <span className="truncate">{home.shortLabel || "Short link is created when the card is published."}</span>
-                  {home.shortLabel ? <IconCopy size={14} className="shrink-0 text-muted" /> : null}
-                </div>
-              </div>
+            <div className="flex justify-center">
+              {cardCreator ? (
+                <PublicInfluencerCard creator={cardCreator} qrDisplay="large" hideCta />
+              ) : (
+                <p className="text-sm text-muted">Publish your card to see it here.</p>
+              )}
             </div>
           </section>
 

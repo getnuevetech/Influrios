@@ -17,6 +17,7 @@ import {
   type SeedCreator,
 } from "@/lib/seed-data";
 import { cardChrome } from "@/lib/entitlements";
+import { InfluencerCardView } from "@/components/influencer-card-view";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
 
 const BADGE_STYLES: Record<string, string> = {
@@ -252,141 +253,10 @@ export async function CreatorCard({
   );
 }
 
-/** Horizontal marketing Influencer Card matching the design template. */
+/** Approved dark Influrios card used on the landing feature and account previews. */
 export async function CompactInfluencerCard({ creator }: { creator: SeedCreator }) {
   const entitlements = await entitlementsForPlan(creator.planTier);
-  const chrome = cardChrome(entitlements);
-  const socials = creator.socials.slice(0, entitlements.socialLinksMax);
-  const allowedPlatforms = new Set(socials.map((s) => s.platform));
-  const stripPlatforms = ["INSTAGRAM", "TIKTOK", "YOUTUBE", "X"] as const;
-
-  return (
-    <article className="w-full max-w-[480px] overflow-hidden rounded-2xl bg-white shadow-[0_20px_50px_rgba(17,26,90,0.14)] ring-1 ring-[#E4E9F5]">
-      {/* Body: left content + QR panel */}
-      <div className="flex items-stretch gap-3 p-4 sm:gap-4 sm:p-5">
-        <div className="flex min-w-0 flex-1 flex-col">
-          {/* Header: photo | identity + stats */}
-          <div className="flex gap-3">
-            <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl sm:h-[100px] sm:w-[100px]">
-              <Image
-                src={creator.image}
-                alt={creator.displayName}
-                fill
-                className="object-cover"
-                sizes="100px"
-              />
-            </div>
-
-            <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
-              <div>
-                <h3 className="flex items-center gap-1.5 font-display text-base font-bold leading-tight text-indigo sm:text-lg">
-                  <span className="truncate">{creator.displayName}</span>
-                  <IconVerified size={16} className="shrink-0" />
-                </h3>
-                <p className="mt-0.5 truncate text-xs text-[#7B8499] sm:text-[13px]">
-                  {creator.title}
-                </p>
-                <p className="mt-1 flex items-center gap-1 text-[11px] text-[#7B8499] sm:text-xs">
-                  <IconMapPin size={12} className="shrink-0 text-[#633CFF]" />
-                  <span className="truncate">
-                    {creator.locationCity}, {creator.locationCountry}
-                  </span>
-                </p>
-              </div>
-
-              {/* Stats with vertical dividers — beside photo under identity */}
-              <div className="mt-2.5 flex items-stretch">
-                {socials.map((s, i) => (
-                  <div key={s.platform} className="flex items-stretch">
-                    {i > 0 ? (
-                      <span className="mx-3 w-px self-stretch bg-[#DDE3F0] sm:mx-3.5" aria-hidden />
-                    ) : null}
-                    <div className="flex min-w-0 flex-col">
-                      <p className="font-display text-[15px] font-bold leading-none text-indigo sm:text-base">
-                        {s.followers > 0 ? formatFollowers(s.followers) : "—"}
-                      </p>
-                      <p className="mt-1 whitespace-nowrap text-[10px] font-medium leading-none text-[#8B93A7] sm:text-[11px]">
-                        {platformDisplayName(s.platform)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Specialty tags — under photo + identity */}
-          <div className="mt-3.5 flex flex-wrap gap-1.5">
-            {creator.specialties.slice(0, entitlements.specialtiesMax).map((s) => (
-              <span
-                key={s}
-                className="rounded-full bg-[#EAE4FF] px-2.5 py-1 text-[10px] font-semibold text-[#633CFF]"
-              >
-                {specialtyLabel(s)}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {chrome.showQr ? (
-        <div className="flex w-[108px] shrink-0 flex-col items-center justify-center rounded-xl bg-[#F5F6FA] px-2.5 py-3 sm:w-[120px]">
-          <div className="h-[80px] w-[80px] overflow-hidden rounded-md bg-white p-1 sm:h-[88px] sm:w-[88px]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/qr/${creator.slug}?size=256&logo=1`}
-              alt={`${creator.displayName} QR`}
-              width={88}
-              height={88}
-              className="h-full w-full object-contain"
-            />
-          </div>
-          <p className="mt-2.5 text-center text-[9px] font-semibold leading-snug text-[#8B93A7]">
-            Scan to view my
-            <br />
-            full profile
-          </p>
-        </div>
-        ) : null}
-      </div>
-
-      {/* Bottom social strip — icons evenly across full card width */}
-      <div className="flex w-full items-center justify-between border-t border-[#EEF1FA] bg-white px-5 py-3.5 sm:px-6">
-        {stripPlatforms.map((platform) => {
-          const linked = allowedPlatforms.has(platform)
-            ? creator.socials.find((s) => s.platform === platform)
-            : undefined;
-          const icon = <SocialIcon platform={platform} size={26} />;
-          return linked ? (
-            <a
-              key={platform}
-              href={linked.url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex h-7 w-7 shrink-0 items-center justify-center transition hover:scale-110"
-              aria-label={platformDisplayName(platform)}
-            >
-              {icon}
-            </a>
-          ) : (
-            <span
-              key={platform}
-              className="flex h-7 w-7 shrink-0 items-center justify-center opacity-35"
-              aria-hidden
-            >
-              {icon}
-            </span>
-          );
-        })}
-        <Link
-          href={`/c/${creator.slug}`}
-          className="flex h-7 w-7 shrink-0 items-center justify-center transition hover:scale-110"
-          aria-label="Open Influencer Card link"
-        >
-          <IconLink size={26} />
-        </Link>
-      </div>
-    </article>
-  );
+  return <InfluencerCardView creator={creator} entitlements={entitlements} hideCta qrDisplay="large" />;
 }
 
 export { InfluencerCardView } from "@/components/influencer-card-view";
