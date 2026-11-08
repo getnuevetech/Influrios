@@ -379,16 +379,43 @@ function originIfUsable(raw: string | null | undefined): string | null {
   }
 }
 
+/** Direct `process.env.NEXT_PUBLIC_*` is inlined at image build and ignores runtime Compose env. */
+function readRuntimeEnv(name: string): string | undefined {
+  const value = process.env[name];
+  return typeof value === "string" ? value : undefined;
+}
+
+export function isPublicHttpsOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== "https:") return false;
+    const host = url.hostname.toLowerCase();
+    if (
+      !host ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host.endsWith(".local")
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function configuredOrigin(): string | null {
+  return originIfUsable(readRuntimeEnv("NEXT_PUBLIC_APP_URL")) || originIfUsable(readRuntimeEnv("APP_URL"));
+}
+
 /**
  * Public site origin for redirects and OAuth return URLs.
  * Never returns `https://0.0.0.0:3000` (standalone Docker HOSTNAME).
  */
 export function getAppOrigin(): string {
-  return (
-    originIfUsable(process.env.NEXT_PUBLIC_APP_URL) ||
-    originIfUsable(process.env.APP_URL) ||
-    "http://localhost:3000"
-  );
+  return configuredOrigin() || "http://localhost:3000";
 }
 
 /**
@@ -396,8 +423,7 @@ export function getAppOrigin(): string {
  * they are not the Docker bind address.
  */
 export function resolveAppOrigin(input?: { proto?: string | null; host?: string | null; fallback?: string | null }) {
-  const fromEnv =
-    originIfUsable(process.env.NEXT_PUBLIC_APP_URL) || originIfUsable(process.env.APP_URL);
+  const fromEnv = configuredOrigin();
   if (fromEnv) return fromEnv;
   const proto = (input?.proto ?? "https").replace(/:$/, "") || "https";
   const host = (input?.host ?? "").split(",")[0]?.trim() ?? "";
@@ -406,6 +432,20 @@ export function resolveAppOrigin(input?: { proto?: string | null; host?: string 
     originIfUsable(input?.fallback) ||
     getAppOrigin()
   );
+}
+
+/**
+ * Origin placed in an OAuth redirect_uri.
+ * A localhost or http env value must not override the public https host the browser used.
+ */
+export function oauthAppOrigin(input?: { proto?: string | null; host?: string | null }): string {
+  const fromEnv = configuredOrigin();
+  if (fromEnv && isPublicHttpsOrigin(fromEnv)) return fromEnv;
+  const proto = (input?.proto ?? "https").replace(/:$/, "") || "https";
+  const host = (input?.host ?? "").split(",")[0]?.trim() ?? "";
+  const fromHost = originIfUsable(`${proto}://${host}`);
+  if (fromHost && isPublicHttpsOrigin(fromHost)) return fromHost;
+  return fromEnv || fromHost || getAppOrigin();
 }
 
 function newId(prefix: string) {

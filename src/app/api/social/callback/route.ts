@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveAppOrigin } from "@/lib/billing";
+import { oauthAppOrigin } from "@/lib/billing";
 import { completeSocialCallback } from "@/lib/social-connect";
 
 function publicOrigin(request: NextRequest) {
-  return resolveAppOrigin({
+  return oauthAppOrigin({
     proto: request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", ""),
     host: request.headers.get("x-forwarded-host") ?? request.headers.get("host"),
-    // Never trust nextUrl.origin alone — Docker HOSTNAME=0.0.0.0 leaks into it.
-    fallback: request.nextUrl.origin,
   });
 }
 

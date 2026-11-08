@@ -7,7 +7,9 @@ import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
+import { classifySocialRow } from "@/lib/creator-home";
 import { formatFollowers } from "@/lib/seed-data";
+import { isLiveSocialAccount } from "@/lib/social-sync";
 import { getCreatorShortLinkAnalytics } from "@/lib/short-link";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +46,7 @@ export default async function CreatorAnalyticsPage() {
         where: { userId: account.id },
         include: {
           socialAccounts: { orderBy: { platform: "asc" } },
+          socialConnections: { select: { platform: true, status: true, lastError: true } },
           shortLinks: { where: { status: { not: "archived" } }, take: 1, select: { id: true, slug: true, status: true } },
         },
       })
@@ -77,11 +80,31 @@ export default async function CreatorAnalyticsPage() {
       : Promise.resolve(0),
   ]);
 
-  const socials = creator?.socialAccounts ?? [];
-  const totalFollowers = socials.reduce((sum, row) => sum + (row.followers ?? 0), 0);
+  const connectionByPlatform = new Map((creator?.socialConnections ?? []).map((row) => [row.platform, row]));
+  const socials = (creator?.socialAccounts ?? []).map((social) => {
+    const connection = connectionByPlatform.get(social.platform);
+    return classifySocialRow({
+      id: social.id,
+      platform: social.platform,
+      handle: social.handle,
+      followers: social.followers,
+      source: social.source,
+      refreshedAt: social.refreshedAt,
+      connectionStatus: connection?.status ?? null,
+      lastError: connection?.lastError ?? null,
+    });
+  });
+  const liveSocials = (creator?.socialAccounts ?? []).filter((row) =>
+    isLiveSocialAccount({
+      source: row.source,
+      refreshedAt: row.refreshedAt,
+      followers: row.followers,
+    }),
+  );
+  const totalFollowers = liveSocials.reduce((sum, row) => sum + (row.followers ?? 0), 0);
   const analytics = linkAnalytics && linkAnalytics.ok ? linkAnalytics.analytics : null;
   const earningsCents = hub?.earnings.releasedCents ?? 0;
-  const earningsCurrency = hub?.earnings.currency || "USD";
+  const earningsCurrency = hub?.earnings.currency || "";
 
   return (
     <div className="space-y-5">
@@ -104,8 +127,12 @@ export default async function CreatorAnalyticsPage() {
         />
         <StatCard
           label="Connected social reach"
-          value={socials.length ? formatFollowers(totalFollowers) : "—"}
-          note={socials.length ? `${socials.length} connected platform${socials.length === 1 ? "" : "s"}` : "Connect socials on My Profile"}
+          value={liveSocials.length ? formatFollowers(totalFollowers) : "—"}
+          note={
+            liveSocials.length
+              ? `${liveSocials.length} synced platform${liveSocials.length === 1 ? "" : "s"}`
+              : "Follower totals appear after a provider sync"
+          }
           tone="violet"
           icon={<IconShare size={16} />}
         />
@@ -118,8 +145,8 @@ export default async function CreatorAnalyticsPage() {
         />
         <StatCard
           label="Released earnings"
-          value={formatMoney(earningsCents, earningsCurrency)}
-          note="Ledger releases only"
+          value={earningsCurrency ? formatMoney(earningsCents, earningsCurrency) : "—"}
+          note={earningsCurrency ? "Ledger releases only" : "No funding currency is stored yet"}
           tone="amber"
           icon={<IconWallet size={16} />}
         />
@@ -226,7 +253,9 @@ export default async function CreatorAnalyticsPage() {
                       </span>
                     </span>
                   </span>
-                  <StatusPill tone="success">Connected</StatusPill>
+                  <StatusPill tone={social.status === "connected" ? "success" : social.status === "attention" ? "warn" : "neutral"}>
+                    {social.statusLabel}
+                  </StatusPill>
                 </li>
               ))}
             </ul>

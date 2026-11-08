@@ -366,13 +366,16 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             ) : null}
             {network.code === "tiktok" ? (
               <p className="sm:col-span-2 text-xs text-muted">
-                Profile sync calls{" "}
+                TikTok Login Kit compares <code className="text-[11px]">redirect_uri</code> character for character.
+                Paste this exact URL into the app&apos;s Login Kit redirect URI (https, no trailing slash, no query):{" "}
+                <code className="text-[11px]">{callbackAbsoluteUrl()}</code>. A TikTok page that says{" "}
+                <span className="font-semibold">correct the following: redirect_uri</span> means the portal value is
+                different from that URL. Profile sync calls{" "}
                 <code className="text-[11px]">
                   /v2/user/info/?fields=open_id,avatar_url,display_name,follower_count,following_count,likes_count,video_count
-                </code>{" "}
-                (required by TikTok). Scopes stay <code className="text-[11px]">user.info.basic,user.info.stats</code> —
-                do not add <code className="text-[11px]">user.info.profile</code> fields for review demos. Sandbox proof:
-                Connect → consent → callback → Connected → follower/likes stats.
+                </code>
+                . Scopes stay <code className="text-[11px]">user.info.basic,user.info.stats</code> with commas left
+                unencoded — do not add <code className="text-[11px]">user.info.profile</code>.
               </p>
             ) : null}
             {network.code === "youtube" ? (

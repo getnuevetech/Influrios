@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { getAppOrigin } from "@/lib/billing";
+import { getAppOrigin, isPublicHttpsOrigin } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { invalidateDirectoryCache } from "@/lib/directory";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
@@ -306,9 +306,10 @@ function redirectUri(origin: string) {
   return `${origin.replace(/\/$/, "")}/api/social/callback`;
 }
 
-/** Exact OAuth redirect URI Google/Meta/etc must whitelist (full https URL). */
-export function socialCallbackUrl(origin = getAppOrigin()) {
-  return redirectUri(origin);
+/** Exact OAuth redirect URI Google/Meta/TikTok must whitelist (full URL, no trailing slash). */
+export function socialCallbackUrl(origin?: string | null) {
+  const base = origin?.trim() ? origin.trim().replace(/\/$/, "") : getAppOrigin();
+  return redirectUri(base);
 }
 
 export async function socialConnectState(slug: string) {
@@ -397,8 +398,16 @@ export async function beginSocialConnect(input: {
   } catch {
     return { ok: false as const, error: "The connected-account policy could not be recorded. Try again." };
   }
-  // Always use the configured public origin — never request Host / 0.0.0.0 —
-  // so the redirect_uri matches Google/Meta console whitelists.
+  // Prefer the public https origin (env, or the browser host when env is localhost).
+  // Never send Docker 0.0.0.0. TikTok rejects any redirect_uri that is not the
+  // exact https URL registered on the Login Kit product.
+  const callback = socialCallbackUrl(input.origin);
+  if (network.code === "tiktok" && !isPublicHttpsOrigin(callback)) {
+    return {
+      ok: false as const,
+      error: `TikTok requires an https redirect URI. This server would send ${callback}. Set NEXT_PUBLIC_APP_URL to the public site (https://influrios.com) and register that exact callback in TikTok Login Kit, with no trailing slash.`,
+    };
+  }
   const configId = resolveConnectConfigId(provider!, networks);
   if (network.code === "instagram" && !configId && !provider!.classicInstagramLogin) {
     return {
@@ -429,11 +438,12 @@ export async function beginSocialConnect(input: {
     authorizeHosts: locked?.authorizeHosts ?? network.authorizeHosts,
     clientIdParam: network.clientIdParam,
     clientId,
-    redirectUri: socialCallbackUrl(),
+    redirectUri: callback,
     state,
     scopes: provider!.scopes,
     // Login for Business / Unified Login: config_id replaces scope=.
     configId,
+    plainScopeCommas: network.code === "tiktok",
     extraParams:
       network.code === "youtube"
         ? { access_type: "offline", include_granted_scopes: "true", prompt: "consent" }
@@ -447,7 +457,7 @@ export async function beginSocialConnect(input: {
         "Meta OAuth URL was missing config_id. Save a Configuration ID under Admin → Social and try Connect again.",
     };
   }
-  return { ok: true as const, authorizeUrl, redirectUri: socialCallbackUrl() };
+  return { ok: true as const, authorizeUrl, redirectUri: callback };
 }
 
 /** Prefer this network's config_id; fall back to the sibling Meta network when App IDs match. */
@@ -797,6 +807,7 @@ export async function completeSocialCallback(input: { code?: string; state?: str
   }
   const ready = await readProvider(connection.providerId, connection.platform as SocialSyncPlatform);
   if (!ready) return { ok: false as const, error: "This network is not connected yet.", slug };
+  const callback = socialCallbackUrl(input.origin);
   try {
     let token = await requestToken({
       tokenUrl: ready.extra.tokenUrl,
@@ -805,8 +816,8 @@ export async function completeSocialCallback(input: { code?: string; state?: str
       clientIdParam: ready.network.clientIdParam,
       clientId: ready.clientId,
       clientSecret: ready.secret,
-      // Must match the authorize redirect_uri exactly (configured public origin).
-      redirectUri: socialCallbackUrl(),
+      // Must match the authorize redirect_uri exactly.
+      redirectUri: callback,
       code: input.code,
     });
     if (!token.ok) {
@@ -822,7 +833,7 @@ export async function completeSocialCallback(input: { code?: string; state?: str
         clientIdParam: ready.network.clientIdParam,
         clientId: ready.clientId,
         clientSecret: ready.secret,
-        redirectUri: socialCallbackUrl(),
+        redirectUri: callback,
         refreshToken: token.accessToken,
       });
       if (extended.ok) token = extended;
@@ -946,7 +957,7 @@ export async function refreshSocialConnection(input: { slug: string; platform: s
         clientIdParam: ready.network.clientIdParam,
         clientId: ready.clientId,
         clientSecret: ready.secret,
-        redirectUri: socialCallbackUrl(),
+        redirectUri: socialCallbackUrl(input.origin),
         refreshToken,
       });
       if (!refreshed.ok) {

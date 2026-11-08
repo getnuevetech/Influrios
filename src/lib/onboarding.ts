@@ -78,14 +78,22 @@ export const DEFAULT_COMPLETION_RULES: CompletionRule[] = [
   },
 ];
 
+/** Claim templates are not a creator bio, even after the word Draft is dropped. */
+export function isPlaceholderBio(bio: string): boolean {
+  const trimmed = bio.trim().toLowerCase();
+  if (!trimmed) return true;
+  return (
+    trimmed.includes("draft influencer card") ||
+    trimmed.includes("draft influencer profile") ||
+    trimmed.includes("confirm specialties, bio, and location") ||
+    trimmed.includes("nothing publishes until you say so")
+  );
+}
+
 /** Null when the bio is long enough and not a draft placeholder. */
 export function bioAcceptanceError(bio: string): string | null {
   const trimmed = bio.trim();
-  if (
-    trimmed.includes("Draft Influencer Card") ||
-    trimmed.includes("Draft Influencer Profile") ||
-    !trimmed
-  ) {
+  if (isPlaceholderBio(trimmed)) {
     return `Add a bio of at least ${BIO_MIN_CHARS} characters describing what you create.`;
   }
   if (trimmed.length < BIO_MIN_CHARS) {

@@ -117,6 +117,7 @@ describe("business request affinity", () => {
       summary: "Consumer tech unboxings",
     };
     assert.ok(scoreBusinessRequestForCreator(strong, creator) > scoreBusinessRequestForCreator(weak, creator));
+    assert.equal(scoreBusinessRequestForCreator(weak, creator), 0);
   });
 });
 
@@ -196,7 +197,8 @@ describe("business hub spend summary", () => {
 describe("influencer campaign card links", () => {
   it("opens the campaign request page instead of the public business marketing page", () => {
     const creatorHub = readFileSync("src/app/collaboration/hub/page.tsx", "utf8");
-    const creatorHome = readFileSync("src/app/creator/page.tsx", "utf8");
+    const creatorHome = readFileSync("src/lib/creator-home.ts", "utf8");
+    const creatorPage = readFileSync("src/app/creator/page.tsx", "utf8");
     const requestPage = readFileSync("src/app/collaboration/requests/[id]/page.tsx", "utf8");
 
     assert.match(creatorHub, /\/collaboration\/requests\/\$\{encodeURIComponent\(request\.id\)\}/);
@@ -205,6 +207,8 @@ describe("influencer campaign card links", () => {
     assert.equal(creatorHub.includes("View Match"), false);
 
     assert.match(creatorHome, /\/collaboration\/requests\/\$\{encodeURIComponent\(request\.id\)\}/);
+    assert.match(creatorPage, /href=\{item\.href\}/);
+    assert.equal(creatorPage.includes('href="/business"'), false);
     assert.match(requestPage, /Apply to campaign/);
     assert.match(requestPage, /getPublishedBusinessRequest/);
   });
