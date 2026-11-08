@@ -106,7 +106,14 @@ export async function actionTransitionApplicationDetail(formData: FormData) {
     const creator = updated.toSlug || updated.fromSlug;
     const brief = updated.briefId ? ws.briefs.find((item) => item.id === updated.briefId) ?? null : null;
     if (creator) {
-      redirect(contractHrefFromCampaign({ creatorSlug: creator, brief }));
+      redirect(
+        contractHrefFromCampaign({
+          creatorSlug: creator,
+          brief,
+          collaborationId: updated.collaborationId,
+          applicationId: updated.id,
+        }),
+      );
     }
   }
 

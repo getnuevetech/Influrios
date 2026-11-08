@@ -66,6 +66,7 @@ type Props = {
     step?: string;
     creator?: string;
     collaboration?: string;
+    application?: string;
     team?: string;
     brief?: string;
     title?: string;
@@ -144,6 +145,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   );
 
   const collaborationId = (params.collaboration ?? "").trim();
+  const applicationId = (params.application ?? "").trim();
   const linkedCollab = collaborationId
     ? await prisma.collaboration.findUnique({ where: { id: collaborationId } }).catch(() => null)
     : null;
@@ -442,6 +444,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           <input type="hidden" name="businessName" value={ws.name} />
           {campaignBrief ? <input type="hidden" name="briefId" value={campaignBrief.id} /> : null}
           {linkedCollab ? <input type="hidden" name="collaborationId" value={linkedCollab.id} /> : null}
+          {applicationId ? <input type="hidden" name="applicationId" value={applicationId} /> : null}
           {teamProposal && teamProposal.workspaceId === ws.businessId ? (
             <input type="hidden" name="teamProposalId" value={teamProposal.id} />
           ) : null}

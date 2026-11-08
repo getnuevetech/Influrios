@@ -423,8 +423,10 @@ export async function loadCreatorHub(input: {
       source: "team",
     });
   }
+  const pipelineIds = new Set(pipeline.map((row) => row.id));
   for (const application of applications) {
     if (application.status !== "ACCEPTED" && application.status !== "COLLABORATION_DRAFTED") continue;
+    if (application.collaborationId && pipelineIds.has(application.collaborationId)) continue;
     pipeline.push({
       id: `application:${application.id}`,
       title: application.requestBrand || application.opportunityLookingFor || "Campaign application",

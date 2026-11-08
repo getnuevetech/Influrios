@@ -43,3 +43,25 @@ jobs:
           npx prisma migrate deploy
           npm test
           npm run check:migrations
+      - name: Release evidence and authenticated journey
+        env:
+          AUTH_SECRET: ci-journey-secret
+          ADMIN_SESSION_SECRET: ci-journey-secret
+          JOURNEY_BASE_URL: http://127.0.0.1:3456
+        run: |
+          npx tsx scripts/release-evidence.ts
+          npx next build
+          rm -rf .next/standalone/public .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          mkdir -p .next/standalone/.next
+          cp -r .next/static .next/standalone/.next/static
+          PORT=3456 HOSTNAME=127.0.0.1 node .next/standalone/server.js &
+          ready=0
+          for _ in $(seq 1 90); do
+            if curl -sf http://127.0.0.1:3456/login >/dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          test "$ready" = 1
+          npx tsx scripts/authz-journey.ts
+          npx tsx scripts/report-collaboration-links.ts
+          npx tsx scripts/report-signed-contracts.ts

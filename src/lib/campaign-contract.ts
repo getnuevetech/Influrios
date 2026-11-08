@@ -34,11 +34,13 @@ export function contractHrefFromCampaign(input: {
   brief?: CampaignBrief | null;
   collaborationId?: string | null;
   teamId?: string | null;
+  applicationId?: string | null;
 }) {
   const params = new URLSearchParams();
   const creator = input.creatorSlug.trim();
   if (creator) params.set("creator", creator);
   if (input.collaborationId?.trim()) params.set("collaboration", input.collaborationId.trim());
+  if (input.applicationId?.trim()) params.set("application", input.applicationId.trim());
   if (input.teamId?.trim()) params.set("team", input.teamId.trim());
   const brief = input.brief;
   if (brief) {

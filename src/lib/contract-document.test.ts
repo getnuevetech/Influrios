@@ -19,6 +19,8 @@ import {
   resolveContractBodyForChrome,
   resolveContractPartyForAccount,
   signatureBlock,
+  contractContentDigest,
+  signedContractReview,
   upgradeLegacyContractBody,
   wrapContractLines,
 } from "./contract-document";
@@ -448,5 +450,40 @@ Creator compensation: $900.00
       actorName: "North Co",
     });
     assert.match(remind.text, /Your signature is still needed/);
+  });
+});
+
+describe("executed agreement digest", () => {
+  it("flags a signed agreement with no digest and leaves a matching digest alone", () => {
+    const body = "Stored agreement text";
+    const missing = signedContractReview({
+      status: "signed",
+      parties: [{ status: "signed" }],
+      contentDigest: "",
+      pdfByteLength: 12,
+      renderedBody: body,
+      signingChannel: "native",
+    });
+    assert.equal(missing.review, true);
+    assert.deepEqual(missing.reasons, ["digest_missing"]);
+    const digest = contractContentDigest(body);
+    const current = signedContractReview({
+      status: "signed",
+      parties: [{ status: "signed" }],
+      contentDigest: digest,
+      pdfByteLength: 12,
+      renderedBody: body,
+      signingChannel: "docusign",
+    });
+    assert.equal(current.review, false);
+    const drifted = signedContractReview({
+      status: "signed",
+      parties: [{ status: "signed" }],
+      contentDigest: digest,
+      pdfByteLength: 12,
+      renderedBody: body + " rewritten",
+      signingChannel: "native",
+    });
+    assert.deepEqual(drifted.reasons, ["digest_mismatch"]);
   });
 });

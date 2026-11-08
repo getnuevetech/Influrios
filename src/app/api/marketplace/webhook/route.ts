@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
       eventType: fundingEvent.eventType,
       fundingId: fundingEvent.fundingId,
       amountCents: fundingEvent.amountCents,
+      currency: fundingEvent.currency,
       milestoneId: fundingEvent.milestoneId,
     });
     return NextResponse.json(result);

@@ -2,6 +2,7 @@
  * Collaboration agreements: admin template, filled document, PDF, and who may read a message.
  * Native in-app signing is primary; DocuSign is an optional channel when enabled with credentials.
  */
+import { createHash } from "crypto";
 import { prisma } from "@/lib/db";
 import {
   asciiForPdf as asciiForPdfImpl,
@@ -29,6 +30,34 @@ import { SERVICE_LEVEL_LABELS, type ServiceLevel } from "@/lib/collaboration-fee
 
 export const CONTRACT_TEMPLATE_ID = "collaboration";
 export const CONTRACT_TEMPLATE_VERSION = "influrios-collab-v1";
+
+export function contractContentDigest(body: string): string {
+  return createHash("sha256").update(body, "utf8").digest("hex");
+}
+
+/** Historical or drifted executed agreements for operator review. Does not rewrite them. */
+export function signedContractReview(input: {
+  status: string;
+  parties: { status: string }[];
+  contentDigest: string;
+  pdfByteLength: number;
+  renderedBody: string;
+  signingChannel?: string | null;
+}): { review: boolean; reasons: string[] } {
+  const frozen =
+    input.status === "signed" ||
+    input.status === "declined" ||
+    input.status === "voided" ||
+    input.parties.some((party) => party.status === "signed");
+  if (!frozen) return { review: false, reasons: [] };
+  const reasons: string[] = [];
+  const digest = input.contentDigest.trim();
+  if (!digest) reasons.push("digest_missing");
+  else if (digest !== contractContentDigest(input.renderedBody)) reasons.push("digest_mismatch");
+  if (input.pdfByteLength <= 0) reasons.push("pdf_missing");
+  if (input.signingChannel === "docusign" && input.pdfByteLength <= 0) reasons.push("provider_pdf_missing");
+  return { review: reasons.length > 0, reasons };
+}
 
 export const CONTRACT_VARIABLES = [
   "title",
@@ -767,6 +796,7 @@ export async function sendCollaborationContract(input: {
   workspaceId: string;
   collaborationId?: string | null;
   teamProposalId?: string | null;
+  applicationId?: string | null;
   createdByUserId: string;
   source: Record<string, string>;
 }) {
@@ -857,8 +887,10 @@ export async function sendCollaborationContract(input: {
       workspaceId: input.workspaceId,
       collaborationId: input.collaborationId || null,
       teamProposalId: input.teamProposalId || null,
+      applicationId: input.applicationId || null,
       title: input.render.title.slice(0, 160),
       renderedBody,
+      contentDigest: contractContentDigest(renderedBody),
       pdfBytes: new Uint8Array(pdfBytes),
       status: "sent",
       signingChannel,
@@ -996,6 +1028,7 @@ export async function signNativeContractParty(input: {
       data: {
         status: aggregate,
         renderedBody: nextBody,
+        contentDigest: contractContentDigest(nextBody),
         pdfBytes: new Uint8Array(pdfBytes),
         envelopeId: fresh.envelopeId || nativeEnvelopeId(document.id),
       },

@@ -64,6 +64,7 @@ export function CreatorOpportunities({
   creatorSlug,
   notice,
   listingsFailed = false,
+  loadRef = "",
 }: {
   requests: RequestCard[];
   openings: OpeningCard[];
@@ -85,6 +86,7 @@ export function CreatorOpportunities({
   creatorSlug: string;
   notice?: { kind: "saved" | "applied" | "error"; text?: string } | null;
   listingsFailed?: boolean;
+  loadRef?: string;
 }) {
   const tab = ["campaigns", "openings", "saved"].includes(filters.tab) ? filters.tab : "recommended";
   const saved = new Set(savedKeys);
@@ -130,7 +132,7 @@ export function CreatorOpportunities({
 
       {listingsFailed ? (
         <p className="rounded-2xl border border-[#F3D7A1] bg-[#FFF8EC] px-4 py-3 text-sm text-[#8A5A12]">
-          Could not load opportunities. Refresh this page to try again.
+          Could not load opportunities. Refresh this page to try again.{loadRef ? ` Reference ${loadRef}.` : ""}
         </p>
       ) : null}
 
