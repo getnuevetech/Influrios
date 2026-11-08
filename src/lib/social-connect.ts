@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { invalidateDirectoryCache } from "@/lib/directory";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
 import {
+  META_GRAPH_VERSION,
   SOCIAL_NETWORKS,
   buildAuthorizeUrl,
   interpretSocialProfile,
@@ -619,6 +620,15 @@ async function requestToken(input: {
  * Hard failures only (bad host / HTTP reject). Missing audience stats are soft notices
  * so OAuth can still mark the network Connected.
  */
+/** Facebook user tokens (Unified Login) are invalid on graph.instagram.com. */
+function looksLikeFacebookUserToken(accessToken: string) {
+  return /^EAA[A-Za-z0-9]/.test(accessToken.trim());
+}
+
+function instagramUnifiedProfileUrl() {
+  return `https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?fields=id,name,instagram_business_account{id,username,name,followers_count,media_count}`;
+}
+
 function profileRequest(requestUrl: string, accessToken: string) {
   try {
     const url = new URL(requestUrl);
@@ -644,7 +654,13 @@ async function fetchSocialProfile(
   accessToken: string,
   platform?: SocialSyncPlatform,
 ) {
-  const prepared = prepareSocialProfileUrl(profileUrl, platform ?? null);
+  let candidate = profileUrl;
+  // Unified Login / Facebook-dialog tokens must use graph.facebook.com, even if an older
+  // Instagram Login profile URL is still stored on the provider row.
+  if ((platform ?? "").toUpperCase() === "INSTAGRAM" && looksLikeFacebookUserToken(accessToken)) {
+    candidate = instagramUnifiedProfileUrl();
+  }
+  const prepared = prepareSocialProfileUrl(candidate, platform ?? null);
   if (!socialHostAllowed(prepared, apiHosts)) {
     return { ok: false as const, error: "The profile URL is not on an official host." };
   }
@@ -652,7 +668,7 @@ async function fetchSocialProfile(
   const response = await fetch(request.url, {
     redirect: "error",
     headers: request.headers,
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(12000),
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
@@ -782,7 +798,7 @@ export async function completeSocialCallback(input: { code?: string; state?: str
   const ready = await readProvider(connection.providerId, connection.platform as SocialSyncPlatform);
   if (!ready) return { ok: false as const, error: "This network is not connected yet.", slug };
   try {
-    const token = await requestToken({
+    let token = await requestToken({
       tokenUrl: ready.extra.tokenUrl,
       apiHosts: ready.network.apiHosts,
       style: ready.network.tokenStyle,
@@ -796,6 +812,20 @@ export async function completeSocialCallback(input: { code?: string; state?: str
     if (!token.ok) {
       await prisma.socialConnection.update({ where: { id: connection.id }, data: { status: "error", lastError: token.error } });
       return { ok: false as const, error: token.error, slug };
+    }
+    // Extend short-lived Meta user tokens so Sync now still works after the ~1h window.
+    if (isMetaGraphTokenUrl(ready.extra.tokenUrl) && looksLikeFacebookUserToken(token.accessToken)) {
+      const extended = await requestToken({
+        tokenUrl: ready.extra.tokenUrl,
+        apiHosts: ready.network.apiHosts,
+        style: ready.network.tokenStyle,
+        clientIdParam: ready.network.clientIdParam,
+        clientId: ready.clientId,
+        clientSecret: ready.secret,
+        redirectUri: socialCallbackUrl(),
+        refreshToken: token.accessToken,
+      });
+      if (extended.ok) token = extended;
     }
     const profile = await fetchSocialProfile(
       ready.extra.profileUrl,
