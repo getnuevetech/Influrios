@@ -81,6 +81,8 @@ describe("social callback origin wiring", () => {
   it("authorizes with the caller origin so TikTok gets the public callback", () => {
     const connect = readFileSync("src/lib/social-connect.ts", "utf8");
     assert.match(connect, /function callbackFor/);
+    assert.match(connect, /function tiktokCallbackUrl/);
+    assert.match(connect, /return `\$\{socialCallbackUrl\(origin\)\}\/`;/);
     assert.match(connect, /socialCallbackUrl\(origin\)/);
     assert.match(connect, /tiktokQuery: network\.code === "tiktok"/);
     assert.match(connect, /callbackAbsoluteUrl/);
