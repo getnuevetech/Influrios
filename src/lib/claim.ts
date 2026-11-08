@@ -911,7 +911,60 @@ export async function verifyDraft(draftId: string, code: string): Promise<ClaimD
   return draft;
 }
 
+async function signedDraftIdFromCookie(): Promise<string | null> {
+  const jar = await cookies();
+  const raw = jar.get(COOKIE_NAME)?.value;
+  if (!raw) return null;
+  const [body, sig] = raw.split(".");
+  if (!body || !sig) return null;
+  const expected = sign(body);
+  try {
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+    const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as { draftId?: string; exp?: number };
+    if (!parsed.draftId || typeof parsed.exp !== "number" || parsed.exp < Date.now()) return null;
+    return parsed.draftId;
+  } catch {
+    return null;
+  }
+}
+
+/** Published profiles require the owning account. Pre-account drafts require the signed session cookie. */
+export async function assertCanMutateDraft(draftId: string): Promise<void> {
+  const id = draftId.trim();
+  if (!id) throw new Error("Draft not found.");
+  const { getAccountSession } = await import("@/lib/accounts");
+  const account = await getAccountSession().catch(() => null);
+  if (id.startsWith("creator_")) {
+    if (!account) throw new Error("Sign in to edit this profile.");
+    const creator = await prisma.creator.findFirst({
+      where: { id: id.slice("creator_".length), userId: account.id },
+      select: { id: true },
+    });
+    if (!creator) throw new Error("You cannot edit this profile.");
+    return;
+  }
+  const draft = await getDraft(id);
+  if (!draft) throw new Error("Draft not found.");
+  if (account) {
+    const owned = await draftFromAccountUser(account.id);
+    if (owned && (owned.id === draft.id || owned.slug === draft.slug)) return;
+    const creator = await prisma.creator.findFirst({
+      where: { userId: account.id, slug: draft.slug },
+      select: { id: true },
+    });
+    if (creator) return;
+    const session = await prisma.onboardingSession.findUnique({ where: { id }, select: { userId: true } });
+    if (session?.userId === account.id) return;
+    throw new Error("You cannot edit this profile.");
+  }
+  if ((await signedDraftIdFromCookie()) === id) return;
+  throw new Error("Sign in to edit this profile.");
+}
+
 export async function publishDraft(draftId: string): Promise<ClaimDraft> {
+  await assertCanMutateDraft(draftId);
   const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
   const published = advanceClaimStage(draft.stage, "publish");
@@ -932,6 +985,7 @@ export async function publishDraft(draftId: string): Promise<ClaimDraft> {
 }
 
 export async function addDraftSocial(draftId: string, social: SeedSocial): Promise<ClaimDraft> {
+  await assertCanMutateDraft(draftId);
   const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
   const plan = storedCreatorPlan(draft.planTier);
@@ -969,10 +1023,24 @@ export async function updateDraftProfile(
       | "needDetails"
       | "image"
       | "coverImage"
-      | "gender"
+      |       "gender"
     >
   >,
 ): Promise<ClaimDraft> {
+  await assertCanMutateDraft(draftId);
+  if (draftId.startsWith("creator_")) {
+    const creator = await prisma.creator.findUnique({
+      where: { id: draftId.slice("creator_".length) },
+      include: { specialties: { include: { specialty: true } } },
+    });
+    if (!creator?.userId) throw new Error("Draft not found");
+    const owned = await draftFromAccountUser(creator.userId);
+    if (!owned) throw new Error("Draft not found");
+    Object.assign(owned, patch);
+    if (patch.gender) owned.gender = normalizeProfileGender(patch.gender);
+    await syncPublishedCreatorProfile(owned);
+    return owned;
+  }
   const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
   if (patch.specialties) {

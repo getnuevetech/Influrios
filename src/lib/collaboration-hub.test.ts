@@ -41,7 +41,7 @@ describe("collaboration hub pipeline", () => {
   it("advances through funded → progress → review → released", () => {
     assert.equal(
       derivePipelineStage({ collaborationStatus: "accepted", fundingStatus: "awaiting_provider" }),
-      "Funded",
+      "Contract",
     );
     assert.equal(
       derivePipelineStage({
@@ -55,6 +55,14 @@ describe("collaboration hub pipeline", () => {
         collaborationStatus: "accepted",
         fundingStatus: "held",
         milestoneStatuses: ["submitted"],
+      }),
+      "Review",
+    );
+    assert.equal(
+      derivePipelineStage({
+        collaborationStatus: "accepted",
+        fundingStatus: "held",
+        milestoneStatuses: ["released", "pending", "pending"],
       }),
       "In Progress",
     );

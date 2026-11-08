@@ -183,6 +183,11 @@ export default async function DiscoverPage({ searchParams }: Props) {
   return (
     <div className="bg-[#F4F7FF] pb-16">
       <GuestGateBanner copy={searchGate.decision === "soft" ? searchGate.copy : ""} next={returnTo} />
+      {livePages ? null : (
+        <p className="mx-auto w-full max-w-[90rem] px-4 pt-4 text-sm font-semibold text-[#8A5A12] sm:px-6 lg:px-10">
+          Sample directory. These profiles are not live partners and cannot be booked from this page.
+        </p>
+      )}
       <section className="relative overflow-hidden border-b border-[#E4E9F5] bg-[radial-gradient(ellipse_at_top_right,_#E7DEFF_0%,_#F7FAFF_42%,_#EEF3FF_100%)]">
         <div className="pointer-events-none absolute -right-16 top-0 h-72 w-72 rounded-full bg-[#C4B5FD]/40 blur-3xl" />
         <div className="relative mx-auto grid w-full max-w-[90rem] items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-10 lg:py-14">

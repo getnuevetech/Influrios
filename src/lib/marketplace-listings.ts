@@ -45,11 +45,19 @@ export type MarketplaceBusinessRequestRow = BusinessRequest & {
   status: string;
   sortOrder: number;
   workspaceId?: string | null;
+  briefId?: string | null;
+  currency?: string | null;
+  deliverableSummary?: string | null;
+  platforms?: string[];
 };
 
 export type MarketplaceCreatorOpportunityRow = CreatorOpportunity & {
   purpose?: string | null;
   location?: string | null;
+  budget?: string | null;
+  currency?: string | null;
+  deliverableSummary?: string | null;
+  platforms?: string[];
   status: string;
   sortOrder: number;
 };
@@ -130,6 +138,10 @@ function mapBusinessRequestRow(row: {
   status: string;
   sortOrder: number;
   workspaceId: string | null;
+  briefId?: string | null;
+  currency?: string | null;
+  deliverableSummary?: string | null;
+  platforms?: string[];
 }): MarketplaceBusinessRequestRow {
   return {
     id: row.id,
@@ -145,6 +157,10 @@ function mapBusinessRequestRow(row: {
     status: row.status,
     sortOrder: row.sortOrder,
     workspaceId: row.workspaceId,
+    briefId: row.briefId ?? null,
+    currency: row.currency ?? "",
+    deliverableSummary: row.deliverableSummary ?? "",
+    platforms: row.platforms ?? [],
   };
 }
 
@@ -198,6 +214,10 @@ export async function listPublishedCreatorOpportunities(filters?: {
       summary: row.summary,
       purpose: row.purpose,
       location: row.location,
+      budget: row.budget,
+      currency: row.currency,
+      deliverableSummary: row.deliverableSummary,
+      platforms: row.platforms,
       status: row.status,
       sortOrder: row.sortOrder,
     }))
@@ -235,6 +255,10 @@ export async function upsertBusinessRequest(input: {
   sortOrder: number;
   /** Owning hub workspace; null clears ownership (admin catalog). */
   workspaceId?: string | null;
+  briefId?: string | null;
+  currency?: string | null;
+  deliverableSummary?: string | null;
+  platforms?: string[];
 }) {
   const brand = input.brand.trim();
   const category = input.category.trim();
@@ -268,6 +292,10 @@ export async function upsertBusinessRequest(input: {
     sortOrder: Number.isFinite(input.sortOrder) ? input.sortOrder : 0,
     publishedAt: input.status === "published" ? new Date() : null,
     ...(workspaceId !== undefined ? { workspaceId } : {}),
+    ...(input.briefId !== undefined ? { briefId: input.briefId?.trim() || null } : {}),
+    ...(input.currency !== undefined ? { currency: (input.currency ?? "").trim().toUpperCase() } : {}),
+    ...(input.deliverableSummary !== undefined ? { deliverableSummary: (input.deliverableSummary ?? "").trim() } : {}),
+    ...(input.platforms !== undefined ? { platforms: input.platforms } : {}),
   };
   if (input.id) {
     return prisma.marketplaceBusinessRequest.update({ where: { id: input.id }, data });
@@ -412,6 +440,7 @@ export async function createMarketplaceApplication(input: {
   fromSlug?: string;
   toSlug?: string;
   note?: string;
+  briefId?: string;
 }) {
   if (input.kind === "business_request" && !input.businessRequestId) {
     throw new Error("businessRequestId is required.");
@@ -422,11 +451,12 @@ export async function createMarketplaceApplication(input: {
   if (input.kind === "business_request" && input.businessRequestId) {
     const request = await prisma.marketplaceBusinessRequest.findUnique({
       where: { id: input.businessRequestId },
-      select: { status: true },
+      select: { status: true, briefId: true },
     });
     if (!request || request.status !== "published") {
       throw new Error("Business request must be published before applying or inviting.");
     }
+    input = { ...input, briefId: input.briefId ?? request.briefId ?? undefined };
   }
   if (input.kind === "creator_opportunity" && input.opportunityId) {
     const opportunity = await prisma.marketplaceCreatorOpportunity.findUnique({
@@ -463,6 +493,7 @@ export async function createMarketplaceApplication(input: {
         fromUserId: input.fromUserId,
         fromSlug: input.fromSlug,
         toSlug: input.toSlug,
+        briefId: input.briefId?.trim() || null,
         status: "REQUESTED",
         note: input.note?.trim() || null,
       },

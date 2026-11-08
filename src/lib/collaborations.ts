@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { collaborationMoveAllowed } from "@/lib/collaboration-access";
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator } from "@/lib/directory";
 import { entitlementsForPlan } from "@/lib/entitlements-db";
@@ -271,6 +272,9 @@ export async function advanceCollaboration(input: {
   id: string;
   to: CollaborationStatus;
   actorUserId: string | null;
+  actorSlug?: string | null;
+  /** Privileged override. Permission is checked by the admin action before this is set. */
+  adminOverride?: { email: string; reason: string };
   plan?: string;
   note?: string;
   enforceLimit?: boolean;
@@ -281,7 +285,20 @@ export async function advanceCollaboration(input: {
     const gate = transitionCollaboration(row.status, input.to);
     if (!gate.ok) return gate;
 
-    if (input.to === "sent" && input.enforceLimit !== false) {
+    if (input.adminOverride) {
+      const reason = input.adminOverride.reason.trim();
+      if (reason.length < 8) return { ok: false, error: "An admin status change needs a reason." };
+    } else {
+      if (!input.actorUserId) return { ok: false, error: "You cannot update this proposal." };
+      const allowed = collaborationMoveAllowed(
+        row,
+        { userId: input.actorUserId, creatorSlug: input.actorSlug },
+        input.to,
+      );
+      if (!allowed.ok) return allowed;
+    }
+
+    if (input.to === "sent" && input.enforceLimit !== false && !input.adminOverride) {
       const creator = await getDirectoryCreator(row.initiatorSlug);
       const plan = input.plan ?? storedCreatorPlan(creator?.planTier);
       const usage = await proposalUsage(row.initiatorSlug, plan);
@@ -291,21 +308,25 @@ export async function advanceCollaboration(input: {
     }
 
     const deciding = input.to === "accepted" || input.to === "declined" || input.to === "withdrawn";
-    await prisma.collaboration.update({
-      where: { id: row.id },
+    const written = await prisma.collaboration.updateMany({
+      where: { id: row.id, status: row.status },
       data: {
         status: input.to,
         sentAt: input.to === "sent" ? new Date() : row.sentAt,
         decidedAt: deciding ? new Date() : row.decidedAt,
         decidedByUserId: input.to === "accepted" || input.to === "declined" ? input.actorUserId : row.decidedByUserId,
-        events: {
-          create: {
-            fromStatus: row.status,
-            toStatus: input.to,
-            actorUserId: input.actorUserId,
-            note: input.note ?? null,
-          },
-        },
+      },
+    });
+    if (written.count !== 1) return { ok: false, error: "That proposal was already updated." };
+    await prisma.collaborationEvent.create({
+      data: {
+        collaborationId: row.id,
+        fromStatus: row.status,
+        toStatus: input.to,
+        actorUserId: input.actorUserId,
+        note: input.adminOverride
+          ? `admin:${input.adminOverride.email}: ${input.adminOverride.reason.trim()}`.slice(0, 500)
+          : (input.note ?? null),
       },
     });
     return { ok: true };

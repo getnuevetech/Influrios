@@ -9,7 +9,7 @@ import { assertCollabOsV1 } from "@/lib/collab-os";
 import {
   activateBrief,
   buildCampaignIntentFields,
-  closeWorkspaceBriefsForContract,
+  closeBriefForContract,
   createBrief,
   ensureOwnedBusinessWorkspace,
   getWorkspace,
@@ -183,6 +183,10 @@ export async function actionPostBusinessRequest(formData: FormData) {
       status: "published",
       sortOrder: 0,
       workspaceId: ws.businessId,
+      briefId: brief.id,
+      currency: brief.budgetCurrency,
+      deliverableSummary: brief.summary,
+      platforms: brief.platform ? [brief.platform] : [],
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not publish the request.";
@@ -354,32 +358,39 @@ export async function actionTransitionMarketplaceApplication(formData: FormData)
       )}`,
     );
   }
+  let updated: Awaited<ReturnType<typeof transitionMarketplaceApplication>>;
   try {
-    const updated = await transitionMarketplaceApplication({
+    updated = await transitionMarketplaceApplication({
       id: applicationId,
       toStatus,
       actorUserId: account.id,
       note: String(formData.get("note") ?? "") || undefined,
     });
-    if (toStatus === "ACCEPTED" || toStatus === "COLLABORATION_DRAFTED") {
-      await closeWorkspaceBriefsForContract(ws.businessId).catch(() => undefined);
+    if ((toStatus === "ACCEPTED" || toStatus === "COLLABORATION_DRAFTED") && updated.briefId) {
+      await closeBriefForContract(updated.briefId, ws.businessId).catch(() => undefined);
     }
     revalidateHub();
-    if (toStatus === "COLLABORATION_DRAFTED") {
-      const creator = updated.toSlug || updated.fromSlug;
-      const brief = ws.briefs.find((item) => item.status !== "closed") ?? ws.briefs[0] ?? null;
-      redirect(
-        creator
-          ? contractHrefFromCampaign({ creatorSlug: creator, brief })
-          : `${HUB}?drafted=1#applicants`,
-      );
-    }
-    redirect(`/collaboration/applications/${applicationId}?app=${encodeURIComponent(toStatus)}`);
   } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "digest" in error &&
+      String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")
+    ) {
+      throw error;
+    }
     redirect(
       `/collaboration/applications/${applicationId}?error=${encodeURIComponent(
         error instanceof Error ? error.message : "Transition failed.",
       )}`,
     );
   }
+  if (toStatus === "COLLABORATION_DRAFTED") {
+    const creator = updated.toSlug || updated.fromSlug;
+    const brief = updated.briefId ? ws.briefs.find((item) => item.id === updated.briefId) ?? null : null;
+    redirect(
+      creator ? contractHrefFromCampaign({ creatorSlug: creator, brief }) : `${HUB}?drafted=1#applicants`,
+    );
+  }
+  redirect(`/collaboration/applications/${applicationId}?app=${encodeURIComponent(toStatus)}`);
 }

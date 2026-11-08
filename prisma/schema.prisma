@@ -517,6 +517,10 @@ model SocialConnection {
   consentVersion  String?
   consentedAt     DateTime?
   stateToken      String?        @unique
+  /** Exact redirect_uri sent on this authorize attempt. Reused at token exchange. */
+  oauthRedirectUri String?
+  /** When this authorize attempt started. Attempts expire instead of living until use. */
+  oauthStartedAt  DateTime?
   /** X OAuth 2.0 PKCE verifier. Cleared after the code exchange. */
   pkceVerifier    String?
   externalId      String?
@@ -818,6 +822,12 @@ model MarketplaceBusinessRequest {
   /** Owning business workspace when posted from the hub; null for admin catalog seeds. */
   workspaceId  String?
   workspace    BusinessWorkspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  /** Campaign intent this request was published from. One acceptance closes only this brief. */
+  briefId      String?
+  currency     String   @default("")
+  applicationDeadline DateTime?
+  deliverableSummary String @default("")
+  platforms    String[] @default([])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   applications MarketplaceApplication[]
@@ -834,6 +844,11 @@ model MarketplaceCreatorOpportunity {
   summary      String
   purpose      String?
   location     String?
+  budget       String   @default("")
+  currency     String   @default("")
+  applicationDeadline DateTime?
+  deliverableSummary String @default("")
+  platforms    String[] @default([])
   status       String   @default("published")
   sortOrder    Int      @default(0)
   publishedAt  DateTime?
@@ -904,6 +919,8 @@ model MarketplaceApplication {
   fromUserId        String?
   fromSlug          String?
   toSlug            String?
+  /** Campaign intent closed when this application is accepted. */
+  briefId           String?
   status            String                         @default("REQUESTED")
   note              String?
   createdAt         DateTime                       @default(now())
@@ -1896,6 +1913,8 @@ model FundingMilestone {
   submittedAt       DateTime?
   autoApproveAt     DateTime?
   approvedAt        DateTime?
+  /// Submission deadline for the deliverable. Separate from review and payout dates.
+  deliverableDueAt  DateTime?
   /// Dev §8 / §16 — set when release is authorized; sweep queues provider release when due.
   releaseScheduledAt DateTime?
   /// Dev §16 — set when provider reports payout.failed; cleared on successful release or retry reset.

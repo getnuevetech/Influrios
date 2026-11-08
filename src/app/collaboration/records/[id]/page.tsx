@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { actionAdvanceCollaboration, actionQueueSignature } from "@/app/collaboration/records/actions";
 import { getAccountSession } from "@/lib/accounts";
+import { allowedCollaborationMoves, canReadCollaboration } from "@/lib/collaboration-access";
+import { getCreatorSessionDraft } from "@/lib/claim";
 import { COLLABORATION_STATUSES, getCollaboration, reasonList, type CollaborationStatus } from "@/lib/collaborations";
 import { prisma } from "@/lib/db";
 import { activeSigningProvider } from "@/lib/providers";
@@ -42,13 +44,20 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
   if (!account) {
     redirect(`/login?next=${encodeURIComponent(`/collaboration/records/${id}`)}`);
   }
+  const [draft, creator] = await Promise.all([
+    getCreatorSessionDraft().catch(() => null),
+    prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } }).catch(() => null),
+  ]);
+  const actor = { userId: account.id, creatorSlug: creator?.slug || draft?.slug || null };
+  if (!canReadCollaboration(record, actor)) notFound();
+  const allowed = new Set(allowedCollaborationMoves(record, actor));
   const initiator = await getDirectoryCreator(record.initiatorSlug);
   const recipient = await getDirectoryCreator(record.recipientSlug);
   const reasons = reasonList(record.reasons);
   const status = (COLLABORATION_STATUSES as readonly string[]).includes(record.status)
     ? (record.status as CollaborationStatus)
     : "draft";
-  const actions = NEXT_ACTIONS[status];
+  const actions = NEXT_ACTIONS[status].filter((action) => allowed.has(action.to));
   const signing = await activeSigningProvider().catch(() => null);
   const signatures = await prisma.signatureRequest
     .findMany({ where: { collaborationId: record.id }, orderBy: { createdAt: "desc" }, include: { provider: true } })

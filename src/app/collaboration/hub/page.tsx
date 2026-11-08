@@ -82,27 +82,37 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
     const milestones = await prisma.fundingMilestone
       .findMany({
         where: {
-          releaseScheduledAt: { not: null },
           funding: { creatorSlug: draft.slug },
+          OR: [
+            { deliverableDueAt: { gte: new Date() } },
+            { releaseScheduledAt: { gte: new Date() } },
+          ],
         },
-        orderBy: { releaseScheduledAt: "asc" },
+        orderBy: [{ deliverableDueAt: "asc" }, { releaseScheduledAt: "asc" }],
         take: 8,
         select: {
           id: true,
           title: true,
+          deliverableDueAt: true,
           releaseScheduledAt: true,
           funding: { select: { title: true, businessName: true } },
         },
       })
-      .catch(() => []);
-    const deadlines = milestones
-      .filter((row) => row.releaseScheduledAt && row.releaseScheduledAt.getTime() >= Date.now())
-      .map((row) => ({
-        id: row.id,
-        title: row.funding.businessName || row.funding.title,
-        detail: row.title,
-        at: row.releaseScheduledAt as Date,
-      }));
+      .catch(() => null);
+    const deadlines = (milestones ?? [])
+      .filter((row) => (row.deliverableDueAt ?? row.releaseScheduledAt) != null)
+      .flatMap((row) => {
+        const at = row.deliverableDueAt ?? row.releaseScheduledAt;
+        if (!at) return [];
+        return [
+          {
+            id: row.id,
+            title: row.funding.businessName || row.funding.title,
+            detail: row.deliverableDueAt ? row.title : `Payout date · ${row.title}`,
+            at,
+          },
+        ];
+      });
     const names: Record<string, string> = {};
     for (const row of hub.pipeline) {
       const creatorRow = bySlug.get(row.counterparty);
@@ -115,6 +125,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
         creatorSlug={draft.slug}
         names={names}
         deadlines={deadlines}
+        deadlinesUnavailable={milestones === null}
         dueThisWeek={deadlines.filter((row) => row.at.getTime() <= weekEnd.getTime()).length}
         tab={params.tab}
         query={params.q?.trim() ?? ""}
@@ -157,9 +168,18 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
     .filter((item) => item.creatorSlug !== draft.slug)
     .filter((item) => {
       const row = bySlug.get(item.creatorSlug);
-      if (params.location && row && !`${row.locationCity} ${row.locationCountry}`.toLowerCase().includes(params.location.toLowerCase())) {
-        return false;
+      const openingPlace = `${item.location ?? ""}`.toLowerCase();
+      if (params.location && !openingPlace.includes(params.location.toLowerCase())) {
+        const profilePlace = `${row?.locationCity ?? ""} ${row?.locationCountry ?? ""}`.toLowerCase();
+        if (!openingPlace && !profilePlace.includes(params.location.toLowerCase())) return false;
+        if (openingPlace && !openingPlace.includes(params.location.toLowerCase())) return false;
       }
+      if (platform) {
+        const hay = `${item.lookingFor} ${item.summary} ${item.purpose ?? ""} ${(item.platforms ?? []).join(" ")}`.toLowerCase();
+        if (!hay.includes(platform)) return false;
+      }
+      if (params.budget && item.budget && item.budget !== params.budget) return false;
+      if (params.budget && !item.budget) return false;
       if (params.category) {
         const hay = `${item.lookingFor} ${item.summary} ${row?.specialties.join(" ") ?? ""}`.toLowerCase();
         if (!hay.includes(params.category.toLowerCase())) return false;

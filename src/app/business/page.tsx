@@ -15,7 +15,7 @@ export const metadata = {
     "Find the right influencers, get AI-powered suggestions, and run protected collaborations on Influrios.",
 };
 
-type Props = { searchParams: Promise<{ error?: string }> };
+type Props = { searchParams: Promise<{ error?: string; plan?: string }> };
 
 export default async function BusinessPage({ searchParams }: Props) {
   const params = await searchParams;
@@ -85,6 +85,8 @@ export default async function BusinessPage({ searchParams }: Props) {
         landing={landingView}
         recommended={recommended}
         error={params.error}
+        sampleProfiles={!livePages}
+        plan={params.plan}
         legalTitles={{
           terms: terms?.title,
           electronicConsent: electronicConsent?.title,

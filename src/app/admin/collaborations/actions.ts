@@ -34,6 +34,10 @@ export async function actionSetCollaborationStatus(formData: FormData) {
   if (!isCollaborationStatus(status)) {
     redirect("/admin/collaborations?error=Unknown status.");
   }
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (reason.length < 8) {
+    redirect("/admin/collaborations?error=Add a reason of at least 8 characters for this status change.");
+  }
   const current = await prisma.collaboration.findUnique({ where: { id }, select: { status: true } });
   if (!current) redirect("/admin/collaborations?error=That proposal was not found.");
   if (current.status === status) redirect("/admin/collaborations?saved=status");
@@ -41,9 +45,20 @@ export async function actionSetCollaborationStatus(formData: FormData) {
     id,
     to: status,
     actorUserId: null,
-    note: `admin:${session.email}`,
+    adminOverride: { email: session.email, reason },
     enforceLimit: false,
   });
   if (!result.ok) redirect(`/admin/collaborations?error=${encodeURIComponent(result.error)}`);
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: session.email,
+        action: "collaboration.status",
+        objectType: "Collaboration",
+        objectId: id,
+        after: { from: current.status, to: status, reason },
+      },
+    })
+    .catch(() => undefined);
   redirect("/admin/collaborations?saved=status");
 }

@@ -409,7 +409,7 @@ export const DEFAULT_BUSINESS_LANDING: BusinessLandingConfig = {
         detail: "/month",
         points: ["Basic search", "Post collaboration requests", "3 active collaborations"],
         ctaLabel: "Get Started",
-        href: "/register?next=%2Fcollaboration%2Fbusiness",
+        href: "/business?plan=STARTER#create-profile",
       },
       {
         code: "GROWTH",
@@ -418,7 +418,7 @@ export const DEFAULT_BUSINESS_LANDING: BusinessLandingConfig = {
         detail: "/month",
         points: ["AI influencer suggestions", "Custom milestones", "10 active collaborations", "Basic analytics"],
         ctaLabel: "Get Started",
-        href: "/register?next=%2Fcollaboration%2Fbusiness%3Fplan%3DGROWTH",
+        href: "/business?plan=GROWTH#create-profile",
         popular: true,
       },
       {
@@ -428,7 +428,7 @@ export const DEFAULT_BUSINESS_LANDING: BusinessLandingConfig = {
         detail: "/month",
         points: ["Multi-influencer campaigns", "Custom contract terms", "Advanced analytics", "Priority listing"],
         ctaLabel: "Get Started",
-        href: "/register?next=%2Fcollaboration%2Fbusiness%3Fplan%3DPRO",
+        href: "/business?plan=PRO#create-profile",
       },
       {
         code: "ENTERPRISE",
@@ -437,7 +437,7 @@ export const DEFAULT_BUSINESS_LANDING: BusinessLandingConfig = {
         detail: "pricing",
         points: ["Unlimited collaborations", "API access", "Dedicated support", "Agency seats"],
         ctaLabel: "Contact Sales",
-        href: "/register?next=%2Fcollaboration%2Fbusiness",
+        href: "/business?plan=ENTERPRISE#create-profile",
       },
     ],
   },

@@ -3,7 +3,12 @@ import { verifyMarketplaceSignature } from "@/lib/ledger";
 import { applyIntroFeeFromWebhook } from "@/lib/managed-matching";
 import { applyAirwallexMentorshipWebhook } from "@/lib/mentorship";
 import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
-import { parseAirwallexIntroFeeWebhook, parseAirwallexWebhook, verifyAirwallexSignature } from "@/lib/providers/airwallex";
+import {
+  parseAirwallexIntroFeeWebhook,
+  parseAirwallexWebhook,
+  verifyAirwallexSignature,
+  verifyAirwallexWebhook,
+} from "@/lib/providers/airwallex";
 import { applyMarketplaceEvent, marketplaceWebhookSecret } from "@/lib/marketplace-ledger";
 import { createMarketplaceSignedWebhookAdapter } from "@/lib/payment-provider-adapter";
 import { applyRegionalCharge, gatewayWebhookSecret, readRegionalWebhook } from "@/lib/providers/regional-charge";
@@ -42,9 +47,11 @@ export async function POST(request: NextRequest) {
   if (mpesaSig || headerProvider === "mpesa") {
     return regionalResponse("mpesa", body, mpesaSig || request.headers.get("x-influrios-signature"));
   }
+  const nativeSignature = request.headers.get("x-signature");
+  const nativeTimestamp = request.headers.get("x-timestamp");
   const airwallexSig = request.headers.get("x-airwallex-signature");
-  if (airwallexSig || headerProvider === "airwallex") {
-    const signature = airwallexSig || request.headers.get("x-influrios-signature");
+  if (nativeSignature || nativeTimestamp || airwallexSig || headerProvider === "airwallex") {
+    const signature = nativeSignature || airwallexSig || request.headers.get("x-influrios-signature");
     const mentorship = await applyAirwallexMentorshipWebhook(body, signature);
     if (!mentorship.fallThrough) {
       return NextResponse.json(mentorship.ok ? mentorship : { error: mentorship.error }, {
@@ -55,7 +62,17 @@ export async function POST(request: NextRequest) {
     if (!settings?.webhookSecret) {
       return NextResponse.json({ error: "Airwallex is not ready." }, { status: 503 });
     }
-    if (!verifyAirwallexSignature(body, signature, settings.webhookSecret)) {
+    if (nativeSignature || nativeTimestamp) {
+      const checked = verifyAirwallexWebhook({
+        body,
+        signature,
+        timestamp: nativeTimestamp,
+        secret: settings.webhookSecret,
+      });
+      if (!checked.ok) {
+        return NextResponse.json({ error: "Signature did not match." }, { status: 401 });
+      }
+    } else if (!verifyAirwallexSignature(body, signature, settings.webhookSecret)) {
       return NextResponse.json({ error: "Signature did not match." }, { status: 401 });
     }
     const introEvent = parseAirwallexIntroFeeWebhook(body);

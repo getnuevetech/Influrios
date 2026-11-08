@@ -23,6 +23,7 @@ import {
   refundAirwallexPayment,
   releaseAirwallexSplit,
   verifyAirwallexSignature,
+  verifyAirwallexWebhook,
 } from "./airwallex";
 
 describe("Airwallex adapter", () => {
@@ -37,6 +38,38 @@ describe("Airwallex adapter", () => {
     const signature = createHmac("sha256", secret).update(held).digest("hex");
     assert.equal(verifyAirwallexSignature(held, signature, secret), true);
     assert.equal(verifyAirwallexSignature(held, "nope", secret), false);
+    const timestamp = "1730000000";
+    const native = createHmac("sha256", secret).update(`${timestamp}${held}`).digest("hex");
+    assert.equal(
+      verifyAirwallexWebhook({
+        body: held,
+        signature: native,
+        timestamp,
+        secret,
+        now: 1730000000 * 1000,
+      }).ok,
+      true,
+    );
+    assert.equal(
+      verifyAirwallexWebhook({
+        body: `${held} `,
+        signature: native,
+        timestamp,
+        secret,
+        now: 1730000000 * 1000,
+      }).ok,
+      false,
+    );
+    assert.equal(
+      verifyAirwallexWebhook({
+        body: held,
+        signature: native,
+        timestamp,
+        secret,
+        now: 1730000000 * 1000 + 10 * 60 * 1000,
+      }).ok,
+      false,
+    );
     const parsed = parseAirwallexWebhook(held);
     assert.equal(parsed.ok && parsed.eventType, "funding.held");
     assert.equal(parsed.ok && parsed.eventId, "evt-1");

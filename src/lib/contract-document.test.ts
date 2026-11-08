@@ -232,7 +232,7 @@ Creator compensation: $900.00
    Signed in Influrios - creator: Ada <ada@example.com> at 2026-10-18T12:00:00.000Z
 `;
     assert.equal(isLegacyContractBody(legacy), true);
-    const upgraded = upgradeLegacyContractBody({
+    const frozen = upgradeLegacyContractBody({
       id: "doc_legacy_1",
       title: "Spring launch",
       status: "sent",
@@ -259,15 +259,42 @@ Creator compensation: $900.00
         },
       ],
     });
+    assert.equal(frozen, legacy);
+    const upgraded = upgradeLegacyContractBody({
+      id: "doc_legacy_1",
+      title: "Spring launch",
+      status: "sent",
+      renderedBody: legacy,
+      signingChannel: "native",
+      createdAt: "2026-10-07T00:00:00.000Z",
+      parties: [
+        {
+          role: "business",
+          name: "North Co",
+          email: "north@example.com",
+          status: "pending",
+          attestation: "",
+          signedAt: null,
+        },
+        {
+          role: "creator",
+          name: "Ada",
+          email: "ada@example.com",
+          creatorSlug: "ada",
+          shareBps: 10000,
+          status: "pending",
+          attestation: "",
+        },
+      ],
+    });
     assert.match(upgraded, /Commercial Summary/);
     assert.match(upgraded, /19\. Electronic Signature/);
     assert.match(upgraded, /\[\[SIG_INK:1\]\]/);
     assert.match(upgraded, /\[\[SIG_INK:2\]\]/);
     assert.match(upgraded, /Managed campaign/);
     assert.match(upgraded, /\$1,000\.00/);
-    assert.match(upgraded, /Signed in Influrios - business: North Co/);
+    assert.match(upgraded, /\/sig1\//);
     assert.match(upgraded, /\/sig2\//);
-    assert.equal(upgraded.includes("/sig1/"), false);
     const resolved = resolveContractBodyForChrome({
       id: "doc_legacy_1",
       title: "Spring launch",
@@ -290,9 +317,9 @@ Creator compensation: $900.00
           role: "business",
           name: "North Co",
           email: "north@example.com",
-          status: "signed",
-          attestation: "North Co",
-          signedAt: "2026-10-18T12:00:00.000Z",
+          status: "pending",
+          attestation: "",
+          signedAt: null,
         },
         {
           role: "creator",
@@ -305,6 +332,18 @@ Creator compensation: $900.00
         },
       ],
     });
+    const signedPdf = buildContractChromePdf({
+      id: "doc_legacy_1",
+      title: "Spring launch",
+      status: "signed",
+      renderedBody: legacy,
+      parties: [
+        { role: "business", name: "North Co", email: "north@example.com", status: "signed" },
+        { role: "creator", name: "Ada", email: "ada@example.com", status: "signed" },
+      ],
+    });
+    assert.equal(signedPdf.upgraded, false);
+    assert.equal(signedPdf.body, legacy);
     assert.equal(chromePdf.upgraded, true);
     assert.match(chromePdf.body, /Commercial Summary/);
     const raw = chromePdf.pdf.toString("latin1");

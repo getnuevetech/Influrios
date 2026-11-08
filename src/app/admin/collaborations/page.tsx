@@ -114,6 +114,14 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
                   <td className="px-4 py-3">
                     <form action={actionSetCollaborationStatus} className="flex items-center gap-2">
                       <input type="hidden" name="id" value={record.id} />
+                      <input
+                        name="reason"
+                        required
+                        minLength={8}
+                        placeholder="Reason"
+                        disabled={!canEdit}
+                        className="w-36 rounded-lg border border-border px-2 py-1 text-xs"
+                      />
                       <select name="status" defaultValue={record.status} disabled={!canEdit} className="rounded-lg border border-border px-2 py-1">
                         {COLLABORATION_STATUSES.map((status) => (
                           <option key={status} value={status}>

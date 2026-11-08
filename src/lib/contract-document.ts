@@ -433,13 +433,22 @@ export type ContractChromeDocument = {
   }[];
 };
 
+/** A signature, or a terminal status, freezes the stored words and PDF. */
+export function contractTermsAreFrozen(document: {
+  status: string;
+  parties: { status: string }[];
+}): boolean {
+  if (document.status === "signed" || document.status === "declined" || document.status === "voided") return true;
+  return document.parties.some((party) => party.status === "signed");
+}
+
 /**
- * Rebuild a legacy agreement into the approved Influrios template chrome,
- * preserving commercial fields parsed from the old body and re-stamping
- * any signatures already recorded on party rows.
+ * Rebuild an unsigned legacy agreement into the current template.
+ * Signed or partially signed agreements are returned unchanged. Do not restamp signatures onto new clauses.
  */
 export function upgradeLegacyContractBody(document: ContractChromeDocument): string {
   const body = document.renderedBody || "";
+  if (contractTermsAreFrozen(document)) return body;
   if (!isLegacyContractBody(body)) return body;
 
   const business = document.parties.find((party) => party.role === "business");
@@ -525,12 +534,12 @@ export function upgradeLegacyContractBody(document: ContractChromeDocument): str
   return next;
 }
 
-/** Always return chrome-ready body text (upgrades legacy stores in memory). */
+/** Unsigned legacy text may be converted. Executed text is returned exactly as stored. */
 export function resolveContractBodyForChrome(document: ContractChromeDocument): {
   body: string;
   upgraded: boolean;
 } {
-  if (!isLegacyContractBody(document.renderedBody)) {
+  if (contractTermsAreFrozen(document) || !isLegacyContractBody(document.renderedBody)) {
     return { body: document.renderedBody, upgraded: false };
   }
   return { body: upgradeLegacyContractBody(document), upgraded: true };
@@ -959,23 +968,12 @@ export async function signNativeContractParty(input: {
     email: party.email,
     signedAt,
   });
-  // Upgrade legacy bodies first so /sigN/ and [[SIG_INK:N]] anchors match the new chrome.
-  const chromeReady = resolveContractBodyForChrome({
-    id: document.id,
-    title: document.title,
-    status: document.status,
-    renderedBody: document.renderedBody,
-    signingChannel: document.signingChannel,
-    createdAt: document.createdAt,
-    parties: document.parties,
-  }).body;
-  const nextBody = applyNativeSignatureAnchor(chromeReady, partyIndex + 1, attestation);
+  const nextBody = applyNativeSignatureAnchor(document.renderedBody, partyIndex + 1, attestation);
   const nextParties = document.parties.map((row) =>
     row.id === party.id
       ? { ...row, status: "signed", attestation: typedName.slice(0, 160), signedAt }
       : row,
   );
-  const documentStatus = nextParties.every((row) => row.status === "signed") ? "signed" : "sent";
   const pdfBytes = renderContractPdf(nextBody, {
     title: document.title,
     agreementId: document.id,
@@ -984,21 +982,32 @@ export async function signNativeContractParty(input: {
     pageEndorsements: true,
   });
 
-  await prisma.$transaction([
-    prisma.contractParty.update({
-      where: { id: party.id },
-      data: { status: "signed", attestation: typedName.slice(0, 160), signedAt },
-    }),
-    prisma.contractDocument.update({
-      where: { id: document.id },
+  const signed = await prisma.$transaction(async (tx) => {
+    const partyWrite = await tx.contractParty.updateMany({
+      where: { id: party.id, status: "pending" },
+      data: { status: "signed", attestation: typedName.slice(0, 160), signedAt, userId: input.userId },
+    });
+    if (partyWrite.count !== 1) return null;
+    const parties = await tx.contractParty.findMany({
+      where: { documentId: document.id },
+      orderBy: { createdAt: "asc" },
+    });
+    const aggregate = parties.every((row) => row.status === "signed") ? "signed" : "sent";
+    await tx.contractDocument.updateMany({
+      where: { id: document.id, status: { in: ["draft", "sent"] } },
       data: {
-        status: documentStatus,
+        status: aggregate,
         renderedBody: nextBody,
         pdfBytes: new Uint8Array(pdfBytes),
         envelopeId: document.envelopeId || nativeEnvelopeId(document.id),
       },
-    }),
-  ]);
+    });
+    return aggregate as "sent" | "signed";
+  });
+  if (!signed) {
+    return { ok: false as const, error: "This agreement was already updated. Refresh and try again. Nothing new was signed." };
+  }
+  const documentStatus = signed;
 
   const partyEmails = document.parties.map((row) => ({ email: row.email, name: row.name }));
   if (documentStatus === "signed") {
