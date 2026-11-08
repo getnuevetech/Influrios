@@ -6,6 +6,9 @@ import {
   interpretSocialProfile,
   isLiveSocialAccount,
   isMetaFacebookDialogUrl,
+  isMetaGraphTokenUrl,
+  metaOAuthErrorMessage,
+  metaTokenRedirectMismatch,
   normalizeMetaAppId,
   normalizeMetaConfigId,
   parseFacebookPageMetrics,
@@ -237,6 +240,14 @@ describe("live social metrics", () => {
     assert.match(badApp.ok ? "" : badApp.error, /Invalid app ID|numeric App ID/i);
     const good = validateMetaUnifiedLoginIds({ appId: "987654321098765", configId: "112233445566" });
     assert.equal(good.ok, true);
+
+    assert.equal(isMetaGraphTokenUrl("https://graph.facebook.com/v22.0/oauth/access_token"), true);
+    assert.equal(isMetaGraphTokenUrl("https://api.instagram.com/oauth/access_token"), false);
+    assert.match(
+      metaOAuthErrorMessage({ error: { message: "Error validating verification code. redirect_uri" } }),
+      /redirect_uri/i,
+    );
+    assert.equal(metaTokenRedirectMismatch("Error validating verification code. Please make sure your redirect_uri is identical"), true);
   });
 
   it("keeps OAuth success notices separate from hard metric failure", () => {

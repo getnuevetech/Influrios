@@ -287,12 +287,13 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             {network.code === "facebook" ? (
               <p className="sm:col-span-2 text-xs text-muted">
                 Connects a <span className="font-semibold">Facebook Page</span> via{" "}
-                <code className="text-[11px]">/me/accounts</code>. Newer Meta apps reject freeform{" "}
-                <code className="text-[11px]">scope=</code> and show{" "}
-                <span className="font-semibold">Invalid parameter: config_id is required</span> unless you paste a
-                Facebook Login for Business Configuration ID that includes{" "}
-                <code className="text-[11px]">{network.configPermissions}</code>. Development vs Live mode does not remove
-                that requirement.
+                <code className="text-[11px]">/me/accounts</code>. Use the same{" "}
+                <span className="font-semibold">Meta App ID / Secret</span> as Instagram Unified Login, plus a
+                Configuration ID that includes <code className="text-[11px]">{network.configPermissions}</code>. The
+                configuration’s redirect URI must be{" "}
+                <code className="text-[11px]">{callbackAbsoluteUrl()}</code>. “The network did not return an access
+                token” usually means the Facebook row’s App Secret is wrong, or that configuration’s redirect URI does
+                not match.
               </p>
             ) : null}
             {network.code === "instagram" ? (
