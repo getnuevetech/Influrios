@@ -380,6 +380,15 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                 unencoded — do not add <code className="text-[11px]">user.info.profile</code>.
               </p>
             ) : null}
+            {network.code === "x" ? (
+              <p className="sm:col-span-2 text-xs text-muted">
+                X requires OAuth 2.0 with PKCE. In the X developer portal, turn on User authentication for a Web App
+                and set the callback to <code className="text-[11px]">{callbackAbsoluteUrl()}</code> (https, no
+                trailing slash). The app type must be a confidential web app with a client id and secret. Scopes stay{" "}
+                <code className="text-[11px]">users.read tweet.read</code>. A page that says you were not able to give
+                access means that callback or those scopes are not saved on the app.
+              </p>
+            ) : null}
             {network.code === "youtube" ? (
               <p className="sm:col-span-2 text-xs text-muted">
                 YouTube stores subscribers + channel views. Google’s unverified-app interstitial is expected while the

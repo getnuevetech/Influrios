@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "crypto";
 import { formatFollowers } from "@/lib/seed-data";
 
 /** Current Meta Graph API version used for Instagram / Facebook defaults. */
@@ -79,9 +80,9 @@ export const SOCIAL_NETWORKS = [
     supportsConfigId: false,
     authorizeHosts: ["twitter.com", "x.com"],
     apiHosts: ["api.twitter.com", "api.x.com"],
-    authorizeUrl: "https://twitter.com/i/oauth2/authorize",
+    authorizeUrl: "https://x.com/i/oauth2/authorize",
     tokenUrl: "https://api.twitter.com/2/oauth2/token",
-    profileUrl: "https://api.twitter.com/2/users/me",
+    profileUrl: "https://api.twitter.com/2/users/me?user.fields=public_metrics,username,name",
     scopes: "users.read tweet.read",
     configPermissions: "users.read tweet.read",
   },
@@ -193,6 +194,12 @@ export const INSTAGRAM_WEAK_SCOPES = new Set([
   "instagram_basic,pages_show_list",
   "instagram_basic,pages_show_list,pages_read_engagement",
 ]);
+
+/** X OAuth 2.0 requires S256 PKCE. The verifier stays on the server; only the challenge is sent. */
+export function createXPkce(verifier = randomBytes(32).toString("base64url")) {
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  return { verifier, challenge, method: "S256" as const };
+}
 
 export function socialNetwork(codeOrPlatform: string) {
   const key = codeOrPlatform.trim().toLowerCase();
@@ -676,6 +683,21 @@ export function prepareSocialProfileUrl(profileUrl: string, platform?: string | 
       if (!url.searchParams.get("part")) url.searchParams.set("part", "snippet,statistics");
       if (!url.searchParams.get("mine") && !url.searchParams.get("id") && !url.searchParams.get("forHandle")) {
         url.searchParams.set("mine", "true");
+      }
+      return url.toString();
+    } catch {
+      return candidate;
+    }
+  }
+
+  const looksX = network?.code === "x" || /api\.(twitter|x)\.com\/2\/users\/me/i.test(candidate);
+  if (looksX) {
+    try {
+      const url = new URL(candidate);
+      if (url.hostname !== "api.twitter.com" && url.hostname !== "api.x.com") return candidate;
+      url.pathname = "/2/users/me";
+      if (!url.searchParams.get("user.fields")) {
+        url.searchParams.set("user.fields", "public_metrics,username,name");
       }
       return url.toString();
     } catch {
