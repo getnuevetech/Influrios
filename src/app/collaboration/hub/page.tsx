@@ -117,6 +117,13 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
         deadlines={deadlines}
         dueThisWeek={deadlines.filter((row) => row.at.getTime() <= weekEnd.getTime()).length}
         tab={params.tab}
+        query={params.q?.trim() ?? ""}
+        savedMatches={hub.saved.map((row) => ({
+          id: row.saveId,
+          title: `${bySlug.get(row.partyASlug)?.displayName || row.partyASlug} × ${bySlug.get(row.partyBSlug)?.displayName || row.partyBSlug}`,
+          detail: row.why,
+          href: `/collaboration/propose?a=${encodeURIComponent(row.partyASlug)}&b=${encodeURIComponent(row.partyBSlug)}&from=${encodeURIComponent(draft.slug)}`,
+        }))}
       />
     );
   }
