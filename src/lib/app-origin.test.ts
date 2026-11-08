@@ -85,5 +85,8 @@ describe("social callback origin wiring", () => {
     assert.match(connect, /callbackAbsoluteUrl/);
     assert.match(readFileSync("src/app/admin/social/page.tsx", "utf8"), /callbackAbsoluteUrl/);
     assert.match(readFileSync("next.config.ts", "utf8"), /bodySizeLimit:\s*"10mb"/);
+    const compose = readFileSync("docker-compose.yml", "utf8");
+    assert.match(compose, /NEXT_PUBLIC_APP_URL: \$\{NEXT_PUBLIC_APP_URL:-https:\/\/influrios\.com\}/);
+    assert.equal(compose.includes("NEXT_PUBLIC_APP_URL:-http://localhost:3000"), false);
   });
 });

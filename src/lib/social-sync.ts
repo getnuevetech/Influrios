@@ -40,7 +40,7 @@ export const SOCIAL_NETWORKS = [
     platform: "TIKTOK",
     name: "TikTok",
     clientIdParam: "client_key",
-    tokenStyle: "json" as const,
+    tokenStyle: "form" as const,
     locksOAuthEndpoints: true,
     supportsConfigId: false,
     authorizeHosts: ["www.tiktok.com"],
@@ -986,8 +986,8 @@ export function buildAuthorizeUrl(input: {
   /** Extra query params (e.g. Google access_type=offline). */
   extraParams?: Record<string, string>;
   /**
-   * TikTok Login Kit compares redirect_uri to the portal value before decoding.
-   * Percent-encoding https:// makes TikTok report redirect_uri. Scope commas stay raw.
+   * TikTok Login Kit requires application/x-www-form-urlencoded query parameters.
+   * redirect_uri is encoded once. Scope commas stay raw.
    */
   tiktokQuery?: boolean;
 }) {
@@ -1019,13 +1019,14 @@ export function buildAuthorizeUrl(input: {
     .filter(Boolean)
     .join(",");
   if (!clientKey || !scopes) return null;
-  // TikTok's own sample concatenates redirect_uri without percent-encoding.
+  // Order and encoding follow Login Kit for Web (updated 2026-08-04):
+  // client_key, scope, response_type, redirect_uri, state. form-urlencoded.
   return (
     "https://www.tiktok.com/v2/auth/authorize/" +
     `?client_key=${encodeURIComponent(clientKey)}` +
-    "&response_type=code" +
     `&scope=${scopes}` +
-    `&redirect_uri=${redirectUri}` +
+    "&response_type=code" +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&state=${encodeURIComponent(input.state.trim())}`
   );
 }
