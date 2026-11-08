@@ -880,6 +880,19 @@ model MarketplaceMatchSave {
   @@index([guestKey])
 }
 
+/// A creator's saved brand campaign or influencer opening. Not a match between two creators.
+model SavedMarketplaceListing {
+  id        String   @id @default(cuid())
+  userId    String
+  /// business_request | creator_opportunity
+  kind      String
+  listingId String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind, listingId])
+  @@index([userId])
+}
+
 /// Invitation/application against a marketplace listing (§4.3 state machine).
 model MarketplaceApplication {
   id                String                         @id @default(cuid())
