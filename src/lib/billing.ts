@@ -434,17 +434,34 @@ export function resolveAppOrigin(input?: { proto?: string | null; host?: string 
   );
 }
 
+/** influrios.com and www.influrios.com share one OAuth callback. TikTok matches it exactly. */
+export function canonicalOAuthOrigin(origin: string): string {
+  try {
+    const url = new URL(origin);
+    const host = url.hostname.toLowerCase();
+    if (host === "influrios.com" || host === "www.influrios.com") return "https://influrios.com";
+    return url.origin;
+  } catch {
+    return origin.replace(/\/$/, "");
+  }
+}
+
 /**
  * Origin placed in an OAuth redirect_uri.
  * A localhost or http env value must not override the public https host the browser used.
+ * A request to influrios.com always uses https://influrios.com, even when the image was built without that env.
  */
 export function oauthAppOrigin(input?: { proto?: string | null; host?: string | null }): string {
-  const fromEnv = configuredOrigin();
-  if (fromEnv && isPublicHttpsOrigin(fromEnv)) return fromEnv;
   const proto = (input?.proto ?? "https").replace(/:$/, "") || "https";
-  const host = (input?.host ?? "").split(",")[0]?.trim() ?? "";
-  const fromHost = originIfUsable(`${proto}://${host}`);
-  if (fromHost && isPublicHttpsOrigin(fromHost)) return fromHost;
+  const hostHeader = (input?.host ?? "").split(",")[0]?.trim() ?? "";
+  const fromHost = originIfUsable(`${proto}://${hostHeader}`);
+  if (fromHost) {
+    const canonical = canonicalOAuthOrigin(fromHost);
+    if (canonical === "https://influrios.com") return canonical;
+  }
+  const fromEnv = configuredOrigin();
+  if (fromEnv && isPublicHttpsOrigin(fromEnv)) return canonicalOAuthOrigin(fromEnv);
+  if (fromHost && isPublicHttpsOrigin(fromHost)) return canonicalOAuthOrigin(fromHost);
   return fromEnv || fromHost || getAppOrigin();
 }
 

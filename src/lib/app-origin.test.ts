@@ -55,6 +55,9 @@ describe("oauthAppOrigin", () => {
       process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
       process.env.APP_URL = "";
       assert.equal(oauthAppOrigin({ proto: "https", host: "influrios.com" }), "https://influrios.com");
+      assert.equal(oauthAppOrigin({ proto: "https", host: "www.influrios.com" }), "https://influrios.com");
+      process.env.NEXT_PUBLIC_APP_URL = "https://staging.example.com";
+      assert.equal(oauthAppOrigin({ proto: "https", host: "www.influrios.com" }), "https://influrios.com");
     } finally {
       if (prevPublic === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
       else process.env.NEXT_PUBLIC_APP_URL = prevPublic;
@@ -69,13 +72,16 @@ describe("social callback origin wiring", () => {
     const source = readFileSync("src/app/api/social/callback/route.ts", "utf8");
     assert.match(source, /oauthAppOrigin/);
     assert.equal(source.includes('new URL("/dashboard", request.nextUrl.origin)'), false);
-    assert.match(readFileSync("src/app/dashboard/social-actions.ts", "utf8"), /oauthAppOrigin/);
+    const actions = readFileSync("src/app/dashboard/social-actions.ts", "utf8");
+    assert.match(actions, /oauthAppOrigin/);
+    assert.match(actions, /\/api\/social\/launch\?state=/);
+    assert.equal(actions.includes("redirect(result.authorizeUrl)"), false);
   });
 
   it("authorizes with the caller origin so TikTok gets the public callback", () => {
     const connect = readFileSync("src/lib/social-connect.ts", "utf8");
     assert.match(connect, /socialCallbackUrl\(input\.origin\)/);
-    assert.match(connect, /plainScopeCommas: network\.code === "tiktok"/);
+    assert.match(connect, /tiktokQuery: network\.code === "tiktok"/);
     assert.match(connect, /callbackAbsoluteUrl/);
     assert.match(readFileSync("src/app/admin/social/page.tsx", "utf8"), /callbackAbsoluteUrl/);
     assert.match(readFileSync("next.config.ts", "utf8"), /bodySizeLimit:\s*"10mb"/);

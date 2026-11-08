@@ -355,10 +355,12 @@ describe("social provider hosts", () => {
       redirectUri: "https://influrios.com/api/social/callback",
       state: "state",
       scopes: "user.info.basic,user.info.stats",
-      plainScopeCommas: true,
+      tiktokQuery: true,
     });
+    assert.match(tiktok ?? "", /^https:\/\/www\.tiktok\.com\/v2\/auth\/authorize\/\?/);
     assert.match(tiktok ?? "", /scope=user\.info\.basic,user\.info\.stats/);
-    assert.match(tiktok ?? "", /redirect_uri=https%3A%2F%2Finflurios\.com%2Fapi%2Fsocial%2Fcallback/);
+    assert.match(tiktok ?? "", /redirect_uri=https:\/\/influrios\.com\/api\/social\/callback(&|$)/);
+    assert.equal((tiktok ?? "").includes("redirect_uri=https%3A"), false);
     assert.equal((tiktok ?? "").includes("scope=user.info.basic%2C"), false);
     assert.equal(
       buildAuthorizeUrl({

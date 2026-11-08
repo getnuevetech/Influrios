@@ -46,7 +46,9 @@ export async function actionConnectSocial(formData: FormData) {
     redirect("/dashboard/social?error=" + encodeURIComponent("Social connection is unavailable. Nothing was connected."));
   }
   if (!result.ok) redirect(`/dashboard/social?error=${encodeURIComponent(result.error)}`);
-  redirect(result.authorizeUrl);
+  // Hand the browser a real 302. A server-action redirect splits on ";" and
+  // re-parses the URL, which changes the redirect_uri TikTok compares.
+  redirect(`/api/social/launch?state=${encodeURIComponent(result.state)}`);
 }
 
 export async function actionRefreshSocial(formData: FormData) {

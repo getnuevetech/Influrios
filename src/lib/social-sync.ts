@@ -986,10 +986,10 @@ export function buildAuthorizeUrl(input: {
   /** Extra query params (e.g. Google access_type=offline). */
   extraParams?: Record<string, string>;
   /**
-   * TikTok Login Kit compares scope as a raw comma list. URLSearchParams encodes
-   * commas as %2C, and TikTok then reports the request as a bad redirect_uri.
+   * TikTok Login Kit compares redirect_uri to the portal value before decoding.
+   * Percent-encoding https:// makes TikTok report redirect_uri. Scope commas stay raw.
    */
-  plainScopeCommas?: boolean;
+  tiktokQuery?: boolean;
 }) {
   if (!socialHostAllowed(input.authorizeUrl, input.authorizeHosts)) return null;
   if (!input.clientId.trim() || !input.state.trim()) return null;
@@ -1011,9 +1011,21 @@ export function buildAuthorizeUrl(input: {
   for (const [key, value] of Object.entries(input.extraParams ?? {})) {
     if (key && value) url.searchParams.set(key, value);
   }
-  const built = url.toString();
-  if (!input.plainScopeCommas) return built;
-  return built.replace(/([?&]scope=)([^&]*)/i, (_, prefix: string, value: string) => {
-    return prefix + value.replace(/%2C/gi, ",");
-  });
+  if (!input.tiktokQuery) return url.toString();
+  const clientKey = input.clientId.trim().replace(/^['"]|['"]$/g, "");
+  const scopes = input.scopes
+    .split(/[\s,]+/)
+    .map((scope) => scope.trim())
+    .filter(Boolean)
+    .join(",");
+  if (!clientKey || !scopes) return null;
+  // TikTok's own sample concatenates redirect_uri without percent-encoding.
+  return (
+    "https://www.tiktok.com/v2/auth/authorize/" +
+    `?client_key=${encodeURIComponent(clientKey)}` +
+    "&response_type=code" +
+    `&scope=${scopes}` +
+    `&redirect_uri=${redirectUri}` +
+    `&state=${encodeURIComponent(input.state.trim())}`
+  );
 }
