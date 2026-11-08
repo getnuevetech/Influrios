@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   META_GRAPH_VERSION,
   buildAuthorizeUrl,
+  createXPkce,
   interpretSocialProfile,
   isLiveSocialAccount,
   isMetaFacebookDialogUrl,
@@ -371,6 +372,29 @@ describe("social provider hosts", () => {
     assert.equal(parsed.searchParams.get("redirect_uri"), "https://influrios.com/api/social/callback");
     assert.equal(parsed.searchParams.get("scope"), "user.info.basic,user.info.stats");
     assert.equal(SOCIAL_NETWORKS.find((network) => network.code === "tiktok")?.tokenStyle, "form");
+    const xNetwork = SOCIAL_NETWORKS.find((network) => network.code === "x");
+    assert.equal(xNetwork?.authorizeUrl, "https://x.com/i/oauth2/authorize");
+    const pkce = createXPkce("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk");
+    assert.equal(pkce.challenge, "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+    assert.equal(pkce.method, "S256");
+    const xUrl = buildAuthorizeUrl({
+      authorizeUrl: "https://x.com/i/oauth2/authorize",
+      authorizeHosts: ["x.com", "twitter.com"],
+      clientIdParam: "client_id",
+      clientId: "client",
+      redirectUri: "https://influrios.com/api/social/callback",
+      state: "state",
+      scopes: "users.read tweet.read",
+      extraParams: { code_challenge: pkce.challenge, code_challenge_method: "S256" },
+    });
+    const xParsed = new URL(xUrl ?? "https://x.com/");
+    assert.equal(xParsed.searchParams.get("code_challenge"), pkce.challenge);
+    assert.equal(xParsed.searchParams.get("code_challenge_method"), "S256");
+    assert.equal(xParsed.searchParams.get("scope"), "users.read tweet.read");
+    assert.match(
+      prepareSocialProfileUrl("https://api.twitter.com/2/users/me", "X") ?? "",
+      /user\.fields=public_metrics%2Cusername%2Cname|user\.fields=public_metrics,username,name/,
+    );
     assert.equal(
       buildAuthorizeUrl({
         authorizeUrl: "https://www.tiktok.com/v2/auth/authorize/",

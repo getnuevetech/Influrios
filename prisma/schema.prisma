@@ -517,6 +517,8 @@ model SocialConnection {
   consentVersion  String?
   consentedAt     DateTime?
   stateToken      String?        @unique
+  /** X OAuth 2.0 PKCE verifier. Cleared after the code exchange. */
+  pkceVerifier    String?
   externalId      String?
   tokenCipher     String?
   refreshCipher   String?

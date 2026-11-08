@@ -7,6 +7,7 @@ import {
   META_GRAPH_VERSION,
   SOCIAL_NETWORKS,
   buildAuthorizeUrl,
+  createXPkce,
   interpretSocialProfile,
   isLiveSocialAccount,
   isMetaFacebookDialogUrl,
@@ -409,7 +410,7 @@ export async function beginSocialConnect(input: {
 
 type ListedSocial = Awaited<ReturnType<typeof listSocialNetworks>>[number];
 
-function readyAuthorizeUrl(input: {
+async function readyAuthorizeUrl(input: {
   network: NonNullable<ReturnType<typeof socialNetwork>>;
   provider: ListedSocial;
   networks: ListedSocial[];
@@ -450,6 +451,19 @@ function readyAuthorizeUrl(input: {
   } else if (isMetaFacebookDialogUrl(authorizeBase)) {
     clientId = normalizeMetaAppId(clientId) || clientId;
   }
+  let extraParams: Record<string, string> | undefined =
+    network.code === "youtube"
+      ? { access_type: "offline", include_granted_scopes: "true", prompt: "consent" }
+      : undefined;
+  if (network.code === "x") {
+    const pkce = createXPkce();
+    const saved = await prisma.socialConnection.updateMany({
+      where: { stateToken: state },
+      data: { pkceVerifier: pkce.verifier },
+    });
+    if (saved.count !== 1) return { ok: false as const, error: "This connection request has expired." };
+    extraParams = { code_challenge: pkce.challenge, code_challenge_method: pkce.method };
+  }
   const authorizeUrl = buildAuthorizeUrl({
     authorizeUrl: authorizeBase,
     authorizeHosts: locked?.authorizeHosts ?? network.authorizeHosts,
@@ -460,10 +474,7 @@ function readyAuthorizeUrl(input: {
     scopes: provider.scopes,
     configId,
     tiktokQuery: network.code === "tiktok",
-    extraParams:
-      network.code === "youtube"
-        ? { access_type: "offline", include_granted_scopes: "true", prompt: "consent" }
-        : undefined,
+    extraParams,
   });
   if (!authorizeUrl) return { ok: false as const, error: "The authorize URL is not on an official host." };
   if (isMetaFacebookDialogUrl(authorizeUrl) && !authorizeUrl.includes("config_id=")) {
@@ -615,6 +626,10 @@ async function requestToken(input: {
   redirectUri: string;
   code?: string;
   refreshToken?: string;
+  /** X OAuth 2.0. Must match the code_challenge sent on authorize. */
+  codeVerifier?: string;
+  /** Confidential client: Authorization Basic of client id and secret. */
+  basicAuth?: boolean;
 }) {
   if (!socialHostAllowed(input.tokenUrl, input.apiHosts)) return { ok: false as const, error: "The token URL is not on an official host." };
   if (isMetaGraphTokenUrl(input.tokenUrl) && !input.refreshToken) {
@@ -632,11 +647,20 @@ async function requestToken(input: {
     redirect_uri: input.redirectUri,
   };
   if (input.code) fields.code = input.code;
+  if (input.codeVerifier) fields.code_verifier = input.codeVerifier;
   if (input.refreshToken) fields.refresh_token = input.refreshToken;
+  if (input.basicAuth) delete fields.client_secret;
+  const headers: Record<string, string> =
+    input.style === "json"
+      ? { "content-type": "application/json" }
+      : { "content-type": "application/x-www-form-urlencoded" };
+  if (input.basicAuth) {
+    headers.authorization = `Basic ${Buffer.from(`${input.clientId}:${input.clientSecret}`).toString("base64")}`;
+  }
   const response = await fetch(input.tokenUrl, {
     method: "POST",
     redirect: "error",
-    headers: input.style === "json" ? { "content-type": "application/json" } : { "content-type": "application/x-www-form-urlencoded" },
+    headers,
     body: input.style === "json" ? JSON.stringify(fields) : new URLSearchParams(fields),
     signal: AbortSignal.timeout(8000),
   });
@@ -838,6 +862,10 @@ export async function completeSocialCallback(input: { code?: string; state?: str
   const ready = await readProvider(connection.providerId, connection.platform as SocialSyncPlatform);
   if (!ready) return { ok: false as const, error: "This network is not connected yet.", slug };
   const callback = socialCallbackUrl(input.origin);
+  const isX = connection.platform === "X";
+  if (isX && !connection.pkceVerifier) {
+    return { ok: false as const, error: "This X connection request expired. Try Connect again.", slug };
+  }
   try {
     let token = await requestToken({
       tokenUrl: ready.extra.tokenUrl,
@@ -849,9 +877,14 @@ export async function completeSocialCallback(input: { code?: string; state?: str
       // Must match the authorize redirect_uri exactly.
       redirectUri: callback,
       code: input.code,
+      codeVerifier: connection.pkceVerifier ?? undefined,
+      basicAuth: isX,
     });
     if (!token.ok) {
-      await prisma.socialConnection.update({ where: { id: connection.id }, data: { status: "error", lastError: token.error } });
+      await prisma.socialConnection.update({
+        where: { id: connection.id },
+        data: { status: "error", lastError: token.error, pkceVerifier: null },
+      });
       return { ok: false as const, error: token.error, slug };
     }
     // Extend short-lived Meta user tokens so Sync now still works after the ~1h window.
@@ -878,6 +911,7 @@ export async function completeSocialCallback(input: { code?: string; state?: str
       tokenCipher: encryptSecret(token.accessToken),
       refreshCipher: token.refreshToken ? encryptSecret(token.refreshToken) : null,
       tokenExpiresAt: token.expiresAt,
+      pkceVerifier: null,
     };
     if (!profile.ok) {
       // OAuth succeeded — keep Connected and surface the profile fetch as a soft notice.
@@ -989,6 +1023,7 @@ export async function refreshSocialConnection(input: { slug: string; platform: s
         clientSecret: ready.secret,
         redirectUri: socialCallbackUrl(input.origin),
         refreshToken,
+        basicAuth: network.code === "x",
       });
       if (!refreshed.ok) {
         await prisma.socialConnection.update({ where: { id: connection.id }, data: { status: "error", lastError: refreshed.error } });
