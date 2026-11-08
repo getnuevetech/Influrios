@@ -159,6 +159,46 @@ export default async function AdminSocialPage({ searchParams }: Props) {
         </form>
       ) : null}
 
+      <section className="mt-6 grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4">
+        <h2 className="font-display text-lg font-bold text-indigo">Meta Live · normal creator testing</h2>
+        <p className="text-sm text-muted">
+          While the Meta app is in <span className="font-semibold">Development</span>, only Facebook users with an{" "}
+          <span className="font-semibold">App Role</span> (Admin / Developer / Tester) can complete Instagram or
+          Facebook Connect. A normal Influrios creator account is not enough by itself.
+        </p>
+        <ol className="list-decimal space-y-2 pl-5 text-sm text-indigo">
+          <li>
+            <span className="font-semibold">Fast path (still Development):</span> Meta → App roles → add the creator’s
+            Facebook user as <span className="font-semibold">Tester</span> (they must accept the invite). Then connect
+            from that creator’s Influrios account. This validates the Influrios flow, not public Live access.
+          </li>
+          <li>
+            <span className="font-semibold">True Live / any creator:</span> Meta → App Review → request{" "}
+            <span className="font-semibold">Advanced Access</span> for every permission in your Login configurations
+            (at least <code className="text-[11px]">instagram_basic</code> / insights as configured,{" "}
+            <code className="text-[11px]">pages_show_list</code>, <code className="text-[11px]">pages_read_engagement</code>
+            ). Complete privacy policy, terms, and data-use questions.
+          </li>
+          <li>
+            After Advanced Access is approved, Meta → Publish / switch the app to{" "}
+            <span className="font-semibold">Live</span>. Development → Live does not replace App Review.
+          </li>
+          <li>
+            Confirm Influrios Admin → Social has the same <span className="font-semibold">Meta App ID / Secret</span>,{" "}
+            <span className="font-semibold">Configuration IDs</span>, and OAuth redirect{" "}
+            <code className="text-[11px]">{callbackAbsoluteUrl()}</code> that Meta has whitelisted.
+          </li>
+          <li>
+            Test with a creator whose Facebook user is <span className="font-semibold">not</span> an App Role: Connect
+            Instagram, share an IG Professional asset; Connect Facebook, share a Page; then Sync now.
+          </li>
+        </ol>
+        <p className="text-xs text-muted">
+          YouTube is separate (Google Cloud OAuth). Put the OAuth client in Production and add the test Google account
+          as a test user while the consent screen is in Testing, or publish the consent screen for any Google account.
+        </p>
+      </section>
+
       {policy ? (
         <form action={actionSaveSocialPolicy} className="mt-6 grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4">
           <h2 className="font-display text-lg font-bold text-indigo">Influencer agreement</h2>
