@@ -20,6 +20,7 @@ import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
+import { syncedFollowerTotal } from "@/lib/social-sync";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business account" };
@@ -507,7 +508,7 @@ export default async function BusinessHomePage() {
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {suggestions.slice(0, 4).map((fit) => {
-                  const followers = fit.creator.socials.reduce((sum, social) => sum + (social.followers || 0), 0);
+                  const followers = syncedFollowerTotal(fit.creator.socials);
                   const platforms = [...new Set(fit.creator.socials.map((social) => social.platform))].slice(0, 3);
                   return (
                     <div key={fit.creator.slug} className="overflow-hidden rounded-2xl border border-[#F0F3FA] bg-white">

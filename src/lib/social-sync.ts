@@ -362,6 +362,30 @@ export function isLiveSocialAccount(row: {
   );
 }
 
+/** A network @username. Display names and claim copies with spaces are not handles. */
+export function isProviderUsername(handle: string | null | undefined): boolean {
+  const name = (handle ?? "").trim().replace(/^@/, "");
+  if (!name || /\s/.test(name)) return false;
+  return /^[A-Za-z0-9._]{1,64}$/.test(name);
+}
+
+export function syncedFollowerTotal(
+  socials: ReadonlyArray<{ followers?: number | null; source?: string | null; refreshedAt?: string | Date | null }>,
+) {
+  return socials.reduce((sum, social) => {
+    if (
+      !isLiveSocialAccount({
+        source: social.source ?? "",
+        refreshedAt: social.refreshedAt ?? null,
+        followers: social.followers ?? null,
+      })
+    ) {
+      return sum;
+    }
+    return sum + (social.followers ?? 0);
+  }, 0);
+}
+
 export function socialAudienceLabel(
   social: { followers: number; likes?: number | null; live?: boolean; platform?: string } | null | undefined,
   options?: { withLikes?: boolean },
@@ -485,8 +509,7 @@ export function parseYoutubeChannelMetrics(payload: unknown): {
     statistics?: { subscriberCount?: unknown; viewCount?: unknown; videoCount?: unknown };
   };
   const customUrl = typeof record.snippet?.customUrl === "string" ? record.snippet.customUrl.trim() : "";
-  const title = typeof record.snippet?.title === "string" ? record.snippet.title.trim() : "";
-  const handle = (customUrl || title || "").replace(/^@/, "") || null;
+  const handle = customUrl.replace(/^@/, "") || null;
   const externalId = typeof record.id === "string" && record.id.trim() ? record.id.trim() : null;
   const subscribers = asCount(record.statistics?.subscriberCount);
   const views = asCount(record.statistics?.viewCount);
@@ -624,6 +647,31 @@ export function parseInstagramBusinessMetrics(payload: unknown): {
   return { ...linked[0]!, emptyAccounts: false };
 }
 
+/** X `users/me` — the @handle is `username`. `name` is the display name and is not a handle. */
+export function parseXUser(payload: unknown): {
+  identity: SocialIdentity | null;
+  metrics: SocialAudienceMetrics | null;
+} | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const root = payload as { data?: unknown };
+  const data = root.data && typeof root.data === "object" && !Array.isArray(root.data) ? root.data : payload;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const record = data as {
+    id?: unknown;
+    name?: unknown;
+    username?: unknown;
+    public_metrics?: { followers_count?: unknown };
+  };
+  const username = typeof record.username === "string" ? record.username.trim().replace(/^@/, "") : "";
+  const externalId = typeof record.id === "string" && record.id.trim() ? record.id.trim() : null;
+  if (!username && !externalId) return null;
+  const followers = asCount(record.public_metrics?.followers_count);
+  return {
+    identity: { handle: username || null, externalId },
+    metrics: followers != null ? { primary: followers, secondary: null } : null,
+  };
+}
+
 export function interpretSocialProfile(
   platform: SocialSyncPlatform | string | null | undefined,
   payload: unknown,
@@ -646,6 +694,27 @@ export function interpretSocialProfile(
       metricsNotice: tiktok.metrics
         ? null
         : "Your TikTok account is connected, but follower statistics were not available yet. Confirm user.info.stats and try Sync now.",
+    };
+  }
+
+  if (key === "X") {
+    const x = parseXUser(payload);
+    if (!x) {
+      return {
+        identity: null,
+        metrics: null,
+        metricsNotice:
+          "This account is connected, but X did not return a username. Try Sync now later.",
+      };
+    }
+    return {
+      identity: x.identity,
+      metrics: x.metrics,
+      metricsNotice: x.identity?.handle
+        ? x.metrics
+          ? null
+          : "Your X account is connected, but follower statistics were not available yet. Try Sync now later."
+        : "Your X account is connected, but X did not return a username. Try Sync now later.",
     };
   }
 
@@ -760,10 +829,12 @@ function findProfileString(value: unknown, keys: string[], depth = 0): string | 
     return null;
   }
   const record = value as Record<string, unknown>;
-  for (const [key, child] of Object.entries(record)) {
-    if (!keys.includes(key.toLowerCase())) continue;
-    if (typeof child === "string" && child.trim()) return child.trim();
-    if (typeof child === "number" && Number.isFinite(child)) return String(child);
+  for (const wanted of keys) {
+    for (const [key, child] of Object.entries(record)) {
+      if (key.toLowerCase() !== wanted) continue;
+      if (typeof child === "string" && child.trim()) return child.trim();
+      if (typeof child === "number" && Number.isFinite(child)) return String(child);
+    }
   }
   for (const child of Object.values(record)) {
     const found = findProfileString(child, keys, depth + 1);

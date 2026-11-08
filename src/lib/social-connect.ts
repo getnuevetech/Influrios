@@ -14,6 +14,7 @@ import {
   reportAuthorizeUrl,
   interpretSocialProfile,
   isLiveSocialAccount,
+  isProviderUsername,
   isMetaFacebookDialogUrl,
   isMetaGraphTokenUrl,
   metaOAuthErrorMessage,
@@ -798,6 +799,11 @@ async function fetchSocialProfile(
   return { ok: true as const, ...profile };
 }
 
+function providerUsername(handle: string | null | undefined) {
+  const raw = (handle ?? "").trim().replace(/^@/, "");
+  return isProviderUsername(raw) ? `@${raw}` : "";
+}
+
 function officialProfileUrl(platform: string, handle: string) {
   const name = handle.replace(/^@/, "");
   if (platform === "TIKTOK") return `https://www.tiktok.com/@${name}`;
@@ -818,18 +824,17 @@ async function writeConnectedIdentity(input: {
   const existing = await prisma.socialAccount.findUnique({
     where: { creatorId_platform: { creatorId: input.creatorId, platform: input.platform } },
   });
-  const handle = input.handle
-    ? `@${input.handle.replace(/^@/, "")}`
-    : existing?.handle;
+  const providerHandle = providerUsername(input.handle);
+  const handle = providerHandle || existing?.handle;
   if (!handle) return { ok: false as const, error: "The network did not return an account name." };
-  const url = existing?.url || officialProfileUrl(input.platform, handle);
+  const url = providerHandle ? officialProfileUrl(input.platform, providerHandle) : existing?.url || officialProfileUrl(input.platform, handle);
   await prisma.socialAccount.upsert({
     where: { creatorId_platform: { creatorId: input.creatorId, platform: input.platform } },
     update: {
       handle,
       url,
       // Keep prior live counts if this reconnect only refreshed identity.
-      source: existing?.source === "PROVIDER_SYNCED" ? "PROVIDER_SYNCED" : "CREATOR_CLAIMED",
+      source: existing?.source === "PROVIDER_SYNCED" ? "PROVIDER_SYNCED" : providerHandle ? "PLATFORM_VERIFIED" : "CREATOR_CLAIMED",
     },
     create: {
       creatorId: input.creatorId,
@@ -838,7 +843,7 @@ async function writeConnectedIdentity(input: {
       url,
       followers: null,
       likes: null,
-      source: "CREATOR_CLAIMED",
+      source: providerHandle ? "PLATFORM_VERIFIED" : "CREATOR_CLAIMED",
       refreshedAt: null,
     },
   });
@@ -857,13 +862,12 @@ async function writeLiveAccount(input: {
   const existing = await prisma.socialAccount.findUnique({
     where: { creatorId_platform: { creatorId: input.creatorId, platform: input.platform } },
   });
-  const handle = input.handle
-    ? `@${input.handle.replace(/^@/, "")}`
-    : existing?.handle;
+  const providerHandle = providerUsername(input.handle);
+  const handle = providerHandle || existing?.handle;
   if (!handle) {
     return { ok: false as const, error: "The network did not return an account name." };
   }
-  const url = existing?.url || officialProfileUrl(input.platform, handle);
+  const url = providerHandle ? officialProfileUrl(input.platform, providerHandle) : existing?.url || officialProfileUrl(input.platform, handle);
   await prisma.socialAccount.upsert({
     where: { creatorId_platform: { creatorId: input.creatorId, platform: input.platform } },
     update: {
