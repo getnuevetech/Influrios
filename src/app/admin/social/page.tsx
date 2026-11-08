@@ -407,13 +407,22 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             ) : null}
             {network.code === "tiktok" ? (
               <p className="sm:col-span-2 text-xs text-muted">
-                TikTok Login Kit requires this exact redirect URI (https, no trailing slash, no{" "}
-                <code className="text-[11px]">www</code>):{" "}
-                <code className="text-[11px]">{callbackAbsoluteUrl()}</code>. Connect sends it form-urlencoded, which
-                TikTok decodes before comparing. Paste that plain URL under Login Kit → Redirect URI, not only under
-                the website URL. A TikTok page that says{" "}
-                <span className="font-semibold">correct the following: redirect_uri</span> means the Login Kit value is
-                different. Profile sync calls{" "}
+                TikTok compares the decoded redirect with Login Kit → Web. The request sends{" "}
+                <code className="text-[11px]">{network.oauthRedirectUri || callbackAbsoluteUrl()}</code>
+                {network.clientId.startsWith("sbaw") ? (
+                  <>
+                    . This client key starts with <code className="text-[11px]">sbaw</code>, so it is the sandbox key.
+                    Register that exact URL on the sandbox Login Kit, and add the TikTok account as a target user. The
+                    production key starts with <code className="text-[11px]">aw</code> and does not share the sandbox
+                    redirect list.
+                  </>
+                ) : (
+                  <>
+                    . Register that exact URL under Login Kit → Web. The website URL field is not the redirect list.
+                  </>
+                )}{" "}
+                A TikTok page that lists <span className="font-semibold">redirect_uri</span> means that list does not
+                contain this URL. Profile sync calls{" "}
                 <code className="text-[11px]">
                   /v2/user/info/?fields=open_id,avatar_url,display_name,follower_count,following_count,likes_count,video_count
                 </code>

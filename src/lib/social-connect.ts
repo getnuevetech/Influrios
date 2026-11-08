@@ -330,7 +330,7 @@ function callbackFor(code: string, override: string | null | undefined, origin: 
   return socialCallbackUrl(origin);
 }
 
-/** Exact OAuth redirect URI Google/Meta/TikTok must whitelist (full URL, no trailing slash). */
+/** Exact OAuth redirect URI providers must whitelist (full URL, no trailing slash). */
 export function socialCallbackUrl(origin?: string | null) {
   const raw = origin?.trim() ? origin.trim().replace(/\/$/, "") : getAppOrigin();
   return redirectUri(canonicalOAuthOrigin(raw));
@@ -348,18 +348,22 @@ export async function socialConnectState(slug: string) {
     const account = creator?.socialAccounts.find((item) => item.platform === network.platform);
     const live = account ? isLiveSocialAccount(account) : false;
     const labels = socialMetricLabels(network.platform);
+    const redirectUri = network.oauthRedirectUri || socialCallbackUrl();
+    const { clientId, ...safeNetwork } = network;
     return {
-      ...network,
+      ...safeNetwork,
       status: connection?.status ?? "needs_consent",
       lastError: connection?.lastError ?? null,
       consentCurrent: connection?.consentVersion === policy.version && connection.consentedAt != null,
+      authorizeRedirect: network.code === "tiktok" || network.code === "x" ? redirectUri : null,
+      sandboxClient: network.code === "tiktok" && clientId.startsWith("sbaw"),
       authorizeReport: providerAuthorizePreview({
         code: network.code,
         authorizeUrl: network.authorizeUrl,
         authorizeHosts: socialNetwork(network.code)?.authorizeHosts ?? [],
         clientIdParam: socialNetwork(network.code)?.clientIdParam ?? "client_id",
-        clientId: network.clientId,
-        redirectUri: network.oauthRedirectUri || socialCallbackUrl(),
+        clientId,
+        redirectUri,
         scopes: network.scopes,
       }),
       followers: live ? account?.followers ?? null : null,
@@ -455,7 +459,7 @@ async function readyAuthorizeUrl(input: {
   if (network.code === "tiktok" && !isPublicHttpsOrigin(callback)) {
     return {
       ok: false as const,
-      error: `TikTok requires an https redirect URI. This server would send ${callback}. Set NEXT_PUBLIC_APP_URL to the public site (https://influrios.com) and register that exact callback in TikTok Login Kit, with no trailing slash.`,
+      error: `TikTok requires an https redirect URI. This server would send ${callback}. Set NEXT_PUBLIC_APP_URL to the public site (https://influrios.com) and register that exact callback in TikTok Login Kit.`,
     };
   }
   const configId = resolveConnectConfigId(provider, networks);

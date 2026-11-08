@@ -12,6 +12,8 @@ type SocialAccount = {
   likes?: number | null;
   lastError?: string | null;
   authorizeReport?: string | null;
+  authorizeRedirect?: string | null;
+  sandboxClient?: boolean;
   scopes?: string | null;
   consentDetail?: string | null;
   loginMode?: string | null;
@@ -102,7 +104,7 @@ export function SocialConnectionsPanel({
                   </div>
                   <p className="text-xs text-muted">{audienceLine(account)}</p>
                 </div>
-                {account.lastError ? (
+                {account.lastError && !account.lastError.startsWith("Last authorize request") ? (
                   <p className="mt-2 text-xs text-amber-800">
                     {connected ? "Audience sync note: " : ""}
                     {account.lastError}
@@ -149,8 +151,16 @@ export function SocialConnectionsPanel({
                     <button type="submit" className="btn-primary !py-1.5 text-xs">
                       Connect {account.name}
                     </button>
+                    {account.sandboxClient && account.authorizeRedirect ? (
+                      <p className="w-full text-xs leading-relaxed text-indigo">
+                        This client key is a TikTok sandbox key. TikTok checks the redirect on the sandbox Login Kit,
+                        not the production app. In the sandbox, add this exact URL under Login Kit → Web, and add the
+                        TikTok account as a target user:{" "}
+                        <code className="font-semibold">{account.authorizeRedirect}</code>
+                      </p>
+                    ) : null}
                     {account.authorizeReport ? (
-                      <p className="w-full break-all font-mono text-[11px] leading-relaxed text-indigo">
+                      <p className="w-full font-mono text-[11px] leading-relaxed text-indigo [overflow-wrap:anywhere]">
                         {account.authorizeReport}
                       </p>
                     ) : null}
