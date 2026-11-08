@@ -184,12 +184,14 @@ describe("business hub spend summary", () => {
     assert.equal(mixed.currency, "");
     const hub = readFileSync("src/lib/collaboration-hub.ts", "utf8");
     const creatorHub = readFileSync("src/app/collaboration/hub/page.tsx", "utf8");
+    const collaborations = readFileSync("src/components/account/creator-collaborations.tsx", "utf8");
     const businessHub = readFileSync("src/app/collaboration/business/page.tsx", "utf8");
     assert.equal(hub.includes('currency: "USD"'), false);
     assert.equal(hub.includes('?? "USD"'), false);
     assert.equal(creatorHub.includes("formatMoney("), false);
+    assert.equal(collaborations.includes("formatMoney("), false);
     assert.equal(businessHub.includes("formatMoney("), false);
-    assert.match(creatorHub, /formatStoredMoney\(availableCents, hub\.earnings\.currency\)/);
+    assert.match(collaborations, /formatStoredMoney\(row\.grossCents, row\.currency\)/);
     assert.match(businessHub, /formatStoredMoney\(hub\.spend\.fundedCents, hub\.spend\.currency\)/);
   });
 });
@@ -197,12 +199,15 @@ describe("business hub spend summary", () => {
 describe("influencer campaign card links", () => {
   it("opens the campaign request page instead of the public business marketing page", () => {
     const creatorHub = readFileSync("src/app/collaboration/hub/page.tsx", "utf8");
+    const opportunities = readFileSync("src/components/account/creator-opportunities.tsx", "utf8");
     const creatorHome = readFileSync("src/lib/creator-home.ts", "utf8");
     const creatorPage = readFileSync("src/app/creator/page.tsx", "utf8");
     const requestPage = readFileSync("src/app/collaboration/requests/[id]/page.tsx", "utf8");
 
-    assert.match(creatorHub, /\/collaboration\/requests\/\$\{encodeURIComponent\(request\.id\)\}/);
-    assert.match(creatorHub, /View campaign/);
+    assert.match(opportunities, /\/collaboration\/requests\/\$\{encodeURIComponent\(request\.id\)\}/);
+    assert.match(opportunities, /View details/);
+    assert.equal(opportunities.includes('href="/business"'), false);
+    assert.equal(opportunities.includes("View Match"), false);
     assert.equal(creatorHub.includes('href="/business"'), false);
     assert.equal(creatorHub.includes("View Match"), false);
 

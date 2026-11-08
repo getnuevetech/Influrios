@@ -9,6 +9,7 @@ import { consumeGuestQuota } from "@/lib/guest-usage";
 import { enteredNote } from "@/lib/business";
 import {
   createMarketplaceApplication,
+  toggleSavedListing,
   creatorApplicationRole,
   creatorApplicationTransitions,
   creatorOwnsApplication,
@@ -74,7 +75,30 @@ export async function actionApplyToBusinessRequest(formData: FormData) {
     );
   }
   revalidateCreatorSurfaces();
-  redirect(returnTo ? `${returnTo}?applied=1` : `${HUB}?applied=1#applications`);
+  redirect(returnTo ? `${returnTo}?applied=1` : `${HUB}?view=opportunities&applied=1`);
+}
+
+/** Bookmark a campaign or opening on Opportunities → Saved. */
+export async function actionToggleSavedListing(formData: FormData) {
+  await assertCollabOsV1();
+  const account = await getAccountSession().catch(() => null);
+  if (!account) redirect(`/login?next=${encodeURIComponent(`${HUB}?view=opportunities`)}&gate=save`);
+  const kind = String(formData.get("kind") ?? "");
+  const listingId = String(formData.get("listingId") ?? "").trim();
+  const returnRaw = String(formData.get("returnTo") ?? "");
+  const returnTo =
+    returnRaw.startsWith("/collaboration/hub?") && !returnRaw.includes("//")
+      ? returnRaw.slice(0, 300)
+      : `${HUB}?view=opportunities&tab=saved`;
+  if (kind !== "business_request" && kind !== "creator_opportunity") {
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("Choose a listing to save.")}`);
+  }
+  if (!listingId) {
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("Choose a listing to save.")}`);
+  }
+  await toggleSavedListing({ userId: account.id, kind, listingId });
+  revalidateCreatorSurfaces();
+  redirect(returnTo);
 }
 
 /** W2.3c — creator connects/applies to a published creator opportunity. */
@@ -114,7 +138,7 @@ export async function actionApplyToCreatorOpportunity(formData: FormData) {
     );
   }
   revalidateCreatorSurfaces();
-  redirect(`${HUB}?applied=1#applications`);
+  redirect(`${HUB}?view=opportunities&applied=1`);
 }
 
 /** W2.3c — creator advances or withdraws an application they own. */

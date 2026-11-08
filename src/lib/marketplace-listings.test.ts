@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   applicationIsStaleForExpire,
+  listingApplicationHidesApply,
   applicationIsAcceptedPipeline,
   applicationIsInvitation,
   applicationIsOpenPipeline,
@@ -195,6 +196,9 @@ describe("marketplace application state machine", () => {
     assert.equal(applicationIsAcceptedPipeline("ACCEPTED"), true);
     assert.equal(applicationIsAcceptedPipeline("COLLABORATION_DRAFTED"), true);
     assert.equal(applicationIsOpenPipeline("ACCEPTED"), false);
+    assert.equal(listingApplicationHidesApply("REQUESTED"), true);
+    assert.equal(listingApplicationHidesApply("EXPIRED"), true);
+    assert.equal(listingApplicationHidesApply("WITHDRAWN"), false);
   });
 
   it("detects stale applications for auto-expire", () => {

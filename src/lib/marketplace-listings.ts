@@ -368,6 +368,42 @@ export async function getTopPersistedMatch(): Promise<{
   };
 }
 
+/** A withdrawn application can be sent again. Every other status means this listing was already applied to. */
+export function listingApplicationHidesApply(status: string): boolean {
+  return status !== "WITHDRAWN";
+}
+
+export async function listSavedListings(userId: string) {
+  const id = userId.trim();
+  if (!id) return [];
+  return prisma.savedMarketplaceListing.findMany({
+    where: { userId: id },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+}
+
+export async function toggleSavedListing(input: {
+  userId: string;
+  kind: "business_request" | "creator_opportunity";
+  listingId: string;
+}) {
+  const listingId = input.listingId.trim();
+  if (!input.userId.trim() || !listingId) return { saved: false as const };
+  const where = {
+    userId_kind_listingId: { userId: input.userId, kind: input.kind, listingId },
+  };
+  const existing = await prisma.savedMarketplaceListing.findUnique({ where });
+  if (existing) {
+    await prisma.savedMarketplaceListing.delete({ where: { id: existing.id } });
+    return { saved: false as const };
+  }
+  await prisma.savedMarketplaceListing.create({
+    data: { userId: input.userId, kind: input.kind, listingId },
+  });
+  return { saved: true as const };
+}
+
 export async function createMarketplaceApplication(input: {
   kind: "business_request" | "creator_opportunity";
   businessRequestId?: string;
@@ -400,6 +436,23 @@ export async function createMarketplaceApplication(input: {
     if (!opportunity || opportunity.status !== "published") {
       throw new Error("Creator opportunity must be published before connecting.");
     }
+  }
+  if (input.fromUserId || input.fromSlug) {
+    const existing = await prisma.marketplaceApplication.findFirst({
+      where: {
+        kind: input.kind,
+        ...(input.kind === "business_request"
+          ? { businessRequestId: input.businessRequestId }
+          : { opportunityId: input.opportunityId }),
+        status: { not: "WITHDRAWN" },
+        OR: [
+          ...(input.fromUserId ? [{ fromUserId: input.fromUserId }] : []),
+          ...(input.fromSlug ? [{ fromSlug: input.fromSlug }] : []),
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existing) return existing;
   }
   return prisma.$transaction(async (tx) => {
     const row = await tx.marketplaceApplication.create({

@@ -53,12 +53,36 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
   const signatures = await prisma.signatureRequest
     .findMany({ where: { collaborationId: record.id }, orderBy: { createdAt: "desc" }, include: { provider: true } })
     .catch(() => []);
+  const contract = await prisma.contractDocument
+    .findFirst({ where: { collaborationId: record.id }, select: { id: true }, orderBy: { updatedAt: "desc" } })
+    .catch(() => null);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
-      <Link href="/collaboration/records" className="text-sm font-semibold text-violet hover:underline">
-        ← Active Collaborations
+      <Link href="/collaboration/hub?view=collaborations&tab=active" className="text-sm font-semibold text-violet hover:underline">
+        ← Collaborations
       </Link>
+      <nav className="mt-4 flex flex-wrap gap-2 text-sm font-semibold text-[#5c6588]">
+        <span className="rounded-full bg-[#F4F0FF] px-3 py-1 text-[#6d4aff]">Overview</span>
+        <Link href="/payments" className="rounded-full px-3 py-1">
+          Deliverables
+        </Link>
+        <Link
+          href={account.role === "BUSINESS" || account.role === "AGENCY" ? "/collaboration/business" : "/creator/messages"}
+          className="rounded-full px-3 py-1"
+        >
+          Messages
+        </Link>
+        <Link href={contract ? `/collaboration/contracts/${contract.id}` : "/collaboration/contracts"} className="rounded-full px-3 py-1">
+          Contract
+        </Link>
+        <Link
+          href={account.role === "BUSINESS" || account.role === "AGENCY" ? "/payments" : "/creator/earnings"}
+          className="rounded-full px-3 py-1"
+        >
+          Payments
+        </Link>
+      </nav>
       <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-violet">{status}</p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo">{record.title}</h1>
       <p className="mt-2 text-muted">
