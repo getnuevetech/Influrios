@@ -366,11 +366,12 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             ) : null}
             {network.code === "tiktok" ? (
               <p className="sm:col-span-2 text-xs text-muted">
-                TikTok Login Kit compares <code className="text-[11px]">redirect_uri</code> character for character.
-                Paste this exact URL into the app&apos;s Login Kit redirect URI (https, no trailing slash, no query):{" "}
+                TikTok Login Kit compares <code className="text-[11px]">redirect_uri</code> to the portal value
+                before it decodes percent-encoding. Connect sends this URL as plain text (https, no trailing slash, no{" "}
+                <code className="text-[11px]">www</code>):{" "}
                 <code className="text-[11px]">{callbackAbsoluteUrl()}</code>. A TikTok page that says{" "}
-                <span className="font-semibold">correct the following: redirect_uri</span> means the portal value is
-                different from that URL. Profile sync calls{" "}
+                <span className="font-semibold">correct the following: redirect_uri</span> means the Login Kit redirect
+                URI is not that exact string. Profile sync calls{" "}
                 <code className="text-[11px]">
                   /v2/user/info/?fields=open_id,avatar_url,display_name,follower_count,following_count,likes_count,video_count
                 </code>

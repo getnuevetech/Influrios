@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { getAppOrigin, isPublicHttpsOrigin } from "@/lib/billing";
+import { canonicalOAuthOrigin, getAppOrigin, isPublicHttpsOrigin } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { invalidateDirectoryCache } from "@/lib/directory";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
@@ -308,8 +308,8 @@ function redirectUri(origin: string) {
 
 /** Exact OAuth redirect URI Google/Meta/TikTok must whitelist (full URL, no trailing slash). */
 export function socialCallbackUrl(origin?: string | null) {
-  const base = origin?.trim() ? origin.trim().replace(/\/$/, "") : getAppOrigin();
-  return redirectUri(base);
+  const raw = origin?.trim() ? origin.trim().replace(/\/$/, "") : getAppOrigin();
+  return redirectUri(canonicalOAuthOrigin(raw));
 }
 
 export async function socialConnectState(slug: string) {
@@ -398,9 +398,26 @@ export async function beginSocialConnect(input: {
   } catch {
     return { ok: false as const, error: "The connected-account policy could not be recorded. Try again." };
   }
-  // Prefer the public https origin (env, or the browser host when env is localhost).
-  // Never send Docker 0.0.0.0. TikTok rejects any redirect_uri that is not the
-  // exact https URL registered on the Login Kit product.
+  return readyAuthorizeUrl({
+    network,
+    provider: provider!,
+    networks,
+    state,
+    origin: input.origin,
+  });
+}
+
+type ListedSocial = Awaited<ReturnType<typeof listSocialNetworks>>[number];
+
+function readyAuthorizeUrl(input: {
+  network: NonNullable<ReturnType<typeof socialNetwork>>;
+  provider: ListedSocial;
+  networks: ListedSocial[];
+  state: string;
+  origin: string;
+}) {
+  const { network, provider, networks, state } = input;
+  // TikTok compares this string to Login Kit before decoding. www and localhost must not appear.
   const callback = socialCallbackUrl(input.origin);
   if (network.code === "tiktok" && !isPublicHttpsOrigin(callback)) {
     return {
@@ -408,8 +425,8 @@ export async function beginSocialConnect(input: {
       error: `TikTok requires an https redirect URI. This server would send ${callback}. Set NEXT_PUBLIC_APP_URL to the public site (https://influrios.com) and register that exact callback in TikTok Login Kit, with no trailing slash.`,
     };
   }
-  const configId = resolveConnectConfigId(provider!, networks);
-  if (network.code === "instagram" && !configId && !provider!.classicInstagramLogin) {
+  const configId = resolveConnectConfigId(provider, networks);
+  if (network.code === "instagram" && !configId && !provider.classicInstagramLogin) {
     return {
       ok: false as const,
       error:
@@ -417,7 +434,7 @@ export async function beginSocialConnect(input: {
     };
   }
   const locked = resolveLockedOAuthEndpoints(network.platform, configId);
-  const authorizeBase = locked?.authorizeUrl ?? provider!.authorizeUrl;
+  const authorizeBase = locked?.authorizeUrl ?? provider.authorizeUrl;
   if (isMetaFacebookDialogUrl(authorizeBase) && !configId) {
     return {
       ok: false as const,
@@ -425,7 +442,7 @@ export async function beginSocialConnect(input: {
         "Meta requires config_id for this app. Admin → Social: paste the Facebook Login for Business Configuration ID on Instagram/Facebook, then try Connect again.",
     };
   }
-  let clientId = provider!.clientId;
+  let clientId = provider.clientId;
   if (configId) {
     const checked = validateMetaUnifiedLoginIds({ appId: clientId, configId });
     if (!checked.ok) return { ok: false as const, error: checked.error };
@@ -440,10 +457,9 @@ export async function beginSocialConnect(input: {
     clientId,
     redirectUri: callback,
     state,
-    scopes: provider!.scopes,
-    // Login for Business / Unified Login: config_id replaces scope=.
+    scopes: provider.scopes,
     configId,
-    plainScopeCommas: network.code === "tiktok",
+    tiktokQuery: network.code === "tiktok",
     extraParams:
       network.code === "youtube"
         ? { access_type: "offline", include_granted_scopes: "true", prompt: "consent" }
@@ -457,7 +473,21 @@ export async function beginSocialConnect(input: {
         "Meta OAuth URL was missing config_id. Save a Configuration ID under Admin → Social and try Connect again.",
     };
   }
-  return { ok: true as const, authorizeUrl, redirectUri: callback };
+  return { ok: true as const, authorizeUrl, redirectUri: callback, state };
+}
+
+/** Browser 302 target. Rebuilds the provider URL from the stored state so it is not rewritten by a server action. */
+export async function launchSocialAuthorize(input: { state: string; origin: string }) {
+  const state = input.state.trim();
+  if (!state) return { ok: false as const, error: "This connection request has expired." };
+  const connection = await prisma.socialConnection.findUnique({ where: { stateToken: state } });
+  if (!connection) return { ok: false as const, error: "This connection request has expired." };
+  const network = socialNetwork(connection.platform);
+  if (!network) return { ok: false as const, error: "Unknown social network." };
+  const networks = await listSocialNetworks();
+  const provider = networks.find((item) => item.platform === network.platform);
+  if (!provider?.ready) return { ok: false as const, error: "This network is not connected yet." };
+  return readyAuthorizeUrl({ network, provider, networks, state, origin: input.origin });
 }
 
 /** Prefer this network's config_id; fall back to the sibling Meta network when App IDs match. */
