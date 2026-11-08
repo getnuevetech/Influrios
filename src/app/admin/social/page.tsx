@@ -8,6 +8,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getMetaWebhookConfig, metaWebhookPath } from "@/lib/meta-webhook";
 import { callbackAbsoluteUrl, callbackPath, getSocialPolicy, listSocialNetworks } from "@/lib/social-connect";
+import { providerAuthorizePreview, socialNetwork } from "@/lib/social-sync";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Social networks · Admin" };
@@ -241,7 +242,11 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                   : "Instagram App ID (not the Meta App ID)"
                 : network.code === "facebook"
                   ? "Meta App ID (App settings → Basic — not Configuration ID)"
-                  : "Client id"}
+                  : network.code === "x"
+                  ? "OAuth 2.0 Client ID (not the API Key)"
+                  : network.code === "tiktok"
+                    ? "Client key"
+                    : "Client id"}
               <input
                 name="clientId"
                 defaultValue={network.clientId}
@@ -362,6 +367,42 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                     Paste the Configuration ID before enabling Instagram Connect.
                   </>
                 )}
+              </p>
+            ) : null}
+            {network.code === "tiktok" || network.code === "x" ? (
+              <label className="block text-sm font-semibold text-indigo sm:col-span-2">
+                Registered redirect URI
+                <input
+                  name="oauthRedirectUri"
+                  defaultValue={network.oauthRedirectUri}
+                  disabled={!canEdit}
+                  className={inputClass}
+                  placeholder={callbackAbsoluteUrl()}
+                  autoComplete="off"
+                />
+                <span className="mt-1 block text-xs font-normal text-muted">
+                  Leave blank to send {callbackAbsoluteUrl()}. Paste the portal value when it differs, including a
+                  trailing slash. No query or hash.
+                </span>
+              </label>
+            ) : null}
+            {network.code === "tiktok" || network.code === "x" ? (
+              <p className="sm:col-span-2 break-all font-mono text-[11px] leading-relaxed text-indigo">
+                {(() => {
+                  const spec = socialNetwork(network.code);
+                  if (!network.clientId || !spec) return "Client id is not saved, so Connect will not start.";
+                  return (
+                    providerAuthorizePreview({
+                      code: network.code,
+                      authorizeUrl: network.authorizeUrl,
+                      authorizeHosts: spec.authorizeHosts,
+                      clientIdParam: spec.clientIdParam,
+                      clientId: network.clientId,
+                      redirectUri: network.oauthRedirectUri || callbackAbsoluteUrl(),
+                      scopes: network.scopes,
+                    }) ?? "Authorize preview is unavailable."
+                  );
+                })()}
               </p>
             ) : null}
             {network.code === "tiktok" ? (
