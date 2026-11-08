@@ -441,8 +441,14 @@ export async function createMarketplaceApplication(input: {
   toSlug?: string;
   note?: string;
   briefId?: string;
+  offerText?: string;
+  deliverables?: string;
+  responseDeadline?: Date | null;
+  /** Recorded on the creation event. Not used as the invitee's identity. */
+  actorUserId?: string;
 }) {
-  if (input.kind === "business_request" && !input.businessRequestId) {
+  const invitation = Boolean(input.toSlug?.trim()) && !input.fromSlug?.trim();
+  if (input.kind === "business_request" && !input.businessRequestId && !(invitation && input.briefId?.trim())) {
     throw new Error("businessRequestId is required.");
   }
   if (input.kind === "creator_opportunity" && !input.opportunityId) {
@@ -467,7 +473,21 @@ export async function createMarketplaceApplication(input: {
       throw new Error("Creator opportunity must be published before connecting.");
     }
   }
-  if (input.fromUserId || input.fromSlug) {
+  if (invitation) {
+    const existing = await prisma.marketplaceApplication.findFirst({
+      where: {
+        kind: input.kind,
+        toSlug: input.toSlug,
+        fromSlug: null,
+        status: { notIn: ["WITHDRAWN", "DECLINED", "EXPIRED"] },
+        ...(input.businessRequestId
+          ? { businessRequestId: input.businessRequestId }
+          : { briefId: input.briefId ?? null }),
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existing) return existing;
+  } else if (input.fromUserId || input.fromSlug) {
     const existing = await prisma.marketplaceApplication.findFirst({
       where: {
         kind: input.kind,
@@ -490,12 +510,15 @@ export async function createMarketplaceApplication(input: {
         kind: input.kind,
         businessRequestId: input.businessRequestId,
         opportunityId: input.opportunityId,
-        fromUserId: input.fromUserId,
+        fromUserId: invitation ? null : input.fromUserId,
         fromSlug: input.fromSlug,
         toSlug: input.toSlug,
         briefId: input.briefId?.trim() || null,
         status: "REQUESTED",
         note: input.note?.trim() || null,
+        offerText: (input.offerText ?? "").trim(),
+        deliverables: (input.deliverables ?? "").trim(),
+        responseDeadline: input.responseDeadline ?? null,
       },
     });
     await tx.marketplaceApplicationEvent.create({
@@ -503,12 +526,87 @@ export async function createMarketplaceApplication(input: {
         applicationId: row.id,
         fromStatus: null,
         toStatus: "REQUESTED",
-        actorUserId: input.fromUserId,
-        note: "Application created",
+        actorUserId: input.actorUserId ?? input.fromUserId,
+        note: invitation ? "Invitation sent" : "Application created",
       },
     });
     return row;
   });
+}
+
+/**
+ * One campaign, one private invitation per influencer.
+ * Accepting or declining one row does not change any other row.
+ */
+export async function inviteCreatorsIndependently(input: {
+  workspaceId: string;
+  actorUserId: string;
+  creatorSlugs: string[];
+  requestId?: string;
+  briefId?: string;
+  offerText?: string;
+  deliverables?: string;
+  responseDeadline?: Date | null;
+  note?: string;
+}): Promise<{ ok: true; ids: string[] } | { ok: false; error: string }> {
+  const slugs = [...new Set(input.creatorSlugs.map((slug) => slug.trim()).filter(Boolean))];
+  if (!slugs.length) return { ok: false, error: "Choose at least one influencer." };
+  const workspaceId = input.workspaceId.trim();
+  if (!workspaceId || workspaceId === "public") {
+    return { ok: false, error: "Sign in with a business workspace." };
+  }
+
+  let requestId = input.requestId?.trim() || "";
+  let briefId = input.briefId?.trim() || "";
+  if (requestId) {
+    const request = await prisma.marketplaceBusinessRequest.findUnique({ where: { id: requestId } });
+    if (!request || request.workspaceId !== workspaceId) {
+      return { ok: false, error: "That campaign is not on this workspace." };
+    }
+    if (request.status !== "published") {
+      return { ok: false, error: "Publish the campaign before inviting influencers." };
+    }
+    briefId = briefId || request.briefId || "";
+  } else if (briefId) {
+    const brief = await prisma.businessBrief.findUnique({ where: { id: briefId } });
+    if (!brief || brief.workspaceId !== workspaceId) {
+      return { ok: false, error: "That campaign is not on this workspace." };
+    }
+    const request = await prisma.marketplaceBusinessRequest.findFirst({
+      where: { workspaceId, briefId, status: "published" },
+      orderBy: { createdAt: "desc" },
+    });
+    requestId = request?.id ?? "";
+  } else {
+    return { ok: false, error: "Save a campaign before inviting influencers." };
+  }
+
+  const ids: string[] = [];
+  for (const toSlug of slugs) {
+    const row = await createMarketplaceApplication({
+      kind: "business_request",
+      businessRequestId: requestId || undefined,
+      briefId: briefId || undefined,
+      toSlug,
+      note: input.note,
+      offerText: input.offerText,
+      deliverables: input.deliverables,
+      responseDeadline: input.responseDeadline,
+      actorUserId: input.actorUserId,
+    });
+    ids.push(row.id);
+  }
+  return { ok: true, ids };
+}
+
+/** A creator may receive only the invitation or application that names them. */
+export function invitationsVisibleTo<T extends { toSlug?: string | null; fromSlug?: string | null }>(
+  rows: T[],
+  creatorSlug: string,
+): T[] {
+  const slug = creatorSlug.trim();
+  if (!slug) return [];
+  return rows.filter((row) => row.toSlug === slug || row.fromSlug === slug);
 }
 
 export async function transitionMarketplaceApplication(input: {
@@ -691,12 +789,15 @@ export function creatorOwnsApplication(
 
 /** Pure — business may manage when the application sits on an owned request id. */
 export function businessOwnsApplication(
-  application: { businessRequestId?: string | null },
+  application: { businessRequestId?: string | null; briefId?: string | null },
   ownedRequestIds: string[],
+  ownedBriefIds: string[] = [],
 ): boolean {
-  const id = application.businessRequestId?.trim();
-  if (!id) return false;
-  return ownedRequestIds.includes(id);
+  const requestId = application.businessRequestId?.trim();
+  if (requestId && ownedRequestIds.includes(requestId)) return true;
+  const briefId = application.briefId?.trim();
+  if (briefId && ownedBriefIds.includes(briefId)) return true;
+  return false;
 }
 
 export async function listWorkspaceBusinessRequests(workspaceId: string): Promise<MarketplaceBusinessRequestRow[]> {
@@ -706,21 +807,7 @@ export async function listWorkspaceBusinessRequests(workspaceId: string): Promis
     where: { workspaceId: id, status: "published" },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
-  return rows.map((row) => ({
-    id: row.id,
-    brand: row.brand,
-    category: row.category,
-    budget: row.budget,
-    location: row.location,
-    tags: row.tags,
-    summary: row.summary,
-    lookingFor: row.lookingFor,
-    logoUrl: publicListingAsset(row.logoUrl),
-    imageUrl: publicListingAsset(row.imageUrl),
-    status: row.status,
-    sortOrder: row.sortOrder,
-    workspaceId: row.workspaceId,
-  }));
+  return rows.map((row) => mapBusinessRequestRow(row));
 }
 
 export type MarketplaceApplicationEventRow = {
@@ -740,8 +827,12 @@ export type MarketplaceApplicationRow = {
   fromUserId: string | null;
   fromSlug: string | null;
   toSlug: string | null;
+  briefId: string | null;
   status: MarketplaceApplicationStatus;
   note: string | null;
+  offerText: string;
+  deliverables: string;
+  responseDeadline: string | null;
   createdAt: string;
   /** Creator slug on either side of the application. */
   creatorSlug: string | null;
@@ -759,6 +850,10 @@ function mapApplication(row: {
   fromUserId: string | null;
   fromSlug: string | null;
   toSlug: string | null;
+  briefId?: string | null;
+  offerText?: string | null;
+  deliverables?: string | null;
+  responseDeadline?: Date | null;
   status: string;
   note: string | null;
   createdAt: Date;
@@ -783,8 +878,12 @@ function mapApplication(row: {
     fromUserId: row.fromUserId,
     fromSlug: row.fromSlug,
     toSlug: row.toSlug,
+    briefId: row.briefId ?? null,
     status,
     note: row.note,
+    offerText: row.offerText ?? "",
+    deliverables: row.deliverables ?? "",
+    responseDeadline: row.responseDeadline ? row.responseDeadline.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     creatorSlug,
     requestBrand: row.businessRequest?.brand ?? null,
@@ -880,14 +979,21 @@ export async function getMarketplaceApplicationDetail(
 
 export async function listMarketplaceApplications(input?: {
   businessRequestIds?: string[];
+  briefIds?: string[];
   creatorSlug?: string;
   opportunityIds?: string[];
   limit?: number;
 }): Promise<MarketplaceApplicationRow[]> {
   const clauses: Record<string, unknown>[] = [];
+  const campaign: Record<string, unknown>[] = [];
   if (input?.businessRequestIds?.length) {
-    clauses.push({ businessRequestId: { in: input.businessRequestIds } });
+    campaign.push({ businessRequestId: { in: input.businessRequestIds } });
   }
+  if (input?.briefIds?.length) {
+    campaign.push({ briefId: { in: input.briefIds } });
+  }
+  if (campaign.length === 1) clauses.push(campaign[0]!);
+  if (campaign.length > 1) clauses.push({ OR: campaign });
   if (input?.opportunityIds?.length) {
     clauses.push({ opportunityId: { in: input.opportunityIds } });
   }
@@ -906,7 +1012,8 @@ export async function listMarketplaceApplications(input?: {
     orderBy: { createdAt: "desc" },
     take: input?.limit ?? 40,
   });
-  return rows.map(mapApplication);
+  const mapped = rows.map(mapApplication);
+  return input?.creatorSlug ? invitationsVisibleTo(mapped, input.creatorSlug) : mapped;
 }
 
 /** Human labels for hub transition buttons. */

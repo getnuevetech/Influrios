@@ -57,7 +57,7 @@ export async function actionTransitionApplicationDetail(formData: FormData) {
       ? (await listWorkspaceBusinessRequests(ws.businessId)).map((row) => row.id)
       : [];
 
-  const asBusiness = businessOwnsApplication(existing, ownedIds);
+  const asBusiness = businessOwnsApplication(existing, ownedIds, ws?.briefs.map((brief) => brief.id) ?? []);
   const asCreator = draft?.slug ? creatorOwnsApplication(existing, draft.slug) : false;
   const creatorRole = draft?.slug ? creatorApplicationRole(existing, draft.slug) : null;
 

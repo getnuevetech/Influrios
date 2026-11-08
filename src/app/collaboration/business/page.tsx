@@ -21,6 +21,7 @@ import {
   actionAddShortlist,
   actionAdvanceLead,
   actionInviteCreatorToRequest,
+  actionInviteSelectedCreators,
   actionPostBusinessRequest,
   actionRefreshCampaignSuggestions,
   actionRemoveShortlist,
@@ -179,9 +180,9 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               Managed matching queued for review.
             </p>
           ) : null}
-          {params.invited ? (
+          {params.invited && !/^\d+$/.test(params.invited) ? (
             <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-              Invitation sent to {params.invited}. Track it under Applicants.
+              Invitation sent to {params.invited}. They only see their own invitation. Track it under Applicants.
             </p>
           ) : null}
           {params.app ? (
@@ -532,14 +533,59 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             </div>
             {params.sent ? (
               <p className="mt-3 text-sm font-semibold text-emerald-700">
-                Team proposal sent. It opens a contract after every creator accepts.{" "}
+                Team proposal sent. Each teammate can see who is on the team. The agreement opens after every teammate accepts.{" "}
                 <Link href="/collaboration/team" className="text-violet hover:underline">
-                  View proposals
+                  View the team
                 </Link>
               </p>
             ) : null}
+            {params.invited && /^\d+$/.test(params.invited) ? (
+              <p className="mt-3 text-sm font-semibold text-emerald-700">
+                {params.invited} private invitation{params.invited === "1" ? "" : "s"} sent. Each influencer sees only their own invitation.
+              </p>
+            ) : null}
+            {hub.suggestions.length >= 1 && (hub.intentBrief || hub.ownRequests.length > 0) ? (
+              <form action={actionInviteSelectedCreators} className="mt-4 space-y-3 rounded-xl border border-[#E4E9F5] bg-[#F8FAFF] p-4">
+                <input type="hidden" name="briefId" value={hub.intentBrief?.id ?? ""} />
+                <input
+                  type="hidden"
+                  name="requestId"
+                  value={
+                    hub.ownRequests.find((request) => hub.intentBrief && request.briefId === hub.intentBrief.id)?.id ??
+                    (hub.intentBrief ? "" : hub.ownRequests[0]?.id ?? "")
+                  }
+                />
+                <fieldset className="space-y-1">
+                  <legend className="text-sm font-semibold text-indigo">Invite influencers to this campaign</legend>
+                  <p className="text-xs text-muted">
+                    Each selected person gets a separate invitation with its own offer, deadline, and response. They do not see who else was invited.
+                  </p>
+                  {hub.suggestions.map(({ creator }) => (
+                    <label key={creator.slug} className="flex items-center gap-2 text-sm text-indigo">
+                      <input type="checkbox" name="creatorSlug" value={creator.slug} />
+                      {creator.displayName}
+                    </label>
+                  ))}
+                </fieldset>
+                <label className="block text-sm font-semibold text-indigo">
+                  Compensation for this invitation
+                  <textarea name="offerText" rows={2} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" placeholder="Stored separately on each invitation" />
+                </label>
+                <label className="block text-sm font-semibold text-indigo">
+                  Deliverables
+                  <textarea name="deliverables" rows={2} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
+                </label>
+                <label className="block text-sm font-semibold text-indigo">
+                  Response deadline
+                  <input type="date" name="responseDeadline" className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
+                </label>
+                <button type="submit" className="btn-primary !py-2 text-sm">
+                  Send private invitations
+                </button>
+              </form>
+            ) : null}
             {teamSendControl({ audience: "business" }).visible && hub.suggestions.length >= 1 ? (
-              <form action={actionSendTeamProposal} className="mt-4 space-y-2 rounded-xl border border-[#E4E9F5] bg-[#F8FAFF] p-4">
+              <form action={actionSendTeamProposal} className="mt-4 space-y-2 rounded-xl border border-[#E4E9F5] bg-white p-4">
                 <input type="hidden" name="returnTo" value="/collaboration/business" />
                 <input type="hidden" name="title" value={hub.intentBrief?.title ?? ""} />
                 <input
@@ -548,16 +594,18 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   value={[hub.intentBrief?.goal, hub.intentBrief?.summary].filter(Boolean).join(" · ") || hub.intentBrief?.title || ""}
                 />
                 <fieldset className="space-y-1">
-                  <legend className="text-sm font-semibold text-indigo">Send a team proposal</legend>
-                  <p className="text-xs text-muted">Select one or more suggestions. One proposal, one contract, one funding instruction.</p>
+                  <legend className="text-sm font-semibold text-indigo">Form a coordinated team</legend>
+                  <p className="text-xs text-muted">
+                    Use this only when these influencers must work together. They will see the teammates and shared responsibilities. Individual compensation stays private. The agreement opens after every teammate accepts.
+                  </p>
                   {hub.suggestions.map(({ creator }) => (
-                    <label key={creator.slug} className="flex items-center gap-2 text-sm text-indigo">
+                    <label key={`team-${creator.slug}`} className="flex items-center gap-2 text-sm text-indigo">
                       <input type="checkbox" name="creatorSlug" value={creator.slug} />
                       {creator.displayName}
                     </label>
                   ))}
                 </fieldset>
-                <button type="submit" className="btn-primary !py-2 text-sm">
+                <button type="submit" className="btn-secondary !py-2 text-sm">
                   Send team proposal
                 </button>
               </form>

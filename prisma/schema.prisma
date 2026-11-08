@@ -923,6 +923,12 @@ model MarketplaceApplication {
   briefId           String?
   status            String                         @default("REQUESTED")
   note              String?
+  /// Compensation offered on this invitation. Private to this recipient and the business.
+  offerText         String                         @default("")
+  /// Deliverables offered on this invitation. Private to this recipient and the business.
+  deliverables      String                         @default("")
+  /// This recipient's response deadline. Other invitees have their own.
+  responseDeadline  DateTime?
   createdAt         DateTime                       @default(now())
   updatedAt         DateTime                       @updatedAt
   events            MarketplaceApplicationEvent[]

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import {
   getTeamProposal,
   teamMemberStatusLabel,
+  visibleTeamMembers,
   wizardHrefForProposal,
 } from "@/lib/team-proposal";
 
@@ -50,7 +51,11 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
   const canRespond =
     Boolean(myMember && myMember.status === "invited") &&
     (proposal.status === "sent" || proposal.status === "partial");
-  const wizardHref = wizardHrefForProposal(proposal);
+  const wizardHref = ownsAsBusiness ? wizardHrefForProposal(proposal) : null;
+  const members = visibleTeamMembers(proposal.members, {
+    creatorSlug: creator?.slug ?? null,
+    canSeeAll: ownsAsBusiness,
+  });
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6 sm:px-6">
@@ -74,8 +79,13 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet">Team invitation</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-indigo">{proposal.title}</h1>
         <p className="mt-2 text-sm text-muted">
-          Proposal status:{" "}
-          <span className="font-semibold uppercase text-violet">{proposal.status}</span>
+          {ownsAsBusiness ? (
+            <>
+              Proposal status: <span className="font-semibold uppercase text-violet">{proposal.status}</span>
+            </>
+          ) : (
+            "This is a coordinated team collaboration. You can see who is on the team. Compensation and private negotiations stay between the business and each person."
+          )}
         </p>
         {myMember ? (
           <p className="mt-1 text-sm font-semibold text-indigo">
@@ -93,9 +103,9 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
         ) : null}
 
         <section className="mt-5">
-          <h2 className="text-sm font-bold text-indigo">Team members</h2>
+          <h2 className="text-sm font-bold text-indigo">{ownsAsBusiness ? "Team members" : "Teammates"}</h2>
           <ul className="mt-2 space-y-2">
-            {proposal.members.map((member) => (
+            {members.map((member) => (
               <li
                 key={member.id}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E8EDF8] bg-[#F8F6FF] px-3 py-2 text-sm"
@@ -103,14 +113,18 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
                 <span className="font-semibold text-indigo">
                   {member.creatorSlug}
                   {creator && member.creatorSlug === creator.slug ? " (you)" : ""}
+                  {member.role ? <span className="font-normal text-muted"> · {member.role}</span> : null}
                 </span>
-                <span className="text-xs font-bold uppercase text-violet">
-                  {member.status === "invited" && creator?.slug === member.creatorSlug
-                    ? teamMemberStatusLabel(member.status)
-                    : member.status}
-                  {" · "}
-                  {(member.shareBps / 100).toFixed(2)}%
-                </span>
+                {member.status || member.shareBps != null ? (
+                  <span className="text-xs font-bold uppercase text-violet">
+                    {member.status
+                      ? member.status === "invited" && creator?.slug === member.creatorSlug
+                        ? teamMemberStatusLabel(member.status)
+                        : member.status
+                      : null}
+                    {member.shareBps != null ? ` · ${(member.shareBps / 100).toFixed(2)}%` : ""}
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -139,8 +153,8 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
               <p className="text-sm font-bold text-indigo">You accepted this invitation</p>
               <p className="mt-1 text-xs text-muted">
                 {proposal.status === "accepted"
-                  ? "Every creator accepted. The business can open the contract."
-                  : "Waiting for the remaining creators to respond. This is no longer an open invite for you."}
+                  ? "Every teammate accepted. The business can open the agreement."
+                  : "You accepted this invitation. This team agreement opens after every teammate accepts. You do not see their compensation or private negotiations."}
               </p>
               {proposal.status === "accepted" && wizardHref ? (
                 <Link href={wizardHref} className="mt-3 inline-block text-sm font-bold text-violet hover:underline">

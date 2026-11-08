@@ -11,6 +11,7 @@ import {
   teamMatchRows,
   teamMemberStatusLabel,
   teamSendControl,
+  visibleTeamMembers,
   wizardHrefForProposal,
   wizardParties,
 } from "./team-proposal";
@@ -23,6 +24,36 @@ describe("team proposals", () => {
 
   it("moves to partial when one creator accepts", () => {
     assert.equal(nextProposalStatus(members, "a", "accepted"), "partial");
+  });
+
+  it("shows teammates without their compensation or response", () => {
+    const visible = visibleTeamMembers(
+      [
+        { id: "1", creatorSlug: "ada", role: "creator", status: "accepted", shareBps: 7000 },
+        { id: "2", creatorSlug: "bea", role: "creator", status: "invited", shareBps: 3000 },
+      ],
+      { creatorSlug: "ada", canSeeAll: false },
+    );
+    assert.equal(visible.length, 2);
+    assert.equal(visible[0]?.shareBps, 7000);
+    assert.equal(visible[0]?.status, "accepted");
+    assert.equal(visible[1]?.creatorSlug, "bea");
+    assert.equal(visible[1]?.role, "creator");
+    assert.equal(visible[1]?.shareBps, null);
+    assert.equal(visible[1]?.status, null);
+    assert.equal(
+      visibleTeamMembers(
+        [{ id: "1", creatorSlug: "ada", role: "creator", status: "invited", shareBps: 10000 }],
+        { creatorSlug: "bea", canSeeAll: false },
+      ).length,
+      0,
+    );
+    const business = visibleTeamMembers(
+      [{ id: "1", creatorSlug: "ada", role: "creator", status: "invited", shareBps: 10000 }],
+      { creatorSlug: null, canSeeAll: true },
+    );
+    assert.equal(business[0]?.shareBps, 10000);
+    assert.equal(business[0]?.status, "invited");
   });
 
   it("labels personal member status so accepted invites do not still read as invited", () => {

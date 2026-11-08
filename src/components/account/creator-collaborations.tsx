@@ -385,7 +385,7 @@ export function CreatorCollaborations({
         <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-5">
           <h2 className="font-display text-lg font-bold text-[#1B1464]">Team proposals</h2>
           {proposals.length === 0 ? (
-            <p className="mt-3 text-sm text-[#667085]">Team invitations appear here. Acceptance still needs the other participants, a contract, and funding.</p>
+            <p className="mt-3 text-sm text-[#667085]">Coordinated team invitations appear here. Ordinary campaign invitations stay in Invitations and are private to you.</p>
           ) : (
             <ul className="mt-3 divide-y divide-[#EEF2F7]">
               {proposals.map((proposal) => {
@@ -395,9 +395,9 @@ export function CreatorCollaborations({
                     ? "Expired"
                     : "Declined"
                   : proposal.status === "accepted"
-                    ? "All participants accepted · contract and funding still required"
+                    ? "Team ready · the business can open the agreement"
                     : mine?.status === "accepted"
-                      ? "You accepted · waiting on other participants"
+                      ? "You accepted · this team agreement waits for every teammate"
                       : "Needs your response";
                 return (
                   <InviteRow key={proposal.id} brand={proposal.title} title="Team proposal" meta={meta} href={`/collaboration/team/${proposal.id}`} action="View invitation →" />

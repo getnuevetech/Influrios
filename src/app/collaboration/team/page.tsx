@@ -49,8 +49,9 @@ export default async function TeamProposalPage({ searchParams }: Props) {
           </Link>
           <h1 className="mt-2 font-display text-4xl font-bold">Team proposals</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Invite one or more influencers on one proposal. The contract opens only after every person accepts.
-            Funding waits until every payout route is ready.
+            A team proposal is only for influencers who must work together. Each person can see the teammates and
+            shared responsibilities. Ordinary campaign invitations stay private and are sent from the business hub.
+            The team agreement opens only after every teammate accepts.
           </p>
         </div>
       </section>
@@ -154,8 +155,8 @@ export default async function TeamProposalPage({ searchParams }: Props) {
               <article key={proposal.id} className="card-surface p-4">
                 <p className="font-semibold text-indigo">{proposal.title}</p>
                 <p className="mt-1 text-xs uppercase tracking-wide text-violet">
-                  Proposal: {proposal.status}
-                  {mine ? ` · ${mine.status === "invited" ? "Pending your response" : mine.status}` : ""}
+                  Team collaboration
+                  {mine?.status ? ` · ${mine.status === "invited" ? "Pending your response" : mine.status}` : ""}
                 </p>
                 <Link
                   href={`/collaboration/team/${proposal.id}`}

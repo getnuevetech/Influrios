@@ -57,7 +57,7 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
       ? (await listWorkspaceBusinessRequests(ws.businessId)).map((row) => row.id)
       : [];
 
-  const asBusiness = businessOwnsApplication(application, ownedIds);
+  const asBusiness = businessOwnsApplication(application, ownedIds, ws?.briefs.map((brief) => brief.id) ?? []);
   const asCreator = draft?.slug ? creatorOwnsApplication(application, draft.slug) : false;
   if (!asBusiness && !asCreator) {
     redirect("/collaboration/hub?error=" + encodeURIComponent("You cannot view that application."));
@@ -183,6 +183,35 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
             </div>
           ) : null}
 
+          {isInvite ? (
+            <section className="rounded-2xl border border-[#E8EDF8] bg-[#F8F6FF] p-4">
+              <h2 className="text-sm font-bold text-indigo">Private invitation</h2>
+              <p className="mt-1 text-xs text-muted">
+                {asBusiness
+                  ? "Only you and this influencer can see this offer, deadline, and response."
+                  : "This invitation is only yours. Other people invited to the campaign are not shown here, and your response does not change theirs."}
+              </p>
+              {application.offerText ? (
+                <p className="mt-3 text-sm text-[#4E5872]">
+                  <span className="font-semibold text-indigo">Compensation. </span>
+                  {application.offerText}
+                </p>
+              ) : null}
+              {application.deliverables ? (
+                <p className="mt-2 text-sm text-[#4E5872]">
+                  <span className="font-semibold text-indigo">Deliverables. </span>
+                  {application.deliverables}
+                </p>
+              ) : null}
+              {application.responseDeadline ? (
+                <p className="mt-2 text-sm text-[#4E5872]">
+                  <span className="font-semibold text-indigo">Respond by. </span>
+                  {application.responseDeadline.slice(0, 10)}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
           {application.requestSummary ? (
             <section>
               <h2 className="text-sm font-bold text-indigo">Campaign summary</h2>
@@ -258,8 +287,8 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
                     {application.status === "COLLABORATION_DRAFTED"
                       ? "The agreement is not on file yet. It shows under Contracts once it is created."
                       : isInvite
-                        ? "This invitation is accepted. The contract appears when the agreement is created."
-                        : "This application is accepted. It is not an invitation. The contract appears when the agreement is created."}
+                        ? "You accepted this invitation. Next: review the agreement."
+                        : "You accepted. This application is private to you and the business."}
                   </p>
                 </div>
                 <Link href="/collaboration/contracts" className="btn-primary inline-flex items-center gap-2 !py-2 text-sm">

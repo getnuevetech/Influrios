@@ -14,6 +14,7 @@ import {
   creatorApplicationRole,
   creatorApplicationTransitions,
   businessOwnsApplication,
+  invitationsVisibleTo,
   canTransitionApplication,
   createMarketplaceApplication,
   creatorOwnsApplication,
@@ -271,6 +272,19 @@ describe("marketplace application ownership guards (W2.3c)", () => {
     assert.equal(businessOwnsApplication({ businessRequestId: "req-1" }, ["req-1", "req-2"]), true);
     assert.equal(businessOwnsApplication({ businessRequestId: "req-9" }, ["req-1"]), false);
     assert.equal(businessOwnsApplication({ businessRequestId: null }, ["req-1"]), false);
+    assert.equal(businessOwnsApplication({ businessRequestId: null, briefId: "brief-1" }, [], ["brief-1"]), true);
+    assert.equal(businessOwnsApplication({ businessRequestId: null, briefId: "brief-9" }, [], ["brief-1"]), false);
+  });
+
+  it("returns only the invitation that names the viewer", () => {
+    const rows = [
+      { id: "a", toSlug: "ada", fromSlug: null, offerText: "Ada private offer" },
+      { id: "b", toSlug: "bea", fromSlug: null, offerText: "Bea private offer" },
+    ];
+    const visible = invitationsVisibleTo(rows, "ada");
+    assert.deepEqual(visible.map((row) => row.id), ["a"]);
+    assert.equal(visible.some((row) => row.offerText.includes("Bea")), false);
+    assert.deepEqual(invitationsVisibleTo(rows, ""), []);
   });
 });
 
