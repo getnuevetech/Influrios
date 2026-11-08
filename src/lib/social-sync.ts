@@ -3,6 +3,14 @@ import { formatFollowers } from "@/lib/seed-data";
 /** Current Meta Graph API version used for Instagram / Facebook defaults. */
 export const META_GRAPH_VERSION = "v22.0";
 
+/**
+ * TikTok `/v2/user/info/` requires `fields`. Limited to scopes we request:
+ * user.info.basic (open_id, avatar_url, display_name) + user.info.stats (counts).
+ * Do not request username/bio/profile links — those need user.info.profile.
+ */
+export const TIKTOK_USER_INFO_FIELDS =
+  "open_id,avatar_url,display_name,follower_count,following_count,likes_count,video_count";
+
 /** Official authorize and API hosts. Admin URLs must stay on these. */
 export const SOCIAL_NETWORKS = [
   {
@@ -39,7 +47,8 @@ export const SOCIAL_NETWORKS = [
     apiHosts: ["open.tiktokapis.com"],
     authorizeUrl: "https://www.tiktok.com/v2/auth/authorize/",
     tokenUrl: "https://open.tiktokapis.com/v2/oauth/token/",
-    profileUrl: "https://open.tiktokapis.com/v2/user/info/",
+    // fields is required by TikTok; keep to user.info.basic + user.info.stats (no user.info.profile).
+    profileUrl: `https://open.tiktokapis.com/v2/user/info/?fields=${TIKTOK_USER_INFO_FIELDS}`,
     scopes: "user.info.basic,user.info.stats",
     configPermissions: "user.info.basic,user.info.stats",
   },
@@ -294,6 +303,46 @@ export function parseSocialMetrics(payload: unknown): { followers: number; likes
 }
 
 /**
+ * TikTok Login Kit `/v2/user/info/` — identity from display_name/open_id;
+ * metrics from follower_count + likes_count (user.info.stats).
+ */
+export function parseTikTokUserInfo(payload: unknown): {
+  identity: SocialIdentity | null;
+  metrics: SocialAudienceMetrics | null;
+} | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const root = payload as { data?: unknown; error?: unknown };
+  const err = root.error;
+  if (err && typeof err === "object" && !Array.isArray(err)) {
+    const code = (err as { code?: unknown }).code;
+    if (typeof code === "string" && code && code.toLowerCase() !== "ok") return null;
+  }
+  const data = root.data;
+  const user =
+    data && typeof data === "object" && !Array.isArray(data)
+      ? (data as { user?: unknown }).user
+      : null;
+  if (!user || typeof user !== "object" || Array.isArray(user)) return null;
+  const record = user as {
+    open_id?: unknown;
+    display_name?: unknown;
+    follower_count?: unknown;
+    likes_count?: unknown;
+  };
+  const displayName = typeof record.display_name === "string" ? record.display_name.trim() : "";
+  const openId = typeof record.open_id === "string" ? record.open_id.trim() : "";
+  const handle = displayName || null;
+  const externalId = openId || null;
+  if (!handle && !externalId) return null;
+  const followers = asCount(record.follower_count);
+  const likes = asCount(record.likes_count);
+  return {
+    identity: { handle, externalId },
+    metrics: followers != null ? { primary: followers, secondary: likes } : null,
+  };
+}
+
+/**
  * YouTube channels.list — identity from snippet; metrics are subscribers + views
  * (views stored in the likes column, labeled "views" in the UI).
  */
@@ -465,6 +514,25 @@ export function interpretSocialProfile(
 ): SocialProfileResult {
   const key = (platform ?? "").toUpperCase();
 
+  if (key === "TIKTOK") {
+    const tiktok = parseTikTokUserInfo(payload);
+    if (!tiktok) {
+      return {
+        identity: null,
+        metrics: null,
+        metricsNotice:
+          "Connected without audience stats: TikTok did not return a usable user profile. Confirm user.info.basic and user.info.stats are approved, then Sync now.",
+      };
+    }
+    return {
+      identity: tiktok.identity,
+      metrics: tiktok.metrics,
+      metricsNotice: tiktok.metrics
+        ? null
+        : "Your TikTok account is connected, but follower statistics were not available yet. Confirm user.info.stats and try Sync now.",
+    };
+  }
+
   if (key === "YOUTUBE") {
     const youtube = parseYoutubeChannelMetrics(payload);
     if (!youtube) {
@@ -609,6 +677,20 @@ export function prepareSocialProfileUrl(profileUrl: string, platform?: string | 
       if (!url.searchParams.get("mine") && !url.searchParams.get("id") && !url.searchParams.get("forHandle")) {
         url.searchParams.set("mine", "true");
       }
+      return url.toString();
+    } catch {
+      return candidate;
+    }
+  }
+
+  const looksTikTok =
+    network?.code === "tiktok" || /open\.tiktokapis\.com\/v2\/user\/info/i.test(candidate);
+  if (looksTikTok) {
+    try {
+      const url = new URL(candidate);
+      if (url.hostname !== "open.tiktokapis.com") return candidate;
+      url.pathname = "/v2/user/info/";
+      url.searchParams.set("fields", TIKTOK_USER_INFO_FIELDS);
       return url.toString();
     } catch {
       return candidate;
