@@ -87,6 +87,7 @@ export default async function CreatorAnalyticsPage() {
       id: social.id,
       platform: social.platform,
       handle: social.handle,
+      slug: creator?.slug ?? "",
       followers: social.followers,
       source: social.source,
       refreshedAt: social.refreshedAt,
@@ -248,8 +249,9 @@ export default async function CreatorAnalyticsPage() {
                     <span>
                       <span className="block text-sm font-semibold capitalize">{social.platform.toLowerCase()}</span>
                       <span className="text-xs text-muted">
-                        {social.handle}
-                        {typeof social.followers === "number" ? ` · ${formatFollowers(social.followers)} followers` : ""}
+                        {social.handle ? social.handle : social.detail ? "" : "No @username saved"}
+                        {typeof social.followers === "number" ? `${social.handle ? " · " : ""}${formatFollowers(social.followers)} followers` : ""}
+                        {social.detail ? `${social.handle || typeof social.followers === "number" ? " · " : ""}${social.detail}` : ""}
                       </span>
                     </span>
                   </span>

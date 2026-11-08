@@ -9,7 +9,7 @@ import { loadCreatorHub } from "@/lib/collaboration-hub";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 import { isBrandDefaultAvatar, isBrandDefaultBanner, isRemoteMediaUrl } from "@/lib/profile-media";
-import { isLiveSocialAccount } from "@/lib/social-sync";
+import { isLiveSocialAccount, isProviderUsername } from "@/lib/social-sync";
 import { primaryShortHost } from "@/lib/short-link";
 import { specialtyLabel } from "@/lib/seed-data";
 
@@ -98,6 +98,23 @@ export function mediaKitPhotos(avatar: string | null | undefined, cover: string 
   return photos;
 }
 
+function claimHandleKey(value: string) {
+  return value
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase()
+    .replace(/-\d+$/, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/** The signup handle copied onto a card row is not that network's account. */
+export function isClaimPlaceholderHandle(handle: string, slug: string) {
+  const left = claimHandleKey(handle);
+  const right = claimHandleKey(slug);
+  if (!left || !right) return false;
+  return left === right;
+}
+
 export function classifySocialRow(input: {
   id: string;
   platform: string;
@@ -107,6 +124,7 @@ export function classifySocialRow(input: {
   refreshedAt: Date | null;
   connectionStatus: string | null;
   lastError: string | null;
+  slug?: string;
 }): HomeSocial {
   const live = isLiveSocialAccount({
     source: input.source,
@@ -116,14 +134,26 @@ export function classifySocialRow(input: {
   const oauth = input.connectionStatus === "connected";
   const attention = input.connectionStatus === "error";
   const status: HomeSocialStatus = oauth ? "connected" : attention ? "attention" : "on_card";
+  const providerConfirmed =
+    (input.source === "PROVIDER_SYNCED" || input.source === "PLATFORM_VERIFIED") && isProviderUsername(input.handle);
+  const claimCopy = !oauth && !attention && isClaimPlaceholderHandle(input.handle, input.slug ?? "");
+  const handle = oauth || attention ? (providerConfirmed ? input.handle : "") : claimCopy ? "" : input.handle;
   return {
     id: input.id,
     platform: input.platform,
-    handle: input.handle,
+    handle,
     followers: live ? input.followers : null,
     status,
     statusLabel: oauth ? "Connected" : attention ? "Needs attention" : "On your card",
-    detail: attention ? input.lastError : oauth && !live ? "Signed in. Audience figures are not synced yet." : null,
+    detail: attention
+      ? input.lastError
+      : oauth && !providerConfirmed
+        ? "Signed in. Sync now to load the @username from this network."
+        : oauth && !live
+          ? "Signed in. Audience figures are not synced yet."
+          : claimCopy
+            ? "This row still has the claim handle. Connect the network to replace it."
+            : null,
   };
 }
 
@@ -248,6 +278,7 @@ export async function loadCreatorHome(userId: string) {
       id: social.id,
       platform: social.platform,
       handle: social.handle,
+      slug,
       followers: social.followers,
       source: social.source,
       refreshedAt: social.refreshedAt,

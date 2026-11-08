@@ -15,6 +15,7 @@ import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
 import { listFxRates } from "@/lib/settlement";
 import { PlaceFields } from "@/components/place-fields";
 import { SPECIALTY_TAXONOMY, formatFollowers, publicStoredImage, specialtyLabel } from "@/lib/seed-data";
+import { syncedFollowerTotal } from "@/lib/social-sync";
 import {
   actionAcceptBusinessTerms,
   actionAddShortlist,
@@ -452,7 +453,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               ) : (
                 hub.suggestions.map(({ creator, score, reasons }) => {
                   const photo = publicStoredImage(creator.image);
-                  const followers = creator.socials.reduce((sum, social) => sum + social.followers, 0);
+                  const followers = syncedFollowerTotal(creator.socials);
                   const engagement = creator.stats?.engagementRate?.trim() ?? "";
                   const showEngagement = engagement.length > 0 && engagement !== "—";
                   return (

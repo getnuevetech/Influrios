@@ -8,6 +8,9 @@ import {
   formatAuthorizeReport,
   reportAuthorizeUrl,
   interpretSocialProfile,
+  isProviderUsername,
+  parseXUser,
+  syncedFollowerTotal,
   isLiveSocialAccount,
   isMetaFacebookDialogUrl,
   isMetaGraphTokenUrl,
@@ -103,6 +106,36 @@ describe("live social metrics", () => {
       emptyChannel: false,
     });
     assert.equal(parseYoutubeChannelMetrics({ items: [] })?.emptyChannel, true);
+    const titleOnly = parseYoutubeChannelMetrics({
+      items: [{ id: "UCabc", snippet: { title: "Ada Creates" }, statistics: { subscriberCount: "3" } }],
+    });
+    assert.equal(titleOnly?.identity.handle, null);
+    assert.equal(titleOnly?.identity.externalId, "UCabc");
+    const xUser = parseXUser({
+      data: {
+        id: "99",
+        name: "Agboola O. Olomola",
+        username: "agboola",
+        public_metrics: { followers_count: 223 },
+      },
+    });
+    assert.deepEqual(xUser, {
+      identity: { handle: "agboola", externalId: "99" },
+      metrics: { primary: 223, secondary: null },
+    });
+    const xInterpreted = interpretSocialProfile("X", {
+      data: { id: "99", name: "Agboola O. Olomola", username: "agboola", public_metrics: { followers_count: 223 } },
+    });
+    assert.equal(xInterpreted.identity?.handle, "agboola");
+    assert.equal(isProviderUsername("@Agboola O. Olomola"), false);
+    assert.equal(isProviderUsername("agboola"), true);
+    assert.equal(
+      syncedFollowerTotal([
+        { followers: 9000, source: "CREATOR_CLAIMED", refreshedAt: null },
+        { followers: 223, source: "PROVIDER_SYNCED", refreshedAt: "2026-11-08T00:00:00.000Z" },
+      ]),
+      223,
+    );
     assert.equal(socialMetricLabels("YOUTUBE").secondary, "views");
   });
 

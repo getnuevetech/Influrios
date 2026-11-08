@@ -26,6 +26,7 @@ import { cardsFromStoredCollaborationMatches } from "@/lib/matching";
 import { FUNDING_BADGE_CLASS } from "@/lib/funding-badge";
 import { PAYOUT_METHOD_LABELS, type PayoutMethod } from "@/lib/payout-readiness";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
+import { syncedFollowerTotal } from "@/lib/social-sync";
 import {
   applicationIsAcceptedPipeline,
   applicationIsInvitation,
@@ -144,7 +145,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
   const popularCards = cardsFromStoredCollaborationMatches(cms?.collaborationMatches.matches ?? []);
 
   const availableCents = hub.earnings.releasedCents;
-  const totalFollowers = creator.socials.reduce((sum, social) => sum + social.followers, 0);
+  const totalFollowers = syncedFollowerTotal(creator.socials);
   const engagement = creator.stats?.engagementRate ?? "—";
 
   return (

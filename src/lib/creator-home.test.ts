@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   classifySocialRow,
+  isClaimPlaceholderHandle,
   countByRecentDays,
   displayBio,
   mediaKitPhotos,
@@ -48,6 +49,57 @@ describe("creator home facts", () => {
     });
     assert.equal(live.status, "connected");
     assert.equal(live.followers, 4100);
+    assert.equal(live.handle, "@ag.olomola");
+    const signedIn = classifySocialRow({
+      id: "3",
+      platform: "YOUTUBE",
+      handle: "@ag.olomola",
+      followers: null,
+      source: "CREATOR_CLAIMED",
+      refreshedAt: null,
+      connectionStatus: "connected",
+      lastError: null,
+      slug: "ag-olomola-2",
+    });
+    assert.equal(signedIn.handle, "");
+    assert.match(signedIn.detail ?? "", /Sync now/);
+    const displayName = classifySocialRow({
+      id: "4",
+      platform: "X",
+      handle: "@Agboola O. Olomola",
+      followers: 223,
+      source: "PROVIDER_SYNCED",
+      refreshedAt: new Date("2026-11-08T00:00:00.000Z"),
+      connectionStatus: "connected",
+      lastError: null,
+    });
+    assert.equal(displayName.handle, "");
+    assert.equal(displayName.followers, 223);
+    const username = classifySocialRow({
+      id: "5",
+      platform: "X",
+      handle: "@agboola",
+      followers: 223,
+      source: "PROVIDER_SYNCED",
+      refreshedAt: new Date("2026-11-08T00:00:00.000Z"),
+      connectionStatus: "connected",
+      lastError: null,
+    });
+    assert.equal(username.handle, "@agboola");
+    assert.equal(isClaimPlaceholderHandle("@ag.olomola", "ag-olomola-2"), true);
+    const onCard = classifySocialRow({
+      id: "6",
+      platform: "INSTAGRAM",
+      handle: "@ag.olomola",
+      followers: null,
+      source: "CREATOR_CLAIMED",
+      refreshedAt: null,
+      connectionStatus: null,
+      lastError: null,
+      slug: "ag-olomola-2",
+    });
+    assert.equal(onCard.handle, "");
+    assert.equal(onCard.status, "on_card");
   });
 
   it("builds a visit series from event times and does not invent a currency", () => {
