@@ -9,14 +9,16 @@ import {
   interpretSocialProfile,
   isLiveSocialAccount,
   isMetaFacebookDialogUrl,
-  prepareSocialProfileUrl,
+  normalizeMetaAppId,
   normalizeMetaConfigId,
+  prepareSocialProfileUrl,
   resolveLockedOAuthEndpoints,
   resolveSocialScopes,
   socialConnectGate,
   socialHostAllowed,
   socialMetricLabels,
   socialNetwork,
+  validateMetaUnifiedLoginIds,
   type SocialSyncPlatform,
 } from "@/lib/social-sync";
 
@@ -231,6 +233,10 @@ export async function saveSocialNetwork(input: {
         : previous.configId;
   const classicInstagramLogin =
     network.code === "instagram" && Boolean(input.classicInstagramLogin) && !configId;
+  const clientId =
+    network.supportsConfigId && (configId || network.code === "facebook")
+      ? normalizeMetaAppId(input.clientId) || input.clientId.trim().slice(0, 200)
+      : input.clientId.trim().slice(0, 200);
   if (network.code === "instagram" && input.enabled && !configId && !classicInstagramLogin) {
     throw new Error(
       "Instagram needs a Facebook Login for Business Configuration ID (config_id). Meta returns “config_id is required” without it. Paste the Configuration ID from Meta → Facebook Login for Business → Configurations, or enable classic Instagram Login for older apps that still have an Instagram App ID.",
@@ -240,6 +246,10 @@ export async function saveSocialNetwork(input: {
     throw new Error(
       "Facebook needs a Facebook Login for Business Configuration ID (config_id). Meta returns “Invalid parameter: config_id is required” when Connect opens the Facebook dialog without it.",
     );
+  }
+  if (configId && input.enabled) {
+    const metaIds = validateMetaUnifiedLoginIds({ appId: clientId, configId });
+    if (!metaIds.ok) throw new Error(metaIds.error);
   }
   const locked = resolveLockedOAuthEndpoints(network.platform, configId);
   const authorizeUrl = network.locksOAuthEndpoints
@@ -273,7 +283,7 @@ export async function saveSocialNetwork(input: {
   const data = {
     name: network.name,
     enabled: input.enabled,
-    publicKey: input.clientId.trim().slice(0, 200) || null,
+    publicKey: clientId.slice(0, 200) || null,
     secretCipher: secretCipher ?? null,
     extraJson: {
       authorizeUrl,
@@ -402,11 +412,19 @@ export async function beginSocialConnect(input: {
         "Meta requires config_id for this app. Admin → Social: paste the Facebook Login for Business Configuration ID on Instagram/Facebook, then try Connect again.",
     };
   }
+  let clientId = provider!.clientId;
+  if (configId) {
+    const checked = validateMetaUnifiedLoginIds({ appId: clientId, configId });
+    if (!checked.ok) return { ok: false as const, error: checked.error };
+    clientId = checked.appId;
+  } else if (isMetaFacebookDialogUrl(authorizeBase)) {
+    clientId = normalizeMetaAppId(clientId) || clientId;
+  }
   const authorizeUrl = buildAuthorizeUrl({
     authorizeUrl: authorizeBase,
     authorizeHosts: locked?.authorizeHosts ?? network.authorizeHosts,
     clientIdParam: network.clientIdParam,
-    clientId: provider!.clientId,
+    clientId,
     redirectUri: socialCallbackUrl(),
     state,
     scopes: provider!.scopes,

@@ -684,6 +684,90 @@ export function normalizeMetaConfigId(raw: string | null | undefined) {
   return value.slice(0, 120);
 }
 
+/**
+ * Meta App ID for Facebook dialog / Unified Login (`client_id`).
+ * Accepts a bare App ID or a full Meta login URL that contains client_id=.
+ * Do not confuse with Configuration ID (config_id) or Instagram App ID.
+ */
+export function normalizeMetaAppId(raw: string | null | undefined) {
+  const value = (raw ?? "").trim();
+  if (!value) return "";
+  if (/^\d{6,}$/.test(value)) return value.slice(0, 120);
+  try {
+    const url = new URL(value);
+    const fromQuery = url.searchParams.get("client_id")?.trim() || url.searchParams.get("app_id")?.trim();
+    if (fromQuery) return fromQuery.replace(/\D/g, "").slice(0, 120) || fromQuery.slice(0, 120);
+  } catch {
+    // not a URL
+  }
+  const match = value.match(/(?:client_id|app_id)=([^&\s#]+)/i);
+  if (match?.[1]) {
+    const decoded = decodeURIComponent(match[1]).trim();
+    return decoded.replace(/\D/g, "").slice(0, 120) || decoded.slice(0, 120);
+  }
+  const labeled = value.match(/(?:(?:meta|facebook)\s+)?app\s*id\s*[:=#-]?\s*(\d{6,})/i);
+  if (labeled?.[1]) return labeled[1].slice(0, 120);
+  const digits = value.match(/\b(\d{10,})\b/);
+  if (digits?.[1]) return digits[1].slice(0, 120);
+  return value.slice(0, 120);
+}
+
+/** Facebook dialog client_id must be the numeric Meta App ID from App settings → Basic. */
+export function isLikelyMetaAppId(value: string | null | undefined) {
+  return /^\d{6,20}$/.test((value ?? "").trim());
+}
+
+/**
+ * Validate Meta Unified Login credentials before hitting Facebook's dialog.
+ * Returns an error message when App ID / Configuration ID are swapped or malformed.
+ */
+export function validateMetaUnifiedLoginIds(input: {
+  appId: string | null | undefined;
+  configId: string | null | undefined;
+}) {
+  const appId = normalizeMetaAppId(input.appId);
+  const configId = normalizeMetaConfigId(input.configId);
+  if (!configId) {
+    return { ok: false as const, error: "Configuration ID (config_id) is required for Meta Unified Login.", appId, configId };
+  }
+  if (!appId) {
+    return {
+      ok: false as const,
+      error:
+        "Meta App ID is required for Unified Login. Use App settings → Basic → App ID (not the Configuration ID, not an Instagram App ID).",
+      appId,
+      configId,
+    };
+  }
+  if (!isLikelyMetaAppId(appId)) {
+    return {
+      ok: false as const,
+      error:
+        "Meta App ID must be the numeric App ID from App settings → Basic. Meta returns “Invalid app ID” when client_id is a Configuration ID, secret, or login URL.",
+      appId,
+      configId,
+    };
+  }
+  if (appId === configId) {
+    return {
+      ok: false as const,
+      error:
+        "Meta App ID and Configuration ID are the same value. client_id must be the App ID; config_id must be the Facebook Login for Business Configuration ID.",
+      appId,
+      configId,
+    };
+  }
+  if (!/^\d{6,20}$/.test(configId)) {
+    return {
+      ok: false as const,
+      error: "Configuration ID must be the numeric config_id from Facebook Login for Business → Configurations.",
+      appId,
+      configId,
+    };
+  }
+  return { ok: true as const, appId, configId };
+}
+
 /** True when the authorize URL will open Meta's Facebook Login dialog. */
 export function isMetaFacebookDialogUrl(authorizeUrl: string | null | undefined) {
   if (!authorizeUrl) return false;

@@ -196,18 +196,40 @@ export default async function AdminSocialPage({ searchParams }: Props) {
             </div>
             <label className="block text-sm font-semibold text-indigo sm:col-span-2">
               {network.code === "instagram"
-                ? network.configId
-                  ? "Meta App ID (Unified Login)"
+                ? network.configId || !network.classicInstagramLogin
+                  ? "Meta App ID (App settings → Basic — not Configuration ID)"
                   : "Instagram App ID (not the Meta App ID)"
-                : "Client id"}
-              <input name="clientId" defaultValue={network.clientId} disabled={!canEdit} className={inputClass} />
+                : network.code === "facebook"
+                  ? "Meta App ID (App settings → Basic — not Configuration ID)"
+                  : "Client id"}
+              <input
+                name="clientId"
+                defaultValue={network.clientId}
+                disabled={!canEdit}
+                className={inputClass}
+                placeholder={
+                  network.supportsConfigId
+                    ? "Numeric Meta App ID, or paste the Meta login URL (client_id is extracted)"
+                    : undefined
+                }
+                autoComplete="off"
+              />
             </label>
+            {network.supportsConfigId ? (
+              <p className="sm:col-span-2 -mt-2 text-xs text-muted">
+                Meta’s <span className="font-semibold">“Invalid app ID”</span> means this field is wrong: use the App ID
+                from <span className="font-semibold">App settings → Basic</span>. Do not paste the Configuration ID or
+                App Secret here.
+              </p>
+            ) : null}
             <label className="block text-sm font-semibold text-indigo sm:col-span-2">
               {network.code === "instagram"
-                ? network.configId
+                ? network.configId || !network.classicInstagramLogin
                   ? `Meta App Secret (${network.secret})`
                   : `Instagram App Secret (${network.secret})`
-                : `Client secret (${network.secret})`}
+                : network.code === "facebook"
+                  ? `Meta App Secret (${network.secret})`
+                  : `Client secret (${network.secret})`}
               <input name="secret" type="password" placeholder="Leave blank to keep the saved secret" disabled={!canEdit} className={inputClass} />
             </label>
             <div className="sm:col-span-2 rounded-xl bg-[#F8F6FF] px-3 py-2 text-xs text-muted">
@@ -279,9 +301,11 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                   <>
                     <span className="font-semibold text-indigo">Active mode: Unified Login.</span> “Connect Instagram”
                     opens the <span className="font-semibold">Facebook / Meta</span> dialog with{" "}
-                    <code className="text-[11px]">config_id</code>. Create the configuration under Meta → Use cases →
-                    Instagram → API setup with Unified login (or Facebook Login for Business → Configurations), then
-                    paste the ID above. App Role admin/tester is still required while the app is in Development.
+                    <code className="text-[11px]">config_id</code>.{" "}
+                    <code className="text-[11px]">client_id</code> must be the{" "}
+                    <span className="font-semibold">Meta App ID</span> from App settings → Basic (same app that owns the
+                    configuration). If Meta shows <span className="font-semibold">Invalid app ID</span>, the App ID
+                    field still has a Configuration ID, Instagram App ID, or secret.
                   </>
                 ) : network.classicInstagramLogin ? (
                   <>
