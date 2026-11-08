@@ -417,7 +417,7 @@ function readyAuthorizeUrl(input: {
   origin: string;
 }) {
   const { network, provider, networks, state } = input;
-  // TikTok compares this string to Login Kit before decoding. www and localhost must not appear.
+  // TikTok decodes this string and compares it to Login Kit. www and localhost must not appear.
   const callback = socialCallbackUrl(input.origin);
   if (network.code === "tiktok" && !isPublicHttpsOrigin(callback)) {
     return {

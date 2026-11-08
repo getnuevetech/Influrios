@@ -21,6 +21,7 @@ import {
   prepareSocialProfileUrl,
   resolveLockedOAuthEndpoints,
   resolveSocialScopes,
+  SOCIAL_NETWORKS,
   socialConnectGate,
   socialHostAllowed,
   socialMetricLabels,
@@ -358,10 +359,18 @@ describe("social provider hosts", () => {
       tiktokQuery: true,
     });
     assert.match(tiktok ?? "", /^https:\/\/www\.tiktok\.com\/v2\/auth\/authorize\/\?/);
-    assert.match(tiktok ?? "", /scope=user\.info\.basic,user\.info\.stats/);
-    assert.match(tiktok ?? "", /redirect_uri=https:\/\/influrios\.com\/api\/social\/callback(&|$)/);
-    assert.equal((tiktok ?? "").includes("redirect_uri=https%3A"), false);
+    assert.match(tiktok ?? "", /[?&]scope=user\.info\.basic,user\.info\.stats&/);
+    assert.match(tiktok ?? "", /[?&]response_type=code&/);
+    assert.match(
+      tiktok ?? "",
+      /redirect_uri=https%3A%2F%2Finflurios\.com%2Fapi%2Fsocial%2Fcallback(&|$)/,
+    );
+    assert.equal((tiktok ?? "").includes("redirect_uri=https://"), false);
     assert.equal((tiktok ?? "").includes("scope=user.info.basic%2C"), false);
+    const parsed = new URL(tiktok ?? "https://www.tiktok.com/");
+    assert.equal(parsed.searchParams.get("redirect_uri"), "https://influrios.com/api/social/callback");
+    assert.equal(parsed.searchParams.get("scope"), "user.info.basic,user.info.stats");
+    assert.equal(SOCIAL_NETWORKS.find((network) => network.code === "tiktok")?.tokenStyle, "form");
     assert.equal(
       buildAuthorizeUrl({
         authorizeUrl: "https://www.tiktok.com/v2/auth/authorize/",
