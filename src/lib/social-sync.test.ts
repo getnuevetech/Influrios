@@ -4,6 +4,9 @@ import {
   META_GRAPH_VERSION,
   buildAuthorizeUrl,
   createXPkce,
+  exactOAuthRedirect,
+  formatAuthorizeReport,
+  reportAuthorizeUrl,
   interpretSocialProfile,
   isLiveSocialAccount,
   isMetaFacebookDialogUrl,
@@ -391,6 +394,33 @@ describe("social provider hosts", () => {
     assert.equal(xParsed.searchParams.get("code_challenge"), pkce.challenge);
     assert.equal(xParsed.searchParams.get("code_challenge_method"), "S256");
     assert.equal(xParsed.searchParams.get("scope"), "users.read tweet.read");
+    const spaced = buildAuthorizeUrl({
+      authorizeUrl: "https://x.com/i/oauth2/authorize",
+      authorizeHosts: ["x.com"],
+      clientIdParam: "client_id",
+      clientId: "clientidvalue123456",
+      redirectUri: "https://influrios.com/api/social/callback",
+      state: "state",
+      scopes: "users.read tweet.read",
+      scopeSpaces: "percent",
+      extraParams: { code_challenge: pkce.challenge, code_challenge_method: "S256" },
+    });
+    assert.match(spaced ?? "", /scope=users\.read%20tweet\.read/);
+    assert.equal((spaced ?? "").includes("scope=users.read+tweet.read"), false);
+    const xReport = reportAuthorizeUrl(spaced ?? "", "client_id");
+    assert.equal(xReport.redirectUri, "https://influrios.com/api/social/callback");
+    assert.equal(xReport.redirectEncoding, "once");
+    assert.equal(xReport.codeChallenge, true);
+    assert.equal(xReport.codeChallengeMethod, "S256");
+    assert.equal(xReport.scope, "users.read tweet.read");
+    assert.equal(xReport.clientIdPrefix, "clie");
+    assert.equal(xReport.clientIdLength, "clientidvalue123456".length);
+    assert.equal(formatAuthorizeReport(xReport).includes("clientidvalue123456"), false);
+    assert.equal(exactOAuthRedirect("https://influrios.com/api/social/callback/"), "https://influrios.com/api/social/callback/");
+    assert.equal(exactOAuthRedirect("https://influrios.com/api/social/callback?next=1"), null);
+    const tiktokReport = reportAuthorizeUrl(tiktok ?? "", "client_key");
+    assert.equal(tiktokReport.redirectEncoding, "once");
+    assert.equal(tiktokReport.codeChallenge, false);
     assert.match(
       prepareSocialProfileUrl("https://api.twitter.com/2/users/me", "X") ?? "",
       /user\.fields=public_metrics%2Cusername%2Cname|user\.fields=public_metrics,username,name/,

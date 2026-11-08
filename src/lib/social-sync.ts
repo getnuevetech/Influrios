@@ -195,6 +195,115 @@ export const INSTAGRAM_WEAK_SCOPES = new Set([
   "instagram_basic,pages_show_list,pages_read_engagement",
 ]);
 
+/** https callback with no query or hash. A trailing slash is kept when the portal saved one. */
+export function exactOAuthRedirect(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:") return null;
+    if (url.search || url.hash || url.username || url.password) return null;
+    if (!url.pathname || url.pathname === "/") return null;
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return null;
+  }
+}
+
+export type OAuthAuthorizeReport = {
+  authorizeHost: string;
+  redirectUri: string;
+  redirectEncoding: "missing" | "raw" | "once" | "double";
+  scope: string;
+  scopeParam: string;
+  codeChallenge: boolean;
+  codeChallengeMethod: string | null;
+  responseType: string | null;
+  statePresent: boolean;
+  clientIdLength: number;
+  clientIdPrefix: string;
+};
+
+function rawQueryValue(query: string, key: string) {
+  const part = query.split("&").find((item) => item.startsWith(`${key}=`));
+  return part ? part.slice(key.length + 1) : "";
+}
+
+/** Safe description of an authorize URL. Omits the client id, state, and PKCE verifier. */
+export function reportAuthorizeUrl(authorizeUrl: string, clientIdParam: string): OAuthAuthorizeReport {
+  const url = new URL(authorizeUrl);
+  const query = url.search.startsWith("?") ? url.search.slice(1) : url.search;
+  const rawRedirect = rawQueryValue(query, "redirect_uri");
+  const redirectEncoding = !rawRedirect
+    ? "missing"
+    : rawRedirect.includes("%253A") || rawRedirect.includes("%252F")
+      ? "double"
+      : rawRedirect.includes("%3A") || rawRedirect.includes("%2F")
+        ? "once"
+        : "raw";
+  const clientId = url.searchParams.get(clientIdParam) ?? "";
+  return {
+    authorizeHost: url.hostname,
+    redirectUri: url.searchParams.get("redirect_uri") ?? "",
+    redirectEncoding,
+    scope: url.searchParams.get("scope") ?? "",
+    scopeParam: rawQueryValue(query, "scope"),
+    codeChallenge: Boolean(url.searchParams.get("code_challenge")),
+    codeChallengeMethod: url.searchParams.get("code_challenge_method"),
+    responseType: url.searchParams.get("response_type"),
+    statePresent: Boolean(url.searchParams.get("state")),
+    clientIdLength: clientId.length,
+    clientIdPrefix: clientId.slice(0, 4),
+  };
+}
+
+export function formatAuthorizeReport(report: OAuthAuthorizeReport) {
+  return [
+    "Last authorize request",
+    `host=${report.authorizeHost}`,
+    `redirect_uri=${report.redirectUri}`,
+    `redirect_encoding=${report.redirectEncoding}`,
+    `scope=${report.scope}`,
+    `scope_param=${report.scopeParam}`,
+    `code_challenge=${report.codeChallenge ? "yes" : "no"}`,
+    report.codeChallengeMethod ? `code_challenge_method=${report.codeChallengeMethod}` : "",
+    `response_type=${report.responseType ?? ""}`,
+    `state=${report.statePresent ? "yes" : "no"}`,
+    `client_id_length=${report.clientIdLength}`,
+    `client_id_prefix=${report.clientIdPrefix}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** Same request the connect button sends, with secrets reduced to a length and a 4-character prefix. */
+export function providerAuthorizePreview(input: {
+  code: string;
+  authorizeUrl: string;
+  authorizeHosts: readonly string[];
+  clientIdParam: string;
+  clientId: string;
+  redirectUri: string;
+  scopes: string;
+}) {
+  if (input.code !== "tiktok" && input.code !== "x") return null;
+  if (!input.clientId.trim()) return null;
+  const url = buildAuthorizeUrl({
+    authorizeUrl: input.authorizeUrl,
+    authorizeHosts: input.authorizeHosts,
+    clientIdParam: input.clientIdParam,
+    clientId: input.clientId,
+    redirectUri: input.redirectUri,
+    state: "preview",
+    scopes: input.scopes,
+    tiktokQuery: input.code === "tiktok",
+    scopeSpaces: input.code === "x" ? "percent" : undefined,
+    extraParams: input.code === "x" ? { code_challenge: "preview", code_challenge_method: "S256" } : undefined,
+  });
+  if (!url) return null;
+  return formatAuthorizeReport(reportAuthorizeUrl(url, input.clientIdParam));
+}
+
 /** X OAuth 2.0 requires S256 PKCE. The verifier stays on the server; only the challenge is sent. */
 export function createXPkce(verifier = randomBytes(32).toString("base64url")) {
   const challenge = createHash("sha256").update(verifier).digest("base64url");
@@ -1007,6 +1116,8 @@ export function buildAuthorizeUrl(input: {
   configId?: string | null;
   /** Extra query params (e.g. Google access_type=offline). */
   extraParams?: Record<string, string>;
+  /** X requires spaces in scope as %20. URLSearchParams writes them as +. */
+  scopeSpaces?: "percent";
   /**
    * TikTok Login Kit requires application/x-www-form-urlencoded query parameters.
    * redirect_uri is encoded once. Scope commas stay raw.
@@ -1033,7 +1144,13 @@ export function buildAuthorizeUrl(input: {
   for (const [key, value] of Object.entries(input.extraParams ?? {})) {
     if (key && value) url.searchParams.set(key, value);
   }
-  if (!input.tiktokQuery) return url.toString();
+  let built = url.toString();
+  if (input.scopeSpaces === "percent") {
+    built = built.replace(/([?&]scope=)([^&]*)/i, (_, prefix: string, value: string) => {
+      return prefix + value.replace(/\+/g, "%20");
+    });
+  }
+  if (!input.tiktokQuery) return built;
   const clientKey = input.clientId.trim().replace(/^['"]|['"]$/g, "");
   const scopes = input.scopes
     .split(/[\s,]+/)
