@@ -6,18 +6,20 @@ import {
   interpretSocialProfile,
   isLiveSocialAccount,
   isMetaFacebookDialogUrl,
+  normalizeMetaAppId,
+  normalizeMetaConfigId,
   parseFacebookPageMetrics,
   parseInstagramBusinessMetrics,
   parseInstagramLoginProfile,
   parseSocialMetrics,
   parseYoutubeChannelMetrics,
   prepareSocialProfileUrl,
-  normalizeMetaConfigId,
   resolveLockedOAuthEndpoints,
   resolveSocialScopes,
   socialConnectGate,
   socialHostAllowed,
   socialMetricLabels,
+  validateMetaUnifiedLoginIds,
 } from "./social-sync";
 
 describe("social consent gate", () => {
@@ -219,6 +221,22 @@ describe("live social metrics", () => {
       configId: "5544332211",
     });
     assert.ok(missingConfig?.includes("config_id=5544332211"));
+
+    assert.equal(
+      normalizeMetaAppId(
+        "https://www.facebook.com/v22.0/dialog/oauth?client_id=987654321098765&config_id=112233445566",
+      ),
+      "987654321098765",
+    );
+    assert.equal(normalizeMetaAppId("App ID: 987654321098765"), "987654321098765");
+    const swapped = validateMetaUnifiedLoginIds({ appId: "112233445566", configId: "112233445566" });
+    assert.equal(swapped.ok, false);
+    assert.match(swapped.ok ? "" : swapped.error, /same value|Configuration ID/i);
+    const badApp = validateMetaUnifiedLoginIds({ appId: "not-an-app-id", configId: "112233445566" });
+    assert.equal(badApp.ok, false);
+    assert.match(badApp.ok ? "" : badApp.error, /Invalid app ID|numeric App ID/i);
+    const good = validateMetaUnifiedLoginIds({ appId: "987654321098765", configId: "112233445566" });
+    assert.equal(good.ok, true);
   });
 
   it("keeps OAuth success notices separate from hard metric failure", () => {
