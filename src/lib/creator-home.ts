@@ -203,7 +203,14 @@ export async function loadCreatorHome(userId: string) {
           socialAccounts: { orderBy: { platform: "asc" } },
           socialConnections: { select: { platform: true, status: true, lastError: true } },
           specialties: { include: { specialty: { select: { name: true, slug: true } } } },
-          payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true } },
+          payoutProfile: {
+            select: {
+              stripeConnectAccountId: true,
+              providerConnectedAccountId: true,
+              primaryStatus: true,
+              secondaryStatus: true,
+            },
+          },
           shortLinks: {
             where: { status: { not: "archived" } },
             take: 1,
@@ -299,7 +306,13 @@ export async function loadCreatorHome(userId: string) {
     badge: statusLabel(inquiry.status),
     badgeTone: statusTone(inquiry.status),
   }));
-  const matchedOpportunities: HomeOpportunity[] = (hub?.brandMatches ?? [])
+  const appliedRequestIds = new Set(
+    (hub?.applications ?? [])
+      .filter((row) => row.businessRequestId && row.fromSlug && row.status !== "WITHDRAWN")
+      .map((row) => row.businessRequestId as string),
+  );
+  const openBrandMatches = (hub?.brandMatches ?? []).filter((row) => !appliedRequestIds.has(row.request.id));
+  const matchedOpportunities: HomeOpportunity[] = openBrandMatches
     .filter((row) => !inquiryOpportunities.some((item) => item.title === row.request.brand))
     .slice(0, 4)
     .map(({ request, score }) => ({
@@ -313,7 +326,7 @@ export async function loadCreatorHome(userId: string) {
       badgeTone: "violet" as const,
     }));
   const opportunities = [...inquiryOpportunities, ...matchedOpportunities].slice(0, 4);
-  const opportunityCount = inquiries.length + (hub?.brandMatches.length ?? 0);
+  const opportunityCount = inquiries.length + openBrandMatches.length;
 
   const pipeline: HomePipelineItem[] = (hub?.pipeline ?? []).slice(0, 4).map((item) => ({
     id: item.id,
@@ -322,9 +335,16 @@ export async function loadCreatorHome(userId: string) {
     stage: item.stage,
   }));
 
+  const methodSubmitted =
+    creator?.payoutProfile?.primaryStatus === "VERIFIED" ||
+    creator?.payoutProfile?.primaryStatus === "PENDING" ||
+    creator?.payoutProfile?.secondaryStatus === "VERIFIED" ||
+    creator?.payoutProfile?.secondaryStatus === "PENDING";
   const payoutReady = Boolean(
     creator?.payoutProfile?.stripeConnectAccountId ||
       creator?.payoutProfile?.providerConnectedAccountId ||
+      methodSubmitted ||
+      hub?.payout.readiness?.accountOnFile ||
       hub?.payout.readiness?.globalPayoutReady ||
       hub?.payout.readiness?.hasVerifiedMethod,
   );

@@ -523,17 +523,33 @@ export function nextApplicationStatuses(from: string): MarketplaceApplicationSta
 }
 
 /**
- * Whether this row is a business→creator invitation (toSlug set, creator did not apply as fromSlug).
- * Creator-submitted applications set fromSlug; business invites set toSlug.
+ * Whether this row is a business→creator invitation.
+ * A creator application always stores fromSlug, including when toSlug names the other party.
+ * An invitation stores only toSlug.
  */
 export function applicationIsInvitation(application: {
   fromSlug?: string | null;
   toSlug?: string | null;
 }): boolean {
   const to = (application.toSlug ?? "").trim();
-  if (!to) return false;
   const from = (application.fromSlug ?? "").trim();
-  return !from || from !== to;
+  return Boolean(to) && !from;
+}
+
+/**
+ * An accepted application still needs a contract when no live agreement names that creator.
+ */
+export function acceptedWorkNeedsContract(
+  application: { status: string; fromSlug?: string | null; toSlug?: string | null },
+  contracts: { status?: string | null; parties: { creatorSlug?: string | null }[] }[],
+): boolean {
+  if (application.status !== "ACCEPTED" && application.status !== "COLLABORATION_DRAFTED") return false;
+  const slug = (application.fromSlug || application.toSlug || "").trim();
+  if (!slug) return true;
+  return !contracts.some((document) => {
+    if (document.status === "voided" || document.status === "declined") return false;
+    return document.parties.some((party) => (party.creatorSlug ?? "").trim() === slug);
+  });
 }
 
 /** Creator role on an application they own. */

@@ -120,8 +120,10 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
   const hasProviderAccount = Boolean(identity?.creator?.payoutProfile?.providerConnectedAccountId);
   const hasVerifiedPayoutMethod =
     identity?.creator?.payoutProfile?.primaryStatus === "VERIFIED" ||
+    identity?.creator?.payoutProfile?.primaryStatus === "PENDING" ||
     identity?.creator?.payoutProfile?.secondaryStatus === "VERIFIED" ||
-    Boolean(hub?.payout.readiness?.hasVerifiedMethod);
+    identity?.creator?.payoutProfile?.secondaryStatus === "PENDING" ||
+    Boolean(hub?.payout.readiness?.hasVerifiedMethod || hub?.payout.readiness?.accountOnFile);
 
   const payoutRail = identity?.creator
     ? await resolvePayoutOnboardingRail({

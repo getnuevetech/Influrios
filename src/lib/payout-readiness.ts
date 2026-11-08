@@ -68,6 +68,8 @@ export type PayoutReadiness = {
   secondaryMethod: string | null;
   secondaryStatus: string | null;
   hasVerifiedMethod: boolean;
+  /** A payout account or submitted method exists, even when the corridor is not globally ready. */
+  accountOnFile: boolean;
   globalPayoutReady: boolean;
   blockers: string[];
 };
@@ -353,6 +355,13 @@ export async function computePayoutReadiness(input: {
     profile.primaryStatus === "VERIFIED" ||
     profile.secondaryStatus === "VERIFIED" ||
     connectedAccountReady;
+  const submitted = profile.primaryStatus === "PENDING" || profile.secondaryStatus === "PENDING";
+  const accountOnFile = Boolean(
+    profile.stripeConnectAccountId?.trim() ||
+      profile.providerConnectedAccountId?.trim() ||
+      hasVerifiedMethod ||
+      submitted,
+  );
   const blockers: string[] = [];
   if (!input.identityVerified) blockers.push("Influencer identity is not verified.");
   if (!countryCode) blockers.push("Influencer payout country is unknown.");
@@ -387,6 +396,7 @@ export async function computePayoutReadiness(input: {
     secondaryMethod: profile.secondaryMethod,
     secondaryStatus: profile.secondaryStatus,
     hasVerifiedMethod,
+    accountOnFile,
     globalPayoutReady,
     blockers,
   };

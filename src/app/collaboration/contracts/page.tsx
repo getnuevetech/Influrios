@@ -3,7 +3,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { IconCalendar, IconCheck, IconEye, IconFileText, IconMail } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
+import { getWorkspace } from "@/lib/business";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
+import { prisma } from "@/lib/db";
+import {
+  acceptedWorkNeedsContract,
+  listMarketplaceApplications,
+  listWorkspaceBusinessRequests,
+} from "@/lib/marketplace-listings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contracts" };
@@ -19,14 +26,18 @@ function shortDate(value: Date) {
   }).format(value);
 }
 
-function yours(contract: ContractRow, accountId: string, email: string) {
+function yours(contract: ContractRow, accountId: string, email: string, creatorSlug = "") {
+  const slug = creatorSlug.trim();
   return contract.parties.find(
-    (row) => row.userId === accountId || row.email.trim().toLowerCase() === email.trim().toLowerCase(),
+    (row) =>
+      row.userId === accountId ||
+      row.email.trim().toLowerCase() === email.trim().toLowerCase() ||
+      (slug.length > 0 && row.creatorSlug === slug),
   );
 }
 
-function needsYourSignature(contract: ContractRow, accountId: string, email: string) {
-  const party = yours(contract, accountId, email);
+function needsYourSignature(contract: ContractRow, accountId: string, email: string, creatorSlug = "") {
+  const party = yours(contract, accountId, email, creatorSlug);
   return (
     contract.signingChannel === "native" &&
     (contract.status === "sent" || contract.status === "draft") &&
@@ -34,10 +45,10 @@ function needsYourSignature(contract: ContractRow, accountId: string, email: str
   );
 }
 
-function bucket(contract: ContractRow, accountId: string, email: string): Kind {
+function bucket(contract: ContractRow, accountId: string, email: string, creatorSlug = ""): Kind {
   if (contract.status === "voided" || contract.status === "declined") return "expired";
   if (contract.status === "signed") return "signed";
-  if (needsYourSignature(contract, accountId, email)) return "yours";
+  if (needsYourSignature(contract, accountId, email, creatorSlug)) return "yours";
   return "others";
 }
 
@@ -75,14 +86,37 @@ export default async function ContractsIndexPage({
   const account = await getAccountSession().catch(() => null);
   if (!account) redirect("/login?next=/collaboration/contracts");
   const params = await searchParams;
-  const contracts = await listContractsForUser(account.id, account.email).catch(() => []);
+  const [contracts, creator, workspace] = await Promise.all([
+    listContractsForUser(account.id, account.email).catch(() => []),
+    prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } }).catch(() => null),
+    getWorkspace(account.id).catch(() => null),
+  ]);
+  const creatorSlug = creator?.slug?.trim() ?? "";
+  const ownedIds =
+    workspace && workspace.businessId !== "public"
+      ? (await listWorkspaceBusinessRequests(workspace.businessId).catch(() => [])).map((row) => row.id)
+      : [];
+  const [creatorApplications, businessApplications] = await Promise.all([
+    creatorSlug
+      ? listMarketplaceApplications({ creatorSlug, limit: 40 }).catch(() => [])
+      : Promise.resolve([]),
+    ownedIds.length
+      ? listMarketplaceApplications({ businessRequestIds: ownedIds, limit: 40 }).catch(() => [])
+      : Promise.resolve([]),
+  ]);
+  const seen = new Set<string>();
+  const needed = [...creatorApplications, ...businessApplications].filter((application) => {
+    if (seen.has(application.id)) return false;
+    seen.add(application.id);
+    return acceptedWorkNeedsContract(application, contracts);
+  });
   const rows = contracts.map((contract) => ({
     contract,
-    kind: bucket(contract, account.id, account.email),
+    kind: bucket(contract, account.id, account.email, creatorSlug),
   }));
   const counts = {
-    all: rows.length,
-    yours: rows.filter((row) => row.kind === "yours").length,
+    all: rows.length + needed.length,
+    yours: rows.filter((row) => row.kind === "yours").length + needed.length,
     others: rows.filter((row) => row.kind === "others").length,
     signed: rows.filter((row) => row.kind === "signed").length,
     expired: rows.filter((row) => row.kind === "expired").length,
@@ -101,7 +135,7 @@ export default async function ContractsIndexPage({
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const selected =
     filtered.find((row) => row.contract.id === params.open)?.contract ?? visible[0]?.contract ?? filtered[0]?.contract ?? null;
-  const selectedKind = selected ? bucket(selected, account.id, account.email) : null;
+  const selectedKind = selected ? bucket(selected, account.id, account.email, creatorSlug) : null;
   const counterparty = (contract: ContractRow) =>
     contract.parties.find((row) => row.userId !== account.id)?.name || contract.parties[0]?.name || "—";
 
@@ -152,9 +186,39 @@ export default async function ContractsIndexPage({
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {needed.length > 0 && (tab === "all" || tab === "yours") ? (
+        <section className="rounded-[24px] border border-[#F3D7A1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
+          <h2 className="font-display text-lg font-bold text-[#1B1464]">Contract needed</h2>
+          <p className="mt-1 text-sm text-[#667085]">
+            These accepted collaborations do not have an agreement yet. A signature request appears here after the agreement is created.
+          </p>
+          <ul className="mt-3 divide-y divide-[#EEF2F7]">
+            {needed.map((application) => {
+              const slug = (application.fromSlug || application.toSlug || "").trim();
+              const owned = Boolean(application.businessRequestId && ownedIds.includes(application.businessRequestId));
+              const title = application.requestBrand || application.opportunityLookingFor || "Accepted collaboration";
+              const href = owned && slug
+                ? `/collaboration/contract?creator=${encodeURIComponent(slug)}`
+                : `/collaboration/applications/${application.id}`;
+              return (
+                <li key={application.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[#1B1464]">{title}</p>
+                    <p className="text-xs text-[#B86E00]">Needs a contract · {application.status.replaceAll("_", " ")}</p>
+                  </div>
+                  <Link href={href} className="rounded-full bg-[#6D4AFF] px-3 py-1.5 text-xs font-semibold text-white">
+                    {owned ? "Start contract" : "Open application"}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {filtered.length === 0 && needed.length === 0 ? (
         <EmptyContracts />
-      ) : (
+      ) : filtered.length === 0 ? null : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.78fr)]">
           <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -182,7 +246,7 @@ export default async function ContractsIndexPage({
                 </thead>
                 <tbody>
                   {visible.map(({ contract, kind }) => {
-                    const sign = needsYourSignature(contract, account.id, account.email);
+                    const sign = needsYourSignature(contract, account.id, account.email, creatorSlug);
                     const brand = counterparty(contract);
                     return (
                       <tr key={contract.id} className={selected?.id === contract.id ? "bg-[#F7F4FF]" : ""}>
@@ -286,7 +350,7 @@ export default async function ContractsIndexPage({
               </div>
               <div className="mt-4 grid gap-2">
                 <Link
-                  href={`/collaboration/contracts/${selected.id}${needsYourSignature(selected, account.id, account.email) ? "#sign" : ""}`}
+                  href={`/collaboration/contracts/${selected.id}${needsYourSignature(selected, account.id, account.email, creatorSlug) ? "#sign" : ""}`}
                   className="inline-flex items-center justify-center rounded-full bg-[#6D4AFF] px-4 py-2.5 text-sm font-semibold text-white"
                 >
                   Review & sign →

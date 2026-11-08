@@ -592,15 +592,23 @@ export function isMessageAudience(value: string): value is MessageAudience {
 }
 
 /** Match a logged-in account to a contract party by user id, then by email (case-insensitive). */
-export function resolveContractPartyForAccount<T extends { id: string; userId: string | null; email: string }>(
+export function resolveContractPartyForAccount<
+  T extends { id: string; userId: string | null; email: string; creatorSlug?: string | null },
+>(
   parties: T[],
   account: { id: string; email: string },
+  creatorSlug?: string | null,
 ): T | undefined {
   const byUser = parties.find((party) => party.userId && party.userId === account.id);
   if (byUser) return byUser;
   const email = account.email.trim().toLowerCase();
-  if (!email) return undefined;
-  return parties.find((party) => party.email.trim().toLowerCase() === email);
+  if (email) {
+    const byEmail = parties.find((party) => party.email.trim().toLowerCase() === email);
+    if (byEmail) return byEmail;
+  }
+  const slug = (creatorSlug ?? "").trim();
+  if (!slug) return undefined;
+  return parties.find((party) => (party.creatorSlug ?? "").trim() === slug);
 }
 
 /**
@@ -1072,9 +1080,11 @@ export async function applyContractEnvelopeEvent(input: {
 
 export async function listContractsForUser(userId: string, email?: string | null) {
   const emailNorm = (email ?? "").trim().toLowerCase();
-  const workspace = await prisma.businessWorkspace
-    .findUnique({ where: { ownerUserId: userId }, select: { id: true } })
-    .catch(() => null);
+  const [workspace, creator] = await Promise.all([
+    prisma.businessWorkspace.findUnique({ where: { ownerUserId: userId }, select: { id: true } }).catch(() => null),
+    prisma.creator.findUnique({ where: { userId }, select: { slug: true } }).catch(() => null),
+  ]);
+  const creatorSlug = creator?.slug?.trim() ?? "";
   return prisma.contractDocument.findMany({
     where: {
       OR: [
@@ -1082,6 +1092,7 @@ export async function listContractsForUser(userId: string, email?: string | null
         { createdByUserId: userId },
         ...(workspace ? [{ workspaceId: workspace.id }] : []),
         ...(emailNorm ? [{ parties: { some: { email: { equals: emailNorm, mode: "insensitive" as const } } } }] : []),
+        ...(creatorSlug ? [{ parties: { some: { creatorSlug } } }] : []),
       ],
     },
     include: { parties: { orderBy: { createdAt: "asc" } } },
@@ -1109,8 +1120,11 @@ export async function resolveContractPartyForSession(
   account: { id: string; email: string } | null | undefined,
 ) {
   if (!account) return null;
-  const parties = await prisma.contractParty.findMany({ where: { documentId } });
-  const party = resolveContractPartyForAccount(parties, account);
+  const [parties, creator] = await Promise.all([
+    prisma.contractParty.findMany({ where: { documentId } }),
+    prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } }).catch(() => null),
+  ]);
+  const party = resolveContractPartyForAccount(parties, account, creator?.slug);
   if (!party) return null;
   if (party.userId !== account.id) {
     await prisma.contractParty.update({
