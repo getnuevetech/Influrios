@@ -11,6 +11,7 @@ type SocialAccount = {
   followers?: number | null;
   likes?: number | null;
   lastError?: string | null;
+  authorizeReport?: string | null;
   scopes?: string | null;
   consentDetail?: string | null;
   loginMode?: string | null;
@@ -148,6 +149,11 @@ export function SocialConnectionsPanel({
                     <button type="submit" className="btn-primary !py-1.5 text-xs">
                       Connect {account.name}
                     </button>
+                    {account.authorizeReport ? (
+                      <p className="w-full break-all font-mono text-[11px] leading-relaxed text-indigo">
+                        {account.authorizeReport}
+                      </p>
+                    ) : null}
                   </form>
                 ) : null}
               </div>

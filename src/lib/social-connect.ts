@@ -8,6 +8,10 @@ import {
   SOCIAL_NETWORKS,
   buildAuthorizeUrl,
   createXPkce,
+  exactOAuthRedirect,
+  formatAuthorizeReport,
+  providerAuthorizePreview,
+  reportAuthorizeUrl,
   interpretSocialProfile,
   isLiveSocialAccount,
   isMetaFacebookDialogUrl,
@@ -46,6 +50,8 @@ type SocialExtra = {
   /** Legacy Instagram Login (instagram.com) — only for older apps with an Instagram App ID. */
   classicInstagramLogin: boolean;
   scopesLocked: true;
+  /** Exact https callback for TikTok or X when the portal value is not the default path. */
+  oauthRedirectUri: string;
 };
 
 let catalogTask: Promise<void> | null = null;
@@ -85,6 +91,7 @@ function extraOf(value: unknown, fallback: (typeof SOCIAL_NETWORKS)[number]): So
       supportsConfigId: fallback.supportsConfigId,
       classicInstagramLogin,
       scopesLocked: true,
+      oauthRedirectUri: exactOAuthRedirect(typeof record.oauthRedirectUri === "string" ? record.oauthRedirectUri : "") ?? "",
     };
   }
   const storedProfile =
@@ -100,6 +107,7 @@ function extraOf(value: unknown, fallback: (typeof SOCIAL_NETWORKS)[number]): So
     supportsConfigId: fallback.supportsConfigId,
     classicInstagramLogin,
     scopesLocked: true,
+    oauthRedirectUri: exactOAuthRedirect(typeof record.oauthRedirectUri === "string" ? record.oauthRedirectUri : "") ?? "",
   };
 }
 
@@ -221,6 +229,8 @@ export async function saveSocialNetwork(input: {
   clearConfigId?: boolean;
   /** Legacy Instagram Login path for older apps with an Instagram App ID. */
   classicInstagramLogin?: boolean;
+  /** TikTok Login Kit or X user-auth callback. Empty keeps the default Influrios callback. */
+  oauthRedirectUri?: string;
 }) {
   const network = socialNetwork(input.code);
   if (!network) throw new Error("Unknown social network.");
@@ -267,6 +277,13 @@ export async function saveSocialNetwork(input: {
     ? (locked?.profileUrl ?? network.profileUrl)
     : prepareSocialProfileUrl(input.profileUrl?.trim() || network.profileUrl, network.platform);
   const scopes = resolveSocialScopes(network.platform);
+  const oauthRedirectUri =
+    network.code === "tiktok" || network.code === "x" ? exactOAuthRedirect(input.oauthRedirectUri ?? "") ?? "" : "";
+  if ((network.code === "tiktok" || network.code === "x") && (input.oauthRedirectUri ?? "").trim() && !oauthRedirectUri) {
+    throw new Error(
+      `${network.name} redirect URI must be an https URL with a path, and no query or hash. A trailing slash is kept.`,
+    );
+  }
   if (!socialHostAllowed(authorizeUrl, network.authorizeHosts)) {
     throw new Error(`${network.name} authorize URL must use an official https host.`);
   }
@@ -297,6 +314,7 @@ export async function saveSocialNetwork(input: {
       scopes,
       ...(network.supportsConfigId ? { configId: configId || null } : {}),
       ...(network.code === "instagram" ? { classicInstagramLogin } : {}),
+      ...((network.code === "tiktok" || network.code === "x") ? { oauthRedirectUri: oauthRedirectUri || null } : {}),
     },
   };
   if (existing) return prisma.integrationProvider.update({ where: { id: existing.id }, data });
@@ -305,6 +323,11 @@ export async function saveSocialNetwork(input: {
 
 function redirectUri(origin: string) {
   return `${origin.replace(/\/$/, "")}/api/social/callback`;
+}
+
+function callbackFor(code: string, override: string | null | undefined, origin: string) {
+  if ((code === "tiktok" || code === "x") && override) return override;
+  return socialCallbackUrl(origin);
 }
 
 /** Exact OAuth redirect URI Google/Meta/TikTok must whitelist (full URL, no trailing slash). */
@@ -330,6 +353,15 @@ export async function socialConnectState(slug: string) {
       status: connection?.status ?? "needs_consent",
       lastError: connection?.lastError ?? null,
       consentCurrent: connection?.consentVersion === policy.version && connection.consentedAt != null,
+      authorizeReport: providerAuthorizePreview({
+        code: network.code,
+        authorizeUrl: network.authorizeUrl,
+        authorizeHosts: socialNetwork(network.code)?.authorizeHosts ?? [],
+        clientIdParam: socialNetwork(network.code)?.clientIdParam ?? "client_id",
+        clientId: network.clientId,
+        redirectUri: network.oauthRedirectUri || socialCallbackUrl(),
+        scopes: network.scopes,
+      }),
       followers: live ? account?.followers ?? null : null,
       likes: live ? account?.likes ?? null : null,
       metricLabels: labels,
@@ -419,7 +451,7 @@ async function readyAuthorizeUrl(input: {
 }) {
   const { network, provider, networks, state } = input;
   // TikTok decodes this string and compares it to Login Kit. www and localhost must not appear.
-  const callback = socialCallbackUrl(input.origin);
+  const callback = callbackFor(network.code, provider.oauthRedirectUri, input.origin);
   if (network.code === "tiktok" && !isPublicHttpsOrigin(callback)) {
     return {
       ok: false as const,
@@ -457,12 +489,12 @@ async function readyAuthorizeUrl(input: {
       : undefined;
   if (network.code === "x") {
     const pkce = createXPkce();
+    extraParams = { code_challenge: pkce.challenge, code_challenge_method: pkce.method };
     const saved = await prisma.socialConnection.updateMany({
       where: { stateToken: state },
       data: { pkceVerifier: pkce.verifier },
     });
     if (saved.count !== 1) return { ok: false as const, error: "This connection request has expired." };
-    extraParams = { code_challenge: pkce.challenge, code_challenge_method: pkce.method };
   }
   const authorizeUrl = buildAuthorizeUrl({
     authorizeUrl: authorizeBase,
@@ -474,8 +506,16 @@ async function readyAuthorizeUrl(input: {
     scopes: provider.scopes,
     configId,
     tiktokQuery: network.code === "tiktok",
+    scopeSpaces: network.code === "x" ? "percent" : undefined,
     extraParams,
   });
+  if (authorizeUrl && (network.code === "tiktok" || network.code === "x")) {
+    const report = formatAuthorizeReport(reportAuthorizeUrl(authorizeUrl, network.clientIdParam)).slice(0, 500);
+    await prisma.socialConnection.updateMany({
+      where: { stateToken: state },
+      data: { lastError: report },
+    });
+  }
   if (!authorizeUrl) return { ok: false as const, error: "The authorize URL is not on an official host." };
   if (isMetaFacebookDialogUrl(authorizeUrl) && !authorizeUrl.includes("config_id=")) {
     return {
@@ -851,7 +891,12 @@ export async function completeSocialCallback(input: { code?: string; state?: str
   if (input.error || !input.code) {
     await prisma.socialConnection.update({
       where: { id: connection.id },
-      data: { status: "error", lastError: "The network did not authorize the connection." },
+      data: {
+        status: "error",
+        lastError: `${
+          connection.lastError?.startsWith("Last authorize request") ? `${connection.lastError} · ` : ""
+        }The network did not authorize the connection.`.slice(0, 900),
+      },
     });
     return { ok: false as const, error: "The network did not authorize the connection.", slug };
   }
@@ -861,7 +906,7 @@ export async function completeSocialCallback(input: { code?: string; state?: str
   }
   const ready = await readProvider(connection.providerId, connection.platform as SocialSyncPlatform);
   if (!ready) return { ok: false as const, error: "This network is not connected yet.", slug };
-  const callback = socialCallbackUrl(input.origin);
+  const callback = callbackFor(ready.network.code, ready.extra.oauthRedirectUri, input.origin);
   const isX = connection.platform === "X";
   if (isX && !connection.pkceVerifier) {
     return { ok: false as const, error: "This X connection request expired. Try Connect again.", slug };
@@ -1021,7 +1066,7 @@ export async function refreshSocialConnection(input: { slug: string; platform: s
         clientIdParam: ready.network.clientIdParam,
         clientId: ready.clientId,
         clientSecret: ready.secret,
-        redirectUri: socialCallbackUrl(input.origin),
+        redirectUri: callbackFor(network.code, ready.extra.oauthRedirectUri, input.origin),
         refreshToken,
         basicAuth: network.code === "x",
       });
