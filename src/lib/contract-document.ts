@@ -968,48 +968,47 @@ export async function signNativeContractParty(input: {
     email: party.email,
     signedAt,
   });
-  const nextBody = applyNativeSignatureAnchor(document.renderedBody, partyIndex + 1, attestation);
-  const nextParties = document.parties.map((row) =>
-    row.id === party.id
-      ? { ...row, status: "signed", attestation: typedName.slice(0, 160), signedAt }
-      : row,
-  );
-  const pdfBytes = renderContractPdf(nextBody, {
-    title: document.title,
-    agreementId: document.id,
-    signatures: signaturesFromParties(nextParties),
-    endorsementSlots: endorsementSlotsFromParties(nextParties),
-    pageEndorsements: true,
-  });
 
   const signed = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "ContractDocument" WHERE "id" = ${document.id} FOR UPDATE`;
     const partyWrite = await tx.contractParty.updateMany({
       where: { id: party.id, status: "pending" },
       data: { status: "signed", attestation: typedName.slice(0, 160), signedAt, userId: input.userId },
     });
     if (partyWrite.count !== 1) return null;
-    const parties = await tx.contractParty.findMany({
-      where: { documentId: document.id },
-      orderBy: { createdAt: "asc" },
+    const fresh = await tx.contractDocument.findUnique({
+      where: { id: document.id },
+      include: { parties: { orderBy: { createdAt: "asc" } } },
     });
-    const aggregate = parties.every((row) => row.status === "signed") ? "signed" : "sent";
-    await tx.contractDocument.updateMany({
+    if (!fresh || (fresh.status !== "draft" && fresh.status !== "sent")) return null;
+    const index = fresh.parties.findIndex((row) => row.id === party.id);
+    const nextBody = applyNativeSignatureAnchor(fresh.renderedBody, (index >= 0 ? index : partyIndex) + 1, attestation);
+    const aggregate = fresh.parties.every((row) => row.status === "signed") ? "signed" : "sent";
+    const pdfBytes = renderContractPdf(nextBody, {
+      title: fresh.title,
+      agreementId: fresh.id,
+      signatures: signaturesFromParties(fresh.parties),
+      endorsementSlots: endorsementSlotsFromParties(fresh.parties),
+      pageEndorsements: true,
+    });
+    const written = await tx.contractDocument.updateMany({
       where: { id: document.id, status: { in: ["draft", "sent"] } },
       data: {
         status: aggregate,
         renderedBody: nextBody,
         pdfBytes: new Uint8Array(pdfBytes),
-        envelopeId: document.envelopeId || nativeEnvelopeId(document.id),
+        envelopeId: fresh.envelopeId || nativeEnvelopeId(document.id),
       },
     });
-    return aggregate as "sent" | "signed";
+    if (written.count !== 1) return null;
+    return { aggregate: aggregate as "sent" | "signed", parties: fresh.parties };
   });
   if (!signed) {
     return { ok: false as const, error: "This agreement was already updated. Refresh and try again. Nothing new was signed." };
   }
-  const documentStatus = signed;
+  const documentStatus = signed.aggregate;
 
-  const partyEmails = document.parties.map((row) => ({ email: row.email, name: row.name }));
+  const partyEmails = signed.parties.map((row) => ({ email: row.email, name: row.name }));
   if (documentStatus === "signed") {
     await notifyContractStage({
       documentId: document.id,
@@ -1028,8 +1027,7 @@ export async function signNativeContractParty(input: {
       actorName: typedName,
       excludeEmails: [party.email],
     }).catch(() => undefined);
-    // Remind remaining pending parties to sign.
-    const pending = document.parties.filter((row) => row.id !== party.id && row.status === "pending");
+    const pending = signed.parties.filter((row) => row.id !== party.id && row.status === "pending");
     if (pending.length > 0) {
       await notifyContractStage({
         documentId: document.id,
@@ -1042,7 +1040,7 @@ export async function signNativeContractParty(input: {
     }
   }
 
-  return { ok: true as const, id: document.id, status: documentStatus as "sent" | "signed" };
+  return { ok: true as const, id: document.id, status: documentStatus };
 }
 
 export async function applyContractEnvelopeEvent(input: {

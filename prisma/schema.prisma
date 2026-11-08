@@ -993,6 +993,8 @@ model BusinessBrief {
   platform        String
   summary         String
   status          String               @default("active")
+  /// How many influencers this campaign can accept before it stops recruiting.
+  creatorSlots    Int                  @default(1)
   createdAt       DateTime             @default(now())
   inquiries       BusinessInquiry[]
   matchQueue      ManagedMatchRequest[]

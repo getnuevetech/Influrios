@@ -12,6 +12,7 @@ import {
   loginAirwallex,
   parseAirwallexMentorshipWebhook,
   verifyAirwallexSignature,
+  verifyAirwallexWebhook,
 } from "@/lib/providers/airwallex";
 import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
 import { openStripeOneTimeCheckout, stripeCredentials } from "@/lib/stripe-admin";
@@ -203,7 +204,11 @@ async function openPaidMentorshipCheckout(input: {
   return airwallex;
 }
 
-export async function applyAirwallexMentorshipWebhook(body: string, signature: string | null): Promise<
+export async function applyAirwallexMentorshipWebhook(
+  body: string,
+  signature: string | null,
+  timestamp?: string | null,
+): Promise<
   | { ok: true; paid: boolean; fallThrough?: false }
   | { ok: false; error: string; status: number; fallThrough: boolean }
 > {
@@ -215,7 +220,16 @@ export async function applyAirwallexMentorshipWebhook(body: string, signature: s
   if (!settings?.webhookSecret) {
     return { ok: false, error: "Airwallex is not ready.", status: 503, fallThrough: false };
   }
-  if (!verifyAirwallexSignature(body, signature, settings.webhookSecret)) {
+  const native = (timestamp ?? "").trim();
+  const verified = native
+    ? verifyAirwallexWebhook({
+        body,
+        signature,
+        timestamp: native,
+        secret: settings.webhookSecret,
+      }).ok
+    : verifyAirwallexSignature(body, signature, settings.webhookSecret);
+  if (!verified) {
     return { ok: false, error: "Signature did not match.", status: 401, fallThrough: false };
   }
   if (!parsed.ok) return { ok: false, error: parsed.error, status: 400, fallThrough: false };

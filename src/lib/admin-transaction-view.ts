@@ -185,14 +185,12 @@ export async function getFundingTransactionView(
         createdAt: true,
       },
     }),
-    prisma.collaboration.findFirst({
-      where: {
-        recipientSlug: funding.creatorSlug,
-        OR: [{ title: funding.title }, { title: { contains: funding.title.slice(0, 40) } }],
-      },
-      orderBy: { updatedAt: "desc" },
-      select: { id: true, status: true, initiatorSlug: true, recipientSlug: true },
-    }),
+    funding.collaborationId
+      ? prisma.collaboration.findUnique({
+          where: { id: funding.collaborationId },
+          select: { id: true, status: true, initiatorSlug: true, recipientSlug: true },
+        })
+      : Promise.resolve(null),
     marketplaceConfig().catch(() => null),
   ]);
 

@@ -413,7 +413,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     });
     if (!sent.ok) redirectError(sent.error, qs);
     if (briefId) {
-      await closeBriefForContract(briefId, ws.businessId).catch(() => undefined);
+      await closeBriefForContract(briefId, ws.businessId, "deal").catch(() => undefined);
     }
     redirect(`/collaboration/contracts/${sent.id}`);
   }
@@ -454,7 +454,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   }
 
   if (briefId) {
-    await closeBriefForContract(briefId, ws.businessId).catch(() => undefined);
+    await closeBriefForContract(briefId, ws.businessId, "deal").catch(() => undefined);
   }
 
   revalidatePath(BASE);

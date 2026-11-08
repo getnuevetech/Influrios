@@ -664,23 +664,42 @@ export async function activateBrief(id: string, workspaceId: string) {
 }
 
 /**
- * Lock a campaign after influencer acceptance / contract drafting so it can no longer be edited.
+ * A campaign stops recruiting only after its own accepted seats are full.
+ * Accepting one influencer never closes a different brief, and a multi-seat
+ * brief stays open until `creatorSlots` acceptances exist.
+ */
+export function briefRecruitmentFilled(input: { slots: number; acceptedCount: number }): boolean {
+  const slots = Number.isInteger(input.slots) && input.slots > 0 ? input.slots : 1;
+  const accepted = Number.isInteger(input.acceptedCount) && input.acceptedCount > 0 ? input.acceptedCount : 0;
+  return accepted >= slots;
+}
+
+/**
+ * Lock one campaign. `seats` waits until accepted applications fill creatorSlots.
+ * `deal` closes a single-seat campaign when its contract is formed, and leaves a
+ * multi-seat campaign open so the other seats can still be filled.
  * Closed briefs stay listed but Edit is unavailable.
  */
-export async function closeBriefForContract(id: string, workspaceId: string) {
+export async function closeBriefForContract(
+  id: string,
+  workspaceId: string,
+  mode: "seats" | "deal" = "seats",
+) {
   await readWorkspace(workspaceId);
   const existing = await prisma.businessBrief.findFirst({ where: { id, workspaceId } });
   if (!existing || existing.status === "closed") return existing;
-  return prisma.businessBrief.update({ where: { id: existing.id }, data: { status: "closed" } });
-}
-
-/** Close every active/draft brief on a workspace when a deal advances to contract. */
-export async function closeWorkspaceBriefsForContract(workspaceId: string) {
-  await readWorkspace(workspaceId);
-  await prisma.businessBrief.updateMany({
-    where: { workspaceId, status: { in: ["draft", "active"] } },
-    data: { status: "closed" },
+  if (mode === "deal") {
+    if (existing.creatorSlots > 1) return existing;
+    return prisma.businessBrief.update({ where: { id: existing.id }, data: { status: "closed" } });
+  }
+  const acceptedCount = await prisma.marketplaceApplication.count({
+    where: {
+      briefId: existing.id,
+      status: { in: ["ACCEPTED", "COLLABORATION_DRAFTED"] },
+    },
   });
+  if (!briefRecruitmentFilled({ slots: existing.creatorSlots, acceptedCount })) return existing;
+  return prisma.businessBrief.update({ where: { id: existing.id }, data: { status: "closed" } });
 }
 
 export async function queuedBriefIds(workspaceId: string) {

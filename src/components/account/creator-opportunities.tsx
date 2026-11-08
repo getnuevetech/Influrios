@@ -63,6 +63,7 @@ export function CreatorOpportunities({
   filters,
   creatorSlug,
   notice,
+  listingsFailed = false,
 }: {
   requests: RequestCard[];
   openings: OpeningCard[];
@@ -83,6 +84,7 @@ export function CreatorOpportunities({
   };
   creatorSlug: string;
   notice?: { kind: "saved" | "applied" | "error"; text?: string } | null;
+  listingsFailed?: boolean;
 }) {
   const tab = ["campaigns", "openings", "saved"].includes(filters.tab) ? filters.tab : "recommended";
   const saved = new Set(savedKeys);
@@ -125,6 +127,12 @@ export function CreatorOpportunities({
           Matching preferences
         </Link>
       </div>
+
+      {listingsFailed ? (
+        <p className="rounded-2xl border border-[#F3D7A1] bg-[#FFF8EC] px-4 py-3 text-sm text-[#8A5A12]">
+          Could not load opportunities. Refresh this page to try again.
+        </p>
+      ) : null}
 
       {notice?.kind === "applied" ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">

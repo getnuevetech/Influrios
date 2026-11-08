@@ -68,7 +68,7 @@ export default async function CollaborationRecordsPage() {
         status: funding.status,
         counterparty: creatorRow?.displayName ?? funding.creatorSlug,
         meta: formatStoredMoney(funding.grossCents, funding.currency),
-        href: "/payments",
+        href: `/payments?funding=${encodeURIComponent(funding.id)}`,
       });
     }
 
@@ -112,7 +112,7 @@ export default async function CollaborationRecordsPage() {
         status: funding.status,
         counterparty: funding.businessName,
         meta: formatStoredMoney(funding.grossCents, funding.currency),
-        href: "/payments",
+        href: `/payments?funding=${encodeURIComponent(funding.id)}`,
       });
     }
 

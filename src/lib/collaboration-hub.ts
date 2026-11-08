@@ -50,6 +50,10 @@ export type HubPipelineItem = {
   stage: PipelineStage;
   stageIndex: number;
   href: string;
+  contractHref?: string | null;
+  /** Influencer compensation after the platform fee. Never mixed across currencies. */
+  netCents?: number | null;
+  source?: "proposal" | "application" | "team";
   /** W2.5 — Product §16 funding badge when a ledger row is linked. */
   fundingBadge?: FundingBadge | null;
   feeCents?: number | null;
@@ -248,19 +252,32 @@ export async function listSavedMatchesForUser(userId: string): Promise<HubSavedM
   }));
 }
 
+async function settle<T>(label: string, work: Promise<T>, fallback: T, degraded: string[]): Promise<T> {
+  try {
+    return await work;
+  } catch (error) {
+    console.error(label, error);
+    degraded.push(label);
+    return fallback;
+  }
+}
+
 export async function loadCreatorHub(input: {
   userId: string;
   creator: SeedCreator;
 }) {
   const slug = input.creator.slug;
-  const [collaborations, fundings, saved, creatorMatches, requests, opportunities] =
+  const degraded: string[] = [];
+  const [collaborations, fundings, saved, creatorMatches, requests, opportunities, applications, teamProposals] =
     await Promise.all([
-      listCollaborations({ slug }).catch(() => []),
-      listFundingsForCreator(slug).catch(() => []),
-      listSavedMatchesForUser(input.userId).catch(() => []),
-      findDirectoryMatchesFor(slug).catch(() => [] as CreatorMatch[]),
-      listPublishedBusinessRequests().catch(() => [] as MarketplaceBusinessRequestRow[]),
-      listPublishedCreatorOpportunities().catch(() => [] as MarketplaceCreatorOpportunityRow[]),
+      settle("proposals", listCollaborations({ slug }), [], degraded),
+      settle("fundings", listFundingsForCreator(slug), [], degraded),
+      settle("saved matches", listSavedMatchesForUser(input.userId), [], degraded),
+      settle("matches", findDirectoryMatchesFor(slug), [] as CreatorMatch[], degraded),
+      settle("campaigns", listPublishedBusinessRequests(), [] as MarketplaceBusinessRequestRow[], degraded),
+      settle("openings", listPublishedCreatorOpportunities(), [] as MarketplaceCreatorOpportunityRow[], degraded),
+      settle("applications", listMarketplaceApplications({ creatorSlug: slug, limit: 100 }), [] as MarketplaceApplicationRow[], degraded),
+      settle("team proposals", import("@/lib/team-proposal").then((mod) => mod.listTeamProposalsForCreator(slug)), [], degraded),
     ]);
 
   await persistTopMatches(creatorMatches).catch(() => 0);
@@ -338,6 +355,11 @@ export async function loadCreatorHub(input: {
         stage,
         stageIndex: PIPELINE_STAGES.indexOf(stage),
         href: funding ? `/payments?funding=${encodeURIComponent(funding.id)}` : `/collaboration/records/${row.id}`,
+        source: "proposal",
+        netCents:
+          funding && Number.isInteger(funding.grossCents) && Number.isInteger(funding.feeCents)
+            ? Math.max(0, funding.grossCents - funding.feeCents)
+            : null,
         obligationDone: funding?.milestones?.filter((item) => item.status === "approved" || item.status === "released").length,
         obligationTotal: funding?.milestones?.length,
         ...surface,
@@ -353,10 +375,91 @@ export async function loadCreatorHub(input: {
     .sort((a, b) => b.score - a.score)
     .slice(0, 8);
 
-  const applications = await listMarketplaceApplications({
-    creatorSlug: slug,
-    limit: 20,
-  }).catch(() => [] as MarketplaceApplicationRow[]);
+  const collabIds = collaborations.map((row) => row.id);
+  const teamIds = teamProposals.map((row) => row.id);
+  const contractWhere = [
+    ...(collabIds.length ? [{ collaborationId: { in: collabIds } }] : []),
+    ...(teamIds.length ? [{ teamProposalId: { in: teamIds } }] : []),
+  ];
+  const contractLinks = contractWhere.length
+    ? await settle(
+        "agreements",
+        prisma.contractDocument.findMany({
+          where: { OR: contractWhere },
+          select: { id: true, collaborationId: true, teamProposalId: true },
+          orderBy: { updatedAt: "desc" },
+        }),
+        [],
+        degraded,
+      )
+    : [];
+  const contractByCollab = new Map<string, string>();
+  const contractByTeam = new Map<string, string>();
+  for (const link of contractLinks) {
+    if (link.collaborationId && !contractByCollab.has(link.collaborationId)) {
+      contractByCollab.set(link.collaborationId, link.id);
+    }
+    if (link.teamProposalId && !contractByTeam.has(link.teamProposalId)) {
+      contractByTeam.set(link.teamProposalId, link.id);
+    }
+  }
+  for (const row of pipeline) {
+    const contractId = contractByCollab.get(row.id);
+    if (contractId) row.contractHref = `/collaboration/contracts/${contractId}`;
+  }
+  for (const proposal of teamProposals) {
+    if (proposal.status !== "accepted" && proposal.status !== "partial") continue;
+    const mine = proposal.members.find((member) => member.creatorSlug === slug);
+    if (!mine || mine.status === "declined") continue;
+    const contractId = contractByTeam.get(proposal.id);
+    pipeline.push({
+      id: `team:${proposal.id}`,
+      title: proposal.title,
+      counterparty: "Team",
+      stage: proposal.status === "accepted" ? "Contract" : "Match",
+      stageIndex: PIPELINE_STAGES.indexOf(proposal.status === "accepted" ? "Contract" : "Match"),
+      href: `/collaboration/team/${proposal.id}`,
+      contractHref: contractId ? `/collaboration/contracts/${contractId}` : null,
+      source: "team",
+    });
+  }
+  for (const application of applications) {
+    if (application.status !== "ACCEPTED" && application.status !== "COLLABORATION_DRAFTED") continue;
+    pipeline.push({
+      id: `application:${application.id}`,
+      title: application.requestBrand || application.opportunityLookingFor || "Campaign application",
+      counterparty: application.requestBrand || "Business",
+      stage: "Contract",
+      stageIndex: PIPELINE_STAGES.indexOf("Contract"),
+      href: `/collaboration/applications/${application.id}`,
+      contractHref: null,
+      source: "application",
+    });
+  }
+  const history: HubPipelineItem[] = [
+    ...collaborations
+      .filter((row) => row.status === "declined" || row.status === "withdrawn")
+      .map((row) => ({
+        id: row.id,
+        title: row.title,
+        counterparty: row.initiatorSlug === slug ? row.recipientSlug : row.initiatorSlug,
+        stage: "Match" as const,
+        stageIndex: 0,
+        href: `/collaboration/records/${row.id}`,
+        source: "proposal" as const,
+      })),
+    ...applications
+      .filter((row) => row.status === "DECLINED" || row.status === "EXPIRED" || row.status === "WITHDRAWN")
+      .map((row) => ({
+        id: `application:${row.id}`,
+        title: row.requestBrand || row.opportunityLookingFor || "Application",
+        counterparty: row.status === "EXPIRED" ? "Expired" : row.status === "WITHDRAWN" ? "Withdrawn" : "Declined",
+        stage: "Match" as const,
+        stageIndex: 0,
+        href: `/collaboration/applications/${row.id}`,
+        source: "application" as const,
+      })),
+  ];
 
   return {
     status,
@@ -370,15 +473,16 @@ export async function loadCreatorHub(input: {
     opportunities: opportunities.filter((item) => item.creatorSlug !== slug).slice(0, 6),
     applications,
     collaborations,
+    history,
+    degraded,
   };
 }
 
 export async function loadBusinessHub(input?: { intentBriefId?: string; userId?: string }) {
   const ws = await getWorkspace(input?.userId);
   const entitlements = await businessEntitlementsForPlan(ws.plan);
-  const [fundings, requests, opportunities, collaborations] = await Promise.all([
+  const [fundings, opportunities, collaborations] = await Promise.all([
     listFundingsForBusiness(ws.businessId).catch(() => []),
-    listPublishedBusinessRequests().catch(() => [] as MarketplaceBusinessRequestRow[]),
     listPublishedCreatorOpportunities().catch(() => [] as MarketplaceCreatorOpportunityRow[]),
     (ws.ownerUserId
       ? prisma.collaboration.count({ where: { initiatorUserId: ws.ownerUserId, status: "accepted" } }).catch(() => 0)
@@ -445,6 +549,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
       stage,
       stageIndex: PIPELINE_STAGES.indexOf(stage),
       href: `/payments?funding=${encodeURIComponent(row.id)}`,
+      netCents: Number.isInteger(row.grossCents) && Number.isInteger(row.feeCents) ? Math.max(0, row.grossCents - row.feeCents) : null,
       obligationDone: row.milestones?.filter((item) => item.status === "approved" || item.status === "released").length,
       obligationTotal: row.milestones?.length,
       ...surface,

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   const airwallexSig = request.headers.get("x-airwallex-signature");
   if (nativeSignature || nativeTimestamp || airwallexSig || headerProvider === "airwallex") {
     const signature = nativeSignature || airwallexSig || request.headers.get("x-influrios-signature");
-    const mentorship = await applyAirwallexMentorshipWebhook(body, signature);
+    const mentorship = await applyAirwallexMentorshipWebhook(body, signature, nativeTimestamp);
     if (!mentorship.fallThrough) {
       return NextResponse.json(mentorship.ok ? mentorship : { error: mentorship.error }, {
         status: mentorship.ok ? 200 : mentorship.status,

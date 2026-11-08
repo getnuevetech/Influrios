@@ -30,6 +30,7 @@ type Props = {
     tab?: string;
     sort?: string;
     view?: string;
+    page?: string;
     saved?: string;
     applied?: string;
     error?: string;
@@ -79,17 +80,15 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
 
   if (view === "collaborations") {
     const weekEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const now = new Date();
     const milestones = await prisma.fundingMilestone
       .findMany({
         where: {
           funding: { creatorSlug: draft.slug },
-          OR: [
-            { deliverableDueAt: { gte: new Date() } },
-            { releaseScheduledAt: { gte: new Date() } },
-          ],
+          OR: [{ deliverableDueAt: { not: null } }, { releaseScheduledAt: { gte: now } }],
         },
         orderBy: [{ deliverableDueAt: "asc" }, { releaseScheduledAt: "asc" }],
-        take: 8,
+        take: 24,
         select: {
           id: true,
           title: true,
@@ -99,20 +98,30 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
         },
       })
       .catch(() => null);
-    const deadlines = (milestones ?? [])
-      .filter((row) => (row.deliverableDueAt ?? row.releaseScheduledAt) != null)
-      .flatMap((row) => {
-        const at = row.deliverableDueAt ?? row.releaseScheduledAt;
-        if (!at) return [];
+    const deadlines = (milestones ?? []).flatMap((row) => {
+      if (row.deliverableDueAt) {
+        const overdue = row.deliverableDueAt.getTime() < now.getTime();
         return [
           {
             id: row.id,
             title: row.funding.businessName || row.funding.title,
-            detail: row.deliverableDueAt ? row.title : `Payout date · ${row.title}`,
-            at,
+            detail: overdue ? `Overdue · ${row.title}` : row.title,
+            at: row.deliverableDueAt,
           },
         ];
-      });
+      }
+      if (row.releaseScheduledAt && row.releaseScheduledAt.getTime() >= now.getTime()) {
+        return [
+          {
+            id: `${row.id}-payout`,
+            title: row.funding.businessName || row.funding.title,
+            detail: `Payout date · ${row.title}`,
+            at: row.releaseScheduledAt,
+          },
+        ];
+      }
+      return [];
+    });
     const names: Record<string, string> = {};
     for (const row of hub.pipeline) {
       const creatorRow = bySlug.get(row.counterparty);
@@ -129,6 +138,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
         dueThisWeek={deadlines.filter((row) => row.at.getTime() <= weekEnd.getTime()).length}
         tab={params.tab}
         query={params.q?.trim() ?? ""}
+        page={Math.max(1, Number(params.page) || 1)}
         savedMatches={hub.saved.map((row) => ({
           id: row.saveId,
           title: `${bySlug.get(row.partyASlug)?.displayName || row.partyASlug} × ${bySlug.get(row.partyBSlug)?.displayName || row.partyBSlug}`,
@@ -139,9 +149,16 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
     );
   }
 
+  let listingsFailed = false;
   const [requests, openings, saves, applications] = await Promise.all([
-    listPublishedBusinessRequests().catch(() => []),
-    listPublishedCreatorOpportunities().catch(() => []),
+    listPublishedBusinessRequests().catch(() => {
+      listingsFailed = true;
+      return [];
+    }),
+    listPublishedCreatorOpportunities().catch(() => {
+      listingsFailed = true;
+      return [];
+    }),
     listSavedListings(account.id).catch(() => []),
     listMarketplaceApplications({ creatorSlug: draft.slug, limit: 100 }).catch(() => []),
   ]);
@@ -201,6 +218,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
 
   return (
     <CreatorOpportunities
+      listingsFailed={listingsFailed}
       requests={scored.map((row) => ({ ...row.request, score: row.score }))}
       openings={filteredOpenings.map((item) => {
         const row = bySlug.get(item.creatorSlug);
