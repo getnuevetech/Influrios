@@ -285,7 +285,7 @@ export function CreatorOpportunities({
       <p className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#E7ECF5] bg-white px-4 py-3 text-sm text-[#667085]">
         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#F4F6FB] text-[11px]">i</span>
         Applications are tracked in Collaborations.{" "}
-        <Link href="/collaboration/hub?view=collaborations&tab=invitations" className="font-semibold text-[#6D4AFF]">
+        <Link href="/collaboration/hub?view=collaborations&tab=applications" className="font-semibold text-[#6D4AFF]">
           View applications →
         </Link>
       </p>
@@ -402,7 +402,7 @@ function OpeningCardView({
           ) : (
             <span className="text-xs text-[#98A2B3]">Review before connecting</span>
           )}
-          <Link href={`/creators/${opening.creatorSlug}`} className="rounded-full bg-[#6D4AFF] px-3 py-1.5 text-xs font-semibold text-white">
+          <Link href={`/collaboration/openings/${encodeURIComponent(opening.id)}`} className="rounded-full bg-[#6D4AFF] px-3 py-1.5 text-xs font-semibold text-white">
             View details →
           </Link>
         </div>

@@ -296,18 +296,23 @@ export async function respondToTeamProposal(input: {
   const member = row.members.find((item) => item.creatorSlug === input.creatorSlug);
   if (!member) return { ok: false as const, error: "You are not on this proposal." };
   if (member.status !== "invited") return { ok: false as const, error: "You already responded." };
-  const status = nextProposalStatus(row.members, input.creatorSlug, input.decision);
-  await prisma.$transaction([
-    prisma.teamProposalMember.update({
-      where: { id: member.id },
+  const settled = await prisma.$transaction(async (tx) => {
+    const write = await tx.teamProposalMember.updateMany({
+      where: { id: member.id, status: "invited" },
       data: { status: input.decision },
-    }),
-    prisma.teamProposal.update({
-      where: { id: row.id },
+    });
+    if (write.count !== 1) return null;
+    const members = await tx.teamProposalMember.findMany({ where: { proposalId: row.id } });
+    const status = nextProposalStatus(members, input.creatorSlug, input.decision);
+    await tx.teamProposal.updateMany({
+      where: { id: row.id, status: { in: ["sent", "partial"] } },
       data: { status },
-    }),
-  ]);
-  const members = row.members.map((item) =>
+    });
+    return { status, members };
+  });
+  if (!settled) return { ok: false as const, error: "You already responded." };
+  const status = settled.status;
+  const members = settled.members.map((item) =>
     item.creatorSlug === input.creatorSlug ? { ...item, status: input.decision } : item,
   );
   return {

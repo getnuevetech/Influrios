@@ -13,12 +13,14 @@ export function BusinessSignupForm({
   submitLabel,
   error,
   legalTitles,
+  plan,
 }: {
   title: string;
   subtitle: string;
   checkboxLabel: string;
   submitLabel: string;
   error?: string;
+  plan?: string;
   legalTitles?: {
     terms?: string | null;
     electronicConsent?: string | null;
@@ -42,6 +44,7 @@ export function BusinessSignupForm({
           {error}
         </p>
       ) : null}
+      {plan?.trim() ? <input type="hidden" name="plan" value={plan.trim().slice(0, 32)} /> : null}
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <label className="block text-xs font-bold text-indigo sm:col-span-2">
           Business Name

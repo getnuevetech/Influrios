@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusinessSession } from "@/lib/account-audience";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
-import { closeBriefForContract, closeWorkspaceBriefsForContract, getWorkspace } from "@/lib/business";
+import { closeBriefForContract, getWorkspace } from "@/lib/business";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { resolveFee } from "@/lib/collaboration-fees";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
@@ -414,8 +414,6 @@ export async function actionSubmitContractWizard(formData: FormData) {
     if (!sent.ok) redirectError(sent.error, qs);
     if (briefId) {
       await closeBriefForContract(briefId, ws.businessId).catch(() => undefined);
-    } else {
-      await closeWorkspaceBriefsForContract(ws.businessId).catch(() => undefined);
     }
     redirect(`/collaboration/contracts/${sent.id}`);
   }
@@ -457,8 +455,6 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   if (briefId) {
     await closeBriefForContract(briefId, ws.businessId).catch(() => undefined);
-  } else {
-    await closeWorkspaceBriefsForContract(ws.businessId).catch(() => undefined);
   }
 
   revalidatePath(BASE);

@@ -86,11 +86,15 @@ export default async function ContractsIndexPage({
   const account = await getAccountSession().catch(() => null);
   if (!account) redirect("/login?next=/collaboration/contracts");
   const params = await searchParams;
-  const [contracts, creator, workspace] = await Promise.all([
-    listContractsForUser(account.id, account.email).catch(() => []),
+  const contractLoad = await listContractsForUser(account.id, account.email)
+    .then((rows) => ({ rows, failed: false }))
+    .catch(() => ({ rows: [], failed: true }));
+  const [creator, workspace] = await Promise.all([
     prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } }).catch(() => null),
     getWorkspace(account.id).catch(() => null),
   ]);
+  const contracts = contractLoad.rows;
+  const contractsFailed = contractLoad.failed;
   const creatorSlug = creator?.slug?.trim() ?? "";
   const ownedIds =
     workspace && workspace.businessId !== "public"
@@ -216,7 +220,11 @@ export default async function ContractsIndexPage({
         </section>
       ) : null}
 
-      {filtered.length === 0 && needed.length === 0 ? (
+      {contractsFailed ? (
+        <p className="rounded-2xl border border-[#F3D7A1] bg-[#FFF8EC] px-4 py-4 text-sm text-[#8A5A12]">
+          Could not load agreements. Refresh this page to try again.
+        </p>
+      ) : filtered.length === 0 && needed.length === 0 ? (
         <EmptyContracts />
       ) : filtered.length === 0 ? null : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.78fr)]">

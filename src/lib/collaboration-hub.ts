@@ -58,6 +58,8 @@ export type HubPipelineItem = {
   currency?: string | null;
   /** e.g. "1/2 revisions used on Delivery" */
   revisionSummary?: string | null;
+  obligationDone?: number;
+  obligationTotal?: number;
 };
 
 export type HubStatusCounts = {
@@ -112,14 +114,14 @@ export function derivePipelineStage(input: {
   milestoneStatuses?: string[];
 }): PipelineStage {
   const milestones = input.milestoneStatuses ?? [];
-  if (input.fundingStatus === "completed" || milestones.some((s) => s === "released")) {
+  const released = milestones.filter((status) => status === "released").length;
+  const allReleased = milestones.length > 0 && released === milestones.length;
+  if (input.fundingStatus === "completed" && (milestones.length === 0 || allReleased)) {
     return "Released";
   }
-  if (milestones.some((s) => s === "approved")) return "Review";
-  if (milestones.some((s) => s === "submitted")) return "In Progress";
-  if (input.fundingStatus === "awaiting_provider" || input.fundingStatus === "held") {
-    return "Funded";
-  }
+  if (milestones.some((status) => status === "submitted" || status === "approved")) return "Review";
+  if (released > 0) return "In Progress";
+  if (input.fundingStatus === "held") return "Funded";
   if (input.collaborationStatus === "accepted") return "Contract";
   return "Match";
 }
@@ -307,15 +309,10 @@ export async function loadCreatorHub(input: {
       .filter((row) => row.collaborationId)
       .map((row) => [row.collaborationId as string, row]),
   );
-  const fundingByTitle = new Map(fundings.map((row) => [row.title.toLowerCase(), row]));
   const pipeline: HubPipelineItem[] = collaborations
     .filter((row) => row.status === "accepted" || row.status === "sent" || row.status === "draft")
-    .slice(0, 6)
     .map((row) => {
-      const funding =
-        fundingByCollab.get(row.id) ??
-        fundingByTitle.get(row.title.toLowerCase()) ??
-        fundings.find((f) => f.creatorSlug === slug && f.title.toLowerCase().includes(row.title.toLowerCase().slice(0, 24)));
+      const funding = fundingByCollab.get(row.id) ?? null;
       const stage = derivePipelineStage({
         collaborationStatus: row.status,
         fundingStatus: funding?.status ?? null,
@@ -340,7 +337,9 @@ export async function loadCreatorHub(input: {
         counterparty,
         stage,
         stageIndex: PIPELINE_STAGES.indexOf(stage),
-        href: funding ? `/payments` : `/collaboration/records/${row.id}`,
+        href: funding ? `/payments?funding=${encodeURIComponent(funding.id)}` : `/collaboration/records/${row.id}`,
+        obligationDone: funding?.milestones?.filter((item) => item.status === "approved" || item.status === "released").length,
+        obligationTotal: funding?.milestones?.length,
         ...surface,
       };
     });
@@ -381,7 +380,9 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
     listFundingsForBusiness(ws.businessId).catch(() => []),
     listPublishedBusinessRequests().catch(() => [] as MarketplaceBusinessRequestRow[]),
     listPublishedCreatorOpportunities().catch(() => [] as MarketplaceCreatorOpportunityRow[]),
-    listCollaborations({}).catch(() => []),
+    (ws.ownerUserId
+      ? prisma.collaboration.count({ where: { initiatorUserId: ws.ownerUserId, status: "accepted" } }).catch(() => 0)
+      : Promise.resolve(0)),
   ]);
 
   const ownRequests = await listWorkspaceBusinessRequests(ws.businessId).catch(
@@ -390,7 +391,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
   const draftRequests = ws.briefs.filter((brief) => brief.status === "draft").length;
   const activeBriefs = ws.briefs.filter((brief) => brief.status === "active").length;
   const pendingReview = ws.inquiries.filter((inquiry) => leadIsOpen(inquiry.status)).length;
-  const active = collaborations.filter((row) => row.status === "accepted").length + activeBriefs;
+  const active = collaborations + activeBriefs;
   const completed = fundings.filter((row) => row.status === "completed").length;
 
   const status: BusinessHubStatus = {
@@ -421,7 +422,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
     ? await listMarketplaceApplications({ businessRequestIds: ownRequestIds, limit: 20 }).catch(() => [])
     : [];
 
-  const pipeline: HubPipelineItem[] = fundings.slice(0, 6).map((row) => {
+  const pipeline: HubPipelineItem[] = fundings.map((row) => {
     const stage = derivePipelineStage({
       collaborationStatus: "accepted",
       fundingStatus: row.status,
@@ -443,7 +444,9 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
       counterparty: row.creatorSlug,
       stage,
       stageIndex: PIPELINE_STAGES.indexOf(stage),
-      href: `/payments`,
+      href: `/payments?funding=${encodeURIComponent(row.id)}`,
+      obligationDone: row.milestones?.filter((item) => item.status === "approved" || item.status === "released").length,
+      obligationTotal: row.milestones?.length,
       ...surface,
     };
   });

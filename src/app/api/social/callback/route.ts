@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       error: mapped || providerError,
       origin,
     });
-    const target = new URL("/dashboard", origin);
+    const target = new URL("/dashboard/social", origin);
     if (result.ok) {
       target.searchParams.set("social", result.metricsSynced ? "synced" : "connected");
     } else {
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.redirect(target);
   } catch {
-    const target = new URL("/dashboard", origin);
+    const target = new URL("/dashboard/social", origin);
     target.searchParams.set("error", "The network could not be reached. The profile figures were not changed.");
     return NextResponse.redirect(target);
   }

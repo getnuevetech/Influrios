@@ -7,6 +7,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import {
   adminCanOpenContractMessages,
   messageVisible,
+  contractTermsAreFrozen,
   resolveContractBodyForChrome,
   resolveContractPartyForAccount,
 } from "@/lib/contract-document";
@@ -95,7 +96,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
     createdAt: document.createdAt,
     parties: document.parties,
   });
-  if (chrome.upgraded) {
+  if (chrome.upgraded && !contractTermsAreFrozen(document)) {
     await prisma.contractDocument
       .update({
         where: { id: document.id },

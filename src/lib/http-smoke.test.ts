@@ -102,7 +102,7 @@ describe("staging evidence probe", () => {
     assert.match(runbook, /### E3 progress \(Social OAuth\)/);
     assert.match(runbook, /staging:e3-social-evidence/);
     assert.match(readFileSync("scripts/staging-e3-social-evidence.sh", "utf8"), /0\.0\.0\.0/);
-    assert.match(readFileSync("src/app/api/social/callback/route.ts", "utf8"), /resolveAppOrigin/);
+    assert.match(readFileSync("src/app/api/social/callback/route.ts", "utf8"), /oauthAppOrigin/);
     assert.match(readFileSync("src/app/api/social/meta/webhook/route.ts", "utf8"), /hub\.challenge|verifyMetaSubscriptionChallenge/);
     assert.match(readFileSync("src/lib/meta-webhook.ts", "utf8"), /\/api\/social\/meta\/webhook/);
     // E3 complete: YouTube connection + PROVIDER_SYNCED account recorded.

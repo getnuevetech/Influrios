@@ -21,6 +21,31 @@ export function verifyAirwallexSignature(body: string, signature: string | null,
   return timingSafeEqual(presented, expected);
 }
 
+/** Airwallex native webhooks: HMAC-SHA256 of `x-timestamp` + raw body, header `x-signature`. */
+export const AIRWALLEX_SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
+
+export function verifyAirwallexWebhook(input: {
+  body: string;
+  signature: string | null;
+  timestamp: string | null;
+  secret: string;
+  now?: number;
+}): { ok: true } | { ok: false; reason: "missing" | "timestamp" | "stale" | "mismatch" } {
+  const timestamp = (input.timestamp ?? "").trim();
+  const signature = (input.signature ?? "").trim();
+  if (!signature || !input.secret || !timestamp) return { ok: false, reason: "missing" };
+  if (!/^\d+$/.test(timestamp)) return { ok: false, reason: "timestamp" };
+  const numeric = Number(timestamp);
+  const millis = numeric < 10_000_000_000 ? numeric * 1000 : numeric;
+  const now = input.now ?? Date.now();
+  if (Math.abs(now - millis) > AIRWALLEX_SIGNATURE_TOLERANCE_MS) return { ok: false, reason: "stale" };
+  const digest = createHmac("sha256", input.secret).update(`${timestamp}${input.body}`).digest("hex");
+  const presented = Buffer.from(signature);
+  const expected = Buffer.from(digest);
+  if (presented.length !== expected.length) return { ok: false, reason: "mismatch" };
+  return timingSafeEqual(presented, expected) ? { ok: true } : { ok: false, reason: "mismatch" };
+}
+
 /**
  * Maps an Airwallex payment event onto the marketplace ledger event vocabulary.
  * Domain code never sees Airwallex types; the webhook route calls this then applyMarketplaceEvent.

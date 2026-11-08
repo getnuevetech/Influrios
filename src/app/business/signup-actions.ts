@@ -92,7 +92,11 @@ export async function actionRegisterBusiness(formData: FormData) {
     back(error instanceof Error ? error.message : "Could not set up the business workspace.");
   }
 
-  redirect(
-    `/account/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent("/business/home")}`,
-  );
+  const plan = String(formData.get("plan") ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_]/g, "")
+    .slice(0, 32);
+  const next = plan ? `/business/home?plan=${encodeURIComponent(plan)}` : "/business/home";
+  redirect(`/account/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`);
 }

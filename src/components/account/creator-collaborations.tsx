@@ -8,7 +8,7 @@ import type { listTeamProposalsForCreator } from "@/lib/team-proposal";
 
 type Hub = Awaited<ReturnType<typeof loadCreatorHub>>;
 type Proposals = Awaited<ReturnType<typeof listTeamProposalsForCreator>>;
-type Tab = "overview" | "invitations" | "active" | "proposals" | "completed" | "saved";
+type Tab = "overview" | "applications" | "invitations" | "active" | "proposals" | "completed" | "saved";
 
 function shortDate(value: string | Date | null | undefined) {
   if (!value) return "";
@@ -40,6 +40,7 @@ export function CreatorCollaborations({
   creatorSlug,
   names = {},
   deadlines = [],
+  deadlinesUnavailable = false,
   dueThisWeek = 0,
   tab = "overview",
   query = "",
@@ -50,13 +51,14 @@ export function CreatorCollaborations({
   creatorSlug: string;
   names?: Record<string, string>;
   deadlines?: { id: string; title: string; detail: string; at: Date }[];
+  deadlinesUnavailable?: boolean;
   dueThisWeek?: number;
   tab?: string;
   query?: string;
   savedMatches?: { id: string; title: string; detail: string; href: string }[];
 }) {
   const current: Tab =
-    tab === "invitations" || tab === "active" || tab === "proposals" || tab === "completed" || tab === "saved"
+    tab === "applications" || tab === "invitations" || tab === "active" || tab === "proposals" || tab === "completed" || tab === "saved"
       ? tab
       : "overview";
   const q = query.trim().toLowerCase();
@@ -111,6 +113,7 @@ export function CreatorCollaborations({
         {(
           [
             ["overview", "Overview", null],
+            ["applications", "Applications", applications.length],
             ["invitations", "Invitations", invitationCount],
             ["active", "Active", active.length],
             ["proposals", "Team proposals", openProposals.length],
@@ -153,7 +156,10 @@ export function CreatorCollaborations({
               <ul className="mt-2 divide-y divide-[#EEF2F7]">
                 {visibleActive.map((row) => {
                   const brand = names[row.counterparty] || row.counterparty || row.title;
-                  const pct = Math.max(8, Math.round(((Math.max(row.stageIndex, 0) + 1) / PIPELINE_STAGES.length) * 100));
+                  const pct =
+                    row.obligationTotal && row.obligationTotal > 0
+                      ? Math.round(((row.obligationDone ?? 0) / row.obligationTotal) * 100)
+                      : Math.max(8, Math.round(((Math.max(row.stageIndex, 0) + 1) / PIPELINE_STAGES.length) * 100));
                   return (
                     <li key={row.id} className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)_120px_90px_auto] lg:items-center">
                       <div className="flex min-w-0 items-center gap-3">
@@ -177,7 +183,11 @@ export function CreatorCollaborations({
                         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#EEF2F7]">
                           <div className="h-full rounded-full bg-[#6D4AFF]" style={{ width: `${pct}%` }} />
                         </div>
-                        <p className="mt-1 text-[11px] text-[#667085]">{row.stage}</p>
+                        <p className="mt-1 text-[11px] text-[#667085]">
+                          {row.obligationTotal
+                            ? `${row.obligationDone ?? 0} of ${row.obligationTotal} deliverables`
+                            : row.stage}
+                        </p>
                       </div>
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-[#98A2B3]">Agreed fee</p>
@@ -206,8 +216,10 @@ export function CreatorCollaborations({
           </section>
           <aside className="space-y-4">
             <Panel title="Upcoming deadlines">
-              {deadlines.length === 0 ? (
-                <p className="text-sm text-[#667085]">Deadlines appear when a release is scheduled.</p>
+              {deadlinesUnavailable ? (
+                <p className="text-sm text-[#8A5A12]">Could not load deadlines. Refresh this page to try again.</p>
+              ) : deadlines.length === 0 ? (
+                <p className="text-sm text-[#667085]">Deliverable and payout dates appear when they are scheduled.</p>
               ) : (
                 <ul className="space-y-3">
                   {deadlines.slice(0, 4).map((row) => (
@@ -225,17 +237,20 @@ export function CreatorCollaborations({
             <Panel
               title="Payment readiness"
               extra={
-                payoutReady || payoutAccountOnFile ? null : (
-                  <span className="text-xs font-semibold text-[#D14343]">Action required</span>
+                payoutReady ? (
+                  <span className="text-xs font-semibold text-[#178A45]">Ready</span>
+                ) : (
+                  <span className="text-xs font-semibold text-[#D14343]">Not ready</span>
                 )
               }
             >
               <p className="text-sm text-[#667085]">
                 {payoutReady
-                  ? "A payout account is connected for completed collaborations."
+                  ? "Identity, payout region, and payout account are ready. This is not a payment that has already been sent."
                   : payoutAccountOnFile
-                    ? "Your payout account is on file. Releases still wait until identity and your payout region are cleared."
-                    : "Connect a payout account to get paid for completed collaborations."}
+                    ? hub.payout.readiness?.blockers[0] ||
+                      "A payout account is on file. Releases stay blocked until identity and your payout region are cleared."
+                    : hub.payout.readiness?.blockers[0] || "Connect a payout account before a release can be sent."}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {payoutAccountOnFile ? null : (
@@ -307,7 +322,14 @@ export function CreatorCollaborations({
         </section>
       ) : null}
 
-      {current === "overview" && applications.length > 0 ? (
+      {current === "applications" && applications.length === 0 ? (
+        <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-5">
+          <h2 className="font-display text-lg font-bold text-[#1B1464]">Applications sent</h2>
+          <p className="mt-3 text-sm text-[#667085]">Applications you send appear here. They are not invitations.</p>
+        </section>
+      ) : null}
+
+      {(current === "overview" || current === "applications") && applications.length > 0 ? (
         <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
           <h2 className="font-display text-lg font-bold text-[#1B1464]">Applications sent</h2>
           <ul className="mt-3 divide-y divide-[#EEF2F7]">

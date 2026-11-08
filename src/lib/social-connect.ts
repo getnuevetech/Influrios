@@ -498,15 +498,20 @@ async function readyAuthorizeUrl(input: {
     network.code === "youtube"
       ? { access_type: "offline", include_granted_scopes: "true", prompt: "consent" }
       : undefined;
+  const attempt: { oauthRedirectUri: string; oauthStartedAt: Date; pkceVerifier?: string } = {
+    oauthRedirectUri: callback,
+    oauthStartedAt: new Date(),
+  };
   if (network.code === "x") {
     const pkce = createXPkce();
     extraParams = { code_challenge: pkce.challenge, code_challenge_method: pkce.method };
-    const saved = await prisma.socialConnection.updateMany({
-      where: { stateToken: state },
-      data: { pkceVerifier: pkce.verifier },
-    });
-    if (saved.count !== 1) return { ok: false as const, error: "This connection request has expired." };
+    attempt.pkceVerifier = pkce.verifier;
   }
+  const savedAttempt = await prisma.socialConnection.updateMany({
+    where: { stateToken: state },
+    data: attempt,
+  });
+  if (savedAttempt.count !== 1) return { ok: false as const, error: "This connection request has expired." };
   const authorizeUrl = buildAuthorizeUrl({
     authorizeUrl: authorizeBase,
     authorizeHosts: locked?.authorizeHosts ?? network.authorizeHosts,
@@ -901,18 +906,29 @@ export async function completeSocialCallback(input: { code?: string; state?: str
   });
   if (!connection) return { ok: false as const, error: "This connection request has expired." };
   const slug = connection.creator.slug;
-  await prisma.socialConnection.update({ where: { id: connection.id }, data: { stateToken: null } });
-  if (input.error || !input.code) {
+  const started = connection.oauthStartedAt?.getTime() ?? 0;
+  if (!started || Date.now() - started > 20 * 60 * 1000) {
     await prisma.socialConnection.update({
       where: { id: connection.id },
-      data: {
-        status: "error",
-        lastError: `${
-          connection.lastError?.startsWith("Last authorize request") ? `${connection.lastError} · ` : ""
-        }The network did not authorize the connection.`.slice(0, 900),
-      },
+      data: { stateToken: null, status: "error", lastError: "This connection request expired." },
     });
-    return { ok: false as const, error: "The network did not authorize the connection.", slug };
+    return { ok: false as const, error: "This connection request expired. Try Connect again.", slug };
+  }
+  const consumed = await prisma.socialConnection.updateMany({
+    where: { id: connection.id, stateToken: input.state },
+    data: { stateToken: null },
+  });
+  if (consumed.count !== 1) return { ok: false as const, error: "This connection request has expired.", slug };
+  if (input.error || !input.code) {
+    const denied = /access_denied|denied|cancel/i.test(input.error ?? "");
+    const message = denied
+      ? "You declined access on the network. Nothing was connected."
+      : "The network did not authorize the connection.";
+    await prisma.socialConnection.update({
+      where: { id: connection.id },
+      data: { status: "error", lastError: message },
+    });
+    return { ok: false as const, error: message, slug };
   }
   const policy = await getSocialPolicy();
   if (connection.consentVersion !== policy.version) {
@@ -920,7 +936,8 @@ export async function completeSocialCallback(input: { code?: string; state?: str
   }
   const ready = await readProvider(connection.providerId, connection.platform as SocialSyncPlatform);
   if (!ready) return { ok: false as const, error: "This network is not connected yet.", slug };
-  const callback = callbackFor(ready.network.code, ready.extra.oauthRedirectUri, input.origin);
+  const callback =
+    connection.oauthRedirectUri?.trim() || callbackFor(ready.network.code, ready.extra.oauthRedirectUri, input.origin);
   const isX = connection.platform === "X";
   if (isX && !connection.pkceVerifier) {
     return { ok: false as const, error: "This X connection request expired. Try Connect again.", slug };

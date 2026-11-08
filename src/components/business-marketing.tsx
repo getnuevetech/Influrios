@@ -13,6 +13,15 @@ import {
 import type { BusinessLandingConfig } from "@/lib/landing-pages";
 import { SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 
+/** Pricing buttons always enter business registration, even if a stored CMS href still points at /register. */
+export function businessPlanHref(href: string, code: string) {
+  const plan = code.trim().toUpperCase();
+  if (!href || href.startsWith("/register") || href.startsWith("/login")) {
+    return `/business?plan=${encodeURIComponent(plan)}#create-profile`;
+  }
+  return href;
+}
+
 type RecommendedInfluencer = {
   slug: string;
   displayName: string;
@@ -31,10 +40,14 @@ export function BusinessMarketingPage({
   recommended,
   error,
   legalTitles,
+  sampleProfiles = false,
+  plan,
 }: {
   landing: BusinessLandingConfig;
   recommended: RecommendedInfluencer[];
   error?: string;
+  sampleProfiles?: boolean;
+  plan?: string;
   legalTitles?: {
     terms?: string | null;
     electronicConsent?: string | null;
@@ -157,7 +170,11 @@ export function BusinessMarketingPage({
           <div className="mb-6 flex items-end justify-between gap-3">
             <div>
               <h2 className="font-display text-2xl font-bold text-indigo">{landing.recommended.title}</h2>
-              <p className="mt-1 text-sm text-muted">{landing.recommended.subtitle}</p>
+              <p className="mt-1 text-sm text-muted">
+                {sampleProfiles
+                  ? "Sample profiles for this layout. They are not available partners and cannot be hired from here."
+                  : landing.recommended.subtitle}
+              </p>
             </div>
             <Link href={landing.recommended.ctaHref} className="text-sm font-bold text-violet hover:underline">
               {landing.recommended.ctaLabel} →
@@ -198,9 +215,13 @@ export function BusinessMarketingPage({
                   {stats.length > 0 ? (
                     <p className="mt-2 text-xs font-semibold text-indigo">{stats.join(" · ")}</p>
                   ) : null}
-                  <Link href={`/creators/${item.slug}`} className="mt-3 inline-flex text-xs font-bold text-violet">
-                    View profile →
-                  </Link>
+                  {sampleProfiles ? (
+                    <p className="mt-3 text-xs font-bold text-[#B86E00]">Sample profile</p>
+                  ) : (
+                    <Link href={`/creators/${item.slug}`} className="mt-3 inline-flex text-xs font-bold text-violet">
+                      View profile →
+                    </Link>
+                  )}
                 </div>
               </article>
               );
@@ -281,7 +302,7 @@ export function BusinessMarketingPage({
                   </li>
                 ))}
               </ul>
-              <Link href={plan.href} className="btn-primary mt-5 w-full !py-2 text-center text-sm">
+              <Link href={businessPlanHref(plan.href, plan.code)} className="btn-primary mt-5 w-full !py-2 text-center text-sm">
                 {plan.ctaLabel}
               </Link>
             </article>
@@ -298,6 +319,7 @@ export function BusinessMarketingPage({
             submitLabel={landing.signup.submitLabel}
             error={error}
             legalTitles={legalTitles}
+            plan={plan}
           />
 
           <aside className="rounded-2xl bg-gradient-to-br from-[#633CFF] to-[#2979FF] p-6 text-white shadow-sm">

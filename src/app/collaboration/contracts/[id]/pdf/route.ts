@@ -3,6 +3,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
 import {
   buildContractChromePdf,
+  contractTermsAreFrozen,
   resolveContractPartyForAccount,
 } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
@@ -53,7 +54,20 @@ export async function GET(_request: Request, { params }: Props) {
     return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
   }
 
-  // Never serve stored pdfBytes — always rebuild chrome (upgrades legacy bodies first).
+  const frozen = contractTermsAreFrozen(document);
+  const storedPdf = document.pdfBytes ? Buffer.from(document.pdfBytes) : Buffer.alloc(0);
+  if (frozen && storedPdf.length > 0) {
+    return new NextResponse(new Uint8Array(storedPdf), {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `inline; filename="influrios-contract-${document.id}.pdf"`,
+        "cache-control": "private, no-store, no-cache, must-revalidate",
+        pragma: "no-cache",
+        "x-influrios-contract-chrome": "stored",
+      },
+    });
+  }
+
   const { body, upgraded, pdf } = buildContractChromePdf({
     id: document.id,
     title: document.title,
@@ -64,16 +78,17 @@ export async function GET(_request: Request, { params }: Props) {
     parties: document.parties,
   });
 
-  // Persist chrome body + PDF so the next view/download matches what was served.
-  await prisma.contractDocument
-    .update({
-      where: { id: document.id },
-      data: {
-        renderedBody: body,
-        pdfBytes: new Uint8Array(pdf),
-      },
-    })
-    .catch(() => undefined);
+  if (!frozen) {
+    await prisma.contractDocument
+      .update({
+        where: { id: document.id, status: { in: ["draft", "sent"] } },
+        data: {
+          renderedBody: body,
+          pdfBytes: new Uint8Array(pdf),
+        },
+      })
+      .catch(() => undefined);
+  }
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {

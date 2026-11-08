@@ -19,8 +19,6 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Active Collaborations" };
 
-type Props = { searchParams: Promise<{ from?: string }> };
-
 type ActiveRow = {
   id: string;
   kind: "funding" | "proposal" | "application" | "contract";
@@ -31,8 +29,7 @@ type ActiveRow = {
   href: string;
 };
 
-export default async function CollaborationRecordsPage({ searchParams }: Props) {
-  const params = await searchParams;
+export default async function CollaborationRecordsPage() {
   const account = await getAccountSession().catch(() => null);
   if (!account) redirect("/login?next=/collaboration/records");
 
@@ -41,7 +38,7 @@ export default async function CollaborationRecordsPage({ searchParams }: Props) 
   const creator = await prisma.creator
     .findUnique({ where: { userId: account.id }, select: { slug: true, displayName: true } })
     .catch(() => null);
-  const creatorSlug = (params.from?.trim() || creator?.slug || draft?.slug || "").trim();
+  const creatorSlug = (creator?.slug || draft?.slug || "").trim();
 
   const ws = isBusiness ? await getWorkspace(account.id).catch(() => null) : null;
   const directory = await getDirectory().catch(() => null);
