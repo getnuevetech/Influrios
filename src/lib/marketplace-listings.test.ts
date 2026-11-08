@@ -5,6 +5,7 @@ import {
   applicationIsStaleForExpire,
   listingApplicationHidesApply,
   applicationIsAcceptedPipeline,
+  acceptedWorkNeedsContract,
   applicationIsInvitation,
   applicationIsOpenPipeline,
   applicationKindLabel,
@@ -177,8 +178,17 @@ describe("marketplace application state machine", () => {
     assert.equal(applicationIsInvitation({ toSlug: "maya", fromSlug: null }), true);
     assert.equal(applicationIsInvitation({ toSlug: "maya", fromSlug: "maya" }), false);
     assert.equal(applicationIsInvitation({ fromSlug: "maya", toSlug: null }), false);
+    assert.equal(applicationIsInvitation({ fromSlug: "ada", toSlug: "maya" }), false);
     assert.equal(applicationKindLabel({ toSlug: "maya" }), "Invitation");
     assert.equal(applicationKindLabel({ fromSlug: "maya", kind: "business_request" }), "Campaign application");
+    assert.equal(
+      applicationKindLabel({ fromSlug: "ada", toSlug: "maya", kind: "creator_opportunity" }),
+      "Opportunity application",
+    );
+    assert.equal(
+      applicationKindLabel({ fromSlug: "ada", toSlug: "brand", kind: "business_request" }),
+      "Campaign application",
+    );
     assert.equal(creatorApplicationRole({ fromSlug: "maya" }, "maya"), "applicant");
     assert.equal(creatorApplicationRole({ toSlug: "maya" }, "maya"), "invitee");
     assert.deepEqual(creatorApplicationTransitions("REQUESTED", "invitee"), []);
@@ -191,6 +201,21 @@ describe("marketplace application state machine", () => {
     assert.deepEqual(creatorApplicationTransitions("VIEWED", "applicant"), ["WITHDRAWN"]);
     assert.ok(!businessApplicationTransitions("REQUESTED").includes("VIEWED"));
     assert.ok(businessApplicationTransitions("REQUESTED").includes("DECLINED"));
+    assert.equal(
+      acceptedWorkNeedsContract(
+        { status: "ACCEPTED", fromSlug: "ada" },
+        [{ status: "sent", parties: [{ creatorSlug: "ada" }] }],
+      ),
+      false,
+    );
+    assert.equal(
+      acceptedWorkNeedsContract(
+        { status: "COLLABORATION_DRAFTED", fromSlug: "ada" },
+        [{ status: "voided", parties: [{ creatorSlug: "ada" }] }],
+      ),
+      true,
+    );
+    assert.equal(acceptedWorkNeedsContract({ status: "REQUESTED", fromSlug: "ada" }, []), false);
     assert.ok(canTransitionApplication("VIEWED", "ACCEPTED"));
     assert.equal(applicationIsOpenPipeline("VIEWED"), true);
     assert.equal(applicationIsAcceptedPipeline("ACCEPTED"), true);

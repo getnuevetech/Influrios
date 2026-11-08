@@ -71,7 +71,8 @@ export function CreatorCollaborations({
   const active = hub.pipeline.filter((row) => row.stage !== "Released" && row.stage !== "Match");
   const completed = hub.pipeline.filter((row) => row.stage === "Released");
   const invitationCount = invitations.length + openProposals.length + hub.status.pending;
-  const payoutReady = Boolean(hub.payout.readiness?.globalPayoutReady || hub.payout.readiness?.hasVerifiedMethod);
+  const payoutAccountOnFile = Boolean(hub.payout.readiness?.accountOnFile || hub.payout.readiness?.hasVerifiedMethod);
+  const payoutReady = Boolean(hub.payout.readiness?.globalPayoutReady);
   const matches = (text: string) => !q || text.toLowerCase().includes(q);
   const visibleActive = active.filter((row) => matches(`${row.title} ${names[row.counterparty] || row.counterparty}`));
 
@@ -221,16 +222,27 @@ export function CreatorCollaborations({
                 </ul>
               )}
             </Panel>
-            <Panel title="Payment readiness" extra={payoutReady ? null : <span className="text-xs font-semibold text-[#D14343]">Action required</span>}>
+            <Panel
+              title="Payment readiness"
+              extra={
+                payoutReady || payoutAccountOnFile ? null : (
+                  <span className="text-xs font-semibold text-[#D14343]">Action required</span>
+                )
+              }
+            >
               <p className="text-sm text-[#667085]">
                 {payoutReady
                   ? "A payout account is connected for completed collaborations."
-                  : "Connect a payout account to get paid for completed collaborations."}
+                  : payoutAccountOnFile
+                    ? "Your payout account is on file. Releases still wait until identity and your payout region are cleared."
+                    : "Connect a payout account to get paid for completed collaborations."}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Link href="/creator/earnings#payouts" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
-                  Set up payouts
-                </Link>
+                {payoutAccountOnFile ? null : (
+                  <Link href="/creator/earnings#payouts" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
+                    Set up payouts
+                  </Link>
+                )}
                 <Link href="/creator/earnings" className="rounded-full border border-[#E7ECF5] px-4 py-2 text-sm font-semibold text-[#6D4AFF]">
                   View earnings →
                 </Link>
@@ -259,8 +271,8 @@ export function CreatorCollaborations({
       {current === "overview" || current === "invitations" ? (
         <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
           <h2 className="font-display text-lg font-bold text-[#1B1464]">Invitations</h2>
-          {invitations.length + openProposals.length + applications.length === 0 && hub.status.pending === 0 ? (
-            <p className="mt-3 text-sm text-[#667085]">No invitations are waiting. Expired invitations stay in Completed.</p>
+          {invitations.length + openProposals.length === 0 && hub.status.pending === 0 ? (
+            <p className="mt-3 text-sm text-[#667085]">No invitations are waiting. Applications you send stay in Applications sent.</p>
           ) : (
             <ul className="mt-3 divide-y divide-[#EEF2F7]">
               {invitations.map((row) => (
@@ -283,16 +295,6 @@ export function CreatorCollaborations({
                   action="View invitation →"
                 />
               ))}
-              {applications.map((row) => (
-                <InviteRow
-                  key={row.id}
-                  brand={row.requestBrand || row.opportunityLookingFor || "Application"}
-                  title="Application sent"
-                  meta={row.status.replaceAll("_", " ")}
-                  href={`/collaboration/applications/${row.id}`}
-                  action="View application →"
-                />
-              ))}
               {hub.status.pending > 0 ? (
                 <li className="py-3">
                   <Link href="/collaboration/records" className="text-sm font-semibold text-[#6D4AFF]">
@@ -302,6 +304,24 @@ export function CreatorCollaborations({
               ) : null}
             </ul>
           )}
+        </section>
+      ) : null}
+
+      {current === "overview" && applications.length > 0 ? (
+        <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
+          <h2 className="font-display text-lg font-bold text-[#1B1464]">Applications sent</h2>
+          <ul className="mt-3 divide-y divide-[#EEF2F7]">
+            {applications.map((row) => (
+              <InviteRow
+                key={row.id}
+                brand={row.requestBrand || row.opportunityLookingFor || "Application"}
+                title="Application sent"
+                meta={row.status.replaceAll("_", " ")}
+                href={`/collaboration/applications/${row.id}`}
+                action="View application →"
+              />
+            ))}
+          </ul>
         </section>
       ) : null}
 

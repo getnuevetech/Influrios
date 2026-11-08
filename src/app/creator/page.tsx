@@ -235,9 +235,9 @@ export default async function CreatorHomePage({
               delta={home.visitDelta ?? undefined}
             />
             <StatCard
-              label="Opportunity invites"
+              label="Open opportunities"
               value={String(home.opportunityCount)}
-              note="Inquiries to this card, plus requests that name your specialty"
+              note="Inquiries and campaigns that match your specialty and have not been applied to"
               tone="violet"
               icon={<IconShare size={16} />}
             />

@@ -249,11 +249,17 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
                 <div>
                   <p className="text-sm font-bold text-indigo">
                     {application.status === "COLLABORATION_DRAFTED"
-                      ? "Collaboration drafted"
-                      : "Invitation accepted"}
+                      ? "Contract still needed"
+                      : isInvite
+                        ? "Invitation accepted"
+                        : "Application accepted"}
                   </p>
                   <p className="mt-1 text-xs text-muted">
-                    This is no longer an open invite. Open the contract to review and sign.
+                    {application.status === "COLLABORATION_DRAFTED"
+                      ? "The agreement is not on file yet. It shows under Contracts once it is created."
+                      : isInvite
+                        ? "This invitation is accepted. The contract appears when the agreement is created."
+                        : "This application is accepted. It is not an invitation. The contract appears when the agreement is created."}
                   </p>
                 </div>
                 <Link href="/collaboration/contracts" className="btn-primary inline-flex items-center gap-2 !py-2 text-sm">
