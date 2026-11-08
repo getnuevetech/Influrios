@@ -304,10 +304,13 @@ async function attachOnboarding(userId: string) {
   }
 }
 
-export async function setAccountSession(userId: string) {
-  const exp = Date.now() + SESSION_DAYS * 86400000;
+export function accountSessionToken(userId: string, exp = Date.now() + SESSION_DAYS * 86400000): string {
   const body = Buffer.from(JSON.stringify({ userId, exp }), "utf8").toString("base64url");
-  const token = `${body}.${sign(body)}`;
+  return `${body}.${sign(body)}`;
+}
+
+export async function setAccountSession(userId: string) {
+  const token = accountSessionToken(userId);
   const jar = await cookies();
   const headerStore = await headers();
   jar.set(COOKIE, token, {

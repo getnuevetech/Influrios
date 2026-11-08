@@ -57,6 +57,7 @@ export function parseAirwallexWebhook(body: string):
       eventType: "funding.held" | "payout.released" | "payout.refunded";
       fundingId: string;
       amountCents: number;
+      currency?: string;
       milestoneId?: string;
     }
   | { ok: false; error: string } {
@@ -70,7 +71,14 @@ export function parseAirwallexWebhook(body: string):
   const record = parsed as {
     id?: unknown;
     name?: unknown;
-    data?: { object?: { id?: unknown; amount?: unknown; metadata?: { fundingId?: unknown; milestoneId?: unknown } } };
+    data?: {
+      object?: {
+        id?: unknown;
+        amount?: unknown;
+        currency?: unknown;
+        metadata?: { fundingId?: unknown; milestoneId?: unknown };
+      };
+    };
   };
   const name = String(record.name ?? "");
   const eventType =
@@ -89,12 +97,15 @@ export function parseAirwallexWebhook(body: string):
   const amountCents = typeof amount === "number" ? Math.round(amount) : Number(amount);
   if (!Number.isInteger(amountCents) || amountCents < 0) return { ok: false, error: "Amount is invalid." };
   const milestoneId = record.data?.object?.metadata?.milestoneId;
+  const currencyRaw = record.data?.object?.currency;
+  const currency = typeof currencyRaw === "string" ? currencyRaw.trim().toUpperCase() : "";
   return {
     ok: true,
     eventId: record.id,
     eventType,
     fundingId,
     amountCents,
+    currency: /^[A-Z]{3}$/.test(currency) ? currency : undefined,
     milestoneId: typeof milestoneId === "string" ? milestoneId : undefined,
   };
 }

@@ -2,6 +2,7 @@
  * Collaboration OS P1b — marketplace listings (business requests, creator opportunities,
  * persisted match records, and application state machine).
  */
+import { applicationLinkPlan } from "@/lib/collaboration-links";
 import { prisma } from "@/lib/db";
 import {
   BUSINESS_REQUESTS,
@@ -538,7 +539,44 @@ export async function transitionMarketplaceApplication(input: {
         note: input.note?.trim() || null,
       },
     });
-    return updated;
+    const plan = applicationLinkPlan({
+      id: updated.id,
+      status: updated.status,
+      collaborationId: updated.collaborationId,
+      fromSlug: updated.fromSlug,
+      toSlug: updated.toSlug,
+    });
+    if (plan !== "create" || !updated.fromSlug || !updated.toSlug) return updated;
+    const collab = await tx.collaboration.create({
+      data: {
+        initiatorSlug: updated.fromSlug,
+        recipientSlug: updated.toSlug,
+        initiatorUserId: input.actorUserId ?? null,
+        title: (updated.note || "Accepted application").slice(0, 160),
+        scope: "Per accepted application",
+        roleInitiator: "Initiator",
+        roleRecipient: "Recipient",
+        commercial: "",
+        status: "accepted",
+        why: "",
+        reasons: [],
+        score: 0,
+        decidedAt: new Date(),
+        decidedByUserId: input.actorUserId ?? null,
+        events: {
+          create: {
+            fromStatus: null,
+            toStatus: "accepted",
+            actorUserId: input.actorUserId ?? null,
+            note: `application:${updated.id}`,
+          },
+        },
+      },
+    });
+    return tx.marketplaceApplication.update({
+      where: { id: updated.id },
+      data: { collaborationId: collab.id },
+    });
   });
 }
 
@@ -594,14 +632,6 @@ export function creatorApplicationRole(
   if (application.toSlug === slug) return "invitee";
   return null;
 }
-
-const BUSINESS_ONLY_TRANSITIONS: MarketplaceApplicationStatus[] = [
-  "VIEWED",
-  "RESPONDED",
-  "NEGOTIATING",
-  "EXPIRED",
-  "COLLABORATION_DRAFTED",
-];
 
 /**
  * Statuses a business may advance from the application detail page.
@@ -740,6 +770,7 @@ export type MarketplaceApplicationRow = {
   fromUserId: string | null;
   fromSlug: string | null;
   toSlug: string | null;
+  collaborationId: string | null;
   status: MarketplaceApplicationStatus;
   note: string | null;
   createdAt: string;
@@ -759,6 +790,7 @@ function mapApplication(row: {
   fromUserId: string | null;
   fromSlug: string | null;
   toSlug: string | null;
+  collaborationId?: string | null;
   status: string;
   note: string | null;
   createdAt: Date;
@@ -783,6 +815,7 @@ function mapApplication(row: {
     fromUserId: row.fromUserId,
     fromSlug: row.fromSlug,
     toSlug: row.toSlug,
+    collaborationId: row.collaborationId ?? null,
     status,
     note: row.note,
     createdAt: row.createdAt.toISOString(),

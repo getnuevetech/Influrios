@@ -1592,6 +1592,7 @@ export async function applyMarketplaceEvent(input: {
   eventType: string;
   fundingId: string;
   amountCents: number;
+  currency?: string | null;
   milestoneId?: string | null;
 }) {
   const eventId = input.eventId.trim();
@@ -1606,6 +1607,20 @@ export async function applyMarketplaceEvent(input: {
     include: { milestones: true, entries: true },
   });
   if (!funding) return { applied: false, result: "missing" as const };
+  const { fundingCurrencyMatches } = await import("@/lib/funding-event");
+  if (!fundingCurrencyMatches(input.currency, funding.currency)) {
+    await prisma.processedWebhook
+      .create({
+        data: {
+          provider: providerKey,
+          eventId,
+          eventType: input.eventType,
+          result: "rejected_currency",
+        },
+      })
+      .catch(() => undefined);
+    return { applied: false, result: "rejected" as const };
+  }
   const prior = reconcileLedger(ledgerMovements(funding.entries), funding.grossCents);
   const milestone = input.milestoneId
     ? funding.milestones.find((row) => row.id === input.milestoneId) ?? null

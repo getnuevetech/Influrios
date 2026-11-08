@@ -930,6 +930,16 @@ async function signedDraftIdFromCookie(): Promise<string | null> {
   }
 }
 
+/** True when the current session may see this private draft. Knowledge of the id is not enough. */
+export async function canReadPrivateDraft(draftId: string): Promise<boolean> {
+  try {
+    await assertCanMutateDraft(draftId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Published profiles require the owning account. Pre-account drafts require the signed session cookie. */
 export async function assertCanMutateDraft(draftId: string): Promise<void> {
   const id = draftId.trim();
@@ -1141,10 +1151,13 @@ async function noteInvitation(draftId: string, status: "claimed" | "published") 
   }
 }
 
-export async function setCreatorSession(draftId: string) {
-  const exp = Date.now() + SESSION_DAYS * 86400000;
+export function creatorSessionToken(draftId: string, exp = Date.now() + SESSION_DAYS * 86400000): string {
   const body = Buffer.from(JSON.stringify({ draftId, exp }), "utf8").toString("base64url");
-  const token = `${body}.${sign(body)}`;
+  return `${body}.${sign(body)}`;
+}
+
+export async function setCreatorSession(draftId: string) {
+  const token = creatorSessionToken(draftId);
   const jar = await cookies();
   jar.set(COOKIE_NAME, token, {
     httpOnly: true,

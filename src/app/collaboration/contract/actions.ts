@@ -87,6 +87,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
   const teamProposalId = String(formData.get("teamProposalId") ?? "").trim();
   const collaborationId = String(formData.get("collaborationId") ?? "").trim() || undefined;
+  const applicationId = String(formData.get("applicationId") ?? "").trim();
   const businessName = String(formData.get("businessName") ?? ws.name).trim() || ws.name;
   const title = String(formData.get("title") ?? "").trim();
   const scope = String(formData.get("scope") ?? "").trim();
@@ -367,6 +368,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
       workspaceId: ws.businessId,
       collaborationId: linkedCollaborationId,
       teamProposalId: teamProposalId || null,
+      applicationId: applicationId || null,
       createdByUserId: account.id,
       source: Object.fromEntries(qs.entries()),
       render: {

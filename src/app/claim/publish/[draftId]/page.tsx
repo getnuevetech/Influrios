@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { actionAddDraftSocial, actionPublishDraft } from "@/app/claim/actions";
 import { PlaceFields } from "@/components/place-fields";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
-import { claimPublishBlockers, draftToSeedCreator, getDraft } from "@/lib/claim";
+import { canReadPrivateDraft, claimPublishBlockers, draftToSeedCreator, getDraft } from "@/lib/claim";
 import { BIO_MIN_CHARS } from "@/lib/onboarding";
 import { SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 
@@ -19,7 +19,7 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
   const { draftId } = await params;
   const q = await searchParams;
   const draft = await getDraft(draftId);
-  if (!draft) notFound();
+  if (!draft || !(await canReadPrivateDraft(draft.id))) notFound();
   if (draft.stage === "draft") redirect(`/claim/preview/${draft.id}`);
   if (draft.stage === "claimed") redirect(`/claim/verify/${draft.id}`);
 

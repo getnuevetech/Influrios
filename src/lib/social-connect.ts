@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { canonicalOAuthOrigin, getAppOrigin, isPublicHttpsOrigin } from "@/lib/billing";
 import { prisma } from "@/lib/db";
+import { oauthAttemptFresh, oauthCallbackError } from "@/lib/oauth-attempt";
 import { invalidateDirectoryCache } from "@/lib/directory";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
 import {
@@ -907,7 +908,7 @@ export async function completeSocialCallback(input: { code?: string; state?: str
   if (!connection) return { ok: false as const, error: "This connection request has expired." };
   const slug = connection.creator.slug;
   const started = connection.oauthStartedAt?.getTime() ?? 0;
-  if (!started || Date.now() - started > 20 * 60 * 1000) {
+  if (!oauthAttemptFresh(started)) {
     await prisma.socialConnection.update({
       where: { id: connection.id },
       data: { stateToken: null, status: "error", lastError: "This connection request expired." },
@@ -920,10 +921,7 @@ export async function completeSocialCallback(input: { code?: string; state?: str
   });
   if (consumed.count !== 1) return { ok: false as const, error: "This connection request has expired.", slug };
   if (input.error || !input.code) {
-    const denied = /access_denied|denied|cancel/i.test(input.error ?? "");
-    const message = denied
-      ? "You declined access on the network. Nothing was connected."
-      : "The network did not authorize the connection.";
+    const message = oauthCallbackError(input.error).message;
     await prisma.socialConnection.update({
       where: { id: connection.id },
       data: { status: "error", lastError: message },
