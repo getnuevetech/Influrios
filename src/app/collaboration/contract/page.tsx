@@ -1,15 +1,12 @@
 import Image from "next/image";
+import { ContractMilestones } from "@/components/contract-milestones";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions";
 import { requireBusinessSession } from "@/lib/account-audience";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace, type CampaignBrief } from "@/lib/business";
-import {
-  budgetToGrossDollars,
-  campaignCommercialFromBrief,
-  campaignScopeFromBrief,
-} from "@/lib/campaign-contract";
+import { contractTermsFromRequest, preferContractField } from "@/lib/campaign-contract";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { resolveFee, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
 import {
@@ -37,6 +34,7 @@ import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
 import { publicStoredImage } from "@/lib/seed-data";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
+import { applicationForContract, listWorkspaceBusinessRequests } from "@/lib/marketplace-listings";
 import {
   buildPayoutFeeFxQuote,
   computePayoutReadiness,
@@ -146,12 +144,22 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   );
 
   const collaborationId = (params.collaboration ?? "").trim();
-  const applicationId = (params.application ?? "").trim();
+  const requestedApplicationId = (params.application ?? "").trim();
   const linkedCollab = collaborationId
     ? await prisma.collaboration.findUnique({ where: { id: collaborationId } }).catch(() => null)
     : null;
+  const ownedRequests = await listWorkspaceBusinessRequests(ws.businessId).catch(() => []);
+  const creatorHint =
+    (params.creator ?? "").trim() || linkedCollab?.recipientSlug || linkedCollab?.initiatorSlug || "";
+  const source = await applicationForContract({
+    applicationId: requestedApplicationId,
+    creatorSlug: creatorHint,
+    businessRequestIds: ownedRequests.map((row) => row.id),
+    briefIds: ws.briefs.map((brief) => brief.id),
+  }).catch(() => null);
+  const applicationId = source?.id || requestedApplicationId;
 
-  const briefId = (params.brief ?? "").trim();
+  const briefId = (params.brief ?? "").trim() || source?.briefId || source?.requestBriefId || "";
   const briefRow = briefId
     ? await prisma.businessBrief
         .findFirst({ where: { id: briefId, workspaceId: ws.businessId } })
@@ -174,47 +182,28 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         status: briefRow.status === "closed" || briefRow.status === "draft" ? briefRow.status : "active",
       }
     : null;
-  const fromCampaign =
-    Boolean(campaignBrief) || Boolean((params.application || params.brief) && (params.title ?? "").trim());
-  const campaignCurrency = (
-    campaignBrief?.budgetCurrency ||
-    params.currency ||
-    "USD"
-  )
-    .trim()
-    .toUpperCase();
+  const carried = contractTermsFromRequest({
+    brief: campaignBrief,
+    title: source?.requestBrand,
+    summary: source?.requestSummary,
+    deliverables: source?.deliverables || source?.requestDeliverables,
+    offerText: source?.offerText,
+    budget: source?.requestBudget,
+    currency: source?.requestCurrency,
+  });
+  const campaignCurrency = ((params.currency ?? "").trim() || carried.currency).toUpperCase();
+  const shownCurrency = /^[A-Z]{3}$/.test(campaignCurrency) ? campaignCurrency : "";
+  const fromCampaign = Boolean(carried.title || carried.scope || carried.gross);
 
-  const creatorSlug =
-    (params.creator ?? "").trim() ||
-    linkedCollab?.recipientSlug ||
-    linkedCollab?.initiatorSlug ||
-    "";
+  const creatorSlug = creatorHint || source?.creatorSlug || "";
   const creator = creatorSlug ? await getDirectoryCreator(creatorSlug) : null;
   const entered = contractWizardFields({
-    title:
-      params.title !== undefined
-        ? params.title
-        : campaignBrief?.title || linkedCollab?.title,
-    scope:
-      params.scope !== undefined
-        ? params.scope
-        : campaignBrief
-          ? campaignScopeFromBrief(campaignBrief)
-          : linkedCollab?.scope,
-    commercial:
-      params.commercial !== undefined
-        ? params.commercial
-        : campaignBrief
-          ? campaignCommercialFromBrief(campaignBrief)
-          : linkedCollab?.commercial,
+    title: preferContractField(params.title, carried.title || linkedCollab?.title || ""),
+    scope: preferContractField(params.scope, carried.scope || linkedCollab?.scope || ""),
+    commercial: preferContractField(params.commercial, carried.commercial || linkedCollab?.commercial || ""),
     jurisdiction: params.jurisdiction,
     serviceLevel: params.serviceLevel,
-    gross:
-      params.gross !== undefined
-        ? params.gross
-        : campaignBrief
-          ? budgetToGrossDollars(campaignBrief.budget, campaignBrief.budgetCurrency)
-          : undefined,
+    gross: preferContractField(params.gross, carried.gross),
     creatorCountryCode: countryCodeFromLocation(creator?.locationCountry),
     jurisdictionCodes: config.jurisdictions.map((row) => row.code),
   });
@@ -444,15 +433,15 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         ) : null}
         {fromCampaign ? (
           <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-            Prefilling from “{campaignBrief?.title || title}”. Title, scope, value, and {campaignCurrency} come from
-            the campaign. Add anything the agreement still needs.
+            “{campaignBrief?.title || title}” is already filled in
+            {shownCurrency ? `, including the ${shownCurrency} value` : ""}. Add anything the agreement still needs.
           </p>
         ) : null}
 
         <form action={actionSubmitContractWizard} className="space-y-8 rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
           <input type="hidden" name="businessName" value={ws.name} />
           {campaignBrief ? <input type="hidden" name="briefId" value={campaignBrief.id} /> : null}
-          {fromCampaign ? <input type="hidden" name="contractCurrency" value={campaignCurrency} /> : null}
+          {shownCurrency ? <input type="hidden" name="contractCurrency" value={shownCurrency} /> : null}
           {linkedCollab ? <input type="hidden" name="collaborationId" value={linkedCollab.id} /> : null}
           {applicationId ? <input type="hidden" name="applicationId" value={applicationId} /> : null}
           {teamProposal && teamProposal.workspaceId === ws.businessId ? (
@@ -535,10 +524,9 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               <input
                 name="title"
                 required
-                readOnly={fromCampaign}
                 placeholder="Campaign title"
                 defaultValue={title}
-                className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign ? "bg-[#F4F7FF] text-indigo" : ""}`}
+                className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${carried.title ? "bg-[#F4F7FF] text-indigo" : ""}`}
               />
             </label>
             <label className="mt-4 block text-sm font-semibold text-indigo">
@@ -546,11 +534,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               <textarea
                 name="scope"
                 required
-                readOnly={fromCampaign}
                 rows={4}
                 placeholder="Deliverables, channels, and revisions"
                 defaultValue={scope}
-                className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign ? "bg-[#F4F7FF] text-indigo" : ""}`}
+                className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${carried.scope ? "bg-[#F4F7FF] text-indigo" : ""}`}
               />
             </label>
           </section>
@@ -559,14 +546,13 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             <h2 className="font-display text-xl font-bold text-indigo">3. Commercial terms</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-semibold text-indigo">
-                Gross value ({campaignCurrency})
+                Gross value{shownCurrency ? ` (${shownCurrency})` : ""}
                 <input
                   name="grossUsd"
                   required
-                  readOnly={fromCampaign && Boolean(grossRaw)}
                   placeholder="Amount"
                   defaultValue={grossRaw}
-                  className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign && grossRaw ? "bg-[#F4F7FF] text-indigo" : ""}`}
+                  className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${carried.gross ? "bg-[#F4F7FF] text-indigo" : ""}`}
                 />
               </label>
               <label className="block text-sm font-semibold text-indigo">
@@ -629,9 +615,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 Commercial framing
                 <input
                   name="commercial"
-                  readOnly={fromCampaign && Boolean(commercial)}
                   defaultValue={commercial}
-                  className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${fromCampaign && commercial ? "bg-[#F4F7FF] text-indigo" : ""}`}
+                  className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${carried.commercial ? "bg-[#F4F7FF] text-indigo" : ""}`}
                 />
               </label>
             </div>
@@ -639,61 +624,12 @@ export default async function ContractWizardPage({ searchParams }: Props) {
 
           <section id="milestones">
             <h2 className="font-display text-xl font-bold text-indigo">4. Milestones</h2>
-            <div className="mt-3 flex flex-wrap gap-4 text-sm">
-              <label className="inline-flex items-center gap-2 font-semibold text-indigo">
-                <input type="radio" name="milestoneMode" value="template" defaultChecked={!usingCustom} />
-                Admin templates
-              </label>
-              <label
-                className={`inline-flex items-center gap-2 font-semibold ${
-                  entitlements.customMilestones ? "text-indigo" : "text-muted"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="milestoneMode"
-                  value="custom"
-                  defaultChecked={usingCustom}
-                  disabled={!entitlements.customMilestones}
-                />
-                Custom schedule{!entitlements.customMilestones ? " (Pro/Agency)" : ""}
-              </label>
-            </div>
-            <ul className="mt-4 space-y-2">
-              {drafts.map((row, index) => (
-                <li key={`${row.title}-${index}`} className="grid grid-cols-[1fr_88px] gap-2">
-                  <input
-                    name="milestoneTitle"
-                    defaultValue={row.title}
-                    className="rounded-xl border border-border px-3 py-2 text-sm"
-                  />
-                  <input
-                    name="milestonePercent"
-                    defaultValue={row.shareBps > 0 ? (row.shareBps / 100).toFixed(0) : ""}
-                    aria-label="Percent"
-                    className="rounded-xl border border-border px-3 py-2 text-sm"
-                  />
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2 text-xs text-muted">
-              {drafts.some((row) => row.title.trim())
-                ? "Percents must total 100. Last share absorbs rounding."
-                : usingCustom
-                  ? "Enter the milestone titles and percents. Blank rows are left out."
-                  : "No milestone templates are saved."}
-            </p>
-            {entitlements.customMilestones ? (
-              <label className="mt-4 flex items-start gap-2 text-sm text-indigo">
-                <input
-                  type="checkbox"
-                  name="influencerAccepted"
-                  defaultChecked={influencerAccepted}
-                  className="mt-0.5 accent-violet"
-                />
-                <span>Influencer accepted this custom milestone schedule (required when using custom).</span>
-              </label>
-            ) : null}
+            <ContractMilestones
+              templates={templates}
+              customEnabled={entitlements.customMilestones}
+              initialCustom={usingCustom}
+              initialAccepted={influencerAccepted}
+            />
             {!milestoneGate.ok ? (
               <p className="mt-3 text-sm font-semibold text-amber-800">{milestoneGate.error}</p>
             ) : null}

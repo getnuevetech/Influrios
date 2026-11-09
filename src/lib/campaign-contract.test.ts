@@ -7,6 +7,8 @@ import {
   campaignScopeFromBrief,
   contractHrefFromCampaign,
   contractOfferReady,
+  contractTermsFromRequest,
+  preferContractField,
 } from "./campaign-contract";
 
 describe("campaign-contract helpers", () => {
@@ -56,6 +58,32 @@ describe("campaign-contract helpers", () => {
     assert.match(href, /gross=2000/);
     assert.match(href, /currency=USD/);
     assert.match(href, /scope=/);
+  });
+
+  it("copies request title, scope, value, and currency into the contract", () => {
+    const terms = contractTermsFromRequest({
+      brief: {
+        title: "Summer Glow",
+        goal: "Awareness",
+        summary: "3 posts",
+        collabType: "Reel",
+        timeframe: "June",
+        platform: "Instagram",
+        specialty: "beauty",
+        budget: "2000",
+        budgetCurrency: "NGN",
+      },
+      deliverables: "One reel and two stories",
+      offerText: "Paid on delivery",
+    });
+    assert.equal(terms.title, "Summer Glow");
+    assert.match(terms.scope, /3 posts/);
+    assert.match(terms.scope, /One reel/);
+    assert.match(terms.commercial, /Paid on delivery/);
+    assert.equal(terms.gross, "2000");
+    assert.equal(terms.currency, "NGN");
+    assert.equal(preferContractField("3 posts", terms.scope), terms.scope);
+    assert.equal(preferContractField("A different title", "Summer Glow"), "A different title");
   });
 
   it("opens create-contract only after the business shortlists an accepted influencer", () => {

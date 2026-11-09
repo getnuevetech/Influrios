@@ -85,8 +85,8 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
   // Re-read after potential concurrent updates (opened redirect already refreshes).
   application = (await getMarketplaceApplicationDetail(id)) ?? application;
 
-  const campaignBrief = application.briefId
-    ? ws?.briefs.find((brief) => brief.id === application.briefId) ?? null
+  const campaignBrief = application.briefId || application.requestBriefId
+    ? ws?.briefs.find((brief) => brief.id === (application.briefId || application.requestBriefId)) ?? null
     : null;
   const shortlistedSlugs = ws?.shortlist.map((item) => item.creatorSlug) ?? [];
   const offerReady =
