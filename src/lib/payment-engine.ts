@@ -561,6 +561,77 @@ export function refundPostings(input: {
   return { ok: true, entries };
 }
 
+export type CancellationStage = "before_work" | "after_partial_delivery" | "after_payout" | "after_fee_earning";
+
+/** Where the deal is when someone asks to cancel. Earning is checked before the payout amount. */
+export function cancellationStage(input: {
+  releasedCents: number;
+  influencerReceivesCents: number;
+  feesEarned: boolean;
+}): CancellationStage {
+  if (input.feesEarned) return "after_fee_earning";
+  if (!Number.isInteger(input.releasedCents) || input.releasedCents <= 0) return "before_work";
+  if (input.releasedCents < input.influencerReceivesCents) return "after_partial_delivery";
+  return "after_payout";
+}
+
+/**
+ * Defined result for each cancellation point. New reversal rows only.
+ * A payout that already left holding is refunded only after that payout is recorded as returned.
+ */
+export function cancellationPostings(input: {
+  stage: CancellationStage;
+  policyApproved: boolean;
+  payoutReturned: boolean;
+  businessPaysCents: number;
+  influencerReceivesCents: number;
+  businessFeeCents: number;
+  influencerFeeCents: number;
+  businessTaxCents: number;
+  influencerTaxCents: number;
+}): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
+  if (!input.policyApproved) return { ok: false, error: "The refund policy is not approved. Nothing was refunded." };
+  if (input.stage === "after_partial_delivery") {
+    return { ok: false, error: "Partial delivery has no automatic refund. Finance records the amount still held." };
+  }
+  if ((input.stage === "after_payout" || input.stage === "after_fee_earning") && !input.payoutReturned) {
+    return { ok: false, error: "Record the returned payout before refunding the business. Nothing was refunded." };
+  }
+  const feeReverses = input.stage === "after_fee_earning" ? "fee_earned" : "fee_pending";
+  const entries: LedgerPosting[] = [
+    { kind: "refund", party: "business", amountCents: input.businessPaysCents, reverses: "collection" },
+  ];
+  if (input.businessFeeCents > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "platform",
+      side: "business",
+      amountCents: input.businessFeeCents,
+      reverses: feeReverses,
+    });
+  }
+  if (input.influencerFeeCents > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "platform",
+      side: "influencer",
+      amountCents: input.influencerFeeCents,
+      reverses: feeReverses,
+    });
+  }
+  const tax = input.businessTaxCents + input.influencerTaxCents;
+  if (tax > 0) entries.push({ kind: "reversal", party: "tax", amountCents: tax, reverses: "tax" });
+  if (input.stage === "before_work" && input.influencerReceivesCents > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "influencer",
+      amountCents: input.influencerReceivesCents,
+      reverses: "influencer_payable",
+    });
+  }
+  return { ok: true, entries };
+}
+
 export function returnedPayoutPostings(input: {
   amountCents: number;
   alreadyReturned: boolean;
@@ -616,6 +687,8 @@ export function signedDealMoneyEvents(input: {
   finalPayout: boolean;
   alreadyEarned: boolean;
   alreadyReturned: boolean;
+  releasedCents?: number;
+  payoutReturned?: boolean;
 }): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
   if (input.eventType === "funding.held") {
     if (input.amountCents !== input.deal.businessPaysCents) {
@@ -649,15 +722,20 @@ export function signedDealMoneyEvents(input: {
     if (input.amountCents !== input.deal.businessPaysCents) {
       return { ok: false, error: "A signed deal refunds the full business payment on the original route." };
     }
-    return refundPostings({
+    return cancellationPostings({
+      stage: cancellationStage({
+        releasedCents: input.releasedCents ?? 0,
+        influencerReceivesCents: input.deal.influencerReceivesCents,
+        feesEarned: input.alreadyEarned,
+      }),
       policyApproved: input.policyApproved,
+      payoutReturned: input.payoutReturned ?? false,
       businessPaysCents: input.deal.businessPaysCents,
+      influencerReceivesCents: input.deal.influencerReceivesCents,
       businessFeeCents: input.deal.businessPlatformFeeCents,
       influencerFeeCents: input.deal.influencerPlatformFeeCents,
       businessTaxCents: input.deal.businessTaxCents,
       influencerTaxCents: input.deal.influencerTaxCents,
-      feeRefundable: true,
-      taxReversible: true,
     });
   }
   if (input.amountCents !== input.deal.influencerReceivesCents) {
