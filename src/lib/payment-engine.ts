@@ -21,6 +21,24 @@ export const DEFAULT_LAUNCH_APPROVALS: LaunchApprovals = {
   providerRouteApproved: false,
 };
 
+export type DeferredFundingSwitches = {
+  crossBorderFundingEnabled: boolean;
+  teamFundingEnabled: boolean;
+  stagedFundingEnabled: boolean;
+  automaticMilestoneApprovalEnabled: boolean;
+  automaticProviderSwitchingEnabled: boolean;
+  allInBudgetEntryEnabled: boolean;
+};
+
+export const DEFAULT_DEFERRED_FUNDING: DeferredFundingSwitches = {
+  crossBorderFundingEnabled: false,
+  teamFundingEnabled: false,
+  stagedFundingEnabled: false,
+  automaticMilestoneApprovalEnabled: false,
+  automaticProviderSwitchingEnabled: false,
+  allInBudgetEntryEnabled: false,
+};
+
 export type TaxLineType = "business_fee_tax" | "influencer_fee_tax" | "withholding" | "other";
 
 export type TaxLine = {
@@ -40,7 +58,7 @@ export type TaxDetermination = {
 
 export type SignedCommercialSnapshot = {
   agreementVersion: number;
-  amountInputMode: "gross_influencer_compensation";
+  amountInputMode: "gross_influencer_compensation" | "all_in_budget";
   currency: string;
   minorDigits: number;
   grossInfluencerCompensationCents: number;
@@ -180,7 +198,7 @@ export function buildProviderStagingTrace(input: {
 export function readSignedCollection(
   plan: unknown,
   routeCurrency: string,
-): { currency: string; businessPaysCents: number; influencerReceivesCents: number; platformFeesTotalCents: number } | { error: string } | null {
+): { currency: string; businessPaysCents: number; influencerReceivesCents: number; platformFeesTotalCents: number; milestoneCount: number } | { error: string } | null {
   if (!plan || typeof plan !== "object") return null;
   const quote = (plan as { signedQuote?: Record<string, unknown> }).signedQuote;
   if (!quote) return null;
@@ -211,11 +229,13 @@ export function readSignedCollection(
   if (Number(businessPaysCents) !== Number(influencerReceivesCents) + Number(platformFeesTotalCents)) {
     return { error: "The signed quote does not reconcile." };
   }
+  const milestoneCount = Number(quote.milestoneCount ?? 1);
   return {
     currency,
     businessPaysCents: Number(businessPaysCents),
     influencerReceivesCents: Number(influencerReceivesCents),
     platformFeesTotalCents: Number(platformFeesTotalCents),
+    milestoneCount: Number.isInteger(milestoneCount) && milestoneCount > 0 ? milestoneCount : 1,
   };
 }
 
@@ -251,6 +271,7 @@ export function domesticCollaborationGate(input: {
   currency: string;
   routeCurrency: string;
   payoutMethod: string;
+  crossBorderAllowed?: boolean;
 }): { ok: true } | { ok: false; error: string } {
   const business = input.businessCountry.trim().toUpperCase();
   const influencer = input.influencerCountry.trim().toUpperCase();
@@ -258,8 +279,8 @@ export function domesticCollaborationGate(input: {
   if (!input.businessVerified) return { ok: false, error: "The business funding country is not verified." };
   if (!input.influencerVerified) return { ok: false, error: "The influencer payout country is not verified." };
   if (!business || !influencer || !deal) return { ok: false, error: "The deal country is incomplete." };
-  if (business !== influencer || business !== deal) {
-    return { ok: false, error: "Cross-border funding is not part of this route." };
+  if ((business !== influencer || business !== deal) && !input.crossBorderAllowed) {
+    return { ok: false, error: "Cross-border funding is off. Turn it on in Payment settings to fund more than one country." };
   }
   if (!input.routeActive) return { ok: false, error: "The country route is not approved." };
   if (input.currency.trim().toUpperCase() !== input.routeCurrency.trim().toUpperCase()) {
@@ -269,9 +290,22 @@ export function domesticCollaborationGate(input: {
   return { ok: true };
 }
 
-export function launchMilestoneGate(count: number): { ok: true } | { ok: false; error: string } {
+export function launchMilestoneGate(
+  count: number,
+  options?: { stagedAllowed?: boolean; maxMilestones?: number },
+): { ok: true } | { ok: false; error: string } {
   if (count === 1) return { ok: true };
-  return { ok: false, error: "This route allows one milestone. Nothing was signed." };
+  const max = options?.maxMilestones ?? 4;
+  if (options?.stagedAllowed && Number.isInteger(count) && count > 1 && count <= max) return { ok: true };
+  return { ok: false, error: "Staged funding is off. This route allows one milestone until Payment settings turns it on." };
+}
+
+export function teamFundingGate(creatorCount: number, teamAllowed: boolean): { ok: true } | { ok: false; error: string } {
+  if (!Number.isInteger(creatorCount) || creatorCount < 1) {
+    return { ok: false, error: "A deal needs one influencer." };
+  }
+  if (creatorCount === 1 || teamAllowed) return { ok: true };
+  return { ok: false, error: "Team funding is off. Turn it on in Payment settings to fund more than one influencer." };
 }
 
 export function buildSignedCommercialSnapshot(input: {
@@ -282,6 +316,7 @@ export function buildSignedCommercialSnapshot(input: {
   tax?: TaxDetermination;
   milestoneCount: number;
   quotedAt?: Date;
+  amountInputMode?: "gross_influencer_compensation" | "all_in_budget";
 }): SignedCommercialSnapshot | { ok: false; error: string } {
   const tax = input.tax ?? { status: "unresolved" as const, lines: [] };
   if (tax.status === "approved_zero" && tax.lines.some((line) => line.amountCents !== 0)) {
@@ -303,7 +338,7 @@ export function buildSignedCommercialSnapshot(input: {
   const quotedAt = input.quotedAt ?? new Date();
   return {
     agreementVersion: input.agreementVersion ?? 1,
-    amountInputMode: "gross_influencer_compensation",
+    amountInputMode: input.amountInputMode ?? "gross_influencer_compensation",
     currency: input.currency.trim().toUpperCase(),
     minorDigits: input.minorDigits,
     grossInfluencerCompensationCents: input.quote.grossInfluencerCompensationCents,

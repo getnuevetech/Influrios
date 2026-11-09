@@ -185,6 +185,32 @@ export function quoteDualPlatformFees(
   };
 }
 
+/** Finds the gross whose business total equals the all-in budget. An inexact budget is refused. */
+export function quoteFromAllInBudget(
+  rules: CollaborationFeeRule[],
+  ctx: Omit<FeeResolveContext, "grossValueCents">,
+  budgetCents: number,
+  options?: { routeMinimumPayoutCents?: number | null },
+): DualPlatformQuote {
+  if (!Number.isInteger(budgetCents) || budgetCents <= 0) {
+    return { ok: false, error: "Enter the all-in budget." };
+  }
+  let low = 1;
+  let high = budgetCents;
+  while (low <= high) {
+    const gross = Math.floor((low + high) / 2);
+    const quote = quoteDualPlatformFees(rules, { ...ctx, grossValueCents: gross }, options);
+    if (!quote.ok) {
+      high = gross - 1;
+      continue;
+    }
+    if (quote.businessPaysCents === budgetCents) return quote;
+    if (quote.businessPaysCents < budgetCents) low = gross + 1;
+    else high = gross - 1;
+  }
+  return { ok: false, error: "That all-in budget does not match a gross amount under the fee rules." };
+}
+
 export async function resolveDualPlatformFees(ctx: FeeResolveContext): Promise<DualPlatformQuote> {
   const store = await getFeeStore();
   const serviceLevel = serviceLevelForFeeResolution({
@@ -192,6 +218,18 @@ export async function resolveDualPlatformFees(ctx: FeeResolveContext): Promise<D
     attributionStatus: ctx.attributionStatus,
   });
   return quoteDualPlatformFees(store.rules, { ...ctx, serviceLevel });
+}
+
+export async function resolveAllInBudget(
+  ctx: Omit<FeeResolveContext, "grossValueCents">,
+  budgetCents: number,
+): Promise<DualPlatformQuote> {
+  const store = await getFeeStore();
+  const serviceLevel = serviceLevelForFeeResolution({
+    requestedServiceLevel: ctx.serviceLevel,
+    attributionStatus: ctx.attributionStatus,
+  });
+  return quoteFromAllInBudget(store.rules, { ...ctx, serviceLevel }, budgetCents);
 }
 
 export function disclosureFromDualQuote(

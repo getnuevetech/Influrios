@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { buildFinancialPlan, feeRuleChangeAffectsPlan, lockFinancialPlan } from "./contract-wizard";
 import type { CollaborationFeeRule } from "./collaboration-fees";
-import { liveFundingBlockReason, quoteDualPlatformFees } from "./dual-platform-fees";
+import { liveFundingBlockReason, quoteDualPlatformFees, quoteFromAllInBudget } from "./dual-platform-fees";
 
 const AS_OF = "2026-06-01T00:00:00.000Z";
 
@@ -74,6 +74,15 @@ describe("dual platform fee quote", () => {
     assert.equal(quote.reservation.status, "reserved");
     assert.equal(quote.reservation.earnedAt, null);
     assert.equal(quote.reservation.providerSettledAt, null);
+    const allIn = quoteFromAllInBudget(
+      [business, influencer],
+      { jurisdiction: "US", serviceLevel: "contracted", asOf: AS_OF },
+      375_000,
+    );
+    assert.equal(allIn.ok, true);
+    if (!allIn.ok) return;
+    assert.equal(allIn.grossInfluencerCompensationCents, 350_000);
+    assert.equal(allIn.businessPaysCents, 375_000);
 
     const plan = buildFinancialPlan({
       grossCents: quote.grossInfluencerCompensationCents,

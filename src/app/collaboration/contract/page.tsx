@@ -10,7 +10,7 @@ import { getWorkspace, type CampaignBrief } from "@/lib/business";
 import { contractTermsFromRequest, preferContractField } from "@/lib/campaign-contract";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
-import { disclosureFromDualQuote, resolveDualPlatformFees } from "@/lib/dual-platform-fees";
+import { disclosureFromDualQuote, resolveAllInBudget, resolveDualPlatformFees } from "@/lib/dual-platform-fees";
 import {
   buildFinancialPlan,
   CONTRACT_WIZARD_STEPS,
@@ -27,6 +27,7 @@ import { findLiveContractForDeal, signatureSendBlocked } from "@/lib/contract-do
 import { isFundableServiceLevel, signedAgreementFundingLevel } from "@/lib/matching-product-boundary";
 import { storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { prisma } from "@/lib/db";
+import { getLaunchGate } from "@/lib/launch-gate";
 import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
 import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
 import {
@@ -76,6 +77,7 @@ type Props = {
     commercial?: string;
     jurisdiction?: string;
     gross?: string;
+    amountMode?: string;
     currency?: string;
     serviceLevel?: string;
     mode?: string;
@@ -227,6 +229,9 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const serviceLevel = entered.serviceLevel;
   const grossRaw = entered.grossRaw;
   const grossCents = dollarsToCents(grossRaw);
+  const fundingSwitches = await getLaunchGate().catch(() => null);
+  const allInAllowed = fundingSwitches?.allInBudgetEntryEnabled === true;
+  const amountMode = allInAllowed && params.amountMode === "all_in" ? "all_in" : "gross";
   const usingCustom = params.mode === "custom" && entitlements.customMilestones;
   const influencerAccepted = params.influencerAccepted === "1";
   const partyAccepted = params.accepted === "1";
@@ -371,17 +376,22 @@ export default async function ContractWizardPage({ searchParams }: Props) {
 
   const quote =
     grossCents > 0 && jurisdictionCode && effectiveServiceLevel
-      ? await resolveDualPlatformFees({
-          jurisdiction: jurisdictionCode,
-          serviceLevel: effectiveServiceLevel,
-          grossValueCents: grossCents,
-        }).catch(() => null)
+      ? amountMode === "all_in"
+        ? await resolveAllInBudget(
+            { jurisdiction: jurisdictionCode, serviceLevel: effectiveServiceLevel },
+            grossCents,
+          ).catch(() => null)
+        : await resolveDualPlatformFees({
+            jurisdiction: jurisdictionCode,
+            serviceLevel: effectiveServiceLevel,
+            grossValueCents: grossCents,
+          }).catch(() => null)
       : null;
 
   const plan =
     quote?.ok && jurisdictionCode && effectiveServiceLevel && milestoneGate.ok
       ? buildFinancialPlan({
-          grossCents,
+          grossCents: quote.grossInfluencerCompensationCents,
           currency: jurisdiction?.currency,
           feeRuleId: quote.business.rule.id,
           feeRuleVersion: quote.business.rule.version,
@@ -578,7 +588,16 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             <h2 className="font-display text-xl font-bold text-indigo">3. Commercial terms</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-semibold text-indigo">
-                Gross influencer compensation{shownCurrency ? ` (${shownCurrency})` : ""}
+                {amountMode === "all_in" ? "All-in budget" : "Gross influencer compensation"}
+                {shownCurrency ? ` (${shownCurrency})` : ""}
+                {allInAllowed ? (
+                  <select name="amountInputMode" defaultValue={amountMode} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal">
+                    <option value="gross">Gross influencer compensation</option>
+                    <option value="all_in">All-in budget</option>
+                  </select>
+                ) : (
+                  <input type="hidden" name="amountInputMode" value="gross" />
+                )}
                 <input
                   name="grossUsd"
                   required
@@ -587,7 +606,9 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   className={`mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet ${carried.gross ? "bg-[#F4F7FF] text-indigo" : ""}`}
                 />
                 <span className="mt-1 block text-xs font-normal text-muted">
-                  The influencer amount before the influencer platform fee. The quote adds the business platform fee on top.
+                  {amountMode === "all_in"
+                    ? "What the business pays before tax. The quote solves for gross influencer compensation."
+                    : "The influencer amount before the influencer platform fee. The quote adds the business platform fee on top."}
                 </span>
               </label>
               <label className="block text-sm font-semibold text-indigo">

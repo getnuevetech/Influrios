@@ -1806,6 +1806,13 @@ model CollaborationLaunchGate {
   providerTraceReady          Boolean  @default(false)
   payoutTraceJson             Json?
   refundTraceJson             Json?
+  /// Off until an admin turns the path on. Live collection still needs the four approvals and a trace.
+  crossBorderFundingEnabled            Boolean @default(false)
+  teamFundingEnabled                   Boolean @default(false)
+  stagedFundingEnabled                 Boolean @default(false)
+  automaticMilestoneApprovalEnabled    Boolean @default(false)
+  automaticProviderSwitchingEnabled    Boolean @default(false)
+  allInBudgetEntryEnabled              Boolean @default(false)
   updatedAt                   DateTime @updatedAt
 }
 

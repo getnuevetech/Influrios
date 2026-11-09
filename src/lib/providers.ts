@@ -537,6 +537,8 @@ export async function saveProvider(input: {
 
 export async function paymentRoutes() {
   await ensureIntegrationCatalog();
+  const { getLaunchGate } = await import("@/lib/launch-gate");
+  const allowSwitch = (await getLaunchGate().catch(() => null))?.automaticProviderSwitchingEnabled === true;
   const [routes, backup] = await Promise.all([
     prisma.paymentCountryRoute.findMany({
       include: { provider: true },
@@ -558,7 +560,7 @@ export async function paymentRoutes() {
       ...primary,
       backupProviderCode: backup.code,
       backupProviderName: backup.name,
-      usingBackup: !primary.ready && backup.enabled && Boolean(backup.hasSecret),
+      usingBackup: allowSwitch && !primary.ready && backup.enabled && Boolean(backup.hasSecret),
     };
   });
 }
@@ -731,6 +733,8 @@ export async function removePaymentGateway(input: {
 
 /** Prefer the country route when ready; otherwise fall back to the admin default backup gateway. */
 export async function resolvePaymentGatewayForCountry(countryCode: string) {
+  const { getLaunchGate } = await import("@/lib/launch-gate");
+  const allowSwitch = (await getLaunchGate().catch(() => null))?.automaticProviderSwitchingEnabled === true;
   const code = countryCode.trim().toUpperCase();
   const route = await prisma.paymentCountryRoute.findUnique({
     where: { countryCode: code },
@@ -755,7 +759,7 @@ export async function resolvePaymentGatewayForCountry(countryCode: string) {
   if (!backup || backup.id === route?.providerId) {
     return { ...primary, providerId: route?.providerId ?? null, usingBackup: false as const };
   }
-  const backupReady = backup.enabled && backup.hasSecret;
+  const backupReady = allowSwitch && backup.enabled && backup.hasSecret;
   if (!backupReady) {
     return {
       ...primary,

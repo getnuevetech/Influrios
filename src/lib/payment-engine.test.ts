@@ -12,6 +12,7 @@ import {
   domesticCollaborationGate,
   earnPlatformFees,
   launchMilestoneGate,
+  teamFundingGate,
   ordinaryDealShareSnapshot,
   providerEventMayAdvance,
   providerFeePosting,
@@ -373,7 +374,23 @@ describe("payment engine acceptance", () => {
       false,
     );
     assert.equal(launchMilestoneGate(3).ok, false);
+    assert.equal(launchMilestoneGate(3, { stagedAllowed: true, maxMilestones: 4 }).ok, true);
     assert.equal(launchMilestoneGate(1).ok, true);
+    assert.equal(teamFundingGate(2, false).ok, false);
+    assert.equal(teamFundingGate(2, true).ok, true);
+    const abroad = domesticCollaborationGate({
+      businessCountry: "US",
+      influencerCountry: "NG",
+      dealCountry: "US",
+      businessVerified: true,
+      influencerVerified: true,
+      routeActive: true,
+      currency: "USD",
+      routeCurrency: "USD",
+      payoutMethod: "local_bank",
+      crossBorderAllowed: true,
+    });
+    assert.equal(abroad.ok, true);
     assert.match(directGrossEditBlock({ feeReservation: { status: "reserved" } }) ?? "", /signed amounts/);
     assert.equal(ordinaryDealShareSnapshot()[0].shareBps, 10_000);
     const charge = providerLedgerAdvance(

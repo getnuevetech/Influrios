@@ -8,8 +8,8 @@ import { closeBriefForContract, getWorkspace } from "@/lib/business";
 import { contractOfferReady } from "@/lib/campaign-contract";
 import { getMarketplaceApplication } from "@/lib/marketplace-listings";
 import { assertCollabOsV1 } from "@/lib/collab-os";
-import { disclosureFromDualQuote, resolveDualPlatformFees } from "@/lib/dual-platform-fees";
-import { buildSignedCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate } from "@/lib/payment-engine";
+import { disclosureFromDualQuote, resolveAllInBudget, resolveDualPlatformFees } from "@/lib/dual-platform-fees";
+import { buildSignedCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate } from "@/lib/payment-engine";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   buildFinancialPlan,
@@ -205,6 +205,8 @@ export async function actionSubmitContractWizard(formData: FormData) {
     .filter((row) => row.active)
     .map((row) => ({ title: row.title, shareBps: row.shareBps }));
 
+  const { getLaunchGate } = await import("@/lib/launch-gate");
+  const fundingSwitches = await getLaunchGate().catch(() => null);
   const drafts = readDrafts(formData, usingCustom, templates);
   const milestoneGate = customMilestonesGate({
     entitled: entitlements.customMilestones,
@@ -314,6 +316,8 @@ export async function actionSubmitContractWizard(formData: FormData) {
         };
     teamShares = memberShareSnapshot(parties);
     if (!teamShares) redirectError("Team creator shares must add up to 100%.", qs);
+    const teamGate = teamFundingGate(parties.length, fundingSwitches?.teamFundingEnabled === true);
+    if (!teamGate.ok) redirectError(teamGate.error, qs);
   }
 
   qs.set("step", intent === "fund" ? "funding" : intent === "accept" ? "accept" : "preview");
@@ -339,11 +343,19 @@ export async function actionSubmitContractWizard(formData: FormData) {
     }
   }
 
-  const quote = await resolveDualPlatformFees({
-    jurisdiction: jurisdictionCode,
-    serviceLevel,
-    grossValueCents: grossCents,
-  }).catch(() => null);
+  const amountMode = String(formData.get("amountInputMode") ?? "gross") === "all_in" ? "all_in" : "gross";
+  if (amountMode === "all_in" && fundingSwitches?.allInBudgetEntryEnabled !== true) {
+    qs.set("step", "commercial");
+    redirectError("All-in budget entry is off. Turn it on in Payment settings, or enter gross influencer compensation.", qs);
+  }
+  const quote =
+    amountMode === "all_in"
+      ? await resolveAllInBudget({ jurisdiction: jurisdictionCode, serviceLevel }, grossCents).catch(() => null)
+      : await resolveDualPlatformFees({
+          jurisdiction: jurisdictionCode,
+          serviceLevel,
+          grossValueCents: grossCents,
+        }).catch(() => null);
   if (!quote?.ok) {
     qs.set("step", "preview");
     redirectError(quote?.error ?? "A fee quote is required before accepting the fee disclosure.", qs);
@@ -380,7 +392,10 @@ export async function actionSubmitContractWizard(formData: FormData) {
     qs.set("step", "preview");
     redirectError("That jurisdiction has no currency.", qs);
   }
-  const milestoneLaunch = launchMilestoneGate(drafts.length);
+  const milestoneLaunch = launchMilestoneGate(drafts.length, {
+    stagedAllowed: fundingSwitches?.stagedFundingEnabled === true,
+    maxMilestones: config.maxStages,
+  });
   if (!milestoneLaunch.ok) {
     qs.set("step", "milestones");
     redirectError(milestoneLaunch.error, qs);
@@ -395,6 +410,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     currency,
     routeCurrency: (jurisdiction?.currency ?? "").trim(),
     payoutMethod: String(formData.get("payoutMethod") ?? ""),
+    crossBorderAllowed: fundingSwitches?.crossBorderFundingEnabled === true,
   });
   if (!domestic.ok) {
     qs.set("step", "payment_readiness");
@@ -410,13 +426,14 @@ export async function actionSubmitContractWizard(formData: FormData) {
     currency,
     minorDigits,
     milestoneCount: drafts.length,
+    amountInputMode: amountMode === "all_in" ? "all_in_budget" : "gross_influencer_compensation",
   });
   if ("ok" in signedQuote) {
     qs.set("step", "preview");
     redirectError(signedQuote.error, qs);
   }
   const plan = buildFinancialPlan({
-    grossCents,
+    grossCents: quote.grossInfluencerCompensationCents,
     currency,
     feeRuleId: quote.business.rule.id,
     feeRuleVersion: quote.business.rule.version,
