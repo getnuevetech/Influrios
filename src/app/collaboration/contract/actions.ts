@@ -8,8 +8,8 @@ import { closeBriefForContract, getWorkspace } from "@/lib/business";
 import { contractOfferReady } from "@/lib/campaign-contract";
 import { getMarketplaceApplication } from "@/lib/marketplace-listings";
 import { assertCollabOsV1 } from "@/lib/collab-os";
-import { disclosureFromDualQuote, resolveAllInBudget, resolveDualPlatformFees } from "@/lib/dual-platform-fees";
-import { buildSignedCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate } from "@/lib/payment-engine";
+import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
+import { buildBusinessCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate } from "@/lib/payment-engine";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   buildFinancialPlan,
@@ -351,11 +351,14 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const quote =
     amountMode === "all_in"
       ? await resolveAllInBudget({ jurisdiction: jurisdictionCode, serviceLevel }, grossCents).catch(() => null)
-      : await resolveDualPlatformFees({
-          jurisdiction: jurisdictionCode,
-          serviceLevel,
-          grossValueCents: grossCents,
-        }).catch(() => null);
+      : await resolvePartyPlatformFee(
+          {
+            jurisdiction: jurisdictionCode,
+            serviceLevel,
+            grossValueCents: grossCents,
+          },
+          "business",
+        ).catch(() => null);
   if (!quote?.ok) {
     qs.set("step", "preview");
     redirectError(quote?.error ?? "A fee quote is required before accepting the fee disclosure.", qs);
@@ -363,7 +366,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   const disclosureGate = requireFeeDisclosureAccepted({
     accepted: feeDisclosureAccepted,
-    disclosure: disclosureFromDualQuote(quote, { jurisdiction: jurisdictionCode, serviceLevel }),
+    disclosure: disclosureFromPartyQuote(quote, { jurisdiction: jurisdictionCode, serviceLevel }),
   });
   if (!disclosureGate.ok) {
     qs.set("step", "accept");
@@ -423,7 +426,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   }
   const { loadProcessTimings } = await import("@/lib/process-timing");
   const quoteHours = (await loadProcessTimings().catch(() => null))?.quoteValidHours ?? 168;
-  const signedQuote = buildSignedCommercialSnapshot({
+  const signedQuote = buildBusinessCommercialSnapshot({
     quote,
     currency,
     minorDigits,
@@ -438,17 +441,15 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const plan = buildFinancialPlan({
     grossCents: quote.grossInfluencerCompensationCents,
     currency,
-    feeRuleId: quote.business.rule.id,
-    feeRuleVersion: quote.business.rule.version,
-    feeMethod: quote.business.rule.method,
-    feePercentBps: quote.business.rule.percentBps,
-    feeFixedCents: quote.business.rule.fixedCents,
-    totalPlatformFeeCents: quote.platformFeesTotalCents,
-    businessPlatformFeeCents: quote.businessPlatformFeeCents,
-    influencerPlatformFeeCents: quote.influencerPlatformFeeCents,
-    businessPaysCents: quote.businessPaysCents,
-    feeReservation: quote.reservation,
-    feePayer: "both",
+    feeRuleId: quote.rule.id,
+    feeRuleVersion: quote.rule.version,
+    feeMethod: quote.rule.method,
+    feePercentBps: quote.rule.percentBps,
+    feeFixedCents: quote.rule.fixedCents,
+    totalPlatformFeeCents: quote.feeCents,
+    businessPlatformFeeCents: quote.feeCents,
+    businessPaysCents: quote.totalCents,
+    feePayer: "brand",
     fundingCountry: jurisdictionCode,
     creatorCountry: creatorCountry ?? jurisdictionCode,
     payoutCurrency: currency,
@@ -501,8 +502,8 @@ export async function actionSubmitContractWizard(formData: FormData) {
         serviceLevel,
         currency: plan.contractCurrency,
         grossLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
-        platformFeeLabel: formatMoney(plan.totalPlatformFeeCents, plan.contractCurrency),
-        creatorCompensationLabel: formatMoney(plan.totalCreatorCompensationCents, plan.contractCurrency),
+        platformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
+        creatorCompensationLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
         businessName,
         businessEmail: account.email,
         parties: [
@@ -525,7 +526,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
             title: milestone.title,
             shareLabel: `${(milestone.shareBps / 100).toFixed(0)}%`,
             grossLabel: formatMoney(milestone.grossCents, plan.contractCurrency),
-            feeLabel: formatMoney(milestone.platformFeeCents, plan.contractCurrency),
+            feeLabel: "Your fee breakdown",
             creatorShares:
               shares?.map((share) => `${share.creatorSlug} ${formatMoney(share.amountCents, plan.contractCurrency)}`).join(", ") ??
               "",

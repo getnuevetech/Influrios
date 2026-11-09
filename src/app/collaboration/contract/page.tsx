@@ -11,7 +11,7 @@ import { contractTermsFromRequest, preferContractField } from "@/lib/campaign-co
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { feeRuleRateLabel, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
 import { ContractServiceLevelField } from "@/components/contract-service-level-field";
-import { disclosureFromDualQuote, resolveAllInBudget, resolveDualPlatformFees } from "@/lib/dual-platform-fees";
+import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import {
   buildFinancialPlan,
   CONTRACT_WIZARD_STEPS,
@@ -42,7 +42,6 @@ import { publicStoredImage } from "@/lib/seed-data";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { acceptedContractChoices, applicationForContract, listWorkspaceBusinessRequests } from "@/lib/marketplace-listings";
 import {
-  buildPayoutFeeFxQuote,
   computePayoutReadiness,
   PAYOUT_METHOD_LABELS,
   PAYOUT_METHODS,
@@ -382,11 +381,14 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             { jurisdiction: jurisdictionCode, serviceLevel: effectiveServiceLevel },
             grossCents,
           ).catch(() => null)
-        : await resolveDualPlatformFees({
-            jurisdiction: jurisdictionCode,
-            serviceLevel: effectiveServiceLevel,
-            grossValueCents: grossCents,
-          }).catch(() => null)
+        : await resolvePartyPlatformFee(
+            {
+              jurisdiction: jurisdictionCode,
+              serviceLevel: effectiveServiceLevel,
+              grossValueCents: grossCents,
+            },
+            "business",
+          ).catch(() => null)
       : null;
 
   const plan =
@@ -394,17 +396,15 @@ export default async function ContractWizardPage({ searchParams }: Props) {
       ? buildFinancialPlan({
           grossCents: quote.grossInfluencerCompensationCents,
           currency: jurisdiction?.currency,
-          feeRuleId: quote.business.rule.id,
-          feeRuleVersion: quote.business.rule.version,
-          feeMethod: quote.business.rule.method,
-          feePercentBps: quote.business.rule.percentBps,
-          feeFixedCents: quote.business.rule.fixedCents,
-          totalPlatformFeeCents: quote.platformFeesTotalCents,
-          businessPlatformFeeCents: quote.businessPlatformFeeCents,
-          influencerPlatformFeeCents: quote.influencerPlatformFeeCents,
-          businessPaysCents: quote.businessPaysCents,
-          feeReservation: quote.reservation,
-          feePayer: "both",
+          feeRuleId: quote.rule.id,
+          feeRuleVersion: quote.rule.version,
+          feeMethod: quote.rule.method,
+          feePercentBps: quote.rule.percentBps,
+          feeFixedCents: quote.rule.fixedCents,
+          totalPlatformFeeCents: quote.feeCents,
+          businessPlatformFeeCents: quote.feeCents,
+          businessPaysCents: quote.totalCents,
+          feePayer: "brand",
           fundingCountry: jurisdictionCode,
           creatorCountry: creatorCountry ?? jurisdictionCode,
           payoutCurrency: jurisdiction?.currency,
@@ -415,15 +415,6 @@ export default async function ContractWizardPage({ searchParams }: Props) {
 
   const routeCurrency = payoutCurrencyForCountry(payoutReadiness?.countryCode) ?? "";
   const payoutCurrency = (routeCurrency || plan?.payoutCurrency || jurisdiction?.currency || "").trim().toUpperCase();
-  const feeFxQuote =
-    plan && /^[A-Z]{3}$/.test(payoutCurrency)
-      ? buildPayoutFeeFxQuote({
-          creatorGrossCents: plan.grossContractValueCents,
-          platformFeeCents: plan.influencerPlatformFeeCents ?? plan.totalPlatformFeeCents,
-          fundingCurrency: plan.contractCurrency,
-          payoutCurrency,
-        })
-      : null;
 
   const shortlisted = ws.shortlist
     .map((item) => creators.find((c) => c.slug === item.creatorSlug))
@@ -654,7 +645,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     ? "No service level is available because this jurisdiction is blocked pending legal review."
                     : signedFundingLevel
                     ? "This agreement is already signed, so funding uses a contracted service level."
-                    : "This choice selects the business fee rule and the influencer fee rule saved in Collaboration fees.") +
+                    : "This choice selects the platform fee your business pays.") +
                   (jurisdictionCaps?.legalReviewStatus && jurisdictionCaps.legalReviewStatus !== "APPROVED"
                     ? ` Legal review: ${jurisdictionCaps.legalReviewStatus}.`
                     : "") +
@@ -664,34 +655,29 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 }
               />
               <div className="sm:col-span-2 rounded-xl border border-[#E4E9F5] bg-[#F7FAFF] px-4 py-3 text-sm">
-                <p className="font-semibold text-indigo">Fee breakdown for this service level</p>
+                <p className="font-semibold text-indigo">Your fee for this service level</p>
                 {quote?.ok && plan ? (
                   <dl className="mt-2 grid gap-2 sm:grid-cols-2">
                     <div>
-                      <dt className="text-xs text-muted">Business rule</dt>
-                      <dd className="font-semibold text-indigo">{quote.business.rule.name} · v{quote.business.rule.version}</dd>
-                      <dd className="text-xs text-muted">{feeRuleRateLabel(quote.business.rule)} · {formatMoney(quote.businessPlatformFeeCents, plan.contractCurrency)} added on top</dd>
+                      <dt className="text-xs text-muted">Your fee rule</dt>
+                      <dd className="font-semibold text-indigo">{quote.rule.name} · v{quote.rule.version}</dd>
+                      <dd className="text-xs text-muted">{feeRuleRateLabel(quote.rule)} · {formatMoney(quote.feeCents, plan.contractCurrency)} added on top</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-muted">Influencer rule</dt>
-                      <dd className="font-semibold text-indigo">{quote.influencer.rule.name} · v{quote.influencer.rule.version}</dd>
-                      <dd className="text-xs text-muted">{feeRuleRateLabel(quote.influencer.rule)} · {formatMoney(quote.influencerPlatformFeeCents, plan.contractCurrency)} deducted from the gross</dd>
+                      <dt className="text-xs text-muted">Gross compensation</dt>
+                      <dd className="font-bold text-indigo">{formatMoney(quote.grossInfluencerCompensationCents, plan.contractCurrency)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-muted">Business pays</dt>
-                      <dd className="font-bold text-indigo">{formatMoney(quote.businessPaysCents, plan.contractCurrency)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted">Influencer receives</dt>
-                      <dd className="font-bold text-indigo">{formatMoney(quote.influencerReceivesCents, plan.contractCurrency)}</dd>
+                      <dt className="text-xs text-muted">You pay</dt>
+                      <dd className="font-bold text-indigo">{formatMoney(quote.totalCents, plan.contractCurrency)}</dd>
                     </div>
                   </dl>
                 ) : quote && !quote.ok ? (
                   <p className="mt-2 font-semibold text-amber-800">{quote.error}</p>
                 ) : (
-                  <p className="mt-2 text-muted">Enter the gross influencer compensation and choose a service level. The total uses the matching admin fee rules.</p>
+                  <p className="mt-2 text-muted">Enter the gross compensation and choose a service level. The total uses your platform fee rule.</p>
                 )}
-                <p className="mt-2 text-xs text-muted">Both fees stay reserved until the agreement is signed. Changing a rule later does not change this quote after it is locked.</p>
+                <p className="mt-2 text-xs text-muted">Your fee stays reserved until the agreement is signed. Changing a rule later does not change this quote after it is locked.</p>
               </div>
               <label className="block text-sm font-semibold text-indigo sm:col-span-2">
                 Commercial framing
@@ -820,38 +806,25 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   <strong>
                     {effectiveServiceLevel ? SERVICE_LEVEL_LABELS[effectiveServiceLevel] : ""}
                   </strong>
-                  . Both fee rules reserve on signing. Later edits do not change a locked deal, and neither fee is earned yet.
+                  . Your fee is reserved on signing. Later edits do not change a locked deal, and the fee is not earned yet.
                 </p>
-                {quote?.ok ? <p className="mt-2 text-xs text-muted">{quote.explanation}</p> : null}
                 <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                   <div>
-                    <dt className="text-muted">Gross influencer compensation</dt>
+                    <dt className="text-muted">Gross compensation</dt>
                     <dd className="font-bold text-indigo">
                       {formatMoney(plan.grossContractValueCents, plan.contractCurrency)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-muted">Business platform fee</dt>
+                    <dt className="text-muted">Your platform fee</dt>
                     <dd className="font-bold text-indigo">
                       {formatMoney(plan.businessPlatformFeeCents ?? 0, plan.contractCurrency)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-muted">Business pays</dt>
+                    <dt className="text-muted">You pay</dt>
                     <dd className="font-bold text-indigo">
                       {formatMoney(plan.businessPaysCents ?? plan.grossContractValueCents, plan.contractCurrency)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">Influencer platform fee</dt>
-                    <dd className="font-bold text-indigo">
-                      {formatMoney(plan.influencerPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">Influencer receives</dt>
-                    <dd className="font-bold text-indigo">
-                      {formatMoney(plan.totalCreatorCompensationCents, plan.contractCurrency)}
                     </dd>
                   </div>
                   <div>
@@ -859,20 +832,6 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     <dd className="font-bold text-indigo">{payoutCurrency}</dd>
                   </div>
                 </dl>
-                {feeFxQuote?.ok ? (
-                  <p className="mt-3 rounded-xl bg-[#F4F7FF] px-3 py-2 text-xs text-indigo">
-                    Fee/FX before confirm: net{" "}
-                    {formatMoney(feeFxQuote.quote.creatorNetCents, feeFxQuote.quote.fundingCurrency)}
-                    {feeFxQuote.quote.fxApplied
-                      ? ` → ≈ ${feeFxQuote.quote.payoutMinor} ${feeFxQuote.quote.payoutCurrency} minor (${feeFxQuote.quote.fxSource} FX)`
-                      : " (no FX)"}
-                    . Exact quote is shown again at payout.
-                  </p>
-                ) : feeFxQuote && !feeFxQuote.ok ? (
-                  <p className="mt-3 text-xs text-amber-800">
-                    Fee/FX estimate unavailable: {feeFxQuote.error}
-                  </p>
-                ) : null}
                 <ul className="mt-4 space-y-2">
                   {plan.milestones.map((m) => {
                     const creatorShares = teamParties
@@ -888,8 +847,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                           {m.title} · {(m.shareBps / 100).toFixed(0)}%
                         </span>
                         <span className="text-muted">
-                          {formatMoney(m.grossCents, plan.contractCurrency)} (fee{" "}
-                          {formatMoney(m.platformFeeCents, plan.contractCurrency)})
+                          {formatMoney(m.grossCents, plan.contractCurrency)} (your fee{" "}
+                          {formatMoney(m.businessPlatformFeeCents ?? 0, plan.contractCurrency)})
                         </span>
                       </div>
                       {creatorShares ? (
@@ -922,7 +881,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 <p className="font-semibold">Fee disclosure</p>
                 <p className="mt-1 whitespace-pre-wrap text-xs text-muted">
                   {buildFeeDisclosureSummary(
-                    disclosureFromDualQuote(quote, {
+                    disclosureFromPartyQuote(quote, {
                       jurisdiction: jurisdictionCode,
                       serviceLevel: effectiveServiceLevel,
                     }),
@@ -955,7 +914,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 className="mt-0.5 accent-violet"
               />
               <span>
-                I accept this fee disclosure. Both platform fees are reserved on the signed agreement. They are not earned,
+                I accept this fee disclosure. Your platform fee is reserved on the signed agreement. It is not earned,
                 and live funding stays off.
               </span>
             </label>

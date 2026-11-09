@@ -63,17 +63,17 @@ export type SignedCommercialSnapshot = {
   minorDigits: number;
   grossInfluencerCompensationCents: number;
   businessPlatformFeeCents: number;
-  influencerPlatformFeeCents: number;
+  influencerPlatformFeeCents: number | null;
   businessTaxCents: number;
   influencerTaxCents: number;
   withholdingCents: number;
   businessPaysCents: number;
-  influencerReceivesCents: number;
+  influencerReceivesCents: number | null;
   platformFeesTotalCents: number;
   businessRuleId: string;
   businessRuleVersion: number;
-  influencerRuleId: string;
-  influencerRuleVersion: number;
+  influencerRuleId: string | null;
+  influencerRuleVersion: number | null;
   businessRateBps: number | null;
   influencerRateBps: number | null;
   businessFloorApplied: boolean;
@@ -379,6 +379,74 @@ export function buildSignedCommercialSnapshot(input: {
   };
 }
 
+/** Business send locks only the business fee. The influencer fee is locked when that party signs. */
+export function buildBusinessCommercialSnapshot(input: {
+  quote: {
+    grossInfluencerCompensationCents: number;
+    feeCents: number;
+    totalCents: number;
+    rule: { id: string; version: number; method: string; percentBps: number };
+    floorApplied: boolean;
+    capApplied: boolean;
+  };
+  currency: string;
+  minorDigits: number;
+  agreementVersion?: number;
+  tax?: TaxDetermination;
+  milestoneCount: number;
+  quotedAt?: Date;
+  amountInputMode?: "gross_influencer_compensation" | "all_in_budget";
+  validForMs?: number;
+}): SignedCommercialSnapshot | { ok: false; error: string } {
+  const tax = input.tax ?? { status: "unresolved" as const, lines: [] };
+  if (tax.status === "approved_zero" && tax.lines.some((line) => line.amountCents !== 0)) {
+    return { ok: false, error: "An approved zero tax determination cannot carry a tax amount." };
+  }
+  if (tax.status === "unresolved" && tax.lines.length > 0) {
+    return { ok: false, error: "Unresolved tax treatment cannot add a tax line." };
+  }
+  const businessTax = tax.lines.filter((line) => line.type === "business_fee_tax").reduce((sum, line) => sum + line.amountCents, 0);
+  const quotedAt = input.quotedAt ?? new Date();
+  const validForMs =
+    Number.isInteger(input.validForMs) && input.validForMs != null && input.validForMs > 0
+      ? input.validForMs
+      : QUOTE_VALID_MS;
+  return {
+    agreementVersion: input.agreementVersion ?? 1,
+    amountInputMode: input.amountInputMode ?? "gross_influencer_compensation",
+    currency: input.currency.trim().toUpperCase(),
+    minorDigits: input.minorDigits,
+    grossInfluencerCompensationCents: input.quote.grossInfluencerCompensationCents,
+    businessPlatformFeeCents: input.quote.feeCents,
+    influencerPlatformFeeCents: null,
+    businessTaxCents: businessTax,
+    influencerTaxCents: 0,
+    withholdingCents: 0,
+    businessPaysCents: input.quote.totalCents + businessTax,
+    influencerReceivesCents: null,
+    platformFeesTotalCents: input.quote.feeCents,
+    businessRuleId: input.quote.rule.id,
+    businessRuleVersion: input.quote.rule.version,
+    influencerRuleId: null,
+    influencerRuleVersion: null,
+    businessRateBps:
+      input.quote.rule.method === "percent" || input.quote.rule.method === "percent_plus_fixed"
+        ? input.quote.rule.percentBps
+        : null,
+    influencerRateBps: null,
+    businessFloorApplied: input.quote.floorApplied,
+    businessCapApplied: input.quote.capApplied,
+    influencerFloorApplied: false,
+    influencerCapApplied: false,
+    rounding: "half_away_from_zero",
+    taxLines: tax.lines,
+    taxStatus: tax.status,
+    milestoneCount: input.milestoneCount,
+    validUntil: new Date(quotedAt.getTime() + validForMs).toISOString(),
+    feeState: "reserved",
+  };
+}
+
 export function signedQuoteExpired(plan: unknown, now = new Date()): string | null {
   if (!plan || typeof plan !== "object") return null;
   const quote = (plan as { signedQuote?: { validUntil?: unknown } }).signedQuote;
@@ -511,9 +579,13 @@ export function providerLedgerAdvance(body: string, expected?: {
 export function reserveFeePostings(snapshot: SignedCommercialSnapshot): LedgerPosting[] {
   const rows: LedgerPosting[] = [
     { kind: "fee_pending", party: "platform", side: "business", amountCents: snapshot.businessPlatformFeeCents },
-    { kind: "fee_pending", party: "platform", side: "influencer", amountCents: snapshot.influencerPlatformFeeCents },
-    { kind: "influencer_payable", party: "influencer", amountCents: snapshot.influencerReceivesCents },
   ];
+  if (snapshot.influencerPlatformFeeCents != null) {
+    rows.push({ kind: "fee_pending", party: "platform", side: "influencer", amountCents: snapshot.influencerPlatformFeeCents });
+  }
+  if (snapshot.influencerReceivesCents != null) {
+    rows.push({ kind: "influencer_payable", party: "influencer", amountCents: snapshot.influencerReceivesCents });
+  }
   for (const line of snapshot.taxLines) {
     if (line.amountCents > 0) rows.push({ kind: "tax", party: "tax", amountCents: line.amountCents });
   }

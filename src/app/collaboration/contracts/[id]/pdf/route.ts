@@ -3,6 +3,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
 import {
   adoptUnboundContractParty,
+  agreementForParty,
   buildContractChromePdf,
   contractTermsAreFrozen,
   resolveContractPartyForAccount,
@@ -51,6 +52,32 @@ export async function GET(_request: Request, { params }: Props) {
   );
   if (!isParty && !adminAllowed) {
     return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
+  }
+
+  if (party) {
+    const renderedBody = await agreementForParty({
+      body: document.renderedBody || "Collaboration agreement",
+      role: party.role,
+      termsSnapshotJson: document.termsSnapshotJson,
+    });
+    const { pdf } = buildContractChromePdf({
+      id: document.id,
+      title: document.title,
+      status: document.status,
+      renderedBody,
+      signingChannel: document.signingChannel,
+      createdAt: document.createdAt,
+      parties: document.parties,
+    });
+    return new NextResponse(new Uint8Array(pdf), {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `inline; filename="influrios-contract-${document.id}.pdf"`,
+        "cache-control": "private, no-store, no-cache, must-revalidate",
+        pragma: "no-cache",
+        "x-influrios-contract-chrome": "party",
+      },
+    });
   }
 
   const frozen = contractTermsAreFrozen(document);

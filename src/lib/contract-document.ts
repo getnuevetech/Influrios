@@ -3,7 +3,11 @@
  * Agreements are signed in Influrios. A stored PDF is available before and after every party signs.
  */
 import { createHash } from "crypto";
+import { applyInfluencerFeeToTerms, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import { prisma } from "@/lib/db";
+import { memberDealView } from "@/lib/member-deal-money";
+import { formatMoney } from "@/lib/money";
+import { readSignedTermsSnapshot } from "@/lib/signed-funding";
 import {
   asciiForPdf as asciiForPdfImpl,
   classifyContractPdfLines as classifyContractPdfLinesImpl,
@@ -298,6 +302,54 @@ export type ContractRenderInput = {
   disputeForum?: string;
   esignProvider?: string;
 };
+
+/** Show one party only their fee lines. The stored agreement keeps the other party's amounts out of this view. */
+export function presentAgreementToParty(
+  body: string,
+  labels: { platformFee: string; compensation: string; feeNote: string },
+): string {
+  return body
+    .replace(/Influrios Platform Fee[ \t]+.*/g, `Influrios Platform Fee  ${labels.platformFee}`)
+    .replace(/Influencer Compensation Pool[ \t]+.*/g, `Influencer Compensation Pool  ${labels.compensation}`)
+    .replace(/Fee Rule[\s\S]*?(?=Fee Earning Rule\.)/, `Fee Rule  ${labels.feeNote}\n\n`);
+}
+
+export async function agreementForParty(input: {
+  body: string;
+  role: string;
+  termsSnapshotJson: unknown;
+}): Promise<string> {
+  const terms = readSignedTermsSnapshot(input.termsSnapshotJson);
+  if (!terms) return input.body;
+  const viewer = input.role === "business" ? "business" : "influencer";
+  const view = memberDealView({
+    role: viewer,
+    grossCents: terms.grossCents,
+    feeCents: 0,
+    plan: terms.financialPlan,
+  });
+  let fee = view.feeReady ? view.feeCents : null;
+  let total = view.feeReady ? view.headlineCents : null;
+  if (!view.feeReady && viewer === "influencer") {
+    const quote = await resolvePartyPlatformFee(
+      {
+        jurisdiction: terms.jurisdictionCode,
+        serviceLevel: terms.serviceLevel,
+        grossValueCents: terms.grossCents,
+      },
+      "influencer",
+    ).catch(() => null);
+    if (quote?.ok) {
+      fee = quote.feeCents;
+      total = quote.totalCents;
+    }
+  }
+  return presentAgreementToParty(input.body, {
+    platformFee: fee != null ? formatMoney(fee, terms.currency) : "Shown in your fee breakdown",
+    compensation: formatMoney(viewer === "influencer" && total != null ? total : terms.grossCents, terms.currency),
+    feeNote: "Your platform fee is reserved on this agreement.",
+  });
+}
 
 export function renderContractTemplate(template: string, values: Record<string, string>): string {
   return template.replace(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi, (match, key: string) => {
@@ -1015,6 +1067,35 @@ export async function signNativeContractParty(input: {
   }
   if (party.status === "declined") {
     return { ok: false as const, error: "You declined this agreement. Nothing was signed." };
+  }
+  if (party.role === "creator" || party.role === "influencer") {
+    const terms = document.termsSnapshotJson;
+    const plan =
+      terms && typeof terms === "object" && (terms as { financialPlan?: unknown }).financialPlan &&
+      typeof (terms as { financialPlan?: unknown }).financialPlan === "object"
+        ? ((terms as { financialPlan: { signedQuote?: unknown } }).financialPlan.signedQuote as { influencerRuleId?: unknown } | undefined)
+        : undefined;
+    const alreadyLocked = typeof plan?.influencerRuleId === "string" && plan.influencerRuleId.length > 0;
+    if (!alreadyLocked) {
+      const snapshot = terms && typeof terms === "object" ? (terms as { jurisdictionCode?: unknown; serviceLevel?: unknown; grossCents?: unknown }) : null;
+      const quote = await resolvePartyPlatformFee(
+        {
+          jurisdiction: String(snapshot?.jurisdictionCode ?? ""),
+          serviceLevel: String(snapshot?.serviceLevel ?? ""),
+          grossValueCents: Number(snapshot?.grossCents),
+        },
+        "influencer",
+      ).catch(() => null);
+      if (!quote?.ok) {
+        return { ok: false as const, error: quote?.error ?? "Your platform fee could not be quoted. Nothing was signed." };
+      }
+      const applied = applyInfluencerFeeToTerms(terms, quote);
+      if (!applied.ok) return { ok: false as const, error: `${applied.error} Nothing was signed.` };
+      await prisma.contractDocument.update({
+        where: { id: document.id },
+        data: { termsSnapshotJson: JSON.parse(JSON.stringify(applied.terms)) as object },
+      });
+    }
   }
 
   const signedAt = new Date();

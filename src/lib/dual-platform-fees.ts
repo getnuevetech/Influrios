@@ -12,6 +12,7 @@ import {
   feeRuleSide,
   pickWinningRule,
   ruleSpecificity,
+  SERVICE_LEVEL_LABELS,
   type CollaborationFeeRule,
   type FeeResolveContext,
 } from "@/lib/collaboration-fees";
@@ -114,6 +115,63 @@ function resolveSide(
   };
 }
 
+export type PartyPlatformQuote = {
+  ok: true;
+  side: FeeSide;
+  grossInfluencerCompensationCents: number;
+  feeCents: number;
+  totalCents: number;
+  rule: CollaborationFeeRule;
+  waived: boolean;
+  floorApplied: boolean;
+  capApplied: boolean;
+  rounding: "half_away_from_zero";
+} | {
+  ok: false;
+  error: string;
+};
+
+function serviceLevelName(serviceLevel: string) {
+  return SERVICE_LEVEL_LABELS[serviceLevel as keyof typeof SERVICE_LEVEL_LABELS] ?? "this service level";
+}
+
+/** One party's fee. The other party's rule is not consulted and is not named. */
+export function quotePartyPlatformFee(
+  rules: CollaborationFeeRule[],
+  ctx: FeeResolveContext,
+  side: FeeSide,
+): PartyPlatformQuote {
+  if (!Number.isInteger(ctx.grossValueCents) || ctx.grossValueCents <= 0) {
+    return { ok: false, error: "Enter the gross compensation." };
+  }
+  const asOf = ctx.asOf ?? new Date().toISOString();
+  const resolved = resolveSide(rules, ctx, side, asOf);
+  if (!resolved.ok) {
+    const level = serviceLevelName(ctx.serviceLevel);
+    return {
+      ok: false,
+      error: resolved.error.includes("ties")
+        ? `More than one platform fee rule ties for ${level}. Signing is blocked.`
+        : `No platform fee rule matches ${level}. Add your fee rule in Collaboration fees before continuing.`,
+    };
+  }
+  if (side === "influencer" && resolved.side.feeCents > ctx.grossValueCents) {
+    return { ok: false, error: "Your platform fee is larger than the gross compensation. Signing is blocked." };
+  }
+  return {
+    ok: true,
+    side,
+    grossInfluencerCompensationCents: ctx.grossValueCents,
+    feeCents: resolved.side.feeCents,
+    totalCents: side === "business" ? ctx.grossValueCents + resolved.side.feeCents : ctx.grossValueCents - resolved.side.feeCents,
+    rule: resolved.side.rule,
+    waived: resolved.side.waived,
+    floorApplied: resolved.side.floorApplied,
+    capApplied: resolved.side.capApplied,
+    rounding: resolved.side.rounding,
+  };
+}
+
 /** Quote both platform fees from gross influencer compensation. */
 export function quoteDualPlatformFees(
   rules: CollaborationFeeRule[],
@@ -189,22 +247,20 @@ export function quoteFromAllInBudget(
   rules: CollaborationFeeRule[],
   ctx: Omit<FeeResolveContext, "grossValueCents">,
   budgetCents: number,
-  options?: { routeMinimumPayoutCents?: number | null },
-): DualPlatformQuote {
+): PartyPlatformQuote {
   if (!Number.isInteger(budgetCents) || budgetCents <= 0) {
     return { ok: false, error: "Enter the all-in budget." };
   }
+  const probe = quotePartyPlatformFee(rules, { ...ctx, grossValueCents: budgetCents }, "business");
+  if (!probe.ok) return probe;
   let low = 1;
   let high = budgetCents;
   while (low <= high) {
     const gross = Math.floor((low + high) / 2);
-    const quote = quoteDualPlatformFees(rules, { ...ctx, grossValueCents: gross }, options);
-    if (!quote.ok) {
-      high = gross - 1;
-      continue;
-    }
-    if (quote.businessPaysCents === budgetCents) return quote;
-    if (quote.businessPaysCents < budgetCents) low = gross + 1;
+    const quote = quotePartyPlatformFee(rules, { ...ctx, grossValueCents: gross }, "business");
+    if (!quote.ok) return quote;
+    if (quote.totalCents === budgetCents) return quote;
+    if (quote.totalCents < budgetCents) low = gross + 1;
     else high = gross - 1;
   }
   return { ok: false, error: "That all-in budget does not match a gross amount under the fee rules." };
@@ -219,16 +275,93 @@ export async function resolveDualPlatformFees(ctx: FeeResolveContext): Promise<D
   return quoteDualPlatformFees(store.rules, { ...ctx, serviceLevel });
 }
 
+export async function resolvePartyPlatformFee(
+  ctx: FeeResolveContext,
+  side: FeeSide,
+): Promise<PartyPlatformQuote> {
+  const store = await getFeeStore();
+  const serviceLevel = serviceLevelForFeeResolution({
+    requestedServiceLevel: ctx.serviceLevel,
+    attributionStatus: ctx.attributionStatus,
+  });
+  return quotePartyPlatformFee(store.rules, { ...ctx, serviceLevel }, side);
+}
+
 export async function resolveAllInBudget(
   ctx: Omit<FeeResolveContext, "grossValueCents">,
   budgetCents: number,
-): Promise<DualPlatformQuote> {
+): Promise<PartyPlatformQuote> {
   const store = await getFeeStore();
   const serviceLevel = serviceLevelForFeeResolution({
     requestedServiceLevel: ctx.serviceLevel,
     attributionStatus: ctx.attributionStatus,
   });
   return quoteFromAllInBudget(store.rules, { ...ctx, serviceLevel }, budgetCents);
+}
+
+/** Lock the influencer fee onto terms the business already sent. Business amounts stay as they were. */
+export function applyInfluencerFeeToTerms(
+  terms: unknown,
+  quote: Extract<PartyPlatformQuote, { ok: true }>,
+): { ok: true; terms: Record<string, unknown> } | { ok: false; error: string } {
+  if (quote.side !== "influencer") return { ok: false, error: "Your platform fee could not be locked." };
+  if (!terms || typeof terms !== "object") return { ok: false, error: "This agreement has no commercial terms." };
+  const root = terms as { financialPlan?: unknown };
+  if (!root.financialPlan || typeof root.financialPlan !== "object") {
+    return { ok: false, error: "This agreement has no commercial terms." };
+  }
+  const plan = { ...(root.financialPlan as Record<string, unknown>) };
+  const signed =
+    plan.signedQuote && typeof plan.signedQuote === "object"
+      ? { ...(plan.signedQuote as Record<string, unknown>) }
+      : null;
+  if (!signed) return { ok: false, error: "This agreement has no commercial terms." };
+  const gross = signed.grossInfluencerCompensationCents;
+  if (gross !== quote.grossInfluencerCompensationCents) {
+    return { ok: false, error: "Your platform fee does not match this agreement." };
+  }
+  if (typeof signed.influencerRuleId === "string" && signed.influencerRuleId && typeof signed.influencerPlatformFeeCents === "number") {
+    return { ok: true, terms: terms as Record<string, unknown> };
+  }
+  signed.influencerPlatformFeeCents = quote.feeCents;
+  signed.influencerReceivesCents = quote.totalCents;
+  signed.influencerRuleId = quote.rule.id;
+  signed.influencerRuleVersion = quote.rule.version;
+  signed.influencerRateBps =
+    quote.rule.method === "percent" || quote.rule.method === "percent_plus_fixed" ? quote.rule.percentBps : null;
+  signed.influencerFloorApplied = quote.floorApplied;
+  signed.influencerCapApplied = quote.capApplied;
+  const businessFee = typeof signed.businessPlatformFeeCents === "number" ? signed.businessPlatformFeeCents : 0;
+  signed.platformFeesTotalCents = businessFee + quote.feeCents;
+  plan.signedQuote = signed;
+  plan.influencerPlatformFeeCents = quote.feeCents;
+  plan.totalCreatorCompensationCents = quote.totalCents;
+  return { ok: true, terms: { ...(terms as Record<string, unknown>), financialPlan: plan } };
+}
+
+export function disclosureFromPartyQuote(
+  quote: Extract<PartyPlatformQuote, { ok: true }>,
+  input: { jurisdiction: string; serviceLevel: string },
+): FeeDisclosureInput {
+  return {
+    feeCents: quote.feeCents,
+    ruleId: quote.rule.id,
+    ruleName: quote.rule.name,
+    ruleVersion: quote.rule.version,
+    feeType: quote.rule.feeType,
+    method: quote.rule.method,
+    percentBps: quote.rule.percentBps,
+    fixedCents: quote.rule.fixedCents,
+    payer: quote.side === "business" ? "brand" : "creator",
+    jurisdiction: input.jurisdiction,
+    serviceLevel: input.serviceLevel,
+    grossCents: quote.grossInfluencerCompensationCents,
+    businessFeeCents: quote.side === "business" ? quote.feeCents : null,
+    influencerFeeCents: quote.side === "influencer" ? quote.feeCents : null,
+    businessPaysCents: quote.side === "business" ? quote.totalCents : null,
+    influencerReceivesCents: quote.side === "influencer" ? quote.totalCents : null,
+    feeState: "reserved",
+  };
 }
 
 export function disclosureFromDualQuote(

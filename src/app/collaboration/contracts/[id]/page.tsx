@@ -13,9 +13,11 @@ import {
   adoptUnboundContractParty,
   messageVisible,
   contractTermsAreFrozen,
+  agreementForParty,
   resolveContractBodyForChrome,
   resolveContractPartyForAccount,
 } from "@/lib/contract-document";
+import { resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import { prisma } from "@/lib/db";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
@@ -99,7 +101,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
   );
   const isNative = document.signingChannel === "native";
   const awaitingSignature = document.status === "sent" || document.status === "draft";
-  const canSignNative = Boolean(party && isNative && awaitingSignature && party.status === "pending");
+  const partyCanSign = Boolean(party && isNative && awaitingSignature && party.status === "pending");
   const youSigned = Boolean(party && party.status === "signed");
   const pendingParties = document.parties.filter((row) => row.status === "pending");
   const signedCount = document.parties.filter((row) => row.status === "signed").length;
@@ -157,6 +159,26 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
     terms?.serviceLevel && (SERVICE_LEVEL_LABELS as Record<string, string>)[terms.serviceLevel]
       ? SERVICE_LEVEL_LABELS[terms.serviceLevel as ServiceLevel]
       : terms?.serviceLevel;
+  const influencerQuote =
+    viewerRole === "influencer" && terms && !dealView?.feeReady
+      ? await resolvePartyPlatformFee(
+          {
+            jurisdiction: terms.jurisdictionCode,
+            serviceLevel: terms.serviceLevel,
+            grossValueCents: terms.grossCents,
+          },
+          "influencer",
+        ).catch(() => null)
+      : null;
+  const influencerFeeBlocked = viewerRole === "influencer" && !dealView?.feeReady && !influencerQuote?.ok;
+  const showSign = partyCanSign && !influencerFeeBlocked;
+  const shownBody = party
+    ? await agreementForParty({
+        body: agreementBody,
+        role: party.role,
+        termsSnapshotJson: document.termsSnapshotJson,
+      })
+    : agreementBody;
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -173,7 +195,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
           </p>
           {awaitingSignature ? (
             <p className="mt-2 text-sm font-semibold text-indigo">
-              {canSignNative
+              {showSign
                 ? "Your signature is required — use the form below."
                 : isNative
                   ? youSigned
@@ -191,7 +213,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
             <p className="mt-2 text-sm text-muted">This agreement is {document.status}.</p>
           )}
           <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
-            {canSignNative ? (
+            {showSign ? (
               <a href="#sign" className="btn-primary !py-2 text-sm">
                 Sign this agreement →
               </a>
@@ -235,11 +257,11 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
       </section>
 
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-        {dealView && terms ? (
+        {dealView?.feeReady && terms ? (
           <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4">
             <h2 className="font-display text-lg font-bold text-indigo">Your fee breakdown</h2>
             <p className="mt-1 text-xs text-muted">
-              Service level {serviceLabel || "not recorded"}. These amounts come from the fee rules locked when the agreement was created.
+              Service level {serviceLabel || "not recorded"}. This is your platform fee for the agreement.
             </p>
             <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               {dealView.lines.map((line) => (
@@ -250,9 +272,32 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
               ))}
             </dl>
           </section>
+        ) : influencerQuote?.ok && terms ? (
+          <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4">
+            <h2 className="font-display text-lg font-bold text-indigo">Your fee breakdown</h2>
+            <p className="mt-1 text-xs text-muted">
+              Service level {serviceLabel || "not recorded"}. This amount is locked when you sign.
+            </p>
+            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs text-muted">Gross compensation</dt>
+                <dd className="font-bold text-indigo">{formatMoney(influencerQuote.grossInfluencerCompensationCents, terms.currency)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Your platform fee</dt>
+                <dd className="font-bold text-indigo">{formatMoney(influencerQuote.feeCents, terms.currency)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">You receive</dt>
+                <dd className="font-bold text-indigo">{formatMoney(influencerQuote.totalCents, terms.currency)}</dd>
+              </div>
+            </dl>
+          </section>
+        ) : influencerQuote && !influencerQuote.ok ? (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{influencerQuote.error}</p>
         ) : party && !terms ? (
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            This agreement has no locked fee breakdown yet. The business quote has to match a business fee rule and an influencer fee rule before it can be signed.
+            This agreement has no fee breakdown for you yet.
           </p>
         ) : null}
         {query.error ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{query.error}</p> : null}
@@ -270,7 +315,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
         ) : null}
         {query.sent ? <p className="text-sm font-semibold text-emerald-700">Message sent on this contract.</p> : null}
 
-        {canSignNative ? (
+        {showSign ? (
           <section
             id="sign"
             className="rounded-2xl border-2 border-violet bg-[#F4F0FF] p-5 shadow-[0_8px_24px_rgba(88,70,200,0.12)]"
@@ -361,7 +406,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                         : "Signed"
                       : row.status === "declined"
                         ? "Declined"
-                        : isYou && canSignNative
+                        : isYou && showSign
                           ? "Your turn — sign above"
                           : "Awaiting signature"}
                   </span>
@@ -369,7 +414,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
               );
             })}
           </ul>
-          {canSignNative ? (
+          {showSign ? (
             <p className="mt-4 text-sm font-semibold text-violet">
               <a href="#sign" className="hover:underline">
                 Jump to sign form ↑
@@ -388,7 +433,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
             </div>
             <p className="text-xs text-muted">ID {document.id.slice(0, 12)}…</p>
           </div>
-          <pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-relaxed text-indigo">{agreementBody}</pre>
+          <pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-relaxed text-indigo">{shownBody}</pre>
         </section>
 
         <section className="rounded-2xl border border-[#E4E9F5] bg-white p-5">
