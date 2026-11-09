@@ -93,9 +93,12 @@ export async function openAirwallexFundingCollection(input: {
   if (!plan.ok) return plan;
   const auth = await session();
   if (!auth.ok) return auth;
-  if (!auth.settings.holdingAccountId) {
-    return { ok: false, error: "Save the Airwallex holding account id in admin. Nothing was charged." };
-  }
+  const { holdingAccountForCollection, readRouteAccounts } = await import("@/lib/payment-route");
+  const holding = holdingAccountForCollection({
+    frozenHoldingAccountId: readRouteAccounts(funding.routeSnapshotJson)?.holdingAccountId,
+    liveHoldingAccountId: auth.settings.holdingAccountId,
+  });
+  if (!holding.ok) return holding;
   const opened = await createAirwallexFunding({
     baseUrl: auth.settings.baseUrl,
     token: auth.token,
@@ -103,7 +106,7 @@ export async function openAirwallexFundingCollection(input: {
       fundingId: funding.id,
       amountCents: funding.grossCents,
       currency: funding.currency,
-      holdingAccountId: auth.settings.holdingAccountId,
+      holdingAccountId: holding.holdingAccountId,
       splits: plan.splits,
     },
   });

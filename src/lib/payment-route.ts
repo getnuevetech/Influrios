@@ -106,3 +106,57 @@ export function readRouteSnapshot(value: unknown): PaymentRouteDecision | null {
     version: String(row.version),
   };
 }
+
+export type RouteAccountRefs = {
+  holdingAccountId: string;
+  operationsAccountId: string;
+  payoutAccountId: string;
+};
+
+/** Account ids captured with the route. A later admin edit does not replace them. */
+export function freezeRouteAccounts(input: {
+  requiresHoldingAccount: boolean;
+  holdingAccountId: string;
+  operationsAccountId: string;
+}): { ok: true; accounts: RouteAccountRefs } | { ok: false; error: string } {
+  const holdingAccountId = input.holdingAccountId.trim();
+  const operationsAccountId = input.operationsAccountId.trim();
+  if (input.requiresHoldingAccount && !holdingAccountId) {
+    return { ok: false, error: "Save the holding account before funding this route." };
+  }
+  return { ok: true, accounts: { holdingAccountId, operationsAccountId, payoutAccountId: "" } };
+}
+
+export function readRouteAccounts(value: unknown): RouteAccountRefs | null {
+  if (!value || typeof value !== "object" || !("accounts" in value)) return null;
+  const accounts = (value as { accounts?: Partial<RouteAccountRefs> }).accounts;
+  if (!accounts || typeof accounts !== "object") return null;
+  return {
+    holdingAccountId: String(accounts.holdingAccountId ?? "").trim(),
+    operationsAccountId: String(accounts.operationsAccountId ?? "").trim(),
+    payoutAccountId: String(accounts.payoutAccountId ?? "").trim(),
+  };
+}
+
+/** The stored holding account wins. A blank snapshot can still use the current account. */
+export function holdingAccountForCollection(input: {
+  frozenHoldingAccountId?: string | null;
+  liveHoldingAccountId?: string | null;
+}): { ok: true; holdingAccountId: string } | { ok: false; error: string } {
+  const frozen = (input.frozenHoldingAccountId ?? "").trim();
+  if (frozen) return { ok: true, holdingAccountId: frozen };
+  const live = (input.liveHoldingAccountId ?? "").trim();
+  if (live) return { ok: true, holdingAccountId: live };
+  return { ok: false, error: "Save the holding account id before opening checkout. Nothing was charged." };
+}
+
+/** A suspended route stops a new checkout. Servicing of money already held stays on the stored route. */
+export function newCheckoutAllowed(input: { corridorActive: boolean | null; fundingStatus: string }) {
+  if (input.fundingStatus !== "awaiting_provider") {
+    return { ok: false as const, error: "This funding is not waiting for a provider." };
+  }
+  if (input.corridorActive === false) {
+    return { ok: false as const, error: "This country route is suspended. Nothing was charged." };
+  }
+  return { ok: true as const };
+}
