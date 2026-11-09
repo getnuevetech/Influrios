@@ -66,6 +66,7 @@ type Props = {
     step?: string;
     creator?: string;
     collaboration?: string;
+    application?: string;
     team?: string;
     brief?: string;
     title?: string;
@@ -73,6 +74,7 @@ type Props = {
     commercial?: string;
     jurisdiction?: string;
     gross?: string;
+    currency?: string;
     serviceLevel?: string;
     mode?: string;
     influencerAccepted?: string;
@@ -144,6 +146,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   );
 
   const collaborationId = (params.collaboration ?? "").trim();
+  const applicationId = (params.application ?? "").trim();
   const linkedCollab = collaborationId
     ? await prisma.collaboration.findUnique({ where: { id: collaborationId } }).catch(() => null)
     : null;
@@ -171,7 +174,15 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         status: briefRow.status === "closed" || briefRow.status === "draft" ? briefRow.status : "active",
       }
     : null;
-  const fromCampaign = Boolean(campaignBrief);
+  const fromCampaign =
+    Boolean(campaignBrief) || Boolean((params.application || params.brief) && (params.title ?? "").trim());
+  const campaignCurrency = (
+    campaignBrief?.budgetCurrency ||
+    params.currency ||
+    "USD"
+  )
+    .trim()
+    .toUpperCase();
 
   const creatorSlug =
     (params.creator ?? "").trim() ||
@@ -431,17 +442,19 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             {params.error}
           </p>
         ) : null}
-        {fromCampaign && campaignBrief ? (
+        {fromCampaign ? (
           <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-            Prefilling from campaign “{campaignBrief.title}”. Title, scope, commercial terms, and budget come from
-            that intent — confirm them below rather than re-entering.
+            Prefilling from “{campaignBrief?.title || title}”. Title, scope, value, and {campaignCurrency} come from
+            the campaign. Add anything the agreement still needs.
           </p>
         ) : null}
 
         <form action={actionSubmitContractWizard} className="space-y-8 rounded-2xl border border-[#E4E9F5] bg-white p-6 shadow-sm">
           <input type="hidden" name="businessName" value={ws.name} />
           {campaignBrief ? <input type="hidden" name="briefId" value={campaignBrief.id} /> : null}
+          {fromCampaign ? <input type="hidden" name="contractCurrency" value={campaignCurrency} /> : null}
           {linkedCollab ? <input type="hidden" name="collaborationId" value={linkedCollab.id} /> : null}
+          {applicationId ? <input type="hidden" name="applicationId" value={applicationId} /> : null}
           {teamProposal && teamProposal.workspaceId === ws.businessId ? (
             <input type="hidden" name="teamProposalId" value={teamProposal.id} />
           ) : null}
@@ -546,7 +559,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             <h2 className="font-display text-xl font-bold text-indigo">3. Commercial terms</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-semibold text-indigo">
-                Gross value (USD)
+                Gross value ({campaignCurrency})
                 <input
                   name="grossUsd"
                   required
@@ -931,8 +944,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               </span>
             </label>
             <p className="mt-3 text-sm text-muted">
-              Send for signature uses the channel enabled in Admin → Document signing (Influrios in-app or DocuSign —
-              only one). Until every party has signed, the agreement stays unsigned and funding does not start.
+              Send for signature uses Influrios in-app signing. Each party can download the agreement before and after
+              signing. Funding does not start until every party has signed.
             </p>
           </section>
 

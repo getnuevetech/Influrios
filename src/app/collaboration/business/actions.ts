@@ -9,7 +9,6 @@ import { assertCollabOsV1 } from "@/lib/collab-os";
 import {
   activateBrief,
   buildCampaignIntentFields,
-  closeBriefForContract,
   createBrief,
   ensureOwnedBusinessWorkspace,
   getWorkspace,
@@ -165,29 +164,57 @@ export async function actionRefreshCampaignSuggestions(formData: FormData) {
 }
 
 export async function actionPostBusinessRequest(formData: FormData) {
-  const { ws } = await requireBusinessAccount();
+  const { account, ws } = await requireBusinessAccount();
   const briefId = String(formData.get("briefId") ?? "").trim();
-  const brief = ws.briefs.find((item) => item.id === briefId) ?? ws.briefs[0];
+  const brief = briefId ? ws.briefs.find((item) => item.id === briefId) : undefined;
   if (!brief) {
-    redirect(`${HUB}?error=${encodeURIComponent("Save a campaign intent before posting a request.")}`);
+    redirect(`${HUB}?error=${encodeURIComponent("Save this campaign before publishing it.")}`);
   }
+  const title = brief.title.trim();
+  if (!title) {
+    redirect(`${HUB}?intent=${encodeURIComponent(brief.id)}&error=${encodeURIComponent("Add a campaign title before publishing.")}#intent`);
+  }
+  const slugs = formData
+    .getAll("creatorSlug")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
   try {
-    await upsertBusinessRequest({
-      brand: ws.name,
-      category: brief.specialty,
+    const existing = (await listWorkspaceBusinessRequests(ws.businessId)).find((row) => row.briefId === brief.id);
+    const request = await upsertBusinessRequest({
+      id: existing?.id,
+      brand: title,
+      category: brief.specialty || "general",
       budget: brief.budget,
-      location: brief.location,
+      location: brief.location || "Remote",
       tags: [brief.goal, brief.platform, brief.specialty].filter(Boolean),
-      summary: brief.summary,
-      lookingFor: brief.specialty.trim() ? `${specialtyLabel(brief.specialty)} influencers` : "",
+      summary: brief.summary.trim() || title,
+      lookingFor: brief.specialty.trim() ? `${specialtyLabel(brief.specialty)} influencers` : title,
       status: "published",
       sortOrder: 0,
       workspaceId: ws.businessId,
       briefId: brief.id,
       currency: brief.budgetCurrency,
-      deliverableSummary: brief.summary,
+      deliverableSummary: brief.summary.trim() || brief.goal,
       platforms: brief.platform ? [brief.platform] : [],
     });
+    if (slugs.length) {
+      const deadlineRaw = String(formData.get("responseDeadline") ?? "").trim();
+      const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
+      const invited = await inviteCreatorsIndependently({
+        workspaceId: ws.businessId,
+        actorUserId: account.id,
+        creatorSlugs: slugs,
+        requestId: request.id,
+        briefId: brief.id,
+        offerText: String(formData.get("offerText") ?? "").trim() || `${brief.budgetCurrency} ${brief.budget}`.trim(),
+        deliverables: String(formData.get("deliverables") ?? "").trim() || brief.summary.trim() || brief.goal,
+        responseDeadline: deadline && !Number.isNaN(deadline.getTime()) ? deadline : null,
+        note: title,
+      });
+      if (!invited.ok) {
+        redirect(`${HUB}?error=${encodeURIComponent(invited.error)}#requests`);
+      }
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not publish the request.";
     redirect(`${HUB}?error=${encodeURIComponent(message)}#requests`);
@@ -381,6 +408,17 @@ export async function actionTransitionMarketplaceApplication(formData: FormData)
       )}`,
     );
   }
+  if (toStatus === "COLLABORATION_DRAFTED") {
+    const slug = (existing.creatorSlug ?? "").trim();
+    const shortlisted = ws.shortlist.some((item) => item.creatorSlug === slug);
+    if (!shortlisted) {
+      redirect(
+        `/collaboration/applications/${applicationId}?error=${encodeURIComponent(
+          "Shortlist this influencer before creating a contract.",
+        )}`,
+      );
+    }
+  }
   let updated: Awaited<ReturnType<typeof transitionMarketplaceApplication>>;
   try {
     updated = await transitionMarketplaceApplication({
@@ -389,9 +427,6 @@ export async function actionTransitionMarketplaceApplication(formData: FormData)
       actorUserId: account.id,
       note: String(formData.get("note") ?? "") || undefined,
     });
-    if ((toStatus === "ACCEPTED" || toStatus === "COLLABORATION_DRAFTED") && updated.briefId) {
-      await closeBriefForContract(updated.briefId, ws.businessId).catch(() => undefined);
-    }
     revalidateHub();
   } catch (error) {
     if (
@@ -412,7 +447,9 @@ export async function actionTransitionMarketplaceApplication(formData: FormData)
     const creator = updated.toSlug || updated.fromSlug;
     const brief = updated.briefId ? ws.briefs.find((item) => item.id === updated.briefId) ?? null : null;
     redirect(
-      creator ? contractHrefFromCampaign({ creatorSlug: creator, brief }) : `${HUB}?drafted=1#applicants`,
+      creator
+        ? contractHrefFromCampaign({ creatorSlug: creator, brief, applicationId })
+        : `${HUB}?drafted=1#applicants`,
     );
   }
   redirect(`/collaboration/applications/${applicationId}?app=${encodeURIComponent(toStatus)}`);

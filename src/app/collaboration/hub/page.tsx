@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { CreatorCollaborations } from "@/components/account/creator-collaborations";
 import { CreatorOpportunities } from "@/components/account/creator-opportunities";
 import { getAccountSession } from "@/lib/accounts";
+import { newCorrelationId } from "@/lib/correlation";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { loadCreatorHub, scoreBusinessRequestForCreator } from "@/lib/collaboration-hub";
@@ -122,6 +123,8 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
       }
       return [];
     });
+    const collabRef = milestones === null || hub.degraded.length ? newCorrelationId() : "";
+    if (collabRef) console.error("collaborations load failed", collabRef, hub.degraded);
     const names: Record<string, string> = {};
     for (const row of hub.pipeline) {
       const creatorRow = bySlug.get(row.counterparty);
@@ -135,6 +138,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
         names={names}
         deadlines={deadlines}
         deadlinesUnavailable={milestones === null}
+        loadRef={collabRef}
         dueThisWeek={deadlines.filter((row) => row.at.getTime() <= weekEnd.getTime()).length}
         tab={params.tab}
         query={params.q?.trim() ?? ""}
@@ -150,13 +154,16 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
   }
 
   let listingsFailed = false;
+  const listingsRef = newCorrelationId();
   const [requests, openings, saves, applications] = await Promise.all([
-    listPublishedBusinessRequests().catch(() => {
+    listPublishedBusinessRequests().catch((error) => {
       listingsFailed = true;
+      console.error("opportunities load failed", listingsRef, error);
       return [];
     }),
-    listPublishedCreatorOpportunities().catch(() => {
+    listPublishedCreatorOpportunities().catch((error) => {
       listingsFailed = true;
+      console.error("openings load failed", listingsRef, error);
       return [];
     }),
     listSavedListings(account.id).catch(() => []),
@@ -219,6 +226,7 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
   return (
     <CreatorOpportunities
       listingsFailed={listingsFailed}
+      loadRef={listingsFailed ? listingsRef : ""}
       requests={scored.map((row) => ({ ...row.request, score: row.score }))}
       openings={filteredOpenings.map((item) => {
         const row = bySlug.get(item.creatorSlug);

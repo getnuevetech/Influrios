@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
-import { closeBriefForContract, getWorkspace } from "@/lib/business";
+import { getWorkspace } from "@/lib/business";
 import { contractHrefFromCampaign } from "@/lib/campaign-contract";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { assertCollabOsV1 } from "@/lib/collab-os";
@@ -81,6 +81,17 @@ export async function actionTransitionApplicationDetail(formData: FormData) {
     );
   }
 
+  if (asBusiness && ws && toStatus === "COLLABORATION_DRAFTED") {
+    const slug = (existing.creatorSlug ?? "").trim();
+    const shortlisted = ws.shortlist.some((item) => item.creatorSlug === slug);
+    if (!shortlisted) {
+      redirect(
+        `${detailPath(applicationId)}?error=${encodeURIComponent(
+          "Shortlist this influencer before creating a contract.",
+        )}`,
+      );
+    }
+  }
   let updated: Awaited<ReturnType<typeof transitionMarketplaceApplication>>;
   try {
     updated = await transitionMarketplaceApplication({
@@ -89,9 +100,6 @@ export async function actionTransitionApplicationDetail(formData: FormData) {
       actorUserId: account.id,
       note: String(formData.get("note") ?? "") || undefined,
     });
-    if (asBusiness && ws && updated.briefId && (toStatus === "ACCEPTED" || toStatus === "COLLABORATION_DRAFTED")) {
-      await closeBriefForContract(updated.briefId, ws.businessId).catch(() => undefined);
-    }
     revalidateApplicationSurfaces(applicationId);
   } catch (error) {
     if (isNavigationError(error)) throw error;
@@ -106,7 +114,14 @@ export async function actionTransitionApplicationDetail(formData: FormData) {
     const creator = updated.toSlug || updated.fromSlug;
     const brief = updated.briefId ? ws.briefs.find((item) => item.id === updated.briefId) ?? null : null;
     if (creator) {
-      redirect(contractHrefFromCampaign({ creatorSlug: creator, brief }));
+      redirect(
+        contractHrefFromCampaign({
+          creatorSlug: creator,
+          brief,
+          collaborationId: updated.collaborationId,
+          applicationId: updated.id,
+        }),
+      );
     }
   }
 

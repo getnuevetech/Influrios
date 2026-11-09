@@ -6,9 +6,7 @@ export function budgetToGrossDollars(budget: string, currency?: string | null): 
   if (!raw) return "";
   const amount = Number(raw.replace(/[^0-9.]/g, ""));
   if (!Number.isFinite(amount) || amount <= 0) return "";
-  const code = (currency || "").trim().toUpperCase();
-  // Wizard gross field is USD-denominated today — still pass the numeric budget when currency is USD or blank.
-  if (code && code !== "USD") return String(amount);
+  void currency;
   return String(amount);
 }
 
@@ -29,16 +27,30 @@ export function campaignCommercialFromBrief(brief: Pick<CampaignBrief, "collabTy
  * Builder for /collaboration/contract with campaign intent already applied.
  * Prefer this over bare ?creator= so the wizard does not re-ask title/budget/scope.
  */
+/** Create-contract is available after the business shortlists an accepted influencer. */
+export function contractOfferReady(input: {
+  status: string;
+  creatorSlug: string | null | undefined;
+  shortlistedSlugs: string[];
+}): boolean {
+  const accepted = input.status === "ACCEPTED" || input.status === "COLLABORATION_DRAFTED";
+  const slug = (input.creatorSlug ?? "").trim();
+  return accepted && Boolean(slug) && input.shortlistedSlugs.includes(slug);
+}
+
 export function contractHrefFromCampaign(input: {
   creatorSlug: string;
   brief?: CampaignBrief | null;
   collaborationId?: string | null;
   teamId?: string | null;
+  applicationId?: string | null;
+  request?: { title?: string | null; budget?: string | null; currency?: string | null; summary?: string | null } | null;
 }) {
   const params = new URLSearchParams();
   const creator = input.creatorSlug.trim();
   if (creator) params.set("creator", creator);
   if (input.collaborationId?.trim()) params.set("collaboration", input.collaborationId.trim());
+  if (input.applicationId?.trim()) params.set("application", input.applicationId.trim());
   if (input.teamId?.trim()) params.set("team", input.teamId.trim());
   const brief = input.brief;
   if (brief) {
@@ -50,6 +62,17 @@ export function contractHrefFromCampaign(input: {
     if (commercial) params.set("commercial", commercial);
     const gross = budgetToGrossDollars(brief.budget, brief.budgetCurrency);
     if (gross) params.set("gross", gross);
+    const currency = (brief.budgetCurrency || "").trim().toUpperCase();
+    if (/^[A-Z]{3}$/.test(currency)) params.set("currency", currency);
+  } else if (input.request) {
+    const title = (input.request.title ?? "").trim();
+    if (title) params.set("title", title);
+    const summary = (input.request.summary ?? "").trim();
+    if (summary) params.set("scope", summary);
+    const gross = budgetToGrossDollars(input.request.budget ?? "", input.request.currency);
+    if (gross) params.set("gross", gross);
+    const currency = (input.request.currency ?? "").trim().toUpperCase();
+    if (/^[A-Z]{3}$/.test(currency)) params.set("currency", currency);
   }
   const qs = params.toString();
   return qs ? `/collaboration/contract?${qs}` : "/collaboration/contract";

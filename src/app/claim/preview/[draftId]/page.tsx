@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { actionClaimDraft } from "@/app/claim/actions";
 import { ClaimForm } from "@/components/claim-form";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
-import { draftToSeedCreator, getDraft } from "@/lib/claim";
+import { canReadPrivateDraft, draftToSeedCreator, getDraft } from "@/lib/claim";
 import { getInfluencerIdentity } from "@/lib/landing-pages";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
   const { draftId } = await params;
   const q = await searchParams;
   const draft = await getDraft(draftId);
-  if (!draft) notFound();
+  if (!draft || !(await canReadPrivateDraft(draft.id))) notFound();
   const [creator, identity] = await Promise.all([
     Promise.resolve(draftToSeedCreator(draft)),
     getInfluencerIdentity(),

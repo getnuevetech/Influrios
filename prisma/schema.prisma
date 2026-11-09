@@ -634,6 +634,8 @@ model Collaboration {
   events          CollaborationEvent[]
   signatures      SignatureRequest[]
   fundings        CollaborationFunding[]
+  applications    MarketplaceApplication[]
+  teamProposals   TeamProposal[]
 
   @@index([initiatorSlug, status])
   @@index([recipientSlug, status])
@@ -733,8 +735,12 @@ model ContractDocument {
   collaborationId String?
   fundingId       String?
   teamProposalId  String?
+  applicationId   String?
+  application     MarketplaceApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
   title           String
   renderedBody    String
+  /// SHA-256 of renderedBody. Empty on historical rows until an operator reviews them.
+  contentDigest   String            @default("")
   pdfBytes        Bytes
   /// draft | sent | signed | declined | voided
   status          String            @default("draft")
@@ -751,6 +757,7 @@ model ContractDocument {
   @@index([workspaceId, createdAt])
   @@index([envelopeId])
   @@index([createdByUserId])
+  @@index([applicationId])
 }
 
 model ContractParty {
@@ -921,6 +928,9 @@ model MarketplaceApplication {
   toSlug            String?
   /** Campaign intent closed when this application is accepted. */
   briefId           String?
+  /// Canonical collaboration record. Null until both parties are known. Never guessed from a title.
+  collaborationId   String?
+  collaboration     Collaboration?                 @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
   status            String                         @default("REQUESTED")
   note              String?
   /// Compensation offered on this invitation. Private to this recipient and the business.
@@ -932,8 +942,10 @@ model MarketplaceApplication {
   createdAt         DateTime                       @default(now())
   updatedAt         DateTime                       @updatedAt
   events            MarketplaceApplicationEvent[]
+  contracts         ContractDocument[]
 
   @@index([kind, status])
+  @@index([collaborationId])
   @@index([businessRequestId])
   @@index([opportunityId])
 }
@@ -2192,11 +2204,15 @@ model TeamProposal {
   expiresAt      DateTime?
   /// Set when the accepted proposal creates its one funding instruction.
   fundingId      String?
+  /// Canonical collaboration record when one was created for this team. Never guessed from a title.
+  collaborationId String?
+  collaboration   Collaboration? @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   members        TeamProposalMember[]
 
   @@index([workspaceId, status])
+  @@index([collaborationId])
 }
 
 model TeamProposalMember {

@@ -423,8 +423,10 @@ export async function loadCreatorHub(input: {
       source: "team",
     });
   }
+  const pipelineIds = new Set(pipeline.map((row) => row.id));
   for (const application of applications) {
     if (application.status !== "ACCEPTED" && application.status !== "COLLABORATION_DRAFTED") continue;
+    if (application.collaborationId && pipelineIds.has(application.collaborationId)) continue;
     pipeline.push({
       id: `application:${application.id}`,
       title: application.requestBrand || application.opportunityLookingFor || "Campaign application",
@@ -569,6 +571,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
     suggestions,
     intentBrief,
     ownRequests: ownRequests.slice(0, 8),
+    publishedBriefIds: ownRequests.map((row) => row.briefId).filter((id): id is string => Boolean(id)),
     applications,
     opportunities: opportunities.slice(0, 6),
     inquiries: ws.inquiries.slice(0, 10),

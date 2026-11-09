@@ -3,6 +3,7 @@ import { createHmac } from "crypto";
 import { readdirSync, readFileSync, statSync } from "fs";
 import path from "path";
 import { describe, it } from "node:test";
+import { fundingCurrencyMatches } from "../funding-event";
 import {
   airwallexIntroFeeIntentBody,
   airwallexMentorshipIntentBody,
@@ -380,5 +381,19 @@ describe("Airwallex adapter", () => {
     assert.equal(result.flowId, "flow_1");
     assert.match(result.url, /^https:\/\/www\.airwallex\.com\/hostedflow/);
     assert.equal(calls.length, 2);
+  });
+
+  it("rejects a webhook currency that does not match the funding and keeps amount in minor units", () => {
+    assert.equal(fundingCurrencyMatches("usd", "USD"), true);
+    assert.equal(fundingCurrencyMatches("EUR", "USD"), false);
+    assert.equal(fundingCurrencyMatches("", "USD"), true);
+    const body = JSON.stringify({
+      id: "evt_currency",
+      name: "payment_intent.succeeded",
+      data: { object: { amount: 10000, currency: "eur", metadata: { fundingId: "fund_1" } } },
+    });
+    const parsed = parseAirwallexWebhook(body);
+    assert.equal(parsed.ok && parsed.amountCents, 10000);
+    assert.equal(parsed.ok && parsed.currency, "EUR");
   });
 });

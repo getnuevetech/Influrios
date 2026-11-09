@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { IconCalendar, IconCheck, IconEye, IconFileText, IconMail } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
+import { newCorrelationId } from "@/lib/correlation";
 import { getWorkspace } from "@/lib/business";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
@@ -95,6 +96,8 @@ export default async function ContractsIndexPage({
   ]);
   const contracts = contractLoad.rows;
   const contractsFailed = contractLoad.failed;
+  const contractsRef = contractsFailed ? newCorrelationId() : "";
+  if (contractsFailed) console.error("contracts load failed", contractsRef);
   const creatorSlug = creator?.slug?.trim() ?? "";
   const ownedIds =
     workspace && workspace.businessId !== "public"
@@ -222,7 +225,7 @@ export default async function ContractsIndexPage({
 
       {contractsFailed ? (
         <p className="rounded-2xl border border-[#F3D7A1] bg-[#FFF8EC] px-4 py-4 text-sm text-[#8A5A12]">
-          Could not load agreements. Refresh this page to try again.
+          Could not load agreements. Refresh this page to try again. Reference {contractsRef}.
         </p>
       ) : filtered.length === 0 && needed.length === 0 ? (
         <EmptyContracts />
@@ -280,17 +283,19 @@ export default async function ContractsIndexPage({
                         <td className="text-[#667085]">{shortDate(contract.updatedAt)}</td>
                         <td>
                           <Link
-                            href={
-                              kind === "signed"
-                                ? `/collaboration/contracts/${contract.id}/pdf`
-                                : `/collaboration/contracts/${contract.id}${sign ? "#sign" : ""}`
-                            }
+                            href={`/collaboration/contracts/${contract.id}${sign ? "#sign" : ""}`}
                             className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ${
                               sign ? "bg-[#6D4AFF] text-white" : "border border-[#E7ECF5] text-[#344054]"
                             }`}
                           >
-                            {sign ? "Review & sign" : kind === "signed" ? "Download PDF" : "View agreement"}
+                            {sign ? "Review & sign" : "View agreement"}
                             {sign ? null : <span aria-hidden>→</span>}
+                          </Link>
+                          <Link
+                            href={`/collaboration/contracts/${contract.id}/pdf`}
+                            className="ml-2 inline-flex items-center rounded-full border border-[#E7ECF5] px-3 py-1.5 text-xs font-semibold text-[#344054]"
+                          >
+                            {kind === "signed" ? "Download signed" : "Download"}
                           </Link>
                         </td>
                       </tr>

@@ -146,9 +146,9 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
             ) : null}
             <Link
               href={`/collaboration/contracts/${document.id}/pdf?v=chrome-v1`}
-              className="text-violet hover:underline"
+              className="btn-secondary !py-2 text-sm"
             >
-              Download PDF
+              {document.status === "signed" ? "Download signed contract" : "Download contract"}
             </Link>
             {document.status === "signed" ? (
               canStartFunding ? (

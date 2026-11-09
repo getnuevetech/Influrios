@@ -2,6 +2,7 @@
  * Collaboration OS P1b — marketplace listings (business requests, creator opportunities,
  * persisted match records, and application state machine).
  */
+import { applicationLinkPlan } from "@/lib/collaboration-links";
 import { prisma } from "@/lib/db";
 import {
   BUSINESS_REQUESTS,
@@ -636,7 +637,44 @@ export async function transitionMarketplaceApplication(input: {
         note: input.note?.trim() || null,
       },
     });
-    return updated;
+    const plan = applicationLinkPlan({
+      id: updated.id,
+      status: updated.status,
+      collaborationId: updated.collaborationId,
+      fromSlug: updated.fromSlug,
+      toSlug: updated.toSlug,
+    });
+    if (plan !== "create" || !updated.fromSlug || !updated.toSlug) return updated;
+    const collab = await tx.collaboration.create({
+      data: {
+        initiatorSlug: updated.fromSlug,
+        recipientSlug: updated.toSlug,
+        initiatorUserId: input.actorUserId ?? null,
+        title: (updated.note || "Accepted application").slice(0, 160),
+        scope: "Per accepted application",
+        roleInitiator: "Initiator",
+        roleRecipient: "Recipient",
+        commercial: "",
+        status: "accepted",
+        why: "",
+        reasons: [],
+        score: 0,
+        decidedAt: new Date(),
+        decidedByUserId: input.actorUserId ?? null,
+        events: {
+          create: {
+            fromStatus: null,
+            toStatus: "accepted",
+            actorUserId: input.actorUserId ?? null,
+            note: `application:${updated.id}`,
+          },
+        },
+      },
+    });
+    return tx.marketplaceApplication.update({
+      where: { id: updated.id },
+      data: { collaborationId: collab.id },
+    });
   });
 }
 
@@ -692,14 +730,6 @@ export function creatorApplicationRole(
   if (application.toSlug === slug) return "invitee";
   return null;
 }
-
-const BUSINESS_ONLY_TRANSITIONS: MarketplaceApplicationStatus[] = [
-  "VIEWED",
-  "RESPONDED",
-  "NEGOTIATING",
-  "EXPIRED",
-  "COLLABORATION_DRAFTED",
-];
 
 /**
  * Statuses a business may advance from the application detail page.
@@ -828,6 +858,7 @@ export type MarketplaceApplicationRow = {
   fromSlug: string | null;
   toSlug: string | null;
   briefId: string | null;
+  collaborationId: string | null;
   status: MarketplaceApplicationStatus;
   note: string | null;
   offerText: string;
@@ -851,6 +882,7 @@ function mapApplication(row: {
   fromSlug: string | null;
   toSlug: string | null;
   briefId?: string | null;
+  collaborationId?: string | null;
   offerText?: string | null;
   deliverables?: string | null;
   responseDeadline?: Date | null;
@@ -879,6 +911,7 @@ function mapApplication(row: {
     fromSlug: row.fromSlug,
     toSlug: row.toSlug,
     briefId: row.briefId ?? null,
+    collaborationId: row.collaborationId ?? null,
     status,
     note: row.note,
     offerText: row.offerText ?? "",
@@ -916,6 +949,7 @@ export async function getMarketplaceApplication(id: string): Promise<Marketplace
           imageUrl: true,
           workspaceId: true,
           status: true,
+          currency: true,
         },
       },
       opportunity: { select: { lookingFor: true, summary: true, creatorSlug: true } },
@@ -934,6 +968,7 @@ export type MarketplaceApplicationDetail = MarketplaceApplicationRow & {
   requestLogoUrl: string | null;
   requestImageUrl: string | null;
   requestWorkspaceId: string | null;
+  requestCurrency: string | null;
   opportunitySummary: string | null;
 };
 
@@ -955,6 +990,7 @@ export async function getMarketplaceApplicationDetail(
           logoUrl: true,
           imageUrl: true,
           workspaceId: true,
+          currency: true,
         },
       },
       opportunity: { select: { lookingFor: true, summary: true } },
@@ -973,6 +1009,7 @@ export async function getMarketplaceApplicationDetail(
     requestLogoUrl: row.businessRequest?.logoUrl ?? null,
     requestImageUrl: row.businessRequest?.imageUrl ?? null,
     requestWorkspaceId: row.businessRequest?.workspaceId ?? null,
+    requestCurrency: row.businessRequest?.currency ?? null,
     opportunitySummary: row.opportunity?.summary ?? null,
   };
 }

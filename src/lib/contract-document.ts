@@ -1,7 +1,8 @@
 /**
  * Collaboration agreements: admin template, filled document, PDF, and who may read a message.
- * Native in-app signing is primary; DocuSign is an optional channel when enabled with credentials.
+ * Agreements are signed in Influrios. A stored PDF is available before and after every party signs.
  */
+import { createHash } from "crypto";
 import { prisma } from "@/lib/db";
 import {
   asciiForPdf as asciiForPdfImpl,
@@ -15,20 +16,43 @@ import {
   type ContractPdfOptions,
   type ContractPdfSignature,
 } from "@/lib/contract-pdf";
-import { assembleDocuSignCredentials, openDocuSignEnvelope } from "@/lib/signing/docusign";
 import {
   applyNativeSignatureAnchor,
   formatNativeAttestation,
-  isNativeSigningCode,
   nativeEnvelopeId,
 } from "@/lib/signing/native";
-import { resolveSigningMode } from "@/lib/signing";
-import { activeSigningProvider } from "@/lib/providers";
-import { decryptSecret } from "@/lib/provider-secrets";
 import { SERVICE_LEVEL_LABELS, type ServiceLevel } from "@/lib/collaboration-fees";
 
 export const CONTRACT_TEMPLATE_ID = "collaboration";
 export const CONTRACT_TEMPLATE_VERSION = "influrios-collab-v1";
+
+export function contractContentDigest(body: string): string {
+  return createHash("sha256").update(body, "utf8").digest("hex");
+}
+
+/** Historical or drifted executed agreements for operator review. Does not rewrite them. */
+export function signedContractReview(input: {
+  status: string;
+  parties: { status: string }[];
+  contentDigest: string;
+  pdfByteLength: number;
+  renderedBody: string;
+  signingChannel?: string | null;
+}): { review: boolean; reasons: string[] } {
+  const frozen =
+    input.status === "signed" ||
+    input.status === "declined" ||
+    input.status === "voided" ||
+    input.parties.some((party) => party.status === "signed");
+  if (!frozen) return { review: false, reasons: [] };
+  const reasons: string[] = [];
+  const digest = input.contentDigest.trim();
+  if (!digest) reasons.push("digest_missing");
+  else if (digest !== contractContentDigest(input.renderedBody)) reasons.push("digest_mismatch");
+  if (input.pdfByteLength <= 0) reasons.push("pdf_missing");
+  if (input.signingChannel === "docusign" && input.pdfByteLength <= 0) reasons.push("provider_pdf_missing");
+  return { review: reasons.length > 0, reasons };
+}
 
 export const CONTRACT_VARIABLES = [
   "title",
@@ -767,6 +791,7 @@ export async function sendCollaborationContract(input: {
   workspaceId: string;
   collaborationId?: string | null;
   teamProposalId?: string | null;
+  applicationId?: string | null;
   createdByUserId: string;
   source: Record<string, string>;
 }) {
@@ -795,70 +820,18 @@ export async function sendCollaborationContract(input: {
     ),
     pageEndorsements: true,
   });
-  const provider = await activeSigningProvider();
-  if (!provider) {
-    return {
-      ok: false as const,
-      error:
-        "Enable Influrios in-app signing or DocuSign in Admin → Document signing. Only one channel can be active. Nothing was signed.",
-    };
-  }
-  const secret = provider.secretCipher ? decryptSecret(provider.secretCipher) : "";
-  const mode = resolveSigningMode(provider.code, {
-    integrationKey: provider.integrationKey,
-    userId: provider.userId,
-    accountId: provider.publicKey,
-    privateKey: secret ?? "",
-    baseUrl: provider.baseUrl,
-  });
-
-  let signingChannel: "native" | "docusign" = "native";
+  const signingChannel = "native" as const;
   let envelopeId = "";
-
-  if (mode === "native") {
-    signingChannel = "native";
-  } else if (mode === "docusign") {
-    const credentials = assembleDocuSignCredentials({
-      stored: {
-        integrationKey: provider.integrationKey,
-        userId: provider.userId,
-        accountId: provider.publicKey,
-        privateKey: secret ?? "",
-        baseUrl: provider.baseUrl,
-        oauthBaseUrl: provider.oauthBaseUrl,
-      },
-    });
-    if (!credentials.ok) return credentials;
-    const opened = await openDocuSignEnvelope({
-      credentials,
-      request: {
-        collaborationId: input.collaborationId || input.workspaceId,
-        title: input.render.title.slice(0, 160),
-        documentHtml: renderedBody,
-        documentPdf: pdfBytes,
-        parties: input.render.parties.map((party) => ({ name: party.name, email: party.email })),
-      },
-    });
-    if (!opened.ok) return { ok: false as const, error: `${opened.error} Nothing was signed.` };
-    signingChannel = "docusign";
-    envelopeId = opened.envelopeId;
-  } else if (isNativeSigningCode(provider.code)) {
-    signingChannel = "native";
-  } else {
-    return {
-      ok: false as const,
-      error:
-        "DocuSign credentials are incomplete. Finish DocuSign setup, or enable Influrios in-app signing instead (only one can be active). Nothing was signed.",
-    };
-  }
 
   const document = await prisma.contractDocument.create({
     data: {
       workspaceId: input.workspaceId,
       collaborationId: input.collaborationId || null,
       teamProposalId: input.teamProposalId || null,
+      applicationId: input.applicationId || null,
       title: input.render.title.slice(0, 160),
       renderedBody,
+      contentDigest: contractContentDigest(renderedBody),
       pdfBytes: new Uint8Array(pdfBytes),
       status: "sent",
       signingChannel,
@@ -996,6 +969,7 @@ export async function signNativeContractParty(input: {
       data: {
         status: aggregate,
         renderedBody: nextBody,
+        contentDigest: contractContentDigest(nextBody),
         pdfBytes: new Uint8Array(pdfBytes),
         envelopeId: fresh.envelopeId || nativeEnvelopeId(document.id),
       },

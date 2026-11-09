@@ -41,6 +41,7 @@ export function CreatorCollaborations({
   names = {},
   deadlines = [],
   deadlinesUnavailable = false,
+  loadRef = "",
   dueThisWeek = 0,
   tab = "overview",
   query = "",
@@ -53,6 +54,7 @@ export function CreatorCollaborations({
   names?: Record<string, string>;
   deadlines?: { id: string; title: string; detail: string; at: Date }[];
   deadlinesUnavailable?: boolean;
+  loadRef?: string;
   dueThisWeek?: number;
   tab?: string;
   query?: string;
@@ -150,7 +152,8 @@ export function CreatorCollaborations({
 
       {hub.degraded?.length ? (
         <p className="rounded-2xl border border-[#F3D7A1] bg-[#FFF8EC] px-4 py-3 text-sm text-[#8A5A12]">
-          Could not load {hub.degraded.join(", ")}. Refresh this page to try again. Nothing here was treated as an empty account.
+          Could not load {hub.degraded.join(", ")}. Refresh this page to try again.
+          {loadRef ? ` Reference ${loadRef}.` : ""} Nothing here was treated as an empty account.
         </p>
       ) : null}
 
@@ -251,7 +254,10 @@ export function CreatorCollaborations({
           <aside className="space-y-4">
             <Panel title="Upcoming deadlines">
               {deadlinesUnavailable ? (
-                <p className="text-sm text-[#8A5A12]">Could not load deadlines. Refresh this page to try again.</p>
+                <p className="text-sm text-[#8A5A12]">
+                  Could not load deadlines. Refresh this page to try again.
+                  {loadRef ? ` Reference ${loadRef}.` : ""}
+                </p>
               ) : deadlines.length === 0 ? (
                 <p className="text-sm text-[#667085]">Deliverable and payout dates appear when they are scheduled.</p>
               ) : (
