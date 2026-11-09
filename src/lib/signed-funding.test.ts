@@ -81,6 +81,20 @@ describe("recover signed commercial terms", () => {
     assert.equal(recovered?.currency, "USD");
     assert.equal(recovered?.creators[0]?.slug, "ag");
     assert.equal(recovered?.milestones.length, 2);
+    const rounded = recoverSignedTermsFromAgreement({
+      title: "Rounded",
+      sourceJson: { gross: "100", currency: "USD" },
+      renderedBody: ["4. Milestone Schedule", "1. Draft  33%  $33", "2. Live  33%  $33", "3. Final  33%  $34", "5. Next"].join("\n"),
+      parties: [{ role: "creator", name: "Ag", creatorSlug: "ag", shareBps: 10000 }],
+    });
+    assert.equal(rounded?.milestones.reduce((sum, row) => sum + row.shareBps, 0), 10_000);
+    const legacy = recoverSignedTermsFromAgreement({
+      title: "Spring launch",
+      renderedBody: ["3. Money", "Currency: USD", "Gross contract value: $1,000.00", "4. Milestones", "1. Delivery", "   Share: 100%", "5. Creator shares"].join("\n"),
+      parties: [{ role: "creator", name: "Ada", creatorSlug: "ada", shareBps: 0 }],
+    });
+    assert.equal(legacy?.grossCents, 100_000);
+    assert.equal(legacy?.milestones[0]?.shareBps, 10_000);
     assert.equal(
       recoverSignedTermsFromAgreement({
         title: "Missing",
