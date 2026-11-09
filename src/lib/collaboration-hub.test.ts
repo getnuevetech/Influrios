@@ -5,6 +5,7 @@ import {
   PIPELINE_STAGES,
   agreementPresentation,
   derivePipelineStage,
+  isCurrentCollaboration,
   invitationStillListed,
   pipelineFundingSurface,
   scoreBusinessRequestForCreator,
@@ -36,6 +37,24 @@ describe("collaboration hub pipeline", () => {
     assert.equal(signed.label, "Contract");
     assert.equal(signed.action, "Review contract →");
     assert.equal(signed.href, "/collaboration/contracts/doc-1");
+  });
+
+  it("keeps invitations and matches out of the active collaboration count", () => {
+    assert.equal(isCurrentCollaboration({ stage: "Match", source: "application" }), false);
+    assert.equal(isCurrentCollaboration({ stage: "Contract", source: "application", contractHref: null }), false);
+    assert.equal(isCurrentCollaboration({ stage: "Contract", source: "team", contractHref: null }), false);
+    assert.equal(isCurrentCollaboration({ stage: "Contract", source: "proposal" }), true);
+    assert.equal(isCurrentCollaboration({ stage: "In Progress", source: "proposal" }), true);
+    assert.equal(
+      isCurrentCollaboration({ stage: "In Progress", source: "application", contractHref: "/collaboration/contracts/1" }),
+      true,
+    );
+    const rows = [
+      { stage: "Match", source: "application" },
+      { stage: "Contract", source: "proposal" },
+      { stage: "In Progress", source: "proposal" },
+    ];
+    assert.equal(rows.filter((row) => isCurrentCollaboration(row)).length, 2);
   });
 
   it("drops an invitation from request lists once a contract exists", () => {

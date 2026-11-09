@@ -26,7 +26,9 @@ import {
 } from "@/components/icons";
 import { actionLogout } from "@/app/account/actions";
 import { accountAudience, type AccountAudience } from "@/lib/account-audience";
+import { unreadNoticeCount } from "@/lib/account-notices";
 import { getAccountSession, homePathForRole } from "@/lib/accounts";
+import { loadCreatorHome } from "@/lib/creator-home";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { isPlanCode, planLabel, type PlanCode } from "@/lib/entitlements";
@@ -133,6 +135,8 @@ export async function MemberFrame({
     contactPerson = profile?.contactName?.trim() || "";
   }
   let unsignedContracts = 0;
+  let pendingInvitations = 0;
+  let unreadNotices = 0;
   if (audience === "creator" && account) {
     const [user, creator, pending] = await Promise.all([
       prisma.user.findUnique({ where: { id: account.id }, select: { planTier: true } }).catch(() => null),
@@ -149,6 +153,9 @@ export async function MemberFrame({
     ]);
     creatorPlan = creator?.planTier || user?.planTier || "STARTER";
     unsignedContracts = pending;
+    const home = await loadCreatorHome(account.id).catch(() => null);
+    pendingInvitations = home?.pendingInvitations ?? 0;
+    unreadNotices = await unreadNoticeCount(account.id);
   }
   const upgrade = audience === "creator" ? nextCreatorUpgrade(creatorPlan) : null;
   const nav = audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
@@ -184,6 +191,11 @@ export async function MemberFrame({
                 {on ? <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-violet" /> : null}
                 <span className={on ? "text-violet" : "text-[#8A93A8]"}>{item.icon}</span>
                 <span className="truncate">{item.label}</span>
+                {item.href.startsWith("/collaboration/hub?view=collaborations") && pendingInvitations > 0 ? (
+                  <span className="ml-auto rounded-full bg-[#6D4AFF] px-1.5 text-[10px] font-bold text-white">
+                    {pendingInvitations > 9 ? "9+" : pendingInvitations}
+                  </span>
+                ) : null}
                 {item.href === "/creator/messages" && unsignedContracts > 0 ? (
                   <span className="ml-auto rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">
                     {unsignedContracts > 9 ? "9+" : unsignedContracts}
@@ -242,10 +254,18 @@ export async function MemberFrame({
             </label>
           </form>
           <div className="ml-auto flex items-center gap-3">
-            <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#E6ECF7] text-[#4E5872]">
+            <Link
+              href={audience === "creator" ? "/creator/notifications" : "/creator/messages"}
+              aria-label={unreadNotices > 0 ? `Notifications, ${unreadNotices} unread` : "Notifications"}
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#E6ECF7] text-[#4E5872]"
+            >
               <IconBell size={18} />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500" />
-            </span>
+              {unreadNotices > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6D4AFF] px-1 text-[10px] font-bold text-white">
+                  {unreadNotices > 9 ? "9+" : unreadNotices}
+                </span>
+              ) : null}
+            </Link>
             <div className="flex items-center gap-2">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EDE7FF] text-sm font-bold text-violet">
                 {primaryName.slice(0, 1).toUpperCase()}
