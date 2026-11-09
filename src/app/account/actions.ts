@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isDefaultMemberHome, safeNextPath } from "@/lib/account-policy";
 import {
+  accountEmailMatches,
   clearAccountSession,
   getAccountSession,
   homePathForRole,
@@ -83,6 +84,10 @@ export async function actionLogin(formData: FormData) {
   let user: Awaited<ReturnType<typeof loginAccount>> | null = null;
   try {
     user = await loginAccount(email, String(formData.get("password") ?? ""));
+    if (!user || !accountEmailMatches(user.email, email)) {
+      await clearAccountSession();
+      back("/login", "That email does not match the account that was signed in.", next);
+    }
     await recordAuthSuccess("account-login", ip, email);
   } catch (error) {
     const coded = error as Error & { code?: string };

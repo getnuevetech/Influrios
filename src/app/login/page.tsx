@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionLogin, actionLogout } from "@/app/account/actions";
 import { safeNextPath } from "@/lib/account-policy";
-import { getAccountSession } from "@/lib/accounts";
+import { getAccountSession, homePathForRole } from "@/lib/accounts";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Log in" };
@@ -13,26 +13,26 @@ export default async function LoginPage({ searchParams }: Props) {
   const params = await searchParams;
   const next = safeNextPath(params.next);
   const account = await getAccountSession().catch(() => null);
-  const contractNext = next.startsWith("/collaboration/contracts");
-  if (account && !contractNext) redirect(next);
+  const requestedNext = Boolean(params.next?.trim());
+  if (account && !requestedNext) redirect(homePathForRole(account.role));
   return (
     <div className="mx-auto max-w-md px-4 py-14">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>
       <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Log in</h1>
       <p className="mt-2 text-sm text-muted">
         {params.gate
-          ? "Create an account or log in to continue. We will return you to the page you were opening."
-          : "Use the email and password for your Influrios account. After login you land on your dashboard."}
+          ? "Create an account or log in to continue. The email you enter is the only account that will be signed in."
+          : "Use the email and password for your Influrios account. That email is the only account that will be signed in."}
       </p>
       <p className="mt-2 text-sm text-muted">
         Claimed a card with email only? Set a password from the link we email when you use Forgot password, or finish
         password setup after verifying your email.
       </p>
-      {account && contractNext ? (
+      {account && requestedNext ? (
         <div className="card-surface mt-6 space-y-3 p-6">
           <p className="text-sm text-indigo">
-            You are signed in as <strong>{account.email}</strong>. Continuing opens the contract as this account only.
-            It does not switch you into the account that sent the contract.
+            You are signed in as <strong>{account.email}</strong>. Continuing keeps this account. Signing in below
+            with a different email opens only that email’s account.
           </p>
           <Link href={next} className="btn-primary inline-flex w-full justify-center">
             Continue as {account.email}

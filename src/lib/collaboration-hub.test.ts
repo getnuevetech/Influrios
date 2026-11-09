@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   PIPELINE_STAGES,
+  agreementPresentation,
   derivePipelineStage,
+  invitationStillListed,
   pipelineFundingSurface,
   scoreBusinessRequestForCreator,
   sharedStoredCurrency,
@@ -13,6 +15,37 @@ import type { MarketplaceBusinessRequestRow } from "./marketplace-listings";
 import type { SeedCreator } from "./seed-data";
 
 describe("collaboration hub pipeline", () => {
+  it("does not call an invitation a contract until the document exists", () => {
+    const pending = agreementPresentation({
+      stage: "Contract",
+      href: "/collaboration/applications/app-1",
+      contractHref: null,
+      revisionSummary: null,
+    });
+    assert.equal(pending.label, "Accepted");
+    assert.equal(pending.action, "Open invitation →");
+    assert.equal(pending.href, "/collaboration/applications/app-1");
+    assert.equal(pending.next, "Agreement not created");
+
+    const signed = agreementPresentation({
+      stage: "Match",
+      href: "/collaboration/applications/app-1",
+      contractHref: "/collaboration/contracts/doc-1",
+      revisionSummary: null,
+    });
+    assert.equal(signed.label, "Contract");
+    assert.equal(signed.action, "Review contract →");
+    assert.equal(signed.href, "/collaboration/contracts/doc-1");
+  });
+
+  it("drops an invitation from request lists once a contract exists", () => {
+    const applications = new Set(["app-1"]);
+    const collaborations = new Set(["collab-1"]);
+    assert.equal(invitationStillListed({ id: "app-1" }, applications, collaborations), false);
+    assert.equal(invitationStillListed({ id: "app-2", collaborationId: "collab-1" }, applications, collaborations), false);
+    assert.equal(invitationStillListed({ id: "app-3", collaborationId: "collab-2" }, applications, collaborations), true);
+  });
+
   it("maps draft/sent to Match and accepted to Contract", () => {
     assert.equal(derivePipelineStage({ collaborationStatus: "draft" }), "Match");
     assert.equal(derivePipelineStage({ collaborationStatus: "sent" }), "Match");

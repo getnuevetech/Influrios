@@ -3,6 +3,7 @@
  * Claim templates, brand-default art, and unsynced follower counts stay off the live figures.
  */
 import { getAccountSession } from "@/lib/accounts";
+import { agreementPresentation } from "@/lib/collaboration-hub";
 import { isPlaceholderBio } from "@/lib/onboarding";
 import { completenessFor, draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
@@ -332,7 +333,7 @@ export async function loadCreatorHome(userId: string) {
     id: item.id,
     title: item.title,
     counterparty: item.counterparty,
-    stage: item.stage,
+    stage: agreementPresentation(item).label,
   }));
 
   const methodSubmitted =

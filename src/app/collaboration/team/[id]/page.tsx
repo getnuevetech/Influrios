@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { actionRespondTeamProposal } from "@/app/collaboration/team/actions";
 import { getAccountSession } from "@/lib/accounts";
+import { isBusinessRole } from "@/lib/account-audience";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import {
@@ -47,6 +48,26 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
   if (!ownsAsBusiness && !myMember) {
     redirect("/collaboration/team?error=" + encodeURIComponent("You are not on this proposal."));
   }
+  const agreement = await prisma.contractDocument.findFirst({
+    where: { teamProposalId: proposal.id, status: { notIn: ["voided", "declined"] } },
+    select: { id: true, parties: { select: { userId: true, email: true, creatorSlug: true } } },
+  });
+  if (agreement) {
+    const email = account.email.trim().toLowerCase();
+    const onContract =
+      ownsAsBusiness ||
+      agreement.parties.some(
+        (party) =>
+          party.userId === account.id ||
+          party.email.trim().toLowerCase() === email ||
+          (creator?.slug && party.creatorSlug === creator.slug),
+      );
+    if (!onContract) notFound();
+    redirect(`/collaboration/contracts/${agreement.id}`);
+  }
+  if (!myMember && !isBusinessRole(account.role)) {
+    redirect("/collaboration/team?error=" + encodeURIComponent("You are not on this proposal."));
+  }
 
   const canRespond =
     Boolean(myMember && myMember.status === "invited") &&
@@ -76,7 +97,7 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
       ) : null}
 
       <article className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm sm:p-7">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet">Team invitation</p>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet">Coordinated invitation</p>
         <h1 className="mt-1 font-display text-3xl font-bold text-indigo">{proposal.title}</h1>
         <p className="mt-2 text-sm text-muted">
           {ownsAsBusiness ? (
@@ -84,7 +105,7 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
               Proposal status: <span className="font-semibold uppercase text-violet">{proposal.status}</span>
             </>
           ) : (
-            "This is a coordinated team collaboration. You can see who is on the team. Compensation and private negotiations stay between the business and each person."
+            "This invitation is not a contract. You can see who else was invited. Compensation stays between the business and each influencer."
           )}
         </p>
         {myMember ? (
@@ -103,7 +124,7 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
         ) : null}
 
         <section className="mt-5">
-          <h2 className="text-sm font-bold text-indigo">{ownsAsBusiness ? "Team members" : "Teammates"}</h2>
+          <h2 className="text-sm font-bold text-indigo">{ownsAsBusiness ? "Invited influencers" : "Other influencers on this invitation"}</h2>
           <ul className="mt-2 space-y-2">
             {members.map((member) => (
               <li
@@ -165,7 +186,7 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
           ) : myMember?.status === "declined" ? (
             <p className="text-sm text-muted">You declined this invitation.</p>
           ) : proposal.status === "declined" ? (
-            <p className="text-sm text-muted">This proposal is closed. A new proposal is required to change the team.</p>
+            <p className="text-sm text-muted">This invitation is closed. Send a new invitation to change who is included.</p>
           ) : ownsAsBusiness ? (
             <p className="text-sm text-muted">
               Track member responses above. The contract opens only after every creator accepts.

@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { normalizeVerificationCode } from "./accounts";
+import { accountEmailMatches, normalizeVerificationCode } from "./accounts";
 
 describe("account verification codes", () => {
+  it("signs in only the account that owns the submitted email", () => {
+    assert.equal(accountEmailMatches("Member@Example.com", " member@example.com "), true);
+    assert.equal(accountEmailMatches("member@example.com", "other@example.com"), false);
+    assert.equal(accountEmailMatches("member@example.com", " "), false);
+  });
+
   it("normalizes pasted codes with spaces", () => {
     assert.equal(normalizeVerificationCode(" 123 456 "), "123456");
     assert.equal(normalizeVerificationCode("987654"), "987654");

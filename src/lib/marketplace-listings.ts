@@ -1171,7 +1171,7 @@ export function applicationTransitionLabel(status: MarketplaceApplicationStatus)
     case "ACCEPTED":
       return "Accept";
     case "COLLABORATION_DRAFTED":
-      return "Draft contract";
+      return "Set up collaboration";
     case "DECLINED":
       return "Decline";
     case "EXPIRED":
