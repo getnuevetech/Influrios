@@ -14,6 +14,7 @@ import {
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { listCollaborations } from "@/lib/collaborations";
 import { fundingBadge, type FundingBadge } from "@/lib/funding-badge";
+import { memberDealView } from "@/lib/member-deal-money";
 import { agreedFeeFromSources } from "@/lib/signed-funding";
 import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketplace-ledger";
 import { findDirectoryMatchesFor, type CreatorMatch, type MatchBreakdown } from "@/lib/matching";
@@ -58,6 +59,7 @@ export type HubPipelineItem = {
   /** W2.5 — Product §16 funding badge when a ledger row is linked. */
   fundingBadge?: FundingBadge | null;
   feeCents?: number | null;
+  moneyLines?: { label: string; amountCents: number }[];
   /** Stored campaign gross when a funding row is linked. */
   grossCents?: number | null;
   currency?: string | null;
@@ -350,6 +352,7 @@ export function summarizeBusinessSpend(
     feeCents: number;
     currency: string;
     ledger: { heldCents: number; releasedCents: number; refundedCents: number; heldInCents: number };
+    feeSnapshotJson?: unknown;
   }>,
 ): BusinessSpendSummary {
   const currency = sharedStoredCurrency(fundings.map((row) => row.currency));
@@ -369,7 +372,17 @@ export function summarizeBusinessSpend(
     heldCents: fundings.reduce((sum, row) => sum + row.ledger.heldCents, 0),
     releasedCents: fundings.reduce((sum, row) => sum + row.ledger.releasedCents, 0),
     refundedCents: fundings.reduce((sum, row) => sum + row.ledger.refundedCents, 0),
-    feeCents: fundings.reduce((sum, row) => sum + row.feeCents, 0),
+    feeCents: fundings.reduce(
+      (sum, row) =>
+        sum +
+        memberDealView({
+          role: "business",
+          grossCents: row.grossCents,
+          feeCents: row.feeCents,
+          plan: row.feeSnapshotJson,
+        }).feeCents,
+      0,
+    ),
     currency,
     dealCount: fundings.length,
   };
@@ -482,12 +495,20 @@ export async function loadCreatorHub(input: {
         milestoneStatuses: funding?.milestones?.map((m) => m.status) ?? [],
       });
       const counterparty = row.initiatorSlug === slug ? row.recipientSlug : row.initiatorSlug;
+      const view = funding
+        ? memberDealView({
+            role: "influencer",
+            grossCents: funding.grossCents,
+            feeCents: funding.feeCents,
+            plan: funding.feeSnapshotJson,
+          })
+        : null;
       const surface = funding
         ? pipelineFundingSurface({
             status: funding.status,
-            feeCents: funding.feeCents,
+            feeCents: view?.feeCents ?? funding.feeCents,
             currency: funding.currency,
-            grossCents: funding.grossCents,
+            grossCents: view?.grossCents ?? funding.grossCents,
             fundingMode: funding.fundingMode,
             heldCents: funding.ledger?.heldCents,
             releasedCents: funding.ledger?.releasedCents,
@@ -502,10 +523,8 @@ export async function loadCreatorHub(input: {
         stageIndex: PIPELINE_STAGES.indexOf(stage),
         href: funding ? `/payments?funding=${encodeURIComponent(funding.id)}` : `/collaboration/records/${row.id}`,
         source: "proposal",
-        netCents:
-          funding && Number.isInteger(funding.grossCents) && Number.isInteger(funding.feeCents)
-            ? Math.max(0, funding.grossCents - funding.feeCents)
-            : null,
+        netCents: view?.headlineCents ?? null,
+        moneyLines: view?.lines,
         obligationDone: funding?.milestones?.filter((item) => item.status === "approved" || item.status === "released").length,
         obligationTotal: funding?.milestones?.length,
         ...surface,
@@ -771,11 +790,17 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
       fundingStatus: row.status,
       milestoneStatuses: row.milestones?.map((m) => m.status) ?? [],
     });
+    const view = memberDealView({
+      role: "business",
+      grossCents: row.grossCents,
+      feeCents: row.feeCents,
+      plan: row.feeSnapshotJson,
+    });
     const surface = pipelineFundingSurface({
       status: row.status,
-      feeCents: row.feeCents,
+      feeCents: view.feeCents,
       currency: row.currency,
-      grossCents: row.grossCents,
+      grossCents: view.headlineCents,
       fundingMode: row.fundingMode,
       heldCents: row.ledger?.heldCents,
       releasedCents: row.ledger?.releasedCents,
@@ -788,7 +813,8 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
       stage,
       stageIndex: PIPELINE_STAGES.indexOf(stage),
       href: `/payments?funding=${encodeURIComponent(row.id)}`,
-      netCents: Number.isInteger(row.grossCents) && Number.isInteger(row.feeCents) ? Math.max(0, row.grossCents - row.feeCents) : null,
+      netCents: null,
+      moneyLines: view.lines,
       obligationDone: row.milestones?.filter((item) => item.status === "approved" || item.status === "released").length,
       obligationTotal: row.milestones?.length,
       ...surface,

@@ -7,7 +7,9 @@ import { newCorrelationId } from "@/lib/correlation";
 import { getWorkspace } from "@/lib/business";
 import { contractHrefFromCampaign, contractOfferReady } from "@/lib/campaign-contract";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
-import { agreedFeeFromSources } from "@/lib/signed-funding";
+import { memberDealView } from "@/lib/member-deal-money";
+import { formatStoredMoney } from "@/lib/money";
+import { agreedFeeFromSources, readSignedTermsSnapshot } from "@/lib/signed-funding";
 import { repairSignedAgreements } from "@/lib/signed-funding-apply";
 import { prisma } from "@/lib/db";
 import {
@@ -69,7 +71,17 @@ function sourceText(source: unknown, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function feeLabel(source: unknown, snapshot?: unknown) {
+function feeLabel(source: unknown, snapshot: unknown, role: "business" | "influencer") {
+  const terms = readSignedTermsSnapshot(snapshot);
+  const view = memberDealView({
+    role,
+    grossCents: terms?.grossCents ?? 0,
+    feeCents: 0,
+    plan: terms?.financialPlan ? { financialPlan: terms.financialPlan } : null,
+  });
+  if (view.signed && terms) {
+    return view.lines.map((line) => `${line.label} ${formatStoredMoney(line.amountCents, terms.currency)}`).join(" · ");
+  }
   return agreedFeeFromSources(source, snapshot).label;
 }
 
@@ -384,7 +396,17 @@ export default async function ContractsIndexPage({
               <dl className="mt-5 space-y-3 text-sm">
                 <Detail icon={<IconUsersMini />} label="Parties" value={selected.parties.map((party) => party.name).filter(Boolean).join(" and ") || "—"} />
                 <Detail icon={<IconFileText size={15} />} label="Linked collaboration" value={selected.collaborationId ? selected.title : "—"} />
-                <Detail icon={<IconFee />} label="Agreed fee" value={feeLabel(selected.sourceJson, selected.termsSnapshotJson)} />
+                <Detail
+                  icon={<IconFee />}
+                  label="Agreed amounts"
+                  value={feeLabel(
+                    selected.sourceJson,
+                    selected.termsSnapshotJson,
+                    selected.parties.some((party) => party.role === "creator" && creatorSlug && party.creatorSlug === creatorSlug)
+                      ? "influencer"
+                      : "business",
+                  )}
+                />
                 <Detail icon={<IconFileText size={15} />} label="Deliverables" value={deliverableLabel(selected.sourceJson)} />
                 <Detail icon={<IconCalendar size={15} />} label="Updated" value={shortDate(selected.updatedAt)} />
               </dl>
