@@ -340,11 +340,7 @@ export function AdminUserAccountsView({
                 <input
                   name="q"
                   defaultValue={filters.q || ""}
-                  placeholder={
-                    tab === "business"
-                      ? "Search businesses (name, email, ID...)"
-                      : "Search influencers (name, email, handle, ID...)"
-                  }
+                  placeholder="Search name, email, mobile, handle, company, or ID"
                   className="w-full rounded-full border border-[#E4EBFF] bg-[#F7F9FF] py-2 pl-9 pr-3 text-[13px] outline-none focus:border-violet focus:bg-white"
                 />
               </label>
@@ -441,6 +437,8 @@ export function AdminUserAccountsView({
                         />
                       </th>
                       <th className="px-3 py-3">{tab === "business" ? "Business" : "Influencer"}</th>
+                      <th className="px-3 py-3">Email</th>
+                      <th className="px-3 py-3">Mobile</th>
                       <th className="px-3 py-3">Role</th>
                       <th className="px-3 py-3">Plan</th>
                       <th className="px-3 py-3">KYC</th>
@@ -453,7 +451,7 @@ export function AdminUserAccountsView({
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-10 text-center text-sm text-muted">
+                        <td colSpan={11} className="px-4 py-10 text-center text-sm text-muted">
                           No accounts match these filters.
                         </td>
                       </tr>
@@ -490,11 +488,30 @@ export function AdminUserAccountsView({
                                 </span>
                                 <div className="min-w-0">
                                   <p className="truncate font-semibold text-indigo">{row.displayName}</p>
+                                  <p className="truncate text-[11px] text-indigo">{row.email}</p>
                                   <p className="truncate text-[11px] text-muted">
-                                    {row.handle || row.email}
+                                    {[accountPhones(row).join(" · ") || "No mobile", row.handle]
+                                      .filter(Boolean)
+                                      .join(" · ")}
                                   </p>
                                 </div>
                               </div>
+                            </td>
+                            <td className="px-3 py-3">
+                              <p className="max-w-[220px] truncate text-indigo">{row.email}</p>
+                              {row.contactEmail && row.contactEmail !== row.email ? (
+                                <p className="max-w-[220px] truncate text-[11px] text-muted">
+                                  Business {row.contactEmail}
+                                </p>
+                              ) : null}
+                            </td>
+                            <td className="px-3 py-3 text-muted">
+                              {accountPhones(row).map((phone) => (
+                                <p key={phone} className="truncate">
+                                  {phone}
+                                </p>
+                              ))}
+                              {accountPhones(row).length === 0 ? "—" : null}
                             </td>
                             <td className="px-3 py-3 text-muted">{row.role}</td>
                             <td className="px-3 py-3">
@@ -648,8 +665,9 @@ function AccountDetailPanel({
                 {status.text}
               </span>
             </div>
+            <p className="truncate text-[12px] text-indigo">{row.email}</p>
             <p className="truncate text-[12px] text-muted">
-              {row.handle || row.email} · {detail.publicId}
+              {accountPhones(row).join(" · ") || "No mobile"} · {row.handle || "No handle"} · {detail.publicId}
             </p>
             <p className="truncate text-[11px] text-muted">
               {row.locationLabel} · Joined {row.createdAt.slice(0, 10)}
@@ -690,6 +708,8 @@ function AccountDetailPanel({
             </div>
 
             <div className="space-y-2 rounded-xl bg-[#F7F9FF] p-3 text-[12px]">
+              <RowLink label="Email" value={row.email} href={`mailto:${row.email}`} linkLabel="Email" />
+              <RowLink label="Mobile" value={accountPhones(row).join(" · ") || "Not set"} />
               <RowLink label="Current plan" value={row.planTier} href="#account-edit" />
               <RowLink
                 label="KYC status"
@@ -768,6 +788,7 @@ function AccountDetailPanel({
 
         {detailTab === "details" ? (
           <div id="account-edit" className="mt-4 space-y-4">
+            <AccountFacts row={row} publicId={detail.publicId} />
             <form action={actionSaveMember} className="space-y-3">
               <input type="hidden" name="userId" value={row.id} />
               <input type="hidden" name="next" value={nextPath} />
@@ -813,12 +834,9 @@ function AccountDetailPanel({
                 Suspended / restricted
               </label>
               <p className="text-[11px] text-muted">
-                Email: {row.emailVerifiedAt ? `Verified ${row.emailVerifiedAt.slice(0, 10)}` : "Not verified"}{" "}
-                (member-owned). Password: {row.passwordHash ? "Set" : "Not set"}.
+                Login email {row.email} is {row.emailVerifiedAt ? `verified ${row.emailVerifiedAt.slice(0, 10)}` : "not verified"}.
+                Password: {row.passwordHash ? "Set" : "Not set"}.
               </p>
-              {row.contactLabel ? (
-                <p className="text-[11px] text-muted">Business contact: {row.contactLabel}</p>
-              ) : null}
               {canEdit ? (
                 <button type="submit" className="btn-primary w-full">
                   Save account
@@ -944,6 +962,53 @@ function StatMini({ label, value }: { label: string; value: string }) {
       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">{label}</p>
       <p className="mt-1 font-display text-base font-bold text-indigo">{value}</p>
     </div>
+  );
+}
+
+function accountPhones(row: AccountTableRow) {
+  return [row.phone, row.contactPhone].filter((phone, index, all): phone is string =>
+    Boolean(phone) && all.indexOf(phone) === index,
+  );
+}
+
+function AccountFacts({ row, publicId }: { row: AccountTableRow; publicId: string }) {
+  const facts: Array<[string, string]> = [
+    ["Login email", row.email],
+    ["Mobile", row.phone || "Not set"],
+    ["Preferred contact", row.preferredCommChannel],
+    ["Email verified", row.emailVerifiedAt ? row.emailVerifiedAt.slice(0, 10) : "Not verified"],
+    ["Password", row.passwordHash ? "Set" : "Not set"],
+    ["Account id", row.id],
+    ["Public id", publicId],
+    ["Legal name", row.name || "Not set"],
+    ["Display name", row.displayName],
+    ["Handle", row.handle || "Not set"],
+    ["Role", row.role],
+    ["Plan", row.planTier],
+    ["Location", row.locationLabel],
+    ["Status", row.suspendedAt ? `Restricted ${row.suspendedAt.slice(0, 10)}` : "Active"],
+    ["Joined", row.createdAt.slice(0, 10)],
+    ["Last updated", row.updatedAt.slice(0, 10)],
+    ["Consent", row.consentVersion || "Not recorded"],
+    ["Stripe customer", row.stripeCustomerId || "Not set"],
+    ["Business name", row.businessName || "Not set"],
+    ["Industry", row.businessIndustry || "Not set"],
+    ["Business geography", row.businessGeography || "Not set"],
+    ["Business contact", row.contactName || "Not set"],
+    ["Business email", row.contactEmail || "Not set"],
+    ["Business mobile", row.contactPhone || "Not set"],
+  ];
+  return (
+    <dl className="grid grid-cols-1 gap-2 rounded-xl border border-[#E4EBFF] p-3 sm:grid-cols-2">
+      {facts.map(([label, value]) => (
+        <div key={label} className="min-w-0">
+          <dt className="text-[10px] font-bold uppercase tracking-wide text-muted">{label}</dt>
+          <dd className="truncate text-[12px] font-semibold text-indigo" title={value}>
+            {value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

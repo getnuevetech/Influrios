@@ -35,6 +35,9 @@ export type AccountKpis = {
 export type AccountTableRow = {
   id: string;
   email: string;
+  phone: string | null;
+  preferredCommChannel: string;
+  stripeCustomerId: string | null;
   name: string | null;
   displayName: string;
   handle: string | null;
@@ -49,6 +52,12 @@ export type AccountTableRow = {
   locationLabel: string;
   secondaryLabel: string | null;
   contactLabel: string | null;
+  businessName: string | null;
+  businessIndustry: string | null;
+  businessGeography: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
   creatorSlug: string | null;
   identityVerified: string | null;
   kycSubmissionStatus: string | null;
@@ -136,6 +145,35 @@ function publicAccountId(role: string, id: string) {
   return `${prefix}-${short}`;
 }
 
+/** Fields an admin can match: login email, mobile, name, id, handle, and business contact. */
+export function accountSearchOr(q: string) {
+  const term = q.trim().slice(0, 120);
+  if (!term) return [];
+  const digits = term.replace(/\D/g, "");
+  const clauses: Record<string, unknown>[] = [
+    { email: { contains: term, mode: "insensitive" } },
+    { name: { contains: term, mode: "insensitive" } },
+    { id: { contains: term, mode: "insensitive" } },
+    { phone: { contains: term, mode: "insensitive" } },
+    { stripeCustomerId: { contains: term, mode: "insensitive" } },
+    { creator: { slug: { contains: term, mode: "insensitive" } } },
+    { creator: { displayName: { contains: term, mode: "insensitive" } } },
+    { creator: { locationCity: { contains: term, mode: "insensitive" } } },
+    { creator: { locationCountry: { contains: term, mode: "insensitive" } } },
+    { business: { name: { contains: term, mode: "insensitive" } } },
+    { business: { industry: { contains: term, mode: "insensitive" } } },
+    { business: { geography: { contains: term, mode: "insensitive" } } },
+    { business: { contactName: { contains: term, mode: "insensitive" } } },
+    { business: { contactEmail: { contains: term, mode: "insensitive" } } },
+    { business: { contactPhone: { contains: term, mode: "insensitive" } } },
+  ];
+  if (digits.length >= 4 && digits !== term) {
+    clauses.push({ phone: { contains: digits } });
+    clauses.push({ business: { contactPhone: { contains: digits } } });
+  }
+  return clauses;
+}
+
 export function accountsBasePath(tab: AccountsTab) {
   if (tab === "business") return "/admin/business-accounts";
   return "/admin/accounts";
@@ -219,16 +257,7 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
   if (status === "active") where.suspendedAt = null;
   if (status === "suspended") where.suspendedAt = { not: null };
   if (plan) where.planTier = plan;
-  if (q) {
-    where.OR = [
-      { email: { contains: q, mode: "insensitive" } },
-      { name: { contains: q, mode: "insensitive" } },
-      { id: { contains: q, mode: "insensitive" } },
-      { creator: { slug: { contains: q, mode: "insensitive" } } },
-      { creator: { displayName: { contains: q, mode: "insensitive" } } },
-      { business: { name: { contains: q, mode: "insensitive" } } },
-    ];
-  }
+  if (q) where.OR = accountSearchOr(q);
   if (kyc !== "all" && (filters.tab === "influencer" || filters.tab === "all")) {
     const map: Record<string, string> = {
       verified: "VERIFIED",
@@ -266,7 +295,14 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
             },
           },
           business: {
-            select: { name: true, geography: true, contactName: true, contactEmail: true, contactPhone: true },
+            select: {
+              name: true,
+              industry: true,
+              geography: true,
+              contactName: true,
+              contactEmail: true,
+              contactPhone: true,
+            },
           },
           onboardingSessions: {
             orderBy: { updatedAt: "desc" },
@@ -359,6 +395,9 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
     return {
       id: user.id,
       email: user.email,
+      phone: user.phone?.trim() || null,
+      preferredCommChannel: user.preferredCommChannel || "email",
+      stripeCustomerId: user.stripeCustomerId?.trim() || null,
       name: user.name,
       displayName,
       handle,
@@ -379,6 +418,12 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
             .filter(Boolean)
             .join(" · ") || null
         : null,
+      businessName: user.business?.name?.trim() || null,
+      businessIndustry: user.business?.industry?.trim() || null,
+      businessGeography: user.business?.geography?.trim() || null,
+      contactName: user.business?.contactName?.trim() || null,
+      contactEmail: user.business?.contactEmail?.trim() || null,
+      contactPhone: user.business?.contactPhone?.trim() || null,
       creatorSlug: user.creator?.slug ?? null,
       identityVerified: user.creator?.identityVerified ?? null,
       kycSubmissionStatus: kycHit
