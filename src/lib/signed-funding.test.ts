@@ -7,6 +7,7 @@ import {
   contractFundingIdempotencyKey,
   contractMayBeDeleted,
   contractMayBeVoided,
+  agreedFeeFromSources,
   describeDealProgress,
   readSignedTermsSnapshot,
   sameDealError,
@@ -35,6 +36,17 @@ const snapshot: SignedTermsSnapshot = {
   payoutMethod: "",
   lockedAt: "2026-11-08T00:00:00.000Z",
 };
+
+describe("agreed fee label", () => {
+  it("keeps the currency with the amount", () => {
+    const fromForm = agreedFeeFromSources({ gross: "11000", currency: "USD" });
+    assert.equal(fromForm.label, "$11,000");
+    assert.equal(fromForm.currency, "USD");
+    const fromSnapshot = agreedFeeFromSources({}, snapshot);
+    assert.match(fromSnapshot.label, /1,500/);
+    assert.equal(agreedFeeFromSources({}).label, "—");
+  });
+});
 
 describe("signed funding instruction", () => {
   it("funds the stored terms and refuses a changed amount, recipient, or milestone split", () => {

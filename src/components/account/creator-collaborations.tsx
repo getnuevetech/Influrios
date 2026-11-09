@@ -31,6 +31,7 @@ const STAGE_PILL: Record<string, string> = {
   Contract: "bg-[#F3EEFF] text-[#6D4AFF]",
   Accepted: "bg-[#E8F1FF] text-[#2F6BFF]",
   Funded: "bg-[#E8F1FF] text-[#2F6BFF]",
+  "Expecting funding": "bg-[#F4F6FB] text-[#667085]",
   Released: "bg-[#E8F8EE] text-[#178A45]",
   Match: "bg-[#F4F6FB] text-[#667085]",
 };
@@ -81,7 +82,7 @@ export function CreatorCollaborations({
     if (closedProposal(proposal.status) || proposal.status === "accepted") return false;
     return proposal.members.some((member) => member.creatorSlug === creatorSlug && member.status === "invited");
   });
-  const active = hub.pipeline.filter((row) => row.stage !== "Released" && row.stage !== "Match");
+  const active = hub.pipeline.filter((row) => row.awaitingFunding || (row.stage !== "Released" && row.stage !== "Match"));
   const completed = hub.pipeline.filter((row) => row.stage === "Released");
   const history = hub.history ?? [];
   const invitationCount = invitations.length + openProposals.length + hub.status.pending;
@@ -185,8 +186,12 @@ export function CreatorCollaborations({
                     row.obligationTotal && row.obligationTotal > 0
                       ? Math.round(((row.obligationDone ?? 0) / row.obligationTotal) * 100)
                       : Math.max(8, Math.round(((Math.max(row.stageIndex, 0) + 1) / PIPELINE_STAGES.length) * 100));
+                  const waiting = Boolean(row.awaitingFunding);
                   return (
-                    <li key={row.id} className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)_120px_90px_auto] lg:items-center">
+                    <li
+                      key={row.id}
+                      className={`grid gap-3 py-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)_120px_90px_auto] lg:items-center ${waiting ? "rounded-2xl bg-[#F8FAFC] px-3" : ""}`}
+                    >
                       <div className="flex min-w-0 items-center gap-3">
                         <Avatar label={brand} />
                         <div className="min-w-0">
@@ -206,34 +211,46 @@ export function CreatorCollaborations({
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-[#98A2B3]">Progress</p>
                         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#EEF2F7]">
-                          <div className="h-full rounded-full bg-[#6D4AFF]" style={{ width: `${pct}%` }} />
+                          <div className={`h-full rounded-full ${waiting ? "bg-[#D0D5DD]" : "bg-[#6D4AFF]"}`} style={{ width: waiting ? "0%" : `${pct}%` }} />
                         </div>
                         <p className="mt-1 text-[11px] text-[#667085]">
-                          {row.obligationTotal
-                            ? `${row.obligationDone ?? 0} of ${row.obligationTotal} deliverables`
-                            : shown.label}
+                          {waiting
+                            ? "Expecting funding"
+                            : row.obligationTotal
+                              ? `${row.obligationDone ?? 0} of ${row.obligationTotal} deliverables`
+                              : shown.label}
                         </p>
                       </div>
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-[#98A2B3]">Influencer compensation</p>
                         <p className="text-sm font-semibold text-[#1B1464]">
-                          {row.netCents != null && row.currency ? formatStoredMoney(row.netCents, row.currency) : "—"}
+                          {waiting && row.grossCents != null && row.currency
+                            ? formatStoredMoney(row.grossCents, row.currency)
+                            : row.netCents != null && row.currency
+                              ? formatStoredMoney(row.netCents, row.currency)
+                              : "—"}
                         </p>
-                        {row.grossCents != null && row.currency ? (
+                        {!waiting && row.grossCents != null && row.currency ? (
                           <p className="text-[11px] text-[#667085]">
                             Gross {formatStoredMoney(row.grossCents, row.currency)}
                             {row.feeCents != null ? ` · fee ${formatStoredMoney(row.feeCents, row.currency)}` : ""}
                           </p>
                         ) : null}
                       </div>
-                      <Link
-                        href={shown.href}
-                        className={`inline-flex justify-center rounded-full px-3 py-2 text-xs font-semibold ${
-                          shown.label === "Contract" ? "bg-[#6D4AFF] text-white" : "border border-[#E7ECF5] text-[#6D4AFF]"
-                        }`}
-                      >
-                        {shown.action}
-                      </Link>
+                      {waiting ? (
+                        <span className="inline-flex justify-center rounded-full border border-[#E7ECF5] bg-white px-3 py-2 text-center text-xs font-semibold text-[#98A2B3]">
+                          Expecting funding
+                        </span>
+                      ) : (
+                        <Link
+                          href={shown.href}
+                          className={`inline-flex justify-center rounded-full px-3 py-2 text-xs font-semibold ${
+                            shown.label === "Contract" ? "bg-[#6D4AFF] text-white" : "border border-[#E7ECF5] text-[#6D4AFF]"
+                          }`}
+                        >
+                          {shown.action}
+                        </Link>
+                      )}
                     </li>
                   );
                 })}

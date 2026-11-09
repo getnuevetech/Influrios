@@ -2,6 +2,7 @@
  * Funding a signed agreement uses the terms stored at send time.
  * The wizard form cannot substitute a different recipient, amount, currency, or milestone split.
  */
+import { formatStoredMoney, storedCurrencyCode } from "@/lib/money";
 
 export type SignedCreatorShare = { slug: string; shareBps: number };
 
@@ -307,4 +308,31 @@ export function readSignedTermsSnapshot(value: unknown): SignedTermsSnapshot | n
     payoutMethod: String(row.payoutMethod ?? "").trim(),
     lockedAt: String(row.lockedAt ?? ""),
   };
+}
+
+function sourceField(source: unknown, key: string) {
+  if (!source || typeof source !== "object" || Array.isArray(source)) return "";
+  const value = (source as Record<string, unknown>)[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/** Agreed fee for a contract card. Currency stays with the amount. */
+export function agreedFeeFromSources(source: unknown, snapshotJson?: unknown) {
+  const snapshot = readSignedTermsSnapshot(snapshotJson);
+  if (snapshot) {
+    return {
+      label: formatStoredMoney(snapshot.grossCents, snapshot.currency),
+      grossCents: snapshot.grossCents,
+      currency: snapshot.currency,
+    };
+  }
+  const currency = storedCurrencyCode(sourceField(source, "currency") || sourceField(source, "contractCurrency"));
+  const raw = sourceField(source, "gross") || sourceField(source, "creator_compensation");
+  if (!raw) return { label: "—", grossCents: null as number | null, currency };
+  const amount = Number(raw.replace(/,/g, ""));
+  if (currency && Number.isFinite(amount) && amount > 0) {
+    const grossCents = Math.round(amount * 100);
+    return { label: formatStoredMoney(grossCents, currency), grossCents, currency };
+  }
+  return { label: currency ? `${currency} ${raw}` : raw, grossCents: null as number | null, currency };
 }
