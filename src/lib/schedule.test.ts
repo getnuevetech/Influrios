@@ -1,11 +1,23 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { prisma } from "./db";
 import { listAttributionSources } from "./deal-attribution";
-import { applyMarketplaceEvent, requestPrefund, saveFundingSchedule, sweepDueRecurrences } from "./marketplace-ledger";
+import { applyMarketplaceEvent, recurringTrancheFeeCents, requestPrefund, saveFundingSchedule, sweepDueRecurrences } from "./marketplace-ledger";
 import { planSchedule, recurrenceIsDue, splitTranches } from "./schedule";
 
 describe("funding schedule rules", () => {
+  it("copies the original tranche fee instead of resolving a new one", () => {
+    const copied = recurringTrancheFeeCents({ sourceGrossCents: 375_000, sourceFeeCents: 32_000, nextGrossCents: 375_000 });
+    assert.equal(copied.ok && copied.feeCents, 32_000);
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    const start = ledger.indexOf("export async function sweepDueRecurrences");
+    const end = ledger.indexOf("export async function runAutoApprovalSweep");
+    const body = ledger.slice(start, end);
+    assert.equal(body.includes("resolveFee"), false);
+    assert.equal(body.includes("recurringTrancheFeeCents"), true);
+  });
+
   it("splits a staged gross without losing cents", () => {
     assert.deepEqual(splitTranches(10_000, 3), [3333, 3333, 3334]);
     assert.equal(splitTranches(10_000, 3)?.reduce((sum, part) => sum + part, 0), 10_000);
