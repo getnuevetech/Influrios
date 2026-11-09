@@ -328,9 +328,10 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
             {showContractLink && application.creatorSlug ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-bold text-indigo">Shortlisted</p>
+                  <p className="text-sm font-bold text-indigo">Accepted</p>
                   <p className="mt-1 text-xs text-muted">
                     Title, value, and scope from this {isInvite ? "invitation" : "request"} are carried into the agreement.
+                    This also appears in Active collaborations.
                   </p>
                 </div>
                 <Link
@@ -352,11 +353,14 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
                 >
                   Create the agreement <IconArrowRight size={14} />
                 </Link>
+                <Link href={`/collaboration/business?tab=active&deal=${encodeURIComponent(application.id)}`} className="text-sm font-bold text-violet">
+                  Open in Active collaborations
+                </Link>
               </div>
             ) : null}
             {accepted && !asBusiness ? (
               <p className="text-sm text-muted">
-                You accepted. The business assigns this campaign by shortlisting you, then sends the agreement.
+                You accepted. The business can open the agreement from Active collaborations.
               </p>
             ) : null}
 

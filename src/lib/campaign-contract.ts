@@ -102,14 +102,15 @@ function uniqueParts(parts: Array<string | null | undefined>) {
 }
 
 /** Create-contract is available after the business shortlists an accepted influencer. */
+/** An accepted influencer can open an agreement without a separate shortlist step. */
 export function contractOfferReady(input: {
   status: string;
   creatorSlug: string | null | undefined;
-  shortlistedSlugs: string[];
+  shortlistedSlugs?: string[];
 }): boolean {
   const accepted = input.status === "ACCEPTED" || input.status === "COLLABORATION_DRAFTED";
   const slug = (input.creatorSlug ?? "").trim();
-  return accepted && Boolean(slug) && input.shortlistedSlugs.includes(slug);
+  return accepted && Boolean(slug);
 }
 
 export function contractHrefFromCampaign(input: {

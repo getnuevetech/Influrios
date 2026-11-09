@@ -476,7 +476,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
       shortlistedSlugs: ws.shortlist.map((item) => item.creatorSlug),
     });
     if (!application || !ready) {
-      redirectError("Shortlist this influencer before creating a contract.", qs);
+      redirectError("The influencer has to accept before an agreement can be created.", qs);
     }
   }
 

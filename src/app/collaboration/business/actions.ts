@@ -147,10 +147,105 @@ export async function actionSaveCampaignIntent(formData: FormData) {
       ? await updateBrief(briefId, fields, ws.businessId)
       : await createBrief(fields, ws.businessId);
   revalidateHub();
-  // Close the edit form after save — reopen only via an intentional Edit link.
-  redirect(
-    `${HUB}?suggestions=1&mode=${mode}&savedBrief=${encodeURIComponent(brief.id)}#suggestions`,
-  );
+  redirect(`/collaboration/business/request/${encodeURIComponent(brief.id)}?saved=draft`);
+}
+
+export async function actionWorkspaceRequest(formData: FormData) {
+  const { account, ws } = await requireBusinessAccount();
+  const intent = String(formData.get("submitIntent") ?? "draft");
+  const briefId = String(formData.get("briefId") ?? "").trim();
+  const back = briefId ? `/collaboration/business/request/${encodeURIComponent(briefId)}` : "/collaboration/business/request/new";
+  let fields;
+  try {
+    const locationParts = [
+      String(formData.get("locationCity") ?? ""),
+      String(formData.get("locationState") ?? ""),
+      String(formData.get("locationCountry") ?? ""),
+    ]
+      .map((part) => part.trim())
+      .filter(Boolean);
+    fields = buildCampaignIntentFields({
+      title: String(formData.get("title") ?? ""),
+      goal: String(formData.get("goal") ?? ""),
+      specialty: String(formData.get("specialty") ?? ""),
+      budget: String(formData.get("budget") ?? ""),
+      budgetCurrency: String(formData.get("budgetCurrency") ?? ""),
+      location: locationParts.join(", ") || "Remote",
+      platform: String(formData.get("platform") ?? ""),
+      audience: String(formData.get("audience") ?? ""),
+      collabType: String(formData.get("collabType") ?? ""),
+      timeframe: String(formData.get("timeframe") ?? ""),
+      summary: String(formData.get("summary") ?? ""),
+      deliverables: String(formData.get("deliverables") ?? ""),
+      responseDeadline: String(formData.get("responseDeadline") ?? ""),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the request.";
+    redirect(`${back}?error=${encodeURIComponent(message)}`);
+  }
+  const mode = resolveCampaignIntentSaveMode({
+    briefId,
+    ownedBriefIds: ws.briefs.map((brief) => brief.id),
+  });
+  if (mode === "update") {
+    const existing = ws.briefs.find((item) => item.id === briefId);
+    if (existing?.status === "closed") {
+      redirect(`${back}?error=${encodeURIComponent("This request is under contract and can no longer be edited.")}`);
+    }
+  }
+  const brief = mode === "update" ? await updateBrief(briefId, fields, ws.businessId) : await createBrief(fields, ws.businessId);
+  const slugs = [...new Set(formData.getAll("creatorSlug").map((value) => String(value).trim()).filter(Boolean))];
+  if (intent === "invite") {
+    if (slugs.length < 1) {
+      redirect(`/collaboration/business/request/${encodeURIComponent(brief.id)}?error=${encodeURIComponent("Choose at least one influencer before sending invitations.")}`);
+    }
+    const invited = await inviteCreatorsIndependently({
+      workspaceId: ws.businessId,
+      actorUserId: account.id,
+      creatorSlugs: slugs,
+      briefId: brief.id,
+      offerText: `${fields.budgetCurrency} ${fields.budget}`.trim(),
+      deliverables: fields.deliverables || fields.summary || fields.goal,
+      responseDeadline: fields.responseDeadline ? new Date(fields.responseDeadline) : null,
+      note: fields.title,
+    });
+    revalidateHub();
+    if (!invited.ok) {
+      redirect(`/collaboration/business/request/${encodeURIComponent(brief.id)}?error=${encodeURIComponent(invited.error)}`);
+    }
+    redirect(`${HUB}?tab=requests&saved=invites`);
+  }
+  if (intent === "publish") {
+    try {
+      const existing = (await listWorkspaceBusinessRequests(ws.businessId)).find((row) => row.briefId === brief.id);
+      await upsertBusinessRequest({
+        id: existing?.id,
+        brand: brief.title.trim(),
+        category: brief.specialty || brief.goal || "general",
+        budget: brief.budget,
+        location: brief.location.trim() || "Remote",
+        tags: [brief.goal, brief.platform, brief.specialty].filter(Boolean),
+        summary: brief.summary.trim() || brief.deliverables.trim() || brief.title.trim(),
+        lookingFor: brief.specialty.trim() ? `${specialtyLabel(brief.specialty)} influencers` : brief.title.trim(),
+        status: "published",
+        sortOrder: 0,
+        workspaceId: ws.businessId,
+        briefId: brief.id,
+        currency: brief.budgetCurrency,
+        deliverableSummary: brief.deliverables.trim() || brief.summary.trim() || brief.goal,
+        platforms: brief.platform ? [brief.platform] : [],
+        applicationDeadline: brief.responseDeadline ? new Date(`${brief.responseDeadline}T00:00:00.000Z`) : null,
+      });
+      await activateBrief(brief.id, ws.businessId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not publish this request.";
+      redirect(`/collaboration/business/request/${encodeURIComponent(brief.id)}?error=${encodeURIComponent(message)}`);
+    }
+    revalidateHub();
+    redirect(`${HUB}?tab=requests&saved=published`);
+  }
+  revalidateHub();
+  redirect(`/collaboration/business/request/${encodeURIComponent(brief.id)}?saved=draft`);
 }
 
 export async function actionPublishCampaign(formData: FormData) {
@@ -195,7 +290,7 @@ export async function actionPublishCampaign(formData: FormData) {
   }
   revalidateHub();
   revalidatePath("/business/campaigns");
-  redirect(`${HUB}?published=1#drafts`);
+  redirect(`${HUB}?tab=requests&saved=published`);
 }
 
 /** W2.3 — re-rank suggestions for an existing Campaign Intent without creating a new brief. */

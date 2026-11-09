@@ -95,10 +95,10 @@ describe("campaign-contract helpers", () => {
     assert.equal(preferContractField("A different title", "Summer Glow"), "A different title");
   });
 
-  it("opens create-contract only after the business shortlists an accepted influencer", () => {
-    assert.equal(contractOfferReady({ status: "ACCEPTED", creatorSlug: "maya", shortlistedSlugs: [] }), false);
+  it("opens an agreement when the influencer has accepted, without a shortlist", () => {
+    assert.equal(contractOfferReady({ status: "ACCEPTED", creatorSlug: "maya", shortlistedSlugs: [] }), true);
     assert.equal(contractOfferReady({ status: "VIEWED", creatorSlug: "maya", shortlistedSlugs: ["maya"] }), false);
-    assert.equal(contractOfferReady({ status: "ACCEPTED", creatorSlug: "maya", shortlistedSlugs: ["maya"] }), true);
+    assert.equal(contractOfferReady({ status: "ACCEPTED", creatorSlug: "maya" }), true);
   });
 
   it("locks closed campaigns from further edits", () => {
