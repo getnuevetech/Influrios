@@ -37,7 +37,7 @@ import {
 import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal-attribution";
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines, storedMinorDigits } from "@/lib/fx-share";
-import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
+import { ensureSettlementDefaults } from "@/lib/settlement";
 import { corridorPrefundSnapshot, storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { decidePaymentRoute } from "@/lib/payment-route";
 import { storedCurrencyCode } from "@/lib/money";
@@ -1050,7 +1050,6 @@ export async function sweepDueRecurrences(now = new Date()) {
   ]);
   const shares = templates.map((row) => row.shareBps);
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;
-  const shareSnapshot = await activeShareSnapshot();
   for (const row of confirmed) {
     if (row.seriesStopped) continue;
     if (!row.scheduleId || row.trancheIndex >= row.trancheCount) continue;
@@ -1106,6 +1105,7 @@ export async function sweepDueRecurrences(now = new Date()) {
       promotionChannel: "",
     }).catch(() => null);
     const feeCents = convertFee(quote?.feeCents ?? 0, fx);
+    const shareSnapshot = readShareSnapshot(row.shareSnapshotJson) ?? [{ label: "Influencer", shareBps: 10_000 }];
     const suffix = ` · ${nextIndex} of ${row.trancheCount}`;
     const baseTitle = row.title.replace(/ · \d+ of \d+$/, "");
     try {

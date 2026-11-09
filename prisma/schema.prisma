@@ -1809,6 +1809,26 @@ model CollaborationLaunchGate {
   updatedAt                   DateTime @updatedAt
 }
 
+/// One provider command per agreement version and operation. The row is written before any provider call.
+model ProviderCommand {
+  id               String    @id @default(cuid())
+  operationKey     String    @unique
+  fundingId        String
+  milestoneId      String?
+  agreementVersion Int       @default(1)
+  operation        String
+  amountCents      Int
+  currency         String
+  status           String    @default("pending")
+  attemptCount     Int       @default(0)
+  providerRef      String    @default("")
+  createdAt        DateTime  @default(now())
+  dispatchedAt     DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  @@index([fundingId, operation])
+}
+
 /// Protected payments and the word "escrow" are jurisdiction flags, not code switches.
 /// W3.3 / Dev Addendum §6 — full capability matrix; flags override features (PA007).
 model CollaborationJurisdiction {
