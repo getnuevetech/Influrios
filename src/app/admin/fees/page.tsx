@@ -26,6 +26,7 @@ import {
   RELATIONSHIP_SOURCE_CONDITIONS,
   SERVICE_LEVEL_LABELS,
   SERVICE_LEVELS,
+  serviceLevelFeeCoverage,
   type CollaborationFeeRule,
 } from "@/lib/collaboration-fees";
 
@@ -329,9 +330,33 @@ export default async function AdminFeesPage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-lg font-bold text-indigo">Active rules</h2>
           <p className="mt-1 text-xs text-muted">
-            Existing rules are collapsed after save. Use <span className="font-semibold">Add a fee rule</span>{" "}
-            below to create a new matrix row.
+            A contract service level uses one Business Platform Fee and one Influencer Platform Fee. A legacy or split
+            rule is not applied. Existing rules are collapsed after save.
           </p>
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-[#E4EBFF] bg-white">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs text-muted">
+              <tr>
+                <th className="px-3 py-2 font-semibold">Service level</th>
+                <th className="px-3 py-2 font-semibold">Business fee rule</th>
+                <th className="px-3 py-2 font-semibold">Influencer fee rule</th>
+              </tr>
+            </thead>
+            <tbody>
+              {serviceLevelFeeCoverage(store.rules).map((row) => (
+                <tr key={row.serviceLevel} className="border-t border-[#E4EBFF]">
+                  <td className="px-3 py-2 font-semibold text-indigo">{row.label}</td>
+                  <td className="px-3 py-2">
+                    {row.business.length === 0 ? "Missing" : row.business.map((rule) => `${rule.name} v${rule.version}`).join(", ")}
+                  </td>
+                  <td className="px-3 py-2">
+                    {row.influencer.length === 0 ? "Missing" : row.influencer.map((rule) => `${rule.name} v${rule.version}`).join(", ")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
         {store.rules
           .slice()
@@ -340,7 +365,7 @@ export default async function AdminFeesPage({ searchParams }: Props) {
             <AdminCollapse
               key={rule.id}
               title={rule.name}
-              subtitle={`${rule.active ? "Active" : "Inactive"} · v${rule.version} · ${rule.jurisdiction}/${rule.serviceLevel} · priority ${rule.priority}`}
+              subtitle={`${rule.active ? "Active" : "Inactive"} · ${FEE_PURPOSE_LABELS[rule.purpose] ?? rule.purpose} · ${rule.jurisdiction}/${rule.serviceLevel} · v${rule.version}`}
             >
               <FeeRuleForm rule={rule} canManage={canManage} />
               {canManage ? (
@@ -609,7 +634,7 @@ function FeeRuleForm({
           <option value="split">Legacy split, not applied to either side</option>
         </select>
         <span className="mt-1 block font-normal">
-          Each side needs its own rule. A split rule is not copied onto both sides.
+          Business Platform Fee uses Business. Influencer Platform Fee uses Influencer. The contract service level must match this rule, or the rule must be set to any service level.
         </span>
       </label>
       <label className="text-xs font-semibold text-muted sm:col-span-3">

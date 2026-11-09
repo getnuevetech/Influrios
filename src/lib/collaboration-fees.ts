@@ -74,6 +74,35 @@ export const SERVICE_LEVEL_LABELS: Record<ServiceLevel, string> = {
   managed_campaign: "Managed campaign",
 };
 
+export type ServiceLevelFeeCoverage = {
+  serviceLevel: ServiceLevel;
+  label: string;
+  business: { id: string; name: string; version: number }[];
+  influencer: { id: string; name: string; version: number }[];
+};
+
+/** A service level can be quoted only when both platform-fee purposes match it. Legacy rules do not count. */
+export function serviceLevelFeeCoverage(rules: CollaborationFeeRule[]): ServiceLevelFeeCoverage[] {
+  return SERVICE_LEVELS.map((serviceLevel) => {
+    const covers = (purpose: FeePurpose, payer: FeePayer) =>
+      rules
+        .filter(
+          (rule) =>
+            rule.active &&
+            rule.purpose === purpose &&
+            rule.payer === payer &&
+            (rule.serviceLevel === serviceLevel || rule.serviceLevel === "*"),
+        )
+        .map((rule) => ({ id: rule.id, name: rule.name, version: rule.version }));
+    return {
+      serviceLevel,
+      label: SERVICE_LEVEL_LABELS[serviceLevel],
+      business: covers("business_platform_fee", "brand"),
+      influencer: covers("influencer_platform_fee", "creator"),
+    };
+  });
+}
+
 export const FEE_TYPE_LABELS: Record<FeeType, string> = {
   platform_service: "Platform Service Fee",
   collaboration: "Collaboration Fee",
@@ -823,6 +852,15 @@ export function explainFeeApplication(rule: CollaborationFeeRule, basisCents: nu
   const capApplied = rule.maxFeeCents != null && afterFloor > rule.maxFeeCents;
   const feeCents = rule.maxFeeCents != null ? Math.min(afterFloor, rule.maxFeeCents) : afterFloor;
   return { feeCents, floorApplied, capApplied, rounding: "half_away_from_zero" as const };
+}
+
+export function feeRuleRateLabel(rule: Pick<CollaborationFeeRule, "method" | "percentBps" | "fixedCents">) {
+  if (rule.method === "percent") return `${(rule.percentBps / 100).toFixed(2)}% of the gross influencer compensation`;
+  if (rule.method === "fixed") return "a fixed amount";
+  if (rule.method === "percent_plus_fixed") return `${(rule.percentBps / 100).toFixed(2)}% plus a fixed amount`;
+  if (rule.method === "waived") return "waived";
+  if (rule.method === "tiered") return "tiered on the gross influencer compensation";
+  return "an enterprise amount";
 }
 
 export function pickWinningRule(rules: CollaborationFeeRule[], ctx: FeeResolveContext, asOf: string) {
