@@ -38,6 +38,8 @@ const brief: CampaignBrief = {
   location: "",
   platform: "",
   summary: "",
+  deliverables: "",
+  responseDeadline: null,
   createdAt: "2026-10-12T00:00:00.000Z",
   status: "draft",
 };

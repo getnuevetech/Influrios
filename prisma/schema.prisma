@@ -1056,6 +1056,10 @@ model BusinessBrief {
   location        String
   platform        String
   summary         String
+  /// Deliverables the business entered on the campaign. Shown again when the draft is edited.
+  deliverables    String               @default("")
+  /// Response deadline entered on the campaign. Null until a date is saved.
+  responseDeadline DateTime?
   status          String               @default("active")
   /// How many influencers this campaign can accept before it stops recruiting.
   creatorSlots    Int                  @default(1)

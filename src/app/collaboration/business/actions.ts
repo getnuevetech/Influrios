@@ -122,6 +122,8 @@ export async function actionSaveCampaignIntent(formData: FormData) {
       collabType: String(formData.get("collabType") ?? ""),
       timeframe: String(formData.get("timeframe") ?? ""),
       summary: String(formData.get("summary") ?? ""),
+      deliverables: String(formData.get("deliverables") ?? ""),
+      responseDeadline: String(formData.get("responseDeadline") ?? ""),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the campaign intent.";
@@ -149,6 +151,51 @@ export async function actionSaveCampaignIntent(formData: FormData) {
   redirect(
     `${HUB}?suggestions=1&mode=${mode}&savedBrief=${encodeURIComponent(brief.id)}#suggestions`,
   );
+}
+
+export async function actionPublishCampaign(formData: FormData) {
+  const { ws } = await requireBusinessAccount();
+  const briefId = String(formData.get("briefId") ?? "").trim();
+  const brief = ws.briefs.find((item) => item.id === briefId);
+  if (!brief) {
+    redirect(`${HUB}?error=${encodeURIComponent("Save this campaign before publishing it.")}#drafts`);
+  }
+  if (brief.status === "closed") {
+    redirect(`${HUB}?error=${encodeURIComponent("This campaign is under contract and can no longer be published.")}#drafts`);
+  }
+  if (!brief.title.trim() || !brief.budget.trim()) {
+    redirect(
+      `${HUB}?intent=${encodeURIComponent(brief.id)}&error=${encodeURIComponent("Add a title and a budget before publishing.")}#suggestions`,
+    );
+  }
+  try {
+    const existing = (await listWorkspaceBusinessRequests(ws.businessId)).find((row) => row.briefId === brief.id);
+    await upsertBusinessRequest({
+      id: existing?.id,
+      brand: brief.title.trim(),
+      category: brief.specialty || brief.goal || "general",
+      budget: brief.budget,
+      location: brief.location.trim() || "Remote",
+      tags: [brief.goal, brief.platform, brief.specialty, brief.collabType].filter(Boolean),
+      summary: brief.summary.trim() || brief.deliverables.trim() || brief.title.trim(),
+      lookingFor: brief.specialty.trim() ? `${specialtyLabel(brief.specialty)} influencers` : brief.title.trim(),
+      status: "published",
+      sortOrder: 0,
+      workspaceId: ws.businessId,
+      briefId: brief.id,
+      currency: brief.budgetCurrency,
+      deliverableSummary: brief.deliverables.trim() || brief.summary.trim() || brief.goal,
+      platforms: brief.platform ? [brief.platform] : [],
+      applicationDeadline: brief.responseDeadline ? new Date(`${brief.responseDeadline}T00:00:00.000Z`) : null,
+    });
+    await activateBrief(brief.id, ws.businessId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not publish this campaign.";
+    redirect(`${HUB}?intent=${encodeURIComponent(brief.id)}&error=${encodeURIComponent(message)}#suggestions`);
+  }
+  revalidateHub();
+  revalidatePath("/business/campaigns");
+  redirect(`${HUB}?published=1#drafts`);
 }
 
 /** W2.3 — re-rank suggestions for an existing Campaign Intent without creating a new brief. */

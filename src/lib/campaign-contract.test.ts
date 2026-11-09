@@ -55,6 +55,8 @@ describe("campaign-contract helpers", () => {
         location: "US",
         platform: "Instagram",
         summary: "3 posts",
+        deliverables: "",
+        responseDeadline: null,
         createdAt: new Date().toISOString(),
         status: "active",
       },

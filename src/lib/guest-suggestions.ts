@@ -51,6 +51,8 @@ export function buildGuestSuggestionBrief(input: GuestSuggestionInput): Campaign
     location: (input.location ?? "Global").trim() || "Global",
     platform: (input.platform ?? "INSTAGRAM").trim() || "INSTAGRAM",
     summary: "Guest collaboration suggestion sample",
+    deliverables: "",
+    responseDeadline: null,
     createdAt: new Date(0).toISOString(),
     status: "draft",
   };

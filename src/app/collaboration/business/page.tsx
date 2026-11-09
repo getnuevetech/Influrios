@@ -23,6 +23,7 @@ import {
   actionInviteCreatorToRequest,
   actionInviteSelectedCreators,
   actionPostBusinessRequest,
+  actionPublishCampaign,
   actionRefreshCampaignSuggestions,
   actionRemoveShortlist,
   actionSaveCampaignIntent,
@@ -264,7 +265,11 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-indigo">{brief.title}</p>
                       <p className="text-[11px] text-muted">
-                        {[brief.goal, brief.budget ? `${brief.budgetCurrency} ${brief.budget}` : ""]
+                        {[
+                          brief.goal,
+                          brief.budget ? `${brief.budgetCurrency} ${brief.budget}` : "",
+                          brief.responseDeadline ? `Respond by ${brief.responseDeadline}` : "",
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
@@ -281,15 +286,15 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#suggestions`}
                             className="text-xs font-bold text-violet hover:underline"
                           >
-                            Save
+                            Edit
                           </Link>
                           {hub.publishedBriefIds.includes(brief.id) ? null : (
-                            <Link
-                              href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#publish`}
-                              className="text-xs font-bold text-indigo hover:underline"
-                            >
-                              Publish
-                            </Link>
+                            <form action={actionPublishCampaign}>
+                              <input type="hidden" name="briefId" value={brief.id} />
+                              <button type="submit" className="text-xs font-bold text-indigo hover:underline">
+                                Publish
+                              </button>
+                            </form>
                           )}
                         </>
                       )}
@@ -453,6 +458,25 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
                 />
               </label>
+              <label className="block text-xs font-bold text-indigo sm:col-span-2 lg:col-span-3">
+                Deliverables
+                <textarea
+                  name="deliverables"
+                  rows={3}
+                  placeholder="What the influencer will create and send"
+                  defaultValue={hub.intentBrief?.deliverables ?? ""}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
+                />
+              </label>
+              <label className="block text-xs font-bold text-indigo">
+                Response deadline
+                <input
+                  type="date"
+                  name="responseDeadline"
+                  defaultValue={hub.intentBrief?.responseDeadline ?? ""}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal"
+                />
+              </label>
               <div className="flex items-end">
                 <button type="submit" className="btn-primary w-full !py-2.5 text-sm">
                   Save campaign <IconArrowRight size={14} />
@@ -598,11 +622,11 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 </label>
                 <label className="block text-sm font-semibold text-indigo">
                   Deliverables
-                  <textarea name="deliverables" rows={2} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
+                  <textarea name="deliverables" rows={2} defaultValue={hub.intentBrief?.deliverables ?? ""} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
                 </label>
                 <label className="block text-sm font-semibold text-indigo">
                   Response deadline
-                  <input type="date" name="responseDeadline" className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
+                  <input type="date" name="responseDeadline" defaultValue={hub.intentBrief?.responseDeadline ?? ""} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
                 </label>
                 <button type="submit" className="btn-primary !py-2 text-sm">
                   Send private invitations

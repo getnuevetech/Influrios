@@ -26,6 +26,8 @@ export type CampaignBrief = {
   location: string;
   platform: string;
   summary: string;
+  deliverables: string;
+  responseDeadline: string | null;
   createdAt: string;
   status: "draft" | "active" | "closed";
 };
@@ -180,6 +182,8 @@ function mapWorkspace(row: WorkspaceRow): BusinessWorkspace {
       location: brief.location,
       platform: brief.platform,
       summary: brief.summary,
+      deliverables: brief.deliverables,
+      responseDeadline: brief.responseDeadline ? brief.responseDeadline.toISOString().slice(0, 10) : null,
       createdAt: brief.createdAt.toISOString(),
       status: asBriefStatus(brief.status),
     })),
@@ -454,6 +458,8 @@ export async function createBrief(
       location: input.location,
       platform: input.platform,
       summary: input.summary,
+      deliverables: input.deliverables ?? "",
+      responseDeadline: input.responseDeadline ? new Date(input.responseDeadline) : null,
       status: input.status ?? "active",
     },
   });
@@ -484,6 +490,13 @@ export async function updateBrief(
       location: input.location,
       platform: input.platform,
       summary: input.summary,
+      deliverables: input.deliverables ?? existing.deliverables,
+      responseDeadline:
+        input.responseDeadline === undefined
+          ? existing.responseDeadline
+          : input.responseDeadline
+            ? new Date(input.responseDeadline)
+            : null,
       status: input.status ?? existing.status,
     },
   });
@@ -502,6 +515,8 @@ function presentBrief(brief: {
   location: string;
   platform: string;
   summary: string;
+  deliverables: string;
+  responseDeadline: Date | null;
   createdAt: Date;
   status: string;
 }): CampaignBrief {
@@ -517,6 +532,8 @@ function presentBrief(brief: {
     location: brief.location,
     platform: brief.platform,
     summary: brief.summary,
+    deliverables: brief.deliverables,
+    responseDeadline: brief.responseDeadline ? brief.responseDeadline.toISOString().slice(0, 10) : null,
     createdAt: brief.createdAt.toISOString(),
     status: asBriefStatus(brief.status),
   };
@@ -561,10 +578,17 @@ export function buildCampaignIntentFields(input: {
   collabType?: string;
   timeframe?: string;
   summary?: string;
+  deliverables?: string;
+  responseDeadline?: string;
 }) {
   const title = (input.title ?? "").trim();
   if (!title) throw new Error("A campaign title is required.");
   const summary = (input.summary ?? "").trim() || (input.audience ?? "").trim();
+  const deadlineRaw = (input.responseDeadline ?? "").trim();
+  const deadline = deadlineRaw ? new Date(`${deadlineRaw}T00:00:00.000Z`) : null;
+  if (deadlineRaw && (!deadline || Number.isNaN(deadline.getTime()))) {
+    throw new Error("Enter a valid response deadline.");
+  }
   return {
     title,
     goal: (input.goal ?? "").trim(),
@@ -576,6 +600,8 @@ export function buildCampaignIntentFields(input: {
     location: (input.location ?? "").trim(),
     platform: (input.platform ?? "").trim(),
     summary,
+    deliverables: (input.deliverables ?? "").trim(),
+    responseDeadline: deadline ? deadline.toISOString() : null,
     status: "draft" as const,
   };
 }
