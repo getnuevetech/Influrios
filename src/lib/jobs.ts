@@ -585,6 +585,8 @@ export async function notifyCollabParties(input: {
 
 /** W3.11 — remind businesses when a review window is about to close. */
 export async function runReviewDeadlineSweep(now = new Date()) {
+  const { loadProcessTimings } = await import("@/lib/process-timing");
+  const leadHours = (await loadProcessTimings().catch(() => null))?.reviewDeadlineLeadHours;
   const due = await prisma.fundingMilestone.findMany({
     where: { status: "submitted", autoApproveAt: { not: null, gt: now } },
     include: { funding: true },
@@ -597,6 +599,7 @@ export async function runReviewDeadlineSweep(now = new Date()) {
         milestoneStatus: milestone.status,
         autoApproveAt: milestone.autoApproveAt,
         now,
+        leadHours,
       })
     ) {
       continue;
@@ -648,7 +651,9 @@ export async function enqueueReviewDeadlineSweep() {
 
 /** Dev §16 — remind parties when an open dispute is past the SLA window. */
 export async function runDisputeSlaSweep(now = new Date()) {
-  const { shouldRemindDisputeSla, DEFAULT_DISPUTE_SLA_HOURS } = await import("@/lib/collab-ops-jobs");
+  const { shouldRemindDisputeSla } = await import("@/lib/collab-ops-jobs");
+  const { loadProcessTimings } = await import("@/lib/process-timing");
+  const slaHours = (await loadProcessTimings().catch(() => null))?.disputeSlaHours;
   const open = await prisma.milestoneDispute.findMany({
     where: { status: { in: ["open", "under_review"] } },
     include: { milestone: true, funding: true },
@@ -662,7 +667,7 @@ export async function runDisputeSlaSweep(now = new Date()) {
         status: dispute.status,
         openedAt: dispute.createdAt,
         now,
-        slaHours: DEFAULT_DISPUTE_SLA_HOURS,
+        slaHours,
       })
     ) {
       continue;
@@ -679,7 +684,7 @@ export async function runDisputeSlaSweep(now = new Date()) {
       fundingId: dispute.fundingId,
       kind: "dispute_sla_reminder",
       milestone: dispute.milestone?.title,
-      detail: `${dispute.reasonLabel} · open since ${dispute.createdAt.toISOString().slice(0, 10)} (${DEFAULT_DISPUTE_SLA_HOURS}h SLA)`,
+      detail: `${dispute.reasonLabel} · open since ${dispute.createdAt.toISOString().slice(0, 10)} (${slaHours ?? "default"}h SLA)`,
       processNow: false,
     });
     if (result.count > 0) {
@@ -715,7 +720,9 @@ export async function enqueueDisputeSlaSweep() {
 
 /** Dev §16 — warn ops when provider-held funds sit past the hold warning window. */
 export async function runProviderHoldWarnSweep(now = new Date()) {
-  const { shouldWarnProviderHold, DEFAULT_PROVIDER_HOLD_WARN_HOURS } = await import("@/lib/collab-ops-jobs");
+  const { shouldWarnProviderHold } = await import("@/lib/collab-ops-jobs");
+  const { loadProcessTimings } = await import("@/lib/process-timing");
+  const warnHours = (await loadProcessTimings().catch(() => null))?.providerHoldWarnHours;
   const held = await prisma.collaborationFunding.findMany({
     where: { status: "held" },
     include: {
@@ -732,7 +739,7 @@ export async function runProviderHoldWarnSweep(now = new Date()) {
         fundingStatus: funding.status,
         heldAt,
         now,
-        warnHours: DEFAULT_PROVIDER_HOLD_WARN_HOURS,
+        warnHours,
       })
     ) {
       continue;
@@ -749,7 +756,7 @@ export async function runProviderHoldWarnSweep(now = new Date()) {
     const result = await notifyCollabFundingEvent({
       fundingId: funding.id,
       kind: "provider_hold_period_warning",
-      detail: `Held for ${ageHours}h (warn after ${DEFAULT_PROVIDER_HOLD_WARN_HOURS}h). Gross ${funding.grossCents}¢ ${funding.currency}.`,
+      detail: `Held for ${ageHours}h (warn after ${warnHours ?? "default"}h). Gross ${funding.grossCents}¢ ${funding.currency}.`,
       processNow: false,
     });
     if (result.count > 0) {
@@ -788,11 +795,9 @@ export async function enqueueProviderHoldWarnSweep() {
  * Resets payout_failed → approved after backoff when no release ledger exists (no double-pay).
  */
 export async function runFailedPayoutRetrySweep(now = new Date()) {
-  const {
-    shouldRetryFailedPayout,
-    DEFAULT_FAILED_PAYOUT_BACKOFF_HOURS,
-    DEFAULT_FAILED_PAYOUT_MAX_ATTEMPTS,
-  } = await import("@/lib/collab-ops-jobs");
+  const { shouldRetryFailedPayout } = await import("@/lib/collab-ops-jobs");
+  const { loadProcessTimings } = await import("@/lib/process-timing");
+  const payoutTiming = await loadProcessTimings().catch(() => null);
   const failed = await prisma.fundingMilestone.findMany({
     where: { status: "payout_failed" },
     include: {
@@ -811,8 +816,8 @@ export async function runFailedPayoutRetrySweep(now = new Date()) {
         payoutFailedAt: milestone.payoutFailedAt,
         payoutRetryCount: milestone.payoutRetryCount,
         now,
-        backoffHours: DEFAULT_FAILED_PAYOUT_BACKOFF_HOURS,
-        maxAttempts: DEFAULT_FAILED_PAYOUT_MAX_ATTEMPTS,
+        backoffHours: payoutTiming?.failedPayoutBackoffHours,
+        maxAttempts: payoutTiming?.failedPayoutMaxAttempts,
       })
     ) {
       continue;
@@ -868,8 +873,9 @@ export async function enqueueFailedPayoutRetrySweep() {
 
 /** Dev §16 — stale funding intents + unbalanced held ledgers. */
 export async function runFundingReconciliationSweep(now = new Date()) {
-  const { shouldFlagStaleFundingIntent, shouldFlagLedgerMismatch, DEFAULT_STALE_FUNDING_HOURS } =
-    await import("@/lib/collab-ops-jobs");
+  const { shouldFlagStaleFundingIntent, shouldFlagLedgerMismatch } = await import("@/lib/collab-ops-jobs");
+  const { loadProcessTimings } = await import("@/lib/process-timing");
+  const staleHours = (await loadProcessTimings().catch(() => null))?.staleFundingHours;
   const { ledgerMovements, reconcileLedger } = await import("@/lib/ledger");
   const awaiting = await prisma.collaborationFunding.findMany({
     where: { status: "awaiting_provider" },
@@ -889,7 +895,7 @@ export async function runFundingReconciliationSweep(now = new Date()) {
         fundingStatus: funding.status,
         createdAt: funding.createdAt,
         now,
-        staleHours: DEFAULT_STALE_FUNDING_HOURS,
+        staleHours,
       })
     ) {
       continue;
@@ -917,7 +923,7 @@ export async function runFundingReconciliationSweep(now = new Date()) {
     await notifyCollabFundingEvent({
       fundingId: funding.id,
       kind: "provider_jurisdiction_limitation",
-      detail: `Stale funding intent still awaiting provider after ${DEFAULT_STALE_FUNDING_HOURS}h.`,
+      detail: `Stale funding intent still awaiting provider after ${staleHours ?? "default"}h.`,
       processNow: false,
     });
   }

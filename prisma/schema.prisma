@@ -1793,6 +1793,20 @@ model MarketplaceSettings {
   killFeeFixedCents        Int      @default(0)
   /// New payout profiles use this code when the country has no corridor.
   payoutFallbackCurrency   String   @default("USD")
+  /// Signed quote lifetime. A quote already signed keeps the expiry it stored.
+  quoteValidHours              Int    @default(168)
+  /// Pending provider command with no reference becomes unknown after this many minutes.
+  unknownCommandMinutes        Int    @default(15)
+  /// Failed provider commands may be sent again until this many attempts.
+  providerCommandMaxAttempts   Int    @default(3)
+  disputeSlaHours              Int    @default(72)
+  providerHoldWarnHours        Int    @default(168)
+  /// Comma-separated hours between failed payout retries.
+  failedPayoutBackoffHours     String @default("1,6,24,72")
+  failedPayoutMaxAttempts      Int    @default(4)
+  staleFundingHours            Int    @default(48)
+  reviewDeadlineLeadHours      Int    @default(12)
+  teamProposalLifeDays         Int    @default(14)
   updatedAt                DateTime @updatedAt
 }
 

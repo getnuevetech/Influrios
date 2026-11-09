@@ -317,6 +317,7 @@ export function buildSignedCommercialSnapshot(input: {
   milestoneCount: number;
   quotedAt?: Date;
   amountInputMode?: "gross_influencer_compensation" | "all_in_budget";
+  validForMs?: number;
 }): SignedCommercialSnapshot | { ok: false; error: string } {
   const tax = input.tax ?? { status: "unresolved" as const, lines: [] };
   if (tax.status === "approved_zero" && tax.lines.some((line) => line.amountCents !== 0)) {
@@ -336,6 +337,10 @@ export function buildSignedCommercialSnapshot(input: {
     return { ok: false, error: "Taxes and fees reduce the influencer payout below zero. Nothing was signed." };
   }
   const quotedAt = input.quotedAt ?? new Date();
+  const validForMs =
+    Number.isInteger(input.validForMs) && input.validForMs != null && input.validForMs > 0
+      ? input.validForMs
+      : QUOTE_VALID_MS;
   return {
     agreementVersion: input.agreementVersion ?? 1,
     amountInputMode: input.amountInputMode ?? "gross_influencer_compensation",
@@ -369,7 +374,7 @@ export function buildSignedCommercialSnapshot(input: {
     taxLines: tax.lines,
     taxStatus: tax.status,
     milestoneCount: input.milestoneCount,
-    validUntil: new Date(quotedAt.getTime() + QUOTE_VALID_MS).toISOString(),
+    validUntil: new Date(quotedAt.getTime() + validForMs).toISOString(),
     feeState: "reserved",
   };
 }

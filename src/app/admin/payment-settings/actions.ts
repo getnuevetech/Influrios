@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { saveCanonicalCountryRoute } from "@/lib/canonical-country-route";
 import { recordProviderStagingTraces, saveDeferredFundingSwitches, saveLaunchApprovals } from "@/lib/launch-gate";
+import { parseBackoffHours, saveProcessTimings } from "@/lib/process-timing";
 
 export async function actionSaveCanonicalCountryRoute(formData: FormData) {
   const session = await requireAdminAction("collab_finance.manage");
@@ -77,6 +78,65 @@ export async function actionSaveDeferredFunding(formData: FormData) {
   }
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?saved=funding-switches");
+}
+
+function whole(formData: FormData, name: string) {
+  const value = Number(String(formData.get(name) ?? "").trim());
+  return Number.isInteger(value) ? value : null;
+}
+
+export async function actionSaveProcessTimings(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  const backoff = parseBackoffHours(String(formData.get("failedPayoutBackoffHours") ?? ""));
+  const reviewWindowHours = whole(formData, "reviewWindowHours");
+  const quoteValidHours = whole(formData, "quoteValidHours");
+  const unknownCommandMinutes = whole(formData, "unknownCommandMinutes");
+  const providerCommandMaxAttempts = whole(formData, "providerCommandMaxAttempts");
+  const disputeSlaHours = whole(formData, "disputeSlaHours");
+  const providerHoldWarnHours = whole(formData, "providerHoldWarnHours");
+  const failedPayoutMaxAttempts = whole(formData, "failedPayoutMaxAttempts");
+  const staleFundingHours = whole(formData, "staleFundingHours");
+  const reviewDeadlineLeadHours = whole(formData, "reviewDeadlineLeadHours");
+  const teamProposalLifeDays = whole(formData, "teamProposalLifeDays");
+  if (
+    !backoff ||
+    reviewWindowHours == null ||
+    quoteValidHours == null ||
+    unknownCommandMinutes == null ||
+    providerCommandMaxAttempts == null ||
+    disputeSlaHours == null ||
+    providerHoldWarnHours == null ||
+    failedPayoutMaxAttempts == null ||
+    staleFundingHours == null ||
+    reviewDeadlineLeadHours == null ||
+    teamProposalLifeDays == null
+  ) {
+    redirect(`/admin/payment-settings?error=${encodeURIComponent("Enter whole numbers for every process clock.")}`);
+  }
+  try {
+    await saveProcessTimings(
+      {
+        reviewWindowHours,
+        quoteValidHours,
+        unknownCommandMinutes,
+        providerCommandMaxAttempts,
+        disputeSlaHours,
+        providerHoldWarnHours,
+        failedPayoutBackoffHours: backoff,
+        failedPayoutMaxAttempts,
+        staleFundingHours,
+        reviewDeadlineLeadHours,
+        teamProposalLifeDays,
+      },
+      session.email,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the process clocks.";
+    redirect(`/admin/payment-settings?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/payment-settings");
+  revalidatePath("/admin/marketplace/settings");
+  redirect("/admin/payment-settings?saved=process-timing");
 }
 
 export async function actionRecordProviderTrace(formData: FormData) {

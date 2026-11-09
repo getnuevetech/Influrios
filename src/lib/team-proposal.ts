@@ -118,8 +118,9 @@ export function teamSendControl(input: { audience: "guest" | "business" | "creat
   return { visible: input.audience === "business" };
 }
 
-export function proposalExpiresAt(from: Date): Date {
-  return new Date(from.getTime() + PROPOSAL_LIFE_MS);
+export function proposalExpiresAt(from: Date, lifeMs = PROPOSAL_LIFE_MS): Date {
+  const span = Number.isFinite(lifeMs) && lifeMs > 0 ? lifeMs : PROPOSAL_LIFE_MS;
+  return new Date(from.getTime() + span);
 }
 
 export function proposalIsExpired(input: { status: string; expiresAt: Date | null; now: Date }): boolean {
@@ -247,13 +248,15 @@ export async function createTeamProposal(input: {
     return { ok: false as const, error: "Sign in with a business workspace and add a title." };
   }
   const campaignIntent = (input.campaignIntent ?? "").trim().slice(0, 240);
+  const { loadProcessTimings } = await import("@/lib/process-timing");
+  const lifeDays = (await loadProcessTimings().catch(() => null))?.teamProposalLifeDays ?? 14;
   const row = await prisma.teamProposal.create({
     data: {
       workspaceId,
       title: title.slice(0, 160),
       campaignIntent,
       status: "sent",
-      expiresAt: proposalExpiresAt(new Date()),
+      expiresAt: proposalExpiresAt(new Date(), lifeDays * 24 * 60 * 60 * 1000),
       members: {
         create: slugs.map((creatorSlug, index) => ({
           creatorSlug,
