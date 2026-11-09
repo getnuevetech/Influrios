@@ -332,7 +332,7 @@ export default async function AdminFeesPage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-lg font-bold text-indigo">Active rules</h2>
           <p className="mt-1 text-xs text-muted">
-            A contract service level uses the Business fee (added on top) and the Influencer fee (deducted from the gross) that match it. A rule saved before fee purpose existed is counted from who pays. A split rule is not applied. A rule set to any service level appears on every row.
+            A contract service level uses the Business fee (added on top) and the Influencer fee (deducted from the gross) that match it. A saved rule for that level is listed even when it is inactive. Missing means no rule is saved for that side. A rule saved before fee purpose existed is counted from who pays. A split rule is not applied. A rule set to any service level appears on every row when it is active.
           </p>
         </div>
         <div className="overflow-x-auto rounded-2xl border border-[#E4EBFF] bg-white">
@@ -349,10 +349,10 @@ export default async function AdminFeesPage({ searchParams }: Props) {
                 <tr key={row.serviceLevel} className="border-t border-[#E4EBFF]">
                   <td className="px-3 py-2 font-semibold text-indigo">{row.label}</td>
                   <td className="px-3 py-2">
-                    {row.business.length === 0 ? "Missing" : row.business.map((rule) => `${rule.name} v${rule.version}`).join(", ")}
+                    {row.business.length === 0 ? "Missing" : row.business.map((rule) => `${rule.name} v${rule.version}${rule.active ? "" : " · Inactive"}`).join(", ")}
                   </td>
                   <td className="px-3 py-2">
-                    {row.influencer.length === 0 ? "Missing" : row.influencer.map((rule) => `${rule.name} v${rule.version}`).join(", ")}
+                    {row.influencer.length === 0 ? "Missing" : row.influencer.map((rule) => `${rule.name} v${rule.version}${rule.active ? "" : " · Inactive"}`).join(", ")}
                   </td>
                 </tr>
               ))}

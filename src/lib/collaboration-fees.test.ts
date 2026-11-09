@@ -363,6 +363,32 @@ describe("service level fee coverage", () => {
     assert.equal(savedBeforePurpose.find((row) => row.serviceLevel === "discovery")?.influencer.length, 1);
     assert.equal(savedBeforePurpose.find((row) => row.serviceLevel === "contracted")?.influencer.length, 0);
   });
+
+  it("lists an inactive rule saved for that service level and leaves an unsaved level missing", () => {
+    const covered = serviceLevelFeeCoverage([
+      rule({
+        id: "pm",
+        name: "Platform Match · Business",
+        purpose: "business_platform_fee",
+        payer: "brand",
+        serviceLevel: "platform_match",
+        active: false,
+      }),
+      rule({
+        id: "wild",
+        name: "Platform Service Fee",
+        purpose: "business_platform_fee",
+        payer: "brand",
+        serviceLevel: "*",
+        active: false,
+      }),
+    ]);
+    const match = covered.find((row) => row.serviceLevel === "platform_match");
+    assert.equal(match?.business.length, 1);
+    assert.equal(match?.business[0]?.id, "pm");
+    assert.equal(match?.business[0]?.active, false);
+    assert.equal(covered.find((row) => row.serviceLevel === "managed_intro")?.business.length, 0);
+  });
 });
 
 describe("protected payment label", () => {
