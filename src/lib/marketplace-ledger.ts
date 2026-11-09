@@ -39,7 +39,8 @@ import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines, storedMinorDigits } from "@/lib/fx-share";
 import { ensureSettlementDefaults } from "@/lib/settlement";
 import { corridorPrefundSnapshot, storedPayoutMethodList } from "@/lib/corridor-checkout";
-import { decidePaymentRoute } from "@/lib/payment-route";
+import { decidePaymentRoute, freezeRouteAccounts } from "@/lib/payment-route";
+import { isConnectedAccountCollectionProvider, routeHoldingAccounts } from "@/lib/provider-collection";
 import { storedCurrencyCode } from "@/lib/money";
 import { quoteWiseUserRate } from "@/lib/wise-quote";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
@@ -668,6 +669,24 @@ export async function requestPrefund(input: {
   if (routeDecision.conflicts.length > 0) {
     return { ok: false as const, error: `${routeDecision.conflicts.join(" ")} Nothing was funded.` };
   }
+  const requiresHoldingAccount =
+    isConnectedAccountCollectionProvider(routeDecision.collectionProvider) ||
+    isConnectedAccountCollectionProvider(routeDecision.holdingProvider);
+  const accountProvider = isConnectedAccountCollectionProvider(routeDecision.collectionProvider)
+    ? routeDecision.collectionProvider
+    : isConnectedAccountCollectionProvider(routeDecision.holdingProvider)
+      ? routeDecision.holdingProvider
+      : "";
+  const holdingAccounts = await routeHoldingAccounts(accountProvider);
+  const frozenAccounts = freezeRouteAccounts({
+    requiresHoldingAccount,
+    holdingAccountId: holdingAccounts.holdingAccountId,
+    operationsAccountId: holdingAccounts.operationsAccountId,
+  });
+  if (!frozenAccounts.ok) {
+    return { ok: false as const, error: `${frozenAccounts.error} Nothing was funded.` };
+  }
+  const routeSnapshot = { ...routeDecision, accounts: frozenAccounts.accounts };
   const minorDigits = storedMinorDigits(jurisdiction?.minorDigits);
   if (minorDigits == null) {
     return { ok: false as const, error: "That jurisdiction has no minor digits. Nothing was funded." };
@@ -930,7 +949,7 @@ export async function requestPrefund(input: {
           providerCode: provider!.code,
           contractDocumentId: index === 0 ? contractDocumentId : null,
           idempotencyKey: index === 0 ? idempotencyKey : null,
-          routeSnapshotJson: routeDecision as object,
+          routeSnapshotJson: routeSnapshot as object,
           attributionLabel: attribution.attributionLabel,
           attributionStatus: attribution.attributionStatus,
           attributionExpiresAt: attribution.attributionExpiresAt,
@@ -1118,6 +1137,7 @@ export async function sweepDueRecurrences(now = new Date()) {
           title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
           currency: fx.currency,
           collectionProviderCode: row.collectionProviderCode,
+          routeSnapshotJson: row.routeSnapshotJson ?? undefined,
           payoutMethod: row.payoutMethod,
           grossCents: fx.convertedMinor,
           feeCents,

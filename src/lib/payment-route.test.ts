@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { decidePaymentRoute, readRouteSnapshot } from "./payment-route";
+import {
+  decidePaymentRoute,
+  freezeRouteAccounts,
+  holdingAccountForCollection,
+  newCheckoutAllowed,
+  readRouteAccounts,
+  readRouteSnapshot,
+} from "./payment-route";
 import { creatorMaySubmitWork, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
 
 describe("payment route decision", () => {
@@ -76,9 +83,32 @@ describe("payment route decision", () => {
     const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
     const checkout = readFileSync("src/app/payments/actions.ts", "utf8");
     assert.match(ledger, /decidePaymentRoute/);
-    assert.match(ledger, /routeSnapshotJson: routeDecision/);
+    assert.match(ledger, /routeSnapshotJson: routeSnapshot/);
     assert.match(ledger, /routeDecision.conflicts.length > 0/);
     assert.match(checkout, /storedRoute\?\.collectionProvider \|\| funding.collectionProviderCode/);
+    assert.match(checkout, /newCheckoutAllowed/);
+    assert.match(ledger, /freezeRouteAccounts/);
+    assert.match(readFileSync("src/lib/providers/airwallex-runtime.ts", "utf8"), /holdingAccountForCollection/);
+    const frozen = freezeRouteAccounts({
+      requiresHoldingAccount: true,
+      holdingAccountId: "hold-at-sign",
+      operationsAccountId: "ops-at-sign",
+    });
+    assert.equal(frozen.ok, true);
+    if (!frozen.ok) return;
+    const snapshot = { version: "v", countryCode: "NG", accounts: frozen.accounts };
+    assert.equal(readRouteAccounts(snapshot)?.holdingAccountId, "hold-at-sign");
+    const collection = holdingAccountForCollection({
+      frozenHoldingAccountId: "hold-at-sign",
+      liveHoldingAccountId: "hold-changed-later",
+    });
+    assert.equal(collection.ok && collection.holdingAccountId, "hold-at-sign");
+    const missing = freezeRouteAccounts({ requiresHoldingAccount: true, holdingAccountId: " ", operationsAccountId: "" });
+    assert.equal(missing.ok, false);
+    assert.equal(newCheckoutAllowed({ corridorActive: false, fundingStatus: "awaiting_provider" }).ok, false);
+    assert.equal(newCheckoutAllowed({ corridorActive: true, fundingStatus: "held" }).ok, false);
+    assert.equal(newCheckoutAllowed({ corridorActive: false, fundingStatus: "held" }).ok, false);
+    assert.equal(newCheckoutAllowed({ corridorActive: true, fundingStatus: "awaiting_provider" }).ok, true);
   });
 });
 

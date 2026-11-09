@@ -151,3 +151,16 @@ export async function openFundingCollection(input: {
     return { ok: false, error: `${message} Nothing was charged.` };
   }
 }
+
+/** Holding and operations account ids for a connected-account collection route. */
+export async function routeHoldingAccounts(providerCode: string | null | undefined) {
+  if (!isConnectedAccountCollectionProvider(providerCode)) {
+    return { holdingAccountId: "", operationsAccountId: "" };
+  }
+  const { loadAirwallexConfig } = await import("@/lib/providers/airwallex-config");
+  const settings = await loadAirwallexConfig();
+  return {
+    holdingAccountId: settings?.holdingAccountId ?? "",
+    operationsAccountId: settings?.operationsAccountId ?? "",
+  };
+}

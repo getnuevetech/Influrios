@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { isBusinessRole } from "@/lib/account-audience";
 import { checkoutUsesStoredCorridor } from "@/lib/corridor-checkout";
-import { readRouteSnapshot } from "@/lib/payment-route";
+import { newCheckoutAllowed, readRouteSnapshot } from "@/lib/payment-route";
 import { markLatestSubmission, submitMilestoneWork } from "@/lib/milestone-delivery";
 import { assertFundingAccess, requireBusinessFundingAccess } from "@/lib/funding-access";
 import { openFundingCollection } from "@/lib/provider-collection";
@@ -49,6 +49,12 @@ export async function actionOpenFundingCheckout(formData: FormData) {
   if (!funding || funding.status !== "awaiting_provider") {
     fail("This funding is not waiting for a provider.");
   }
+  const corridor = await prisma.countryActivationCorridor.findUnique({
+    where: { countryCode: funding.jurisdictionCode },
+    select: { active: true },
+  });
+  const checkoutGate = newCheckoutAllowed({ corridorActive: corridor?.active ?? null, fundingStatus: funding.status });
+  if (!checkoutGate.ok) fail(checkoutGate.error);
   const storedRoute = readRouteSnapshot(funding.routeSnapshotJson);
   const route = checkoutUsesStoredCorridor({
     collectionProviderCode: storedRoute?.collectionProvider || funding.collectionProviderCode,
