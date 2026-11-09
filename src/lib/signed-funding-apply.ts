@@ -8,6 +8,7 @@ import {
   contractMayBeVoided,
   parseAmendmentCreators,
   parseAmendmentMilestones,
+  missingCommercialTermsReason,
   readSignedTermsSnapshot,
   recoverSignedTermsFromAgreement,
   sameDealError,
@@ -35,8 +36,43 @@ type StoredAgreement = {
   sourceJson: unknown;
   renderedBody: string;
   termsSnapshotJson: unknown;
-  parties: { role: string; name: string; creatorSlug: string | null; shareBps: number }[];
+  parties: {
+    id?: string;
+    role: string;
+    name: string;
+    email?: string | null;
+    userId?: string | null;
+    creatorSlug: string | null;
+    shareBps: number;
+  }[];
 };
+
+async function partiesWithCreatorSlugs(parties: StoredAgreement["parties"]) {
+  const next = [];
+  for (const party of parties) {
+    if (party.role !== "creator" || party.creatorSlug?.trim()) {
+      next.push(party);
+      continue;
+    }
+    const byUser = party.userId
+      ? await prisma.creator.findUnique({ where: { userId: party.userId }, select: { slug: true } })
+      : null;
+    const email = party.email?.trim();
+    const byEmail =
+      !byUser && email
+        ? await prisma.creator.findFirst({
+            where: { user: { email: { equals: email, mode: "insensitive" } } },
+            select: { slug: true },
+          })
+        : null;
+    const creatorSlug = byUser?.slug || byEmail?.slug || null;
+    if (party.id && creatorSlug) {
+      await prisma.contractParty.update({ where: { id: party.id }, data: { creatorSlug } }).catch(() => undefined);
+    }
+    next.push({ ...party, creatorSlug });
+  }
+  return next;
+}
 
 /** Keep a valid snapshot. When an older signed agreement has none, write one from the signed record. */
 export async function ensureStoredCommercialTerms(document: StoredAgreement) {
@@ -45,8 +81,11 @@ export async function ensureStoredCommercialTerms(document: StoredAgreement) {
   if (document.status !== "signed") {
     return { ok: false as const, error: "Funding waits until every party has signed." };
   }
-  const recovered = recoverSignedTermsFromAgreement(document);
-  if (!recovered) return { ok: false as const, error: MISSING_TERMS };
+  const parties = await partiesWithCreatorSlugs(document.parties);
+  const recovered = recoverSignedTermsFromAgreement({ ...document, parties });
+  if (!recovered) {
+    return { ok: false as const, error: missingCommercialTermsReason({ ...document, parties }) ?? MISSING_TERMS };
+  }
   await prisma.contractDocument.update({
     where: { id: document.id },
     data: { termsSnapshotJson: JSON.parse(JSON.stringify(recovered)) as object },

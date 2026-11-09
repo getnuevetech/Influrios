@@ -362,8 +362,10 @@ export type RecoverableAgreement = {
 
 function labeledLine(body: string, label: string) {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = body.match(new RegExp(`^${escaped}\\s{2,}(.+)$`, "m"));
-  return match?.[1]?.trim() ?? "";
+  const spaced = body.match(new RegExp(`^${escaped}\\s{2,}(.+)$`, "im"));
+  if (spaced?.[1]) return spaced[1].trim();
+  const colon = body.match(new RegExp(`^${escaped}:\\s*(.+)$`, "im"));
+  return colon?.[1]?.trim() ?? "";
 }
 
 function moneyToCents(raw: string) {
@@ -378,19 +380,46 @@ function sharesTotal(rows: { shareBps: number }[]) {
   return rows.reduce((sum, row) => sum + row.shareBps, 0);
 }
 
-function milestonesFromSignedBody(body: string): SignedMilestone[] | null {
-  const section = body.split("4. Milestone Schedule")[1]?.split(/\n5\.\s/)[0] ?? "";
-  const rows: SignedMilestone[] = [];
-  for (const line of section.split("\n")) {
-    const match = line.match(/^\d+\.\s+(.+)$/);
-    if (!match) continue;
-    const parts = match[1].split(/\s{2,}/).map((part) => part.trim()).filter(Boolean);
-    const share = parts[1]?.match(/^(\d+(?:\.\d+)?)%$/);
-    if (!parts[0] || !share) continue;
-    rows.push({ title: parts[0], shareBps: Math.round(Number(share[1]) * 100) });
+function balanceDisplayedShares(rows: SignedMilestone[]): SignedMilestone[] | null {
+  if (rows.length === 0) return null;
+  const total = sharesTotal(rows);
+  if (total <= 0) return null;
+  const next = rows.map((row) => ({ ...row }));
+  if (total !== 10_000) {
+    const drift = 10_000 - total;
+    // The agreement prints whole percents, so 33% + 33% + 33% is the signed 100% schedule.
+    if (Math.abs(drift) > rows.length * 50) return null;
+    next[next.length - 1] = { ...next[next.length - 1], shareBps: next[next.length - 1].shareBps + drift };
   }
-  const normalized = normalizeMilestones(rows);
+  const normalized = normalizeMilestones(next);
   return sharesTotal(normalized) === 10_000 ? normalized : null;
+}
+
+function milestonesFromScheduleText(section: string): SignedMilestone[] {
+  const rows: SignedMilestone[] = [];
+  const blocks = section.split(/\n(?=\d+\.\s+)/).map((block) => block.trim()).filter(Boolean);
+  for (const block of blocks) {
+    const titleLine = block.match(/^\d+\.\s+(.+)$/m)?.[1]?.trim() ?? "";
+    const title = titleLine.split("\n")[0]?.trim() ?? "";
+    if (!title || /none scheduled/i.test(title) || /^milestone\s+share/i.test(title)) continue;
+    const inline = title.split(/\s{2,}/).map((part) => part.trim()).filter(Boolean);
+    const inlineShare = inline[1]?.match(/^(\d+(?:\.\d+)?)%$/);
+    const labeled = block.match(/Share:\s*(\d+(?:\.\d+)?)%/i);
+    const share = inlineShare?.[1] ?? labeled?.[1];
+    if (!share) continue;
+    const name = inlineShare ? inline[0] : title;
+    if (!name) continue;
+    rows.push({ title: name, shareBps: Math.round(Number(share) * 100) });
+  }
+  return rows;
+}
+
+function milestonesFromSignedBody(body: string): SignedMilestone[] | null {
+  const chrome = body.split(/4\.\s+Milestone Schedule/i)[1]?.split(/\n5\.\s/)[0] ?? "";
+  const legacy = body.split(/\n\s*4\.\s+Milestones\b/i)[1]?.split(/\n\s*5\.\s+/i)[0] ?? "";
+  const parsed = milestonesFromScheduleText(chrome);
+  const rows = parsed.length > 0 ? parsed : milestonesFromScheduleText(legacy);
+  return balanceDisplayedShares(rows);
 }
 
 function creatorsFromSignedAgreement(input: RecoverableAgreement): SignedCreatorShare[] | null {
@@ -423,7 +452,10 @@ export function recoverSignedTermsFromAgreement(input: RecoverableAgreement): Si
   const currency =
     storedCurrencyCode(sourceField(input.sourceJson, "currency") || sourceField(input.sourceJson, "contractCurrency")) ||
     storedCurrencyCode(labeledLine(body, "Currency"));
-  const grossCents = moneyToCents(sourceField(input.sourceJson, "gross")) || moneyToCents(labeledLine(body, "Gross Contract Value"));
+  const grossCents =
+    moneyToCents(sourceField(input.sourceJson, "gross")) ||
+    moneyToCents(labeledLine(body, "Gross Contract Value")) ||
+    moneyToCents(labeledLine(body, "Gross contract value"));
   const creators = creatorsFromSignedAgreement(input);
   const milestones = milestonesFromSignedBody(body);
   if (!currency || !grossCents || !creators || !milestones) return null;
@@ -447,4 +479,22 @@ export function recoverSignedTermsFromAgreement(input: RecoverableAgreement): Si
     payoutMethod: sourceField(input.sourceJson, "payoutMethod"),
     lockedAt: lockedAt && Number.isFinite(lockedAt.getTime()) ? lockedAt.toISOString() : "",
   });
+}
+
+/** Why a signed agreement still cannot be funded. Null when recovery succeeds. */
+export function missingCommercialTermsReason(input: RecoverableAgreement) {
+  if (recoverSignedTermsFromAgreement(input)) return null;
+  const body = input.renderedBody ?? "";
+  const currency =
+    storedCurrencyCode(sourceField(input.sourceJson, "currency") || sourceField(input.sourceJson, "contractCurrency")) ||
+    storedCurrencyCode(labeledLine(body, "Currency"));
+  const grossCents =
+    moneyToCents(sourceField(input.sourceJson, "gross")) || moneyToCents(labeledLine(body, "Gross Contract Value"));
+  if (!currency || !grossCents) {
+    return "This signed agreement has no currency or gross amount. Nothing was funded.";
+  }
+  if (!creatorsFromSignedAgreement(input)) {
+    return "This signed agreement does not name the influencer profile. Nothing was funded.";
+  }
+  return "This signed agreement has no milestone schedule that adds up to 100%. Nothing was funded.";
 }
