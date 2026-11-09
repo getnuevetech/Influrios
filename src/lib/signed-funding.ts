@@ -269,6 +269,47 @@ export function describeDealProgress(input: {
   };
 }
 
+export function parseScheduleCorrection(input: {
+  slugs: string[];
+  creatorPercents: string[];
+  titles: string[];
+  milestonePercents: string[];
+}): { ok: true; creators: SignedCreatorShare[]; milestones: SignedMilestone[] } | { ok: false; error: string } {
+  const creators: SignedCreatorShare[] = [];
+  const count = Math.max(input.slugs.length, input.creatorPercents.length);
+  for (let index = 0; index < count; index += 1) {
+    const slug = (input.slugs[index] ?? "").trim();
+    const raw = (input.creatorPercents[index] ?? "").trim();
+    if (!slug && !raw) continue;
+    const percent = Number(raw);
+    if (!slug || !Number.isFinite(percent) || percent <= 0) {
+      return { ok: false, error: "Each influencer needs a profile slug and a share greater than 0." };
+    }
+    creators.push({ slug, shareBps: Math.round(percent * 100) });
+  }
+  const milestones: SignedMilestone[] = [];
+  const milestoneCount = Math.max(input.titles.length, input.milestonePercents.length);
+  for (let index = 0; index < milestoneCount; index += 1) {
+    const title = (input.titles[index] ?? "").trim();
+    const raw = (input.milestonePercents[index] ?? "").trim();
+    if (!title && !raw) continue;
+    const percent = Number(raw);
+    if (!title || !Number.isFinite(percent) || percent <= 0) {
+      return { ok: false, error: "Each milestone needs a title and a share greater than 0." };
+    }
+    milestones.push({ title, shareBps: Math.round(percent * 100) });
+  }
+  const creatorTotal = creators.reduce((sum, row) => sum + row.shareBps, 0);
+  const milestoneTotal = milestones.reduce((sum, row) => sum + row.shareBps, 0);
+  if (creators.length === 0 || creatorTotal !== 10_000) {
+    return { ok: false, error: "Influencer shares must add up to 100%." };
+  }
+  if (milestones.length === 0 || milestoneTotal !== 10_000) {
+    return { ok: false, error: "Milestone shares must add up to 100%." };
+  }
+  return { ok: true, creators, milestones };
+}
+
 export function parseAmendmentCreators(value: unknown): SignedCreatorShare[] {
   if (!Array.isArray(value)) return [];
   return normalizeCreators(

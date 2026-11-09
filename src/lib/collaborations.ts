@@ -43,6 +43,12 @@ export function proposalCountsTowardLimit(status: string): boolean {
   return (COUNTED_PROPOSAL_STATUSES as readonly string[]).includes(status);
 }
 
+/** Statuses an operator may apply. A closed proposal has no next step. */
+export function collaborationStatusChoices(current: string): CollaborationStatus[] {
+  if (!isCollaborationStatus(current)) return [...COLLABORATION_STATUSES];
+  return [current, ...TRANSITIONS[current]];
+}
+
 export function transitionCollaboration(
   from: string,
   to: string,
