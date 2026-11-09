@@ -955,9 +955,11 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                               </span>
                             </>
                           ) : null}
-                          {item.feeCents != null && item.currency
-                            ? ` · fee locked ${formatStoredMoney(item.feeCents, item.currency)}`
-                            : ""}
+                          {item.moneyLines && item.currency
+                            ? ` · ${item.moneyLines.map((line) => `${line.label} ${formatStoredMoney(line.amountCents, item.currency ?? "")}`).join(" · ")}`
+                            : item.feeCents != null && item.currency
+                              ? ` · fee locked ${formatStoredMoney(item.feeCents, item.currency)}`
+                              : ""}
                           {item.revisionSummary ? ` · ${item.revisionSummary}` : ""}
                         </p>
                       </div>
@@ -994,7 +996,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 ["Held", hub.spend.heldCents],
                 ["Released", hub.spend.releasedCents],
                 ["Refunded", hub.spend.refundedCents],
-                ["Platform fee", hub.spend.feeCents],
+                ["Your platform fee", hub.spend.feeCents],
               ].map(([label, cents]) => (
                 <div key={label as string} className="rounded-xl bg-[#F8FAFF] p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted">{label as string}</p>

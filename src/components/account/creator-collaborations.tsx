@@ -230,7 +230,11 @@ export function CreatorCollaborations({
                               ? formatStoredMoney(row.netCents, row.currency)
                               : "—"}
                         </p>
-                        {!waiting && row.grossCents != null && row.currency ? (
+                        {!waiting && row.moneyLines && row.currency ? (
+                          <p className="text-[11px] text-[#667085]">
+                            {row.moneyLines.map((line) => `${line.label} ${formatStoredMoney(line.amountCents, row.currency ?? "")}`).join(" · ")}
+                          </p>
+                        ) : !waiting && row.grossCents != null && row.currency ? (
                           <p className="text-[11px] text-[#667085]">
                             Gross {formatStoredMoney(row.grossCents, row.currency)}
                             {row.feeCents != null ? ` · fee ${formatStoredMoney(row.feeCents, row.currency)}` : ""}

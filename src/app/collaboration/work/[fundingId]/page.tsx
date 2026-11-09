@@ -4,6 +4,7 @@ import { actionApproveMilestone, actionRequestRevision, actionSubmitMilestone } 
 import { getAccountSession } from "@/lib/accounts";
 import { assertFundingAccess } from "@/lib/funding-access";
 import { visibleSubmissions } from "@/lib/milestone-delivery";
+import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/db";
 
@@ -31,6 +32,12 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
   });
   if (!funding) notFound();
   const business = access.audience === "business";
+  const money = memberDealView({
+    role: business ? "business" : "influencer",
+    grossCents: funding.grossCents,
+    feeCents: funding.feeCents,
+    plan: funding.feeSnapshotJson,
+  });
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -40,7 +47,8 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">{funding.title}</h1>
         <p className="mt-2 text-sm text-muted">
-          {funding.businessName} · {funding.status.replaceAll("_", " ")} · {formatMoney(funding.grossCents, funding.currency)}
+          {funding.businessName} · {funding.status.replaceAll("_", " ")}
+          {money.lines.map((line) => ` · ${line.label} ${formatMoney(line.amountCents, funding.currency)}`).join("")}
         </p>
         <p className="mt-2 text-sm text-indigo">
           {business

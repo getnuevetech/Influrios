@@ -20,6 +20,7 @@ import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
 import { fundingTerm } from "@/lib/ledger";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFundingsForBusiness, listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
+import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 import { FUNDING_BADGE_CLASS, fundingBadge } from "@/lib/funding-badge";
@@ -203,6 +204,12 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   other.id !== deal.id &&
                   other.status === "awaiting_provider",
               );
+            const money = memberDealView({
+              role: businessViewer ? "business" : "influencer",
+              grossCents: deal.grossCents,
+              feeCents: deal.feeCents,
+              plan: deal.feeSnapshotJson,
+            });
             const badge = fundingBadge({
               status: deal.status,
               heldCents: deal.ledger.heldCents,
@@ -246,9 +253,11 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   </form>
                 ) : null}
                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted">
-                  <span>
-                    Total <strong className="text-indigo">{formatMoney(deal.grossCents, deal.currency)}</strong>
-                  </span>
+                  {money.lines.map((line) => (
+                    <span key={line.label}>
+                      {line.label} <strong className="text-indigo">{formatMoney(line.amountCents, deal.currency)}</strong>
+                    </span>
+                  ))}
                   {fx?.source === "wise" ? (
                     <span>
                       From <strong className="text-indigo">{formatMoney(fx.usdCents)}</strong> at the Wise user rate
@@ -260,9 +269,6 @@ export default async function PaymentsPage({ searchParams }: Props) {
                       From <strong className="text-indigo">{formatMoney(fx.usdCents)}</strong> at the saved rate
                     </span>
                   ) : null}
-                  <span>
-                    Fee snapshot <strong className="text-indigo">{formatMoney(deal.feeCents, deal.currency)}</strong>
-                  </span>
                   <span>
                     Released <strong className="text-emerald-700">{formatMoney(deal.ledger.releasedCents, deal.currency)}</strong>
                   </span>
@@ -441,6 +447,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                             <input type="hidden" name="dealId" value={deal.id} />
                             <input type="hidden" name="milestoneId" value={milestone.id} />
                             {(() => {
+                              if (money.signed) return null;
                               const feeCents = Math.round(
                                 (deal.feeCents * (milestone.amountCents || 0)) / Math.max(deal.grossCents, 1),
                               );
