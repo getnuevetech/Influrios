@@ -144,7 +144,7 @@ export function classifySocialRow(input: {
     handle,
     followers: live ? input.followers : null,
     status,
-    statusLabel: oauth ? "Connected" : attention ? "Needs attention" : "On your card",
+    statusLabel: oauth ? "Connected" : attention ? "Needs attention" : "Unverified",
     detail: attention
       ? input.lastError
       : oauth && !providerConfirmed
@@ -357,13 +357,13 @@ export async function loadCreatorHome(userId: string) {
   const oauthConnected = socials.some((social) => social.status === "connected");
   const profileHref = draft ? "/dashboard" : slug ? "/dashboard" : "/claim";
   const checklist: HomeChecklistItem[] = [
-    { id: "claimed", label: "Claim ownership", done: claimed, href: claimed ? profileHref : "/claim" },
+    { id: "claimed", label: "Build your profile", done: claimed, href: claimed ? profileHref : "/claim" },
     { id: "email", label: "Verify email", done: emailVerified, href: "/account" },
     { id: "published", label: "Publish Starter card", done: published, href: published && slug ? `/c/${slug}` : "/claim" },
     { id: "bio", label: "Write a short bio", done: bio.length >= 24, href: profileHref },
     { id: "location", label: "Set location", done: locationDone, href: profileHref },
     { id: "specialty", label: "Confirm specialty", done: specialties.length > 0, href: profileHref },
-    { id: "social", label: "Connect a social account", done: oauthConnected, href: "/dashboard#socials" },
+    { id: "social", label: "Connect a social account", done: oauthConnected, href: "/dashboard/social" },
     {
       id: "payout",
       label: payoutReady

@@ -120,6 +120,16 @@ export default async function CreatorCampaignRequestPage({ params, searchParams 
             </p>
           </section>
 
+          {(request.platforms ?? []).length > 0 ? (
+            <section>
+              <h2 className="text-sm font-bold text-indigo">Verified channel required</h2>
+              <p className="mt-2 text-sm leading-relaxed text-[#4E5872]">
+                Apply after you connect and verify {(request.platforms ?? []).join(", ")}. A handle typed on your card is not
+                enough. Connect it from your dashboard, then come back.
+              </p>
+            </section>
+          ) : null}
+
           <section>
             <h2 className="text-sm font-bold text-indigo">Looking for</h2>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#4E5872]">

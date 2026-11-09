@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
 import {
+  adoptUnboundContractParty,
   buildContractChromePdf,
   contractTermsAreFrozen,
   resolveContractPartyForAccount,
@@ -40,10 +41,8 @@ export async function GET(_request: Request, { params }: Props) {
     }),
   ]);
   if (!document) return NextResponse.json({ error: "Contract not found." }, { status: 404 });
-  const party = account ? resolveContractPartyForAccount(document.parties, account) : null;
-  if (party && account && party.userId !== account.id) {
-    await prisma.contractParty.update({ where: { id: party.id }, data: { userId: account.id } }).catch(() => undefined);
-  }
+  const matched = account ? resolveContractPartyForAccount(document.parties, account) : undefined;
+  const party = matched && account ? await adoptUnboundContractParty(matched, account) : null;
   const isParty = Boolean(party);
   const adminAllowed = Boolean(
     admin &&

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { draftFromSession, publicClaimPayload, type ClaimDraft } from "./claim";
+import { claimDraftAttachment, draftFromSession, publicClaimPayload, type ClaimDraft } from "./claim";
 import type { OnboardingSession } from "@prisma/client";
 
 function sampleDraft(overrides: Partial<ClaimDraft> = {}): ClaimDraft {
@@ -148,5 +148,11 @@ describe("claim session mapping", () => {
     } as OnboardingSession;
     assert.equal(draftFromSession(publishedRow).stage, "published");
     assert.equal(draftFromSession(publishedRow).publishedAt, "2026-10-01T02:00:00.000Z");
+  });
+
+  it("does not attach another member's draft when someone else logs in", () => {
+    assert.equal(claimDraftAttachment(null, "user_b"), "attach");
+    assert.equal(claimDraftAttachment("user_b", "user_b"), "keep");
+    assert.equal(claimDraftAttachment("user_a", "user_b"), "reject");
   });
 });

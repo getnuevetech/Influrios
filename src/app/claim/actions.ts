@@ -40,6 +40,13 @@ export async function actionCreateDraft(formData: FormData) {
   try {
     const draft = await createDraftFromHandle(handle, "ORGANIC_SIGNUP", platformHint || undefined, source);
     draftId = draft.id;
+    const { getAccountSession } = await import("@/lib/accounts");
+    const account = await getAccountSession().catch(() => null);
+    if (account) {
+      const { prisma } = await import("@/lib/db");
+      await prisma.onboardingSession.update({ where: { id: draft.id }, data: { userId: account.id } });
+    }
+    await setCreatorSession(draft.id);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not create draft";
     redirect(`/claim?error=${encodeURIComponent(message)}`);

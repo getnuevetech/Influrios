@@ -28,14 +28,14 @@ function shortDate(value: Date) {
   }).format(value);
 }
 
-function yours(contract: ContractRow, accountId: string, email: string, creatorSlug = "") {
-  const slug = creatorSlug.trim();
-  return contract.parties.find(
-    (row) =>
-      row.userId === accountId ||
-      row.email.trim().toLowerCase() === email.trim().toLowerCase() ||
-      (slug.length > 0 && row.creatorSlug === slug),
-  );
+function yours(contract: ContractRow, accountId: string, email: string, _creatorSlug = "") {
+  void _creatorSlug;
+  const normalized = email.trim().toLowerCase();
+  return contract.parties.find((row) => {
+    if (row.userId && row.userId === accountId) return true;
+    if (!normalized || row.email.trim().toLowerCase() !== normalized) return false;
+    return !row.userId || row.userId === accountId;
+  });
 }
 
 function needsYourSignature(contract: ContractRow, accountId: string, email: string, creatorSlug = "") {

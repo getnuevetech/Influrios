@@ -13,6 +13,7 @@ import {
   businessApplicationTransitions,
   creatorApplicationRole,
   creatorApplicationTransitions,
+  missingVerifiedPlatforms,
   businessOwnsApplication,
   invitationsVisibleTo,
   canTransitionApplication,
@@ -483,5 +484,12 @@ describe("marketplace application create/transition (db)", () => {
       mentorship: DEFAULT_COLLAB_CONTROL_PLANE.mentorship,
       guestCollab: DEFAULT_COLLAB_CONTROL_PLANE.guestCollab,
     });
+  });
+});
+
+describe("verified channel requirement", () => {
+  it("lists platforms the applicant has not connected", () => {
+    assert.deepEqual(missingVerifiedPlatforms(["TikTok", "instagram"], ["INSTAGRAM"]), ["TIKTOK"]);
+    assert.deepEqual(missingVerifiedPlatforms([], ["TIKTOK"]), []);
   });
 });
