@@ -1060,6 +1060,25 @@ export async function stopRecurringSeries(scheduleId: string) {
   return { ok: true as const, stopped: updated.count };
 }
 
+/** Later recurring tranches keep the original fee ratio. The live fee matrix is not applied. */
+export function recurringTrancheFeeCents(input: {
+  sourceGrossCents: number;
+  sourceFeeCents: number;
+  nextGrossCents: number;
+}): { ok: true; feeCents: number } | { ok: false; error: string } {
+  const amounts = [input.sourceGrossCents, input.sourceFeeCents, input.nextGrossCents];
+  if (amounts.some((amount) => !Number.isInteger(amount) || amount < 0)) {
+    return { ok: false, error: "The stored tranche fee is missing." };
+  }
+  if (input.sourceGrossCents <= 0 || input.nextGrossCents <= 0) {
+    return { ok: false, error: "The stored tranche fee is missing." };
+  }
+  return {
+    ok: true,
+    feeCents: Math.round((input.sourceFeeCents * input.nextGrossCents) / input.sourceGrossCents),
+  };
+}
+
 export async function sweepDueRecurrences(now = new Date()) {
   const confirmed = await prisma.collaborationFunding.findMany({
     where: { scheduleKind: "recurring", status: { in: ["held", "completed", "refunded"] } },
@@ -1117,15 +1136,21 @@ export async function sweepDueRecurrences(now = new Date()) {
     if (!fx.ok) continue;
     const milestoneAmounts = splitGross(fx.convertedMinor, shares);
     if (!milestoneAmounts) continue;
-    const quote = await resolveFee({
-      jurisdiction: row.jurisdictionCode,
-      serviceLevel: row.serviceLevel,
-      grossValueCents: usdCents,
-      fundingMode: (row.fundingMode ?? "").trim(),
-      relationshipSource: row.attributionStatus === "pre_existing" ? "pre_existing" : "",
-      promotionChannel: "",
-    }).catch(() => null);
-    const feeCents = convertFee(quote?.feeCents ?? 0, fx);
+    const copiedFee = recurringTrancheFeeCents({
+      sourceGrossCents: row.grossCents,
+      sourceFeeCents: row.feeCents,
+      nextGrossCents: fx.convertedMinor,
+    });
+    if (!copiedFee.ok) continue;
+    const feeCents = copiedFee.feeCents;
+    const priorFee = row.feeSnapshotJson as {
+      ruleId?: string | null;
+      ruleName?: string | null;
+      ruleVersion?: number | null;
+      percentBps?: number | null;
+      fixedCents?: number | null;
+      feeType?: string | null;
+    } | null;
     const shareSnapshot = readShareSnapshot(row.shareSnapshotJson) ?? [{ label: "Influencer", shareBps: 10_000 }];
     const suffix = ` · ${nextIndex} of ${row.trancheCount}`;
     const baseTitle = row.title.replace(/ · \d+ of \d+$/, "");
@@ -1144,14 +1169,14 @@ export async function sweepDueRecurrences(now = new Date()) {
           feeCents,
           serviceLevel: row.serviceLevel,
           feeSnapshotJson: {
-            ruleId: quote?.rule?.id ?? null,
-            ruleName: quote?.rule?.name ?? null,
-            ruleVersion: quote?.rule?.version ?? null,
-            percentBps: quote?.rule?.percentBps ?? null,
-            fixedCents: quote?.rule?.fixedCents ?? null,
+            ruleId: priorFee?.ruleId ?? null,
+            ruleName: priorFee?.ruleName ?? null,
+            ruleVersion: priorFee?.ruleVersion ?? null,
+            percentBps: priorFee?.percentBps ?? null,
+            fixedCents: priorFee?.fixedCents ?? null,
             feeCents,
-            feeType: quote?.rule?.feeType ?? "",
-            explanation: quote?.explanation ?? "Fee rules were unavailable.",
+            feeType: priorFee?.feeType ?? "",
+            explanation: "Copied from the original tranche. The live fee matrix was not applied.",
             capturedAt: now.toISOString(),
           },
           fxSnapshotJson: fxRecord(fx),
