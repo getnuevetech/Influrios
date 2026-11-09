@@ -23,19 +23,35 @@ describe("payment route decision", () => {
     assert.equal(split.conflicts.length, 0);
     assert.equal(split.ready, true);
 
+    const splitRails = decidePaymentRoute({
+      countryCode: "CM",
+      corridorActive: true,
+      corridorCurrency: "XAF",
+      corridorCollectionProvider: "flutterwave",
+      jurisdictionCurrency: "XAF",
+      jurisdictionHoldingProvider: "primary",
+      jurisdictionProtectedPayments: true,
+      gatewayProvider: "stripe",
+      gatewayActive: true,
+    });
+    assert.equal(splitRails.conflicts.length, 0);
+    assert.equal(splitRails.collectionProvider, "flutterwave");
+    assert.equal(splitRails.payoutRouteProvider, "stripe");
+    assert.equal(splitRails.ready, true);
+
     const conflict = decidePaymentRoute({
-      ...split,
       countryCode: "NG",
       corridorCurrency: "NGN",
       jurisdictionCurrency: "USD",
-      corridorCollectionProvider: "flutterwave",
+      corridorCollectionProvider: "airwallex",
       jurisdictionHoldingProvider: "primary",
       jurisdictionProtectedPayments: true,
       gatewayProvider: "stripe",
       gatewayActive: true,
       corridorActive: true,
     });
-    assert.equal(conflict.conflicts.length, 2);
+    assert.equal(conflict.conflicts.length, 1);
+    assert.match(conflict.conflicts[0], /NGN/);
     assert.equal(conflict.ready, false);
     const again = readRouteSnapshot(conflict);
     assert.equal(again?.version, conflict.version);

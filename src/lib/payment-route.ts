@@ -34,7 +34,7 @@ function clean(value: string | null | undefined) {
   return text || null;
 }
 
-/** One route decision for a country. Collection and holding may differ. Two answers for the same job conflict. */
+/** One route decision for a country. Collection, holding, and the gateway assignment may differ. Two currencies for one country conflict. */
 export function decidePaymentRoute(input: PaymentRouteInput): PaymentRouteDecision {
   const countryCode = input.countryCode.trim().toUpperCase();
   const corridorCurrency = storedCurrencyCode(input.corridorCurrency);
@@ -48,11 +48,6 @@ export function decidePaymentRoute(input: PaymentRouteInput): PaymentRouteDecisi
   if (corridorCurrency && jurisdictionCurrency && corridorCurrency !== jurisdictionCurrency) {
     conflicts.push(
       `${countryCode} currency is ${corridorCurrency} on the corridor and ${jurisdictionCurrency} on the jurisdiction.`,
-    );
-  }
-  if (collectionProvider && payoutRouteProvider && collectionProvider !== payoutRouteProvider) {
-    conflicts.push(
-      `${countryCode} collects with ${collectionProvider} and the gateway route assigns ${payoutRouteProvider}.`,
     );
   }
   let blockedReason: string | null = null;
