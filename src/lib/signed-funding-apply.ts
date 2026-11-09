@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { liveFundingBlockReason } from "@/lib/dual-platform-fees";
 import { requestPrefund } from "@/lib/marketplace-ledger";
 import { signedAgreementFundingLevel } from "@/lib/matching-product-boundary";
 import {
@@ -157,6 +158,9 @@ export async function fundSignedAgreement(input: {
   const terms = canonicalTerms(snapshot, amendment && amendment.creators.length && amendment.milestones.length ? amendment : null);
   const drift = submittedTermsDiffer(terms, input.submitted);
   if (drift) return { ok: false as const, error: `${drift} ${CHANGE_REQUIRED}` };
+
+  const liveFunding = liveFundingBlockReason(terms.financialPlan);
+  if (liveFunding) return { ok: false as const, error: liveFunding };
 
   const serviceLevel = signedAgreementFundingLevel(terms.serviceLevel);
   const primary = terms.creators[0];

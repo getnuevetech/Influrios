@@ -4,6 +4,7 @@
  */
 import { SERVICE_LEVELS } from "@/lib/collaboration-fees";
 import { corridorCountries } from "@/lib/corridor-countries";
+import type { FeeReservation } from "@/lib/dual-platform-fees";
 import { splitGross } from "@/lib/ledger";
 
 export const CONTRACT_WIZARD_STEPS = [
@@ -28,6 +29,8 @@ export type FinancialPlanMilestone = MilestoneDraft & {
   grossCents: number;
   creatorCents: number;
   platformFeeCents: number;
+  /** Business platform fee added on top of this milestone's gross. Omitted on legacy plans. */
+  businessPlatformFeeCents?: number;
   /** W3.10 — when usage rights activate (default: on payment release). */
   rightsActivateOn?: "release" | "acceptance" | "custom";
 };
@@ -42,6 +45,14 @@ export type CollaborationFinancialPlan = {
   feeFixedCents: number | null;
   totalPlatformFeeCents: number;
   totalCreatorCompensationCents: number;
+  /** Gross influencer compensation plus the business platform fee. */
+  businessPaysCents?: number;
+  /** Business platform fee reserved on top of gross influencer compensation. */
+  businessPlatformFeeCents?: number;
+  /** Influencer platform fee reserved from gross influencer compensation. */
+  influencerPlatformFeeCents?: number;
+  /** Reserved on signing. Earning and provider settlement stay empty until approved. */
+  feeReservation?: FeeReservation | null;
   feePayer: string;
   fundingCountry: string;
   creatorCountry: string;
@@ -247,6 +258,10 @@ export function buildFinancialPlan(input: {
   feePercentBps?: number | null;
   feeFixedCents?: number | null;
   totalPlatformFeeCents: number;
+  businessPlatformFeeCents?: number | null;
+  influencerPlatformFeeCents?: number | null;
+  businessPaysCents?: number | null;
+  feeReservation?: FeeReservation | null;
   feePayer?: string;
   fundingCountry: string;
   creatorCountry: string;
@@ -263,25 +278,39 @@ export function buildFinancialPlan(input: {
 }): CollaborationFinancialPlan | null {
   if (!Number.isInteger(input.grossCents) || input.grossCents <= 0) return null;
   if (!Number.isInteger(input.totalPlatformFeeCents) || input.totalPlatformFeeCents < 0) return null;
+  const dual =
+    input.businessPlatformFeeCents != null || input.influencerPlatformFeeCents != null;
+  const businessFee = input.businessPlatformFeeCents ?? 0;
+  const influencerFee = input.influencerPlatformFeeCents ?? 0;
+  if (dual) {
+    if (
+      !Number.isInteger(businessFee) ||
+      businessFee < 0 ||
+      !Number.isInteger(influencerFee) ||
+      influencerFee < 0 ||
+      influencerFee > input.grossCents ||
+      businessFee + influencerFee !== input.totalPlatformFeeCents
+    ) {
+      return null;
+    }
+  }
+  const deductedFee = dual ? influencerFee : input.totalPlatformFeeCents;
   const contractCurrency = currencyCode(input.currency);
   if (!contractCurrency) return null;
   const payoutRaw = (input.payoutCurrency ?? "").trim();
   const payoutCurrency = payoutRaw ? currencyCode(payoutRaw) : contractCurrency;
   if (!payoutCurrency) return null;
-  const shares = validateMilestoneShares(input.milestones);
-  if (!shares.ok) return null;
-  const grossParts = splitGross(input.grossCents, input.milestones.map((m) => m.shareBps));
+  const shareCheck = validateMilestoneShares(input.milestones);
+  if (!shareCheck.ok) return null;
+  const shares = input.milestones.map((m) => m.shareBps);
+  const grossParts = splitGross(input.grossCents, shares);
   if (!grossParts) return null;
-  const feeParts = splitGross(
-    Math.max(input.totalPlatformFeeCents, 0) || 0,
-    input.milestones.map((m) => m.shareBps),
-  );
+  const feeParts = splitGross(Math.max(deductedFee, 0) || 0, shares);
   // When fee is 0, allocate zeros without splitGross (which rejects 0 gross).
-  const platformParts =
-    input.totalPlatformFeeCents === 0
-      ? input.milestones.map(() => 0)
-      : feeParts;
+  const platformParts = deductedFee === 0 ? input.milestones.map(() => 0) : feeParts;
   if (!platformParts) return null;
+  const businessParts = !dual || businessFee === 0 ? input.milestones.map(() => 0) : splitGross(businessFee, shares);
+  if (!businessParts) return null;
 
   const rightsActivateOn = input.rightsActivateOn ?? "release";
   const milestones: FinancialPlanMilestone[] = input.milestones.map((row, index) => {
@@ -292,13 +321,16 @@ export function buildFinancialPlan(input: {
       shareBps: row.shareBps,
       grossCents,
       platformFeeCents,
+      ...(dual ? { businessPlatformFeeCents: businessParts[index] } : {}),
       creatorCents: Math.max(0, grossCents - platformFeeCents),
       rightsActivateOn,
     };
   });
 
   const totalCreator = milestones.reduce((sum, row) => sum + row.creatorCents, 0);
-  const totalFee = milestones.reduce((sum, row) => sum + row.platformFeeCents, 0);
+  const deductedTotal = milestones.reduce((sum, row) => sum + row.platformFeeCents, 0);
+  const businessTotal = milestones.reduce((sum, row) => sum + (row.businessPlatformFeeCents ?? 0), 0);
+  const totalFee = dual ? deductedTotal + businessTotal : deductedTotal;
 
   return {
     contractCurrency,
@@ -310,6 +342,14 @@ export function buildFinancialPlan(input: {
     feeFixedCents: input.feeFixedCents ?? null,
     totalPlatformFeeCents: totalFee,
     totalCreatorCompensationCents: totalCreator,
+    ...(dual
+      ? {
+          businessPlatformFeeCents: businessFee,
+          influencerPlatformFeeCents: influencerFee,
+          businessPaysCents: input.businessPaysCents ?? input.grossCents + businessFee,
+          feeReservation: input.feeReservation ?? null,
+        }
+      : {}),
     feePayer: (input.feePayer ?? "").trim(),
     fundingCountry: input.fundingCountry.trim().toUpperCase(),
     creatorCountry: input.creatorCountry.trim().toUpperCase(),
@@ -344,8 +384,16 @@ export function feeRuleChangeAffectsPlan(
   nextRule: { id: string; version: number },
 ): boolean {
   if (!plan.lockedAt) return true;
-  if (!plan.feeRuleId) return false;
-  return plan.feeRuleId !== nextRule.id || plan.feeRuleVersion !== nextRule.version;
+  const watched = [
+    plan.feeRuleId ? { id: plan.feeRuleId, version: plan.feeRuleVersion ?? 0 } : null,
+    plan.feeReservation
+      ? { id: plan.feeReservation.influencerRuleId, version: plan.feeReservation.influencerRuleVersion }
+      : null,
+  ].filter((row): row is { id: string; version: number } => Boolean(row));
+  if (!watched.length) return false;
+  const match = watched.find((row) => row.id === nextRule.id);
+  if (!match) return true;
+  return match.version !== nextRule.version;
 }
 
 export function parseMilestoneDraftsFromForm(raw: {

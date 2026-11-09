@@ -36,6 +36,10 @@ type Props = {
     serviceLevel?: string;
     grossUsd?: string;
     feeCents?: string;
+    businessFee?: string;
+    influencerFee?: string;
+    businessPays?: string;
+    influencerReceives?: string;
     rule?: string;
     feeType?: string;
     explanation?: string;
@@ -142,7 +146,7 @@ export default async function AdminFeesPage({ searchParams }: Props) {
             </select>
           </label>
           <label className="text-xs font-semibold text-muted">
-            Gross value (USD)
+            Gross influencer compensation (USD)
             <input
               name="grossUsd"
               type="number"
@@ -172,7 +176,18 @@ export default async function AdminFeesPage({ searchParams }: Props) {
               ) : null}
             </p>
             <p className="mt-1">
-              <span className="font-bold">Fee:</span>{" "}
+              <span className="font-bold">Business pays:</span> {formatCents(Number(params.businessPays || 0))}
+              {" · "}
+              <span className="font-bold">Business fee:</span> {formatCents(Number(params.businessFee || 0))}
+            </p>
+            <p className="mt-1">
+              <span className="font-bold">Influencer receives:</span>{" "}
+              {formatCents(Number(params.influencerReceives || 0))}
+              {" · "}
+              <span className="font-bold">Influencer fee:</span> {formatCents(Number(params.influencerFee || 0))}
+            </p>
+            <p className="mt-1">
+              <span className="font-bold">Platform fees reserved:</span>{" "}
               {formatCents(Number(params.feeCents || 0))}
             </p>
             {params.explanation ? (
@@ -570,10 +585,13 @@ function FeeRuleForm({
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
         >
           <option value="">Choose who pays</option>
-          <option value="brand">Brand</option>
-          <option value="creator">Creator</option>
-          <option value="split">Split</option>
+          <option value="brand">Business, added to the gross</option>
+          <option value="creator">Influencer, deducted from the gross</option>
+          <option value="split">Legacy split, not applied to either side</option>
         </select>
+        <span className="mt-1 block font-normal">
+          Each side needs its own rule. A split rule is not copied onto both sides.
+        </span>
       </label>
       <label className="text-xs font-semibold text-muted sm:col-span-3">
         Notes

@@ -8,7 +8,7 @@ import { closeBriefForContract, getWorkspace } from "@/lib/business";
 import { contractOfferReady } from "@/lib/campaign-contract";
 import { getMarketplaceApplication } from "@/lib/marketplace-listings";
 import { assertCollabOsV1 } from "@/lib/collab-os";
-import { resolveFee } from "@/lib/collaboration-fees";
+import { disclosureFromDualQuote, resolveDualPlatformFees } from "@/lib/dual-platform-fees";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   buildFinancialPlan,
@@ -338,31 +338,19 @@ export async function actionSubmitContractWizard(formData: FormData) {
     }
   }
 
-  const quote = await resolveFee({
+  const quote = await resolveDualPlatformFees({
     jurisdiction: jurisdictionCode,
     serviceLevel,
     grossValueCents: grossCents,
   }).catch(() => null);
+  if (!quote?.ok) {
+    qs.set("step", "preview");
+    redirectError(quote?.error ?? "A fee quote is required before accepting the fee disclosure.", qs);
+  }
 
   const disclosureGate = requireFeeDisclosureAccepted({
     accepted: feeDisclosureAccepted,
-    disclosure: quote
-      ? {
-          feeCents: quote.feeCents,
-          ruleId: quote.rule?.id ?? null,
-          ruleName: quote.rule?.name ?? null,
-          ruleVersion: quote.rule?.version ?? null,
-          feeType: quote.rule?.feeType ?? null,
-          method: quote.rule?.method ?? null,
-          percentBps: quote.rule?.percentBps ?? null,
-          fixedCents: quote.rule?.fixedCents ?? null,
-          payer: quote.rule?.payer ?? null,
-          jurisdiction: jurisdictionCode,
-          serviceLevel,
-          grossCents,
-          explanation: quote.explanation,
-        }
-      : null,
+    disclosure: disclosureFromDualQuote(quote, { jurisdiction: jurisdictionCode, serviceLevel }),
   });
   if (!disclosureGate.ok) {
     qs.set("step", "accept");
@@ -394,13 +382,17 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const plan = buildFinancialPlan({
     grossCents,
     currency,
-    feeRuleId: quote?.rule?.id ?? null,
-    feeRuleVersion: quote?.rule?.version ?? null,
-    feeMethod: quote?.rule?.method ?? null,
-    feePercentBps: quote?.rule?.percentBps ?? null,
-    feeFixedCents: quote?.rule?.fixedCents ?? null,
-    totalPlatformFeeCents: quote?.feeCents ?? 0,
-    feePayer: quote?.rule?.payer ?? "",
+    feeRuleId: quote.business.rule.id,
+    feeRuleVersion: quote.business.rule.version,
+    feeMethod: quote.business.rule.method,
+    feePercentBps: quote.business.rule.percentBps,
+    feeFixedCents: quote.business.rule.fixedCents,
+    totalPlatformFeeCents: quote.platformFeesTotalCents,
+    businessPlatformFeeCents: quote.businessPlatformFeeCents,
+    influencerPlatformFeeCents: quote.influencerPlatformFeeCents,
+    businessPaysCents: quote.businessPaysCents,
+    feeReservation: quote.reservation,
+    feePayer: "both",
     fundingCountry: jurisdictionCode,
     creatorCountry: creatorCountry ?? jurisdictionCode,
     payoutCurrency: currency,

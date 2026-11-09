@@ -18,6 +18,13 @@ export type FeeDisclosureInput = {
   serviceLevel: string;
   grossCents: number;
   explanation?: string | null;
+  businessFeeCents?: number | null;
+  influencerFeeCents?: number | null;
+  businessPaysCents?: number | null;
+  influencerReceivesCents?: number | null;
+  influencerRuleId?: string | null;
+  influencerRuleVersion?: number | null;
+  feeState?: "reserved" | null;
 };
 
 export type FeeDisclosureRecord = FeeDisclosureInput & {
@@ -47,6 +54,20 @@ export function buildFeeDisclosureSummary(input: FeeDisclosureInput): string {
     lines.push(`- Rate: enterprise ${input.fixedCents} cents`);
   }
   lines.push(`- Platform fee (cents): ${input.feeCents}`);
+  if (input.businessFeeCents != null) lines.push(`- Business platform fee (cents): ${input.businessFeeCents}`);
+  if (input.influencerFeeCents != null) {
+    lines.push(`- Influencer platform fee (cents): ${input.influencerFeeCents}`);
+  }
+  if (input.businessPaysCents != null) lines.push(`- Business pays (cents): ${input.businessPaysCents}`);
+  if (input.influencerReceivesCents != null) {
+    lines.push(`- Influencer receives (cents): ${input.influencerReceivesCents}`);
+  }
+  if (input.influencerRuleId) {
+    lines.push(`- Influencer rule: ${input.influencerRuleId} v${input.influencerRuleVersion ?? "n/a"}`);
+  }
+  if (input.feeState === "reserved") {
+    lines.push("- Fee state: reserved. Not earned. Not settled to Influrios.");
+  }
   if (input.ruleId) lines.push(`- Rule: ${input.ruleId} v${input.ruleVersion ?? "n/a"}`);
   if (input.ruleName) lines.push(`- Rule name: ${input.ruleName}`);
   if (input.payer) lines.push(`- Payer: ${input.payer}`);
