@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { actionApproveDealAmendment, actionVoidDealContract } from "@/app/admin/deals/actions";
+import { actionApproveDealAmendment, actionRecordFeeSettlement, actionVoidDealContract } from "@/app/admin/deals/actions";
 import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission, isSuperAdmin } from "@/lib/admin-auth";
 import { loadAdminDeal } from "@/lib/admin-deal";
@@ -11,7 +11,7 @@ import { contractMayBeVoided, fundedShareBps, sharePercentLabel } from "@/lib/si
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Deal · Admin" };
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; voided?: string; amended?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; voided?: string; amended?: string; settled?: string }> };
 
 export default async function AdminDealPage({ params, searchParams }: Props) {
   const session = await requireAnyAdminModule(["collaborations", "contracts", "marketplace"]);
@@ -23,6 +23,9 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
   const anchor = contract?.id ?? funding?.id ?? collaboration?.id ?? id;
   const canVoid = isSuperAdmin(session);
   const canAmend = canVoid || hasPermission(session, "contracts.manage");
+  const canSettle = hasPermission(session, "marketplace.manage");
+  const feesEarned = funding?.entries.some((entry) => entry.kind === "fee_earned") ?? false;
+  const feesSettled = funding?.entries.some((entry) => entry.kind === "fee_settled") ?? false;
   const scheduleAmounts = terms ? splitGross(terms.grossCents, terms.milestones.map((row) => row.shareBps)) : null;
   const creatorRows = terms?.creators.length
     ? terms.creators.map((row) => ({ name: row.slug, percent: String(row.shareBps / 100) }))
@@ -49,6 +52,7 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
       {query.error ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{query.error}</p> : null}
       {query.voided ? <p className="text-sm font-semibold text-emerald-700">Agreement voided. The PDF and signatures stay on record.</p> : null}
       {query.amended ? <p className="text-sm font-semibold text-emerald-700">Change order approved. The next funding instruction uses these terms.</p> : null}
+      {query.settled ? <p className="text-sm font-semibold text-emerald-700">Earned fees were settled to operating funds. The earned rows stay on the ledger.</p> : null}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -111,6 +115,18 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
               ))}
               {funding.entries.length === 0 ? <li>No provider event yet.</li> : null}
             </ul>
+            <p className="mt-3 text-xs font-semibold text-indigo">
+              {feesSettled ? "Platform fees are settled to operating funds." : feesEarned ? "Platform fees are earned and still in clearing." : "Platform fees are not earned."}
+            </p>
+            {canSettle && feesEarned && !feesSettled ? (
+              <form action={actionRecordFeeSettlement} className="mt-3 grid gap-2 sm:grid-cols-2">
+                <input type="hidden" name="id" value={anchor} />
+                <input type="hidden" name="fundingId" value={funding.id} />
+                <input name="amountCents" required inputMode="numeric" placeholder="Earned fees, minor units" className="rounded-lg border px-3 py-2" />
+                <input name="providerReference" required minLength={4} placeholder="Provider settlement reference" className="rounded-lg border px-3 py-2" />
+                <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Record settlement</button>
+              </form>
+            ) : null}
           </div>
         ) : null}
         {funding && funding.milestones.length > 0 ? (

@@ -128,6 +128,26 @@ describe("marketplace ledger rules", () => {
     );
     assert.equal(returned.heldCents, 10_000);
     assert.equal(returned.balanced, true);
+    const settledFees = reconcileLedger(
+      [
+        { kind: "hold", amountCents: 10_000 },
+        { kind: "release", amountCents: 9_000 },
+        { kind: "fee_settled", amountCents: 1_000 },
+      ],
+      10_000,
+    );
+    assert.equal(settledFees.heldCents, 0);
+    assert.equal(settledFees.balanced, true);
+    assert.equal(
+      marketplaceDisposition({
+        eventType: "fee.settled",
+        fundingStatus: "completed",
+        amountCents: 1_000,
+        expectedCents: 1_000,
+        heldCents: 1_000,
+      }),
+      "apply",
+    );
     assert.equal(
       marketplaceDisposition({
         eventType: "payout.returned",

@@ -19,6 +19,7 @@ import {
   reserveFeePostings,
   readSignedDealMoney,
   returnedPayoutPostings,
+  settlePlatformFees,
   signedDealMoneyEvents,
   signedQuoteExpired,
   taxIsSeparateFromPlatformFees,
@@ -163,6 +164,36 @@ describe("payment engine acceptance", () => {
       influencerFeeCents: 7_000,
     });
     assert.equal(replay.ok, false);
+    const beforeEarning = settlePlatformFees({
+      earned: false,
+      alreadySettled: false,
+      businessFeeCents: 25_000,
+      influencerFeeCents: 7_000,
+      amountCents: 32_000,
+      providerReference: "set_staging",
+    });
+    assert.equal(beforeEarning.ok, false);
+    const settled = settlePlatformFees({
+      earned: true,
+      alreadySettled: false,
+      businessFeeCents: 25_000,
+      influencerFeeCents: 7_000,
+      amountCents: 32_000,
+      providerReference: "set_staging",
+    });
+    assert.equal(settled.ok, true);
+    if (!settled.ok) return;
+    assert.equal(settled.entries.filter((row) => row.kind === "fee_settled").length, 2);
+    assert.equal(settled.entries.some((row) => row.kind === "fee_earned"), false);
+    const again = settlePlatformFees({
+      earned: true,
+      alreadySettled: true,
+      businessFeeCents: 25_000,
+      influencerFeeCents: 7_000,
+      amountCents: 32_000,
+      providerReference: "set_staging",
+    });
+    assert.equal(again.ok, false);
   });
 
   it("records a refund and a returned payout without rewriting the original amounts", () => {

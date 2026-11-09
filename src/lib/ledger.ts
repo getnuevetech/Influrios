@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { storedCurrencyCode } from "@/lib/money";
 
-export const LEDGER_KINDS = ["hold", "release", "refund", "fee", "return"] as const;
+export const LEDGER_KINDS = ["hold", "release", "refund", "fee", "fee_settled", "return"] as const;
 export type LedgerKind = (typeof LEDGER_KINDS)[number];
 
 export type MilestoneWorkflowStatus = "pending" | "submitted" | "approved" | "released" | "refunded";
@@ -238,6 +238,7 @@ export function ledgerMovements(entries: { kind: string; amountCents: number }[]
     entry.kind === "release" ||
     entry.kind === "refund" ||
     entry.kind === "fee" ||
+    entry.kind === "fee_settled" ||
     entry.kind === "return"
       ? [{ kind: entry.kind, amountCents: entry.amountCents }]
       : [],
@@ -311,7 +312,7 @@ export function reconcileLedger(entries: LedgerMovement[], grossCents: number) {
   const released = sum("release");
   const refunded = sum("refund");
   // P4: earned platform fee legs leave Collaboration Holding (fee booked on release, not on hold).
-  const fees = sum("fee");
+  const fees = sum("fee") + sum("fee_settled");
   const returned = sum("return");
   const held = heldIn - released - refunded - fees + returned;
   const balanced = held >= 0 && heldIn <= grossCents && released + refunded + fees <= heldIn + returned;
@@ -390,6 +391,17 @@ export function marketplaceDisposition(input: {
   if (input.eventType === "payout.returned") {
     if (input.fundingStatus === "payment_risk") return "reject";
     if (input.milestoneStatus === "released" && input.amountCents === input.expectedCents && input.amountCents > 0) {
+      return "apply";
+    }
+    return "reject";
+  }
+  if (input.eventType === "fee.settled") {
+    if (input.fundingStatus === "payment_risk") return "reject";
+    if (
+      (input.fundingStatus === "completed" || input.fundingStatus === "held") &&
+      input.amountCents === input.expectedCents &&
+      input.amountCents > 0
+    ) {
       return "apply";
     }
     return "reject";

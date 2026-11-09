@@ -77,6 +77,7 @@ export type LedgerPosting = {
     | "influencer_payable"
     | "fee_pending"
     | "fee_earned"
+    | "fee_settled"
     | "tax"
     | "release"
     | "payout"
@@ -501,6 +502,36 @@ export function earnPlatformFees(input: {
       { kind: "fee_earned", party: "platform", side: "influencer", amountCents: input.influencerFeeCents },
     ],
   };
+}
+
+/** Move earned fees to operating funds. Earning rows stay. A second settlement is refused. */
+export function settlePlatformFees(input: {
+  earned: boolean;
+  alreadySettled: boolean;
+  businessFeeCents: number;
+  influencerFeeCents: number;
+  amountCents: number;
+  providerReference: string;
+}): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
+  if (!input.earned) return { ok: false, error: "Fees stay in clearing until they are earned." };
+  if (input.alreadySettled) return { ok: false, error: "These fees were already settled to operating funds." };
+  const total = input.businessFeeCents + input.influencerFeeCents;
+  if (!Number.isInteger(total) || total < 0) return { ok: false, error: "The earned platform fees are missing." };
+  if (input.amountCents !== total) {
+    return { ok: false, error: "The settlement does not match the earned platform fees." };
+  }
+  if (total === 0) return { ok: true, entries: [] };
+  if (input.providerReference.trim().length < 4) {
+    return { ok: false, error: "A provider settlement reference is required." };
+  }
+  const entries: LedgerPosting[] = [];
+  if (input.businessFeeCents > 0) {
+    entries.push({ kind: "fee_settled", party: "platform", side: "business", amountCents: input.businessFeeCents });
+  }
+  if (input.influencerFeeCents > 0) {
+    entries.push({ kind: "fee_settled", party: "platform", side: "influencer", amountCents: input.influencerFeeCents });
+  }
+  return { ok: true, entries };
 }
 
 export function refundPostings(input: {
