@@ -118,6 +118,9 @@ export function InfluencerCardView({
               >
                 <SocialIcon platform={social.platform} size={18} />
                 {TILE_LABEL[social.platform] ?? social.platform}
+                <span className="text-[9px] font-semibold uppercase tracking-wide text-white/70">
+                  {social.source === "PROVIDER_SYNCED" || social.source === "PLATFORM_VERIFIED" ? "Verified" : "Unverified"}
+                </span>
               </a>
             ))}
           </div>

@@ -4,7 +4,9 @@ import { actionClaimDraft } from "@/app/claim/actions";
 import { ClaimForm } from "@/components/claim-form";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { canReadPrivateDraft, draftToSeedCreator, getDraft } from "@/lib/claim";
+import { prisma } from "@/lib/db";
 import { getInfluencerIdentity } from "@/lib/landing-pages";
+import { getAccountSession } from "@/lib/accounts";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Preview your Influencer Card" };
@@ -14,17 +16,20 @@ type Props = {
   searchParams: Promise<{ error?: string }>;
 };
 
-const STAGES = ["Preview", "Claim", "Verify", "Publish"] as const;
+const STAGES = ["Preview", "Create account", "Verify email", "Publish"] as const;
 
 export default async function ClaimPreviewPage({ params, searchParams }: Props) {
   const { draftId } = await params;
   const q = await searchParams;
   const draft = await getDraft(draftId);
   if (!draft || !(await canReadPrivateDraft(draft.id))) notFound();
-  const [creator, identity] = await Promise.all([
+  const [creator, identity, existing, account] = await Promise.all([
     Promise.resolve(draftToSeedCreator(draft)),
     getInfluencerIdentity(),
+    prisma.creator.findUnique({ where: { slug: draft.slug }, select: { userId: true } }).catch(() => null),
+    getAccountSession().catch(() => null),
   ]);
+  const ownedBySomeoneElse = Boolean(existing?.userId && existing.userId !== account?.id);
 
   const titleOptions = identity.selfDescriptions.length
     ? identity.selfDescriptions
@@ -39,9 +44,8 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
           Your Influencer Card — before you sign up
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Generated from <span className="font-semibold text-indigo">{draft.inputHandle}</span>. The card
-          shows that handle only. Follower counts and extra networks are not added. Nothing is public until
-          you claim, verify, and publish.
+          Generated from <span className="font-semibold text-indigo">{draft.inputHandle}</span>. The handle is
+          unverified. Follower counts are not added. Nothing is public until you verify your email and publish.
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
           {STAGES.map((s, i) => (
@@ -69,12 +73,15 @@ export default async function ClaimPreviewPage({ params, searchParams }: Props) 
       <PublicInfluencerCard creator={creator} qrDisplay="large" draftPreview />
 
       <div className="mx-auto mt-8 max-w-sm card-surface space-y-4 p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Claim this Influencer Profile</h2>
+        <h2 className="font-display text-xl font-bold text-indigo">
+          {ownedBySomeoneElse ? "Claim this profile" : "Save this preview to your account"}
+        </h2>
         <p className="text-sm text-muted">
-          Attach your email to take ownership. Publishing starts on the Starter plan after you add a bio,
-          a city, and a specialty.
+          {ownedBySomeoneElse
+            ? "This public profile already belongs to an account. Claiming it does not transfer it. Publish is blocked until you verify control of the social channel."
+            : "Add your email to keep this private preview. Verifying the email confirms your Influrios account. It does not verify the social handle."}
         </p>
-        <ClaimForm action={actionClaimDraft}>
+        <ClaimForm action={actionClaimDraft} submitLabel={ownedBySomeoneElse ? "Claim this profile" : "Continue with email"}>
           <input type="hidden" name="draftId" value={draft.id} />
           <label className="block text-sm font-semibold text-indigo">
             Display name

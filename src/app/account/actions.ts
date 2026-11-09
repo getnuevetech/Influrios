@@ -200,8 +200,17 @@ export async function actionSetPassword(formData: FormData) {
   redirect(next);
 }
 
-export async function actionLogout() {
+export async function actionLogout(formData?: FormData) {
   await clearAccountSession();
+  const { clearCreatorSession } = await import("@/lib/claim");
+  await clearCreatorSession().catch(() => undefined);
+  const nextRaw = String(formData?.get("next") ?? "").trim();
+  if (nextRaw) {
+    const next = safeNextPath(nextRaw, "/");
+    if (next.startsWith("/collaboration/contracts")) {
+      redirect(`/login?next=${encodeURIComponent(next)}`);
+    }
+  }
   redirect("/");
 }
 

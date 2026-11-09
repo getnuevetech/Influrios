@@ -19,7 +19,7 @@ export function advanceClaimStage(
     return { ok: true, stage: "verified" };
   }
   if (current !== "verified" && current !== "published") {
-    return { ok: false, error: "Verify ownership before publishing" };
+    return { ok: false, error: "Verify your email before publishing. A social channel is verified separately." };
   }
   return { ok: true, stage: "published" };
 }
@@ -42,8 +42,8 @@ export type CompletionSubject = {
 export const DEFAULT_COMPLETION_RULES: CompletionRule[] = [
   {
     key: "claimed",
-    label: "Claim ownership",
-    hint: "Attach your email and take ownership of this draft",
+    label: "Create your account",
+    hint: "Sign up with email. This does not verify a social channel.",
     weight: 20,
   },
   {

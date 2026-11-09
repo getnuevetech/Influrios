@@ -433,6 +433,30 @@ export async function toggleSavedListing(input: {
   return { saved: true as const };
 }
 
+/** Platforms named on a campaign that the applicant has not connected. */
+export function missingVerifiedPlatforms(required: string[], connected: string[]) {
+  const have = new Set(connected.map((item) => item.trim().toUpperCase()).filter(Boolean));
+  return [
+    ...new Set(required.map((item) => item.trim().toUpperCase()).filter((item) => item && !have.has(item))),
+  ];
+}
+
+async function assertVerifiedChannels(slug: string, platforms: string[]) {
+  if (missingVerifiedPlatforms(platforms, []).length === 0) return;
+  const creator = await prisma.creator.findUnique({
+    where: { slug },
+    select: { socialConnections: { where: { status: "connected" }, select: { platform: true } } },
+  });
+  const missing = missingVerifiedPlatforms(
+    platforms,
+    (creator?.socialConnections ?? []).map((row) => row.platform),
+  );
+  if (missing.length === 0) return;
+  throw new Error(
+    `This campaign requires a verified ${missing.join(", ")} channel. Connect that account from your dashboard before applying. Nothing was submitted.`,
+  );
+}
+
 export async function createMarketplaceApplication(input: {
   kind: "business_request" | "creator_opportunity";
   businessRequestId?: string;
@@ -455,14 +479,16 @@ export async function createMarketplaceApplication(input: {
   if (input.kind === "creator_opportunity" && !input.opportunityId) {
     throw new Error("opportunityId is required.");
   }
+  let requiredPlatforms: string[] = [];
   if (input.kind === "business_request" && input.businessRequestId) {
     const request = await prisma.marketplaceBusinessRequest.findUnique({
       where: { id: input.businessRequestId },
-      select: { status: true, briefId: true },
+      select: { status: true, briefId: true, platforms: true },
     });
     if (!request || request.status !== "published") {
       throw new Error("Business request must be published before applying or inviting.");
     }
+    requiredPlatforms = request.platforms ?? [];
     input = { ...input, briefId: input.briefId ?? request.briefId ?? undefined };
   }
   if (input.kind === "creator_opportunity" && input.opportunityId) {
@@ -473,6 +499,9 @@ export async function createMarketplaceApplication(input: {
     if (!opportunity || opportunity.status !== "published") {
       throw new Error("Creator opportunity must be published before connecting.");
     }
+  }
+  if (!invitation && input.fromSlug && requiredPlatforms.length > 0) {
+    await assertVerifiedChannels(input.fromSlug, requiredPlatforms);
   }
   if (invitation) {
     const existing = await prisma.marketplaceApplication.findFirst({

@@ -116,13 +116,23 @@ export async function persistPublishedClaim(draft: ClaimDraft) {
   const user = await prisma.user.upsert({
     where: { email: draft.email },
     create: { email: draft.email, name: draft.ownerName, role: "CREATOR", planTier: "STARTER" },
-    update: { role: "CREATOR", name: draft.ownerName ?? undefined },
+    update: { name: draft.ownerName ?? undefined },
   });
 
   await prisma.onboardingSession.update({
     where: { id: draft.id },
     data: { userId: user.id },
   });
+
+  const existingCreator = await prisma.creator.findUnique({
+    where: { slug: draft.slug },
+    select: { userId: true },
+  });
+  if (existingCreator?.userId && existingCreator.userId !== user.id) {
+    throw new Error(
+      "This profile belongs to another account. Verify control of its social channel before it can be transferred. Nothing was published.",
+    );
+  }
 
   const creator = await prisma.creator.upsert({
     where: { slug: draft.slug },

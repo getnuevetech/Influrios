@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { actionLogout } from "@/app/account/actions";
 import { actionPostContractMessage, actionSignNativeContract } from "@/app/collaboration/contracts/[id]/actions";
 import { SignaturePad } from "@/components/signature-pad";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
 import {
   adminCanOpenContractMessages,
+  adoptUnboundContractParty,
   messageVisible,
   contractTermsAreFrozen,
   resolveContractBodyForChrome,
@@ -36,16 +38,33 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
   ]);
   if (!document) notFound();
   let party = account ? resolveContractPartyForAccount(document.parties, account) : undefined;
-  if (party && account && party.userId !== account.id) {
-    await prisma.contractParty.update({ where: { id: party.id }, data: { userId: account.id } }).catch(() => undefined);
-    party = { ...party, userId: account.id };
-  }
+  if (party && account) party = await adoptUnboundContractParty(party, account);
   const adminOpen = admin
     ? adminCanOpenContractMessages(admin) ||
       admin.permissions.includes("contracts.manage") ||
       admin.permissions.includes("contracts.view")
     : false;
-  if (!party && !adminOpen) redirect("/login?next=/collaboration/contracts/" + id);
+  if (!account && !adminOpen) redirect("/login?next=/collaboration/contracts/" + id);
+  if (account && !party && !adminOpen) {
+    const invited = document.parties.map((row) => row.email).filter(Boolean);
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet">Contract</p>
+        <h1 className="mt-2 font-display text-3xl font-bold text-indigo">This login is not a party on this contract</h1>
+        <p className="mt-3 text-sm text-muted">
+          You are signed in as <strong className="text-indigo">{account.email}</strong>. Opening this link does not
+          sign you into another account. Sign in with the email that was invited
+          {invited.length ? `: ${invited.join(", ")}` : ""}.
+        </p>
+        <form action={actionLogout} className="mt-6">
+          <input type="hidden" name="next" value={`/collaboration/contracts/${id}`} />
+          <button type="submit" className="btn-primary">
+            Sign out and use a different login
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   const viewer =
     party && account

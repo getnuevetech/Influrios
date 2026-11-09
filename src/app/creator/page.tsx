@@ -105,6 +105,26 @@ export default async function CreatorHomePage({
         </div>
       ) : null}
 
+      {params.welcome ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E4EBFF] bg-white px-4 py-3 text-sm">
+          <div>
+            <p className="font-semibold text-indigo">Connect a social account</p>
+            <p className="text-muted">
+              Your email account is ready. Connect Instagram, TikTok, YouTube, Facebook, or X when you want a verified
+              badge and synced metrics. If a network declines the connection, this profile stays here so you can retry.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/social" className="btn-primary !py-2 text-sm">
+              Connect a social account
+            </Link>
+            <Link href="/creator" className="btn-secondary !py-2 text-sm">
+              Do this later
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
       {home.incomplete ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <div>

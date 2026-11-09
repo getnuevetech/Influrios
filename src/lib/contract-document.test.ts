@@ -390,6 +390,22 @@ Creator compensation: $900.00
     assert.equal(resolveContractPartyForAccount(parties, { id: "new_user", email: "ada@example.com" })?.id, "p1");
     assert.equal(resolveContractPartyForAccount(parties, { id: "user_biz", email: "other@example.com" })?.id, "p2");
     assert.equal(resolveContractPartyForAccount(parties, { id: "x", email: "missing@example.com" }), undefined);
+    assert.equal(
+      resolveContractPartyForAccount(
+        [{ id: "p3", userId: "owner", email: "ada@example.com", creatorSlug: "ada" }],
+        { id: "intruder", email: "ada@example.com" },
+        "ada",
+      ),
+      undefined,
+    );
+    assert.equal(
+      resolveContractPartyForAccount(
+        [{ id: "p4", userId: null, email: "other@example.com", creatorSlug: "ada" }],
+        { id: "intruder", email: "intruder@example.com" },
+        "ada",
+      ),
+      undefined,
+    );
   });
 
   it("routes notify emails to all parties or one recipient, skipping the sender", () => {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { actionLogin } from "@/app/account/actions";
+import { actionLogin, actionLogout } from "@/app/account/actions";
 import { safeNextPath } from "@/lib/account-policy";
 import { getAccountSession } from "@/lib/accounts";
 
@@ -13,7 +13,8 @@ export default async function LoginPage({ searchParams }: Props) {
   const params = await searchParams;
   const next = safeNextPath(params.next);
   const account = await getAccountSession().catch(() => null);
-  if (account) redirect(next);
+  const contractNext = next.startsWith("/collaboration/contracts");
+  if (account && !contractNext) redirect(next);
   return (
     <div className="mx-auto max-w-md px-4 py-14">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>
@@ -27,6 +28,23 @@ export default async function LoginPage({ searchParams }: Props) {
         Claimed a card with email only? Set a password from the link we email when you use Forgot password, or finish
         password setup after verifying your email.
       </p>
+      {account && contractNext ? (
+        <div className="card-surface mt-6 space-y-3 p-6">
+          <p className="text-sm text-indigo">
+            You are signed in as <strong>{account.email}</strong>. Continuing opens the contract as this account only.
+            It does not switch you into the account that sent the contract.
+          </p>
+          <Link href={next} className="btn-primary inline-flex w-full justify-center">
+            Continue as {account.email}
+          </Link>
+          <form action={actionLogout}>
+            <input type="hidden" name="next" value={next} />
+            <button type="submit" className="w-full text-sm font-semibold text-violet">
+              Sign out and use a different login
+            </button>
+          </form>
+        </div>
+      ) : null}
       {params.error ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {params.error}

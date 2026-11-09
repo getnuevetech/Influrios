@@ -1277,8 +1277,18 @@ export async function getCreatorSessionDraft(): Promise<ClaimDraft | null> {
     const { getAccountSession } = await import("@/lib/accounts");
     const account = await getAccountSession();
     if (account) {
+      const cookieId = await signedDraftIdFromCookie();
+      if (cookieId) {
+        const cookieSession = await prisma.onboardingSession.findUnique({
+          where: { id: cookieId },
+          select: { userId: true },
+        });
+        if (claimDraftAttachment(cookieSession?.userId, account.id) === "reject") {
+          await clearCreatorSession();
+        }
+      }
       const fromAccount = await draftFromAccountUser(account.id);
-      if (fromAccount) return withStoredOfferAndNeed(fromAccount);
+      return fromAccount ? withStoredOfferAndNeed(fromAccount) : null;
     }
   } catch {
     /* account module unavailable in some scripts */
@@ -1306,7 +1316,20 @@ export async function getCreatorSessionDraft(): Promise<ClaimDraft | null> {
   }
 }
 
-/** Link the open claim draft cookie to a registered member and keep the creator session. */
+/**
+ * A preview cookie may be saved onto the account that just signed in.
+ * A draft already owned by someone else is never transferred by logging in.
+ */
+export function claimDraftAttachment(
+  draftUserId: string | null | undefined,
+  accountUserId: string,
+): "attach" | "keep" | "reject" {
+  if (!draftUserId) return "attach";
+  if (draftUserId === accountUserId) return "keep";
+  return "reject";
+}
+
+/** Link an unowned preview cookie to the account that just signed in. Never takes another member's draft. */
 export async function attachClaimToUser(userId: string) {
   const jar = await cookies();
   const raw = jar.get(COOKIE_NAME)?.value;
@@ -1330,10 +1353,30 @@ export async function attachClaimToUser(userId: string) {
       exp: number;
     };
     if (parsed.exp < Date.now()) return;
-    await prisma.onboardingSession.update({
+    const session = await prisma.onboardingSession.findUnique({
       where: { id: parsed.draftId },
-      data: { userId },
+      select: { userId: true },
     });
+    if (!session) {
+      await clearCreatorSession();
+      return;
+    }
+    const attachment = claimDraftAttachment(session.userId, userId);
+    if (attachment === "reject") {
+      await clearCreatorSession();
+      const latest = await prisma.onboardingSession.findFirst({
+        where: { userId },
+        orderBy: { updatedAt: "desc" },
+      });
+      if (latest) await setCreatorSession(latest.id);
+      return;
+    }
+    if (attachment === "attach") {
+      await prisma.onboardingSession.update({
+        where: { id: parsed.draftId },
+        data: { userId },
+      });
+    }
     await setCreatorSession(parsed.draftId);
   } catch {
     /* draft may already be linked or missing */

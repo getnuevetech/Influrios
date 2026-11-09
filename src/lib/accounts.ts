@@ -259,7 +259,6 @@ export async function ensureAccountFromClaimDraft(input: {
         data: {
           name: input.name?.trim() || existing.name,
           emailVerifiedAt: existing.emailVerifiedAt ?? verifiedAt,
-          role: existing.role === "ADMIN" ? existing.role : "CREATOR",
         },
       })
     : await prisma.user.create({
