@@ -118,6 +118,7 @@ function postingParty(row: { party: string; side?: string }) {
 }
 
 function postingPurpose(kind: string) {
+  if (kind === "fee_settled") return "OPERATIONS";
   if (kind === "fee_pending" || kind === "fee_earned" || kind === "reversal") return "PLATFORM_FEE_CLEARING";
   if (kind === "refund") return "REFUND_RESERVE";
   return "COLLABORATION_HOLDING";
@@ -1777,7 +1778,7 @@ export async function applyMarketplaceEvent(input: {
     return { applied: false, result: "rejected" as const };
   }
   const snapshotPlan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
-  const { readSignedDealMoney, signedDealMoneyEvents } = await import("@/lib/payment-engine");
+  const { readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } = await import("@/lib/payment-engine");
   const signedDeal = readSignedDealMoney(snapshotPlan);
   const launchGate = signedDeal
     ? await import("@/lib/launch-gate")
@@ -1809,9 +1810,13 @@ export async function applyMarketplaceEvent(input: {
         ? left > 0
           ? left
           : -1
-        : input.eventType === "payout.returned"
-          ? (milestone?.amountCents ?? -1)
-          : (milestone?.amountCents ?? -1);
+        : input.eventType === "fee.settled"
+          ? signedDeal
+            ? signedDeal.businessPlatformFeeCents + signedDeal.influencerPlatformFeeCents
+            : -1
+          : input.eventType === "payout.returned"
+            ? (milestone?.amountCents ?? -1)
+            : (milestone?.amountCents ?? -1);
   const disposition = marketplaceDisposition({
     eventType: input.eventType,
     fundingStatus: funding.status,
@@ -2050,6 +2055,25 @@ export async function applyMarketplaceEvent(input: {
           provider: providerKey,
           eventId,
           entries: returned.entries,
+        });
+        return;
+      }
+      if (input.eventType === "fee.settled") {
+        if (!signedDeal) throw new LedgerReject("Fee settlement is only for a signed deal.");
+        const settled = settlePlatformFees({
+          earned: funding.entries.some((entry) => entry.kind === "fee_earned"),
+          alreadySettled: funding.entries.some((entry) => entry.kind === "fee_settled"),
+          businessFeeCents: signedDeal.businessPlatformFeeCents,
+          influencerFeeCents: signedDeal.influencerPlatformFeeCents,
+          amountCents: input.amountCents,
+          providerReference: eventId,
+        });
+        if (!settled.ok) throw new LedgerReject(settled.error);
+        await writeSignedPostings(tx, {
+          fundingId: funding.id,
+          provider: providerKey,
+          eventId,
+          entries: settled.entries,
         });
         return;
       }

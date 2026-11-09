@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminSession, hasPermission, isSuperAdmin } from "@/lib/admin-auth";
 import { parseScheduleCorrection } from "@/lib/signed-funding";
+import { applyMarketplaceEvent } from "@/lib/marketplace-ledger";
 import { approveContractAmendment, voidContractDocument } from "@/lib/signed-funding-apply";
 
 function dollarsToCents(raw: string) {
@@ -33,6 +34,34 @@ export async function actionVoidDealContract(formData: FormData) {
   revalidatePath("/admin/contracts");
   revalidatePath(`/admin/deals/${id}`);
   redirect(`/admin/deals/${id}?voided=1`);
+}
+
+export async function actionRecordFeeSettlement(formData: FormData) {
+  const session = await operator();
+  const id = String(formData.get("id") ?? "").trim();
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  if (!hasPermission(session, "marketplace.manage")) {
+    redirect(`/admin/deals/${id}?error=` + encodeURIComponent("Finance records a fee settlement."));
+  }
+  const amountCents = Number(String(formData.get("amountCents") ?? "").trim());
+  const providerReference = String(formData.get("providerReference") ?? "").trim();
+  if (!Number.isInteger(amountCents) || amountCents <= 0) {
+    redirect(`/admin/deals/${id}?error=` + encodeURIComponent("Enter the settlement in whole minor units."));
+  }
+  const result = await applyMarketplaceEvent({
+    provider: "finance",
+    eventId: providerReference,
+    eventType: "fee.settled",
+    fundingId,
+    amountCents,
+  });
+  if (!result.applied) {
+    const message = result.result === "duplicate" ? "That settlement reference is already recorded." : "The settlement was not recorded.";
+    redirect(`/admin/deals/${id}?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath(`/admin/deals/${id}`);
+  revalidatePath(`/admin/marketplace/${fundingId}`);
+  redirect(`/admin/deals/${id}?settled=1`);
 }
 
 export async function actionApproveDealAmendment(formData: FormData) {
