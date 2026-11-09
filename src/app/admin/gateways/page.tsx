@@ -139,8 +139,8 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-lg font-bold text-indigo">Country groups</h2>
           <p className="mt-1 text-sm text-muted">
-            Group countries and assign one gateway to the whole group. Saving updates each country route to that
-            gateway. Hold Ctrl/Cmd to select multiple countries.
+            Group countries for reference. Saving a group does not change a country route. Edit each payout
+            gateway on Payment settings. Hold Ctrl/Cmd to select multiple countries.
           </p>
         </div>
         {groups.map((group) => (
@@ -176,7 +176,7 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                     <CountryMultiSelect selected={group.countryCodes} />
                   </label>
                   <button type="submit" className="btn-primary w-fit">
-                    Save group & routes
+                    Save group
                   </button>
                 </form>
                 <form action={actionDeleteCountryGroup}>
