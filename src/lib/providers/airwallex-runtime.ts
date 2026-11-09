@@ -65,7 +65,14 @@ export async function openAirwallexFundingCollection(input: {
   const jurisdiction = await prisma.collaborationJurisdiction.findUnique({ where: { code: funding.jurisdictionCode } });
   const allowed = jurisdictionAllowsAirwallexIntent(parseApprovedProviderIds(jurisdiction?.approvedProviderIds));
   if (!allowed.ok) return allowed;
-  const primaryAccount = await connectedAccountForSlug(funding.creatorSlug);
+  const { payoutAccountForCollection, readRouteAccounts } = await import("@/lib/payment-route");
+  const storedAccounts = readRouteAccounts(funding.routeSnapshotJson);
+  const livePrimary = await connectedAccountForSlug(funding.creatorSlug);
+  const payoutAccount = payoutAccountForCollection({
+    frozenPayoutAccountId: storedAccounts?.payoutAccountId,
+    livePayoutAccountId: livePrimary,
+  });
+  const primaryAccount = payoutAccount.accountId;
   const parties = readShareSnapshot(funding.shareSnapshotJson);
   const resolved: { label: string; shareBps: number; connectedAccountId: string }[] = [];
   if (parties && parties.length >= 2) {
@@ -77,6 +84,25 @@ export async function openAirwallexFundingCollection(input: {
   const teamParties = resolved.length >= 2 && parties && resolved.length === parties.length ? resolved : null;
   if (!teamParties && !primaryAccount) {
     return { ok: false, error: "Add the creator's connected account before opening checkout. Nothing was charged." };
+  }
+  if (!teamParties && payoutAccount.shouldStore) {
+    const base =
+      funding.routeSnapshotJson && typeof funding.routeSnapshotJson === "object"
+        ? { ...(funding.routeSnapshotJson as Record<string, unknown>) }
+        : {};
+    await prisma.collaborationFunding.update({
+      where: { id: funding.id },
+      data: {
+        routeSnapshotJson: {
+          ...base,
+          accounts: {
+            holdingAccountId: storedAccounts?.holdingAccountId ?? "",
+            operationsAccountId: storedAccounts?.operationsAccountId ?? "",
+            payoutAccountId: primaryAccount,
+          },
+        },
+      },
+    });
   }
   const plan = fundingSplitPlan({
     milestones: funding.milestones.map((milestone) => ({
@@ -93,9 +119,9 @@ export async function openAirwallexFundingCollection(input: {
   if (!plan.ok) return plan;
   const auth = await session();
   if (!auth.ok) return auth;
-  const { holdingAccountForCollection, readRouteAccounts } = await import("@/lib/payment-route");
+  const { holdingAccountForCollection } = await import("@/lib/payment-route");
   const holding = holdingAccountForCollection({
-    frozenHoldingAccountId: readRouteAccounts(funding.routeSnapshotJson)?.holdingAccountId,
+    frozenHoldingAccountId: storedAccounts?.holdingAccountId,
     liveHoldingAccountId: auth.settings.holdingAccountId,
   });
   if (!holding.ok) return holding;

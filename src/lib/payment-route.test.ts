@@ -5,6 +5,7 @@ import {
   decidePaymentRoute,
   freezeRouteAccounts,
   holdingAccountForCollection,
+  payoutAccountForCollection,
   newCheckoutAllowed,
   readRouteAccounts,
   readRouteSnapshot,
@@ -89,6 +90,15 @@ describe("payment route decision", () => {
     assert.match(checkout, /newCheckoutAllowed/);
     assert.match(ledger, /freezeRouteAccounts/);
     assert.match(readFileSync("src/lib/providers/airwallex-runtime.ts", "utf8"), /holdingAccountForCollection/);
+    assert.match(readFileSync("src/lib/providers/airwallex-runtime.ts", "utf8"), /payoutAccountForCollection/);
+    const storedPayout = payoutAccountForCollection({
+      frozenPayoutAccountId: "acct-at-checkout",
+      livePayoutAccountId: "acct-changed-later",
+    });
+    assert.equal(storedPayout.accountId, "acct-at-checkout");
+    assert.equal(storedPayout.shouldStore, false);
+    const firstPayout = payoutAccountForCollection({ frozenPayoutAccountId: "", livePayoutAccountId: "acct-live" });
+    assert.equal(firstPayout.shouldStore, true);
     const frozen = freezeRouteAccounts({
       requiresHoldingAccount: true,
       holdingAccountId: "hold-at-sign",
