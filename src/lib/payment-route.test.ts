@@ -89,6 +89,8 @@ describe("payment route decision", () => {
     assert.match(checkout, /storedRoute\?\.collectionProvider \|\| funding.collectionProviderCode/);
     assert.match(checkout, /newCheckoutAllowed/);
     assert.match(ledger, /freezeRouteAccounts/);
+    const groups = readFileSync("src/lib/payment-country-groups.ts", "utf8");
+    assert.equal(groups.includes("setCountryGateway"), false);
     assert.match(readFileSync("src/lib/providers/airwallex-runtime.ts", "utf8"), /holdingAccountForCollection/);
     assert.match(readFileSync("src/lib/providers/airwallex-runtime.ts", "utf8"), /payoutAccountForCollection/);
     const storedPayout = payoutAccountForCollection({

@@ -1,6 +1,5 @@
 import { corridorCountryByCode } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
-import { setCountryGateway } from "@/lib/providers";
 
 export type PaymentCountryGroupView = {
   id: string;
@@ -82,10 +81,6 @@ export async function savePaymentCountryGroup(input: {
     });
     return row;
   });
-
-  for (const countryCode of countryCodes) {
-    await setCountryGateway(countryCode, provider.id);
-  }
 
   return group;
 }
