@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   budgetToGrossDollars,
+  currencyForPlaceName,
   campaignCommercialFromBrief,
   campaignEditLocked,
   campaignScopeFromBrief,
@@ -12,6 +13,12 @@ import {
 } from "./campaign-contract";
 
 describe("campaign-contract helpers", () => {
+  it("uses the country currency for a campaign", () => {
+    assert.equal(currencyForPlaceName("Nigeria"), "NGN");
+    assert.equal(currencyForPlaceName("US"), "USD");
+    assert.equal(currencyForPlaceName(""), null);
+  });
+
   it("parses budget into a gross dollar string", () => {
     assert.equal(budgetToGrossDollars("$1,250.00", "USD"), "1250");
     assert.equal(budgetToGrossDollars("500", "NGN"), "500");
