@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
+import { ROUTE_FIELDS_MESSAGE } from "@/lib/canonical-country-route";
+import { prisma } from "@/lib/db";
 import { saveAttributionPolicy, saveAttributionSources, fileAttributionClaim, resolveAttributionClaim } from "@/lib/deal-attribution";
 import { saveDisputeReasons } from "@/lib/milestone-disputes";
 import {
@@ -60,6 +62,21 @@ export async function actionSaveMarketplaceSettings(formData: FormData) {
 
 export async function actionSaveJurisdiction(formData: FormData) {
   await requireAdminAction("marketplace.manage");
+  const code = String(formData.get("code") ?? "").trim().toUpperCase();
+  const existing = code
+    ? await prisma.collaborationJurisdiction.findUnique({ where: { code } })
+    : null;
+  const postedCurrency = String(formData.get("currency") ?? "").trim().toUpperCase();
+  const postedDigits = String(formData.get("minorDigits") ?? "").trim();
+  const postedProvider = String(formData.get("providerCode") ?? "").trim().toLowerCase();
+  if (
+    existing &&
+    (postedCurrency !== existing.currency ||
+      postedDigits !== String(existing.minorDigits) ||
+      postedProvider !== existing.providerCode)
+  ) {
+    redirect(`/admin/payment-settings?error=${encodeURIComponent(ROUTE_FIELDS_MESSAGE)}`);
+  }
   try {
     await saveJurisdiction({
       code: String(formData.get("code") ?? ""),
@@ -88,7 +105,7 @@ export async function actionSaveJurisdiction(formData: FormData) {
   }
   revalidatePath("/admin/marketplace");
   revalidatePath("/payments");
-  redirect("/admin/marketplace?saved=jurisdiction");
+  redirect(`/admin/marketplace/settings?saved=jurisdiction${code ? `&code=${encodeURIComponent(code)}` : ""}`);
 }
 
 export async function actionSaveTemplates(formData: FormData) {

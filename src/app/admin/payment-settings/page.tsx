@@ -1,18 +1,30 @@
 import Link from "next/link";
+import { actionSaveCanonicalCountryRoute } from "@/app/admin/payment-settings/actions";
 import { requireAnyAdminModule } from "@/app/admin/guard";
+import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { decidePaymentRoute } from "@/lib/payment-route";
 import { storedPayoutMethodList } from "@/lib/corridor-checkout";
+import { corridorCurrencyOptions } from "@/lib/corridor-countries";
+import { listProviders } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Payment settings · Admin" };
 
-export default async function PaymentSettingsPage() {
-  await requireAnyAdminModule(["gateways", "collab_finance", "marketplace"]);
-  const [corridors, jurisdictions, routes] = await Promise.all([
+export default async function PaymentSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string; error?: string }>;
+}) {
+  const session = await requireAnyAdminModule(["gateways", "collab_finance", "marketplace"]);
+  const canEdit = hasPermission(session, "collab_finance.manage");
+  const params = await searchParams;
+  const [corridors, jurisdictions, routes, gateways, marketplaceProviders] = await Promise.all([
     prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }),
     prisma.collaborationJurisdiction.findMany({ orderBy: { code: "asc" } }),
     prisma.paymentCountryRoute.findMany({ include: { provider: { select: { code: true, enabled: true, name: true } } } }),
+    listProviders("payment").catch(() => []),
+    prisma.integrationProvider.findMany({ where: { kind: "marketplace" }, orderBy: { code: "asc" } }),
   ]);
   const corridorByCode = new Map(corridors.map((row) => [row.countryCode, row]));
   const jurisdictionByCode = new Map(jurisdictions.map((row) => [row.code, row]));
@@ -43,23 +55,31 @@ export default async function PaymentSettingsPage() {
       <div>
         <h1 className="font-display text-3xl font-bold text-indigo">Payment settings</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          One place for how a country collects, holds, and pays out. Credentials stay on providers. A country route is the
-          corridor, the jurisdiction rules, and the gateway assignment together. A deal stores the route it used, so a
-          later edit does not reroute money already in motion.
+          This page is the only editor for a country’s currency, precision, collection provider, holding provider, and
+          payout gateway. Provider credentials stay on Providers. Fee rules stay on Fees. A deal stores the route it
+          used, so a later edit does not reroute money already in motion.
         </p>
       </div>
+      {params.error ? (
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{params.error}</p>
+      ) : null}
+      {params.saved ? (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Saved the {params.saved} route.
+        </p>
+      ) : null}
       <section className="grid gap-3 sm:grid-cols-3">
         <Link href="/admin/gateways" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
           <p className="font-display text-lg font-bold text-indigo">Providers</p>
-          <p className="mt-1 text-xs text-muted">Gateway credentials and which countries a gateway can serve.</p>
+          <p className="mt-1 text-xs text-muted">Gateway credentials, Connect, and health. Country assignment is here.</p>
         </Link>
-        <Link href="/admin/corridors" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <p className="font-display text-lg font-bold text-indigo">Country routes</p>
-          <p className="mt-1 text-xs text-muted">Activation, currency, collection provider, and payout methods.</p>
+        <Link href="/admin/fees" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
+          <p className="font-display text-lg font-bold text-indigo">Fees and policies</p>
+          <p className="mt-1 text-xs text-muted">Business and influencer platform fee rules, waivers, and the simulator.</p>
         </Link>
-        <Link href="/admin/marketplace/settings" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <p className="font-display text-lg font-bold text-indigo">Policies</p>
-          <p className="mt-1 text-xs text-muted">Jurisdiction eligibility, holding provider, and funding schedules.</p>
+        <Link href="/admin/billing" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
+          <p className="font-display text-lg font-bold text-indigo">Subscription billing</p>
+          <p className="mt-1 text-xs text-muted">Plan prices and the billing portal. Separate from collaboration funding.</p>
         </Link>
       </section>
       {conflicts.length > 0 ? (
@@ -105,6 +125,66 @@ export default async function PaymentSettingsPage() {
             ) : null}
           </tbody>
         </table>
+      </section>
+      <section className="space-y-4">
+        <h2 className="font-display text-xl font-bold text-indigo">Edit a country route</h2>
+        {codes.map((code) => {
+          const corridor = corridorByCode.get(code);
+          const jurisdiction = jurisdictionByCode.get(code);
+          const route = routeByCode.get(code);
+          if (!corridor || !jurisdiction) return null;
+          return (
+            <form key={code} action={actionSaveCanonicalCountryRoute} className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
+              <p className="font-display text-lg font-bold text-indigo">{code}</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-5">
+                <input type="hidden" name="countryCode" value={code} />
+                <label className="text-xs font-semibold text-muted">
+                  Currency
+                  <select name="currency" defaultValue={corridor.currency} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
+                    {corridorCurrencyOptions(corridor.currency).map((currency) => (
+                      <option key={currency} value={currency}>{currency}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-muted">
+                  Minor digits
+                  <input name="minorDigits" defaultValue={jurisdiction.minorDigits} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm" />
+                </label>
+                <label className="text-xs font-semibold text-muted">
+                  Collection
+                  <select name="collectionProviderCode" defaultValue={corridor.collectionProviderCode ?? ""} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
+                    <option value="">None</option>
+                    {gateways.map((provider) => (
+                      <option key={provider.id} value={provider.code}>{provider.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-muted">
+                  Holding
+                  <select name="holdingProviderCode" defaultValue={jurisdiction.providerCode} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
+                    {marketplaceProviders.map((provider) => (
+                      <option key={provider.id} value={provider.code}>{provider.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-muted">
+                  Payout gateway
+                  <select name="payoutGatewayCode" defaultValue={route?.provider.code ?? ""} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
+                    <option value="">Choose</option>
+                    {gateways.map((provider) => (
+                      <option key={provider.id} value={provider.code}>{provider.name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {canEdit ? (
+                <button type="submit" className="btn-primary mt-3 !py-2 text-sm">Save {code}</button>
+              ) : (
+                <p className="mt-3 text-xs text-muted">Route edits need the collaboration finance permission.</p>
+              )}
+            </form>
+          );
+        })}
       </section>
     </div>
   );

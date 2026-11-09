@@ -35,7 +35,22 @@ describe("payment route decision", () => {
       gatewayActive: true,
       corridorActive: true,
     });
-    assert.equal(conflict.conflicts.length, 2);
+    assert.equal(conflict.conflicts.length, 1);
+    const separateJobs = decidePaymentRoute({
+      countryCode: "NG",
+      corridorActive: true,
+      corridorCurrency: "NGN",
+      corridorCollectionProvider: "flutterwave",
+      jurisdictionCurrency: "NGN",
+      jurisdictionMinorDigits: 2,
+      jurisdictionHoldingProvider: "primary",
+      jurisdictionProtectedPayments: true,
+      gatewayProvider: "stripe",
+      gatewayActive: true,
+    });
+    assert.equal(separateJobs.conflicts.length, 0);
+    assert.equal(separateJobs.collectionProvider, "flutterwave");
+    assert.equal(separateJobs.payoutRouteProvider, "stripe");
     assert.equal(conflict.ready, false);
     const again = readRouteSnapshot(conflict);
     assert.equal(again?.version, conflict.version);

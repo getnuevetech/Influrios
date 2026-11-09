@@ -50,11 +50,6 @@ export function decidePaymentRoute(input: PaymentRouteInput): PaymentRouteDecisi
       `${countryCode} currency is ${corridorCurrency} on the corridor and ${jurisdictionCurrency} on the jurisdiction.`,
     );
   }
-  if (collectionProvider && payoutRouteProvider && collectionProvider !== payoutRouteProvider) {
-    conflicts.push(
-      `${countryCode} collects with ${collectionProvider} and the gateway route assigns ${payoutRouteProvider}.`,
-    );
-  }
   let blockedReason: string | null = null;
   if (input.corridorActive === false) blockedReason = `${countryCode} corridor is suspended.`;
   else if (input.jurisdictionProtectedPayments === false) blockedReason = `${countryCode} is not open for protected payments.`;

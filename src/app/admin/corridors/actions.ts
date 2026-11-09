@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
+import { ROUTE_FIELDS_MESSAGE } from "@/lib/canonical-country-route";
+import { prisma } from "@/lib/db";
 import {
   createCorridor,
   deleteCorridorGroup,
@@ -98,6 +100,16 @@ export async function actionSavePayoutFallback(formData: FormData) {
 export async function actionUpdateCorridor(formData: FormData) {
   const session = await requireAdminAction("collab_finance.manage");
   const countryCode = String(formData.get("countryCode") ?? "").trim().toUpperCase();
+  const existing = await prisma.countryActivationCorridor.findUnique({ where: { countryCode } });
+  const postedCurrency = String(formData.get("currency") ?? "").trim().toUpperCase();
+  const postedCollection = String(formData.get("collectionProviderCode") ?? "").trim();
+  if (
+    existing &&
+    ((postedCurrency && postedCurrency !== existing.currency) ||
+      (formData.has("collectionProviderCode") && postedCollection !== (existing.collectionProviderCode ?? "")))
+  ) {
+    redirect(`/admin/payment-settings?error=${encodeURIComponent(ROUTE_FIELDS_MESSAGE)}`);
+  }
   const currencyField = formData.get("currency");
   const methods = formData
     .getAll("payoutMethod")
