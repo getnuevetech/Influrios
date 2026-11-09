@@ -15,6 +15,7 @@ import {
   signatureSendBlocked,
   isLegacyContractBody,
   messageVisible,
+  presentAgreementToParty,
   renderContractBody,
   renderContractPdf,
   renderContractTemplate,
@@ -33,6 +34,29 @@ const parties = [
   { role: "creator" as const, name: "Ada", email: "ada@example.com", creatorSlug: "ada", shareBps: 5000 },
   { role: "creator" as const, name: "Bea", email: "bea@example.com", creatorSlug: "bea", shareBps: 5000 },
 ];
+
+describe("party agreement view", () => {
+  it("replaces the shared fee lines with the viewer's own amounts", () => {
+    const body = [
+      "Influrios Platform Fee  $25.00",
+      "Influencer Compensation Pool  $350.00",
+      "Fee Rule  Business platform fee (cents): 2500",
+      "Influencer platform fee (cents): 700",
+      "Fee Earning Rule. The applicable portion of the platform fee is earned only when released.",
+    ].join("\n");
+    const shown = presentAgreementToParty(body, {
+      platformFee: "$7.00",
+      compensation: "$343.00",
+      feeNote: "Your platform fee is reserved on this agreement.",
+    });
+    assert.equal(shown.includes("$25.00"), false);
+    assert.equal(shown.includes("2500"), false);
+    assert.equal(shown.includes("700"), false);
+    assert.match(shown, /Influrios Platform Fee {2}\$7\.00/);
+    assert.match(shown, /Influencer Compensation Pool {2}\$343\.00/);
+    assert.match(shown, /Fee Earning Rule\./);
+  });
+});
 
 describe("contract documents", () => {
   it("blocks a second send after the agreement was sent or signed", () => {

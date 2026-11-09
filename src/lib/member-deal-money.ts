@@ -7,6 +7,7 @@ export type MemberDealView = {
   feeCents: number;
   grossCents: number;
   signed: boolean;
+  feeReady: boolean;
 };
 
 function integer(value: unknown) {
@@ -22,17 +23,11 @@ function signedQuote(plan: unknown) {
   if (!quote || typeof quote !== "object" || !("businessPaysCents" in quote)) return null;
   const row = quote as Record<string, unknown>;
   const businessPaysCents = integer(row.businessPaysCents);
-  const influencerReceivesCents = integer(row.influencerReceivesCents);
   const businessPlatformFeeCents = integer(row.businessPlatformFeeCents);
-  const influencerPlatformFeeCents = integer(row.influencerPlatformFeeCents);
   const grossInfluencerCompensationCents = integer(row.grossInfluencerCompensationCents);
-  if (
-    businessPaysCents == null ||
-    influencerReceivesCents == null ||
-    businessPlatformFeeCents == null ||
-    influencerPlatformFeeCents == null ||
-    grossInfluencerCompensationCents == null
-  ) {
+  const influencerReceivesCents = integer(row.influencerReceivesCents);
+  const influencerPlatformFeeCents = integer(row.influencerPlatformFeeCents);
+  if (businessPaysCents == null || businessPlatformFeeCents == null || grossInfluencerCompensationCents == null) {
     return null;
   }
   const influencerTaxCents = integer(row.influencerTaxCents) ?? 0;
@@ -62,13 +57,15 @@ export function memberDealView(input: {
       feeCents: quote.businessPlatformFeeCents,
       grossCents: quote.businessPaysCents,
       lines: [
-        { label: "Funding total", amountCents: quote.businessPaysCents },
+        { label: "Gross compensation", amountCents: quote.grossInfluencerCompensationCents },
         { label: "Your platform fee", amountCents: quote.businessPlatformFeeCents },
+        { label: "You pay", amountCents: quote.businessPaysCents },
       ],
       signed: true,
+      feeReady: true,
     };
   }
-  if (quote) {
+  if (quote && quote.influencerPlatformFeeCents != null && quote.influencerReceivesCents != null) {
     const lines: MemberDealLine[] = [
       { label: "Gross influencer compensation", amountCents: quote.grossInfluencerCompensationCents },
       { label: "Your platform fee", amountCents: quote.influencerPlatformFeeCents },
@@ -84,6 +81,18 @@ export function memberDealView(input: {
       grossCents: quote.grossInfluencerCompensationCents,
       lines,
       signed: true,
+      feeReady: true,
+    };
+  }
+  if (quote && input.role === "influencer") {
+    return {
+      role: "influencer",
+      headlineCents: 0,
+      feeCents: 0,
+      grossCents: quote.grossInfluencerCompensationCents,
+      lines: [],
+      signed: false,
+      feeReady: false,
     };
   }
   const gross = Number.isInteger(input.grossCents) && input.grossCents > 0 ? input.grossCents : 0;
@@ -99,6 +108,7 @@ export function memberDealView(input: {
         { label: "Platform fee", amountCents: fee },
       ],
       signed: false,
+      feeReady: true,
     };
   }
   const net = Math.max(0, gross - fee);
@@ -113,5 +123,6 @@ export function memberDealView(input: {
       { label: "Net payout", amountCents: net },
     ],
     signed: false,
+    feeReady: true,
   };
 }

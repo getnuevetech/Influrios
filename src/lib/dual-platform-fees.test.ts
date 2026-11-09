@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { buildFinancialPlan, feeRuleChangeAffectsPlan, lockFinancialPlan } from "./contract-wizard";
 import type { CollaborationFeeRule } from "./collaboration-fees";
-import { liveFundingBlockReason, quoteDualPlatformFees, quoteFromAllInBudget } from "./dual-platform-fees";
+import { applyInfluencerFeeToTerms, liveFundingBlockReason, quoteDualPlatformFees, quoteFromAllInBudget, quotePartyPlatformFee } from "./dual-platform-fees";
 
 const AS_OF = "2026-06-01T00:00:00.000Z";
 
@@ -82,7 +82,7 @@ describe("dual platform fee quote", () => {
     assert.equal(allIn.ok, true);
     if (!allIn.ok) return;
     assert.equal(allIn.grossInfluencerCompensationCents, 350_000);
-    assert.equal(allIn.businessPaysCents, 375_000);
+    assert.equal(allIn.totalCents, 375_000);
 
     const plan = buildFinancialPlan({
       grossCents: quote.grossInfluencerCompensationCents,
@@ -160,6 +160,78 @@ describe("dual platform fee quote", () => {
     assert.equal(quote.influencerPlatformFeeCents, 0);
     assert.equal(quote.influencerReceivesCents, 350_000);
     assert.match(quote.explanation, /not applied to either side/);
+  });
+
+  it("locks an influencer fee onto a business quote without changing what the business pays", () => {
+    const influencerQuote = quotePartyPlatformFee(
+      [rule({ ...influencer, serviceLevel: "contracted" })],
+      { jurisdiction: "US", serviceLevel: "contracted", grossValueCents: 350_000, asOf: AS_OF },
+      "influencer",
+    );
+    assert.equal(influencerQuote.ok, true);
+    if (!influencerQuote.ok) return;
+    const applied = applyInfluencerFeeToTerms(
+      {
+        financialPlan: {
+          signedQuote: {
+            grossInfluencerCompensationCents: 350_000,
+            businessPlatformFeeCents: 25_000,
+            businessPaysCents: 375_000,
+            influencerPlatformFeeCents: null,
+            influencerRuleId: null,
+          },
+        },
+      },
+      influencerQuote,
+    );
+    assert.equal(applied.ok, true);
+    if (!applied.ok) return;
+    const plan = applied.terms.financialPlan as { signedQuote: { businessPaysCents: number; influencerPlatformFeeCents: number; influencerReceivesCents: number } };
+    assert.equal(plan.signedQuote.businessPaysCents, 375_000);
+    assert.equal(plan.signedQuote.influencerPlatformFeeCents, 7_000);
+    assert.equal(plan.signedQuote.influencerReceivesCents, 343_000);
+  });
+
+  it("quotes each party without the other party's rule", () => {
+    const businessOnly = quotePartyPlatformFee(
+      [rule({ ...business, serviceLevel: "platform_match" })],
+      { jurisdiction: "US", serviceLevel: "platform_match", grossValueCents: 350_000, asOf: AS_OF },
+      "business",
+    );
+    assert.equal(businessOnly.ok, true);
+    if (!businessOnly.ok) return;
+    assert.equal(businessOnly.feeCents, 25_000);
+    assert.equal(businessOnly.totalCents, 375_000);
+    assert.equal(JSON.stringify(businessOnly).includes("influencer"), false);
+
+    const influencerOnly = quotePartyPlatformFee(
+      [rule({ ...influencer, serviceLevel: "platform_match" })],
+      { jurisdiction: "US", serviceLevel: "platform_match", grossValueCents: 350_000, asOf: AS_OF },
+      "influencer",
+    );
+    assert.equal(influencerOnly.ok, true);
+    if (!influencerOnly.ok) return;
+    assert.equal(influencerOnly.feeCents, 7_000);
+    assert.equal(influencerOnly.totalCents, 343_000);
+    assert.equal(JSON.stringify(influencerOnly).toLowerCase().includes("business"), false);
+
+    const missingInfluencer = quotePartyPlatformFee(
+      [rule({ ...business, serviceLevel: "platform_match" })],
+      { jurisdiction: "US", serviceLevel: "platform_match", grossValueCents: 350_000, asOf: AS_OF },
+      "influencer",
+    );
+    assert.equal(missingInfluencer.ok, false);
+    if (!missingInfluencer.ok) {
+      assert.match(missingInfluencer.error, /Platform match/);
+      assert.equal(/business/i.test(missingInfluencer.error), false);
+    }
+    const missingBusiness = quotePartyPlatformFee(
+      [rule({ ...influencer, serviceLevel: "platform_match" })],
+      { jurisdiction: "US", serviceLevel: "platform_match", grossValueCents: 350_000, asOf: AS_OF },
+      "business",
+    );
+    assert.equal(missingBusiness.ok, false);
+    if (!missingBusiness.ok) assert.equal(/influencer/i.test(missingBusiness.error), false);
   });
 
   it("blocks a missing side, a tie, and an influencer fee above the gross", () => {

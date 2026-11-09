@@ -58,7 +58,7 @@ export type CollaborationFinancialPlan = {
     validUntil: string;
     taxStatus: string;
     businessPaysCents: number;
-    influencerReceivesCents: number;
+    influencerReceivesCents: number | null;
     platformFeesTotalCents: number;
     businessTaxCents: number;
     influencerTaxCents: number;
