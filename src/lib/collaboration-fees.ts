@@ -841,27 +841,29 @@ export async function resolveFee(ctx: FeeResolveContext) {
   };
 }
 
-/** Freeze a commercial fee snapshot — later rule edits must not mutate this. */
-export async function createFeeSnapshot(ctx: FeeResolveContext) {
-  const { rule, feeCents, explanation } = await resolveFee(ctx);
-  if (!rule) throw new Error(explanation);
-
+async function persistFeeSnapshot(input: {
+  rule: CollaborationFeeRule;
+  feeCents: number;
+  basisCents: number;
+  jurisdiction: string;
+  serviceLevel: string;
+}) {
   const snapshotId = id("feesnap");
   const created = await prisma.collaborationFeeSnapshot.create({
     data: {
       id: snapshotId,
-      ruleId: rule.id,
-      ruleName: rule.name,
-      ruleVersion: rule.version,
-      method: rule.method,
-      payer: rule.payer,
-      feeType: rule.feeType,
-      basisCents: ctx.grossValueCents,
-      percentBps: rule.percentBps,
-      fixedCents: rule.fixedCents,
-      calculatedFeeCents: feeCents,
-      jurisdiction: ctx.jurisdiction,
-      serviceLevel: ctx.serviceLevel,
+      ruleId: input.rule.id,
+      ruleName: input.rule.name,
+      ruleVersion: input.rule.version,
+      method: input.rule.method,
+      payer: input.rule.payer,
+      feeType: input.rule.feeType,
+      basisCents: input.basisCents,
+      percentBps: input.rule.percentBps,
+      fixedCents: input.rule.fixedCents,
+      calculatedFeeCents: input.feeCents,
+      jurisdiction: input.jurisdiction,
+      serviceLevel: input.serviceLevel,
     },
   });
 
@@ -877,6 +879,30 @@ export async function createFeeSnapshot(ctx: FeeResolveContext) {
   }
 
   return snapshotFromRow(created);
+}
+
+/** Freeze one already-resolved side. Later rule edits must not mutate this row. */
+export async function createFeeSnapshotForRule(input: {
+  rule: CollaborationFeeRule;
+  feeCents: number;
+  basisCents: number;
+  jurisdiction: string;
+  serviceLevel: string;
+}) {
+  return persistFeeSnapshot(input);
+}
+
+/** Freeze a commercial fee snapshot — later rule edits must not mutate this. */
+export async function createFeeSnapshot(ctx: FeeResolveContext) {
+  const { rule, feeCents, explanation } = await resolveFee(ctx);
+  if (!rule) throw new Error(explanation);
+  return persistFeeSnapshot({
+    rule,
+    feeCents,
+    basisCents: ctx.grossValueCents,
+    jurisdiction: ctx.jurisdiction,
+    serviceLevel: ctx.serviceLevel,
+  });
 }
 
 export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { name: string }) {

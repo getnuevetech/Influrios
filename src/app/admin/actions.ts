@@ -148,26 +148,32 @@ export async function actionRestoreValueProposition() {
 
 export async function actionSimulateFee(formData: FormData) {
   await requireAdminAction("commerce.view");
-  const { feeSimulationDraft, resolveFee } = await import("@/lib/collaboration-fees");
+  const { feeSimulationDraft } = await import("@/lib/collaboration-fees");
+  const { resolveDualPlatformFees } = await import("@/lib/dual-platform-fees");
   const draft = feeSimulationDraft({
     jurisdiction: String(formData.get("jurisdiction") ?? ""),
     serviceLevel: String(formData.get("serviceLevel") ?? ""),
     grossUsd: String(formData.get("grossUsd") ?? ""),
   });
   if (!draft.ok) redirect(`/admin/fees?error=${encodeURIComponent(draft.error)}`);
-  const result = await resolveFee({
+  const result = await resolveDualPlatformFees({
     jurisdiction: draft.jurisdiction,
     serviceLevel: draft.serviceLevel,
     grossValueCents: draft.grossValueCents,
   });
+  if (!result.ok) redirect(`/admin/fees?error=${encodeURIComponent(result.error)}`);
   const q = new URLSearchParams({
     simulated: "1",
     jurisdiction: draft.jurisdiction,
     serviceLevel: draft.serviceLevel,
     grossUsd: draft.grossUsd,
-    feeCents: String(result.feeCents),
-    rule: result.rule?.name ?? "none",
-    feeType: result.rule?.feeType ?? "",
+    feeCents: String(result.platformFeesTotalCents),
+    businessFee: String(result.businessPlatformFeeCents),
+    influencerFee: String(result.influencerPlatformFeeCents),
+    businessPays: String(result.businessPaysCents),
+    influencerReceives: String(result.influencerReceivesCents),
+    rule: `${result.business.rule.name} + ${result.influencer.rule.name}`,
+    feeType: result.business.rule.feeType,
     explanation: result.explanation.slice(0, 400),
   });
   redirect(`/admin/fees?${q.toString()}`);
@@ -175,20 +181,36 @@ export async function actionSimulateFee(formData: FormData) {
 
 export async function actionFreezeFeeSnapshot(formData: FormData) {
   await requireAdminAction("commerce.manage");
-  const { createFeeSnapshot, feeSimulationDraft } = await import("@/lib/collaboration-fees");
+  const { feeSimulationDraft, createFeeSnapshotForRule } = await import("@/lib/collaboration-fees");
+  const { resolveDualPlatformFees } = await import("@/lib/dual-platform-fees");
   const draft = feeSimulationDraft({
     jurisdiction: String(formData.get("jurisdiction") ?? ""),
     serviceLevel: String(formData.get("serviceLevel") ?? ""),
     grossUsd: String(formData.get("grossUsd") ?? ""),
   });
   if (!draft.ok) redirect(`/admin/fees?error=${encodeURIComponent(draft.error)}`);
-  const snap = await createFeeSnapshot({
+  const quote = await resolveDualPlatformFees({
     jurisdiction: draft.jurisdiction,
     serviceLevel: draft.serviceLevel,
     grossValueCents: draft.grossValueCents,
   });
+  if (!quote.ok) redirect(`/admin/fees?error=${encodeURIComponent(quote.error)}`);
+  const business = await createFeeSnapshotForRule({
+    rule: quote.business.rule,
+    feeCents: quote.businessPlatformFeeCents,
+    basisCents: draft.grossValueCents,
+    jurisdiction: draft.jurisdiction,
+    serviceLevel: draft.serviceLevel,
+  });
+  const influencer = await createFeeSnapshotForRule({
+    rule: quote.influencer.rule,
+    feeCents: quote.influencerPlatformFeeCents,
+    basisCents: draft.grossValueCents,
+    jurisdiction: draft.jurisdiction,
+    serviceLevel: draft.serviceLevel,
+  });
   revalidatePath("/admin/fees");
-  redirect(`/admin/fees?frozen=${snap.id}`);
+  redirect(`/admin/fees?frozen=${encodeURIComponent(`${business.id} and ${influencer.id}`)}`);
 }
 
 export async function actionSaveFeeRule(formData: FormData) {
