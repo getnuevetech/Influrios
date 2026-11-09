@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { saveCanonicalCountryRoute } from "@/lib/canonical-country-route";
-import { recordProviderStagingTraces, saveLaunchApprovals } from "@/lib/launch-gate";
+import { recordProviderStagingTraces, saveDeferredFundingSwitches, saveLaunchApprovals } from "@/lib/launch-gate";
 
 export async function actionSaveCanonicalCountryRoute(formData: FormData) {
   const session = await requireAdminAction("collab_finance.manage");
@@ -54,6 +54,29 @@ export async function actionSaveLaunchApprovals(formData: FormData) {
   }
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?saved=launch-approvals");
+}
+
+export async function actionSaveDeferredFunding(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  try {
+    await saveDeferredFundingSwitches({
+      actor: session.email,
+      reason: String(formData.get("reason") ?? ""),
+      switches: {
+        crossBorderFundingEnabled: formData.get("crossBorderFundingEnabled") === "on",
+        teamFundingEnabled: formData.get("teamFundingEnabled") === "on",
+        stagedFundingEnabled: formData.get("stagedFundingEnabled") === "on",
+        automaticMilestoneApprovalEnabled: formData.get("automaticMilestoneApprovalEnabled") === "on",
+        automaticProviderSwitchingEnabled: formData.get("automaticProviderSwitchingEnabled") === "on",
+        allInBudgetEntryEnabled: formData.get("allInBudgetEntryEnabled") === "on",
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the funding switches.";
+    redirect(`/admin/payment-settings?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?saved=funding-switches");
 }
 
 export async function actionRecordProviderTrace(formData: FormData) {

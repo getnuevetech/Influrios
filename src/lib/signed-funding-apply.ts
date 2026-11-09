@@ -161,7 +161,10 @@ export async function fundSignedAgreement(input: {
   if (drift) return { ok: false as const, error: `${drift} ${CHANGE_REQUIRED}` };
 
   const { getLaunchGate } = await import("@/lib/launch-gate");
+  const { teamFundingGate } = await import("@/lib/payment-engine");
   const gate = await getLaunchGate().catch(() => null);
+  const teamGate = teamFundingGate(terms.creators.length, gate?.teamFundingEnabled === true);
+  if (!teamGate.ok) return teamGate;
   const liveFunding = liveFundingBlockReason(
     terms.financialPlan,
     gate

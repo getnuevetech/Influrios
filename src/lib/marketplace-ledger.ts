@@ -849,8 +849,21 @@ export async function requestPrefund(input: {
     signedFeeCents?: number;
   }[] = [];
   if (signedCollection) {
-    if (milestoneDefs.length !== 1 || schedule.parts.length !== 1) {
-      return { ok: false as const, error: "This route allows one collection and one milestone. Nothing was funded." };
+    if (schedule.parts.length !== 1) {
+      return { ok: false as const, error: "This route allows one collection. Nothing was funded." };
+    }
+    if (milestoneDefs.length !== signedCollection.milestoneCount) {
+      return { ok: false as const, error: "The milestones do not match the signed quote. Nothing was funded." };
+    }
+    const milestoneAmounts =
+      milestoneDefs.length === 1
+        ? [signedCollection.influencerReceivesCents]
+        : splitGross(
+            signedCollection.influencerReceivesCents,
+            milestoneDefs.map((row) => row.shareBps),
+          );
+    if (!milestoneAmounts) {
+      return { ok: false as const, error: "Signed milestone shares must add up to 100%. Nothing was funded." };
     }
     prepared.push({
       gross: signedCollection.businessPaysCents,
@@ -867,7 +880,7 @@ export async function requestPrefund(input: {
         quotedAt: null,
         rateType: null,
       },
-      milestoneAmounts: [signedCollection.influencerReceivesCents],
+      milestoneAmounts,
       quote: null,
       signedFeeCents: signedCollection.platformFeesTotalCents,
     });
@@ -1222,6 +1235,11 @@ export async function sweepDueRecurrences(now = new Date()) {
 export async function runAutoApprovalSweep(now = new Date()) {
   const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
   if (settings && settings.autoApprovalEnabled === false) {
+    return { scanned: 0, approved: 0, skippedDispute: 0, disabled: true as const };
+  }
+  const { getLaunchGate } = await import("@/lib/launch-gate");
+  const gate = await getLaunchGate().catch(() => null);
+  if (!gate?.automaticMilestoneApprovalEnabled) {
     return { scanned: 0, approved: 0, skippedDispute: 0, disabled: true as const };
   }
   const due = await prisma.fundingMilestone.findMany({

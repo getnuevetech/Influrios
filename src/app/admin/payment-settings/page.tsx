@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { actionRecordProviderTrace, actionSaveCanonicalCountryRoute, actionSaveLaunchApprovals } from "@/app/admin/payment-settings/actions";
+import { actionRecordProviderTrace, actionSaveCanonicalCountryRoute, actionSaveDeferredFunding, actionSaveLaunchApprovals } from "@/app/admin/payment-settings/actions";
 import { getLaunchGate } from "@/lib/launch-gate";
 import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
@@ -92,6 +92,22 @@ export default async function PaymentSettingsPage({
         ) : (
           <p className="mt-2 text-xs text-muted">Finance can change these approvals.</p>
         )}
+        <h3 className="mt-4 font-display text-base font-bold text-indigo">Extra funding paths</h3>
+        <p className="mt-1 text-sm text-muted">
+          Each path stays off until it is saved here. Turning one on does not charge a deal and does not approve live collection.
+        </p>
+        {canApprove ? (
+          <form action={actionSaveDeferredFunding} className="mt-3 grid gap-2 text-sm">
+            <label className="flex gap-2"><input type="checkbox" name="crossBorderFundingEnabled" defaultChecked={launchGate?.crossBorderFundingEnabled} /> Cross-border funding</label>
+            <label className="flex gap-2"><input type="checkbox" name="teamFundingEnabled" defaultChecked={launchGate?.teamFundingEnabled} /> Team funding</label>
+            <label className="flex gap-2"><input type="checkbox" name="stagedFundingEnabled" defaultChecked={launchGate?.stagedFundingEnabled} /> Staged funding</label>
+            <label className="flex gap-2"><input type="checkbox" name="automaticMilestoneApprovalEnabled" defaultChecked={launchGate?.automaticMilestoneApprovalEnabled} /> Automatic milestone approval</label>
+            <label className="flex gap-2"><input type="checkbox" name="automaticProviderSwitchingEnabled" defaultChecked={launchGate?.automaticProviderSwitchingEnabled} /> Automatic provider switching</label>
+            <label className="flex gap-2"><input type="checkbox" name="allInBudgetEntryEnabled" defaultChecked={launchGate?.allInBudgetEntryEnabled} /> All-in budget entry</label>
+            <input name="reason" required minLength={8} placeholder="Reason for this change" className="rounded-lg border px-3 py-2" />
+            <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Save funding paths</button>
+          </form>
+        ) : null}
         {canApprove ? (
           <form action={actionRecordProviderTrace} className="mt-4 grid gap-2 border-t border-[#E4EBFF] pt-4 text-sm sm:grid-cols-2">
             <p className="sm:col-span-2 text-xs text-muted">

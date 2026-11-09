@@ -1,17 +1,20 @@
 import { prisma } from "@/lib/db";
 import {
   buildProviderStagingTrace,
+  DEFAULT_DEFERRED_FUNDING,
+  type DeferredFundingSwitches,
   type LaunchApprovals,
   type StagingTrace,
 } from "@/lib/payment-engine";
 
 const GATE_ID = "default";
 
-export type LaunchGateRecord = LaunchApprovals & {
-  providerTraceReady: boolean;
-  payoutTrace: StagingTrace | null;
-  refundTrace: StagingTrace | null;
-};
+export type LaunchGateRecord = LaunchApprovals &
+  DeferredFundingSwitches & {
+    providerTraceReady: boolean;
+    payoutTrace: StagingTrace | null;
+    refundTrace: StagingTrace | null;
+  };
 
 function readTrace(value: unknown): StagingTrace | null {
   if (!value || typeof value !== "object") return null;
@@ -31,6 +34,12 @@ export async function getLaunchGate(): Promise<LaunchGateRecord> {
     taxTreatmentApproved: row.taxTreatmentApproved,
     earningRefundPolicyApproved: row.earningRefundPolicyApproved,
     providerRouteApproved: row.providerRouteApproved,
+    crossBorderFundingEnabled: row.crossBorderFundingEnabled,
+    teamFundingEnabled: row.teamFundingEnabled,
+    stagedFundingEnabled: row.stagedFundingEnabled,
+    automaticMilestoneApprovalEnabled: row.automaticMilestoneApprovalEnabled,
+    automaticProviderSwitchingEnabled: row.automaticProviderSwitchingEnabled,
+    allInBudgetEntryEnabled: row.allInBudgetEntryEnabled,
     providerTraceReady: row.providerTraceReady,
     payoutTrace: readTrace(row.payoutTraceJson),
     refundTrace: readTrace(row.refundTraceJson),
@@ -68,6 +77,40 @@ export async function saveLaunchApprovals(input: {
     },
   });
   return row;
+}
+
+export async function saveDeferredFundingSwitches(input: {
+  actor: string;
+  reason: string;
+  switches: DeferredFundingSwitches;
+}) {
+  const reason = input.reason.trim();
+  if (reason.length < 8) throw new Error("Add a reason of at least 8 characters. Nothing was changed.");
+  const before = await getLaunchGate().catch(() => ({ ...DEFAULT_DEFERRED_FUNDING }));
+  await getLaunchGate();
+  await prisma.collaborationLaunchGate.update({
+    where: { id: GATE_ID },
+    data: input.switches,
+  });
+  await prisma.auditLog.create({
+    data: {
+      actor: input.actor.slice(0, 120),
+      action: "launch_gate.deferred_funding",
+      objectType: "CollaborationLaunchGate",
+      objectId: GATE_ID,
+      before: {
+        crossBorderFundingEnabled: "crossBorderFundingEnabled" in before ? before.crossBorderFundingEnabled : false,
+        teamFundingEnabled: "teamFundingEnabled" in before ? before.teamFundingEnabled : false,
+        stagedFundingEnabled: "stagedFundingEnabled" in before ? before.stagedFundingEnabled : false,
+        automaticMilestoneApprovalEnabled:
+          "automaticMilestoneApprovalEnabled" in before ? before.automaticMilestoneApprovalEnabled : false,
+        automaticProviderSwitchingEnabled:
+          "automaticProviderSwitchingEnabled" in before ? before.automaticProviderSwitchingEnabled : false,
+        allInBudgetEntryEnabled: "allInBudgetEntryEnabled" in before ? before.allInBudgetEntryEnabled : false,
+      },
+      after: { ...input.switches, reason },
+    },
+  });
 }
 
 export async function recordProviderStagingTraces(input: {
