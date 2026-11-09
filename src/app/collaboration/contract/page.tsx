@@ -22,6 +22,8 @@ import {
   type ContractWizardStep,
   type MilestoneDraft,
 } from "@/lib/contract-wizard";
+import { findLiveContractForDeal, signatureSendBlocked } from "@/lib/contract-document";
+import { isFundableServiceLevel, signedAgreementFundingLevel } from "@/lib/matching-product-boundary";
 import { storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { prisma } from "@/lib/db";
 import { getDirectoryCreator, listDirectoryCreators } from "@/lib/directory";
@@ -308,6 +310,16 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   });
 
   const teamId = (params.team ?? "").trim();
+  const existingContract = await findLiveContractForDeal({
+    applicationId,
+    collaborationId: linkedCollab?.id,
+    teamProposalId: teamId,
+  }).catch(() => null);
+  const sendBlocked = signatureSendBlocked(existingContract);
+  const signedFundingLevel =
+    existingContract?.status === "signed" && !isFundableServiceLevel(effectiveServiceLevel)
+      ? signedAgreementFundingLevel(effectiveServiceLevel || serviceLevel)
+      : "";
   const teamProposal = teamId
     ? await prisma.teamProposal
         .findUnique({
@@ -604,18 +616,23 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 <select
                   name="serviceLevel"
                   required
-                  defaultValue={effectiveServiceLevel}
+                  defaultValue={signedFundingLevel || effectiveServiceLevel}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
                 >
                   <option value=""> </option>
-                  {availableServiceLevels.map((level) => (
+                  {(signedFundingLevel && !availableServiceLevels.includes(signedFundingLevel)
+                    ? [signedFundingLevel, ...availableServiceLevels]
+                    : availableServiceLevels
+                  ).map((level) => (
                     <option key={level} value={level}>
                       {SERVICE_LEVEL_LABELS[level]}
                     </option>
                   ))}
                 </select>
                 <span className="mt-1 block text-xs font-normal text-muted">
-                  Affects fee matrix, legal treatment, and jurisdiction availability.
+                  {signedFundingLevel
+                    ? "This agreement is already signed, so funding uses a contracted service level."
+                    : "Affects fee matrix, legal treatment, and jurisdiction availability."}
                   {jurisdictionCaps?.legalReviewStatus && jurisdictionCaps.legalReviewStatus !== "APPROVED"
                     ? ` Legal review: ${jurisdictionCaps.legalReviewStatus}.`
                     : ""}
@@ -896,14 +913,28 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               Send for signature uses Influrios in-app signing. Each party can download the agreement before and after
               signing. Funding does not start until every party has signed.
             </p>
+            {sendBlocked && existingContract ? (
+              <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                {sendBlocked}{" "}
+                <Link href={`/collaboration/contracts/${existingContract.id}`} className="font-semibold text-violet hover:underline">
+                  Open the agreement
+                </Link>
+              </p>
+            ) : null}
           </section>
 
           <div className="flex flex-col gap-3 border-t border-[#E4E9F5] pt-4 sm:flex-row">
             <button type="submit" name="intent" value="preview" className="btn-secondary flex-1">
               Refresh preview
             </button>
-            <button type="submit" name="intent" value="sign" className="btn-secondary flex-1">
-              Send for signature
+            <button
+              type="submit"
+              name="intent"
+              value="sign"
+              disabled={Boolean(sendBlocked)}
+              className="btn-secondary flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {sendBlocked ? "Already sent for signature" : "Send for signature"}
             </button>
             <button type="submit" name="intent" value="fund" className="btn-primary flex-1">
               Start funding →

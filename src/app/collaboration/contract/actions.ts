@@ -35,6 +35,7 @@ import {
   requireFeeDisclosureAccepted,
 } from "@/lib/fee-disclosure";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
+import { signedAgreementFundingLevel } from "@/lib/matching-product-boundary";
 import { formatMoney } from "@/lib/money";
 import {
   fundingAllowedBySignature,
@@ -433,7 +434,14 @@ export async function actionSubmitContractWizard(formData: FormData) {
         generatedAt: new Date().toISOString(),
       },
     });
-    if (!sent.ok) redirectError(sent.error, qs);
+    if (!sent.ok) {
+      if ("existingId" in sent && sent.existingId) {
+        redirect(
+          `/collaboration/contracts/${sent.existingId}?error=${encodeURIComponent(sent.error)}`,
+        );
+      }
+      redirectError(sent.error, qs);
+    }
     if (briefId) {
       await closeBriefForContract(briefId, ws.businessId, "deal").catch(() => undefined);
     }
@@ -444,18 +452,23 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const signedDocument = contractDocumentId
     ? await prisma.contractDocument.findUnique({ where: { id: contractDocumentId } })
     : null;
-  const signatureGate = fundingAllowedBySignature(signedDocument?.workspaceId === ws.businessId ? signedDocument.status : "");
+  const ownsSignedDocument = Boolean(signedDocument && signedDocument.workspaceId === ws.businessId);
+  const signatureGate = fundingAllowedBySignature(ownsSignedDocument ? signedDocument!.status : "");
   if (!signatureGate.ok) {
     qs.set("step", "accept");
     redirectError(signatureGate.error, qs);
   }
+  const fundingLevel =
+    ownsSignedDocument && signedDocument!.status === "signed"
+      ? signedAgreementFundingLevel(serviceLevel)
+      : serviceLevel;
   const result = await requestPrefund({
     businessName,
     creatorSlug,
     title: `${title} · ${scope.slice(0, 40)}`,
     jurisdictionCode,
     grossCents,
-    serviceLevel,
+    serviceLevel: fundingLevel,
     customMilestones: usingCustom ? drafts : null,
     financialPlan: locked as unknown as Record<string, unknown>,
     workspaceId: ws.businessId,
