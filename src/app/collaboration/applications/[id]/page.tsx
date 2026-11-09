@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { IconArrowRight, IconBuilding } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
+import { contractHrefFromCampaign, contractOfferReady } from "@/lib/campaign-contract";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { getDirectoryCreator } from "@/lib/directory";
 import {
@@ -20,6 +21,7 @@ import {
   listWorkspaceBusinessRequests,
   transitionMarketplaceApplication,
 } from "@/lib/marketplace-listings";
+import { actionAddShortlist } from "@/app/collaboration/business/actions";
 import { actionTransitionApplicationDetail } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +59,7 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
       ? (await listWorkspaceBusinessRequests(ws.businessId)).map((row) => row.id)
       : [];
 
-  const asBusiness = businessOwnsApplication(application, ownedIds);
+  const asBusiness = businessOwnsApplication(application, ownedIds, ws?.briefs.map((brief) => brief.id) ?? []);
   const asCreator = draft?.slug ? creatorOwnsApplication(application, draft.slug) : false;
   if (!asBusiness && !asCreator) {
     redirect("/collaboration/hub?error=" + encodeURIComponent("You cannot view that application."));
@@ -83,11 +85,24 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
   // Re-read after potential concurrent updates (opened redirect already refreshes).
   application = (await getMarketplaceApplicationDetail(id)) ?? application;
 
-  const nextStatuses = asBusiness
+  const campaignBrief = application.briefId
+    ? ws?.briefs.find((brief) => brief.id === application.briefId) ?? null
+    : null;
+  const shortlistedSlugs = ws?.shortlist.map((item) => item.creatorSlug) ?? [];
+  const offerReady =
+    asBusiness &&
+    contractOfferReady({
+      status: application.status,
+      creatorSlug: application.creatorSlug,
+      shortlistedSlugs,
+    });
+  const accepted = applicationIsAcceptedPipeline(application.status);
+  const nextStatuses = (asBusiness
     ? businessApplicationTransitions(application.status)
     : creatorRole
       ? creatorApplicationTransitions(application.status, creatorRole)
-      : [];
+      : []
+  ).filter((status) => status !== "COLLABORATION_DRAFTED");
 
   const counterpartSlug =
     asBusiness
@@ -98,15 +113,19 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
     : null;
 
   const title =
-    application.requestBrand ??
-    application.opportunityLookingFor ??
-    (counterpart?.displayName ?? applicationKindLabel(application));
+    campaignBrief?.title ||
+    application.requestBrand ||
+    application.opportunityLookingFor ||
+    counterpart?.displayName ||
+    applicationKindLabel(application);
+  const valueCurrency = (campaignBrief?.budgetCurrency || application.requestCurrency || "").trim();
+  const valueAmount = campaignBrief?.budget || application.requestBudget || "";
 
   const backHref = asBusiness
     ? "/collaboration/business#applicants"
     : "/collaboration/hub?view=collaborations#applications";
 
-  const showContractLink = applicationIsAcceptedPipeline(application.status);
+  const showContractLink = offerReady;
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6 sm:px-6">
@@ -161,8 +180,10 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
               <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
                 {application.requestCategory ? <span>{application.requestCategory}</span> : null}
                 {application.requestLocation ? <span>{application.requestLocation}</span> : null}
-                {application.requestBudget ? (
-                  <span className="font-semibold text-indigo">{application.requestBudget}</span>
+                {valueAmount ? (
+                  <span className="font-semibold text-indigo">
+                    {valueCurrency ? `${valueCurrency} ${valueAmount}` : valueAmount}
+                  </span>
                 ) : null}
               </p>
             </div>
@@ -181,6 +202,35 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
                 <p className="text-xs text-muted">@{counterpart.slug}</p>
               </div>
             </div>
+          ) : null}
+
+          {isInvite ? (
+            <section className="rounded-2xl border border-[#E8EDF8] bg-[#F8F6FF] p-4">
+              <h2 className="text-sm font-bold text-indigo">Private invitation</h2>
+              <p className="mt-1 text-xs text-muted">
+                {asBusiness
+                  ? "Only you and this influencer can see this offer, deadline, and response."
+                  : "This invitation is only yours. Other people invited to the campaign are not shown here, and your response does not change theirs."}
+              </p>
+              {application.offerText ? (
+                <p className="mt-3 text-sm text-[#4E5872]">
+                  <span className="font-semibold text-indigo">Compensation. </span>
+                  {application.offerText}
+                </p>
+              ) : null}
+              {application.deliverables ? (
+                <p className="mt-2 text-sm text-[#4E5872]">
+                  <span className="font-semibold text-indigo">Deliverables. </span>
+                  {application.deliverables}
+                </p>
+              ) : null}
+              {application.responseDeadline ? (
+                <p className="mt-2 text-sm text-[#4E5872]">
+                  <span className="font-semibold text-indigo">Respond by. </span>
+                  {application.responseDeadline.slice(0, 10)}
+                </p>
+              ) : null}
+            </section>
           ) : null}
 
           {application.requestSummary ? (
@@ -244,28 +294,57 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
           ) : null}
 
           <div className="rounded-2xl border border-[#E6ECF7] bg-[#F8F6FF] p-4">
-            {showContractLink ? (
+            {accepted && asBusiness && !offerReady ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-bold text-indigo">
-                    {application.status === "COLLABORATION_DRAFTED"
-                      ? "Contract still needed"
-                      : isInvite
-                        ? "Invitation accepted"
-                        : "Application accepted"}
-                  </p>
+                  <p className="text-sm font-bold text-indigo">Accepted, not assigned</p>
                   <p className="mt-1 text-xs text-muted">
-                    {application.status === "COLLABORATION_DRAFTED"
-                      ? "The agreement is not on file yet. It shows under Contracts once it is created."
-                      : isInvite
-                        ? "This invitation is accepted. The contract appears when the agreement is created."
-                        : "This application is accepted. It is not an invitation. The contract appears when the agreement is created."}
+                    Shortlist this influencer before a contract can be created. Accepting does not assign the campaign.
                   </p>
                 </div>
-                <Link href="/collaboration/contracts" className="btn-primary inline-flex items-center gap-2 !py-2 text-sm">
-                  Open contracts <IconArrowRight size={14} />
+                {application.creatorSlug ? (
+                  <form action={actionAddShortlist}>
+                    <input type="hidden" name="slug" value={application.creatorSlug} />
+                    <button type="submit" className="btn-primary !py-2 text-sm">
+                      Shortlist
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            ) : null}
+            {showContractLink && application.creatorSlug ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-indigo">Shortlisted</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Title, value, and scope from this {isInvite ? "invitation" : "request"} are carried into the agreement.
+                  </p>
+                </div>
+                <Link
+                  href={contractHrefFromCampaign({
+                    creatorSlug: application.creatorSlug,
+                    brief: campaignBrief,
+                    applicationId: application.id,
+                    collaborationId: application.collaborationId,
+                    request: campaignBrief
+                      ? null
+                      : {
+                          title: application.requestBrand,
+                          budget: application.requestBudget,
+                          currency: application.requestCurrency,
+                          summary: application.requestSummary,
+                        },
+                  })}
+                  className="btn-primary inline-flex items-center gap-2 !py-2 text-sm"
+                >
+                  Create contract <IconArrowRight size={14} />
                 </Link>
               </div>
+            ) : null}
+            {accepted && !asBusiness ? (
+              <p className="text-sm text-muted">
+                You accepted. The business assigns this campaign by shortlisting you, then sends the agreement.
+              </p>
             ) : null}
 
             {nextStatuses.length > 0 ? (
@@ -284,7 +363,7 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
                         className={`rounded-lg px-3 py-2 text-xs font-bold ${
                           status === "DECLINED" || status === "WITHDRAWN" || status === "EXPIRED"
                             ? "border border-border text-muted"
-                            : status === "ACCEPTED" || status === "COLLABORATION_DRAFTED"
+                            : status === "ACCEPTED"
                               ? "bg-violet text-white"
                               : "border border-violet/30 text-violet"
                         }`}

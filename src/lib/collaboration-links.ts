@@ -54,11 +54,14 @@ export type ApplicationLinkInput = {
   toSlug?: string | null;
 };
 
-/** Accepted work with both slugs can receive a collaboration id. One slug stays unlinked. */
+/**
+ * A collaboration is created only when the business drafts the contract.
+ * An influencer accepting does not assign the campaign.
+ */
 export function applicationLinkPlan(row: ApplicationLinkInput): "keep" | "create" | "unlinked" {
-  const accepted = row.status === "ACCEPTED" || row.status === "COLLABORATION_DRAFTED";
-  if (!accepted) return "keep";
   if ((row.collaborationId ?? "").trim()) return "keep";
+  const drafting = row.status === "COLLABORATION_DRAFTED";
+  if (!drafting) return row.status === "ACCEPTED" ? "unlinked" : "keep";
   const from = (row.fromSlug ?? "").trim();
   const to = (row.toSlug ?? "").trim();
   if (from && to && from !== to) return "create";

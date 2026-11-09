@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { requireBusinessSession } from "@/lib/account-audience";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { closeBriefForContract, getWorkspace } from "@/lib/business";
+import { contractOfferReady } from "@/lib/campaign-contract";
+import { getMarketplaceApplication } from "@/lib/marketplace-listings";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { resolveFee } from "@/lib/collaboration-fees";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
@@ -110,6 +112,9 @@ export async function actionSubmitContractWizard(formData: FormData) {
   if (teamProposalId) qs.set("team", teamProposalId);
   if (collaborationId) qs.set("collaboration", collaborationId);
   if (briefId) qs.set("brief", briefId);
+  if (applicationId) qs.set("application", applicationId);
+  const contractCurrency = String(formData.get("contractCurrency") ?? "").trim().toUpperCase();
+  if (/^[A-Z]{3}$/.test(contractCurrency)) qs.set("currency", contractCurrency);
   qs.set("title", title);
   qs.set("scope", scope);
   qs.set("commercial", commercial);
@@ -325,7 +330,10 @@ export async function actionSubmitContractWizard(formData: FormData) {
     settingsReviewWindowHours: config.reviewWindowHours,
     settingsMaxRevisions: config.maxRevisions,
   });
-  const currency = (jurisdiction?.currency ?? "").trim();
+  const requestedCurrency = String(formData.get("contractCurrency") ?? "").trim().toUpperCase();
+  const currency = /^[A-Z]{3}$/.test(requestedCurrency)
+    ? requestedCurrency
+    : (jurisdiction?.currency ?? "").trim();
   if (!/^[A-Za-z]{3}$/.test(currency)) {
     qs.set("step", "preview");
     redirectError("That jurisdiction has no currency.", qs);
@@ -358,6 +366,18 @@ export async function actionSubmitContractWizard(formData: FormData) {
       acceptedByUserId: account.id,
     },
   });
+  if (intent === "sign" && applicationId) {
+    const application = await getMarketplaceApplication(applicationId);
+    const ready = contractOfferReady({
+      status: application?.status ?? "",
+      creatorSlug: application?.creatorSlug,
+      shortlistedSlugs: ws.shortlist.map((item) => item.creatorSlug),
+    });
+    if (!application || !ready) {
+      redirectError("Shortlist this influencer before creating a contract.", qs);
+    }
+  }
+
   if (intent === "sign") {
     const members = teamShares
       ? teamShares.map((row) => ({ creatorSlug: row.label, shareBps: row.shareBps }))

@@ -335,12 +335,16 @@ export async function listTeamProposalsForWorkspace(workspaceId: string) {
 
 export async function listTeamProposalsForCreator(creatorSlug: string) {
   await expireDueProposals();
-  return prisma.teamProposal.findMany({
+  const rows = await prisma.teamProposal.findMany({
     where: { members: { some: { creatorSlug } } },
     include: { members: { orderBy: { createdAt: "asc" } } },
     orderBy: { createdAt: "desc" },
     take: 20,
   });
+  return rows.map((row) => ({
+    ...row,
+    members: visibleTeamMembers(row.members, { creatorSlug, canSeeAll: false }),
+  }));
 }
 
 export async function getTeamProposal(id: string) {
@@ -350,6 +354,48 @@ export async function getTeamProposal(id: string) {
   return prisma.teamProposal.findUnique({
     where: { id: proposalId },
     include: { members: { orderBy: { createdAt: "asc" } } },
+  });
+}
+
+export type VisibleTeamMember = {
+  id: string;
+  creatorSlug: string;
+  role: string;
+  /** Null when this viewer must not see that person's response. */
+  status: string | null;
+  /** Null when this viewer must not see that person's compensation. */
+  shareBps: number | null;
+};
+
+/**
+ * Business operators see every response and share.
+ * A teammate sees names and roles, plus only their own response and compensation.
+ * Anyone else receives no member rows.
+ */
+export function visibleTeamMembers(
+  members: { id: string; creatorSlug: string; role: string; status: string; shareBps: number }[],
+  viewer: { creatorSlug: string | null; canSeeAll: boolean },
+): VisibleTeamMember[] {
+  if (viewer.canSeeAll) {
+    return members.map((member) => ({
+      id: member.id,
+      creatorSlug: member.creatorSlug,
+      role: member.role,
+      status: member.status,
+      shareBps: member.shareBps,
+    }));
+  }
+  const slug = viewer.creatorSlug?.trim() ?? "";
+  if (!slug || !members.some((member) => member.creatorSlug === slug)) return [];
+  return members.map((member) => {
+    const self = member.creatorSlug === slug;
+    return {
+      id: member.id,
+      creatorSlug: member.creatorSlug,
+      role: member.role,
+      status: self ? member.status : null,
+      shareBps: self ? member.shareBps : null,
+    };
   });
 }
 

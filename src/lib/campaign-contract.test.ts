@@ -6,6 +6,7 @@ import {
   campaignEditLocked,
   campaignScopeFromBrief,
   contractHrefFromCampaign,
+  contractOfferReady,
 } from "./campaign-contract";
 
 describe("campaign-contract helpers", () => {
@@ -53,7 +54,14 @@ describe("campaign-contract helpers", () => {
     assert.match(href, /brief=brief_1/);
     assert.match(href, /title=Summer/);
     assert.match(href, /gross=2000/);
+    assert.match(href, /currency=USD/);
     assert.match(href, /scope=/);
+  });
+
+  it("opens create-contract only after the business shortlists an accepted influencer", () => {
+    assert.equal(contractOfferReady({ status: "ACCEPTED", creatorSlug: "maya", shortlistedSlugs: [] }), false);
+    assert.equal(contractOfferReady({ status: "VIEWED", creatorSlug: "maya", shortlistedSlugs: ["maya"] }), false);
+    assert.equal(contractOfferReady({ status: "ACCEPTED", creatorSlug: "maya", shortlistedSlugs: ["maya"] }), true);
   });
 
   it("locks closed campaigns from further edits", () => {

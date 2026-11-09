@@ -283,17 +283,19 @@ export default async function ContractsIndexPage({
                         <td className="text-[#667085]">{shortDate(contract.updatedAt)}</td>
                         <td>
                           <Link
-                            href={
-                              kind === "signed"
-                                ? `/collaboration/contracts/${contract.id}/pdf`
-                                : `/collaboration/contracts/${contract.id}${sign ? "#sign" : ""}`
-                            }
+                            href={`/collaboration/contracts/${contract.id}${sign ? "#sign" : ""}`}
                             className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ${
                               sign ? "bg-[#6D4AFF] text-white" : "border border-[#E7ECF5] text-[#344054]"
                             }`}
                           >
-                            {sign ? "Review & sign" : kind === "signed" ? "Download PDF" : "View agreement"}
+                            {sign ? "Review & sign" : "View agreement"}
                             {sign ? null : <span aria-hidden>→</span>}
+                          </Link>
+                          <Link
+                            href={`/collaboration/contracts/${contract.id}/pdf`}
+                            className="ml-2 inline-flex items-center rounded-full border border-[#E7ECF5] px-3 py-1.5 text-xs font-semibold text-[#344054]"
+                          >
+                            {kind === "signed" ? "Download signed" : "Download"}
                           </Link>
                         </td>
                       </tr>

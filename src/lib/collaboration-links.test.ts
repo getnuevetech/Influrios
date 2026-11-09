@@ -27,7 +27,8 @@ describe("collaboration link classification", () => {
   });
 
   it("creates a collaboration only when both parties are known", () => {
-    assert.equal(applicationLinkPlan({ id: "a", status: "ACCEPTED", fromSlug: "brand", toSlug: "maya" }), "create");
+    assert.equal(applicationLinkPlan({ id: "a", status: "ACCEPTED", fromSlug: "brand", toSlug: "maya" }), "unlinked");
+    assert.equal(applicationLinkPlan({ id: "a", status: "COLLABORATION_DRAFTED", fromSlug: "brand", toSlug: "maya" }), "create");
     assert.equal(applicationLinkPlan({ id: "a", status: "ACCEPTED", fromSlug: "maya", toSlug: null }), "unlinked");
     assert.equal(
       applicationLinkPlan({ id: "a", status: "ACCEPTED", collaborationId: "c1", fromSlug: "brand", toSlug: "maya" }),

@@ -524,8 +524,13 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
   }
 
   const ownRequestIds = ownRequests.map((row) => row.id);
-  const applications = ownRequestIds.length
-    ? await listMarketplaceApplications({ businessRequestIds: ownRequestIds, limit: 20 }).catch(() => [])
+  const ownBriefIds = ws.briefs.map((brief) => brief.id);
+  const applications = ownRequestIds.length || ownBriefIds.length
+    ? await listMarketplaceApplications({
+        businessRequestIds: ownRequestIds,
+        briefIds: ownBriefIds,
+        limit: 20,
+      }).catch(() => [])
     : [];
 
   const pipeline: HubPipelineItem[] = fundings.map((row) => {
@@ -566,6 +571,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
     suggestions,
     intentBrief,
     ownRequests: ownRequests.slice(0, 8),
+    publishedBriefIds: ownRequests.map((row) => row.briefId).filter((id): id is string => Boolean(id)),
     applications,
     opportunities: opportunities.slice(0, 6),
     inquiries: ws.inquiries.slice(0, 10),

@@ -1,6 +1,6 @@
 /**
  * Collaboration agreements: admin template, filled document, PDF, and who may read a message.
- * Native in-app signing is primary; DocuSign is an optional channel when enabled with credentials.
+ * Agreements are signed in Influrios. A stored PDF is available before and after every party signs.
  */
 import { createHash } from "crypto";
 import { prisma } from "@/lib/db";
@@ -16,16 +16,11 @@ import {
   type ContractPdfOptions,
   type ContractPdfSignature,
 } from "@/lib/contract-pdf";
-import { assembleDocuSignCredentials, openDocuSignEnvelope } from "@/lib/signing/docusign";
 import {
   applyNativeSignatureAnchor,
   formatNativeAttestation,
-  isNativeSigningCode,
   nativeEnvelopeId,
 } from "@/lib/signing/native";
-import { resolveSigningMode } from "@/lib/signing";
-import { activeSigningProvider } from "@/lib/providers";
-import { decryptSecret } from "@/lib/provider-secrets";
 import { SERVICE_LEVEL_LABELS, type ServiceLevel } from "@/lib/collaboration-fees";
 
 export const CONTRACT_TEMPLATE_ID = "collaboration";
@@ -825,62 +820,8 @@ export async function sendCollaborationContract(input: {
     ),
     pageEndorsements: true,
   });
-  const provider = await activeSigningProvider();
-  if (!provider) {
-    return {
-      ok: false as const,
-      error:
-        "Enable Influrios in-app signing or DocuSign in Admin → Document signing. Only one channel can be active. Nothing was signed.",
-    };
-  }
-  const secret = provider.secretCipher ? decryptSecret(provider.secretCipher) : "";
-  const mode = resolveSigningMode(provider.code, {
-    integrationKey: provider.integrationKey,
-    userId: provider.userId,
-    accountId: provider.publicKey,
-    privateKey: secret ?? "",
-    baseUrl: provider.baseUrl,
-  });
-
-  let signingChannel: "native" | "docusign" = "native";
+  const signingChannel = "native" as const;
   let envelopeId = "";
-
-  if (mode === "native") {
-    signingChannel = "native";
-  } else if (mode === "docusign") {
-    const credentials = assembleDocuSignCredentials({
-      stored: {
-        integrationKey: provider.integrationKey,
-        userId: provider.userId,
-        accountId: provider.publicKey,
-        privateKey: secret ?? "",
-        baseUrl: provider.baseUrl,
-        oauthBaseUrl: provider.oauthBaseUrl,
-      },
-    });
-    if (!credentials.ok) return credentials;
-    const opened = await openDocuSignEnvelope({
-      credentials,
-      request: {
-        collaborationId: input.collaborationId || input.workspaceId,
-        title: input.render.title.slice(0, 160),
-        documentHtml: renderedBody,
-        documentPdf: pdfBytes,
-        parties: input.render.parties.map((party) => ({ name: party.name, email: party.email })),
-      },
-    });
-    if (!opened.ok) return { ok: false as const, error: `${opened.error} Nothing was signed.` };
-    signingChannel = "docusign";
-    envelopeId = opened.envelopeId;
-  } else if (isNativeSigningCode(provider.code)) {
-    signingChannel = "native";
-  } else {
-    return {
-      ok: false as const,
-      error:
-        "DocuSign credentials are incomplete. Finish DocuSign setup, or enable Influrios in-app signing instead (only one can be active). Nothing was signed.",
-    };
-  }
 
   const document = await prisma.contractDocument.create({
     data: {
