@@ -36,6 +36,16 @@ const MODULE_PATH: Record<AdminModule, string> = {
   collab_finance: "/admin/collaboration-ops",
 };
 
+/** Gate an admin page when any one of the modules is enough. */
+export async function requireAnyAdminModule(modules: AdminModule[]) {
+  const session = await getAdminSession();
+  if (!session) redirect("/admin/login");
+  if (!modules.some((module) => canAccessModule(session, module))) {
+    redirect("/admin?error=forbidden");
+  }
+  return session;
+}
+
 /** Gate an admin page by module (any feature under that module). */
 export async function requireAdminPage(module: AdminModule) {
   const session = await getAdminSession();

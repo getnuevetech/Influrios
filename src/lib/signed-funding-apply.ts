@@ -1,0 +1,215 @@
+import { prisma } from "@/lib/db";
+import { requestPrefund } from "@/lib/marketplace-ledger";
+import { signedAgreementFundingLevel } from "@/lib/matching-product-boundary";
+import {
+  canonicalTerms,
+  contractFundingIdempotencyKey,
+  contractMayBeDeleted,
+  contractMayBeVoided,
+  parseAmendmentCreators,
+  parseAmendmentMilestones,
+  readSignedTermsSnapshot,
+  sameDealError,
+  submittedTermsDiffer,
+  type SignedCreatorShare,
+  type SignedMilestone,
+  type SignedTermsSnapshot,
+  type SubmittedFundingFields,
+} from "@/lib/signed-funding";
+
+const CHANGE_REQUIRED =
+  "These terms differ from the signed agreement. An approved change order is required before funding. Nothing was funded.";
+
+export async function fundSignedAgreement(input: {
+  documentId: string;
+  workspaceId: string;
+  payoutMethod?: string | null;
+  submitted: SubmittedFundingFields;
+}) {
+  const documentId = input.documentId.trim();
+  const document = await prisma.contractDocument.findUnique({
+    where: { id: documentId },
+    include: { amendments: { orderBy: { createdAt: "desc" }, take: 1 } },
+  });
+  if (!document) return { ok: false as const, error: "Contract not found." };
+  if (document.status !== "signed") {
+    return { ok: false as const, error: "Funding waits until every party has signed." };
+  }
+  const dealError = sameDealError(document, { ...input.submitted, workspaceId: input.workspaceId });
+  if (dealError) return { ok: false as const, error: dealError };
+  if (document.fundingId) {
+    const prior = await prisma.collaborationFunding.findUnique({ where: { id: document.fundingId } });
+    if (prior) return { ok: true as const, id: prior.id, status: prior.status, reused: true as const };
+  }
+
+  const snapshot = readSignedTermsSnapshot(document.termsSnapshotJson);
+  if (!snapshot) {
+    return {
+      ok: false as const,
+      error: "This signed agreement has no stored commercial terms. Nothing was funded.",
+    };
+  }
+  const amendment = document.amendments[0]
+    ? {
+        grossCents: document.amendments[0].grossCents,
+        currency: document.amendments[0].currency,
+        creators: parseAmendmentCreators(document.amendments[0].creatorsJson),
+        milestones: parseAmendmentMilestones(document.amendments[0].milestonesJson),
+        note: document.amendments[0].note,
+      }
+    : null;
+  const terms = canonicalTerms(snapshot, amendment && amendment.creators.length && amendment.milestones.length ? amendment : null);
+  const drift = submittedTermsDiffer(terms, input.submitted);
+  if (drift) return { ok: false as const, error: `${drift} ${CHANGE_REQUIRED}` };
+
+  const serviceLevel = signedAgreementFundingLevel(terms.serviceLevel);
+  const primary = terms.creators[0];
+  const result = await requestPrefund({
+    jurisdictionCode: terms.jurisdictionCode,
+    businessName: terms.businessName,
+    creatorSlug: primary.slug,
+    title: terms.title,
+    grossCents: terms.grossCents,
+    serviceLevel,
+    customMilestones: terms.milestones,
+    financialPlan: terms.financialPlan,
+    workspaceId: document.workspaceId,
+    collaborationId: document.collaborationId,
+    teamProposalId: document.teamProposalId,
+    creatorShares: terms.creators.length > 1 ? terms.creators.map((row) => ({ label: row.slug, shareBps: row.shareBps })) : null,
+    payoutMethod: input.payoutMethod?.trim() || terms.payoutMethod,
+    contractDocumentId: document.id,
+    idempotencyKey: contractFundingIdempotencyKey(document.id),
+  });
+  return result;
+}
+
+export async function approveContractAmendment(input: {
+  documentId: string;
+  actor: string;
+  note: string;
+  grossCents: number;
+  currency: string;
+  creators: SignedCreatorShare[];
+  milestones: SignedMilestone[];
+}) {
+  const note = input.note.trim();
+  if (note.length < 8) return { ok: false as const, error: "Add a reason of at least 8 characters. Nothing was changed." };
+  const snapshotLike: SignedTermsSnapshot = {
+    version: 1,
+    title: "amendment",
+    businessName: "amendment",
+    jurisdictionCode: "US",
+    currency: input.currency.trim().toUpperCase(),
+    grossCents: input.grossCents,
+    serviceLevel: "contracted",
+    workspaceId: "amendment",
+    collaborationId: null,
+    applicationId: null,
+    teamProposalId: null,
+    creators: input.creators,
+    milestones: input.milestones,
+    financialPlan: null,
+    payoutMethod: "",
+    lockedAt: new Date().toISOString(),
+  };
+  const checked = readSignedTermsSnapshot(snapshotLike);
+  if (!checked) {
+    return {
+      ok: false as const,
+      error: "A change order needs a currency, a gross amount, creators that add up to 100%, and milestones that add up to 100%.",
+    };
+  }
+  const document = await prisma.contractDocument.findUnique({
+    where: { id: input.documentId.trim() },
+    select: { id: true, status: true, fundingId: true },
+  });
+  if (!document) return { ok: false as const, error: "Contract not found." };
+  if (document.status !== "signed") return { ok: false as const, error: "Change orders apply to a signed agreement." };
+  if (document.fundingId) {
+    return { ok: false as const, error: "Funding already started. Change the prefund with a funding change order." };
+  }
+  const row = await prisma.contractTermAmendment.create({
+    data: {
+      documentId: document.id,
+      note,
+      grossCents: checked.grossCents,
+      currency: checked.currency,
+      creatorsJson: checked.creators,
+      milestonesJson: checked.milestones,
+      actor: input.actor,
+    },
+  });
+  await prisma.auditLog.create({
+    data: {
+      actor: input.actor,
+      action: "contract.amendment.approved",
+      objectType: "ContractDocument",
+      objectId: document.id,
+      after: { amendmentId: row.id, grossCents: checked.grossCents, currency: checked.currency, note },
+    },
+  }).catch(() => undefined);
+  return { ok: true as const, id: row.id };
+}
+
+export async function voidContractDocument(input: { id: string; actor: string; reason: string }) {
+  const reason = input.reason.trim();
+  if (reason.length < 8) return { ok: false as const, error: "Add a reason of at least 8 characters. Nothing was voided." };
+  const document = await prisma.contractDocument.findUnique({
+    where: { id: input.id.trim() },
+    select: { id: true, status: true, fundingId: true },
+  });
+  if (!document) return { ok: false as const, error: "Contract not found." };
+  if (!contractMayBeVoided(document.status, document.fundingId)) {
+    return {
+      ok: false as const,
+      error: document.fundingId
+        ? "This contract already started funding. It was not voided."
+        : "Only a sent, signed, or declined agreement can be voided.",
+    };
+  }
+  await prisma.contractDocument.update({
+    where: { id: document.id },
+    data: { status: "voided", voidReason: reason, voidedAt: new Date() },
+  });
+  await prisma.auditLog.create({
+    data: {
+      actor: input.actor,
+      action: "contract.voided",
+      objectType: "ContractDocument",
+      objectId: document.id,
+      before: { status: document.status },
+      after: { status: "voided", reason },
+    },
+  }).catch(() => undefined);
+  return { ok: true as const };
+}
+
+export async function linkSupersededContract(input: {
+  applicationId?: string | null;
+  collaborationId?: string | null;
+  teamProposalId?: string | null;
+  replacementId: string;
+}) {
+  const or = [
+    input.applicationId?.trim() ? { applicationId: input.applicationId.trim() } : null,
+    input.collaborationId?.trim() ? { collaborationId: input.collaborationId.trim() } : null,
+    input.teamProposalId?.trim() ? { teamProposalId: input.teamProposalId.trim() } : null,
+  ].filter((row): row is { applicationId: string } | { collaborationId: string } | { teamProposalId: string } => Boolean(row));
+  if (or.length === 0) return;
+  const previous = await prisma.contractDocument.findFirst({
+    where: { status: "voided", supersededById: null, id: { not: input.replacementId }, OR: or },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (!previous) return;
+  await prisma.contractDocument.update({
+    where: { id: previous.id },
+    data: { supersededById: input.replacementId },
+  });
+}
+
+export function deletionBlockedReason(status: string) {
+  if (contractMayBeDeleted(status)) return null;
+  return "Signed and sent agreements stay on record. Void the agreement instead of deleting it.";
+}

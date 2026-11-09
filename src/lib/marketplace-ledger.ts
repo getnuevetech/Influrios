@@ -539,6 +539,11 @@ export async function saveFundingSchedule(input: {
 }
 
 class TeamFundingReject extends Error {}
+class FundingLinkReject extends Error {
+  constructor(readonly existingId: string | null) {
+    super("This agreement already has a funding instruction.");
+  }
+}
 
 export async function requestPrefund(input: {
   jurisdictionCode: string;
@@ -566,9 +571,29 @@ export async function requestPrefund(input: {
   creatorShares?: { label: string; shareBps: number }[] | null;
   /** Payout method chosen from the country corridor. Blank stays blank. */
   payoutMethod?: string | null;
+  /** Signed agreement this instruction pays. Set with idempotencyKey. */
+  contractDocumentId?: string | null;
+  /** Stable key for the agreement and the initial funding stage. */
+  idempotencyKey?: string | null;
 }) {
   await ensureMarketplaceDefaults();
   await ensureSettlementDefaults();
+  const idempotencyKey = input.idempotencyKey?.trim() || null;
+  const contractDocumentId = input.contractDocumentId?.trim() || null;
+  if (idempotencyKey) {
+    const prior = await prisma.collaborationFunding.findUnique({ where: { idempotencyKey } });
+    if (prior) return { ok: true as const, id: prior.id, status: prior.status, reused: true as const };
+  }
+  if (contractDocumentId) {
+    const linked = await prisma.contractDocument.findUnique({
+      where: { id: contractDocumentId },
+      select: { fundingId: true },
+    });
+    if (linked?.fundingId) {
+      const prior = await prisma.collaborationFunding.findUnique({ where: { id: linked.fundingId } });
+      if (prior) return { ok: true as const, id: prior.id, status: prior.status, reused: true as const };
+    }
+  }
   const code = input.jurisdictionCode.trim().toUpperCase();
   const [jurisdiction, corridor] = await Promise.all([
     prisma.collaborationJurisdiction.findUnique({ where: { code } }),
@@ -816,6 +841,8 @@ export async function requestPrefund(input: {
           shareSnapshotJson: shareSnapshot,
           status: "awaiting_provider",
           providerCode: provider!.code,
+          contractDocumentId: index === 0 ? contractDocumentId : null,
+          idempotencyKey: index === 0 ? idempotencyKey : null,
           attributionLabel: attribution.attributionLabel,
           attributionStatus: attribution.attributionStatus,
           attributionExpiresAt: attribution.attributionExpiresAt,
@@ -855,10 +882,35 @@ export async function requestPrefund(input: {
       });
       if (locked.count !== 1) throw new TeamFundingReject("This team proposal already has a funding instruction.");
     }
+    if (contractDocumentId) {
+      const linked = await tx.contractDocument.updateMany({
+        where: { id: contractDocumentId, fundingId: null },
+        data: { fundingId: ids[0] },
+      });
+      if (linked.count !== 1) {
+        const winner = await tx.contractDocument.findUnique({
+          where: { id: contractDocumentId },
+          select: { fundingId: true },
+        });
+        throw new FundingLinkReject(winner?.fundingId ?? null);
+      }
+    }
     return ids;
   });
   } catch (error) {
     if (error instanceof TeamFundingReject) return { ok: false as const, error: error.message };
+    if (error instanceof FundingLinkReject) {
+      if (error.existingId) {
+        const prior = await prisma.collaborationFunding.findUnique({ where: { id: error.existingId } });
+        if (prior) return { ok: true as const, id: prior.id, status: prior.status, reused: true as const };
+      }
+      return { ok: false as const, error: error.message };
+    }
+    const code = typeof error === "object" && error && "code" in error ? String((error as { code?: string }).code) : "";
+    if (code === "P2002" && idempotencyKey) {
+      const prior = await prisma.collaborationFunding.findUnique({ where: { idempotencyKey } });
+      if (prior) return { ok: true as const, id: prior.id, status: prior.status, reused: true as const };
+    }
     throw error;
   }
   await prisma.auditLog.create({
@@ -1029,13 +1081,9 @@ export async function sweepDueRecurrences(now = new Date()) {
   }
 }
 
-async function sweepAutoApprovals() {
-  return runAutoApprovalSweep();
-}
-
 /**
  * W3.5 — Dedicated idempotent auto-approval sweep (Dev Addendum §8 / §17).
- * Skips milestones with an open dispute. Safe to run from jobs or read paths.
+ * Skips milestones with an open dispute. Jobs run this. Opening a ledger does not.
  */
 export async function runAutoApprovalSweep(now = new Date()) {
   const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
@@ -1248,11 +1296,31 @@ export async function ledgerTotals() {
   );
 }
 
-export async function listFundings() {
-  await sweepAutoApprovals();
-  await sweepDueRecurrences();
-  const rows = await prisma.collaborationFunding.findMany({
+export async function listFundings(query?: { q?: string; status?: string; page?: number; pageSize?: number }) {
+  const pageSize = Math.min(50, Math.max(1, query?.pageSize ?? 25));
+  const page = Math.max(1, query?.page ?? 1);
+  const q = query?.q?.trim() ?? "";
+  const status = query?.status?.trim() ?? "";
+  const where = {
+    ...(status ? { status } : {}),
+    ...(q
+      ? {
+          OR: [
+            { title: { contains: q, mode: "insensitive" as const } },
+            { businessName: { contains: q, mode: "insensitive" as const } },
+            { creatorSlug: { contains: q, mode: "insensitive" as const } },
+            { id: q },
+          ],
+        }
+      : {}),
+  };
+  const [total, rows] = await prisma.$transaction([
+    prisma.collaborationFunding.count({ where }),
+    prisma.collaborationFunding.findMany({
+    where,
     orderBy: { createdAt: "desc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
     include: {
       milestones: { orderBy: { sortOrder: "asc" } },
       entries: { orderBy: { createdAt: "asc" } },
@@ -1272,14 +1340,12 @@ export async function listFundings() {
         select: { id: true, note: true, previousUsdCents: true, nextUsdCents: true },
       },
     },
-    take: 50,
-  });
-  return rows.map(presentFunding);
+    }),
+  ]);
+  return { rows: rows.map(presentFunding), total, page, pageSize };
 }
 
 export async function listFundingsForCreator(creatorSlug: string) {
-  await sweepAutoApprovals();
-  await sweepDueRecurrences();
   const rows = await prisma.collaborationFunding.findMany({
     where: { creatorSlug },
     orderBy: { createdAt: "desc" },
@@ -1309,8 +1375,6 @@ export async function listFundingsForCreator(creatorSlug: string) {
 
 /** Spend view for a business — durable workspaceId ownership (not brand substring). */
 export async function listFundingsForBusiness(workspaceId: string) {
-  await sweepAutoApprovals();
-  await sweepDueRecurrences();
   const id = workspaceId.trim();
   if (!id) return [];
   const rows = await prisma.collaborationFunding.findMany({

@@ -368,6 +368,14 @@ export async function listJobs(limit = 50) {
   return prisma.job.findMany({ orderBy: { createdAt: "desc" }, take: limit });
 }
 
+export async function listFundingSweepResults() {
+  return prisma.job.findMany({
+    where: { kind: { in: ["milestone_auto_approval", "recurring_cycle_sweep"] } },
+    orderBy: { updatedAt: "desc" },
+    take: 8,
+  });
+}
+
 /** W3.5 — queue an idempotent milestone auto-approval sweep. */
 export async function enqueueAutoApprovalSweep() {
   await prisma.job.create({

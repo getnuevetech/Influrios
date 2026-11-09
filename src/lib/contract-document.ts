@@ -825,7 +825,7 @@ export async function findLiveContractForDeal(input: {
   if (or.length === 0) return null;
   return prisma.contractDocument.findFirst({
     where: { status: { notIn: ["voided", "declined"] }, OR: or },
-    select: { id: true, status: true, title: true },
+    select: { id: true, status: true, title: true, fundingId: true },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -835,13 +835,13 @@ export async function deleteContractDocumentAsSuperAdmin(id: string) {
   if (!documentId) return { ok: false as const, error: "Contract not found." };
   const document = await prisma.contractDocument.findUnique({
     where: { id: documentId },
-    select: { id: true, fundingId: true },
+    select: { id: true, fundingId: true, status: true },
   });
   if (!document) return { ok: false as const, error: "Contract not found." };
-  if (document.fundingId) {
+  if (document.status !== "draft" || document.fundingId) {
     return {
       ok: false as const,
-      error: "This contract already started funding. It was not deleted.",
+      error: "Only an unused draft can be deleted. Void a sent or signed agreement so the signatures stay on record.",
     };
   }
   await prisma.contractDocument.delete({ where: { id: document.id } });
@@ -856,6 +856,7 @@ export async function sendCollaborationContract(input: {
   applicationId?: string | null;
   createdByUserId: string;
   source: Record<string, string>;
+  termsSnapshot?: import("@/lib/signed-funding").SignedTermsSnapshot | null;
 }) {
   const business = input.render.parties.find((party) => party.role === "business");
   const creators = input.render.parties.filter((party) => party.role === "creator");
@@ -909,6 +910,7 @@ export async function sendCollaborationContract(input: {
       envelopeId,
       createdByUserId: input.createdByUserId,
       sourceJson: input.source,
+      termsSnapshotJson: input.termsSnapshot ? (JSON.parse(JSON.stringify(input.termsSnapshot)) as object) : undefined,
       parties: {
         create: input.render.parties.map((party) => ({
           role: party.role,
@@ -922,6 +924,14 @@ export async function sendCollaborationContract(input: {
       },
     },
   });
+
+  const { linkSupersededContract } = await import("@/lib/signed-funding-apply");
+  await linkSupersededContract({
+    applicationId: input.applicationId,
+    collaborationId: input.collaborationId,
+    teamProposalId: input.teamProposalId,
+    replacementId: document.id,
+  }).catch(() => undefined);
 
   if (signingChannel === "native" && !envelopeId) {
     envelopeId = nativeEnvelopeId(document.id);

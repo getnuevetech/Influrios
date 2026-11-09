@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/app/admin/guard";
+import { prisma } from "@/lib/db";
 import { frozenFeeRuleHeading, getFundingTransactionView } from "@/lib/admin-transaction-view";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { marketplaceProviderLabel } from "@/lib/marketplace-ledger";
@@ -16,6 +17,17 @@ export default async function AdminFundingTransactionPage({ params }: Props) {
   const { fundingId } = await params;
   const view = await getFundingTransactionView(fundingId);
   if (!view) notFound();
+  const agreement = await prisma.contractDocument.findFirst({
+    where: {
+      OR: [
+        { fundingId },
+        ...("contractDocumentId" in view.funding && view.funding.contractDocumentId
+          ? [{ id: view.funding.contractDocumentId }]
+          : []),
+      ],
+    },
+    select: { id: true, title: true, status: true },
+  });
 
   const { funding, feeRule, funds, provider, milestones, disputes, changeOrders, audits, collaboration } =
     view;
@@ -48,16 +60,26 @@ export default async function AdminFundingTransactionPage({ params }: Props) {
           </span>
           {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
         </p>
+        <p className="text-xs text-muted">
+          <Link href={`/admin/deals/${agreement?.id ?? funding.id}`} className="font-semibold text-violet hover:underline">
+            Open the deal
+          </Link>
+          {agreement ? (
+            <>
+              {" "}
+              · Agreement{" "}
+              <Link href={`/collaboration/contracts/${agreement.id}`} className="font-semibold text-violet hover:underline">
+                {agreement.title}
+              </Link>{" "}
+              ({agreement.status})
+            </>
+          ) : (
+            " · No signed agreement is linked to this prefund."
+          )}
+        </p>
         {collaboration ? (
           <p className="text-xs text-muted">
-            Proposal{" "}
-            <Link
-              href={`/collaboration/records/${collaboration.id}`}
-              className="font-semibold text-violet hover:underline"
-            >
-              {collaboration.id}
-            </Link>{" "}
-            · {collaboration.status} · {collaboration.initiatorSlug} → {collaboration.recipientSlug}
+            Proposal {collaboration.status} · {collaboration.initiatorSlug} → {collaboration.recipientSlug}
           </p>
         ) : (
           <p className="text-xs text-muted">No matching Collaboration proposal row found.</p>

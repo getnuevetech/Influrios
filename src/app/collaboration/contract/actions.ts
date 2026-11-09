@@ -35,15 +35,10 @@ import {
   requireFeeDisclosureAccepted,
 } from "@/lib/fee-disclosure";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
-import { signedAgreementFundingLevel } from "@/lib/matching-product-boundary";
 import { formatMoney } from "@/lib/money";
-import {
-  fundingAllowedBySignature,
-  resolveCreatorParties,
-  sendCollaborationContract,
-} from "@/lib/contract-document";
+import { resolveCreatorParties, sendCollaborationContract } from "@/lib/contract-document";
 import { creatorAmountsForMilestone } from "@/lib/team-proposal";
-import { ensureMarketplaceDefaults, marketplaceConfig, requestPrefund } from "@/lib/marketplace-ledger";
+import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
 import { collectionPayoutBlocker, collectionPayoutReady, paymentRoutes } from "@/lib/providers";
 import {
@@ -71,6 +66,25 @@ function readDrafts(formData: FormData, usingCustom: boolean, templates: Milesto
   const titles = formData.getAll("milestoneTitle").map((v) => String(v));
   const percents = formData.getAll("milestonePercent").map((v) => String(v));
   return parseMilestoneDraftsFromForm({ titles, percents });
+}
+
+export async function actionFundSignedContract(formData: FormData) {
+  const account = await requireBusinessSession("/collaboration/contracts");
+  const ws = await getWorkspace(account.id);
+  const documentId = String(formData.get("contractDocumentId") ?? "").trim();
+  const { fundSignedAgreement } = await import("@/lib/signed-funding-apply");
+  const funded = await fundSignedAgreement({
+    documentId,
+    workspaceId: ws.businessId,
+    payoutMethod: String(formData.get("payoutMethod") ?? ""),
+    submitted: { workspaceId: ws.businessId },
+  });
+  if (!funded.ok) {
+    redirect(`/collaboration/contracts/${documentId}?error=${encodeURIComponent(funded.error)}`);
+  }
+  revalidatePath("/payments");
+  revalidatePath(`/collaboration/contracts/${documentId}`);
+  redirect(`/payments?created=${funded.id}`);
 }
 
 export async function actionSubmitContractWizard(formData: FormData) {
@@ -126,6 +140,44 @@ export async function actionSubmitContractWizard(formData: FormData) {
   if (influencerAccepted) qs.set("influencerAccepted", "1");
   if (partyAccepted) qs.set("accepted", "1");
   if (feeDisclosureAccepted) qs.set("feeDisclosure", "1");
+
+  const contractDocumentIdEarly = String(formData.get("contractDocumentId") ?? "").trim();
+  if (intent === "fund") {
+    if (!contractDocumentIdEarly) {
+      redirectError("Open the signed agreement and start funding from that agreement.", qs);
+    }
+    const { fundSignedAgreement } = await import("@/lib/signed-funding-apply");
+    const customMilestones = usingCustom
+      ? parseMilestoneDraftsFromForm({
+          titles: formData.getAll("milestoneTitle").map((value) => String(value)),
+          percents: formData.getAll("milestonePercent").map((value) => String(value)),
+        })
+      : null;
+    const funded = await fundSignedAgreement({
+      documentId: contractDocumentIdEarly,
+      workspaceId: ws.businessId,
+      payoutMethod: String(formData.get("payoutMethod") ?? ""),
+      submitted: {
+        workspaceId: ws.businessId,
+        collaborationId,
+        applicationId,
+        teamProposalId,
+        creatorSlug,
+        currency: contractCurrency,
+        grossCents,
+        customMilestones,
+      },
+    });
+    if (!funded.ok) {
+      qs.set("step", "funding");
+      redirectError(funded.error, qs);
+    }
+    revalidatePath(BASE);
+    revalidatePath("/payments");
+    revalidatePath("/collaboration/business");
+    revalidatePath(`/collaboration/contracts/${contractDocumentIdEarly}`);
+    redirect(`/payments?created=${funded.id}`);
+  }
 
   if (!creatorSlug || !title || !scope || grossCents <= 0) {
     redirectError("Add the influencer, title, scope, and a gross amount.", qs);
@@ -433,6 +485,26 @@ export async function actionSubmitContractWizard(formData: FormData) {
         feeDisclosure: buildFeeDisclosureSummary(disclosureGate.record),
         generatedAt: new Date().toISOString(),
       },
+      termsSnapshot: {
+        version: 1 as const,
+        title,
+        businessName,
+        jurisdictionCode,
+        currency: plan.contractCurrency,
+        grossCents: plan.grossContractValueCents,
+        serviceLevel,
+        workspaceId: ws.businessId,
+        collaborationId: linkedCollaborationId,
+        applicationId: applicationId || null,
+        teamProposalId: teamProposalId || null,
+        creators: creators.parties
+          .filter((party) => party.role === "creator" && party.creatorSlug)
+          .map((party) => ({ slug: party.creatorSlug as string, shareBps: party.shareBps ?? 0 })),
+        milestones: plan.milestones.map((milestone) => ({ title: milestone.title, shareBps: milestone.shareBps })),
+        financialPlan: locked as unknown as Record<string, unknown>,
+        payoutMethod: String(formData.get("payoutMethod") ?? ""),
+        lockedAt: locked.lockedAt ?? new Date().toISOString(),
+      },
     });
     if (!sent.ok) {
       if ("existingId" in sent && sent.existingId) {
@@ -448,53 +520,5 @@ export async function actionSubmitContractWizard(formData: FormData) {
     redirect(`/collaboration/contracts/${sent.id}`);
   }
 
-  const contractDocumentId = String(formData.get("contractDocumentId") ?? "").trim();
-  const signedDocument = contractDocumentId
-    ? await prisma.contractDocument.findUnique({ where: { id: contractDocumentId } })
-    : null;
-  const ownsSignedDocument = Boolean(signedDocument && signedDocument.workspaceId === ws.businessId);
-  const signatureGate = fundingAllowedBySignature(ownsSignedDocument ? signedDocument!.status : "");
-  if (!signatureGate.ok) {
-    qs.set("step", "accept");
-    redirectError(signatureGate.error, qs);
-  }
-  const fundingLevel =
-    ownsSignedDocument && signedDocument!.status === "signed"
-      ? signedAgreementFundingLevel(serviceLevel)
-      : serviceLevel;
-  const result = await requestPrefund({
-    businessName,
-    creatorSlug,
-    title: `${title} · ${scope.slice(0, 40)}`,
-    jurisdictionCode,
-    grossCents,
-    serviceLevel: fundingLevel,
-    customMilestones: usingCustom ? drafts : null,
-    financialPlan: locked as unknown as Record<string, unknown>,
-    workspaceId: ws.businessId,
-    collaborationId: linkedCollaborationId,
-    teamProposalId: teamProposalId || null,
-    creatorShares: teamShares,
-    payoutMethod: String(formData.get("payoutMethod") ?? ""),
-  });
-  if (!result.ok) {
-    qs.set("step", "funding");
-    redirectError(result.error, qs);
-  }
-  if (signedDocument) {
-    await prisma.contractDocument.update({
-      where: { id: signedDocument.id },
-      data: { fundingId: result.id },
-    });
-  }
-
-  if (briefId) {
-    await closeBriefForContract(briefId, ws.businessId, "deal").catch(() => undefined);
-  }
-
-  revalidatePath(BASE);
-  revalidatePath("/payments");
-  revalidatePath("/collaboration/business");
-  revalidatePath("/business/campaigns");
-  redirect(`/payments?created=${result.id}`);
+  redirectError("Funding starts from the signed agreement. Nothing was funded.", qs);
 }

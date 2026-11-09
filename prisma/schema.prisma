@@ -767,6 +767,14 @@ model ContractDocument {
   envelopeId      String            @default("")
   createdByUserId String?
   sourceJson      Json?
+  /// Locked commercial terms captured when the agreement is sent. Funding reads this, not the wizard form.
+  termsSnapshotJson Json?
+  voidReason      String            @default("")
+  voidedAt        DateTime?
+  supersededById  String?
+  supersededBy    ContractDocument? @relation("ContractSupersede", fields: [supersededById], references: [id], onDelete: SetNull)
+  supersedes      ContractDocument[] @relation("ContractSupersede")
+  amendments      ContractTermAmendment[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   parties         ContractParty[]
@@ -776,6 +784,26 @@ model ContractDocument {
   @@index([envelopeId])
   @@index([createdByUserId])
   @@index([applicationId])
+  @@index([fundingId])
+  @@index([collaborationId])
+  @@index([teamProposalId])
+  @@index([status, createdAt])
+}
+
+/// An approved change to signed commercial terms before funding starts.
+model ContractTermAmendment {
+  id             String           @id @default(cuid())
+  documentId     String
+  document       ContractDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  note           String
+  grossCents     Int
+  currency       String
+  creatorsJson   Json
+  milestonesJson Json
+  actor          String
+  createdAt      DateTime         @default(now())
+
+  @@index([documentId, createdAt])
 }
 
 model ContractParty {
@@ -1875,6 +1903,10 @@ model CollaborationFunding {
   /// Optional durable link to a Collaboration proposal/record (hub pipeline join).
   collaborationId  String?
   collaboration    Collaboration? @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
+  /// Agreement this prefund was created from. One initial instruction per agreement.
+  contractDocumentId String? @unique
+  /// contract:{documentId}:initial — a retry returns this row instead of inserting another.
+  idempotencyKey   String?  @unique
   creatorSlug      String
   title            String
   currency         String   @default("USD")
