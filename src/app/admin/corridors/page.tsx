@@ -62,18 +62,6 @@ function KycSelect({ value }: { value: string }) {
   );
 }
 
-function CurrencySelect({ value }: { value: string }) {
-  return (
-    <select name="currency" defaultValue={value} className={selectClass}>
-      {corridorCurrencyOptions(value).map((code) => (
-        <option key={code} value={code}>
-          {code}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 function RouteSelect({ value, providers }: { value: string; providers: ProviderOption[] }) {
   const known = providers.some((provider) => provider.code === value);
   return (
@@ -106,12 +94,10 @@ function CorridorCard({
   row,
   canManage,
   methods,
-  providers,
 }: {
   row: CorridorRow;
   canManage: boolean;
   methods: MethodOption[];
-  providers: ProviderOption[];
 }) {
   const selected = Array.isArray(row.payoutMethodsJson) ? (row.payoutMethodsJson as string[]) : [];
   return (
@@ -134,14 +120,13 @@ function CorridorCard({
       {canManage ? (
         <form action={actionUpdateCorridor} className="mt-4 grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="countryCode" value={row.countryCode} />
-          <label className="text-xs font-semibold text-muted">
-            Currency
-            <CurrencySelect value={row.currency} />
-          </label>
-          <label className="text-xs font-semibold text-muted">
-            Collection route
-            <RouteSelect value={row.collectionProviderCode ?? ""} providers={providers} />
-          </label>
+          <p className="text-xs text-muted sm:col-span-2">
+            Currency {row.currency}. Collection {row.collectionProviderCode ?? "not set"}.{" "}
+            <Link href="/admin/payment-settings" className="font-semibold text-violet hover:underline">
+              Edit the route on Payment settings
+            </Link>
+            .
+          </p>
           <label className="text-xs font-semibold text-muted sm:col-span-2">
             KYC type
             <KycSelect value={row.kycModel} />
@@ -397,7 +382,7 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
               ) : null}
               <div className="mt-4 space-y-3">
                 {members.map((row) => (
-                  <CorridorCard key={row.countryCode} row={row} canManage={canManage} methods={methods} providers={providers} />
+                  <CorridorCard key={row.countryCode} row={row} canManage={canManage} methods={methods} />
                 ))}
               </div>
             </AdminCollapse>
@@ -446,7 +431,7 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
         ) : (
           <div className="space-y-3">
             {ungrouped.map((row) => (
-              <CorridorCard key={row.countryCode} row={row} canManage={canManage} methods={methods} providers={providers} />
+              <CorridorCard key={row.countryCode} row={row} canManage={canManage} methods={methods} />
             ))}
           </div>
         )}
