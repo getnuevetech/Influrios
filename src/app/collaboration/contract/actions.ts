@@ -9,6 +9,8 @@ import { contractOfferReady } from "@/lib/campaign-contract";
 import { getMarketplaceApplication } from "@/lib/marketplace-listings";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
+import { displayServiceLevel } from "@/lib/contract-document";
+import { resolvePaidAgreementFee } from "@/lib/paid-agreement-fee";
 import { buildBusinessCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate } from "@/lib/payment-engine";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
@@ -248,9 +250,15 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const marketplaceGate = marketplaceProviderGateMessage(provider, assignedProviderCode);
 
   const caps = jurisdiction ? capabilitiesFromJurisdictionRow(jurisdiction) : null;
+  const feeBoundary = resolvePaidAgreementFee({ statedServiceLevel: serviceLevel, grossCents });
+  const feeServiceLevel = feeBoundary.feeServiceLevel;
   if (caps) {
     const serviceGate = serviceLevelAllowedByJurisdiction(caps, serviceLevel);
     if (!serviceGate.ok) redirectError(serviceGate.error, qs);
+    if (feeServiceLevel !== serviceLevel) {
+      const feeGate = serviceLevelAllowedByJurisdiction(caps, feeServiceLevel);
+      if (!feeGate.ok) redirectError(feeGate.error, qs);
+    }
   }
 
   const payoutProfile = dbCreator
@@ -350,11 +358,11 @@ export async function actionSubmitContractWizard(formData: FormData) {
   }
   const quote =
     amountMode === "all_in"
-      ? await resolveAllInBudget({ jurisdiction: jurisdictionCode, serviceLevel }, grossCents).catch(() => null)
+      ? await resolveAllInBudget({ jurisdiction: jurisdictionCode, serviceLevel: feeServiceLevel }, grossCents).catch(() => null)
       : await resolvePartyPlatformFee(
           {
             jurisdiction: jurisdictionCode,
-            serviceLevel,
+            serviceLevel: feeServiceLevel,
             grossValueCents: grossCents,
           },
           "business",
@@ -363,10 +371,22 @@ export async function actionSubmitContractWizard(formData: FormData) {
     qs.set("step", "preview");
     redirectError(quote?.error ?? "A fee quote is required before accepting the fee disclosure.", qs);
   }
+  const influencerQuote = await resolvePartyPlatformFee(
+    {
+      jurisdiction: jurisdictionCode,
+      serviceLevel: feeServiceLevel,
+      grossValueCents: quote.grossInfluencerCompensationCents,
+    },
+    "influencer",
+  ).catch(() => null);
+  const disclosureServiceLevel =
+    feeBoundary.originServiceLevel === "discovery" || feeBoundary.originServiceLevel === "platform_match"
+      ? `${feeBoundary.originServiceLevel} origin, ${feeServiceLevel} fee`
+      : feeServiceLevel;
 
   const disclosureGate = requireFeeDisclosureAccepted({
     accepted: feeDisclosureAccepted,
-    disclosure: disclosureFromPartyQuote(quote, { jurisdiction: jurisdictionCode, serviceLevel }),
+    disclosure: disclosureFromPartyQuote(quote, { jurisdiction: jurisdictionCode, serviceLevel: disclosureServiceLevel }),
   });
   if (!disclosureGate.ok) {
     qs.set("step", "accept");
@@ -428,6 +448,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const quoteHours = (await loadProcessTimings().catch(() => null))?.quoteValidHours ?? 168;
   const signedQuote = buildBusinessCommercialSnapshot({
     quote,
+    influencer: influencerQuote?.ok ? influencerQuote : null,
     currency,
     minorDigits,
     milestoneCount: drafts.length,
@@ -499,7 +520,10 @@ export async function actionSubmitContractWizard(formData: FormData) {
         scope,
         commercial,
         jurisdiction: jurisdictionCode,
-        serviceLevel,
+        serviceLevel:
+          feeBoundary.originServiceLevel === "discovery" || feeBoundary.originServiceLevel === "platform_match"
+            ? `${displayServiceLevel(feeBoundary.originServiceLevel)} · ${displayServiceLevel(feeServiceLevel)}`
+            : serviceLevel,
         currency: plan.contractCurrency,
         grossLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
         platformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
@@ -543,6 +567,8 @@ export async function actionSubmitContractWizard(formData: FormData) {
         currency: plan.contractCurrency,
         grossCents: plan.grossContractValueCents,
         serviceLevel,
+        originServiceLevel: feeBoundary.originServiceLevel,
+        feeServiceLevel,
         workspaceId: ws.businessId,
         collaborationId: linkedCollaborationId,
         applicationId: applicationId || null,

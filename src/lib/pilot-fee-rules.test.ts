@@ -50,7 +50,7 @@ describe("pilot fee rules", () => {
     }
   });
 
-  it("keeps discovery free and leaves platform match off", () => {
+  it("keeps discovery free and prices platform match at the pilot rates", () => {
     const discovery = quoteDualPlatformFees(PILOT_FEE_RULES, {
       jurisdiction: "US",
       serviceLevel: "discovery",
@@ -63,13 +63,18 @@ describe("pilot fee rules", () => {
     assert.equal(discovery.influencerPlatformFeeCents, 0);
     assert.equal(discovery.businessPaysCents, 10_000);
 
-    const match = quotePartyPlatformFee(PILOT_FEE_RULES, {
+    const match = quoteDualPlatformFees(PILOT_FEE_RULES, {
       jurisdiction: "US",
       serviceLevel: "platform_match",
       grossValueCents: 10_000,
       asOf: AS_OF,
-    }, "business");
-    assert.equal(match.ok, false);
+    });
+    assert.equal(match.ok, true);
+    if (!match.ok) return;
+    assert.equal(match.business.rule.id, "rule_pilot_platform_match_business");
+    assert.equal(match.influencer.rule.id, "rule_pilot_platform_match_influencer");
+    assert.equal(match.businessPlatformFeeCents, 500);
+    assert.equal(match.influencerPlatformFeeCents, 250);
 
     const outsidePilot = quotePartyPlatformFee(active, {
       jurisdiction: "NG",

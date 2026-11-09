@@ -16,6 +16,8 @@ export type SignedTermsSnapshot = {
   currency: string;
   grossCents: number;
   serviceLevel: string;
+  originServiceLevel?: string | null;
+  feeServiceLevel?: string | null;
   workspaceId: string;
   collaborationId: string | null;
   applicationId: string | null;
@@ -83,8 +85,20 @@ function sameMilestones(left: SignedMilestone[], right: SignedMilestone[]) {
   return a.every((row, index) => row.title === b[index].title && row.shareBps === b[index].shareBps);
 }
 
+export function repriceNeedsNewAgreement(
+  snapshot: SignedTermsSnapshot,
+  amendment: ApprovedAmendment | null,
+): string | null {
+  if (!amendment) return null;
+  const currency = amendment.currency.trim().toUpperCase();
+  if (amendment.grossCents !== snapshot.grossCents || currency !== snapshot.currency) {
+    return "A new agreement version and fresh signatures are required before these amounts can change. Nothing was repriced.";
+  }
+  return null;
+}
+
 export function canonicalTerms(snapshot: SignedTermsSnapshot, amendment: ApprovedAmendment | null): SignedTermsSnapshot {
-  if (!amendment) return snapshot;
+  if (!amendment || repriceNeedsNewAgreement(snapshot, amendment)) return snapshot;
   return {
     ...snapshot,
     currency: amendment.currency.trim().toUpperCase(),
@@ -350,6 +364,8 @@ export function readSignedTermsSnapshot(value: unknown): SignedTermsSnapshot | n
     currency,
     grossCents,
     serviceLevel: String(row.serviceLevel ?? "").trim(),
+    originServiceLevel: typeof row.originServiceLevel === "string" ? row.originServiceLevel : null,
+    feeServiceLevel: typeof row.feeServiceLevel === "string" ? row.feeServiceLevel : null,
     workspaceId: String(row.workspaceId ?? "").trim(),
     collaborationId: String(row.collaborationId ?? "").trim() || null,
     applicationId: String(row.applicationId ?? "").trim() || null,

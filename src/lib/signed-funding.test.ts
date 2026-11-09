@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   canonicalTerms,
+  repriceNeedsNewAgreement,
   contractFundingCta,
   contractFundingIdempotencyKey,
   contractMayBeDeleted,
@@ -161,17 +162,18 @@ describe("signed funding instruction", () => {
     );
   });
 
-  it("uses an approved change order as the terms the next instruction must match", () => {
-    const next = canonicalTerms(snapshot, {
+  it("keeps the signed amounts until a new agreement version is signed", () => {
+    const amendment = {
       grossCents: 200000,
       currency: "USD",
       creators: [{ slug: "ada", shareBps: 10_000 }],
       milestones: [{ title: "Delivery", shareBps: 10_000 }],
       note: "Scope grew after signing",
-    });
-    assert.equal(next.grossCents, 200000);
-    assert.equal(submittedTermsDiffer(next, { workspaceId: "ws_1", grossCents: 150000 })?.includes("amount"), true);
-    assert.equal(submittedTermsDiffer(next, { workspaceId: "ws_1", grossCents: 200000 }), null);
+    };
+    assert.match(repriceNeedsNewAgreement(snapshot, amendment) ?? "", /fresh signatures/);
+    const next = canonicalTerms(snapshot, amendment);
+    assert.equal(next.grossCents, 150000);
+    assert.equal(submittedTermsDiffer(next, { workspaceId: "ws_1", grossCents: 200000 })?.includes("amount"), true);
   });
 
   it("round-trips a snapshot and rejects a snapshot whose shares do not add up", () => {

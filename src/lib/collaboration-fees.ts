@@ -77,22 +77,21 @@ export const SERVICE_LEVEL_LABELS: Record<ServiceLevel, string> = {
 export type ServiceLevelFeeCoverage = {
   serviceLevel: ServiceLevel;
   label: string;
-  business: { id: string; name: string; version: number }[];
-  influencer: { id: string; name: string; version: number }[];
+  business: { id: string; name: string; version: number; active: boolean }[];
+  influencer: { id: string; name: string; version: number; active: boolean }[];
 };
 
-/** A service level lists every active rule that prices that side, including a rule saved before fee purpose existed. */
+/** A service level lists the rules that price that side. An inactive rule saved for that exact level is shown. An inactive rule for any level is not. */
 export function serviceLevelFeeCoverage(rules: CollaborationFeeRule[]): ServiceLevelFeeCoverage[] {
   return SERVICE_LEVELS.map((serviceLevel) => {
-    const covers = (side: "business" | "influencer") =>
-      rules
-        .filter(
-          (rule) =>
-            rule.active &&
-            feeRuleSide(rule) === side &&
-            (rule.serviceLevel === serviceLevel || rule.serviceLevel === "*"),
-        )
-        .map((rule) => ({ id: rule.id, name: rule.name, version: rule.version }));
+    const covers = (side: "business" | "influencer") => {
+      const matching = rules.filter(
+        (rule) => feeRuleSide(rule) === side && (rule.serviceLevel === serviceLevel || rule.serviceLevel === "*"),
+      );
+      const active = matching.filter((rule) => rule.active);
+      const chosen = active.length > 0 ? active : matching.filter((rule) => rule.serviceLevel === serviceLevel);
+      return chosen.map((rule) => ({ id: rule.id, name: rule.name, version: rule.version, active: rule.active }));
+    };
     return {
       serviceLevel,
       label: SERVICE_LEVEL_LABELS[serviceLevel],
