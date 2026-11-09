@@ -222,12 +222,20 @@ export function disclosureFromDualQuote(
   };
 }
 
-/** A signed dual-fee quote does not open a provider charge. */
-export function liveFundingBlockReason(plan: unknown): string | null {
+/** A signed dual-fee quote does not open a provider charge until Finance approvals and a reconciled trace exist. */
+export function liveFundingBlockReason(
+  plan: unknown,
+  gate?: { approvals?: import("@/lib/payment-engine").LaunchApprovals; traceReady?: boolean } | null,
+): string | null {
   if (!plan || typeof plan !== "object") return null;
-  const reservation = (plan as { feeReservation?: { status?: unknown } }).feeReservation;
-  if (reservation?.status === "reserved") {
-    return `${collaborationLaunchBlockers().join(" ")} ${LIVE_FUNDING_OFF}`;
-  }
-  return null;
+  const reservation = (plan as { feeReservation?: { status?: unknown }; signedQuote?: { taxStatus?: string } }).feeReservation;
+  if (reservation?.status !== "reserved") return null;
+  const taxStatus = (plan as { signedQuote?: { taxStatus?: "unresolved" | "approved_zero" | "approved" } }).signedQuote?.taxStatus;
+  const blockers = collaborationLaunchBlockers(
+    gate?.approvals,
+    taxStatus ? { status: taxStatus, lines: [] } : undefined,
+  );
+  if (!gate?.traceReady) blockers.push("The provider staging trace is not recorded.");
+  if (blockers.length === 0) return null;
+  return `${blockers.join(" ")} ${LIVE_FUNDING_OFF}`;
 }

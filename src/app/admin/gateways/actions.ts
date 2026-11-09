@@ -7,7 +7,6 @@ import {
   gatewayRemovalImpact,
   removePaymentGateway,
   saveProvider,
-  setCountryGateway,
   setDefaultBackupGateway,
 } from "@/lib/providers";
 
@@ -68,13 +67,10 @@ export async function actionSaveConnect(formData: FormData) {
 
 export async function actionAssignCountryGateway(formData: FormData) {
   await requireAdminAction("gateways.edit");
-  try {
-    await setCountryGateway(clean(formData.get("countryCode")), clean(formData.get("providerId")));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not assign the country.";
-    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
-  }
-  redirect("/admin/gateways?saved=country");
+  void formData;
+  redirect(
+    `/admin/payment-settings?error=${encodeURIComponent("The payout gateway for a country is edited on Payment settings.")}`,
+  );
 }
 
 export async function actionSetDefaultBackupGateway(formData: FormData) {

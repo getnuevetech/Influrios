@@ -770,7 +770,12 @@ export async function requestPrefund(input: {
   const workspaceId = input.workspaceId?.trim() || null;
   const collaborationId = input.collaborationId?.trim() || null;
   const baseTitle = input.title.trim().slice(0, 140);
-  if (currency !== "USD" && !fxRate?.active) {
+  const { readSignedCollection } = await import("@/lib/payment-engine");
+  const signedCollection = readSignedCollection(input.financialPlan, currency);
+  if (signedCollection && "error" in signedCollection) {
+    return { ok: false as const, error: `${signedCollection.error} Nothing was funded.` };
+  }
+  if (!signedCollection && currency !== "USD" && !fxRate?.active) {
     return { ok: false as const, error: `No Wise currency is saved for ${currency}. Nothing was funded.` };
   }
   const teamShares = input.creatorShares ? readShareSnapshot(input.creatorShares) : null;
@@ -783,8 +788,33 @@ export async function requestPrefund(input: {
     fx: Extract<Awaited<ReturnType<typeof quoteWiseUserRate>>, { ok: true }>;
     milestoneAmounts: number[];
     quote: Awaited<ReturnType<typeof resolveFee>> | null;
+    signedFeeCents?: number;
   }[] = [];
-  for (let index = 0; index < schedule.parts.length; index += 1) {
+  if (signedCollection) {
+    if (milestoneDefs.length !== 1 || schedule.parts.length !== 1) {
+      return { ok: false as const, error: "This route allows one collection and one milestone. Nothing was funded." };
+    }
+    prepared.push({
+      gross: signedCollection.businessPaysCents,
+      fx: {
+        ok: true,
+        currency,
+        minorPerUsd: currency === "USD" ? 100 : 1,
+        usdCents: signedCollection.businessPaysCents,
+        convertedMinor: signedCollection.businessPaysCents,
+        source: "identity",
+        rate: null,
+        minorDigits,
+        quoteId: null,
+        quotedAt: null,
+        rateType: null,
+      },
+      milestoneAmounts: [signedCollection.influencerReceivesCents],
+      quote: null,
+      signedFeeCents: signedCollection.platformFeesTotalCents,
+    });
+  }
+  for (let index = 0; index < schedule.parts.length && !signedCollection; index += 1) {
     const usdCents = schedule.parts[index];
     const fx = await quoteWiseUserRate({ currency, usdCents, minorDigits });
     if (!fx.ok) return fx;
@@ -812,7 +842,11 @@ export async function requestPrefund(input: {
     for (let index = 0; index < prepared.length; index += 1) {
       const part = prepared[index];
       const quote = part.quote;
-      const feeCents = convertFee(quote?.feeCents ?? 0, part.fx);
+      const feeCents = part.signedFeeCents ?? convertFee(quote?.feeCents ?? 0, part.fx);
+      const feeExplanation =
+        part.signedFeeCents != null
+          ? "Signed commercial snapshot. The live fee matrix was not applied."
+          : (quote?.explanation ?? "Fee rules were unavailable.");
       const suffix =
         schedule.kind === "staged"
           ? ` · stage ${index + 1} of ${schedule.trancheCount}`
@@ -841,7 +875,7 @@ export async function requestPrefund(input: {
             fixedCents: quote?.rule?.fixedCents ?? null,
             feeCents,
             feeType: quote?.rule?.feeType ?? "",
-            explanation: quote?.explanation ?? "Fee rules were unavailable.",
+            explanation: feeExplanation,
             capturedAt: new Date().toISOString(),
             ...(input.teamProposalId ? { teamProposalId: input.teamProposalId } : {}),
             ...(input.financialPlan ? { financialPlan: input.financialPlan } : {}),

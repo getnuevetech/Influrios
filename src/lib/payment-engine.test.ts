@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { CollaborationFeeRule } from "./collaboration-fees";
-import { quoteDualPlatformFees } from "./dual-platform-fees";
+import { liveFundingBlockReason, quoteDualPlatformFees } from "./dual-platform-fees";
 import {
   airwallexLedgerAdvance,
+  buildProviderStagingTrace,
   buildSignedCommercialSnapshot,
   collaborationLaunchBlockers,
   collectionPostings,
@@ -13,6 +14,7 @@ import {
   launchMilestoneGate,
   ordinaryDealShareSnapshot,
   providerEventMayAdvance,
+  readSignedCollection,
   refundPostings,
   reserveFeePostings,
   returnedPayoutPostings,
@@ -263,5 +265,55 @@ describe("payment engine acceptance", () => {
     });
     if ("ok" in snapshot) return;
     assert.match(signedQuoteExpired({ signedQuote: snapshot }, new Date("2026-02-01T00:00:00.000Z")) ?? "", /expired/);
+  });
+
+  it("records a staging trace only when the payout and the refund reconcile", () => {
+    const shared = {
+      currency: "USD",
+      businessPaysCents: 375_000,
+      influencerReceivesCents: 343_000,
+      platformFeesTotalCents: 32_000,
+      taxCents: 0,
+      collectionRef: "col_staging",
+      holdingRef: "hold_staging",
+      releaseRef: "rel_staging",
+      payoutRef: "pay_staging",
+      holdingAvailable: true,
+      beneficiaryConfirmed: true,
+    };
+    const payout = buildProviderStagingTrace({ ...shared, scenario: "payout" });
+    assert.equal("ok" in payout, false);
+    if ("ok" in payout) return;
+    assert.equal(payout.steps.reduce((sum, step) => sum + (step.step === "collection" ? step.amountCents : 0), 0), 375_000);
+    const broken = buildProviderStagingTrace({ ...shared, scenario: "payout", platformFeesTotalCents: 1 });
+    assert.equal("ok" in broken, true);
+    const refund = buildProviderStagingTrace({ ...shared, scenario: "refund", refundRef: "rf_staging", refundConfirmed: true });
+    assert.equal("ok" in refund, false);
+    const open = {
+      feeSchedulesApproved: true,
+      taxTreatmentApproved: true,
+      earningRefundPolicyApproved: true,
+      providerRouteApproved: true,
+    };
+    const plan = {
+      feeReservation: { status: "reserved" },
+      signedQuote: { taxStatus: "approved_zero" },
+    };
+    assert.match(liveFundingBlockReason(plan, { approvals: open, traceReady: false }) ?? "", /staging trace/);
+    assert.equal(liveFundingBlockReason(plan, { approvals: open, traceReady: true }), null);
+    assert.equal(
+      readSignedCollection(
+        {
+          signedQuote: {
+            currency: "USD",
+            businessPaysCents: 375_000,
+            influencerReceivesCents: 343_000,
+            platformFeesTotalCents: 32_000,
+          },
+        },
+        "USD",
+      ) && "error" in (readSignedCollection({ signedQuote: { currency: "EUR", businessPaysCents: 1, influencerReceivesCents: 1, platformFeesTotalCents: 0 } }, "USD") ?? {}),
+      true,
+    );
   });
 });

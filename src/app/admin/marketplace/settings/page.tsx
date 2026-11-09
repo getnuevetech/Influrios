@@ -673,50 +673,16 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               />
             </label>
-            <label className="text-xs font-semibold text-muted">
-              Currency
-              <input
-                name="currency"
-                maxLength={3}
-                defaultValue={row.currency}
-                disabled={!canManage}
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo"
-              />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Minor digits
-              <input
-                name="minorDigits"
-                type="number"
-                min={0}
-                max={4}
-                defaultValue={row.minorDigits}
-                disabled={!canManage}
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-              />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Provider
-              <select
-                name="providerCode"
-                defaultValue={providerCodes.has(row.providerCode) ? row.providerCode : providerFormDefault}
-                disabled={!canManage}
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-              >
-                {providerOptions.map((provider) => (
-                  <option key={provider.code} value={provider.code}>
-                    {provider.name}
-                    {providersByCode.get(provider.code)?.ready ? " · ready" : " · configure webhook above first"}
-                  </option>
-                ))}
-              </select>
-              <span className="mt-1 block text-[11px] font-normal text-muted">
-                Contract payment readiness uses this jurisdiction assignment — not only the webhook form above.
-                {providersByCode.get(row.providerCode)?.ready
-                  ? ""
-                  : " Save webhook + Enabled for this provider above before funding."}
-              </span>
-            </label>
+            <input type="hidden" name="currency" value={row.currency} />
+            <input type="hidden" name="minorDigits" value={row.minorDigits} />
+            <input type="hidden" name="providerCode" value={row.providerCode} />
+            <p className="text-xs text-muted sm:col-span-4">
+              Currency {row.currency}, {row.minorDigits} minor digits, holding provider {row.providerCode}.{" "}
+              <Link href="/admin/payment-settings" className="font-semibold text-violet hover:underline">
+                Edit the route on Payment settings
+              </Link>
+              .
+            </p>
             <p className="text-sm text-muted sm:col-span-2">Shown as {fundingTerm(row.escrowTermAllowed)}.</p>
             {canManage ? (
               <button type="submit" className="btn-secondary !py-2 text-sm sm:col-span-4">

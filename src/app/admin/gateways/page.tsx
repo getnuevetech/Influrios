@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  actionAssignCountryGateway,
   actionDeleteCountryGroup,
   actionSaveConnect,
   actionSaveCountryGroup,
@@ -62,9 +61,6 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
     console.error("admin gateways", error);
     dbError = true;
   }
-
-  const routedCodes = new Set(routes.map((route) => route.countryCode));
-  const countriesForNewRoute = corridorCountries().filter((country) => !routedCodes.has(country.code));
 
   const savedMessage =
     params.saved === "removed"
@@ -252,26 +248,9 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                     <span className="mt-0.5 block text-xs font-normal text-muted">{route.countryCode}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <form action={actionAssignCountryGateway} className="flex items-center gap-2">
-                      <input type="hidden" name="countryCode" value={route.countryCode} />
-                      <select
-                        name="providerId"
-                        defaultValue={providers.find((provider) => provider.code === route.providerCode)?.id}
-                        disabled={!canEdit}
-                        className="rounded-lg border border-border px-2 py-1"
-                      >
-                        {providers.map((provider) => (
-                          <option key={provider.id} value={provider.id}>
-                            {provider.name}
-                          </option>
-                        ))}
-                      </select>
-                      {canEdit ? (
-                        <button type="submit" className="text-xs font-semibold text-violet">
-                          Assign
-                        </button>
-                      ) : null}
-                    </form>
+                    <Link href="/admin/payment-settings" className="text-xs font-semibold text-violet hover:underline">
+                      {route.providerName} · edit on Payment settings
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-muted">{route.ready ? "Ready" : route.reason.replace(/_/g, " ")}</td>
                   <td className="px-4 py-3 text-muted">
@@ -287,39 +266,12 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
           </table>
         </div>
 
-        {canEdit ? (
-          <form
-            action={actionAssignCountryGateway}
-            className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-dashed border-[#E4EBFF] bg-[#F8FAFF] p-4"
-          >
-            <label className="text-sm font-semibold text-indigo">
-              Country
-              <select name="countryCode" required defaultValue="" className={selectClass}>
-                <option value="" disabled>
-                  Choose a country…
-                </option>
-                {countriesForNewRoute.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name} ({country.code})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-semibold text-indigo">
-              Gateway
-              <select name="providerId" required className={selectClass}>
-                {providers.map((provider) => (
-                  <option key={provider.id} value={provider.id}>
-                    {provider.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="btn-secondary">
-              Assign country
-            </button>
-          </form>
-        ) : null}
+        <p className="mt-4 text-sm text-muted">
+          <Link href="/admin/payment-settings" className="font-semibold text-violet hover:underline">
+            Assign a country’s payout gateway on Payment settings
+          </Link>
+          . Country groups below can still apply one gateway as a default.
+        </p>
       </AdminCollapse>
 
       <AdminCollapse title="Stripe Connect" subtitle={connectOn ? "Account links on" : "Account links off"}>
