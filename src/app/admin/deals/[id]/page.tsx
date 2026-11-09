@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { actionApproveDealAmendment, actionRecordFeeSettlement, actionVoidDealContract } from "@/app/admin/deals/actions";
+import { actionApproveDealAmendment, actionCompareProviderBalance, actionRecordFeeSettlement, actionVoidDealContract } from "@/app/admin/deals/actions";
 import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission, isSuperAdmin } from "@/lib/admin-auth";
 import { loadAdminDeal } from "@/lib/admin-deal";
@@ -11,7 +11,7 @@ import { contractMayBeVoided, fundedShareBps, sharePercentLabel } from "@/lib/si
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Deal · Admin" };
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; voided?: string; amended?: string; settled?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; voided?: string; amended?: string; settled?: string; compared?: string }> };
 
 export default async function AdminDealPage({ params, searchParams }: Props) {
   const session = await requireAnyAdminModule(["collaborations", "contracts", "marketplace"]);
@@ -53,6 +53,7 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
       {query.voided ? <p className="text-sm font-semibold text-emerald-700">Agreement voided. The PDF and signatures stay on record.</p> : null}
       {query.amended ? <p className="text-sm font-semibold text-emerald-700">Change order approved. The next funding instruction uses these terms.</p> : null}
       {query.settled ? <p className="text-sm font-semibold text-emerald-700">Earned fees were settled to operating funds. The earned rows stay on the ledger.</p> : null}
+      {query.compared ? <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-indigo">{query.compared}</p> : null}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
@@ -125,6 +126,16 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
                 <input name="amountCents" required inputMode="numeric" placeholder="Earned fees, minor units" className="rounded-lg border px-3 py-2" />
                 <input name="providerReference" required minLength={4} placeholder="Provider settlement reference" className="rounded-lg border px-3 py-2" />
                 <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Record settlement</button>
+              </form>
+            ) : null}
+            {canSettle ? (
+              <form action={actionCompareProviderBalance} className="mt-3 grid gap-2 sm:grid-cols-3">
+                <input type="hidden" name="id" value={anchor} />
+                <input type="hidden" name="fundingId" value={funding.id} />
+                <input name="providerHeldCents" required inputMode="numeric" placeholder="Provider held, minor units" className="rounded-lg border px-3 py-2" />
+                <input name="providerReleasedCents" required inputMode="numeric" placeholder="Provider released, minor units" className="rounded-lg border px-3 py-2" />
+                <input name="providerRefundedCents" required inputMode="numeric" placeholder="Provider refunded, minor units" className="rounded-lg border px-3 py-2" />
+                <button className="w-fit rounded-full border border-indigo px-4 py-2 text-xs font-bold text-indigo">Compare balances</button>
               </form>
             ) : null}
           </div>
