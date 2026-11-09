@@ -9,6 +9,7 @@ import {
   explainFeeApplication,
   getFeeStore,
   matchesRule,
+  feeRuleSide,
   pickWinningRule,
   ruleSpecificity,
   type CollaborationFeeRule,
@@ -64,9 +65,7 @@ export type DualPlatformQuote = {
 };
 
 export function payerSide(rule: { payer?: string | null; purpose?: string | null }): FeeSide | null {
-  if (rule.purpose === "business_platform_fee" && rule.payer === "brand") return "business";
-  if (rule.purpose === "influencer_platform_fee" && rule.payer === "creator") return "influencer";
-  return null;
+  return feeRuleSide(rule);
 }
 
 function sideName(side: FeeSide) {

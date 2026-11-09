@@ -9,6 +9,7 @@ import {
   matchesRule,
   parseTierBands,
   pickWinningRule,
+  feeRuleSide,
   protectedPaymentLabel,
   ruleSpecificity,
   serviceLevelFeeCoverage,
@@ -338,6 +339,29 @@ describe("service level fee coverage", () => {
     assert.equal(contracted?.business.length, 1);
     assert.equal(contracted?.influencer.length, 0);
     assert.equal(covered.find((row) => row.serviceLevel === "discovery")?.business.length, 0);
+
+    const savedBeforePurpose = serviceLevelFeeCoverage([
+      rule({
+        id: "saved",
+        name: "Platform Service Fee",
+        purpose: "legacy",
+        payer: "brand",
+        serviceLevel: "*",
+      }),
+      rule({
+        id: "creator",
+        name: "Discovery influencer",
+        purpose: "legacy",
+        payer: "creator",
+        serviceLevel: "discovery",
+      }),
+    ]);
+    assert.equal(feeRuleSide({ payer: "brand", purpose: "legacy" }), "business");
+    assert.equal(feeRuleSide({ payer: "creator", purpose: "legacy" }), "influencer");
+    assert.equal(feeRuleSide({ payer: "split", purpose: "legacy" }), null);
+    assert.equal(savedBeforePurpose.every((row) => row.business.some((item) => item.id === "saved")), true);
+    assert.equal(savedBeforePurpose.find((row) => row.serviceLevel === "discovery")?.influencer.length, 1);
+    assert.equal(savedBeforePurpose.find((row) => row.serviceLevel === "contracted")?.influencer.length, 0);
   });
 });
 

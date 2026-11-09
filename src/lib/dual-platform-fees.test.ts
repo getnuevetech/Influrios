@@ -121,6 +121,23 @@ describe("dual platform fee quote", () => {
     assert.equal(liveFundingBlockReason({ feeRuleId: "legacy" }), null);
   });
 
+  it("prices a rule saved before fee purpose from the payer, and ignores a split rule", () => {
+    const quote = quoteDualPlatformFees(
+      [
+        rule({ id: "old-business", name: "Platform Service Fee", purpose: "legacy", payer: "brand", fixedCents: 5_000 }),
+        rule({ id: "old-influencer", name: "Influencer fee", purpose: "legacy", payer: "creator", fixedCents: 2_000 }),
+        rule({ id: "split", name: "Legacy split", payer: "split", purpose: "legacy", priority: 900, fixedCents: 99_000 }),
+      ],
+      { jurisdiction: "US", serviceLevel: "contracted", grossValueCents: 350_000, asOf: AS_OF },
+    );
+    assert.equal(quote.ok, true);
+    if (!quote.ok) return;
+    assert.equal(quote.business.rule.id, "old-business");
+    assert.equal(quote.influencer.rule.id, "old-influencer");
+    assert.equal(quote.businessPlatformFeeCents, 5_000);
+    assert.equal(quote.influencerPlatformFeeCents, 2_000);
+  });
+
   it("accepts an explicit waiver and ignores a legacy split rule", () => {
     const quote = quoteDualPlatformFees(
       [
