@@ -1907,6 +1907,8 @@ model CollaborationFunding {
   contractDocumentId String? @unique
   /// contract:{documentId}:initial — a retry returns this row instead of inserting another.
   idempotencyKey   String?  @unique
+  /// Frozen collection, holding, and payout route. Later country edits do not rewrite it.
+  routeSnapshotJson Json?
   creatorSlug      String
   title            String
   currency         String   @default("USD")
@@ -1952,6 +1954,7 @@ model CollaborationFunding {
   entries           LedgerEntry[]
   disputes          MilestoneDispute[]
   changeOrders      FundingChangeOrder[]
+  submissions       MilestoneSubmission[]
 
   @@unique([scheduleId, trancheIndex])
   @@index([creatorSlug, status])
@@ -1995,10 +1998,31 @@ model FundingMilestone {
   updatedAt         DateTime             @updatedAt
   entries           LedgerEntry[]
   disputes          MilestoneDispute[]
+  submissions       MilestoneSubmission[]
 
   @@index([fundingId, status])
   @@index([status, payoutFailedAt])
   @@index([status, releaseScheduledAt])
+}
+
+/// One submitted version of a milestone. Revisions keep the earlier versions.
+model MilestoneSubmission {
+  id           String           @id @default(cuid())
+  fundingId    String
+  funding      CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  milestoneId  String
+  milestone    FundingMilestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  creatorSlug  String
+  version      Int
+  note         String
+  linkUrl      String           @default("")
+  /// submitted | revision_requested | approved
+  status       String           @default("submitted")
+  reviewNote   String           @default("")
+  createdAt    DateTime         @default(now())
+
+  @@unique([milestoneId, creatorSlug, version])
+  @@index([fundingId, createdAt])
 }
 
 /// Provider-held movements. This is not an Influrios cash balance.

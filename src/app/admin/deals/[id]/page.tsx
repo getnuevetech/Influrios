@@ -111,6 +111,9 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
               <li key={milestone.id}>
                 {milestone.title} · {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status}
                 {milestone.releaseScheduledAt ? ` · release scheduled ${milestone.releaseScheduledAt.toISOString()}` : ""}
+                {milestone.submissions.length > 0
+                  ? ` · ${milestone.submissions.length} version${milestone.submissions.length === 1 ? "" : "s"}`
+                  : ""}
               </li>
             ))}
           </ul>

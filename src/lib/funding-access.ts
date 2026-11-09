@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { isBusinessRole, type AccountAudience } from "@/lib/account-audience";
 import type { AccountSession } from "@/lib/accounts";
+import { creatorMaySubmitWork } from "@/lib/milestone-delivery";
 
 export type FundingAccessOk = {
   ok: true;
@@ -12,6 +13,8 @@ export type FundingAccessOk = {
     status: string;
   };
   audience: AccountAudience;
+  /** Influencer slug of the signed-in creator. Empty for a business. */
+  actorSlug: string | null;
 };
 
 export type FundingAccessDenied = { ok: false; error: string };
@@ -35,6 +38,7 @@ export async function assertFundingAccess(
       creatorSlug: true,
       businessName: true,
       status: true,
+      shareSnapshotJson: true,
     },
   });
   if (!funding) return { ok: false, error: "That funding was not found." };
@@ -47,17 +51,24 @@ export async function assertFundingAccess(
     if (!workspace?.id || funding.workspaceId !== workspace.id) {
       return { ok: false, error: "You do not have access to that funding." };
     }
-    return { ok: true, funding, audience: "business" };
+    return { ok: true, funding, audience: "business", actorSlug: null };
   }
 
   const creator = await prisma.creator.findUnique({
     where: { userId: account.id },
     select: { slug: true },
   });
-  if (!creator?.slug || funding.creatorSlug !== creator.slug) {
+  if (
+    !creator?.slug ||
+    !creatorMaySubmitWork({
+      actorSlug: creator.slug,
+      creatorSlug: funding.creatorSlug,
+      shareSnapshotJson: funding.shareSnapshotJson,
+    })
+  ) {
     return { ok: false, error: "You do not have access to that funding." };
   }
-  return { ok: true, funding, audience: "creator" };
+  return { ok: true, funding, audience: "creator", actorSlug: creator.slug };
 }
 
 /** Business-only mutations (approve, checkout, cancel, change order). */

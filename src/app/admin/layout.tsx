@@ -94,6 +94,12 @@ const SIDE_GROUPS: SideGroup[] = [
   {
     name: "Payments & finance",
     links: [
+      {
+        href: "/admin/payment-settings",
+        label: "Payment settings",
+        anyModules: ["gateways", "collab_finance", "marketplace"],
+        icon: "billing",
+      },
       { href: "/admin/gateways", label: "Payment gateways", module: "gateways", icon: "billing" },
       { href: "/admin/search", label: "Meilisearch", module: "gateways", icon: "stats" },
       { href: "/admin/fees", label: "Collaboration fees", module: "commerce", icon: "billing" },

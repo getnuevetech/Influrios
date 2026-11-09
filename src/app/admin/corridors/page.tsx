@@ -214,6 +214,14 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
           ← Admin
         </Link>
         <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Country activation corridors</h1>
+        <p className="mt-2 text-sm text-muted">
+          Corridor currency and collection are one part of a country route. Compare them with the gateway and the
+          jurisdiction on{" "}
+          <Link href="/admin/payment-settings" className="font-semibold text-violet hover:underline">
+            Payment settings
+          </Link>
+          .
+        </p>
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Corridors control collaboration collection, influencer payout onboarding, payout methods, and KYC for each
           country. Add a country from the list (full name + currency letters for a new payout profile). The collection

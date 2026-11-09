@@ -1,0 +1,129 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { actionApproveMilestone, actionRequestRevision, actionSubmitMilestone } from "@/app/payments/actions";
+import { getAccountSession } from "@/lib/accounts";
+import { assertFundingAccess } from "@/lib/funding-access";
+import { visibleSubmissions } from "@/lib/milestone-delivery";
+import { formatMoney } from "@/lib/money";
+import { prisma } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Deliverables" };
+
+type Props = {
+  params: Promise<{ fundingId: string }>;
+  searchParams: Promise<{ error?: string; submitted?: string; revised?: string; approved?: string }>;
+};
+
+export default async function CollaborationWorkPage({ params, searchParams }: Props) {
+  const account = await getAccountSession().catch(() => null);
+  if (!account) redirect("/login?next=/collaboration/hub");
+  const { fundingId } = await params;
+  const query = await searchParams;
+  const access = await assertFundingAccess(account, fundingId);
+  if (!access.ok) notFound();
+  const funding = await prisma.collaborationFunding.findUnique({
+    where: { id: access.funding.id },
+    include: {
+      milestones: { orderBy: { sortOrder: "asc" }, include: { submissions: { orderBy: { version: "asc" } } } },
+      disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } } },
+    },
+  });
+  if (!funding) notFound();
+  const business = access.audience === "business";
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <div>
+        <Link href="/payments" className="text-sm font-semibold text-violet hover:underline">
+          ← Payments
+        </Link>
+        <h1 className="mt-2 font-display text-3xl font-bold text-indigo">{funding.title}</h1>
+        <p className="mt-2 text-sm text-muted">
+          {funding.businessName} · {funding.status.replaceAll("_", " ")} · {formatMoney(funding.grossCents, funding.currency)}
+        </p>
+        <p className="mt-2 text-sm text-indigo">
+          {business
+            ? "Review the exact version an influencer submitted. A revision keeps the earlier versions."
+            : "Submit a link or a note for your deliverable. The review clock starts when the version is saved."}
+        </p>
+      </div>
+      {query.submitted ? <p className="text-sm font-semibold text-emerald-700">Version submitted.</p> : null}
+      {query.revised ? <p className="text-sm font-semibold text-emerald-700">Revision requested on the latest version.</p> : null}
+      {query.approved ? <p className="text-sm font-semibold text-emerald-700">That version was approved.</p> : null}
+
+      {funding.milestones.map((milestone) => {
+        const rows = visibleSubmissions(milestone.submissions, access.audience, access.actorSlug);
+        const openDispute = funding.disputes.find((row) => row.milestoneId === milestone.id || row.milestoneId == null);
+        return (
+          <section key={milestone.id} className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
+            <h2 className="font-display text-xl font-bold text-indigo">{milestone.title}</h2>
+            <p className="mt-1 text-sm text-muted">
+              {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status.replaceAll("_", " ")}
+              {milestone.deliverableDueAt ? ` · deliver by ${milestone.deliverableDueAt.toISOString().slice(0, 10)}` : ""}
+              {milestone.autoApproveAt && milestone.status === "submitted"
+                ? ` · review by ${milestone.autoApproveAt.toISOString().slice(0, 16).replace("T", " ")} UTC`
+                : milestone.reviewWindowHours
+                  ? ` · ${milestone.reviewWindowHours}h review window`
+                  : ""}
+              {milestone.releaseScheduledAt ? ` · release scheduled ${milestone.releaseScheduledAt.toISOString().slice(0, 16).replace("T", " ")} UTC` : ""}
+              {milestone.status === "released" ? " · payout confirmed" : ""}
+            </p>
+            {openDispute ? (
+              <p className="mt-2 text-sm text-amber-800">
+                A dispute holds {formatMoney(milestone.amountCents, funding.currency)} on this milestone.
+              </p>
+            ) : null}
+            <ul className="mt-4 space-y-3">
+              {rows.map((row) => (
+                <li key={row.id} className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm">
+                  <p className="font-semibold text-indigo">
+                    Version {row.version} · {row.creatorSlug} · {row.status.replaceAll("_", " ")}
+                  </p>
+                  {row.note ? <p className="mt-1 text-indigo">{row.note}</p> : null}
+                  {row.linkUrl ? (
+                    <a href={row.linkUrl} className="mt-1 block text-violet hover:underline">
+                      {row.linkUrl}
+                    </a>
+                  ) : null}
+                  {row.reviewNote ? <p className="mt-1 text-amber-900">Review: {row.reviewNote}</p> : null}
+                </li>
+              ))}
+              {rows.length === 0 ? <li className="text-sm text-muted">No submission yet.</li> : null}
+            </ul>
+            {!business && funding.status === "held" && milestone.status === "pending" ? (
+              <form action={actionSubmitMilestone} className="mt-4 space-y-2">
+                <input type="hidden" name="dealId" value={funding.id} />
+                <input type="hidden" name="milestoneId" value={milestone.id} />
+                <input name="linkUrl" placeholder="https:// link to the work" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
+                <textarea name="note" rows={3} placeholder="What this version includes" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
+                <button type="submit" className="btn-primary !py-2 text-sm">
+                  Submit this version
+                </button>
+              </form>
+            ) : null}
+            {business && milestone.status === "submitted" ? (
+              <div className="mt-4 space-y-3">
+                <form action={actionApproveMilestone}>
+                  <input type="hidden" name="dealId" value={funding.id} />
+                  <input type="hidden" name="milestoneId" value={milestone.id} />
+                  <button type="submit" className="btn-primary !py-2 text-sm">
+                    Approve this version
+                  </button>
+                </form>
+                <form action={actionRequestRevision} className="space-y-2">
+                  <input type="hidden" name="dealId" value={funding.id} />
+                  <input type="hidden" name="milestoneId" value={milestone.id} />
+                  <textarea name="note" required minLength={8} rows={2} placeholder="What should change" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
+                  <button type="submit" className="btn-secondary !py-2 text-sm">
+                    Request a revision
+                  </button>
+                </form>
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
+    </div>
+  );
+}

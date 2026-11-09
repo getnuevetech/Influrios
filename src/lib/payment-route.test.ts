@@ -1,0 +1,81 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { describe, it } from "node:test";
+import { decidePaymentRoute, readRouteSnapshot } from "./payment-route";
+import { creatorMaySubmitWork, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
+
+describe("payment route decision", () => {
+  it("keeps collection and holding distinct and flags two answers for the same job", () => {
+    const split = decidePaymentRoute({
+      countryCode: "ng",
+      corridorActive: true,
+      corridorCurrency: "NGN",
+      corridorCollectionProvider: "flutterwave",
+      jurisdictionCurrency: "NGN",
+      jurisdictionMinorDigits: 2,
+      jurisdictionHoldingProvider: "primary",
+      jurisdictionProtectedPayments: true,
+      gatewayProvider: "flutterwave",
+      gatewayActive: true,
+    });
+    assert.equal(split.collectionProvider, "flutterwave");
+    assert.equal(split.holdingProvider, "primary");
+    assert.equal(split.conflicts.length, 0);
+    assert.equal(split.ready, true);
+
+    const conflict = decidePaymentRoute({
+      ...split,
+      countryCode: "NG",
+      corridorCurrency: "NGN",
+      jurisdictionCurrency: "USD",
+      corridorCollectionProvider: "flutterwave",
+      jurisdictionHoldingProvider: "primary",
+      jurisdictionProtectedPayments: true,
+      gatewayProvider: "stripe",
+      gatewayActive: true,
+      corridorActive: true,
+    });
+    assert.equal(conflict.conflicts.length, 2);
+    assert.equal(conflict.ready, false);
+    const again = readRouteSnapshot(conflict);
+    assert.equal(again?.version, conflict.version);
+  });
+
+  it("stores the decision on a new prefund and checks out with that collection provider", () => {
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    const checkout = readFileSync("src/app/payments/actions.ts", "utf8");
+    assert.match(ledger, /decidePaymentRoute/);
+    assert.match(ledger, /routeSnapshotJson: routeDecision/);
+    assert.match(ledger, /routeDecision.conflicts.length > 0/);
+    assert.match(checkout, /storedRoute\?\.collectionProvider \|\| funding.collectionProviderCode/);
+  });
+});
+
+describe("milestone delivery", () => {
+  it("lets each assigned influencer submit and hides another influencer's versions", () => {
+    const shares = [
+      { label: "ada", shareBps: 6000 },
+      { label: "ben", shareBps: 4000 },
+    ];
+    assert.equal(creatorMaySubmitWork({ actorSlug: "ben", creatorSlug: "ada", shareSnapshotJson: shares }), true);
+    assert.equal(creatorMaySubmitWork({ actorSlug: "cleo", creatorSlug: "ada", shareSnapshotJson: shares }), false);
+    const rows = [
+      { creatorSlug: "ada", version: 1 },
+      { creatorSlug: "ben", version: 1 },
+    ];
+    assert.equal(visibleSubmissions(rows, "creator", "ben").length, 1);
+    assert.equal(visibleSubmissions(rows, "business", null).length, 2);
+    assert.equal(submissionIsComplete({ note: "", linkUrl: "" }).ok, false);
+    assert.equal(submissionIsComplete({ note: "Cut is ready", linkUrl: "http://example.com" }).ok, false);
+    assert.equal(submissionIsComplete({ note: "", linkUrl: "https://example.com/cut" }).ok, true);
+  });
+
+  it("keeps submit off the business and requires a version", () => {
+    const actions = readFileSync("src/app/payments/actions.ts", "utf8");
+    const page = readFileSync("src/app/payments/page.tsx", "utf8");
+    assert.match(actions, /Only the assigned influencer can submit work/);
+    assert.match(actions, /submitMilestoneWork/);
+    assert.match(page, /!businessViewer && deal.status === "held"/);
+    assert.match(readFileSync("src/app/collaboration/work/[fundingId]/page.tsx", "utf8"), /Version \{row.version\}/);
+  });
+});
