@@ -621,18 +621,20 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   defaultValue={signedFundingLevel || effectiveServiceLevel}
                   className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
                 >
-                  <option value=""> </option>
+                  <option value="">Choose a service level</option>
                   {(signedFundingLevel && !availableServiceLevels.includes(signedFundingLevel)
                     ? [signedFundingLevel, ...availableServiceLevels]
                     : availableServiceLevels
                   ).map((level) => (
                     <option key={level} value={level}>
-                      {SERVICE_LEVEL_LABELS[level]}
+                      {SERVICE_LEVEL_LABELS[level] ?? level}
                     </option>
                   ))}
                 </select>
                 <span className="mt-1 block text-xs font-normal text-muted">
-                  {signedFundingLevel
+                  {availableServiceLevels.length === 0
+                    ? "No service level is available because this jurisdiction is blocked pending legal review."
+                    : signedFundingLevel
                     ? "This agreement is already signed, so funding uses a contracted service level."
                     : "Affects fee matrix, legal treatment, and jurisdiction availability."}
                   {jurisdictionCaps?.legalReviewStatus && jurisdictionCaps.legalReviewStatus !== "APPROVED"

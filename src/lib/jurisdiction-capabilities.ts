@@ -75,6 +75,21 @@ function toDate(value: Date | string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/** A date-only value is stored at UTC midnight. The end date includes that calendar day. */
+function inclusiveEnd(date: Date): Date {
+  if (
+    date.getUTCHours() === 0 &&
+    date.getUTCMinutes() === 0 &&
+    date.getUTCSeconds() === 0 &&
+    date.getUTCMilliseconds() === 0
+  ) {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+  }
+  return date;
+}
+
+const STANDARD_SERVICE_LEVELS = ["discovery", "platform_match", "contracted"] as const;
+
 /** Effective-window + legal_review_status for the capability matrix. */
 export function jurisdictionCapabilitiesActive(
   caps: Pick<
@@ -92,7 +107,7 @@ export function jurisdictionCapabilitiesActive(
   if (from && asOf < from) {
     return { ok: false, error: "Jurisdiction capabilities are not yet effective." };
   }
-  if (to && asOf > to) {
+  if (to && asOf > inclusiveEnd(to)) {
     return { ok: false, error: "Jurisdiction capabilities have expired." };
   }
   return { ok: true };
@@ -115,6 +130,14 @@ export function serviceLevelAllowedByJurisdiction(
   asOf: Date = new Date(),
 ): { ok: true } | { ok: false; error: string } {
   const level = serviceLevel.trim().toLowerCase();
+  // Discovery, platform match, and contracted stay on the contract form unless legal review blocks the jurisdiction.
+  // An effective-date window must not wipe the required dropdown.
+  if ((STANDARD_SERVICE_LEVELS as readonly string[]).includes(level)) {
+    if (asLegalReviewStatus(caps.legalReviewStatus) === "BLOCKED") {
+      return { ok: false, error: "This jurisdiction is blocked pending legal review." };
+    }
+    return { ok: true };
+  }
   const active = jurisdictionCapabilitiesActive(caps, asOf);
   if (!active.ok) return active;
 
