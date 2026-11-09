@@ -5,6 +5,7 @@ import {
   capabilitiesFromJurisdictionRow,
   enteredLegalReviewStatus,
   evaluatePrefundCapabilities,
+  parseCapabilityDate,
   serializeApprovedProviderIds,
   parseApprovedProviderIds,
 } from "@/lib/jurisdiction-capabilities";
@@ -388,14 +389,8 @@ export async function saveJurisdiction(input: {
   const legalReviewStatus = review.status;
   const approvedProviderIds = serializeApprovedProviderIds(parseApprovedProviderIds(input.approvedProviderIds));
   const capabilityNotes = String(input.capabilityNotes ?? "").trim().slice(0, 500);
-  const parseOptionalDate = (raw: string | null | undefined) => {
-    if (raw == null || String(raw).trim() === "") return null;
-    const date = new Date(String(raw));
-    if (Number.isNaN(date.getTime())) throw new Error("Use a valid capability effective date.");
-    return date;
-  };
-  const capabilitiesEffectiveFrom = parseOptionalDate(input.capabilitiesEffectiveFrom);
-  const capabilitiesEffectiveTo = parseOptionalDate(input.capabilitiesEffectiveTo);
+  const capabilitiesEffectiveFrom = parseCapabilityDate(input.capabilitiesEffectiveFrom);
+  const capabilitiesEffectiveTo = parseCapabilityDate(input.capabilitiesEffectiveTo);
   if (
     capabilitiesEffectiveFrom &&
     capabilitiesEffectiveTo &&

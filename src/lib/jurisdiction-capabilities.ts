@@ -75,6 +75,31 @@ function toDate(value: Date | string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/** A capability date from the admin form is a calendar day, stored at UTC midnight. */
+export function parseCapabilityDate(raw: string | null | undefined): Date | null {
+  const text = (raw ?? "").trim();
+  if (!text) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) throw new Error("Use a valid capability date (YYYY-MM-DD).");
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    throw new Error("Use a valid capability date (YYYY-MM-DD).");
+  }
+  return date;
+}
+
+/** Value for an input type="date", using the stored UTC calendar day. */
+export function capabilityDateInputValue(value: Date | string | null | undefined): string {
+  const date = toDate(value);
+  if (!date) return "";
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${date.getUTCFullYear()}-${month}-${day}`;
+}
+
 /** A date-only value is stored at UTC midnight. The end date includes that calendar day. */
 function inclusiveEnd(date: Date): Date {
   if (

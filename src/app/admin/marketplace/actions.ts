@@ -101,9 +101,12 @@ export async function actionSaveJurisdiction(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the jurisdiction.";
-    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
+    const code = String(formData.get("code") ?? "").trim().toUpperCase();
+    const codeQuery = code ? `&code=${encodeURIComponent(code)}` : "";
+    redirect(`/admin/marketplace/settings?error=${encodeURIComponent(message)}${codeQuery}`);
   }
   revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/marketplace/settings");
   revalidatePath("/payments");
   redirect(`/admin/marketplace/settings?saved=jurisdiction${code ? `&code=${encodeURIComponent(code)}` : ""}`);
 }

@@ -43,7 +43,7 @@ import {
   buildMarketplaceProviderOptions,
   marketplaceProviderCatalogLabel,
 } from "@/app/admin/marketplace/provider-catalog";
-import { parseApprovedProviderIds } from "@/lib/jurisdiction-capabilities";
+import { capabilityDateInputValue, parseApprovedProviderIds } from "@/lib/jurisdiction-capabilities";
 import { listProviders } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
@@ -510,6 +510,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
             key={row.code}
             title={`${row.label} (${row.code})`}
             subtitle={`${row.currency} · ${row.protectedPaymentsEnabled ? "protected payments on" : "protected payments off"} · legal ${row.legalReviewStatus}`}
+            defaultOpen={params.code === row.code}
           >
           <form action={actionSaveJurisdiction} className="grid gap-3 sm:grid-cols-4">
             <input type="hidden" name="code" value={row.code} />
@@ -622,11 +623,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
               <input
                 name="capabilitiesEffectiveFrom"
                 type="date"
-                defaultValue={
-                  row.capabilitiesEffectiveFrom
-                    ? new Date(row.capabilitiesEffectiveFrom).toISOString().slice(0, 10)
-                    : ""
-                }
+                defaultValue={capabilityDateInputValue(row.capabilitiesEffectiveFrom)}
                 disabled={!canManage}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               />
@@ -636,11 +633,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
               <input
                 name="capabilitiesEffectiveTo"
                 type="date"
-                defaultValue={
-                  row.capabilitiesEffectiveTo
-                    ? new Date(row.capabilitiesEffectiveTo).toISOString().slice(0, 10)
-                    : ""
-                }
+                defaultValue={capabilityDateInputValue(row.capabilitiesEffectiveTo)}
                 disabled={!canManage}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
               />

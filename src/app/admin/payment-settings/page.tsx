@@ -132,10 +132,12 @@ export default async function PaymentSettingsPage({
           <ul className="mt-2 space-y-1 text-sm text-amber-950">
             {conflicts.flatMap((row) => row.conflicts.map((conflict) => <li key={conflict}>{conflict}</li>))}
           </ul>
-          <p className="mt-2 text-xs text-amber-900">A new prefund is refused while a country has one of these conflicts.</p>
+          <p className="mt-2 text-xs text-amber-900">
+            A new prefund is refused while a country has two currencies. Collection and the gateway assignment can differ.
+          </p>
         </section>
       ) : (
-        <p className="text-sm text-emerald-800">No country has two different answers for currency or collection.</p>
+        <p className="text-sm text-emerald-800">No country has two currencies.</p>
       )}
       <section className="overflow-x-auto rounded-2xl border border-[#E4EBFF] bg-white">
         <table className="w-full min-w-[760px] text-left text-sm">
