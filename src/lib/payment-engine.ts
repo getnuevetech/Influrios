@@ -83,8 +83,9 @@ export type LedgerPosting = {
     | "payout"
     | "return"
     | "refund"
-    | "reversal";
-  party: "business" | "influencer" | "platform" | "tax";
+    | "reversal"
+    | "provider_fee";
+  party: "business" | "influencer" | "platform" | "tax" | "provider";
   side?: "business" | "influencer";
   amountCents: number;
   reverses?: string;
@@ -532,6 +533,20 @@ export function settlePlatformFees(input: {
     entries.push({ kind: "fee_settled", party: "platform", side: "influencer", amountCents: input.influencerFeeCents });
   }
   return { ok: true, entries };
+}
+
+/** The provider's own charge. It is not platform fee revenue and does not change signed amounts. */
+export function providerFeePosting(input: {
+  amountCents: number;
+  providerReference: string;
+}): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
+  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+    return { ok: false, error: "The provider fee is missing." };
+  }
+  if (input.providerReference.trim().length < 4) {
+    return { ok: false, error: "A provider fee reference is required." };
+  }
+  return { ok: true, entries: [{ kind: "provider_fee", party: "provider", amountCents: input.amountCents }] };
 }
 
 export function refundPostings(input: {

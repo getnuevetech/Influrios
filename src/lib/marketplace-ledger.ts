@@ -119,6 +119,7 @@ function postingParty(row: { party: string; side?: string }) {
 }
 
 function postingPurpose(kind: string) {
+  if (kind === "provider_fee") return "REGIONAL_SETTLEMENT";
   if (kind === "fee_settled") return "OPERATIONS";
   if (kind === "fee_pending" || kind === "fee_earned" || kind === "reversal") return "PLATFORM_FEE_CLEARING";
   if (kind === "refund") return "REFUND_RESERVE";
@@ -1798,7 +1799,9 @@ export async function applyMarketplaceEvent(input: {
     return { applied: false, result: "rejected" as const };
   }
   const snapshotPlan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
-  const { readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } = await import("@/lib/payment-engine");
+  const { providerFeePosting, readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } = await import(
+    "@/lib/payment-engine"
+  );
   const signedDeal = readSignedDealMoney(snapshotPlan);
   const launchGate = signedDeal
     ? await import("@/lib/launch-gate")
@@ -1830,7 +1833,11 @@ export async function applyMarketplaceEvent(input: {
         ? left > 0
           ? left
           : -1
-        : input.eventType === "fee.settled"
+        : input.eventType === "provider_fee.recorded"
+          ? input.amountCents > 0
+            ? input.amountCents
+            : -1
+          : input.eventType === "fee.settled"
           ? signedDeal
             ? signedDeal.businessPlatformFeeCents + signedDeal.influencerPlatformFeeCents
             : -1
@@ -2075,6 +2082,17 @@ export async function applyMarketplaceEvent(input: {
           provider: providerKey,
           eventId,
           entries: returned.entries,
+        });
+        return;
+      }
+      if (input.eventType === "provider_fee.recorded") {
+        const recorded = providerFeePosting({ amountCents: input.amountCents, providerReference: eventId });
+        if (!recorded.ok) throw new LedgerReject(recorded.error);
+        await writeSignedPostings(tx, {
+          fundingId: funding.id,
+          provider: providerKey,
+          eventId,
+          entries: recorded.entries,
         });
         return;
       }

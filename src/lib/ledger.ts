@@ -395,6 +395,17 @@ export function marketplaceDisposition(input: {
     }
     return "reject";
   }
+  if (input.eventType === "provider_fee.recorded") {
+    if (input.fundingStatus === "payment_risk") return "reject";
+    if (
+      (input.fundingStatus === "held" || input.fundingStatus === "completed") &&
+      input.amountCents === input.expectedCents &&
+      input.amountCents > 0
+    ) {
+      return "apply";
+    }
+    return "reject";
+  }
   if (input.eventType === "fee.settled") {
     if (input.fundingStatus === "payment_risk") return "reject";
     if (

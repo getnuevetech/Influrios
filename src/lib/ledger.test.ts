@@ -140,6 +140,16 @@ describe("marketplace ledger rules", () => {
     assert.equal(settledFees.balanced, true);
     assert.equal(
       marketplaceDisposition({
+        eventType: "provider_fee.recorded",
+        fundingStatus: "held",
+        amountCents: 50,
+        expectedCents: 50,
+        heldCents: 32_000,
+      }),
+      "apply",
+    );
+    assert.equal(
+      marketplaceDisposition({
         eventType: "fee.settled",
         fundingStatus: "completed",
         amountCents: 1_000,
