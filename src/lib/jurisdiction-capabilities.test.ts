@@ -7,7 +7,9 @@ import {
   capabilitiesFromJurisdictionRow,
   enteredLegalReviewStatus,
   evaluatePrefundCapabilities,
+  capabilityDateInputValue,
   parseApprovedProviderIds,
+  parseCapabilityDate,
   providerApprovedByJurisdiction,
   scheduleKindAllowedByJurisdiction,
   serializeApprovedProviderIds,
@@ -44,6 +46,14 @@ describe("jurisdiction capability parsing", () => {
     assert.deepEqual(parseApprovedProviderIds('["primary","wise"]'), ["primary", "wise"]);
     assert.deepEqual(parseApprovedProviderIds("primary, airwallex"), ["primary", "airwallex"]);
     assert.equal(serializeApprovedProviderIds(["Primary", "primary", "wise"]), '["primary","wise"]');
+    const end = parseCapabilityDate("2026-11-08");
+    assert.equal(end?.toISOString(), "2026-11-08T00:00:00.000Z");
+    assert.equal(parseCapabilityDate(""), null);
+    assert.throws(() => parseCapabilityDate("11/08/2026"), /YYYY-MM-DD/);
+    assert.equal(capabilityDateInputValue(end), "2026-11-08");
+    const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
+    assert.match(actions, /\/admin\/marketplace\/settings\?saved=jurisdiction/);
+    assert.equal(actions.includes('redirect("/admin/marketplace?saved=jurisdiction")'), false);
   });
 
   it("maps a jurisdiction row with safe defaults", () => {
