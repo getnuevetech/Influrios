@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { liveFundingBlockReason } from "@/lib/dual-platform-fees";
+import { signedQuoteExpired } from "@/lib/payment-engine";
 import { requestPrefund } from "@/lib/marketplace-ledger";
 import { signedAgreementFundingLevel } from "@/lib/matching-product-boundary";
 import {
@@ -161,6 +162,8 @@ export async function fundSignedAgreement(input: {
 
   const liveFunding = liveFundingBlockReason(terms.financialPlan);
   if (liveFunding) return { ok: false as const, error: liveFunding };
+  const expired = signedQuoteExpired(terms.financialPlan);
+  if (expired) return { ok: false as const, error: expired };
 
   const serviceLevel = signedAgreementFundingLevel(terms.serviceLevel);
   const primary = terms.creators[0];

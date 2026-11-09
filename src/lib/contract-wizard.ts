@@ -53,6 +53,17 @@ export type CollaborationFinancialPlan = {
   influencerPlatformFeeCents?: number;
   /** Reserved on signing. Earning and provider settlement stay empty until approved. */
   feeReservation?: FeeReservation | null;
+  /** Frozen commercial breakdown. Checkout must not reprice it from the live matrix. */
+  signedQuote?: {
+    validUntil: string;
+    taxStatus: string;
+    businessPaysCents: number;
+    influencerReceivesCents: number;
+    platformFeesTotalCents: number;
+    businessTaxCents: number;
+    influencerTaxCents: number;
+    withholdingCents: number;
+  } | null;
   feePayer: string;
   fundingCountry: string;
   creatorCountry: string;

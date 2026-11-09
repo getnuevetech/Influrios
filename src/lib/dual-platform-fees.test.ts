@@ -27,6 +27,7 @@ function rule(overrides: Partial<CollaborationFeeRule>): CollaborationFeeRule {
     maxFeeCents: null,
     tierBands: [],
     payer: "brand",
+    purpose: "business_platform_fee",
     effectiveFrom: "2026-01-01T00:00:00.000Z",
     notes: "",
     ...overrides,
@@ -37,13 +38,19 @@ const business = rule({
   id: "rule_business",
   name: "Business fixture",
   payer: "brand",
-  fixedCents: 25_000,
+  purpose: "business_platform_fee",
+  method: "percent",
+  percentBps: 250,
+  minFeeCents: 25_000,
 });
 const influencer = rule({
   id: "rule_influencer",
   name: "Influencer fixture",
   payer: "creator",
-  fixedCents: 7_000,
+  purpose: "influencer_platform_fee",
+  method: "percent",
+  percentBps: 200,
+  minFeeCents: 0,
 });
 
 describe("dual platform fee quote", () => {
@@ -62,6 +69,8 @@ describe("dual platform fee quote", () => {
     assert.equal(quote.businessPaysCents, 375_000);
     assert.equal(quote.influencerReceivesCents, 343_000);
     assert.equal(quote.platformFeesTotalCents, 32_000);
+    assert.equal(quote.business.floorApplied, true);
+    assert.equal(quote.influencer.floorApplied, false);
     assert.equal(quote.reservation.status, "reserved");
     assert.equal(quote.reservation.earnedAt, null);
     assert.equal(quote.reservation.providerSettledAt, null);
@@ -107,8 +116,15 @@ describe("dual platform fee quote", () => {
     const quote = quoteDualPlatformFees(
       [
         business,
-        rule({ id: "waive", name: "Influencer waiver", payer: "creator", method: "waived", priority: 200 }),
-        rule({ id: "split", name: "Legacy split", payer: "split", priority: 900, fixedCents: 99_000 }),
+        rule({
+          id: "waive",
+          name: "Influencer waiver",
+          payer: "creator",
+          purpose: "influencer_platform_fee",
+          method: "waived",
+          priority: 200,
+        }),
+        rule({ id: "split", name: "Legacy split", payer: "split", purpose: "legacy", priority: 900, fixedCents: 99_000 }),
       ],
       { jurisdiction: "US", serviceLevel: "contracted", grossValueCents: 350_000, asOf: AS_OF },
     );
@@ -134,7 +150,14 @@ describe("dual platform fee quote", () => {
       [
         business,
         influencer,
-        rule({ id: "tie", name: "Same precedence", payer: "creator", fixedCents: 1_000, priority: 100 }),
+        rule({
+          id: "tie",
+          name: "Same precedence",
+          payer: "creator",
+          purpose: "influencer_platform_fee",
+          fixedCents: 1_000,
+          priority: 100,
+        }),
       ],
       { jurisdiction: "US", serviceLevel: "contracted", grossValueCents: 350_000, asOf: AS_OF },
     );
@@ -149,6 +172,7 @@ describe("dual platform fee quote", () => {
           id: "specific",
           name: "US influencer",
           payer: "creator",
+          purpose: "influencer_platform_fee",
           jurisdiction: "US",
           fixedCents: 1_000,
           priority: 100,
@@ -160,7 +184,7 @@ describe("dual platform fee quote", () => {
     if (specific.ok) assert.equal(specific.influencer.rule.id, "specific");
 
     const tooLarge = quoteDualPlatformFees(
-      [business, rule({ ...influencer, fixedCents: 400_000 })],
+      [business, rule({ ...influencer, method: "fixed", percentBps: 0, fixedCents: 400_000 })],
       { jurisdiction: "US", serviceLevel: "contracted", grossValueCents: 350_000, asOf: AS_OF },
     );
     assert.equal(tooLarge.ok, false);

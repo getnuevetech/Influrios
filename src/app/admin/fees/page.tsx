@@ -14,6 +14,8 @@ import { hasPermission } from "@/lib/admin-auth";
 import {
   FEE_METHOD_LABELS,
   FEE_METHODS,
+  FEE_PURPOSE_LABELS,
+  FEE_PURPOSES,
   FEE_TYPE_LABELS,
   FEE_TYPES,
   FUNDING_MODE_CONDITIONS,
@@ -574,6 +576,23 @@ function FeeRuleForm({
           placeholder='[{"upToCents":100000,"percentBps":800},{"upToCents":null,"percentBps":1200}]'
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 font-mono text-xs text-indigo disabled:bg-[#F3F4F6]"
         />
+      </label>
+      <label className="text-xs font-semibold text-muted">
+        Fee purpose
+        <select
+          name="purpose"
+          required
+          defaultValue={rule?.purpose ?? ""}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        >
+          <option value="">Choose a fee purpose</option>
+          {FEE_PURPOSES.map((purpose) => (
+            <option key={purpose} value={purpose}>
+              {FEE_PURPOSE_LABELS[purpose]}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="text-xs font-semibold text-muted">
         Payer

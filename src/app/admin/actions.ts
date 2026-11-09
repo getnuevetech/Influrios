@@ -242,6 +242,7 @@ export async function actionSaveFeeRule(formData: FormData) {
       minFeeUsd: String(formData.get("minFeeUsd") ?? ""),
       maxFeeUsd: String(formData.get("maxFeeUsd") ?? ""),
       payer: String(formData.get("payer") ?? ""),
+      purpose: String(formData.get("purpose") ?? ""),
       notes: String(formData.get("notes") ?? ""),
       active: formData.get("active") === "on",
       tierBands,
@@ -265,6 +266,7 @@ export async function actionSaveFeeRule(formData: FormData) {
       maxFeeCents: draft.maxFeeCents,
       tierBands: draft.tierBands,
       payer: draft.payer,
+      purpose: draft.purpose,
       notes: draft.notes,
     });
   } catch (error) {
