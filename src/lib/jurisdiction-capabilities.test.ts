@@ -111,6 +111,39 @@ describe("managed-mode gates (Dev §24)", () => {
     assert.equal(serviceLevelAllowedByJurisdiction(caps({ legalReviewStatus: "PENDING" }), "discovery").ok, true);
     assert.equal(serviceLevelAllowedByJurisdiction(caps({ legalReviewStatus: "BLOCKED" }), "contracted").ok, false);
   });
+
+  it("keeps standard service levels when the capability window is closed", () => {
+    const closed = caps({
+      capabilitiesEffectiveTo: "2020-01-01T00:00:00.000Z",
+      managedIntroductionEnabled: true,
+    });
+    const asOf = new Date("2026-11-09T18:00:00.000Z");
+    assert.equal(serviceLevelAllowedByJurisdiction(closed, "contracted", asOf).ok, true);
+    assert.equal(serviceLevelAllowedByJurisdiction(closed, "discovery", asOf).ok, true);
+    assert.equal(serviceLevelAllowedByJurisdiction(closed, "platform_match", asOf).ok, true);
+    const managed = serviceLevelAllowedByJurisdiction(closed, "managed_intro", asOf);
+    assert.equal(managed.ok, false);
+    const choices = allowedServiceLevels(closed, ["discovery", "platform_match", "contracted", "managed_intro"], asOf);
+    assert.deepEqual(choices, ["discovery", "platform_match", "contracted"]);
+  });
+
+  it("treats a date-only capability end as the end of that day", () => {
+    const window = caps({ capabilitiesEffectiveTo: "2026-11-09T00:00:00.000Z" });
+    const during = serviceLevelAllowedByJurisdiction(window, "managed_intro", new Date("2026-11-09T18:00:00.000Z"));
+    assert.equal(during.ok, false);
+    const sameDay = caps({
+      capabilitiesEffectiveTo: "2026-11-09T00:00:00.000Z",
+      managedIntroductionEnabled: true,
+    });
+    assert.equal(
+      serviceLevelAllowedByJurisdiction(sameDay, "managed_intro", new Date("2026-11-09T18:00:00.000Z")).ok,
+      true,
+    );
+    assert.equal(
+      serviceLevelAllowedByJurisdiction(sameDay, "managed_intro", new Date("2026-11-10T00:00:00.000Z")).ok,
+      false,
+    );
+  });
 });
 
 describe("funding schedule + provider gates", () => {
