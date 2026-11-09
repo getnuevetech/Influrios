@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAdminSession, hasPermission, isSuperAdmin } from "@/lib/admin-auth";
 import { parseScheduleCorrection } from "@/lib/signed-funding";
 import { applyMarketplaceEvent } from "@/lib/marketplace-ledger";
+import { recordProviderBalanceComparison } from "@/lib/provider-balance";
 import { approveContractAmendment, voidContractDocument } from "@/lib/signed-funding-apply";
 
 function dollarsToCents(raw: string) {
@@ -62,6 +63,31 @@ export async function actionRecordFeeSettlement(formData: FormData) {
   revalidatePath(`/admin/deals/${id}`);
   revalidatePath(`/admin/marketplace/${fundingId}`);
   redirect(`/admin/deals/${id}?settled=1`);
+}
+
+export async function actionCompareProviderBalance(formData: FormData) {
+  const session = await operator();
+  const id = String(formData.get("id") ?? "").trim();
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  if (!hasPermission(session, "marketplace.manage")) {
+    redirect(`/admin/deals/${id}?error=` + encodeURIComponent("Finance compares provider balances."));
+  }
+  const providerHeldCents = Number(String(formData.get("providerHeldCents") ?? "").trim());
+  const providerReleasedCents = Number(String(formData.get("providerReleasedCents") ?? "").trim());
+  const providerRefundedCents = Number(String(formData.get("providerRefundedCents") ?? "").trim());
+  const result = await recordProviderBalanceComparison({
+    fundingId,
+    actor: session.email,
+    providerHeldCents,
+    providerReleasedCents,
+    providerRefundedCents,
+  });
+  if (!result.ok) redirect(`/admin/deals/${id}?error=${encodeURIComponent(result.error)}`);
+  const message = result.matched
+    ? "Provider balances match the ledger. Nothing was moved."
+    : `Held difference ${result.heldDifferenceCents} minor units. Released difference ${result.releasedDifferenceCents} minor units. Refunded difference ${result.refundedDifferenceCents} minor units. Nothing was moved.`;
+  revalidatePath(`/admin/deals/${id}`);
+  redirect(`/admin/deals/${id}?compared=${encodeURIComponent(message)}`);
 }
 
 export async function actionApproveDealAmendment(formData: FormData) {
