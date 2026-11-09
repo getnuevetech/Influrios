@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { actionFundSignedContract } from "@/app/collaboration/contract/actions";
+import { contractFundingCta } from "@/lib/signed-funding";
 import { notFound, redirect } from "next/navigation";
 import { actionLogout } from "@/app/account/actions";
 import { actionPostContractMessage, actionSignNativeContract } from "@/app/collaboration/contracts/[id]/actions";
@@ -86,19 +88,26 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
   const canMessage = Boolean(
     party || (admin && (adminCanOpenContractMessages(admin) || admin.permissions.includes("contracts.manage"))),
   );
-  const source =
-    document.sourceJson && typeof document.sourceJson === "object"
-      ? (document.sourceJson as Record<string, string>)
-      : {};
-  const returnQuery = new URLSearchParams({ ...source, contractDocument: document.id });
   const isNative = document.signingChannel === "native";
   const awaitingSignature = document.status === "sent" || document.status === "draft";
   const canSignNative = Boolean(party && isNative && awaitingSignature && party.status === "pending");
   const youSigned = Boolean(party && party.status === "signed");
   const pendingParties = document.parties.filter((row) => row.status === "pending");
   const signedCount = document.parties.filter((row) => row.status === "signed").length;
+  const linkedFunding = document.fundingId
+    ? await prisma.collaborationFunding.findUnique({
+        where: { id: document.fundingId },
+        select: { id: true, status: true },
+      })
+    : null;
   /** Business starts funding — influencers must not hit /collaboration/contract. */
   const canStartFunding = Boolean(party && party.role === "business");
+  const fundingCta = contractFundingCta({
+    role: party?.role,
+    status: document.status,
+    fundingId: document.fundingId,
+    fundingStatus: linkedFunding?.status,
+  });
   const channelLabel = isNative
     ? "Influrios in-app"
     : document.envelopeId
@@ -169,14 +178,23 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
             >
               {document.status === "signed" ? "Download signed contract" : "Download contract"}
             </Link>
-            {document.status === "signed" ? (
-              canStartFunding ? (
-                <Link href={`/collaboration/contract?${returnQuery.toString()}`} className="text-violet hover:underline">
-                  Start funding
+            {canStartFunding ? (
+              fundingCta.kind === "start" ? (
+                <form action={actionFundSignedContract}>
+                  <input type="hidden" name="contractDocumentId" value={document.id} />
+                  <button type="submit" className="text-violet hover:underline">
+                    Start funding
+                  </button>
+                </form>
+              ) : fundingCta.kind === "resume" || fundingCta.kind === "view" ? (
+                <Link href={`/payments?created=${document.fundingId}`} className="text-violet hover:underline">
+                  {fundingCta.label}
                 </Link>
-              ) : (
-                <span className="text-muted">The business starts funding from their side.</span>
-              )
+              ) : fundingCta.kind === "wait" ? (
+                <span className="text-muted">{fundingCta.label}</span>
+              ) : null
+            ) : document.status === "signed" ? (
+              <span className="text-muted">The business starts funding from their side.</span>
             ) : (
               <span className="text-muted">Funding waits until every party has signed.</span>
             )}

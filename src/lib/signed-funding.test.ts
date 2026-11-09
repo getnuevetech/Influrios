@@ -1,0 +1,161 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { describe, it } from "node:test";
+import {
+  canonicalTerms,
+  contractFundingCta,
+  contractFundingIdempotencyKey,
+  contractMayBeDeleted,
+  contractMayBeVoided,
+  describeDealProgress,
+  readSignedTermsSnapshot,
+  sameDealError,
+  submittedTermsDiffer,
+  type SignedTermsSnapshot,
+} from "./signed-funding";
+
+const snapshot: SignedTermsSnapshot = {
+  version: 1,
+  title: "2nd Collaboration Test",
+  businessName: "North Brand",
+  jurisdictionCode: "US",
+  currency: "USD",
+  grossCents: 150000,
+  serviceLevel: "discovery",
+  workspaceId: "ws_1",
+  collaborationId: "col_1",
+  applicationId: "app_1",
+  teamProposalId: null,
+  creators: [{ slug: "ada", shareBps: 10_000 }],
+  milestones: [
+    { title: "Delivery", shareBps: 6_000 },
+    { title: "Usage", shareBps: 4_000 },
+  ],
+  financialPlan: { grossContractValueCents: 150000, contractCurrency: "USD" },
+  payoutMethod: "",
+  lockedAt: "2026-11-08T00:00:00.000Z",
+};
+
+describe("signed funding instruction", () => {
+  it("funds the stored terms and refuses a changed amount, recipient, or milestone split", () => {
+    assert.equal(submittedTermsDiffer(snapshot, { workspaceId: "ws_1" }), null);
+    assert.match(submittedTermsDiffer(snapshot, { workspaceId: "ws_1", grossCents: 9000 }) ?? "", /amount/i);
+    assert.match(submittedTermsDiffer(snapshot, { workspaceId: "ws_1", creatorSlug: "other" }) ?? "", /influencer/i);
+    assert.match(
+      submittedTermsDiffer(snapshot, {
+        workspaceId: "ws_1",
+        customMilestones: [{ title: "Delivery", shareBps: 10_000 }],
+      }) ?? "",
+      /milestone/i,
+    );
+    assert.match(sameDealError(snapshot, { workspaceId: "ws_2" }) ?? "", /different business/i);
+    assert.match(
+      sameDealError(snapshot, { workspaceId: "ws_1", collaborationId: "col_2" }) ?? "",
+      /different deal/i,
+    );
+  });
+
+  it("uses an approved change order as the terms the next instruction must match", () => {
+    const next = canonicalTerms(snapshot, {
+      grossCents: 200000,
+      currency: "USD",
+      creators: [{ slug: "ada", shareBps: 10_000 }],
+      milestones: [{ title: "Delivery", shareBps: 10_000 }],
+      note: "Scope grew after signing",
+    });
+    assert.equal(next.grossCents, 200000);
+    assert.equal(submittedTermsDiffer(next, { workspaceId: "ws_1", grossCents: 150000 })?.includes("amount"), true);
+    assert.equal(submittedTermsDiffer(next, { workspaceId: "ws_1", grossCents: 200000 }), null);
+  });
+
+  it("round-trips a snapshot and rejects a snapshot whose shares do not add up", () => {
+    assert.equal(readSignedTermsSnapshot(snapshot)?.grossCents, 150000);
+    assert.equal(readSignedTermsSnapshot({ ...snapshot, creators: [{ slug: "ada", shareBps: 5000 }] }), null);
+  });
+
+  it("shows start, resume, or view funding and never a second start", () => {
+    assert.equal(contractFundingCta({ role: "business", status: "signed" }).kind, "start");
+    const resume = contractFundingCta({ role: "business", status: "signed", fundingId: "f1", fundingStatus: "awaiting_provider" });
+    assert.equal(resume.kind === "resume" ? resume.label : "", "Resume payment");
+    const view = contractFundingCta({ role: "business", status: "signed", fundingId: "f1", fundingStatus: "held" });
+    assert.equal(view.kind === "view" ? view.label : "", "View funding");
+    assert.equal(contractFundingCta({ role: "creator", status: "signed", fundingId: "f1" }).kind, "hidden");
+    assert.equal(contractFundingIdempotencyKey("doc_1"), "contract:doc_1:initial");
+  });
+
+  it("deletes only drafts and voids an unfunded signed agreement", () => {
+    assert.equal(contractMayBeDeleted("draft"), true);
+    assert.equal(contractMayBeDeleted("signed"), false);
+    assert.equal(contractMayBeDeleted("sent"), false);
+    assert.equal(contractMayBeVoided("signed", null), true);
+    assert.equal(contractMayBeVoided("signed", "fund_1"), false);
+    assert.equal(contractMayBeVoided("draft", null), false);
+  });
+
+  it("names provider confirmation, scheduled release, and the disputed milestone", () => {
+    const waiting = describeDealProgress({
+      collaborationStatus: "accepted",
+      agreementStatus: "signed",
+      signedCount: 2,
+      partyCount: 2,
+      fundingStatus: "awaiting_provider",
+      currency: "USD",
+      milestones: [{ id: "m1", title: "Delivery", status: "pending", amountCents: 150000, releaseScheduledAt: null }],
+      disputes: [],
+    });
+    assert.equal(waiting.agreement, "Fully signed");
+    assert.equal(waiting.funding, "Awaiting provider confirmation");
+    assert.match(waiting.next, /provider confirmation/i);
+
+    const scheduled = describeDealProgress({
+      ...waiting,
+      collaborationStatus: "accepted",
+      fundingStatus: "held",
+      milestones: [{ id: "m1", title: "Delivery", status: "approved", amountCents: 150000, releaseScheduledAt: "2026-11-09T00:00:00.000Z" }],
+      disputes: [],
+      agreementStatus: "signed",
+      signedCount: 2,
+      partyCount: 2,
+      currency: "USD",
+    });
+    assert.equal(scheduled.delivery, "Release scheduled");
+
+    const disputed = describeDealProgress({
+      collaborationStatus: "accepted",
+      agreementStatus: "signed",
+      signedCount: 2,
+      partyCount: 2,
+      fundingStatus: "held",
+      currency: "USD",
+      milestones: [{ id: "m1", title: "Delivery", status: "approved", amountCents: 80000, releaseScheduledAt: null }],
+      disputes: [{ milestoneId: "m1", status: "open", title: "Delivery", amountCents: 80000 }],
+    });
+    assert.equal(disputed.hold?.title, "Delivery");
+    assert.equal(disputed.hold?.amountCents, 80000);
+    assert.match(disputed.next, /on hold/i);
+  });
+
+  it("keeps the ledger read-only and the admin links on the deal page", () => {
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    const list = ledger.slice(ledger.indexOf("export async function listFundings"), ledger.indexOf("export async function listFundingsForCreator"));
+    assert.equal(list.includes("sweepAutoApprovals"), false);
+    assert.equal(list.includes("sweepDueRecurrences"), false);
+    const creator = ledger.slice(ledger.indexOf("export async function listFundingsForCreator"), ledger.indexOf("export async function listFundingsForBusiness"));
+    assert.equal(creator.includes("sweepAutoApprovals"), false);
+    const business = ledger.slice(ledger.indexOf("export async function listFundingsForBusiness"), ledger.indexOf("export async function submitFundingMilestone"));
+    assert.equal(business.includes("sweepDueRecurrences"), false);
+    const action = readFileSync("src/app/collaboration/contract/actions.ts", "utf8");
+    assert.match(action, /fundSignedAgreement/);
+    assert.match(action, /termsSnapshot/);
+    const deleter = readFileSync("src/lib/contract-document.ts", "utf8");
+    assert.match(deleter, /status !== "draft"/);
+    const adminContracts = readFileSync("src/app/admin/contracts/actions.ts", "utf8");
+    assert.match(adminContracts, /voidContractDocument/);
+    const collab = readFileSync("src/app/admin/collaborations/page.tsx", "utf8");
+    assert.match(collab, /\/admin\/deals\//);
+    assert.equal(collab.includes("/collaboration/records/"), false);
+    const detail = readFileSync("src/app/admin/marketplace/[fundingId]/page.tsx", "utf8");
+    assert.match(detail, /\/admin\/deals\//);
+    assert.equal(detail.includes("/collaboration/records/"), false);
+  });
+});

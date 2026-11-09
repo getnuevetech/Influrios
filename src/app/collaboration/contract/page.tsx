@@ -936,9 +936,15 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             >
               {sendBlocked ? "Already sent for signature" : "Send for signature"}
             </button>
-            <button type="submit" name="intent" value="fund" className="btn-primary flex-1">
-              Start funding →
-            </button>
+            {existingContract?.fundingId ? (
+              <Link href={`/payments?created=${existingContract.fundingId}`} className="btn-primary flex-1 text-center">
+                View funding
+              </Link>
+            ) : (
+              <button type="submit" name="intent" value="fund" className="btn-primary flex-1">
+                Start funding →
+              </button>
+            )}
           </div>
         </form>
 

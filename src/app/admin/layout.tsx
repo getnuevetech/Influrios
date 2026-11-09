@@ -6,6 +6,7 @@ type SideLink = {
   href: string;
   label: string;
   module?: AdminModule | "dashboard";
+  anyModules?: AdminModule[];
   icon?: string;
 };
 
@@ -65,6 +66,12 @@ const SIDE_GROUPS: SideGroup[] = [
   {
     name: "Collaborations",
     links: [
+      {
+        href: "/admin/deals",
+        label: "Deals",
+        anyModules: ["collaborations", "contracts", "marketplace"],
+        icon: "collab",
+      },
       { href: "/admin/collaborations", label: "Collaborations", module: "collaborations", icon: "collab" },
       {
         href: "/admin/marketplace-listings",
@@ -123,7 +130,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     name: group.name,
     links: group.links
       .filter((l) =>
-        l.module === "dashboard" ? true : canAccessModule(session, l.module as AdminModule),
+        l.anyModules
+          ? l.anyModules.some((module) => canAccessModule(session, module))
+          : l.module === "dashboard"
+            ? true
+            : canAccessModule(session, l.module as AdminModule),
       )
       .map((l) => ({ href: l.href, label: l.label, icon: l.icon })),
   })).filter((group) => group.links.length > 0);

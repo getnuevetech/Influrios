@@ -103,7 +103,7 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
               return (
                 <tr key={record.id} className="border-b border-[#E4EBFF] last:border-0">
                   <td className="px-4 py-3">
-                    <Link href={`/collaboration/records/${record.id}`} className="font-semibold text-indigo hover:text-violet">
+                    <Link href={`/admin/deals/${record.id}`} className="font-semibold text-indigo hover:text-violet">
                       {record.title}
                     </Link>
                     <p className="text-xs text-muted">{record.commercial}</p>
