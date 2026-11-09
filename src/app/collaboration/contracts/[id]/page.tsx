@@ -18,6 +18,7 @@ import {
   resolveContractPartyForAccount,
 } from "@/lib/contract-document";
 import { resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
+import { feeLevelForSignedTerms } from "@/lib/paid-agreement-fee";
 import { prisma } from "@/lib/db";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
@@ -164,7 +165,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
       ? await resolvePartyPlatformFee(
           {
             jurisdiction: terms.jurisdictionCode,
-            serviceLevel: terms.serviceLevel,
+            serviceLevel: feeLevelForSignedTerms(terms),
             grossValueCents: terms.grossCents,
           },
           "influencer",

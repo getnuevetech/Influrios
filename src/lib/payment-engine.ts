@@ -379,7 +379,7 @@ export function buildSignedCommercialSnapshot(input: {
   };
 }
 
-/** Business send locks only the business fee. The influencer fee is locked when that party signs. */
+/** Locks the business fee. When the influencer rule also matches, both signed amounts are stored for funding. */
 export function buildBusinessCommercialSnapshot(input: {
   quote: {
     grossInfluencerCompensationCents: number;
@@ -389,6 +389,14 @@ export function buildBusinessCommercialSnapshot(input: {
     floorApplied: boolean;
     capApplied: boolean;
   };
+  influencer?: {
+    grossInfluencerCompensationCents: number;
+    feeCents: number;
+    totalCents: number;
+    rule: { id: string; version: number; method: string; percentBps: number };
+    floorApplied: boolean;
+    capApplied: boolean;
+  } | null;
   currency: string;
   minorDigits: number;
   agreementVersion?: number;
@@ -406,6 +414,9 @@ export function buildBusinessCommercialSnapshot(input: {
     return { ok: false, error: "Unresolved tax treatment cannot add a tax line." };
   }
   const businessTax = tax.lines.filter((line) => line.type === "business_fee_tax").reduce((sum, line) => sum + line.amountCents, 0);
+  const influencer = input.influencer;
+  const influencerLocked =
+    influencer != null && influencer.grossInfluencerCompensationCents === input.quote.grossInfluencerCompensationCents;
   const quotedAt = input.quotedAt ?? new Date();
   const validForMs =
     Number.isInteger(input.validForMs) && input.validForMs != null && input.validForMs > 0
@@ -418,26 +429,29 @@ export function buildBusinessCommercialSnapshot(input: {
     minorDigits: input.minorDigits,
     grossInfluencerCompensationCents: input.quote.grossInfluencerCompensationCents,
     businessPlatformFeeCents: input.quote.feeCents,
-    influencerPlatformFeeCents: null,
+    influencerPlatformFeeCents: influencerLocked ? influencer.feeCents : null,
     businessTaxCents: businessTax,
     influencerTaxCents: 0,
     withholdingCents: 0,
     businessPaysCents: input.quote.totalCents + businessTax,
-    influencerReceivesCents: null,
-    platformFeesTotalCents: input.quote.feeCents,
+    influencerReceivesCents: influencerLocked ? influencer.totalCents : null,
+    platformFeesTotalCents: input.quote.feeCents + (influencerLocked ? influencer.feeCents : 0),
     businessRuleId: input.quote.rule.id,
     businessRuleVersion: input.quote.rule.version,
-    influencerRuleId: null,
-    influencerRuleVersion: null,
+    influencerRuleId: influencerLocked ? influencer.rule.id : null,
+    influencerRuleVersion: influencerLocked ? influencer.rule.version : null,
     businessRateBps:
       input.quote.rule.method === "percent" || input.quote.rule.method === "percent_plus_fixed"
         ? input.quote.rule.percentBps
         : null,
-    influencerRateBps: null,
+    influencerRateBps:
+      influencerLocked && (influencer.rule.method === "percent" || influencer.rule.method === "percent_plus_fixed")
+        ? influencer.rule.percentBps
+        : null,
     businessFloorApplied: input.quote.floorApplied,
     businessCapApplied: input.quote.capApplied,
-    influencerFloorApplied: false,
-    influencerCapApplied: false,
+    influencerFloorApplied: influencerLocked ? influencer.floorApplied : false,
+    influencerCapApplied: influencerLocked ? influencer.capApplied : false,
     rounding: "half_away_from_zero",
     taxLines: tax.lines,
     taxStatus: tax.status,
@@ -462,7 +476,7 @@ export function directGrossEditBlock(plan: unknown): string | null {
   if (!plan || typeof plan !== "object") return null;
   const row = plan as { feeReservation?: { status?: unknown }; signedQuote?: unknown };
   if (row.feeReservation?.status === "reserved" || row.signedQuote) {
-    return "A revised agreement is required. The signed amounts were not changed.";
+    return "A new agreement version and fresh signatures are required. The signed amounts were not changed.";
   }
   return null;
 }

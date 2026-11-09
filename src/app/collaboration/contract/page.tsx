@@ -12,6 +12,7 @@ import { collabOsV1Enabled } from "@/lib/collab-os";
 import { feeRuleRateLabel, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
 import { ContractServiceLevelField } from "@/components/contract-service-level-field";
 import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
+import { resolvePaidAgreementFee } from "@/lib/paid-agreement-fee";
 import {
   buildFinancialPlan,
   CONTRACT_WIZARD_STEPS,
@@ -374,17 +375,27 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     influencerAccepted,
   });
 
+  const feeBoundary = resolvePaidAgreementFee({
+    statedServiceLevel: effectiveServiceLevel || serviceLevel,
+    grossCents,
+  });
+  const feeServiceLevel = feeBoundary.feeServiceLevel;
+  const feeLevelAllowed = availableServiceLevels.some((level) => level === feeServiceLevel);
+  const disclosureServiceLevel =
+    feeBoundary.originServiceLevel === feeServiceLevel
+      ? feeServiceLevel
+      : `${feeBoundary.originServiceLevel} origin, ${feeServiceLevel} fee`;
   const quote =
-    grossCents > 0 && jurisdictionCode && effectiveServiceLevel
+    grossCents > 0 && jurisdictionCode && effectiveServiceLevel && feeLevelAllowed
       ? amountMode === "all_in"
         ? await resolveAllInBudget(
-            { jurisdiction: jurisdictionCode, serviceLevel: effectiveServiceLevel },
+            { jurisdiction: jurisdictionCode, serviceLevel: feeServiceLevel },
             grossCents,
           ).catch(() => null)
         : await resolvePartyPlatformFee(
             {
               jurisdiction: jurisdictionCode,
-              serviceLevel: effectiveServiceLevel,
+              serviceLevel: feeServiceLevel,
               grossValueCents: grossCents,
             },
             "business",
@@ -645,6 +656,11 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     ? "No service level is available because this jurisdiction is blocked pending legal review."
                     : signedFundingLevel
                     ? "This agreement is already signed, so funding uses a contracted service level."
+                    : feeBoundary.freeDiscovery
+                    ? "Discovery with no amount uses the free Discovery fee."
+                    : effectiveServiceLevel &&
+                        (feeBoundary.originServiceLevel === "discovery" || feeBoundary.originServiceLevel === "platform_match")
+                    ? `${SERVICE_LEVEL_LABELS[feeBoundary.originServiceLevel]} stays the origin. A paid agreement uses the Contracted collaboration fee.`
                     : "This choice selects the platform fee your business pays.") +
                   (jurisdictionCaps?.legalReviewStatus && jurisdictionCaps.legalReviewStatus !== "APPROVED"
                     ? ` Legal review: ${jurisdictionCaps.legalReviewStatus}.`
@@ -804,7 +820,11 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 <p className="mt-1 text-sm text-muted">
                   Service level{" "}
                   <strong>
-                    {effectiveServiceLevel ? SERVICE_LEVEL_LABELS[effectiveServiceLevel] : ""}
+                    {feeBoundary.originServiceLevel === "discovery" || feeBoundary.originServiceLevel === "platform_match"
+                      ? `${SERVICE_LEVEL_LABELS[feeBoundary.originServiceLevel]} · ${SERVICE_LEVEL_LABELS[feeServiceLevel]}`
+                      : effectiveServiceLevel
+                        ? SERVICE_LEVEL_LABELS[effectiveServiceLevel]
+                        : ""}
                   </strong>
                   . Your fee is reserved on signing. Later edits do not change a locked deal, and the fee is not earned yet.
                 </p>
@@ -865,6 +885,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   })}
                 </ul>
               </>
+            ) : grossCents > 0 && effectiveServiceLevel && !feeLevelAllowed ? (
+              <p className="mt-2 text-sm font-semibold text-amber-800">
+                This jurisdiction cannot price a paid agreement at Contracted collaboration.
+              </p>
             ) : quote && !quote.ok ? (
               <p className="mt-2 text-sm font-semibold text-amber-800">{quote.error}</p>
             ) : jurisdictionCode && !(jurisdiction?.currency ?? "").trim() ? (
@@ -883,7 +907,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   {buildFeeDisclosureSummary(
                     disclosureFromPartyQuote(quote, {
                       jurisdiction: jurisdictionCode,
-                      serviceLevel: effectiveServiceLevel,
+                      serviceLevel: disclosureServiceLevel,
                     }),
                   )}
                 </p>

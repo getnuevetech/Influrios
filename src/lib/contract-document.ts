@@ -4,6 +4,7 @@
  */
 import { createHash } from "crypto";
 import { applyInfluencerFeeToTerms, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
+import { feeLevelForSignedTerms } from "@/lib/paid-agreement-fee";
 import { prisma } from "@/lib/db";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
@@ -243,6 +244,7 @@ export function asciiForPdf(value: string): string {
 }
 
 export function displayServiceLevel(value: string): string {
+  if (value.includes(" · ")) return value;
   const key = value.trim().toLowerCase() as ServiceLevel;
   if (key in SERVICE_LEVEL_LABELS) return SERVICE_LEVEL_LABELS[key];
   return value
@@ -334,7 +336,7 @@ export async function agreementForParty(input: {
     const quote = await resolvePartyPlatformFee(
       {
         jurisdiction: terms.jurisdictionCode,
-        serviceLevel: terms.serviceLevel,
+        serviceLevel: feeLevelForSignedTerms(terms),
         grossValueCents: terms.grossCents,
       },
       "influencer",
@@ -1077,11 +1079,15 @@ export async function signNativeContractParty(input: {
         : undefined;
     const alreadyLocked = typeof plan?.influencerRuleId === "string" && plan.influencerRuleId.length > 0;
     if (!alreadyLocked) {
-      const snapshot = terms && typeof terms === "object" ? (terms as { jurisdictionCode?: unknown; serviceLevel?: unknown; grossCents?: unknown }) : null;
+      const snapshot = terms && typeof terms === "object" ? (terms as { jurisdictionCode?: unknown; serviceLevel?: unknown; feeServiceLevel?: unknown; grossCents?: unknown }) : null;
       const quote = await resolvePartyPlatformFee(
         {
           jurisdiction: String(snapshot?.jurisdictionCode ?? ""),
-          serviceLevel: String(snapshot?.serviceLevel ?? ""),
+          serviceLevel: feeLevelForSignedTerms({
+            serviceLevel: String(snapshot?.serviceLevel ?? ""),
+            feeServiceLevel: typeof snapshot?.feeServiceLevel === "string" ? snapshot.feeServiceLevel : null,
+            grossCents: Number(snapshot?.grossCents),
+          }),
           grossValueCents: Number(snapshot?.grossCents),
         },
         "influencer",

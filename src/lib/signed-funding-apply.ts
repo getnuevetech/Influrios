@@ -5,6 +5,7 @@ import { requestPrefund } from "@/lib/marketplace-ledger";
 import { signedAgreementFundingLevel } from "@/lib/matching-product-boundary";
 import {
   canonicalTerms,
+  repriceNeedsNewAgreement,
   contractFundingIdempotencyKey,
   contractMayBeDeleted,
   contractMayBeVoided,
@@ -156,7 +157,10 @@ export async function fundSignedAgreement(input: {
         note: document.amendments[0].note,
       }
     : null;
-  const terms = canonicalTerms(snapshot, amendment && amendment.creators.length && amendment.milestones.length ? amendment : null);
+  const approvedAmendment = amendment && amendment.creators.length && amendment.milestones.length ? amendment : null;
+  const reprice = repriceNeedsNewAgreement(snapshot, approvedAmendment);
+  if (reprice) return { ok: false as const, error: reprice };
+  const terms = canonicalTerms(snapshot, approvedAmendment);
   const drift = submittedTermsDiffer(terms, input.submitted);
   if (drift) return { ok: false as const, error: `${drift} ${CHANGE_REQUIRED}` };
 
