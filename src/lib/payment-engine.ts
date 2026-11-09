@@ -399,7 +399,7 @@ export function providerEventMayAdvance(input: ProviderAdvanceInput): { advance:
   return { advance: true };
 }
 
-export function airwallexLedgerAdvance(body: string, expected?: {
+export function providerLedgerAdvance(body: string, expected?: {
   amountCents: number;
   currency: string;
   accountId: string;
@@ -542,4 +542,95 @@ export function returnedPayoutPostings(input: {
     ok: true,
     entries: [{ kind: "return", party: "influencer", amountCents: input.amountCents, reverses: "payout" }],
   };
+}
+
+export type SignedDealMoney = {
+  businessPaysCents: number;
+  influencerReceivesCents: number;
+  businessPlatformFeeCents: number;
+  influencerPlatformFeeCents: number;
+  businessTaxCents: number;
+  influencerTaxCents: number;
+};
+
+export function readSignedDealMoney(plan: unknown): SignedDealMoney | null {
+  if (!plan || typeof plan !== "object") return null;
+  const quote = (plan as { signedQuote?: Record<string, unknown> }).signedQuote;
+  if (!quote) return null;
+  const money = {
+    businessPaysCents: quote.businessPaysCents,
+    influencerReceivesCents: quote.influencerReceivesCents,
+    businessPlatformFeeCents: quote.businessPlatformFeeCents,
+    influencerPlatformFeeCents: quote.influencerPlatformFeeCents,
+    businessTaxCents: quote.businessTaxCents ?? 0,
+    influencerTaxCents: quote.influencerTaxCents ?? 0,
+  };
+  if (Object.values(money).some((amount) => !Number.isInteger(amount) || Number(amount) < 0)) return null;
+  return {
+    businessPaysCents: Number(money.businessPaysCents),
+    influencerReceivesCents: Number(money.influencerReceivesCents),
+    businessPlatformFeeCents: Number(money.businessPlatformFeeCents),
+    influencerPlatformFeeCents: Number(money.influencerPlatformFeeCents),
+    businessTaxCents: Number(money.businessTaxCents),
+    influencerTaxCents: Number(money.influencerTaxCents),
+  };
+}
+
+/** Extra ledger rows for a signed dual-fee deal. The original signed amounts stay unchanged. */
+export function signedDealMoneyEvents(input: {
+  deal: SignedDealMoney;
+  eventType: "funding.held" | "payout.released" | "payout.refunded" | "payout.returned";
+  amountCents: number;
+  policyApproved: boolean;
+  finalPayout: boolean;
+  alreadyEarned: boolean;
+  alreadyReturned: boolean;
+}): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
+  if (input.eventType === "funding.held") {
+    if (input.amountCents !== input.deal.businessPaysCents) {
+      return { ok: false, error: "The collection does not match the signed business payment." };
+    }
+    return {
+      ok: true,
+      entries: [
+        { kind: "fee_pending", party: "platform", side: "business", amountCents: input.deal.businessPlatformFeeCents },
+        { kind: "fee_pending", party: "platform", side: "influencer", amountCents: input.deal.influencerPlatformFeeCents },
+        { kind: "influencer_payable", party: "influencer", amountCents: input.deal.influencerReceivesCents },
+      ],
+    };
+  }
+  if (input.eventType === "payout.released") {
+    if (input.amountCents !== input.deal.influencerReceivesCents) {
+      return { ok: false, error: "The payout does not match the signed influencer amount." };
+    }
+    if (!input.finalPayout || input.alreadyEarned) return { ok: true, entries: [] };
+    const earned = earnPlatformFees({
+      policyApproved: input.policyApproved,
+      finalPayoutConfirmed: true,
+      alreadyEarned: false,
+      businessFeeCents: input.deal.businessPlatformFeeCents,
+      influencerFeeCents: input.deal.influencerPlatformFeeCents,
+    });
+    if (!earned.ok) return { ok: true, entries: [] };
+    return earned;
+  }
+  if (input.eventType === "payout.refunded") {
+    if (input.amountCents !== input.deal.businessPaysCents) {
+      return { ok: false, error: "A signed deal refunds the full business payment on the original route." };
+    }
+    return refundPostings({
+      policyApproved: input.policyApproved,
+      businessPaysCents: input.deal.businessPaysCents,
+      businessFeeCents: input.deal.businessPlatformFeeCents,
+      influencerFeeCents: input.deal.influencerPlatformFeeCents,
+      businessTaxCents: input.deal.businessTaxCents,
+      influencerTaxCents: input.deal.influencerTaxCents,
+      feeRefundable: true,
+      taxReversible: true,
+    });
+  }
+  if (input.amountCents !== input.deal.influencerReceivesCents) {
+    return { ok: false, error: "The returned amount does not match the signed influencer payout." };
+  }
+  return returnedPayoutPostings({ amountCents: input.amountCents, alreadyReturned: input.alreadyReturned });
 }

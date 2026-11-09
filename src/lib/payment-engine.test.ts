@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import type { CollaborationFeeRule } from "./collaboration-fees";
 import { liveFundingBlockReason, quoteDualPlatformFees } from "./dual-platform-fees";
 import {
-  airwallexLedgerAdvance,
+  providerLedgerAdvance,
   buildProviderStagingTrace,
   buildSignedCommercialSnapshot,
   collaborationLaunchBlockers,
@@ -17,7 +17,9 @@ import {
   readSignedCollection,
   refundPostings,
   reserveFeePostings,
+  readSignedDealMoney,
   returnedPayoutPostings,
+  signedDealMoneyEvents,
   signedQuoteExpired,
   taxIsSeparateFromPlatformFees,
 } from "./payment-engine";
@@ -193,6 +195,72 @@ describe("payment engine acceptance", () => {
     assert.equal(returned.ok, true);
     const again = returnedPayoutPostings({ amountCents: 343_000, alreadyReturned: true });
     assert.equal(again.ok, false);
+    const deal = {
+      businessPaysCents: 375_000,
+      influencerReceivesCents: 343_000,
+      businessPlatformFeeCents: 25_000,
+      influencerPlatformFeeCents: 7_000,
+      businessTaxCents: 0,
+      influencerTaxCents: 0,
+    };
+    const held = signedDealMoneyEvents({
+      deal,
+      eventType: "funding.held",
+      amountCents: 375_000,
+      policyApproved: false,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(held.ok, true);
+    if (!held.ok) return;
+    assert.equal(held.entries.filter((row) => row.kind === "fee_pending").length, 2);
+    const early = signedDealMoneyEvents({
+      deal,
+      eventType: "payout.released",
+      amountCents: 343_000,
+      policyApproved: false,
+      finalPayout: true,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(early.ok, true);
+    if (!early.ok) return;
+    assert.equal(early.entries.length, 0);
+    const earned = signedDealMoneyEvents({
+      deal,
+      eventType: "payout.released",
+      amountCents: 343_000,
+      policyApproved: true,
+      finalPayout: true,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(earned.ok, true);
+    if (!earned.ok) return;
+    assert.equal(earned.entries.filter((row) => row.kind === "fee_earned").length, 2);
+    const blockedRefund = signedDealMoneyEvents({
+      deal,
+      eventType: "payout.refunded",
+      amountCents: 375_000,
+      policyApproved: false,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(blockedRefund.ok, false);
+    const returnedPayout = signedDealMoneyEvents({
+      deal,
+      eventType: "payout.returned",
+      amountCents: 343_000,
+      policyApproved: false,
+      finalPayout: true,
+      alreadyEarned: true,
+      alreadyReturned: false,
+    });
+    assert.equal(returnedPayout.ok, true);
+    assert.equal(readSignedDealMoney({ signedQuote: deal })?.businessPaysCents, 375_000);
+    assert.equal(readSignedDealMoney({ feeRuleId: "legacy" }), null);
   });
 
   it("blocks cross-border deals, extra milestones, direct edits, and weak provider events", () => {
@@ -214,14 +282,14 @@ describe("payment engine acceptance", () => {
     assert.equal(launchMilestoneGate(1).ok, true);
     assert.match(directGrossEditBlock({ feeReservation: { status: "reserved" } }) ?? "", /signed amounts/);
     assert.equal(ordinaryDealShareSnapshot()[0].shareBps, 10_000);
-    const charge = airwallexLedgerAdvance(
+    const charge = providerLedgerAdvance(
       JSON.stringify({
         name: "payment_intent.succeeded",
         data: { object: { amount: 375000, currency: "USD", metadata: { fundingId: "deal-1" } } },
       }),
     );
     assert.equal(charge.advance, false);
-    const held = airwallexLedgerAdvance(
+    const held = providerLedgerAdvance(
       JSON.stringify({
         name: "payment_intent.succeeded",
         account_id: "acct",

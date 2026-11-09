@@ -118,6 +118,38 @@ describe("marketplace ledger rules", () => {
     assert.equal(after.balanced, true);
     const over = reconcileLedger([{ kind: "hold", amountCents: 10_001 }], 10_000);
     assert.equal(over.balanced, false);
+    const returned = reconcileLedger(
+      [
+        { kind: "hold", amountCents: 10_000 },
+        { kind: "release", amountCents: 9_000 },
+        { kind: "return", amountCents: 9_000 },
+      ],
+      10_000,
+    );
+    assert.equal(returned.heldCents, 10_000);
+    assert.equal(returned.balanced, true);
+    assert.equal(
+      marketplaceDisposition({
+        eventType: "payout.returned",
+        fundingStatus: "completed",
+        amountCents: 9_000,
+        expectedCents: 9_000,
+        heldCents: 1_000,
+        milestoneStatus: "released",
+      }),
+      "apply",
+    );
+    assert.equal(
+      marketplaceDisposition({
+        eventType: "payout.released",
+        fundingStatus: "completed",
+        amountCents: 9_000,
+        expectedCents: 9_000,
+        heldCents: 10_000,
+        milestoneStatus: "released",
+      }),
+      "reject",
+    );
   });
 
   it("applies a hold or release only when the funding and milestone are ready", () => {
