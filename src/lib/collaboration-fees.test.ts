@@ -11,6 +11,7 @@ import {
   pickWinningRule,
   protectedPaymentLabel,
   ruleSpecificity,
+  serviceLevelFeeCoverage,
   type CollaborationFeeRule,
   type FeeResolveContext,
 } from "./collaboration-fees";
@@ -324,6 +325,19 @@ describe("entered fee rule facts", () => {
     assert.equal(page.includes("?? 1000"), false);
     assert.equal(page.includes('?? "contracted"'), false);
     assert.equal(page.includes('?? "brand"'), false);
+  });
+});
+
+describe("service level fee coverage", () => {
+  it("requires a business rule and an influencer rule, and ignores a legacy rule", () => {
+    const covered = serviceLevelFeeCoverage([
+      rule({ id: "biz", name: "Business contracted", purpose: "business_platform_fee", payer: "brand", serviceLevel: "contracted" }),
+      rule({ id: "old", name: "Old split", purpose: "legacy", payer: "split", serviceLevel: "contracted" }),
+    ]);
+    const contracted = covered.find((row) => row.serviceLevel === "contracted");
+    assert.equal(contracted?.business.length, 1);
+    assert.equal(contracted?.influencer.length, 0);
+    assert.equal(covered.find((row) => row.serviceLevel === "discovery")?.business.length, 0);
   });
 });
 

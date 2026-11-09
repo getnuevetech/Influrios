@@ -9,7 +9,8 @@ import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace, type CampaignBrief } from "@/lib/business";
 import { contractTermsFromRequest, preferContractField } from "@/lib/campaign-contract";
 import { collabOsV1Enabled } from "@/lib/collab-os";
-import { SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
+import { feeRuleRateLabel, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
+import { ContractServiceLevelField } from "@/components/contract-service-level-field";
 import { disclosureFromDualQuote, resolveAllInBudget, resolveDualPlatformFees } from "@/lib/dual-platform-fees";
 import {
   buildFinancialPlan,
@@ -642,38 +643,56 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   ))}
                 </select>
               </label>
-              <label className="block text-sm font-semibold text-indigo sm:col-span-2">
-                Collaboration service level
-                <select
-                  name="serviceLevel"
-                  required
-                  defaultValue={signedFundingLevel || effectiveServiceLevel}
-                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
-                >
-                  <option value="">Choose a service level</option>
-                  {(signedFundingLevel && !availableServiceLevels.includes(signedFundingLevel)
-                    ? [signedFundingLevel, ...availableServiceLevels]
-                    : availableServiceLevels
-                  ).map((level) => (
-                    <option key={level} value={level}>
-                      {SERVICE_LEVEL_LABELS[level] ?? level}
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-xs font-normal text-muted">
-                  {availableServiceLevels.length === 0
+              <ContractServiceLevelField
+                value={signedFundingLevel || effectiveServiceLevel}
+                options={(signedFundingLevel && !availableServiceLevels.includes(signedFundingLevel)
+                  ? [signedFundingLevel, ...availableServiceLevels]
+                  : availableServiceLevels
+                ).map((level) => ({ value: level, label: SERVICE_LEVEL_LABELS[level] ?? level }))}
+                hint={
+                  (availableServiceLevels.length === 0
                     ? "No service level is available because this jurisdiction is blocked pending legal review."
                     : signedFundingLevel
                     ? "This agreement is already signed, so funding uses a contracted service level."
-                    : "Affects fee matrix, legal treatment, and jurisdiction availability."}
-                  {jurisdictionCaps?.legalReviewStatus && jurisdictionCaps.legalReviewStatus !== "APPROVED"
+                    : "This choice selects the business fee rule and the influencer fee rule saved in Collaboration fees.") +
+                  (jurisdictionCaps?.legalReviewStatus && jurisdictionCaps.legalReviewStatus !== "APPROVED"
                     ? ` Legal review: ${jurisdictionCaps.legalReviewStatus}.`
-                    : ""}
-                  {jurisdictionCaps && !jurisdictionCaps.managedIntroductionEnabled
+                    : "") +
+                  (jurisdictionCaps && !jurisdictionCaps.managedIntroductionEnabled
                     ? " Managed introduction is off until admin enables it."
-                    : ""}
-                </span>
-              </label>
+                    : "")
+                }
+              />
+              <div className="sm:col-span-2 rounded-xl border border-[#E4E9F5] bg-[#F7FAFF] px-4 py-3 text-sm">
+                <p className="font-semibold text-indigo">Fee breakdown for this service level</p>
+                {quote?.ok && plan ? (
+                  <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs text-muted">Business rule</dt>
+                      <dd className="font-semibold text-indigo">{quote.business.rule.name} · v{quote.business.rule.version}</dd>
+                      <dd className="text-xs text-muted">{feeRuleRateLabel(quote.business.rule)} · {formatMoney(quote.businessPlatformFeeCents, plan.contractCurrency)} added on top</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted">Influencer rule</dt>
+                      <dd className="font-semibold text-indigo">{quote.influencer.rule.name} · v{quote.influencer.rule.version}</dd>
+                      <dd className="text-xs text-muted">{feeRuleRateLabel(quote.influencer.rule)} · {formatMoney(quote.influencerPlatformFeeCents, plan.contractCurrency)} deducted from the gross</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted">Business pays</dt>
+                      <dd className="font-bold text-indigo">{formatMoney(quote.businessPaysCents, plan.contractCurrency)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted">Influencer receives</dt>
+                      <dd className="font-bold text-indigo">{formatMoney(quote.influencerReceivesCents, plan.contractCurrency)}</dd>
+                    </div>
+                  </dl>
+                ) : quote && !quote.ok ? (
+                  <p className="mt-2 font-semibold text-amber-800">{quote.error}</p>
+                ) : (
+                  <p className="mt-2 text-muted">Enter the gross influencer compensation and choose a service level. The total uses the matching admin fee rules.</p>
+                )}
+                <p className="mt-2 text-xs text-muted">Both fees stay reserved until the agreement is signed. Changing a rule later does not change this quote after it is locked.</p>
+              </div>
               <label className="block text-sm font-semibold text-indigo sm:col-span-2">
                 Commercial framing
                 <input

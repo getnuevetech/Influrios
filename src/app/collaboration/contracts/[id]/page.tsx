@@ -17,6 +17,10 @@ import {
   resolveContractPartyForAccount,
 } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
+import { memberDealView } from "@/lib/member-deal-money";
+import { formatMoney } from "@/lib/money";
+import { readSignedTermsSnapshot } from "@/lib/signed-funding";
+import { SERVICE_LEVEL_LABELS, type ServiceLevel } from "@/lib/collaboration-fees";
 
 export const dynamic = "force-dynamic";
 
@@ -138,6 +142,21 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
       .catch(() => undefined);
   }
   const agreementBody = chrome.body;
+  const terms = readSignedTermsSnapshot(document.termsSnapshotJson);
+  const viewerRole = party?.role === "business" ? "business" : party ? "influencer" : null;
+  const dealView =
+    viewerRole && terms
+      ? memberDealView({
+          role: viewerRole,
+          grossCents: terms.grossCents,
+          feeCents: 0,
+          plan: terms.financialPlan,
+        })
+      : null;
+  const serviceLabel =
+    terms?.serviceLevel && (SERVICE_LEVEL_LABELS as Record<string, string>)[terms.serviceLevel]
+      ? SERVICE_LEVEL_LABELS[terms.serviceLevel as ServiceLevel]
+      : terms?.serviceLevel;
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -216,6 +235,26 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
       </section>
 
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+        {dealView && terms ? (
+          <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4">
+            <h2 className="font-display text-lg font-bold text-indigo">Your fee breakdown</h2>
+            <p className="mt-1 text-xs text-muted">
+              Service level {serviceLabel || "not recorded"}. These amounts come from the fee rules locked when the agreement was created.
+            </p>
+            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              {dealView.lines.map((line) => (
+                <div key={line.label}>
+                  <dt className="text-xs text-muted">{line.label}</dt>
+                  <dd className="font-bold text-indigo">{formatMoney(line.amountCents, terms.currency)}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ) : party && !terms ? (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            This agreement has no locked fee breakdown yet. The business quote has to match a business fee rule and an influencer fee rule before it can be signed.
+          </p>
+        ) : null}
         {query.error ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{query.error}</p> : null}
         {query.signed === "1" ? (
           <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">

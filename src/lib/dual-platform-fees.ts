@@ -88,7 +88,7 @@ function resolveSide(
   if (!winner) {
     return {
       ok: false,
-      error: `No ${sideName(side)} platform fee rule matched this collaboration. Signing is blocked.`,
+      error: `No ${sideName(side)} platform fee rule matches ${ctx.serviceLevel || "this service level"}. Add that rule in Collaboration fees before signing.`,
     };
   }
   const winningSpecificity = ruleSpecificity(winner);
