@@ -15,6 +15,8 @@ import {
   ordinaryDealShareSnapshot,
   providerEventMayAdvance,
   readSignedCollection,
+  cancellationPostings,
+  cancellationStage,
   refundPostings,
   reserveFeePostings,
   readSignedDealMoney,
@@ -290,6 +292,60 @@ describe("payment engine acceptance", () => {
       alreadyReturned: false,
     });
     assert.equal(returnedPayout.ok, true);
+    const beforeWork = cancellationPostings({
+      stage: cancellationStage({ releasedCents: 0, influencerReceivesCents: 343_000, feesEarned: false }),
+      policyApproved: true,
+      payoutReturned: false,
+      businessPaysCents: 375_000,
+      influencerReceivesCents: 343_000,
+      businessFeeCents: 25_000,
+      influencerFeeCents: 7_000,
+      businessTaxCents: 0,
+      influencerTaxCents: 0,
+    });
+    assert.equal(beforeWork.ok, true);
+    if (!beforeWork.ok) return;
+    assert.equal(beforeWork.entries.some((row) => row.reverses === "fee_pending"), true);
+    assert.equal(beforeWork.entries.some((row) => row.reverses === "influencer_payable"), true);
+    const partial = cancellationPostings({
+      stage: cancellationStage({ releasedCents: 100_000, influencerReceivesCents: 343_000, feesEarned: false }),
+      policyApproved: true,
+      payoutReturned: false,
+      businessPaysCents: 375_000,
+      influencerReceivesCents: 343_000,
+      businessFeeCents: 25_000,
+      influencerFeeCents: 7_000,
+      businessTaxCents: 0,
+      influencerTaxCents: 0,
+    });
+    assert.equal(partial.ok, false);
+    const afterPayout = cancellationPostings({
+      stage: "after_payout",
+      policyApproved: true,
+      payoutReturned: false,
+      businessPaysCents: 375_000,
+      influencerReceivesCents: 343_000,
+      businessFeeCents: 25_000,
+      influencerFeeCents: 7_000,
+      businessTaxCents: 0,
+      influencerTaxCents: 0,
+    });
+    assert.equal(afterPayout.ok, false);
+    const afterEarning = cancellationPostings({
+      stage: cancellationStage({ releasedCents: 343_000, influencerReceivesCents: 343_000, feesEarned: true }),
+      policyApproved: true,
+      payoutReturned: true,
+      businessPaysCents: 375_000,
+      influencerReceivesCents: 343_000,
+      businessFeeCents: 25_000,
+      influencerFeeCents: 7_000,
+      businessTaxCents: 0,
+      influencerTaxCents: 0,
+    });
+    assert.equal(afterEarning.ok, true);
+    if (!afterEarning.ok) return;
+    assert.equal(afterEarning.entries.some((row) => row.reverses === "fee_earned"), true);
+    assert.equal(afterEarning.entries.some((row) => row.kind === "fee_earned"), false);
     assert.equal(readSignedDealMoney({ signedQuote: deal })?.businessPaysCents, 375_000);
     assert.equal(readSignedDealMoney({ feeRuleId: "legacy" }), null);
   });

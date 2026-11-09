@@ -2108,8 +2108,12 @@ export async function applyMarketplaceEvent(input: {
             amountCents: input.amountCents,
             policyApproved,
             finalPayout: false,
-            alreadyEarned: funding.entries.some((entry) => entry.kind === "fee_earned"),
+            alreadyEarned: fresh.some((entry) => entry.kind === "fee_earned"),
             alreadyReturned: false,
+            releasedCents: fresh
+              .filter((entry) => entry.kind === "release")
+              .reduce((sum, entry) => sum + entry.amountCents, 0),
+            payoutReturned: fresh.some((entry) => entry.kind === "return"),
           });
           if (!refunded.ok) throw new LedgerReject(refunded.error);
           await writeSignedPostings(tx, {
