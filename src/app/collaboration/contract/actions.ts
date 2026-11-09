@@ -421,12 +421,15 @@ export async function actionSubmitContractWizard(formData: FormData) {
     qs.set("step", "preview");
     redirectError("That jurisdiction has no minor digits.", qs);
   }
+  const { loadProcessTimings } = await import("@/lib/process-timing");
+  const quoteHours = (await loadProcessTimings().catch(() => null))?.quoteValidHours ?? 168;
   const signedQuote = buildSignedCommercialSnapshot({
     quote,
     currency,
     minorDigits,
     milestoneCount: drafts.length,
     amountInputMode: amountMode === "all_in" ? "all_in_budget" : "gross_influencer_compensation",
+    validForMs: quoteHours * 60 * 60 * 1000,
   });
   if ("ok" in signedQuote) {
     qs.set("step", "preview");

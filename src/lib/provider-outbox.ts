@@ -61,11 +61,12 @@ export function commandNeedsReconciliation(input: {
   );
 }
 
-/** A claimed or completed command is not sent again. A failed command can be tried three times. */
-export function commandMayDispatch(status: string, attemptCount: number) {
+/** A claimed or completed command is not sent again. A failed command can be tried until the admin attempt limit. */
+export function commandMayDispatch(status: string, attemptCount: number, maxAttempts = 3) {
+  const limit = Number.isInteger(maxAttempts) && maxAttempts > 0 ? maxAttempts : 3;
   if (status === "dispatched" || status === "confirmed") return false;
   if (status === "pending" && attemptCount > 0) return false;
-  if (status === "failed" && attemptCount < 3) return true;
+  if (status === "failed" && attemptCount < limit) return true;
   if (status === "pending" && attemptCount === 0) return true;
   return false;
 }
@@ -114,7 +115,9 @@ export async function claimProviderCommand(input: {
     }
   }
   const row = existing ?? (await prisma.providerCommand.findUnique({ where: { operationKey } }));
-  if (!row || !commandMayDispatch(row.status, row.attemptCount)) {
+  const { loadProcessTimings } = await import("@/lib/process-timing");
+  const maxAttempts = (await loadProcessTimings().catch(() => null))?.providerCommandMaxAttempts ?? 3;
+  if (!row || !commandMayDispatch(row.status, row.attemptCount, maxAttempts)) {
     return {
       dispatch: false,
       reason: "This provider command was already sent.",
@@ -133,8 +136,11 @@ export async function claimProviderCommand(input: {
 }
 
 /** Marks a claimed command with no provider result as unknown. It does not send the command again. */
-export async function markUnknownProviderCommands(now = new Date()) {
-  const cutoff = new Date(now.getTime() - UNKNOWN_COMMAND_AFTER_MS);
+export async function markUnknownProviderCommands(now = new Date(), afterMs?: number) {
+  const { loadProcessTimings } = await import("@/lib/process-timing");
+  const minutes = (await loadProcessTimings().catch(() => null))?.unknownCommandMinutes;
+  const windowMs = afterMs ?? (minutes ? minutes * 60 * 1000 : UNKNOWN_COMMAND_AFTER_MS);
+  const cutoff = new Date(now.getTime() - windowMs);
   const result = await prisma.providerCommand.updateMany({
     where: {
       status: "pending",

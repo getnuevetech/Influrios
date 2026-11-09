@@ -252,6 +252,9 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Review window</h2>
         <p className="mt-1 text-xs text-muted">
+          Quote life, the unknown-command wait, dispute reminders, hold warnings, payout retries, stale funding, the review notice, and team proposal life are edited on Payment settings.
+        </p>
+        <p className="mt-1 text-xs text-muted">
           A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested. Turning partial refunds off blocks a new request. A request already recorded still waits for the provider, and the rest of that milestone can be released. A change order amends the gross while the prefund is still waiting for the provider. The limit is copied onto that prefund. Zero means none. Turning change orders off blocks a new amendment and leaves one already recorded in place. The earlier fee snapshot stays on the change order. An open-dispute limit of 0 means no extra limit. Turning risk controls off skips that check and leaves the gross cap in place. The monthly report lists amounts recorded that month. Turning it off hides the report and does not delete ledger rows.
         </p>
         {canManage ? (

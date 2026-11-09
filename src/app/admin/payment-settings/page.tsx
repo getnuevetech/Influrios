@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { actionRecordProviderTrace, actionSaveCanonicalCountryRoute, actionSaveDeferredFunding, actionSaveLaunchApprovals } from "@/app/admin/payment-settings/actions";
+import { actionRecordProviderTrace, actionSaveCanonicalCountryRoute, actionSaveDeferredFunding, actionSaveLaunchApprovals, actionSaveProcessTimings } from "@/app/admin/payment-settings/actions";
 import { getLaunchGate } from "@/lib/launch-gate";
+import { loadProcessTimings } from "@/lib/process-timing";
 import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
@@ -21,6 +22,7 @@ export default async function PaymentSettingsPage({
   const canEdit = hasPermission(session, "collab_finance.manage");
   const canApprove = hasPermission(session, "marketplace.manage");
   const launchGate = await getLaunchGate().catch(() => null);
+  const timing = await loadProcessTimings().catch(() => null);
   const params = await searchParams;
   const [corridors, jurisdictions, routes, gateways, marketplaceProviders] = await Promise.all([
     prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }),
@@ -92,6 +94,26 @@ export default async function PaymentSettingsPage({
         ) : (
           <p className="mt-2 text-xs text-muted">Finance can change these approvals.</p>
         )}
+        <h3 className="mt-4 font-display text-base font-bold text-indigo">Process clocks</h3>
+        <p className="mt-1 text-sm text-muted">
+          These clocks start at the previous fixed values. A review window is copied onto a milestone when it is funded, and a quote expiry is copied when the deal is signed. The other clocks are read each time the job runs. A country can still set its own review window on Marketplace settings. Attribution days and the recurring interval stay on that page too. Login lockout, webhook signature age, and mail timeouts stay fixed.
+        </p>
+        {canApprove && timing ? (
+          <form action={actionSaveProcessTimings} className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+            <label>Review window, hours<input name="reviewWindowHours" type="number" min={1} max={720} required defaultValue={timing.reviewWindowHours} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Review notice lead, hours<input name="reviewDeadlineLeadHours" type="number" min={1} max={168} required defaultValue={timing.reviewDeadlineLeadHours} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Quote life, hours<input name="quoteValidHours" type="number" min={1} max={2160} required defaultValue={timing.quoteValidHours} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Unknown command wait, minutes<input name="unknownCommandMinutes" type="number" min={1} max={1440} required defaultValue={timing.unknownCommandMinutes} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Provider command attempts<input name="providerCommandMaxAttempts" type="number" min={1} max={10} required defaultValue={timing.providerCommandMaxAttempts} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Dispute reminder, hours<input name="disputeSlaHours" type="number" min={1} max={720} required defaultValue={timing.disputeSlaHours} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Hold warning, hours<input name="providerHoldWarnHours" type="number" min={1} max={2160} required defaultValue={timing.providerHoldWarnHours} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Stale funding, hours<input name="staleFundingHours" type="number" min={1} max={720} required defaultValue={timing.staleFundingHours} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Failed payout attempts<input name="failedPayoutMaxAttempts" type="number" min={1} max={10} required defaultValue={timing.failedPayoutMaxAttempts} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Failed payout waits, hours<input name="failedPayoutBackoffHours" required defaultValue={timing.failedPayoutBackoffHours.join(",")} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <label>Team proposal life, days<input name="teamProposalLifeDays" type="number" min={1} max={90} required defaultValue={timing.teamProposalLifeDays} className="mt-1 w-full rounded-lg border px-3 py-2" /></label>
+            <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Save process clocks</button>
+          </form>
+        ) : null}
         <h3 className="mt-4 font-display text-base font-bold text-indigo">Extra funding paths</h3>
         <p className="mt-1 text-sm text-muted">
           Each path stays off until it is saved here. Turning one on does not charge a deal and does not approve live collection.
