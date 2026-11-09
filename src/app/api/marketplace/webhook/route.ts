@@ -10,7 +10,7 @@ import {
   verifyAirwallexWebhook,
 } from "@/lib/providers/airwallex";
 import { applyMarketplaceEvent, marketplaceWebhookSecret } from "@/lib/marketplace-ledger";
-import { airwallexLedgerAdvance } from "@/lib/payment-engine";
+import { providerLedgerAdvance } from "@/lib/payment-engine";
 import { createMarketplaceSignedWebhookAdapter } from "@/lib/payment-provider-adapter";
 import { applyRegionalCharge, gatewayWebhookSecret, readRegionalWebhook } from "@/lib/providers/regional-charge";
 
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
     const fundingEvent = parseAirwallexWebhook(body);
     if (!fundingEvent.ok) return NextResponse.json({ error: fundingEvent.error }, { status: 400 });
-    const advance = airwallexLedgerAdvance(body);
+    const advance = providerLedgerAdvance(body);
     if (!advance.advance) {
       return NextResponse.json({ ok: true, parked: true, reason: advance.reason });
     }

@@ -1016,14 +1016,40 @@ export async function runScheduledReleaseSweep(now = new Date()) {
     if (openDispute) continue;
     const amount = releasableCents(milestone.amountCents, milestone.refundedCents);
     if (amount <= 0) continue;
-    const parties = readShareSnapshot(milestone.funding.shareSnapshotJson);
-    const legs = splitMilestoneRelease({
+    const plan = (milestone.funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
+    const { readSignedDealMoney } = await import("@/lib/payment-engine");
+    const { claimProviderCommand, recordProviderCommandResult, releaseInstructionAmount } = await import(
+      "@/lib/provider-outbox"
+    );
+    const signed = readSignedDealMoney(plan);
+    const planned = releaseInstructionAmount({
       releasableCents: amount,
-      fundingGrossCents: milestone.funding.grossCents,
-      fundingFeeCents: milestone.funding.feeCents,
-      financialPlanJson: (milestone.funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan,
-      milestoneTitle: milestone.title,
+      signedInfluencerReceivesCents: signed?.influencerReceivesCents ?? null,
     });
+    if (!planned.ok) continue;
+    const agreementVersion =
+      plan && typeof plan === "object" && "signedQuote" in plan
+        ? Number((plan as { signedQuote?: { agreementVersion?: number } }).signedQuote?.agreementVersion ?? 1)
+        : 1;
+    const claim = await claimProviderCommand({
+      agreementVersion: Number.isInteger(agreementVersion) ? agreementVersion : 1,
+      fundingId: milestone.fundingId,
+      milestoneId: milestone.id,
+      operation: "release",
+      amountCents: planned.amountCents,
+      currency: milestone.funding.currency,
+    });
+    if (!claim.dispatch) continue;
+    const parties = readShareSnapshot(milestone.funding.shareSnapshotJson);
+    const legs = signed
+      ? { creatorCents: planned.amountCents, feeCents: 0 }
+      : splitMilestoneRelease({
+          releasableCents: amount,
+          fundingGrossCents: milestone.funding.grossCents,
+          fundingFeeCents: milestone.funding.feeCents,
+          financialPlanJson: plan,
+          milestoneTitle: milestone.title,
+        });
     const lines = parties && legs.creatorCents > 0 ? shareLines(legs.creatorCents, parties) : null;
     const adapter = await adapterForProvider(milestone.funding.providerCode, {
       verifySignature: verifyMarketplaceSignature,
@@ -1031,10 +1057,18 @@ export async function runScheduledReleaseSweep(now = new Date()) {
     const instruction = await adapter.createReleaseOrTransfer({
       fundingId: milestone.fundingId,
       milestoneId: milestone.id,
-      amountCents: amount,
+      amountCents: planned.amountCents,
       shares: lines?.map((line) => ({ label: line.label, amountCents: line.amountCents })),
     });
-    if (!instruction.ok) continue;
+    if (!instruction.ok) {
+      await recordProviderCommandResult({ commandId: claim.commandId, ok: false });
+      continue;
+    }
+    await recordProviderCommandResult({
+      commandId: claim.commandId,
+      ok: true,
+      providerRef: instruction.reference,
+    });
     const updated = await prisma.fundingMilestone.updateMany({
       where: { id: milestone.id, status: "release_scheduled" },
       data: { status: "release_requested" },
@@ -1051,7 +1085,7 @@ export async function runScheduledReleaseSweep(now = new Date()) {
           after: {
             fundingId: milestone.fundingId,
             reference: instruction.reference,
-            amountCents: amount,
+            amountCents: planned.amountCents,
             at: now.toISOString(),
           },
         },

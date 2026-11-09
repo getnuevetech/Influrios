@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { resolveFee } from "@/lib/collaboration-fees";
 import {
@@ -36,7 +37,7 @@ import {
 import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal-attribution";
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines, storedMinorDigits } from "@/lib/fx-share";
-import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
+import { ensureSettlementDefaults } from "@/lib/settlement";
 import { corridorPrefundSnapshot, storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { decidePaymentRoute } from "@/lib/payment-route";
 import { storedCurrencyCode } from "@/lib/money";
@@ -109,6 +110,42 @@ class LedgerReject extends Error {
   constructor(message: string) {
     super(message);
     this.name = "LedgerReject";
+  }
+}
+
+function postingParty(row: { party: string; side?: string }) {
+  return row.side ? `${row.party}:${row.side}` : row.party;
+}
+
+function postingPurpose(kind: string) {
+  if (kind === "fee_pending" || kind === "fee_earned" || kind === "reversal") return "PLATFORM_FEE_CLEARING";
+  if (kind === "refund") return "REFUND_RESERVE";
+  return "COLLABORATION_HOLDING";
+}
+
+async function writeSignedPostings(
+  tx: Prisma.TransactionClient,
+  input: {
+    fundingId: string;
+    milestoneId?: string | null;
+    provider: string;
+    eventId: string;
+    entries: { kind: string; party: string; side?: string; amountCents: number }[];
+  },
+) {
+  for (const entry of input.entries) {
+    await tx.ledgerEntry.create({
+      data: {
+        fundingId: input.fundingId,
+        milestoneId: input.milestoneId ?? null,
+        kind: entry.kind,
+        amountCents: entry.amountCents,
+        party: postingParty(entry),
+        accountPurpose: postingPurpose(entry.kind),
+        provider: input.provider,
+        eventId: input.eventId,
+      },
+    });
   }
 }
 
@@ -1013,7 +1050,6 @@ export async function sweepDueRecurrences(now = new Date()) {
   ]);
   const shares = templates.map((row) => row.shareBps);
   const changeOrderLimit = settings?.maxChangeOrders ?? 2;
-  const shareSnapshot = await activeShareSnapshot();
   for (const row of confirmed) {
     if (row.seriesStopped) continue;
     if (!row.scheduleId || row.trancheIndex >= row.trancheCount) continue;
@@ -1069,6 +1105,7 @@ export async function sweepDueRecurrences(now = new Date()) {
       promotionChannel: "",
     }).catch(() => null);
     const feeCents = convertFee(quote?.feeCents ?? 0, fx);
+    const shareSnapshot = readShareSnapshot(row.shareSnapshotJson) ?? [{ label: "Influencer", shareBps: 10_000 }];
     const suffix = ` · ${nextIndex} of ${row.trancheCount}`;
     const baseTitle = row.title.replace(/ · \d+ of \d+$/, "");
     try {
@@ -1739,6 +1776,15 @@ export async function applyMarketplaceEvent(input: {
       .catch(() => undefined);
     return { applied: false, result: "rejected" as const };
   }
+  const snapshotPlan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
+  const { readSignedDealMoney, signedDealMoneyEvents } = await import("@/lib/payment-engine");
+  const signedDeal = readSignedDealMoney(snapshotPlan);
+  const launchGate = signedDeal
+    ? await import("@/lib/launch-gate")
+        .then((mod) => mod.getLaunchGate())
+        .catch(() => null)
+    : null;
+  const policyApproved = Boolean(launchGate?.earningRefundPolicyApproved);
   const prior = reconcileLedger(ledgerMovements(funding.entries), funding.grossCents);
   const milestone = input.milestoneId
     ? funding.milestones.find((row) => row.id === input.milestoneId) ?? null
@@ -1763,7 +1809,9 @@ export async function applyMarketplaceEvent(input: {
         ? left > 0
           ? left
           : -1
-        : (milestone?.amountCents ?? -1);
+        : input.eventType === "payout.returned"
+          ? (milestone?.amountCents ?? -1)
+          : (milestone?.amountCents ?? -1);
   const disposition = marketplaceDisposition({
     eventType: input.eventType,
     fundingStatus: funding.status,
@@ -1804,7 +1852,24 @@ export async function applyMarketplaceEvent(input: {
             accountPurpose: "COLLABORATION_HOLDING",
           },
         });
-        // P4: platform fee stays unearned in Holding until milestone release — do not book fee here.
+        if (signedDeal) {
+          const reserved = signedDealMoneyEvents({
+            deal: signedDeal,
+            eventType: "funding.held",
+            amountCents: funding.grossCents,
+            policyApproved,
+            finalPayout: false,
+            alreadyEarned: false,
+            alreadyReturned: false,
+          });
+          if (!reserved.ok) throw new LedgerReject(reserved.error);
+          await writeSignedPostings(tx, {
+            fundingId: funding.id,
+            provider: providerKey,
+            eventId,
+            entries: reserved.entries,
+          });
+        }
         return;
       }
       if (input.eventType === "funding.failed") {
@@ -1880,14 +1945,19 @@ export async function applyMarketplaceEvent(input: {
                 String((row as { title?: string }).title) === milestone.title,
             )
           : -1;
-        const legs = splitMilestoneRelease({
-          releasableCents: left,
-          fundingGrossCents: funding.grossCents,
-          fundingFeeCents: funding.feeCents,
-          financialPlanJson: snapshot?.financialPlan,
-          milestoneTitle: milestone.title,
-          milestoneIndex: milestoneIndex >= 0 ? milestoneIndex : undefined,
-        });
+        const legs = signedDeal
+          ? { creatorCents: left, feeCents: 0 }
+          : splitMilestoneRelease({
+              releasableCents: left,
+              fundingGrossCents: funding.grossCents,
+              fundingFeeCents: funding.feeCents,
+              financialPlanJson: snapshot?.financialPlan,
+              milestoneTitle: milestone.title,
+              milestoneIndex: milestoneIndex >= 0 ? milestoneIndex : undefined,
+            });
+        if (signedDeal && left !== signedDeal.influencerReceivesCents) {
+          throw new LedgerReject("The payout does not match the signed influencer amount.");
+        }
         // Dual release legs: creator payout from Holding + earned fee to Operations (P4).
         await tx.ledgerEntry.create({
           data: {
@@ -1936,25 +2006,87 @@ export async function applyMarketplaceEvent(input: {
         const open = await tx.fundingMilestone.count({
           where: { fundingId: funding.id, status: { not: "released" } },
         });
+        if (signedDeal) {
+          const earned = signedDealMoneyEvents({
+            deal: signedDeal,
+            eventType: "payout.released",
+            amountCents: left,
+            policyApproved,
+            finalPayout: open === 0,
+            alreadyEarned: fresh.some((entry) => entry.kind === "fee_earned"),
+            alreadyReturned: false,
+          });
+          if (!earned.ok) throw new LedgerReject(earned.error);
+          await writeSignedPostings(tx, {
+            fundingId: funding.id,
+            milestoneId: milestone.id,
+            provider: providerKey,
+            eventId,
+            entries: earned.entries,
+          });
+        }
         if (open === 0) {
           await tx.collaborationFunding.update({ where: { id: funding.id }, data: { status: "completed" } });
         }
+        return;
+      }
+      if (input.eventType === "payout.returned" && milestone) {
+        if (!signedDeal) throw new LedgerReject("A returned payout needs the signed influencer amount.");
+        const returned = signedDealMoneyEvents({
+          deal: signedDeal,
+          eventType: "payout.returned",
+          amountCents: input.amountCents,
+          policyApproved,
+          finalPayout: true,
+          alreadyEarned: false,
+          alreadyReturned: funding.entries.some(
+            (entry) => entry.kind === "return" && entry.milestoneId === milestone.id,
+          ),
+        });
+        if (!returned.ok) throw new LedgerReject(returned.error);
+        await writeSignedPostings(tx, {
+          fundingId: funding.id,
+          milestoneId: milestone.id,
+          provider: providerKey,
+          eventId,
+          entries: returned.entries,
+        });
         return;
       }
       if (input.eventType === "payout.refunded") {
         const fresh = await tx.ledgerEntry.findMany({ where: { fundingId: funding.id } });
         const held = reconcileLedger(ledgerMovements(fresh), funding.grossCents);
         if (input.amountCents > held.heldCents) throw new LedgerReject("Refund is larger than the held amount.");
-        await tx.ledgerEntry.create({
-          data: {
+        if (signedDeal) {
+          const refunded = signedDealMoneyEvents({
+            deal: signedDeal,
+            eventType: "payout.refunded",
+            amountCents: input.amountCents,
+            policyApproved,
+            finalPayout: false,
+            alreadyEarned: funding.entries.some((entry) => entry.kind === "fee_earned"),
+            alreadyReturned: false,
+          });
+          if (!refunded.ok) throw new LedgerReject(refunded.error);
+          await writeSignedPostings(tx, {
             fundingId: funding.id,
             milestoneId: milestone?.id,
-            kind: "refund",
-            amountCents: input.amountCents,
             provider: providerKey,
             eventId,
-          },
-        });
+            entries: refunded.entries,
+          });
+        } else {
+          await tx.ledgerEntry.create({
+            data: {
+              fundingId: funding.id,
+              milestoneId: milestone?.id,
+              kind: "refund",
+              amountCents: input.amountCents,
+              provider: providerKey,
+              eventId,
+            },
+          });
+        }
         if (held.heldCents - input.amountCents === 0) {
           await tx.collaborationFunding.updateMany({
             where: { id: funding.id, status: { in: ["held", "payment_risk"] } },
