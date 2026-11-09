@@ -7,6 +7,9 @@ const EXACT = new Set([
   "/business/billing",
   "/business/home",
   "/discover",
+  "/login",
+  "/claim",
+  "/register",
 ]);
 
 export function hidesMarketingChrome(pathname: string): boolean {

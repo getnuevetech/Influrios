@@ -145,6 +145,22 @@ export function agreementPresentation(row: {
   };
 }
 
+/**
+ * Current work only. Matches, open invitations, and proposals stay out of the active count.
+ * An accepted collaboration record counts. An invitation counts only after it is a funded or in-progress contract.
+ */
+export function isCurrentCollaboration(row: {
+  stage: string;
+  source?: string | null;
+  contractHref?: string | null;
+}) {
+  if (row.stage === "Match" || row.stage === "Released") return false;
+  if (row.source === "application" || row.source === "team") {
+    return Boolean(row.contractHref) && row.stage !== "Contract";
+  }
+  return row.stage === "Contract" || row.stage === "Funded" || row.stage === "In Progress" || row.stage === "Review";
+}
+
 /** Invitations and requests leave those lists once a live contract exists. */
 export function invitationStillListed(
   row: { id: string; collaborationId?: string | null },
@@ -505,6 +521,7 @@ export async function loadCreatorHub(input: {
   const listedApplications = applications.filter((row) =>
     invitationStillListed(row, new Set(contractByApplication.keys()), new Set(contractByCollab.keys())),
   );
+  status.active = pipeline.filter((row) => isCurrentCollaboration(row)).length;
   const history: HubPipelineItem[] = [
     ...collaborations
       .filter((row) => row.status === "declined" || row.status === "withdrawn")

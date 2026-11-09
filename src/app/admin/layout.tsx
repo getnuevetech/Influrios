@@ -17,6 +17,7 @@ const SIDE_GROUPS: SideGroup[] = [
     links: [
       { href: "/admin", label: "Dashboard", module: "dashboard", icon: "home" },
       { href: "/admin/banners", label: "Banners", module: "banners", icon: "banners" },
+      { href: "/admin/example-portraits", label: "Example portraits", module: "banners", icon: "cards" },
       { href: "/admin/value-prop", label: "Value proposition", module: "banners", icon: "value" },
       { href: "/admin/homepage", label: "Homepage", module: "banners", icon: "homepage" },
       {

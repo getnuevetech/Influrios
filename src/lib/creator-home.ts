@@ -3,11 +3,13 @@
  * Claim templates, brand-default art, and unsynced follower counts stay off the live figures.
  */
 import { getAccountSession } from "@/lib/accounts";
-import { agreementPresentation } from "@/lib/collaboration-hub";
+import { agreementPresentation, isCurrentCollaboration } from "@/lib/collaboration-hub";
+import { applicationIsInvitation, applicationIsOpenPipeline } from "@/lib/marketplace-listings";
 import { isPlaceholderBio } from "@/lib/onboarding";
 import { completenessFor, draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
+import { syncAccountNotices } from "@/lib/account-notices";
 import { prisma } from "@/lib/db";
 import { isBrandDefaultAvatar, isBrandDefaultBanner, isRemoteMediaUrl } from "@/lib/profile-media";
 import { isLiveSocialAccount, isProviderUsername } from "@/lib/social-sync";
@@ -51,6 +53,24 @@ export type HomePipelineItem = {
   title: string;
   counterparty: string;
   stage: string;
+  href: string;
+  next: string;
+};
+
+export type HomeAttentionItem = {
+  id: string;
+  title: string;
+  detail: string;
+  action: string;
+  href: string;
+  kind: "invitation" | "agreement" | "deliverable";
+};
+
+export type HomeEarnings = {
+  failed: boolean;
+  cents: number;
+  currency: string;
+  note: string;
 };
 
 export function countByRecentDays(dates: Array<Date | string>, days = 7, now = Date.now()): number[] {
@@ -74,6 +94,29 @@ export function visitDelta(series: number[]): { label: string; positive: boolean
   if (prior === 0) return { label: "↑ 100%", positive: true };
   const pct = Math.round(((recent - prior) / prior) * 100);
   return { label: `${pct >= 0 ? "↑" : "↓"} ${Math.abs(pct)}%`, positive: pct >= 0 };
+}
+
+/** What the earnings tile should say. A failed load must not look like zero. */
+export function earningsSummaryNote(input: { failed: boolean; currency: string; cents: number }) {
+  if (input.failed) return "Earnings could not be loaded. This is not zero.";
+  if (!input.currency || input.cents === 0) return "Nothing released this month.";
+  return "Released to you this month.";
+}
+
+export function portraitAt<T>(images: readonly T[], index: number): T | null {
+  if (images.length === 0) return null;
+  const normalized = ((Math.floor(index) % images.length) + images.length) % images.length;
+  return images[normalized] ?? null;
+}
+
+export function deliverableWhen(due: Date, now = new Date()) {
+  const label = due.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Chicago",
+  });
+  return due.getTime() < now.getTime() ? `Overdue · due ${label}` : `Deliverable due ${label}`;
 }
 
 export function displayBio(bio: string | null | undefined): string {
@@ -230,19 +273,24 @@ export async function loadCreatorHome(userId: string) {
   const seed = draft ? draftToSeedCreator(draft) : null;
   const shortLink = creator?.shortLinks[0] ?? null;
   const since = new Date(Date.now() - 7 * 86400000);
+  const since30 = new Date(Date.now() - 30 * 86400000);
   const monthStart = new Date();
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
 
-  const [visitEvents, inquiries, hub, releases, fundingCurrencies] = await Promise.all([
+  const [visitLoad, inquiries, hub, releaseLoad, currencyLoad, deliverables, teamProposals] = await Promise.all([
     shortLink
       ? prisma.shortLinkEvent
           .findMany({
             where: { shortLinkId: shortLink.id, eventType: { in: [...VISIT_EVENTS] } },
             select: { createdAt: true },
           })
-          .catch(() => [])
-      : Promise.resolve([]),
+          .then((rows) => ({ rows, failed: false }))
+          .catch((error) => {
+            console.error("profile visits", error);
+            return { rows: [] as { createdAt: Date }[], failed: true };
+          })
+      : Promise.resolve({ rows: [] as { createdAt: Date }[], failed: false }),
     slug
       ? prisma.businessInquiry
           .findMany({
@@ -268,16 +316,51 @@ export async function loadCreatorHome(userId: string) {
             },
             select: { amountCents: true, createdAt: true },
           })
-          .catch(() => [])
-      : Promise.resolve([]),
+          .then((rows) => ({ rows, failed: false }))
+          .catch((error) => {
+            console.error("earnings releases", error);
+            return { rows: [] as { amountCents: number; createdAt: Date }[], failed: true };
+          })
+      : Promise.resolve({ rows: [] as { amountCents: number; createdAt: Date }[], failed: false }),
     slug
       ? prisma.collaborationFunding
           .findMany({ where: { creatorSlug: slug }, select: { currency: true } })
+          .then((rows) => ({ rows, failed: false }))
+          .catch((error) => {
+            console.error("earnings currency", error);
+            return { rows: [] as { currency: string }[], failed: true };
+          })
+      : Promise.resolve({ rows: [] as { currency: string }[], failed: false }),
+    slug
+      ? prisma.fundingMilestone
+          .findMany({
+            where: {
+              deliverableDueAt: { not: null },
+              status: { notIn: ["released", "approved", "cancelled", "voided"] },
+              funding: { creatorSlug: slug },
+            },
+            select: {
+              id: true,
+              title: true,
+              deliverableDueAt: true,
+              funding: { select: { id: true, title: true, collaborationId: true } },
+            },
+            orderBy: { deliverableDueAt: "asc" },
+            take: 6,
+          })
           .catch(() => [])
       : Promise.resolve([]),
+    slug
+      ? import("@/lib/team-proposal").then((mod) => mod.listTeamProposalsForCreator(slug)).catch(() => [])
+      : Promise.resolve([]),
   ]);
+  const visitEvents = visitLoad.rows;
+  const releases = releaseLoad.rows;
+  const fundingCurrencies = currencyLoad.rows;
+  const earningsFailed = releaseLoad.failed || currencyLoad.failed;
 
   const recentVisits = visitEvents.filter((event) => event.createdAt >= since);
+  const visits30 = visitEvents.filter((event) => event.createdAt >= since30);
   const visitSeries = countByRecentDays(recentVisits.map((event) => event.createdAt));
   const connectionByPlatform = new Map((creator?.socialConnections ?? []).map((row) => [row.platform, row]));
   const socials: HomeSocial[] = (creator?.socialAccounts ?? []).map((social) => {
@@ -329,12 +412,80 @@ export async function loadCreatorHome(userId: string) {
   const opportunities = [...inquiryOpportunities, ...matchedOpportunities].slice(0, 4);
   const opportunityCount = inquiries.length + openBrandMatches.length;
 
-  const pipeline: HomePipelineItem[] = (hub?.pipeline ?? []).slice(0, 4).map((item) => ({
-    id: item.id,
-    title: item.title,
-    counterparty: item.counterparty,
-    stage: agreementPresentation(item).label,
-  }));
+  const dueByCollaboration = new Map<string, Date>();
+  for (const row of deliverables) {
+    const collaborationId = row.funding.collaborationId;
+    const due = row.deliverableDueAt;
+    if (!collaborationId || !due) continue;
+    const current = dueByCollaboration.get(collaborationId);
+    if (!current || due.getTime() < current.getTime()) dueByCollaboration.set(collaborationId, due);
+  }
+  const activeCollaborations: HomePipelineItem[] = (hub?.pipeline ?? [])
+    .filter((item) => isCurrentCollaboration(item))
+    .slice(0, 4)
+    .map((item) => {
+      const due = dueByCollaboration.get(item.id);
+      const shown = agreementPresentation(item);
+      return {
+        id: item.id,
+        title: item.title,
+        counterparty: item.counterparty,
+        stage: shown.label,
+        href: shown.href,
+        next: due ? deliverableWhen(due) : shown.next,
+      };
+    });
+
+  const invitationRows = (hub?.applications ?? []).filter(
+    (row) =>
+      applicationIsInvitation(row) &&
+      applicationIsOpenPipeline(row.status) &&
+      (row.toSlug === slug || row.creatorSlug === slug),
+  );
+  const attention: HomeAttentionItem[] = [
+    ...invitationRows.map((row) => ({
+      id: `invitation:${row.id}`,
+      title: row.requestBrand || row.opportunityLookingFor || "Campaign invitation",
+      detail: "New campaign invitation",
+      action: "Review invitation",
+      href: `/collaboration/applications/${row.id}`,
+      kind: "invitation" as const,
+    })),
+    ...teamProposals
+      .filter((proposal) => proposal.members.some((member) => member.creatorSlug === slug && member.status === "invited"))
+      .map((proposal) => ({
+        id: `invitation:team:${proposal.id}`,
+        title: proposal.title,
+        detail: "New campaign invitation",
+        action: "Review invitation",
+        href: `/collaboration/team/${proposal.id}`,
+        kind: "invitation" as const,
+      })),
+    ...contracts
+      .filter((contract) => contractNeedsSignature(contract, userId, account?.email ?? ""))
+      .map((contract) => ({
+        id: `agreement:${contract.id}`,
+        title: contract.title,
+        detail: "Your signature is needed",
+        action: "Review agreement",
+        href: `/collaboration/contracts/${contract.id}#sign`,
+        kind: "agreement" as const,
+      })),
+    ...deliverables
+      .filter((row) => row.deliverableDueAt)
+      .map((row) => ({
+        id: `deliverable:${row.id}`,
+        title: row.funding.title || row.title,
+        detail: deliverableWhen(row.deliverableDueAt as Date),
+        action: "Open workspace",
+        href: row.funding.collaborationId
+          ? `/collaboration/records/${row.funding.collaborationId}`
+          : `/payments?funding=${encodeURIComponent(row.funding.id)}`,
+        kind: "deliverable" as const,
+      })),
+  ];
+
+  const pipeline: HomePipelineItem[] = activeCollaborations;
 
   const methodSubmitted =
     creator?.payoutProfile?.primaryStatus === "VERIFIED" ||
@@ -379,8 +530,28 @@ export async function loadCreatorHome(userId: string) {
 
   const completion = draft ? completenessFor(draft) : null;
   const monthCents = releases.reduce((sum, row) => sum + row.amountCents, 0);
-  const currency =
-    sharedCurrency(fundingCurrencies.map((row) => row.currency)) || hub?.earnings.currency || "";
+  const currency = earningsFailed
+    ? ""
+    : sharedCurrency(fundingCurrencies.map((row) => row.currency)) || hub?.earnings.currency || "";
+  const earnings: HomeEarnings = {
+    failed: earningsFailed,
+    cents: earningsFailed ? 0 : monthCents,
+    currency,
+    note: earningsSummaryNote({ failed: earningsFailed, currency, cents: monthCents }),
+  };
+  const pendingInvitations = attention.filter((item) => item.kind === "invitation").length;
+  await syncAccountNotices(
+    userId,
+    attention.map((item) => ({
+      kind: item.kind,
+      sourceId: item.id,
+      title: item.title,
+      detail: item.detail,
+      href: item.href,
+    })),
+  ).catch((error) => {
+    console.error("account notices", error);
+  });
 
   return {
     displayName: creator?.displayName || draft?.displayName || user?.name || account?.name || "Creator",
@@ -407,12 +578,17 @@ export async function loadCreatorHome(userId: string) {
     checklist,
     checklistDone: checklist.filter((item) => item.done).length,
     visitCount: recentVisits.length,
+    visitCount30: visitLoad.failed ? null : shortLink ? visits30.length : null,
+    visitsFailed: visitLoad.failed,
     visitAllTime: visitEvents.length,
     visitSeries,
     visitDelta: visitDelta(visitSeries),
-    activeCollabs: hub?.status.active ?? 0,
-    monthCents,
-    currency,
+    activeCollabs: activeCollaborations.length,
+    pendingInvitations,
+    attention,
+    monthCents: earnings.cents,
+    currency: earnings.currency,
+    earnings,
     incomplete: completion ? completion.score < 100 || checklist.some((item) => !item.done) : checklist.some((item) => !item.done),
     completionScore: checklist.length
       ? Math.round((checklist.filter((item) => item.done).length / checklist.length) * 100)

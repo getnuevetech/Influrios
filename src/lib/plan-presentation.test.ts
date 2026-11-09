@@ -147,6 +147,9 @@ describe("plan presentation", () => {
     assert.equal(hidesMarketingChrome("/admin"), true);
     assert.equal(hidesMarketingChrome("/admin/login"), true);
     assert.equal(hidesMarketingChrome("/admin/marketplace"), true);
+    assert.equal(hidesMarketingChrome("/login"), true);
+    assert.equal(hidesMarketingChrome("/claim"), true);
+    assert.equal(hidesMarketingChrome("/register"), true);
     const layout = readFileSync("src/app/layout.tsx", "utf8");
     const frame = readFileSync("src/components/chrome-frame.tsx", "utf8");
     assert.match(layout, /ChromeFrame/);
