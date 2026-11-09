@@ -13,6 +13,14 @@ import { prisma } from "@/lib/db";
 
 export type FeeMethod = "percent" | "fixed" | "percent_plus_fixed" | "waived" | "tiered" | "custom_enterprise";
 export type FeePayer = "brand" | "creator" | "split";
+export const FEE_PURPOSES = ["business_platform_fee", "influencer_platform_fee", "legacy"] as const;
+export type FeePurpose = (typeof FEE_PURPOSES)[number];
+
+export const FEE_PURPOSE_LABELS: Record<FeePurpose, string> = {
+  business_platform_fee: "Business Platform Fee",
+  influencer_platform_fee: "Influencer Platform Fee",
+  legacy: "Legacy, not used on a new deal",
+};
 
 export const FEE_METHODS = [
   "percent",
@@ -78,6 +86,11 @@ export const FEE_TYPE_LABELS: Record<FeeType, string> = {
   referral: "Referral Fee",
 };
 
+export function asFeePurpose(value: string | undefined | null): FeePurpose {
+  if (value && (FEE_PURPOSES as readonly string[]).includes(value)) return value as FeePurpose;
+  return "legacy";
+}
+
 export function asFeeType(value: string | undefined | null): FeeType {
   if (value && (FEE_TYPES as readonly string[]).includes(value)) return value as FeeType;
   return "collaboration";
@@ -127,6 +140,7 @@ export function feeRuleDraft(input: {
   minFeeUsd?: string | null;
   maxFeeUsd?: string | null;
   payer?: string | null;
+  purpose?: string | null;
   notes?: string | null;
   active?: boolean;
   tierBands?: FeeTierBand[];
@@ -148,6 +162,7 @@ export function feeRuleDraft(input: {
       minFeeCents: number;
       maxFeeCents: number | null;
       payer: FeePayer;
+      purpose: FeePurpose;
       notes: string;
       active: boolean;
       tierBands: FeeTierBand[];
@@ -186,6 +201,16 @@ export function feeRuleDraft(input: {
   if (payer !== "brand" && payer !== "creator" && payer !== "split") {
     return { ok: false, error: "Choose who pays the fee." };
   }
+  const purpose = (input.purpose ?? "").trim();
+  if (!(FEE_PURPOSES as readonly string[]).includes(purpose)) {
+    return { ok: false, error: "Choose a fee purpose." };
+  }
+  if (purpose === "business_platform_fee" && payer !== "brand") {
+    return { ok: false, error: "A business platform fee is paid by the business." };
+  }
+  if (purpose === "influencer_platform_fee" && payer !== "creator") {
+    return { ok: false, error: "An influencer platform fee is deducted from the influencer." };
+  }
   const percent = integerText(input.percentBps ?? "");
   const needsPercent = method === "percent" || method === "percent_plus_fixed";
   if (needsPercent && percent == null) return { ok: false, error: "Enter the percent in basis points." };
@@ -216,6 +241,7 @@ export function feeRuleDraft(input: {
     minFeeCents: minFee,
     maxFeeCents: maxFee,
     payer,
+    purpose: purpose as FeePurpose,
     notes: (input.notes ?? "").trim(),
     active: input.active === true,
     tierBands: input.tierBands ?? [],
@@ -266,6 +292,7 @@ export type CollaborationFeeRule = {
   /** Tiered method bands: first matching upToCents wins; null upTo = catch-all. */
   tierBands: FeeTierBand[];
   payer: FeePayer;
+  purpose: FeePurpose;
   effectiveFrom: string;
   notes: string;
 };
@@ -371,8 +398,9 @@ const DEFAULT_RULES: CollaborationFeeRule[] = [
     maxFeeCents: null,
     tierBands: [],
     payer: "brand",
+    purpose: "legacy",
     effectiveFrom: "2026-01-01T00:00:00.000Z",
-    notes: "Launch default — 10% of gross, min $5. Admin-editable.",
+    notes: "Legacy brand rule. It is not a Business Platform Fee and is not copied to the influencer.",
   },
   {
     id: "rule_us_managed",
@@ -393,8 +421,9 @@ const DEFAULT_RULES: CollaborationFeeRule[] = [
     maxFeeCents: 50000,
     tierBands: [],
     payer: "brand",
+    purpose: "legacy",
     effectiveFrom: "2026-01-01T00:00:00.000Z",
-    notes: "Higher touch managed intro — 15% + $25, capped.",
+    notes: "Legacy managed-intro rule. It does not price a new dual-fee deal.",
   },
   {
     id: "rule_discovery",
@@ -415,8 +444,9 @@ const DEFAULT_RULES: CollaborationFeeRule[] = [
     maxFeeCents: 0,
     tierBands: [],
     payer: "brand",
+    purpose: "legacy",
     effectiveFrom: "2026-01-01T00:00:00.000Z",
-    notes: "Subscription-covered discovery connects — $0 transaction fee.",
+    notes: "Legacy discovery rule. A new deal needs an explicit waived or zero rule on each side.",
   },
 ];
 
@@ -485,6 +515,7 @@ function ruleFromRow(row: {
   minFeeCents: number;
   maxFeeCents: number | null;
   payer: string;
+  purpose?: string | null;
   effectiveFrom: Date;
   notes: string;
   tierBandsJson?: unknown;
@@ -510,6 +541,7 @@ function ruleFromRow(row: {
     maxFeeCents: row.maxFeeCents,
     tierBands: parseTierBands(row.tierBandsJson),
     payer: asFeePayer(row.payer),
+    purpose: asFeePurpose(row.purpose),
     effectiveFrom: row.effectiveFrom.toISOString(),
     notes: row.notes,
   };
@@ -571,6 +603,7 @@ function ruleCreateData(rule: CollaborationFeeRule) {
     maxFeeCents: rule.maxFeeCents,
     tierBandsJson: rule.tierBands.length ? rule.tierBands : undefined,
     payer: rule.payer,
+    purpose: rule.purpose || "legacy",
     effectiveFrom: new Date(rule.effectiveFrom),
     notes: rule.notes,
   };
@@ -772,6 +805,26 @@ export function calculateFeeCents(rule: CollaborationFeeRule, basisCents: number
   return fee;
 }
 
+/** Integer minor units. Percent rounding is half away from zero. Records whether the floor or cap applied. */
+export function explainFeeApplication(rule: CollaborationFeeRule, basisCents: number) {
+  let raw = 0;
+  if (rule.method !== "waived") {
+    if (rule.method === "tiered") raw = feeFromTier(basisCents, rule.tierBands);
+    else if (rule.method === "custom_enterprise") raw = rule.fixedCents;
+    else {
+      if (rule.method === "percent" || rule.method === "percent_plus_fixed") {
+        raw += Math.round((basisCents * rule.percentBps) / 10_000);
+      }
+      if (rule.method === "fixed" || rule.method === "percent_plus_fixed") raw += rule.fixedCents;
+    }
+  }
+  const floorApplied = rule.method !== "waived" && raw < rule.minFeeCents;
+  const afterFloor = rule.method === "waived" ? 0 : Math.max(raw, rule.minFeeCents);
+  const capApplied = rule.maxFeeCents != null && afterFloor > rule.maxFeeCents;
+  const feeCents = rule.maxFeeCents != null ? Math.min(afterFloor, rule.maxFeeCents) : afterFloor;
+  return { feeCents, floorApplied, capApplied, rounding: "half_away_from_zero" as const };
+}
+
 export function pickWinningRule(rules: CollaborationFeeRule[], ctx: FeeResolveContext, asOf: string) {
   return rules
     .filter((r) => matchesRule(r, ctx, asOf))
@@ -917,7 +970,9 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
         input.method !== undefined ||
         input.tierBands !== undefined ||
         input.minFeeCents !== undefined ||
-        input.maxFeeCents !== undefined;
+        input.maxFeeCents !== undefined ||
+        input.purpose !== undefined ||
+        input.payer !== undefined;
       const updated = await prisma.collaborationFeeRule.update({
         where: { id: prev.id },
         data: {
@@ -947,6 +1002,7 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
                 : Prisma.DbNull
               : undefined,
           payer: input.payer ?? prev.payer,
+          purpose: input.purpose ?? prev.purpose,
           effectiveFrom: input.effectiveFrom ? new Date(input.effectiveFrom) : prev.effectiveFrom,
           notes: input.notes ?? prev.notes,
           version: bumpVersion ? prev.version + 1 : prev.version,
@@ -971,10 +1027,11 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
     !Number.isInteger(input.percentBps) ||
     input.fixedCents == null ||
     input.minFeeCents == null ||
-    !input.payer
+    !input.payer ||
+    !input.purpose
   ) {
     throw new Error(
-      "A fee rule needs the name, priority, jurisdiction, service level, fee type, conditions, method, amounts, and payer that were entered.",
+      "A fee rule needs the name, priority, jurisdiction, service level, fee type, fee purpose, conditions, method, amounts, and payer that were entered.",
     );
   }
 
@@ -999,6 +1056,7 @@ export async function upsertFeeRule(input: Partial<CollaborationFeeRule> & { nam
     maxFeeCents: input.maxFeeCents ?? null,
     tierBands: input.tierBands ?? [],
     payer: input.payer,
+    purpose: input.purpose,
     effectiveFrom: input.effectiveFrom ?? now(),
     notes: input.notes ?? "",
   };

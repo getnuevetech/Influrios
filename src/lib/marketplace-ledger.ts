@@ -773,12 +773,11 @@ export async function requestPrefund(input: {
   if (currency !== "USD" && !fxRate?.active) {
     return { ok: false as const, error: `No Wise currency is saved for ${currency}. Nothing was funded.` };
   }
-  const revenueShares = await activeShareSnapshot();
   const teamShares = input.creatorShares ? readShareSnapshot(input.creatorShares) : null;
   if (input.creatorShares && (!teamShares || teamShares.length < 2)) {
     return { ok: false as const, error: "Team creator shares must add up to 100%." };
   }
-  const shareSnapshot = teamShares ?? revenueShares;
+  const shareSnapshot = teamShares ?? [{ label: "Influencer", shareBps: 10_000 }];
   const prepared: {
     gross: number;
     fx: Extract<Awaited<ReturnType<typeof quoteWiseUserRate>>, { ok: true }>;
@@ -1163,6 +1162,10 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
     },
   });
   if (!funding) return { ok: false as const, error: "Prefund not found." };
+  const signedPlan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
+  const { directGrossEditBlock } = await import("@/lib/payment-engine");
+  const signedEdit = directGrossEditBlock(signedPlan);
+  if (signedEdit) return { ok: false as const, error: signedEdit };
   const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
   const enabled = changeOrdersForTests ?? settings?.changeOrdersEnabled ?? true;
   const gate = canRequestChangeOrder({

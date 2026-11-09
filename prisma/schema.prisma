@@ -1856,6 +1856,8 @@ model CollaborationFeeRule {
   /// Tiered fee bands JSON: [{ "upToCents": 10000, "percentBps": 800 }, { "upToCents": null, "percentBps": 1200 }]
   tierBandsJson Json?
   payer         String   @default("brand")
+  /// business_platform_fee | influencer_platform_fee | legacy. Legacy rules do not price a new deal.
+  purpose       String   @default("legacy")
   effectiveFrom DateTime
   notes         String   @default("")
   createdAt     DateTime @default(now())

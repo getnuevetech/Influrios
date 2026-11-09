@@ -675,6 +675,16 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             {!milestoneGate.ok ? (
               <p className="mt-3 text-sm font-semibold text-amber-800">{milestoneGate.error}</p>
             ) : null}
+            {enteredMilestones.length > 0 && enteredMilestones.length !== 1 ? (
+              <p className="mt-3 text-sm font-semibold text-amber-800">
+                This route allows one milestone. Nothing is signed until the schedule is a single milestone.
+              </p>
+            ) : null}
+            {creatorCountry && jurisdictionCode && creatorCountry !== jurisdictionCode ? (
+              <p className="mt-3 text-sm font-semibold text-amber-800">
+                Cross-border funding is not part of this route. The influencer payout country and the deal country must match.
+              </p>
+            ) : null}
           </section>
 
           <section id="payment_readiness">

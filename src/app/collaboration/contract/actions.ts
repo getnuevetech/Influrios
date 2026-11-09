@@ -9,6 +9,7 @@ import { contractOfferReady } from "@/lib/campaign-contract";
 import { getMarketplaceApplication } from "@/lib/marketplace-listings";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { disclosureFromDualQuote, resolveDualPlatformFees } from "@/lib/dual-platform-fees";
+import { buildSignedCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate } from "@/lib/payment-engine";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   buildFinancialPlan,
@@ -379,6 +380,41 @@ export async function actionSubmitContractWizard(formData: FormData) {
     qs.set("step", "preview");
     redirectError("That jurisdiction has no currency.", qs);
   }
+  const milestoneLaunch = launchMilestoneGate(drafts.length);
+  if (!milestoneLaunch.ok) {
+    qs.set("step", "milestones");
+    redirectError(milestoneLaunch.error, qs);
+  }
+  const domestic = domesticCollaborationGate({
+    businessCountry: jurisdictionCode,
+    influencerCountry: creatorCountry ?? "",
+    dealCountry: jurisdictionCode,
+    businessVerified: Boolean(jurisdiction?.protectedPaymentsEnabled),
+    influencerVerified: identityVerified,
+    routeActive: gates.ok,
+    currency,
+    routeCurrency: (jurisdiction?.currency ?? "").trim(),
+    payoutMethod: String(formData.get("payoutMethod") ?? ""),
+  });
+  if (!domestic.ok) {
+    qs.set("step", "payment_readiness");
+    redirectError(domestic.error, qs);
+  }
+  const minorDigits = jurisdiction?.minorDigits;
+  if (typeof minorDigits !== "number" || !Number.isInteger(minorDigits)) {
+    qs.set("step", "preview");
+    redirectError("That jurisdiction has no minor digits.", qs);
+  }
+  const signedQuote = buildSignedCommercialSnapshot({
+    quote,
+    currency,
+    minorDigits,
+    milestoneCount: drafts.length,
+  });
+  if ("ok" in signedQuote) {
+    qs.set("step", "preview");
+    redirectError(signedQuote.error, qs);
+  }
   const plan = buildFinancialPlan({
     grossCents,
     currency,
@@ -405,6 +441,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   const locked = lockFinancialPlan({
     ...plan,
+    signedQuote,
     feeDisclosure: {
       ...disclosureGate.record,
       summary: buildFeeDisclosureSummary(disclosureGate.record),

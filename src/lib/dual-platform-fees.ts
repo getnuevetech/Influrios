@@ -6,7 +6,7 @@
  */
 import { serviceLevelForFeeResolution } from "@/lib/attribution";
 import {
-  calculateFeeCents,
+  explainFeeApplication,
   getFeeStore,
   matchesRule,
   pickWinningRule,
@@ -15,6 +15,7 @@ import {
   type FeeResolveContext,
 } from "@/lib/collaboration-fees";
 import type { FeeDisclosureInput } from "@/lib/fee-disclosure";
+import { collaborationLaunchBlockers } from "@/lib/payment-engine";
 
 export const LIVE_FUNDING_OFF =
   "Live funding stays off until the fee schedules, tax treatment, fee earning and refund policy, and provider route are approved. Both fees stay reserved. Nothing was charged.";
@@ -25,6 +26,9 @@ export type SideFee = {
   rule: CollaborationFeeRule;
   feeCents: number;
   waived: boolean;
+  floorApplied: boolean;
+  capApplied: boolean;
+  rounding: "half_away_from_zero";
 };
 
 export type FeeReservation = {
@@ -59,9 +63,9 @@ export type DualPlatformQuote = {
   error: string;
 };
 
-export function payerSide(payer: string | null | undefined): FeeSide | null {
-  if (payer === "brand") return "business";
-  if (payer === "creator") return "influencer";
+export function payerSide(rule: { payer?: string | null; purpose?: string | null }): FeeSide | null {
+  if (rule.purpose === "business_platform_fee" && rule.payer === "brand") return "business";
+  if (rule.purpose === "influencer_platform_fee" && rule.payer === "creator") return "influencer";
   return null;
 }
 
@@ -76,7 +80,7 @@ function resolveSide(
   asOf: string,
 ): { ok: true; side: SideFee } | { ok: false; error: string } {
   const candidates = pickWinningRule(
-    rules.filter((rule) => payerSide(rule.payer) === side),
+    rules.filter((rule) => payerSide(rule) === side),
     ctx,
     asOf,
   );
@@ -97,10 +101,17 @@ function resolveSide(
       error: `More than one ${sideName(side)} platform fee rule ties at the winning precedence. Signing is blocked.`,
     };
   }
-  const feeCents = calculateFeeCents(winner, ctx.grossValueCents);
+  const applied = explainFeeApplication(winner, ctx.grossValueCents);
   return {
     ok: true,
-    side: { rule: winner, feeCents, waived: winner.method === "waived" },
+    side: {
+      rule: winner,
+      feeCents: applied.feeCents,
+      waived: winner.method === "waived",
+      floorApplied: applied.floorApplied,
+      capApplied: applied.capApplied,
+      rounding: applied.rounding,
+    },
   };
 }
 
@@ -108,6 +119,7 @@ function resolveSide(
 export function quoteDualPlatformFees(
   rules: CollaborationFeeRule[],
   ctx: FeeResolveContext,
+  options?: { routeMinimumPayoutCents?: number | null },
 ): DualPlatformQuote {
   if (!Number.isInteger(ctx.grossValueCents) || ctx.grossValueCents <= 0) {
     return { ok: false, error: "Enter the gross influencer compensation." };
@@ -123,10 +135,17 @@ export function quoteDualPlatformFees(
       error: "The influencer platform fee is larger than the gross influencer compensation. Signing is blocked.",
     };
   }
+  const influencerReceivesCents = ctx.grossValueCents - influencer.side.feeCents;
+  const routeMinimum = options?.routeMinimumPayoutCents;
+  if (routeMinimum != null && influencerReceivesCents < routeMinimum) {
+    return {
+      ok: false,
+      error: "The influencer payout is below the approved route minimum. Signing is blocked.",
+    };
+  }
   const businessPlatformFeeCents = business.side.feeCents;
   const influencerPlatformFeeCents = influencer.side.feeCents;
   const businessPaysCents = ctx.grossValueCents + businessPlatformFeeCents;
-  const influencerReceivesCents = ctx.grossValueCents - influencerPlatformFeeCents;
   const ignoredSplit = rules.some(
     (rule) => rule.payer === "split" && matchesRule(rule, ctx, asOf),
   );
@@ -207,6 +226,8 @@ export function disclosureFromDualQuote(
 export function liveFundingBlockReason(plan: unknown): string | null {
   if (!plan || typeof plan !== "object") return null;
   const reservation = (plan as { feeReservation?: { status?: unknown } }).feeReservation;
-  if (reservation?.status === "reserved") return LIVE_FUNDING_OFF;
+  if (reservation?.status === "reserved") {
+    return `${collaborationLaunchBlockers().join(" ")} ${LIVE_FUNDING_OFF}`;
+  }
   return null;
 }

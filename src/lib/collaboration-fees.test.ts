@@ -36,6 +36,7 @@ function rule(overrides: Partial<CollaborationFeeRule> = {}): CollaborationFeeRu
     maxFeeCents: null,
     tierBands: [],
     payer: "brand",
+    purpose: "legacy",
     effectiveFrom: "2026-01-01T00:00:00.000Z",
     notes: "",
     ...overrides,
@@ -248,6 +249,7 @@ describe("entered fee rule facts", () => {
       method: "percent",
       percentBps: "",
       payer: "brand",
+      purpose: "business_platform_fee",
     });
     assert.equal(missingPercent.ok, false);
 
@@ -262,6 +264,7 @@ describe("entered fee rule facts", () => {
       promotionChannel: "*",
       method: "waived",
       payer: "creator",
+      purpose: "influencer_platform_fee",
     });
     assert.equal(waived.ok, true);
     if (waived.ok) {
@@ -283,6 +286,7 @@ describe("entered fee rule facts", () => {
       method: "percent",
       percentBps: "0",
       payer: "split",
+      purpose: "legacy",
     });
     assert.equal(zeroPercent.ok, true);
     if (zeroPercent.ok) assert.equal(zeroPercent.percentBps, 0);
