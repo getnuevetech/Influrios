@@ -979,6 +979,8 @@ export async function enqueueFundingReconciliationSweep() {
  * Ledger still moves only on signed payout.released.
  */
 export async function runScheduledReleaseSweep(now = new Date()) {
+  const { markUnknownProviderCommands } = await import("@/lib/provider-outbox");
+  await markUnknownProviderCommands(now);
   const { shouldRequestScheduledRelease } = await import("@/lib/collab-ops-jobs");
   const { releasableCents } = await import("@/lib/ledger");
   const { splitMilestoneRelease } = await import("@/lib/account-purpose");

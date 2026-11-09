@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { collectionInstructionAmount, commandMayDispatch, providerOperationKey, releaseInstructionAmount } from "./provider-outbox";
+import {
+  collectionInstructionAmount,
+  commandMayDispatch,
+  commandNeedsReconciliation,
+  providerOperationKey,
+  releaseInstructionAmount,
+  UNKNOWN_COMMAND_AFTER_MS,
+} from "./provider-outbox";
 
 describe("provider command outbox", () => {
   it("uses one key per agreement version and operation", () => {
@@ -30,6 +37,29 @@ describe("provider command outbox", () => {
     assert.equal(commandMayDispatch("dispatched", 1), false);
     assert.equal(commandMayDispatch("failed", 2), true);
     assert.equal(commandMayDispatch("failed", 3), false);
+    assert.equal(commandMayDispatch("unknown", 1), false);
+    assert.equal(
+      commandNeedsReconciliation({
+        status: "pending",
+        attemptCount: 1,
+        providerRef: "",
+        ageMs: UNKNOWN_COMMAND_AFTER_MS,
+      }),
+      true,
+    );
+    assert.equal(
+      commandNeedsReconciliation({
+        status: "pending",
+        attemptCount: 1,
+        providerRef: "pay_123",
+        ageMs: UNKNOWN_COMMAND_AFTER_MS,
+      }),
+      false,
+    );
+    const jobs = readFileSync("src/lib/jobs.ts", "utf8");
+    const mark = jobs.indexOf("markUnknownProviderCommands");
+    const release = jobs.indexOf("createReleaseOrTransfer");
+    assert.ok(mark > 0 && release > mark);
   });
 
   it("releases the signed influencer amount and refuses a different figure", () => {
