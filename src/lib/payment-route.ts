@@ -138,6 +138,17 @@ export function readRouteAccounts(value: unknown): RouteAccountRefs | null {
   };
 }
 
+/** The stored beneficiary account wins. A blank snapshot can still use the creator's current account, and that choice is what should be stored. */
+export function payoutAccountForCollection(input: {
+  frozenPayoutAccountId?: string | null;
+  livePayoutAccountId?: string | null;
+}) {
+  const frozen = (input.frozenPayoutAccountId ?? "").trim();
+  if (frozen) return { accountId: frozen, shouldStore: false };
+  const live = (input.livePayoutAccountId ?? "").trim();
+  return { accountId: live, shouldStore: live.length > 0 };
+}
+
 /** The stored holding account wins. A blank snapshot can still use the current account. */
 export function holdingAccountForCollection(input: {
   frozenHoldingAccountId?: string | null;
