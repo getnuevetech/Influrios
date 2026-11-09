@@ -215,16 +215,12 @@ export async function actionFreezeFeeSnapshot(formData: FormData) {
 
 export async function actionSaveFeeRule(formData: FormData) {
   await requireAdminAction("commerce.manage");
-  const { parseTierBands } = await import("@/lib/collaboration-fees");
-  let tierBands: ReturnType<typeof parseTierBands> = [];
-  const rawBands = String(formData.get("tierBandsJson") || "").trim();
-  if (rawBands) {
-    try {
-      tierBands = parseTierBands(JSON.parse(rawBands));
-    } catch {
-      redirect(`/admin/fees?error=${encodeURIComponent("Tier bands JSON is invalid.")}`);
-    }
-  }
+  const { tierBandsFromFields } = await import("@/lib/collaboration-fees");
+  const tierBands = tierBandsFromFields(
+    formData.getAll("tierUpToUsd").map((value) => String(value)),
+    formData.getAll("tierPercentBps").map((value) => String(value)),
+  );
+  if ("error" in tierBands) redirect(`/admin/fees?error=${encodeURIComponent(tierBands.error)}`);
   try {
     const { feeRuleDraft, upsertFeeRule } = await import("@/lib/collaboration-fees");
     const draft = feeRuleDraft({

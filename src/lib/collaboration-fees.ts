@@ -505,6 +505,29 @@ function asFeeMethod(value: string): FeeMethod {
   return "percent";
 }
 
+/** Tier rows from the fee form. A blank Up to means the remaining amount. */
+export function tierBandsFromFields(upToUsd: string[], percentBps: string[]): FeeTierBand[] | { error: string } {
+  const count = Math.max(upToUsd.length, percentBps.length);
+  const bands: FeeTierBand[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const upTo = (upToUsd[index] ?? "").trim();
+    const bpsText = (percentBps[index] ?? "").trim();
+    if (!upTo && !bpsText) continue;
+    const bps = integerText(bpsText);
+    if (bps == null) return { error: "Enter the tier percent in basis points." };
+    if (!upTo) {
+      bands.push({ upToCents: null, percentBps: bps });
+      continue;
+    }
+    const upToCents = usdToCents(upTo);
+    if (upToCents == null || upToCents <= 0) {
+      return { error: "Enter the tier limit in dollars, or leave it blank for the remaining amount." };
+    }
+    bands.push({ upToCents, percentBps: bps });
+  }
+  return bands;
+}
+
 export function parseTierBands(value: unknown): FeeTierBand[] {
   if (!Array.isArray(value)) return [];
   return value

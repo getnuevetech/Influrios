@@ -1,13 +1,13 @@
 /**
- * A paid agreement is priced as Contracted collaboration.
- * Discovery and Platform Match stay the deal's origin. The $0 Discovery rules apply only when nothing is being funded.
+ * The contract quotes the fee rule saved for the service level on the agreement.
+ * Discovery with a fixed zero stays zero. Platform Match uses the Platform Match rules.
  */
 
 export type DealOrigin = "discovery" | "platform_match" | "direct" | "managed_intro" | "managed_campaign";
 
 export type PaidAgreementFeeBoundary = {
   originServiceLevel: DealOrigin;
-  feeServiceLevel: "discovery" | "contracted" | "managed_intro" | "managed_campaign";
+  feeServiceLevel: "discovery" | "platform_match" | "contracted" | "managed_intro" | "managed_campaign";
   freeDiscovery: boolean;
 };
 
@@ -17,21 +17,11 @@ export function resolvePaidAgreementFee(input: {
 }): PaidAgreementFeeBoundary {
   const stated = String(input.statedServiceLevel ?? "").trim().toLowerCase();
   const paid = Number.isInteger(input.grossCents) && input.grossCents > 0;
-  if (stated === "managed_intro" || stated === "managed_campaign") {
-    return { originServiceLevel: stated, feeServiceLevel: stated, freeDiscovery: false };
-  }
-  if (stated === "platform_match") {
+  if (stated === "managed_intro" || stated === "managed_campaign" || stated === "platform_match" || stated === "discovery" || stated === "contracted") {
     return {
-      originServiceLevel: "platform_match",
-      feeServiceLevel: paid ? "contracted" : "contracted",
-      freeDiscovery: false,
-    };
-  }
-  if (stated === "discovery") {
-    return {
-      originServiceLevel: "discovery",
-      feeServiceLevel: paid ? "contracted" : "discovery",
-      freeDiscovery: !paid,
+      originServiceLevel: stated === "contracted" ? "direct" : stated,
+      feeServiceLevel: stated,
+      freeDiscovery: stated === "discovery" && !paid,
     };
   }
   return { originServiceLevel: "direct", feeServiceLevel: "contracted", freeDiscovery: false };
@@ -42,7 +32,11 @@ export function feeLevelForSignedTerms(terms: {
   feeServiceLevel?: string | null;
   grossCents?: number | null;
 }): string {
-  const stored = String(terms.feeServiceLevel ?? "").trim();
+  const stated = String(terms.serviceLevel ?? "").trim().toLowerCase();
+  if (stated === "discovery" || stated === "platform_match" || stated === "contracted" || stated === "managed_intro" || stated === "managed_campaign") {
+    return stated;
+  }
+  const stored = String(terms.feeServiceLevel ?? "").trim().toLowerCase();
   if (stored) return stored;
   return resolvePaidAgreementFee({
     statedServiceLevel: terms.serviceLevel,

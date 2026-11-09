@@ -19,10 +19,26 @@ function quoteSide(serviceLevel: string, side: "business" | "influencer") {
 }
 
 describe("paid agreement fee boundary", () => {
-  it("prices a $3,500 US agreement from Discovery, Platform Match, and a direct invitation", () => {
-    for (const stated of ["discovery", "platform_match", "contracted"]) {
+  it("prices Discovery from the saved Discovery rule, including a $3,500 gross", () => {
+    const boundary = resolvePaidAgreementFee({ statedServiceLevel: "discovery", grossCents: GROSS });
+    assert.equal(boundary.feeServiceLevel, "discovery");
+    assert.equal(boundary.originServiceLevel, "discovery");
+    const business = quoteSide("discovery", "business");
+    const influencer = quoteSide("discovery", "influencer");
+    assert.equal(business.ok, true);
+    assert.equal(influencer.ok, true);
+    if (!business.ok || !influencer.ok) return;
+    assert.equal(business.rule.id, "rule_pilot_discovery_business");
+    assert.equal(business.feeCents, 0);
+    assert.equal(business.totalCents, GROSS);
+    assert.equal(influencer.feeCents, 0);
+    assert.equal(influencer.totalCents, GROSS);
+  });
+
+  it("prices a $3,500 US agreement from Platform Match and a direct invitation at the saved rates", () => {
+    for (const stated of ["platform_match", "contracted"]) {
       const boundary = resolvePaidAgreementFee({ statedServiceLevel: stated, grossCents: GROSS });
-      assert.equal(boundary.feeServiceLevel, "contracted");
+      assert.equal(boundary.feeServiceLevel, stated);
       assert.equal(boundary.freeDiscovery, false);
       if (stated === "discovery") assert.equal(boundary.originServiceLevel, "discovery");
       if (stated === "platform_match") assert.equal(boundary.originServiceLevel, "platform_match");
@@ -37,7 +53,7 @@ describe("paid agreement fee boundary", () => {
       assert.equal(business.totalCents, 367_500);
       assert.equal(influencer.feeCents, 8_750);
       assert.equal(influencer.totalCents, 341_250);
-      assert.equal(business.rule.id, "rule_pilot_contracted_business");
+      assert.equal(business.rule.percentBps, 500);
       assert.notEqual(business.rule.percentBps, 8000);
 
       const snapshot = buildBusinessCommercialSnapshot({
@@ -90,10 +106,11 @@ describe("paid agreement fee boundary", () => {
     assert.equal(free.freeDiscovery, true);
     assert.equal(free.feeServiceLevel, "discovery");
     assert.equal(free.originServiceLevel, "discovery");
-    const stored = feeLevelForSignedTerms({ serviceLevel: "discovery", grossCents: GROSS });
-    assert.equal(stored, "contracted");
-    const explicit = feeLevelForSignedTerms({ serviceLevel: "discovery", feeServiceLevel: "contracted", grossCents: GROSS });
-    assert.equal(explicit, "contracted");
+    assert.equal(feeLevelForSignedTerms({ serviceLevel: "discovery", grossCents: GROSS }), "discovery");
+    assert.equal(
+      feeLevelForSignedTerms({ serviceLevel: "discovery", feeServiceLevel: "contracted", grossCents: GROSS }),
+      "discovery",
+    );
   });
 
   it("deactivates only rules the paid quote can select", () => {
