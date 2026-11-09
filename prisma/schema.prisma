@@ -1796,6 +1796,19 @@ model MarketplaceSettings {
   updatedAt                DateTime @updatedAt
 }
 
+/// Finance approvals for collaboration funding. Defaults stay off. A page load does not change them.
+model CollaborationLaunchGate {
+  id                          String   @id @default("default")
+  feeSchedulesApproved        Boolean  @default(false)
+  taxTreatmentApproved        Boolean  @default(false)
+  earningRefundPolicyApproved Boolean  @default(false)
+  providerRouteApproved       Boolean  @default(false)
+  providerTraceReady          Boolean  @default(false)
+  payoutTraceJson             Json?
+  refundTraceJson             Json?
+  updatedAt                   DateTime @updatedAt
+}
+
 /// Protected payments and the word "escrow" are jurisdiction flags, not code switches.
 /// W3.3 / Dev Addendum §6 — full capability matrix; flags override features (PA007).
 model CollaborationJurisdiction {

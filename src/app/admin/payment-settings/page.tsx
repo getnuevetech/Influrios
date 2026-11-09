@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { actionSaveCanonicalCountryRoute } from "@/app/admin/payment-settings/actions";
+import { actionRecordProviderTrace, actionSaveCanonicalCountryRoute, actionSaveLaunchApprovals } from "@/app/admin/payment-settings/actions";
+import { getLaunchGate } from "@/lib/launch-gate";
 import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
@@ -18,6 +19,8 @@ export default async function PaymentSettingsPage({
 }) {
   const session = await requireAnyAdminModule(["gateways", "collab_finance", "marketplace"]);
   const canEdit = hasPermission(session, "collab_finance.manage");
+  const canApprove = hasPermission(session, "marketplace.manage");
+  const launchGate = await getLaunchGate().catch(() => null);
   const params = await searchParams;
   const [corridors, jurisdictions, routes, gateways, marketplaceProviders] = await Promise.all([
     prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }),
@@ -65,9 +68,50 @@ export default async function PaymentSettingsPage({
       ) : null}
       {params.saved ? (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          Saved the {params.saved} route.
+          Saved {params.saved}.
         </p>
       ) : null}
+      <section className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
+        <h2 className="font-display text-lg font-bold text-indigo">Launch approvals</h2>
+        <p className="mt-1 text-sm text-muted">
+          Live collection stays off until all four approvals are saved and a reconciled payout trace and refund trace
+          are recorded. Saving this form does not charge a deal.
+        </p>
+        <p className="mt-2 text-xs font-semibold text-indigo">
+          Trace: {launchGate?.providerTraceReady ? "recorded" : "not recorded"}
+        </p>
+        {canApprove ? (
+          <form action={actionSaveLaunchApprovals} className="mt-3 grid gap-2 text-sm">
+            <label className="flex gap-2"><input type="checkbox" name="feeSchedulesApproved" defaultChecked={launchGate?.feeSchedulesApproved} /> Fee schedules approved</label>
+            <label className="flex gap-2"><input type="checkbox" name="taxTreatmentApproved" defaultChecked={launchGate?.taxTreatmentApproved} /> Tax treatment approved</label>
+            <label className="flex gap-2"><input type="checkbox" name="earningRefundPolicyApproved" defaultChecked={launchGate?.earningRefundPolicyApproved} /> Fee earning and refund policy approved</label>
+            <label className="flex gap-2"><input type="checkbox" name="providerRouteApproved" defaultChecked={launchGate?.providerRouteApproved} /> Provider route approved</label>
+            <input name="reason" required minLength={8} placeholder="Reason for this change" className="rounded-lg border px-3 py-2" />
+            <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Save approvals</button>
+          </form>
+        ) : (
+          <p className="mt-2 text-xs text-muted">Finance can change these approvals.</p>
+        )}
+        {canApprove ? (
+          <form action={actionRecordProviderTrace} className="mt-4 grid gap-2 border-t border-[#E4EBFF] pt-4 text-sm sm:grid-cols-2">
+            <p className="sm:col-span-2 text-xs text-muted">
+              Enter the staging amounts and redacted provider references from one funded payout and one confirmed refund.
+              The trace is stored only when collection equals the payout plus fees plus tax.
+            </p>
+            <input name="currency" required placeholder="Currency" className="rounded-lg border px-3 py-2" />
+            <input name="businessPaysCents" required inputMode="numeric" placeholder="Business pays, minor units" className="rounded-lg border px-3 py-2" />
+            <input name="influencerReceivesCents" required inputMode="numeric" placeholder="Influencer receives, minor units" className="rounded-lg border px-3 py-2" />
+            <input name="platformFeesTotalCents" required inputMode="numeric" placeholder="Platform fees, minor units" className="rounded-lg border px-3 py-2" />
+            <input name="taxCents" required inputMode="numeric" placeholder="Tax, minor units" className="rounded-lg border px-3 py-2" />
+            <input name="collectionRef" required minLength={4} placeholder="Collection reference" className="rounded-lg border px-3 py-2" />
+            <input name="holdingRef" required minLength={4} placeholder="Holding reference" className="rounded-lg border px-3 py-2" />
+            <input name="releaseRef" required minLength={4} placeholder="Release reference" className="rounded-lg border px-3 py-2" />
+            <input name="payoutRef" required minLength={4} placeholder="Confirmed payout reference" className="rounded-lg border px-3 py-2" />
+            <input name="refundRef" required minLength={4} placeholder="Confirmed refund reference" className="rounded-lg border px-3 py-2 sm:col-span-2" />
+            <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Record staging trace</button>
+          </form>
+        ) : null}
+      </section>
       <section className="grid gap-3 sm:grid-cols-3">
         <Link href="/admin/gateways" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
           <p className="font-display text-lg font-bold text-indigo">Providers</p>

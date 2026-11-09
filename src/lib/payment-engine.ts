@@ -89,6 +89,134 @@ export type LedgerPosting = {
   reverses?: string;
 };
 
+export type StagingTraceStep = {
+  step: string;
+  where: string;
+  amountCents: number;
+  reference: string;
+};
+
+export type StagingTrace = {
+  scenario: "payout" | "refund";
+  currency: string;
+  businessPaysCents: number;
+  influencerReceivesCents: number;
+  platformFeesTotalCents: number;
+  taxCents: number;
+  steps: StagingTraceStep[];
+  reconciled: true;
+};
+
+export function buildProviderStagingTrace(input: {
+  scenario: "payout" | "refund";
+  currency: string;
+  businessPaysCents: number;
+  influencerReceivesCents: number;
+  platformFeesTotalCents: number;
+  taxCents: number;
+  collectionRef: string;
+  holdingRef: string;
+  releaseRef: string;
+  payoutRef: string;
+  refundRef?: string;
+  holdingAvailable: boolean;
+  beneficiaryConfirmed: boolean;
+  refundConfirmed?: boolean;
+}): StagingTrace | { ok: false; error: string } {
+  const currency = input.currency.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) return { ok: false, error: "Use a three-letter currency." };
+  const amounts = [
+    input.businessPaysCents,
+    input.influencerReceivesCents,
+    input.platformFeesTotalCents,
+    input.taxCents,
+  ];
+  if (amounts.some((amount) => !Number.isInteger(amount) || amount < 0)) {
+    return { ok: false, error: "Trace amounts must be zero or positive minor units." };
+  }
+  if (input.businessPaysCents !== input.influencerReceivesCents + input.platformFeesTotalCents + input.taxCents) {
+    return { ok: false, error: "The trace does not reconcile. Collection must equal payout plus fees plus tax." };
+  }
+  const refs = [input.collectionRef, input.holdingRef, input.releaseRef, input.payoutRef].map((ref) => ref.trim());
+  if (refs.some((ref) => ref.length < 4)) return { ok: false, error: "Each provider reference is required." };
+  if (!input.holdingAvailable) {
+    return { ok: false, error: "Collection without holding evidence cannot start work." };
+  }
+  if (!input.beneficiaryConfirmed) {
+    return { ok: false, error: "A payout is not confirmed until the beneficiary evidence is present." };
+  }
+  const steps: StagingTraceStep[] = [
+    { step: "collection", where: "Provider collection", amountCents: input.businessPaysCents, reference: refs[0] },
+    { step: "funds_available", where: "Approved holding arrangement", amountCents: input.businessPaysCents, reference: refs[1] },
+    { step: "release_authorization", where: "Release instruction", amountCents: input.influencerReceivesCents, reference: refs[2] },
+    { step: "confirmed_payout", where: "Verified beneficiary", amountCents: input.influencerReceivesCents, reference: refs[3] },
+  ];
+  if (input.scenario === "refund") {
+    const refundRef = (input.refundRef ?? "").trim();
+    if (refundRef.length < 4 || !input.refundConfirmed) {
+      return { ok: false, error: "A refund trace needs a confirmed refund on the original route." };
+    }
+    steps.push({
+      step: "refund",
+      where: "Original route, refund confirmed",
+      amountCents: input.businessPaysCents,
+      reference: refundRef,
+    });
+  }
+  return {
+    scenario: input.scenario,
+    currency,
+    businessPaysCents: input.businessPaysCents,
+    influencerReceivesCents: input.influencerReceivesCents,
+    platformFeesTotalCents: input.platformFeesTotalCents,
+    taxCents: input.taxCents,
+    steps,
+    reconciled: true,
+  };
+}
+
+export function readSignedCollection(
+  plan: unknown,
+  routeCurrency: string,
+): { currency: string; businessPaysCents: number; influencerReceivesCents: number; platformFeesTotalCents: number } | { error: string } | null {
+  if (!plan || typeof plan !== "object") return null;
+  const quote = (plan as { signedQuote?: Record<string, unknown> }).signedQuote;
+  if (!quote) return null;
+  const currency = typeof quote.currency === "string" ? quote.currency.trim().toUpperCase() : "";
+  const businessPaysCents = quote.businessPaysCents;
+  const influencerReceivesCents = quote.influencerReceivesCents;
+  const platformFeesTotalCents = quote.platformFeesTotalCents;
+  if (!/^[A-Z]{3}$/.test(currency)) return { error: "The signed quote has no currency." };
+  if (currency !== routeCurrency.trim().toUpperCase()) {
+    return { error: "The signed currency does not match the route." };
+  }
+  const businessTaxCents = Number(quote.businessTaxCents ?? 0);
+  const influencerTaxCents = Number(quote.influencerTaxCents ?? 0);
+  const withholdingCents = Number(quote.withholdingCents ?? 0);
+  if (
+    !Number.isInteger(businessPaysCents) ||
+    !Number.isInteger(influencerReceivesCents) ||
+    !Number.isInteger(platformFeesTotalCents) ||
+    !Number.isInteger(businessTaxCents) ||
+    !Number.isInteger(influencerTaxCents) ||
+    !Number.isInteger(withholdingCents)
+  ) {
+    return { error: "The signed quote amounts are incomplete." };
+  }
+  if (businessTaxCents + influencerTaxCents + withholdingCents !== 0) {
+    return { error: "Tax collection is not part of this route." };
+  }
+  if (Number(businessPaysCents) !== Number(influencerReceivesCents) + Number(platformFeesTotalCents)) {
+    return { error: "The signed quote does not reconcile." };
+  }
+  return {
+    currency,
+    businessPaysCents: Number(businessPaysCents),
+    influencerReceivesCents: Number(influencerReceivesCents),
+    platformFeesTotalCents: Number(platformFeesTotalCents),
+  };
+}
+
 export function collaborationLaunchBlockers(
   approvals: LaunchApprovals = DEFAULT_LAUNCH_APPROVALS,
   tax: TaxDetermination = { status: "unresolved", lines: [] },
