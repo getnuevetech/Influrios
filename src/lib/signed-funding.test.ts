@@ -10,6 +10,7 @@ import {
   agreedFeeFromSources,
   describeDealProgress,
   readSignedTermsSnapshot,
+  recoverSignedTermsFromAgreement,
   sameDealError,
   submittedTermsDiffer,
   type SignedTermsSnapshot,
@@ -45,6 +46,53 @@ describe("agreed fee label", () => {
     const fromSnapshot = agreedFeeFromSources({}, snapshot);
     assert.match(fromSnapshot.label, /1,500/);
     assert.equal(agreedFeeFromSources({}).label, "—");
+  });
+});
+
+describe("recover signed commercial terms", () => {
+  it("rebuilds the snapshot from the signed agreement and refuses a schedule that does not add up", () => {
+    const body = [
+      "Commercial Summary",
+      "Currency  USD",
+      "Gross Contract Value  $11,000",
+      "Business  Agboola Olomola",
+      "4. Milestone Schedule",
+      "1. Delivery  60%  $6,600  $660  ag $5,940",
+      "2. Usage  40%  $4,400  $440  ag $3,960",
+      "5. Influencer Share Allocation",
+      "Ag Olomola  @ag  100.00%",
+      "6. Funding, Release and Payout",
+    ].join("\n");
+    const recovered = recoverSignedTermsFromAgreement({
+      title: "2nd Collaboration Test",
+      workspaceId: "ws_1",
+      collaborationId: null,
+      applicationId: null,
+      teamProposalId: null,
+      createdAt: "2026-11-08T00:00:00.000Z",
+      sourceJson: { gross: "11000", currency: "USD", jurisdiction: "US", serviceLevel: "discovery" },
+      renderedBody: body,
+      parties: [
+        { role: "business", name: "Agboola Olomola", shareBps: 0 },
+        { role: "creator", name: "Ag Olomola", creatorSlug: "ag", shareBps: 10000 },
+      ],
+    });
+    assert.equal(recovered?.grossCents, 1_100_000);
+    assert.equal(recovered?.currency, "USD");
+    assert.equal(recovered?.creators[0]?.slug, "ag");
+    assert.equal(recovered?.milestones.length, 2);
+    assert.equal(
+      recoverSignedTermsFromAgreement({
+        title: "Missing",
+        renderedBody: body.replace("60%", "50%"),
+        sourceJson: { gross: "11000", currency: "USD" },
+        parties: [{ role: "creator", name: "Ag", creatorSlug: "ag", shareBps: 10000 }],
+      }),
+      null,
+    );
+    const apply = readFileSync("src/lib/signed-funding-apply.ts", "utf8");
+    assert.match(apply, /ensureStoredCommercialTerms/);
+    assert.match(apply, /contract.terms.recovered/);
   });
 });
 

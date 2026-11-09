@@ -8,6 +8,7 @@ import { getWorkspace } from "@/lib/business";
 import { contractHrefFromCampaign, contractOfferReady } from "@/lib/campaign-contract";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { agreedFeeFromSources } from "@/lib/signed-funding";
+import { repairSignedAgreements } from "@/lib/signed-funding-apply";
 import { prisma } from "@/lib/db";
 import {
   acceptedWorkNeedsContract,
@@ -97,6 +98,9 @@ export default async function ContractsIndexPage({
     getWorkspace(account.id).catch(() => null),
   ]);
   const contracts = contractLoad.rows;
+  if (!contractLoad.failed) {
+    await repairSignedAgreements(contracts.filter((row) => row.status === "signed").map((row) => row.id)).catch(() => 0);
+  }
   const contractsFailed = contractLoad.failed;
   const contractsRef = contractsFailed ? newCorrelationId() : "";
   if (contractsFailed) console.error("contracts load failed", contractsRef);

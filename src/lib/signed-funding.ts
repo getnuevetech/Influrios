@@ -336,3 +336,104 @@ export function agreedFeeFromSources(source: unknown, snapshotJson?: unknown) {
   }
   return { label: currency ? `${currency} ${raw}` : raw, grossCents: null as number | null, currency };
 }
+
+export type RecoverableAgreement = {
+  title: string;
+  workspaceId?: string | null;
+  collaborationId?: string | null;
+  applicationId?: string | null;
+  teamProposalId?: string | null;
+  createdAt?: Date | string | null;
+  sourceJson?: unknown;
+  renderedBody?: string | null;
+  parties: { role: string; name: string; creatorSlug?: string | null; shareBps?: number | null }[];
+};
+
+function labeledLine(body: string, label: string) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = body.match(new RegExp(`^${escaped}\\s{2,}(.+)$`, "m"));
+  return match?.[1]?.trim() ?? "";
+}
+
+function moneyToCents(raw: string) {
+  const match = raw.replace(/,/g, "").match(/(\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return Math.round(amount * 100);
+}
+
+function sharesTotal(rows: { shareBps: number }[]) {
+  return rows.reduce((sum, row) => sum + row.shareBps, 0);
+}
+
+function milestonesFromSignedBody(body: string): SignedMilestone[] | null {
+  const section = body.split("4. Milestone Schedule")[1]?.split(/\n5\.\s/)[0] ?? "";
+  const rows: SignedMilestone[] = [];
+  for (const line of section.split("\n")) {
+    const match = line.match(/^\d+\.\s+(.+)$/);
+    if (!match) continue;
+    const parts = match[1].split(/\s{2,}/).map((part) => part.trim()).filter(Boolean);
+    const share = parts[1]?.match(/^(\d+(?:\.\d+)?)%$/);
+    if (!parts[0] || !share) continue;
+    rows.push({ title: parts[0], shareBps: Math.round(Number(share[1]) * 100) });
+  }
+  const normalized = normalizeMilestones(rows);
+  return sharesTotal(normalized) === 10_000 ? normalized : null;
+}
+
+function creatorsFromSignedAgreement(input: RecoverableAgreement): SignedCreatorShare[] | null {
+  const body = input.renderedBody ?? "";
+  const fromParties = normalizeCreators(
+    input.parties
+      .filter((party) => party.role === "creator" && party.creatorSlug?.trim())
+      .map((party) => ({ slug: party.creatorSlug ?? "", shareBps: party.shareBps ?? 0 })),
+  );
+  if (sharesTotal(fromParties) === 10_000) return fromParties;
+  const section = body.split("5. Influencer Share Allocation")[1]?.split(/\n6\.\s/)[0] ?? "";
+  const fromBody = normalizeCreators(
+    [...section.matchAll(/@([A-Za-z0-9._-]+)\s+(\d+(?:\.\d+)?)%/g)].map((match) => ({
+      slug: match[1],
+      shareBps: Math.round(Number(match[2]) * 100),
+    })),
+  );
+  if (sharesTotal(fromBody) === 10_000) return fromBody;
+  const sole = input.parties.filter((party) => party.role === "creator" && party.creatorSlug?.trim());
+  if (sole.length === 1 && (sole[0].shareBps ?? 0) === 0) return [{ slug: sole[0].creatorSlug!.trim(), shareBps: 10_000 }];
+  return null;
+}
+
+/**
+ * Rebuild the funding snapshot from the agreement that was signed.
+ * Uses the stored wizard source, the signed text, and the party shares. It does not read a new form.
+ */
+export function recoverSignedTermsFromAgreement(input: RecoverableAgreement): SignedTermsSnapshot | null {
+  const body = input.renderedBody ?? "";
+  const currency =
+    storedCurrencyCode(sourceField(input.sourceJson, "currency") || sourceField(input.sourceJson, "contractCurrency")) ||
+    storedCurrencyCode(labeledLine(body, "Currency"));
+  const grossCents = moneyToCents(sourceField(input.sourceJson, "gross")) || moneyToCents(labeledLine(body, "Gross Contract Value"));
+  const creators = creatorsFromSignedAgreement(input);
+  const milestones = milestonesFromSignedBody(body);
+  if (!currency || !grossCents || !creators || !milestones) return null;
+  const business = input.parties.find((party) => party.role === "business");
+  const lockedAt = input.createdAt ? new Date(input.createdAt) : null;
+  return readSignedTermsSnapshot({
+    version: 1,
+    title: input.title.trim() || sourceField(input.sourceJson, "title"),
+    businessName: business?.name.trim() || labeledLine(body, "Business"),
+    jurisdictionCode: (sourceField(input.sourceJson, "jurisdiction") || sourceField(input.sourceJson, "jurisdictionCode")).toUpperCase(),
+    currency,
+    grossCents,
+    serviceLevel: sourceField(input.sourceJson, "serviceLevel"),
+    workspaceId: input.workspaceId?.trim() || "",
+    collaborationId: input.collaborationId ?? null,
+    applicationId: input.applicationId ?? null,
+    teamProposalId: input.teamProposalId ?? null,
+    creators,
+    milestones,
+    financialPlan: null,
+    payoutMethod: sourceField(input.sourceJson, "payoutMethod"),
+    lockedAt: lockedAt && Number.isFinite(lockedAt.getTime()) ? lockedAt.toISOString() : "",
+  });
+}
