@@ -7,6 +7,7 @@ import { newCorrelationId } from "@/lib/correlation";
 import { getWorkspace } from "@/lib/business";
 import { contractHrefFromCampaign, contractOfferReady } from "@/lib/campaign-contract";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
+import { agreedFeeFromSources } from "@/lib/signed-funding";
 import { prisma } from "@/lib/db";
 import {
   acceptedWorkNeedsContract,
@@ -67,8 +68,8 @@ function sourceText(source: unknown, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function feeLabel(source: unknown) {
-  return sourceText(source, "creator_compensation") || sourceText(source, "gross") || "—";
+function feeLabel(source: unknown, snapshot?: unknown) {
+  return agreedFeeFromSources(source, snapshot).label;
 }
 
 const PILL: Record<Kind, string> = {
@@ -379,7 +380,7 @@ export default async function ContractsIndexPage({
               <dl className="mt-5 space-y-3 text-sm">
                 <Detail icon={<IconUsersMini />} label="Parties" value={selected.parties.map((party) => party.name).filter(Boolean).join(" and ") || "—"} />
                 <Detail icon={<IconFileText size={15} />} label="Linked collaboration" value={selected.collaborationId ? selected.title : "—"} />
-                <Detail icon={<IconFee />} label="Agreed fee" value={feeLabel(selected.sourceJson)} />
+                <Detail icon={<IconFee />} label="Agreed fee" value={feeLabel(selected.sourceJson, selected.termsSnapshotJson)} />
                 <Detail icon={<IconFileText size={15} />} label="Deliverables" value={deliverableLabel(selected.sourceJson)} />
                 <Detail icon={<IconCalendar size={15} />} label="Updated" value={shortDate(selected.updatedAt)} />
               </dl>
@@ -400,12 +401,21 @@ export default async function ContractsIndexPage({
                 </ul>
               </div>
               <div className="mt-4 grid gap-2">
-                <Link
-                  href={`/collaboration/contracts/${selected.id}${needsYourSignature(selected, account.id, account.email, creatorSlug) ? "#sign" : ""}`}
-                  className="inline-flex items-center justify-center rounded-full bg-[#6D4AFF] px-4 py-2.5 text-sm font-semibold text-white"
-                >
-                  Review & sign →
-                </Link>
+                {needsYourSignature(selected, account.id, account.email, creatorSlug) ? (
+                  <Link
+                    href={`/collaboration/contracts/${selected.id}#sign`}
+                    className="inline-flex items-center justify-center rounded-full bg-[#6D4AFF] px-4 py-2.5 text-sm font-semibold text-white"
+                  >
+                    Review & sign →
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/collaboration/contracts/${selected.id}`}
+                    className="inline-flex items-center justify-center rounded-full border border-[#E7ECF5] px-4 py-2.5 text-sm font-semibold text-[#344054]"
+                  >
+                    View agreement
+                  </Link>
+                )}
                 <Link
                   href={`/collaboration/contracts/${selected.id}`}
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-[#E7ECF5] px-4 py-2.5 text-sm font-semibold text-[#344054]"
@@ -414,7 +424,10 @@ export default async function ContractsIndexPage({
                 </Link>
               </div>
               <p className="mt-3 text-xs text-[#98A2B3]">
-                Review the full agreement before signing. {contractPartyProgress(selected.parties).label}
+                {selectedKind === "signed"
+                  ? "This agreement is fully signed."
+                  : "Review the full agreement before signing."}{" "}
+                {contractPartyProgress(selected.parties).label}
                 {selected.signingChannel === "docusign" ? " · DocuSign" : " · In-app signing"}
               </p>
             </aside>

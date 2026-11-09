@@ -138,9 +138,15 @@ export default async function CreatorHomePage({
                         {item.next}
                       </p>
                     </div>
-                    <Link href={item.href} className="rounded-full border border-[#E4E9F5] px-3 py-2 text-xs font-semibold text-[#6D4AFF]">
-                      Open workspace →
-                    </Link>
+                    {item.stage === "Expecting funding" ? (
+                      <span className="rounded-full border border-[#E7ECF5] bg-[#F8FAFC] px-3 py-2 text-xs font-semibold text-[#98A2B3]">
+                        Expecting funding
+                      </span>
+                    ) : (
+                      <Link href={item.href} className="rounded-full border border-[#E4E9F5] px-3 py-2 text-xs font-semibold text-[#6D4AFF]">
+                        Open workspace →
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

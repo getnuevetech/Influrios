@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   PIPELINE_STAGES,
   agreementPresentation,
+  attachAwaitingFunding,
   derivePipelineStage,
   isCurrentCollaboration,
   invitationStillListed,
@@ -37,6 +38,60 @@ describe("collaboration hub pipeline", () => {
     assert.equal(signed.label, "Contract");
     assert.equal(signed.action, "Review contract →");
     assert.equal(signed.href, "/collaboration/contracts/doc-1");
+
+    const waiting = agreementPresentation({
+      stage: "Contract",
+      href: "/collaboration/records/1",
+      contractHref: "/collaboration/contracts/doc-1",
+      awaitingFunding: true,
+    });
+    assert.equal(waiting.label, "Expecting funding");
+    assert.equal(waiting.action, "View agreement");
+    assert.match(waiting.next, /fund/);
+  });
+
+  it("shows a signed unfunded agreement on Active and leaves a funded deal alone", () => {
+    const added = attachAwaitingFunding([], [
+      {
+        id: "doc-1",
+        title: "2nd Collaboration Test",
+        status: "signed",
+        fundingId: null,
+        grossCents: 1_100_000,
+        currency: "USD",
+        counterparty: "Agboola Olomola",
+      },
+    ]);
+    assert.equal(added.length, 1);
+    assert.equal(added[0]?.awaitingFunding, true);
+    assert.equal(added[0]?.counterparty, "Agboola Olomola");
+    assert.equal(isCurrentCollaboration(added[0]!), true);
+
+    const funded = attachAwaitingFunding(
+      [
+        {
+          id: "collab-1",
+          title: "Live",
+          counterparty: "Brand",
+          stage: "Funded",
+          stageIndex: 2,
+          href: "/payments",
+        },
+      ],
+      [
+        {
+          id: "doc-2",
+          title: "Live",
+          status: "signed",
+          fundingId: null,
+          collaborationId: "collab-1",
+          grossCents: 100,
+          currency: "USD",
+          counterparty: "Brand",
+        },
+      ],
+    );
+    assert.equal(funded[0]?.awaitingFunding, undefined);
   });
 
   it("keeps invitations and matches out of the active collaboration count", () => {

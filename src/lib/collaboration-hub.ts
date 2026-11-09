@@ -14,6 +14,7 @@ import {
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { listCollaborations } from "@/lib/collaborations";
 import { fundingBadge, type FundingBadge } from "@/lib/funding-badge";
+import { agreedFeeFromSources } from "@/lib/signed-funding";
 import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketplace-ledger";
 import { findDirectoryMatchesFor, type CreatorMatch, type MatchBreakdown } from "@/lib/matching";
 import {
@@ -64,6 +65,8 @@ export type HubPipelineItem = {
   revisionSummary?: string | null;
   obligationDone?: number;
   obligationTotal?: number;
+  /** Signed agreement with no funding yet. Visible, but work has not started. */
+  awaitingFunding?: boolean;
 };
 
 export type HubStatusCounts = {
@@ -120,7 +123,16 @@ export function agreementPresentation(row: {
   href: string;
   contractHref?: string | null;
   revisionSummary?: string | null;
+  awaitingFunding?: boolean;
 }) {
+  if (row.awaitingFunding) {
+    return {
+      label: "Expecting funding",
+      next: "Waiting for the business to fund this agreement",
+      action: "View agreement",
+      href: row.contractHref || row.href,
+    };
+  }
   if (row.contractHref) {
     return {
       label: "Contract",
@@ -153,12 +165,79 @@ export function isCurrentCollaboration(row: {
   stage: string;
   source?: string | null;
   contractHref?: string | null;
+  awaitingFunding?: boolean;
 }) {
+  if (row.awaitingFunding) return true;
   if (row.stage === "Match" || row.stage === "Released") return false;
   if (row.source === "application" || row.source === "team") {
     return Boolean(row.contractHref) && row.stage !== "Contract";
   }
   return row.stage === "Contract" || row.stage === "Funded" || row.stage === "In Progress" || row.stage === "Review";
+}
+
+const FUNDED_STAGES = new Set(["Funded", "In Progress", "Review", "Released"]);
+
+export type AwaitingFundingContract = {
+  id: string;
+  title: string;
+  status: string;
+  fundingId: string | null;
+  collaborationId?: string | null;
+  applicationId?: string | null;
+  teamProposalId?: string | null;
+  grossCents: number | null;
+  currency: string | null;
+  counterparty: string;
+};
+
+function sameSignedDeal(row: HubPipelineItem, doc: AwaitingFundingContract) {
+  const href = `/collaboration/contracts/${doc.id}`;
+  if (row.contractHref === href || row.href === href) return true;
+  if (doc.collaborationId && row.id === doc.collaborationId) return true;
+  if (doc.applicationId && row.id === `application:${doc.applicationId}`) return true;
+  if (doc.teamProposalId && row.id === `team:${doc.teamProposalId}`) return true;
+  return false;
+}
+
+/** Signed, unfunded agreements stay on Active as one inactive row until money is held. */
+export function attachAwaitingFunding(pipeline: HubPipelineItem[], contracts: AwaitingFundingContract[]): HubPipelineItem[] {
+  const next = pipeline.map((row) => ({ ...row }));
+  for (const doc of contracts) {
+    if (doc.status !== "signed" || doc.fundingId) continue;
+    const href = `/collaboration/contracts/${doc.id}`;
+    const matches = next.filter((row) => sameSignedDeal(row, doc));
+    if (matches.some((row) => FUNDED_STAGES.has(row.stage))) continue;
+    const visible = matches.filter((row) => row.stage !== "Match" && row.stage !== "Released");
+    const targets = visible.length > 0 ? visible : matches.slice(0, 1);
+    const apply = (row: HubPipelineItem) => {
+      row.awaitingFunding = true;
+      row.contractHref = href;
+      row.href = href;
+      if (!row.counterparty.trim()) row.counterparty = doc.counterparty || "Business";
+      if (doc.grossCents && doc.currency && row.grossCents == null) {
+        row.grossCents = doc.grossCents;
+        row.currency = doc.currency;
+      }
+    };
+    if (targets.length > 0) {
+      for (const row of targets) apply(row);
+      continue;
+    }
+    next.push({
+      id: `contract:${doc.id}`,
+      title: doc.title,
+      counterparty: doc.counterparty || "Business",
+      stage: "Contract",
+      stageIndex: PIPELINE_STAGES.indexOf("Contract"),
+      href,
+      contractHref: href,
+      awaitingFunding: true,
+      grossCents: doc.grossCents,
+      currency: doc.currency,
+      source: "proposal",
+    });
+  }
+  return next;
 }
 
 /** Invitations and requests leave those lists once a live contract exists. */
@@ -521,7 +600,54 @@ export async function loadCreatorHub(input: {
   const listedApplications = applications.filter((row) =>
     invitationStillListed(row, new Set(contractByApplication.keys()), new Set(contractByCollab.keys())),
   );
-  status.active = pipeline.filter((row) => isCurrentCollaboration(row)).length;
+  const signedUnfunded = await settle(
+    "signed agreements",
+    prisma.contractDocument.findMany({
+      where: {
+        status: "signed",
+        fundingId: null,
+        OR: [
+          { parties: { some: { creatorSlug: slug } } },
+          { parties: { some: { userId: input.userId, role: "creator" } } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        fundingId: true,
+        collaborationId: true,
+        applicationId: true,
+        teamProposalId: true,
+        sourceJson: true,
+        termsSnapshotJson: true,
+        parties: { select: { role: true, name: true } },
+      },
+      take: 40,
+    }),
+    [],
+    degraded,
+  );
+  const withFunding = attachAwaitingFunding(
+    pipeline,
+    signedUnfunded.map((document) => {
+      const fee = agreedFeeFromSources(document.sourceJson, document.termsSnapshotJson);
+      const business = document.parties.find((party) => party.role === "business");
+      return {
+        id: document.id,
+        title: document.title,
+        status: document.status,
+        fundingId: document.fundingId,
+        collaborationId: document.collaborationId,
+        applicationId: document.applicationId,
+        teamProposalId: document.teamProposalId,
+        grossCents: fee.grossCents,
+        currency: fee.currency,
+        counterparty: business?.name || "Business",
+      };
+    }),
+  );
+  status.active = withFunding.filter((row) => isCurrentCollaboration(row)).length;
   const history: HubPipelineItem[] = [
     ...collaborations
       .filter((row) => row.status === "declined" || row.status === "withdrawn")
@@ -551,7 +677,7 @@ export async function loadCreatorHub(input: {
     status,
     earnings,
     payout,
-    pipeline,
+    pipeline: withFunding,
     saved,
     creatorMatches: creatorMatches.slice(0, 8),
     brandMatches,
