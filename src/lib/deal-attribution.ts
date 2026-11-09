@@ -116,6 +116,19 @@ export async function listRepeatCandidates() {
   });
 }
 
+/** A signed contract has no attribution picker. An empty id uses the first active source that is not a pre-existing relationship. */
+async function attributionSourceForDeal(sourceId: string) {
+  if (sourceId) {
+    const chosen = await prisma.attributionSource.findUnique({ where: { id: sourceId } });
+    return chosen?.active ? chosen : null;
+  }
+  const sources = await prisma.attributionSource.findMany({
+    where: { active: true },
+    orderBy: { sortOrder: "asc" },
+  });
+  return sources.find((row) => !/pre-?existing/i.test(row.label)) ?? sources[0] ?? null;
+}
+
 export async function resolveDealAttribution(input: {
   businessName: string;
   creatorSlug: string;
@@ -127,8 +140,8 @@ export async function resolveDealAttribution(input: {
   const windowDays = settings?.attributionWindowDays ?? 90;
   const minGrossCents = settings?.repeatMinGrossCents ?? 0;
   const sourceId = input.sourceId?.trim() || "";
-  const source = sourceId ? await prisma.attributionSource.findUnique({ where: { id: sourceId } }) : null;
-  if (!source?.active) return { ok: false as const, error: "Choose an attribution source." };
+  const source = await attributionSourceForDeal(sourceId);
+  if (!source) return { ok: false as const, error: "Choose an attribution source." };
 
   const openClaim = await prisma.attributionClaim.findFirst({
     where: {
