@@ -44,6 +44,23 @@ export function collectionInstructionAmount(input: {
   return { ok: true, amountCents: input.signedBusinessPaysCents };
 }
 
+/** A pending command with no provider reference is unknown after this long. It is not sent again. */
+export const UNKNOWN_COMMAND_AFTER_MS = 15 * 60 * 1000;
+
+export function commandNeedsReconciliation(input: {
+  status: string;
+  attemptCount: number;
+  providerRef: string;
+  ageMs: number;
+}) {
+  return (
+    input.status === "pending" &&
+    input.attemptCount > 0 &&
+    !input.providerRef.trim() &&
+    input.ageMs >= UNKNOWN_COMMAND_AFTER_MS
+  );
+}
+
 /** A claimed or completed command is not sent again. A failed command can be tried three times. */
 export function commandMayDispatch(status: string, attemptCount: number) {
   if (status === "dispatched" || status === "confirmed") return false;
@@ -113,6 +130,21 @@ export async function claimProviderCommand(input: {
   });
   if (claimed.count !== 1) return { dispatch: false, reason: "Another worker claimed this command." };
   return { dispatch: true, commandId: row.id };
+}
+
+/** Marks a claimed command with no provider result as unknown. It does not send the command again. */
+export async function markUnknownProviderCommands(now = new Date()) {
+  const cutoff = new Date(now.getTime() - UNKNOWN_COMMAND_AFTER_MS);
+  const result = await prisma.providerCommand.updateMany({
+    where: {
+      status: "pending",
+      attemptCount: { gt: 0 },
+      providerRef: "",
+      updatedAt: { lt: cutoff },
+    },
+    data: { status: "unknown" },
+  });
+  return result.count;
 }
 
 export async function recordProviderCommandResult(input: {
