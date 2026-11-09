@@ -9,6 +9,7 @@ import {
   parseAmendmentCreators,
   parseAmendmentMilestones,
   readSignedTermsSnapshot,
+  recoverSignedTermsFromAgreement,
   sameDealError,
   submittedTermsDiffer,
   type SignedCreatorShare,
@@ -20,6 +21,66 @@ import {
 const CHANGE_REQUIRED =
   "These terms differ from the signed agreement. An approved change order is required before funding. Nothing was funded.";
 
+const MISSING_TERMS = "This signed agreement has no stored commercial terms. Nothing was funded.";
+
+type StoredAgreement = {
+  id: string;
+  status: string;
+  title: string;
+  workspaceId: string | null;
+  collaborationId: string | null;
+  applicationId: string | null;
+  teamProposalId: string | null;
+  createdAt: Date;
+  sourceJson: unknown;
+  renderedBody: string;
+  termsSnapshotJson: unknown;
+  parties: { role: string; name: string; creatorSlug: string | null; shareBps: number }[];
+};
+
+/** Keep a valid snapshot. When an older signed agreement has none, write one from the signed record. */
+export async function ensureStoredCommercialTerms(document: StoredAgreement) {
+  const existing = readSignedTermsSnapshot(document.termsSnapshotJson);
+  if (existing) return { ok: true as const, snapshot: existing, repaired: false as const };
+  if (document.status !== "signed") {
+    return { ok: false as const, error: "Funding waits until every party has signed." };
+  }
+  const recovered = recoverSignedTermsFromAgreement(document);
+  if (!recovered) return { ok: false as const, error: MISSING_TERMS };
+  await prisma.contractDocument.update({
+    where: { id: document.id },
+    data: { termsSnapshotJson: JSON.parse(JSON.stringify(recovered)) as object },
+  });
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: "contract-repair",
+        action: "contract.terms.recovered",
+        objectType: "ContractDocument",
+        objectId: document.id,
+        after: { currency: recovered.currency, grossCents: recovered.grossCents },
+      },
+    })
+    .catch(() => undefined);
+  return { ok: true as const, snapshot: recovered, repaired: true as const };
+}
+
+export async function repairSignedAgreements(ids?: string[]) {
+  if (ids && ids.length === 0) return 0;
+  const rows = await prisma.contractDocument.findMany({
+    where: { status: "signed", ...(ids ? { id: { in: ids } } : {}) },
+    include: { parties: true },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  let repaired = 0;
+  for (const row of rows) {
+    const result = await ensureStoredCommercialTerms(row);
+    if (result.ok && result.repaired) repaired += 1;
+  }
+  return repaired;
+}
+
 export async function fundSignedAgreement(input: {
   documentId: string;
   workspaceId: string;
@@ -29,7 +90,7 @@ export async function fundSignedAgreement(input: {
   const documentId = input.documentId.trim();
   const document = await prisma.contractDocument.findUnique({
     where: { id: documentId },
-    include: { amendments: { orderBy: { createdAt: "desc" }, take: 1 } },
+    include: { amendments: { orderBy: { createdAt: "desc" }, take: 1 }, parties: true },
   });
   if (!document) return { ok: false as const, error: "Contract not found." };
   if (document.status !== "signed") {
@@ -42,13 +103,9 @@ export async function fundSignedAgreement(input: {
     if (prior) return { ok: true as const, id: prior.id, status: prior.status, reused: true as const };
   }
 
-  const snapshot = readSignedTermsSnapshot(document.termsSnapshotJson);
-  if (!snapshot) {
-    return {
-      ok: false as const,
-      error: "This signed agreement has no stored commercial terms. Nothing was funded.",
-    };
-  }
+  const stored = await ensureStoredCommercialTerms(document);
+  if (!stored.ok) return stored;
+  const snapshot = stored.snapshot;
   const amendment = document.amendments[0]
     ? {
         grossCents: document.amendments[0].grossCents,

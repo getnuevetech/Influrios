@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionFundSignedContract } from "@/app/collaboration/contract/actions";
 import { contractFundingCta } from "@/lib/signed-funding";
+import { ensureStoredCommercialTerms } from "@/lib/signed-funding-apply";
 import { notFound, redirect } from "next/navigation";
 import { actionLogout } from "@/app/account/actions";
 import { actionPostContractMessage, actionSignNativeContract } from "@/app/collaboration/contracts/[id]/actions";
@@ -39,6 +40,10 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
     }),
   ]);
   if (!document) notFound();
+  if (document.status === "signed") {
+    const stored = await ensureStoredCommercialTerms(document).catch(() => null);
+    if (stored?.ok && stored.repaired) document.termsSnapshotJson = stored.snapshot as object;
+  }
   let party = account ? resolveContractPartyForAccount(document.parties, account) : undefined;
   if (party && account) party = await adoptUnboundContractParty(party, account);
   const adminOpen = admin

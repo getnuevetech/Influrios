@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionDeleteContractDocument, actionSaveContractTemplate, actionVoidContractDocument } from "@/app/admin/contracts/actions";
 import { contractMayBeDeleted, contractMayBeVoided } from "@/lib/signed-funding";
+import { repairSignedAgreements } from "@/lib/signed-funding-apply";
 import { hasPermission, isSuperAdmin } from "@/lib/admin-auth";
 import { requireAdminPage } from "@/app/admin/guard";
 import {
@@ -17,6 +18,7 @@ type Props = { searchParams: Promise<{ error?: string; saved?: string; deleted?:
 
 export default async function AdminContractsPage({ searchParams }: Props) {
   const session = await requireAdminPage("contracts");
+  await repairSignedAgreements().catch(() => 0);
   const params = await searchParams;
   const canEdit = hasPermission(session, "contracts.templates");
   const canDelete = isSuperAdmin(session);
