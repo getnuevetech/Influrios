@@ -10,6 +10,7 @@ import {
   agreedFeeFromSources,
   describeDealProgress,
   fundedShareBps,
+  parseScheduleCorrection,
   readSignedTermsSnapshot,
   sharePercentLabel,
   recoverSignedTermsFromAgreement,
@@ -39,6 +40,25 @@ const snapshot: SignedTermsSnapshot = {
   payoutMethod: "",
   lockedAt: "2026-11-08T00:00:00.000Z",
 };
+
+describe("schedule correction fields", () => {
+  it("requires labeled influencer and milestone shares to add up to 100", () => {
+    const ok = parseScheduleCorrection({
+      slugs: ["ag", ""],
+      creatorPercents: ["100", ""],
+      titles: ["Delivery"],
+      milestonePercents: ["100"],
+    });
+    assert.equal(ok.ok, true);
+    const short = parseScheduleCorrection({
+      slugs: ["ag"],
+      creatorPercents: ["60"],
+      titles: ["Delivery"],
+      milestonePercents: ["100"],
+    });
+    assert.equal(short.ok, false);
+  });
+});
 
 describe("agreed fee label", () => {
   it("keeps the currency with the amount", () => {

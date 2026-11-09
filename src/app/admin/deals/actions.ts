@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminSession, hasPermission, isSuperAdmin } from "@/lib/admin-auth";
+import { parseScheduleCorrection } from "@/lib/signed-funding";
 import { approveContractAmendment, voidContractDocument } from "@/lib/signed-funding-apply";
 
 function dollarsToCents(raw: string) {
@@ -40,30 +41,21 @@ export async function actionApproveDealAmendment(formData: FormData) {
   if (!isSuperAdmin(session) && !hasPermission(session, "contracts.manage")) {
     redirect(`/admin/deals/${id}?error=` + encodeURIComponent("A contract manager or super admin approves a change order."));
   }
-  const creators = String(formData.get("creators") ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [slug, share] = line.split(",").map((part) => part.trim());
-      return { slug, shareBps: Math.round(Number(share) * 100) };
-    });
-  const milestones = String(formData.get("milestones") ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [title, share] = line.split("|").map((part) => part.trim());
-      return { title, shareBps: Math.round(Number(share) * 100) };
-    });
+  const parsed = parseScheduleCorrection({
+    slugs: formData.getAll("creatorSlug").map(String),
+    creatorPercents: formData.getAll("creatorPercent").map(String),
+    titles: formData.getAll("milestoneTitle").map(String),
+    milestonePercents: formData.getAll("milestonePercent").map(String),
+  });
+  if (!parsed.ok) redirect(`/admin/deals/${id}?error=${encodeURIComponent(parsed.error)}`);
   const result = await approveContractAmendment({
     documentId: id,
     actor: session.email,
     note: String(formData.get("note") ?? ""),
     grossCents: dollarsToCents(String(formData.get("gross") ?? "")),
     currency: String(formData.get("currency") ?? ""),
-    creators,
-    milestones,
+    creators: parsed.creators,
+    milestones: parsed.milestones,
   });
   if (!result.ok) redirect(`/admin/deals/${id}?error=${encodeURIComponent(result.error)}`);
   revalidatePath(`/admin/deals/${id}`);

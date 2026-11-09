@@ -3,10 +3,11 @@ import { actionSaveCollaborationSettings, actionSetCollaborationStatus } from "@
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import {
-  COLLABORATION_STATUSES,
+  collaborationStatusChoices,
   getCollaborationSettings,
   listCollaborations,
 } from "@/lib/collaborations";
+import { prisma } from "@/lib/db";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
@@ -33,19 +34,34 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
 
   const directory = await getDirectory().catch(() => null);
   const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
+  const proposalIds = records.map((record) => record.id);
+  const agreements = proposalIds.length
+    ? await prisma.contractDocument.findMany({
+        where: { collaborationId: { in: proposalIds } },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, collaborationId: true, status: true, fundingId: true },
+      }).catch(() => [])
+    : [];
+  const agreementByProposal = new Map<string, (typeof agreements)[number]>();
+  for (const agreement of agreements) {
+    if (agreement.collaborationId && !agreementByProposal.has(agreement.collaborationId)) {
+      agreementByProposal.set(agreement.collaborationId, agreement);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-5xl">
       <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
         ← Admin
       </Link>
-      <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Collaborations</h1>
+      <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Proposals</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        The proposal window and commercial options are edited here. How many proposals a plan can send is the{" "}
-        <Link href="/admin/plans" className="font-semibold text-violet">
-          collaboration.proposals.max
-        </Link>{" "}
-        entitlement. Status changes follow draft, sent, accepted, declined, and withdrawn.
+        This page is only creator-to-creator proposals. It does not list campaign invitations, signed contracts, or
+        funding. An agreement created from a campaign lives on{" "}
+        <Link href="/admin/deals" className="font-semibold text-violet hover:underline">
+          Deals
+        </Link>
+        , even when this table is empty.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
@@ -57,7 +73,7 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
         <form action={actionSaveCollaborationSettings} className="mt-6 space-y-3 rounded-2xl border border-[#E4EBFF] bg-white p-5">
           <h2 className="font-display text-lg font-bold text-indigo">Proposal rules</h2>
           <label className="block text-sm font-semibold text-indigo">
-            Window in days
+            Days that count toward the plan limit
             <input
               name="windowDays"
               type="number"
@@ -67,9 +83,16 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
               disabled={!canEdit}
               className={inputClass}
             />
+            <span className="mt-1 block text-xs font-normal text-muted">
+              A sent proposal inside this many days counts toward{" "}
+              <Link href="/admin/plans" className="font-semibold text-violet">
+                collaboration.proposals.max
+              </Link>
+              . This does not set a contract fee.
+            </span>
           </label>
           <label className="block text-sm font-semibold text-indigo">
-            Commercial options
+            Choices for Commercial framing
             <textarea
               name="commercialOptions"
               rows={5}
@@ -77,8 +100,11 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
               disabled={!canEdit}
               className={inputClass}
             />
+            <span className="mt-1 block text-xs font-normal text-muted">
+              One choice per line, up to 12 lines of 80 characters. These are the options on Propose a collaboration.
+              They are not the gross amount or the milestone split on a signed agreement.
+            </span>
           </label>
-          <p className="text-xs text-muted">One option per line. These are the choices on the propose form.</p>
           {canEdit ? (
             <button type="submit" className="btn-primary w-fit">
               Save rules
@@ -93,56 +119,80 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
             <tr>
               <th className="px-4 py-3 font-semibold">Proposal</th>
               <th className="px-4 py-3 font-semibold">People</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Agreement</th>
+              <th className="px-4 py-3 font-semibold">Proposal status</th>
             </tr>
           </thead>
           <tbody>
             {records.map((record) => {
               const initiator = bySlug.get(record.initiatorSlug);
               const recipient = bySlug.get(record.recipientSlug);
+              const agreement = agreementByProposal.get(record.id);
+              const nextStatuses = collaborationStatusChoices(record.status);
+              const closed = nextStatuses.length <= 1;
               return (
                 <tr key={record.id} className="border-b border-[#E4EBFF] last:border-0">
                   <td className="px-4 py-3">
                     <Link href={`/admin/deals/${record.id}`} className="font-semibold text-indigo hover:text-violet">
                       {record.title}
                     </Link>
-                    <p className="text-xs text-muted">{record.commercial}</p>
+                    <p className="text-xs text-muted">Framing: {record.commercial || "Not set"}</p>
                   </td>
                   <td className="px-4 py-3 text-muted">
                     {initiator?.displayName ?? record.initiatorSlug} → {recipient?.displayName ?? record.recipientSlug}
                   </td>
+                  <td className="px-4 py-3 text-xs">
+                    {agreement ? (
+                      <Link href={`/admin/deals/${agreement.id}`} className="font-semibold text-violet hover:underline">
+                        {agreement.status}
+                        {agreement.fundingId ? " · funding linked" : " · no funding yet"}
+                      </Link>
+                    ) : (
+                      <span className="text-muted">No agreement yet</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
-                    <form action={actionSetCollaborationStatus} className="flex items-center gap-2">
-                      <input type="hidden" name="id" value={record.id} />
-                      <input
-                        name="reason"
-                        required
-                        minLength={8}
-                        placeholder="Reason"
-                        disabled={!canEdit}
-                        className="w-36 rounded-lg border border-border px-2 py-1 text-xs"
-                      />
-                      <select name="status" defaultValue={record.status} disabled={!canEdit} className="rounded-lg border border-border px-2 py-1">
-                        {COLLABORATION_STATUSES.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                      {canEdit ? (
-                        <button type="submit" className="text-xs font-semibold text-violet">
-                          Update
-                        </button>
-                      ) : null}
-                    </form>
+                    {closed ? (
+                      <p className="text-xs text-muted">{record.status}. This proposal is closed.</p>
+                    ) : (
+                      <form action={actionSetCollaborationStatus} className="flex flex-wrap items-center gap-2">
+                        <input type="hidden" name="id" value={record.id} />
+                        <label className="text-xs text-muted">
+                          Reason
+                          <input
+                            name="reason"
+                            required
+                            minLength={8}
+                            aria-label={`Reason for changing ${record.title}`}
+                            disabled={!canEdit}
+                            className="mt-1 block w-40 rounded-lg border border-border px-2 py-1 text-xs"
+                          />
+                        </label>
+                        <label className="text-xs text-muted">
+                          Next status
+                          <select name="status" defaultValue={record.status} disabled={!canEdit} className="mt-1 block rounded-lg border border-border px-2 py-1">
+                            {nextStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        {canEdit ? (
+                          <button type="submit" className="text-xs font-semibold text-violet">
+                            Update proposal
+                          </button>
+                        ) : null}
+                      </form>
+                    )}
                   </td>
                 </tr>
               );
             })}
             {records.length === 0 && !dbError ? (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-muted">
-                  No proposals yet.
+                <td colSpan={4} className="px-4 py-6 text-muted">
+                  No creator-to-creator proposals yet. Signed campaign agreements are on Deals.
                 </td>
               </tr>
             ) : null}

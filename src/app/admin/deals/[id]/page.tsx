@@ -24,6 +24,12 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
   const canVoid = isSuperAdmin(session);
   const canAmend = canVoid || hasPermission(session, "contracts.manage");
   const scheduleAmounts = terms ? splitGross(terms.grossCents, terms.milestones.map((row) => row.shareBps)) : null;
+  const creatorRows = terms?.creators.length
+    ? terms.creators.map((row) => ({ name: row.slug, percent: String(row.shareBps / 100) }))
+    : [{ name: "", percent: "" }];
+  const milestoneRows = terms?.milestones.length
+    ? terms.milestones.map((row) => ({ name: row.title, percent: String(row.shareBps / 100) }))
+    : [{ name: "", percent: "" }];
   const holdLabel = progress.hold
     ? `${formatMoney(progress.hold.amountCents, progress.hold.currency || funding?.currency || "USD")} on ${progress.hold.title}`
     : null;
@@ -244,20 +250,48 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
       </section>
 
       {contract && canAmend && contract.status === "signed" && !contract.fundingId ? (
-        <form action={actionApproveDealAmendment} className="space-y-3 rounded-2xl border border-[#E4EBFF] bg-white p-5">
-          <h2 className="font-display text-lg font-bold text-indigo">Correct the schedule before funding</h2>
+        <form action={actionApproveDealAmendment} className="space-y-4 rounded-2xl border border-[#E4EBFF] bg-white p-5">
+          <h2 className="font-display text-lg font-bold text-indigo">Replace the signed schedule</h2>
           <p className="text-xs text-muted">
-            Use this only when the signed schedule needs to be replaced. Creators are one per line as slug, percent.
-            Milestones are one per line as title | percent. Each list must add up to 100.
+            Use this only before funding starts, when the signed schedule itself must change. It does not create the
+            contract. Influencer shares must add up to 100%. Milestone shares must add up to 100%.
           </p>
           <input type="hidden" name="id" value={contract.id} />
-          <input name="gross" placeholder="Gross amount" defaultValue={terms ? String(terms.grossCents / 100) : ""} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          <input name="currency" placeholder="USD" defaultValue={terms?.currency ?? ""} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          <textarea name="creators" rows={3} placeholder={"creator-slug, 100"} defaultValue={terms?.creators.map((row) => `${row.slug}, ${row.shareBps / 100}`).join("\n") ?? ""} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          <textarea name="milestones" rows={3} placeholder={"Delivery | 100"} defaultValue={terms?.milestones.map((row) => `${row.title} | ${row.shareBps / 100}`).join("\n") ?? ""} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          <textarea name="note" required minLength={8} rows={2} placeholder="Why the terms changed" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          <label className="block text-sm font-semibold text-indigo">
+            Gross contract value
+            <input name="gross" type="number" min="0.01" step="0.01" required defaultValue={terms ? String(terms.grossCents / 100) : ""} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
+            <span className="mt-1 block text-xs font-normal text-muted">The full amount in the currency below. 11000 is eleven thousand, not cents.</span>
+          </label>
+          <label className="block text-sm font-semibold text-indigo">
+            Currency code
+            <input name="currency" required maxLength={3} minLength={3} defaultValue={terms?.currency ?? ""} placeholder="USD" className="mt-1 w-32 rounded-xl border border-border px-3 py-2 text-sm font-normal uppercase" />
+          </label>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-semibold text-indigo">Influencer shares</legend>
+            <p className="text-xs text-muted">Profile slug and that influencer’s percent of the compensation.</p>
+            {creatorRows.map((row, index) => (
+              <div key={`creator-${index}`} className="grid gap-2 sm:grid-cols-[1fr_8rem]">
+                <input name="creatorSlug" aria-label={`Influencer ${index + 1} profile slug`} defaultValue={row.name} placeholder="profile slug" className="rounded-xl border border-border px-3 py-2 text-sm" />
+                <input name="creatorPercent" aria-label={`Influencer ${index + 1} percent`} type="number" min="0.01" max="100" step="0.01" defaultValue={row.percent} placeholder="%" className="rounded-xl border border-border px-3 py-2 text-sm" />
+              </div>
+            ))}
+          </fieldset>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-semibold text-indigo">Milestone shares</legend>
+            <p className="text-xs text-muted">Title and that milestone’s percent of the gross. Funding uses these percentages.</p>
+            {milestoneRows.map((row, index) => (
+              <div key={`milestone-${index}`} className="grid gap-2 sm:grid-cols-[1fr_8rem]">
+                <input name="milestoneTitle" aria-label={`Milestone ${index + 1} title`} defaultValue={row.name} placeholder="Milestone title" className="rounded-xl border border-border px-3 py-2 text-sm" />
+                <input name="milestonePercent" aria-label={`Milestone ${index + 1} percent`} type="number" min="0.01" max="100" step="0.01" defaultValue={row.percent} placeholder="%" className="rounded-xl border border-border px-3 py-2 text-sm" />
+              </div>
+            ))}
+          </fieldset>
+          <label className="block text-sm font-semibold text-indigo">
+            Why this schedule is being replaced
+            <textarea name="note" required minLength={8} rows={2} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
+          </label>
           <button type="submit" className="btn-primary !py-2 text-sm">
-            Save corrected schedule
+            Save replacement schedule
           </button>
         </form>
       ) : null}
@@ -270,13 +304,17 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
             agreement is not available.
           </p>
           <input type="hidden" name="id" value={contract.id} />
-          <textarea name="reason" required minLength={8} rows={2} placeholder="Why this agreement should be voided" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          <label className="block text-sm font-semibold text-indigo">
+            Reason this agreement is voided
+            <textarea name="reason" required minLength={8} rows={2} className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal" />
+            <span className="mt-1 block text-xs font-normal text-muted">At least 8 characters. The PDF and signatures stay on record.</span>
+          </label>
           <button type="submit" className="text-sm font-semibold text-rose-700">
             Void agreement
           </button>
         </form>
       ) : null}
-      <p className="text-xs text-muted">Deal anchor {anchor}</p>
+      <p className="text-xs text-muted">Record id {anchor}. Open this deal again with that id.</p>
     </div>
   );
 }

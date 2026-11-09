@@ -11,6 +11,7 @@ import {
   proposalCountsTowardLimit,
   proposalDenialMessage,
   reasonList,
+  collaborationStatusChoices,
   transitionCollaboration,
 } from "./collaborations";
 
@@ -27,6 +28,11 @@ describe("collaboration states", () => {
     assert.equal(transitionCollaboration("draft", "accepted").ok, false);
     assert.equal(transitionCollaboration("sent", "declined").ok, true);
     assert.equal(transitionCollaboration("declined", "accepted").ok, false);
+  });
+
+  it("offers only the next legal proposal status", () => {
+    assert.deepEqual(collaborationStatusChoices("draft"), ["draft", "sent", "withdrawn"]);
+    assert.deepEqual(collaborationStatusChoices("accepted"), ["accepted"]);
   });
 
   it("rejects an unknown status", () => {
