@@ -81,24 +81,23 @@ export type ServiceLevelFeeCoverage = {
   influencer: { id: string; name: string; version: number }[];
 };
 
-/** A service level can be quoted only when both platform-fee purposes match it. Legacy rules do not count. */
+/** A service level lists every active rule that prices that side, including a rule saved before fee purpose existed. */
 export function serviceLevelFeeCoverage(rules: CollaborationFeeRule[]): ServiceLevelFeeCoverage[] {
   return SERVICE_LEVELS.map((serviceLevel) => {
-    const covers = (purpose: FeePurpose, payer: FeePayer) =>
+    const covers = (side: "business" | "influencer") =>
       rules
         .filter(
           (rule) =>
             rule.active &&
-            rule.purpose === purpose &&
-            rule.payer === payer &&
+            feeRuleSide(rule) === side &&
             (rule.serviceLevel === serviceLevel || rule.serviceLevel === "*"),
         )
         .map((rule) => ({ id: rule.id, name: rule.name, version: rule.version }));
     return {
       serviceLevel,
       label: SERVICE_LEVEL_LABELS[serviceLevel],
-      business: covers("business_platform_fee", "brand"),
-      influencer: covers("influencer_platform_fee", "creator"),
+      business: covers("business"),
+      influencer: covers("influencer"),
     };
   });
 }
@@ -118,6 +117,29 @@ export const FEE_TYPE_LABELS: Record<FeeType, string> = {
 export function asFeePurpose(value: string | undefined | null): FeePurpose {
   if (value && (FEE_PURPOSES as readonly string[]).includes(value)) return value as FeePurpose;
   return "legacy";
+}
+
+/**
+ * Which side of a contract this rule prices.
+ * A rule saved before fee purpose existed is stored as legacy. That default follows the payer
+ * the admin already chose. An explicit legacy purpose with a split payer is not applied.
+ */
+export function feeRuleSide(rule: { payer?: string | null; purpose?: string | null }): "business" | "influencer" | null {
+  if (rule.payer === "split") return null;
+  if (rule.purpose === "business_platform_fee" && rule.payer === "brand") return "business";
+  if (rule.purpose === "influencer_platform_fee" && rule.payer === "creator") return "influencer";
+  if (rule.purpose === "legacy" || rule.purpose == null || rule.purpose === "") {
+    if (rule.payer === "brand") return "business";
+    if (rule.payer === "creator") return "influencer";
+  }
+  return null;
+}
+
+export function feeRulePurposeLabel(rule: { payer?: string | null; purpose?: string | null }) {
+  const side = feeRuleSide(rule);
+  if (side === "business") return FEE_PURPOSE_LABELS.business_platform_fee;
+  if (side === "influencer") return FEE_PURPOSE_LABELS.influencer_platform_fee;
+  return "Not applied to a new deal";
 }
 
 export function asFeeType(value: string | undefined | null): FeeType {
