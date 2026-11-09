@@ -29,6 +29,21 @@ export function releaseInstructionAmount(input: {
   return { ok: true, amountCents: input.signedInfluencerReceivesCents };
 }
 
+/** A signed deal collects the business total. Any other amount is not sent. */
+export function collectionInstructionAmount(input: {
+  fundingGrossCents: number;
+  signedBusinessPaysCents?: number | null;
+}): { ok: true; amountCents: number } | { ok: false; error: string } {
+  if (!Number.isInteger(input.fundingGrossCents) || input.fundingGrossCents <= 0) {
+    return { ok: false, error: "Collection needs a positive integer amount." };
+  }
+  if (input.signedBusinessPaysCents == null) return { ok: true, amountCents: input.fundingGrossCents };
+  if (input.fundingGrossCents !== input.signedBusinessPaysCents) {
+    return { ok: false, error: "The collection instruction does not match the signed business payment." };
+  }
+  return { ok: true, amountCents: input.signedBusinessPaysCents };
+}
+
 /** A claimed or completed command is not sent again. A failed command can be tried three times. */
 export function commandMayDispatch(status: string, attemptCount: number) {
   if (status === "dispatched" || status === "confirmed") return false;
@@ -50,7 +65,10 @@ export async function claimProviderCommand(input: {
   operation: ProviderOperation;
   amountCents: number;
   currency: string;
-}): Promise<{ dispatch: true; commandId: string } | { dispatch: false; reason: string }> {
+}): Promise<
+  | { dispatch: true; commandId: string }
+  | { dispatch: false; reason: string; providerRef?: string }
+> {
   const operationKey = providerOperationKey(input);
   const currency = input.currency.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) return { dispatch: false, reason: "The command currency is missing." };
@@ -80,7 +98,11 @@ export async function claimProviderCommand(input: {
   }
   const row = existing ?? (await prisma.providerCommand.findUnique({ where: { operationKey } }));
   if (!row || !commandMayDispatch(row.status, row.attemptCount)) {
-    return { dispatch: false, reason: "This provider command was already sent." };
+    return {
+      dispatch: false,
+      reason: "This provider command was already sent.",
+      providerRef: row?.providerRef || undefined,
+    };
   }
   if (row.amountCents !== input.amountCents || row.currency !== currency) {
     return { dispatch: false, reason: "The stored command amount does not match this instruction." };

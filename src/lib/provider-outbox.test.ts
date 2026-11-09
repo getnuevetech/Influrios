@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { commandMayDispatch, providerOperationKey, releaseInstructionAmount } from "./provider-outbox";
+import { collectionInstructionAmount, commandMayDispatch, providerOperationKey, releaseInstructionAmount } from "./provider-outbox";
 
 describe("provider command outbox", () => {
   it("uses one key per agreement version and operation", () => {
@@ -45,5 +45,20 @@ describe("provider command outbox", () => {
     assert.ok(claim > 0 && send > claim);
     const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
     assert.equal(ledger.includes("activeShareSnapshot"), false);
+    const collection = collectionInstructionAmount({ fundingGrossCents: 375_000, signedBusinessPaysCents: 375_000 });
+    assert.equal(collection.ok, true);
+    if (!collection.ok) return;
+    assert.equal(collection.amountCents, 375_000);
+    const wrongCollection = collectionInstructionAmount({ fundingGrossCents: 350_000, signedBusinessPaysCents: 375_000 });
+    assert.equal(wrongCollection.ok, false);
+    const key = providerOperationKey({ agreementVersion: 1, fundingId: "fund-1", operation: "collection" });
+    assert.equal(key, "v1:fund-1:funding:collection");
+    const checkout = readFileSync("src/lib/provider-collection.ts", "utf8");
+    const checkoutClaim = checkout.indexOf("claimProviderCommand");
+    assert.ok(checkoutClaim > 0);
+    assert.ok(checkout.indexOf("createFlutterwaveCharge({") > checkoutClaim);
+    assert.ok(checkout.indexOf("createMpesaCharge({") > checkoutClaim);
+    assert.ok(checkout.indexOf("openAirwallexFundingCollection({") > checkoutClaim);
+    assert.equal(checkout.includes("recordProviderCommandResult"), true);
   });
 });

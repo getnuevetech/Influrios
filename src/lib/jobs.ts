@@ -1026,7 +1026,20 @@ export async function runScheduledReleaseSweep(now = new Date()) {
       releasableCents: amount,
       signedInfluencerReceivesCents: signed?.influencerReceivesCents ?? null,
     });
-    if (!planned.ok) continue;
+    if (!planned.ok) {
+      await prisma.auditLog
+        .create({
+          data: {
+            actor: "system",
+            action: "milestone_release_skipped",
+            objectType: "FundingMilestone",
+            objectId: milestone.id,
+            after: { fundingId: milestone.fundingId, error: planned.error, at: now.toISOString() },
+          },
+        })
+        .catch(() => undefined);
+      continue;
+    }
     const agreementVersion =
       plan && typeof plan === "object" && "signedQuote" in plan
         ? Number((plan as { signedQuote?: { agreementVersion?: number } }).signedQuote?.agreementVersion ?? 1)
@@ -1054,12 +1067,18 @@ export async function runScheduledReleaseSweep(now = new Date()) {
     const adapter = await adapterForProvider(milestone.funding.providerCode, {
       verifySignature: verifyMarketplaceSignature,
     });
-    const instruction = await adapter.createReleaseOrTransfer({
-      fundingId: milestone.fundingId,
-      milestoneId: milestone.id,
-      amountCents: planned.amountCents,
-      shares: lines?.map((line) => ({ label: line.label, amountCents: line.amountCents })),
-    });
+    let instruction: Awaited<ReturnType<typeof adapter.createReleaseOrTransfer>>;
+    try {
+      instruction = await adapter.createReleaseOrTransfer({
+        fundingId: milestone.fundingId,
+        milestoneId: milestone.id,
+        amountCents: planned.amountCents,
+        shares: lines?.map((line) => ({ label: line.label, amountCents: line.amountCents })),
+      });
+    } catch {
+      await recordProviderCommandResult({ commandId: claim.commandId, ok: false });
+      continue;
+    }
     if (!instruction.ok) {
       await recordProviderCommandResult({ commandId: claim.commandId, ok: false });
       continue;
