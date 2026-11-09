@@ -402,6 +402,11 @@ export type AdminAuthStore = {
   users: AdminUser[];
 };
 
+/** Contract deletion is limited to the Super Admin role. Other admin levels cannot grant it. */
+export function isSuperAdmin(session: { roleId?: string | null } | null | undefined) {
+  return session?.roleId === "role_super";
+}
+
 export type AdminSession = {
   userId: string;
   email: string;

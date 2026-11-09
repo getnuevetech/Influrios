@@ -610,6 +610,16 @@ export function buildContractChromePdf(document: ContractChromeDocument): {
   return { body, upgraded, pdf };
 }
 
+/** A live agreement already exists. Sending again would create a second contract. */
+export function signatureSendBlocked(existing: { status: string } | null | undefined): string | null {
+  const status = (existing?.status ?? "").trim();
+  if (!status || status === "voided" || status === "declined") return null;
+  if (status === "signed") {
+    return "This agreement is already signed. Send for signature stays off so a second contract is not created.";
+  }
+  return "This agreement was already sent for signature. Send for signature stays off so a second contract is not created.";
+}
+
 export function fundingAllowedBySignature(status: string): { ok: true } | { ok: false; error: string } {
   if (status === "signed") return { ok: true };
   return {
@@ -802,6 +812,42 @@ export async function resolveCreatorParties(
   return { ok: true, parties };
 }
 
+export async function findLiveContractForDeal(input: {
+  applicationId?: string | null;
+  collaborationId?: string | null;
+  teamProposalId?: string | null;
+}) {
+  const or = [
+    input.applicationId?.trim() ? { applicationId: input.applicationId.trim() } : null,
+    input.collaborationId?.trim() ? { collaborationId: input.collaborationId.trim() } : null,
+    input.teamProposalId?.trim() ? { teamProposalId: input.teamProposalId.trim() } : null,
+  ].filter((row): row is { applicationId: string } | { collaborationId: string } | { teamProposalId: string } => Boolean(row));
+  if (or.length === 0) return null;
+  return prisma.contractDocument.findFirst({
+    where: { status: { notIn: ["voided", "declined"] }, OR: or },
+    select: { id: true, status: true, title: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function deleteContractDocumentAsSuperAdmin(id: string) {
+  const documentId = id.trim();
+  if (!documentId) return { ok: false as const, error: "Contract not found." };
+  const document = await prisma.contractDocument.findUnique({
+    where: { id: documentId },
+    select: { id: true, fundingId: true },
+  });
+  if (!document) return { ok: false as const, error: "Contract not found." };
+  if (document.fundingId) {
+    return {
+      ok: false as const,
+      error: "This contract already started funding. It was not deleted.",
+    };
+  }
+  await prisma.contractDocument.delete({ where: { id: document.id } });
+  return { ok: true as const };
+}
+
 export async function sendCollaborationContract(input: {
   render: ContractRenderInput;
   workspaceId: string;
@@ -815,6 +861,15 @@ export async function sendCollaborationContract(input: {
   const creators = input.render.parties.filter((party) => party.role === "creator");
   if (!business?.email || creators.length < 1) {
     return { ok: false as const, error: "The agreement needs the business and at least one creator email. Nothing was signed." };
+  }
+  const existing = await findLiveContractForDeal({
+    applicationId: input.applicationId,
+    collaborationId: input.collaborationId,
+    teamProposalId: input.teamProposalId,
+  });
+  const duplicate = signatureSendBlocked(existing);
+  if (duplicate) {
+    return { ok: false as const, error: duplicate, existingId: existing?.id ?? null };
   }
   const template = await ensureContractTemplate();
   const renderedBody = renderContractBody(template.body, {

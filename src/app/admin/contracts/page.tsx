@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { actionSaveContractTemplate } from "@/app/admin/contracts/actions";
-import { hasPermission } from "@/lib/admin-auth";
+import { actionDeleteContractDocument, actionSaveContractTemplate } from "@/app/admin/contracts/actions";
+import { hasPermission, isSuperAdmin } from "@/lib/admin-auth";
 import { requireAdminPage } from "@/app/admin/guard";
 import {
   CONTRACT_VARIABLES,
@@ -12,12 +12,13 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contracts · Admin" };
 
-type Props = { searchParams: Promise<{ error?: string; saved?: string }> };
+type Props = { searchParams: Promise<{ error?: string; saved?: string; deleted?: string }> };
 
 export default async function AdminContractsPage({ searchParams }: Props) {
   const session = await requireAdminPage("contracts");
   const params = await searchParams;
   const canEdit = hasPermission(session, "contracts.templates");
+  const canDelete = isSuperAdmin(session);
   const template = await ensureContractTemplate().catch(() => null);
   const documents = await prisma.contractDocument
     .findMany({
@@ -36,8 +37,9 @@ export default async function AdminContractsPage({ searchParams }: Props) {
         <div>
           <h1 className="font-display text-3xl font-bold text-indigo">Contracts</h1>
           <p className="mt-2 max-w-3xl text-sm text-muted">
-            Sent agreements, signature progress, and the collaboration template. Signing channel (in-app or DocuSign)
-            is configured under{" "}
+            Sent agreements, signature progress, and the collaboration template. A business or influencer cannot delete
+            a contract. Only a super admin can remove an agreement that was created twice. Signing channel (in-app or
+            DocuSign) is configured under{" "}
             <Link href="/admin/signing" className="font-semibold text-violet hover:underline">
               Document signing
             </Link>
@@ -49,6 +51,7 @@ export default async function AdminContractsPage({ searchParams }: Props) {
         </Link>
       </div>
       {params.saved ? <p className="mt-3 text-sm font-semibold text-emerald-700">Template saved.</p> : null}
+      {params.deleted ? <p className="mt-3 text-sm font-semibold text-emerald-700">Contract deleted.</p> : null}
       {params.error ? <p className="mt-3 text-sm font-semibold text-amber-800">{params.error}</p> : null}
 
       <section className="mt-8 rounded-2xl border border-[#E4EBFF] bg-white p-5">
@@ -58,15 +61,15 @@ export default async function AdminContractsPage({ searchParams }: Props) {
         </p>
 
         <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-violet">Fully signed</h3>
-        <ContractAdminList documents={signed} empty="No fully signed agreements yet." />
+        <ContractAdminList documents={signed} empty="No fully signed agreements yet." canDelete={canDelete} />
 
         <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-violet">Awaiting signatures</h3>
-        <ContractAdminList documents={awaiting} empty="No agreements waiting for signatures." />
+        <ContractAdminList documents={awaiting} empty="No agreements waiting for signatures." canDelete={canDelete} />
 
         {other.length > 0 ? (
           <>
             <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-violet">Other</h3>
-            <ContractAdminList documents={other} empty="" />
+            <ContractAdminList documents={other} empty="" canDelete={canDelete} />
           </>
         ) : null}
       </section>
@@ -107,6 +110,7 @@ export default async function AdminContractsPage({ searchParams }: Props) {
 function ContractAdminList({
   documents,
   empty,
+  canDelete,
 }: {
   documents: {
     id: string;
@@ -114,9 +118,11 @@ function ContractAdminList({
     status: string;
     signingChannel: string;
     createdAt: Date;
+    fundingId?: string | null;
     parties: { name: string; email: string; role: string; status: string }[];
   }[];
   empty: string;
+  canDelete: boolean;
 }) {
   if (documents.length === 0) {
     return empty ? <p className="mt-2 text-sm text-muted">{empty}</p> : null;
@@ -149,12 +155,26 @@ function ContractAdminList({
                     .join(" · ")}
                 </p>
               </div>
+              <div className="flex flex-col items-end gap-2">
               <Link
                 href={`/collaboration/contracts/${document.id}`}
                 className="text-xs font-semibold text-violet hover:underline"
               >
                 Open →
               </Link>
+              {canDelete && !document.fundingId ? (
+                <form action={actionDeleteContractDocument} className="text-right">
+                  <input type="hidden" name="id" value={document.id} />
+                  <label className="flex items-center justify-end gap-1 text-[11px] text-muted">
+                    <input type="checkbox" name="confirm" className="accent-rose-600" />
+                    Delete this duplicate
+                  </label>
+                  <button type="submit" className="mt-1 text-[11px] font-semibold text-rose-700">
+                    Delete contract
+                  </button>
+                </form>
+              ) : null}
+              </div>
             </div>
           </li>
         );

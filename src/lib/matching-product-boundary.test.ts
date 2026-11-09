@@ -11,6 +11,7 @@ import {
   matchingStageImpliesProtectedPayment,
   paymentDealDraft,
   requireFundableServiceLevel,
+  signedAgreementFundingLevel,
 } from "./matching-product-boundary";
 
 describe("matching product boundary (W4 / R073)", () => {
@@ -60,6 +61,15 @@ describe("requireFundableServiceLevel (W3.2)", () => {
     const unknown = requireFundableServiceLevel("vip_concierge");
     assert.equal(unknown.ok, false);
     if (!unknown.ok) assert.match(unknown.error, /not recognized/i);
+  });
+
+  it("funds a signed agreement even when the wizard still says discovery", () => {
+    assert.equal(signedAgreementFundingLevel("discovery"), "contracted");
+    assert.equal(signedAgreementFundingLevel("platform_match"), "contracted");
+    assert.equal(signedAgreementFundingLevel(""), "contracted");
+    assert.equal(signedAgreementFundingLevel("managed_campaign"), "managed_campaign");
+    const unsigned = requireFundableServiceLevel("discovery");
+    assert.equal(unsigned.ok, false);
   });
 
   it("refuses discovery / platform_match and accepts fundable levels", () => {

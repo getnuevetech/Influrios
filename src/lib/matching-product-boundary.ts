@@ -57,6 +57,17 @@ export function requireFundableServiceLevel(
   return { ok: true, serviceLevel: alias as FundableServiceLevel };
 }
 
+/**
+ * A signed agreement is already a contracted collaboration.
+ * Discovery or platform-match left on the wizard must not block funding.
+ * An unsigned deal still has to choose a fundable level.
+ */
+export function signedAgreementFundingLevel(level: string | null | undefined): FundableServiceLevel {
+  const checked = requireFundableServiceLevel(level);
+  if (checked.ok) return checked.serviceLevel;
+  return "contracted";
+}
+
 /** A new prefund stores the business, creator, title, jurisdiction, amount, and service level that were entered. */
 export function paymentDealDraft(input: {
   businessName?: string | null;
