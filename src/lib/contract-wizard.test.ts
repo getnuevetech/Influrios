@@ -395,4 +395,18 @@ describe("contract wizard fields", () => {
     assert.match(page, /requireBusinessSession\("\/collaboration\/contract"\)/);
     assert.match(actions, /requireBusinessSession\(BASE\)/);
   });
+
+  it("fills a contract from the accepted request and locks admin milestone templates", () => {
+    const page = readFileSync("src/app/collaboration/contract/page.tsx", "utf8");
+    const milestones = readFileSync("src/components/contract-milestones.tsx", "utf8");
+    const contracts = readFileSync("src/app/collaboration/contracts/page.tsx", "utf8");
+    assert.match(page, /applicationForContract/);
+    assert.match(page, /contractTermsFromRequest/);
+    assert.equal(page.includes("Gross value (USD)"), false);
+    assert.equal(page.includes('?? "USD"'), false);
+    assert.match(milestones, /readOnly=\{!custom\}/);
+    assert.match(milestones, /Choose Custom schedule before changing a milestone/);
+    assert.equal(contracts.includes("/collaboration/contract?creator="), false);
+    assert.match(contracts, /contractHrefFromCampaign/);
+  });
 });

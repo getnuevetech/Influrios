@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { actionPostBusinessRequest } from "@/app/collaboration/business/actions";
 import { Panel, StatusPill, TextLink } from "@/components/dashboard-ui";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { campaignEditLocked } from "@/lib/campaign-contract";
+import { listWorkspaceBusinessRequests } from "@/lib/marketplace-listings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Campaigns & drafts" };
@@ -32,6 +34,8 @@ export default async function BusinessCampaignsPage() {
   const briefs = [...workspace.briefs].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const drafts = briefs.filter((brief) => brief.status === "draft");
   const active = briefs.filter((brief) => brief.status !== "draft");
+  const published = await listWorkspaceBusinessRequests(workspace.businessId).catch(() => []);
+  const publishedBriefIds = new Set(published.map((row) => row.briefId).filter((id): id is string => Boolean(id)));
 
   return (
     <div className="space-y-5">
@@ -68,8 +72,16 @@ export default async function BusinessCampaignsPage() {
                     href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
                     className="text-xs font-bold text-violet hover:underline"
                   >
-                    Open →
+                    Save
                   </Link>
+                  {publishedBriefIds.has(brief.id) ? null : (
+                    <form action={actionPostBusinessRequest}>
+                      <input type="hidden" name="briefId" value={brief.id} />
+                      <button type="submit" className="text-xs font-bold text-indigo hover:underline">
+                        Publish
+                      </button>
+                    </form>
+                  )}
                 </div>
               </li>
             ))}
@@ -102,12 +114,22 @@ export default async function BusinessCampaignsPage() {
                   {campaignEditLocked(brief) ? (
                     <span className="text-xs font-semibold text-muted">Locked</span>
                   ) : (
-                    <Link
-                      href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
-                      className="text-xs font-bold text-violet hover:underline"
-                    >
-                      Open →
-                    </Link>
+                    <>
+                      <Link
+                        href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
+                        className="text-xs font-bold text-violet hover:underline"
+                      >
+                        Save
+                      </Link>
+                      {publishedBriefIds.has(brief.id) ? null : (
+                        <form action={actionPostBusinessRequest}>
+                          <input type="hidden" name="briefId" value={brief.id} />
+                          <button type="submit" className="text-xs font-bold text-indigo hover:underline">
+                            Publish
+                          </button>
+                        </form>
+                      )}
+                    </>
                   )}
                 </div>
               </li>

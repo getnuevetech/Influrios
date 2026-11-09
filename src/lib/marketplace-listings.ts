@@ -868,6 +868,11 @@ export type MarketplaceApplicationRow = {
   /** Creator slug on either side of the application. */
   creatorSlug: string | null;
   requestBrand: string | null;
+  requestBudget: string | null;
+  requestCurrency: string | null;
+  requestSummary: string | null;
+  requestBriefId: string | null;
+  requestDeliverables: string | null;
   opportunityLookingFor: string | null;
   nextStatuses: MarketplaceApplicationStatus[];
   events: MarketplaceApplicationEventRow[];
@@ -889,7 +894,14 @@ function mapApplication(row: {
   status: string;
   note: string | null;
   createdAt: Date;
-  businessRequest?: { brand: string } | null;
+  businessRequest?: {
+    brand: string;
+    budget?: string | null;
+    currency?: string | null;
+    summary?: string | null;
+    briefId?: string | null;
+    deliverableSummary?: string | null;
+  } | null;
   opportunity?: { lookingFor: string } | null;
   events?: {
     id: string;
@@ -920,6 +932,11 @@ function mapApplication(row: {
     createdAt: row.createdAt.toISOString(),
     creatorSlug,
     requestBrand: row.businessRequest?.brand ?? null,
+    requestBudget: row.businessRequest?.budget ?? null,
+    requestCurrency: row.businessRequest?.currency ?? null,
+    requestSummary: row.businessRequest?.summary ?? null,
+    requestBriefId: row.businessRequest?.briefId ?? null,
+    requestDeliverables: row.businessRequest?.deliverableSummary ?? null,
     opportunityLookingFor: row.opportunity?.lookingFor ?? null,
     nextStatuses: nextApplicationStatuses(status),
     events: (row.events ?? []).map((event) => ({
@@ -950,6 +967,8 @@ export async function getMarketplaceApplication(id: string): Promise<Marketplace
           workspaceId: true,
           status: true,
           currency: true,
+          briefId: true,
+          deliverableSummary: true,
         },
       },
       opportunity: { select: { lookingFor: true, summary: true, creatorSlug: true } },
@@ -991,6 +1010,8 @@ export async function getMarketplaceApplicationDetail(
           imageUrl: true,
           workspaceId: true,
           currency: true,
+          briefId: true,
+          deliverableSummary: true,
         },
       },
       opportunity: { select: { lookingFor: true, summary: true } },
@@ -1042,7 +1063,9 @@ export async function listMarketplaceApplications(input?: {
   const rows = await prisma.marketplaceApplication.findMany({
     where: clauses.length ? { AND: clauses } : undefined,
     include: {
-      businessRequest: { select: { brand: true } },
+      businessRequest: {
+        select: { brand: true, budget: true, currency: true, summary: true, briefId: true, deliverableSummary: true },
+      },
       opportunity: { select: { lookingFor: true } },
       events: { orderBy: { createdAt: "asc" } },
     },
@@ -1051,6 +1074,40 @@ export async function listMarketplaceApplications(input?: {
   });
   const mapped = rows.map(mapApplication);
   return input?.creatorSlug ? invitationsVisibleTo(mapped, input.creatorSlug) : mapped;
+}
+
+/**
+ * The request a contract should copy.
+ * A chosen application wins. Otherwise the newest accepted request for that influencer.
+ */
+export async function applicationForContract(input: {
+  applicationId?: string;
+  creatorSlug?: string;
+  businessRequestIds: string[];
+  briefIds: string[];
+}): Promise<MarketplaceApplicationDetail | null> {
+  const requestIds = input.businessRequestIds;
+  const briefIds = input.briefIds;
+  const owns = (row: { businessRequestId?: string | null; briefId?: string | null }) =>
+    businessOwnsApplication(row, requestIds, briefIds);
+  const id = input.applicationId?.trim();
+  if (id) {
+    const row = await getMarketplaceApplicationDetail(id);
+    if (row && owns(row)) return row;
+  }
+  const slug = input.creatorSlug?.trim();
+  if (!slug || (!requestIds.length && !briefIds.length)) return null;
+  const rows = await listMarketplaceApplications({
+    businessRequestIds: requestIds,
+    briefIds,
+    limit: 40,
+  });
+  const match = rows.find(
+    (row) =>
+      row.creatorSlug === slug &&
+      (row.status === "ACCEPTED" || row.status === "COLLABORATION_DRAFTED"),
+  );
+  return match ? getMarketplaceApplicationDetail(match.id) : null;
 }
 
 /** Human labels for hub transition buttons. */
