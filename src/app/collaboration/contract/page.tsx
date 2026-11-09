@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ContractInfluencerField } from "@/components/contract-influencer-field";
 import { ContractMilestones } from "@/components/contract-milestones";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -34,7 +35,7 @@ import { hasCurrentLegalRecord } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
 import { publicStoredImage } from "@/lib/seed-data";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
-import { applicationForContract, listWorkspaceBusinessRequests } from "@/lib/marketplace-listings";
+import { acceptedContractChoices, applicationForContract, listWorkspaceBusinessRequests } from "@/lib/marketplace-listings";
 import {
   buildPayoutFeeFxQuote,
   computePayoutReadiness,
@@ -151,12 +152,19 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const ownedRequests = await listWorkspaceBusinessRequests(ws.businessId).catch(() => []);
   const creatorHint =
     (params.creator ?? "").trim() || linkedCollab?.recipientSlug || linkedCollab?.initiatorSlug || "";
+  const ownedRequestIds = ownedRequests.map((row) => row.id);
+  const ownedBriefIds = ws.briefs.map((brief) => brief.id);
   const source = await applicationForContract({
     applicationId: requestedApplicationId,
     creatorSlug: creatorHint,
-    businessRequestIds: ownedRequests.map((row) => row.id),
-    briefIds: ws.briefs.map((brief) => brief.id),
+    businessRequestIds: ownedRequestIds,
+    briefIds: ownedBriefIds,
   }).catch(() => null);
+  const acceptedChoices = await acceptedContractChoices({
+    creatorSlug: creatorHint || source?.creatorSlug || "",
+    businessRequestIds: ownedRequestIds,
+    briefIds: ownedBriefIds,
+  }).catch(() => []);
   const applicationId = source?.id || requestedApplicationId;
 
   const briefId = (params.brief ?? "").trim() || source?.briefId || source?.requestBriefId || "";
@@ -474,27 +482,32 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 </p>
               </div>
             ) : (
-            <label className="mt-4 block text-sm font-semibold text-indigo">
-              Influencer
-              <select
-                name="creatorSlug"
-                required
-                defaultValue={creatorSlug}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-violet"
-              >
-                <option value="">Select influencer…</option>
-                {influencerOptions.map((c) =>
-                  c ? (
-                    <option key={c.slug} value={c.slug}>
-                      {c.displayName}
-                    {[c.locationCity, c.locationCountry].filter(Boolean).length
-                      ? ` · ${[c.locationCity, c.locationCountry].filter(Boolean).join(", ")}`
-                      : ""}
-                    </option>
-                  ) : null,
-                )}
-              </select>
-            </label>
+            <ContractInfluencerField
+              creatorSlug={creatorSlug}
+              applicationId={applicationId}
+              options={influencerOptions.flatMap((creator) =>
+                creator
+                  ? [
+                      {
+                        slug: creator.slug,
+                        label: [
+                          creator.displayName,
+                          [creator.locationCity, creator.locationCountry].filter(Boolean).join(", "),
+                        ]
+                          .filter(Boolean)
+                          .join(" · "),
+                      },
+                    ]
+                  : [],
+              )}
+              requests={acceptedChoices.map((choice) => ({
+                id: choice.id,
+                title:
+                  ws.briefs.find((brief) => brief.id === (choice.briefId || choice.requestBriefId))?.title ||
+                  choice.requestBrand ||
+                  "Accepted request",
+              }))}
+            />
             )}
             {creator ? (
               <div className="mt-3 flex items-center gap-3 rounded-xl bg-[#F4F7FF] p-3">

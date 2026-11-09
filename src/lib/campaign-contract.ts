@@ -1,6 +1,16 @@
 import type { CampaignBrief } from "@/lib/business";
+import { corridorCountries, corridorCountryByCode } from "@/lib/corridor-countries";
 
-/** Parse a campaign budget string into a dollar amount for the contract wizard. */
+/** Currency letters for a country name or ISO code. Blank when the place is unknown. */
+export function currencyForPlaceName(place: string | null | undefined): string | null {
+  const raw = (place ?? "").trim();
+  if (!raw) return null;
+  if (/^[A-Za-z]{2}$/.test(raw)) return corridorCountryByCode(raw)?.currency ?? null;
+  const needle = raw.toLowerCase();
+  return corridorCountries().find((row) => row.name.toLowerCase() === needle)?.currency ?? null;
+}
+
+/** Parse a campaign budget string into an amount for the contract wizard. */
 export function budgetToGrossDollars(budget: string, currency?: string | null): string {
   const raw = budget.trim();
   if (!raw) return "";

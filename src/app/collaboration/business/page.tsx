@@ -5,7 +5,7 @@ import { IconArrowRight, IconShieldPay, IconUsers } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { leadLabel, leadTransitions, parseLocationParts } from "@/lib/business";
-import { contractHrefFromCampaign, contractOfferReady } from "@/lib/campaign-contract";
+import { contractHrefFromCampaign, contractOfferReady, currencyForPlaceName } from "@/lib/campaign-contract";
 import { loadBusinessHub, PIPELINE_STAGES } from "@/lib/collaboration-hub";
 import { listCatalogOptions } from "@/lib/catalog-options";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
@@ -98,13 +98,17 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
     listCatalogOptions("timeframe").catch(() => []),
     listFxRates().catch(() => []),
   ]);
-  const currencyOptions = ["USD", ...fxRates.filter((row) => row.active).map((row) => row.currency)];
+  const intentLocation = parseLocationParts(hub.intentBrief?.location ?? "");
+  const campaignCurrency =
+    hub.intentBrief?.budgetCurrency || currencyForPlaceName(intentLocation.country) || "USD";
+  const currencyOptions = [
+    ...new Set([campaignCurrency, "USD", ...fxRates.filter((row) => row.active).map((row) => row.currency)]),
+  ];
 
   // Form only when intentionally opened (?intent=new|<id>). Save redirects clear intent.
   const intentLocked = hub.intentBrief?.status === "closed";
   const showIntentForm =
     params.intent === "new" || (Boolean(hub.intentBrief) && !intentLocked);
-  const intentLocation = parseLocationParts(hub.intentBrief?.location ?? "");
 
   return (
     <div className="bg-[#F4F7FF]">
@@ -280,12 +284,12 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             Save
                           </Link>
                           {hub.publishedBriefIds.includes(brief.id) ? null : (
-                            <form action={actionPostBusinessRequest}>
-                              <input type="hidden" name="briefId" value={brief.id} />
-                              <button type="submit" className="text-xs font-bold text-indigo hover:underline">
-                                Publish
-                              </button>
-                            </form>
+                            <Link
+                              href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#publish`}
+                              className="text-xs font-bold text-indigo hover:underline"
+                            >
+                              Publish
+                            </Link>
                           )}
                         </>
                       )}
@@ -383,7 +387,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 <div className="mt-1 flex gap-2">
                   <select
                     name="budgetCurrency"
-                    defaultValue={hub.intentBrief?.budgetCurrency ?? "USD"}
+                    defaultValue={campaignCurrency}
                     className="w-24 rounded-xl border border-border px-2 py-2 text-sm font-medium"
                   >
                     {currencyOptions.map((code) => (
@@ -457,7 +461,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             </form>
             ) : null}
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div id="publish" className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {hub.suggestions.length === 0 ? (
                 <p className="text-sm text-muted sm:col-span-2">Save a campaign intent to see influencer suggestions.</p>
               ) : (
@@ -499,6 +503,22 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             Shortlist
                           </button>
                         </form>
+                        {hub.intentBrief &&
+                        !hub.publishedBriefIds.includes(hub.intentBrief.id) &&
+                        !hub.applications.some(
+                          (application) =>
+                            application.creatorSlug === creator.slug &&
+                            (application.briefId === hub.intentBrief?.id ||
+                              application.requestBriefId === hub.intentBrief?.id),
+                        ) ? (
+                          <form action={actionPostBusinessRequest}>
+                            <input type="hidden" name="briefId" value={hub.intentBrief.id} />
+                            <input type="hidden" name="creatorSlug" value={creator.slug} />
+                            <button type="submit" className="btn-primary !px-3 !py-1.5 text-[11px]">
+                              Publish
+                            </button>
+                          </form>
+                        ) : null}
                         <form action={actionSendInquiry} className="basis-full">
                           <input type="hidden" name="creatorSlug" value={creator.slug} />
                           {hub.intentBrief ? (
@@ -544,13 +564,11 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 {params.invited} private invitation{params.invited === "1" ? "" : "s"} sent. Each influencer sees only their own invitation.
               </p>
             ) : null}
-            {hub.suggestions.length >= 1 && (hub.intentBrief || hub.ownRequests.length > 0) ? (
+            {hub.suggestions.length >= 1 &&
+            hub.intentBrief &&
+            hub.publishedBriefIds.includes(hub.intentBrief.id) ? (
               <form
-                action={
-                  hub.intentBrief && !hub.publishedBriefIds.includes(hub.intentBrief.id)
-                    ? actionPostBusinessRequest
-                    : actionInviteSelectedCreators
-                }
+                action={actionInviteSelectedCreators}
                 className="mt-4 space-y-3 rounded-xl border border-[#E4E9F5] bg-[#F8FAFF] p-4"
               >
                 <input type="hidden" name="briefId" value={hub.intentBrief?.id ?? ""} />
@@ -587,9 +605,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   <input type="date" name="responseDeadline" className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
                 </label>
                 <button type="submit" className="btn-primary !py-2 text-sm">
-                  {hub.intentBrief && !hub.publishedBriefIds.includes(hub.intentBrief.id)
-                    ? "Publish this campaign"
-                    : "Send private invitations"}
+                  Send private invitations
                 </button>
               </form>
             ) : null}
@@ -712,9 +728,14 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                           {applicationKindLabel(application)}
                           {accepted ? " · Accepted" : ""}
                         </p>
-                        <p className="text-sm font-bold text-indigo">
-                          {campaignTitle || "Campaign"}
-                        </p>
+                        <p className="text-sm font-bold text-indigo">{campaignTitle || "Untitled campaign"}</p>
+                        {campaignBrief?.budget || application.requestBudget ? (
+                          <p className="text-[11px] font-semibold text-indigo">
+                            {campaignBrief
+                              ? `${campaignBrief.budgetCurrency} ${campaignBrief.budget}`
+                              : `${application.requestCurrency || ""} ${application.requestBudget || ""}`.trim()}
+                          </p>
+                        ) : null}
                         <p className="text-[11px] text-muted">
                           {creator?.displayName ?? application.creatorSlug ?? "Applicant"}
                           {application.note?.trim() ? ` · ${application.note.trim()}` : ""}
@@ -771,7 +792,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-bold text-indigo">
-                            {hub.briefs.find((brief) => brief.id === inquiry.briefId)?.title || "Inquiry"}
+                            {hub.briefs.find((brief) => brief.id === inquiry.briefId)?.title || "Untitled campaign"}
                           </p>
                           <p className="text-[11px] text-muted">{creator?.displayName ?? inquiry.creatorSlug}</p>
                           <p className="line-clamp-2 text-xs text-muted">{inquiry.message}</p>

@@ -178,6 +178,13 @@ export async function actionPostBusinessRequest(formData: FormData) {
     .getAll("creatorSlug")
     .map((value) => String(value).trim())
     .filter(Boolean);
+  if (!slugs.length) {
+    redirect(
+      `${HUB}?intent=${encodeURIComponent(brief.id)}&error=${encodeURIComponent(
+        "Select an influencer before publishing this campaign.",
+      )}#publish`,
+    );
+  }
   try {
     const existing = (await listWorkspaceBusinessRequests(ws.businessId)).find((row) => row.briefId === brief.id);
     const request = await upsertBusinessRequest({

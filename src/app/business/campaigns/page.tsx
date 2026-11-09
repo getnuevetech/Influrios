@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { actionPostBusinessRequest } from "@/app/collaboration/business/actions";
 import { Panel, StatusPill, TextLink } from "@/components/dashboard-ui";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
@@ -75,12 +74,12 @@ export default async function BusinessCampaignsPage() {
                     Save
                   </Link>
                   {publishedBriefIds.has(brief.id) ? null : (
-                    <form action={actionPostBusinessRequest}>
-                      <input type="hidden" name="briefId" value={brief.id} />
-                      <button type="submit" className="text-xs font-bold text-indigo hover:underline">
-                        Publish
-                      </button>
-                    </form>
+                    <Link
+                      href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#publish`}
+                      className="text-xs font-bold text-indigo hover:underline"
+                    >
+                      Publish
+                    </Link>
                   )}
                 </div>
               </li>
@@ -122,12 +121,12 @@ export default async function BusinessCampaignsPage() {
                         Save
                       </Link>
                       {publishedBriefIds.has(brief.id) ? null : (
-                        <form action={actionPostBusinessRequest}>
-                          <input type="hidden" name="briefId" value={brief.id} />
-                          <button type="submit" className="text-xs font-bold text-indigo hover:underline">
-                            Publish
-                          </button>
-                        </form>
+                        <Link
+                          href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#publish`}
+                          className="text-xs font-bold text-indigo hover:underline"
+                        >
+                          Publish
+                        </Link>
                       )}
                     </>
                   )}

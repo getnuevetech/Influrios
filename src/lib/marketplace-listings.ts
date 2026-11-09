@@ -1076,6 +1076,26 @@ export async function listMarketplaceApplications(input?: {
   return input?.creatorSlug ? invitationsVisibleTo(mapped, input.creatorSlug) : mapped;
 }
 
+/** Accepted requests for one influencer on this workspace, newest first. */
+export async function acceptedContractChoices(input: {
+  creatorSlug?: string;
+  businessRequestIds: string[];
+  briefIds: string[];
+}): Promise<MarketplaceApplicationRow[]> {
+  const slug = input.creatorSlug?.trim();
+  if (!slug || (!input.businessRequestIds.length && !input.briefIds.length)) return [];
+  const rows = await listMarketplaceApplications({
+    businessRequestIds: input.businessRequestIds,
+    briefIds: input.briefIds,
+    limit: 40,
+  });
+  return rows.filter(
+    (row) =>
+      row.creatorSlug === slug &&
+      (row.status === "ACCEPTED" || row.status === "COLLABORATION_DRAFTED"),
+  );
+}
+
 /**
  * The request a contract should copy.
  * A chosen application wins. Otherwise the newest accepted request for that influencer.

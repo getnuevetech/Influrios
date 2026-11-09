@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { actionAdvanceCollaboration, actionQueueSignature } from "@/app/collaboration/records/actions";
+import { actionAdvanceCollaboration } from "@/app/collaboration/records/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { allowedCollaborationMoves, canReadCollaboration } from "@/lib/collaboration-access";
 import { getCreatorSessionDraft } from "@/lib/claim";
 import { COLLABORATION_STATUSES, getCollaboration, reasonList, type CollaborationStatus } from "@/lib/collaborations";
 import { prisma } from "@/lib/db";
-import { activeSigningProvider } from "@/lib/providers";
 import { getDirectoryCreator } from "@/lib/directory";
 import { specialtyLabel } from "@/lib/seed-data";
 
@@ -58,7 +57,6 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
     ? (record.status as CollaborationStatus)
     : "draft";
   const actions = NEXT_ACTIONS[status].filter((action) => allowed.has(action.to));
-  const signing = await activeSigningProvider().catch(() => null);
   const signatures = await prisma.signatureRequest
     .findMany({ where: { collaborationId: record.id }, orderBy: { createdAt: "desc" }, include: { provider: true } })
     .catch(() => []);
@@ -181,9 +179,7 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
       <section className="card-surface mt-6 p-6 text-sm">
         <h2 className="font-semibold text-indigo">Document signing</h2>
         <p className="mt-2 text-muted">
-          {signing?.enabled && signing.hasSecret
-            ? `Connected to ${signing.name}. A request stays queued until that provider confirms the signature.`
-            : "Document signing is not connected. An admin adds the API details under Document signing."}
+          Agreements are signed in Influrios. Each party can view and download the contract before and after signing.
         </p>
         {signatures.length ? (
           <ul className="mt-3 space-y-1 text-muted">
@@ -194,13 +190,15 @@ export default async function CollaborationRecordPage({ params, searchParams }: 
             ))}
           </ul>
         ) : null}
-        {account && status === "accepted" && signing?.enabled && signing.hasSecret ? (
-          <form action={actionQueueSignature} className="mt-4">
-            <input type="hidden" name="id" value={record.id} />
-            <button type="submit" className="btn-primary">
-              Queue signature request
-            </button>
-          </form>
+        {account && status === "accepted" ? (
+          <p className="mt-4">
+            <Link
+              href={`/collaboration/contract?collaboration=${encodeURIComponent(record.id)}&creator=${encodeURIComponent(record.recipientSlug)}&title=${encodeURIComponent(record.title)}&scope=${encodeURIComponent(record.scope.slice(0, 200))}&commercial=${encodeURIComponent(record.commercial)}`}
+              className="btn-secondary"
+            >
+              Sign in Influrios
+            </Link>
+          </p>
         ) : null}
       </section>
 

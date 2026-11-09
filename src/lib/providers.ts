@@ -1,7 +1,6 @@
 import { corridorCountryByCode } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
-import { assembleDocuSignCredentials, openDocuSignEnvelope } from "@/lib/signing/docusign";
 import { classifyStripeKey, stripePayoutRouteReady } from "@/lib/stripe-admin";
 
 export const AI_FUNCTIONS = [
@@ -886,39 +885,11 @@ export async function queueSignatureRequest(input: { collaborationId: string; ti
   } else if (code === "influrios" || code === "native" || code === "in_app" || code === "in-app") {
     externalId = `native_${input.collaborationId.slice(0, 40)}`;
   } else if (code === "docusign" || code.includes("docusign")) {
-    const collab = await prisma.collaboration.findUnique({
-      where: { id: input.collaborationId },
-      include: { initiatorUser: true, decidedByUser: true },
-    });
-    const parties = [collab?.initiatorUser, collab?.decidedByUser]
-      .filter((user): user is NonNullable<typeof user> => Boolean(user?.email))
-      .filter((user, index, all) => all.findIndex((row) => row.email === user.email) === index)
-      .map((user) => ({ name: user.name?.trim() || user.email, email: user.email }));
-    if (parties.length < 1) {
-      return { ok: false as const, error: "Add an email on each signer before sending the envelope. Nothing was signed." };
-    }
-    const credentials = assembleDocuSignCredentials({
-      stored: {
-        integrationKey: provider.integrationKey,
-        userId: provider.userId,
-        accountId: provider.publicKey,
-        privateKey: secret ?? "",
-        baseUrl: provider.baseUrl,
-        oauthBaseUrl: provider.oauthBaseUrl,
-      },
-    });
-    if (!credentials.ok) return credentials;
-    const opened = await openDocuSignEnvelope({
-      credentials,
-      request: {
-        collaborationId: input.collaborationId,
-        title: input.title.slice(0, 160),
-        documentHtml: `<h1>${input.title.slice(0, 160)}</h1><p>${collab?.scope ?? ""}</p>`,
-        parties,
-      },
-    });
-    if (!opened.ok) return opened;
-    externalId = opened.envelopeId;
+    return {
+      ok: false as const,
+      error:
+        "Agreements are signed in Influrios. Create the contract and each party signs on the contract page. Nothing was sent to DocuSign.",
+    };
   } else if (!provider.baseUrl) {
     return { ok: false as const, error: "Add the signing API base URL in admin. Nothing was signed." };
   } else {
