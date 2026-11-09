@@ -12,6 +12,8 @@ import {
 import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import {
+  feeRulePurposeLabel,
+  feeRuleSide,
   FEE_METHOD_LABELS,
   FEE_METHODS,
   FEE_PURPOSE_LABELS,
@@ -330,8 +332,7 @@ export default async function AdminFeesPage({ searchParams }: Props) {
         <div>
           <h2 className="font-display text-lg font-bold text-indigo">Active rules</h2>
           <p className="mt-1 text-xs text-muted">
-            A contract service level uses one Business Platform Fee and one Influencer Platform Fee. A legacy or split
-            rule is not applied. Existing rules are collapsed after save.
+            A contract service level uses the Business fee (added on top) and the Influencer fee (deducted from the gross) that match it. A rule saved before fee purpose existed is counted from who pays. A split rule is not applied. A rule set to any service level appears on every row.
           </p>
         </div>
         <div className="overflow-x-auto rounded-2xl border border-[#E4EBFF] bg-white">
@@ -365,7 +366,7 @@ export default async function AdminFeesPage({ searchParams }: Props) {
             <AdminCollapse
               key={rule.id}
               title={rule.name}
-              subtitle={`${rule.active ? "Active" : "Inactive"} · ${FEE_PURPOSE_LABELS[rule.purpose] ?? rule.purpose} · ${rule.jurisdiction}/${rule.serviceLevel} · v${rule.version}`}
+              subtitle={`${rule.active ? "Active" : "Inactive"} · ${feeRulePurposeLabel(rule)} · ${rule.jurisdiction}/${rule.serviceLevel} · v${rule.version}`}
             >
               <FeeRuleForm rule={rule} canManage={canManage} />
               {canManage ? (
@@ -607,7 +608,13 @@ function FeeRuleForm({
         <select
           name="purpose"
           required
-          defaultValue={rule?.purpose ?? ""}
+          defaultValue={
+            rule?.purpose === "legacy" && feeRuleSide(rule) === "business"
+              ? "business_platform_fee"
+              : rule?.purpose === "legacy" && feeRuleSide(rule) === "influencer"
+                ? "influencer_platform_fee"
+                : (rule?.purpose ?? "")
+          }
           disabled={!canManage}
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
         >
@@ -634,7 +641,7 @@ function FeeRuleForm({
           <option value="split">Legacy split, not applied to either side</option>
         </select>
         <span className="mt-1 block font-normal">
-          Business Platform Fee uses Business. Influencer Platform Fee uses Influencer. The contract service level must match this rule, or the rule must be set to any service level.
+          Business Platform Fee uses Business. Influencer Platform Fee uses Influencer. A rule saved before fee purpose existed keeps the payer already chosen. Split is not applied to either side. The contract service level must match this rule, or the rule must be set to any service level.
         </span>
       </label>
       <label className="text-xs font-semibold text-muted sm:col-span-3">
