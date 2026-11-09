@@ -51,6 +51,17 @@ export function contractFundingIdempotencyKey(documentId: string) {
   return `contract:${documentId.trim()}:initial`;
 }
 
+export function sharePercentLabel(shareBps: number) {
+  const percent = shareBps / 100;
+  return Number.isInteger(percent) ? `${percent}%` : `${percent.toFixed(2)}%`;
+}
+
+/** Share of a funded milestone, derived from its amount and the funding gross. */
+export function fundedShareBps(amountCents: number, grossCents: number) {
+  if (!Number.isInteger(amountCents) || !Number.isInteger(grossCents) || grossCents <= 0) return null;
+  return Math.round((amountCents * 10_000) / grossCents);
+}
+
 export function normalizeMilestones(rows: SignedMilestone[] | null | undefined): SignedMilestone[] {
   return (rows ?? [])
     .map((row) => ({ title: row.title.trim(), shareBps: row.shareBps }))

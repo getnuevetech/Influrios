@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { ensureStoredCommercialTerms } from "@/lib/signed-funding-apply";
 import { describeDealProgress, readSignedTermsSnapshot } from "@/lib/signed-funding";
 
 export async function loadAdminDeal(rawId: string) {
@@ -76,13 +77,22 @@ export async function loadAdminDeal(rawId: string) {
   const disputedMilestone = openDispute?.milestoneId
     ? funding?.milestones.find((row) => row.id === openDispute.milestoneId)
     : null;
+  let terms = readSignedTermsSnapshot(contract?.termsSnapshotJson);
+  let termsRecovered = false;
+  if (contract?.status === "signed" && !terms) {
+    const stored = await ensureStoredCommercialTerms(contract).catch(() => null);
+    if (stored?.ok) {
+      terms = stored.snapshot;
+      termsRecovered = stored.repaired;
+    }
+  }
   const progress = describeDealProgress({
     collaborationStatus: collaboration?.status ?? null,
     agreementStatus: contract?.status ?? null,
     signedCount: contract?.parties.filter((row) => row.status === "signed").length ?? 0,
     partyCount: contract?.parties.length ?? 0,
     fundingStatus: funding?.status ?? null,
-    currency: funding?.currency ?? readSignedTermsSnapshot(contract?.termsSnapshotJson)?.currency ?? "",
+    currency: funding?.currency ?? terms?.currency ?? "",
     milestones: (funding?.milestones ?? []).map((row) => ({
       id: row.id,
       title: row.title,
@@ -102,5 +112,5 @@ export async function loadAdminDeal(rawId: string) {
       : [],
   });
 
-  return { contract, funding, collaboration, relatedContracts, audits, progress, terms: readSignedTermsSnapshot(contract?.termsSnapshotJson) };
+  return { contract, funding, collaboration, relatedContracts, audits, progress, terms, termsRecovered };
 }

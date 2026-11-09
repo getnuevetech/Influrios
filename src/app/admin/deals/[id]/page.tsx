@@ -4,8 +4,9 @@ import { actionApproveDealAmendment, actionVoidDealContract } from "@/app/admin/
 import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission, isSuperAdmin } from "@/lib/admin-auth";
 import { loadAdminDeal } from "@/lib/admin-deal";
+import { splitGross } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
-import { contractMayBeVoided } from "@/lib/signed-funding";
+import { contractMayBeVoided, fundedShareBps, sharePercentLabel } from "@/lib/signed-funding";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Deal · Admin" };
@@ -18,10 +19,11 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
   const query = await searchParams;
   const deal = await loadAdminDeal(id);
   if (!deal) notFound();
-  const { contract, funding, collaboration, relatedContracts, audits, progress, terms } = deal;
+  const { contract, funding, collaboration, relatedContracts, audits, progress, terms, termsRecovered } = deal;
   const anchor = contract?.id ?? funding?.id ?? collaboration?.id ?? id;
   const canVoid = isSuperAdmin(session);
   const canAmend = canVoid || hasPermission(session, "contracts.manage");
+  const scheduleAmounts = terms ? splitGross(terms.grossCents, terms.milestones.map((row) => row.shareBps)) : null;
   const holdLabel = progress.hold
     ? `${formatMoney(progress.hold.amountCents, progress.hold.currency || funding?.currency || "USD")} on ${progress.hold.title}`
     : null;
@@ -150,31 +152,84 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
         </section>
       ) : null}
 
-      {terms ? (
-        <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5 text-sm">
-          <h2 className="font-display text-lg font-bold text-indigo">Stored terms</h2>
-          <p className="mt-2 text-muted">
-            {terms.currency} {formatMoney(terms.grossCents, terms.currency)} · {terms.serviceLevel} ·{" "}
-            {terms.creators.map((row) => `${row.slug} ${row.shareBps / 100}%`).join(", ")}
+      <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5 text-sm">
+        <h2 className="font-display text-lg font-bold text-indigo">Contract schedule</h2>
+        <p className="mt-2 text-muted">
+          These percentages were set when the agreement was created. Funding splits the gross by this schedule. A change
+          order is only a later correction, and only before funding starts.
+        </p>
+        {termsRecovered ? (
+          <p className="mt-2 text-sm font-semibold text-emerald-800">
+            The schedule was already in the signed agreement. It is now stored for funding.
           </p>
-          <ul className="mt-2 space-y-1">
-            {terms.milestones.map((row) => (
-              <li key={`${row.title}-${row.shareBps}`}>
-                {row.title} · {row.shareBps / 100}%
+        ) : null}
+        {terms && scheduleAmounts ? (
+          <>
+            <p className="mt-3 font-semibold text-indigo">
+              {formatMoney(terms.grossCents, terms.currency)} · {terms.serviceLevel || "service level on the agreement"}
+            </p>
+            <p className="mt-1 text-muted">
+              Influencers: {terms.creators.map((row) => `${row.slug} ${sharePercentLabel(row.shareBps)}`).join(", ")}
+            </p>
+            <table className="mt-3 w-full text-left">
+              <thead className="text-[11px] uppercase tracking-wide text-muted">
+                <tr>
+                  <th className="py-2 font-semibold">Milestone</th>
+                  <th className="font-semibold">Share</th>
+                  <th className="font-semibold">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {terms.milestones.map((row, index) => (
+                  <tr key={`${row.title}-${row.shareBps}`} className="border-t border-[#E4EBFF]">
+                    <td className="py-2 font-semibold text-indigo">{row.title}</td>
+                    <td>{sharePercentLabel(row.shareBps)}</td>
+                    <td>{formatMoney(scheduleAmounts[index] ?? 0, terms.currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        ) : (
+          <p className="mt-3 text-amber-900">
+            This agreement has no milestone schedule that adds up to 100%. Funding cannot split the gross until that
+            schedule is recorded.
+          </p>
+        )}
+        {funding && funding.milestones.length > 0 ? (
+          <div className="mt-5">
+            <h3 className="font-semibold text-indigo">Funding split in effect</h3>
+            <p className="mt-1 text-xs text-muted">
+              Each row is that milestone’s share of {formatMoney(funding.grossCents, funding.currency)}.
+            </p>
+            <ul className="mt-2 space-y-1">
+              {funding.milestones.map((milestone) => {
+                const share = fundedShareBps(milestone.amountCents, funding.grossCents);
+                return (
+                  <li key={milestone.id}>
+                    {milestone.title} · {share != null ? sharePercentLabel(share) : "—"} ·{" "}
+                    {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status.replaceAll("_", " ")}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <p className="mt-4 text-muted">
+            Funding has not started. The business starts it from the signed agreement, and the instruction uses the
+            percentages above.
+          </p>
+        )}
+        {contract && contract.amendments.length > 0 ? (
+          <ul className="mt-3 space-y-1 text-xs text-muted">
+            {contract.amendments.map((row) => (
+              <li key={row.id}>
+                Correction {row.createdAt.toISOString().slice(0, 10)} · {row.currency} {formatMoney(row.grossCents, row.currency)} · {row.note}
               </li>
             ))}
           </ul>
-          {contract && contract.amendments.length > 0 ? (
-            <ul className="mt-3 space-y-1 text-xs text-muted">
-              {contract.amendments.map((row) => (
-                <li key={row.id}>
-                  Change order {row.createdAt.toISOString().slice(0, 10)} · {row.currency} {formatMoney(row.grossCents, row.currency)} · {row.note}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
-      ) : null}
+        ) : null}
+      </section>
 
       <section className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Audit</h2>
@@ -190,19 +245,19 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
 
       {contract && canAmend && contract.status === "signed" && !contract.fundingId ? (
         <form action={actionApproveDealAmendment} className="space-y-3 rounded-2xl border border-[#E4EBFF] bg-white p-5">
-          <h2 className="font-display text-lg font-bold text-indigo">Approve a change order</h2>
+          <h2 className="font-display text-lg font-bold text-indigo">Correct the schedule before funding</h2>
           <p className="text-xs text-muted">
-            Funding uses these terms instead of the signed snapshot. Creators are one per line as slug, percent. Milestones
-            are one per line as title | percent. Shares must add up to 100.
+            Use this only when the signed schedule needs to be replaced. Creators are one per line as slug, percent.
+            Milestones are one per line as title | percent. Each list must add up to 100.
           </p>
           <input type="hidden" name="id" value={contract.id} />
-          <input name="gross" placeholder="Gross amount" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          <input name="gross" placeholder="Gross amount" defaultValue={terms ? String(terms.grossCents / 100) : ""} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
           <input name="currency" placeholder="USD" defaultValue={terms?.currency ?? ""} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          <textarea name="creators" rows={3} placeholder={"creator-slug, 100"} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          <textarea name="milestones" rows={3} placeholder={"Delivery | 100"} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          <textarea name="creators" rows={3} placeholder={"creator-slug, 100"} defaultValue={terms?.creators.map((row) => `${row.slug}, ${row.shareBps / 100}`).join("\n") ?? ""} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          <textarea name="milestones" rows={3} placeholder={"Delivery | 100"} defaultValue={terms?.milestones.map((row) => `${row.title} | ${row.shareBps / 100}`).join("\n") ?? ""} className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
           <textarea name="note" required minLength={8} rows={2} placeholder="Why the terms changed" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
           <button type="submit" className="btn-primary !py-2 text-sm">
-            Approve change order
+            Save corrected schedule
           </button>
         </form>
       ) : null}
