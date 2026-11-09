@@ -9,7 +9,9 @@ import {
   contractMayBeVoided,
   agreedFeeFromSources,
   describeDealProgress,
+  fundedShareBps,
   readSignedTermsSnapshot,
+  sharePercentLabel,
   recoverSignedTermsFromAgreement,
   sameDealError,
   submittedTermsDiffer,
@@ -93,6 +95,16 @@ describe("recover signed commercial terms", () => {
     const apply = readFileSync("src/lib/signed-funding-apply.ts", "utf8");
     assert.match(apply, /ensureStoredCommercialTerms/);
     assert.match(apply, /contract.terms.recovered/);
+  });
+});
+
+describe("milestone share on a funded deal", () => {
+  it("keeps the contract percentage on each funded amount", () => {
+    assert.equal(sharePercentLabel(6000), "60%");
+    assert.equal(fundedShareBps(660000, 1_100_000), 6000);
+    const page = readFileSync("src/app/admin/deals/[id]/page.tsx", "utf8");
+    assert.match(page, /These percentages were set when the agreement was created/);
+    assert.match(readFileSync("src/lib/admin-deal.ts", "utf8"), /ensureStoredCommercialTerms/);
   });
 });
 

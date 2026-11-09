@@ -6,6 +6,7 @@ import { frozenFeeRuleHeading, getFundingTransactionView } from "@/lib/admin-tra
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { marketplaceProviderLabel } from "@/lib/marketplace-ledger";
 import { formatMoney } from "@/lib/money";
+import { fundedShareBps, sharePercentLabel } from "@/lib/signed-funding";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Transaction" };
@@ -134,9 +135,12 @@ export default async function AdminFundingTransactionPage({ params }: Props) {
         <h2 className="font-display text-lg font-bold text-indigo">Milestones</h2>
         {milestones.length === 0 ? <p className="text-sm text-muted">No milestones.</p> : null}
         <ul className="space-y-2 text-sm text-indigo">
-          {milestones.map((m) => (
+          {milestones.map((m) => {
+            const share = fundedShareBps(m.amountCents, funding.grossCents);
+            return (
             <li key={m.id} className="rounded-lg border border-[#E6ECFF] px-3 py-2">
-              <span className="font-semibold">{m.title}</span> · {formatMoney(m.amountCents, funding.currency)} ·{" "}
+              <span className="font-semibold">{m.title}</span> · {share != null ? `${sharePercentLabel(share)} · ` : ""}
+              {formatMoney(m.amountCents, funding.currency)} ·{" "}
               {m.status}
               {m.refundedCents > 0
                 ? ` · refunded ${formatMoney(m.refundedCents, funding.currency)}`
@@ -147,7 +151,8 @@ export default async function AdminFundingTransactionPage({ params }: Props) {
               {m.autoApproveAt ? ` · review by ${m.autoApproveAt}` : ""}
               {m.rightsStatus ? ` · rights ${m.rightsStatus}` : ""}
             </li>
-          ))}
+            );
+          })}
         </ul>
         {disputes.length > 0 ? (
           <div className="pt-2">
