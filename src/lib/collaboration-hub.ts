@@ -111,6 +111,68 @@ export type BusinessHubStatus = {
   completed: number;
 };
 
+/**
+ * What the member sees. The word “Contract” is used only when a contract document exists.
+ * An accepted invitation or collaboration before that document is not a contract.
+ */
+export function agreementPresentation(row: {
+  stage: string;
+  href: string;
+  contractHref?: string | null;
+  revisionSummary?: string | null;
+}) {
+  if (row.contractHref) {
+    return {
+      label: "Contract",
+      next: row.revisionSummary || "Contract",
+      action: "Review contract →",
+      href: row.contractHref,
+    };
+  }
+  if (row.stage === "Contract") {
+    return {
+      label: "Accepted",
+      next: row.revisionSummary || "Agreement not created",
+      action: "Open invitation →",
+      href: row.href,
+    };
+  }
+  return {
+    label: row.stage,
+    next: row.revisionSummary || row.stage,
+    action: "Open workspace →",
+    href: row.href,
+  };
+}
+
+/**
+ * Current work only. Matches, open invitations, and proposals stay out of the active count.
+ * An accepted collaboration record counts. An invitation counts only after it is a funded or in-progress contract.
+ */
+export function isCurrentCollaboration(row: {
+  stage: string;
+  source?: string | null;
+  contractHref?: string | null;
+}) {
+  if (row.stage === "Match" || row.stage === "Released") return false;
+  if (row.source === "application" || row.source === "team") {
+    return Boolean(row.contractHref) && row.stage !== "Contract";
+  }
+  return row.stage === "Contract" || row.stage === "Funded" || row.stage === "In Progress" || row.stage === "Review";
+}
+
+/** Invitations and requests leave those lists once a live contract exists. */
+export function invitationStillListed(
+  row: { id: string; collaborationId?: string | null },
+  contractedApplicationIds: ReadonlySet<string>,
+  contractedCollaborationIds: ReadonlySet<string>,
+) {
+  if (contractedApplicationIds.has(row.id)) return false;
+  const collaborationId = row.collaborationId?.trim();
+  if (collaborationId && contractedCollaborationIds.has(collaborationId)) return false;
+  return true;
+}
+
 /** Map collaboration + funding state onto the Figure 2 pipeline stepper. */
 export function derivePipelineStage(input: {
   collaborationStatus: string;
@@ -277,7 +339,12 @@ export async function loadCreatorHub(input: {
       settle("campaigns", listPublishedBusinessRequests(), [] as MarketplaceBusinessRequestRow[], degraded),
       settle("openings", listPublishedCreatorOpportunities(), [] as MarketplaceCreatorOpportunityRow[], degraded),
       settle("applications", listMarketplaceApplications({ creatorSlug: slug, limit: 100 }), [] as MarketplaceApplicationRow[], degraded),
-      settle("team proposals", import("@/lib/team-proposal").then((mod) => mod.listTeamProposalsForCreator(slug)), [], degraded),
+      settle(
+        "team proposals",
+        import("@/lib/team-proposal").then((mod) => mod.listTeamProposalsForCreator(slug, { includeContracted: true })),
+        [],
+        degraded,
+      ),
     ]);
 
   await persistTopMatches(creatorMatches).catch(() => 0);
@@ -386,7 +453,7 @@ export async function loadCreatorHub(input: {
         "agreements",
         prisma.contractDocument.findMany({
           where: { OR: contractWhere },
-          select: { id: true, collaborationId: true, teamProposalId: true },
+          select: { id: true, applicationId: true, collaborationId: true, teamProposalId: true },
           orderBy: { updatedAt: "desc" },
         }),
         [],
@@ -395,6 +462,7 @@ export async function loadCreatorHub(input: {
     : [];
   const contractByCollab = new Map<string, string>();
   const contractByTeam = new Map<string, string>();
+  const contractByApplication = new Map<string, string>();
   for (const link of contractLinks) {
     if (link.collaborationId && !contractByCollab.has(link.collaborationId)) {
       contractByCollab.set(link.collaborationId, link.id);
@@ -402,23 +470,31 @@ export async function loadCreatorHub(input: {
     if (link.teamProposalId && !contractByTeam.has(link.teamProposalId)) {
       contractByTeam.set(link.teamProposalId, link.id);
     }
+    if (link.applicationId && !contractByApplication.has(link.applicationId)) {
+      contractByApplication.set(link.applicationId, link.id);
+    }
   }
   for (const row of pipeline) {
     const contractId = contractByCollab.get(row.id);
-    if (contractId) row.contractHref = `/collaboration/contracts/${contractId}`;
+    if (contractId) {
+      row.contractHref = `/collaboration/contracts/${contractId}`;
+      row.stage = "Contract";
+      row.stageIndex = PIPELINE_STAGES.indexOf("Contract");
+    }
   }
   for (const proposal of teamProposals) {
     if (proposal.status !== "accepted" && proposal.status !== "partial") continue;
     const mine = proposal.members.find((member) => member.creatorSlug === slug);
     if (!mine || mine.status === "declined") continue;
     const contractId = contractByTeam.get(proposal.id);
+    const stage: PipelineStage = contractId ? "Contract" : "Match";
     pipeline.push({
       id: `team:${proposal.id}`,
       title: proposal.title,
-      counterparty: "Team",
-      stage: proposal.status === "accepted" ? "Contract" : "Match",
-      stageIndex: PIPELINE_STAGES.indexOf(proposal.status === "accepted" ? "Contract" : "Match"),
-      href: `/collaboration/team/${proposal.id}`,
+      counterparty: proposal.title,
+      stage,
+      stageIndex: PIPELINE_STAGES.indexOf(stage),
+      href: contractId ? `/collaboration/contracts/${contractId}` : `/collaboration/team/${proposal.id}`,
       contractHref: contractId ? `/collaboration/contracts/${contractId}` : null,
       source: "team",
     });
@@ -427,17 +503,25 @@ export async function loadCreatorHub(input: {
   for (const application of applications) {
     if (application.status !== "ACCEPTED" && application.status !== "COLLABORATION_DRAFTED") continue;
     if (application.collaborationId && pipelineIds.has(application.collaborationId)) continue;
+    const contractId =
+      contractByApplication.get(application.id) ||
+      (application.collaborationId ? contractByCollab.get(application.collaborationId) : undefined);
+    const stage: PipelineStage = contractId ? "Contract" : "Match";
     pipeline.push({
       id: `application:${application.id}`,
-      title: application.requestBrand || application.opportunityLookingFor || "Campaign application",
+      title: application.requestBrand || application.opportunityLookingFor || "Campaign invitation",
       counterparty: application.requestBrand || "Business",
-      stage: "Contract",
-      stageIndex: PIPELINE_STAGES.indexOf("Contract"),
-      href: `/collaboration/applications/${application.id}`,
-      contractHref: null,
+      stage,
+      stageIndex: PIPELINE_STAGES.indexOf(stage),
+      href: contractId ? `/collaboration/contracts/${contractId}` : `/collaboration/applications/${application.id}`,
+      contractHref: contractId ? `/collaboration/contracts/${contractId}` : null,
       source: "application",
     });
   }
+  const listedApplications = applications.filter((row) =>
+    invitationStillListed(row, new Set(contractByApplication.keys()), new Set(contractByCollab.keys())),
+  );
+  status.active = pipeline.filter((row) => isCurrentCollaboration(row)).length;
   const history: HubPipelineItem[] = [
     ...collaborations
       .filter((row) => row.status === "declined" || row.status === "withdrawn")
@@ -473,7 +557,7 @@ export async function loadCreatorHub(input: {
     brandMatches,
     requests: requests.slice(0, 6),
     opportunities: opportunities.filter((item) => item.creatorSlug !== slug).slice(0, 6),
-    applications,
+    applications: listedApplications,
     collaborations,
     history,
     degraded,
@@ -533,6 +617,28 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
       }).catch(() => [])
     : [];
 
+  const applicationIds = applications.map((row) => row.id);
+  const contractedApplications = applicationIds.length
+    ? await prisma.contractDocument
+        .findMany({
+          where: {
+            applicationId: { in: applicationIds },
+            status: { notIn: ["voided", "declined"] },
+          },
+          select: { applicationId: true, collaborationId: true },
+        })
+        .catch(() => [])
+    : [];
+  const contractedApplicationIds = new Set(
+    contractedApplications.map((row) => row.applicationId).filter((id): id is string => Boolean(id)),
+  );
+  const contractedCollaborationIds = new Set(
+    contractedApplications.map((row) => row.collaborationId).filter((id): id is string => Boolean(id)),
+  );
+  const listedApplications = applications.filter((row) =>
+    invitationStillListed(row, contractedApplicationIds, contractedCollaborationIds),
+  );
+
   const pipeline: HubPipelineItem[] = fundings.map((row) => {
     const stage = derivePipelineStage({
       collaborationStatus: "accepted",
@@ -572,7 +678,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
     intentBrief,
     ownRequests: ownRequests.slice(0, 8),
     publishedBriefIds: ownRequests.map((row) => row.briefId).filter((id): id is string => Boolean(id)),
-    applications,
+    applications: listedApplications,
     opportunities: opportunities.slice(0, 6),
     inquiries: ws.inquiries.slice(0, 10),
     shortlist: ws.shortlist,

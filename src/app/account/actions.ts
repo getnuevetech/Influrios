@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isDefaultMemberHome, safeNextPath } from "@/lib/account-policy";
 import {
+  accountEmailMatches,
   clearAccountSession,
   getAccountSession,
   homePathForRole,
@@ -38,13 +39,15 @@ function clientIp(headerStore: Headers) {
 export async function actionRegister(formData: FormData) {
   const next = safeNextPath(String(formData.get("next") ?? ""));
   const email = String(formData.get("email") ?? "");
+  const requestedReturn = String(formData.get("returnTo") ?? "");
+  const returnTo = requestedReturn === "/claim" || requestedReturn === "/register" ? requestedReturn : "/register";
   if (formData.get("consent") !== "on") {
-    back("/register", "Consent is required to create an account.", next);
+    back(returnTo, "Consent is required to create an account.", next);
   }
   const headerStore = await headers();
   const ip = clientIp(headerStore);
   const locked = await lockoutMessage("register", ip, email);
-  if (locked) back("/register", AUTH_LOCKOUT_GENERIC_MESSAGE, next);
+  if (locked) back(returnTo, AUTH_LOCKOUT_GENERIC_MESSAGE, next);
   try {
     const user = await registerAccount({
       email,
@@ -68,7 +71,7 @@ export async function actionRegister(formData: FormData) {
     await recordAuthSuccess("register", ip, email);
   } catch (error) {
     await recordAuthFailure("register", ip, email);
-    back("/register", error instanceof Error ? error.message : "Could not register.", next);
+    back(returnTo, error instanceof Error ? error.message : "Could not register.", next);
   }
   redirect(`/account/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(next)}`);
 }
@@ -83,6 +86,10 @@ export async function actionLogin(formData: FormData) {
   let user: Awaited<ReturnType<typeof loginAccount>> | null = null;
   try {
     user = await loginAccount(email, String(formData.get("password") ?? ""));
+    if (!user || !accountEmailMatches(user.email, email)) {
+      await clearAccountSession();
+      back("/login", "That email does not match the account that was signed in.", next);
+    }
     await recordAuthSuccess("account-login", ip, email);
   } catch (error) {
     const coded = error as Error & { code?: string };

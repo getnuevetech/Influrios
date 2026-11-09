@@ -45,14 +45,9 @@ export async function GET(
   const creator = await getDirectoryCreator(slug);
   if (creator) {
     const entitlements = await entitlementsForPlan(creator.planTier);
-    if (!entitlements.standardQr && !entitlements.dynamicQr) {
-      return NextResponse.json({ error: "QR not included on Starter" }, { status: 403 });
-    }
-
-    const target = await qrPayloadForSlug(creator.slug);
-    if (!target) {
-      return NextResponse.json({ error: "QR identity is not available for this card" }, { status: 404 });
-    }
+    const paidQr = Boolean(entitlements.standardQr || entitlements.dynamicQr);
+    const paidTarget = paidQr ? await qrPayloadForSlug(creator.slug) : null;
+    const target = paidTarget || `${appOrigin(request)}/c/${encodeURIComponent(creator.slug)}`;
 
     const svg = await buildBrandedQrSvg({ target, size, withLogo, margin: 1 });
     return new NextResponse(svg, {

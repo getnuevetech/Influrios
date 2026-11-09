@@ -130,7 +130,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
               Campaigns & drafts
             </Link>
             <Link href="/collaboration/team" className="btn-secondary !py-2 text-sm">
-              Team proposal
+              Invite influencers together
             </Link>
             <Link href="/payments" className="btn-secondary !py-2 text-sm">
               Protected payments
@@ -553,9 +553,9 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
             </div>
             {params.sent ? (
               <p className="mt-3 text-sm font-semibold text-emerald-700">
-                Team proposal sent. Each teammate can see who is on the team. The agreement opens after every teammate accepts.{" "}
+                Invitation sent. Each influencer can respond to their own invitation. They are not company employees. The agreement is created after everyone accepts.{" "}
                 <Link href="/collaboration/team" className="text-violet hover:underline">
-                  View the team
+                  View invitations
                 </Link>
               </p>
             ) : null}
@@ -619,9 +619,9 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   value={[hub.intentBrief?.goal, hub.intentBrief?.summary].filter(Boolean).join(" · ") || hub.intentBrief?.title || ""}
                 />
                 <fieldset className="space-y-1">
-                  <legend className="text-sm font-semibold text-indigo">Form a coordinated team</legend>
+                  <legend className="text-sm font-semibold text-indigo">Invite influencers who must work together</legend>
                   <p className="text-xs text-muted">
-                    Use this only when these influencers must work together. They will see the teammates and shared responsibilities. Individual compensation stays private. The agreement opens after every teammate accepts.
+                    These people are influencers, not company employees. Use this only when they must work on one proposal together. Each person sees the other invited influencers. Compensation stays private. This is an invitation until you create the agreement.
                   </p>
                   {hub.suggestions.map(({ creator }) => (
                     <label key={`team-${creator.slug}`} className="flex items-center gap-2 text-sm text-indigo">
@@ -631,7 +631,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   ))}
                 </fieldset>
                 <button type="submit" className="btn-secondary !py-2 text-sm">
-                  Send team proposal
+                  Send invitation
                 </button>
               </form>
             ) : null}
@@ -774,7 +774,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                               })}
                               className="text-[11px] font-bold text-indigo hover:underline"
                             >
-                              Create contract →
+                              Create the agreement →
                             </Link>
                           ) : null}
                         </div>

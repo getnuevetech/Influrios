@@ -4,13 +4,35 @@ import {
   classifySocialRow,
   isClaimPlaceholderHandle,
   countByRecentDays,
+  deliverableWhen,
   displayBio,
+  earningsSummaryNote,
   mediaKitPhotos,
+  portraitAt,
   sharedCurrency,
   visitDelta,
 } from "./creator-home";
 
 describe("creator home facts", () => {
+  it("does not describe a failed earnings load as zero", () => {
+    assert.equal(earningsSummaryNote({ failed: true, currency: "", cents: 0 }), "Earnings could not be loaded. This is not zero.");
+    assert.equal(earningsSummaryNote({ failed: false, currency: "", cents: 0 }), "Nothing released this month.");
+    assert.equal(earningsSummaryNote({ failed: false, currency: "USD", cents: 45000 }), "Released to you this month.");
+  });
+
+  it("rotates example portraits by index and labels a due deliverable", () => {
+    const images = [
+      { src: "/a.png", gender: "female" as const },
+      { src: "/b.png", gender: "male" as const },
+    ];
+    assert.equal(portraitAt(images, 0)?.src, "/a.png");
+    assert.equal(portraitAt(images, 1)?.gender, "male");
+    assert.equal(portraitAt(images, 2)?.src, "/a.png");
+    assert.equal(portraitAt([], 0), null);
+    const due = deliverableWhen(new Date("2026-11-13T18:00:00Z"), new Date("2026-11-08T18:00:00Z"));
+    assert.match(due, /^Deliverable due /);
+  });
+
   it("hides claim-template bios and brand-default media", () => {
     assert.equal(
       displayBio(

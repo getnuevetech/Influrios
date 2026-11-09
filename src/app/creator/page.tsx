@@ -1,30 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChecklistItem, Panel, StatCard, StatusPill, TextLink } from "@/components/dashboard-ui";
-import { PublicInfluencerCard } from "@/components/public-influencer-card";
-import {
-  IconArrowRight,
-  IconCamera,
-  IconEye,
-  IconLink,
-  IconShare,
-  IconUsers,
-  IconVerified,
-  IconWallet,
-  SocialIcon,
-} from "@/components/icons";
+import { CopyTextButton } from "@/components/copy-text-button";
+import { ChecklistItem } from "@/components/dashboard-ui";
+import { IconArrowRight, IconEye, IconHandshake, IconMail, IconWallet } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
-import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
-import { getDirectoryCreator } from "@/lib/directory";
-import { contractNeedsSignature, contractPartyProgress, loadCreatorHome } from "@/lib/creator-home";
+import { loadCreatorHome } from "@/lib/creator-home";
 import { formatMoney } from "@/lib/money";
-import { formatFollowers } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Creator account" };
+export const metadata = { title: "Home" };
 
-function moneyLabel(cents: number, currency: string) {
-  if (!currency) return "—";
+function moneyLabel(cents: number, currency: string, failed: boolean) {
+  if (failed || !currency) return "—";
   return formatMoney(cents, currency);
 }
 
@@ -37,82 +24,43 @@ export default async function CreatorHomePage({
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/creator");
   const home = await loadCreatorHome(account.id);
-  const directoryCreator = home.slug ? await getDirectoryCreator(home.slug).catch(() => null) : null;
-  const draft = directoryCreator ? null : await getCreatorSessionDraft().catch(() => null);
-  const cardCreator = directoryCreator ?? (draft ? draftToSeedCreator(draft) : null);
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-  const hasProfile = home.hasCard;
+  const connected = home.socials.filter((social) => social.status === "connected").length;
+  const checklistOpen = home.checklist.some((item) => !item.done);
+  const shareUrl = home.shortLabel
+    ? home.shortLabel.startsWith("http")
+      ? home.shortLabel
+      : `https://${home.shortLabel}`
+    : home.slug
+      ? `https://influrios.com/c/${home.slug}`
+      : "";
+  const viewCount = home.visitsFailed ? "—" : home.visitCount30 === null ? "—" : String(home.visitCount30);
+  const viewNote = home.visitsFailed
+    ? "Profile views could not be loaded. This is not zero."
+    : home.visitCount30 === null
+      ? "Views start after your card link is live"
+      : "Last 30 days";
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-bold text-indigo">Creator account</h1>
-          <p className="mt-1 text-sm text-muted">
-            Welcome back{home.firstName ? `, ${home.firstName}` : ""}. Figures on this page come from your card, inquiries, and ledger.
-          </p>
+          <h1 className="font-display text-3xl font-bold text-[#1B1464] sm:text-4xl">
+            Welcome back{home.firstName ? `, ${home.firstName}` : ""}
+          </h1>
+          <p className="mt-1 text-sm text-[#667085]">Here&apos;s what&apos;s happening with your account.</p>
         </div>
-        <p className="text-xs font-semibold text-muted">{today}</p>
       </div>
 
-      {home.contracts.length > 0 ? (
-        <Panel title="Contracts" action={<TextLink href="/collaboration/contracts">View all →</TextLink>}>
-          <ul className="space-y-2 text-sm">
-            {home.contracts.slice(0, 5).map((contract) => {
-              const needsSign = contractNeedsSignature(contract, account.id, account.email);
-              const progress = contractPartyProgress(contract.parties);
-              return (
-                <li key={contract.id}>
-                  <Link
-                    href={`/collaboration/contracts/${contract.id}${needsSign ? "#sign" : ""}`}
-                    className={`flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 hover:bg-[#F1ECFF] ${
-                      needsSign ? "bg-[#F4F0FF]" : "bg-[#F7F8FC]"
-                    }`}
-                  >
-                    <span>
-                      <span className="font-semibold text-indigo">{contract.title}</span>
-                      <span className="ml-2 text-xs text-muted">
-                        {contract.status} · {progress.label}
-                      </span>
-                    </span>
-                    <span className="text-xs font-semibold text-violet">{needsSign ? "Sign now →" : "Open →"}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </Panel>
-      ) : null}
-
       {params.published ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Your Starter card is live
-          {home.slug ? (
-            <>
-              {" "}
-              at{" "}
-              <Link href={home.cardHref} className="font-semibold underline">
-                /c/{home.slug}
-              </Link>
-            </>
-          ) : null}
-          .
-        </div>
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Your Starter card is live{home.slug ? ` at /c/${home.slug}` : ""}.
+        </p>
       ) : null}
-
       {params.welcome ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E4EBFF] bg-white px-4 py-3 text-sm">
           <div>
-            <p className="font-semibold text-indigo">Connect a social account</p>
-            <p className="text-muted">
-              Your email account is ready. Connect Instagram, TikTok, YouTube, Facebook, or X when you want a verified
-              badge and synced metrics. If a network declines the connection, this profile stays here so you can retry.
-            </p>
+            <p className="font-semibold text-[#1B1464]">Connect a social account</p>
+            <p className="text-[#667085]">You can do this later. A declined connection keeps this profile so you can retry.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/dashboard/social" className="btn-primary !py-2 text-sm">
@@ -125,39 +73,88 @@ export default async function CreatorHomePage({
         </div>
       ) : null}
 
-      {home.incomplete ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <div>
-            <p className="font-semibold">Account setup ({home.completionScore}%)</p>
-            <p className="text-amber-900/80">
-              {params.welcome
-                ? "Your account is ready. Finish the remaining steps so brands see a real card."
-                : "Some account steps are still open. The checklist uses your saved profile, not sample copy."}
-            </p>
-          </div>
-          <Link href={home.profileHref} className="btn-primary !py-2 text-sm">
-            Edit profile
-          </Link>
-        </div>
-      ) : null}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat href="/collaboration/hub?view=collaborations&tab=invitations" label="Pending invitations" value={String(home.pendingInvitations)} icon={<IconMail size={16} />} />
+        <Stat href="/collaboration/hub?view=collaborations&tab=active" label="Active collaborations" value={String(home.activeCollabs)} icon={<IconHandshake size={16} />} />
+        <Stat href="/creator/analytics" label="Profile views · 30 days" value={viewCount} note={viewNote} icon={<IconEye size={16} />} />
+        <Stat
+          href="/creator/earnings"
+          label="Released this month"
+          value={moneyLabel(home.earnings.cents, home.earnings.currency, home.earnings.failed)}
+          note={home.earnings.note}
+          icon={<IconWallet size={16} />}
+        />
+      </section>
 
-      {!hasProfile && !home.slug ? (
-        <section className="rounded-3xl border border-[#E6ECF7] bg-white p-6">
-          <h2 className="font-display text-xl font-bold">Create your influencer card</h2>
-          <p className="mt-2 max-w-xl text-sm text-muted">
-            Your email is verified and this account is active. Start a card whenever you are ready.
-          </p>
-          <Link href="/claim" className="btn-primary mt-4">
-            Get started free
-          </Link>
-        </section>
-      ) : (
-        <>
-          <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(17rem,0.75fr)]">
-            <div className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap items-start gap-5">
-                <div className="relative">
-                  <span className="inline-flex h-24 w-24 overflow-hidden rounded-full bg-[#EDE7FF] text-2xl font-bold text-violet ring-4 ring-[#F5F7FB]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]">
+        <div className="space-y-4">
+          <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-lg font-bold text-[#1B1464]">Needs your attention</h2>
+              {home.attention.length > 0 ? (
+                <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[#F3EEFF] px-2 text-xs font-bold text-[#6D4AFF]">
+                  {home.attention.length}
+                </span>
+              ) : null}
+            </div>
+            {home.attention.length === 0 ? (
+              <p className="mt-3 text-sm text-[#667085]">Nothing is waiting on you. New invitations appear here.</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-[#EEF2F7]">
+                {home.attention.map((item) => (
+                  <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[#1B1464]">{item.title}</p>
+                      <p className="text-xs text-[#667085]">{item.detail}</p>
+                    </div>
+                    <Link href={item.href} className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">
+                      {item.action} →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-lg font-bold text-[#1B1464]">Active collaborations</h2>
+              <Link href="/collaboration/hub?view=collaborations&tab=active" className="text-xs font-semibold text-[#6D4AFF]">
+                View all
+              </Link>
+            </div>
+            {home.pipeline.length === 0 ? (
+              <p className="mt-3 text-sm text-[#667085]">
+                No current work. Invitations and proposals stay in Needs your attention until they become a collaboration.
+              </p>
+            ) : (
+              <ul className="mt-3 divide-y divide-[#EEF2F7]">
+                {home.pipeline.map((item) => (
+                  <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[#1B1464]">{item.title}</p>
+                      <p className="text-xs text-[#667085]">
+                        {item.counterparty ? `${item.counterparty} · ` : ""}
+                        {item.next}
+                      </p>
+                    </div>
+                    <Link href={item.href} className="rounded-full border border-[#E4E9F5] px-3 py-2 text-xs font-semibold text-[#6D4AFF]">
+                      Open workspace →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        <div className="space-y-4">
+          <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-sm">
+            <h2 className="font-display text-lg font-bold text-[#1B1464]">Your Influencer Card</h2>
+            {home.slug ? (
+              <div className="mt-3 overflow-hidden rounded-2xl bg-gradient-to-br from-[#5B4DFF] to-[#8B5CF6] p-4 text-white">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-14 w-14 overflow-hidden rounded-full bg-white/20 text-lg font-bold">
                     {home.avatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={home.avatar} alt="" className="h-full w-full object-cover" />
@@ -165,303 +162,96 @@ export default async function CreatorHomePage({
                       <span className="flex h-full w-full items-center justify-center">{home.displayName.slice(0, 1)}</span>
                     )}
                   </span>
-                  <Link
-                    href="/dashboard"
-                    className="absolute bottom-0 right-0 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-violet text-white shadow"
-                  >
-                    <IconCamera size={14} />
-                  </Link>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{home.displayName}</p>
+                    <p className="truncate text-xs text-white/80">{home.title || "Influencer"}</p>
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/qr/${encodeURIComponent(home.slug)}?size=160&logo=0`}
+                    alt=""
+                    width={64}
+                    height={64}
+                    className="ml-auto h-16 w-16 rounded-lg bg-white p-1"
+                  />
                 </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-display text-2xl font-bold">{home.displayName}</h2>
-                    {home.identityVerified ? <IconVerified size={18} /> : null}
-                  </div>
-                  {home.slug ? <p className="text-sm text-muted">@{home.slug}</p> : null}
-                  <p className="mt-2 max-w-2xl text-sm text-indigo/80">
-                    {home.bio || "Add a short bio so brands know what you create."}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {home.specialties.length ? (
-                      home.specialties.slice(0, 6).map((name) => (
-                        <span key={name} className="rounded-full bg-[#E8F0FF] px-2.5 py-1 text-xs font-semibold text-[#2F5FD0]">
-                          {name}
-                        </span>
-                      ))
-                    ) : (
-                      <Link
-                        href="/dashboard"
-                        className="rounded-full border border-dashed border-[#C9D3EA] px-2.5 py-1 text-xs font-semibold text-muted"
-                      >
-                        + Add niche tags
-                      </Link>
-                    )}
-                  </div>
-                  <div className="mt-5 max-w-md rounded-2xl bg-[#F7F8FC] p-3">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span>Account setup</span>
-                      <span>{home.completionScore}%</span>
-                    </div>
-                    <div className="mt-2 h-2 rounded-full bg-white">
-                      <div className="h-2 rounded-full bg-violet" style={{ width: `${home.completionScore}%` }} />
-                    </div>
-                    <Link href={home.profileHref} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-violet">
-                      Open the steps that still use your saved profile
-                      <IconArrowRight size={12} />
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="flex w-full flex-col gap-2 sm:w-48">
-                  <Link href={home.profileHref} className="btn-primary !py-2.5 text-center text-sm">
-                    Edit profile
-                  </Link>
-                  <Link href={home.cardHref} className="btn-secondary !py-2.5 text-center text-sm">
-                    <span className="inline-flex items-center justify-center gap-2">
-                      <IconLink size={14} /> Share Influrios Card
-                    </span>
-                  </Link>
-                  <Link href="/dashboard#socials" className="btn-secondary !py-2.5 text-center text-sm">
-                    <span className="inline-flex items-center justify-center gap-2">
-                      <IconShare size={14} /> Connect socials
-                    </span>
-                  </Link>
-                </div>
+                {home.shortLabel ? <p className="mt-3 text-xs font-semibold text-white/90">{home.shortLabel}</p> : null}
               </div>
-            </div>
-
-            <div className="flex justify-center">
-              {cardCreator ? (
-                <PublicInfluencerCard creator={cardCreator} qrDisplay="large" hideCta />
-              ) : (
-                <p className="text-sm text-muted">Publish your card to see it here.</p>
-              )}
-            </div>
-          </section>
-
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              label="Profile views"
-              value={formatFollowers(home.visitCount)}
-              note={
-                home.shortLabel
-                  ? `Short link, QR, and NFC visits · last 7 days · ${home.visitAllTime} all time`
-                  : "Visits start after a published short link"
-              }
-              tone="blue"
-              icon={<IconEye size={16} />}
-              points={home.shortLabel ? home.visitSeries : undefined}
-              delta={home.visitDelta ?? undefined}
-            />
-            <StatCard
-              label="Open opportunities"
-              value={String(home.opportunityCount)}
-              note="Inquiries and campaigns that match your specialty and have not been applied to"
-              tone="violet"
-              icon={<IconShare size={16} />}
-            />
-            <StatCard
-              label="Active collaborations"
-              value={String(home.activeCollabs)}
-              note="Accepted collaboration records"
-              tone="emerald"
-              icon={<IconUsers size={16} />}
-            />
-            <StatCard
-              label="Earnings this month"
-              value={moneyLabel(home.monthCents, home.currency)}
-              note={home.currency ? "Influencer release rows this month" : "No funding currency is stored yet"}
-              tone="amber"
-              icon={<IconWallet size={16} />}
-            />
-          </section>
-
-          <section className="grid gap-4 lg:grid-cols-3">
-            <Panel title="Connected social profiles" action={<TextLink href="/dashboard#socials">Manage</TextLink>}>
-              {home.socials.length === 0 ? (
-                <p className="text-sm text-muted">No social profile is saved on this card yet.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {home.socials.map((social) => (
-                    <li key={social.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#F0F3FA] px-3 py-2.5">
-                      <span className="flex items-center gap-3">
-                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#F1ECFF] text-violet">
-                          <SocialIcon platform={social.platform} size={16} />
-                        </span>
-                        <span>
-                          <span className="block text-sm font-semibold capitalize">{social.platform.toLowerCase()}</span>
-                          <span className="text-xs text-muted">
-                            {social.handle ? social.handle : social.detail ? "" : "No @username saved"}
-                            {typeof social.followers === "number" ? `${social.handle ? " · " : ""}${formatFollowers(social.followers)} followers` : ""}
-                            {social.detail ? `${social.handle || typeof social.followers === "number" ? " · " : ""}${social.detail}` : ""}
-                          </span>
-                        </span>
-                      </span>
-                      <span
-                        className={`flex items-center gap-2 text-xs font-semibold ${
-                          social.status === "connected"
-                            ? "text-emerald-700"
-                            : social.status === "attention"
-                              ? "text-amber-800"
-                              : "text-muted"
-                        }`}
-                      >
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            social.status === "connected"
-                              ? "bg-emerald-500"
-                              : social.status === "attention"
-                                ? "bg-amber-500"
-                                : "bg-[#C9D3EA]"
-                          }`}
-                        />
-                        {social.statusLabel}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
-
-            <Panel
-              title="Media kit"
-              action={
-                <StatusPill tone={home.mediaPublished ? "success" : "neutral"}>
-                  {home.mediaPublished ? "Published" : "Not published"}
-                </StatusPill>
-              }
-            >
-              <p className="text-sm text-muted">
-                {home.mediaPublished
-                  ? "Uploaded profile photos on this card."
-                  : "Upload your own photos. The branded avatar and banner are not a media kit."}
-              </p>
-              <div className="mt-3 grid grid-cols-4 gap-2">
-                {home.photos.length === 0 ? (
-                  <div className="col-span-4 rounded-xl bg-[#EEF2FA] px-3 py-6 text-center text-xs font-semibold text-muted">
-                    No uploaded photos yet
-                  </div>
-                ) : (
-                  home.photos.map((src) => (
-                    <div key={src} className="aspect-square overflow-hidden rounded-xl bg-[#EEF2FA]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt="" className="h-full w-full object-cover" />
-                    </div>
-                  ))
-                )}
-              </div>
-              <div className="mt-4 flex gap-2">
-                <Link href={home.cardHref} className="btn-secondary !py-2 text-sm">
-                  View card
-                </Link>
-                <Link href="/creator/media-kit" className="btn-secondary !py-2 text-sm">
-                  Edit media kit
-                </Link>
-              </div>
-            </Panel>
-
-            <Panel
-              title="Payout status"
-              action={
-                <StatusPill tone={home.payoutReady ? "success" : "neutral"}>
-                  {home.payoutReady ? "Payout ready" : "Not set up"}
-                </StatusPill>
-              }
-            >
-              <p className="text-sm text-muted">
-                {home.payoutReady
-                  ? "A payout account is stored for this card."
-                  : "Add a payout method before collaborations can pay this card."}
-              </p>
-              <ul className="mt-3 space-y-2 text-sm">
-                <ChecklistItem done={home.identityDone} label="Identity verified" href="/dashboard/kyc" />
-                <ChecklistItem done={home.payoutReady} label="Payout method added" href="/creator/earnings#payouts" />
-                <ChecklistItem done={home.payoutReady} label="Ready to receive payments" href="/creator/earnings#payouts" />
-              </ul>
-              <Link href="/creator/earnings#payouts" className="btn-secondary mt-4 !py-2 text-sm">
-                Manage payout methods
+            ) : (
+              <p className="mt-3 text-sm text-[#667085]">Create your card to get a share link. The full portrait stays on its own page.</p>
+            )}
+            <div className="mt-3 flex gap-2">
+              <Link href={home.cardHref} className="inline-flex flex-1 items-center justify-center gap-1 rounded-full bg-[#6D4AFF] px-3 py-2 text-sm font-semibold text-white">
+                View card <IconArrowRight size={14} />
               </Link>
-            </Panel>
+              {shareUrl ? <CopyTextButton value={shareUrl} /> : null}
+            </div>
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-3">
-            <Panel title="Recent opportunities" action={<TextLink href="/collaboration/hub?view=opportunities">View all</TextLink>}>
-              {home.opportunities.length === 0 ? (
-                <p className="text-sm text-muted">No brand inquiry or specialty-matched request is stored for this card yet.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {home.opportunities.map((item) => (
-                    <li key={item.id}>
-                      <Link
-                        href={item.href}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-[#F0F3FA] px-3 py-3 hover:border-violet/40 hover:bg-[#F8F6FF]"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">{item.title}</p>
-                          <p className="truncate text-xs text-muted">{item.subtitle}</p>
-                          {item.tags.length ? (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {item.tags.slice(0, 2).map((tag) => (
-                                <span key={tag} className="rounded-full bg-[#EEF2FA] px-2 py-0.5 text-[10px] font-semibold text-muted">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-indigo">{item.budget || "—"}</p>
-                          <StatusPill tone={item.badgeTone}>{item.badge}</StatusPill>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
+          <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-sm">
+            <h2 className="font-display text-lg font-bold text-[#1B1464]">Account status</h2>
+            <ul className="mt-3 space-y-2 text-sm text-[#1B1464]">
+              <StatusRow done={home.published} label="Profile published" href={home.profileHref} />
+              <StatusRow
+                done={connected > 0}
+                label={connected > 0 ? `${connected} social${connected === 1 ? "" : "s"} connected` : "No social connected"}
+                href="/dashboard/social"
+              />
+              <StatusRow done={home.payoutReady} label={home.payoutReady ? "Payout ready" : "Payout not ready"} href="/creator/earnings#payouts" />
+            </ul>
+            {checklistOpen ? (
+              <div className="mt-4 border-t border-[#EEF2F7] pt-3">
+                <p className="text-xs font-semibold text-[#667085]">
+                  Setup {home.checklistDone} of {home.checklist.length}
+                </p>
+                <ul className="mt-2">
+                  {home.checklist
+                    .filter((item) => !item.done)
+                    .map((item) => (
+                      <ChecklistItem key={item.id} done={item.done} label={item.label} href={item.href} />
+                    ))}
                 </ul>
-              )}
-            </Panel>
-
-            <Panel title="Active collaborations" action={<TextLink href="/collaboration/hub?view=collaborations">View all</TextLink>}>
-              {home.pipeline.length === 0 ? (
-                <p className="text-sm text-muted">No active collaboration pipeline items yet.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {home.pipeline.map((item) => (
-                    <li key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#F0F3FA] px-3 py-3">
-                      <div>
-                        <p className="text-sm font-semibold">{item.title}</p>
-                        <p className="text-xs text-muted">{item.counterparty}</p>
-                      </div>
-                      <StatusPill
-                        tone={item.stage === "In Progress" ? "success" : item.stage === "Review" ? "violet" : "info"}
-                      >
-                        {item.stage}
-                      </StatusPill>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
-
-            <Panel title="Account setup checklist">
-              <p className="text-xs font-semibold text-muted">
-                {home.checklistDone} of {home.checklist.length} complete
-              </p>
-              <div className="mt-2 h-2 rounded-full bg-[#EEF2FA]">
-                <div
-                  className="h-2 rounded-full bg-violet"
-                  style={{ width: `${home.checklist.length ? (home.checklistDone / home.checklist.length) * 100 : 0}%` }}
-                />
               </div>
-              <ul className="mt-3 space-y-1">
-                {home.checklist.map((item) => (
-                  <ChecklistItem key={item.id} done={item.done} label={item.label} href={item.href} />
-                ))}
-              </ul>
-            </Panel>
+            ) : null}
           </section>
-        </>
-      )}
+        </div>
+      </div>
     </div>
+  );
+}
+
+function Stat({
+  href,
+  label,
+  value,
+  note,
+  icon,
+}: {
+  href: string;
+  label: string;
+  value: string;
+  note?: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <Link href={href} className="rounded-2xl border border-[#E7ECF5] bg-white p-4 shadow-sm hover:border-[#C9B8FF]">
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[#F3EEFF] text-[#6D4AFF]">{icon}</span>
+      <p className="mt-3 text-xs font-semibold text-[#667085]">{label}</p>
+      <p className="mt-1 font-display text-2xl font-bold text-[#1B1464]">{value}</p>
+      {note ? <p className="mt-1 text-[11px] leading-snug text-[#667085]">{note}</p> : null}
+    </Link>
+  );
+}
+
+function StatusRow({ done, label, href }: { done: boolean; label: string; href: string }) {
+  return (
+    <li>
+      <Link href={href} className="flex items-center gap-2 hover:text-[#6D4AFF]">
+        <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${done ? "bg-[#E8F8EE] text-[#178A45]" : "bg-[#F4F6FB] text-[#98A2B3]"}`}>
+          {done ? "✓" : "–"}
+        </span>
+        {label}
+      </Link>
+    </li>
   );
 }

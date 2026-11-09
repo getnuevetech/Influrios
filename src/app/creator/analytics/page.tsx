@@ -7,7 +7,7 @@ import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
-import { classifySocialRow } from "@/lib/creator-home";
+import { classifySocialRow, earningsSummaryNote } from "@/lib/creator-home";
 import { formatFollowers } from "@/lib/seed-data";
 import { isLiveSocialAccount } from "@/lib/social-sync";
 import { getCreatorShortLinkAnalytics } from "@/lib/short-link";
@@ -147,7 +147,11 @@ export default async function CreatorAnalyticsPage() {
         <StatCard
           label="Released earnings"
           value={earningsCurrency ? formatMoney(earningsCents, earningsCurrency) : "—"}
-          note={earningsCurrency ? "Ledger releases only" : "No funding currency is stored yet"}
+          note={earningsSummaryNote({
+            failed: Boolean(creator) && !hub,
+            currency: earningsCurrency,
+            cents: earningsCents,
+          })}
           tone="amber"
           icon={<IconWallet size={16} />}
         />

@@ -83,6 +83,24 @@ model User {
   legalAcceptances  LegalAcceptance[]
   subscriptionStates SubscriptionState[]
   referralRegistration ReferralRegistration?
+  accountNotices    AccountNotice[]
+}
+
+/// Unread events for the signed-in member. Reading a row clears the bell. The invitation itself stays pending.
+model AccountNotice {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  sourceId  String
+  title     String
+  detail    String
+  href      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, kind, sourceId])
+  @@index([userId, readAt])
 }
 
 model EntitlementPlan {

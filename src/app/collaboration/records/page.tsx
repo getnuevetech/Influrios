@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { getCreatorSessionDraft } from "@/lib/claim";
+import { invitationStillListed } from "@/lib/collaboration-hub";
 import { listCollaborations } from "@/lib/collaborations";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
@@ -72,7 +73,18 @@ export default async function CollaborationRecordsPage() {
       });
     }
 
-    for (const app of applications.filter((row) => applicationIsAcceptedPipeline(row.status) || row.status === "RESPONDED" || row.status === "NEGOTIATING")) {
+    const liveContracts = contracts.filter((row) => row.status !== "voided" && row.status !== "declined");
+    const contractedApplicationIds = new Set(
+      liveContracts.map((row) => row.applicationId).filter((id): id is string => Boolean(id)),
+    );
+    const contractedCollaborationIds = new Set(
+      liveContracts.map((row) => row.collaborationId).filter((id): id is string => Boolean(id)),
+    );
+    for (const app of applications.filter(
+      (row) =>
+        invitationStillListed(row, contractedApplicationIds, contractedCollaborationIds) &&
+        (applicationIsAcceptedPipeline(row.status) || row.status === "RESPONDED" || row.status === "NEGOTIATING"),
+    )) {
       const creatorRow = app.creatorSlug ? bySlug.get(app.creatorSlug) : null;
       rows.push({
         id: `app-${app.id}`,
@@ -116,8 +128,17 @@ export default async function CollaborationRecordsPage() {
       });
     }
 
-    for (const record of collaborations.filter((row) =>
-      ["draft", "sent", "accepted"].includes(row.status),
+    const liveContracts = contracts.filter((row) => row.status !== "voided" && row.status !== "declined");
+    const contractedApplicationIds = new Set(
+      liveContracts.map((row) => row.applicationId).filter((id): id is string => Boolean(id)),
+    );
+    const contractedCollaborationIds = new Set(
+      liveContracts.map((row) => row.collaborationId).filter((id): id is string => Boolean(id)),
+    );
+    for (const record of collaborations.filter(
+      (row) =>
+        ["draft", "sent", "accepted"].includes(row.status) &&
+        !contractedCollaborationIds.has(row.id),
     )) {
       const otherSlug = record.initiatorSlug === creatorSlug ? record.recipientSlug : record.initiatorSlug;
       const other = bySlug.get(otherSlug);
@@ -133,11 +154,12 @@ export default async function CollaborationRecordsPage() {
 
     for (const app of applications.filter(
       (row) =>
-        applicationIsAcceptedPipeline(row.status) ||
-        row.status === "REQUESTED" ||
-        row.status === "VIEWED" ||
-        row.status === "RESPONDED" ||
-        row.status === "NEGOTIATING",
+        invitationStillListed(row, contractedApplicationIds, contractedCollaborationIds) &&
+        (applicationIsAcceptedPipeline(row.status) ||
+          row.status === "REQUESTED" ||
+          row.status === "VIEWED" ||
+          row.status === "RESPONDED" ||
+          row.status === "NEGOTIATING"),
     )) {
       rows.push({
         id: `app-${app.id}`,

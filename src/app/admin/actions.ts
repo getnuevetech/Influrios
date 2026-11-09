@@ -14,6 +14,7 @@ import {
   type BannerSlot,
   type CardFeatureFlags,
 } from "@/lib/cms";
+import { addExampleCardPortrait, removeExampleCardPortrait } from "@/lib/example-portraits";
 
 export async function actionUpdateBanner(formData: FormData) {
   await requireAdminAction("banners.edit");
@@ -296,6 +297,31 @@ export async function actionDeleteFeeRule(formData: FormData) {
   }
   revalidatePath("/admin/fees");
   redirect("/admin/fees?removed=rule");
+}
+
+export async function actionUploadExamplePortrait(formData: FormData) {
+  await requireAdminAction("banners.edit");
+  const gender = String(formData.get("gender") ?? "");
+  if (gender !== "male" && gender !== "female") {
+    redirect("/admin/example-portraits?error=Choose%20male%20or%20female");
+  }
+  try {
+    const src = await saveUploadedImage(formData.get("file"));
+    if (!src) throw new Error("Choose an image file.");
+    await addExampleCardPortrait({ src, gender });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Upload failed.";
+    redirect(`/admin/example-portraits?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/claim");
+  redirect("/admin/example-portraits?uploaded=1");
+}
+
+export async function actionRemoveExamplePortrait(formData: FormData) {
+  await requireAdminAction("banners.edit");
+  await removeExampleCardPortrait(String(formData.get("src") ?? ""));
+  revalidatePath("/claim");
+  redirect("/admin/example-portraits?removed=1");
 }
 
 export async function actionDeleteFeeSnapshot(formData: FormData) {
