@@ -260,6 +260,7 @@ export async function upsertBusinessRequest(input: {
   currency?: string | null;
   deliverableSummary?: string | null;
   platforms?: string[];
+  applicationDeadline?: Date | null;
 }) {
   const brand = input.brand.trim();
   const category = input.category.trim();
@@ -297,6 +298,7 @@ export async function upsertBusinessRequest(input: {
     ...(input.currency !== undefined ? { currency: (input.currency ?? "").trim().toUpperCase() } : {}),
     ...(input.deliverableSummary !== undefined ? { deliverableSummary: (input.deliverableSummary ?? "").trim() } : {}),
     ...(input.platforms !== undefined ? { platforms: input.platforms } : {}),
+    ...(input.applicationDeadline !== undefined ? { applicationDeadline: input.applicationDeadline } : {}),
   };
   if (input.id) {
     return prisma.marketplaceBusinessRequest.update({ where: { id: input.id }, data });

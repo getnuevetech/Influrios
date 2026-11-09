@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Panel, StatusPill, TextLink } from "@/components/dashboard-ui";
+import { actionPublishCampaign } from "@/app/collaboration/business/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { campaignEditLocked } from "@/lib/campaign-contract";
@@ -68,18 +69,18 @@ export default async function BusinessCampaignsPage() {
                 <div className="flex items-center gap-2">
                   <StatusPill tone="neutral">Draft</StatusPill>
                   <Link
-                    href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
+                    href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#suggestions`}
                     className="text-xs font-bold text-violet hover:underline"
                   >
-                    Save
+                    Edit
                   </Link>
                   {publishedBriefIds.has(brief.id) ? null : (
-                    <Link
-                      href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#publish`}
-                      className="text-xs font-bold text-indigo hover:underline"
-                    >
-                      Publish
-                    </Link>
+                    <form action={actionPublishCampaign}>
+                      <input type="hidden" name="briefId" value={brief.id} />
+                      <button type="submit" className="text-xs font-bold text-indigo hover:underline">
+                        Publish
+                      </button>
+                    </form>
                   )}
                 </div>
               </li>
@@ -115,18 +116,18 @@ export default async function BusinessCampaignsPage() {
                   ) : (
                     <>
                       <Link
-                        href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}`}
+                        href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#suggestions`}
                         className="text-xs font-bold text-violet hover:underline"
                       >
-                        Save
+                        Edit
                       </Link>
                       {publishedBriefIds.has(brief.id) ? null : (
-                        <Link
-                          href={`/collaboration/business?intent=${encodeURIComponent(brief.id)}#publish`}
-                          className="text-xs font-bold text-indigo hover:underline"
-                        >
-                          Publish
-                        </Link>
+                        <form action={actionPublishCampaign}>
+                          <input type="hidden" name="briefId" value={brief.id} />
+                          <button type="submit" className="text-xs font-bold text-indigo hover:underline">
+                            Publish
+                          </button>
+                        </form>
                       )}
                     </>
                   )}

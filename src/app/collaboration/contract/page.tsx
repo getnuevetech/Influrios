@@ -188,6 +188,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         location: briefRow.location,
         platform: briefRow.platform,
         summary: briefRow.summary,
+        deliverables: briefRow.deliverables,
+        responseDeadline: briefRow.responseDeadline ? briefRow.responseDeadline.toISOString().slice(0, 10) : null,
         createdAt: briefRow.createdAt.toISOString(),
         status: briefRow.status === "closed" || briefRow.status === "draft" ? briefRow.status : "active",
       }

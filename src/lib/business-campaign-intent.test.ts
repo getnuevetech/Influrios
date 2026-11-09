@@ -27,6 +27,8 @@ function brief(overrides: Partial<CampaignBrief> = {}): CampaignBrief {
     location: "",
     platform: "",
     summary: "",
+    deliverables: "",
+    responseDeadline: null,
     createdAt: "2026-10-10T00:00:00.000Z",
     status: "draft",
     ...overrides,
@@ -101,6 +103,18 @@ describe("campaign intent field builder (W2.3)", () => {
     assert.equal(fields.platform, "");
     assert.equal(fields.status, "draft");
     assert.equal(fields.summary, "Gen Z skincare");
+    assert.equal(fields.deliverables, "");
+    assert.equal(fields.responseDeadline, null);
+  });
+
+  it("keeps deliverables and a response deadline on the saved intent", () => {
+    const fields = buildCampaignIntentFields({
+      title: "3rd Testing Colabs",
+      deliverables: "One launch reel",
+      responseDeadline: "2026-12-01",
+    });
+    assert.equal(fields.deliverables, "One launch reel");
+    assert.equal(fields.responseDeadline, "2026-12-01T00:00:00.000Z");
   });
 
   it("stores a three-letter budget currency and falls back to USD otherwise", () => {
@@ -175,7 +189,14 @@ describe("campaign intent sources", () => {
       assert.equal(text.includes("Strong specialty and market fit"), false, file);
     }
     const page = source("src/app/collaboration/business/page.tsx");
+    const campaigns = source("src/app/business/campaigns/page.tsx");
     assert.match(page, /name="title"/);
+    assert.match(page, /name="deliverables"/);
+    assert.match(page, /name="responseDeadline"/);
     assert.match(page, /required/);
+    assert.match(page, /actionPublishCampaign/);
+    assert.match(campaigns, /actionPublishCampaign/);
+    assert.equal(page.includes("#publish"), false);
+    assert.equal(campaigns.includes("#publish"), false);
   });
 });
