@@ -595,10 +595,11 @@ export async function inviteCreatorsIndependently(input: {
     if (!request || request.workspaceId !== workspaceId) {
       return { ok: false, error: "That campaign is not on this workspace." };
     }
-    if (request.status !== "published") {
-      return { ok: false, error: "Publish the campaign before inviting influencers." };
-    }
     briefId = briefId || request.briefId || "";
+    if (request.status !== "published") requestId = "";
+    if (!briefId && !requestId) {
+      return { ok: false, error: "Save the campaign before inviting influencers." };
+    }
   } else if (briefId) {
     const brief = await prisma.businessBrief.findUnique({ where: { id: briefId } });
     if (!brief || brief.workspaceId !== workspaceId) {
