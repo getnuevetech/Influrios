@@ -33,7 +33,7 @@ export async function loadAdminDeal(rawId: string) {
     },
     orderBy: { createdAt: "desc" },
     include: {
-      milestones: { orderBy: { sortOrder: "asc" } },
+      milestones: { orderBy: { sortOrder: "asc" }, include: { submissions: { orderBy: { version: "asc" } } } },
       disputes: { orderBy: { createdAt: "desc" } },
       entries: { orderBy: { createdAt: "asc" } },
       changeOrders: { orderBy: { createdAt: "desc" } },

@@ -36,7 +36,8 @@ import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines, storedMinorDigits } from "@/lib/fx-share";
 import { activeShareSnapshot, ensureSettlementDefaults } from "@/lib/settlement";
-import { corridorPrefundSnapshot } from "@/lib/corridor-checkout";
+import { corridorPrefundSnapshot, storedPayoutMethodList } from "@/lib/corridor-checkout";
+import { decidePaymentRoute } from "@/lib/payment-route";
 import { storedCurrencyCode } from "@/lib/money";
 import { quoteWiseUserRate } from "@/lib/wise-quote";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
@@ -614,6 +615,26 @@ export async function requestPrefund(input: {
   if (!currency) {
     return { ok: false as const, error: "That jurisdiction has no currency. Nothing was funded." };
   }
+  const gatewayRoute = await prisma.paymentCountryRoute.findUnique({
+    where: { countryCode: code },
+    include: { provider: { select: { code: true, enabled: true } } },
+  });
+  const routeDecision = decidePaymentRoute({
+    countryCode: code,
+    corridorActive: corridor?.active ?? null,
+    corridorCurrency: corridor?.currency,
+    corridorCollectionProvider: corridorFacts.collectionProviderCode,
+    corridorPayoutMethods: storedPayoutMethodList(corridor?.payoutMethodsJson),
+    jurisdictionCurrency: jurisdiction?.currency,
+    jurisdictionMinorDigits: jurisdiction?.minorDigits,
+    jurisdictionHoldingProvider: assignedCode,
+    jurisdictionProtectedPayments: jurisdiction?.protectedPaymentsEnabled ?? null,
+    gatewayProvider: gatewayRoute?.provider.code,
+    gatewayActive: gatewayRoute ? gatewayRoute.active && gatewayRoute.provider.enabled : null,
+  });
+  if (routeDecision.conflicts.length > 0) {
+    return { ok: false as const, error: `${routeDecision.conflicts.join(" ")} Nothing was funded.` };
+  }
   const minorDigits = storedMinorDigits(jurisdiction?.minorDigits);
   if (minorDigits == null) {
     return { ok: false as const, error: "That jurisdiction has no minor digits. Nothing was funded." };
@@ -843,6 +864,7 @@ export async function requestPrefund(input: {
           providerCode: provider!.code,
           contractDocumentId: index === 0 ? contractDocumentId : null,
           idempotencyKey: index === 0 ? idempotencyKey : null,
+          routeSnapshotJson: routeDecision as object,
           attributionLabel: attribution.attributionLabel,
           attributionStatus: attribution.attributionStatus,
           attributionExpiresAt: attribution.attributionExpiresAt,

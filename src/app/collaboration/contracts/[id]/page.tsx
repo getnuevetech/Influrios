@@ -187,9 +187,14 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                   </button>
                 </form>
               ) : fundingCta.kind === "resume" || fundingCta.kind === "view" ? (
-                <Link href={`/payments?created=${document.fundingId}`} className="text-violet hover:underline">
-                  {fundingCta.label}
-                </Link>
+                <>
+                  <Link href={`/payments?created=${document.fundingId}`} className="text-violet hover:underline">
+                    {fundingCta.label}
+                  </Link>
+                  <Link href={`/collaboration/work/${document.fundingId}`} className="text-violet hover:underline">
+                    Deliverables
+                  </Link>
+                </>
               ) : fundingCta.kind === "wait" ? (
                 <span className="text-muted">{fundingCta.label}</span>
               ) : null

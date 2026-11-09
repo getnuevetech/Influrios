@@ -220,6 +220,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                       {deal.businessName} → {creator?.displayName ?? deal.creatorSlug}
                     </p>
                     <h3 className="mt-1 font-display text-xl font-bold text-indigo">{deal.title}</h3>
+                    <Link href={`/collaboration/work/${deal.id}`} className="mt-1 inline-block text-xs font-semibold text-violet hover:underline">
+                      Deliverables and review →
+                    </Link>
                     <p className="mt-1 font-mono text-[11px] text-muted">
                       {deal.id} · {fundingTerm(Boolean(jurisdiction?.escrowTermAllowed))} ·{" "}
                       {FUNDING_MODE_LABELS[mode]}
@@ -422,10 +425,12 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {deal.status === "held" && milestone.status === "pending" ? (
-                          <form action={actionSubmitMilestone}>
+                        {!businessViewer && deal.status === "held" && milestone.status === "pending" ? (
+                          <form action={actionSubmitMilestone} className="space-y-2">
                             <input type="hidden" name="dealId" value={deal.id} />
                             <input type="hidden" name="milestoneId" value={milestone.id} />
+                            <input name="linkUrl" placeholder="https:// link to the work" className="w-full rounded-lg border border-border px-2 py-1 text-xs" />
+                            <input name="note" placeholder="What you are submitting" className="w-full rounded-lg border border-border px-2 py-1 text-xs" />
                             <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo hover:bg-lavender">
                               Submit work
                             </button>

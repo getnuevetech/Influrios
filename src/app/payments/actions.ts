@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { isBusinessRole } from "@/lib/account-audience";
 import { checkoutUsesStoredCorridor } from "@/lib/corridor-checkout";
+import { readRouteSnapshot } from "@/lib/payment-route";
+import { markLatestSubmission, submitMilestoneWork } from "@/lib/milestone-delivery";
 import { assertFundingAccess, requireBusinessFundingAccess } from "@/lib/funding-access";
 import { openFundingCollection } from "@/lib/provider-collection";
 import { prisma } from "@/lib/db";
@@ -13,7 +15,6 @@ import {
   requestChangeOrder,
   requestFundingRevision,
   stopRecurringSeries,
-  submitFundingMilestone,
 } from "@/lib/marketplace-ledger";
 import { addDisputeEvidence, cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
 
@@ -48,7 +49,11 @@ export async function actionOpenFundingCheckout(formData: FormData) {
   if (!funding || funding.status !== "awaiting_provider") {
     fail("This funding is not waiting for a provider.");
   }
-  const route = checkoutUsesStoredCorridor(funding);
+  const storedRoute = readRouteSnapshot(funding.routeSnapshotJson);
+  const route = checkoutUsesStoredCorridor({
+    collectionProviderCode: storedRoute?.collectionProvider || funding.collectionProviderCode,
+    payoutMethod: funding.payoutMethod,
+  });
   if (!route.ok) fail(route.error);
   const origin = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
   const opened = await openFundingCollection({
@@ -92,11 +97,21 @@ export async function actionSubmitMilestone(formData: FormData) {
   const milestoneId = String(formData.get("milestoneId") ?? "");
   const access = await assertFundingAccess(account, fundingId);
   if (!access.ok) fail(access.error);
-  const result = await submitFundingMilestone(access.funding.id, milestoneId);
+  if (access.audience !== "creator" || !access.actorSlug) {
+    fail("Only the assigned influencer can submit work.");
+  }
+  const result = await submitMilestoneWork({
+    fundingId: access.funding.id,
+    milestoneId,
+    creatorSlug: access.actorSlug,
+    note: String(formData.get("note") ?? ""),
+    linkUrl: String(formData.get("linkUrl") ?? ""),
+  });
   if (!result.ok) fail(result.error);
   revalidatePath("/payments");
   revalidatePath("/dashboard");
-  redirect("/payments?submitted=1");
+  revalidatePath(`/collaboration/work/${access.funding.id}`);
+  redirect(`/collaboration/work/${access.funding.id}?submitted=1`);
 }
 
 export async function actionRequestRevision(formData: FormData) {
@@ -107,9 +122,11 @@ export async function actionRequestRevision(formData: FormData) {
   if (!access.ok) fail(access.error);
   const result = await requestFundingRevision(access.funding.id, milestoneId, String(formData.get("note") ?? ""));
   if (!result.ok) fail(result.error);
+  await markLatestSubmission({ milestoneId, status: "revision_requested", reviewNote: String(formData.get("note") ?? "") });
   revalidatePath("/payments");
   revalidatePath("/dashboard");
-  redirect("/payments?revised=1");
+  revalidatePath(`/collaboration/work/${access.funding.id}`);
+  redirect(`/collaboration/work/${access.funding.id}?revised=1`);
 }
 
 export async function actionApproveMilestone(formData: FormData) {
@@ -120,8 +137,10 @@ export async function actionApproveMilestone(formData: FormData) {
   if (!access.ok) fail(access.error);
   const result = await approveFundingMilestone(access.funding.id, milestoneId);
   if (!result.ok) fail(result.error);
+  await markLatestSubmission({ milestoneId, status: "approved", reviewNote: "" });
   revalidatePath("/payments");
-  redirect("/payments?approved=1");
+  revalidatePath(`/collaboration/work/${access.funding.id}`);
+  redirect(`/collaboration/work/${access.funding.id}?approved=1`);
 }
 
 export async function actionCancelPrefund(formData: FormData) {

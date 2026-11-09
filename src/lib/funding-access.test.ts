@@ -15,6 +15,7 @@ describe("funding access", () => {
         businessName: "Brand",
         status: "held",
       },
+      actorSlug: null,
     };
     const creator: FundingAccessOk = { ...business, audience: "creator" };
     assert.equal(requireBusinessFundingAccess(business).ok, true);

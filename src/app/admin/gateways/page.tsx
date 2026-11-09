@@ -85,6 +85,13 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
         ← Admin
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Payment gateways</h1>
+      <p className="mt-2 text-sm text-muted">
+        Credentials live here. Country collection, holding, and conflicts are on{" "}
+        <Link href="/admin/payment-settings" className="font-semibold text-violet hover:underline">
+          Payment settings
+        </Link>
+        .
+      </p>
       <p className="mt-2 max-w-3xl text-sm text-muted">
         Save gateway credentials here. Plan checkouts use Stripe from this page. Country corridors pick which of these
         gateways collect collaboration funding and which payout onboarding rail influencers see. Assign each country —
