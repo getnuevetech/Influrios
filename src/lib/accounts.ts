@@ -160,9 +160,16 @@ export async function registerAccount(input: {
   return user;
 }
 
+/** The signed-in account is the one that owns this email. A link cannot select a different account. */
+export function accountEmailMatches(accountEmail: string, submittedEmail: string) {
+  const submitted = submittedEmail.trim().toLowerCase();
+  return Boolean(submitted) && accountEmail.trim().toLowerCase() === submitted;
+}
+
 export async function loginAccount(email: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
-  if (!user?.passwordHash || !verifyAccountPassword(password, user.passwordHash)) {
+  const submitted = email.trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email: submitted } });
+  if (!user?.passwordHash || !verifyAccountPassword(password, user.passwordHash) || !accountEmailMatches(user.email, submitted)) {
     throw new Error("Email or password is incorrect.");
   }
   if (user.suspendedAt) throw new Error("This account is suspended. Contact Influrios support.");

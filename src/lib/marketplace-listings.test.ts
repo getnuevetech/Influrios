@@ -171,7 +171,7 @@ describe("marketplace application state machine", () => {
       "WITHDRAWN",
     ]);
     assert.deepEqual(nextApplicationStatuses("ACCEPTED"), ["COLLABORATION_DRAFTED", "WITHDRAWN"]);
-    assert.equal(applicationTransitionLabel("COLLABORATION_DRAFTED"), "Draft contract");
+    assert.equal(applicationTransitionLabel("COLLABORATION_DRAFTED"), "Set up collaboration");
     assert.equal(applicationTransitionLabel("VIEWED"), "Mark viewed");
     assert.equal(applicationTransitionLabel("EXPIRED"), "Mark expired");
   });

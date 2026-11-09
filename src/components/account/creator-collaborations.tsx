@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { IconCalendar, IconCheck, IconHandshake, IconMail } from "@/components/icons";
-import { PIPELINE_STAGES, type loadCreatorHub } from "@/lib/collaboration-hub";
+import { agreementPresentation, PIPELINE_STAGES, type loadCreatorHub } from "@/lib/collaboration-hub";
 import { applicationIsInvitation, applicationIsOpenPipeline } from "@/lib/marketplace-listings";
 import { formatStoredMoney } from "@/lib/money";
 import type { listTeamProposalsForCreator } from "@/lib/team-proposal";
@@ -29,6 +29,7 @@ const STAGE_PILL: Record<string, string> = {
   "In Progress": "bg-[#E8F8EE] text-[#178A45]",
   Review: "bg-[#FFF4D8] text-[#B86E00]",
   Contract: "bg-[#F3EEFF] text-[#6D4AFF]",
+  Accepted: "bg-[#E8F1FF] text-[#2F6BFF]",
   Funded: "bg-[#E8F1FF] text-[#2F6BFF]",
   Released: "bg-[#E8F8EE] text-[#178A45]",
   Match: "bg-[#F4F6FB] text-[#667085]",
@@ -131,7 +132,7 @@ export function CreatorCollaborations({
             ["applications", "Applications", applications.length],
             ["invitations", "Invitations", invitationCount],
             ["active", "Active", active.length],
-            ["proposals", "Team proposals", openProposals.length],
+            ["proposals", "Coordinated proposals", openProposals.length],
             ["completed", "Completed", completed.length],
             ["history", "History", history.length],
             ["saved", "Saved matches", savedMatches.length],
@@ -179,6 +180,7 @@ export function CreatorCollaborations({
               <ul className="mt-2 divide-y divide-[#EEF2F7]">
                 {pagedActive.map((row) => {
                   const brand = names[row.counterparty] || row.counterparty || row.title;
+                  const shown = agreementPresentation(row);
                   const pct =
                     row.obligationTotal && row.obligationTotal > 0
                       ? Math.round(((row.obligationDone ?? 0) / row.obligationTotal) * 100)
@@ -190,8 +192,8 @@ export function CreatorCollaborations({
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="truncate font-semibold text-[#1B1464]">{brand}</p>
-                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STAGE_PILL[row.stage] || STAGE_PILL.Match}`}>
-                              {row.stage}
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STAGE_PILL[shown.label] || STAGE_PILL.Match}`}>
+                              {shown.label}
                             </span>
                           </div>
                           <p className="truncate text-xs text-[#667085]">{row.title}</p>
@@ -199,7 +201,7 @@ export function CreatorCollaborations({
                       </div>
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-[#98A2B3]">Next deliverable</p>
-                        <p className="text-sm text-[#1B1464]">{row.revisionSummary || row.stage}</p>
+                        <p className="text-sm text-[#1B1464]">{shown.next}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-[#98A2B3]">Progress</p>
@@ -209,7 +211,7 @@ export function CreatorCollaborations({
                         <p className="mt-1 text-[11px] text-[#667085]">
                           {row.obligationTotal
                             ? `${row.obligationDone ?? 0} of ${row.obligationTotal} deliverables`
-                            : row.stage}
+                            : shown.label}
                         </p>
                       </div>
                       <div>
@@ -225,12 +227,12 @@ export function CreatorCollaborations({
                         ) : null}
                       </div>
                       <Link
-                        href={row.stage === "Contract" ? row.contractHref || row.href : row.href}
+                        href={shown.href}
                         className={`inline-flex justify-center rounded-full px-3 py-2 text-xs font-semibold ${
-                          row.stage === "Contract" ? "bg-[#6D4AFF] text-white" : "border border-[#E7ECF5] text-[#6D4AFF]"
+                          shown.label === "Contract" ? "bg-[#6D4AFF] text-white" : "border border-[#E7ECF5] text-[#6D4AFF]"
                         }`}
                       >
-                        {row.stage === "Contract" ? "Review contract →" : "Open workspace →"}
+                        {shown.action}
                       </Link>
                     </li>
                   );
@@ -311,7 +313,7 @@ export function CreatorCollaborations({
                   {hub.pipeline.slice(0, 4).map((row) => (
                     <li key={row.id} className="flex items-start justify-between gap-3 text-sm">
                       <span>
-                        <span className="block font-semibold text-[#1B1464]">{row.stage}</span>
+                        <span className="block font-semibold text-[#1B1464]">{agreementPresentation(row).label}</span>
                         <span className="text-xs text-[#667085]">{row.title}</span>
                       </span>
                     </li>
@@ -344,7 +346,7 @@ export function CreatorCollaborations({
                 <InviteRow
                   key={proposal.id}
                   brand={proposal.title}
-                  title="Team proposal"
+                  title="Coordinated proposal"
                   meta="Needs your response · accepting does not start the collaboration"
                   href={`/collaboration/team/${proposal.id}`}
                   action="View invitation →"
@@ -389,9 +391,9 @@ export function CreatorCollaborations({
 
       {current === "proposals" ? (
         <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-5">
-          <h2 className="font-display text-lg font-bold text-[#1B1464]">Team proposals</h2>
+          <h2 className="font-display text-lg font-bold text-[#1B1464]">Coordinated proposals</h2>
           {proposals.length === 0 ? (
-            <p className="mt-3 text-sm text-[#667085]">Coordinated team invitations appear here. Ordinary campaign invitations stay in Invitations and are private to you.</p>
+            <p className="mt-3 text-sm text-[#667085]">Invitations that ask several influencers to work together appear here. Ordinary campaign invitations stay private to you. A proposal leaves this list once it becomes a contract.</p>
           ) : (
             <ul className="mt-3 divide-y divide-[#EEF2F7]">
               {proposals.map((proposal) => {
@@ -401,12 +403,12 @@ export function CreatorCollaborations({
                     ? "Expired"
                     : "Declined"
                   : proposal.status === "accepted"
-                    ? "Team ready · the business can open the agreement"
+                    ? "Accepted · the business can create the agreement"
                     : mine?.status === "accepted"
-                      ? "You accepted · this team agreement waits for every teammate"
+                      ? "You accepted · waiting for the other influencers"
                       : "Needs your response";
                 return (
-                  <InviteRow key={proposal.id} brand={proposal.title} title="Team proposal" meta={meta} href={`/collaboration/team/${proposal.id}`} action="View invitation →" />
+                  <InviteRow key={proposal.id} brand={proposal.title} title="Invitation" meta={meta} href={`/collaboration/team/${proposal.id}`} action="View invitation →" />
                 );
               })}
             </ul>

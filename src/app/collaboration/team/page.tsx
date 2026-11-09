@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionSendTeamProposal } from "@/app/collaboration/team/actions";
 import { getAccountSession } from "@/lib/accounts";
+import { isBusinessRole } from "@/lib/account-audience";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { listDirectoryCreators } from "@/lib/directory";
@@ -14,7 +15,7 @@ import {
 import { listTeamProposalsForCreator, listTeamProposalsForWorkspace } from "@/lib/team-proposal";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Team proposals" };
+export const metadata = { title: "Coordinated proposals" };
 
 type Props = { searchParams: Promise<{ error?: string; sent?: string; status?: string }> };
 
@@ -47,11 +48,12 @@ export default async function TeamProposalPage({ searchParams }: Props) {
           <Link href="/collaboration/business" className="text-sm font-semibold text-lavender/90 hover:underline">
             ← Business hub
           </Link>
-          <h1 className="mt-2 font-display text-4xl font-bold">Team proposals</h1>
+          <h1 className="mt-2 font-display text-4xl font-bold">Coordinated proposals</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            A team proposal is only for influencers who must work together. Each person can see the teammates and
-            shared responsibilities. Ordinary campaign invitations stay private and are sent from the business hub.
-            The team agreement opens only after every teammate accepts.
+            Influencers who have worked with the business are not the company team. The company team is the people
+            employed by the business. This page invites specific influencers to one coordinated proposal. Each
+            influencer only sees their own invitation until a contract exists, and then only the contract parties
+            can open it.
           </p>
         </div>
       </section>
@@ -60,15 +62,18 @@ export default async function TeamProposalPage({ searchParams }: Props) {
         {params.sent ? <p className="text-sm font-semibold text-emerald-700">Proposal sent.</p> : null}
         {params.status ? <p className="text-sm font-semibold text-indigo">Status: {params.status}</p> : null}
 
-        {account && ws.businessId !== "public" ? (
+        {account && isBusinessRole(account.role) && ws.businessId !== "public" ? (
           <form action={actionSendTeamProposal} className="card-surface space-y-3 p-6">
-            <h2 className="font-display text-xl font-bold text-indigo">Send a team proposal</h2>
+            <h2 className="font-display text-xl font-bold text-indigo">Invite influencers to one proposal</h2>
+            <p className="text-sm text-muted">
+              These are influencers you can invite. They are not employees and they are not your company team.
+            </p>
             <label className="block text-sm font-semibold text-indigo">
               Title
               <input name="title" required className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
             </label>
             <fieldset className="grid gap-2 sm:grid-cols-2">
-              <legend className="text-sm font-semibold text-indigo">Creators</legend>
+              <legend className="text-sm font-semibold text-indigo">Influencers</legend>
               {directory.slice(0, 12).map((person) => (
                 <label key={person.slug} className="flex items-center gap-2 text-sm text-indigo">
                   <input type="checkbox" name="creatorSlug" value={person.slug} />
@@ -85,13 +90,13 @@ export default async function TeamProposalPage({ searchParams }: Props) {
             <Link href="/login?next=/collaboration/team" className="font-semibold text-violet hover:underline">
               Sign in
             </Link>{" "}
-            with a business account to send a team proposal.
+            with a business account to invite influencers. Influencer accounts do not see another creator’s invitation.
           </p>
         )}
 
         <section className="space-y-3">
           <h2 className="font-display text-xl font-bold text-indigo">Your proposals</h2>
-          {outgoing.length === 0 ? <p className="text-sm text-muted">No team proposals from this workspace.</p> : null}
+          {outgoing.length === 0 ? <p className="text-sm text-muted">No open invitations from this workspace.</p> : null}
           {await Promise.all(outgoing.map(async (proposal) => {
             const checks = config
               ? await Promise.all(
@@ -129,7 +134,7 @@ export default async function TeamProposalPage({ searchParams }: Props) {
                   <p className="mt-2 text-sm text-indigo">
                     {ready.ok ? "Every payout route is ready. " : "Funding stays blocked until every payout route is ready. "}
                     <Link href={wizardHref} className="font-semibold text-violet hover:underline">
-                      Open the contract
+                      Create the agreement
                     </Link>
                   </p>
                 ) : null}
@@ -155,7 +160,7 @@ export default async function TeamProposalPage({ searchParams }: Props) {
               <article key={proposal.id} className="card-surface p-4">
                 <p className="font-semibold text-indigo">{proposal.title}</p>
                 <p className="mt-1 text-xs uppercase tracking-wide text-violet">
-                  Team collaboration
+                  Coordinated invitation
                   {mine?.status ? ` · ${mine.status === "invited" ? "Pending your response" : mine.status}` : ""}
                 </p>
                 <Link

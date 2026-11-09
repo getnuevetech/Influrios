@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { IconArrowRight, IconBuilding } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
+import { prisma } from "@/lib/db";
 import { getWorkspace } from "@/lib/business";
 import { contractHrefFromCampaign, contractOfferReady } from "@/lib/campaign-contract";
 import { getCreatorSessionDraft } from "@/lib/claim";
@@ -64,6 +65,18 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
   if (!asBusiness && !asCreator) {
     redirect("/collaboration/hub?error=" + encodeURIComponent("You cannot view that application."));
   }
+
+  const agreement = await prisma.contractDocument.findFirst({
+    where: {
+      status: { notIn: ["voided", "declined"] },
+      OR: [
+        { applicationId: application.id },
+        ...(application.collaborationId ? [{ collaborationId: application.collaborationId }] : []),
+      ],
+    },
+    select: { id: true },
+  });
+  if (agreement) redirect(`/collaboration/contracts/${agreement.id}`);
 
   const creatorRole = draft?.slug ? creatorApplicationRole(application, draft.slug) : null;
   const isInvite = applicationIsInvitation(application);
@@ -299,7 +312,7 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
                 <div>
                   <p className="text-sm font-bold text-indigo">Accepted, not assigned</p>
                   <p className="mt-1 text-xs text-muted">
-                    Shortlist this influencer before a contract can be created. Accepting does not assign the campaign.
+                    Shortlist this influencer before an agreement can be created. Accepting does not assign the campaign.
                   </p>
                 </div>
                 {application.creatorSlug ? (
@@ -337,7 +350,7 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
                   })}
                   className="btn-primary inline-flex items-center gap-2 !py-2 text-sm"
                 >
-                  Create contract <IconArrowRight size={14} />
+                  Create the agreement <IconArrowRight size={14} />
                 </Link>
               </div>
             ) : null}

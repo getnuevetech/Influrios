@@ -325,15 +325,20 @@ export async function respondToTeamProposal(input: {
 
 export async function listTeamProposalsForWorkspace(workspaceId: string) {
   await expireDueProposals();
-  return prisma.teamProposal.findMany({
+  const rows = await prisma.teamProposal.findMany({
     where: { workspaceId },
     include: { members: { orderBy: { createdAt: "asc" } } },
     orderBy: { createdAt: "desc" },
     take: 20,
   });
+  const contracted = await contractedTeamProposalIds(rows.map((row) => row.id));
+  return rows.filter((row) => !contracted.has(row.id));
 }
 
-export async function listTeamProposalsForCreator(creatorSlug: string) {
+export async function listTeamProposalsForCreator(
+  creatorSlug: string,
+  options?: { includeContracted?: boolean },
+) {
   await expireDueProposals();
   const rows = await prisma.teamProposal.findMany({
     where: { members: { some: { creatorSlug } } },
@@ -341,10 +346,24 @@ export async function listTeamProposalsForCreator(creatorSlug: string) {
     orderBy: { createdAt: "desc" },
     take: 20,
   });
-  return rows.map((row) => ({
-    ...row,
-    members: visibleTeamMembers(row.members, { creatorSlug, canSeeAll: false }),
-  }));
+  const contracted = options?.includeContracted
+    ? new Set<string>()
+    : await contractedTeamProposalIds(rows.map((row) => row.id));
+  return rows
+    .filter((row) => !contracted.has(row.id))
+    .map((row) => ({
+      ...row,
+      members: visibleTeamMembers(row.members, { creatorSlug, canSeeAll: false }),
+    }));
+}
+
+async function contractedTeamProposalIds(ids: string[]) {
+  if (ids.length === 0) return new Set<string>();
+  const links = await prisma.contractDocument.findMany({
+    where: { teamProposalId: { in: ids }, status: { notIn: ["voided", "declined"] } },
+    select: { teamProposalId: true },
+  });
+  return new Set(links.map((row) => row.teamProposalId).filter((id): id is string => Boolean(id)));
 }
 
 export async function getTeamProposal(id: string) {
