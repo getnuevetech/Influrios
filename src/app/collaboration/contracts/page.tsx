@@ -5,6 +5,7 @@ import { IconCalendar, IconCheck, IconEye, IconFileText, IconMail } from "@/comp
 import { getAccountSession } from "@/lib/accounts";
 import { newCorrelationId } from "@/lib/correlation";
 import { getWorkspace } from "@/lib/business";
+import { contractHrefFromCampaign, contractOfferReady } from "@/lib/campaign-contract";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 import {
@@ -99,16 +100,22 @@ export default async function ContractsIndexPage({
   const contractsRef = contractsFailed ? newCorrelationId() : "";
   if (contractsFailed) console.error("contracts load failed", contractsRef);
   const creatorSlug = creator?.slug?.trim() ?? "";
-  const ownedIds =
+  const ownedRequests =
     workspace && workspace.businessId !== "public"
-      ? (await listWorkspaceBusinessRequests(workspace.businessId).catch(() => [])).map((row) => row.id)
+      ? await listWorkspaceBusinessRequests(workspace.businessId).catch(() => [])
       : [];
+  const ownedIds = ownedRequests.map((row) => row.id);
+  const ownedBriefIds = workspace?.briefs.map((brief) => brief.id) ?? [];
   const [creatorApplications, businessApplications] = await Promise.all([
     creatorSlug
       ? listMarketplaceApplications({ creatorSlug, limit: 40 }).catch(() => [])
       : Promise.resolve([]),
-    ownedIds.length
-      ? listMarketplaceApplications({ businessRequestIds: ownedIds, limit: 40 }).catch(() => [])
+    ownedIds.length || ownedBriefIds.length
+      ? listMarketplaceApplications({
+          businessRequestIds: ownedIds,
+          briefIds: ownedBriefIds,
+          limit: 40,
+        }).catch(() => [])
       : Promise.resolve([]),
   ]);
   const seen = new Set<string>();
@@ -202,19 +209,50 @@ export default async function ContractsIndexPage({
           <ul className="mt-3 divide-y divide-[#EEF2F7]">
             {needed.map((application) => {
               const slug = (application.fromSlug || application.toSlug || "").trim();
-              const owned = Boolean(application.businessRequestId && ownedIds.includes(application.businessRequestId));
-              const title = application.requestBrand || application.opportunityLookingFor || "Accepted collaboration";
-              const href = owned && slug
-                ? `/collaboration/contract?creator=${encodeURIComponent(slug)}`
-                : `/collaboration/applications/${application.id}`;
+              const owned = Boolean(
+                (application.businessRequestId && ownedIds.includes(application.businessRequestId)) ||
+                  ((application.briefId || application.requestBriefId) &&
+                    ownedBriefIds.includes((application.briefId || application.requestBriefId) ?? "")),
+              );
+              const brief =
+                workspace?.briefs.find((item) => item.id === (application.briefId || application.requestBriefId)) ??
+                null;
+              const title = brief?.title || application.requestBrand || application.opportunityLookingFor || "Accepted collaboration";
+              const shortlisted = contractOfferReady({
+                status: application.status,
+                creatorSlug: slug,
+                shortlistedSlugs: workspace?.shortlist.map((item) => item.creatorSlug) ?? [],
+              });
+              const href =
+                owned && slug && shortlisted
+                  ? contractHrefFromCampaign({
+                      creatorSlug: slug,
+                      brief,
+                      applicationId: application.id,
+                      collaborationId: application.collaborationId,
+                      request: brief
+                        ? null
+                        : {
+                            title: application.requestBrand,
+                            budget: application.requestBudget,
+                            currency: application.requestCurrency,
+                            summary: [application.deliverables, application.requestDeliverables, application.requestSummary]
+                              .filter(Boolean)
+                              .join("\n"),
+                          },
+                    })
+                  : `/collaboration/applications/${application.id}`;
               return (
                 <li key={application.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <div>
                     <p className="text-sm font-semibold text-[#1B1464]">{title}</p>
-                    <p className="text-xs text-[#B86E00]">Needs a contract · {application.status.replaceAll("_", " ")}</p>
+                    <p className="text-xs text-[#B86E00]">
+                      {shortlisted ? "Ready for a contract" : "Shortlist this influencer before creating a contract"} ·{" "}
+                      {application.status.replaceAll("_", " ")}
+                    </p>
                   </div>
                   <Link href={href} className="rounded-full bg-[#6D4AFF] px-3 py-1.5 text-xs font-semibold text-white">
-                    {owned ? "Start contract" : "Open application"}
+                    {owned && shortlisted ? "Create contract" : "Open application"}
                   </Link>
                 </li>
               );

@@ -515,15 +515,6 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                             Inquire
                           </button>
                         </form>
-                        <Link
-                          href={contractHrefFromCampaign({
-                            creatorSlug: creator.slug,
-                            brief: hub.intentBrief ?? hub.briefs.find((b) => b.status !== "closed") ?? null,
-                          })}
-                          className="btn-secondary !px-3 !py-1.5 text-[11px]"
-                        >
-                          Contract
-                        </Link>
                         {hub.ownRequests[0] ? (
                           <form action={actionInviteCreatorToRequest}>
                             <input type="hidden" name="creatorSlug" value={creator.slug} />
@@ -646,15 +637,19 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                 {hub.ownRequests.length === 0 && hub.briefs.length === 0 ? (
                   <li className="text-sm text-muted">No requests yet — save an intent and publish.</li>
                 ) : null}
-                {hub.ownRequests.map((item) => (
+                {hub.ownRequests.map((item) => {
+                  const currency =
+                    item.currency || hub.briefs.find((brief) => brief.id === item.briefId)?.budgetCurrency || "";
+                  return (
                   <li key={item.id} className="rounded-xl border border-[#E8EDF8] p-3">
                     <p className="text-sm font-bold text-indigo">{item.brand}</p>
                     <p className="text-[11px] text-muted">
-                      {item.currency ? `${item.currency} ${item.budget}` : item.budget} · {item.location} · {item.category}
+                      {currency ? `${currency} ${item.budget}` : item.budget} · {item.location} · {item.category}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs text-muted">{item.summary}</p>
                   </li>
-                ))}
+                  );
+                })}
                 {hub.briefs
                   .filter((brief) => !hub.publishedBriefIds.includes(brief.id))
                   .slice(0, 4)
@@ -693,7 +688,7 @@ export default async function BusinessCollaborationHubPage({ searchParams }: Pro
                   const invite = applicationIsInvitation(application);
                   const accepted = applicationIsAcceptedPipeline(application.status);
                   const campaignBrief =
-                    hub.briefs.find((brief) => brief.id === application.briefId) ??
+                    hub.briefs.find((brief) => brief.id === (application.briefId || application.requestBriefId)) ??
                     null;
                   const campaignTitle =
                     campaignBrief?.title ||
