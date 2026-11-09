@@ -35,13 +35,16 @@ describe("account-purpose splitMilestoneRelease", () => {
     assert.equal(split.creatorCents, 2_250);
   });
 
-  it("operations earned counts only fee entries", () => {
+  it("operations earned counts platform fees and leaves out the provider charge", () => {
     assert.equal(
       operationsEarnedCents([
         { kind: "hold", amountCents: 10_000, accountPurpose: "COLLABORATION_HOLDING" },
         { kind: "fee", amountCents: 150, accountPurpose: "OPERATIONS" },
+        { kind: "fee_settled", amountCents: 32_000, accountPurpose: "OPERATIONS" },
+        { kind: "provider_fee", amountCents: 50, accountPurpose: "REGIONAL_SETTLEMENT" },
+        { kind: "fee_earned", amountCents: 32_000, accountPurpose: "PLATFORM_FEE_CLEARING" },
       ]),
-      150,
+      32_150,
     );
   });
 });

@@ -14,6 +14,7 @@ import {
   launchMilestoneGate,
   ordinaryDealShareSnapshot,
   providerEventMayAdvance,
+  providerFeePosting,
   readSignedCollection,
   cancellationPostings,
   cancellationStage,
@@ -346,6 +347,12 @@ describe("payment engine acceptance", () => {
     if (!afterEarning.ok) return;
     assert.equal(afterEarning.entries.some((row) => row.reverses === "fee_earned"), true);
     assert.equal(afterEarning.entries.some((row) => row.kind === "fee_earned"), false);
+    const providerFee = providerFeePosting({ amountCents: 50, providerReference: "prov_fee_1" });
+    assert.equal(providerFee.ok, true);
+    if (!providerFee.ok) return;
+    assert.equal(providerFee.entries[0].kind, "provider_fee");
+    assert.equal(providerFee.entries[0].party, "provider");
+    assert.equal(providerFeePosting({ amountCents: 50, providerReference: "x" }).ok, false);
     assert.equal(readSignedDealMoney({ signedQuote: deal })?.businessPaysCents, 375_000);
     assert.equal(readSignedDealMoney({ feeRuleId: "legacy" }), null);
   });

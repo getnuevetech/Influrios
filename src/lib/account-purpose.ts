@@ -18,16 +18,18 @@ export function asAccountPurpose(value: string | null | undefined): AccountPurpo
   return (ACCOUNT_PURPOSES as readonly string[]).includes(value) ? (value as AccountPurpose) : null;
 }
 
-/** Sum of fee entries credited to Operations (earned platform fee). */
+/** Platform fee credited to Operations. A provider's own charge is not included. */
 export function operationsEarnedCents(
   entries: { kind: string; amountCents: number; accountPurpose?: string | null }[],
 ) {
   return entries
-    .filter(
-      (entry) =>
-        entry.kind === "fee" &&
-        (entry.accountPurpose === "OPERATIONS" || entry.accountPurpose == null || entry.accountPurpose === ""),
-    )
+    .filter((entry) => {
+      if (entry.kind === "provider_fee") return false;
+      const platformFee = entry.kind === "fee" || entry.kind === "fee_settled";
+      const operations =
+        entry.accountPurpose === "OPERATIONS" || entry.accountPurpose == null || entry.accountPurpose === "";
+      return platformFee && operations;
+    })
     .reduce((sum, entry) => sum + entry.amountCents, 0);
 }
 
