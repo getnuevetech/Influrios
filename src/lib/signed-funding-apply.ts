@@ -160,7 +160,17 @@ export async function fundSignedAgreement(input: {
   const drift = submittedTermsDiffer(terms, input.submitted);
   if (drift) return { ok: false as const, error: `${drift} ${CHANGE_REQUIRED}` };
 
-  const liveFunding = liveFundingBlockReason(terms.financialPlan);
+  const { getLaunchGate } = await import("@/lib/launch-gate");
+  const gate = await getLaunchGate().catch(() => null);
+  const liveFunding = liveFundingBlockReason(
+    terms.financialPlan,
+    gate
+      ? {
+          approvals: gate,
+          traceReady: gate.providerTraceReady,
+        }
+      : null,
+  );
   if (liveFunding) return { ok: false as const, error: liveFunding };
   const expired = signedQuoteExpired(terms.financialPlan);
   if (expired) return { ok: false as const, error: expired };
