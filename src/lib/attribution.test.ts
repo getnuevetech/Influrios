@@ -23,6 +23,25 @@ import { requestPrefund } from "./marketplace-ledger";
 const NOW = new Date("2026-09-30T12:00:00.000Z");
 
 describe("deal attribution rules", () => {
+  it("records the first active source when a contract does not send one", async () => {
+    const sources = await listAttributionSources();
+    const expected =
+      sources.find((row) => row.active && !/pre-?existing/i.test(row.label)) ?? sources.find((row) => row.active);
+    const result = await resolveDealAttribution({
+      businessName: "Harbor Co",
+      creatorSlug: "sofia-martinez",
+    });
+    assert.equal(result.ok, true);
+    if (result.ok && expected) assert.equal(result.attributionLabel, expected.label);
+    const missing = await resolveDealAttribution({
+      businessName: "Harbor Co",
+      creatorSlug: "sofia-martinez",
+      sourceId: "missing-source",
+    });
+    assert.equal(missing.ok, false);
+    if (!missing.ok) assert.match(missing.error, /attribution source/);
+  });
+
   it("matches a business name without caring about case or extra spaces", () => {
     assert.equal(sameBusiness("Harbor Co", " harbor   co "), true);
     assert.equal(sameBusiness("Harbor Co", "Northwind"), false);
