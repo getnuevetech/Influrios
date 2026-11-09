@@ -13,6 +13,7 @@ import {
   protectedPaymentLabel,
   ruleSpecificity,
   serviceLevelFeeCoverage,
+  tierBandsFromFields,
   type CollaborationFeeRule,
   type FeeResolveContext,
 } from "./collaboration-fees";
@@ -326,6 +327,24 @@ describe("entered fee rule facts", () => {
     assert.equal(page.includes("?? 1000"), false);
     assert.equal(page.includes('?? "contracted"'), false);
     assert.equal(page.includes('?? "brand"'), false);
+    assert.equal(page.includes("tierBandsJson"), false);
+    assert.equal(page.includes("percentBps\":800"), false);
+  });
+});
+
+describe("tier band fields", () => {
+  it("reads the up-to amount and the percent from the form", () => {
+    const bands = tierBandsFromFields(["1000", ""], ["800", "1200"]);
+    assert.equal("error" in bands, false);
+    if ("error" in bands) return;
+    assert.deepEqual(bands, [
+      { upToCents: 100_000, percentBps: 800 },
+      { upToCents: null, percentBps: 1200 },
+    ]);
+    const empty = tierBandsFromFields(["", ""], ["", ""]);
+    assert.equal(Array.isArray(empty) && empty.length === 0, true);
+    const missing = tierBandsFromFields(["1000"], [""]);
+    assert.equal("error" in missing, true);
   });
 });
 

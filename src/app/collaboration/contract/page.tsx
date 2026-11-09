@@ -381,10 +381,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   });
   const feeServiceLevel = feeBoundary.feeServiceLevel;
   const feeLevelAllowed = availableServiceLevels.some((level) => level === feeServiceLevel);
-  const disclosureServiceLevel =
-    feeBoundary.originServiceLevel === feeServiceLevel
-      ? feeServiceLevel
-      : `${feeBoundary.originServiceLevel} origin, ${feeServiceLevel} fee`;
+  const disclosureServiceLevel = feeServiceLevel;
   const quote =
     grossCents > 0 && jurisdictionCode && effectiveServiceLevel && feeLevelAllowed
       ? amountMode === "all_in"
@@ -656,12 +653,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     ? "No service level is available because this jurisdiction is blocked pending legal review."
                     : signedFundingLevel
                     ? "This agreement is already signed, so funding uses a contracted service level."
-                    : feeBoundary.freeDiscovery
-                    ? "Discovery with no amount uses the free Discovery fee."
-                    : effectiveServiceLevel &&
-                        (feeBoundary.originServiceLevel === "discovery" || feeBoundary.originServiceLevel === "platform_match")
-                    ? `${SERVICE_LEVEL_LABELS[feeBoundary.originServiceLevel]} stays the origin. A paid agreement uses the Contracted collaboration fee.`
-                    : "This choice selects the platform fee your business pays.") +
+                    : "This choice uses the fee rule saved for this service level.") +
                   (jurisdictionCaps?.legalReviewStatus && jurisdictionCaps.legalReviewStatus !== "APPROVED"
                     ? ` Legal review: ${jurisdictionCaps.legalReviewStatus}.`
                     : "") +
@@ -820,11 +812,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 <p className="mt-1 text-sm text-muted">
                   Service level{" "}
                   <strong>
-                    {feeBoundary.originServiceLevel === "discovery" || feeBoundary.originServiceLevel === "platform_match"
-                      ? `${SERVICE_LEVEL_LABELS[feeBoundary.originServiceLevel]} · ${SERVICE_LEVEL_LABELS[feeServiceLevel]}`
-                      : effectiveServiceLevel
-                        ? SERVICE_LEVEL_LABELS[effectiveServiceLevel]
-                        : ""}
+                    {effectiveServiceLevel ? SERVICE_LEVEL_LABELS[effectiveServiceLevel] : ""}
                   </strong>
                   . Your fee is reserved on signing. Later edits do not change a locked deal, and the fee is not earned yet.
                 </p>

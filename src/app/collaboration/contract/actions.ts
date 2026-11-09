@@ -9,7 +9,6 @@ import { contractOfferReady } from "@/lib/campaign-contract";
 import { getMarketplaceApplication } from "@/lib/marketplace-listings";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
-import { displayServiceLevel } from "@/lib/contract-document";
 import { resolvePaidAgreementFee } from "@/lib/paid-agreement-fee";
 import { buildBusinessCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate } from "@/lib/payment-engine";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
@@ -379,10 +378,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     },
     "influencer",
   ).catch(() => null);
-  const disclosureServiceLevel =
-    feeBoundary.originServiceLevel === "discovery" || feeBoundary.originServiceLevel === "platform_match"
-      ? `${feeBoundary.originServiceLevel} origin, ${feeServiceLevel} fee`
-      : feeServiceLevel;
+  const disclosureServiceLevel = serviceLevel;
 
   const disclosureGate = requireFeeDisclosureAccepted({
     accepted: feeDisclosureAccepted,
@@ -520,10 +516,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
         scope,
         commercial,
         jurisdiction: jurisdictionCode,
-        serviceLevel:
-          feeBoundary.originServiceLevel === "discovery" || feeBoundary.originServiceLevel === "platform_match"
-            ? `${displayServiceLevel(feeBoundary.originServiceLevel)} · ${displayServiceLevel(feeServiceLevel)}`
-            : serviceLevel,
+        serviceLevel,
         currency: plan.contractCurrency,
         grossLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
         platformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
