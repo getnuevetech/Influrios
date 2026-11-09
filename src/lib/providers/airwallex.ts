@@ -54,7 +54,7 @@ export function parseAirwallexWebhook(body: string):
   | {
       ok: true;
       eventId: string;
-      eventType: "funding.held" | "payout.released" | "payout.refunded";
+      eventType: "funding.held" | "payout.released" | "payout.refunded" | "payout.returned";
       fundingId: string;
       amountCents: number;
       currency?: string;
@@ -88,7 +88,9 @@ export function parseAirwallexWebhook(body: string):
         ? "payout.released"
         : name === "payment_intent.refunded"
           ? "payout.refunded"
-          : null;
+          : name === "funds_split.returned"
+            ? "payout.returned"
+            : null;
   const fundingId = record.data?.object?.metadata?.fundingId;
   const amount = record.data?.object?.amount;
   if (!eventType || typeof fundingId !== "string" || typeof record.id !== "string") {
