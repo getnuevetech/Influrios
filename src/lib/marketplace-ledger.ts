@@ -41,6 +41,7 @@ import { ensureSettlementDefaults } from "@/lib/settlement";
 import { corridorPrefundSnapshot, storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { decidePaymentRoute, freezeRouteAccounts } from "@/lib/payment-route";
 import { isConnectedAccountCollectionProvider, routeHoldingAccounts } from "@/lib/provider-collection";
+import { getLaunchGate } from "@/lib/launch-gate";
 import { storedCurrencyCode } from "@/lib/money";
 import { quoteWiseUserRate } from "@/lib/wise-quote";
 import { closeDisputesForRefund, milestoneHasOpenDispute } from "@/lib/milestone-disputes";
@@ -779,12 +780,16 @@ export async function requestPrefund(input: {
     repeatOfId: input.repeatOfId,
   });
   if (!attribution.ok) return attribution;
+  const launchGate = await getLaunchGate().catch(() => null);
   const schedule = planSchedule({
     kind: scheduleKind,
     grossCents: input.grossCents,
     stageCount: input.stageCount,
     occurrenceCount: input.occurrenceCount,
-    stagedEnabled: (settings?.stagedFundingEnabled ?? true) && Boolean(caps?.stagedPrefundingEnabled),
+    stagedEnabled:
+      launchGate?.stagedFundingEnabled === true &&
+      settings?.stagedFundingEnabled === true &&
+      Boolean(caps?.stagedPrefundingEnabled),
     recurringEnabled: (settings?.recurringFundingEnabled ?? true) && Boolean(caps?.recurringFundingEnabled),
     maxStages: settings?.maxStages ?? 4,
     maxRecurrences: settings?.maxRecurrences ?? 6,

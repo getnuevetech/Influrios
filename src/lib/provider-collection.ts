@@ -14,6 +14,54 @@ export function collectionProviderCode(code: string | null | undefined): Collect
   return null;
 }
 
+/** Checkout fields follow the collection route saved on the prefund. */
+export function collectionCheckoutFields(providerCode: string | null | undefined): {
+  email: boolean;
+  phone: boolean;
+  canOpen: boolean;
+  note: string;
+} {
+  const provider = (providerCode ?? "").trim().toLowerCase();
+  if (provider === "flutterwave") {
+    return {
+      email: true,
+      phone: false,
+      canOpen: true,
+      note: "Flutterwave collects this prefund. A payer email is required. Nothing is marked paid until the webhook.",
+    };
+  }
+  if (provider === "mpesa") {
+    return {
+      email: false,
+      phone: true,
+      canOpen: true,
+      note: "M-Pesa collects this prefund. A phone number and the saved short code are required. Nothing is marked paid until the webhook.",
+    };
+  }
+  if (provider === "airwallex") {
+    return {
+      email: false,
+      phone: false,
+      canOpen: true,
+      note: "Airwallex collects this prefund from the holding and operations accounts saved on the route. Nothing is marked paid until the webhook.",
+    };
+  }
+  if (provider === "stripe") {
+    return {
+      email: false,
+      phone: false,
+      canOpen: false,
+      note: "Stripe is the collection route on this prefund. Checkout does not use Flutterwave or M-Pesa.",
+    };
+  }
+  return {
+    email: false,
+    phone: false,
+    canOpen: false,
+    note: "This prefund has no collection provider that can open checkout. Nothing was charged.",
+  };
+}
+
 /** True when the corridor collection route onboards influencers via a connected-account provider. */
 export function isConnectedAccountCollectionProvider(code: string | null | undefined): boolean {
   return collectionProviderCode(code) === "airwallex";
@@ -48,7 +96,14 @@ export async function openFundingCollection(input: {
 }): Promise<{ ok: true; reference: string; url?: string } | { ok: false; error: string }> {
   const provider = collectionProviderCode(input.providerCode);
   if (!provider) {
-    return { ok: false, error: "Assign Flutterwave, M-Pesa, or Airwallex to this country before opening checkout." };
+    const route = (input.providerCode ?? "").trim() || "none";
+    return {
+      ok: false,
+      error:
+        route.toLowerCase() === "stripe"
+          ? "Stripe is the collection route. Checkout does not open a Flutterwave or M-Pesa charge. Nothing was charged."
+          : "This collection route cannot open checkout. Nothing was charged.",
+    };
   }
   const funding = await prisma.collaborationFunding.findUnique({
     where: { id: input.fundingId.trim() },

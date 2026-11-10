@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { collectionPayoutReady, gatewayCredentialLabels, mergeProviderExtra } from "./providers";
-import { collectionProviderCode } from "./provider-collection";
+import { collectionCheckoutFields, collectionProviderCode } from "./provider-collection";
 
 describe("admin integration fields", () => {
   it("keeps Airwallex account ids when a later save only changes the model", () => {
@@ -25,6 +26,18 @@ describe("admin integration fields", () => {
     assert.equal(gatewayCredentialLabels("airwallex").secret, "API key");
     assert.equal(collectionProviderCode("flutterwave"), "flutterwave");
     assert.equal(collectionProviderCode("stripe"), null);
+    const stripe = collectionCheckoutFields("stripe");
+    assert.equal(stripe.email, false);
+    assert.equal(stripe.phone, false);
+    assert.equal(stripe.canOpen, false);
+    assert.equal(collectionCheckoutFields("flutterwave").email, true);
+    assert.equal(collectionCheckoutFields("flutterwave").phone, false);
+    assert.equal(collectionCheckoutFields("mpesa").phone, true);
+    assert.equal(collectionCheckoutFields("mpesa").email, false);
+    assert.equal(collectionCheckoutFields("airwallex").canOpen, true);
+    const page = readFileSync("src/app/payments/page.tsx", "utf8");
+    assert.equal(page.includes("Flutterwave needs the email. M-Pesa needs the phone"), false);
+    assert.equal(page.includes("collectionCheckoutFields"), true);
   });
 
   it("requires a connected account only for the collaboration payout rail", () => {

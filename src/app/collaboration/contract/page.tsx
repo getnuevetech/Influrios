@@ -701,17 +701,21 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           <section id="milestones">
             <h2 className="font-display text-xl font-bold text-indigo">4. Milestones</h2>
             <ContractMilestones
-              templates={templates}
-              customEnabled={entitlements.customMilestones}
-              initialCustom={usingCustom}
+              templates={
+                fundingSwitches?.stagedFundingEnabled === true
+                  ? templates
+                  : [{ title: "Delivery", shareBps: 10_000 }]
+              }
+              customEnabled={entitlements.customMilestones && fundingSwitches?.stagedFundingEnabled === true}
+              initialCustom={usingCustom && fundingSwitches?.stagedFundingEnabled === true}
               initialAccepted={influencerAccepted}
             />
             {!milestoneGate.ok ? (
               <p className="mt-3 text-sm font-semibold text-amber-800">{milestoneGate.error}</p>
             ) : null}
-            {enteredMilestones.length > 0 && enteredMilestones.length !== 1 ? (
+            {fundingSwitches?.stagedFundingEnabled !== true && enteredMilestones.length > 1 ? (
               <p className="mt-3 text-sm font-semibold text-amber-800">
-                This route allows one milestone. Nothing is signed until the schedule is a single milestone.
+                Staged funding is off. This agreement uses one milestone.
               </p>
             ) : null}
             {creatorCountry && jurisdictionCode && creatorCountry !== jurisdictionCode ? (
