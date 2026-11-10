@@ -32,6 +32,7 @@ const STAGE_PILL: Record<string, string> = {
   Accepted: "bg-[#E8F1FF] text-[#2F6BFF]",
   Funded: "bg-[#E8F1FF] text-[#2F6BFF]",
   "Expecting funding": "bg-[#F4F6FB] text-[#667085]",
+  "Payment pending": "bg-[#FFF4D8] text-[#B86E00]",
   Released: "bg-[#E8F8EE] text-[#178A45]",
   Match: "bg-[#F4F6FB] text-[#667085]",
 };

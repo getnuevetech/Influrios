@@ -68,10 +68,29 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
   const contracts = applicationIds.length
     ? await prisma.contractDocument.findMany({
         where: { applicationId: { in: applicationIds }, status: { notIn: ["voided", "declined"] } },
-        select: { applicationId: true },
+        select: { id: true, applicationId: true, status: true, fundingId: true },
       }).catch(() => [])
     : [];
-  const contracted = new Set(contracts.map((row) => row.applicationId).filter((id): id is string => Boolean(id)));
+  const contractByApplication = new Map<string, { id: string; status: string; fundingId: string | null }>();
+  for (const contract of contracts) {
+    if (!contract.applicationId) continue;
+    const current = contractByApplication.get(contract.applicationId);
+    if (!current || (current.status !== "signed" && contract.status === "signed")) {
+      contractByApplication.set(contract.applicationId, contract);
+    }
+  }
+  const fundingIds = [...contractByApplication.values()].map((row) => row.fundingId).filter((id): id is string => Boolean(id));
+  if (fundingIds.length) {
+    const { syncOpenGatewayDeposits } = await import("@/lib/funding-checkout");
+    await Promise.all(fundingIds.map((id) => syncOpenGatewayDeposits(id).catch(() => false)));
+  }
+  const fundingRows = fundingIds.length
+    ? await prisma.collaborationFunding.findMany({
+        where: { id: { in: fundingIds } },
+        select: { id: true, status: true },
+      }).catch(() => [])
+    : [];
+  const fundingStatusById = new Map(fundingRows.map((row) => [row.id, row.status]));
   const bySlug = new Map((directory?.creators ?? []).map((creator) => [creator.slug, creator]));
   const tab = params.tab === "opportunities" || params.tab === "active" ? params.tab : "requests";
   const hub = await loadBusinessHub({ userId: account.id }).catch(() => null);
@@ -119,7 +138,10 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
           businessRequestId: application.businessRequestId,
           collaborationId: application.collaborationId,
           invitation: !application.fromSlug && Boolean(application.toSlug),
-          hasContract: contracted.has(application.id),
+          hasContract: contractByApplication.get(application.id)?.status === "signed",
+          fundingId: contractByApplication.get(application.id)?.fundingId ?? null,
+          fundingStatus: fundingStatusById.get(contractByApplication.get(application.id)?.fundingId ?? "") ?? null,
+          contractId: contractByApplication.get(application.id)?.id ?? null,
           note: application.note ?? "",
         };
       })}

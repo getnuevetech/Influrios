@@ -39,6 +39,24 @@ describe("collaboration hub pipeline", () => {
     assert.equal(signed.action, "Review contract →");
     assert.equal(signed.href, "/collaboration/contracts/doc-1");
 
+    const fundedWork = agreementPresentation({
+      stage: "Funded",
+      href: "/collaboration/work/fund-1",
+      contractHref: "/collaboration/contracts/doc-1",
+    });
+    assert.equal(fundedWork.label, "Funded");
+    assert.equal(fundedWork.action, "Open deliverables");
+    assert.equal(fundedWork.href, "/collaboration/work/fund-1");
+
+    const pendingPayment = agreementPresentation({
+      stage: "Contract",
+      href: "/collaboration/contracts/doc-1",
+      contractHref: "/collaboration/contracts/doc-1",
+      depositPending: true,
+    });
+    assert.equal(pendingPayment.label, "Payment pending");
+    assert.match(pendingPayment.next, /deposit/i);
+
     const waiting = agreementPresentation({
       stage: "Contract",
       href: "/collaboration/records/1",
@@ -103,6 +121,18 @@ describe("collaboration hub pipeline", () => {
     assert.equal(
       isCurrentCollaboration({ stage: "In Progress", source: "application", contractHref: "/collaboration/contracts/1" }),
       true,
+    );
+    assert.equal(
+      isCurrentCollaboration({ stage: "Funded", source: "application", contractHref: "/collaboration/contracts/1" }),
+      true,
+    );
+    assert.equal(
+      isCurrentCollaboration({ stage: "Contract", source: "application", contractHref: "/collaboration/contracts/1", depositPending: true }),
+      true,
+    );
+    assert.equal(
+      isCurrentCollaboration({ stage: "Contract", source: "application", contractHref: "/collaboration/contracts/1" }),
+      false,
     );
     const rows = [
       { stage: "Match", source: "application" },

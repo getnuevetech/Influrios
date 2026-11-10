@@ -478,9 +478,7 @@ export async function loadCreatorHome(userId: string) {
         title: row.funding.title || row.title,
         detail: deliverableWhen(row.deliverableDueAt as Date),
         action: "Open workspace",
-        href: row.funding.collaborationId
-          ? `/collaboration/records/${row.funding.collaborationId}`
-          : `/payments?funding=${encodeURIComponent(row.funding.id)}`,
+        href: `/collaboration/work/${row.funding.id}`,
         kind: "deliverable" as const,
       })),
   ];

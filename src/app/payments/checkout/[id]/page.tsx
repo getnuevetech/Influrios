@@ -10,6 +10,7 @@ import {
   DEPOSIT_METHODS,
   type DepositMethod,
   readManualDepositInstructions,
+  syncOpenGatewayDeposits,
 } from "@/lib/funding-checkout";
 import { formatMoney } from "@/lib/money";
 import { collectionInstructionAmount } from "@/lib/provider-outbox";
@@ -47,6 +48,7 @@ export default async function FundingCheckoutPage({ params, searchParams }: Prop
   const access = await assertFundingAccess(account, id);
   if (!access.ok) notFound();
   const businessViewer = isBusinessRole(account.role);
+  if (businessViewer) await syncOpenGatewayDeposits(access.funding.id).catch(() => false);
   const funding = await prisma.collaborationFunding.findUnique({
     where: { id: access.funding.id },
     include: { deposits: { orderBy: { createdAt: "desc" } } },
@@ -59,6 +61,7 @@ export default async function FundingCheckoutPage({ params, searchParams }: Prop
     signedBusinessPaysCents: signed?.businessPaysCents ?? null,
   });
   const amountLabel = amount.ok ? formatMoney(amount.amountCents, funding.currency) : "";
+  const funded = funding.status === "held" || funding.status === "completed";
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -83,9 +86,13 @@ export default async function FundingCheckoutPage({ params, searchParams }: Prop
             The manual payment is recorded as pending. The agreement stays unfunded until finance confirms it.
           </p>
         ) : null}
-        {query.returned ? (
+        {query.returned && funded ? (
+          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            Stripe confirmed the payment. Deliverables are open.
+          </p>
+        ) : query.returned ? (
           <p className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-            Checkout was opened. The agreement stays unfunded until the payment provider confirms it.
+            Stripe has not confirmed this payment. The agreement stays unfunded.
           </p>
         ) : null}
         {query.cancelled ? (
@@ -134,7 +141,11 @@ export default async function FundingCheckoutPage({ params, searchParams }: Prop
             ))}
           </section>
         ) : null}
-        {businessViewer && funding.status === "awaiting_provider" && amount.ok ? (
+        {funded ? (
+          <Link href={`/collaboration/work/${funding.id}`} className="btn-primary inline-flex text-sm">
+            Open deliverables
+          </Link>
+        ) : businessViewer && funding.status === "awaiting_provider" && amount.ok ? (
           <section className="card-surface space-y-4 p-5">
             <h2 className="font-display text-lg font-bold text-indigo">Choose how to pay</h2>
             <form action={actionStartFundingDeposit} className="space-y-4">

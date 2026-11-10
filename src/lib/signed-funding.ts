@@ -199,6 +199,18 @@ export function contractFundingCta(input: {
   return { kind: "view", label: "View funding" };
 }
 
+/** What a signed agreement says about money. A started deposit is not “waiting to start.” */
+export function signedFundingNotice(fundingStatus: string | null | undefined) {
+  if (fundingStatus === "held" || fundingStatus === "completed") {
+    return "Funds are confirmed. Deliverables are open.";
+  }
+  if (fundingStatus === "awaiting_provider") {
+    return "A deposit is open. The agreement stays unfunded until Stripe or finance confirms the payment.";
+  }
+  if (!fundingStatus) return "Every party has signed. Waiting for the business to start funding.";
+  return "Every party has signed.";
+}
+
 export type DealMilestoneFact = {
   id: string;
   title: string;

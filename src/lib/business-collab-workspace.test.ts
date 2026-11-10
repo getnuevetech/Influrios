@@ -58,6 +58,26 @@ describe("business collaboration workspace", () => {
     });
     assert.equal(accepted?.bucket, "needs_action");
     assert.equal(accepted?.stage, "Agreement review");
+    const funded = activeRowForApplication({
+      id: "app-3",
+      status: "ACCEPTED",
+      title: "4th Test Campaign",
+      influencer: "Ag Olomola",
+      hasContract: true,
+      fundingStatus: "held",
+    });
+    assert.equal(funded?.stage, "Content production");
+    assert.equal(funded?.badge, "In progress");
+    assert.equal(funded?.bucket, "in_progress");
+    const waiting = activeRowForApplication({
+      id: "app-4",
+      status: "ACCEPTED",
+      title: "2nd Collaboration Test",
+      influencer: "Ag Olomola",
+      hasContract: true,
+      fundingStatus: "awaiting_provider",
+    });
+    assert.equal(waiting?.badge, "Funds not confirmed");
     assert.match(accepted?.href ?? "", /tab=active&deal=/);
   });
 });

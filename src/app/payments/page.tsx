@@ -18,6 +18,8 @@ import { prisma } from "@/lib/db";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
 import { fundingTerm } from "@/lib/ledger";
+import { syncOpenGatewayDeposits } from "@/lib/funding-checkout";
+import { readSignedDealMoney } from "@/lib/payment-engine";
 import { collectionCheckoutFields } from "@/lib/provider-collection";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFundingsForBusiness, listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
@@ -79,7 +81,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
     : await prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } }).catch(() => null);
   const workspace = businessViewer ? await getWorkspace(account.id).catch(() => null) : null;
 
-  const [config, fundings, reasons] = await Promise.all([
+  const [config, loadedFundings, reasons] = await Promise.all([
     marketplaceConfig().catch(() => null),
     businessViewer && workspace?.businessId && workspace.businessId !== "public"
       ? listFundingsForBusiness(workspace.businessId).catch(() => [])
@@ -88,6 +90,14 @@ export default async function PaymentsPage({ searchParams }: Props) {
         : Promise.resolve([]),
     listDisputeReasons().catch(() => []),
   ]);
+  let fundings = loadedFundings;
+  if (businessViewer) {
+    const waiting = fundings.filter((row) => row.status === "awaiting_provider");
+    const changed = await Promise.all(waiting.map((row) => syncOpenGatewayDeposits(row.id).catch(() => false)));
+    if (changed.some(Boolean) && workspace?.businessId && workspace.businessId !== "public") {
+      fundings = await listFundingsForBusiness(workspace.businessId).catch(() => fundings);
+    }
+  }
   const jurisdictions = config?.jurisdictions ?? [];
   const homeJurisdiction = jurisdictions.find((row) => row.code === "US") ?? jurisdictions[0];
   const term = fundingTerm(Boolean(homeJurisdiction?.escrowTermAllowed));
@@ -205,6 +215,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                   other.id !== deal.id &&
                   other.status === "awaiting_provider",
               );
+            const signedDeal = readSignedDealMoney(
+              (deal.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan,
+            );
             const money = memberDealView({
               role: businessViewer ? "business" : "influencer",
               grossCents: deal.grossCents,
@@ -364,6 +377,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         </>
                       );
                     })()}
+                    {signedDeal ? (
+                      <p className="text-xs text-muted">Signed amounts stay locked.</p>
+                    ) : (
                     <details className="rounded-xl border border-border bg-white px-3 py-2">
                       <summary className="cursor-pointer text-xs font-semibold text-indigo">
                         Change order
@@ -411,6 +427,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         ) : null}
                       </div>
                     </details>
+                    )}
                     <form action={actionCancelPrefund}>
                       <input type="hidden" name="dealId" value={deal.id} />
                       <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">

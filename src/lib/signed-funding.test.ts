@@ -14,6 +14,7 @@ import {
   parseScheduleCorrection,
   readSignedTermsSnapshot,
   sharePercentLabel,
+  signedFundingNotice,
   recoverSignedTermsFromAgreement,
   sameDealError,
   submittedTermsDiffer,
@@ -188,6 +189,9 @@ describe("signed funding instruction", () => {
     const view = contractFundingCta({ role: "business", status: "signed", fundingId: "f1", fundingStatus: "held" });
     assert.equal(view.kind === "view" ? view.label : "", "View funding");
     assert.equal(contractFundingCta({ role: "creator", status: "signed", fundingId: "f1" }).kind, "hidden");
+    assert.match(signedFundingNotice(null), /start funding/i);
+    assert.match(signedFundingNotice("awaiting_provider"), /deposit is open/i);
+    assert.match(signedFundingNotice("held"), /Deliverables are open/);
     assert.equal(contractFundingIdempotencyKey("doc_1"), "contract:doc_1:initial");
   });
 

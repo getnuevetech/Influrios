@@ -51,9 +51,11 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
           {money.lines.map((line) => ` · ${line.label} ${formatMoney(line.amountCents, funding.currency)}`).join("")}
         </p>
         <p className="mt-2 text-sm text-indigo">
-          {business
-            ? "Review the exact version an influencer submitted. A revision keeps the earlier versions."
-            : "Submit a link or a note for your deliverable. The review clock starts when the version is saved."}
+          {funding.status !== "held" && funding.status !== "completed"
+            ? "Deliverables open after the deposit is confirmed."
+            : business
+              ? "Review the exact version an influencer submitted. A revision keeps the earlier versions."
+              : "Submit a link or a note for your deliverable. The review clock starts when the version is saved."}
         </p>
       </div>
       {query.submitted ? <p className="text-sm font-semibold text-emerald-700">Version submitted.</p> : null}
