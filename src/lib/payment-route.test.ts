@@ -10,7 +10,7 @@ import {
   readRouteAccounts,
   readRouteSnapshot,
 } from "./payment-route";
-import { creatorMaySubmitWork, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
+import { creatorMaySubmitWork, milestoneWorkLabel, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
 
 describe("payment route decision", () => {
   it("keeps collection and holding distinct and flags two answers for the same job", () => {
@@ -141,6 +141,10 @@ describe("milestone delivery", () => {
     assert.equal(submissionIsComplete({ note: "", linkUrl: "" }).ok, false);
     assert.equal(submissionIsComplete({ note: "Cut is ready", linkUrl: "http://example.com" }).ok, false);
     assert.equal(submissionIsComplete({ note: "", linkUrl: "https://example.com/cut" }).ok, true);
+    assert.equal(milestoneWorkLabel("approved"), "Done");
+    assert.equal(milestoneWorkLabel("released"), "Done");
+    assert.equal(milestoneWorkLabel("pending"), "Open");
+    assert.equal(milestoneWorkLabel("submitted"), "In review");
   });
 
   it("keeps submit off the business and requires a version", () => {

@@ -54,6 +54,7 @@ export type HomePipelineItem = {
   counterparty: string;
   stage: string;
   href: string;
+  contractHref: string | null;
   next: string;
 };
 
@@ -432,6 +433,7 @@ export async function loadCreatorHome(userId: string) {
         counterparty: item.counterparty,
         stage: shown.label,
         href: shown.href,
+        contractHref: item.contractHref && item.contractHref !== shown.href ? item.contractHref : null,
         next: due ? deliverableWhen(due) : shown.next,
       };
     });

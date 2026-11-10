@@ -16,6 +16,14 @@ export function creatorMaySubmitWork(input: { actorSlug: string; creatorSlug: st
   return creatorSlugsOnFunding(input).includes(input.actorSlug.trim());
 }
 
+/** Work state shown on a milestone. Approved work is done even while the payout is still with the provider. */
+export function milestoneWorkLabel(status: string) {
+  if (status === "approved" || status === "released") return "Done";
+  if (status === "submitted") return "In review";
+  if (status === "pending") return "Open";
+  return status.replaceAll("_", " ");
+}
+
 export function submissionIsComplete(input: { note: string; linkUrl: string }) {
   const note = input.note.trim();
   const linkUrl = input.linkUrl.trim();

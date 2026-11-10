@@ -20,6 +20,7 @@ export default async function AdminContractsPage({ searchParams }: Props) {
   const session = await requireAdminPage("contracts");
   await repairSignedAgreements().catch(() => 0);
   const params = await searchParams;
+  const canView = hasPermission(session, "contracts.view");
   const canEdit = hasPermission(session, "contracts.templates");
   const canDelete = isSuperAdmin(session);
   const template = await ensureContractTemplate().catch(() => null);
@@ -39,7 +40,8 @@ export default async function AdminContractsPage({ searchParams }: Props) {
         }
       : {}),
   };
-  const [total, documents] = await prisma
+  const [total, documents] = canView
+    ? await prisma
     .$transaction([
       prisma.contractDocument.count({ where }),
       prisma.contractDocument.findMany({
@@ -50,7 +52,8 @@ export default async function AdminContractsPage({ searchParams }: Props) {
         include: { parties: { select: { name: true, email: true, role: true, status: true } } },
       }),
     ])
-    .catch(() => [0, []] as const);
+    .catch(() => [0, []] as const)
+    : ([0, []] as const);
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const signed = documents.filter((row) => row.status === "signed");
   const awaiting = documents.filter((row) => row.status === "sent" || row.status === "draft");
@@ -108,8 +111,13 @@ export default async function AdminContractsPage({ searchParams }: Props) {
         ) : null}
       </p>
       {params.error ? <p className="mt-3 text-sm font-semibold text-amber-800">{params.error}</p> : null}
+      {!canView ? (
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          This access level can edit the template. Opening stored agreements needs the View contracts permission.
+        </p>
+      ) : null}
 
-      <section className="mt-8 rounded-2xl border border-[#E4EBFF] bg-white p-5">
+      {canView ? <section className="mt-8 rounded-2xl border border-[#E4EBFF] bg-white p-5">
         <h2 className="font-display text-xl font-bold text-indigo">Signature status</h2>
         <p className="mt-1 text-sm text-muted">
           {signed.length} fully signed · {awaiting.length} awaiting signatures · {other.length} other
@@ -127,7 +135,7 @@ export default async function AdminContractsPage({ searchParams }: Props) {
             <ContractAdminList documents={other} empty="" canDelete={canDelete} />
           </>
         ) : null}
-      </section>
+      </section> : null}
 
       <section className="mt-8">
         <h2 className="font-display text-xl font-bold text-indigo">Agreement template</h2>
@@ -194,7 +202,7 @@ function ContractAdminList({
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <Link
-                  href={`/collaboration/contracts/${document.id}`}
+                  href={`/admin/contracts/${document.id}`}
                   className="font-semibold text-violet hover:underline"
                 >
                   {document.title}
@@ -212,7 +220,7 @@ function ContractAdminList({
               </div>
               <div className="flex flex-col items-end gap-2">
               <Link
-                href={`/collaboration/contracts/${document.id}`}
+                href={`/admin/contracts/${document.id}`}
                 className="text-xs font-semibold text-violet hover:underline"
               >
                 Open →

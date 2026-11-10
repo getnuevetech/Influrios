@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { actionApproveMilestone, actionRequestRevision, actionSubmitMilestone } from "@/app/payments/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { assertFundingAccess } from "@/lib/funding-access";
-import { visibleSubmissions } from "@/lib/milestone-delivery";
+import { milestoneWorkLabel, visibleSubmissions } from "@/lib/milestone-delivery";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/db";
@@ -31,6 +31,9 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
     },
   });
   if (!funding) notFound();
+  const contract = await prisma.contractDocument
+    .findFirst({ where: { fundingId: funding.id }, select: { id: true, title: true } })
+    .catch(() => null);
   const business = access.audience === "business";
   const money = memberDealView({
     role: business ? "business" : "influencer",
@@ -42,9 +45,16 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
       <div>
-        <Link href="/payments" className="text-sm font-semibold text-violet hover:underline">
-          ← Payments
-        </Link>
+        <div className="flex flex-wrap gap-4">
+          <Link href="/payments" className="text-sm font-semibold text-violet hover:underline">
+            ← Payments
+          </Link>
+          {contract ? (
+            <Link href={`/collaboration/contracts/${contract.id}`} className="text-sm font-semibold text-violet hover:underline">
+              View contract
+            </Link>
+          ) : null}
+        </div>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">{funding.title}</h1>
         <p className="mt-2 text-sm text-muted">
           {funding.businessName} · {funding.status.replaceAll("_", " ")}
@@ -69,7 +79,7 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
           <section key={milestone.id} className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
             <h2 className="font-display text-xl font-bold text-indigo">{milestone.title}</h2>
             <p className="mt-1 text-sm text-muted">
-              {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status.replaceAll("_", " ")}
+              {formatMoney(milestone.amountCents, funding.currency)} · {milestoneWorkLabel(milestone.status)}
               {milestone.deliverableDueAt ? ` · deliver by ${milestone.deliverableDueAt.toISOString().slice(0, 10)}` : ""}
               {milestone.autoApproveAt && milestone.status === "submitted"
                 ? ` · review by ${milestone.autoApproveAt.toISOString().slice(0, 16).replace("T", " ")} UTC`

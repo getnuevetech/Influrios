@@ -16,6 +16,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
+import { milestoneWorkLabel } from "@/lib/milestone-delivery";
 import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
 import { fundingTerm } from "@/lib/ledger";
 import { syncOpenGatewayDeposits } from "@/lib/funding-checkout";
@@ -66,7 +67,7 @@ const STATUS_COLOR: Record<string, string> = {
 const MILESTONE_COLOR: Record<string, string> = {
   pending: "bg-slate-100 text-slate-600",
   submitted: "bg-amber-100 text-amber-800",
-  approved: "bg-blue-100 text-blue-800",
+  approved: "bg-emerald-100 text-emerald-800",
   released: "bg-emerald-100 text-emerald-800",
   refunded: "bg-amber-100 text-amber-900",
 };
@@ -108,6 +109,15 @@ export default async function PaymentsPage({ searchParams }: Props) {
   const confirmed = fundings.filter((row) => row.status === "held" || row.status === "completed").length;
   const directoryCreators = await listDirectoryCreators().catch(() => []);
   const bySlug = indexCreatorsBySlug(directoryCreators);
+  const contractRows = fundings.length
+    ? await prisma.contractDocument
+        .findMany({
+          where: { fundingId: { in: fundings.map((deal) => deal.id) } },
+          select: { id: true, fundingId: true },
+        })
+        .catch(() => [])
+    : [];
+  const contractByFunding = new Map(contractRows.flatMap((row) => (row.fundingId ? [[row.fundingId, row.id] as const] : [])));
 
   return (
     <div className="bg-[#F7FAFF]">
@@ -241,9 +251,19 @@ export default async function PaymentsPage({ searchParams }: Props) {
                       {deal.businessName} → {creator?.displayName ?? deal.creatorSlug}
                     </p>
                     <h3 className="mt-1 font-display text-xl font-bold text-indigo">{deal.title}</h3>
-                    <Link href={`/collaboration/work/${deal.id}`} className="mt-1 inline-block text-xs font-semibold text-violet hover:underline">
-                      Deliverables and review →
-                    </Link>
+                    <span className="mt-1 flex flex-wrap gap-3">
+                      <Link href={`/collaboration/work/${deal.id}`} className="text-xs font-semibold text-violet hover:underline">
+                        Deliverables and review →
+                      </Link>
+                      {contractByFunding.get(deal.id) ? (
+                        <Link
+                          href={`/collaboration/contracts/${contractByFunding.get(deal.id)}`}
+                          className="text-xs font-semibold text-violet hover:underline"
+                        >
+                          View contract →
+                        </Link>
+                      ) : null}
+                    </span>
                     <p className="mt-1 font-mono text-[11px] text-muted">
                       {deal.id} · {fundingTerm(Boolean(jurisdiction?.escrowTermAllowed))} ·{" "}
                       {FUNDING_MODE_LABELS[mode]}
@@ -451,7 +471,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-semibold text-indigo">{milestone.title}</p>
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${MILESTONE_COLOR[milestone.status] ?? ""}`}>
-                            {milestone.status}
+                            {milestoneWorkLabel(milestone.status)}
                           </span>
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
                             {RIGHTS_STATUS_LABELS[asRightsStatus(milestone.rightsStatus)]}
@@ -470,9 +490,10 @@ export default async function PaymentsPage({ searchParams }: Props) {
                             : milestone.reviewWindowHours
                               ? ` · ${milestone.reviewWindowHours}h review window`
                               : ""}
-                          {milestone.status === "approved" && asRightsStatus(milestone.rightsStatus) === "pending"
-                            ? " · usage rights activate on payment release"
+                          {milestone.status === "approved"
+                            ? " · Work is done. Payout releases after the provider confirms."
                             : ""}
+                          {milestone.status === "released" ? " · Work is done and the payout is confirmed." : ""}
                         </p>
                         {milestone.revisionNote && milestone.status === "pending" ? (
                           <p className="mt-1 text-xs text-indigo">Revision: {milestone.revisionNote}</p>

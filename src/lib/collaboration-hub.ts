@@ -210,6 +210,7 @@ export type AwaitingFundingContract = {
   grossCents: number | null;
   currency: string | null;
   counterparty: string;
+  fundingStatus?: string | null;
 };
 
 function sameSignedDeal(row: HubPipelineItem, doc: AwaitingFundingContract) {
@@ -254,6 +255,49 @@ export function attachAwaitingFunding(pipeline: HubPipelineItem[], contracts: Aw
       href,
       contractHref: href,
       awaitingFunding: true,
+      grossCents: doc.grossCents,
+      currency: doc.currency,
+      source: "proposal",
+    });
+  }
+  return next;
+}
+
+/** A signed contract with a funding record belongs on the ongoing collaboration, with both the agreement and the work. */
+export function attachOpenContracts(pipeline: HubPipelineItem[], contracts: AwaitingFundingContract[]): HubPipelineItem[] {
+  const next = pipeline.map((row) => ({ ...row }));
+  for (const doc of contracts) {
+    if (doc.status !== "signed" || !doc.fundingId) continue;
+    const href = `/collaboration/contracts/${doc.id}`;
+    const work = `/collaboration/work/${doc.fundingId}`;
+    const funded = doc.fundingStatus === "held" || doc.fundingStatus === "completed";
+    const matches = next.filter((row) => sameSignedDeal(row, doc));
+    const apply = (row: HubPipelineItem) => {
+      row.contractHref = href;
+      row.awaitingFunding = false;
+      row.depositPending = !funded;
+      if (funded) {
+        row.stage = row.stage === "Released" ? "Released" : "Funded";
+        row.stageIndex = PIPELINE_STAGES.indexOf(row.stage);
+        row.href = work;
+      } else if (!row.href || row.href === href) {
+        row.href = href;
+      }
+      if (!row.counterparty.trim()) row.counterparty = doc.counterparty || "Business";
+    };
+    if (matches.length > 0) {
+      for (const row of matches) apply(row);
+      continue;
+    }
+    next.push({
+      id: `contract:${doc.id}`,
+      title: doc.title,
+      counterparty: doc.counterparty || "Business",
+      stage: funded ? "Funded" : "Contract",
+      stageIndex: PIPELINE_STAGES.indexOf(funded ? "Funded" : "Contract"),
+      href: funded ? work : href,
+      contractHref: href,
+      depositPending: !funded,
       grossCents: doc.grossCents,
       currency: doc.currency,
       source: "proposal",
@@ -721,24 +765,67 @@ export async function loadCreatorHub(input: {
     [],
     degraded,
   );
-  const withFunding = attachAwaitingFunding(
-    pipeline,
-    signedUnfunded.map((document) => {
-      const fee = agreedFeeFromSources(document.sourceJson, document.termsSnapshotJson);
-      const business = document.parties.find((party) => party.role === "business");
-      return {
-        id: document.id,
-        title: document.title,
-        status: document.status,
-        fundingId: document.fundingId,
-        collaborationId: document.collaborationId,
-        applicationId: document.applicationId,
-        teamProposalId: document.teamProposalId,
-        grossCents: fee.grossCents,
-        currency: fee.currency,
-        counterparty: business?.name || "Business",
-      };
+  const signedWithFunding = await settle(
+    "funded agreements",
+    prisma.contractDocument.findMany({
+      where: {
+        status: "signed",
+        fundingId: { not: null },
+        OR: [
+          { parties: { some: { creatorSlug: slug } } },
+          { parties: { some: { userId: input.userId, role: "creator" } } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        fundingId: true,
+        collaborationId: true,
+        applicationId: true,
+        teamProposalId: true,
+        sourceJson: true,
+        termsSnapshotJson: true,
+        parties: { select: { role: true, name: true } },
+      },
+      take: 40,
     }),
+    [],
+    degraded,
+  );
+  const fundingStates = await settle(
+    "funding status",
+    prisma.collaborationFunding.findMany({
+      where: { id: { in: signedWithFunding.flatMap((document) => (document.fundingId ? [document.fundingId] : [])) } },
+      select: { id: true, status: true },
+    }),
+    [],
+    degraded,
+  );
+  const fundingStatus = new Map(fundingStates.map((row) => [row.id, row.status]));
+  const toContract = (document: (typeof signedUnfunded)[number], status: string | null) => {
+    const fee = agreedFeeFromSources(document.sourceJson, document.termsSnapshotJson);
+    const business = document.parties.find((party) => party.role === "business");
+    return {
+      id: document.id,
+      title: document.title,
+      status: document.status,
+      fundingId: document.fundingId,
+      collaborationId: document.collaborationId,
+      applicationId: document.applicationId,
+      teamProposalId: document.teamProposalId,
+      grossCents: fee.grossCents,
+      currency: fee.currency,
+      counterparty: business?.name || "Business",
+      fundingStatus: status,
+    };
+  };
+  const withFunding = attachOpenContracts(
+    attachAwaitingFunding(
+      pipeline,
+      signedUnfunded.map((document) => toContract(document, null)),
+    ),
+    signedWithFunding.map((document) => toContract(document, document.fundingId ? fundingStatus.get(document.fundingId) ?? null : null)),
   );
   status.active = withFunding.filter((row) => isCurrentCollaboration(row)).length;
   const history: HubPipelineItem[] = [

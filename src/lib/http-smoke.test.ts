@@ -90,6 +90,7 @@ describe("staging evidence probe", () => {
     assert.match(billing, /Open Earnings → Payout methods/);
     assert.equal(billing.includes("actionOpenConnect"), false);
     assert.match(readFileSync("src/components/account-shell.tsx", "utf8"), /href: "\/creator\/earnings"/);
+    assert.match(readFileSync("src/components/account-shell.tsx", "utf8"), /href: "\/payments", label: "Collaboration Payments"/);
     assert.equal(readFileSync("src/components/account-shell.tsx", "utf8").includes('label: "Payout Methods"'), false);
     // Member checklist: no country / rail / account-id dump.
     assert.equal(panel.includes("Country corridor"), false);

@@ -5,6 +5,7 @@ import {
   PIPELINE_STAGES,
   agreementPresentation,
   attachAwaitingFunding,
+  attachOpenContracts,
   derivePipelineStage,
   isCurrentCollaboration,
   invitationStillListed,
@@ -110,6 +111,55 @@ describe("collaboration hub pipeline", () => {
       ],
     );
     assert.equal(funded[0]?.awaitingFunding, undefined);
+  });
+
+  it("puts a funded signed agreement on the ongoing collaboration with the contract and the work", () => {
+    const opened = attachOpenContracts(
+      [
+        {
+          id: "application:app-1",
+          title: "Campaign",
+          counterparty: "Brand",
+          stage: "Contract",
+          stageIndex: 1,
+          href: "/collaboration/applications/app-1",
+          source: "application",
+        },
+      ],
+      [
+        {
+          id: "doc-9",
+          title: "Campaign agreement",
+          status: "signed",
+          fundingId: "fund-9",
+          applicationId: "app-1",
+          grossCents: 420_000,
+          currency: "USD",
+          counterparty: "Brand",
+          fundingStatus: "held",
+        },
+      ],
+    );
+    assert.equal(opened[0]?.stage, "Funded");
+    assert.equal(opened[0]?.href, "/collaboration/work/fund-9");
+    assert.equal(opened[0]?.contractHref, "/collaboration/contracts/doc-9");
+    assert.equal(isCurrentCollaboration(opened[0]!), true);
+
+    const alone = attachOpenContracts([], [
+      {
+        id: "doc-10",
+        title: "Standalone",
+        status: "signed",
+        fundingId: "fund-10",
+        grossCents: 100,
+        currency: "USD",
+        counterparty: "Brand",
+        fundingStatus: "held",
+      },
+    ]);
+    assert.equal(alone[0]?.id, "contract:doc-10");
+    assert.equal(alone[0]?.href, "/collaboration/work/fund-10");
+    assert.equal(isCurrentCollaboration(alone[0]!), true);
   });
 
   it("keeps invitations and matches out of the active collaboration count", () => {

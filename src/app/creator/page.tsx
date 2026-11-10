@@ -143,9 +143,16 @@ export default async function CreatorHomePage({
                         Expecting funding
                       </span>
                     ) : (
-                      <Link href={item.href} className="rounded-full border border-[#E4E9F5] px-3 py-2 text-xs font-semibold text-[#6D4AFF]">
-                        Open workspace →
-                      </Link>
+                      <span className="flex flex-wrap gap-2">
+                        {item.contractHref ? (
+                          <Link href={item.contractHref} className="rounded-full border border-[#E4E9F5] px-3 py-2 text-xs font-semibold text-[#6D4AFF]">
+                            Contract
+                          </Link>
+                        ) : null}
+                        <Link href={item.href} className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">
+                          {item.href.includes("/collaboration/work/") ? "Deliverables" : "Open workspace →"}
+                        </Link>
+                      </span>
                     )}
                   </li>
                 ))}
