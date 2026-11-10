@@ -18,6 +18,7 @@ import { prisma } from "@/lib/db";
 import { listDisputeReasons } from "@/lib/milestone-disputes";
 import { readFxSnapshot, readShareSnapshot } from "@/lib/fx-share";
 import { fundingTerm } from "@/lib/ledger";
+import { collectionCheckoutFields } from "@/lib/provider-collection";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFundingsForBusiness, listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { memberDealView } from "@/lib/member-deal-money";
@@ -330,23 +331,34 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 </div>
                 {businessViewer && deal.status === "awaiting_provider" ? (
                   <div className="mt-4 space-y-3">
-                    <form action={actionOpenFundingCheckout} className="flex flex-wrap items-end gap-2">
-                      <input type="hidden" name="dealId" value={deal.id} />
-                      <label className="text-xs font-semibold text-muted">
-                        Payer email
-                        <input name="email" type="email" required className="mt-1 w-48 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
-                      </label>
-                      <label className="text-xs font-semibold text-muted">
-                        M-Pesa phone
-                        <input name="phone" className="mt-1 w-40 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
-                      </label>
-                      <button type="submit" className="btn-primary !py-2 text-sm">
-                        Open provider checkout
-                      </button>
-                    </form>
-                    <p className="text-xs text-muted">
-                      Uses the collection route and payout method saved on this prefund. Flutterwave needs the email. M-Pesa needs the phone and short code. Airwallex needs the holding and operations accounts. Nothing is marked paid until the webhook.
-                    </p>
+                    {(() => {
+                      const checkout = collectionCheckoutFields(deal.collectionProviderCode || deal.providerCode);
+                      return (
+                        <>
+                          {checkout.canOpen ? (
+                            <form action={actionOpenFundingCheckout} className="flex flex-wrap items-end gap-2">
+                              <input type="hidden" name="dealId" value={deal.id} />
+                              {checkout.email ? (
+                                <label className="text-xs font-semibold text-muted">
+                                  Payer email
+                                  <input name="email" type="email" required className="mt-1 w-48 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
+                                </label>
+                              ) : null}
+                              {checkout.phone ? (
+                                <label className="text-xs font-semibold text-muted">
+                                  M-Pesa phone
+                                  <input name="phone" required className="mt-1 w-40 rounded-lg border border-border px-2 py-1 text-sm text-indigo" />
+                                </label>
+                              ) : null}
+                              <button type="submit" className="btn-primary !py-2 text-sm">
+                                Open provider checkout
+                              </button>
+                            </form>
+                          ) : null}
+                          <p className="text-xs text-muted">{checkout.note}</p>
+                        </>
+                      );
+                    })()}
                     <p className="text-xs text-muted">
                       Change orders {deal.changeOrderCount} of {deal.changeOrderLimit}.
                       {config?.changeOrdersEnabled === false ? " Change orders are turned off." : ""}
@@ -392,6 +404,11 @@ export default async function PaymentsPage({ searchParams }: Props) {
                       </button>
                     </form>
                   </div>
+                ) : null}
+                {mode === "FULL" && deal.milestones.length > 1 ? (
+                  <p className="mt-4 text-xs text-muted">
+                    One collection for the full amount. These rows are delivery milestones, not staged funding.
+                  </p>
                 ) : null}
                 <ul className="mt-5 space-y-3">
                   {deal.milestones.map((milestone) => (
