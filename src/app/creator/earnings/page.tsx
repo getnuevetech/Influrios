@@ -164,8 +164,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
       <div>
         <h1 className="font-display text-3xl font-bold">Earnings</h1>
         <p className="mt-1 text-sm text-muted">
-          Released and held collaboration funds for this influencer account. Amounts come from the marketplace ledger —
-          not estimates.
+          Your net collaboration payout. The amount the business deposited includes platform fees, so it is not shown here.
         </p>
       </div>
 
@@ -180,7 +179,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         <StatCard
           label="Held"
           value={formatMoney(held, currency)}
-          note="In collaboration holding"
+          note="Your net payout still in holding"
           tone="amber"
           icon={<IconWallet size={16} />}
         />

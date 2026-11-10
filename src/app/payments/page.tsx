@@ -25,7 +25,7 @@ import { readSignedDealMoney } from "@/lib/payment-engine";
 import { collectionCheckoutFields } from "@/lib/provider-collection";
 import { scheduleLabel } from "@/lib/schedule";
 import { listFundingsForBusiness, listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
-import { memberDealView } from "@/lib/member-deal-money";
+import { influencerLedgerShare, memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 import { FUNDING_BADGE_CLASS, fundingBadge } from "@/lib/funding-badge";
@@ -105,8 +105,17 @@ export default async function PaymentsPage({ searchParams }: Props) {
   const term = fundingTerm(Boolean(homeJurisdiction?.escrowTermAllowed));
   const usdFundings = fundings.filter((row) => row.currency === "USD");
   const mixedCurrency = fundings.some((row) => row.currency !== "USD");
-  const held = usdFundings.reduce((sum, row) => sum + row.ledger.heldCents, 0);
-  const released = usdFundings.reduce((sum, row) => sum + row.ledger.releasedCents, 0);
+  const partyMoney = (row: (typeof fundings)[number]) =>
+    businessViewer
+      ? { heldCents: row.ledger.heldCents, releasedCents: row.ledger.releasedCents }
+      : influencerLedgerShare({
+          grossCents: row.grossCents,
+          feeCents: row.feeCents,
+          plan: row.feeSnapshotJson,
+          ledger: row.ledger,
+        });
+  const held = usdFundings.reduce((sum, row) => sum + partyMoney(row).heldCents, 0);
+  const released = usdFundings.reduce((sum, row) => sum + partyMoney(row).releasedCents, 0);
   const confirmed = fundings.filter((row) => row.status === "held" || row.status === "completed").length;
   const directoryCreators = await listDirectoryCreators().catch(() => []);
   const bySlug = indexCreatorsBySlug(directoryCreators);
@@ -149,7 +158,13 @@ export default async function PaymentsPage({ searchParams }: Props) {
           </div>
           <div className="rounded-xl bg-amber-100 px-4 py-2">
             <p className="font-display text-lg font-bold text-amber-800">{formatMoney(held)}</p>
-            <p className="text-muted">{mixedCurrency ? "Held by provider (USD)" : "Held by provider"}</p>
+            <p className="text-muted">
+              {businessViewer
+                ? mixedCurrency
+                  ? "Held by provider (USD)"
+                  : "Held by provider"
+                : "Held for you"}
+            </p>
           </div>
         </div>
 
@@ -305,10 +320,14 @@ export default async function PaymentsPage({ searchParams }: Props) {
                     </span>
                   ) : null}
                   <span>
-                    Released <strong className="text-emerald-700">{formatMoney(deal.ledger.releasedCents, deal.currency)}</strong>
+                    Released{" "}
+                    <strong className="text-emerald-700">
+                      {formatMoney(partyMoney(deal).releasedCents, deal.currency)}
+                    </strong>
                   </span>
                   <span>
-                    Held by provider <strong className="text-amber-800">{formatMoney(deal.ledger.heldCents, deal.currency)}</strong>
+                    {businessViewer ? "Held by provider" : "Held for you"}{" "}
+                    <strong className="text-amber-800">{formatMoney(partyMoney(deal).heldCents, deal.currency)}</strong>
                   </span>
                   <span>
                     Provider <strong className="text-indigo">{deal.providerCode}</strong>

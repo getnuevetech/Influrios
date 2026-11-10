@@ -126,3 +126,32 @@ export function memberDealView(input: {
     feeReady: true,
   };
 }
+
+/**
+ * Influencer earnings. A signed hold is the business collection, which includes both platform fees.
+ * The influencer's held and released figures stay inside their signed net payout.
+ */
+export function influencerLedgerShare(input: {
+  grossCents: number;
+  feeCents: number;
+  plan?: unknown;
+  ledger: { heldCents: number; releasedCents: number };
+}): { heldCents: number; releasedCents: number } {
+  const view = memberDealView({
+    role: "influencer",
+    grossCents: input.grossCents,
+    feeCents: input.feeCents,
+    plan: input.plan,
+  });
+  if (!view.signed || !view.feeReady) {
+    return {
+      heldCents: Math.max(0, input.ledger.heldCents),
+      releasedCents: Math.max(0, input.ledger.releasedCents),
+    };
+  }
+  const payable = view.headlineCents;
+  const released = Math.min(Math.max(input.ledger.releasedCents, 0), payable);
+  const owed = Math.max(0, payable - released);
+  const held = input.ledger.heldCents <= 0 ? 0 : Math.min(owed, input.ledger.heldCents);
+  return { heldCents: held, releasedCents: released };
+}
