@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { memberDealView } from "./member-deal-money";
+import { influencerLedgerShare, memberDealView } from "./member-deal-money";
 
 const plan = {
   financialPlan: {
@@ -36,5 +36,46 @@ describe("member deal amounts", () => {
     assert.equal(business.feeCents, 1_000);
     const influencer = memberDealView({ role: "influencer", grossCents: 10_000, feeCents: 1_000 });
     assert.equal(influencer.headlineCents, 9_000);
+  });
+
+  it("keeps the business collection out of the influencer's held earnings", () => {
+    const share = influencerLedgerShare({
+      grossCents: 483_000,
+      feeCents: 126_000,
+      plan: {
+        financialPlan: {
+          signedQuote: {
+            grossInfluencerCompensationCents: 420_000,
+            businessPlatformFeeCents: 63_000,
+            influencerPlatformFeeCents: 63_000,
+            businessPaysCents: 483_000,
+            influencerReceivesCents: 357_000,
+            influencerTaxCents: 0,
+            withholdingCents: 0,
+          },
+        },
+      },
+      ledger: { heldCents: 483_000, releasedCents: 0 },
+    });
+    assert.equal(share.heldCents, 357_000);
+    assert.equal(share.releasedCents, 0);
+    const paid = influencerLedgerShare({
+      grossCents: 483_000,
+      feeCents: 126_000,
+      plan: {
+        financialPlan: {
+          signedQuote: {
+            grossInfluencerCompensationCents: 420_000,
+            businessPlatformFeeCents: 63_000,
+            influencerPlatformFeeCents: 63_000,
+            businessPaysCents: 483_000,
+            influencerReceivesCents: 357_000,
+          },
+        },
+      },
+      ledger: { heldCents: 126_000, releasedCents: 357_000 },
+    });
+    assert.equal(paid.heldCents, 0);
+    assert.equal(paid.releasedCents, 357_000);
   });
 });

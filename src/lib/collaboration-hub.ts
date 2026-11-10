@@ -527,8 +527,17 @@ export async function loadCreatorHub(input: {
     completed,
   };
 
-  const heldCents = fundings.reduce((sum, row) => sum + (row.ledger?.heldCents ?? 0), 0);
-  const releasedCents = fundings.reduce((sum, row) => sum + (row.ledger?.releasedCents ?? 0), 0);
+  const { influencerLedgerShare } = await import("@/lib/member-deal-money");
+  const influencerEarnings = fundings.map((row) =>
+    influencerLedgerShare({
+      grossCents: row.grossCents,
+      feeCents: row.feeCents,
+      plan: row.feeSnapshotJson,
+      ledger: { heldCents: row.ledger?.heldCents ?? 0, releasedCents: row.ledger?.releasedCents ?? 0 },
+    }),
+  );
+  const heldCents = influencerEarnings.reduce((sum, row) => sum + row.heldCents, 0);
+  const releasedCents = influencerEarnings.reduce((sum, row) => sum + row.releasedCents, 0);
   const earnings: HubEarnings = {
     heldCents,
     releasedCents,
