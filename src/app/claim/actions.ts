@@ -119,6 +119,9 @@ export async function actionPublishDraft(formData: FormData) {
         locationCity,
         locationState,
         locationCountry,
+        addressLine1: String(formData.get("addressLine1") ?? "").trim(),
+        addressLine2: String(formData.get("addressLine2") ?? "").trim(),
+        postalCode: String(formData.get("postalCode") ?? "").trim(),
         specialties: specialty ? [specialty] : [],
       });
     }
@@ -184,6 +187,9 @@ export async function actionUpdateDashboardProfile(formData: FormData) {
       locationCity: String(formData.get("locationCity") ?? "").trim() || undefined,
       locationState: String(formData.get("locationState") ?? "").trim() || undefined,
       locationCountry: String(formData.get("locationCountry") ?? "").trim() || undefined,
+      addressLine1: String(formData.get("addressLine1") ?? "").trim(),
+      addressLine2: String(formData.get("addressLine2") ?? "").trim(),
+      postalCode: String(formData.get("postalCode") ?? "").trim(),
       gender: (() => {
         const raw = String(formData.get("gender") ?? "").trim();
         return raw ? normalizeProfileGender(raw) : undefined;

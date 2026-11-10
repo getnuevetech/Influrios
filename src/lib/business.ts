@@ -337,6 +337,9 @@ export async function updateOwnedBusinessProfile(
     contactName?: string | null;
     contactEmail?: string | null;
     contactPhone?: string | null;
+    addressLine1?: string | null;
+    addressLine2?: string | null;
+    postalCode?: string | null;
   },
 ) {
   const ws = await ensureOwnedBusinessWorkspace(userId);
@@ -359,6 +362,12 @@ export async function updateOwnedBusinessProfile(
     input.contactPhone === undefined
       ? undefined
       : (input.contactPhone ?? "").trim().slice(0, 40) || null;
+  const addressLine1 =
+    input.addressLine1 === undefined ? undefined : (input.addressLine1 ?? "").trim().slice(0, 160) || null;
+  const addressLine2 =
+    input.addressLine2 === undefined ? undefined : (input.addressLine2 ?? "").trim().slice(0, 160) || null;
+  const postalCode =
+    input.postalCode === undefined ? undefined : (input.postalCode ?? "").trim().slice(0, 20) || null;
   await prisma.businessWorkspace.update({
     where: { id: ws.businessId },
     data: { name, industry },
@@ -373,6 +382,9 @@ export async function updateOwnedBusinessProfile(
       contactName: contactName ?? null,
       contactEmail: contactEmail ?? null,
       contactPhone: contactPhone ?? null,
+      addressLine1: addressLine1 ?? null,
+      addressLine2: addressLine2 ?? null,
+      postalCode: postalCode ?? null,
     },
     update: {
       name,
@@ -381,6 +393,9 @@ export async function updateOwnedBusinessProfile(
       ...(contactName !== undefined ? { contactName } : {}),
       ...(contactEmail !== undefined ? { contactEmail } : {}),
       ...(contactPhone !== undefined ? { contactPhone } : {}),
+      ...(addressLine1 !== undefined ? { addressLine1 } : {}),
+      ...(addressLine2 !== undefined ? { addressLine2 } : {}),
+      ...(postalCode !== undefined ? { postalCode } : {}),
     },
   });
   return readWorkspace(ws.businessId);

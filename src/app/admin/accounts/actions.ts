@@ -92,6 +92,7 @@ export async function actionSaveMember(formData: FormData) {
   if (!allowed.has(planTier)) redirect(withQuery(base, { error: "member" }));
 
   const suspended = formData.get("suspended") === "1";
+  const phone = clean(formData.get("phone"), 40);
   const before = {
     role: current.role,
     planTier: current.planTier,
@@ -103,8 +104,53 @@ export async function actionSaveMember(formData: FormData) {
       role: role as (typeof ROLES)[number],
       planTier,
       suspendedAt: suspended ? current.suspendedAt ?? new Date() : null,
+      phone: phone || null,
     },
   });
+  const addressLine1 = clean(formData.get("addressLine1"), 160) || null;
+  const addressLine2 = clean(formData.get("addressLine2"), 160) || null;
+  const postalCode = clean(formData.get("postalCode"), 20) || null;
+  const city = clean(formData.get("city"), 80);
+  const state = clean(formData.get("state"), 80);
+  const country = clean(formData.get("country"), 80);
+  const geography = [city, state, country].filter(Boolean).join(", ") || null;
+  if (role === "CREATOR") {
+    await prisma.creator.updateMany({
+      where: { userId: id },
+      data: {
+        addressLine1,
+        addressLine2,
+        postalCode,
+        locationCity: city,
+        locationState: state,
+        locationCountry: country,
+      },
+    });
+  } else {
+    await prisma.businessProfile.upsert({
+      where: { userId: id },
+      create: {
+        userId: id,
+        name: current.name?.trim() || "Business",
+        addressLine1,
+        addressLine2,
+        postalCode,
+        geography,
+        contactName: clean(formData.get("contactName"), 120) || null,
+        contactEmail: clean(formData.get("contactEmail"), 254).toLowerCase() || null,
+        contactPhone: clean(formData.get("contactPhone"), 40) || null,
+      },
+      update: {
+        addressLine1,
+        addressLine2,
+        postalCode,
+        geography,
+        contactName: clean(formData.get("contactName"), 120) || null,
+        contactEmail: clean(formData.get("contactEmail"), 254).toLowerCase() || null,
+        contactPhone: clean(formData.get("contactPhone"), 40) || null,
+      },
+    });
+  }
   await writeAudit({
     actor: session.email,
     action: "accounts.update",
@@ -116,7 +162,7 @@ export async function actionSaveMember(formData: FormData) {
       suspendedAt: suspended ? (current.suspendedAt ?? new Date()).toISOString() : null,
     },
   });
-  redirect(withQuery(base, { saved: "member", id }));
+  redirect(withQuery(base, { saved: "member", edit: id }));
 }
 
 export async function actionBulkAccountUpdate(formData: FormData) {

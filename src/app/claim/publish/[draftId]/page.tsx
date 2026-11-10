@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { actionAddDraftSocial, actionPublishDraft } from "@/app/claim/actions";
+import { ContactAddressFields } from "@/components/contact-address-fields";
 import { PlaceFields } from "@/components/place-fields";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
 import { canReadPrivateDraft, claimPublishBlockers, draftToSeedCreator, getDraft } from "@/lib/claim";
@@ -79,6 +80,16 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
                 At least {BIO_MIN_CHARS} characters. A brief sentence is enough.
               </span>
             </label>
+            <div>
+              <p className="text-sm font-semibold text-indigo">Contact address</p>
+              <div className="mt-2">
+                <ContactAddressFields
+                  defaultLine1={draft.addressLine1 ?? ""}
+                  defaultLine2={draft.addressLine2 ?? ""}
+                  defaultPostal={draft.postalCode ?? ""}
+                />
+              </div>
+            </div>
             <PlaceFields
               cityName="locationCity"
               stateName="locationState"

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionSaveBusinessProfile } from "@/app/business/profile/actions";
+import { ContactAddressFields } from "@/components/contact-address-fields";
 import { PlaceFields } from "@/components/place-fields";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace, parseLocationParts } from "@/lib/business";
@@ -30,8 +31,9 @@ export default async function BusinessProfilePage({
       </Link>
       <h1 className="mt-2 font-display text-3xl font-bold">Company profile</h1>
       <p className="mt-2 text-sm text-muted">
-        The workspace is listed under the <span className="font-semibold text-indigo">business name</span>. The contact
-        person below is reference-only and is not used to sign in.
+        The workspace is listed under the <span className="font-semibold text-indigo">business name</span>. Business
+        and agency accounts both keep a full contact address here. The contact person below is reference-only and is
+        not used to sign in.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Company profile saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
@@ -60,8 +62,18 @@ export default async function BusinessProfilePage({
           />
         </label>
         <div>
-          <p className="text-sm font-semibold text-indigo">Headquarters location</p>
-          <p className="mt-1 text-xs text-muted">Pick from suggestions — do not free-type a country name.</p>
+          <p className="text-sm font-semibold text-indigo">Contact address</p>
+          <p className="mt-1 text-xs text-muted">
+            Street address for this company. Pick the city, state, and country from suggestions.
+          </p>
+          <div className="mt-3">
+            <ContactAddressFields
+              defaultLine1={profile?.addressLine1 ?? ""}
+              defaultLine2={profile?.addressLine2 ?? ""}
+              defaultPostal={profile?.postalCode ?? ""}
+            />
+          </div>
+          <p className="mt-4 text-sm font-semibold text-indigo">Headquarters location</p>
           <div className="mt-2">
             <PlaceFields
               cityName="city"

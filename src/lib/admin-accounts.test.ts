@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { accountSearchOr, accountsBasePath, type AccountsTab } from "./admin-accounts";
+import { accountFieldFilters, accountSearchOr, accountsBasePath, type AccountsTab } from "./admin-accounts";
 
 describe("admin accounts helpers", () => {
   it("maps tabs to the correct admin paths", () => {
@@ -22,6 +22,13 @@ describe("admin accounts helpers", () => {
     assert.ok(clauses.some((clause) => "business" in clause && "contactEmail" in (clause.business as object)));
     assert.ok(clauses.some((clause) => "business" in clause && "contactPhone" in (clause.business as object)));
     assert.equal(accountSearchOr("   ").length, 0);
+  });
+
+  it("filters handle, email, and mobile as separate columns", () => {
+    const filters = accountFieldFilters({ email: "ada@example.com", phone: "+1 (713) 555-0100", handle: "@ada" });
+    assert.equal(filters.length, 3);
+    assert.deepEqual(filters[0], { email: { contains: "ada@example.com", mode: "insensitive" } });
+    assert.equal((filters[2] as { creator: { slug: { contains: string } } }).creator.slug.contains, "ada");
   });
 
   it("also matches a phone when the query includes formatting", () => {
