@@ -292,6 +292,10 @@ model Creator {
   /// Region / state / province when the member provided one (optional).
   locationState      String?
   locationCountry    String?
+  /// Mailing address. City, state, and country stay on the location fields.
+  addressLine1       String?
+  addressLine2       String?
+  postalCode         String?
   languages          String[]           @default([])
   avatarUrl          String?
   coverUrl           String?
@@ -1020,6 +1024,10 @@ model BusinessProfile {
   contactName  String?
   contactEmail String?
   contactPhone String?
+  /// Mailing address. City, state, and country stay in geography.
+  addressLine1 String?
+  addressLine2 String?
+  postalCode   String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

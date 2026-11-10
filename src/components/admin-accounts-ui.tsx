@@ -11,6 +11,8 @@ import {
   actionSetInfluencerIdentityKyc,
 } from "@/app/admin/accounts/actions";
 import { AccountPolicyForm } from "@/app/admin/accounts/account-section";
+import { ContactAddressFields } from "@/components/contact-address-fields";
+import { PlaceFields } from "@/components/place-fields";
 import type {
   AccountDetailExtras,
   AccountKpis,
@@ -20,7 +22,6 @@ import type {
 import {
   IconArrowRight,
   IconBuilding,
-  IconDots,
   IconIdCard,
   IconMail,
   IconSearch,
@@ -123,6 +124,9 @@ export function AdminUserAccountsView({
   pageSize: number;
   filters: {
     q?: string;
+    email?: string;
+    phone?: string;
+    handle?: string;
     status?: string;
     plan?: string;
     kyc?: string;
@@ -150,6 +154,9 @@ export function AdminUserAccountsView({
     () => ({
       tab: tab === "influencer" || tab === "business" ? undefined : tab,
       q: filters.q,
+      email: filters.email,
+      phone: filters.phone,
+      handle: filters.handle,
       status: filters.status,
       plan: filters.plan,
       kyc: filters.kyc,
@@ -174,8 +181,10 @@ export function AdminUserAccountsView({
   }
 
   const exportHref = `/admin/accounts/export?tab=${tab}${filters.q ? `&q=${encodeURIComponent(filters.q)}` : ""}${
-    filters.status && filters.status !== "all" ? `&status=${filters.status}` : ""
-  }`;
+    filters.email ? `&email=${encodeURIComponent(filters.email)}` : ""
+  }${filters.phone ? `&phone=${encodeURIComponent(filters.phone)}` : ""}${
+    filters.handle ? `&handle=${encodeURIComponent(filters.handle)}` : ""
+  }${filters.status && filters.status !== "all" ? `&status=${filters.status}` : ""}`;
 
   return (
     <div className="space-y-5">
@@ -316,8 +325,7 @@ export function AdminUserAccountsView({
         </Link>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="min-w-0 space-y-3">
+      <div className="min-w-0 space-y-3">
             <form
               className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#E4EBFF] bg-white p-3 shadow-sm"
               onSubmit={(e) => {
@@ -325,11 +333,14 @@ export function AdminUserAccountsView({
                 const fd = new FormData(e.currentTarget);
                 go({
                   q: String(fd.get("q") || "") || undefined,
+                  email: String(fd.get("email") || "") || undefined,
+                  phone: String(fd.get("phone") || "") || undefined,
+                  handle: String(fd.get("handle") || "") || undefined,
                   status: String(fd.get("status") || "all"),
                   plan: String(fd.get("plan") || "") || undefined,
                   kyc: String(fd.get("kyc") || "all"),
                   page: 1,
-                  id: undefined,
+                  edit: undefined,
                 });
               }}
             >
@@ -340,10 +351,28 @@ export function AdminUserAccountsView({
                 <input
                   name="q"
                   defaultValue={filters.q || ""}
-                  placeholder="Search name, email, mobile, handle, company, or ID"
+                  placeholder="Search name or company"
                   className="w-full rounded-full border border-[#E4EBFF] bg-[#F7F9FF] py-2 pl-9 pr-3 text-[13px] outline-none focus:border-violet focus:bg-white"
                 />
               </label>
+              <input
+                name="handle"
+                defaultValue={filters.handle || ""}
+                placeholder="Handle"
+                className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
+              />
+              <input
+                name="email"
+                defaultValue={filters.email || ""}
+                placeholder="Email"
+                className="w-44 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
+              />
+              <input
+                name="phone"
+                defaultValue={filters.phone || ""}
+                placeholder="Mobile"
+                className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
+              />
               <select
                 name="status"
                 defaultValue={filters.status || "all"}
@@ -391,7 +420,7 @@ export function AdminUserAccountsView({
                 action={actionBulkAccountUpdate}
                 className="flex flex-wrap items-center gap-2 rounded-xl border border-violet/20 bg-[#F8F5FF] px-3 py-2"
               >
-                <input type="hidden" name="next" value={buildHref(basePath, { ...currentQuery, id: selected?.id })} />
+                <input type="hidden" name="next" value={buildHref(basePath, { ...currentQuery, edit: selected?.id })} />
                 <input type="hidden" name="section" value={tab === "business" ? "business" : "influencer"} />
                 {selectedIds.map((id) => (
                   <input key={id} type="hidden" name="userIds" value={id} />
@@ -436,7 +465,8 @@ export function AdminUserAccountsView({
                           onChange={toggleAllOnPage}
                         />
                       </th>
-                      <th className="px-3 py-3">{tab === "business" ? "Business" : "Influencer"}</th>
+                      <th className="px-3 py-3">{tab === "business" ? "Business" : "Name"}</th>
+                      <th className="px-3 py-3">Handle</th>
                       <th className="px-3 py-3">Email</th>
                       <th className="px-3 py-3">Mobile</th>
                       <th className="px-3 py-3">Role</th>
@@ -445,13 +475,13 @@ export function AdminUserAccountsView({
                       <th className="px-3 py-3">Joined</th>
                       <th className="px-3 py-3">Last active</th>
                       <th className="px-3 py-3">Status</th>
-                      <th className="px-3 py-3" />
+                      <th className="px-3 py-3">Edit</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="px-4 py-10 text-center text-sm text-muted">
+                        <td colSpan={12} className="px-4 py-10 text-center text-sm text-muted">
                           No accounts match these filters.
                         </td>
                       </tr>
@@ -463,10 +493,9 @@ export function AdminUserAccountsView({
                         return (
                           <tr
                             key={row.id}
-                            className={`cursor-pointer border-t border-[#EEF2FF] transition ${
+                            className={`border-t border-[#EEF2FF] transition ${
                               active ? "bg-[#F5F1FF]" : "hover:bg-[#FBFBFF]"
                             }`}
-                            onClick={() => go({ id: row.id, page })}
                           >
                             <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                               <input
@@ -488,15 +517,10 @@ export function AdminUserAccountsView({
                                 </span>
                                 <div className="min-w-0">
                                   <p className="truncate font-semibold text-indigo">{row.displayName}</p>
-                                  <p className="truncate text-[11px] text-indigo">{row.email}</p>
-                                  <p className="truncate text-[11px] text-muted">
-                                    {[accountPhones(row).join(" · ") || "No mobile", row.handle]
-                                      .filter(Boolean)
-                                      .join(" · ")}
-                                  </p>
                                 </div>
                               </div>
                             </td>
+                            <td className="px-3 py-3 text-muted">{row.handle || "—"}</td>
                             <td className="px-3 py-3">
                               <p className="max-w-[220px] truncate text-indigo">{row.email}</p>
                               {row.contactEmail && row.contactEmail !== row.email ? (
@@ -537,8 +561,14 @@ export function AdminUserAccountsView({
                                 {status.text}
                               </span>
                             </td>
-                            <td className="px-3 py-3 text-muted">
-                              <IconDots size={16} />
+                            <td className="px-3 py-3">
+                              <button
+                                type="button"
+                                onClick={() => go({ edit: row.id })}
+                                className="rounded-full bg-[#F1ECFF] px-3 py-1.5 text-[12px] font-semibold text-violet"
+                              >
+                                Edit
+                              </button>
                             </td>
                           </tr>
                         );
@@ -556,7 +586,7 @@ export function AdminUserAccountsView({
                   <button
                     type="button"
                     disabled={page <= 1 || pending}
-                    onClick={() => go({ page: page - 1, id: selected?.id })}
+                    onClick={() => go({ page: page - 1, edit: selected?.id })}
                     className="rounded-lg border border-[#E4EBFF] px-2 py-1 font-semibold disabled:opacity-40"
                   >
                     ‹
@@ -567,7 +597,7 @@ export function AdminUserAccountsView({
                   <button
                     type="button"
                     disabled={page >= pageCount || pending}
-                    onClick={() => go({ page: page + 1, id: selected?.id })}
+                    onClick={() => go({ page: page + 1, edit: selected?.id })}
                     className="rounded-lg border border-[#E4EBFF] px-2 py-1 font-semibold disabled:opacity-40"
                   >
                     ›
@@ -577,26 +607,37 @@ export function AdminUserAccountsView({
             </div>
           </div>
 
-          <aside className="min-w-0">
-            {selected && detail ? (
-              <AccountDetailPanel
-                row={selected}
-                detail={detail}
-                detailTab={detailTab}
-                setDetailTab={setDetailTab}
-                canEdit={canEdit}
-                planOptions={planOptions}
-                roleOptions={roleOptions}
-                nextPath={buildHref(basePath, { ...currentQuery, id: selected.id })}
-                section={selected.role === "CREATOR" ? "influencer" : "business"}
-              />
-            ) : (
-              <div className="rounded-2xl border border-dashed border-[#E4EBFF] bg-white p-8 text-center text-sm text-muted shadow-sm">
-                Select an account row to open the profile overview, KYC tools, notes, and quick actions.
-              </div>
-            )}
-          </aside>
-      </div>
+      {selected && detail ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#0E1440]/45 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="account-edit-title"
+            className="my-4 w-full max-w-3xl"
+          >
+            <div className="mb-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => go({ edit: undefined })}
+                className="rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-indigo shadow"
+              >
+                Close
+              </button>
+            </div>
+            <AccountDetailPanel
+              row={selected}
+              detail={detail}
+              detailTab={detailTab}
+              setDetailTab={setDetailTab}
+              canEdit={canEdit}
+              planOptions={planOptions}
+              roleOptions={roleOptions}
+              nextPath={buildHref(basePath, { ...currentQuery, edit: selected.id })}
+              section={selected.role === "CREATOR" ? "influencer" : "business"}
+            />
+          </div>
+        </div>
+      ) : null}
 
       <details className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
         <summary className="cursor-pointer font-display text-sm font-bold text-indigo">
@@ -660,17 +701,27 @@ function AccountDetailPanel({
           </span>
           <div className="min-w-0 flex-1 pb-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate font-display text-lg font-bold text-indigo">{row.displayName}</h2>
+              <h2 id="account-edit-title" className="truncate font-display text-lg font-bold text-indigo">{row.displayName}</h2>
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${status.className}`}>
                 {status.text}
               </span>
             </div>
-            <p className="truncate text-[12px] text-indigo">{row.email}</p>
-            <p className="truncate text-[12px] text-muted">
-              {accountPhones(row).join(" · ") || "No mobile"} · {row.handle || "No handle"} · {detail.publicId}
-            </p>
+            <dl className="mt-1 space-y-0.5 text-[12px]">
+              <div className="flex gap-2">
+                <dt className="w-14 shrink-0 text-muted">Email</dt>
+                <dd className="truncate text-indigo">{row.email}</dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="w-14 shrink-0 text-muted">Mobile</dt>
+                <dd className="truncate text-indigo">{accountPhones(row).join(", ") || "Not set"}</dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="w-14 shrink-0 text-muted">Handle</dt>
+                <dd className="truncate text-indigo">{row.handle || "Not set"}</dd>
+              </div>
+            </dl>
             <p className="truncate text-[11px] text-muted">
-              {row.locationLabel} · Joined {row.createdAt.slice(0, 10)}
+              {detail.publicId} · {row.locationLabel} · Joined {row.createdAt.slice(0, 10)}
             </p>
           </div>
         </div>
@@ -823,6 +874,61 @@ function AccountDetailPanel({
                   ))}
                 </select>
               </label>
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-muted">
+                Account mobile
+                <input
+                  name="phone"
+                  defaultValue={row.phone || ""}
+                  disabled={!canEdit}
+                  className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo"
+                />
+              </label>
+              {canEdit ? (
+                <>
+                  <ContactAddressFields
+                    defaultLine1={row.addressLine1 || ""}
+                    defaultLine2={row.addressLine2 || ""}
+                    defaultPostal={row.postalCode || ""}
+                  />
+                  <PlaceFields
+                    cityName="city"
+                    stateName="state"
+                    countryName="country"
+                    defaultCity={row.city || ""}
+                    defaultState={row.state || ""}
+                    defaultCountry={row.country || ""}
+                  />
+                  {section === "business" ? (
+                    <>
+                      <label className="block text-[11px] font-bold uppercase tracking-wide text-muted">
+                        Contact name
+                        <input
+                          name="contactName"
+                          defaultValue={row.contactName || ""}
+                          className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo"
+                        />
+                      </label>
+                      <label className="block text-[11px] font-bold uppercase tracking-wide text-muted">
+                        Contact email
+                        <input
+                          name="contactEmail"
+                          type="email"
+                          defaultValue={row.contactEmail || ""}
+                          className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo"
+                        />
+                      </label>
+                      <label className="block text-[11px] font-bold uppercase tracking-wide text-muted">
+                        Contact mobile
+                        <input
+                          name="contactPhone"
+                          defaultValue={row.contactPhone || ""}
+                          className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo"
+                        />
+                      </label>
+                    </>
+                  ) : null}
+                </>
+              ) : null}
               <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
                 <input
                   type="checkbox"
@@ -985,6 +1091,12 @@ function AccountFacts({ row, publicId }: { row: AccountTableRow; publicId: strin
     ["Handle", row.handle || "Not set"],
     ["Role", row.role],
     ["Plan", row.planTier],
+    ["Street", row.addressLine1 || "Not set"],
+    ["Address line 2", row.addressLine2 || "Not set"],
+    ["City", row.city || "Not set"],
+    ["State", row.state || "Not set"],
+    ["Country", row.country || "Not set"],
+    ["Postal code", row.postalCode || "Not set"],
     ["Location", row.locationLabel],
     ["Status", row.suspendedAt ? `Restricted ${row.suspendedAt.slice(0, 10)}` : "Active"],
     ["Joined", row.createdAt.slice(0, 10)],

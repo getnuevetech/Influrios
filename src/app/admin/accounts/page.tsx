@@ -21,11 +21,14 @@ const FALLBACK_BUSINESS = ["BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];
 type Search = {
   tab?: string;
   q?: string;
+  email?: string;
+  phone?: string;
+  handle?: string;
   status?: string;
   plan?: string;
   kyc?: string;
   page?: string;
-  id?: string;
+  edit?: string;
   saved?: string;
   error?: string;
   reset?: string;
@@ -82,20 +85,22 @@ export default async function AdminAccountsPage({
     loadAccountTable({
       tab,
       q: params.q,
+      email: params.email,
+      phone: params.phone,
+      handle: params.handle,
       status: (params.status as "active" | "suspended" | "all") || "all",
       plan: params.plan,
       kyc: (params.kyc as "verified" | "pending" | "unverified" | "rejected" | "all") || "all",
       page,
       pageSize: 8,
-      selectedId: params.id,
     }),
   ]);
 
-  let selectedRow = params.id
-    ? table.rows.find((r) => r.id === params.id) || (await loadAccountById(params.id))
-    : table.rows[0] || null;
-  if (selectedRow && params.id && selectedRow.id !== params.id) {
-    selectedRow = await loadAccountById(params.id);
+  let selectedRow = params.edit
+    ? table.rows.find((r) => r.id === params.edit) || (await loadAccountById(params.edit))
+    : null;
+  if (selectedRow && params.edit && selectedRow.id !== params.edit) {
+    selectedRow = await loadAccountById(params.edit);
   }
 
   const detail = selectedRow ? await loadAccountDetailExtras(selectedRow.id) : null;
@@ -111,6 +116,9 @@ export default async function AdminAccountsPage({
       pageSize={table.pageSize}
       filters={{
         q: params.q,
+        email: params.email,
+        phone: params.phone,
+        handle: params.handle,
         status: params.status,
         plan: params.plan,
         kyc: params.kyc,

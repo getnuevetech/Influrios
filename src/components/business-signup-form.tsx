@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { actionRegisterBusiness } from "@/app/business/signup-actions";
 import { IconArrowRight } from "@/components/icons";
+import { ContactAddressFields } from "@/components/contact-address-fields";
 import { PlaceFields } from "@/components/place-fields";
 
 export function BusinessSignupForm({
@@ -90,6 +91,12 @@ export function BusinessSignupForm({
           />
           {mismatch ? <span className="mt-1 block text-[11px] font-semibold text-rose-600">Passwords do not match.</span> : null}
         </label>
+        <div className="sm:col-span-2">
+          <p className="text-xs font-bold text-indigo">Contact address</p>
+          <div className="mt-2">
+            <ContactAddressFields />
+          </div>
+        </div>
         <PlaceFields
           className="sm:col-span-2 grid gap-3 sm:grid-cols-3"
           countryName="country"

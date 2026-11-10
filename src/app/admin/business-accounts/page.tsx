@@ -17,10 +17,13 @@ const FALLBACK_PLANS = ["BUSINESS_FREE", "BUSINESS_PRO", "AGENCY"];
 
 type Search = {
   q?: string;
+  email?: string;
+  phone?: string;
+  handle?: string;
   status?: string;
   plan?: string;
   page?: string;
-  id?: string;
+  edit?: string;
   saved?: string;
   error?: string;
   reset?: string;
@@ -46,18 +49,19 @@ export default async function AdminBusinessAccountsPage({
     loadAccountTable({
       tab: "business",
       q: params.q,
+      email: params.email,
+      phone: params.phone,
+      handle: params.handle,
       status: (params.status as "active" | "suspended" | "all") || "all",
       plan: params.plan,
       page,
       pageSize: 8,
-      selectedId: params.id,
     }),
   ]);
 
-  let selectedRow =
-    (params.id ? table.rows.find((r) => r.id === params.id) : table.rows[0]) || null;
-  if (params.id && (!selectedRow || selectedRow.id !== params.id)) {
-    selectedRow = await loadAccountById(params.id);
+  let selectedRow = params.edit ? table.rows.find((r) => r.id === params.edit) || null : null;
+  if (params.edit && (!selectedRow || selectedRow.id !== params.edit)) {
+    selectedRow = await loadAccountById(params.edit);
     if (selectedRow && selectedRow.role === "CREATOR") selectedRow = null;
   }
   const detail = selectedRow ? await loadAccountDetailExtras(selectedRow.id) : null;
@@ -73,6 +77,9 @@ export default async function AdminBusinessAccountsPage({
       pageSize={table.pageSize}
       filters={{
         q: params.q,
+        email: params.email,
+        phone: params.phone,
+        handle: params.handle,
         status: params.status,
         plan: params.plan,
       }}

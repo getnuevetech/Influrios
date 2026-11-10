@@ -46,6 +46,9 @@ export type ClaimDraft = {
   locationCity: string;
   locationState?: string;
   locationCountry: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  postalCode?: string;
   specialties: string[];
   contentStyles?: string[];
   commercialModes?: string[];
@@ -93,6 +96,9 @@ type SessionPayload = {
   locationCity: string;
   locationState?: string;
   locationCountry: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  postalCode?: string;
   specialties: string[];
   contentStyles: string[];
   commercialModes: string[];
@@ -352,6 +358,9 @@ function readPayload(raw: Prisma.JsonValue): SessionPayload {
     locationCity: typeof value.locationCity === "string" ? value.locationCity : "",
     locationState: typeof value.locationState === "string" ? value.locationState : "",
     locationCountry: typeof value.locationCountry === "string" ? value.locationCountry : "",
+    addressLine1: typeof value.addressLine1 === "string" ? value.addressLine1 : "",
+    addressLine2: typeof value.addressLine2 === "string" ? value.addressLine2 : "",
+    postalCode: typeof value.postalCode === "string" ? value.postalCode : "",
     specialties,
     contentStyles: facetList(value.contentStyles),
     commercialModes: facetList(value.commercialModes),
@@ -397,6 +406,9 @@ function sessionPayload(draft: ClaimDraft): SessionPayload {
     locationCity: draft.locationCity,
     locationState: draft.locationState ?? "",
     locationCountry: draft.locationCountry,
+    addressLine1: draft.addressLine1 ?? "",
+    addressLine2: draft.addressLine2 ?? "",
+    postalCode: draft.postalCode ?? "",
     specialties: draft.specialties,
     contentStyles: draft.contentStyles ?? [],
     commercialModes: draft.commercialModes ?? [],
@@ -459,6 +471,9 @@ export function draftFromSession(row: OnboardingSession): ClaimDraft {
     locationCity: payload.locationCity,
     locationState: payload.locationState ?? "",
     locationCountry: payload.locationCountry,
+    addressLine1: payload.addressLine1 ?? "",
+    addressLine2: payload.addressLine2 ?? "",
+    postalCode: payload.postalCode ?? "",
     specialties: payload.specialties,
     contentStyles: payload.contentStyles,
     commercialModes: payload.commercialModes,
@@ -1024,6 +1039,9 @@ export async function updateDraftProfile(
       | "locationCity"
       | "locationState"
       | "locationCountry"
+      | "addressLine1"
+      | "addressLine2"
+      | "postalCode"
       | "specialties"
       | "contentStyles"
       | "commercialModes"
@@ -1102,6 +1120,9 @@ async function syncPublishedCreatorProfile(draft: ClaimDraft) {
       locationCity: draft.locationCity,
       locationState: draft.locationState ?? "",
       locationCountry: draft.locationCountry,
+      addressLine1: draft.addressLine1?.trim() || null,
+      addressLine2: draft.addressLine2?.trim() || null,
+      postalCode: draft.postalCode?.trim() || null,
       avatarUrl: draft.image,
       coverUrl: draft.coverImage,
       gender: draft.gender,
@@ -1212,6 +1233,9 @@ async function draftFromAccountUser(userId: string): Promise<ClaimDraft | null> 
     locationCity: creator.locationCity ?? "",
     locationState: creator.locationState ?? "",
     locationCountry: creator.locationCountry ?? "",
+    addressLine1: creator.addressLine1 ?? "",
+    addressLine2: creator.addressLine2 ?? "",
+    postalCode: creator.postalCode ?? "",
     specialties: creator.specialties.map((row) => row.specialty.slug),
     contentStyles: creator.discoveryFacets
       .filter((link) => link.facet.kind === "content_style" && link.facet.active)

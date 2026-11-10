@@ -76,6 +76,9 @@ export async function actionRegisterBusiness(formData: FormData) {
         contactName,
         contactEmail,
         contactPhone,
+        addressLine1: String(formData.get("addressLine1") ?? "").trim() || null,
+        addressLine2: String(formData.get("addressLine2") ?? "").trim() || null,
+        postalCode: String(formData.get("postalCode") ?? "").trim() || null,
       },
     });
     // registerAccount already records registration docs; also accept business-terms at signup.

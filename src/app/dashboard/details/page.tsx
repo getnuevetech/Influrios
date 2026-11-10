@@ -7,6 +7,7 @@ import { DiscoveryFacetForm, ProfileNotesForm } from "@/components/creator-profi
 import { ManagedIntrosPanel } from "@/components/creator-profile/managed-intros-panel";
 import { CreatorProfileShell, ProfileFlash } from "@/components/creator-profile/profile-shell";
 import { SpecialtyPicker } from "@/components/creator-profile/specialty-picker";
+import { ContactAddressFields } from "@/components/contact-address-fields";
 import { PlaceFields } from "@/components/place-fields";
 import { loadCreatorProfileBundle } from "@/lib/creator-profile-data";
 import { BIO_MIN_CHARS } from "@/lib/onboarding";
@@ -185,6 +186,16 @@ export default async function ProfileDetailsPage({ searchParams }: Props) {
                 At least {BIO_MIN_CHARS} characters. A brief sentence about what you create is enough.
               </span>
             </label>
+            <div className="sm:col-span-2">
+              <p className="text-sm font-semibold text-indigo">Contact address</p>
+              <div className="mt-2">
+                <ContactAddressFields
+                  defaultLine1={draft.addressLine1 ?? ""}
+                  defaultLine2={draft.addressLine2 ?? ""}
+                  defaultPostal={draft.postalCode ?? ""}
+                />
+              </div>
+            </div>
             <PlaceFields
               cityName="locationCity"
               stateName="locationState"

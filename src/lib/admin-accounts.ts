@@ -10,6 +10,9 @@ export type AccountsTab = "influencer" | "business" | "all";
 export type AccountListFilters = {
   tab: AccountsTab;
   q?: string;
+  email?: string;
+  phone?: string;
+  handle?: string;
   status?: "active" | "suspended" | "all";
   plan?: string;
   kyc?: "verified" | "pending" | "unverified" | "rejected" | "all";
@@ -50,6 +53,12 @@ export type AccountTableRow = {
   updatedAt: string;
   consentVersion: string | null;
   locationLabel: string;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  postalCode: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
   secondaryLabel: string | null;
   contactLabel: string | null;
   businessName: string | null;
@@ -89,6 +98,17 @@ export type AccountDetailExtras = {
   activity: AccountActivity[];
   publicId: string;
 };
+
+function splitPlace(location?: string | null) {
+  const parts = (location ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length >= 3) return { city: parts[0]!, state: parts[1]!, country: parts.slice(2).join(", ") };
+  if (parts.length === 2) return { city: parts[0]!, state: "", country: parts[1]! };
+  if (parts.length === 1) return { city: parts[0]!, state: "", country: "" };
+  return { city: "", state: "", country: "" };
+}
 
 function locationLabel(city?: string | null, state?: string | null, country?: string | null) {
   const parts = [city?.trim(), state?.trim(), country?.trim()].filter(
@@ -174,6 +194,29 @@ export function accountSearchOr(q: string) {
   return clauses;
 }
 
+/** Exact column filters. Each one narrows the list on its own field. */
+export function accountFieldFilters(input: { email?: string; phone?: string; handle?: string }) {
+  const and: Record<string, unknown>[] = [];
+  const email = input.email?.trim().slice(0, 120) || "";
+  const phone = input.phone?.trim().slice(0, 40) || "";
+  const handle = input.handle?.trim().replace(/^@/, "").slice(0, 80) || "";
+  if (email) and.push({ email: { contains: email, mode: "insensitive" } });
+  if (phone) {
+    const digits = phone.replace(/\D/g, "");
+    const or: Record<string, unknown>[] = [
+      { phone: { contains: phone, mode: "insensitive" } },
+      { business: { contactPhone: { contains: phone, mode: "insensitive" } } },
+    ];
+    if (digits.length >= 4 && digits !== phone) {
+      or.push({ phone: { contains: digits } });
+      or.push({ business: { contactPhone: { contains: digits } } });
+    }
+    and.push({ OR: or });
+  }
+  if (handle) and.push({ creator: { slug: { contains: handle, mode: "insensitive" } } });
+  return and;
+}
+
 export function accountsBasePath(tab: AccountsTab) {
   if (tab === "business") return "/admin/business-accounts";
   return "/admin/accounts";
@@ -248,6 +291,7 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
   const pageSize = Math.min(Math.max(filters.pageSize ?? 8, 1), 50);
   const page = Math.max(filters.page ?? 1, 1);
   const q = filters.q?.trim().slice(0, 120) || "";
+  const fieldFilters = accountFieldFilters(filters);
   const status = filters.status || "all";
   const plan = filters.plan?.trim() || "";
   const kyc = filters.kyc || "all";
@@ -258,6 +302,7 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
   if (status === "suspended") where.suspendedAt = { not: null };
   if (plan) where.planTier = plan;
   if (q) where.OR = accountSearchOr(q);
+  if (fieldFilters.length) where.AND = fieldFilters;
   if (kyc !== "all" && (filters.tab === "influencer" || filters.tab === "all")) {
     const map: Record<string, string> = {
       verified: "VERIFIED",
@@ -286,6 +331,9 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
               locationCity: true,
               locationState: true,
               locationCountry: true,
+              addressLine1: true,
+              addressLine2: true,
+              postalCode: true,
               slug: true,
               displayName: true,
               identityVerified: true,
@@ -302,6 +350,9 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
               contactName: true,
               contactEmail: true,
               contactPhone: true,
+              addressLine1: true,
+              addressLine2: true,
+              postalCode: true,
             },
           },
           onboardingSessions: {
@@ -383,11 +434,8 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
     const followers =
       user.creator?.socialAccounts.reduce((sum, s) => sum + (s.followers ?? 0), 0) ?? 0;
     const kycHit = user.creator?.slug ? latestKyc.get(user.creator.slug) : undefined;
-    const handle = user.creator?.slug
-      ? `@${user.creator.slug}`
-      : isBusiness
-        ? user.business?.name || null
-        : null;
+    const handle = user.creator?.slug ? `@${user.creator.slug}` : null;
+    const businessPlace = splitPlace(user.business?.geography);
     const displayName = isBusiness
       ? user.business?.name || user.name || "Unnamed business"
       : user.creator?.displayName || user.name || handle || "Unnamed";
@@ -412,6 +460,12 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
       locationLabel: isBusiness
         ? geography || (fromCreator !== "Not set" ? fromCreator : "Not set")
         : fromCreator,
+      addressLine1: (isBusiness ? user.business?.addressLine1 : user.creator?.addressLine1)?.trim() || null,
+      addressLine2: (isBusiness ? user.business?.addressLine2 : user.creator?.addressLine2)?.trim() || null,
+      postalCode: (isBusiness ? user.business?.postalCode : user.creator?.postalCode)?.trim() || null,
+      city: (isBusiness ? businessPlace.city : city)?.trim() || null,
+      state: (isBusiness ? businessPlace.state : state)?.trim() || null,
+      country: (isBusiness ? businessPlace.country : country)?.trim() || null,
       secondaryLabel: handle,
       contactLabel: isBusiness
         ? [user.business?.contactName, user.business?.contactEmail, user.business?.contactPhone]

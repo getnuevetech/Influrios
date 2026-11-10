@@ -20,6 +20,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const tab = parseTab(url.searchParams.get("tab"));
   const q = url.searchParams.get("q") || undefined;
+  const email = url.searchParams.get("email") || undefined;
+  const phone = url.searchParams.get("phone") || undefined;
+  const handle = url.searchParams.get("handle") || undefined;
   const status = (url.searchParams.get("status") as "active" | "suspended" | "all") || "all";
   const plan = url.searchParams.get("plan") || undefined;
   const kyc =
@@ -29,6 +32,9 @@ export async function GET(request: Request) {
   const { rows } = await loadAccountTable({
     tab,
     q,
+    email,
+    phone,
+    handle,
     status,
     plan,
     kyc,

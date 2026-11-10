@@ -22,6 +22,9 @@ export async function actionSaveBusinessProfile(formData: FormData) {
       contactName: String(formData.get("contactName") ?? ""),
       contactEmail: String(formData.get("contactEmail") ?? ""),
       contactPhone: String(formData.get("contactPhone") ?? ""),
+      addressLine1: String(formData.get("addressLine1") ?? ""),
+      addressLine2: String(formData.get("addressLine2") ?? ""),
+      postalCode: String(formData.get("postalCode") ?? ""),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save company profile.";
