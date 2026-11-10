@@ -359,44 +359,53 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         </>
                       );
                     })()}
-                    <p className="text-xs text-muted">
-                      Change orders {deal.changeOrderCount} of {deal.changeOrderLimit}.
-                      {config?.changeOrdersEnabled === false ? " Change orders are turned off." : ""}
-                    </p>
-                    {deal.changeOrders.map((order) => (
-                      <p key={order.id} className="text-xs text-indigo">
-                        Change order {formatMoney(order.previousUsdCents)} → {formatMoney(order.nextUsdCents)}. {order.note}
-                      </p>
-                    ))}
-                    {config?.changeOrdersEnabled !== false && deal.changeOrderCount < deal.changeOrderLimit ? (
-                      <form action={actionRequestChangeOrder} className="flex flex-wrap items-end gap-2">
-                        <input type="hidden" name="dealId" value={deal.id} />
-                        <label className="text-xs font-semibold text-muted">
-                          New gross USD
-                          <input
-                            name="grossUsd"
-                            type="number"
-                            min={1}
-                            step={1}
-                            required
-                            className="mt-1 w-32 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
-                          />
-                        </label>
-                        <label className="text-xs font-semibold text-muted">
-                          What changed
-                          <input
-                            name="note"
-                            required
-                            minLength={8}
-                            placeholder="What the amendment covers"
-                            className="mt-1 w-64 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
-                          />
-                        </label>
-                        <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
-                          Record change order
-                        </button>
-                      </form>
-                    ) : null}
+                    <details className="rounded-xl border border-border bg-white px-3 py-2">
+                      <summary className="cursor-pointer text-xs font-semibold text-indigo">
+                        Change order
+                        {deal.changeOrderCount > 0 ? ` · ${deal.changeOrderCount} of ${deal.changeOrderLimit}` : ""}
+                      </summary>
+                      <div className="mt-3 space-y-3">
+                        <p className="text-xs text-muted">
+                          Change orders {deal.changeOrderCount} of {deal.changeOrderLimit}.
+                          {config?.changeOrdersEnabled === false ? " Change orders are turned off." : ""}
+                          {" "}A change order can amend this prefund only before the provider confirms the hold.
+                        </p>
+                        {deal.changeOrders.map((order) => (
+                          <p key={order.id} className="text-xs text-indigo">
+                            Change order {formatMoney(order.previousUsdCents)} → {formatMoney(order.nextUsdCents)}. {order.note}
+                          </p>
+                        ))}
+                        {config?.changeOrdersEnabled !== false && deal.changeOrderCount < deal.changeOrderLimit ? (
+                          <form action={actionRequestChangeOrder} className="flex flex-wrap items-end gap-2">
+                            <input type="hidden" name="dealId" value={deal.id} />
+                            <label className="text-xs font-semibold text-muted">
+                              New gross USD
+                              <input
+                                name="grossUsd"
+                                type="number"
+                                min={1}
+                                step={1}
+                                required
+                                className="mt-1 w-32 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
+                              />
+                            </label>
+                            <label className="text-xs font-semibold text-muted">
+                              What changed
+                              <input
+                                name="note"
+                                required
+                                minLength={8}
+                                placeholder="What the amendment covers"
+                                className="mt-1 w-64 rounded-lg border border-border px-2 py-1 text-sm text-indigo"
+                              />
+                            </label>
+                            <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                              Record change order
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    </details>
                     <form action={actionCancelPrefund}>
                       <input type="hidden" name="dealId" value={deal.id} />
                       <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
