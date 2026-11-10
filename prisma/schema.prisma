@@ -2014,6 +2014,7 @@ model CollaborationFunding {
   entries           LedgerEntry[]
   disputes          MilestoneDispute[]
   changeOrders      FundingChangeOrder[]
+  deposits          FundingDeposit[]
   submissions       MilestoneSubmission[]
 
   @@unique([scheduleId, trancheIndex])
@@ -2177,6 +2178,28 @@ model FundingChangeOrder {
   createdAt               DateTime             @default(now())
 
   @@index([fundingId])
+}
+
+/// A business deposit for one prefund. Manual methods stay pending until finance confirms them.
+model FundingDeposit {
+  id               String               @id @default(cuid())
+  fundingId        String
+  funding          CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  /// card | ach_online | ach_wire | check
+  method           String
+  /// gateway_opened | manual_pending | confirmed | failed
+  status           String
+  amountCents      Int
+  currency         String
+  reference        String               @default("")
+  payerNote        String               @default("")
+  instructionsJson Json?
+  confirmedBy      String?
+  confirmedAt      DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([fundingId, status])
 }
 
 /// A milestone dispute or a request to cancel money the provider is holding.

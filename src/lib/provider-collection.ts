@@ -51,7 +51,7 @@ export function collectionCheckoutFields(providerCode: string | null | undefined
       email: false,
       phone: false,
       canOpen: false,
-      note: "Stripe is the collection route on this prefund. Checkout does not use Flutterwave or M-Pesa.",
+      note: "",
     };
   }
   return {

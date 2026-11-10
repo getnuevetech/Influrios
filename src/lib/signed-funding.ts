@@ -176,7 +176,7 @@ export type ContractFundingCta =
   | { kind: "hidden" }
   | { kind: "wait"; label: string }
   | { kind: "start"; label: "Start funding" }
-  | { kind: "resume"; label: "Resume payment" }
+  | { kind: "resume"; label: "Deposit funds" }
   | { kind: "view"; label: "View funding" };
 
 export function contractFundingCta(input: {
@@ -195,7 +195,7 @@ export function contractFundingCta(input: {
     return { kind: "wait", label: "Funding waits until every party has signed." };
   }
   if (!input.fundingId) return { kind: "start", label: "Start funding" };
-  if ((input.fundingStatus ?? "") === "awaiting_provider") return { kind: "resume", label: "Resume payment" };
+  if ((input.fundingStatus ?? "") === "awaiting_provider") return { kind: "resume", label: "Deposit funds" };
   return { kind: "view", label: "View funding" };
 }
 
@@ -265,7 +265,9 @@ export function describeDealProgress(input: {
   else if (input.agreementStatus !== "signed" && input.agreementStatus !== "voided") {
     next = "Waiting for the remaining parties to sign.";
   } else if (input.agreementStatus === "signed" && !input.fundingStatus) next = "Waiting for the business to start funding.";
-  else if (input.fundingStatus === "awaiting_provider") next = "Waiting for payment provider confirmation.";
+  else if (input.fundingStatus === "awaiting_provider") {
+    next = "The business deposits the funds. The agreement stays unfunded until the provider or finance confirms the payment.";
+  }
   else if (nextMilestone?.status === "approved" && nextMilestone.releaseScheduledAt) {
     next = `Release is scheduled for ${nextMilestone.title}.`;
   } else if (nextMilestone?.status === "approved") next = `Release is processing for ${nextMilestone.title}.`;

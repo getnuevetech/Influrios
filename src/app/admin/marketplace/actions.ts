@@ -27,9 +27,53 @@ import { wiseRateCheckDraft } from "@/lib/fx-share";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
 import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep, enqueueScheduledReleaseSweep } from "@/lib/jobs";
 import { scheduleMilestoneRelease } from "@/lib/marketplace-ledger";
+import { confirmManualDeposit, readManualDepositInstructions, saveManualDepositInstructions } from "@/lib/funding-checkout";
 
 function flag(formData: FormData, name: string) {
   return formData.get(name) === "on";
+}
+
+export async function actionSaveManualDepositInstructions(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  await saveManualDepositInstructions(
+    readManualDepositInstructions({
+      bankName: String(formData.get("bankName") ?? ""),
+      accountName: String(formData.get("accountName") ?? ""),
+      routingNumber: String(formData.get("routingNumber") ?? ""),
+      accountNumber: String(formData.get("accountNumber") ?? ""),
+      checkPayableTo: String(formData.get("checkPayableTo") ?? ""),
+      checkMailingAddress: String(formData.get("checkMailingAddress") ?? ""),
+    }),
+  );
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: session.email,
+        action: "funding.deposit.instructions",
+        objectType: "PlatformSetting",
+        objectId: "marketplace.manual_deposit",
+        after: { saved: true },
+      },
+    })
+    .catch(() => undefined);
+  revalidatePath("/admin/marketplace/settings");
+  revalidatePath("/payments/checkout");
+  redirect("/admin/marketplace/settings?saved=deposit");
+}
+
+export async function actionConfirmManualDeposit(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  const result = await confirmManualDeposit({
+    depositId: String(formData.get("depositId") ?? ""),
+    actor: session.email,
+  });
+  if (!result.ok) {
+    redirect(`/admin/marketplace/${fundingId}?error=${encodeURIComponent(result.error)}`);
+  }
+  revalidatePath(`/admin/marketplace/${fundingId}`);
+  revalidatePath("/payments");
+  redirect(`/admin/marketplace/${fundingId}?confirmed=1`);
 }
 
 export async function actionSaveMarketplaceSettings(formData: FormData) {

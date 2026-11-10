@@ -27,7 +27,7 @@ export function classifyStripeKey(secret: string): StripeKeyMode | null {
   return null;
 }
 
-function stripeCredentialError(reason: StripeCredentialFailure, action: "charged" | "opened") {
+export function stripeCredentialError(reason: StripeCredentialFailure, action: "charged" | "opened") {
   if (reason === "missing") {
     return action === "charged"
       ? "Stripe is not ready. Nothing was charged."
@@ -226,6 +226,62 @@ export function stripeOneTimeCheckoutBody(input: {
   for (const [key, value] of Object.entries(input.metadata)) body.set(`metadata[${key}]`, value);
   if (input.customerEmail) body.set("customer_email", input.customerEmail);
   return body;
+}
+
+/** One-time collaboration deposit. Card and online ACH use different Stripe method types. */
+export function stripeFundingCheckoutBody(input: {
+  amountCents: number;
+  currency: string;
+  name: string;
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
+  paymentMethod: "card" | "us_bank_account";
+  metadata: Record<string, string>;
+}) {
+  const body = new URLSearchParams({
+    mode: "payment",
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+    "payment_method_types[0]": input.paymentMethod,
+    "line_items[0][quantity]": "1",
+    "line_items[0][price_data][currency]": input.currency.trim().toLowerCase(),
+    "line_items[0][price_data][unit_amount]": String(input.amountCents),
+    "line_items[0][price_data][product_data][name]": input.name.slice(0, 120),
+  });
+  for (const [key, value] of Object.entries(input.metadata)) body.set(`metadata[${key}]`, value);
+  if (input.customerEmail) body.set("customer_email", input.customerEmail);
+  return body;
+}
+
+export async function openStripeFundingCheckout(input: {
+  secret: string;
+  mode: StripeKeyMode;
+  amountCents: number;
+  currency: string;
+  name: string;
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
+  paymentMethod: "card" | "us_bank_account";
+  metadata: Record<string, string>;
+}) {
+  try {
+    const payload = await stripeCall("POST", "/v1/checkout/sessions", input.secret, stripeFundingCheckoutBody(input));
+    const id = checkoutId(payload?.id);
+    const url = httpsUrl(payload?.url);
+    const livemode = payload?.livemode;
+    if (!payload || !id || !url) return { ok: false as const, error: "Stripe did not open checkout. Nothing was charged." };
+    if (input.mode === "sandbox" && livemode !== false) {
+      return { ok: false as const, error: "Stripe did not open a sandbox checkout. Nothing was charged." };
+    }
+    if (input.mode === "live" && livemode !== true) {
+      return { ok: false as const, error: "Stripe did not open checkout. Nothing was charged." };
+    }
+    return { ok: true as const, id, url };
+  } catch {
+    return { ok: false as const, error: "Stripe did not open checkout. Nothing was charged." };
+  }
 }
 
 export async function openStripeOneTimeCheckout(input: {
