@@ -30,6 +30,7 @@ describe("admin integration fields", () => {
     assert.equal(stripe.email, false);
     assert.equal(stripe.phone, false);
     assert.equal(stripe.canOpen, false);
+    assert.equal(stripe.note, "");
     assert.equal(collectionCheckoutFields("flutterwave").email, true);
     assert.equal(collectionCheckoutFields("flutterwave").phone, false);
     assert.equal(collectionCheckoutFields("mpesa").phone, true);
@@ -37,6 +38,7 @@ describe("admin integration fields", () => {
     assert.equal(collectionCheckoutFields("airwallex").canOpen, true);
     const page = readFileSync("src/app/payments/page.tsx", "utf8");
     assert.equal(page.includes("Flutterwave needs the email. M-Pesa needs the phone"), false);
+    assert.equal(page.includes("Checkout does not use Flutterwave or M-Pesa"), false);
     assert.equal(page.includes("collectionCheckoutFields"), true);
   });
 

@@ -355,7 +355,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                               </button>
                             </form>
                           ) : null}
-                          <p className="text-xs text-muted">{checkout.note}</p>
+                          {checkout.note ? <p className="text-xs text-muted">{checkout.note}</p> : null}
                         </>
                       );
                     })()}
