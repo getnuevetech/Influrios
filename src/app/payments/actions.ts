@@ -6,6 +6,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { isBusinessRole } from "@/lib/account-audience";
 import { checkoutUsesStoredCorridor } from "@/lib/corridor-checkout";
 import { newCheckoutAllowed, readRouteSnapshot } from "@/lib/payment-route";
+import { filesFromForm, saveDeliverableFiles, validateDeliverableFiles } from "@/lib/deliverable-files";
 import { markLatestSubmission, submitMilestoneWork } from "@/lib/milestone-delivery";
 import { assertFundingAccess, requireBusinessFundingAccess } from "@/lib/funding-access";
 import { openFundingCollection } from "@/lib/provider-collection";
@@ -135,12 +136,16 @@ export async function actionSubmitMilestone(formData: FormData) {
   if (access.audience !== "creator" || !access.actorSlug) {
     fail("Only the assigned influencer can submit work.");
   }
+  const files = filesFromForm(formData);
+  const checked = validateDeliverableFiles(files);
+  if (!checked.ok) fail(checked.error);
   const result = await submitMilestoneWork({
     fundingId: access.funding.id,
     milestoneId,
     creatorSlug: access.actorSlug,
     note: String(formData.get("note") ?? ""),
     linkUrl: String(formData.get("linkUrl") ?? ""),
+    files: checked.files,
   });
   if (!result.ok) fail(result.error);
   revalidatePath("/payments");
@@ -155,13 +160,65 @@ export async function actionRequestRevision(formData: FormData) {
   const milestoneId = String(formData.get("milestoneId") ?? "");
   const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
   if (!access.ok) fail(access.error);
+  const files = filesFromForm(formData);
+  const checked = validateDeliverableFiles(files);
+  if (!checked.ok) fail(checked.error);
   const result = await requestFundingRevision(access.funding.id, milestoneId, String(formData.get("note") ?? ""));
   if (!result.ok) fail(result.error);
   await markLatestSubmission({ milestoneId, status: "revision_requested", reviewNote: String(formData.get("note") ?? "") });
+  if (checked.files.length > 0) {
+    const latest = await prisma.milestoneSubmission.findFirst({
+      where: { milestoneId, fundingId: access.funding.id },
+      orderBy: { version: "desc" },
+      select: { id: true },
+    });
+    const stored = await saveDeliverableFiles({
+      fundingId: access.funding.id,
+      milestoneId,
+      submissionId: latest?.id ?? null,
+      audience: "business",
+      files: checked.files,
+    });
+    if (!stored.ok) fail(stored.error);
+  }
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   revalidatePath(`/collaboration/work/${access.funding.id}`);
   redirect(`/collaboration/work/${access.funding.id}?revised=1`);
+}
+
+export async function actionAddDeliverableFiles(formData: FormData) {
+  const account = await requirePaymentsAccount();
+  const fundingId = String(formData.get("dealId") ?? "");
+  const milestoneId = String(formData.get("milestoneId") ?? "");
+  const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
+  if (!access.ok) fail(access.error);
+  if (access.funding.status !== "held") fail("Files can be added after the deposit is confirmed.");
+  const files = filesFromForm(formData);
+  const checked = validateDeliverableFiles(files);
+  if (!checked.ok) fail(checked.error);
+  if (checked.files.length === 0) fail("Choose a document, media file, or zip.");
+  const milestone = await prisma.fundingMilestone.findFirst({
+    where: { id: milestoneId, fundingId: access.funding.id },
+    select: { id: true },
+  });
+  if (!milestone) fail("Milestone not found.");
+  const latest = await prisma.milestoneSubmission.findFirst({
+    where: { milestoneId, fundingId: access.funding.id },
+    orderBy: { version: "desc" },
+    select: { id: true },
+  });
+  const stored = await saveDeliverableFiles({
+    fundingId: access.funding.id,
+    milestoneId,
+    submissionId: latest?.id ?? null,
+    audience: "business",
+    files: checked.files,
+  });
+  if (!stored.ok) fail(stored.error);
+  revalidatePath("/payments");
+  revalidatePath(`/collaboration/work/${access.funding.id}`);
+  redirect(`/collaboration/work/${access.funding.id}?submitted=1`);
 }
 
 export async function actionApproveMilestone(formData: FormData) {

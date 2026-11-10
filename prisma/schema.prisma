@@ -2016,6 +2016,7 @@ model CollaborationFunding {
   changeOrders      FundingChangeOrder[]
   deposits          FundingDeposit[]
   submissions       MilestoneSubmission[]
+  files             MilestoneFile[]
 
   @@unique([scheduleId, trancheIndex])
   @@index([creatorSlug, status])
@@ -2060,6 +2061,7 @@ model FundingMilestone {
   entries           LedgerEntry[]
   disputes          MilestoneDispute[]
   submissions       MilestoneSubmission[]
+  files             MilestoneFile[]
 
   @@index([fundingId, status])
   @@index([status, payoutFailedAt])
@@ -2081,9 +2083,33 @@ model MilestoneSubmission {
   status       String           @default("submitted")
   reviewNote   String           @default("")
   createdAt    DateTime         @default(now())
+  files        MilestoneFile[]
 
   @@unique([milestoneId, creatorSlug, version])
   @@index([fundingId, createdAt])
+}
+
+/// A document, media file, or other file on a deliverable. Stored outside the public site.
+model MilestoneFile {
+  id           String              @id @default(cuid())
+  fundingId    String
+  funding      CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  milestoneId  String
+  milestone    FundingMilestone    @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  submissionId String?
+  submission   MilestoneSubmission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  /// creator | business
+  audience     String
+  /// document | media | file
+  kind         String
+  fileName     String
+  contentType  String
+  sizeBytes    Int
+  storagePath  String
+  createdAt    DateTime            @default(now())
+
+  @@index([milestoneId, createdAt])
+  @@index([submissionId])
 }
 
 /// Provider-held movements. This is not an Influrios cash balance.

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   actionAddEvidence,
+  actionAddDeliverableFiles,
   actionApproveMilestone,
   actionCancelPrefund,
   actionOpenFundingCheckout,
@@ -506,6 +507,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                             <input type="hidden" name="milestoneId" value={milestone.id} />
                             <input name="linkUrl" placeholder="https:// link to the work" className="w-full rounded-lg border border-border px-2 py-1 text-xs" />
                             <input name="note" placeholder="What you are submitting" className="w-full rounded-lg border border-border px-2 py-1 text-xs" />
+                            <input name="files" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.zip" className="w-full text-xs" />
                             <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo hover:bg-lavender">
                               Submit work
                             </button>
@@ -554,8 +556,19 @@ export default async function PaymentsPage({ searchParams }: Props) {
                               placeholder="What should change"
                               className="rounded-lg border border-border px-2 py-1 text-xs"
                             />
+                            <input name="files" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.zip" className="w-full text-xs" />
                             <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
                               Request revision
+                            </button>
+                          </form>
+                        ) : null}
+                        {businessViewer && deal.status === "held" ? (
+                          <form action={actionAddDeliverableFiles} className="space-y-2">
+                            <input type="hidden" name="dealId" value={deal.id} />
+                            <input type="hidden" name="milestoneId" value={milestone.id} />
+                            <input name="files" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.zip" className="w-full text-xs" />
+                            <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                              Add files
                             </button>
                           </form>
                         ) : null}

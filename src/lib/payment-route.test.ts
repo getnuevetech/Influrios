@@ -10,6 +10,7 @@ import {
   readRouteAccounts,
   readRouteSnapshot,
 } from "./payment-route";
+import { deliverableFileRule, validateDeliverableFiles } from "./deliverable-files";
 import { creatorMaySubmitWork, milestoneWorkLabel, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
 
 describe("payment route decision", () => {
@@ -141,6 +142,8 @@ describe("milestone delivery", () => {
     assert.equal(submissionIsComplete({ note: "", linkUrl: "" }).ok, false);
     assert.equal(submissionIsComplete({ note: "Cut is ready", linkUrl: "http://example.com" }).ok, false);
     assert.equal(submissionIsComplete({ note: "", linkUrl: "https://example.com/cut" }).ok, true);
+    assert.equal(submissionIsComplete({ note: "", linkUrl: "", fileCount: 1 }).ok, true);
+    assert.equal(submissionIsComplete({ note: "short", linkUrl: "", fileCount: 0 }).ok, false);
     assert.equal(milestoneWorkLabel("approved"), "Done");
     assert.equal(milestoneWorkLabel("released"), "Done");
     assert.equal(milestoneWorkLabel("pending"), "Open");
@@ -153,6 +156,18 @@ describe("milestone delivery", () => {
     assert.match(actions, /Only the assigned influencer can submit work/);
     assert.match(actions, /submitMilestoneWork/);
     assert.match(page, /!businessViewer && deal.status === "held"/);
-    assert.match(readFileSync("src/app/collaboration/work/[fundingId]/page.tsx", "utf8"), /Version \{row.version\}/);
+    const work = readFileSync("src/app/collaboration/work/[fundingId]/page.tsx", "utf8");
+    assert.match(work, /Version \{row.version\}/);
+    assert.match(work, /name="files"/);
+    assert.match(work, /actionAddDeliverableFiles/);
+    assert.equal(deliverableFileRule("image/png", "shot.png")?.kind, "media");
+    assert.equal(deliverableFileRule("application/pdf", "brief.pdf")?.kind, "document");
+    assert.equal(deliverableFileRule("application/zip", "pack.zip")?.kind, "file");
+    assert.equal(deliverableFileRule("text/html", "page.html"), null);
+    assert.equal(deliverableFileRule("", "cut.mp4")?.kind, "media");
+    const tooBig = new File([new Uint8Array(8 * 1024 * 1024 + 1)], "big.pdf", { type: "application/pdf" });
+    assert.equal(validateDeliverableFiles([tooBig]).ok, false);
+    const pdf = new File([new Uint8Array([1, 2, 3])], "brief.pdf", { type: "application/pdf" });
+    assert.equal(validateDeliverableFiles([pdf]).ok, true);
   });
 });
