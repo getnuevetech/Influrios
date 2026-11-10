@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { actionFundSignedContract } from "@/app/collaboration/contract/actions";
-import { contractFundingCta } from "@/lib/signed-funding";
+import { syncOpenGatewayDeposits } from "@/lib/funding-checkout";
 import { ensureStoredCommercialTerms } from "@/lib/signed-funding-apply";
 import { notFound, redirect } from "next/navigation";
 import { actionLogout } from "@/app/account/actions";
@@ -22,7 +22,7 @@ import { feeLevelForSignedTerms } from "@/lib/paid-agreement-fee";
 import { prisma } from "@/lib/db";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
-import { readSignedTermsSnapshot } from "@/lib/signed-funding";
+import { contractFundingCta, readSignedTermsSnapshot, signedFundingNotice } from "@/lib/signed-funding";
 import { SERVICE_LEVEL_LABELS, type ServiceLevel } from "@/lib/collaboration-fees";
 
 export const dynamic = "force-dynamic";
@@ -106,12 +106,15 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
   const youSigned = Boolean(party && party.status === "signed");
   const pendingParties = document.parties.filter((row) => row.status === "pending");
   const signedCount = document.parties.filter((row) => row.status === "signed").length;
+  if (document.fundingId) await syncOpenGatewayDeposits(document.fundingId).catch(() => false);
   const linkedFunding = document.fundingId
     ? await prisma.collaborationFunding.findUnique({
         where: { id: document.fundingId },
         select: { id: true, status: true },
       })
     : null;
+  const fundingNotice = signedFundingNotice(linkedFunding?.status);
+  const deliverablesOpen = linkedFunding?.status === "held" || linkedFunding?.status === "completed";
   /** Business starts funding — influencers must not hit /collaboration/contract. */
   const canStartFunding = Boolean(party && party.role === "business");
   const fundingCta = contractFundingCta({
@@ -205,11 +208,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                   : "Complete your DocuSign envelope. This page tracks status for every party."}
             </p>
           ) : document.status === "signed" ? (
-            <p className="mt-2 text-sm font-semibold text-emerald-700">
-              {canStartFunding
-                ? "Every party has signed. Funding can start."
-                : "Every party has signed. Waiting for the business to start funding."}
-            </p>
+            <p className="mt-2 text-sm font-semibold text-emerald-700">{fundingNotice}</p>
           ) : (
             <p className="mt-2 text-sm text-muted">This agreement is {document.status}.</p>
           )}
@@ -225,6 +224,11 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
             >
               {document.status === "signed" ? "Download signed contract" : "Download contract"}
             </Link>
+            {deliverablesOpen && linkedFunding ? (
+              <Link href={`/collaboration/work/${linkedFunding.id}`} className="btn-primary !py-2 text-sm">
+                Deliverables
+              </Link>
+            ) : null}
             {canStartFunding ? (
               fundingCta.kind === "start" ? (
                 <form action={actionFundSignedContract}>
@@ -234,27 +238,17 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                   </button>
                 </form>
               ) : fundingCta.kind === "resume" ? (
-                <>
-                  <Link href={`/payments/checkout/${document.fundingId}`} className="btn-primary !py-2 text-sm">
-                    {fundingCta.label}
-                  </Link>
-                  <Link href={`/collaboration/work/${document.fundingId}`} className="text-violet hover:underline">
-                    Deliverables
-                  </Link>
-                </>
+                <Link href={`/payments/checkout/${document.fundingId}`} className="btn-primary !py-2 text-sm">
+                  {fundingCta.label}
+                </Link>
               ) : fundingCta.kind === "view" ? (
-                <>
-                  <Link href={`/payments?created=${document.fundingId}`} className="text-violet hover:underline">
-                    {fundingCta.label}
-                  </Link>
-                  <Link href={`/collaboration/work/${document.fundingId}`} className="text-violet hover:underline">
-                    Deliverables
-                  </Link>
-                </>
+                <Link href={`/payments?created=${document.fundingId}`} className="text-violet hover:underline">
+                  {fundingCta.label}
+                </Link>
               ) : fundingCta.kind === "wait" ? (
                 <span className="text-muted">{fundingCta.label}</span>
               ) : null
-            ) : document.status === "signed" ? (
+            ) : document.status === "signed" && !linkedFunding ? (
               <span className="text-muted">The business starts funding from their side.</span>
             ) : (
               <span className="text-muted">Funding waits until every party has signed.</span>
@@ -313,9 +307,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
         {query.error ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{query.error}</p> : null}
         {query.signed === "1" ? (
           <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-            {canStartFunding
-              ? "Every party has signed. Funding can start."
-              : "Every party has signed. Waiting for the business to start funding."}
+            {fundingNotice}
           </p>
         ) : null}
         {query.signed === "0" ? (

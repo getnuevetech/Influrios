@@ -102,6 +102,39 @@ function checkoutId(value: unknown) {
   return typeof value === "string" && /^cs_(test|live)_[A-Za-z0-9]+$/.test(value) ? value : null;
 }
 
+export type StripeCheckoutPayment = {
+  id: string;
+  paymentStatus: string;
+  amountTotal: number | null;
+  metadata: Record<string, string>;
+};
+
+/** Reads the payment Stripe actually recorded. A return URL is not this object. */
+export function stripeCheckoutPayment(payload: Record<string, unknown> | null): StripeCheckoutPayment | null {
+  if (!payload) return null;
+  const id = checkoutId(payload.id);
+  const paymentStatus = typeof payload.payment_status === "string" ? payload.payment_status : "";
+  if (!id || !paymentStatus) return null;
+  const amountTotal = typeof payload.amount_total === "number" && Number.isInteger(payload.amount_total) ? payload.amount_total : null;
+  const raw = payload.metadata && typeof payload.metadata === "object" ? (payload.metadata as Record<string, unknown>) : {};
+  const metadata: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === "string" && value.trim()) metadata[key] = value.trim();
+  }
+  return { id, paymentStatus, amountTotal, metadata };
+}
+
+export async function readStripeCheckoutSession(secret: string, sessionId: string): Promise<StripeCheckoutPayment | null> {
+  const id = checkoutId(sessionId);
+  if (!id) return null;
+  try {
+    const payload = await stripeCall("GET", `/v1/checkout/sessions/${id}`, secret);
+    return stripeCheckoutPayment(payload);
+  } catch {
+    return null;
+  }
+}
+
 /** A Stripe Identity session is used only when Stripe returned an id and an https URL. */
 export function stripeIdentitySession(payload: Record<string, unknown> | null): { id: string; url: string } | null {
   if (!payload) return null;

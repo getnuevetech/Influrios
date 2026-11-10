@@ -11,8 +11,10 @@ import {
   saveManualDepositInstructions,
   startFundingDeposit,
   confirmManualDeposit,
+  confirmGatewayDeposit,
+  gatewaySessionConfirmsDeposit,
 } from "./funding-checkout";
-import { stripeFundingCheckoutBody } from "./stripe-admin";
+import { stripeCheckoutPayment, stripeFundingCheckoutBody } from "./stripe-admin";
 
 describe("funding deposit rules", () => {
   it("keeps manual deposits unfunded until finance confirms them", () => {
@@ -63,6 +65,35 @@ describe("funding deposit rules", () => {
     assert.equal(page.includes("/payments/checkout/"), true);
     assert.equal(contract.includes("/payments/checkout/"), true);
     assert.equal(page.includes("Stripe is the collection route"), false);
+    const paid = stripeCheckoutPayment({
+      id: "cs_test_paid",
+      payment_status: "paid",
+      amount_total: 483000,
+      metadata: { depositId: "dep_1", fundingId: "fund_1", purpose: "funding_deposit" },
+    });
+    assert.equal(
+      gatewaySessionConfirmsDeposit({ session: paid, depositId: "dep_1", fundingId: "fund_1", amountCents: 483000 }),
+      true,
+    );
+    assert.equal(
+      gatewaySessionConfirmsDeposit({
+        session: paid ? { ...paid, paymentStatus: "unpaid" } : null,
+        depositId: "dep_1",
+        fundingId: "fund_1",
+        amountCents: 483000,
+      }),
+      false,
+    );
+    assert.equal(
+      gatewaySessionConfirmsDeposit({
+        session: paid ? { ...paid, amountTotal: 100 } : null,
+        depositId: "dep_1",
+        fundingId: "fund_1",
+        amountCents: 483000,
+      }),
+      false,
+    );
+    assert.equal(gatewaySessionConfirmsDeposit({ session: null, depositId: "dep_1", fundingId: "fund_1", amountCents: 483000 }), false);
   });
 });
 
@@ -120,6 +151,58 @@ describe("funding deposit ledger", () => {
       } else {
         await prisma.platformSetting.delete({ where: { key: "marketplace.manual_deposit" } }).catch(() => undefined);
       }
+      await prisma.collaborationFunding.delete({ where: { id: funding.id } }).catch(() => undefined);
+    }
+  });
+
+  it("posts the hold when Stripe reports the card checkout paid", async () => {
+    const funding = await prisma.collaborationFunding.create({
+      data: {
+        jurisdictionCode: "US",
+        businessName: "Deposit test",
+        creatorSlug: "sofia-martinez",
+        title: "Card deposit",
+        grossCents: 483_000,
+        feeCents: 63_000,
+        feeSnapshotJson: { feeCents: 63_000 },
+        serviceLevel: "contracted",
+        status: "awaiting_provider",
+        providerCode: "stripe",
+        collectionProviderCode: "stripe",
+        currency: "USD",
+      },
+    });
+    const sessionId = `cs_test_${funding.id.replace(/[^A-Za-z0-9]/g, "")}`;
+    const deposit = await prisma.fundingDeposit.create({
+      data: {
+        fundingId: funding.id,
+        method: "card",
+        status: "gateway_opened",
+        amountCents: 483_000,
+        currency: "USD",
+        reference: sessionId,
+      },
+    });
+    try {
+      const unpaid = await confirmGatewayDeposit({
+        depositId: deposit.id,
+        fundingId: funding.id,
+        checkoutSessionId: sessionId,
+        paymentStatus: "unpaid",
+      });
+      assert.equal(unpaid.ok, false);
+      assert.equal((await prisma.collaborationFunding.findUnique({ where: { id: funding.id } }))?.status, "awaiting_provider");
+      const paid = await confirmGatewayDeposit({
+        depositId: deposit.id,
+        fundingId: funding.id,
+        checkoutSessionId: sessionId,
+        paymentStatus: "paid",
+      });
+      assert.equal(paid.ok, true);
+      assert.equal((await prisma.collaborationFunding.findUnique({ where: { id: funding.id } }))?.status, "held");
+      assert.equal((await prisma.fundingDeposit.findUnique({ where: { id: deposit.id } }))?.status, "confirmed");
+    } finally {
+      await prisma.processedWebhook.deleteMany({ where: { eventId: sessionId } }).catch(() => undefined);
       await prisma.collaborationFunding.delete({ where: { id: funding.id } }).catch(() => undefined);
     }
   });

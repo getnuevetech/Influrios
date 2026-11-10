@@ -21,6 +21,9 @@ export type WorkspaceApplication = {
   collaborationId: string | null;
   invitation: boolean;
   hasContract: boolean;
+  fundingId?: string | null;
+  fundingStatus?: string | null;
+  contractId?: string | null;
   note: string;
 };
 
@@ -93,6 +96,7 @@ export function BusinessCollaborations(props: {
         title: application.title,
         influencer: application.creatorName,
         hasContract: application.hasContract,
+        fundingStatus: application.fundingStatus,
       }),
     )
     .filter((row): row is ActiveQueueRow => Boolean(row));
@@ -380,10 +384,16 @@ function ActiveDetail(props: { application: WorkspaceApplication; row: ActiveQue
         {!props.application.hasContract ? (
           <Link href={agreementHref} className="rounded-full bg-[#6D4AFF] px-4 py-2 text-white">Create the agreement</Link>
         ) : (
-          <Link href={`/collaboration/contracts`} className="rounded-full border border-[#E6ECF7] px-4 py-2 text-indigo">View agreement</Link>
+          <Link href={props.application.contractId ? `/collaboration/contracts/${props.application.contractId}` : "/collaboration/contracts"} className="rounded-full border border-[#E6ECF7] px-4 py-2 text-indigo">View agreement</Link>
         )}
-        <Link href="/payments" className="rounded-full border border-[#E6ECF7] px-4 py-2 text-indigo">View funding</Link>
-        <Link href={`/collaboration/applications/${props.application.id}`} className="text-[#6D4AFF]">Review submission</Link>
+        {props.row.bucket === "completed" || props.row.stage === "Content production" ? (
+          <Link href={props.application.fundingId ? `/collaboration/work/${props.application.fundingId}` : "/payments"} className="rounded-full bg-[#6D4AFF] px-4 py-2 text-white">Deliverables</Link>
+        ) : props.application.fundingId ? (
+          <Link href={`/payments/checkout/${props.application.fundingId}`} className="rounded-full bg-[#6D4AFF] px-4 py-2 text-white">Deposit funds</Link>
+        ) : null}
+        {!props.application.hasContract ? (
+          <Link href={`/collaboration/applications/${props.application.id}`} className="text-[#6D4AFF]">Review invitation</Link>
+        ) : null}
       </div>
     </div>
   );

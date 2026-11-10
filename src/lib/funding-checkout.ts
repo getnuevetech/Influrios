@@ -2,7 +2,13 @@ import { prisma } from "@/lib/db";
 import { applyMarketplaceEvent } from "@/lib/marketplace-ledger";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 import { collectionInstructionAmount } from "@/lib/provider-outbox";
-import { openStripeFundingCheckout, stripeCredentials, stripeCredentialError } from "@/lib/stripe-admin";
+import {
+  openStripeFundingCheckout,
+  readStripeCheckoutSession,
+  stripeCredentials,
+  stripeCredentialError,
+  type StripeCheckoutPayment,
+} from "@/lib/stripe-admin";
 
 export const MANUAL_DEPOSIT_KEY = "marketplace.manual_deposit";
 
@@ -248,6 +254,66 @@ export async function confirmManualDeposit(input: { depositId: string; actor: st
     })
     .catch(() => undefined);
   return { ok: true as const, fundingId: deposit.fundingId };
+}
+
+/** A paid Stripe session for this deposit is the confirmation. The return URL is not. */
+export function gatewaySessionConfirmsDeposit(input: {
+  session: StripeCheckoutPayment | null;
+  depositId: string;
+  fundingId: string;
+  amountCents: number;
+}) {
+  const session = input.session;
+  if (!session || session.paymentStatus !== "paid") return false;
+  if (session.amountTotal != null && session.amountTotal !== input.amountCents) return false;
+  const depositId = session.metadata.depositId?.trim() ?? "";
+  const fundingId = session.metadata.fundingId?.trim() ?? "";
+  if (depositId && depositId !== input.depositId) return false;
+  if (fundingId && fundingId !== input.fundingId) return false;
+  return true;
+}
+
+/**
+ * Asks Stripe about an open card or online ACH checkout and posts the hold when Stripe says paid.
+ * An unpaid or missing session leaves the agreement awaiting the provider.
+ */
+export async function syncOpenGatewayDeposits(fundingId: string) {
+  const id = fundingId.trim();
+  if (!id) return false;
+  const funding = await prisma.collaborationFunding.findUnique({
+    where: { id },
+    select: { status: true },
+  });
+  if (!funding || funding.status !== "awaiting_provider") return false;
+  const creds = await stripeCredentials().catch(() => null);
+  if (!creds?.ok) return false;
+  const open = await prisma.fundingDeposit.findMany({
+    where: { fundingId: id, status: "gateway_opened", method: { in: ["card", "ach_online"] } },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  });
+  for (const deposit of open) {
+    const session = await readStripeCheckoutSession(creds.secret, deposit.reference);
+    if (
+      !gatewaySessionConfirmsDeposit({
+        session,
+        depositId: deposit.id,
+        fundingId: id,
+        amountCents: deposit.amountCents,
+      }) ||
+      !session
+    ) {
+      continue;
+    }
+    const confirmed = await confirmGatewayDeposit({
+      depositId: deposit.id,
+      fundingId: id,
+      checkoutSessionId: session.id,
+      paymentStatus: session.paymentStatus,
+    });
+    if (confirmed.ok) return true;
+  }
+  return false;
 }
 
 /** Stripe checkout completion posts the hold. A return to the site does not. */

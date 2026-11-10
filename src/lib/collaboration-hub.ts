@@ -69,6 +69,8 @@ export type HubPipelineItem = {
   obligationTotal?: number;
   /** Signed agreement with no funding yet. Visible, but work has not started. */
   awaitingFunding?: boolean;
+  /** Checkout is open and Stripe or finance has not confirmed it. */
+  depositPending?: boolean;
 };
 
 export type HubStatusCounts = {
@@ -126,7 +128,24 @@ export function agreementPresentation(row: {
   contractHref?: string | null;
   revisionSummary?: string | null;
   awaitingFunding?: boolean;
+  depositPending?: boolean;
 }) {
+  if (row.stage === "Funded" || row.stage === "In Progress" || row.stage === "Review") {
+    return {
+      label: row.stage,
+      next: row.revisionSummary || "Deliverables are open",
+      action: "Open deliverables",
+      href: row.href,
+    };
+  }
+  if (row.depositPending) {
+    return {
+      label: "Payment pending",
+      next: "The business opened a deposit. It stays unfunded until Stripe or finance confirms it.",
+      action: "View agreement",
+      href: row.contractHref || row.href,
+    };
+  }
   if (row.awaitingFunding) {
     return {
       label: "Expecting funding",
@@ -168,8 +187,9 @@ export function isCurrentCollaboration(row: {
   source?: string | null;
   contractHref?: string | null;
   awaitingFunding?: boolean;
+  depositPending?: boolean;
 }) {
-  if (row.awaitingFunding) return true;
+  if (row.awaitingFunding || row.depositPending) return true;
   if (row.stage === "Match" || row.stage === "Released") return false;
   if (row.source === "application" || row.source === "team") {
     return Boolean(row.contractHref) && row.stage !== "Contract";
@@ -440,6 +460,15 @@ export async function loadCreatorHub(input: {
     ]);
 
   await persistTopMatches(creatorMatches).catch(() => 0);
+  const awaitingDeposits = fundings.filter((row) => row.status === "awaiting_provider");
+  if (awaitingDeposits.length > 0) {
+    const { syncOpenGatewayDeposits } = await import("@/lib/funding-checkout");
+    const changed = await Promise.all(awaitingDeposits.map((row) => syncOpenGatewayDeposits(row.id).catch(() => false)));
+    if (changed.some(Boolean)) {
+      const fresh = await listFundingsForCreator(slug).catch(() => fundings);
+      fundings.splice(0, fundings.length, ...fresh);
+    }
+  }
 
   const pending = collaborations.filter(
     (row) => row.status === "sent" && row.recipientSlug === slug,
@@ -521,7 +550,13 @@ export async function loadCreatorHub(input: {
         counterparty,
         stage,
         stageIndex: PIPELINE_STAGES.indexOf(stage),
-        href: funding ? `/payments?funding=${encodeURIComponent(funding.id)}` : `/collaboration/records/${row.id}`,
+        href:
+          funding && (funding.status === "held" || funding.status === "completed")
+            ? `/collaboration/work/${funding.id}`
+            : funding
+              ? `/payments?funding=${encodeURIComponent(funding.id)}`
+              : `/collaboration/records/${row.id}`,
+        depositPending: funding?.status === "awaiting_provider",
         source: "proposal",
         netCents: view?.headlineCents ?? null,
         moneyLines: view?.lines,
@@ -551,7 +586,7 @@ export async function loadCreatorHub(input: {
         "agreements",
         prisma.contractDocument.findMany({
           where: { OR: contractWhere },
-          select: { id: true, applicationId: true, collaborationId: true, teamProposalId: true },
+          select: { id: true, applicationId: true, collaborationId: true, teamProposalId: true, fundingId: true, status: true },
           orderBy: { updatedAt: "desc" },
         }),
         [],
@@ -572,28 +607,56 @@ export async function loadCreatorHub(input: {
       contractByApplication.set(link.applicationId, link.id);
     }
   }
+  const fundingIds = [...new Set(contractLinks.map((link) => link.fundingId).filter((id): id is string => Boolean(id)))];
+  const fundingRows = fundingIds.length
+    ? await prisma.collaborationFunding.findMany({
+        where: { id: { in: fundingIds } },
+        select: { id: true, status: true },
+      })
+    : [];
+  const fundingById = new Map(fundingRows.map((row) => [row.id, row]));
   for (const row of pipeline) {
     const contractId = contractByCollab.get(row.id);
-    if (contractId) {
-      row.contractHref = `/collaboration/contracts/${contractId}`;
+    if (!contractId) continue;
+    row.contractHref = row.contractHref || `/collaboration/contracts/${contractId}`;
+    if (row.stage === "Match") {
       row.stage = "Contract";
       row.stageIndex = PIPELINE_STAGES.indexOf("Contract");
     }
   }
+  const contractFunding = (contractId: string | undefined) => {
+    const link = contractId ? contractLinks.find((row) => row.id === contractId) : undefined;
+    const funding = link?.fundingId ? fundingById.get(link.fundingId) : undefined;
+    if (!funding) {
+      return { stage: (contractId ? "Contract" : "Match") as PipelineStage, workHref: null as string | null, depositPending: false };
+    }
+    const stage = derivePipelineStage({
+      collaborationStatus: "accepted",
+      fundingStatus: funding.status,
+      milestoneStatuses: [],
+    });
+    const open = funding.status === "held" || funding.status === "completed";
+    return {
+      stage,
+      workHref: open ? `/collaboration/work/${funding.id}` : null,
+      depositPending: funding.status === "awaiting_provider",
+    };
+  };
   for (const proposal of teamProposals) {
     if (proposal.status !== "accepted" && proposal.status !== "partial") continue;
     const mine = proposal.members.find((member) => member.creatorSlug === slug);
     if (!mine || mine.status === "declined") continue;
     const contractId = contractByTeam.get(proposal.id);
-    const stage: PipelineStage = contractId ? "Contract" : "Match";
+    const money = contractFunding(contractId);
     pipeline.push({
       id: `team:${proposal.id}`,
       title: proposal.title,
       counterparty: proposal.title,
-      stage,
-      stageIndex: PIPELINE_STAGES.indexOf(stage),
-      href: contractId ? `/collaboration/contracts/${contractId}` : `/collaboration/team/${proposal.id}`,
+      stage: money.stage,
+      stageIndex: PIPELINE_STAGES.indexOf(money.stage),
+      href: money.workHref || (contractId ? `/collaboration/contracts/${contractId}` : `/collaboration/team/${proposal.id}`),
       contractHref: contractId ? `/collaboration/contracts/${contractId}` : null,
+      depositPending: money.depositPending,
       source: "team",
     });
   }
@@ -604,17 +667,28 @@ export async function loadCreatorHub(input: {
     const contractId =
       contractByApplication.get(application.id) ||
       (application.collaborationId ? contractByCollab.get(application.collaborationId) : undefined);
-    const stage: PipelineStage = contractId ? "Contract" : "Match";
+    const money = contractFunding(contractId);
     pipeline.push({
       id: `application:${application.id}`,
       title: application.requestBrand || application.opportunityLookingFor || "Campaign invitation",
       counterparty: application.requestBrand || "Business",
-      stage,
-      stageIndex: PIPELINE_STAGES.indexOf(stage),
-      href: contractId ? `/collaboration/contracts/${contractId}` : `/collaboration/applications/${application.id}`,
+      stage: money.stage,
+      stageIndex: PIPELINE_STAGES.indexOf(money.stage),
+      href: money.workHref || (contractId ? `/collaboration/contracts/${contractId}` : `/collaboration/applications/${application.id}`),
       contractHref: contractId ? `/collaboration/contracts/${contractId}` : null,
+      depositPending: money.depositPending,
       source: "application",
     });
+  }
+  for (const row of pipeline) {
+    if (row.stage === "Funded" || row.stage === "In Progress" || row.stage === "Review") continue;
+    const contractId = row.contractHref?.split("/").pop();
+    const money = contractFunding(contractId);
+    if (!money.workHref && !money.depositPending) continue;
+    row.stage = money.stage;
+    row.stageIndex = PIPELINE_STAGES.indexOf(money.stage);
+    if (money.workHref) row.href = money.workHref;
+    row.depositPending = money.depositPending;
   }
   const listedApplications = applications.filter((row) =>
     invitationStillListed(row, new Set(contractByApplication.keys()), new Set(contractByCollab.keys())),
