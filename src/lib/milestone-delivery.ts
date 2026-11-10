@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { saveDeliverableFiles } from "@/lib/deliverable-files";
 import { readShareSnapshot } from "@/lib/fx-share";
 import { submitFundingMilestone } from "@/lib/marketplace-ledger";
 
@@ -16,12 +17,16 @@ export function creatorMaySubmitWork(input: { actorSlug: string; creatorSlug: st
   return creatorSlugsOnFunding(input).includes(input.actorSlug.trim());
 }
 
-export function submissionIsComplete(input: { note: string; linkUrl: string }) {
+export function submissionIsComplete(input: { note: string; linkUrl: string; fileCount?: number }) {
   const note = input.note.trim();
   const linkUrl = input.linkUrl.trim();
+  const fileCount = input.fileCount ?? 0;
   if (linkUrl && !LINK.test(linkUrl)) return { ok: false as const, error: "The work link must start with https://." };
-  if (note.length < 8 && !linkUrl) {
-    return { ok: false as const, error: "Add a note or an https link so the business can review this version." };
+  if (fileCount < 0 || !Number.isInteger(fileCount)) {
+    return { ok: false as const, error: "Add a note, an https link, or a file so the business can review this version." };
+  }
+  if (note.length < 8 && !linkUrl && fileCount === 0) {
+    return { ok: false as const, error: "Add a note, an https link, or a file so the business can review this version." };
   }
   return { ok: true as const, note, linkUrl };
 }
@@ -32,8 +37,9 @@ export async function submitMilestoneWork(input: {
   creatorSlug: string;
   note: string;
   linkUrl: string;
+  files?: File[];
 }) {
-  const content = submissionIsComplete(input);
+  const content = submissionIsComplete({ ...input, fileCount: input.files?.length ?? 0 });
   if (!content.ok) return content;
   const milestone = await prisma.fundingMilestone.findFirst({
     where: { id: input.milestoneId, fundingId: input.fundingId },
@@ -63,6 +69,19 @@ export async function submitMilestoneWork(input: {
       status: "submitted",
     },
   });
+  if (input.files && input.files.length > 0) {
+    const stored = await saveDeliverableFiles({
+      fundingId: milestone.fundingId,
+      milestoneId: milestone.id,
+      submissionId: submission.id,
+      audience: "creator",
+      files: input.files,
+    });
+    if (!stored.ok) {
+      await prisma.milestoneSubmission.delete({ where: { id: submission.id } }).catch(() => undefined);
+      return stored;
+    }
+  }
   const submitted = await submitFundingMilestone(milestone.fundingId, milestone.id);
   if (!submitted.ok) {
     await prisma.milestoneSubmission.delete({ where: { id: submission.id } }).catch(() => undefined);
