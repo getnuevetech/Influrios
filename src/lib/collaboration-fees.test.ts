@@ -328,6 +328,8 @@ describe("entered fee rule facts", () => {
     assert.equal(page.includes('?? "contracted"'), false);
     assert.equal(page.includes('?? "brand"'), false);
     assert.equal(page.includes("tierBandsJson"), false);
+    assert.equal(page.includes('placeholder="Code or * for any"'), false);
+    assert.equal(page.includes("Choose a jurisdiction"), true);
     assert.equal(page.includes("percentBps\":800"), false);
   });
 });

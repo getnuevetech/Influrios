@@ -369,7 +369,7 @@ export default async function AdminFeesPage({ searchParams }: Props) {
               title={rule.name}
               subtitle={`${rule.active ? "Active" : "Inactive"} · ${feeRulePurposeLabel(rule)} · ${rule.jurisdiction}/${rule.serviceLevel} · v${rule.version}`}
             >
-              <FeeRuleForm rule={rule} canManage={canManage} />
+              <FeeRuleForm rule={rule} canManage={canManage} jurisdictions={store.jurisdictions} />
               {canManage ? (
                 <form action={actionDeleteFeeRule} className="mt-3 border-t border-[#E6ECFF] pt-3">
                   <input type="hidden" name="id" value={rule.id} />
@@ -388,7 +388,7 @@ export default async function AdminFeesPage({ searchParams }: Props) {
               Creates a new active matrix row. Leave ID blank — the server assigns one.
             </p>
             <div className="mt-3">
-              <FeeRuleForm canManage />
+              <FeeRuleForm canManage jurisdictions={store.jurisdictions} />
             </div>
           </div>
         ) : null}
@@ -434,10 +434,19 @@ export default async function AdminFeesPage({ searchParams }: Props) {
 function FeeRuleForm({
   rule,
   canManage,
+  jurisdictions,
 }: {
   rule?: CollaborationFeeRule;
   canManage: boolean;
+  jurisdictions: { code: string; label: string }[];
 }) {
+  const choices = [
+    { code: "*", label: "* (any)" },
+    ...jurisdictions.map((row) => ({ code: row.code, label: `${row.code} · ${row.label}` })),
+  ];
+  if (rule && !choices.some((row) => row.code === rule.jurisdiction)) {
+    choices.push({ code: rule.jurisdiction, label: rule.jurisdiction });
+  }
   const isNew = !rule;
   return (
     <form action={actionSaveFeeRule} className="grid gap-3 sm:grid-cols-3">
@@ -458,14 +467,23 @@ function FeeRuleForm({
         {rule ? `Active · v${rule.version}` : "Active"}
       </label>
       <Field name="priority" label="Priority" defaultValue={rule ? String(rule.priority) : ""} required disabled={!canManage} />
-      <Field
-        name="jurisdiction"
-        label="Jurisdiction"
-        defaultValue={rule?.jurisdiction ?? ""}
-        required
-        placeholder="Code or * for any"
-        disabled={!canManage}
-      />
+      <label className="text-xs font-semibold text-muted">
+        Jurisdiction
+        <select
+          name="jurisdiction"
+          required
+          defaultValue={rule?.jurisdiction ?? ""}
+          disabled={!canManage}
+          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+        >
+          <option value="">Choose a jurisdiction</option>
+          {choices.map((row) => (
+            <option key={row.code} value={row.code}>
+              {row.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <label className="text-xs font-semibold text-muted">
         Service level
         <select
