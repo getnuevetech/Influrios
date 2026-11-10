@@ -1,10 +1,19 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { prisma } from "./db";
 import { canRequestChangeOrder, sharesFromAmounts, splitGross } from "./ledger";
 import { applyMarketplaceEvent, requestChangeOrder, setChangeOrdersForTests, setGrossCapForTests } from "./marketplace-ledger";
 
 describe("change order rules", () => {
+  it("keeps the funding-page form collapsed until the business opens it", () => {
+    const page = readFileSync("src/app/payments/page.tsx", "utf8");
+    const formAt = page.indexOf("action={actionRequestChangeOrder}");
+    const detailsAt = page.lastIndexOf("<details", formAt);
+    assert.ok(detailsAt >= 0 && detailsAt < formAt);
+    assert.match(page.slice(detailsAt, formAt), /<summary[\s\S]*Change order/);
+  });
+
   it("keeps the existing shares and refuses a confirmed prefund", () => {
     const shares = sharesFromAmounts([6_000, 4_000]);
     assert.deepEqual(shares, [6_000, 4_000]);
