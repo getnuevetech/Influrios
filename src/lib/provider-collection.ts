@@ -47,12 +47,7 @@ export function collectionCheckoutFields(providerCode: string | null | undefined
     };
   }
   if (provider === "stripe") {
-    return {
-      email: false,
-      phone: false,
-      canOpen: false,
-      note: "",
-    };
+    return { email: false, phone: false, canOpen: false, note: "" };
   }
   return {
     email: false,
