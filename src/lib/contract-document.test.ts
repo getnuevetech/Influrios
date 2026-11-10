@@ -65,9 +65,18 @@ describe("contract documents", () => {
     assert.match(signatureSendBlocked({ status: "sent" }) ?? "", /already sent/i);
     assert.match(signatureSendBlocked({ status: "signed" }) ?? "", /already signed/i);
     const admin = readFileSync("src/app/admin/contracts/actions.ts", "utf8");
+    const adminList = readFileSync("src/app/admin/contracts/page.tsx", "utf8");
+    const adminView = readFileSync("src/app/admin/contracts/[id]/page.tsx", "utf8");
     const business = readFileSync("src/app/collaboration/contracts/[id]/page.tsx", "utf8");
+    const memberList = readFileSync("src/app/collaboration/contracts/page.tsx", "utf8");
     assert.match(admin, /isSuperAdmin/);
     assert.equal(business.includes("actionDeleteContractDocument"), false);
+    assert.match(adminList, /\/admin\/contracts\/\$\{document\.id\}/);
+    assert.equal(adminList.includes("href={`/collaboration/contracts/${document.id}`}"), false);
+    assert.match(adminView, /contracts\.view/);
+    assert.equal(adminView.includes("actionSign"), false);
+    assert.match(memberList, /href=\{`\/collaboration\/contracts\/\$\{contract\.id\}`\}/);
+    assert.match(memberList, /Deliverables/);
   });
 
   it("fills the template with every party and keeps an unknown variable visible", () => {

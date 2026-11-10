@@ -247,14 +247,26 @@ export function CreatorCollaborations({
                           Expecting funding
                         </span>
                       ) : (
-                        <Link
-                          href={shown.href}
-                          className={`inline-flex justify-center rounded-full px-3 py-2 text-xs font-semibold ${
-                            shown.label === "Contract" ? "bg-[#6D4AFF] text-white" : "border border-[#E7ECF5] text-[#6D4AFF]"
-                          }`}
-                        >
-                          {shown.action}
-                        </Link>
+                        <span className="flex flex-col gap-2">
+                          <Link
+                            href={shown.href}
+                            className={`inline-flex justify-center rounded-full px-3 py-2 text-xs font-semibold ${
+                              shown.label === "Contract" || shown.action === "Open deliverables"
+                                ? "bg-[#6D4AFF] text-white"
+                                : "border border-[#E7ECF5] text-[#6D4AFF]"
+                            }`}
+                          >
+                            {shown.action}
+                          </Link>
+                          {row.contractHref && row.contractHref !== shown.href ? (
+                            <Link
+                              href={row.contractHref}
+                              className="inline-flex justify-center rounded-full border border-[#E7ECF5] px-3 py-2 text-xs font-semibold text-[#6D4AFF]"
+                            >
+                              Contract
+                            </Link>
+                          ) : null}
+                        </span>
                       )}
                     </li>
                   );

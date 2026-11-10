@@ -305,7 +305,7 @@ export const ADMIN_PERMISSION_GROUPS: {
     label: "Contract agreements",
     description: "Agreement template, stored PDFs, and messages kept on each contract",
     permissions: [
-      { id: "contracts.view", label: "View contracts", hint: "Open stored agreements" },
+      { id: "contracts.view", label: "View contracts", hint: "Open any stored agreement. Signing and template edits stay on their own permissions." },
       { id: "contracts.templates", label: "Edit contract template", hint: "Change the agreement text and variables" },
       {
         id: "contracts.message",

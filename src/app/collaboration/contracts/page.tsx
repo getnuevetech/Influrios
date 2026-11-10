@@ -113,6 +113,22 @@ export default async function ContractsIndexPage({
   if (!contractLoad.failed) {
     await repairSignedAgreements(contracts.filter((row) => row.status === "signed").map((row) => row.id)).catch(() => 0);
   }
+  const fundingIds = contracts.flatMap((row) => (row.fundingId ? [row.fundingId] : []));
+  const fundingRows = fundingIds.length
+    ? await prisma.collaborationFunding
+        .findMany({ where: { id: { in: fundingIds } }, select: { id: true, status: true } })
+        .catch(() => [])
+    : [];
+  const fundingStatus = new Map(fundingRows.map((row) => [row.id, row.status]));
+  const deliverablesHref = (fundingId: string | null | undefined) => {
+    if (!fundingId) return null;
+    const status = fundingStatus.get(fundingId);
+    return status === "held" || status === "completed" ? `/collaboration/work/${fundingId}` : null;
+  };
+  const depositHref = (fundingId: string | null | undefined) => {
+    if (!fundingId || !workspace || workspace.businessId === "public") return null;
+    return fundingStatus.get(fundingId) === "awaiting_provider" ? `/payments/checkout/${fundingId}` : null;
+  };
   const contractsFailed = contractLoad.failed;
   const contractsRef = contractsFailed ? newCorrelationId() : "";
   if (contractsFailed) console.error("contracts load failed", contractsRef);
@@ -314,10 +330,11 @@ export default async function ContractsIndexPage({
                   {visible.map(({ contract, kind }) => {
                     const sign = needsYourSignature(contract, account.id, account.email, creatorSlug);
                     const brand = counterparty(contract);
+                    const work = deliverablesHref(contract.fundingId);
                     return (
                       <tr key={contract.id} className={selected?.id === contract.id ? "bg-[#F7F4FF]" : ""}>
                         <td className="py-3 pr-3">
-                          <Link href={`/collaboration/contracts?tab=${tab}&open=${contract.id}&q=${encodeURIComponent(params.q ?? "")}`} className="flex items-center gap-2 font-semibold text-[#1B1464]">
+                          <Link href={`/collaboration/contracts/${contract.id}`} className="flex items-center gap-2 font-semibold text-[#1B1464]">
                             <span className="text-[#98A2B3]">
                               <IconFileText size={16} />
                             </span>
@@ -337,6 +354,14 @@ export default async function ContractsIndexPage({
                         </td>
                         <td className="text-[#667085]">{shortDate(contract.updatedAt)}</td>
                         <td>
+                          {work ? (
+                            <Link
+                              href={work}
+                              className="mr-2 inline-flex items-center rounded-full bg-[#6D4AFF] px-3 py-1.5 text-xs font-semibold text-white"
+                            >
+                              Deliverables
+                            </Link>
+                          ) : null}
                           <Link
                             href={`/collaboration/contracts/${contract.id}${sign ? "#sign" : ""}`}
                             className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ${
@@ -385,7 +410,9 @@ export default async function ContractsIndexPage({
                     {counterparty(selected).slice(0, 1).toUpperCase()}
                   </span>
                   <div>
-                    <h2 className="font-display text-xl font-bold text-[#1B1464]">{selected.title}</h2>
+                    <Link href={`/collaboration/contracts/${selected.id}`} className="font-display text-xl font-bold text-[#1B1464] hover:underline">
+                      {selected.title}
+                    </Link>
                     <p className="text-xs text-[#98A2B3]">{selected.id.slice(0, 12)}</p>
                   </div>
                 </div>
@@ -427,6 +454,22 @@ export default async function ContractsIndexPage({
                 </ul>
               </div>
               <div className="mt-4 grid gap-2">
+                {deliverablesHref(selected.fundingId) ? (
+                  <Link
+                    href={deliverablesHref(selected.fundingId)!}
+                    className="inline-flex items-center justify-center rounded-full bg-[#6D4AFF] px-4 py-2.5 text-sm font-semibold text-white"
+                  >
+                    Deliverables
+                  </Link>
+                ) : null}
+                {depositHref(selected.fundingId) ? (
+                  <Link
+                    href={depositHref(selected.fundingId)!}
+                    className="inline-flex items-center justify-center rounded-full bg-[#6D4AFF] px-4 py-2.5 text-sm font-semibold text-white"
+                  >
+                    Deposit funds
+                  </Link>
+                ) : null}
                 {needsYourSignature(selected, account.id, account.email, creatorSlug) ? (
                   <Link
                     href={`/collaboration/contracts/${selected.id}#sign`}

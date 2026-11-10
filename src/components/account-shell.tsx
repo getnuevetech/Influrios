@@ -39,6 +39,7 @@ const CREATOR_NAV: NavItem[] = [
   { href: "/collaboration/hub?view=opportunities", label: "Opportunities", icon: <IconBriefcase size={18} /> },
   { href: "/collaboration/hub?view=collaborations", label: "Collaborations", icon: <IconHandshake size={18} /> },
   { href: "/collaboration/contracts", label: "Contracts", icon: <IconFileText size={18} /> },
+  { href: "/payments", label: "Collaboration Payments", icon: <IconShieldPay size={18} /> },
   { href: "/creator/media-kit", label: "Media Kit", icon: <IconImage size={18} /> },
   { href: "/creator/analytics", label: "Analytics", icon: <IconIntelligence size={18} /> },
   { href: "/creator/messages", label: "Messages", icon: <IconMail size={18} /> },
