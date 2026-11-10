@@ -35,7 +35,7 @@ describe("Wise rate check", () => {
       assert.equal(quoted.minorDigits, 0);
     }
     const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
-    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/settings/page.tsx", "utf8");
     assert.equal(actions.includes('?? "GBP"'), false);
     assert.equal(actions.includes("10_000"), false);
     assert.equal(page.includes('defaultValue="GBP"'), false);

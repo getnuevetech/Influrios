@@ -82,6 +82,26 @@ describe("intro fee settlement (W4 / R073)", () => {
       briefTitle: "W4 intro fee settlement",
       feeExpected: "managed intro fee",
     });
+    const ruleId = `rule_test_intro_${intro.id}`;
+    await prisma.collaborationFeeRule.create({
+      data: {
+        id: ruleId,
+        name: "Test managed introduction",
+        jurisdiction: "US",
+        serviceLevel: "managed_intro",
+        feeType: "managed_intro",
+        fundingMode: "*",
+        relationshipSource: "*",
+        promotionChannel: "*",
+        method: "percent_plus_fixed",
+        percentBps: 1500,
+        fixedCents: 2500,
+        minFeeCents: 2500,
+        payer: "brand",
+        purpose: "legacy",
+        effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
     try {
       const quoted = await requestIntroFeeSettlement(intro.id, {
         jurisdiction: "US",
@@ -151,6 +171,7 @@ describe("intro fee settlement (W4 / R073)", () => {
       });
       assert.equal(other.ok, false);
     } finally {
+      await prisma.collaborationFeeRule.delete({ where: { id: `rule_test_intro_${intro.id}` } }).catch(() => undefined);
       await prisma.managedIntroEvent.deleteMany({ where: { introId: intro.id } });
       await prisma.managedIntro.deleteMany({ where: { id: intro.id } });
     }
