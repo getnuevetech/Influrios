@@ -17,6 +17,7 @@ export type FeeDisclosureInput = {
   jurisdiction: string;
   serviceLevel: string;
   grossCents: number;
+  currency?: string | null;
   explanation?: string | null;
   businessFeeCents?: number | null;
   influencerFeeCents?: number | null;
@@ -32,35 +33,48 @@ export type FeeDisclosureRecord = FeeDisclosureInput & {
   acceptedByUserId?: string | null;
 };
 
+function disclosureMoney(cents: number, currency: string | null | undefined): string {
+  const code = (currency ?? "").trim().toUpperCase();
+  const amount = cents / 100;
+  if (/^[A-Z]{3}$/.test(code)) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: code,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+}
+
 export function buildFeeDisclosureSummary(input: FeeDisclosureInput): string {
+  const money = (cents: number) => disclosureMoney(cents, input.currency);
   const lines: string[] = ["Fee schedule (locked for this agreement):"];
   lines.push(`- Jurisdiction: ${input.jurisdiction.toUpperCase()}`);
   lines.push(`- Service level: ${input.serviceLevel}`);
-  lines.push(`- Gross (cents): ${input.grossCents}`);
+  lines.push(`- Gross: ${money(input.grossCents)}`);
   if (input.feeType) lines.push(`- Fee type: ${input.feeType}`);
   if (input.method === "percent" && input.percentBps != null) {
     lines.push(`- Rate: ${(input.percentBps / 100).toFixed(2)}%`);
   } else if (input.method === "fixed" && input.fixedCents != null) {
-    lines.push(`- Rate: fixed ${input.fixedCents} cents`);
+    lines.push(`- Rate: fixed ${money(input.fixedCents)}`);
   } else if (input.method === "percent_plus_fixed") {
-    lines.push(
-      `- Rate: ${((input.percentBps ?? 0) / 100).toFixed(2)}% + ${input.fixedCents ?? 0} cents`,
-    );
+    lines.push(`- Rate: ${((input.percentBps ?? 0) / 100).toFixed(2)}% + ${money(input.fixedCents ?? 0)}`);
   } else if (input.method === "waived") {
     lines.push("- Rate: waived");
   } else if (input.method === "tiered") {
     lines.push("- Rate: tiered");
   } else if (input.method === "custom_enterprise" && input.fixedCents != null) {
-    lines.push(`- Rate: enterprise ${input.fixedCents} cents`);
+    lines.push(`- Rate: enterprise ${money(input.fixedCents)}`);
   }
-  lines.push(`- Platform fee (cents): ${input.feeCents}`);
-  if (input.businessFeeCents != null) lines.push(`- Business platform fee (cents): ${input.businessFeeCents}`);
+  lines.push(`- Platform fee: ${money(input.feeCents)}`);
+  if (input.businessFeeCents != null) lines.push(`- Business platform fee: ${money(input.businessFeeCents)}`);
   if (input.influencerFeeCents != null) {
-    lines.push(`- Influencer platform fee (cents): ${input.influencerFeeCents}`);
+    lines.push(`- Influencer platform fee: ${money(input.influencerFeeCents)}`);
   }
-  if (input.businessPaysCents != null) lines.push(`- Business pays (cents): ${input.businessPaysCents}`);
+  if (input.businessPaysCents != null) lines.push(`- Business pays: ${money(input.businessPaysCents)}`);
   if (input.influencerReceivesCents != null) {
-    lines.push(`- Influencer receives (cents): ${input.influencerReceivesCents}`);
+    lines.push(`- Influencer receives: ${money(input.influencerReceivesCents)}`);
   }
   if (input.influencerRuleId) {
     lines.push(`- Influencer rule: ${input.influencerRuleId} v${input.influencerRuleVersion ?? "n/a"}`);
