@@ -355,6 +355,11 @@ export default async function PaymentsPage({ searchParams }: Props) {
                               </button>
                             </form>
                           ) : null}
+                          {(deal.collectionProviderCode || deal.providerCode).trim().toLowerCase() === "stripe" ? (
+                            <Link href={`/payments/checkout/${deal.id}`} className="btn-primary inline-flex !py-2 text-sm">
+                              Deposit funds
+                            </Link>
+                          ) : null}
                           {checkout.note ? <p className="text-xs text-muted">{checkout.note}</p> : null}
                         </>
                       );

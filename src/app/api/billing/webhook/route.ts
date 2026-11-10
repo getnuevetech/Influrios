@@ -6,6 +6,7 @@ import {
   markWebhookReceived,
 } from "@/lib/billing";
 import { completeGatewayKyc } from "@/lib/kyc-document";
+import { confirmGatewayDeposit } from "@/lib/funding-checkout";
 import { confirmMentorshipPayment } from "@/lib/mentorship";
 import { rememberStripeCustomer, stripeCredentials, stripeWebhookSecret } from "@/lib/stripe-admin";
 import { applyPlanOnce, noteWebhook, webhookDisposition } from "@/lib/webhook-idempotency";
@@ -21,9 +22,12 @@ type StripeObject = {
     userId?: string;
     purpose?: string;
     requestId?: string;
+    depositId?: string;
+    fundingId?: string;
   } | null;
   subscription?: string | { id?: string } | null;
   status?: string | null;
+  payment_status?: string | null;
 };
 
 function customerIdOf(object: StripeObject) {
@@ -133,6 +137,25 @@ export async function POST(req: NextRequest) {
         result: decision === "verified" ? "kyc_verified" : "kyc_rejected",
       });
       return NextResponse.json({ received: true, kyc: decision });
+    }
+
+    if (event.type === "checkout.session.completed" && object.metadata?.purpose === "funding_deposit") {
+      const depositId = object.metadata.depositId?.trim() ?? "";
+      const fundingId = object.metadata.fundingId?.trim() ?? "";
+      if (!depositId || !fundingId || !object.id) {
+        return NextResponse.json({ received: false, pending: true }, { status: 503 });
+      }
+      const confirmed = await confirmGatewayDeposit({
+        depositId,
+        fundingId,
+        checkoutSessionId: object.id,
+        paymentStatus: object.payment_status,
+      });
+      if (!confirmed.ok) {
+        return NextResponse.json({ error: confirmed.error }, { status: 409 });
+      }
+      await noteWebhook({ provider: "stripe", eventId: event.id, eventType: event.type, result: "funding_deposit" });
+      return NextResponse.json({ received: true, fundingDeposit: true });
     }
 
     if (event.type === "checkout.session.completed" && object.metadata?.purpose === "mentorship") {

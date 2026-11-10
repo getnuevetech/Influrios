@@ -126,7 +126,7 @@ describe("entered provider names", () => {
     assert.equal(marketplaceProviderLabel("  ", "primary"), "primary");
     assert.equal(marketplaceProviderLabel(null, "primary"), "primary");
     const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
-    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/settings/page.tsx", "utf8");
     const catalog = readFileSync("src/app/admin/marketplace/provider-catalog.ts", "utf8");
     assert.equal(ledger.includes('?? "Marketplace provider"'), false);
     assert.equal(ledger.includes('name: "Marketplace provider"'), false);

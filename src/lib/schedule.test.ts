@@ -152,11 +152,24 @@ describe("staged and recurring prefunds", () => {
     const source = sources.find((row) => row.active);
     if (!source || !settings) throw new Error("marketplace settings are missing");
     const jurisdiction = await enableUsScheduleCapabilities();
+    const launchGate = await prisma.collaborationLaunchGate.findUnique({ where: { id: "default" } });
     const ids: string[] = [];
     try {
       await prisma.integrationProvider.update({
         where: { kind_code: { kind: "marketplace", code: "primary" } },
         data: { enabled: true, webhookCipher: provider?.webhookCipher ?? "v1.dGVzdC1pdi1wYWRk.dGVzdC10YWc.dGVzdA" },
+      });
+      await prisma.collaborationLaunchGate.upsert({
+        where: { id: "default" },
+        create: { id: "default", stagedFundingEnabled: true },
+        update: { stagedFundingEnabled: true },
+      });
+      await saveFundingSchedule({
+        stagedFundingEnabled: true,
+        recurringFundingEnabled: settings.recurringFundingEnabled,
+        maxStages: settings.maxStages,
+        recurringIntervalDays: settings.recurringIntervalDays,
+        maxRecurrences: settings.maxRecurrences,
       });
       const staged = await requestPrefund({
         jurisdictionCode: "US",
@@ -304,6 +317,14 @@ describe("staged and recurring prefunds", () => {
           where: { id: provider.id },
           data: { enabled: provider.enabled, webhookCipher: provider.webhookCipher, name: provider.name },
         });
+      }
+      if (launchGate) {
+        await prisma.collaborationLaunchGate.update({
+          where: { id: "default" },
+          data: { stagedFundingEnabled: launchGate.stagedFundingEnabled },
+        });
+      } else {
+        await prisma.collaborationLaunchGate.delete({ where: { id: "default" } }).catch(() => undefined);
       }
       if (jurisdiction) {
         await prisma.collaborationJurisdiction.update({

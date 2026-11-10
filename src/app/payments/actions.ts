@@ -9,6 +9,7 @@ import { newCheckoutAllowed, readRouteSnapshot } from "@/lib/payment-route";
 import { markLatestSubmission, submitMilestoneWork } from "@/lib/milestone-delivery";
 import { assertFundingAccess, requireBusinessFundingAccess } from "@/lib/funding-access";
 import { openFundingCollection } from "@/lib/provider-collection";
+import { parseDepositMethod, startFundingDeposit } from "@/lib/funding-checkout";
 import { prisma } from "@/lib/db";
 import {
   approveFundingMilestone,
@@ -76,6 +77,34 @@ export async function actionOpenFundingCheckout(formData: FormData) {
   if (opened.url) redirect(opened.url);
   revalidatePath("/payments");
   redirect(`/payments?checkout=${encodeURIComponent(opened.reference)}`);
+}
+
+export async function actionStartFundingDeposit(formData: FormData) {
+  const account = await requirePaymentsAccount();
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
+  if (!access.ok) fail(access.error);
+  const method = parseDepositMethod(String(formData.get("method") ?? ""));
+  if (!method) {
+    redirect(
+      `/payments/checkout/${access.funding.id}?error=${encodeURIComponent("Choose card, online ACH, ACH wire, or check. Nothing was charged.")}`,
+    );
+  }
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const started = await startFundingDeposit({
+    fundingId: access.funding.id,
+    method,
+    email: String(formData.get("email") ?? ""),
+    note: String(formData.get("note") ?? ""),
+    origin,
+  });
+  if (!started.ok) {
+    redirect(`/payments/checkout/${access.funding.id}?error=${encodeURIComponent(started.error)}`);
+  }
+  revalidatePath("/payments");
+  revalidatePath(`/payments/checkout/${access.funding.id}`);
+  if (started.kind === "gateway") redirect(started.url);
+  redirect(`/payments/checkout/${access.funding.id}?recorded=1`);
 }
 
 export async function actionRequestChangeOrder(formData: FormData) {

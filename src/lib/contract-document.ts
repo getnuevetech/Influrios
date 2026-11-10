@@ -1078,7 +1078,7 @@ export async function signNativeContractParty(input: {
         ? ((terms as { financialPlan: { signedQuote?: unknown } }).financialPlan.signedQuote as { influencerRuleId?: unknown } | undefined)
         : undefined;
     const alreadyLocked = typeof plan?.influencerRuleId === "string" && plan.influencerRuleId.length > 0;
-    if (!alreadyLocked) {
+    if (!alreadyLocked && terms && typeof terms === "object") {
       const snapshot = terms && typeof terms === "object" ? (terms as { jurisdictionCode?: unknown; serviceLevel?: unknown; feeServiceLevel?: unknown; grossCents?: unknown }) : null;
       const quote = await resolvePartyPlatformFee(
         {

@@ -233,7 +233,16 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                     Start funding
                   </button>
                 </form>
-              ) : fundingCta.kind === "resume" || fundingCta.kind === "view" ? (
+              ) : fundingCta.kind === "resume" ? (
+                <>
+                  <Link href={`/payments/checkout/${document.fundingId}`} className="btn-primary !py-2 text-sm">
+                    {fundingCta.label}
+                  </Link>
+                  <Link href={`/collaboration/work/${document.fundingId}`} className="text-violet hover:underline">
+                    Deliverables
+                  </Link>
+                </>
+              ) : fundingCta.kind === "view" ? (
                 <>
                   <Link href={`/payments?created=${document.fundingId}`} className="text-violet hover:underline">
                     {fundingCta.label}

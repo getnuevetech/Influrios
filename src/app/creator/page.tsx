@@ -170,7 +170,7 @@ export default async function CreatorHomePage({
                   </span>
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{home.displayName}</p>
-                    <p className="truncate text-xs text-white/80">{home.title || "Influencer"}</p>
+                    {home.title ? <p className="truncate text-xs text-white/80">{home.title}</p> : null}
                   </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img

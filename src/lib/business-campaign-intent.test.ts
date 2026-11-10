@@ -188,15 +188,14 @@ describe("campaign intent sources", () => {
       assert.equal(text.includes('?? "beauty"'), false, file);
       assert.equal(text.includes("Strong specialty and market fit"), false, file);
     }
-    const page = source("src/app/collaboration/business/page.tsx");
+    const editor = source("src/components/account/request-editor.tsx");
     const campaigns = source("src/app/business/campaigns/page.tsx");
-    assert.match(page, /name="title"/);
-    assert.match(page, /name="deliverables"/);
-    assert.match(page, /name="responseDeadline"/);
-    assert.match(page, /required/);
-    assert.match(page, /actionPublishCampaign/);
-    assert.match(campaigns, /actionPublishCampaign/);
-    assert.equal(page.includes("#publish"), false);
+    assert.match(editor, /name="title"/);
+    assert.match(editor, /name="deliverables"/);
+    assert.match(editor, /name="responseDeadline"/);
+    assert.match(editor, /required/);
+    assert.equal(editor.includes("#publish"), false);
     assert.equal(campaigns.includes("#publish"), false);
+    assert.equal(campaigns.includes("$1K – $5K"), false);
   });
 });

@@ -23,7 +23,7 @@ const SOCIAL_HINTS = [
 
 export default async function ClaimPage({ searchParams }: Props) {
   const params = await searchParams;
-  const platformHint = SOCIAL_HINTS.find((item) => item.platform === params.platform) ?? SOCIAL_HINTS[0];
+  const platformHint = SOCIAL_HINTS.find((item) => item.platform === params.platform);
   const source = (params.source || params.utm_source || "").trim();
   const campaign = (params.utm_campaign || "").trim();
   const [account, policy, terms, consent, privacy, portraits] = await Promise.all([
@@ -88,7 +88,7 @@ export default async function ClaimPage({ searchParams }: Props) {
                 key={item.platform}
                 href={claimQuery(item.platform)}
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${
-                  platformHint.platform === item.platform
+                  platformHint?.platform === item.platform
                     ? "bg-[#6D4AFF] text-white ring-[#6D4AFF]"
                     : "bg-white text-[#1B1464] ring-[#E4E9F5]"
                 }`}
@@ -99,7 +99,7 @@ export default async function ClaimPage({ searchParams }: Props) {
             ))}
           </div>
           <form action={actionCreateDraft} className="mt-4 space-y-3">
-            <input type="hidden" name="platform" value={platformHint.platform} />
+            <input type="hidden" name="platform" value={platformHint?.platform ?? ""} />
             {source ? <input type="hidden" name="source" value={source} /> : null}
             {params.utm_source ? <input type="hidden" name="utm_source" value={params.utm_source} /> : null}
             {campaign ? <input type="hidden" name="utm_campaign" value={campaign} /> : null}
@@ -179,6 +179,9 @@ export default async function ClaimPage({ searchParams }: Props) {
               <li><span className="font-semibold text-[#6D4AFF]">3</span> Connect a channel · Optional</li>
             </ol>
             <p className="mt-2 text-xs text-[#667085]">Connect a channel to verify ownership and sync available metrics.</p>
+            <Link href="/discover" className="mt-3 inline-flex text-sm font-semibold text-[#6D4AFF]">
+              Browse creators
+            </Link>
           </div>
         </div>
       </div>

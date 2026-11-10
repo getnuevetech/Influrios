@@ -184,7 +184,7 @@ describe("signed funding instruction", () => {
   it("shows start, resume, or view funding and never a second start", () => {
     assert.equal(contractFundingCta({ role: "business", status: "signed" }).kind, "start");
     const resume = contractFundingCta({ role: "business", status: "signed", fundingId: "f1", fundingStatus: "awaiting_provider" });
-    assert.equal(resume.kind === "resume" ? resume.label : "", "Resume payment");
+    assert.equal(resume.kind === "resume" ? resume.label : "", "Deposit funds");
     const view = contractFundingCta({ role: "business", status: "signed", fundingId: "f1", fundingStatus: "held" });
     assert.equal(view.kind === "view" ? view.label : "", "View funding");
     assert.equal(contractFundingCta({ role: "creator", status: "signed", fundingId: "f1" }).kind, "hidden");
@@ -213,7 +213,7 @@ describe("signed funding instruction", () => {
     });
     assert.equal(waiting.agreement, "Fully signed");
     assert.equal(waiting.funding, "Awaiting provider confirmation");
-    assert.match(waiting.next, /provider confirmation/i);
+    assert.match(waiting.next, /deposits the funds/i);
 
     const scheduled = describeDealProgress({
       ...waiting,

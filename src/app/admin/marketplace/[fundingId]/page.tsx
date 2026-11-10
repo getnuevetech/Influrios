@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/app/admin/guard";
+import { hasPermission } from "@/lib/admin-auth";
+import { actionConfirmManualDeposit } from "@/app/admin/marketplace/actions";
+import { DEPOSIT_METHOD_LABELS, type DepositMethod } from "@/lib/funding-checkout";
 import { prisma } from "@/lib/db";
 import { frozenFeeRuleHeading, getFundingTransactionView } from "@/lib/admin-transaction-view";
 import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
@@ -11,11 +14,13 @@ import { fundedShareBps, sharePercentLabel } from "@/lib/signed-funding";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Transaction" };
 
-type Props = { params: Promise<{ fundingId: string }> };
+type Props = { params: Promise<{ fundingId: string }>; searchParams: Promise<{ error?: string; confirmed?: string }> };
 
-export default async function AdminFundingTransactionPage({ params }: Props) {
-  await requireAdminPage("marketplace");
+export default async function AdminFundingTransactionPage({ params, searchParams }: Props) {
+  const session = await requireAdminPage("marketplace");
+  const canManage = hasPermission(session, "marketplace.manage");
   const { fundingId } = await params;
+  const query = await searchParams;
   const view = await getFundingTransactionView(fundingId);
   if (!view) notFound();
   const agreement = await prisma.contractDocument.findFirst({
@@ -30,6 +35,10 @@ export default async function AdminFundingTransactionPage({ params }: Props) {
     select: { id: true, title: true, status: true },
   });
 
+  const deposits = await prisma.fundingDeposit.findMany({
+    where: { fundingId },
+    orderBy: { createdAt: "desc" },
+  });
   const { funding, feeRule, funds, provider, milestones, disputes, changeOrders, audits, collaboration } =
     view;
   const feeTypeLabel = FEE_TYPE_LABELS[feeRule.feeType as FeeType] ?? feeRule.feeType;
@@ -126,8 +135,35 @@ export default async function AdminFundingTransactionPage({ params }: Props) {
         </p>
         {funding.status === "awaiting_provider" ? (
           <p className="pt-2 text-xs text-muted">
-            This prefund stays unfunded until the provider webhook confirms it.
+            This prefund stays unfunded until a card or online ACH payment is confirmed by the provider, or finance
+            confirms an ACH wire or check.
           </p>
+        ) : null}
+        {query.error ? <p className="text-sm text-rose-700">{query.error}</p> : null}
+        {query.confirmed ? (
+          <p className="text-sm text-emerald-800">Finance confirmed the manual deposit. The hold is recorded.</p>
+        ) : null}
+        {deposits.length > 0 ? (
+          <ul className="space-y-2 pt-2 text-sm text-indigo">
+            {deposits.map((deposit) => (
+              <li key={deposit.id} className="rounded-lg border border-[#E6ECFF] px-3 py-2">
+                <p>
+                  {DEPOSIT_METHOD_LABELS[deposit.method as DepositMethod] ?? deposit.method} ·{" "}
+                  {formatMoney(deposit.amountCents, deposit.currency)} · {deposit.status.replaceAll("_", " ")}
+                </p>
+                {deposit.payerNote ? <p className="text-xs text-muted">{deposit.payerNote}</p> : null}
+                {canManage && deposit.status === "manual_pending" ? (
+                  <form action={actionConfirmManualDeposit} className="pt-2">
+                    <input type="hidden" name="fundingId" value={funding.id} />
+                    <input type="hidden" name="depositId" value={deposit.id} />
+                    <button type="submit" className="rounded-xl border border-border bg-white px-3 py-1.5 text-xs font-semibold text-indigo">
+                      Confirm receipt
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         ) : null}
       </section>
 

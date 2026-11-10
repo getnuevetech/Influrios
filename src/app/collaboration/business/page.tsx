@@ -9,6 +9,8 @@ import { listMarketplaceApplications, listWorkspaceBusinessRequests } from "@/li
 import { getDirectory } from "@/lib/directory";
 import { prisma } from "@/lib/db";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
+import { loadBusinessHub } from "@/lib/collaboration-hub";
+import { formatStoredMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Collaborations · Influrios" };
@@ -72,6 +74,7 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
   const contracted = new Set(contracts.map((row) => row.applicationId).filter((id): id is string => Boolean(id)));
   const bySlug = new Map((directory?.creators ?? []).map((creator) => [creator.slug, creator]));
   const tab = params.tab === "opportunities" || params.tab === "active" ? params.tab : "requests";
+  const hub = await loadBusinessHub({ userId: account.id }).catch(() => null);
   const creators = (directory?.creators ?? []).slice(0, 40).map((creator) => ({
     slug: creator.slug,
     name: creator.displayName,
@@ -85,6 +88,12 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
   }));
 
   return (
+    <>
+    {hub ? (
+      <p className="px-6 pt-6 text-sm text-muted">
+        Funded {formatStoredMoney(hub.spend.fundedCents, hub.spend.currency)}
+      </p>
+    ) : null}
     <BusinessCollaborations
       tab={tab}
       view={params.view === "applications" ? "applications" : "recommended"}
@@ -117,5 +126,6 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
       creators={creators}
       requestsForInvite={workspace.briefs.filter((brief) => brief.status !== "closed").map((brief) => ({ id: brief.id, title: brief.title || "Untitled request" }))}
     />
+    </>
   );
 }
