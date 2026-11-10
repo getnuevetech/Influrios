@@ -341,7 +341,7 @@ export function applyInfluencerFeeToTerms(
 
 export function disclosureFromPartyQuote(
   quote: Extract<PartyPlatformQuote, { ok: true }>,
-  input: { jurisdiction: string; serviceLevel: string },
+  input: { jurisdiction: string; serviceLevel: string; currency?: string | null },
 ): FeeDisclosureInput {
   return {
     feeCents: quote.feeCents,
@@ -355,6 +355,7 @@ export function disclosureFromPartyQuote(
     payer: quote.side === "business" ? "brand" : "creator",
     jurisdiction: input.jurisdiction,
     serviceLevel: input.serviceLevel,
+    currency: input.currency,
     grossCents: quote.grossInfluencerCompensationCents,
     businessFeeCents: quote.side === "business" ? quote.feeCents : null,
     influencerFeeCents: quote.side === "influencer" ? quote.feeCents : null,
@@ -366,7 +367,7 @@ export function disclosureFromPartyQuote(
 
 export function disclosureFromDualQuote(
   quote: Extract<DualPlatformQuote, { ok: true }>,
-  input: { jurisdiction: string; serviceLevel: string },
+  input: { jurisdiction: string; serviceLevel: string; currency?: string | null },
 ): FeeDisclosureInput {
   return {
     feeCents: quote.platformFeesTotalCents,
@@ -380,6 +381,7 @@ export function disclosureFromDualQuote(
     payer: "brand",
     jurisdiction: input.jurisdiction,
     serviceLevel: input.serviceLevel,
+    currency: input.currency,
     grossCents: quote.grossInfluencerCompensationCents,
     explanation: quote.explanation,
     businessFeeCents: quote.businessPlatformFeeCents,

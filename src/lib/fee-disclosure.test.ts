@@ -17,6 +17,7 @@ describe("fee disclosure (W3.12)", () => {
     payer: "brand",
     jurisdiction: "US",
     serviceLevel: "contracted",
+    currency: "USD",
     grossCents: 10_000,
     explanation: "Default contracted collaboration fee",
   };
@@ -25,7 +26,25 @@ describe("fee disclosure (W3.12)", () => {
     const summary = buildFeeDisclosureSummary(disclosure);
     assert.match(summary, /rule_default_contracted/);
     assert.match(summary, /10\.00%/);
-    assert.match(summary, /Platform fee \(cents\): 1000/);
+    assert.match(summary, /Gross: \$100\.00/);
+    assert.match(summary, /Platform fee: \$10\.00/);
+    assert.equal(summary.toLowerCase().includes("cents"), false);
+    const campaign = buildFeeDisclosureSummary({
+      feeCents: 63_000,
+      businessFeeCents: 63_000,
+      businessPaysCents: 483_000,
+      method: "percent",
+      percentBps: 1500,
+      jurisdiction: "US",
+      serviceLevel: "managed_campaign",
+      currency: "USD",
+      grossCents: 420_000,
+      feeState: "reserved",
+    });
+    assert.match(campaign, /Gross: \$4,200\.00/);
+    assert.match(campaign, /Platform fee: \$630\.00/);
+    assert.match(campaign, /Business pays: \$4,830\.00/);
+    assert.equal(campaign.toLowerCase().includes("cents"), false);
     assert.match(summary, /Fee schedule/);
     assert.equal(summary.includes("·"), false);
     assert.ok(FEE_DISCLOSURE_LEGAL_KEYS.includes("marketplace-terms"));

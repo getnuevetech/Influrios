@@ -896,6 +896,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     disclosureFromPartyQuote(quote, {
                       jurisdiction: jurisdictionCode,
                       serviceLevel: disclosureServiceLevel,
+                      currency: jurisdiction?.currency,
                     }),
                   )}
                 </p>

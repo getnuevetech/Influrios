@@ -382,7 +382,11 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   const disclosureGate = requireFeeDisclosureAccepted({
     accepted: feeDisclosureAccepted,
-    disclosure: disclosureFromPartyQuote(quote, { jurisdiction: jurisdictionCode, serviceLevel: disclosureServiceLevel }),
+    disclosure: disclosureFromPartyQuote(quote, {
+      jurisdiction: jurisdictionCode,
+      serviceLevel: disclosureServiceLevel,
+      currency: jurisdiction?.currency,
+    }),
   });
   if (!disclosureGate.ok) {
     qs.set("step", "accept");
