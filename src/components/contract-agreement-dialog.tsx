@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export type ContractDialogParty = {
   id: string;
@@ -226,11 +226,13 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 
 export function ContractRowMenu({
   items,
+  children,
 }: {
   items: Array<{ href: string; label: string }>;
+  children?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  if (items.length === 0) return null;
+  if (items.length === 0 && !children) return null;
   return (
     <span className="relative inline-flex">
       <button
@@ -244,6 +246,7 @@ export function ContractRowMenu({
       </button>
       {open ? (
         <span className="absolute right-0 top-9 z-20 min-w-44 rounded-2xl border border-[#E7ECF5] bg-white p-1 text-left shadow-lg">
+          {children}
           {items.map((item) => (
             <Link
               key={item.href + item.label}

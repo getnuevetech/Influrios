@@ -411,7 +411,14 @@ export default async function ContractsIndexPage({
                               View agreement
                               <span aria-hidden>→</span>
                             </Link>
-                            <ContractRowMenu items={menu} />
+                            <ContractRowMenu items={menu}>
+                              <Link
+                                href={`/collaboration/contracts/${contract.id}`}
+                                className="block rounded-xl px-3 py-2 text-xs font-semibold text-[#344054] hover:bg-[#F7F4FF]"
+                              >
+                                Open full agreement
+                              </Link>
+                            </ContractRowMenu>
                           </span>
                         </td>
                       </tr>
