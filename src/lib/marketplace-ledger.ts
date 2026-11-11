@@ -2078,8 +2078,17 @@ export async function applyMarketplaceEvent(input: {
               milestoneTitle: milestone.title,
               milestoneIndex: milestoneIndex >= 0 ? milestoneIndex : undefined,
             });
-        if (signedDeal && left !== signedDeal.influencerReceivesCents) {
-          throw new LedgerReject("The payout does not match the signed influencer amount.");
+        const alreadyReleasedCents = fresh
+          .filter((entry) => entry.kind === "release" && entry.milestoneId !== milestone.id)
+          .reduce((sum, entry) => sum + entry.amountCents, 0);
+        if (signedDeal) {
+          const { releaseInstructionAmount } = await import("@/lib/provider-outbox");
+          const planned = releaseInstructionAmount({
+            releasableCents: left,
+            signedInfluencerReceivesCents: signedDeal.influencerReceivesCents,
+            alreadyReleasedCents,
+          });
+          if (!planned.ok) throw new LedgerReject(planned.error);
         }
         // Dual release legs: creator payout from Holding + earned fee to Operations (P4).
         await tx.ledgerEntry.create({
@@ -2134,6 +2143,7 @@ export async function applyMarketplaceEvent(input: {
             deal: signedDeal,
             eventType: "payout.released",
             amountCents: left,
+            releasedCents: alreadyReleasedCents + left,
             policyApproved,
             finalPayout: open === 0,
             alreadyEarned: fresh.some((entry) => entry.kind === "fee_earned"),

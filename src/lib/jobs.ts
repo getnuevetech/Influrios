@@ -1049,9 +1049,22 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
       "@/lib/provider-outbox"
     );
     const signed = readSignedDealMoney(plan);
+    const siblings = await prisma.fundingMilestone.findMany({
+      where: {
+        fundingId: milestone.fundingId,
+        id: { not: milestone.id },
+        status: { in: ["released", "release_requested"] },
+      },
+      select: { amountCents: true, refundedCents: true },
+    });
+    const alreadyReleasedCents = siblings.reduce(
+      (sum, row) => sum + releasableCents(row.amountCents, row.refundedCents),
+      0,
+    );
     const planned = releaseInstructionAmount({
       releasableCents: amount,
       signedInfluencerReceivesCents: signed?.influencerReceivesCents ?? null,
+      alreadyReleasedCents,
     });
     if (!planned.ok) {
       await prisma.auditLog
