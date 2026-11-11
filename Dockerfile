@@ -69,6 +69,8 @@ RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
+# Files placed in src/app/myfiles (for example tik.pdf) are served at /myfiles/<name>.
+COPY --from=builder --chown=nextjs:nodejs /app/src/app/myfiles ./src/app/myfiles
 COPY --from=builder /app/package.json ./package.json
 # Standalone server. Its traced node_modules can omit the Prisma CLI and
 # replace a complete generated client, so Prisma is copied after this.
