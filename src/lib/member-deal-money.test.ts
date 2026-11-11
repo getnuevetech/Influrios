@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { influencerLedgerShare, memberDealView } from "./member-deal-money";
+import { influencerLedgerShare, ledgerEntryVisibleTo, memberDealView } from "./member-deal-money";
 
 const plan = {
   financialPlan: {
@@ -28,6 +28,25 @@ describe("member deal amounts", () => {
     assert.equal(influencer.headlineCents, 343_000);
     assert.equal(influencer.lines.some((line) => line.amountCents === 25_000), false);
     assert.equal(influencer.lines.at(-1)?.label, "Net payout");
+  });
+
+  it("hides the business collection from the influencer and the influencer fee from the business", () => {
+    const hold = { kind: "hold", party: "" };
+    const businessFee = { kind: "fee_pending", party: "platform:business" };
+    const influencerFee = { kind: "fee_pending", party: "platform:influencer" };
+    const payable = { kind: "influencer_payable", party: "influencer" };
+    const payout = { kind: "release", party: "Influencer" };
+    assert.equal(ledgerEntryVisibleTo({ role: "business", ...hold }), true);
+    assert.equal(ledgerEntryVisibleTo({ role: "influencer", ...hold }), false);
+    assert.equal(ledgerEntryVisibleTo({ role: "business", ...businessFee }), true);
+    assert.equal(ledgerEntryVisibleTo({ role: "influencer", ...businessFee }), false);
+    assert.equal(ledgerEntryVisibleTo({ role: "business", ...influencerFee }), false);
+    assert.equal(ledgerEntryVisibleTo({ role: "influencer", ...influencerFee }), true);
+    assert.equal(ledgerEntryVisibleTo({ role: "business", ...payable }), false);
+    assert.equal(ledgerEntryVisibleTo({ role: "influencer", ...payable }), true);
+    assert.equal(ledgerEntryVisibleTo({ role: "business", ...payout }), true);
+    assert.equal(ledgerEntryVisibleTo({ role: "influencer", ...payout }), true);
+    assert.equal(ledgerEntryVisibleTo({ role: "influencer", kind: "fee", party: "Platform" }), false);
   });
 
   it("keeps a legacy row on one platform fee", () => {

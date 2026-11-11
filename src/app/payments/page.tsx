@@ -19,7 +19,7 @@ import { syncOpenGatewayDeposits } from "@/lib/funding-checkout";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 import { collectionCheckoutFields } from "@/lib/provider-collection";
 import { listFundingsForBusiness, listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
-import { influencerLedgerShare, memberDealView } from "@/lib/member-deal-money";
+import { influencerLedgerShare, ledgerEntryVisibleTo, memberDealView } from "@/lib/member-deal-money";
 import { storedCurrencyCode } from "@/lib/money";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
 
@@ -51,14 +51,17 @@ type Deal = Awaited<ReturnType<typeof listFundingsForBusiness>>[number];
 
 const PAGE_SIZE = 8;
 
-const LEDGER_LABEL: Record<string, string> = {
-  hold: "Funds received",
-  release: "Payout confirmed",
-  refund: "Refund",
-  fee: "Platform fee",
-  fee_settled: "Fee settled",
-  return: "Returned",
-};
+function ledgerLabel(role: "business" | "influencer", kind: string) {
+  if (role === "business" && kind === "hold") return "Funds received";
+  if (role === "business" && kind === "collection") return "Funds received";
+  if (role === "business" && kind === "release") return "Payout sent";
+  if (role === "influencer" && kind === "influencer_payable") return "Held for you";
+  if (role === "influencer" && kind === "release") return "Payout confirmed";
+  if (kind === "fee" || kind === "fee_pending" || kind === "fee_earned" || kind === "fee_settled") return "Your platform fee";
+  if (kind === "refund") return "Refund";
+  if (kind === "return") return "Returned";
+  return "";
+}
 
 function moneyLabel(cents: number, currency: string) {
   const code = storedCurrencyCode(currency) ?? "USD";
@@ -109,16 +112,18 @@ function payoutClass(label: string) {
   return "bg-slate-100 text-slate-600";
 }
 
-function ledgerEntries(deal: Deal) {
+function ledgerEntries(deal: Deal, role: "business" | "influencer") {
   return deal.entries.flatMap((entry) => {
     const row = entry as Deal["entries"][number] & {
       id?: string;
       createdAt?: Date | string;
       provider?: string;
       eventId?: string;
+      party?: string;
       milestoneId?: string | null;
     };
-    if (!LEDGER_LABEL[row.kind]) return [];
+    if (!ledgerEntryVisibleTo({ role, kind: row.kind, party: row.party })) return [];
+    if (!ledgerLabel(role, row.kind)) return [];
     return [row];
   });
 }
@@ -522,7 +527,8 @@ function PaymentDialog({
   const checkout = collectionCheckoutFields(deal.collectionProviderCode || deal.providerCode);
   const stripe = (deal.collectionProviderCode || deal.providerCode).trim().toLowerCase() === "stripe";
   const canDeposit = businessViewer && deal.status === "awaiting_provider" && (checkout.canOpen || stripe);
-  const entries = ledgerEntries(deal);
+  const viewerRole = businessViewer ? "business" : "influencer";
+  const entries = ledgerEntries(deal, viewerRole);
   const pending = deal.milestones.some((milestone) => milestonePayoutLabel(milestone.status) === "Pending confirmation");
   const provider = deal.providerCode.trim();
   const next = canDeposit
@@ -682,56 +688,41 @@ function PaymentDialog({
         </div>
       }
       milestones={
-        <div className="space-y-4">
-          <p className="text-sm text-[#667085]">Delivery status and payout status are tracked separately.</p>
-          <div className="overflow-x-auto rounded-2xl border border-[#E6ECF7]">
-            <table className="w-full min-w-[520px] text-left text-sm">
-              <thead className="bg-[#F7F8FF] text-xs text-[#667085]">
-                <tr>
-                  <th className="px-3 py-2 font-semibold">Milestone</th>
-                  <th className="px-3 py-2 font-semibold">Delivery</th>
-                  <th className="px-3 py-2 font-semibold">Payout</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deal.milestones.map((milestone) => {
-                  const delivery = milestoneDeliveryLabel(milestone.status);
-                  const payout = milestonePayoutLabel(milestone.status);
-                  return (
-                    <tr key={milestone.id} className="border-t border-[#F2F4F7]">
-                      <td className="px-3 py-3 font-semibold text-[#1B1464]">{milestone.title}</td>
-                      <td className="px-3 py-3">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${deliveryClass(delivery)}`}>{delivery}</span>
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${payoutClass(payout)}`}>{payout}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-sm text-[#667085]">Review submissions and comments in the collaboration workspace.</p>
-          {!businessViewer && deal.status === "held" ? (
-            <div className="space-y-3">
-              {deal.milestones
-                .filter((milestone) => milestone.status === "pending")
-                .map((milestone) => (
-                  <form key={milestone.id} action={actionSubmitMilestone} className="space-y-2 rounded-2xl border border-[#E6ECF7] p-3">
-                    <input type="hidden" name="dealId" value={deal.id} />
-                    <input type="hidden" name="milestoneId" value={milestone.id} />
-                    <p className="text-sm font-semibold text-[#1B1464]">{milestone.title}</p>
-                    <input name="linkUrl" placeholder="https:// link to the work" className="w-full rounded-lg border border-[#E6ECF7] px-2 py-1 text-xs" />
-                    <input name="note" placeholder="What you are submitting" className="w-full rounded-lg border border-[#E6ECF7] px-2 py-1 text-xs" />
-                    <input name="files" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.zip" className="w-full text-xs" />
-                    <button type="submit" className="rounded-full border border-[#E6ECF7] px-3 py-1.5 text-xs font-semibold text-[#1B1464]">
-                      Submit work
-                    </button>
-                  </form>
-                ))}
-            </div>
-          ) : null}
+        <div className="space-y-3">
+          <p className="text-sm text-[#667085]">Delivery status and payout status stay visible. Open a milestone for the submission.</p>
+          {deal.milestones.map((milestone) => {
+            const delivery = milestoneDeliveryLabel(milestone.status);
+            const payout = milestonePayoutLabel(milestone.status);
+            return (
+              <details key={milestone.id} className="group rounded-2xl border border-[#E6ECF7]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                  <span className="font-semibold text-[#1B1464]">{milestone.title}</span>
+                  <span className="flex flex-wrap items-center justify-end gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${deliveryClass(delivery)}`}>{delivery}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${payoutClass(payout)}`}>{payout}</span>
+                    <span aria-hidden className="text-xs text-[#98A2B3] transition group-open:rotate-180">▾</span>
+                  </span>
+                </summary>
+                <div className="space-y-3 border-t border-[#E6ECF7] px-4 py-3">
+                  <p className="text-sm text-[#667085]">
+                    {moneyLabel(milestone.amountCents, deal.currency)}. Review submissions and comments in the collaboration workspace.
+                  </p>
+                  {!businessViewer && deal.status === "held" && milestone.status === "pending" ? (
+                    <form action={actionSubmitMilestone} className="space-y-2">
+                      <input type="hidden" name="dealId" value={deal.id} />
+                      <input type="hidden" name="milestoneId" value={milestone.id} />
+                      <input name="linkUrl" placeholder="https:// link to the work" className="w-full rounded-lg border border-[#E6ECF7] px-2 py-1 text-xs" />
+                      <input name="note" placeholder="What you are submitting" className="w-full rounded-lg border border-[#E6ECF7] px-2 py-1 text-xs" />
+                      <input name="files" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.zip" className="w-full text-xs" />
+                      <button type="submit" className="rounded-full border border-[#E6ECF7] px-3 py-1.5 text-xs font-semibold text-[#1B1464]">
+                        Submit work
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+              </details>
+            );
+          })}
         </div>
       }
       transactions={
@@ -752,7 +743,7 @@ function PaymentDialog({
                 {entries.map((entry) => (
                   <tr key={entry.id ?? `${entry.kind}-${entry.eventId ?? entry.amountCents}`} className="border-t border-[#F2F4F7]">
                     <td className="px-3 py-3 text-[#667085]">{when(entry.createdAt)}</td>
-                    <td className="px-3 py-3 font-semibold text-[#1B1464]">{LEDGER_LABEL[entry.kind]}</td>
+                    <td className="px-3 py-3 font-semibold text-[#1B1464]">{ledgerLabel(viewerRole, entry.kind)}</td>
                     <td className="px-3 py-3">{moneyLabel(entry.amountCents, deal.currency)}</td>
                     <td className="px-3 py-3 text-[#667085]">{entry.provider?.trim() || provider || "—"}</td>
                   </tr>
