@@ -13,8 +13,8 @@ until node -e "require('net').connect(5432,'postgres',()=>process.exit(0)).on('e
 done
 echo "OK: Postgres port open"
 
-mkdir -p /app/data /app/public/uploads/banners
-chown -R nextjs:nodejs /app/data /app/public/uploads
+mkdir -p /app/data /app/public/uploads/banners /app/src/app/myfiles
+chown -R nextjs:nodejs /app/data /app/public/uploads /app/src/app/myfiles
 
 # Compose interpolates POSTGRES_PASSWORD raw. Rebuild the URL so @ : / # ? in
 # the password cannot make Prisma throw on every short-link lookup.
