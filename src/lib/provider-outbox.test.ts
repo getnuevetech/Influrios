@@ -69,6 +69,20 @@ describe("provider command outbox", () => {
     assert.equal(signed.amountCents, 343_000);
     const wrong = releaseInstructionAmount({ releasableCents: 350_000, signedInfluencerReceivesCents: 343_000 });
     assert.equal(wrong.ok, false);
+    const slice = releaseInstructionAmount({
+      releasableCents: 117_800,
+      signedInfluencerReceivesCents: 343_000,
+      alreadyReleasedCents: 0,
+    });
+    assert.equal(slice.ok, true);
+    if (!slice.ok) return;
+    assert.equal(slice.amountCents, 117_800);
+    const over = releaseInstructionAmount({
+      releasableCents: 117_800,
+      signedInfluencerReceivesCents: 343_000,
+      alreadyReleasedCents: 230_000,
+    });
+    assert.equal(over.ok, false);
     const sweep = readFileSync("src/lib/jobs.ts", "utf8");
     const claim = sweep.indexOf("claimProviderCommand");
     const send = sweep.indexOf("createReleaseOrTransfer");

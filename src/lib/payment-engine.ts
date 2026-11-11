@@ -849,10 +849,21 @@ export function signedDealMoneyEvents(input: {
     };
   }
   if (input.eventType === "payout.released") {
-    if (input.amountCents !== input.deal.influencerReceivesCents) {
+    const released = input.releasedCents ?? input.amountCents;
+    if (
+      !Number.isInteger(input.amountCents) ||
+      input.amountCents <= 0 ||
+      input.amountCents > input.deal.influencerReceivesCents ||
+      !Number.isInteger(released) ||
+      released < input.amountCents ||
+      released > input.deal.influencerReceivesCents
+    ) {
       return { ok: false, error: "The payout does not match the signed influencer amount." };
     }
     if (!input.finalPayout || input.alreadyEarned) return { ok: true, entries: [] };
+    if (released !== input.deal.influencerReceivesCents) {
+      return { ok: false, error: "The payout does not match the signed influencer amount." };
+    }
     const earned = earnPlatformFees({
       policyApproved: input.policyApproved,
       finalPayoutConfirmed: true,

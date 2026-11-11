@@ -14,19 +14,28 @@ export function providerOperationKey(input: {
   return `v${version}:${fundingId}:${milestoneId}:${input.operation}`;
 }
 
-/** A signed deal releases the influencer amount. Any other amount is not sent. */
+/**
+ * A signed deal releases this milestone's influencer amount.
+ * One milestone may be a share of the signed total. The running total cannot pass it.
+ */
 export function releaseInstructionAmount(input: {
   releasableCents: number;
   signedInfluencerReceivesCents?: number | null;
+  alreadyReleasedCents?: number;
 }): { ok: true; amountCents: number } | { ok: false; error: string } {
   if (!Number.isInteger(input.releasableCents) || input.releasableCents <= 0) {
     return { ok: false, error: "Release needs a positive integer amount." };
   }
   if (input.signedInfluencerReceivesCents == null) return { ok: true, amountCents: input.releasableCents };
-  if (input.releasableCents !== input.signedInfluencerReceivesCents) {
+  const signed = input.signedInfluencerReceivesCents;
+  const already = input.alreadyReleasedCents ?? 0;
+  if (!Number.isInteger(signed) || signed <= 0 || !Number.isInteger(already) || already < 0) {
     return { ok: false, error: "The release instruction does not match the signed influencer amount." };
   }
-  return { ok: true, amountCents: input.signedInfluencerReceivesCents };
+  if (input.releasableCents > signed || already + input.releasableCents > signed) {
+    return { ok: false, error: "The release instruction does not match the signed influencer amount." };
+  }
+  return { ok: true, amountCents: input.releasableCents };
 }
 
 /** A signed deal collects the business total. Any other amount is not sent. */

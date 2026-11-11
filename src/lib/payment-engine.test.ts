@@ -250,6 +250,19 @@ describe("payment engine acceptance", () => {
     assert.equal(held.ok, true);
     if (!held.ok) return;
     assert.equal(held.entries.filter((row) => row.kind === "fee_pending").length, 2);
+    const milestoneSlice = signedDealMoneyEvents({
+      deal,
+      eventType: "payout.released",
+      amountCents: 117_800,
+      releasedCents: 117_800,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(milestoneSlice.ok, true);
+    if (!milestoneSlice.ok) return;
+    assert.equal(milestoneSlice.entries.length, 0);
     const early = signedDealMoneyEvents({
       deal,
       eventType: "payout.released",
