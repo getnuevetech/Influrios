@@ -23,6 +23,8 @@ type Search = {
   status?: string;
   plan?: string;
   page?: string;
+  view?: string;
+  mode?: string;
   edit?: string;
   saved?: string;
   error?: string;
@@ -59,9 +61,10 @@ export default async function AdminBusinessAccountsPage({
     }),
   ]);
 
-  let selectedRow = params.edit ? table.rows.find((r) => r.id === params.edit) || null : null;
-  if (params.edit && (!selectedRow || selectedRow.id !== params.edit)) {
-    selectedRow = await loadAccountById(params.edit);
+  const focusId = params.view || params.edit || "";
+  let selectedRow = focusId ? table.rows.find((r) => r.id === focusId) || null : null;
+  if (focusId && (!selectedRow || selectedRow.id !== focusId)) {
+    selectedRow = await loadAccountById(focusId);
     if (selectedRow && selectedRow.role === "CREATOR") selectedRow = null;
   }
   const detail = selectedRow ? await loadAccountDetailExtras(selectedRow.id) : null;
@@ -88,6 +91,7 @@ export default async function AdminBusinessAccountsPage({
       planOptions={businessPlans.length ? businessPlans : FALLBACK_PLANS}
       roleOptions={["BUSINESS", "AGENCY"]}
       canEdit={canEdit}
+      initialEditing={params.mode === "edit"}
       flash={{ saved: params.saved, error: params.error, reset: params.reset }}
       policy={{
         consentVersion: policy.consentVersion,

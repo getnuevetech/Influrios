@@ -162,7 +162,7 @@ export async function actionSaveMember(formData: FormData) {
       suspendedAt: suspended ? (current.suspendedAt ?? new Date()).toISOString() : null,
     },
   });
-  redirect(withQuery(base, { saved: "member", edit: id }));
+  redirect(withQuery(base, { saved: "member", view: id }));
 }
 
 export async function actionBulkAccountUpdate(formData: FormData) {
