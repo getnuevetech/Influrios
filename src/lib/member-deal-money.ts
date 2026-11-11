@@ -42,6 +42,38 @@ function signedQuote(plan: unknown) {
   };
 }
 
+/**
+ * A ledger row is visible to one party. The business deposit and the business fee stay with the
+ * business. The influencer payable, influencer fee, and influencer payout stay with the influencer.
+ * A payout release is the disbursement both sides can see. A combined hold with no party is the
+ * business collection.
+ */
+export function ledgerEntryVisibleTo(input: {
+  role: "business" | "influencer";
+  kind: string;
+  party?: string | null;
+}): boolean {
+  const party = (input.party ?? "").trim();
+  const [owner, side] = party.split(":");
+  const kind = input.kind;
+  const businessFee =
+    kind === "fee" || kind === "fee_pending" || kind === "fee_earned" || kind === "fee_settled";
+  if (input.role === "business") {
+    if (kind === "release" || kind === "return") return true;
+    if (owner === "influencer" || owner === "Influencer" || side === "influencer") return false;
+    if (kind === "influencer_payable" || kind === "share" || kind === "tax" || kind === "provider_fee") return false;
+    if (kind === "hold" || kind === "collection" || kind === "refund") return owner === "" || owner === "business";
+    if (businessFee) return side === "business" || owner === "Platform" || owner === "platform" || owner === "";
+    return false;
+  }
+  if (owner === "business" || side === "business") return false;
+  if (kind === "hold" || kind === "collection" || kind === "refund") return false;
+  if (kind === "influencer_payable") return true;
+  if (kind === "release" || kind === "return") return owner === "" || owner === "Influencer" || owner === "influencer";
+  if (businessFee) return side === "influencer";
+  return false;
+}
+
 /** What one party sees. The other party's fee is left out. */
 export function memberDealView(input: {
   role: "business" | "influencer";
