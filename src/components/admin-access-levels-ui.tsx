@@ -1,13 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import {
-  actionCreateRole,
-  actionDuplicateRole,
-  actionUpdateRole,
-} from "@/app/admin/actions-auth";
-import { IconLink, IconPlus, IconSearch, IconUsers } from "@/components/icons";
+import { useEffect, useMemo, useState } from "react";
+import { actionCreateRole, actionUpdateRole } from "@/app/admin/actions-auth";
+import { IconDots, IconPlus, IconSearch } from "@/components/icons";
 
 export type AccessRoleCard = {
   id: string;
@@ -17,6 +13,7 @@ export type AccessRoleCard = {
   permissions: string[];
   permissionLabels: string[];
   assignedCount: number;
+  assignees: { name: string; email: string }[];
 };
 
 export type AccessModuleGroup = {
@@ -26,37 +23,23 @@ export type AccessModuleGroup = {
   permissions: { id: string; label: string; hint: string }[];
 };
 
-export type AccessActivity = {
-  id: string;
-  title: string;
-  at: string;
+const BUCKETS: { id: string; label: string; modules: string[] }[] = [
+  { id: "content", label: "Content", modules: ["banners", "cards", "taxonomy", "legal", "intelligence"] },
+  { id: "accounts", label: "User accounts", modules: ["accounts", "invitations"] },
+  { id: "collaborations", label: "Collaborations", modules: ["collaborations", "matching", "contracts", "signing", "social", "agency"] },
+  { id: "finance", label: "Finance", modules: ["billing", "payments", "gateways", "commerce", "marketplace", "collab_finance", "trust"] },
+  { id: "settings", label: "Settings", modules: ["plans", "ai", "mail", "jobs", "shortlinks"] },
+  { id: "access", label: "Access control", modules: ["access"] },
+];
+
+type DialogState = {
+  mode: "view" | "edit" | "create";
+  roleId: string | null;
+  baseRoleId: string | null;
 };
 
-function relativeTime(iso: string) {
-  const ms = Date.now() - new Date(iso).getTime();
-  const min = Math.round(ms / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min} min ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 48) return `${hr} hr ago`;
-  const day = Math.round(hr / 24);
-  return `${day}d ago`;
-}
-
-function RoleTrend({ values }: { values: number[] }) {
-  const max = Math.max(1, ...values);
-  const points = values
-    .map((v, i) => {
-      const x = values.length === 1 ? 0 : (i / (values.length - 1)) * 100;
-      const y = 36 - (v / max) * 28;
-      return `${x},${y}`;
-    })
-    .join(" ");
-  return (
-    <svg viewBox="0 0 100 40" className="h-14 w-full" aria-hidden>
-      <polyline fill="none" stroke="#633CFF" strokeWidth="2.5" strokeLinecap="round" points={points} />
-    </svg>
-  );
+function bucketFor(module: string) {
+  return BUCKETS.find((bucket) => bucket.modules.includes(module))?.id ?? "settings";
 }
 
 export function AdminAccessLevelsView({
@@ -65,9 +48,7 @@ export function AdminAccessLevelsView({
   canManageRoles,
   canManageUsers,
   editRoleId,
-  activity,
-  changeSeries,
-  changeTrendPct,
+  adminCount,
   flash,
 }: {
   roles: AccessRoleCard[];
@@ -75,80 +56,119 @@ export function AdminAccessLevelsView({
   canManageRoles: boolean;
   canManageUsers: boolean;
   editRoleId?: string;
-  activity: AccessActivity[];
-  changeSeries: number[];
-  changeTrendPct: number | null;
+  adminCount: number;
   flash: { error?: string; created?: string; updated?: string };
 }) {
   const [q, setQ] = useState("");
   const [type, setType] = useState<"all" | "system" | "custom">("all");
-  const [selectedId, setSelectedId] = useState<string | null>(editRoleId || null);
-  const selected = roles.find((r) => r.id === selectedId) || null;
-  const [descLen, setDescLen] = useState(selected?.description.length ?? 0);
+  const linked = roles.find((role) => role.id === editRoleId) ?? null;
+  const [dialog, setDialog] = useState<DialogState | null>(
+    linked
+      ? { mode: "view", roleId: linked.id, baseRoleId: null }
+      : null,
+  );
+  const [step, setStep] = useState<"permissions" | "review">("permissions");
+  const [bucketId, setBucketId] = useState(BUCKETS[0]!.id);
+  const [permQuery, setPermQuery] = useState("");
+  const [name, setName] = useState(linked?.name ?? "");
+  const [description, setDescription] = useState(linked?.description ?? "");
+  const [checked, setChecked] = useState<string[]>(linked ? [...linked.permissions] : []);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return roles.filter((r) => {
-      if (type === "system" && !r.system) return false;
-      if (type === "custom" && r.system) return false;
+    return roles.filter((role) => {
+      if (type === "system" && !role.system) return false;
+      if (type === "custom" && role.system) return false;
       if (!query) return true;
       return (
-        r.name.toLowerCase().includes(query) ||
-        r.description.toLowerCase().includes(query) ||
-        r.permissionLabels.some((p) => p.toLowerCase().includes(query))
+        role.name.toLowerCase().includes(query) ||
+        role.description.toLowerCase().includes(query)
       );
     });
   }, [roles, q, type]);
 
-  const systemCount = roles.filter((r) => r.system).length;
+  const systemCount = roles.filter((role) => role.system).length;
   const customCount = roles.length - systemCount;
-  const assignedTotal = roles.reduce((s, r) => s + r.assignedCount, 0);
-  const maxAssigned = Math.max(1, ...roles.map((r) => r.assignedCount));
+  const labelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const group of groups) {
+      for (const perm of group.permissions) map.set(perm.id, perm.label);
+    }
+    return map;
+  }, [groups]);
 
-  const selectedPerms = new Set(selected?.permissions ?? []);
-  const formKey = selected?.id || "new";
+  const activeRole = roles.find((role) => role.id === dialog?.roleId) ?? null;
+  const baseRole = roles.find((role) => role.id === dialog?.baseRoleId) ?? null;
+  const readOnly = !dialog || dialog.mode === "view" || !canManageRoles;
+  const baseline = new Set(
+    (dialog?.mode === "edit" ? activeRole?.permissions : baseRole?.permissions) ?? [],
+  );
+  const selected = new Set(checked);
+  const added = [...selected].filter((id) => !baseline.has(id));
+  const removed = [...baseline].filter((id) => !selected.has(id));
 
-  function setBulk(mode: "all" | "view" | "manage" | "clear") {
-    const form = document.getElementById("access-role-form") as HTMLFormElement | null;
-    if (!form) return;
-    const boxes = form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name^="perm_"]');
-    boxes.forEach((box) => {
-      const id = box.name.replace(/^perm_/, "");
-      if (mode === "all") box.checked = true;
-      else if (mode === "clear") box.checked = false;
-      else if (mode === "view") box.checked = id.includes(".view");
-      else if (mode === "manage")
-        box.checked = id.includes(".manage") || id.includes(".edit") || id.includes(".mediate");
-    });
+  function openDialog(next: DialogState, source?: AccessRoleCard | null) {
+    setDialog(next);
+    setStep("permissions");
+    setBucketId(BUCKETS[0]!.id);
+    setPermQuery("");
+    setName(next.mode === "create" ? (source ? `${source.name} copy` : "") : source?.name ?? "");
+    setDescription(next.mode === "view" || next.mode === "edit" ? source?.description ?? "" : source?.description ?? "");
+    setChecked(source ? [...source.permissions] : []);
   }
+
+  useEffect(() => {
+    if (!dialog) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [dialog]);
+
+  function toggle(id: string) {
+    setChecked((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+
+  const visibleGroups = groups.filter((group) => bucketFor(group.module) === bucketId);
+  const query = permQuery.trim().toLowerCase();
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-3xl font-bold text-indigo">Access Levels</h1>
-            <Link
-              href="/admin/admin-users"
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#E4EBFF] bg-white px-3 py-1.5 text-[12px] font-semibold text-violet shadow-sm hover:border-violet/40"
-            >
-              <IconLink size={12} /> Go to Admin Users
-            </Link>
-          </div>
-          <p className="mt-2 max-w-2xl text-sm text-muted">
-            Build and edit roles here. Assign those roles to operators on{" "}
+          <h1 className="font-display text-3xl font-bold text-indigo">Access Levels</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            Define roles and permissions. Assign roles in{" "}
             <Link href="/admin/admin-users" className="font-semibold text-violet hover:underline">
               Admin Users
             </Link>
             .
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          {canManageUsers ? (
+            <Link
+              href="/admin/admin-users"
+              className="rounded-full border border-[#E4EBFF] bg-white px-3.5 py-2 text-[13px] font-semibold text-indigo"
+            >
+              Admin Users
+            </Link>
+          ) : null}
+          {canManageRoles ? (
+            <button
+              type="button"
+              onClick={() => openDialog({ mode: "create", roleId: null, baseRoleId: null })}
+              className="inline-flex items-center gap-1.5 rounded-full bg-violet px-3.5 py-2 text-[13px] font-semibold text-white"
+            >
+              <IconPlus size={14} /> Create role
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {flash.error ? (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {flash.error}
-        </p>
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{flash.error}</p>
       ) : null}
       {flash.created || flash.updated ? (
         <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
@@ -156,350 +176,384 @@ export function AdminAccessLevelsView({
         </p>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Kpi label="Total Roles" value={String(roles.length)} detail="All access levels" />
-        <Kpi label="System Roles" value={String(systemCount)} detail="Built-in roles" />
-        <Kpi label="Custom Roles" value={String(customCount)} detail="User-defined roles" />
-        <Kpi label="Admins Assigned" value={String(assignedTotal)} detail="Across all roles" />
-        <div className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-[0_8px_24px_rgba(17,26,90,0.04)]">
-          <p className="text-[12px] font-semibold text-muted">Role changes (30d)</p>
-          <p className={`mt-1 text-[11px] font-semibold ${changeTrendPct != null && changeTrendPct >= 0 ? "text-emerald-600" : "text-muted"}`}>
-            {changeTrendPct == null ? "—" : `${changeTrendPct >= 0 ? "+" : ""}${changeTrendPct}%`}
-          </p>
-          <RoleTrend values={changeSeries} />
-        </div>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Kpi label="Total roles" value={String(roles.length)} />
+        <Kpi label="System roles" value={String(systemCount)} />
+        <Kpi label="Custom roles" value={String(customCount)} />
+        <Kpi label="Assigned admins" value={String(adminCount)} />
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="space-y-4">
-          <section className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-[0_8px_24px_rgba(17,26,90,0.04)]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-bold text-indigo">Role Library</h2>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="relative">
-                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
-                    <IconSearch size={14} />
-                  </span>
-                  <input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder="Search roles..."
-                    className="rounded-full border border-[#E4EBFF] bg-[#F7F9FF] py-2 pl-9 pr-3 text-[13px] outline-none focus:border-violet"
-                  />
-                </label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value as typeof type)}
-                  className="rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold"
-                >
-                  <option value="all">All types</option>
-                  <option value="system">System</option>
-                  <option value="custom">Custom</option>
-                </select>
-                {canManageRoles ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedId(null);
-                      setDescLen(0);
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-blue px-3.5 py-2 text-[12px] font-semibold text-white"
-                  >
-                    <IconPlus size={14} /> Create Role
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {filtered.map((role) => (
-                <article
-                  key={role.id}
-                  className={`rounded-2xl border p-4 transition ${
-                    selectedId === role.id
-                      ? "border-violet bg-[#F8F5FF]"
-                      : "border-[#E4EBFF] bg-white hover:border-violet/30"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-display font-bold text-indigo">{role.name}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            role.system
-                              ? "bg-[#EEE8FF] text-violet"
-                              : "bg-emerald-50 text-emerald-700"
-                          }`}
-                        >
-                          {role.system ? "System" : "Custom"}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted">
-                          <IconUsers size={12} /> {role.assignedCount} admins
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-[12px] text-muted">{role.description || "No description"}</p>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {role.permissionLabels.slice(0, 4).map((label) => (
-                      <span
-                        key={label}
-                        className="rounded-full bg-[#F3F6FF] px-2 py-0.5 text-[10px] font-semibold text-indigo"
-                      >
-                        {label}
-                      </span>
-                    ))}
-                    {role.permissionLabels.length > 4 ? (
-                      <span className="rounded-full bg-[#F3F6FF] px-2 py-0.5 text-[10px] font-semibold text-muted">
-                        +{role.permissionLabels.length - 4}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-3 text-[12px] font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedId(role.id);
-                        setDescLen(role.description.length);
-                      }}
-                      className="text-violet hover:underline"
-                    >
-                      View details
-                    </button>
-                    {canManageRoles && !role.system ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedId(role.id);
-                          setDescLen(role.description.length);
-                        }}
-                        className="text-indigo hover:underline"
-                      >
-                        Edit
-                      </button>
-                    ) : null}
-                    {canManageRoles ? (
-                      <form action={actionDuplicateRole}>
-                        <input type="hidden" name="roleId" value={role.id} />
-                        <input type="hidden" name="next" value="/admin/access" />
-                        <button type="submit" className="text-indigo hover:underline">
-                          Duplicate
-                        </button>
-                      </form>
-                    ) : null}
-                    {canManageUsers ? (
-                      <Link href="/admin/admin-users" className="text-indigo hover:underline">
-                        Assign users
-                      </Link>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <section className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
-              <h3 className="font-display text-base font-bold text-indigo">Recently updated roles</h3>
-              <ul className="mt-3 space-y-2">
-                {activity.length === 0 ? (
-                  <li className="text-[12px] text-muted">No role changes recorded yet.</li>
-                ) : (
-                  activity.slice(0, 6).map((item) => (
-                    <li key={item.id} className="text-[12px]">
-                      <p className="font-semibold text-indigo">{item.title}</p>
-                      <p className="text-muted">{relativeTime(item.at)}</p>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </section>
-            <section className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
-              <h3 className="font-display text-base font-bold text-indigo">Assignment snapshot</h3>
-              <ul className="mt-3 space-y-2">
-                {roles.map((role) => (
-                  <li key={role.id}>
-                    <div className="mb-1 flex items-center justify-between text-[11px] font-semibold">
-                      <span className="text-indigo">{role.name}</span>
-                      <span className="text-muted">{role.assignedCount}</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-[#F3F6FF]">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#4B2AD9] to-[#9B7CFF]"
-                        style={{ width: `${(role.assignedCount / maxAssigned) * 100}%` }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
+      <section className="overflow-hidden rounded-2xl border border-[#E4EBFF] bg-white shadow-[0_8px_24px_rgba(17,26,90,0.04)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEF2FF] px-4 py-3">
+          <h2 className="font-display text-lg font-bold text-indigo">Role library</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
+                <IconSearch size={14} />
+              </span>
+              <input
+                value={q}
+                onChange={(event) => setQ(event.target.value)}
+                placeholder="Search roles..."
+                className="w-52 rounded-full border border-[#E4EBFF] bg-[#F7F9FF] py-2 pl-9 pr-3 text-[13px] outline-none focus:border-violet"
+              />
+            </label>
+            <select
+              value={type}
+              onChange={(event) => setType(event.target.value as typeof type)}
+              className="rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo"
+            >
+              <option value="all">Type: All types</option>
+              <option value="system">System</option>
+              <option value="custom">Custom</option>
+            </select>
           </div>
         </div>
-
-        <aside className="rounded-2xl border border-[#E4EBFF] bg-white p-5 shadow-[0_8px_24px_rgba(17,26,90,0.04)]">
-          <h2 className="font-display text-lg font-bold text-indigo">
-            {selected ? (selected.system ? "View access level" : "Edit access level") : "Create access level"}
-          </h2>
-          <p className="mt-1 text-[12px] text-muted">
-            {selected?.system
-              ? "System roles are built-in. Duplicate to customize permissions."
-              : "Tick every feature this role should see or use."}
-          </p>
-
-          <form
-            id="access-role-form"
-            key={formKey}
-            action={selected && !selected.system ? actionUpdateRole : actionCreateRole}
-            className="mt-4 space-y-3"
-          >
-            <input type="hidden" name="next" value="/admin/access" />
-            {selected && !selected.system ? (
-              <input type="hidden" name="roleId" value={selected.id} />
-            ) : null}
-
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-muted">
-              Role name
-              <input
-                name="name"
-                required
-                defaultValue={selected && !selected.system ? selected.name : ""}
-                disabled={Boolean(selected?.system) || !canManageRoles}
-                placeholder="e.g. Matching Ops"
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo disabled:bg-[#F7F9FF]"
-              />
-            </label>
-
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-muted">
-              Role type
-              <input
-                value={selected?.system ? "System role" : "Custom role"}
-                disabled
-                className="mt-1 w-full rounded-xl border border-border bg-[#F7F9FF] px-3 py-2 text-sm text-indigo"
-              />
-            </label>
-
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-muted">
-              Purpose / Description <span className="font-medium normal-case">({descLen}/250)</span>
-              <textarea
-                name="description"
-                maxLength={250}
-                rows={3}
-                defaultValue={selected && !selected.system ? selected.description : ""}
-                disabled={Boolean(selected?.system) || !canManageRoles}
-                onChange={(e) => setDescLen(e.target.value.length)}
-                className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo disabled:bg-[#F7F9FF]"
-              />
-            </label>
-
-            <div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted">
-                  Permissions by module
-                </p>
-                {canManageRoles && !selected?.system ? (
-                  <div className="flex flex-wrap gap-1">
-                    {(
-                      [
-                        ["all", "Select all"],
-                        ["view", "View only"],
-                        ["manage", "Manage"],
-                        ["clear", "Clear"],
-                      ] as const
-                    ).map(([mode, label]) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setBulk(mode)}
-                        className="rounded-full border border-[#E4EBFF] px-2 py-0.5 text-[10px] font-semibold text-indigo"
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="mt-2 max-h-[420px] space-y-3 overflow-y-auto pr-1">
-                {groups.map((group) => (
-                  <fieldset key={group.module} className="rounded-xl border border-[#E4EBFF] bg-[#F7F9FF] p-3">
-                    <legend className="px-1 text-[12px] font-bold text-indigo">{group.label}</legend>
-                    <p className="mb-2 text-[10px] text-muted">{group.description}</p>
-                    <div className="space-y-1.5">
-                      {group.permissions.map((perm) => (
-                        <label
-                          key={perm.id}
-                          className="flex items-start gap-2 rounded-lg bg-white px-2.5 py-1.5 text-[12px] text-indigo ring-1 ring-[#E4EBFF]"
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-[13px]">
+            <thead className="bg-[#F7F9FF] text-[11px] font-bold uppercase tracking-wide text-muted">
+              <tr>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Assigned admins</th>
+                <th className="px-4 py-3">Scope</th>
+                <th className="px-4 py-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">
+                    No roles match these filters.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((role) => (
+                  <tr key={role.id} className="border-t border-[#EEF2FF]">
+                    <td className="px-4 py-3 font-semibold text-indigo">{role.name}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-[#EEE8FF] px-2 py-0.5 text-[11px] font-semibold text-violet">
+                        {role.system ? "System" : "Custom"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-indigo">{role.assignedCount}</td>
+                    <td className="max-w-md px-4 py-3 text-muted">{role.description || "No description"}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openDialog({ mode: "view", roleId: role.id, baseRoleId: null }, role)}
+                          className="rounded-full border border-[#E4EBFF] px-3 py-1.5 text-[12px] font-semibold text-violet"
                         >
-                          <input
-                            type="checkbox"
-                            name={`perm_${perm.id}`}
-                            defaultChecked={selectedPerms.has(perm.id)}
-                            disabled={Boolean(selected?.system) || !canManageRoles}
-                            className="mt-0.5 accent-[#633CFF]"
-                          />
-                          <span>
-                            <span className="font-semibold">{perm.label}</span>
-                            <span className="mt-0.5 block text-[10px] text-muted">{perm.hint}</span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                ))}
+                          View role
+                        </button>
+                        <details className="relative">
+                          <summary className="cursor-pointer list-none rounded-full border border-[#E4EBFF] px-2 py-1 text-muted">
+                            <IconDots size={14} />
+                          </summary>
+                          <div className="absolute right-0 z-10 mt-1 w-48 rounded-xl border border-[#E4EBFF] bg-white p-1 shadow-lg">
+                            {canManageRoles ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openDialog({ mode: "create", roleId: null, baseRoleId: role.id }, role)
+                                }
+                                className="block w-full rounded-lg px-3 py-2 text-left text-[12px] font-semibold text-indigo hover:bg-[#F7F8FF]"
+                              >
+                                Duplicate as custom role
+                              </button>
+                            ) : null}
+                            {canManageRoles && !role.system ? (
+                              <button
+                                type="button"
+                                onClick={() => openDialog({ mode: "edit", roleId: role.id, baseRoleId: null }, role)}
+                                className="block w-full rounded-lg px-3 py-2 text-left text-[12px] font-semibold text-indigo hover:bg-[#F7F8FF]"
+                              >
+                                Edit role
+                              </button>
+                            ) : null}
+                            <Link href="/admin/admin-users" className="block rounded-lg px-3 py-2 text-[12px] font-semibold text-indigo hover:bg-[#F7F8FF]">
+                              Assign in Admin Users
+                            </Link>
+                          </div>
+                        </details>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <p className="border-t border-[#EEF2FF] px-4 py-3 text-[12px] text-muted">
+          {filtered.length} roles · System roles are read-only. Create a custom role by duplicating an existing role.
+        </p>
+      </section>
+
+      {dialog ? (
+        <div className="fixed inset-0 z-50">
+          <button type="button" aria-label="Close role" className="absolute inset-0 bg-[#0E1440]/45" onClick={() => setDialog(null)} />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="absolute inset-0 flex flex-col overflow-y-auto bg-white p-5 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(90vh,820px)] sm:w-[min(920px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(17,26,90,0.18)]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-display text-xl font-bold text-indigo">
+                  {dialog.mode === "create" ? "Create custom role" : dialog.mode === "edit" ? "Edit role" : activeRole?.name || "Role"}
+                </h2>
+                <p className="mt-1 text-[13px] text-muted">
+                  {dialog.mode === "create" && baseRole
+                    ? `Based on ${baseRole.name}`
+                    : dialog.mode === "view"
+                      ? "System roles are read-only. Duplicate to create a custom role."
+                      : "Choose the permissions this role can use."}
+                </p>
               </div>
+              <button type="button" onClick={() => setDialog(null)} aria-label="Close dialog" className="px-2 text-lg text-muted">
+                ×
+              </button>
             </div>
 
-            {canManageRoles && !selected?.system ? (
-              <div className="flex flex-wrap gap-2 pt-1">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="block text-[13px] font-semibold text-indigo">
+                Role name
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  disabled={readOnly}
+                  required
+                  className="mt-1 w-full rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm font-normal disabled:bg-[#F7F9FF]"
+                />
+              </label>
+              <label className="block text-[13px] font-semibold text-indigo">
+                Description
+                <input
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value.slice(0, 250))}
+                  disabled={readOnly}
+                  className="mt-1 w-full rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm font-normal disabled:bg-[#F7F9FF]"
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 flex gap-4 border-b border-[#EEF2FF]">
+              {(["permissions", "review"] as const).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setStep(id)}
+                  className={`border-b-2 pb-2 text-[13px] font-semibold capitalize ${
+                    step === id ? "border-violet text-violet" : "border-transparent text-muted"
+                  }`}
+                >
+                  {id === "permissions" ? "Permissions" : "Review"}
+                </button>
+              ))}
+            </div>
+
+            {step === "permissions" ? (
+              <div className="mt-4 grid min-h-0 gap-4 md:grid-cols-[200px_minmax(0,1fr)]">
+                <div className="space-y-1">
+                  {BUCKETS.map((bucket) => {
+                    const count = groups
+                      .filter((group) => bucketFor(group.module) === bucket.id)
+                      .reduce(
+                        (sum, group) => sum + group.permissions.filter((perm) => selected.has(perm.id)).length,
+                        0,
+                      );
+                    return (
+                      <button
+                        key={bucket.id}
+                        type="button"
+                        onClick={() => setBucketId(bucket.id)}
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[13px] font-semibold ${
+                          bucketId === bucket.id ? "bg-[#F1ECFF] text-violet" : "text-indigo hover:bg-[#F7F8FF]"
+                        }`}
+                      >
+                        {bucket.label}
+                        <span className="text-[11px] text-muted">{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[13px] font-bold text-indigo">
+                      {BUCKETS.find((bucket) => bucket.id === bucketId)?.label} permissions
+                    </p>
+                    <p className="text-[12px] text-muted">{checked.length} selected</p>
+                  </div>
+                  <label className="relative mb-3 block">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
+                      <IconSearch size={14} />
+                    </span>
+                    <input
+                      value={permQuery}
+                      onChange={(event) => setPermQuery(event.target.value)}
+                      placeholder="Find a permission"
+                      className="w-full rounded-xl border border-[#E4EBFF] py-2 pl-9 pr-3 text-[13px] outline-none focus:border-violet"
+                    />
+                  </label>
+                  <div className="space-y-3">
+                    {visibleGroups.map((group) => {
+                      const perms = group.permissions.filter((perm) => {
+                        if (!query) return true;
+                        return (
+                          perm.label.toLowerCase().includes(query) ||
+                          perm.hint.toLowerCase().includes(query) ||
+                          perm.id.toLowerCase().includes(query)
+                        );
+                      });
+                      if (!perms.length) return null;
+                      const groupCount = group.permissions.filter((perm) => selected.has(perm.id)).length;
+                      return (
+                        <section key={group.module} className="rounded-2xl border border-[#E4EBFF]">
+                          <div className="flex items-center justify-between px-3 py-2">
+                            <p className="text-[13px] font-bold text-indigo">{group.label}</p>
+                            <span className="text-[11px] font-semibold text-muted">{groupCount} selected</span>
+                          </div>
+                          <p className="px-3 pb-2 text-[11px] text-muted">{group.description}</p>
+                          <ul className="space-y-1 px-3 pb-3">
+                            {perms.map((perm) => (
+                              <li key={perm.id}>
+                                <label className="flex items-start gap-2 rounded-lg px-1 py-1.5 text-[13px] text-indigo">
+                                  <input
+                                    type="checkbox"
+                                    checked={selected.has(perm.id)}
+                                    disabled={readOnly}
+                                    onChange={() => toggle(perm.id)}
+                                    className="mt-0.5 accent-[#633CFF]"
+                                  />
+                                  <span>
+                                    <span className="font-semibold">{perm.label}</span>
+                                    <span className="mt-0.5 block text-[11px] text-muted">{perm.hint}</span>
+                                  </span>
+                                </label>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-4 text-[13px]">
+                <section className="rounded-2xl border border-[#E4EBFF] p-4">
+                  <p className="font-bold text-indigo">Permission changes</p>
+                  <p className="mt-2 text-muted">
+                    {added.length} added · {removed.length} removed · {checked.length} total
+                  </p>
+                  {added.length ? (
+                    <ul className="mt-2 space-y-1">
+                      {added.map((id) => (
+                        <li key={id} className="text-emerald-700">+ {labelById.get(id) || id}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {removed.length ? (
+                    <ul className="mt-2 space-y-1">
+                      {removed.map((id) => (
+                        <li key={id} className="text-rose-600">− {labelById.get(id) || id}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </section>
+                <section className="rounded-2xl border border-[#E4EBFF] p-4">
+                  <p className="font-bold text-indigo">Affected admins</p>
+                  {dialog.mode === "create" ? (
+                    <p className="mt-2 text-muted">No admins yet. Assign this role from Admin Users after it is saved.</p>
+                  ) : activeRole && activeRole.assignees.length ? (
+                    <ul className="mt-2 space-y-1">
+                      {activeRole.assignees.map((admin) => (
+                        <li key={admin.email} className="text-indigo">
+                          {admin.name} · {admin.email}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-muted">No admins are assigned to this role.</p>
+                  )}
+                </section>
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#EEF2FF] pt-4">
+              <p className="text-[12px] text-muted">
+                {dialog.mode === "create" ? "Custom role · Not yet saved" : readOnly ? "Read only" : "Custom role"}
+              </p>
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    const checked = Array.from(
-                      document.querySelectorAll<HTMLInputElement>(
-                        '#access-role-form input[type="checkbox"][name^="perm_"]:checked',
-                      ),
-                    ).map((el) => el.name.replace(/^perm_/, ""));
-                    window.alert(
-                      checked.length
-                        ? `Preview: ${checked.length} permission(s)\n${checked.slice(0, 12).join(", ")}${checked.length > 12 ? "…" : ""}`
-                        : "No permissions selected.",
-                    );
-                  }}
-                  className="rounded-full border border-[#E4EBFF] px-4 py-2 text-[12px] font-semibold text-indigo"
+                  onClick={() => (step === "review" ? setStep("permissions") : setDialog(null))}
+                  className="rounded-full border border-[#E4EBFF] px-4 py-2 text-[13px] font-semibold text-indigo"
                 >
-                  Preview Access
+                  {step === "review" ? "Back" : "Cancel"}
                 </button>
-                <button
-                  type="submit"
-                  className="rounded-full bg-gradient-to-r from-[#4B2AD9] to-[#633CFF] px-4 py-2 text-[12px] font-semibold text-white shadow-sm"
-                >
-                  Save Role
-                </button>
+                {readOnly && canManageRoles && activeRole && !activeRole.system ? (
+                  <button
+                    type="button"
+                    onClick={() => setDialog({ mode: "edit", roleId: activeRole.id, baseRoleId: null })}
+                    className="rounded-full border border-[#E4EBFF] px-4 py-2 text-[13px] font-semibold text-indigo"
+                  >
+                    Edit role
+                  </button>
+                ) : null}
+                {readOnly && canManageRoles && activeRole ? (
+                  <button
+                    type="button"
+                    onClick={() => openDialog({ mode: "create", roleId: null, baseRoleId: activeRole.id }, activeRole)}
+                    className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white"
+                  >
+                    Duplicate as custom role
+                  </button>
+                ) : null}
+                {!readOnly && step === "permissions" ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep("review")}
+                    className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white"
+                  >
+                    Review changes
+                  </button>
+                ) : null}
+                {!readOnly && step === "review" ? (
+                  <form action={dialog.mode === "edit" ? actionUpdateRole : actionCreateRole}>
+                    <input type="hidden" name="next" value="/admin/access" />
+                    {dialog.mode === "edit" && dialog.roleId ? (
+                      <input type="hidden" name="roleId" value={dialog.roleId} />
+                    ) : null}
+                    <input type="hidden" name="name" value={name} />
+                    <input type="hidden" name="description" value={description} />
+                    {checked.map((id) => (
+                      <input key={id} type="hidden" name={`perm_${id}`} value="on" />
+                    ))}
+                    <button
+                      type="submit"
+                      disabled={!name.trim() || checked.length === 0}
+                      className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
+                    >
+                      {dialog.mode === "edit" ? "Save role" : "Create role"}
+                    </button>
+                  </form>
+                ) : null}
               </div>
-            ) : null}
-            {selected?.system && canManageRoles ? (
-              <form action={actionDuplicateRole} className="pt-1">
-                <input type="hidden" name="roleId" value={selected.id} />
-                <input type="hidden" name="next" value="/admin/access" />
-                <button type="submit" className="rounded-full bg-violet px-4 py-2 text-[12px] font-semibold text-white">
-                  Duplicate as custom role
-                </button>
-              </form>
-            ) : null}
-          </form>
-        </aside>
-      </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function Kpi({ label, value, detail }: { label: string; value: string; detail: string }) {
+function Kpi({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-[0_8px_24px_rgba(17,26,90,0.04)]">
       <p className="text-[12px] font-semibold text-muted">{label}</p>
       <p className="mt-1 font-display text-2xl font-bold text-indigo">{value}</p>
-      <p className="mt-1 text-[11px] text-muted">{detail}</p>
     </div>
   );
 }
