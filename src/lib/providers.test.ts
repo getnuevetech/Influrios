@@ -98,6 +98,27 @@ describe("ai function routing", () => {
     });
     assert.equal(live.mode, "provider");
     if (live.mode === "provider") assert.equal(live.providerCode, "openai");
+    assert.equal(
+      routeAiFunction({
+        functionKey: "profile_topic_classification",
+        providerCode: "openai",
+        providerEnabled: true,
+        hasSecret: true,
+        routeEnabled: false,
+      }).mode,
+      "fallback",
+    );
+  });
+
+  it("keeps a new function off and does not invent a model", () => {
+    const providers = readFileSync("src/lib/providers.ts", "utf8");
+    const runtime = readFileSync("src/lib/ai-runtime.ts", "utf8");
+    const schema = readFileSync("prisma/schema.prisma", "utf8");
+    assert.match(providers, /create: \{ functionKey: fn\.key, enabled: false \}/);
+    assert.equal(providers.includes("update: { providerId: provider?.id ?? null, enabled: true }"), false);
+    assert.match(schema, /model AiFunctionRoute \{[\s\S]*enabled\s+Boolean\s+@default\(false\)/);
+    assert.equal(runtime.includes("gpt-4o-mini"), false);
+    assert.equal(runtime.includes("claude-3-5-haiku-latest"), false);
   });
 
   it("allows only the documented model hosts", () => {

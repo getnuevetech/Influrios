@@ -34,7 +34,11 @@ export async function actionSaveAiProvider(formData: FormData) {
 export async function actionAssignAiFunction(formData: FormData) {
   await requireAdminAction("ai.edit");
   try {
-    await assignAiFunction(clean(formData.get("functionKey")), clean(formData.get("providerId")));
+    await assignAiFunction(
+      clean(formData.get("functionKey")),
+      clean(formData.get("providerId")),
+      formData.get("enabled") === "1",
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not assign the function.";
     redirect(`/admin/ai?error=${encodeURIComponent(message)}`);

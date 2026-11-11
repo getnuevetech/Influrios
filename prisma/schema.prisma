@@ -721,7 +721,7 @@ model AiFunctionRoute {
   functionKey String               @id
   providerId  String?
   provider    IntegrationProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
-  enabled     Boolean              @default(true)
+  enabled     Boolean              @default(false)
   updatedAt   DateTime             @updatedAt
 }
 
