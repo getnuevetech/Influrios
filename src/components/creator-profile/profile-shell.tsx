@@ -73,7 +73,7 @@ export function ProfileFlash({
       {params.error ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <p>{params.error}</p>
-          <p className="mt-1 text-xs">Your profile was kept. You can retry the connection from this page.</p>
+          <p className="mt-1 text-xs">Nothing was retried. Use Retry below when you want to try again.</p>
         </div>
       ) : null}
     </>

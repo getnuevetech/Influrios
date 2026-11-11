@@ -23,6 +23,9 @@ function friendlyProviderError(error: string | undefined, description: string | 
   if (blob.includes("invalid scopes")) {
     return "Meta rejected the requested permissions (Invalid Scopes). For Facebook/Instagram on Login for Business apps, paste a Configuration ID in Admin → Social instead of freeform scopes.";
   }
+  if (blob.includes("invalid_request")) {
+    return "TikTok rejected the login request before it started. Nothing was retried. Use Retry on Social accounts.";
+  }
   if (description?.trim()) return description.trim().slice(0, 300);
   if (error?.trim()) return error.trim().slice(0, 300);
   return undefined;

@@ -40,9 +40,11 @@ function audienceLine(account: SocialAccount) {
 export function SocialConnectionsPanel({
   social,
   flash,
+  manualRetry = false,
 }: {
   social: { creatorId?: string | null; accounts: SocialAccount[] } | null;
   flash?: { social?: string };
+  manualRetry?: boolean;
 }) {
   if (!social) {
     return <p className="text-sm text-muted">Social connection state is unavailable right now.</p>;
@@ -149,7 +151,7 @@ export function SocialConnectionsPanel({
                       </span>
                     </label>
                     <button type="submit" className="btn-primary !py-1.5 text-xs">
-                      Connect {account.name}
+                      {manualRetry ? `Retry ${account.name}` : `Connect ${account.name}`}
                     </button>
                     {account.sandboxClient && account.authorizeRedirect ? (
                       <p className="w-full text-xs leading-relaxed text-indigo">

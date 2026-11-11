@@ -223,10 +223,79 @@ export function tiktokRedirectUri(canonical: string, override?: string | null) {
   const host = savedUrl.hostname.toLowerCase();
   const canonicalHost = canonicalUrl.hostname.toLowerCase();
   const sameSite = host === canonicalHost || host === `www.${canonicalHost}` || canonicalHost === `www.${host}`;
-  if (!sameSite) return slashed;
+  // TikTok's authorize page is not a callback. A saved copy of it must not be sent.
+  if (!sameSite || host.endsWith("tiktok.com") || savedUrl.pathname.includes("/v2/auth/authorize")) return slashed;
   const savedPath = savedUrl.pathname.replace(/\/+$/, "") || "/";
   if (savedPath !== canonicalPath) return `${canonicalUrl.origin}${savedUrl.pathname}`;
   return slashed;
+}
+
+/** True when the decoded redirect_uri is Influrios's callback, not TikTok's authorize page. */
+export function isInfluriosOAuthCallback(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.search || url.hash) return false;
+    const host = url.hostname.toLowerCase();
+    if (!host || host === "tiktok.com" || host.endsWith(".tiktok.com")) return false;
+    if (url.pathname.includes("/v2/auth/authorize")) return false;
+    return url.pathname.replace(/\/+$/, "").endsWith("/api/social/callback");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * First URL the browser should open on TikTok. Built with URL and URLSearchParams
+ * so the query always starts with "?" and each value is encoded once.
+ */
+export function describeTikTokAuthorizeUrl(authorizeUrl: string) {
+  const questionMarks = authorizeUrl.split("?").length - 1;
+  let parsed: URL;
+  try {
+    parsed = new URL(authorizeUrl);
+  } catch {
+    return { ok: false as const, error: "The TikTok authorize URL could not be parsed." };
+  }
+  const redirectUri = parsed.searchParams.get("redirect_uri") ?? "";
+  const missing = ["client_key", "response_type", "scope", "redirect_uri", "state"].filter(
+    (key) => !parsed.searchParams.get(key),
+  );
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.hostname !== "www.tiktok.com" ||
+    parsed.pathname !== "/v2/auth/authorize/" ||
+    questionMarks !== 1 ||
+    !authorizeUrl.includes("?") ||
+    missing.length ||
+    parsed.searchParams.get("response_type") !== "code" ||
+    !isInfluriosOAuthCallback(redirectUri)
+  ) {
+    return {
+      ok: false as const,
+      error: "TikTok authorize URL is incomplete. Influrios did not open TikTok.",
+      redirectUri,
+      missing,
+    };
+  }
+  return { ok: true as const, redirectUri, url: parsed.toString() };
+}
+
+/** One navigation. The repeated TikTok &error=&logid= loop is not produced here. */
+export function providerLaunchDocument(authorizeUrl: string) {
+  const scriptUrl = JSON.stringify(authorizeUrl).replace(/</g, "\\u003c");
+  const href = authorizeUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Continue to the network</title>
+</head>
+<body>
+<p>Influrios opens the network login once and does not retry.</p>
+<p><a href="${href}">Continue</a></p>
+<script>location.replace(${scriptUrl});</script>
+</body>
+</html>`;
 }
 
 /** https callback with no query or hash. A trailing slash is kept when the portal saved one. */
@@ -1263,14 +1332,12 @@ export function buildAuthorizeUrl(input: {
     .filter(Boolean)
     .join(",");
   if (!clientKey || !scopes) return null;
-  // Login Kit for Web (updated 2026-08-04) lists:
-  // client_key, response_type, scope, redirect_uri, state. form-urlencoded, encoded once.
-  return (
-    "https://www.tiktok.com/v2/auth/authorize/" +
-    `?client_key=${encodeURIComponent(clientKey)}` +
-    "&response_type=code" +
-    `&scope=${scopes}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&state=${encodeURIComponent(input.state.trim())}`
-  );
+  // URLSearchParams writes "?" and encodes each value once, including scope commas.
+  const authorize = new URL("https://www.tiktok.com/v2/auth/authorize/");
+  authorize.searchParams.set("client_key", clientKey);
+  authorize.searchParams.set("response_type", "code");
+  authorize.searchParams.set("scope", scopes);
+  authorize.searchParams.set("redirect_uri", redirectUri);
+  authorize.searchParams.set("state", input.state.trim());
+  return authorize.toString();
 }

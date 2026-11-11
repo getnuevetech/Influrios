@@ -4,7 +4,10 @@ import {
   META_GRAPH_VERSION,
   buildAuthorizeUrl,
   createXPkce,
+  describeTikTokAuthorizeUrl,
   exactOAuthRedirect,
+  isInfluriosOAuthCallback,
+  providerLaunchDocument,
   tiktokRedirectUri,
   formatAuthorizeReport,
   reportAuthorizeUrl,
@@ -397,16 +400,25 @@ describe("social provider hosts", () => {
       tiktokQuery: true,
     });
     assert.match(tiktok ?? "", /^https:\/\/www\.tiktok\.com\/v2\/auth\/authorize\/\?/);
-    assert.match(tiktok ?? "", /[?&]scope=user\.info\.basic,user\.info\.stats&/);
+    assert.equal((tiktok ?? "").split("?").length, 2);
+    assert.equal((tiktok ?? "").includes("/authorize/&"), false);
+    assert.match(tiktok ?? "", /[?&]scope=user\.info\.basic%2Cuser\.info\.stats&/);
     assert.match(tiktok ?? "", /[?&]response_type=code&/);
     assert.match(
       tiktok ?? "",
       /redirect_uri=https%3A%2F%2Finflurios\.com%2Fapi%2Fsocial%2Fcallback(&|$)/,
     );
     assert.equal((tiktok ?? "").includes("redirect_uri=https://"), false);
-    assert.equal((tiktok ?? "").includes("scope=user.info.basic%2C"), false);
     const parsed = new URL(tiktok ?? "https://www.tiktok.com/");
     assert.equal(parsed.searchParams.get("redirect_uri"), "https://influrios.com/api/social/callback");
+    const described = describeTikTokAuthorizeUrl(tiktok ?? "");
+    assert.equal(described.ok, true);
+    if (described.ok) assert.equal(described.redirectUri, "https://influrios.com/api/social/callback");
+    const launch = providerLaunchDocument(tiktok ?? "");
+    assert.equal(launch.includes("location.replace"), true);
+    assert.equal(launch.includes("/authorize/&error="), false);
+    assert.equal(describeTikTokAuthorizeUrl("https://www.tiktok.com/v2/auth/authorize/&error=invalid_request").ok, false);
+    assert.equal(isInfluriosOAuthCallback("https://www.tiktok.com/v2/auth/authorize/"), false);
     const slashed = buildAuthorizeUrl({
       authorizeUrl: "https://www.tiktok.com/v2/auth/authorize/",
       authorizeHosts: ["www.tiktok.com"],
@@ -483,7 +495,11 @@ describe("social provider hosts", () => {
       tiktokRedirectUri("https://influrios.com/api/social/callback", "https://influrios.com/oauth/tiktok"),
       "https://influrios.com/oauth/tiktok",
     );
-    assert.match(tiktok ?? "", /response_type=code&scope=user\.info\.basic,user\.info\.stats&redirect_uri=/);
+    assert.equal(
+      tiktokRedirectUri("https://influrios.com/api/social/callback", "https://www.tiktok.com/v2/auth/authorize/"),
+      "https://influrios.com/api/social/callback/",
+    );
+    assert.match(tiktok ?? "", /response_type=code&scope=user\.info\.basic%2Cuser\.info\.stats&redirect_uri=/);
     assert.equal(exactOAuthRedirect("https://influrios.com/api/social/callback/"), "https://influrios.com/api/social/callback/");
     assert.equal(exactOAuthRedirect("https://influrios.com/api/social/callback?next=1"), null);
     const tiktokReport = reportAuthorizeUrl(tiktok ?? "", "client_key");
