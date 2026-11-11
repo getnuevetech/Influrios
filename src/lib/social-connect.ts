@@ -10,6 +10,7 @@ import {
   buildAuthorizeUrl,
   createXPkce,
   exactOAuthRedirect,
+  tiktokRedirectUri,
   formatAuthorizeReport,
   providerAuthorizePreview,
   reportAuthorizeUrl,
@@ -328,8 +329,8 @@ function redirectUri(origin: string) {
 }
 
 function callbackFor(code: string, override: string | null | undefined, origin: string) {
-  if ((code === "tiktok" || code === "x") && override) return override;
-  if (code === "tiktok") return tiktokCallbackUrl(origin);
+  if (code === "tiktok") return tiktokRedirectUri(tiktokCallbackUrl(origin), override);
+  if (code === "x" && override) return override;
   return socialCallbackUrl(origin);
 }
 
@@ -339,9 +340,9 @@ export function socialCallbackUrl(origin?: string | null) {
   return redirectUri(canonicalOAuthOrigin(raw));
 }
 
-/** Login Kit’s documented Web redirect ends with a slash. TikTok compares that exact string. */
+/** The callback route Influrios serves. TikTok compares this string with no extra slash. */
 export function tiktokCallbackUrl(origin?: string | null) {
-  return `${socialCallbackUrl(origin)}/`;
+  return socialCallbackUrl(origin);
 }
 
 export async function socialConnectState(slug: string) {
@@ -356,7 +357,10 @@ export async function socialConnectState(slug: string) {
     const account = creator?.socialAccounts.find((item) => item.platform === network.platform);
     const live = account ? isLiveSocialAccount(account) : false;
     const labels = socialMetricLabels(network.platform);
-    const redirectUri = network.oauthRedirectUri || (network.code === "tiktok" ? tiktokCallbackUrl() : socialCallbackUrl());
+    const redirectUri =
+      network.code === "tiktok"
+        ? tiktokRedirectUri(tiktokCallbackUrl(), network.oauthRedirectUri)
+        : network.oauthRedirectUri || socialCallbackUrl();
     const { clientId, ...safeNetwork } = network;
     return {
       ...safeNetwork,
