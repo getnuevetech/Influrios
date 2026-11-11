@@ -834,6 +834,70 @@ export function encodeSession(session: AdminSession): string {
   return `${payload}.${sig}`;
 }
 
+const ADMIN_SETUP_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Signed link an invited admin uses once to choose a password. */
+export function issueAdminSetupToken(userId: string, permissionVersion: number, now = Date.now()) {
+  const payload = Buffer.from(
+    JSON.stringify({
+      purpose: "admin-setup",
+      userId,
+      permissionVersion,
+      exp: now + ADMIN_SETUP_MS,
+    }),
+  ).toString("base64url");
+  return `${payload}.${signPayload(payload)}`;
+}
+
+export function readAdminSetupToken(
+  token: string | undefined | null,
+  now = Date.now(),
+): { userId: string; permissionVersion: number } | null {
+  if (!token) return null;
+  const [payload, sig] = token.split(".");
+  if (!payload || !sig) return null;
+  const expected = signPayload(payload);
+  try {
+    const left = Buffer.from(sig);
+    const right = Buffer.from(expected);
+    if (left.length !== right.length || !timingSafeEqual(left, right)) return null;
+  } catch {
+    return null;
+  }
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      purpose?: string;
+      userId?: string;
+      permissionVersion?: number;
+      exp?: number;
+    };
+    if (data.purpose !== "admin-setup" || !data.userId || typeof data.permissionVersion !== "number") {
+      return null;
+    }
+    if (!data.exp || now > data.exp) return null;
+    return { userId: data.userId, permissionVersion: data.permissionVersion };
+  } catch {
+    return null;
+  }
+}
+
+export async function completeAdminSetup(token: string, password: string) {
+  const parsed = readAdminSetupToken(token);
+  if (!parsed) throw new Error("This setup link is invalid or expired.");
+  if (password.trim().length < 10) throw new Error("Use at least 10 characters.");
+  const store = await ensureStore();
+  const user = store.users.find((u) => u.id === parsed.userId && u.active);
+  if (!user || user.permissionVersion !== parsed.permissionVersion) {
+    throw new Error("This setup link is invalid or expired.");
+  }
+  const salt = randomBytes(16).toString("hex");
+  user.passwordSalt = salt;
+  user.passwordHash = hashPassword(password, salt);
+  bumpPermissionVersion(user);
+  await saveStore(store);
+  return { id: user.id, email: user.email };
+}
+
 export function decodeSession(token: string | undefined | null): AdminSession | null {
   if (!token) return null;
   const [payload, sig] = token.split(".");

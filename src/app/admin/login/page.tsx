@@ -8,7 +8,7 @@ import { safeNextPath } from "@/lib/account-policy";
 export const metadata = { title: "Admin login" };
 
 type Props = {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; setup?: string }>;
 };
 
 export default async function AdminLoginPage({ searchParams }: Props) {
@@ -27,6 +27,11 @@ export default async function AdminLoginPage({ searchParams }: Props) {
             admins.
           </p>
 
+          {params.setup === "done" ? (
+            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              Password saved. Sign in with your work email.
+            </div>
+          ) : null}
           {params.error ? (
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               {params.error}
