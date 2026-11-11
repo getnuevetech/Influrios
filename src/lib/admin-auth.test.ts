@@ -6,6 +6,8 @@ import {
   cookieIsSecure,
   decodeSession,
   encodeSession,
+  issueAdminSetupToken,
+  readAdminSetupToken,
   hasPermission,
   resolveAdminSession,
   type AdminAuthStore,
@@ -88,6 +90,18 @@ describe("admin session cookie", () => {
     const token = encodeSession(sampleSession());
     const [payload] = token.split(".");
     assert.equal(decodeSession(`${payload}.not-a-real-signature`), null);
+  });
+
+  it("issues a one-time admin setup link that expires and rejects tampering", () => {
+    const now = Date.parse("2026-11-10T00:00:00Z");
+    const token = issueAdminSetupToken("user_new", 1, now);
+    assert.deepEqual(readAdminSetupToken(token, now + 1000), {
+      userId: "user_new",
+      permissionVersion: 1,
+    });
+    assert.equal(readAdminSetupToken(token, now + 8 * 24 * 60 * 60 * 1000), null);
+    const [payload] = token.split(".");
+    assert.equal(readAdminSetupToken(`${payload}.tampered`, now), null);
   });
 });
 

@@ -12,14 +12,18 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin Users · Admin" };
 
 type Props = {
-  searchParams: Promise<{ error?: string; created?: string; updated?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    created?: string;
+    updated?: string;
+    setup?: string;
+    q?: string;
+    status?: string;
+    role?: string;
+    manage?: string;
+    invite?: string;
+  }>;
 };
-
-function daysAgo(n: number) {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() - n);
-  return d;
-}
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   const session = await getAdminSession();
@@ -53,40 +57,6 @@ export default async function AdminUsersPage({ searchParams }: Props) {
     system: Boolean(r.system),
   }));
 
-  const since = daysAgo(14);
-  const loginEvents = await prisma.auditLog
-    .findMany({
-      where: { action: "admin.login", createdAt: { gte: since } },
-      select: { createdAt: true },
-      orderBy: { createdAt: "asc" },
-      take: 500,
-    })
-    .catch(() => []);
-
-  const dayKeys: string[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = daysAgo(i);
-    dayKeys.push(d.toISOString().slice(0, 10));
-  }
-  const byDay = new Map(dayKeys.map((k) => [k, 0]));
-  for (const ev of loginEvents) {
-    const key = ev.createdAt.toISOString().slice(0, 10);
-    if (byDay.has(key)) byDay.set(key, (byDay.get(key) ?? 0) + 1);
-  }
-  const loginSeries = dayKeys.map((k) => byDay.get(k) ?? 0);
-  const loginTotal = loginSeries.reduce((s, n) => s + n, 0);
-  const prevKeys: string[] = [];
-  for (let i = 13; i >= 7; i--) prevKeys.push(daysAgo(i).toISOString().slice(0, 10));
-  const prevTotal = loginEvents.filter((ev) =>
-    prevKeys.includes(ev.createdAt.toISOString().slice(0, 10)),
-  ).length;
-  const loginTrendPct =
-    prevTotal <= 0 && loginTotal <= 0
-      ? null
-      : prevTotal <= 0
-        ? 100
-        : Math.round(((loginTotal - prevTotal) / prevTotal) * 1000) / 10;
-
   const activityRows = await prisma.auditLog
     .findMany({
       where: {
@@ -97,7 +67,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
       },
       orderBy: { createdAt: "desc" },
       take: 10,
-      select: { id: true, action: true, actor: true, after: true, createdAt: true },
+      select: { id: true, action: true, actor: true, objectId: true, createdAt: true },
     })
     .catch(() => []);
 
@@ -105,18 +75,26 @@ export default async function AdminUsersPage({ searchParams }: Props) {
     id: row.id,
     title: `${row.action.replace(/\./g, " · ")} · ${row.actor}`,
     at: row.createdAt.toISOString(),
+    actor: row.actor,
+    objectId: row.objectId || "",
   }));
+  const status = params.status === "active" || params.status === "suspended" ? params.status : "all";
 
   return (
     <AdminUsersView
       users={users}
       roles={roles}
       canManage={canManage}
-      loginSeries={loginSeries}
-      loginTotal={loginTotal}
-      loginTrendPct={loginTrendPct}
       activity={activity}
-      flash={{ error: params.error, created: params.created, updated: params.updated }}
+      filters={{ q: params.q || "", status, role: params.role || "all" }}
+      manageId={params.manage || null}
+      inviteOpen={params.invite === "1"}
+      flash={{
+        error: params.error,
+        created: params.created,
+        updated: params.updated,
+        setup: params.setup,
+      }}
     />
   );
 }
