@@ -465,12 +465,23 @@ describe("social provider hosts", () => {
     assert.equal(formatAuthorizeReport(xReport).includes("clientidvalue123456"), false);
     assert.equal(
       tiktokRedirectUri("https://influrios.com/api/social/callback", "https://influrios.com/api/social/callback/"),
-      "https://influrios.com/api/social/callback",
+      "https://influrios.com/api/social/callback/",
     );
-    assert.equal(tiktokRedirectUri("https://influrios.com/api/social/callback", ""), "https://influrios.com/api/social/callback");
+    assert.equal(
+      tiktokRedirectUri("https://influrios.com/api/social/callback", ""),
+      "https://influrios.com/api/social/callback/",
+    );
+    assert.equal(
+      tiktokRedirectUri("https://influrios.com/api/social/callback", "https://www.influrios.com/api/social/callback"),
+      "https://influrios.com/api/social/callback/",
+    );
     assert.equal(
       tiktokRedirectUri("https://influrios.com/api/social/callback", "https://example.com/oauth/callback"),
-      "https://example.com/oauth/callback",
+      "https://influrios.com/api/social/callback/",
+    );
+    assert.equal(
+      tiktokRedirectUri("https://influrios.com/api/social/callback", "https://influrios.com/oauth/tiktok"),
+      "https://influrios.com/oauth/tiktok",
     );
     assert.match(tiktok ?? "", /response_type=code&scope=user\.info\.basic,user\.info\.stats&redirect_uri=/);
     assert.equal(exactOAuthRedirect("https://influrios.com/api/social/callback/"), "https://influrios.com/api/social/callback/");

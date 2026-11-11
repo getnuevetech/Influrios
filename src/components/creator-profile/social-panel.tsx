@@ -154,7 +154,7 @@ export function SocialConnectionsPanel({
                     {account.sandboxClient && account.authorizeRedirect ? (
                       <p className="w-full text-xs leading-relaxed text-indigo">
                         This client key is a TikTok sandbox key. In the sandbox, open Login Kit → Web and register this URL
-                        with no trailing slash. Add the TikTok account as a target user:{" "}
+                        exactly, including the trailing slash. Add the TikTok account as a target user:{" "}
                         <code className="font-semibold">{account.authorizeRedirect}</code>
                       </p>
                     ) : null}
