@@ -277,13 +277,21 @@ export function describeTikTokAuthorizeUrl(authorizeUrl: string) {
       missing,
     };
   }
-  return { ok: true as const, redirectUri, url: parsed.toString() };
+  // Keep the original string. URL#toString encodes scope commas as %2C, and TikTok then reports redirect_uri.
+  return { ok: true as const, redirectUri, url: authorizeUrl };
 }
 
 /** One navigation. The repeated TikTok &error=&logid= loop is not produced here. */
 export function providerLaunchDocument(authorizeUrl: string) {
   const scriptUrl = JSON.stringify(authorizeUrl).replace(/</g, "\\u003c");
   const href = authorizeUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  let callback = "";
+  try {
+    callback = new URL(authorizeUrl).searchParams.get("redirect_uri") ?? "";
+  } catch {
+    callback = "";
+  }
+  const callbackText = callback.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -292,6 +300,7 @@ export function providerLaunchDocument(authorizeUrl: string) {
 </head>
 <body>
 <p>Influrios opens the network login once and does not retry.</p>
+${callbackText ? `<p>Callback: ${callbackText}</p>` : ""}
 <p><a href="${href}">Continue</a></p>
 <script>location.replace(${scriptUrl});</script>
 </body>
@@ -1339,5 +1348,8 @@ export function buildAuthorizeUrl(input: {
   authorize.searchParams.set("scope", scopes);
   authorize.searchParams.set("redirect_uri", redirectUri);
   authorize.searchParams.set("state", input.state.trim());
-  return authorize.toString();
+  // Scope commas must stay commas. %2C makes TikTok report the request as a bad redirect_uri.
+  return authorize.toString().replace(/([?&]scope=)([^&]*)/i, (_, prefix: string, value: string) => {
+    return prefix + value.replace(/%2C/gi, ",");
+  });
 }
