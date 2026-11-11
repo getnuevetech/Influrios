@@ -52,6 +52,20 @@ describe("AI provider functions", () => {
     assert.deepEqual(draft.specialties, ["beauty"]);
   });
 
+  it("stays on the rules result when the route has no model", async () => {
+    let called = false;
+    const explanation = await explainCollaborationMatch([{ label: "Niche", value: 80 }], {
+      route: { ...route, model: "  " },
+      fetchImpl: async () => {
+        called = true;
+        return new Response("should not be called", { status: 500 });
+      },
+    });
+    assert.equal(called, false);
+    assert.equal(explanation.source, "rules");
+    assert.match(explanation.explanation, /Strongest signal: Niche/);
+  });
+
   it("returns the rules result and records a failed provider job when the call fails", async () => {
     const failures: string[] = [];
     setAiFailureRecorderForTests(async (functionKey, message) => {

@@ -61,6 +61,11 @@ export default async function AdminAiPage({ searchParams }: Props) {
                 ))}
               </select>
             </label>
+            <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-indigo">
+              <input type="checkbox" name="enabled" value="1" defaultChecked={fn.enabled} disabled={!canEdit} />
+              Feature on
+            </label>
+            <p className="mt-1 text-xs text-muted">Saving a provider does not turn this function on. A blank model stays on the deterministic fallback.</p>
             {canEdit ? <button type="submit" className="btn-primary mt-3 w-fit">Save assignment</button> : null}
           </form>
         ))}
@@ -112,7 +117,7 @@ export default async function AdminAiPage({ searchParams }: Props) {
             </label>
             <label className="block text-sm font-semibold text-indigo">
               Model
-              <input name="model" placeholder="gpt-4o-mini" className={inputClass} />
+              <input name="model" placeholder="Model id from the provider" className={inputClass} />
             </label>
             <label className="block text-sm font-semibold text-indigo sm:col-span-2">
               API secret

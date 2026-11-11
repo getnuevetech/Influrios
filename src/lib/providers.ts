@@ -402,7 +402,7 @@ async function seedIntegrationCatalog() {
     await prisma.aiFunctionRoute.upsert({
       where: { functionKey: fn.key },
       update: {},
-      create: { functionKey: fn.key, enabled: true },
+      create: { functionKey: fn.key, enabled: false },
     });
   }
 }
@@ -797,11 +797,11 @@ export async function aiFunctionRoutes() {
       hasSecret: Boolean(route?.provider?.secretCipher),
       routeEnabled: route?.enabled,
     });
-    return { ...fn, providerId: route?.providerId ?? "", decision };
+    return { ...fn, providerId: route?.providerId ?? "", enabled: route?.enabled ?? false, decision };
   });
 }
 
-export async function assignAiFunction(functionKey: string, providerId: string) {
+export async function assignAiFunction(functionKey: string, providerId: string, enabled = false) {
   if (!AI_FUNCTIONS.some((fn) => fn.key === functionKey)) throw new Error("Unknown AI function.");
   const provider = providerId
     ? await prisma.integrationProvider.findFirst({ where: { id: providerId, kind: "ai" } })
@@ -809,8 +809,8 @@ export async function assignAiFunction(functionKey: string, providerId: string) 
   if (providerId && !provider) throw new Error("Choose an AI provider.");
   return prisma.aiFunctionRoute.upsert({
     where: { functionKey },
-    update: { providerId: provider?.id ?? null, enabled: true },
-    create: { functionKey, providerId: provider?.id ?? null, enabled: true },
+    update: { providerId: provider?.id ?? null, enabled },
+    create: { functionKey, providerId: provider?.id ?? null, enabled },
   });
 }
 

@@ -83,6 +83,8 @@ async function postChat(input: {
   prompt: string;
   fetchImpl?: typeof fetch;
 }) {
+  const model = input.model.trim();
+  if (!model) throw new Error("No model is assigned.");
   const fetchImpl = input.fetchImpl ?? fetch;
   const host = new URL(input.endpoint).hostname;
   const init: RequestInit =
@@ -95,7 +97,7 @@ async function postChat(input: {
             "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: input.model || "claude-3-5-haiku-latest",
+            model,
             max_tokens: 400,
             messages: [{ role: "user", content: input.prompt }],
           }),
@@ -104,7 +106,7 @@ async function postChat(input: {
           method: "POST",
           headers: { "content-type": "application/json", authorization: `Bearer ${input.secret}` },
           body: JSON.stringify({
-            model: input.model || "gpt-4o-mini",
+            model,
             messages: [{ role: "user", content: input.prompt }],
           }),
         };
@@ -174,8 +176,9 @@ export async function classifyProfileTopics(text: string): Promise<{
     route.provider.extraJson &&
     "model" in route.provider.extraJson &&
     typeof (route.provider.extraJson as { model?: string }).model === "string"
-      ? (route.provider.extraJson as { model: string }).model
+      ? (route.provider.extraJson as { model: string }).model.trim()
       : "";
+  if (!model) return { suggestions: fallback, source: "fallback" };
   const prompt = `Suggest up to 3 specialty slugs from this list only: ${[...allowed].join(", ")}. Profile:\n${text.slice(0, 1200)}\nReply with JSON {"slugs":[]} only.`;
   const host = new URL(endpoint).hostname;
   const init: RequestInit =
@@ -188,7 +191,7 @@ export async function classifyProfileTopics(text: string): Promise<{
             "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: model || "claude-3-5-haiku-latest",
+            model,
             max_tokens: 200,
             messages: [{ role: "user", content: prompt }],
           }),
@@ -197,7 +200,7 @@ export async function classifyProfileTopics(text: string): Promise<{
           method: "POST",
           headers: { "content-type": "application/json", authorization: `Bearer ${secret}` },
           body: JSON.stringify({
-            model: model || "gpt-4o-mini",
+            model,
             messages: [{ role: "user", content: prompt }],
           }),
         };
@@ -246,7 +249,9 @@ export function emptyProfileDraft() {
 
 async function providerJson(functionKey: string, prompt: string, options?: { fetchImpl?: typeof fetch; route?: AiRouteOverride | null }) {
   const route = await resolveAiRoute(functionKey, options?.route);
-  if (!route) return { ok: false as const, unassigned: options?.route !== undefined ? options.route === null : true };
+  if (!route || !route.model?.trim()) {
+    return { ok: false as const, unassigned: options?.route !== undefined ? options.route === null || !options.route.model?.trim() : true };
+  }
   try {
     const raw = await postChat({ ...route, model: route.model ?? "", prompt, fetchImpl: options?.fetchImpl });
     const json = jsonFromAssistant(raw);
