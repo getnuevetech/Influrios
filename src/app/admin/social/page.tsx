@@ -53,9 +53,12 @@ export default async function AdminSocialPage({ searchParams }: Props) {
         OAuth redirect path: <span className="font-semibold text-indigo">{callbackPath()}</span>
       </p>
       <p className="mt-1 text-sm text-muted">
-        Paste this <span className="font-semibold text-indigo">exact</span> URL into Google / Meta / TikTok authorized
+        Paste this <span className="font-semibold text-indigo">exact</span> URL into Google and Meta authorized
         redirect URIs (https, no trailing slash):{" "}
         <code className="rounded bg-[#F1ECFF] px-1.5 py-0.5 text-xs font-semibold text-violet">{callbackAbsoluteUrl()}</code>
+        . TikTok Login Kit uses{" "}
+        <code className="rounded bg-[#F1ECFF] px-1.5 py-0.5 text-xs font-semibold text-violet">{tiktokCallbackUrl()}</code>{" "}
+        with the trailing slash.
       </p>
       <p className="mt-2 text-sm text-muted">
         Meta webhook path: <span className="font-semibold text-indigo">{metaWebhookPath()}</span>
@@ -382,8 +385,10 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                   autoComplete="off"
                 />
                 <span className="mt-1 block text-xs font-normal text-muted">
-                  Leave blank to send {network.code === "tiktok" ? tiktokRedirectUri(tiktokCallbackUrl(), "") : callbackAbsoluteUrl()}. Paste
-                  the portal value when it differs. No query, hash, or extra slash.
+                  Leave blank to send {network.code === "tiktok" ? tiktokRedirectUri(tiktokCallbackUrl(), "") : callbackAbsoluteUrl()}.
+                  {network.code === "tiktok"
+                    ? " TikTok is sent that URL with the trailing slash. A saved www host or a missing slash does not change it."
+                    : " Paste the portal value when it differs. No query or hash."}
                 </span>
               </label>
             ) : null}
@@ -416,14 +421,14 @@ export default async function AdminSocialPage({ searchParams }: Props) {
                 {network.clientId.startsWith("sbaw") ? (
                   <>
                     . This client key starts with <code className="text-[11px]">sbaw</code>, so it is the sandbox key.
-                    Register that exact URL on the sandbox Login Kit, with no trailing slash, and add the TikTok account
-                    as a target user. The production key starts with <code className="text-[11px]">aw</code> and does
-                    not share the sandbox redirect list.
+                    Register that exact URL, including the trailing slash, on the sandbox Login Kit, and add the TikTok
+                    account as a target user. The production key starts with <code className="text-[11px]">aw</code> and
+                    does not share the sandbox redirect list.
                   </>
                 ) : (
                   <>
-                    . Register that exact URL under Login Kit → Web, with no trailing slash. The website URL field is a
-                    different setting.
+                    . Register that exact URL under Login Kit → Web, including the trailing slash. The website URL field
+                    is a different setting.
                   </>
                 )}{" "}
                 A TikTok page that lists <span className="font-semibold">redirect_uri</span> means that list does not

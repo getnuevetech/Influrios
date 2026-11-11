@@ -196,14 +196,37 @@ export const INSTAGRAM_WEAK_SCOPES = new Set([
 ]);
 
 /**
- * TikTok redirect Influrios actually serves.
- * A saved copy of that URL with only an extra trailing slash is the same callback.
- * A different https path is kept, because that is the portal value.
+ * Decoded TikTok redirect_uri.
+ * Login Kit Web (August 4, 2026) registers the callback with a trailing slash.
+ * The no-slash form is the same path and is sent with the slash.
+ * www is rewritten to the canonical host. Any other host is dropped so an old
+ * deployment URL cannot be sent. A different path on this site is kept as saved.
  */
 export function tiktokRedirectUri(canonical: string, override?: string | null) {
+  const base = exactOAuthRedirect(canonical) ?? canonical.trim().replace(/\/$/, "");
+  let canonicalUrl: URL;
+  try {
+    canonicalUrl = new URL(base);
+  } catch {
+    return base.endsWith("/") ? base : `${base}/`;
+  }
+  const canonicalPath = canonicalUrl.pathname.replace(/\/+$/, "") || "/";
+  const slashed = `${canonicalUrl.origin}${canonicalPath}/`;
   const saved = exactOAuthRedirect(override ?? "") ?? "";
-  if (!saved || saved === canonical || saved === `${canonical}/`) return canonical;
-  return saved;
+  if (!saved) return slashed;
+  let savedUrl: URL;
+  try {
+    savedUrl = new URL(saved);
+  } catch {
+    return slashed;
+  }
+  const host = savedUrl.hostname.toLowerCase();
+  const canonicalHost = canonicalUrl.hostname.toLowerCase();
+  const sameSite = host === canonicalHost || host === `www.${canonicalHost}` || canonicalHost === `www.${host}`;
+  if (!sameSite) return slashed;
+  const savedPath = savedUrl.pathname.replace(/\/+$/, "") || "/";
+  if (savedPath !== canonicalPath) return `${canonicalUrl.origin}${savedUrl.pathname}`;
+  return slashed;
 }
 
 /** https callback with no query or hash. A trailing slash is kept when the portal saved one. */

@@ -340,9 +340,9 @@ export function socialCallbackUrl(origin?: string | null) {
   return redirectUri(canonicalOAuthOrigin(raw));
 }
 
-/** The callback route Influrios serves. TikTok compares this string with no extra slash. */
+/** Decoded TikTok redirect_uri. Login Kit Web keeps the trailing slash. */
 export function tiktokCallbackUrl(origin?: string | null) {
-  return socialCallbackUrl(origin);
+  return tiktokRedirectUri(socialCallbackUrl(origin), "");
 }
 
 export async function socialConnectState(slug: string) {
