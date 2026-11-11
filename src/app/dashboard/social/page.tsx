@@ -22,7 +22,7 @@ export default async function ProfileSocialPage({ searchParams }: Props) {
       kycVerified={kycVerified}
       flash={<ProfileFlash params={params} />}
     >
-      <SocialConnectionsPanel social={social} />
+      <SocialConnectionsPanel social={social} manualRetry={Boolean(params.error)} />
     </CreatorProfileShell>
   );
 }
