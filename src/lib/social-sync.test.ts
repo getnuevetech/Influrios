@@ -5,6 +5,7 @@ import {
   buildAuthorizeUrl,
   createXPkce,
   exactOAuthRedirect,
+  tiktokRedirectUri,
   formatAuthorizeReport,
   reportAuthorizeUrl,
   interpretSocialProfile,
@@ -462,6 +463,16 @@ describe("social provider hosts", () => {
     assert.equal(xReport.clientIdPrefix, "clie");
     assert.equal(xReport.clientIdLength, "clientidvalue123456".length);
     assert.equal(formatAuthorizeReport(xReport).includes("clientidvalue123456"), false);
+    assert.equal(
+      tiktokRedirectUri("https://influrios.com/api/social/callback", "https://influrios.com/api/social/callback/"),
+      "https://influrios.com/api/social/callback",
+    );
+    assert.equal(tiktokRedirectUri("https://influrios.com/api/social/callback", ""), "https://influrios.com/api/social/callback");
+    assert.equal(
+      tiktokRedirectUri("https://influrios.com/api/social/callback", "https://example.com/oauth/callback"),
+      "https://example.com/oauth/callback",
+    );
+    assert.match(tiktok ?? "", /response_type=code&scope=user\.info\.basic,user\.info\.stats&redirect_uri=/);
     assert.equal(exactOAuthRedirect("https://influrios.com/api/social/callback/"), "https://influrios.com/api/social/callback/");
     assert.equal(exactOAuthRedirect("https://influrios.com/api/social/callback?next=1"), null);
     const tiktokReport = reportAuthorizeUrl(tiktok ?? "", "client_key");

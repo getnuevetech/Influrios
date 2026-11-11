@@ -195,6 +195,17 @@ export const INSTAGRAM_WEAK_SCOPES = new Set([
   "instagram_basic,pages_show_list,pages_read_engagement",
 ]);
 
+/**
+ * TikTok redirect Influrios actually serves.
+ * A saved copy of that URL with only an extra trailing slash is the same callback.
+ * A different https path is kept, because that is the portal value.
+ */
+export function tiktokRedirectUri(canonical: string, override?: string | null) {
+  const saved = exactOAuthRedirect(override ?? "") ?? "";
+  if (!saved || saved === canonical || saved === `${canonical}/`) return canonical;
+  return saved;
+}
+
 /** https callback with no query or hash. A trailing slash is kept when the portal saved one. */
 export function exactOAuthRedirect(value: string): string | null {
   const trimmed = value.trim();
@@ -1229,13 +1240,13 @@ export function buildAuthorizeUrl(input: {
     .filter(Boolean)
     .join(",");
   if (!clientKey || !scopes) return null;
-  // Order and encoding follow Login Kit for Web (updated 2026-08-04):
-  // client_key, scope, response_type, redirect_uri, state. form-urlencoded.
+  // Login Kit for Web (updated 2026-08-04) lists:
+  // client_key, response_type, scope, redirect_uri, state. form-urlencoded, encoded once.
   return (
     "https://www.tiktok.com/v2/auth/authorize/" +
     `?client_key=${encodeURIComponent(clientKey)}` +
-    `&scope=${scopes}` +
     "&response_type=code" +
+    `&scope=${scopes}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&state=${encodeURIComponent(input.state.trim())}`
   );
