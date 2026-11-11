@@ -25,6 +25,38 @@ export function milestoneWorkLabel(status: string) {
   return status.replaceAll("_", " ");
 }
 
+/** Delivery column. Payout confirmation is a separate label. */
+export function milestoneDeliveryLabel(status: string) {
+  if (status === "pending") return "Open";
+  if (status === "submitted") return "In review";
+  if (status === "refunded") return "Refunded";
+  if (
+    status === "approved" ||
+    status === "released" ||
+    status === "release_scheduled" ||
+    status === "release_requested" ||
+    status === "payout_failed"
+  ) {
+    return "Approved";
+  }
+  return status.replaceAll("_", " ");
+}
+
+/** Payout column from the milestone record. Balances stay on the ledger. */
+export function milestonePayoutLabel(status: string) {
+  if (status === "released") return "Paid";
+  if (status === "refunded") return "Refunded";
+  if (
+    status === "approved" ||
+    status === "release_scheduled" ||
+    status === "release_requested" ||
+    status === "payout_failed"
+  ) {
+    return "Pending confirmation";
+  }
+  return "Not initiated";
+}
+
 export function submissionIsComplete(input: { note: string; linkUrl: string; fileCount?: number }) {
   const note = input.note.trim();
   const linkUrl = input.linkUrl.trim();

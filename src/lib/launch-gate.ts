@@ -40,6 +40,8 @@ export async function getLaunchGate(): Promise<LaunchGateRecord> {
     automaticMilestoneApprovalEnabled: row.automaticMilestoneApprovalEnabled,
     automaticProviderSwitchingEnabled: row.automaticProviderSwitchingEnabled,
     allInBudgetEntryEnabled: row.allInBudgetEntryEnabled,
+    automaticReleaseApprovalEnabled: row.automaticReleaseApprovalEnabled,
+    automaticProviderReleaseEnabled: row.automaticProviderReleaseEnabled,
     providerTraceReady: row.providerTraceReady,
     payoutTrace: readTrace(row.payoutTraceJson),
     refundTrace: readTrace(row.refundTraceJson),
@@ -107,8 +109,43 @@ export async function saveDeferredFundingSwitches(input: {
         automaticProviderSwitchingEnabled:
           "automaticProviderSwitchingEnabled" in before ? before.automaticProviderSwitchingEnabled : false,
         allInBudgetEntryEnabled: "allInBudgetEntryEnabled" in before ? before.allInBudgetEntryEnabled : false,
+        automaticReleaseApprovalEnabled:
+          "automaticReleaseApprovalEnabled" in before ? before.automaticReleaseApprovalEnabled : false,
+        automaticProviderReleaseEnabled:
+          "automaticProviderReleaseEnabled" in before ? before.automaticProviderReleaseEnabled : false,
       },
       after: { ...input.switches, reason },
+    },
+  });
+}
+
+export async function saveReleaseAutomation(input: {
+  actor: string;
+  automaticReleaseApprovalEnabled: boolean;
+  automaticProviderReleaseEnabled: boolean;
+}) {
+  const before = await getLaunchGate();
+  await prisma.collaborationLaunchGate.update({
+    where: { id: GATE_ID },
+    data: {
+      automaticReleaseApprovalEnabled: input.automaticReleaseApprovalEnabled,
+      automaticProviderReleaseEnabled: input.automaticProviderReleaseEnabled,
+    },
+  });
+  await prisma.auditLog.create({
+    data: {
+      actor: input.actor.slice(0, 120),
+      action: "launch_gate.release_automation",
+      objectType: "CollaborationLaunchGate",
+      objectId: GATE_ID,
+      before: {
+        automaticReleaseApprovalEnabled: before.automaticReleaseApprovalEnabled,
+        automaticProviderReleaseEnabled: before.automaticProviderReleaseEnabled,
+      },
+      after: {
+        automaticReleaseApprovalEnabled: input.automaticReleaseApprovalEnabled,
+        automaticProviderReleaseEnabled: input.automaticProviderReleaseEnabled,
+      },
     },
   });
 }

@@ -1835,6 +1835,10 @@ model CollaborationLaunchGate {
   automaticMilestoneApprovalEnabled    Boolean @default(false)
   automaticProviderSwitchingEnabled    Boolean @default(false)
   allInBudgetEntryEnabled              Boolean @default(false)
+  /// When on, an approved milestone is authorized for payout without an admin push approval.
+  automaticReleaseApprovalEnabled      Boolean @default(false)
+  /// When on, the release sweep sends the payout instruction to the provider.
+  automaticProviderReleaseEnabled      Boolean @default(false)
   updatedAt                   DateTime @updatedAt
 }
 
@@ -2060,6 +2064,8 @@ model FundingMilestone {
   deliverableDueAt  DateTime?
   /// Dev §8 / §16 — set when release is authorized; sweep queues provider release when due.
   releaseScheduledAt DateTime?
+  /// Set when an admin, or automatic release approval, authorizes the provider push.
+  releaseApprovedAt  DateTime?
   /// Dev §16 — set when provider reports payout.failed; cleared on successful release or retry reset.
   payoutFailedAt    DateTime?
   payoutRetryCount  Int                  @default(0)

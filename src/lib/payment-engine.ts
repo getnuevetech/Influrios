@@ -28,6 +28,8 @@ export type DeferredFundingSwitches = {
   automaticMilestoneApprovalEnabled: boolean;
   automaticProviderSwitchingEnabled: boolean;
   allInBudgetEntryEnabled: boolean;
+  automaticReleaseApprovalEnabled: boolean;
+  automaticProviderReleaseEnabled: boolean;
 };
 
 export const DEFAULT_DEFERRED_FUNDING: DeferredFundingSwitches = {
@@ -37,6 +39,8 @@ export const DEFAULT_DEFERRED_FUNDING: DeferredFundingSwitches = {
   automaticMilestoneApprovalEnabled: false,
   automaticProviderSwitchingEnabled: false,
   allInBudgetEntryEnabled: false,
+  automaticReleaseApprovalEnabled: false,
+  automaticProviderReleaseEnabled: false,
 };
 
 export type TaxLineType = "business_fee_tax" | "influencer_fee_tax" | "withholding" | "other";

@@ -70,6 +70,8 @@ export async function actionSaveDeferredFunding(formData: FormData) {
         automaticMilestoneApprovalEnabled: formData.get("automaticMilestoneApprovalEnabled") === "on",
         automaticProviderSwitchingEnabled: formData.get("automaticProviderSwitchingEnabled") === "on",
         allInBudgetEntryEnabled: formData.get("allInBudgetEntryEnabled") === "on",
+        automaticReleaseApprovalEnabled: formData.get("automaticReleaseApprovalEnabled") === "on",
+        automaticProviderReleaseEnabled: formData.get("automaticProviderReleaseEnabled") === "on",
       },
     });
   } catch (error) {

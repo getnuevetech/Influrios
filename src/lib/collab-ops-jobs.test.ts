@@ -7,6 +7,7 @@ import {
   shouldFlagStaleFundingIntent,
   shouldFlagLedgerMismatch,
   canScheduleMilestoneRelease,
+  releasePushAuthorized,
   shouldRequestScheduledRelease,
   isReleaseReadyMilestoneStatus,
   DEFAULT_DISPUTE_SLA_HOURS,
@@ -223,6 +224,18 @@ describe("scheduled release (Dev §8 / §16)", () => {
         disputeOpen: true,
       }).ok,
       false,
+    );
+  });
+
+  it("authorizes a provider push from the switch or a recorded approval", () => {
+    assert.equal(releasePushAuthorized({ automaticReleaseApproval: true, releaseApprovedAt: null }), true);
+    assert.equal(releasePushAuthorized({ automaticReleaseApproval: false, releaseApprovedAt: null }), false);
+    assert.equal(
+      releasePushAuthorized({
+        automaticReleaseApproval: false,
+        releaseApprovedAt: "2026-11-11T12:00:00.000Z",
+      }),
+      true,
     );
   });
 

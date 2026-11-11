@@ -25,8 +25,8 @@ import {
 import { setProductSwitch } from "@/lib/product-switches";
 import { wiseRateCheckDraft } from "@/lib/fx-share";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
-import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep, enqueueScheduledReleaseSweep } from "@/lib/jobs";
-import { scheduleMilestoneRelease } from "@/lib/marketplace-ledger";
+import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep, enqueueScheduledReleaseSweep, pushScheduledRelease } from "@/lib/jobs";
+import { getLaunchGate, saveReleaseAutomation } from "@/lib/launch-gate";
 import { confirmManualDeposit, readManualDepositInstructions, saveManualDepositInstructions } from "@/lib/funding-checkout";
 
 function flag(formData: FormData, name: string) {
@@ -554,31 +554,55 @@ export async function actionEnqueueScheduledReleaseSweep() {
   redirect("/admin/marketplace?saved=scheduled_release");
 }
 
-export async function actionScheduleMilestoneRelease(formData: FormData) {
-  await requireAdminAction("marketplace.manage");
-  const pick = String(formData.get("milestonePick") ?? "").trim();
-  const [fundingId, milestoneId] = pick.split("::");
-  const delayHoursRaw = String(formData.get("delayHours") ?? "0").trim();
-  const delayHours = Number(delayHoursRaw);
-  if (!fundingId || !milestoneId) {
-    redirect("/admin/marketplace?error=" + encodeURIComponent("Choose funding and milestone."));
-  }
-  if (!Number.isFinite(delayHours) || delayHours < 0 || delayHours > 720) {
-    redirect("/admin/marketplace?error=" + encodeURIComponent("Delay hours must be 0–720."));
-  }
-  const releaseAt = new Date(Date.now() + delayHours * 60 * 60 * 1000);
-  const result = await scheduleMilestoneRelease({
-    fundingId,
-    milestoneId,
-    releaseAt,
-    actor: "admin",
+export async function actionSaveReleaseAutomation(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  await saveReleaseAutomation({
+    actor: session.email,
+    automaticReleaseApprovalEnabled: formData.get("automaticReleaseApprovalEnabled") === "on",
+    automaticProviderReleaseEnabled: formData.get("automaticProviderReleaseEnabled") === "on",
   });
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/marketplace?saved=release_automation");
+}
+
+export async function actionApproveReleasePush(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  const milestoneId = String(formData.get("milestoneId") ?? "").trim();
+  const updated = await prisma.fundingMilestone.updateMany({
+    where: { id: milestoneId, status: "release_scheduled", releaseApprovedAt: null },
+    data: { releaseApprovedAt: new Date() },
+  });
+  if (updated.count !== 1) {
+    redirect("/admin/marketplace?error=" + encodeURIComponent("That payout is not waiting for approval."));
+  }
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: session.email,
+        action: "milestone_release_approved",
+        objectType: "FundingMilestone",
+        objectId: milestoneId,
+      },
+    })
+    .catch(() => undefined);
+  const gate = await getLaunchGate().catch(() => null);
+  if (gate?.automaticProviderReleaseEnabled) await enqueueScheduledReleaseSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=release_approved");
+}
+
+export async function actionPushProviderRelease(formData: FormData) {
+  await requireAdminAction("marketplace.manage");
+  const milestoneId = String(formData.get("milestoneId") ?? "").trim();
+  const result = await pushScheduledRelease(milestoneId);
   if (!result.ok) {
     redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
   }
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin/jobs");
-  redirect("/admin/marketplace?saved=release_scheduled");
+  redirect("/admin/marketplace?saved=provider_release");
 }
 
 /** Catalog options — admin-managed collaboration type / timeframe picks used on Campaign Intent. */
