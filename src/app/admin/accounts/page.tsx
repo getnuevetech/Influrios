@@ -28,6 +28,8 @@ type Search = {
   plan?: string;
   kyc?: string;
   page?: string;
+  view?: string;
+  mode?: string;
   edit?: string;
   saved?: string;
   error?: string;
@@ -96,11 +98,12 @@ export default async function AdminAccountsPage({
     }),
   ]);
 
-  let selectedRow = params.edit
-    ? table.rows.find((r) => r.id === params.edit) || (await loadAccountById(params.edit))
+  const focusId = params.view || params.edit || "";
+  let selectedRow = focusId
+    ? table.rows.find((r) => r.id === focusId) || (await loadAccountById(focusId))
     : null;
-  if (selectedRow && params.edit && selectedRow.id !== params.edit) {
-    selectedRow = await loadAccountById(params.edit);
+  if (selectedRow && focusId && selectedRow.id !== focusId) {
+    selectedRow = await loadAccountById(focusId);
   }
 
   const detail = selectedRow ? await loadAccountDetailExtras(selectedRow.id) : null;
@@ -128,6 +131,7 @@ export default async function AdminAccountsPage({
       planOptions={planOptions}
       roleOptions={roleOptions}
       canEdit={canEdit}
+      initialEditing={params.mode === "edit"}
       flash={{ saved: params.saved, error: params.error, reset: params.reset }}
       policy={{
         consentVersion: policy.consentVersion,

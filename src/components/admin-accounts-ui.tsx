@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   actionAddAccountNote,
   actionBulkAccountUpdate,
@@ -23,7 +23,6 @@ import {
   IconArrowRight,
   IconBuilding,
   IconIdCard,
-  IconMail,
   IconSearch,
   IconUser,
   IconUsers,
@@ -36,27 +35,12 @@ function trendText(pct: number | null) {
   return `${arrow} ${Math.abs(pct)}%`;
 }
 
-function formatFollowers(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
-}
-
 function money(cents: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(cents / 100);
-}
-
-function planTone(plan: string) {
-  const p = plan.toUpperCase();
-  if (p.includes("PRO") || p.includes("PLUS") || p.includes("AGENCY")) {
-    return "bg-amber-50 text-amber-800 border-amber-100";
-  }
-  if (p.includes("BUSINESS")) return "bg-[#E8F1FF] text-blue border-[#D6E6FF]";
-  return "bg-[#EEE8FF] text-violet border-[#E0D6FF]";
 }
 
 function kycBadge(identity: string | null | undefined, submission: string | null | undefined) {
@@ -114,6 +98,7 @@ export function AdminUserAccountsView({
   canEdit,
   flash,
   policy,
+  initialEditing = false,
 }: {
   tab: AccountsTab;
   basePath: string;
@@ -138,13 +123,16 @@ export function AdminUserAccountsView({
   canEdit: boolean;
   flash: { saved?: string; error?: string; reset?: string };
   policy: { consentVersion: string; consentCopy: string; passwordMinLength: number };
+  initialEditing?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [detailTab, setDetailTab] = useState<"overview" | "details" | "kyc" | "activity" | "billing">(
+  const [detailTab, setDetailTab] = useState<"overview" | "profile" | "verification" | "billing" | "activity">(
     "overview",
   );
+  const [editing, setEditing] = useState(initialEditing);
+  const [moreFilters, setMoreFilters] = useState(Boolean(filters.email || filters.phone || filters.handle));
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -167,9 +155,23 @@ export function AdminUserAccountsView({
 
   function go(patch: Record<string, string | number | undefined | null>) {
     startTransition(() => {
-      router.push(buildHref(basePath, { ...currentQuery, ...patch }));
+      router.push(buildHref(basePath, { ...currentQuery, ...patch }), { scroll: false });
     });
   }
+
+  useEffect(() => {
+    setEditing(initialEditing);
+    setDetailTab("overview");
+  }, [selected?.id, initialEditing]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [selected]);
 
   function toggleId(id: string) {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -340,7 +342,7 @@ export function AdminUserAccountsView({
                   plan: String(fd.get("plan") || "") || undefined,
                   kyc: String(fd.get("kyc") || "all"),
                   page: 1,
-                  edit: undefined,
+                  view: undefined,
                 });
               }}
             >
@@ -351,28 +353,45 @@ export function AdminUserAccountsView({
                 <input
                   name="q"
                   defaultValue={filters.q || ""}
-                  placeholder="Search name or company"
+                  placeholder="Search name, email, handle, or ID"
                   className="w-full rounded-full border border-[#E4EBFF] bg-[#F7F9FF] py-2 pl-9 pr-3 text-[13px] outline-none focus:border-violet focus:bg-white"
                 />
               </label>
-              <input
-                name="handle"
-                defaultValue={filters.handle || ""}
-                placeholder="Handle"
-                className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
-              />
-              <input
-                name="email"
-                defaultValue={filters.email || ""}
-                placeholder="Email"
-                className="w-44 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
-              />
-              <input
-                name="phone"
-                defaultValue={filters.phone || ""}
-                placeholder="Mobile"
-                className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
-              />
+              <button
+                type="button"
+                onClick={() => setMoreFilters((value) => !value)}
+                className="rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo"
+              >
+                More
+              </button>
+              {moreFilters ? (
+                <>
+                  <input
+                    name="handle"
+                    defaultValue={filters.handle || ""}
+                    placeholder="Handle"
+                    className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
+                  />
+                  <input
+                    name="email"
+                    defaultValue={filters.email || ""}
+                    placeholder="Email"
+                    className="w-44 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
+                  />
+                  <input
+                    name="phone"
+                    defaultValue={filters.phone || ""}
+                    placeholder="Mobile"
+                    className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
+                  />
+                </>
+              ) : (
+                <>
+                  <input type="hidden" name="handle" value={filters.handle || ""} />
+                  <input type="hidden" name="email" value={filters.email || ""} />
+                  <input type="hidden" name="phone" value={filters.phone || ""} />
+                </>
+              )}
               <select
                 name="status"
                 defaultValue={filters.status || "all"}
@@ -420,7 +439,7 @@ export function AdminUserAccountsView({
                 action={actionBulkAccountUpdate}
                 className="flex flex-wrap items-center gap-2 rounded-xl border border-violet/20 bg-[#F8F5FF] px-3 py-2"
               >
-                <input type="hidden" name="next" value={buildHref(basePath, { ...currentQuery, edit: selected?.id })} />
+                <input type="hidden" name="next" value={buildHref(basePath, { ...currentQuery, view: selected?.id })} />
                 <input type="hidden" name="section" value={tab === "business" ? "business" : "influencer"} />
                 {selectedIds.map((id) => (
                   <input key={id} type="hidden" name="userIds" value={id} />
@@ -465,23 +484,17 @@ export function AdminUserAccountsView({
                           onChange={toggleAllOnPage}
                         />
                       </th>
-                      <th className="px-3 py-3">{tab === "business" ? "Business" : "Name"}</th>
-                      <th className="px-3 py-3">Handle</th>
-                      <th className="px-3 py-3">Email</th>
-                      <th className="px-3 py-3">Mobile</th>
-                      <th className="px-3 py-3">Role</th>
-                      <th className="px-3 py-3">Plan</th>
-                      <th className="px-3 py-3">KYC</th>
-                      <th className="px-3 py-3">Joined</th>
-                      <th className="px-3 py-3">Last active</th>
+                      <th className="px-3 py-3">Account</th>
+                      <th className="px-3 py-3">Verification</th>
                       <th className="px-3 py-3">Status</th>
-                      <th className="px-3 py-3">Edit</th>
+                      <th className="px-3 py-3">Last active</th>
+                      <th className="px-3 py-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={12} className="px-4 py-10 text-center text-sm text-muted">
+                        <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
                           No accounts match these filters.
                         </td>
                       </tr>
@@ -517,58 +530,50 @@ export function AdminUserAccountsView({
                                 </span>
                                 <div className="min-w-0">
                                   <p className="truncate font-semibold text-indigo">{row.displayName}</p>
+                                  <p className="truncate text-[11px] text-muted">{row.handle || row.email}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-3 text-muted">{row.handle || "—"}</td>
                             <td className="px-3 py-3">
-                              <p className="max-w-[220px] truncate text-indigo">{row.email}</p>
-                              {row.contactEmail && row.contactEmail !== row.email ? (
-                                <p className="max-w-[220px] truncate text-[11px] text-muted">
-                                  Business {row.contactEmail}
-                                </p>
-                              ) : null}
-                            </td>
-                            <td className="px-3 py-3 text-muted">
-                              {accountPhones(row).map((phone) => (
-                                <p key={phone} className="truncate">
-                                  {phone}
-                                </p>
-                              ))}
-                              {accountPhones(row).length === 0 ? "—" : null}
-                            </td>
-                            <td className="px-3 py-3 text-muted">{row.role}</td>
-                            <td className="px-3 py-3">
-                              <span
-                                className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${planTone(row.planTier)}`}
-                              >
-                                {row.planTier}
+                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${kyc.className}`}>
+                                {kyc.text}
                               </span>
                             </td>
-                            <td className="px-3 py-3">
-                              {tab === "business" ? (
-                                <span className="text-muted">—</span>
-                              ) : (
-                                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${kyc.className}`}>
-                                  {kyc.text}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-3 py-3 text-muted">{row.createdAt.slice(0, 10)}</td>
-                            <td className="px-3 py-3 text-muted">{row.lastActiveLabel}</td>
                             <td className="px-3 py-3">
                               <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>
                                 {status.text}
                               </span>
                             </td>
+                            <td className="px-3 py-3 text-muted">{row.lastActiveLabel}</td>
                             <td className="px-3 py-3">
-                              <button
-                                type="button"
-                                onClick={() => go({ edit: row.id })}
-                                className="rounded-full bg-[#F1ECFF] px-3 py-1.5 text-[12px] font-semibold text-violet"
-                              >
-                                Edit
-                              </button>
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => go({ view: row.id })}
+                                  className="rounded-full border border-[#E4EBFF] bg-white px-3 py-1.5 text-[12px] font-semibold text-violet"
+                                >
+                                  View account
+                                </button>
+                                <details className="relative">
+                                  <summary className="cursor-pointer list-none rounded-full border border-[#E4EBFF] px-2 py-1 text-[12px] font-bold text-muted">
+                                    ···
+                                  </summary>
+                                  <div className="absolute right-0 z-10 mt-1 w-44 rounded-xl border border-[#E4EBFF] bg-white p-1 shadow-lg">
+                                    <a href={`mailto:${row.email}`} className="block rounded-lg px-3 py-2 text-[12px] font-semibold text-indigo hover:bg-[#F7F8FF]">
+                                      Email
+                                    </a>
+                                    {canEdit ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => go({ view: row.id, mode: "edit" })}
+                                        className="block w-full rounded-lg px-3 py-2 text-left text-[12px] font-semibold text-indigo hover:bg-[#F7F8FF]"
+                                      >
+                                        Edit account
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </details>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -586,7 +591,7 @@ export function AdminUserAccountsView({
                   <button
                     type="button"
                     disabled={page <= 1 || pending}
-                    onClick={() => go({ page: page - 1, edit: selected?.id })}
+                    onClick={() => go({ page: page - 1, view: selected?.id })}
                     className="rounded-lg border border-[#E4EBFF] px-2 py-1 font-semibold disabled:opacity-40"
                   >
                     ‹
@@ -597,7 +602,7 @@ export function AdminUserAccountsView({
                   <button
                     type="button"
                     disabled={page >= pageCount || pending}
-                    onClick={() => go({ page: page + 1, edit: selected?.id })}
+                    onClick={() => go({ page: page + 1, view: selected?.id })}
                     className="rounded-lg border border-[#E4EBFF] px-2 py-1 font-semibold disabled:opacity-40"
                   >
                     ›
@@ -608,31 +613,31 @@ export function AdminUserAccountsView({
           </div>
 
       {selected && detail ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#0E1440]/45 p-4">
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            aria-label="Close account"
+            className="absolute inset-0 bg-[#0E1440]/45"
+            onClick={() => go({ view: undefined, mode: undefined })}
+          />
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="account-edit-title"
-            className="my-4 w-full max-w-3xl"
+            className="absolute inset-0 flex flex-col overflow-hidden bg-white sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(90vh,840px)] sm:w-[min(880px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(17,26,90,0.18)]"
           >
-            <div className="mb-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => go({ edit: undefined })}
-                className="rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-indigo shadow"
-              >
-                Close
-              </button>
-            </div>
             <AccountDetailPanel
               row={selected}
               detail={detail}
               detailTab={detailTab}
               setDetailTab={setDetailTab}
+              editing={editing}
+              setEditing={setEditing}
+              onClose={() => go({ view: undefined })}
               canEdit={canEdit}
               planOptions={planOptions}
               roleOptions={roleOptions}
-              nextPath={buildHref(basePath, { ...currentQuery, edit: selected.id })}
+              nextPath={buildHref(basePath, { ...currentQuery, view: selected.id })}
               section={selected.role === "CREATOR" ? "influencer" : "business"}
             />
           </div>
@@ -660,6 +665,9 @@ function AccountDetailPanel({
   detail,
   detailTab,
   setDetailTab,
+  editing,
+  setEditing,
+  onClose,
   canEdit,
   planOptions,
   roleOptions,
@@ -668,8 +676,11 @@ function AccountDetailPanel({
 }: {
   row: AccountTableRow;
   detail: AccountDetailExtras;
-  detailTab: "overview" | "details" | "kyc" | "activity" | "billing";
-  setDetailTab: (t: "overview" | "details" | "kyc" | "activity" | "billing") => void;
+  detailTab: "overview" | "profile" | "verification" | "billing" | "activity";
+  setDetailTab: (t: "overview" | "profile" | "verification" | "billing" | "activity") => void;
+  editing: boolean;
+  setEditing: (value: boolean) => void;
+  onClose: () => void;
   canEdit: boolean;
   planOptions: string[];
   roleOptions: string[];
@@ -678,132 +689,135 @@ function AccountDetailPanel({
 }) {
   const status = statusBadge(row.suspendedAt);
   const kyc = kycBadge(row.identityVerified, row.kycSubmissionStatus);
+  const tabs = [
+    ["overview", "Overview"],
+    ["profile", "Profile"],
+    ["verification", "Verification"],
+    ["billing", "Billing"],
+    ["activity", "Activity"],
+  ] as const;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#E4EBFF] bg-white shadow-[0_8px_24px_rgba(17,26,90,0.04)]">
-      <div
-        className="relative h-24 bg-gradient-to-r from-[#4B2AD9] via-[#633CFF] to-[#2979FF]"
-        style={
-          row.coverUrl
-            ? { backgroundImage: `url(${row.coverUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-            : undefined
-        }
-      />
-      <div className="relative px-4 pb-4 pt-0">
-        <div className="-mt-8 flex items-end gap-3">
-          <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-gradient-to-br from-violet to-blue text-sm font-bold text-white shadow">
-            {row.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              initials(row.displayName)
-            )}
-          </span>
-          <div className="min-w-0 flex-1 pb-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 id="account-edit-title" className="truncate font-display text-lg font-bold text-indigo">{row.displayName}</h2>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${status.className}`}>
-                {status.text}
-              </span>
+    <div className="flex h-full min-h-0 flex-col bg-white">
+      <div className="flex items-start justify-between gap-3 border-b border-[#EEF2FF] px-5 py-4">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-muted">User account</p>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-violet to-blue text-sm font-bold text-white">
+              {row.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                initials(row.displayName)
+              )}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 id="account-edit-title" className="truncate font-display text-lg font-bold text-indigo">
+                  {row.displayName}
+                </h2>
+                <span className="rounded-full bg-[#F1ECFF] px-2 py-0.5 text-[10px] font-bold text-violet">
+                  {roleLabel(row.role)}
+                </span>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${status.className}`}>{status.text}</span>
+              </div>
+              <p className="truncate text-[12px] text-muted">
+                {row.handle || "No handle"} · {detail.publicId}
+              </p>
             </div>
-            <dl className="mt-1 space-y-0.5 text-[12px]">
-              <div className="flex gap-2">
-                <dt className="w-14 shrink-0 text-muted">Email</dt>
-                <dd className="truncate text-indigo">{row.email}</dd>
-              </div>
-              <div className="flex gap-2">
-                <dt className="w-14 shrink-0 text-muted">Mobile</dt>
-                <dd className="truncate text-indigo">{accountPhones(row).join(", ") || "Not set"}</dd>
-              </div>
-              <div className="flex gap-2">
-                <dt className="w-14 shrink-0 text-muted">Handle</dt>
-                <dd className="truncate text-indigo">{row.handle || "Not set"}</dd>
-              </div>
-            </dl>
-            <p className="truncate text-[11px] text-muted">
-              {detail.publicId} · {row.locationLabel} · Joined {row.createdAt.slice(0, 10)}
-            </p>
           </div>
         </div>
+        <button type="button" onClick={onClose} aria-label="Close" className="rounded-full px-2 py-1 text-lg text-muted">
+          ×
+        </button>
+      </div>
+      <div className="flex gap-1 overflow-x-auto border-b border-[#EEF2FF] px-5">
+        {tabs.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => {
+              setEditing(false);
+              setDetailTab(id);
+            }}
+            className={`shrink-0 border-b-2 px-3 py-2.5 text-[13px] font-semibold ${
+              !editing && detailTab === id ? "border-violet text-violet" : "border-transparent text-muted"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
 
-        <div className="mt-4 flex flex-wrap gap-1 border-b border-[#EEF2FF] pb-2">
-          {(
-            [
-              ["overview", "Overview"],
-              ["details", "Details"],
-              ["kyc", "KYC & Docs"],
-              ["activity", "Activity"],
-              ["billing", "Billing"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setDetailTab(id)}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                detailTab === id ? "bg-[#EEE8FF] text-violet" : "text-muted hover:text-indigo"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {detailTab === "overview" ? (
-          <div className="mt-4 space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              <StatMini label="Followers" value={formatFollowers(row.followers)} />
-              <StatMini label="Engagement" value={row.engagementRate || "—"} />
-              <StatMini label="Collaborations" value={String(row.collaborations)} />
-              <StatMini label="Earnings" value={`${money(row.earningsYtdCents)} YTD`} />
+        {!editing && detailTab === "overview" ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <section className="rounded-2xl border border-[#E4EBFF] p-4">
+                <p className="text-[13px] font-bold text-indigo">Contact details</p>
+                <dl className="mt-3 space-y-2 text-[13px]">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Email</dt>
+                    <dd className="truncate text-right text-indigo">{row.email}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Mobile</dt>
+                    <dd className="text-right text-indigo">{accountPhones(row).join(", ") || "Not provided"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Location</dt>
+                    <dd className="text-right text-indigo">{row.locationLabel || "Not provided"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Joined</dt>
+                    <dd className="text-right text-indigo">{row.createdAt.slice(0, 10)}</dd>
+                  </div>
+                </dl>
+              </section>
+              <section className="rounded-2xl border border-[#E4EBFF] p-4">
+                <p className="text-[13px] font-bold text-indigo">Account status</p>
+                <dl className="mt-3 space-y-2 text-[13px]">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Status</dt>
+                    <dd className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>{status.text}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Plan</dt>
+                    <dd className="text-indigo">{row.planTier}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Email verification</dt>
+                    <dd className="text-indigo">{row.emailVerifiedAt ? "Verified" : "Not verified"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Identity (KYC)</dt>
+                    <dd className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${kyc.className}`}>{kyc.text}</dd>
+                  </div>
+                </dl>
+              </section>
             </div>
 
-            <div className="space-y-2 rounded-xl bg-[#F7F9FF] p-3 text-[12px]">
-              <RowLink label="Email" value={row.email} href={`mailto:${row.email}`} linkLabel="Email" />
-              <RowLink label="Mobile" value={accountPhones(row).join(" · ") || "Not set"} />
-              <RowLink label="Current plan" value={row.planTier} href="#account-edit" />
-              <RowLink
-                label="KYC status"
-                value={kyc.text}
-                href={row.creatorSlug ? "/admin/kyc" : undefined}
-                linkLabel={row.creatorSlug ? "View documents" : undefined}
-              />
-              <RowLink
-                label="Account status"
-                value={status.text}
-                href="#account-edit"
-                linkLabel={row.suspendedAt ? "Restore" : "Suspend"}
-              />
-              <RowLink label="Role" value={row.role} href="#account-edit" linkLabel="Edit role" />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`mailto:${row.email}`}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo"
-              >
-                <IconMail size={14} /> Message
-              </Link>
-              <Link
-                href="/admin/invitations"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo"
-              >
-                Send invite
-              </Link>
-              {canEdit ? (
-                <form action={actionSendPasswordReset}>
-                  <input type="hidden" name="userId" value={row.id} />
-                  <input type="hidden" name="next" value={nextPath} />
-                  <input type="hidden" name="section" value={section} />
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#F1ECFF] px-3 py-2 text-[12px] font-semibold text-violet"
-                  >
-                    Reset password
-                  </button>
-                </form>
-              ) : null}
-            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <section className="rounded-2xl border border-[#E4EBFF] p-4">
+                <p className="text-[13px] font-bold text-indigo">Account tools</p>
+                <div className="mt-3 flex flex-col items-start gap-2">
+                  {row.creatorSlug ? (
+                    <Link href={`/creators/${row.creatorSlug}`} className="text-[13px] font-semibold text-violet">
+                      View public profile
+                    </Link>
+                  ) : null}
+                  {canEdit ? (
+                    <form action={actionSendPasswordReset}>
+                      <input type="hidden" name="userId" value={row.id} />
+                      <input type="hidden" name="next" value={nextPath} />
+                      <input type="hidden" name="section" value={section} />
+                      <button type="submit" className="text-[13px] font-semibold text-violet">
+                        Send password reset
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+              </section>
 
             <div>
               <div className="flex items-center justify-between">
@@ -834,13 +848,13 @@ function AccountDetailPanel({
                 )}
               </ul>
             </div>
+            </div>
           </div>
         ) : null}
 
-        {detailTab === "details" ? (
-          <div id="account-edit" className="mt-4 space-y-4">
-            <AccountFacts row={row} publicId={detail.publicId} />
-            <form action={actionSaveMember} className="space-y-3">
+        {editing ? (
+          <div id="account-edit" className="space-y-4">
+            <form id="account-edit-form" action={actionSaveMember} className="space-y-3">
               <input type="hidden" name="userId" value={row.id} />
               <input type="hidden" name="next" value={nextPath} />
               <input type="hidden" name="section" value={section} />
@@ -943,12 +957,7 @@ function AccountDetailPanel({
                 Login email {row.email} is {row.emailVerifiedAt ? `verified ${row.emailVerifiedAt.slice(0, 10)}` : "not verified"}.
                 Password: {row.passwordHash ? "Set" : "Not set"}.
               </p>
-              {canEdit ? (
-                <button type="submit" className="btn-primary w-full">
-                  Save account
-                </button>
-              ) : null}
-            </form>
+              </form>
 
             {canEdit ? (
               <form action={actionAddAccountNote} className="space-y-2 border-t border-[#EEF2FF] pt-3">
@@ -981,7 +990,13 @@ function AccountDetailPanel({
           </div>
         ) : null}
 
-        {detailTab === "kyc" ? (
+        {!editing && detailTab === "profile" ? (
+          <div className="space-y-4">
+            <AccountFacts row={row} publicId={detail.publicId} />
+          </div>
+        ) : null}
+
+        {!editing && detailTab === "verification" ? (
           <div className="mt-4 space-y-3">
             <p className={`text-sm font-semibold ${kyc.className.replace("bg-", " ").trim()}`}>
               Identity: {kyc.text}
@@ -1023,7 +1038,7 @@ function AccountDetailPanel({
           </div>
         ) : null}
 
-        {detailTab === "activity" ? (
+        {!editing && detailTab === "activity" ? (
           <ul className="mt-4 space-y-3">
             {detail.activity.length === 0 ? (
               <li className="text-[12px] text-muted">No audited account activity yet.</li>
@@ -1040,7 +1055,7 @@ function AccountDetailPanel({
           </ul>
         ) : null}
 
-        {detailTab === "billing" ? (
+        {!editing && detailTab === "billing" ? (
           <div className="mt-4 space-y-3 text-[12px]">
             <div className="rounded-xl bg-[#F7F9FF] p-3">
               <p className="font-semibold text-indigo">Plan</p>
@@ -1058,17 +1073,52 @@ function AccountDetailPanel({
           </div>
         ) : null}
       </div>
+      <div className="flex justify-end gap-2 border-t border-[#EEF2FF] px-5 py-4">
+        {editing ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="rounded-full border border-[#E4EBFF] px-4 py-2 text-[13px] font-semibold text-indigo"
+            >
+              Cancel
+            </button>
+            {canEdit ? (
+              <button type="submit" form="account-edit-form" className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white">
+                Save
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-[#E4EBFF] px-4 py-2 text-[13px] font-semibold text-indigo"
+            >
+              Close
+            </button>
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white"
+              >
+                Edit account
+              </button>
+            ) : null}
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-function StatMini({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-[#E4EBFF] bg-[#FBFBFF] p-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-1 font-display text-base font-bold text-indigo">{value}</p>
-    </div>
-  );
+function roleLabel(role: string) {
+  if (role === "CREATOR") return "Influencer";
+  if (role === "BUSINESS") return "Business";
+  if (role === "AGENCY") return "Agency";
+  return role;
 }
 
 function accountPhones(row: AccountTableRow) {
@@ -1121,31 +1171,5 @@ function AccountFacts({ row, publicId }: { row: AccountTableRow; publicId: strin
         </div>
       ))}
     </dl>
-  );
-}
-
-function RowLink({
-  label,
-  value,
-  href,
-  linkLabel,
-}: {
-  label: string;
-  value: string;
-  href?: string;
-  linkLabel?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <div>
-        <p className="text-muted">{label}</p>
-        <p className="font-semibold text-indigo">{value}</p>
-      </div>
-      {href && linkLabel ? (
-        <Link href={href} className="shrink-0 font-semibold text-violet hover:underline">
-          {linkLabel}
-        </Link>
-      ) : null}
-    </div>
   );
 }
