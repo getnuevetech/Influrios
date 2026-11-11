@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { saveCanonicalCountryRoute } from "@/lib/canonical-country-route";
-import { recordProviderStagingTraces, saveDeferredFundingSwitches, saveLaunchApprovals } from "@/lib/launch-gate";
+import { getLaunchGate, recordProviderStagingTraces, saveDeferredFundingSwitches, saveLaunchApprovals } from "@/lib/launch-gate";
 import { parseBackoffHours, saveProcessTimings } from "@/lib/process-timing";
 
 export async function actionSaveCanonicalCountryRoute(formData: FormData) {
@@ -59,6 +59,7 @@ export async function actionSaveLaunchApprovals(formData: FormData) {
 
 export async function actionSaveDeferredFunding(formData: FormData) {
   const session = await requireAdminAction("marketplace.manage");
+  const gate = await getLaunchGate().catch(() => null);
   try {
     await saveDeferredFundingSwitches({
       actor: session.email,
@@ -70,8 +71,8 @@ export async function actionSaveDeferredFunding(formData: FormData) {
         automaticMilestoneApprovalEnabled: formData.get("automaticMilestoneApprovalEnabled") === "on",
         automaticProviderSwitchingEnabled: formData.get("automaticProviderSwitchingEnabled") === "on",
         allInBudgetEntryEnabled: formData.get("allInBudgetEntryEnabled") === "on",
-        automaticReleaseApprovalEnabled: formData.get("automaticReleaseApprovalEnabled") === "on",
-        automaticProviderReleaseEnabled: formData.get("automaticProviderReleaseEnabled") === "on",
+        automaticReleaseApprovalEnabled: gate?.automaticReleaseApprovalEnabled === true,
+        automaticProviderReleaseEnabled: gate?.automaticProviderReleaseEnabled === true,
       },
     });
   } catch (error) {

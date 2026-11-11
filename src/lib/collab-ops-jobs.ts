@@ -126,6 +126,36 @@ export function releasePushAuthorized(input: {
   return !Number.isNaN(at.getTime());
 }
 
+export type ReleaseQueueAction = "schedule" | "approve" | "send" | "wait_sweep" | "wait_provider";
+
+/** The one next step for a milestone that is past work approval and not yet paid. */
+export function releaseQueueStep(input: {
+  status: string;
+  releaseApprovedAt?: Date | string | null;
+  automaticReleaseApproval: boolean;
+  automaticProviderRelease: boolean;
+}): { action: ReleaseQueueAction; label: string } {
+  if (input.status === "approved" || input.status === "payout_failed") {
+    return {
+      action: "schedule",
+      label: input.status === "payout_failed" ? "Schedule this payout again" : "Schedule this payout",
+    };
+  }
+  if (input.status === "release_requested") {
+    return { action: "wait_provider", label: "Sent. Waiting for the provider to confirm the payout." };
+  }
+  if (input.status !== "release_scheduled") {
+    return { action: "wait_provider", label: "This milestone is not ready to pay." };
+  }
+  const approved = releasePushAuthorized({
+    automaticReleaseApproval: input.automaticReleaseApproval,
+    releaseApprovedAt: input.releaseApprovedAt,
+  });
+  if (!approved) return { action: "approve", label: "Approve this payout" };
+  if (!input.automaticProviderRelease) return { action: "send", label: "Send this payout to the provider" };
+  return { action: "wait_sweep", label: "Automatic send is on. The release sweep sends this payout." };
+}
+
 /** True when a release_scheduled milestone is due for provider request. */
 export function shouldRequestScheduledRelease(input: {
   milestoneStatus: string;
