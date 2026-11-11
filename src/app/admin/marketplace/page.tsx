@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { actionExecuteHeldCancellation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
+import { actionApproveReleasePush, actionExecuteHeldCancellation, actionPushProviderRelease, actionSaveReleaseAutomation } from "@/app/admin/marketplace/actions";
+import { prisma } from "@/lib/db";
+import { getLaunchGate } from "@/lib/launch-gate";
 import { readShareSnapshot } from "@/lib/fx-share";
 import { CANCELLATION_REASON_LABELS, type CancellationReason } from "@/lib/cancellation-matrix";
 import { listPaymentRiskFundings } from "@/lib/collaboration-cancellation";
@@ -42,26 +44,42 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const canManage = hasPermission(session, "marketplace.manage");
   const canHighRiskCancel = hasPermission(session, "collab_finance.high_risk");
   const params = await searchParams;
-  const [fundings, heldFundings, riskFundings, totals, reportsOn, paymentRisk] = await Promise.all([
+  const launchGate = await getLaunchGate().catch(() => null);
+  const approvalOn = launchGate?.automaticReleaseApprovalEnabled === true;
+  const providerOn = launchGate?.automaticProviderReleaseEnabled === true;
+  const [fundings, heldFundings, riskFundings, totals, reportsOn, paymentRisk, waitingApproval, waitingProvider] = await Promise.all([
     listFundings({ q: params.q, status: params.status, page: Number(params.page) || 1 }),
     listFundings({ status: "held", pageSize: 50 }),
     listFundings({ status: "payment_risk", pageSize: 50 }),
     ledgerTotals(),
     productSwitch("financial_reports"),
     listPaymentRiskFundings(),
+    approvalOn
+      ? Promise.resolve([])
+      : prisma.fundingMilestone.findMany({
+          where: { status: "release_scheduled", releaseApprovedAt: null, funding: { status: "held" } },
+          include: { funding: { select: { businessName: true, creatorSlug: true, currency: true, title: true } } },
+          orderBy: { releaseScheduledAt: "asc" },
+          take: 50,
+        }),
+    providerOn
+      ? Promise.resolve([])
+      : prisma.fundingMilestone.findMany({
+          where: {
+            status: "release_scheduled",
+            funding: { status: "held" },
+            ...(approvalOn ? {} : { releaseApprovedAt: { not: null } }),
+          },
+          include: { funding: { select: { businessName: true, creatorSlug: true, currency: true, title: true } } },
+          orderBy: { releaseApprovedAt: "asc" },
+          take: 50,
+        }),
   ]);
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
   const sweeps = await listFundingSweepResults().catch(() => []);
   const fundingRows = fundings.rows;
   const actionable = [...heldFundings.rows, ...riskFundings.rows];
   const cancellable = actionable.filter((f) => f.status === "held" || f.status === "payment_risk");
-  const schedulable = actionable.flatMap((funding) =>
-    funding.status !== "held"
-      ? []
-      : funding.milestones
-          .filter((m) => m.status === "approved" || m.status === "payout_failed")
-          .map((m) => ({ funding, milestone: m })),
-  );
   return (
     <div className="space-y-6">
       <div>
@@ -112,54 +130,77 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         </div>
       ) : null}
 
-      <AdminCollapse title="Scheduled release" subtitle="Approved milestone payouts">
-        <h2 className="sr-only">Scheduled release</h2>
+      <AdminCollapse title="Payout release" subtitle="Schedule is automatic. Approval and provider send follow the switches.">
+        <h2 className="sr-only">Payout release</h2>
         <p className="mt-1 text-xs text-muted">
-          Dev §8: APPROVED → release_scheduled → release_requested → signed{" "}
-          <code className="text-[11px]">payout.released</code>. Authorizing release does not move money; the sweep
-          queues a durable <code className="text-[11px]">mkt_release_*</code> instruction when due.
+          Approving the work schedules the payout. Money moves only after a signed{" "}
+          <code className="text-[11px]">payout.released</code> event. Automatic release approval skips the admin
+          approval. Automatic provider release lets the sweep send the instruction. Both stay off until saved here.
         </p>
-        {canManage && schedulable.length > 0 ? (
-          <form action={actionScheduleMilestoneRelease} className="mt-4 grid gap-3 sm:grid-cols-3">
-            <label className="text-xs font-semibold text-muted sm:col-span-2">
-              Approved milestone
-              <select
-                name="milestonePick"
-                required
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-                defaultValue=""
-              >
-                <option value="">Select</option>
-                {schedulable.map(({ funding, milestone }) => (
-                  <option key={milestone.id} value={`${funding.id}::${milestone.id}`}>
-                    {funding.businessName} → {funding.creatorSlug} · {milestone.title} ·{" "}
-                    {formatMoney(milestone.amountCents, funding.currency)}
-                  </option>
-                ))}
-              </select>
+        <p className="mt-2 text-sm font-semibold text-indigo">
+          Release approval {approvalOn ? "automatic" : "needs an admin"} · Provider send{" "}
+          {providerOn ? "automatic" : "needs an admin"}
+        </p>
+        {canManage ? (
+          <form action={actionSaveReleaseAutomation} className="mt-3 grid gap-2 text-sm">
+            <label className="flex gap-2">
+              <input type="checkbox" name="automaticReleaseApprovalEnabled" defaultChecked={approvalOn} />
+              Automatic release approval
             </label>
-            <label className="text-xs font-semibold text-muted">
-              Delay hours
-              <input
-                name="delayHours"
-                type="number"
-                min={0}
-                max={720}
-                defaultValue={0}
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-              />
+            <label className="flex gap-2">
+              <input type="checkbox" name="automaticProviderReleaseEnabled" defaultChecked={providerOn} />
+              Automatic provider release
             </label>
-            <div className="sm:col-span-3">
-              <button type="submit" className="btn-secondary !py-2 text-sm">
-                Authorize release
-              </button>
-            </div>
+            <button type="submit" className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">
+              Save release switches
+            </button>
           </form>
         ) : (
+          <p className="mt-3 text-sm text-muted">Marketplace managers can change these switches.</p>
+        )}
+        {!approvalOn && waitingApproval.length > 0 ? (
+          <ul className="mt-4 space-y-2">
+            {waitingApproval.map((milestone) => (
+              <li key={milestone.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#E4EBFF] px-3 py-2 text-sm">
+                <span>
+                  {milestone.funding.businessName} → {milestone.funding.creatorSlug} · {milestone.title} ·{" "}
+                  {formatMoney(milestone.amountCents, milestone.funding.currency)}
+                </span>
+                {canManage ? (
+                  <form action={actionApproveReleasePush}>
+                    <input type="hidden" name="milestoneId" value={milestone.id} />
+                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
+                      Approve payout
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
           <p className="mt-3 text-sm text-muted">
-            {canManage ? "No approved held milestones ready to schedule." : "Ops can authorize releases here."}
+            {approvalOn ? "Approved work is authorized for payout without an admin." : "No payout is waiting for approval."}
           </p>
         )}
+        {!providerOn && waitingProvider.length > 0 ? (
+          <ul className="mt-4 space-y-2">
+            {waitingProvider.map((milestone) => (
+              <li key={milestone.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#E4EBFF] px-3 py-2 text-sm">
+                <span>
+                  Send {milestone.funding.title} · {milestone.title} · {formatMoney(milestone.amountCents, milestone.funding.currency)}
+                </span>
+                {canManage ? (
+                  <form action={actionPushProviderRelease}>
+                    <input type="hidden" name="milestoneId" value={milestone.id} />
+                    <button type="submit" className="btn-primary !py-1.5 text-xs">
+                      Send to provider
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </AdminCollapse>
 
       <AdminCollapse title="Chargebacks & held cancellations" subtitle="High-risk ops">

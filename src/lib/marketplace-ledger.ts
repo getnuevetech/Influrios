@@ -1267,6 +1267,12 @@ export async function runAutoApprovalSweep(now = new Date()) {
     });
     if (updated.count === 1) {
       approved += 1;
+      await scheduleMilestoneRelease({
+        fundingId: milestone.fundingId,
+        milestoneId: milestone.id,
+        releaseAt: now,
+        actor: "system",
+      });
       await prisma.auditLog.create({
         data: {
           actor: "system",
@@ -1286,7 +1292,36 @@ export async function runAutoApprovalSweep(now = new Date()) {
       });
     }
   }
+  if (approved > 0) await queueAutomaticProviderRelease();
   return { scanned: due.length, approved, skippedDispute, disabled: false as const };
+}
+
+/** Schedule every approved held milestone. Disputes stay unscheduled. */
+export async function scheduleApprovedMilestones(now = new Date()) {
+  const rows = await prisma.fundingMilestone.findMany({
+    where: { status: "approved", funding: { status: "held" } },
+    select: { id: true, fundingId: true },
+    take: 100,
+    orderBy: { approvedAt: "asc" },
+  });
+  let scheduled = 0;
+  for (const row of rows) {
+    const result = await scheduleMilestoneRelease({
+      fundingId: row.fundingId,
+      milestoneId: row.id,
+      releaseAt: now,
+      actor: "system",
+    });
+    if (result.ok) scheduled += 1;
+  }
+  return { scanned: rows.length, scheduled };
+}
+
+async function queueAutomaticProviderRelease() {
+  const gate = await getLaunchGate().catch(() => null);
+  if (!gate?.automaticProviderReleaseEnabled || !gate.automaticReleaseApprovalEnabled) return;
+  const { enqueueScheduledReleaseSweep } = await import("@/lib/jobs");
+  await enqueueScheduledReleaseSweep();
 }
 
 export async function requestChangeOrder(input: { fundingId: string; grossCents: number; note: string }) {
@@ -1734,6 +1769,12 @@ export async function approveFundingMilestone(fundingId: string, milestoneId: st
         : {}),
     },
   });
+  await scheduleMilestoneRelease({
+    fundingId,
+    milestoneId,
+    actor: "system",
+  });
+  await queueAutomaticProviderRelease();
   fireCollabNotify(async () => {
     const { notifyCollabFundingEvent } = await import("@/lib/jobs");
     await notifyCollabFundingEvent({
@@ -1779,11 +1820,13 @@ export async function scheduleMilestoneRelease(input: {
   });
   if (!gate.ok) return gate;
   const releaseAt = input.releaseAt && !Number.isNaN(input.releaseAt.getTime()) ? input.releaseAt : new Date();
+  const launchGate = await getLaunchGate().catch(() => null);
   const updated = await prisma.fundingMilestone.updateMany({
     where: { id: milestone.id, status: { in: ["approved", "payout_failed"] } },
     data: {
       status: "release_scheduled",
       releaseScheduledAt: releaseAt,
+      releaseApprovedAt: launchGate?.automaticReleaseApprovalEnabled ? releaseAt : null,
       payoutFailedAt: null,
     },
   });

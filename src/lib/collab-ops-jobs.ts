@@ -114,6 +114,18 @@ export function canScheduleMilestoneRelease(input: {
   return { ok: true };
 }
 
+/** Admin push approval, or the automatic release-approval switch. */
+export function releasePushAuthorized(input: {
+  automaticReleaseApproval: boolean;
+  releaseApprovedAt: Date | string | null | undefined;
+}): boolean {
+  if (input.automaticReleaseApproval) return true;
+  if (!input.releaseApprovedAt) return false;
+  const at =
+    input.releaseApprovedAt instanceof Date ? input.releaseApprovedAt : new Date(input.releaseApprovedAt);
+  return !Number.isNaN(at.getTime());
+}
+
 /** True when a release_scheduled milestone is due for provider request. */
 export function shouldRequestScheduledRelease(input: {
   milestoneStatus: string;

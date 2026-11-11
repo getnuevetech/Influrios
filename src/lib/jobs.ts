@@ -984,21 +984,31 @@ export async function enqueueFundingReconciliationSweep() {
  * Dev §8 / §16 — due release_scheduled milestones → provider release instruction + release_requested.
  * Ledger still moves only on signed payout.released.
  */
-export async function runScheduledReleaseSweep(now = new Date()) {
+export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId?: string) {
   const { markUnknownProviderCommands } = await import("@/lib/provider-outbox");
   await markUnknownProviderCommands(now);
-  const { shouldRequestScheduledRelease } = await import("@/lib/collab-ops-jobs");
+  const { releasePushAuthorized, shouldRequestScheduledRelease } = await import("@/lib/collab-ops-jobs");
+  const { getLaunchGate } = await import("@/lib/launch-gate");
+  if (!onlyMilestoneId) {
+    const { scheduleApprovedMilestones } = await import("@/lib/marketplace-ledger");
+    await scheduleApprovedMilestones(now);
+  }
+  const launchGate = await getLaunchGate().catch(() => null);
+  const approvalOn = launchGate?.automaticReleaseApprovalEnabled === true;
+  const providerOn = launchGate?.automaticProviderReleaseEnabled === true;
   const { releasableCents } = await import("@/lib/ledger");
   const { splitMilestoneRelease } = await import("@/lib/account-purpose");
   const { readShareSnapshot, shareLines } = await import("@/lib/fx-share");
   const { adapterForProvider } = await import("@/lib/payment-provider-adapter");
   const { verifyMarketplaceSignature } = await import("@/lib/ledger");
   const due = await prisma.fundingMilestone.findMany({
-    where: {
-      status: "release_scheduled",
-      releaseScheduledAt: { lte: now },
-      funding: { status: "held" },
-    },
+    where: onlyMilestoneId
+      ? { id: onlyMilestoneId, status: "release_scheduled", funding: { status: "held" } }
+      : {
+          status: "release_scheduled",
+          releaseScheduledAt: { lte: now },
+          funding: { status: "held" },
+        },
     include: { funding: true },
     take: 100,
     orderBy: { releaseScheduledAt: "asc" },
@@ -1022,6 +1032,15 @@ export async function runScheduledReleaseSweep(now = new Date()) {
       },
     });
     if (openDispute) continue;
+    if (!onlyMilestoneId && !providerOn) continue;
+    if (
+      !releasePushAuthorized({
+        automaticReleaseApproval: approvalOn,
+        releaseApprovedAt: milestone.releaseApprovedAt,
+      })
+    ) {
+      continue;
+    }
     const amount = releasableCents(milestone.amountCents, milestone.refundedCents);
     if (amount <= 0) continue;
     const plan = (milestone.funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
@@ -1128,6 +1147,30 @@ export async function runScheduledReleaseSweep(now = new Date()) {
   }
   if (requested > 0) await processDueJobs();
   return { scanned: due.length, requested };
+}
+
+/** Admin send. The provider switch does not have to be on. The payout still needs push approval. */
+export async function pushScheduledRelease(milestoneId: string) {
+  const milestone = await prisma.fundingMilestone.findUnique({ where: { id: milestoneId } });
+  if (!milestone || milestone.status !== "release_scheduled") {
+    return { ok: false as const, error: "That milestone is not waiting to be sent." };
+  }
+  const { getLaunchGate } = await import("@/lib/launch-gate");
+  const { releasePushAuthorized } = await import("@/lib/collab-ops-jobs");
+  const gate = await getLaunchGate().catch(() => null);
+  if (
+    !releasePushAuthorized({
+      automaticReleaseApproval: gate?.automaticReleaseApprovalEnabled === true,
+      releaseApprovedAt: milestone.releaseApprovedAt,
+    })
+  ) {
+    return { ok: false as const, error: "Approve the payout before sending it to the provider." };
+  }
+  const result = await runScheduledReleaseSweep(new Date(), milestoneId);
+  if (result.requested !== 1) {
+    return { ok: false as const, error: "The provider did not accept the payout instruction." };
+  }
+  return { ok: true as const };
 }
 
 export async function enqueueScheduledReleaseSweep() {

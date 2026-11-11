@@ -126,6 +126,8 @@ export default async function PaymentSettingsPage({
             <label className="flex gap-2"><input type="checkbox" name="automaticMilestoneApprovalEnabled" defaultChecked={launchGate?.automaticMilestoneApprovalEnabled} /> Automatic milestone approval</label>
             <label className="flex gap-2"><input type="checkbox" name="automaticProviderSwitchingEnabled" defaultChecked={launchGate?.automaticProviderSwitchingEnabled} /> Automatic provider switching</label>
             <label className="flex gap-2"><input type="checkbox" name="allInBudgetEntryEnabled" defaultChecked={launchGate?.allInBudgetEntryEnabled} /> All-in budget entry</label>
+            <label className="flex gap-2"><input type="checkbox" name="automaticReleaseApprovalEnabled" defaultChecked={launchGate?.automaticReleaseApprovalEnabled} /> Automatic release approval</label>
+            <label className="flex gap-2"><input type="checkbox" name="automaticProviderReleaseEnabled" defaultChecked={launchGate?.automaticProviderReleaseEnabled} /> Automatic provider release</label>
             <input name="reason" required minLength={8} placeholder="Reason for this change" className="rounded-lg border px-3 py-2" />
             <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Save funding paths</button>
           </form>
