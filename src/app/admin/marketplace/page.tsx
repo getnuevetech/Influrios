@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { actionApproveReleasePush, actionExecuteHeldCancellation, actionPushProviderRelease, actionSaveReleaseAutomation } from "@/app/admin/marketplace/actions";
+import { actionApproveReleasePush, actionExecuteHeldCancellation, actionPushProviderRelease, actionSaveReleaseAutomation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
 import { prisma } from "@/lib/db";
 import { getLaunchGate } from "@/lib/launch-gate";
 import { readShareSnapshot } from "@/lib/fx-share";
@@ -15,6 +15,7 @@ import { FEE_TYPE_LABELS, type FeeType } from "@/lib/collaboration-fees";
 import { feeTypeFromFundingSnapshot, type FeeTypeAmount } from "@/lib/ledger";
 import { AdminCollapse } from "@/components/admin-collapse";
 import { listFundingSweepResults } from "@/lib/jobs";
+import { releaseQueueStep } from "@/lib/collab-ops-jobs";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin · Marketplace ledger" };
@@ -24,6 +25,35 @@ type Props = {
 };
 
 const CANCEL_REASONS = Object.keys(CANCELLATION_REASON_LABELS) as CancellationReason[];
+
+const RELEASE_LOG_LABEL: Record<string, string> = {
+  milestone_release_scheduled: "Scheduled",
+  milestone_release_approved: "Approved",
+  milestone_release_requested: "Sent to provider",
+  milestone_release_skipped: "Skipped",
+  "launch_gate.release_automation": "Switches saved",
+  provider_instruction_release: "Instruction recorded",
+};
+
+function releaseWhen(value: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Chicago",
+    timeZoneName: "short",
+  }).format(value);
+}
+
+function releaseLogDetail(after: unknown) {
+  if (!after || typeof after !== "object") return "";
+  const row = after as { reference?: unknown; error?: unknown };
+  if (typeof row.error === "string" && row.error.trim()) return row.error.trim();
+  if (typeof row.reference === "string" && row.reference.trim()) return row.reference.trim();
+  return "";
+}
 
 function formatFeesByType(feesByType: FeeTypeAmount[], currency: string, totalCents: number) {
   if (feesByType.length === 0) return formatStoredMoney(totalCents, currency);
@@ -47,33 +77,38 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const launchGate = await getLaunchGate().catch(() => null);
   const approvalOn = launchGate?.automaticReleaseApprovalEnabled === true;
   const providerOn = launchGate?.automaticProviderReleaseEnabled === true;
-  const [fundings, heldFundings, riskFundings, totals, reportsOn, paymentRisk, waitingApproval, waitingProvider] = await Promise.all([
+  const [fundings, heldFundings, riskFundings, totals, reportsOn, paymentRisk, payoutQueue, releaseLog] = await Promise.all([
     listFundings({ q: params.q, status: params.status, page: Number(params.page) || 1 }),
     listFundings({ status: "held", pageSize: 50 }),
     listFundings({ status: "payment_risk", pageSize: 50 }),
     ledgerTotals(),
     productSwitch("financial_reports"),
     listPaymentRiskFundings(),
-    approvalOn
-      ? Promise.resolve([])
-      : prisma.fundingMilestone.findMany({
-          where: { status: "release_scheduled", releaseApprovedAt: null, funding: { status: "held" } },
-          include: { funding: { select: { businessName: true, creatorSlug: true, currency: true, title: true } } },
-          orderBy: { releaseScheduledAt: "asc" },
-          take: 50,
-        }),
-    providerOn
-      ? Promise.resolve([])
-      : prisma.fundingMilestone.findMany({
-          where: {
-            status: "release_scheduled",
-            funding: { status: "held" },
-            ...(approvalOn ? {} : { releaseApprovedAt: { not: null } }),
-          },
-          include: { funding: { select: { businessName: true, creatorSlug: true, currency: true, title: true } } },
-          orderBy: { releaseApprovedAt: "asc" },
-          take: 50,
-        }),
+    prisma.fundingMilestone.findMany({
+      where: {
+        status: { in: ["approved", "release_scheduled", "release_requested", "payout_failed"] },
+        funding: { status: "held" },
+      },
+      include: { funding: { select: { id: true, businessName: true, creatorSlug: true, currency: true, title: true, providerCode: true } } },
+      orderBy: { updatedAt: "asc" },
+      take: 50,
+    }),
+    prisma.auditLog.findMany({
+      where: {
+        action: {
+          in: [
+            "milestone_release_scheduled",
+            "milestone_release_approved",
+            "milestone_release_requested",
+            "milestone_release_skipped",
+            "launch_gate.release_automation",
+            "provider_instruction_release",
+          ],
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
   ]);
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
   const sweeps = await listFundingSweepResults().catch(() => []);
@@ -130,16 +165,16 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         </div>
       ) : null}
 
-      <AdminCollapse title="Payout release" subtitle="Schedule is automatic. Approval and provider send follow the switches.">
+      <AdminCollapse
+        title="Payout release"
+        subtitle={`${payoutQueue.length} milestone${payoutQueue.length === 1 ? "" : "s"} waiting · approval ${approvalOn ? "automatic" : "manual"} · provider send ${providerOn ? "automatic" : "manual"}`}
+        defaultOpen
+      >
         <h2 className="sr-only">Payout release</h2>
         <p className="mt-1 text-xs text-muted">
-          Approving the work schedules the payout. Money moves only after a signed{" "}
-          <code className="text-[11px]">payout.released</code> event. Automatic release approval skips the admin
-          approval. Automatic provider release lets the sweep send the instruction. Both stay off until saved here.
-        </p>
-        <p className="mt-2 text-sm font-semibold text-indigo">
-          Release approval {approvalOn ? "automatic" : "needs an admin"} · Provider send{" "}
-          {providerOn ? "automatic" : "needs an admin"}
+          Every approved milestone stays in this list until the provider confirms <code className="text-[11px]">payout.released</code>.
+          With a switch off, each row has its own button. With a switch on, the row stays visible and the release sweep does that step.
+          Saving the switches runs the sweep once. A Stripe send records the instruction here; it does not call Stripe.
         </p>
         {canManage ? (
           <form action={actionSaveReleaseAutomation} className="mt-3 grid gap-2 text-sm">
@@ -158,49 +193,70 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         ) : (
           <p className="mt-3 text-sm text-muted">Marketplace managers can change these switches.</p>
         )}
-        {!approvalOn && waitingApproval.length > 0 ? (
-          <ul className="mt-4 space-y-2">
-            {waitingApproval.map((milestone) => (
-              <li key={milestone.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#E4EBFF] px-3 py-2 text-sm">
-                <span>
-                  {milestone.funding.businessName} → {milestone.funding.creatorSlug} · {milestone.title} ·{" "}
-                  {formatMoney(milestone.amountCents, milestone.funding.currency)}
-                </span>
-                {canManage ? (
-                  <form action={actionApproveReleasePush}>
-                    <input type="hidden" name="milestoneId" value={milestone.id} />
-                    <button type="submit" className="btn-secondary !py-1.5 text-xs">
-                      Approve payout
-                    </button>
-                  </form>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+        {payoutQueue.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">No approved milestone is waiting for a payout.</p>
         ) : (
-          <p className="mt-3 text-sm text-muted">
-            {approvalOn ? "Approved work is authorized for payout without an admin." : "No payout is waiting for approval."}
-          </p>
-        )}
-        {!providerOn && waitingProvider.length > 0 ? (
           <ul className="mt-4 space-y-2">
-            {waitingProvider.map((milestone) => (
-              <li key={milestone.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#E4EBFF] px-3 py-2 text-sm">
-                <span>
-                  Send {milestone.funding.title} · {milestone.title} · {formatMoney(milestone.amountCents, milestone.funding.currency)}
-                </span>
-                {canManage ? (
-                  <form action={actionPushProviderRelease}>
-                    <input type="hidden" name="milestoneId" value={milestone.id} />
-                    <button type="submit" className="btn-primary !py-1.5 text-xs">
-                      Send to provider
-                    </button>
-                  </form>
-                ) : null}
-              </li>
-            ))}
+            {payoutQueue.map((milestone) => {
+              const step = releaseQueueStep({
+                status: milestone.status,
+                releaseApprovedAt: milestone.releaseApprovedAt,
+                automaticReleaseApproval: approvalOn,
+                automaticProviderRelease: providerOn,
+              });
+              return (
+                <li key={milestone.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#E4EBFF] px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-indigo">
+                      {milestone.funding.title} · {milestone.title}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {milestone.funding.businessName} → {milestone.funding.creatorSlug} · {formatMoney(milestone.amountCents, milestone.funding.currency)} · {milestone.funding.providerCode || "provider unset"} · {milestone.status.replaceAll("_", " ")}
+                    </p>
+                    {step.action === "wait_provider" || step.action === "wait_sweep" ? (
+                      <p className="mt-1 text-xs text-muted">{step.label}</p>
+                    ) : null}
+                  </div>
+                  {canManage && step.action === "schedule" ? (
+                    <form action={actionScheduleMilestoneRelease}>
+                      <input type="hidden" name="fundingId" value={milestone.fundingId} />
+                      <input type="hidden" name="milestoneId" value={milestone.id} />
+                      <button type="submit" className="btn-secondary !py-1.5 text-xs">{step.label}</button>
+                    </form>
+                  ) : null}
+                  {canManage && step.action === "approve" ? (
+                    <form action={actionApproveReleasePush}>
+                      <input type="hidden" name="milestoneId" value={milestone.id} />
+                      <button type="submit" className="btn-secondary !py-1.5 text-xs">{step.label}</button>
+                    </form>
+                  ) : null}
+                  {canManage && step.action === "send" ? (
+                    <form action={actionPushProviderRelease}>
+                      <input type="hidden" name="milestoneId" value={milestone.id} />
+                      <button type="submit" className="btn-primary !py-1.5 text-xs">{step.label}</button>
+                    </form>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
-        ) : null}
+        )}
+        <h3 className="mt-5 font-display text-base font-bold text-indigo">Release log</h3>
+        {releaseLog.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">No release has been scheduled, approved, or sent yet.</p>
+        ) : (
+          <ul className="mt-2 space-y-1 text-xs text-muted">
+            {releaseLog.map((entry) => {
+              const detail = releaseLogDetail(entry.after);
+              return (
+                <li key={entry.id}>
+                  {releaseWhen(entry.createdAt)} · {RELEASE_LOG_LABEL[entry.action] ?? entry.action} · {entry.actor}
+                  {detail ? ` · ${detail}` : ""}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </AdminCollapse>
 
       <AdminCollapse title="Chargebacks & held cancellations" subtitle="High-risk ops">

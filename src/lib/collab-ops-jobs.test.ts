@@ -8,6 +8,7 @@ import {
   shouldFlagLedgerMismatch,
   canScheduleMilestoneRelease,
   releasePushAuthorized,
+  releaseQueueStep,
   shouldRequestScheduledRelease,
   isReleaseReadyMilestoneStatus,
   DEFAULT_DISPUTE_SLA_HOURS,
@@ -237,6 +238,36 @@ describe("scheduled release (Dev §8 / §16)", () => {
       }),
       true,
     );
+  });
+
+  it("keeps a manual action on every unpaid milestone and leaves an automatic send visible", () => {
+    assert.deepEqual(releaseQueueStep({ status: "approved", automaticReleaseApproval: false, automaticProviderRelease: false }), {
+      action: "schedule",
+      label: "Schedule this payout",
+    });
+    assert.equal(
+      releaseQueueStep({ status: "release_scheduled", automaticReleaseApproval: false, automaticProviderRelease: false }).action,
+      "approve",
+    );
+    assert.equal(
+      releaseQueueStep({
+        status: "release_scheduled",
+        releaseApprovedAt: "2026-11-11T12:00:00.000Z",
+        automaticReleaseApproval: false,
+        automaticProviderRelease: false,
+      }).action,
+      "send",
+    );
+    assert.equal(
+      releaseQueueStep({ status: "release_scheduled", automaticReleaseApproval: true, automaticProviderRelease: false }).action,
+      "send",
+    );
+    assert.equal(
+      releaseQueueStep({ status: "release_scheduled", automaticReleaseApproval: true, automaticProviderRelease: true }).action,
+      "wait_sweep",
+    );
+    assert.equal(releaseQueueStep({ status: "release_requested", automaticReleaseApproval: false, automaticProviderRelease: false }).action, "wait_provider");
+    assert.equal(releaseQueueStep({ status: "payout_failed", automaticReleaseApproval: false, automaticProviderRelease: false }).action, "schedule");
   });
 
   it("requests provider release only when release_scheduled is due", () => {

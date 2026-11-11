@@ -9,6 +9,7 @@ import { saveAttributionPolicy, saveAttributionSources, fileAttributionClaim, re
 import { saveDisputeReasons } from "@/lib/milestone-disputes";
 import {
   marketplaceConfig,
+  scheduleMilestoneRelease,
   saveFundingSchedule,
   saveJurisdiction,
   saveMarketplaceProvider,
@@ -556,14 +557,32 @@ export async function actionEnqueueScheduledReleaseSweep() {
 
 export async function actionSaveReleaseAutomation(formData: FormData) {
   const session = await requireAdminAction("marketplace.manage");
+  const automaticReleaseApprovalEnabled = formData.get("automaticReleaseApprovalEnabled") === "on";
+  const automaticProviderReleaseEnabled = formData.get("automaticProviderReleaseEnabled") === "on";
   await saveReleaseAutomation({
     actor: session.email,
-    automaticReleaseApprovalEnabled: formData.get("automaticReleaseApprovalEnabled") === "on",
-    automaticProviderReleaseEnabled: formData.get("automaticProviderReleaseEnabled") === "on",
+    automaticReleaseApprovalEnabled,
+    automaticProviderReleaseEnabled,
   });
+  if (automaticReleaseApprovalEnabled || automaticProviderReleaseEnabled) await enqueueScheduledReleaseSweep();
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin/payment-settings");
   redirect("/admin/marketplace?saved=release_automation");
+}
+
+export async function actionScheduleMilestoneRelease(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  const milestoneId = String(formData.get("milestoneId") ?? "").trim();
+  const result = await scheduleMilestoneRelease({ fundingId, milestoneId, actor: session.email });
+  if (!result.ok) {
+    redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  }
+  const gate = await getLaunchGate().catch(() => null);
+  if (gate?.automaticReleaseApprovalEnabled && gate.automaticProviderReleaseEnabled) await enqueueScheduledReleaseSweep();
+  revalidatePath("/admin/marketplace");
+  revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=release_scheduled");
 }
 
 export async function actionApproveReleasePush(formData: FormData) {
