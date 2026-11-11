@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { IconCalendar, IconCheck, IconEye, IconFileText, IconMail } from "@/components/icons";
+import { ContractAgreementDialog, ContractRowMenu } from "@/components/contract-agreement-dialog";
+import { IconCalendar, IconCheck, IconFileText, IconMail } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
 import { newCorrelationId } from "@/lib/correlation";
 import { getWorkspace } from "@/lib/business";
 import { contractHrefFromCampaign, contractOfferReady } from "@/lib/campaign-contract";
-import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
+import { listContractsForUser } from "@/lib/contract-document";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatStoredMoney } from "@/lib/money";
-import { agreedFeeFromSources, readSignedTermsSnapshot } from "@/lib/signed-funding";
+import { readSignedTermsSnapshot } from "@/lib/signed-funding";
 import { repairSignedAgreements } from "@/lib/signed-funding-apply";
 import { prisma } from "@/lib/db";
 import {
@@ -71,18 +72,42 @@ function sourceText(source: unknown, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function feeLabel(source: unknown, snapshot: unknown, role: "business" | "influencer") {
-  const terms = readSignedTermsSnapshot(snapshot);
+function viewerRole(contract: ContractRow, creatorSlug: string): "business" | "influencer" {
+  const creator = contract.parties.some((party) => party.role === "creator" && creatorSlug && party.creatorSlug === creatorSlug);
+  return creator ? "influencer" : "business";
+}
+
+function amountLines(contract: ContractRow, creatorSlug: string) {
+  const terms = readSignedTermsSnapshot(contract.termsSnapshotJson);
   const view = memberDealView({
-    role,
+    role: viewerRole(contract, creatorSlug),
     grossCents: terms?.grossCents ?? 0,
     feeCents: 0,
     plan: terms?.financialPlan ? { financialPlan: terms.financialPlan } : null,
   });
-  if (view.signed && terms) {
-    return view.lines.map((line) => `${line.label} ${formatStoredMoney(line.amountCents, terms.currency)}`).join(" · ");
-  }
-  return agreedFeeFromSources(source, snapshot).label;
+  if (!terms || !view.feeReady || view.lines.length === 0) return [];
+  return view.lines.map((line) => ({
+    label: line.label === "You pay" ? "Total you pay" : line.label,
+    amount: formatStoredMoney(line.amountCents, terms.currency),
+    emphasis: line.label === "You pay" || line.label === "Net payout" || line.label === "You receive",
+  }));
+}
+
+function partyNamed(contract: ContractRow, role: "business" | "creator") {
+  const names = contract.parties
+    .filter((party) => (role === "creator" ? party.role === "creator" || party.role === "influencer" : party.role === "business"))
+    .map((party) => party.name.trim())
+    .filter(Boolean);
+  return names.join(", ");
+}
+
+function deliverableLines(source: unknown) {
+  const block = sourceText(source, "milestones_block");
+  if (!block || block.includes("(None scheduled.)")) return [];
+  return block
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^\d+\./.test(line));
 }
 
 const PILL: Record<Kind, string> = {
@@ -180,11 +205,20 @@ export default async function ContractsIndexPage({
   const page = Math.max(1, Number(params.page) || 1);
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const selected =
-    filtered.find((row) => row.contract.id === params.open)?.contract ?? visible[0]?.contract ?? filtered[0]?.contract ?? null;
+  const selected = params.open ? contracts.find((contract) => contract.id === params.open) ?? null : null;
   const selectedKind = selected ? bucket(selected, account.id, account.email, creatorSlug) : null;
-  const counterparty = (contract: ContractRow) =>
-    contract.parties.find((row) => row.userId !== account.id)?.name || contract.parties[0]?.name || "—";
+  const selectedBody = selected
+    ? await prisma.contractDocument
+        .findUnique({ where: { id: selected.id }, select: { renderedBody: true } })
+        .catch(() => null)
+    : null;
+  const viewerIsBusiness = account.role === "BUSINESS" || account.role === "AGENCY";
+  const listQuery = `tab=${tab}&q=${encodeURIComponent(params.q ?? "")}&page=${page}`;
+  const closeHref = `/collaboration/contracts?${listQuery}`;
+  const counterparty = (contract: ContractRow) => {
+    const named = viewerIsBusiness ? partyNamed(contract, "creator") : partyNamed(contract, "business");
+    return named || contract.parties.find((row) => row.userId !== account.id)?.name || "—";
+  };
 
   return (
     <div className="space-y-4">
@@ -224,7 +258,7 @@ export default async function ContractsIndexPage({
         ).map(([key, label, count]) => (
           <Link
             key={key}
-            href={`/collaboration/contracts?tab=${key}`}
+            href={`/collaboration/contracts?tab=${key}&q=${encodeURIComponent(params.q ?? "")}`}
             className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 ${tab === key ? "border-[#6D4AFF] text-[#6D4AFF]" : "border-transparent"}`}
           >
             {label}
@@ -301,7 +335,7 @@ export default async function ContractsIndexPage({
       ) : filtered.length === 0 && needed.length === 0 ? (
         <EmptyContracts />
       ) : filtered.length === 0 ? null : (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.78fr)]">
+        <div>
           <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-lg font-bold text-[#1B1464]">Your agreements</h2>
@@ -320,7 +354,7 @@ export default async function ContractsIndexPage({
                 <thead className="text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3]">
                   <tr className="border-b border-[#EEF2F7]">
                     <th className="py-2 font-semibold">Agreement</th>
-                    <th className="font-semibold">Brand</th>
+                    <th className="font-semibold">{viewerIsBusiness ? "Influencer" : "Company"}</th>
                     <th className="font-semibold">Status</th>
                     <th className="font-semibold">Updated</th>
                     <th className="font-semibold">Action</th>
@@ -331,10 +365,24 @@ export default async function ContractsIndexPage({
                     const sign = needsYourSignature(contract, account.id, account.email, creatorSlug);
                     const brand = counterparty(contract);
                     const work = deliverablesHref(contract.fundingId);
+                    const openHref = `/collaboration/contracts?${listQuery}&open=${contract.id}`;
+                    const menu = [
+                      ...(sign
+                        ? [{ href: `/collaboration/contracts/${contract.id}#sign`, label: "Review & sign" }]
+                        : []),
+                      {
+                        href: `/collaboration/contracts/${contract.id}/pdf`,
+                        label: kind === "signed" ? "Download signed copy" : "Download",
+                      },
+                      ...(work ? [{ href: work, label: "Deliverables" }] : []),
+                      ...(depositHref(contract.fundingId)
+                        ? [{ href: depositHref(contract.fundingId)!, label: "Deposit funds" }]
+                        : []),
+                    ];
                     return (
                       <tr key={contract.id} className={selected?.id === contract.id ? "bg-[#F7F4FF]" : ""}>
                         <td className="py-3 pr-3">
-                          <Link href={`/collaboration/contracts/${contract.id}`} className="flex items-center gap-2 font-semibold text-[#1B1464]">
+                          <Link href={openHref} scroll={false} className="flex items-center gap-2 font-semibold text-[#1B1464]">
                             <span className="text-[#98A2B3]">
                               <IconFileText size={16} />
                             </span>
@@ -354,29 +402,24 @@ export default async function ContractsIndexPage({
                         </td>
                         <td className="text-[#667085]">{shortDate(contract.updatedAt)}</td>
                         <td>
-                          {work ? (
+                          <span className="inline-flex items-center gap-1">
                             <Link
-                              href={work}
-                              className="mr-2 inline-flex items-center rounded-full bg-[#6D4AFF] px-3 py-1.5 text-xs font-semibold text-white"
+                              href={openHref}
+                              scroll={false}
+                              className="inline-flex items-center gap-1 rounded-full border border-[#E7ECF5] px-3 py-1.5 text-xs font-semibold text-[#344054]"
                             >
-                              Deliverables
+                              View agreement
+                              <span aria-hidden>→</span>
                             </Link>
-                          ) : null}
-                          <Link
-                            href={`/collaboration/contracts/${contract.id}${sign ? "#sign" : ""}`}
-                            className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                              sign ? "bg-[#6D4AFF] text-white" : "border border-[#E7ECF5] text-[#344054]"
-                            }`}
-                          >
-                            {sign ? "Review & sign" : "View agreement"}
-                            {sign ? null : <span aria-hidden>→</span>}
-                          </Link>
-                          <Link
-                            href={`/collaboration/contracts/${contract.id}/pdf`}
-                            className="ml-2 inline-flex items-center rounded-full border border-[#E7ECF5] px-3 py-1.5 text-xs font-semibold text-[#344054]"
-                          >
-                            {kind === "signed" ? "Download signed" : "Download"}
-                          </Link>
+                            <ContractRowMenu items={menu}>
+                              <Link
+                                href={`/collaboration/contracts/${contract.id}`}
+                                className="block rounded-xl px-3 py-2 text-xs font-semibold text-[#344054] hover:bg-[#F7F4FF]"
+                              >
+                                Open full agreement
+                              </Link>
+                            </ContractRowMenu>
+                          </span>
                         </td>
                       </tr>
                     );
@@ -401,108 +444,38 @@ export default async function ContractsIndexPage({
               </div>
             </div>
           </section>
-
-          {selected && selectedKind ? (
-            <aside className="rounded-[24px] border border-[#E7ECF5] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1B1464] text-sm font-bold text-white">
-                    {counterparty(selected).slice(0, 1).toUpperCase()}
-                  </span>
-                  <div>
-                    <Link href={`/collaboration/contracts/${selected.id}`} className="font-display text-xl font-bold text-[#1B1464] hover:underline">
-                      {selected.title}
-                    </Link>
-                    <p className="text-xs text-[#98A2B3]">{selected.id.slice(0, 12)}</p>
-                  </div>
-                </div>
-                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${PILL[selectedKind]}`}>
-                  {statusLabel(selectedKind)}
-                </span>
-              </div>
-              <dl className="mt-5 space-y-3 text-sm">
-                <Detail icon={<IconUsersMini />} label="Parties" value={selected.parties.map((party) => party.name).filter(Boolean).join(" and ") || "—"} />
-                <Detail icon={<IconFileText size={15} />} label="Linked collaboration" value={selected.collaborationId ? selected.title : "—"} />
-                <Detail
-                  icon={<IconFee />}
-                  label="Agreed amounts"
-                  value={feeLabel(
-                    selected.sourceJson,
-                    selected.termsSnapshotJson,
-                    selected.parties.some((party) => party.role === "creator" && creatorSlug && party.creatorSlug === creatorSlug)
-                      ? "influencer"
-                      : "business",
-                  )}
-                />
-                <Detail icon={<IconFileText size={15} />} label="Deliverables" value={deliverableLabel(selected.sourceJson)} />
-                <Detail icon={<IconCalendar size={15} />} label="Updated" value={shortDate(selected.updatedAt)} />
-              </dl>
-              <div className="mt-5">
-                <p className="text-sm font-semibold text-[#1B1464]">Signature progress</p>
-                <ul className="mt-2 space-y-2">
-                  {selected.parties.map((party) => (
-                    <li
-                      key={party.id}
-                      className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${
-                        party.status === "signed" ? "bg-[#E8F8EE] text-[#178A45]" : "bg-[#FFF6E8] text-[#B86E00]"
-                      }`}
-                    >
-                      <span aria-hidden>{party.status === "signed" ? "✓" : "•"}</span>
-                      {party.name || party.role}: {party.status === "signed" ? "Signed" : "Pending"}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="mt-4 grid gap-2">
-                {deliverablesHref(selected.fundingId) ? (
-                  <Link
-                    href={deliverablesHref(selected.fundingId)!}
-                    className="inline-flex items-center justify-center rounded-full bg-[#6D4AFF] px-4 py-2.5 text-sm font-semibold text-white"
-                  >
-                    Deliverables
-                  </Link>
-                ) : null}
-                {depositHref(selected.fundingId) ? (
-                  <Link
-                    href={depositHref(selected.fundingId)!}
-                    className="inline-flex items-center justify-center rounded-full bg-[#6D4AFF] px-4 py-2.5 text-sm font-semibold text-white"
-                  >
-                    Deposit funds
-                  </Link>
-                ) : null}
-                {needsYourSignature(selected, account.id, account.email, creatorSlug) ? (
-                  <Link
-                    href={`/collaboration/contracts/${selected.id}#sign`}
-                    className="inline-flex items-center justify-center rounded-full bg-[#6D4AFF] px-4 py-2.5 text-sm font-semibold text-white"
-                  >
-                    Review & sign →
-                  </Link>
-                ) : (
-                  <Link
-                    href={`/collaboration/contracts/${selected.id}`}
-                    className="inline-flex items-center justify-center rounded-full border border-[#E7ECF5] px-4 py-2.5 text-sm font-semibold text-[#344054]"
-                  >
-                    View agreement
-                  </Link>
-                )}
-                <Link
-                  href={`/collaboration/contracts/${selected.id}`}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#E7ECF5] px-4 py-2.5 text-sm font-semibold text-[#344054]"
-                >
-                  <IconEye size={15} /> Preview document
-                </Link>
-              </div>
-              <p className="mt-3 text-xs text-[#98A2B3]">
-                {selectedKind === "signed"
-                  ? "This agreement is fully signed."
-                  : "Review the full agreement before signing."}{" "}
-                {contractPartyProgress(selected.parties).label}
-                {selected.signingChannel === "docusign" ? " · DocuSign" : " · In-app signing"}
-              </p>
-            </aside>
-          ) : null}
         </div>
       )}
+
+      {selected && selectedKind ? (
+        <ContractAgreementDialog
+          title={selected.title}
+          status={statusLabel(selectedKind)}
+          statusClass={PILL[selectedKind]}
+          company={partyNamed(selected, "business") || "—"}
+          influencer={partyNamed(selected, "creator") || "—"}
+          updated={shortDate(selected.updatedAt)}
+          parties={selected.parties.map((party) => ({
+            id: party.id,
+            name: party.name,
+            role: party.role,
+            signed: party.status === "signed",
+          }))}
+          amounts={amountLines(selected, creatorSlug)}
+          body={selectedBody?.renderedBody ?? ""}
+          deliverables={deliverableLines(selected.sourceJson)}
+          showDeliverables={Boolean(selected.fundingId)}
+          deliverablesHref={selected.fundingId ? deliverablesHref(selected.fundingId) : null}
+          downloadHref={`/collaboration/contracts/${selected.id}/pdf`}
+          downloadLabel={selectedKind === "signed" ? "Download signed copy" : "Download"}
+          closeHref={closeHref}
+          signHref={
+            needsYourSignature(selected, account.id, account.email, creatorSlug)
+              ? `/collaboration/contracts/${selected.id}#sign`
+              : null
+          }
+        />
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-5">
@@ -561,13 +534,6 @@ export default async function ContractsIndexPage({
   );
 }
 
-function deliverableLabel(source: unknown) {
-  const block = sourceText(source, "milestones_block");
-  if (!block || block.includes("(None scheduled.)")) return "—";
-  const lines = block.split("\n").filter((line) => /^\d+\./.test(line.trim()));
-  return lines.length ? `${lines.length} milestone${lines.length === 1 ? "" : "s"}` : "—";
-}
-
 function EmptyContracts() {
   return (
     <section className="flex flex-col items-center gap-4 rounded-[24px] border border-[#E7ECF5] bg-white px-6 py-10 text-center sm:flex-row sm:text-left">
@@ -609,18 +575,6 @@ function Stat({
   );
 }
 
-function Detail({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <dt className="inline-flex items-center gap-2 text-[#98A2B3]">
-        {icon}
-        {label}
-      </dt>
-      <dd className="max-w-[55%] text-right font-semibold text-[#1B1464]">{value}</dd>
-    </div>
-  );
-}
-
 function PenIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -630,22 +584,3 @@ function PenIcon() {
   );
 }
 
-function IconUsersMini() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <circle cx="9" cy="8" r="3" />
-      <path d="M3.5 19c.6-2.6 2.8-4 5.5-4s4.9 1.4 5.5 4" />
-      <circle cx="17" cy="9" r="2.2" />
-      <path d="M16.2 15c1.8.3 3.2 1.4 3.8 3.2" />
-    </svg>
-  );
-}
-
-function IconFee() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <rect x="3" y="6" width="18" height="12" rx="2" />
-      <path d="M3 10h18" />
-    </svg>
-  );
-}
