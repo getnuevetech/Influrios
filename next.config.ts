@@ -43,6 +43,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          // TikTok fetches https://influrios.com/tiktok<token>.txt
+          source: "/:file(tiktok[A-Za-z0-9-]+\\.txt)",
+          destination: "/myfiles/:file",
+        },
+      ],
+    };
+  },
   webpack: (config, { dev }) => {
     // The Docker builder has a 1024 MB heap and shares a small Lightsail box
     // with Postgres. An in-memory webpack cache pushes that build over the edge.

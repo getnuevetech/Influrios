@@ -37,6 +37,11 @@ export function resolveMyFile(name: string): string | null {
   return full;
 }
 
+/** TikTok domain checks request this file at the site root, not under /myfiles. */
+export function isTikTokRootFile(name: string) {
+  return /^tiktok[A-Za-z0-9-]+\.txt$/.test(name);
+}
+
 export function myFileContentType(filename: string) {
   return TYPES[path.extname(filename).toLowerCase()] || "application/octet-stream";
 }
