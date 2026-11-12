@@ -180,7 +180,7 @@ export async function executeHeldCancellation(input: {
   const settlement = settlementFromSnapshot({
     feeSnapshot: funding.feeSnapshotJson,
     milestones: funding.milestones,
-    activationEligible: funding.entries.some((entry) => entry.kind === "fee_eligible"),
+    activationEligible: funding.entries.some((entry) => entry.kind === "fee_eligible" && entry.milestoneId == null),
     currentMilestoneId: input.currentMilestoneId,
     acceptedPartialCents: input.acceptedPartialCents,
   });

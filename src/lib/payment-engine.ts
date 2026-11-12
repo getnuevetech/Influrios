@@ -891,6 +891,71 @@ export function readSignedDealMoney(plan: unknown): SignedDealMoney | null {
   };
 }
 
+/** Collaboration fees for one milestone become eligible once, on its confirmed payout. Missing allocations stay on the older earning path. */
+export function collaborationMilestoneFees(input: {
+  allocations: unknown;
+  milestoneCount: number;
+  milestoneIndex: number;
+}):
+  | { ok: true; fees: { businessCollaborationFeeCents: number; influencerFeeCents: number } | null }
+  | { ok: false; error: string } {
+  if (input.allocations == null) return { ok: true, fees: null };
+  if (!Array.isArray(input.allocations) || input.allocations.length === 0) return { ok: true, fees: null };
+  if (
+    !Number.isInteger(input.milestoneCount) ||
+    input.allocations.length !== input.milestoneCount ||
+    !Number.isInteger(input.milestoneIndex) ||
+    input.milestoneIndex < 0 ||
+    input.milestoneIndex >= input.allocations.length
+  ) {
+    return { ok: false, error: "The frozen milestone allocation does not match this schedule." };
+  }
+  const row = input.allocations[input.milestoneIndex];
+  if (!row || typeof row !== "object") return { ok: false, error: "The frozen milestone allocation does not reconcile." };
+  const business = (row as { businessCollaborationFeeCents?: unknown }).businessCollaborationFeeCents;
+  const influencer = (row as { influencerFeeCents?: unknown }).influencerFeeCents;
+  if (!Number.isInteger(business) || !Number.isInteger(influencer) || Number(business) < 0 || Number(influencer) < 0) {
+    return { ok: false, error: "The frozen milestone allocation does not reconcile." };
+  }
+  return {
+    ok: true,
+    fees: { businessCollaborationFeeCents: Number(business), influencerFeeCents: Number(influencer) },
+  };
+}
+
+function milestoneCollaborationEligibility(
+  fees: { businessCollaborationFeeCents: number; influencerFeeCents: number } | null | undefined,
+  alreadyEligible: boolean,
+): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
+  if (!fees || alreadyEligible) return { ok: true, entries: [] };
+  if (
+    !Number.isInteger(fees.businessCollaborationFeeCents) ||
+    !Number.isInteger(fees.influencerFeeCents) ||
+    fees.businessCollaborationFeeCents < 0 ||
+    fees.influencerFeeCents < 0
+  ) {
+    return { ok: false, error: "The frozen milestone allocation does not reconcile." };
+  }
+  const entries: LedgerPosting[] = [];
+  if (fees.businessCollaborationFeeCents > 0) {
+    entries.push({
+      kind: "fee_eligible",
+      party: "platform",
+      side: "business",
+      amountCents: fees.businessCollaborationFeeCents,
+    });
+  }
+  if (fees.influencerFeeCents > 0) {
+    entries.push({
+      kind: "fee_eligible",
+      party: "platform",
+      side: "influencer",
+      amountCents: fees.influencerFeeCents,
+    });
+  }
+  return { ok: true, entries };
+}
+
 /** Extra ledger rows for a signed dual-fee deal. The original signed amounts stay unchanged. */
 export function signedDealMoneyEvents(input: {
   deal: SignedDealMoney;
@@ -901,6 +966,9 @@ export function signedDealMoneyEvents(input: {
   alreadyEarned: boolean;
   alreadyReturned: boolean;
   alreadyActivationEligible?: boolean;
+  /** Frozen collaboration fees for the milestone whose payout just succeeded. */
+  milestoneFees?: { businessCollaborationFeeCents: number; influencerFeeCents: number } | null;
+  alreadyMilestoneEligible?: boolean;
   releasedCents?: number;
   payoutReturned?: boolean;
   /** The still-open provider payout this return closes. Omit only for a full signed payout. */
@@ -939,7 +1007,9 @@ export function signedDealMoneyEvents(input: {
     ) {
       return { ok: false, error: "The payout does not match the signed influencer amount." };
     }
-    if (!input.finalPayout || input.alreadyEarned) return { ok: true, entries: [] };
+    const eligible = milestoneCollaborationEligibility(input.milestoneFees, input.alreadyMilestoneEligible === true);
+    if (!eligible.ok) return eligible;
+    if (!input.finalPayout || input.alreadyEarned) return { ok: true, entries: eligible.entries };
     if (released !== input.deal.influencerReceivesCents) {
       return { ok: false, error: "The payout does not match the signed influencer amount." };
     }
@@ -950,8 +1020,8 @@ export function signedDealMoneyEvents(input: {
       businessFeeCents: input.deal.businessPlatformFeeCents,
       influencerFeeCents: input.deal.influencerPlatformFeeCents,
     });
-    if (!earned.ok) return { ok: true, entries: [] };
-    return earned;
+    if (!earned.ok) return { ok: true, entries: eligible.entries };
+    return { ok: true, entries: [...eligible.entries, ...earned.entries] };
   }
   if (input.eventType === "payout.refunded") {
     const alreadyRefunded = input.alreadyRefundedCents ?? 0;

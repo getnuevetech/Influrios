@@ -28,6 +28,7 @@ import {
   returnedPayoutPostings,
   settlePlatformFees,
   platformFeeEarningState,
+  collaborationMilestoneFees,
   signedDealMoneyEvents,
   signedQuoteExpired,
   taxIsSeparateFromPlatformFees,
@@ -303,6 +304,83 @@ describe("payment engine acceptance", () => {
     assert.equal(milestoneSlice.ok, true);
     if (!milestoneSlice.ok) return;
     assert.equal(milestoneSlice.entries.length, 0);
+    const fixture = {
+      businessPaysCents: 105_000,
+      influencerReceivesCents: 97_500,
+      businessPlatformFeeCents: 5_000,
+      influencerPlatformFeeCents: 2_500,
+      businessTaxCents: 0,
+      influencerTaxCents: 0,
+      activationFeeCents: 1_000,
+    };
+    const firstPaid = signedDealMoneyEvents({
+      deal: fixture,
+      eventType: "payout.released",
+      amountCents: 39_000,
+      releasedCents: 39_000,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+      milestoneFees: { businessCollaborationFeeCents: 1_600, influencerFeeCents: 1_000 },
+    });
+    assert.equal(firstPaid.ok, true);
+    if (!firstPaid.ok) return;
+    assert.deepEqual(
+      firstPaid.entries.filter((row) => row.kind === "fee_eligible").map((row) => row.amountCents),
+      [1_600, 1_000],
+    );
+    assert.equal(firstPaid.entries.some((row) => row.kind === "fee_earned"), false);
+    const replayed = signedDealMoneyEvents({
+      deal: fixture,
+      eventType: "payout.released",
+      amountCents: 39_000,
+      releasedCents: 39_000,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+      milestoneFees: { businessCollaborationFeeCents: 1_600, influencerFeeCents: 1_000 },
+      alreadyMilestoneEligible: true,
+    });
+    assert.equal(replayed.ok, true);
+    if (!replayed.ok) return;
+    assert.equal(replayed.entries.length, 0);
+    const finalPaid = signedDealMoneyEvents({
+      deal: fixture,
+      eventType: "payout.released",
+      amountCents: 58_500,
+      releasedCents: 97_500,
+      policyApproved: true,
+      finalPayout: true,
+      alreadyEarned: false,
+      alreadyReturned: false,
+      milestoneFees: { businessCollaborationFeeCents: 2_400, influencerFeeCents: 1_500 },
+    });
+    assert.equal(finalPaid.ok, true);
+    if (!finalPaid.ok) return;
+    assert.equal(
+      finalPaid.entries.filter((row) => row.kind === "fee_eligible").reduce((sum, row) => sum + row.amountCents, 0),
+      3_900,
+    );
+    assert.equal(finalPaid.entries.filter((row) => row.kind === "fee_earned").length, 2);
+    const matched = collaborationMilestoneFees({
+      allocations: [
+        { businessCollaborationFeeCents: 1_600, influencerFeeCents: 1_000 },
+        { businessCollaborationFeeCents: 2_400, influencerFeeCents: 1_500 },
+      ],
+      milestoneCount: 2,
+      milestoneIndex: 0,
+    });
+    assert.equal(matched.ok, true);
+    if (!matched.ok) return;
+    assert.equal(matched.fees?.businessCollaborationFeeCents, 1_600);
+    const mismatched = collaborationMilestoneFees({
+      allocations: [{ businessCollaborationFeeCents: 1_600, influencerFeeCents: 1_000 }],
+      milestoneCount: 2,
+      milestoneIndex: 0,
+    });
+    assert.equal(mismatched.ok, false);
     const early = signedDealMoneyEvents({
       deal,
       eventType: "payout.released",
