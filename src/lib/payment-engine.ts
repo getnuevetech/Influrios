@@ -90,6 +90,16 @@ export type SignedCommercialSnapshot = {
   milestoneCount: number;
   validUntil: string;
   feeState: "reserved";
+  activationFeeCents?: number;
+  businessCollaborationFeeCents?: number;
+  activationRuleId?: string;
+  activationRuleVersion?: number;
+  milestoneAllocations?: {
+    grossCents: number;
+    businessCollaborationFeeCents: number;
+    influencerFeeCents: number;
+    influencerNetCents: number;
+  }[];
 };
 
 export type LedgerPosting = {
@@ -430,6 +440,18 @@ export function buildBusinessCommercialSnapshot(input: {
   quotedAt?: Date;
   amountInputMode?: "gross_influencer_compensation" | "all_in_budget";
   validForMs?: number;
+  activation?: {
+    activationFeeCents: number;
+    businessCollaborationFeeCents: number;
+    activationRuleId: string;
+    activationRuleVersion: number;
+    allocations: {
+      grossCents: number;
+      businessCollaborationFeeCents: number;
+      influencerFeeCents: number;
+      influencerNetCents: number;
+    }[];
+  };
 }): SignedCommercialSnapshot | { ok: false; error: string } {
   const tax = input.tax ?? { status: "unresolved" as const, lines: [] };
   if (tax.status === "approved_zero" && tax.lines.some((line) => line.amountCents !== 0)) {
@@ -442,6 +464,12 @@ export function buildBusinessCommercialSnapshot(input: {
   const influencer = input.influencer;
   const influencerLocked =
     influencer != null && influencer.grossInfluencerCompensationCents === input.quote.grossInfluencerCompensationCents;
+  if (
+    input.activation &&
+    input.activation.activationFeeCents + input.activation.businessCollaborationFeeCents !== input.quote.feeCents
+  ) {
+    return { ok: false, error: "The activation split does not match the business fee." };
+  }
   const quotedAt = input.quotedAt ?? new Date();
   const validForMs =
     Number.isInteger(input.validForMs) && input.validForMs != null && input.validForMs > 0
@@ -483,6 +511,15 @@ export function buildBusinessCommercialSnapshot(input: {
     milestoneCount: input.milestoneCount,
     validUntil: new Date(quotedAt.getTime() + validForMs).toISOString(),
     feeState: "reserved",
+    ...(input.activation
+      ? {
+          activationFeeCents: input.activation.activationFeeCents,
+          businessCollaborationFeeCents: input.activation.businessCollaborationFeeCents,
+          activationRuleId: input.activation.activationRuleId,
+          activationRuleVersion: input.activation.activationRuleVersion,
+          milestoneAllocations: input.activation.allocations,
+        }
+      : {}),
   };
 }
 

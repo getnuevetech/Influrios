@@ -11,6 +11,7 @@ import { contractTermsFromRequest, preferContractField } from "@/lib/campaign-co
 import { collabOsV1Enabled } from "@/lib/collab-os";
 import { feeRuleRateLabel, SERVICE_LEVEL_LABELS, SERVICE_LEVELS, type ServiceLevel } from "@/lib/collaboration-fees";
 import { ContractServiceLevelField } from "@/components/contract-service-level-field";
+import { resolveNewAgreementFees } from "@/lib/agreement-fee-engine";
 import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import { resolvePaidAgreementFee } from "@/lib/paid-agreement-fee";
 import {
@@ -398,20 +399,34 @@ export default async function ContractWizardPage({ searchParams }: Props) {
             "business",
           ).catch(() => null)
       : null;
+  const agreement =
+    quote?.ok && milestoneGate.ok
+      ? await resolveNewAgreementFees(
+          {
+            jurisdiction: jurisdictionCode,
+            serviceLevel: feeServiceLevel,
+            grossValueCents: quote.grossInfluencerCompensationCents,
+          },
+          enteredMilestones.map((row) => row.shareBps),
+        ).catch(() => null)
+      : null;
+  const shownQuote = agreement && !agreement.ok ? agreement : quote;
 
   const plan =
-    quote?.ok && jurisdictionCode && effectiveServiceLevel && milestoneGate.ok
+    shownQuote?.ok && agreement?.ok && jurisdictionCode && effectiveServiceLevel && milestoneGate.ok
       ? buildFinancialPlan({
-          grossCents: quote.grossInfluencerCompensationCents,
+          grossCents: shownQuote.grossInfluencerCompensationCents,
           currency: jurisdiction?.currency,
-          feeRuleId: quote.rule.id,
-          feeRuleVersion: quote.rule.version,
-          feeMethod: quote.rule.method,
-          feePercentBps: quote.rule.percentBps,
-          feeFixedCents: quote.rule.fixedCents,
-          totalPlatformFeeCents: quote.feeCents,
-          businessPlatformFeeCents: quote.feeCents,
-          businessPaysCents: quote.totalCents,
+          feeRuleId: shownQuote.rule.id,
+          feeRuleVersion: shownQuote.rule.version,
+          feeMethod: shownQuote.rule.method,
+          feePercentBps: shownQuote.rule.percentBps,
+          feeFixedCents: shownQuote.rule.fixedCents,
+          totalPlatformFeeCents: agreement.platformFeesTotalCents,
+          businessPlatformFeeCents: agreement.businessPlatformFeeCents,
+          influencerPlatformFeeCents: agreement.influencerPlatformFeeCents,
+          activationFeeCents: agreement.activationFeeCents,
+          businessPaysCents: agreement.businessPaysCents,
           feePayer: "brand",
           fundingCountry: jurisdictionCode,
           creatorCountry: creatorCountry ?? jurisdictionCode,
@@ -664,7 +679,9 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               />
               <div className="sm:col-span-2 rounded-xl border border-[#E4E9F5] bg-[#F7FAFF] px-4 py-3 text-sm">
                 <p className="font-semibold text-indigo">Your fee for this service level</p>
-                {quote?.ok && plan ? (
+                {agreement && !agreement.ok ? (
+                  <p className="mt-2 font-semibold text-amber-800">{agreement.error}</p>
+                ) : quote?.ok && plan ? (
                   <dl className="mt-2 grid gap-2 sm:grid-cols-2">
                     <div>
                       <dt className="text-xs text-muted">Your fee rule</dt>
@@ -833,6 +850,22 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                       {formatMoney(plan.businessPlatformFeeCents ?? 0, plan.contractCurrency)}
                     </dd>
                   </div>
+                  {plan.activationFeeCents != null ? (
+                    <div>
+                      <dt className="text-muted">Activation fee</dt>
+                      <dd className="font-bold text-indigo">
+                        {formatMoney(plan.activationFeeCents, plan.contractCurrency)}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {plan.businessCollaborationFeeCents != null ? (
+                    <div>
+                      <dt className="text-muted">Collaboration service fee</dt>
+                      <dd className="font-bold text-indigo">
+                        {formatMoney(plan.businessCollaborationFeeCents, plan.contractCurrency)}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt className="text-muted">You pay</dt>
                     <dd className="font-bold text-indigo">
@@ -859,7 +892,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                           {m.title} · {(m.shareBps / 100).toFixed(0)}%
                         </span>
                         <span className="text-muted">
-                          {formatMoney(m.grossCents, plan.contractCurrency)} (your fee{" "}
+                          {formatMoney(m.grossCents, plan.contractCurrency)} (collaboration fee{" "}
                           {formatMoney(m.businessPlatformFeeCents ?? 0, plan.contractCurrency)})
                         </span>
                       </div>
@@ -881,6 +914,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
               <p className="mt-2 text-sm font-semibold text-amber-800">
                 This jurisdiction cannot price a paid agreement at Contracted collaboration.
               </p>
+            ) : agreement && !agreement.ok ? (
+              <p className="mt-2 text-sm font-semibold text-amber-800">{agreement.error}</p>
             ) : quote && !quote.ok ? (
               <p className="mt-2 text-sm font-semibold text-amber-800">{quote.error}</p>
             ) : jurisdictionCode && !(jurisdiction?.currency ?? "").trim() ? (
