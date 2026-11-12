@@ -1890,7 +1890,7 @@ export async function applyMarketplaceEvent(input: {
     return { applied: false, result: "rejected" as const };
   }
   const snapshotPlan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
-  const { platformFeeEarningState, providerFeePosting, readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } =
+  const { collaborationMilestoneFees, platformFeeEarningState, providerFeePosting, readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } =
     await import("@/lib/payment-engine");
   const signedDeal = readSignedDealMoney(snapshotPlan);
   const launchGate = signedDeal
@@ -2000,7 +2000,7 @@ export async function applyMarketplaceEvent(input: {
             finalPayout: false,
             alreadyEarned: false,
             alreadyReturned: false,
-            alreadyActivationEligible: funding.entries.some((entry) => entry.kind === "fee_eligible"),
+            alreadyActivationEligible: funding.entries.some((entry) => entry.kind === "fee_eligible" && entry.milestoneId == null),
           });
           if (!reserved.ok) throw new LedgerReject(reserved.error);
           await writeSignedPostings(tx, {
@@ -2061,6 +2061,15 @@ export async function applyMarketplaceEvent(input: {
         });
         if (blocking) throw new LedgerReject("This milestone is in dispute.");
         const fresh = await tx.ledgerEntry.findMany({ where: { fundingId: funding.id } });
+        const orderedMilestones = [...funding.milestones].sort((left, right) => left.sortOrder - right.sortOrder);
+        const feeIndex = orderedMilestones.findIndex((row) => row.id === milestone.id);
+        const quote = (snapshotPlan as { signedQuote?: { milestoneAllocations?: unknown } } | null)?.signedQuote;
+        const allocation = collaborationMilestoneFees({
+          allocations: quote?.milestoneAllocations,
+          milestoneCount: orderedMilestones.length,
+          milestoneIndex: feeIndex,
+        });
+        if (!allocation.ok) throw new LedgerReject(allocation.error);
         const held = reconcileLedger(ledgerMovements(fresh), funding.grossCents);
         if (left <= 0 || held.heldCents < left) throw new LedgerReject("The provider is not holding enough.");
         const rights = rightsAfterPaymentRelease({
@@ -2174,6 +2183,8 @@ export async function applyMarketplaceEvent(input: {
             finalPayout: open === 0,
             alreadyEarned: platformFeeEarningState(fresh).earned,
             alreadyReturned: false,
+            milestoneFees: allocation.fees,
+            alreadyMilestoneEligible: fresh.some((entry) => entry.kind === "fee_eligible" && entry.milestoneId === milestone.id),
           });
           if (!earned.ok) throw new LedgerReject(earned.error);
           await writeSignedPostings(tx, {
