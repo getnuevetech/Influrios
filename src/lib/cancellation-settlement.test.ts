@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { activationExceptionForReason, settlementFromSnapshot, settlementProposal } from "./cancellation-settlement";
+import { activationExceptionForReason, settlementFromSnapshot, settlementProposal, settlementVersionDecision } from "./cancellation-settlement";
 
 const milestones = [
   {
@@ -137,6 +137,26 @@ describe("cancellation settlement proposal", () => {
     assert.equal(settled.proposal.activationRecoveryCents, 1_000);
     assert.equal(settled.proposal.businessRefundCents, 105_000);
     assert.equal(activationExceptionForReason("platform_cannot_serve"), true);
+    const first = settlementVersionDecision({ latest: null, proposal: settled.proposal });
+    assert.equal(first.kind, "propose");
+    if (first.kind !== "propose") return;
+    assert.equal(first.versionNumber, 1);
+    const accepted = settlementVersionDecision({
+      latest: { versionNumber: 1, status: "accepted", proposal: settled.proposal },
+      proposal: { ...settled.proposal, automatic: false },
+    });
+    assert.equal(accepted.kind, "execute");
+    if (accepted.kind !== "execute") return;
+    assert.equal(accepted.create, false);
+    assert.equal(accepted.proposal.businessRefundCents, 105_000);
+    const changed = settlementVersionDecision({
+      latest: { versionNumber: 1, status: "accepted", proposal: settled.proposal },
+      proposal: { ...settled.proposal, businessRefundCents: 104_000, automatic: false },
+    });
+    assert.equal(changed.kind, "propose");
+    if (changed.kind !== "propose") return;
+    assert.equal(changed.supersede, true);
+    assert.equal(changed.versionNumber, 2);
     assert.equal(activationExceptionForReason("brand_before_start"), false);
     const cancellation = readFileSync("src/lib/collaboration-cancellation.ts", "utf8");
     assert.ok(cancellation.indexOf("createPartialRefund") > cancellation.indexOf("settlementFromSnapshot"));

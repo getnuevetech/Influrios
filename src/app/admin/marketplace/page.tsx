@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { actionApproveReleasePush, actionCancelUnfundedPrefund, actionExecuteHeldCancellation, actionPushProviderRelease, actionSaveReleaseAutomation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
+import { actionAcceptFundingSettlement, actionApproveReleasePush, actionCancelUnfundedPrefund, actionExecuteHeldCancellation, actionPushProviderRelease, actionSaveReleaseAutomation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
 import { prisma } from "@/lib/db";
 import { getLaunchGate } from "@/lib/launch-gate";
 import { readShareSnapshot } from "@/lib/fx-share";
 import { CANCELLATION_REASON_LABELS, type CancellationReason } from "@/lib/cancellation-matrix";
 import { listPaymentRiskFundings } from "@/lib/collaboration-cancellation";
+import { readSettlementProposal } from "@/lib/cancellation-settlement";
 import { scheduleLabel } from "@/lib/schedule";
 import { formatMoney, formatStoredMoney } from "@/lib/money";
 import { ledgerMonthlyReport, ledgerTotals, listFundings } from "@/lib/marketplace-ledger";
@@ -78,7 +79,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
   const launchGate = await getLaunchGate().catch(() => null);
   const approvalOn = launchGate?.automaticReleaseApprovalEnabled === true;
   const providerOn = launchGate?.automaticProviderReleaseEnabled === true;
-  const [fundings, heldFundings, riskFundings, totals, reportsOn, paymentRisk, payoutQueue, releaseLog] = await Promise.all([
+  const [fundings, heldFundings, riskFundings, totals, reportsOn, paymentRisk, payoutQueue, releaseLog, proposedSettlements] = await Promise.all([
     listFundings({ q: params.q, status: params.status, page: Number(params.page) || 1 }),
     listFundings({ status: "held", pageSize: 50 }),
     listFundings({ status: "payment_risk", pageSize: 50 }),
@@ -109,6 +110,12 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       },
       orderBy: { createdAt: "desc" },
       take: 20,
+    }),
+    prisma.fundingSettlement.findMany({
+      where: { status: "proposed" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { funding: { select: { id: true, businessName: true, creatorSlug: true, title: true, currency: true } } },
     }),
   ]);
   const externalReleases = payoutQueue.length
@@ -308,6 +315,32 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         ) : (
           <p className="mt-3 text-sm text-muted">No payment-risk fundings right now.</p>
         )}
+        {canHighRiskCancel && proposedSettlements.length > 0 ? (
+          <form action={actionAcceptFundingSettlement} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <p className="text-xs text-muted sm:col-span-2">
+              Accepting a proposal freezes it. The refund is sent only when that accepted version is executed.
+            </p>
+            <label className="text-xs font-semibold text-muted sm:col-span-2">
+              Proposed settlement
+              <select name="fundingId" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
+                {proposedSettlements.map((row) => {
+                  const proposal = readSettlementProposal(row.proposalJson);
+                  return (
+                    <option key={row.id} value={row.fundingId}>
+                      v{row.versionNumber} · {row.funding.businessName} → {row.funding.creatorSlug} · {row.funding.title}
+                      {proposal ? ` · refund ${formatMoney(proposal.businessRefundCents, row.funding.currency)}` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Step-up password
+              <input name="stepUpPassword" type="password" required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+            </label>
+            <button className="w-fit self-end rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Accept settlement</button>
+          </form>
+        ) : null}
         {canHighRiskCancel && cancellable.length > 0 ? (
           <form action={actionExecuteHeldCancellation} className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-muted sm:col-span-2">
