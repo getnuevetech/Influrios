@@ -1656,6 +1656,7 @@ function presentFunding(row: {
   seriesStopped?: boolean;
   serviceLevel?: string;
   feeSnapshotJson?: unknown;
+  updatedAt?: Date;
 }) {
   const movements: LedgerMovement[] = ledgerMovements(row.entries);
   return { ...row, ledger: reconcileLedger(movements, row.grossCents) };

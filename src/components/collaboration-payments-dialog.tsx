@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export function PaymentDetailsDialog({
   closeHref,
@@ -12,8 +12,11 @@ export function PaymentDetailsDialog({
   statusClass,
   workspaceHref,
   overview,
+  fees,
+  timeline,
   milestones,
-  transactions,
+  cancellation,
+  documents,
 }: {
   closeHref: string;
   title: string;
@@ -22,35 +25,47 @@ export function PaymentDetailsDialog({
   statusClass: string;
   workspaceHref: string;
   overview: ReactNode;
+  fees: ReactNode;
+  timeline: ReactNode;
   milestones: ReactNode;
-  transactions: ReactNode;
+  cancellation: ReactNode;
+  documents: ReactNode;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"overview" | "milestones" | "transactions">("overview");
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [tab, setTab] = useState<"overview" | "fees" | "timeline" | "milestones" | "cancellation" | "documents">("overview");
 
   useEffect(() => {
-    const previous = document.body.style.overflow;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = "hidden";
+    panelRef.current?.focus();
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") router.push(closeHref, { scroll: false });
     }
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = previous;
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKey);
+      previousFocus?.focus();
     };
   }, [closeHref, router]);
 
   const tabs = [
     ["overview", "Overview"],
+    ["fees", "Fee breakdown"],
+    ["timeline", "Payment timeline"],
     ["milestones", "Milestones"],
-    ["transactions", "Transactions"],
+    ["cancellation", "Cancellation and refunds"],
+    ["documents", "Documents"],
   ] as const;
 
   return (
     <div className="fixed inset-0 z-50">
       <Link href={closeHref} scroll={false} aria-label="Close payment details" className="absolute inset-0 bg-[#1B1464]/40" />
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="payment-dialog-title"
@@ -78,7 +93,7 @@ export function PaymentDetailsDialog({
             ×
           </Link>
         </div>
-        <div className="mt-4 flex gap-2 px-5 sm:px-7">
+        <div className="mt-4 flex flex-wrap gap-2 px-5 sm:px-7">
           {tabs.map(([id, label]) => (
             <button
               key={id}
@@ -94,8 +109,11 @@ export function PaymentDetailsDialog({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-7">
           <div hidden={tab !== "overview"}>{overview}</div>
+          <div hidden={tab !== "fees"}>{fees}</div>
+          <div hidden={tab !== "timeline"}>{timeline}</div>
           <div hidden={tab !== "milestones"}>{milestones}</div>
-          <div hidden={tab !== "transactions"}>{transactions}</div>
+          <div hidden={tab !== "cancellation"}>{cancellation}</div>
+          <div hidden={tab !== "documents"}>{documents}</div>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-[#EEF2F7] px-5 py-4 sm:px-7">
           <Link
