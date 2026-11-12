@@ -1890,7 +1890,7 @@ export async function applyMarketplaceEvent(input: {
     return { applied: false, result: "rejected" as const };
   }
   const snapshotPlan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
-  const { collaborationMilestoneFees, openMilestoneCollaborationFees, platformFeeEarningState, providerFeePosting, readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } =
+  const { collaborationMilestoneFees, eligiblePlatformFeePosition, openMilestoneCollaborationFees, platformFeeEarningState, providerFeePosting, readSignedDealMoney, settleEligiblePlatformFees, settlePlatformFees, signedDealMoneyEvents } =
     await import("@/lib/payment-engine");
   const signedDeal = readSignedDealMoney(snapshotPlan);
   const launchGate = signedDeal
@@ -1919,6 +1919,13 @@ export async function applyMarketplaceEvent(input: {
     : 0;
   const openPayoutCents = milestoneReleaseCents - milestoneReturnCents;
   const feeState = platformFeeEarningState(funding.entries);
+  const signedQuote =
+    snapshotPlan && typeof snapshotPlan === "object"
+      ? (snapshotPlan as { signedQuote?: { milestoneAllocations?: unknown } }).signedQuote
+      : null;
+  const usesEligibleSettlement = Array.isArray(signedQuote?.milestoneAllocations) && signedQuote.milestoneAllocations.length > 0;
+  const feePosition = usesEligibleSettlement ? eligiblePlatformFeePosition(funding.entries) : null;
+  const unsettledEligible = feePosition ? feePosition.unsettledBusinessCents + feePosition.unsettledInfluencerCents : 0;
   const refundRequest =
     milestone && input.eventType === "payout.refunded"
       ? await prisma.milestoneDispute.findFirst({
@@ -1944,7 +1951,11 @@ export async function applyMarketplaceEvent(input: {
             : -1
           : input.eventType === "fee.settled"
           ? signedDeal
-            ? signedDeal.businessPlatformFeeCents + signedDeal.influencerPlatformFeeCents
+            ? usesEligibleSettlement
+              ? unsettledEligible > 0
+                ? unsettledEligible
+                : -1
+              : signedDeal.businessPlatformFeeCents + signedDeal.influencerPlatformFeeCents
             : -1
           : input.eventType === "payout.returned"
             ? openPayoutCents > 0
@@ -2264,6 +2275,24 @@ export async function applyMarketplaceEvent(input: {
       }
       if (input.eventType === "fee.settled") {
         if (!signedDeal) throw new LedgerReject("Fee settlement is only for a signed deal.");
+        if (feePosition) {
+          const settled = settleEligiblePlatformFees({
+            eligibleBusinessCents: feePosition.eligibleBusinessCents,
+            eligibleInfluencerCents: feePosition.eligibleInfluencerCents,
+            settledBusinessCents: feePosition.settledBusinessCents,
+            settledInfluencerCents: feePosition.settledInfluencerCents,
+            amountCents: input.amountCents,
+            providerReference: eventId,
+          });
+          if (!settled.ok) throw new LedgerReject(settled.error);
+          await writeSignedPostings(tx, {
+            fundingId: funding.id,
+            provider: providerKey,
+            eventId,
+            entries: settled.entries,
+          });
+          return;
+        }
         const settled = settlePlatformFees({
           earned: funding.entries.some((entry) => entry.kind === "fee_earned"),
           alreadySettled: funding.entries.some((entry) => entry.kind === "fee_settled"),

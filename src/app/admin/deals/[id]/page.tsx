@@ -6,6 +6,7 @@ import { hasPermission, isSuperAdmin } from "@/lib/admin-auth";
 import { loadAdminDeal } from "@/lib/admin-deal";
 import { splitGross } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
+import { eligiblePlatformFeePosition } from "@/lib/payment-engine";
 import { contractMayBeVoided, fundedShareBps, sharePercentLabel } from "@/lib/signed-funding";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,14 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
   const canSettle = hasPermission(session, "marketplace.manage");
   const feesEarned = funding?.entries.some((entry) => entry.kind === "fee_earned") ?? false;
   const feesSettled = funding?.entries.some((entry) => entry.kind === "fee_settled") ?? false;
+  const allocations = (
+    funding?.feeSnapshotJson as { financialPlan?: { signedQuote?: { milestoneAllocations?: unknown } } } | null
+  )?.financialPlan?.signedQuote?.milestoneAllocations;
+  const feePosition =
+    funding && Array.isArray(allocations) && allocations.length > 0 ? eligiblePlatformFeePosition(funding.entries) : null;
+  const unsettledFees = feePosition ? feePosition.unsettledBusinessCents + feePosition.unsettledInfluencerCents : 0;
+  const eligibleFees = feePosition ? feePosition.eligibleBusinessCents + feePosition.eligibleInfluencerCents : 0;
+  const settledFees = feePosition ? feePosition.settledBusinessCents + feePosition.settledInfluencerCents : 0;
   const scheduleAmounts = terms ? splitGross(terms.grossCents, terms.milestones.map((row) => row.shareBps)) : null;
   const creatorRows = terms?.creators.length
     ? terms.creators.map((row) => ({ name: row.slug, percent: String(row.shareBps / 100) }))
@@ -52,7 +61,7 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
       {query.error ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{query.error}</p> : null}
       {query.voided ? <p className="text-sm font-semibold text-emerald-700">Agreement voided. The PDF and signatures stay on record.</p> : null}
       {query.amended ? <p className="text-sm font-semibold text-emerald-700">Change order approved. The next funding instruction uses these terms.</p> : null}
-      {query.settled ? <p className="text-sm font-semibold text-emerald-700">Earned fees were settled to operating funds. The earned rows stay on the ledger.</p> : null}
+      {query.settled ? <p className="text-sm font-semibold text-emerald-700">The fee transfer was recorded. Eligible fees moved to operating funds, and earned rows stay on the ledger.</p> : null}
       {query.compared ? <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-indigo">{query.compared}</p> : null}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -117,13 +126,26 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
               {funding.entries.length === 0 ? <li>No provider event yet.</li> : null}
             </ul>
             <p className="mt-3 text-xs font-semibold text-indigo">
-              {feesSettled ? "Platform fees are settled to operating funds." : feesEarned ? "Platform fees are earned and still in clearing." : "Platform fees are not earned."}
+              {feePosition
+                ? `Eligible ${formatMoney(eligibleFees, funding.currency)} · settled ${formatMoney(settledFees, funding.currency)} · unsettled ${formatMoney(unsettledFees, funding.currency)}`
+                : feesSettled
+                  ? "Platform fees are settled to operating funds."
+                  : feesEarned
+                    ? "Platform fees are earned and still in clearing."
+                    : "Platform fees are not earned."}
             </p>
-            {canSettle && feesEarned && !feesSettled ? (
+            {canSettle && (feePosition ? unsettledFees > 0 : feesEarned && !feesSettled) ? (
               <form action={actionRecordFeeSettlement} className="mt-3 grid gap-2 sm:grid-cols-2">
                 <input type="hidden" name="id" value={anchor} />
                 <input type="hidden" name="fundingId" value={funding.id} />
-                <input name="amountCents" required inputMode="numeric" placeholder="Earned fees, minor units" className="rounded-lg border px-3 py-2" />
+                <input
+                  name="amountCents"
+                  required
+                  inputMode="numeric"
+                  defaultValue={feePosition ? unsettledFees : undefined}
+                  placeholder={feePosition ? "Eligible unsettled fees, minor units" : "Earned fees, minor units"}
+                  className="rounded-lg border px-3 py-2"
+                />
                 <input name="providerReference" required minLength={4} placeholder="Provider settlement reference" className="rounded-lg border px-3 py-2" />
                 <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Record settlement</button>
               </form>

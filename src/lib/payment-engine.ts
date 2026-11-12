@@ -715,6 +715,74 @@ export function settlePlatformFees(input: {
   return { ok: true, entries };
 }
 
+/** Eligible fees that have not moved to operations. Activation has no milestone. Suspended milestone fees are already removed. */
+export function eligiblePlatformFeePosition(
+  entries: { kind: string; amountCents: number; party?: string; milestoneId?: string | null }[],
+) {
+  const sum = (kind: string, party: string, milestoneId: string | null) =>
+    entries
+      .filter((entry) => entry.kind === kind && entry.party === party && (entry.milestoneId ?? null) === milestoneId)
+      .reduce((total, entry) => total + entry.amountCents, 0);
+  const activation = Math.max(0, sum("fee_eligible", "platform:business", null) - sum("reversal", "platform:business_eligible", null));
+  const milestoneIds = [...new Set(entries.map((entry) => entry.milestoneId).filter((id): id is string => Boolean(id)))];
+  let business = activation;
+  let influencer = 0;
+  for (const milestoneId of milestoneIds) {
+    const open = openMilestoneCollaborationFees(entries, milestoneId);
+    business += open.businessCollaborationFeeCents;
+    influencer += open.influencerFeeCents;
+  }
+  const settledBusiness = entries
+    .filter((entry) => entry.kind === "fee_settled" && entry.party === "platform:business")
+    .reduce((total, entry) => total + entry.amountCents, 0);
+  const settledInfluencer = entries
+    .filter((entry) => entry.kind === "fee_settled" && entry.party === "platform:influencer")
+    .reduce((total, entry) => total + entry.amountCents, 0);
+  return {
+    eligibleBusinessCents: business,
+    eligibleInfluencerCents: influencer,
+    settledBusinessCents: settledBusiness,
+    settledInfluencerCents: settledInfluencer,
+    unsettledBusinessCents: Math.max(0, business - settledBusiness),
+    unsettledInfluencerCents: Math.max(0, influencer - settledInfluencer),
+  };
+}
+
+/** Move the currently eligible remainder to operating funds. Ineligible fees stay reserved. */
+export function settleEligiblePlatformFees(input: {
+  eligibleBusinessCents: number;
+  eligibleInfluencerCents: number;
+  settledBusinessCents: number;
+  settledInfluencerCents: number;
+  amountCents: number;
+  providerReference: string;
+}): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
+  const amounts = [
+    input.eligibleBusinessCents,
+    input.eligibleInfluencerCents,
+    input.settledBusinessCents,
+    input.settledInfluencerCents,
+    input.amountCents,
+  ];
+  if (amounts.some((amount) => !Number.isInteger(amount) || amount < 0)) {
+    return { ok: false, error: "The eligible platform fees are missing." };
+  }
+  const business = Math.max(0, input.eligibleBusinessCents - input.settledBusinessCents);
+  const influencer = Math.max(0, input.eligibleInfluencerCents - input.settledInfluencerCents);
+  const unsettled = business + influencer;
+  if (unsettled <= 0) return { ok: false, error: "Nothing is eligible to settle." };
+  if (input.amountCents !== unsettled) {
+    return { ok: false, error: "The settlement does not match the eligible platform fees." };
+  }
+  if (input.providerReference.trim().length < 4) {
+    return { ok: false, error: "A provider settlement reference is required." };
+  }
+  const entries: LedgerPosting[] = [];
+  if (business > 0) entries.push({ kind: "fee_settled", party: "platform", side: "business", amountCents: business });
+  if (influencer > 0) entries.push({ kind: "fee_settled", party: "platform", side: "influencer", amountCents: influencer });
+  return { ok: true, entries };
+}
+
 /** The provider's own charge. It is not platform fee revenue and does not change signed amounts. */
 export function providerFeePosting(input: {
   amountCents: number;
