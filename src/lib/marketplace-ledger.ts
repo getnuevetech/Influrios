@@ -2336,7 +2336,8 @@ export async function applyMarketplaceEvent(input: {
             const amount = row && typeof row === "object" ? (row as { influencerFeeCents?: unknown }).influencerFeeCents : null;
             return sum + (Number.isInteger(amount) ? Number(amount) : 0);
           }, 0);
-          const activationFee = Number.isInteger(quote?.activationFeeCents) ? Number(quote.activationFeeCents) : 0;
+          const activationValue = quote?.activationFeeCents;
+          const activationFee = Number.isInteger(activationValue) ? Number(activationValue) : 0;
           const position = eligiblePlatformFeePosition(fresh);
           const refundFees =
             proposal && proposal.businessRefundCents === input.amountCents && allocationRows.length > 0
