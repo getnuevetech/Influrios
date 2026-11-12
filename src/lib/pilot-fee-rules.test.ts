@@ -9,7 +9,7 @@ const AS_OF = "2026-11-09T12:00:00.000Z";
 
 function legacyOverlap(overrides: Partial<CollaborationFeeRule> = {}): CollaborationFeeRule {
   return {
-    ...PILOT_FEE_RULES[2],
+    ...PILOT_FEE_RULES.find((rule) => rule.id === "rule_pilot_contracted_business")!,
     id: "rule_legacy_overlap",
     name: "Legacy 80/20",
     active: false,

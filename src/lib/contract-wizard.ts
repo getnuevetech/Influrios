@@ -2,6 +2,7 @@
  * Collab OS P3 — Contract & milestone wizard.
  * Pure gates + financial plan snapshot; funding still goes through marketplace-ledger.
  */
+import { allocateByLargestRemainder } from "@/lib/agreement-fee-engine";
 import { SERVICE_LEVELS } from "@/lib/collaboration-fees";
 import { corridorCountries } from "@/lib/corridor-countries";
 import type { FeeReservation } from "@/lib/dual-platform-fees";
@@ -49,6 +50,10 @@ export type CollaborationFinancialPlan = {
   businessPaysCents?: number;
   /** Business platform fee reserved on top of gross influencer compensation. */
   businessPlatformFeeCents?: number;
+  /** Portion of the business fee allocated to activation. It is not spread across milestones. */
+  activationFeeCents?: number;
+  /** Remainder of the business fee after activation. This is the amount spread across milestones. */
+  businessCollaborationFeeCents?: number;
   /** Influencer platform fee reserved from gross influencer compensation. */
   influencerPlatformFeeCents?: number;
   /** Reserved on signing. Earning and provider settlement stay empty until approved. */
@@ -69,7 +74,7 @@ export type CollaborationFinancialPlan = {
   creatorCountry: string;
   payoutCurrency: string;
   providerRouteVersion: string;
-  roundingPolicy: "last_milestone_absorbs";
+  roundingPolicy: "last_milestone_absorbs" | "largest_remainder";
   contractVersion: number;
   createdAt: string;
   lockedAt: string | null;
@@ -271,6 +276,7 @@ export function buildFinancialPlan(input: {
   totalPlatformFeeCents: number;
   businessPlatformFeeCents?: number | null;
   influencerPlatformFeeCents?: number | null;
+  activationFeeCents?: number | null;
   businessPaysCents?: number | null;
   feeReservation?: FeeReservation | null;
   feePayer?: string;
@@ -314,13 +320,34 @@ export function buildFinancialPlan(input: {
   const shareCheck = validateMilestoneShares(input.milestones);
   if (!shareCheck.ok) return null;
   const shares = input.milestones.map((m) => m.shareBps);
-  const grossParts = splitGross(input.grossCents, shares);
+  const activationFeeCents =
+    input.activationFeeCents == null
+      ? null
+      : Number.isInteger(input.activationFeeCents) && input.activationFeeCents >= 0 && input.activationFeeCents <= businessFee
+        ? input.activationFeeCents
+        : null;
+  if (input.activationFeeCents != null && activationFeeCents == null) return null;
+  const collaborationFeeCents = activationFeeCents == null ? businessFee : businessFee - activationFeeCents;
+  const grossParts =
+    activationFeeCents == null
+      ? splitGross(input.grossCents, shares)
+      : allocateByLargestRemainder(input.grossCents, shares);
   if (!grossParts) return null;
+  const zeros = input.milestones.map(() => 0);
   const feeParts = splitGross(Math.max(deductedFee, 0) || 0, shares);
-  // When fee is 0, allocate zeros without splitGross (which rejects 0 gross).
-  const platformParts = deductedFee === 0 ? input.milestones.map(() => 0) : feeParts;
+  const platformParts =
+    activationFeeCents == null
+      ? deductedFee === 0
+        ? zeros
+        : feeParts
+      : allocateByLargestRemainder(deductedFee, shares);
   if (!platformParts) return null;
-  const businessParts = !dual || businessFee === 0 ? input.milestones.map(() => 0) : splitGross(businessFee, shares);
+  const businessParts =
+    activationFeeCents == null
+      ? !dual || businessFee === 0
+        ? zeros
+        : splitGross(businessFee, shares)
+      : allocateByLargestRemainder(collaborationFeeCents, shares);
   if (!businessParts) return null;
 
   const rightsActivateOn = input.rightsActivateOn ?? "release";
@@ -333,15 +360,16 @@ export function buildFinancialPlan(input: {
       grossCents,
       platformFeeCents,
       ...(dual ? { businessPlatformFeeCents: businessParts[index] } : {}),
-      creatorCents: Math.max(0, grossCents - platformFeeCents),
+      creatorCents: activationFeeCents == null ? Math.max(0, grossCents - platformFeeCents) : grossCents - platformFeeCents,
       rightsActivateOn,
     };
   });
 
+  if (activationFeeCents != null && milestones.some((row) => row.creatorCents < 0)) return null;
   const totalCreator = milestones.reduce((sum, row) => sum + row.creatorCents, 0);
   const deductedTotal = milestones.reduce((sum, row) => sum + row.platformFeeCents, 0);
   const businessTotal = milestones.reduce((sum, row) => sum + (row.businessPlatformFeeCents ?? 0), 0);
-  const totalFee = dual ? deductedTotal + businessTotal : deductedTotal;
+  const totalFee = dual ? deductedTotal + businessTotal + (activationFeeCents ?? 0) : deductedTotal;
 
   return {
     contractCurrency,
@@ -357,6 +385,9 @@ export function buildFinancialPlan(input: {
       ? {
           businessPlatformFeeCents: businessFee,
           influencerPlatformFeeCents: influencerFee,
+          ...(activationFeeCents == null
+            ? {}
+            : { activationFeeCents, businessCollaborationFeeCents: collaborationFeeCents }),
           businessPaysCents: input.businessPaysCents ?? input.grossCents + businessFee,
           feeReservation: input.feeReservation ?? null,
         }
@@ -366,7 +397,7 @@ export function buildFinancialPlan(input: {
     creatorCountry: input.creatorCountry.trim().toUpperCase(),
     payoutCurrency,
     providerRouteVersion: input.providerRouteVersion ?? "v1",
-    roundingPolicy: "last_milestone_absorbs",
+    roundingPolicy: activationFeeCents == null ? "last_milestone_absorbs" : "largest_remainder",
     contractVersion: input.contractVersion ?? 1,
     createdAt: input.createdAt ?? new Date().toISOString(),
     lockedAt: input.lockedAt ?? null,

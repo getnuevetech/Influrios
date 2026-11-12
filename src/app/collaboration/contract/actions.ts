@@ -8,6 +8,7 @@ import { closeBriefForContract, getWorkspace } from "@/lib/business";
 import { contractOfferReady } from "@/lib/campaign-contract";
 import { getMarketplaceApplication } from "@/lib/marketplace-listings";
 import { assertCollabOsV1 } from "@/lib/collab-os";
+import { resolveNewAgreementFees } from "@/lib/agreement-fee-engine";
 import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import { resolvePaidAgreementFee } from "@/lib/paid-agreement-fee";
 import { buildBusinessCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate, verifiedDomesticCountry } from "@/lib/payment-engine";
@@ -381,6 +382,22 @@ export async function actionSubmitContractWizard(formData: FormData) {
     },
     "influencer",
   ).catch(() => null);
+  const agreement = await resolveNewAgreementFees(
+    {
+      jurisdiction: jurisdictionCode,
+      serviceLevel: feeServiceLevel,
+      grossValueCents: quote.grossInfluencerCompensationCents,
+    },
+    drafts.map((row) => row.shareBps),
+  ).catch(() => null);
+  if (!agreement?.ok) {
+    qs.set("step", "preview");
+    redirectError(agreement?.error ?? "The activation and collaboration fees could not be quoted.", qs);
+  }
+  if (agreement.businessPlatformFeeCents !== quote.feeCents || agreement.businessPaysCents !== quote.totalCents) {
+    qs.set("step", "preview");
+    redirectError("The activation split does not match the business fee.", qs);
+  }
   const disclosureServiceLevel = feeServiceLevel;
 
   const disclosureGate = requireFeeDisclosureAccepted({
@@ -464,6 +481,13 @@ export async function actionSubmitContractWizard(formData: FormData) {
     milestoneCount: drafts.length,
     amountInputMode: amountMode === "all_in" ? "all_in_budget" : "gross_influencer_compensation",
     validForMs: quoteHours * 60 * 60 * 1000,
+    activation: {
+      activationFeeCents: agreement.activationFeeCents,
+      businessCollaborationFeeCents: agreement.businessCollaborationFeeCents,
+      activationRuleId: agreement.activationRule.id,
+      activationRuleVersion: agreement.activationRule.version,
+      allocations: agreement.allocations,
+    },
   });
   if ("ok" in signedQuote) {
     qs.set("step", "preview");
@@ -477,9 +501,11 @@ export async function actionSubmitContractWizard(formData: FormData) {
     feeMethod: quote.rule.method,
     feePercentBps: quote.rule.percentBps,
     feeFixedCents: quote.rule.fixedCents,
-    totalPlatformFeeCents: quote.feeCents,
-    businessPlatformFeeCents: quote.feeCents,
-    businessPaysCents: quote.totalCents,
+    totalPlatformFeeCents: agreement.platformFeesTotalCents,
+    businessPlatformFeeCents: agreement.businessPlatformFeeCents,
+    influencerPlatformFeeCents: agreement.influencerPlatformFeeCents,
+    activationFeeCents: agreement.activationFeeCents,
+    businessPaysCents: agreement.businessPaysCents,
     feePayer: "brand",
     fundingCountry: jurisdictionCode,
     creatorCountry: creatorCountry ?? jurisdictionCode,

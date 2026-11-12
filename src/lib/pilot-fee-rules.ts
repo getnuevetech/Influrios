@@ -52,6 +52,21 @@ function pair(input: {
 }
 
 export const PILOT_FEE_RULES: CollaborationFeeRule[] = [
+  {
+    ...shared,
+    id: "rule_pilot_activation_business",
+    name: "Platform Activation · Business",
+    active: true,
+    priority: 700,
+    jurisdiction: "*",
+    serviceLevel: "*",
+    feeType: "platform_service",
+    method: "fixed",
+    percentBps: 0,
+    payer: "brand",
+    purpose: "platform_activation",
+    notes: "Explicit zero activation until an approved allocation is saved. It is capped by the business fee and is not a second minimum.",
+  },
   pair({
     id: "rule_pilot_discovery_business",
     name: "Discovery Only · Business",

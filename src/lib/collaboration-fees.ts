@@ -13,12 +13,13 @@ import { prisma } from "@/lib/db";
 
 export type FeeMethod = "percent" | "fixed" | "percent_plus_fixed" | "waived" | "tiered" | "custom_enterprise";
 export type FeePayer = "brand" | "creator" | "split";
-export const FEE_PURPOSES = ["business_platform_fee", "influencer_platform_fee", "legacy"] as const;
+export const FEE_PURPOSES = ["business_platform_fee", "influencer_platform_fee", "platform_activation", "legacy"] as const;
 export type FeePurpose = (typeof FEE_PURPOSES)[number];
 
 export const FEE_PURPOSE_LABELS: Record<FeePurpose, string> = {
   business_platform_fee: "Business Platform Fee",
   influencer_platform_fee: "Influencer Platform Fee",
+  platform_activation: "Platform Activation Fee",
   legacy: "Legacy, not used on a new deal",
 };
 
@@ -125,6 +126,7 @@ export function asFeePurpose(value: string | undefined | null): FeePurpose {
  */
 export function feeRuleSide(rule: { payer?: string | null; purpose?: string | null }): "business" | "influencer" | null {
   if (rule.payer === "split") return null;
+  if (rule.purpose === "platform_activation") return null;
   if (rule.purpose === "business_platform_fee" && rule.payer === "brand") return "business";
   if (rule.purpose === "influencer_platform_fee" && rule.payer === "creator") return "influencer";
   if (rule.purpose === "legacy" || rule.purpose == null || rule.purpose === "") {
@@ -135,6 +137,7 @@ export function feeRuleSide(rule: { payer?: string | null; purpose?: string | nu
 }
 
 export function feeRulePurposeLabel(rule: { payer?: string | null; purpose?: string | null }) {
+  if (rule.purpose === "platform_activation" && rule.payer === "brand") return FEE_PURPOSE_LABELS.platform_activation;
   const side = feeRuleSide(rule);
   if (side === "business") return FEE_PURPOSE_LABELS.business_platform_fee;
   if (side === "influencer") return FEE_PURPOSE_LABELS.influencer_platform_fee;
@@ -254,6 +257,9 @@ export function feeRuleDraft(input: {
   const purpose = (input.purpose ?? "").trim();
   if (!(FEE_PURPOSES as readonly string[]).includes(purpose)) {
     return { ok: false, error: "Choose a fee purpose." };
+  }
+  if (purpose === "platform_activation" && payer !== "brand") {
+    return { ok: false, error: "The platform activation fee is paid by the business." };
   }
   if (purpose === "business_platform_fee" && payer !== "brand") {
     return { ok: false, error: "A business platform fee is paid by the business." };
