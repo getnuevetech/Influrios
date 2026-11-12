@@ -158,8 +158,10 @@ describe("milestone delivery", () => {
     const page = readFileSync("src/app/payments/page.tsx", "utf8");
     assert.match(actions, /Only the assigned influencer can submit work/);
     assert.match(actions, /submitMilestoneWork/);
-    assert.match(page, /!businessViewer && deal.status === "held"/);
+    assert.equal(page.includes('type="file"'), false);
+    assert.match(page, /\/collaboration\/work\/\$\{deal\.id\}/);
     const work = readFileSync("src/app/collaboration/work/[fundingId]/page.tsx", "utf8");
+    assert.match(work, /!business && funding.status === "held"/);
     assert.match(work, /Version \{row.version\}/);
     assert.match(work, /name="files"/);
     assert.match(work, /actionAddDeliverableFiles/);

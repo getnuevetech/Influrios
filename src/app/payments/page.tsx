@@ -5,7 +5,6 @@ import {
   actionOpenFundingCheckout,
   actionRequestChangeOrder,
   actionStopSeries,
-  actionSubmitMilestone,
 } from "@/app/payments/actions";
 import { PaymentDetailsDialog } from "@/components/collaboration-payments-dialog";
 import { ContractRowMenu } from "@/components/contract-agreement-dialog";
@@ -16,7 +15,9 @@ import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { milestoneDeliveryLabel, milestonePayoutLabel } from "@/lib/milestone-delivery";
 import { syncOpenGatewayDeposits } from "@/lib/funding-checkout";
-import { readSignedDealMoney } from "@/lib/payment-engine";
+import { eligiblePlatformFeePosition, readSignedDealMoney } from "@/lib/payment-engine";
+import { currencyPaymentTotals, paymentNextAction } from "@/lib/payment-list";
+import { readSettlementProposal } from "@/lib/cancellation-settlement";
 import { collectionCheckoutFields } from "@/lib/provider-collection";
 import { listFundingsForBusiness, listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { influencerLedgerShare, ledgerEntryVisibleTo, memberDealView } from "@/lib/member-deal-money";
@@ -204,10 +205,15 @@ export default async function PaymentsPage({ searchParams }: Props) {
   const status = ["awaiting", "funded", "completed"].includes(params.status ?? "") ? params.status! : "all";
   const currencies = [...new Set(fundings.map((deal) => storedCurrencyCode(deal.currency) ?? deal.currency))].sort();
   const currency = currencies.includes(params.currency ?? "") ? params.currency! : "all";
-  const summaryCurrency = currency !== "all" ? currency : currencies.length === 1 ? currencies[0] : "USD";
-  const summaryRows = fundings.filter((deal) => (storedCurrencyCode(deal.currency) ?? deal.currency) === summaryCurrency);
-  const held = summaryRows.reduce((sum, row) => sum + partyMoney(row).heldCents, 0);
-  const released = summaryRows.reduce((sum, row) => sum + partyMoney(row).releasedCents, 0);
+  const currencyTotals = currencyPaymentTotals(
+    fundings
+      .filter((deal) => currency === "all" || (storedCurrencyCode(deal.currency) ?? deal.currency) === currency)
+      .map((deal) => ({
+        currency: storedCurrencyCode(deal.currency) ?? deal.currency,
+        heldCents: partyMoney(deal).heldCents,
+        releasedCents: partyMoney(deal).releasedCents,
+      })),
+  );
   const fundedCount = fundings.filter((row) => row.status === "held" || row.status === "completed").length;
 
   const searched = fundings.filter((deal) => {
@@ -228,6 +234,14 @@ export default async function PaymentsPage({ searchParams }: Props) {
   const currentPage = Math.min(page, pageCount);
   const rows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const selected = fundings.find((deal) => deal.id === params.deal) ?? null;
+  const openSettlement = selected
+    ? await prisma.fundingSettlement
+        .findFirst({
+          where: { fundingId: selected.id, status: { in: ["proposed", "accepted", "executed"] } },
+          orderBy: { versionNumber: "desc" },
+        })
+        .catch(() => null)
+    : null;
   const closeHref = listHref({ q: params.q, status, currency, page: currentPage });
 
   const tabs = [
@@ -284,11 +298,23 @@ export default async function PaymentsPage({ searchParams }: Props) {
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Deals" value={String(fundings.length)} />
         <Stat label="Funded deals" value={String(fundedCount)} />
-        <Stat
-          label={businessViewer ? `Held by provider · ${summaryCurrency}` : `Held for you · ${summaryCurrency}`}
-          value={moneyLabel(held, summaryCurrency)}
-        />
-        <Stat label={`Paid out · ${summaryCurrency}`} value={moneyLabel(released, summaryCurrency)} />
+        <div className="rounded-2xl border border-[#E6ECF7] bg-white px-4 py-4 sm:col-span-2">
+          <p className="text-xs font-semibold text-[#667085]">Totals by currency</p>
+          {currencyTotals.length === 0 ? (
+            <p className="mt-2 text-sm text-[#667085]">No funded amounts yet.</p>
+          ) : (
+            <ul className="mt-2 space-y-1 text-sm text-[#1B1464]">
+              {currencyTotals.map(([code, totals]) => (
+                <li key={code} className="flex flex-wrap justify-between gap-2">
+                  <span className="font-semibold">{code}</span>
+                  <span>
+                    {businessViewer ? "Held" : "Held for you"} {moneyLabel(totals.heldCents, code)} · Paid {moneyLabel(totals.releasedCents, code)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
 
       <div className="flex flex-wrap gap-2">
@@ -355,8 +381,19 @@ export default async function PaymentsPage({ searchParams }: Props) {
         <ul className="mt-4 space-y-3 md:hidden">
           {rows.map((deal) => {
             const pill = statusPill(deal.status);
-            const share = partyMoney(deal);
             const name = creatorName(deal);
+            const signed = memberDealView({
+              role: businessViewer ? "business" : "influencer",
+              grossCents: deal.grossCents,
+              feeCents: deal.feeCents,
+              plan: deal.feeSnapshotJson,
+            });
+            const next = paymentNextAction({
+              status: deal.status,
+              role: businessViewer ? "business" : "influencer",
+              payoutPending: deal.milestones.some((milestone) => milestonePayoutLabel(milestone.status) === "Pending confirmation"),
+              payoutReturned: deal.milestones.some((milestone) => milestone.status === "returned"),
+            });
             const openHref = listHref({ q: params.q, status, currency, page: currentPage, deal: deal.id });
             return (
               <li key={deal.id} className="rounded-2xl border border-[#E6ECF7] p-3">
@@ -364,8 +401,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 <p className="mt-1 text-sm text-[#344054]">{name}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                   <span className={`rounded-full px-2.5 py-1 font-semibold ${pill.className}`}>{pill.text}</span>
-                  <span>Held {moneyLabel(share.heldCents, deal.currency)}</span>
-                  <span>Paid {moneyLabel(share.releasedCents, deal.currency)}</span>
+                  <span>{moneyLabel(signed.headlineCents, deal.currency)}</span>
+                  <span>{next}</span>
+                  <span>{when(deal.updatedAt)}</span>
                 </div>
                 <Link
                   href={openHref}
@@ -385,17 +423,29 @@ export default async function PaymentsPage({ searchParams }: Props) {
               <tr>
                 <th className="px-2 py-2 font-semibold">Collaboration</th>
                 <th className="px-2 py-2 font-semibold">Influencer</th>
-                <th className="px-2 py-2 font-semibold">Funding</th>
-                <th className="px-2 py-2 font-semibold">Held</th>
-                <th className="px-2 py-2 font-semibold">Paid out</th>
-                <th className="px-2 py-2 font-semibold">Action</th>
+                <th className="px-2 py-2 font-semibold">{businessViewer ? "Signed total" : "Your net"}</th>
+                <th className="px-2 py-2 font-semibold">Status</th>
+                <th className="px-2 py-2 font-semibold">Next action</th>
+                <th className="px-2 py-2 font-semibold">Updated</th>
+                <th className="px-2 py-2 font-semibold">Open</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((deal) => {
                 const pill = statusPill(deal.status);
-                const share = partyMoney(deal);
                 const name = creatorName(deal);
+                const signed = memberDealView({
+                  role: businessViewer ? "business" : "influencer",
+                  grossCents: deal.grossCents,
+                  feeCents: deal.feeCents,
+                  plan: deal.feeSnapshotJson,
+                });
+                const next = paymentNextAction({
+                  status: deal.status,
+                  role: businessViewer ? "business" : "influencer",
+                  payoutPending: deal.milestones.some((milestone) => milestonePayoutLabel(milestone.status) === "Pending confirmation"),
+                  payoutReturned: deal.milestones.some((milestone) => milestone.status === "returned"),
+                });
                 const openHref = listHref({ q: params.q, status, currency, page: currentPage, deal: deal.id });
                 return (
                   <tr key={deal.id} className="border-t border-[#F2F4F7]">
@@ -408,11 +458,12 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         {name}
                       </span>
                     </td>
+                    <td className="px-2 py-4 text-[#344054]">{moneyLabel(signed.headlineCents, deal.currency)}</td>
                     <td className="px-2 py-4">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${pill.className}`}>{pill.text}</span>
                     </td>
-                    <td className="px-2 py-4 text-[#344054]">{moneyLabel(share.heldCents, deal.currency)}</td>
-                    <td className="px-2 py-4 text-[#344054]">{moneyLabel(share.releasedCents, deal.currency)}</td>
+                    <td className="px-2 py-4 text-[#344054]">{next}</td>
+                    <td className="px-2 py-4 text-[#667085]">{when(deal.updatedAt)}</td>
                     <td className="px-2 py-4">
                       <span className="inline-flex items-center gap-1">
                         <Link
@@ -437,7 +488,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
               })}
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-2 py-8 text-sm text-[#667085]">
+                  <td colSpan={7} className="px-2 py-8 text-sm text-[#667085]">
                     No deals on this account yet. Fund from a signed collaboration contract.
                   </td>
                 </tr>
@@ -482,6 +533,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
           heldCents={partyMoney(selected).heldCents}
           releasedCents={partyMoney(selected).releasedCents}
           changeOrdersEnabled={config?.changeOrdersEnabled !== false}
+          settlement={openSettlement ? readSettlementProposal(openSettlement.proposalJson) : null}
+          settlementStatus={openSettlement?.status ?? null}
         />
       ) : null}
     </div>
@@ -506,6 +559,8 @@ function PaymentDialog({
   heldCents,
   releasedCents,
   changeOrdersEnabled,
+  settlement,
+  settlementStatus,
 }: {
   deal: Deal;
   businessViewer: boolean;
@@ -515,6 +570,8 @@ function PaymentDialog({
   heldCents: number;
   releasedCents: number;
   changeOrdersEnabled: boolean;
+  settlement: ReturnType<typeof readSettlementProposal>;
+  settlementStatus: string | null;
 }) {
   const pill = statusPill(deal.status);
   const money = memberDealView({
@@ -531,6 +588,22 @@ function PaymentDialog({
   const entries = ledgerEntries(deal, viewerRole);
   const pending = deal.milestones.some((milestone) => milestonePayoutLabel(milestone.status) === "Pending confirmation");
   const provider = deal.providerCode.trim();
+  const feeEntries = deal.entries as {
+    kind: string;
+    amountCents: number;
+    party?: string;
+    milestoneId?: string | null;
+  }[];
+  const feePosition = eligiblePlatformFeePosition(feeEntries);
+  const quote = (deal.feeSnapshotJson as { financialPlan?: { signedQuote?: Record<string, unknown> } } | null)?.financialPlan?.signedQuote;
+  const activationValue = quote?.activationFeeCents;
+  const collaborationValue = quote?.businessCollaborationFeeCents;
+  const activationFee = Number.isInteger(activationValue) ? Number(activationValue) : null;
+  const collaborationFee = Number.isInteger(collaborationValue) ? Number(collaborationValue) : null;
+  const refundedCents = feeEntries.filter((entry) => entry.kind === "refund").reduce((sum, entry) => sum + entry.amountCents, 0);
+  const collectedCents = feeEntries
+    .filter((entry) => entry.kind === "hold" || entry.kind === "collection")
+    .reduce((sum, entry) => sum + entry.amountCents, 0);
   const next = canDeposit
     ? "Deposit the signed amount. Nothing is held until the provider confirms the payment."
     : deal.status === "awaiting_provider"
@@ -687,6 +760,55 @@ function PaymentDialog({
           ) : null}
         </div>
       }
+      fees={
+        <dl className="space-y-2 text-sm">
+          {money.lines.map((line) => (
+            <div key={line.label} className="flex items-center justify-between gap-3">
+              <dt className="text-[#667085]">
+                {line.label === "Your platform fee" && businessViewer && activationFee != null ? "Business fee envelope" : line.label}
+              </dt>
+              <dd className="font-semibold text-[#1B1464]">{moneyLabel(line.amountCents, deal.currency)}</dd>
+            </div>
+          ))}
+          {businessViewer && activationFee != null ? (
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-[#667085]">Platform Activation Fee</dt>
+              <dd className="font-semibold text-[#1B1464]">{moneyLabel(activationFee, deal.currency)}</dd>
+            </div>
+          ) : null}
+          {businessViewer && collaborationFee != null ? (
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-[#667085]">Collaboration Service Fee</dt>
+              <dd className="font-semibold text-[#1B1464]">{moneyLabel(collaborationFee, deal.currency)}</dd>
+            </div>
+          ) : null}
+          {businessViewer ? (
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-[#667085]">Collected</dt>
+              <dd className="font-semibold text-[#1B1464]">{moneyLabel(collectedCents, deal.currency)}</dd>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between gap-3">
+            <dt className="text-[#667085]">Eligible</dt>
+            <dd className="font-semibold text-[#1B1464]">
+              {moneyLabel(businessViewer ? feePosition.eligibleBusinessCents : feePosition.eligibleInfluencerCents, deal.currency)}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <dt className="text-[#667085]">Settled</dt>
+            <dd className="font-semibold text-[#1B1464]">
+              {moneyLabel(businessViewer ? feePosition.settledBusinessCents : feePosition.settledInfluencerCents, deal.currency)}
+            </dd>
+          </div>
+          {businessViewer ? (
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-[#667085]">Refunded</dt>
+              <dd className="font-semibold text-[#1B1464]">{moneyLabel(refundedCents, deal.currency)}</dd>
+            </div>
+          ) : null}
+          <p className="pt-2 text-xs text-[#667085]">The other party’s fee is not shown here.</p>
+        </dl>
+      }
       milestones={
         <div className="space-y-3">
           <p className="text-sm text-[#667085]">Delivery status and payout status stay visible. Open a milestone for the submission.</p>
@@ -705,27 +827,18 @@ function PaymentDialog({
                 </summary>
                 <div className="space-y-3 border-t border-[#E6ECF7] px-4 py-3">
                   <p className="text-sm text-[#667085]">
-                    {moneyLabel(milestone.amountCents, deal.currency)}. Review submissions and comments in the collaboration workspace.
+                    {moneyLabel(milestone.amountCents, deal.currency)}. Review submissions in the collaboration workspace.
                   </p>
-                  {!businessViewer && deal.status === "held" && milestone.status === "pending" ? (
-                    <form action={actionSubmitMilestone} className="space-y-2">
-                      <input type="hidden" name="dealId" value={deal.id} />
-                      <input type="hidden" name="milestoneId" value={milestone.id} />
-                      <input name="linkUrl" placeholder="https:// link to the work" className="w-full rounded-lg border border-[#E6ECF7] px-2 py-1 text-xs" />
-                      <input name="note" placeholder="What you are submitting" className="w-full rounded-lg border border-[#E6ECF7] px-2 py-1 text-xs" />
-                      <input name="files" type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.zip" className="w-full text-xs" />
-                      <button type="submit" className="rounded-full border border-[#E6ECF7] px-3 py-1.5 text-xs font-semibold text-[#1B1464]">
-                        Submit work
-                      </button>
-                    </form>
-                  ) : null}
+                  <Link href={`/collaboration/work/${deal.id}`} className="text-sm font-semibold text-[#6D4AFF] hover:underline">
+                    Open collaboration
+                  </Link>
                 </div>
               </details>
             );
           })}
         </div>
       }
-      transactions={
+      timeline={
         entries.length === 0 ? (
           <p className="text-sm text-[#667085]">No confirmed transactions yet.</p>
         ) : (
@@ -752,6 +865,65 @@ function PaymentDialog({
             </table>
           </div>
         )
+      }
+      cancellation={
+        <div className="space-y-3 text-sm text-[#344054]">
+          <p>Review cancellation explains the proposal. This page does not refund a funded collaboration.</p>
+          {settlement ? (
+            <dl className="space-y-2">
+              <div className="flex justify-between gap-3">
+                <dt className="text-[#667085]">Status</dt>
+                <dd className="font-semibold text-[#1B1464]">{settlementStatus ?? "proposed"}</dd>
+              </div>
+              {businessViewer ? (
+                <>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[#667085]">Retained activation</dt>
+                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.retainedActivationCents, deal.currency)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[#667085]">Retained collaboration fee</dt>
+                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.retainedBusinessCollaborationCents, deal.currency)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[#667085]">Business refund</dt>
+                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.businessRefundCents, deal.currency)}</dd>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[#667085]">Accepted net</dt>
+                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.influencerNetCents, deal.currency)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[#667085]">Retained collaboration fee</dt>
+                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.retainedInfluencerFeeCents, deal.currency)}</dd>
+                  </div>
+                </>
+              )}
+            </dl>
+          ) : (
+            <p className="text-[#667085]">No cancellation proposal is open.</p>
+          )}
+        </div>
+      }
+      documents={
+        <div className="space-y-3 text-sm">
+          {contractId ? (
+            <Link href={`/collaboration/contracts/${contractId}`} className="font-semibold text-[#6D4AFF] hover:underline">
+              View signed contract
+            </Link>
+          ) : (
+            <p className="text-[#667085]">No signed contract is linked.</p>
+          )}
+          <details className="rounded-xl border border-[#E6ECF7] px-3 py-2">
+            <summary className="cursor-pointer text-xs font-semibold text-[#1B1464]">Support details</summary>
+            <p className="mt-2 text-xs text-[#667085]">
+              Provider {provider || "not recorded"}. Funding {deal.id}.
+            </p>
+          </details>
+        </div>
       }
     />
   );
