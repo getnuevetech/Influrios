@@ -17,7 +17,7 @@ import {
   type ChargebackEvidencePack,
 } from "@/lib/chargeback-evidence";
 import { ledgerMovements, reconcileLedger, verifyMarketplaceSignature } from "@/lib/ledger";
-import { activationExceptionForReason, settlementFromSnapshot } from "@/lib/cancellation-settlement";
+import { activationExceptionForReason, readSettlementProposal, settlementFromSnapshot, settlementVersionDecision } from "@/lib/cancellation-settlement";
 import { adapterForProvider } from "@/lib/payment-provider-adapter";
 
 const CHARGEBACK_REASONS = new Set<CancellationReason>(["chargeback"]);
@@ -197,27 +197,65 @@ export async function executeHeldCancellation(input: {
     acceptedPartialCents: input.acceptedPartialCents,
   });
   if (settlement && !settlement.ok) return settlement;
-  const proposal = settlement && settlement.ok ? settlement.proposal : null;
-  if (proposal && !proposal.automatic) {
-    await prisma.auditLog
-      .create({
+  let proposal = settlement && settlement.ok ? settlement.proposal : null;
+  if (proposal) {
+    const latestRow = await prisma.fundingSettlement.findFirst({
+      where: { fundingId: funding.id },
+      orderBy: { versionNumber: "desc" },
+    });
+    const latestProposal = latestRow ? readSettlementProposal(latestRow.proposalJson) : null;
+    const decision = settlementVersionDecision({
+      latest: latestRow && latestProposal ? { versionNumber: latestRow.versionNumber, status: latestRow.status, proposal: latestProposal } : null,
+      proposal,
+    });
+    if (decision.kind === "executed") {
+      return { ok: false as const, error: "This settlement was already sent. Nothing was refunded again." };
+    }
+    if (decision.supersede) {
+      await prisma.fundingSettlement.updateMany({
+        where: { fundingId: funding.id, status: { in: ["proposed", "accepted"] } },
+        data: { status: "superseded" },
+      });
+    }
+    if (decision.create) {
+      await prisma.fundingSettlement.create({
         data: {
-          actor: input.actor,
-          action: "funding_settlement_review",
-          objectType: "CollaborationFunding",
-          objectId: funding.id,
-          after: { reason: input.reason, proposal, note: input.note?.trim().slice(0, 500) || null },
+          fundingId: funding.id,
+          versionNumber: decision.versionNumber,
+          status: decision.kind === "execute" ? "accepted" : "proposed",
+          proposalJson: decision.proposal,
+          reason: input.reason,
+          acceptedBy: decision.kind === "execute" ? input.actor : null,
         },
-      })
-      .catch(() => undefined);
-    return {
-      ok: true as const,
-      paymentRisk: false as const,
-      calculation: calc,
-      providerRefund: null,
-      settlement: proposal,
-      evidence: null as ChargebackEvidencePack | null,
-    };
+      });
+    } else if (decision.kind === "execute" && latestRow && latestRow.status === "proposed") {
+      await prisma.fundingSettlement.update({
+        where: { id: latestRow.id },
+        data: { status: "accepted", acceptedBy: input.actor },
+      });
+    }
+    proposal = decision.proposal;
+    if (decision.kind === "propose") {
+      await prisma.auditLog
+        .create({
+          data: {
+            actor: input.actor,
+            action: "funding_settlement_review",
+            objectType: "CollaborationFunding",
+            objectId: funding.id,
+            after: { reason: input.reason, proposal, versionNumber: decision.versionNumber, note: input.note?.trim().slice(0, 500) || null },
+          },
+        })
+        .catch(() => undefined);
+      return {
+        ok: true as const,
+        paymentRisk: false as const,
+        calculation: calc,
+        providerRefund: null,
+        settlement: proposal,
+        evidence: null as ChargebackEvidencePack | null,
+      };
+    }
   }
   const payoutBlock = cancellationPayoutBlock(funding.milestones);
   if (!payoutBlock.ok) {
@@ -280,6 +318,13 @@ export async function executeHeldCancellation(input: {
     providerRefund = await providerAdapter.cancelFunding(funding.id);
   }
 
+  if (proposal && !(providerRefund && "ok" in providerRefund && providerRefund.ok === false)) {
+    await prisma.fundingSettlement.updateMany({
+      where: { fundingId: funding.id, status: "accepted" },
+      data: { status: "executed" },
+    });
+  }
+
   await prisma.auditLog
     .create({
       data: {
@@ -321,6 +366,32 @@ export async function executeHeldCancellation(input: {
     settlement: proposal,
     evidence: null as ChargebackEvidencePack | null,
   };
+}
+
+/** Freezes the open proposal. The provider refund waits for a later execution of that version. */
+export async function acceptFundingSettlement(input: { fundingId: string; actor: string }) {
+  const fundingId = input.fundingId.trim();
+  const row = await prisma.fundingSettlement.findFirst({
+    where: { fundingId, status: "proposed" },
+    orderBy: { versionNumber: "desc" },
+  });
+  if (!row) return { ok: false as const, error: "There is no settlement proposal to accept." };
+  await prisma.fundingSettlement.update({
+    where: { id: row.id },
+    data: { status: "accepted", acceptedBy: input.actor },
+  });
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: input.actor,
+        action: "funding_settlement_accepted",
+        objectType: "CollaborationFunding",
+        objectId: fundingId,
+        after: { versionNumber: row.versionNumber },
+      },
+    })
+    .catch(() => undefined);
+  return { ok: true as const, versionNumber: row.versionNumber };
 }
 
 export async function listPaymentRiskFundings(limit = 50) {

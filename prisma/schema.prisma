@@ -2029,6 +2029,7 @@ model CollaborationFunding {
   disputes          MilestoneDispute[]
   changeOrders      FundingChangeOrder[]
   deposits          FundingDeposit[]
+  settlements       FundingSettlement[]
   submissions       MilestoneSubmission[]
   files             MilestoneFile[]
 
@@ -2223,6 +2224,24 @@ model FundingChangeOrder {
 }
 
 /// A business deposit for one prefund. Manual methods stay pending until finance confirms them.
+/// A versioned cancellation settlement. Finance executes the accepted version.
+model FundingSettlement {
+  id            String               @id @default(cuid())
+  fundingId     String
+  funding       CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  /// proposed | accepted | superseded | executed
+  status        String
+  proposalJson  Json
+  reason        String
+  acceptedBy    String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@unique([fundingId, versionNumber])
+  @@index([fundingId, status])
+}
+
 model FundingDeposit {
   id               String               @id @default(cuid())
   fundingId        String

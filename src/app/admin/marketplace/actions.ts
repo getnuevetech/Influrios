@@ -496,6 +496,20 @@ export async function actionCancelUnfundedPrefund(formData: FormData) {
   redirect("/admin/marketplace?saved=prefund_cancelled");
 }
 
+export async function actionAcceptFundingSettlement(formData: FormData) {
+  const session = await requireAdminAction("collab_finance.high_risk");
+  const { requireCollabFinanceHighRisk } = await import("@/lib/admin-auth");
+  const stepUp = await requireCollabFinanceHighRisk(session, String(formData.get("stepUpPassword") ?? ""));
+  if (!stepUp.ok) redirect(`/admin/marketplace?error=${encodeURIComponent(stepUp.error)}`);
+  const { acceptFundingSettlement } = await import("@/lib/collaboration-cancellation");
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  if (!fundingId) redirect("/admin/marketplace?error=" + encodeURIComponent("Choose a funding record."));
+  const result = await acceptFundingSettlement({ fundingId, actor: session.email });
+  if (!result.ok) redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/admin/marketplace");
+  redirect("/admin/marketplace?saved=settlement_accepted");
+}
+
 export async function actionExecuteHeldCancellation(formData: FormData) {
   const session = await requireAdminAction("collab_finance.high_risk");
   const { requireCollabFinanceHighRisk } = await import("@/lib/admin-auth");

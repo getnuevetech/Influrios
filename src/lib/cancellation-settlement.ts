@@ -231,6 +231,56 @@ export function readSettlementProposal(value: unknown): SettlementProposal | nul
   };
 }
 
+function sameSettlementMoney(left: SettlementProposal, right: SettlementProposal) {
+  return (
+    left.influencerNetCents === right.influencerNetCents &&
+    left.retainedActivationCents === right.retainedActivationCents &&
+    left.retainedBusinessCollaborationCents === right.retainedBusinessCollaborationCents &&
+    left.retainedInfluencerFeeCents === right.retainedInfluencerFeeCents &&
+    left.platformRetainedCents === right.platformRetainedCents &&
+    left.businessRefundCents === right.businessRefundCents &&
+    left.activationRecoveryCents === right.activationRecoveryCents
+  );
+}
+
+/**
+ * A stored settlement is the record finance executes.
+ * A matching accepted version is reused. A changed amount supersedes that approval.
+ */
+export function settlementVersionDecision(input: {
+  latest: { versionNumber: number; status: string; proposal: SettlementProposal } | null;
+  proposal: SettlementProposal;
+}):
+  | { kind: "executed" }
+  | {
+      kind: "propose" | "execute";
+      versionNumber: number;
+      supersede: boolean;
+      create: boolean;
+      proposal: SettlementProposal;
+    } {
+  const latest = input.latest;
+  const nextNumber = (latest?.versionNumber ?? 0) + 1;
+  if (!latest || latest.status === "superseded") {
+    return input.proposal.automatic
+      ? { kind: "execute", versionNumber: nextNumber, supersede: false, create: true, proposal: input.proposal }
+      : { kind: "propose", versionNumber: nextNumber, supersede: false, create: true, proposal: input.proposal };
+  }
+  if (!sameSettlementMoney(latest.proposal, input.proposal)) {
+    return input.proposal.automatic
+      ? { kind: "execute", versionNumber: nextNumber, supersede: true, create: true, proposal: input.proposal }
+      : { kind: "propose", versionNumber: nextNumber, supersede: true, create: true, proposal: input.proposal };
+  }
+  if (latest.status === "executed") return { kind: "executed" };
+  if (latest.status === "accepted") {
+    return { kind: "execute", versionNumber: latest.versionNumber, supersede: false, create: false, proposal: latest.proposal };
+  }
+  if (input.proposal.automatic) {
+    return { kind: "execute", versionNumber: latest.versionNumber, supersede: false, create: false, proposal: latest.proposal };
+  }
+  return { kind: "propose", versionNumber: latest.versionNumber, supersede: false, create: false, proposal: latest.proposal };
+}
+
 /** The platform-service failure is the activation refund exception. Other reasons keep an eligible activation. */
 export function activationExceptionForReason(reason: string) {
   return reason === "platform_cannot_serve";
