@@ -47,6 +47,16 @@ export function canExecuteHeldCancellation(input: {
   });
 }
 
+/** A payout instruction that the provider has not finished. Settlement waits instead of refunding that money. */
+export function cancellationPayoutBlock(milestones: { status: string }[]): { ok: true } | { ok: false; error: string } {
+  const pending = milestones.some((milestone) => milestone.status === "release_scheduled" || milestone.status === "release_requested");
+  if (!pending) return { ok: true };
+  return {
+    ok: false,
+    error: "A payout is still with the provider. The settlement waits until that result is known. Nothing was refunded.",
+  };
+}
+
 export async function executeHeldCancellation(input: {
   fundingId: string;
   reason: CancellationReason;
@@ -208,6 +218,26 @@ export async function executeHeldCancellation(input: {
       settlement: proposal,
       evidence: null as ChargebackEvidencePack | null,
     };
+  }
+  const payoutBlock = cancellationPayoutBlock(funding.milestones);
+  if (!payoutBlock.ok) {
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: input.actor,
+          action: "funding_settlement_review",
+          objectType: "CollaborationFunding",
+          objectId: funding.id,
+          after: {
+            reason: input.reason,
+            proposal,
+            payoutPending: true,
+            note: input.note?.trim().slice(0, 500) || null,
+          },
+        },
+      })
+      .catch(() => undefined);
+    return payoutBlock;
   }
   const refundCents = proposal ? proposal.businessRefundCents : calc.refundableFutureCents;
   if (proposal && refundCents > reconciled.heldCents) {

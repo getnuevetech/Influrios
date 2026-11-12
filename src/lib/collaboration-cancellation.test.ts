@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  cancellationPayoutBlock,
   canExecuteHeldCancellation,
   isCancellationReason,
 } from "./collaboration-cancellation";
@@ -15,6 +16,15 @@ describe("W3.6 chargeback + held cancellation gates", () => {
     assert.equal(isCancellationReason("brand_after_start"), true);
     assert.equal(isCancellationReason("not_a_reason"), false);
     assert.ok(CANCELLATION_REASON_LABELS.chargeback.includes("Chargeback"));
+  });
+
+  it("waits while a payout is still with the provider", () => {
+    assert.equal(cancellationPayoutBlock([{ status: "released" }, { status: "pending" }]).ok, true);
+    assert.equal(cancellationPayoutBlock([{ status: "payout_failed" }]).ok, true);
+    const scheduled = cancellationPayoutBlock([{ status: "release_scheduled" }]);
+    assert.equal(scheduled.ok, false);
+    const requested = cancellationPayoutBlock([{ status: "approved" }, { status: "release_requested" }]);
+    assert.equal(requested.ok, false);
   });
 
   it("allows held cancel when protected payments are on", () => {
