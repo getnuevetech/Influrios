@@ -278,6 +278,11 @@ export async function executeHeldCancellation(input: {
     return payoutBlock;
   }
   const refundCents = proposal ? proposal.businessRefundCents : calc.refundableFutureCents;
+  if (refundCents > 0) {
+    const { paymentChargeBlock } = await import("@/lib/payment-charge-switches");
+    const charge = await paymentChargeBlock("cancellation_refund");
+    if (!charge.ok) return charge;
+  }
   if (proposal && refundCents > reconciled.heldCents) {
     return { ok: false as const, error: "The settlement refund is larger than the held amount. Nothing was refunded." };
   }

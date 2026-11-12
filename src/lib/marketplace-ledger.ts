@@ -1099,6 +1099,8 @@ export function recurringTrancheFeeCents(input: {
 }
 
 export async function sweepDueRecurrences(now = new Date()) {
+  const { paymentChargeEnabled } = await import("@/lib/payment-charge-switches");
+  if (!(await paymentChargeEnabled("recurring_collection"))) return;
   const confirmed = await prisma.collaborationFunding.findMany({
     where: { scheduleKind: "recurring", status: { in: ["held", "completed", "refunded"] } },
     include: { entries: { where: { kind: "hold" }, orderBy: { createdAt: "asc" }, take: 1 } },
@@ -1344,6 +1346,9 @@ export async function requestChangeOrder(input: { fundingId: string; grossCents:
   const signedEdit = directGrossEditBlock(signedPlan);
   if (signedEdit) return { ok: false as const, error: signedEdit };
   const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
+  const { paymentChargeBlock } = await import("@/lib/payment-charge-switches");
+  const charge = await paymentChargeBlock("change_order");
+  if (!charge.ok) return charge;
   const enabled = changeOrdersForTests ?? settings?.changeOrdersEnabled ?? true;
   const gate = canRequestChangeOrder({
     enabled,

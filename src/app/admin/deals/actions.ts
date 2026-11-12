@@ -49,6 +49,9 @@ export async function actionRecordFeeSettlement(formData: FormData) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) {
     redirect(`/admin/deals/${id}?error=` + encodeURIComponent("Enter the settlement in whole minor units."));
   }
+  const { paymentChargeBlock } = await import("@/lib/payment-charge-switches");
+  const charge = await paymentChargeBlock("fee_settlement");
+  if (!charge.ok) redirect(`/admin/deals/${id}?error=${encodeURIComponent(charge.error)}`);
   const result = await applyMarketplaceEvent({
     provider: "finance",
     eventId: providerReference,

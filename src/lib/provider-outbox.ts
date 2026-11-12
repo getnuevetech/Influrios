@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { paymentChargeBlock, paymentChargeKeyForRelease, paymentChargeRefusal } from "@/lib/payment-charge-switches";
 
 export type ProviderOperation = "collection" | "release" | "refund";
 
@@ -129,6 +130,7 @@ export async function claimProviderCommand(input: {
   | { dispatch: false; reason: string; providerRef?: string }
 > {
   let operationKey = providerOperationKey(input);
+  let latestStatus: string | null = null;
   if (input.operation === "release" && input.milestoneId?.trim()) {
     const prior = await prisma.providerCommand.findMany({
       where: {
@@ -139,6 +141,7 @@ export async function claimProviderCommand(input: {
       orderBy: { createdAt: "desc" },
     });
     const latest = prior[0];
+    latestStatus = latest?.status ?? null;
     if (latest?.status === "returned") {
       operationKey = providerOperationKey({ ...input, attempt: prior.length + 1 });
     } else if (latest) {
@@ -147,6 +150,16 @@ export async function claimProviderCommand(input: {
   }
   const currency = input.currency.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) return { dispatch: false, reason: "The command currency is missing." };
+  const chargeKey =
+    input.operation === "collection"
+      ? "provider_collection"
+      : input.operation === "release"
+        ? paymentChargeKeyForRelease(latestStatus)
+        : null;
+  if (chargeKey) {
+    const charge = await paymentChargeBlock(chargeKey);
+    if (!charge.ok) return { dispatch: false, reason: paymentChargeRefusal(chargeKey) };
+  }
   if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
     return { dispatch: false, reason: "The command amount is missing." };
   }

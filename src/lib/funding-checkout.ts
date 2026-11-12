@@ -114,6 +114,12 @@ export async function startFundingDeposit(input: {
   if (!funding || funding.status !== "awaiting_provider") {
     return { ok: false, error: "This funding is not waiting for a deposit. Nothing was charged." };
   }
+  const { paymentChargeBlock, paymentChargeKeyForDeposit } = await import("@/lib/payment-charge-switches");
+  const chargeKey = paymentChargeKeyForDeposit(input.method);
+  if (chargeKey) {
+    const charge = await paymentChargeBlock(chargeKey);
+    if (!charge.ok) return charge;
+  }
   const plan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
   const signed = readSignedDealMoney(plan);
   const planned = collectionInstructionAmount({
@@ -376,6 +382,9 @@ export function prefundingCancellationDecision(input: {
 
 /** Cancels an unfunded prefund after the open charge result is known. */
 export async function cancelUnfundedPrefund(input: { fundingId: string; actor: string }) {
+  const { paymentChargeBlock } = await import("@/lib/payment-charge-switches");
+  const charge = await paymentChargeBlock("prefund_cancel");
+  if (!charge.ok) return charge;
   const fundingId = input.fundingId.trim();
   const funding = await prisma.collaborationFunding.findUnique({
     where: { id: fundingId },

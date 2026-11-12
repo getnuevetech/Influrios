@@ -158,6 +158,10 @@ export default async function PaymentSettingsPage({
           <p className="font-display text-lg font-bold text-indigo">Providers</p>
           <p className="mt-1 text-xs text-muted">Gateway credentials, Connect, and health. Country assignment is here.</p>
         </Link>
+        <Link href="/admin/payment-switches" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
+          <p className="font-display text-lg font-bold text-indigo">Payment switches</p>
+          <p className="mt-1 text-xs text-muted">Turn each charge, payout, and refund on or off. Separate from fee rules.</p>
+        </Link>
         <Link href="/admin/fees" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
           <p className="font-display text-lg font-bold text-indigo">Fees and policies</p>
           <p className="mt-1 text-xs text-muted">Business and influencer platform fee rules, waivers, and the simulator.</p>
