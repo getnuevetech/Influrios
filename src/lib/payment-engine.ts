@@ -119,7 +119,14 @@ export type LedgerPosting = {
     | "reversal"
     | "provider_fee";
   party: "business" | "influencer" | "platform" | "tax" | "provider";
-  side?: "business" | "influencer" | "business_eligible" | "influencer_eligible" | "recovery";
+  side?:
+    | "business"
+    | "influencer"
+    | "business_eligible"
+    | "influencer_eligible"
+    | "business_pending"
+    | "influencer_pending"
+    | "recovery";
   amountCents: number;
   reverses?: string;
 };
@@ -745,7 +752,75 @@ export function eligiblePlatformFeePosition(
     settledInfluencerCents: settledInfluencer,
     unsettledBusinessCents: Math.max(0, business - settledBusiness),
     unsettledInfluencerCents: Math.max(0, influencer - settledInfluencer),
+    activationEligibleCents: activation,
   };
+}
+
+/** Fees a partial refund gives back. Retained fees stay. Settled amounts become a recovery instead of a held reduction. */
+export function partialRefundFeeReversals(input: {
+  activationFeeCents: number;
+  businessCollaborationFeeCents: number;
+  influencerFeeCents: number;
+  retainedActivationCents: number;
+  retainedBusinessCollaborationCents: number;
+  retainedInfluencerFeeCents: number;
+  activationEligibleCents: number;
+  settledBusinessCents: number;
+}): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
+  const amounts = Object.values(input);
+  if (amounts.some((amount) => !Number.isInteger(amount) || amount < 0)) {
+    return { ok: false, error: "The refund fee reversal does not reconcile." };
+  }
+  const unretainedActivation = input.activationFeeCents - input.retainedActivationCents;
+  const unretainedCollaboration = input.businessCollaborationFeeCents - input.retainedBusinessCollaborationCents;
+  const unretainedInfluencer = input.influencerFeeCents - input.retainedInfluencerFeeCents;
+  if (unretainedActivation < 0 || unretainedCollaboration < 0 || unretainedInfluencer < 0) {
+    return { ok: false, error: "The refund fee reversal does not reconcile." };
+  }
+  const entries: LedgerPosting[] = [];
+  if (unretainedCollaboration > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "platform",
+      side: "business_pending",
+      amountCents: unretainedCollaboration,
+      reverses: "fee_pending",
+    });
+  }
+  if (unretainedInfluencer > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "platform",
+      side: "influencer_pending",
+      amountCents: unretainedInfluencer,
+      reverses: "fee_pending",
+    });
+  }
+  const eligibleReversal = Math.min(unretainedActivation, input.activationEligibleCents);
+  if (eligibleReversal > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "platform",
+      side: "business_eligible",
+      amountCents: eligibleReversal,
+      reverses: "fee_eligible",
+    });
+  }
+  const retainedBusiness = input.retainedActivationCents + input.retainedBusinessCollaborationCents;
+  const recovery = Math.min(
+    unretainedActivation + unretainedCollaboration,
+    Math.max(0, input.settledBusinessCents - retainedBusiness),
+  );
+  if (recovery > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "platform",
+      side: "recovery",
+      amountCents: recovery,
+      reverses: "fee_settled",
+    });
+  }
+  return { ok: true, entries };
 }
 
 /** Move the currently eligible remainder to operating funds. Ineligible fees stay reserved. */
@@ -1052,6 +1127,17 @@ export function signedDealMoneyEvents(input: {
   feesReversed?: boolean;
   /** Approved refund instruction. A partial amount is accepted only when it matches this figure. */
   operationRefundCents?: number;
+  /** Unretained fees for a partial refund. Omitted refunds do not reverse fees. */
+  refundFees?: {
+    activationFeeCents: number;
+    businessCollaborationFeeCents: number;
+    influencerFeeCents: number;
+    retainedActivationCents: number;
+    retainedBusinessCollaborationCents: number;
+    retainedInfluencerFeeCents: number;
+    activationEligibleCents: number;
+    settledBusinessCents: number;
+  } | null;
   alreadyRefundedCents?: number;
 }): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
   if (input.eventType === "funding.held") {
@@ -1131,10 +1217,13 @@ export function signedDealMoneyEvents(input: {
       });
     }
     if (!input.policyApproved) return { ok: false, error: "The refund policy is not approved. Nothing was refunded." };
-    return {
-      ok: true,
-      entries: [{ kind: "refund", party: "business", amountCents: input.amountCents, reverses: "collection" }],
-    };
+    const entries: LedgerPosting[] = [{ kind: "refund", party: "business", amountCents: input.amountCents, reverses: "collection" }];
+    if (input.refundFees) {
+      const reversed = partialRefundFeeReversals(input.refundFees);
+      if (!reversed.ok) return reversed;
+      entries.push(...reversed.entries);
+    }
+    return { ok: true, entries };
   }
   if (input.alreadyReturned) {
     return { ok: false, error: "This payout return is already recorded. A retry stays blocked." };
