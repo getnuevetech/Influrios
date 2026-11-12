@@ -275,6 +275,40 @@ export async function decideMilestoneDispute(input: {
     partialAllowed: partialRefundsForTests ?? settings?.partialRefundsEnabled ?? true,
   });
   if (!decision.ok) return decision;
+  if ((input.action === "refund" || input.action === "partial") && dispute.milestone.status === "released") {
+    return { ok: false as const, error: "This milestone is already paid. Record the returned payout before refunding it." };
+  }
+  if (input.action === "refund" || input.action === "partial") {
+    const { readSignedDealMoney, signedDealMoneyEvents, platformFeeEarningState } = await import("@/lib/payment-engine");
+    const plan = (dispute.funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
+    const signed = readSignedDealMoney(plan);
+    if (signed) {
+      const { getLaunchGate } = await import("@/lib/launch-gate");
+      const gate = await getLaunchGate().catch(() => null);
+      const amount =
+        input.action === "partial"
+          ? (decision.requestedRefundCents ?? input.requestedCents ?? 0)
+          : releasableCents(dispute.milestone.amountCents, dispute.milestone.refundedCents);
+      const posted = signedDealMoneyEvents({
+        deal: signed,
+        eventType: "payout.refunded",
+        amountCents: amount,
+        operationRefundCents: amount,
+        alreadyRefundedCents: dispute.funding.entries
+          .filter((entry) => entry.kind === "refund")
+          .reduce((sum, entry) => sum + entry.amountCents, 0),
+        policyApproved: Boolean(gate?.earningRefundPolicyApproved),
+        finalPayout: false,
+        alreadyEarned: platformFeeEarningState(dispute.funding.entries).earned,
+        alreadyReturned: false,
+        releasedCents: dispute.funding.entries
+          .filter((entry) => entry.kind === "release")
+          .reduce((sum, entry) => sum + entry.amountCents, 0),
+        payoutReturned: dispute.funding.entries.some((entry) => entry.kind === "return"),
+      });
+      if (!posted.ok) return { ok: false as const, error: posted.error };
+    }
+  }
   await prisma.milestoneDispute.update({
     where: { id: dispute.id },
     data: {

@@ -844,6 +844,9 @@ export function signedDealMoneyEvents(input: {
   /** Returns already posted on this agreement, excluding the open payout being closed. */
   alreadyReturnedCents?: number;
   feesReversed?: boolean;
+  /** Approved refund instruction. A partial amount is accepted only when it matches this figure. */
+  operationRefundCents?: number;
+  alreadyRefundedCents?: number;
 }): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
   if (input.eventType === "funding.held") {
     if (input.amountCents !== input.deal.businessPaysCents) {
@@ -885,24 +888,43 @@ export function signedDealMoneyEvents(input: {
     return earned;
   }
   if (input.eventType === "payout.refunded") {
-    if (input.amountCents !== input.deal.businessPaysCents) {
-      return { ok: false, error: "A signed deal refunds the full business payment on the original route." };
+    const alreadyRefunded = input.alreadyRefundedCents ?? 0;
+    if (!Number.isInteger(input.amountCents) || input.amountCents <= 0 || !Number.isInteger(alreadyRefunded) || alreadyRefunded < 0) {
+      return { ok: false, error: "The refund amount is missing." };
     }
-    return cancellationPostings({
-      stage: cancellationStage({
-        releasedCents: input.releasedCents ?? 0,
+    if (alreadyRefunded + input.amountCents > input.deal.businessPaysCents) {
+      return { ok: false, error: "The refund is larger than the remaining signed business payment." };
+    }
+    const fullRefund = input.amountCents === input.deal.businessPaysCents && alreadyRefunded === 0;
+    if (input.operationRefundCents == null) {
+      if (!fullRefund) {
+        return { ok: false, error: "A signed deal refunds the full business payment on the original route." };
+      }
+    } else if (!Number.isInteger(input.operationRefundCents) || input.amountCents !== input.operationRefundCents) {
+      return { ok: false, error: "The refund does not match this refund instruction." };
+    }
+    if (fullRefund) {
+      return cancellationPostings({
+        stage: cancellationStage({
+          releasedCents: input.releasedCents ?? 0,
+          influencerReceivesCents: input.deal.influencerReceivesCents,
+          feesEarned: input.alreadyEarned,
+        }),
+        policyApproved: input.policyApproved,
+        payoutReturned: input.payoutReturned ?? false,
+        businessPaysCents: input.deal.businessPaysCents,
         influencerReceivesCents: input.deal.influencerReceivesCents,
-        feesEarned: input.alreadyEarned,
-      }),
-      policyApproved: input.policyApproved,
-      payoutReturned: input.payoutReturned ?? false,
-      businessPaysCents: input.deal.businessPaysCents,
-      influencerReceivesCents: input.deal.influencerReceivesCents,
-      businessFeeCents: input.deal.businessPlatformFeeCents,
-      influencerFeeCents: input.deal.influencerPlatformFeeCents,
-      businessTaxCents: input.deal.businessTaxCents,
-      influencerTaxCents: input.deal.influencerTaxCents,
-    });
+        businessFeeCents: input.deal.businessPlatformFeeCents,
+        influencerFeeCents: input.deal.influencerPlatformFeeCents,
+        businessTaxCents: input.deal.businessTaxCents,
+        influencerTaxCents: input.deal.influencerTaxCents,
+      });
+    }
+    if (!input.policyApproved) return { ok: false, error: "The refund policy is not approved. Nothing was refunded." };
+    return {
+      ok: true,
+      entries: [{ kind: "refund", party: "business", amountCents: input.amountCents, reverses: "collection" }],
+    };
   }
   if (input.alreadyReturned) {
     return { ok: false, error: "This payout return is already recorded. A retry stays blocked." };

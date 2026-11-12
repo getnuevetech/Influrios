@@ -298,6 +298,58 @@ describe("payment engine acceptance", () => {
       alreadyReturned: false,
     });
     assert.equal(blockedRefund.ok, false);
+    const partialRefund = signedDealMoneyEvents({
+      deal,
+      eventType: "payout.refunded",
+      amountCents: 117_800,
+      operationRefundCents: 117_800,
+      alreadyRefundedCents: 0,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+      releasedCents: 0,
+      payoutReturned: false,
+    });
+    assert.equal(partialRefund.ok, true);
+    if (!partialRefund.ok) return;
+    assert.equal(partialRefund.entries[0].kind, "refund");
+    assert.equal(partialRefund.entries[0].amountCents, 117_800);
+    assert.equal(partialRefund.entries.some((row) => row.kind === "reversal"), false);
+    const unapprovedPartial = signedDealMoneyEvents({
+      deal,
+      eventType: "payout.refunded",
+      amountCents: 117_800,
+      operationRefundCents: 117_800,
+      policyApproved: false,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(unapprovedPartial.ok, false);
+    const mismatchedRefund = signedDealMoneyEvents({
+      deal,
+      eventType: "payout.refunded",
+      amountCents: 100_000,
+      operationRefundCents: 117_800,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(mismatchedRefund.ok, false);
+    const overRefund = signedDealMoneyEvents({
+      deal,
+      eventType: "payout.refunded",
+      amountCents: 117_800,
+      operationRefundCents: 117_800,
+      alreadyRefundedCents: 300_000,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(overRefund.ok, false);
     const returnedPayout = signedDealMoneyEvents({
       deal,
       eventType: "payout.returned",
