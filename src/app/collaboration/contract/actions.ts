@@ -10,7 +10,7 @@ import { getMarketplaceApplication } from "@/lib/marketplace-listings";
 import { assertCollabOsV1 } from "@/lib/collab-os";
 import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import { resolvePaidAgreementFee } from "@/lib/paid-agreement-fee";
-import { buildBusinessCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate } from "@/lib/payment-engine";
+import { buildBusinessCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate, verifiedDomesticCountry } from "@/lib/payment-engine";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   buildFinancialPlan,
@@ -225,7 +225,10 @@ export async function actionSubmitContractWizard(formData: FormData) {
     ? routes.find((row) => row.countryCode === creatorCountry)
     : undefined;
 
-  const dbCreator = await prisma.creator.findUnique({ where: { slug: creatorSlug } }).catch(() => null);
+  const [dbCreator, businessProfile] = await Promise.all([
+    prisma.creator.findUnique({ where: { slug: creatorSlug } }).catch(() => null),
+    prisma.businessProfile.findUnique({ where: { userId: account.id }, select: { verifiedCountryCode: true } }).catch(() => null),
+  ]);
   const identityVerified = dbCreator
     ? await resolveCreatorIdentityVerified({
         creatorId: dbCreator.id,
@@ -378,7 +381,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     },
     "influencer",
   ).catch(() => null);
-  const disclosureServiceLevel = serviceLevel;
+  const disclosureServiceLevel = feeServiceLevel;
 
   const disclosureGate = requireFeeDisclosureAccepted({
     accepted: feeDisclosureAccepted,
@@ -423,12 +426,19 @@ export async function actionSubmitContractWizard(formData: FormData) {
     qs.set("step", "milestones");
     redirectError(milestoneLaunch.error, qs);
   }
+  const verifiedBusinessCountry = verifiedDomesticCountry(businessProfile?.verifiedCountryCode);
+  const kyc = dbCreator
+    ? await prisma.creatorKycSubmission
+        .findUnique({ where: { creatorSlug: dbCreator.slug }, select: { countryCode: true, status: true } })
+        .catch(() => null)
+    : null;
+  const verifiedInfluencerCountry = kyc?.status === "verified" ? verifiedDomesticCountry(kyc.countryCode) : null;
   const domestic = domesticCollaborationGate({
-    businessCountry: jurisdictionCode,
-    influencerCountry: creatorCountry ?? "",
+    businessCountry: verifiedBusinessCountry ?? "",
+    influencerCountry: verifiedInfluencerCountry ?? "",
     dealCountry: jurisdictionCode,
-    businessVerified: Boolean(jurisdiction?.protectedPaymentsEnabled),
-    influencerVerified: identityVerified,
+    businessVerified: Boolean(verifiedBusinessCountry),
+    influencerVerified: Boolean(verifiedInfluencerCountry),
     routeActive: gates.ok,
     currency,
     routeCurrency: (jurisdiction?.currency ?? "").trim(),

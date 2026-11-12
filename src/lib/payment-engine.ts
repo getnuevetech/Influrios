@@ -265,6 +265,23 @@ export function taxIsSeparateFromPlatformFees(lines: TaxLine[], platformFeesTota
   return { taxTotalCents: taxTotal, platformFeesTotalCents, taxIncludedInPlatformFees: false as const };
 }
 
+/** A stored two-letter country. A mailing address or the agreement jurisdiction is not this value. */
+export function verifiedDomesticCountry(countryCode: string | null | undefined): string | null {
+  const country = (countryCode ?? "").trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(country) ? country : null;
+}
+
+/** Records a verified funding country. An unchecked verification clears it. A country name is refused. */
+export function recordedVerifiedCountry(input: {
+  verified: boolean;
+  countryCode: string;
+}): { ok: true; country: string | null } | { ok: false; error: string } {
+  if (!input.verified) return { ok: true, country: null };
+  const country = verifiedDomesticCountry(input.countryCode);
+  if (!country) return { ok: false, error: "Enter the verified funding country as a two-letter code." };
+  return { ok: true, country };
+}
+
 export function domesticCollaborationGate(input: {
   businessCountry: string;
   influencerCountry: string;
@@ -280,9 +297,13 @@ export function domesticCollaborationGate(input: {
   const business = input.businessCountry.trim().toUpperCase();
   const influencer = input.influencerCountry.trim().toUpperCase();
   const deal = input.dealCountry.trim().toUpperCase();
-  if (!input.businessVerified) return { ok: false, error: "The business funding country is not verified." };
-  if (!input.influencerVerified) return { ok: false, error: "The influencer payout country is not verified." };
-  if (!business || !influencer || !deal) return { ok: false, error: "The deal country is incomplete." };
+  if (!input.businessVerified || !/^[A-Z]{2}$/.test(business)) {
+    return { ok: false, error: "The business funding country is not verified." };
+  }
+  if (!input.influencerVerified || !/^[A-Z]{2}$/.test(influencer)) {
+    return { ok: false, error: "The influencer payout country is not verified." };
+  }
+  if (!/^[A-Z]{2}$/.test(deal)) return { ok: false, error: "The deal country is incomplete." };
   if ((business !== influencer || business !== deal) && !input.crossBorderAllowed) {
     return { ok: false, error: "Cross-border funding is off. Turn it on in Payment settings to fund more than one country." };
   }

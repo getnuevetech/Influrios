@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { recordedVerifiedCountry } from "@/lib/payment-engine";
 import { assignablePlanCodes } from "@/lib/entitlements-db";
 import { clampPasswordMin, DEFAULT_SITE_CONFIG, invalidateSiteConfigCache } from "@/lib/site-config";
 
@@ -93,6 +94,14 @@ export async function actionSaveMember(formData: FormData) {
 
   const suspended = formData.get("suspended") === "1";
   const phone = clean(formData.get("phone"), 40);
+  const verifiedCountry =
+    role === "CREATOR"
+      ? null
+      : recordedVerifiedCountry({
+          verified: formData.get("countryVerified") === "1",
+          countryCode: clean(formData.get("verifiedCountryCode"), 8),
+        });
+  if (verifiedCountry && !verifiedCountry.ok) redirect(withQuery(base, { error: "country", view: id }));
   const before = {
     role: current.role,
     planTier: current.planTier,
@@ -139,6 +148,7 @@ export async function actionSaveMember(formData: FormData) {
         contactName: clean(formData.get("contactName"), 120) || null,
         contactEmail: clean(formData.get("contactEmail"), 254).toLowerCase() || null,
         contactPhone: clean(formData.get("contactPhone"), 40) || null,
+        verifiedCountryCode: verifiedCountry && verifiedCountry.ok ? verifiedCountry.country : null,
       },
       update: {
         addressLine1,
@@ -148,6 +158,7 @@ export async function actionSaveMember(formData: FormData) {
         contactName: clean(formData.get("contactName"), 120) || null,
         contactEmail: clean(formData.get("contactEmail"), 254).toLowerCase() || null,
         contactPhone: clean(formData.get("contactPhone"), 40) || null,
+        verifiedCountryCode: verifiedCountry && verifiedCountry.ok ? verifiedCountry.country : null,
       },
     });
   }
