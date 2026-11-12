@@ -23,6 +23,7 @@ export type CancellationReason =
   | "brand_after_start"
   | "creator_without_cause"
   | "partial_delivery_accepted"
+  | "platform_cannot_serve"
   | "chargeback";
 
 export const DEFAULT_KILL_FEE_RULE: KillFeeRule = {
@@ -35,6 +36,7 @@ export const CANCELLATION_REASON_LABELS: Record<CancellationReason, string> = {
   brand_after_start: "Brand cancels after accepted work begins",
   creator_without_cause: "Influencer cancels without permitted cause",
   partial_delivery_accepted: "Partial delivery accepted",
+  platform_cannot_serve: "Platform cannot provide the activation service",
   chargeback: "Chargeback / payment reversal",
 };
 
@@ -144,6 +146,9 @@ export function calculateCancellation(input: {
     } else if (input.reason === "creator_without_cause" && !isCompletedMilestoneStatus(current.status)) {
       currentAdjustment = 0;
       currentLine = `Current “${current.title}” returns to brand — influencer cancelled without permitted cause.`;
+    } else if (input.reason === "platform_cannot_serve" && !isCompletedMilestoneStatus(current.status)) {
+      currentAdjustment = 0;
+      currentLine = `Current “${current.title}” refundable — the platform cannot provide the service.`;
     } else {
       const kill = applyKillFeeOrPartial({
         milestoneAmountCents: current.amountCents,

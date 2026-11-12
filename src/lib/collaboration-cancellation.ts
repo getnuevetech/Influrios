@@ -17,7 +17,7 @@ import {
   type ChargebackEvidencePack,
 } from "@/lib/chargeback-evidence";
 import { ledgerMovements, reconcileLedger, verifyMarketplaceSignature } from "@/lib/ledger";
-import { settlementFromSnapshot } from "@/lib/cancellation-settlement";
+import { activationExceptionForReason, settlementFromSnapshot } from "@/lib/cancellation-settlement";
 import { adapterForProvider } from "@/lib/payment-provider-adapter";
 
 const CHARGEBACK_REASONS = new Set<CancellationReason>(["chargeback"]);
@@ -181,6 +181,8 @@ export async function executeHeldCancellation(input: {
     feeSnapshot: funding.feeSnapshotJson,
     milestones: funding.milestones,
     activationEligible: funding.entries.some((entry) => entry.kind === "fee_eligible" && entry.milestoneId == null),
+    activationException: activationExceptionForReason(input.reason),
+    activationSettled: funding.entries.some((entry) => entry.kind === "fee_settled"),
     currentMilestoneId: input.currentMilestoneId,
     acceptedPartialCents: input.acceptedPartialCents,
   });
@@ -208,6 +210,9 @@ export async function executeHeldCancellation(input: {
     };
   }
   const refundCents = proposal ? proposal.businessRefundCents : calc.refundableFutureCents;
+  if (proposal && refundCents > reconciled.heldCents) {
+    return { ok: false as const, error: "The settlement refund is larger than the held amount. Nothing was refunded." };
+  }
   let providerRefund: { ok: true; reference: string } | { ok: false; error: string } | null = null;
   if (refundCents > 0) {
     const { readSignedDealMoney, signedDealMoneyEvents, platformFeeEarningState } = await import("@/lib/payment-engine");
