@@ -18,7 +18,9 @@ export type SettlementProposal = {
   retainedInfluencerFeeCents: number;
   platformRetainedCents: number;
   businessRefundCents: number;
-  /** False when an in-progress milestone has no accepted amount. Nothing is sent to the provider. */
+  /** Activation already moved to operations. The refund is not sent until that amount is recovered. */
+  activationRecoveryCents: number;
+  /** False when an in-progress milestone has no accepted amount, or settled activation must be recovered. Nothing is sent to the provider. */
   automatic: boolean;
 };
 
@@ -33,6 +35,8 @@ export function settlementProposal(input: {
   activationFeeCents: number;
   activationEligible: boolean;
   activationException: boolean;
+  /** True when a fee has already settled to operations, so the activation portion is no longer held. */
+  activationSettled?: boolean;
   milestones: (FrozenMilestoneAllocation & { acceptedGrossCents: number })[];
   review: boolean;
 }): { ok: true; proposal: SettlementProposal } | { ok: false; error: string } {
@@ -83,6 +87,8 @@ export function settlementProposal(input: {
   if (businessRefund < 0 || influencerNet + platformRetained + businessRefund !== input.businessPaysCents) {
     return { ok: false, error: "The settlement does not reconcile. Nothing was refunded." };
   }
+  const activationRecoveryCents =
+    input.activationException && input.activationSettled ? input.activationFeeCents : 0;
   return {
     ok: true,
     proposal: {
@@ -93,7 +99,8 @@ export function settlementProposal(input: {
       retainedInfluencerFeeCents: retainedInfluencerFee,
       platformRetainedCents: platformRetained,
       businessRefundCents: businessRefund,
-      automatic: !input.review,
+      activationRecoveryCents,
+      automatic: !input.review && activationRecoveryCents === 0,
     },
   };
 }
@@ -132,6 +139,7 @@ export function settlementFromSnapshot(input: {
   milestones: { id: string; status: string }[];
   activationEligible: boolean;
   activationException?: boolean;
+  activationSettled?: boolean;
   currentMilestoneId?: string | null;
   acceptedPartialCents?: number | null;
 }): { ok: true; proposal: SettlementProposal } | { ok: false; error: string } | null {
@@ -176,7 +184,13 @@ export function settlementFromSnapshot(input: {
     activationFeeCents: activation,
     activationEligible: input.activationEligible,
     activationException: input.activationException === true,
+    activationSettled: input.activationSettled === true,
     milestones,
     review,
   });
+}
+
+/** The platform-service failure is the activation refund exception. Other reasons keep an eligible activation. */
+export function activationExceptionForReason(reason: string) {
+  return reason === "platform_cannot_serve";
 }

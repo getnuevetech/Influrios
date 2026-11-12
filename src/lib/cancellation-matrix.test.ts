@@ -63,6 +63,21 @@ describe("calculateCancellation matrix", () => {
     assert.ok(result.refundableFutureCents > 0);
   });
 
+  it("refunds the current milestone when the platform cannot provide the service", () => {
+    const result = calculateCancellation({
+      milestones,
+      currentMilestoneId: "m2",
+      reason: "platform_cannot_serve",
+      fundedCents: 10_000,
+      alreadyReleasedCents: 2_500,
+      killFeeRule: { killFeeBps: 2_500, killFeeFixedCents: 0 },
+    });
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.currentAdjustmentCents, 0);
+    assert.equal(result.paymentRisk, false);
+  });
+
   it("marks chargebacks as payment-risk without automatic refund", () => {
     const result = calculateCancellation({
       milestones,
