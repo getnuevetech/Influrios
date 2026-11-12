@@ -17,6 +17,7 @@ import {
   type ChargebackEvidencePack,
 } from "@/lib/chargeback-evidence";
 import { ledgerMovements, reconcileLedger, verifyMarketplaceSignature } from "@/lib/ledger";
+import { settlementFromSnapshot } from "@/lib/cancellation-settlement";
 import { adapterForProvider } from "@/lib/payment-provider-adapter";
 
 const CHARGEBACK_REASONS = new Set<CancellationReason>(["chargeback"]);
@@ -176,8 +177,39 @@ export async function executeHeldCancellation(input: {
   }
 
   // Non-chargeback cancel: record matrix snapshot; queue provider refund for refundable remainder.
+  const settlement = settlementFromSnapshot({
+    feeSnapshot: funding.feeSnapshotJson,
+    milestones: funding.milestones,
+    activationEligible: funding.entries.some((entry) => entry.kind === "fee_eligible"),
+    currentMilestoneId: input.currentMilestoneId,
+    acceptedPartialCents: input.acceptedPartialCents,
+  });
+  if (settlement && !settlement.ok) return settlement;
+  const proposal = settlement && settlement.ok ? settlement.proposal : null;
+  if (proposal && !proposal.automatic) {
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: input.actor,
+          action: "funding_settlement_review",
+          objectType: "CollaborationFunding",
+          objectId: funding.id,
+          after: { reason: input.reason, proposal, note: input.note?.trim().slice(0, 500) || null },
+        },
+      })
+      .catch(() => undefined);
+    return {
+      ok: true as const,
+      paymentRisk: false as const,
+      calculation: calc,
+      providerRefund: null,
+      settlement: proposal,
+      evidence: null as ChargebackEvidencePack | null,
+    };
+  }
+  const refundCents = proposal ? proposal.businessRefundCents : calc.refundableFutureCents;
   let providerRefund: { ok: true; reference: string } | { ok: false; error: string } | null = null;
-  if (calc.refundableFutureCents > 0) {
+  if (refundCents > 0) {
     const { readSignedDealMoney, signedDealMoneyEvents, platformFeeEarningState } = await import("@/lib/payment-engine");
     const plan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
     const signed = readSignedDealMoney(plan);
@@ -187,8 +219,8 @@ export async function executeHeldCancellation(input: {
       const posted = signedDealMoneyEvents({
         deal: signed,
         eventType: "payout.refunded",
-        amountCents: calc.refundableFutureCents,
-        operationRefundCents: calc.refundableFutureCents,
+        amountCents: refundCents,
+        operationRefundCents: refundCents,
         alreadyRefundedCents: funding.entries
           .filter((entry) => entry.kind === "refund")
           .reduce((sum, entry) => sum + entry.amountCents, 0),
@@ -202,11 +234,11 @@ export async function executeHeldCancellation(input: {
       if (!posted.ok) return { ok: false as const, error: posted.error };
     }
     providerRefund =
-      calc.refundableFutureCents >= reconciled.heldCents && reconciled.heldCents > 0
+      refundCents >= reconciled.heldCents && reconciled.heldCents > 0
         ? await providerAdapter.createFullRefund({ fundingId: funding.id })
         : await providerAdapter.createPartialRefund({
             fundingId: funding.id,
-            amountCents: calc.refundableFutureCents,
+            amountCents: refundCents,
             milestoneId: input.currentMilestoneId ?? undefined,
           });
   } else {
@@ -226,7 +258,8 @@ export async function executeHeldCancellation(input: {
           lines: calc.lines,
           payableCompletedCents: calc.payableCompletedCents,
           currentAdjustmentCents: calc.currentAdjustmentCents,
-          refundableFutureCents: calc.refundableFutureCents,
+          refundableFutureCents: refundCents,
+          settlement: proposal,
           earnedFeeCents: calc.earnedFeeCents,
           providerRefund,
           note: input.note?.trim().slice(0, 500) || null,
@@ -239,7 +272,7 @@ export async function executeHeldCancellation(input: {
   await notifyCollabFundingEvent({
     fundingId: funding.id,
     kind: "collaboration_cancelled",
-    detail: `${CANCELLATION_REASON_LABELS[input.reason]}. Refundable held remainder ${calc.refundableFutureCents}¢ queued with provider${
+    detail: `${CANCELLATION_REASON_LABELS[input.reason]}. Refundable held remainder ${refundCents}¢ queued with provider${
       providerRefund && "ok" in providerRefund && providerRefund.ok === false ? ` (${providerRefund.error})` : ""
     }. Ledger moves only on signed payout.refunded.`,
     processNow: false,
@@ -250,6 +283,7 @@ export async function executeHeldCancellation(input: {
     paymentRisk: false as const,
     calculation: calc,
     providerRefund,
+    settlement: proposal,
     evidence: null as ChargebackEvidencePack | null,
   };
 }
