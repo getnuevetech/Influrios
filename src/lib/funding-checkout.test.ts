@@ -14,8 +14,46 @@ import {
   confirmGatewayDeposit,
   fundingDepositEventDecision,
   gatewaySessionConfirmsDeposit,
+  prefundingCancellationDecision,
 } from "./funding-checkout";
 import { stripeCheckoutPayment, stripeFundingCheckoutBody } from "./stripe-admin";
+
+describe("prefunding cancellation", () => {
+  it("expires an unpaid checkout and waits when the charge result is unknown or paid", () => {
+    const open = prefundingCancellationDecision({
+      fundingStatus: "awaiting_provider",
+      deposits: [{ id: "d1", status: "gateway_opened", method: "card", charge: "unpaid" }],
+    });
+    assert.equal(open.ok, true);
+    if (!open.ok) return;
+    assert.deepEqual(open.expireIds, ["d1"]);
+    assert.equal(
+      prefundingCancellationDecision({
+        fundingStatus: "awaiting_provider",
+        deposits: [{ id: "d1", status: "gateway_opened", method: "ach_online", charge: "unknown" }],
+      }).ok,
+      false,
+    );
+    assert.equal(
+      prefundingCancellationDecision({
+        fundingStatus: "awaiting_provider",
+        deposits: [{ id: "d1", status: "confirmed", method: "card", charge: "paid" }],
+      }).ok,
+      false,
+    );
+    const manual = prefundingCancellationDecision({
+      fundingStatus: "awaiting_provider",
+      deposits: [{ id: "d2", status: "manual_pending", method: "check", charge: null }],
+    });
+    assert.equal(manual.ok, true);
+    if (!manual.ok) return;
+    assert.deepEqual(manual.expireIds, ["d2"]);
+    assert.equal(
+      prefundingCancellationDecision({ fundingStatus: "held", deposits: [] }).ok,
+      false,
+    );
+  });
+});
 
 describe("funding deposit rules", () => {
   it("keeps manual deposits unfunded until finance confirms them", () => {
