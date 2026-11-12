@@ -10,7 +10,7 @@ export const DEFAULT_FAILED_PAYOUT_BACKOFF_HOURS = [1, 6, 24, 72] as const;
 export const DEFAULT_FAILED_PAYOUT_MAX_ATTEMPTS = 4;
 export const DEFAULT_STALE_FUNDING_HOURS = 48;
 
-export const RELEASE_READY_STATUSES = ["approved", "release_scheduled", "release_requested", "payout_failed"] as const;
+export const RELEASE_READY_STATUSES = ["approved", "release_scheduled", "release_requested", "payout_failed", "returned"] as const;
 
 export function shouldRemindDisputeSla(input: {
   status: string;
@@ -108,8 +108,12 @@ export function canScheduleMilestoneRelease(input: {
   if (input.fundingStatus !== "held") {
     return { ok: false, error: "Release can be scheduled only while the provider is holding funds." };
   }
-  if (input.milestoneStatus !== "approved" && input.milestoneStatus !== "payout_failed") {
-    return { ok: false, error: "Only approved milestones can be scheduled for release." };
+  if (
+    input.milestoneStatus !== "approved" &&
+    input.milestoneStatus !== "payout_failed" &&
+    input.milestoneStatus !== "returned"
+  ) {
+    return { ok: false, error: "Only an approved, failed, or returned payout can be scheduled." };
   }
   return { ok: true };
 }
@@ -135,10 +139,10 @@ export function releaseQueueStep(input: {
   automaticReleaseApproval: boolean;
   automaticProviderRelease: boolean;
 }): { action: ReleaseQueueAction; label: string } {
-  if (input.status === "approved" || input.status === "payout_failed") {
+  if (input.status === "approved" || input.status === "payout_failed" || input.status === "returned") {
     return {
       action: "schedule",
-      label: input.status === "payout_failed" ? "Schedule this payout again" : "Schedule this payout",
+      label: input.status === "approved" ? "Schedule this payout" : "Schedule this payout again",
     };
   }
   if (input.status === "release_requested") {

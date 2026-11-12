@@ -268,6 +268,11 @@ describe("scheduled release (Dev §8 / §16)", () => {
     );
     assert.equal(releaseQueueStep({ status: "release_requested", automaticReleaseApproval: false, automaticProviderRelease: false }).action, "wait_provider");
     assert.equal(releaseQueueStep({ status: "payout_failed", automaticReleaseApproval: false, automaticProviderRelease: false }).action, "schedule");
+    assert.equal(releaseQueueStep({ status: "returned", automaticReleaseApproval: false, automaticProviderRelease: false }).label, "Schedule this payout again");
+    assert.equal(
+      canScheduleMilestoneRelease({ milestoneStatus: "returned", fundingStatus: "held" }).ok,
+      true,
+    );
   });
 
   it("requests provider release only when release_scheduled is due", () => {

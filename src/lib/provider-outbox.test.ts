@@ -5,6 +5,8 @@ import {
   collectionInstructionAmount,
   commandMayDispatch,
   commandNeedsReconciliation,
+  failedPayoutCommandAllowsRetry,
+  nextCommandStatus,
   providerOperationKey,
   releaseInstructionAmount,
   UNKNOWN_COMMAND_AFTER_MS,
@@ -38,6 +40,24 @@ describe("provider command outbox", () => {
     assert.equal(commandMayDispatch("failed", 2), true);
     assert.equal(commandMayDispatch("failed", 3), false);
     assert.equal(commandMayDispatch("unknown", 1), false);
+    assert.equal(commandMayDispatch("returned", 1), false);
+    assert.equal(failedPayoutCommandAllowsRetry("failed"), true);
+    assert.equal(failedPayoutCommandAllowsRetry(null), true);
+    assert.equal(failedPayoutCommandAllowsRetry("dispatched"), false);
+    assert.equal(failedPayoutCommandAllowsRetry("unknown"), false);
+    assert.equal(failedPayoutCommandAllowsRetry("returned"), false);
+    assert.equal(nextCommandStatus({ status: "dispatched", outcome: "payout_failed" }), "failed");
+    assert.equal(nextCommandStatus({ status: "unknown", outcome: "payout_failed" }), "failed");
+    assert.equal(nextCommandStatus({ status: "dispatched", outcome: "payout_returned" }), "returned");
+    assert.equal(nextCommandStatus({ status: "returned", outcome: "payout_failed" }), null);
+    assert.equal(providerOperationKey({ agreementVersion: 1, fundingId: "fund-1", milestoneId: "mile-1", operation: "release", attempt: 2 }), "v1:fund-1:mile-1:release:a2");
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    assert.equal(ledger.includes("syncReleaseCommandOutcome"), true);
+    assert.equal(ledger.includes('status: "returned"'), true);
+    const retry = readFileSync("src/lib/jobs.ts", "utf8");
+    const gate = retry.indexOf("failedPayoutCommandAllowsRetry");
+    const reset = retry.indexOf('status: "approved"');
+    assert.ok(gate > 0 && reset > gate);
     assert.equal(
       commandNeedsReconciliation({
         status: "pending",

@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 export type ProviderOperation = "collection" | "release" | "refund";
@@ -7,11 +8,42 @@ export function providerOperationKey(input: {
   fundingId: string;
   milestoneId?: string | null;
   operation: ProviderOperation;
+  attempt?: number;
 }) {
   const version = Number.isInteger(input.agreementVersion) && input.agreementVersion > 0 ? input.agreementVersion : 1;
   const fundingId = input.fundingId.trim();
   const milestoneId = input.milestoneId?.trim() || "funding";
-  return `v${version}:${fundingId}:${milestoneId}:${input.operation}`;
+  const base = `v${version}:${fundingId}:${milestoneId}:${input.operation}`;
+  const attempt = input.attempt ?? 1;
+  if (!Number.isInteger(attempt) || attempt <= 1) return base;
+  return `${base}:a${attempt}`;
+}
+
+/** A confirmed payout failure can be retried. Unknown, in-flight, and returned commands cannot. */
+export function failedPayoutCommandAllowsRetry(status: string | null | undefined) {
+  if (!status) return true;
+  return status === "failed";
+}
+
+/** Map a confirmed payout result onto the latest release command. Null means leave the row alone. */
+export function nextCommandStatus(input: {
+  status: string;
+  outcome: "payout_failed" | "payout_returned";
+}): "failed" | "returned" | null {
+  if (input.outcome === "payout_returned") {
+    if (input.status === "dispatched" || input.status === "confirmed") return "returned";
+    return null;
+  }
+  if (input.status === "returned" || input.status === "failed") return null;
+  if (
+    input.status === "pending" ||
+    input.status === "dispatched" ||
+    input.status === "confirmed" ||
+    input.status === "unknown"
+  ) {
+    return "failed";
+  }
+  return null;
 }
 
 /**
@@ -96,7 +128,23 @@ export async function claimProviderCommand(input: {
   | { dispatch: true; commandId: string }
   | { dispatch: false; reason: string; providerRef?: string }
 > {
-  const operationKey = providerOperationKey(input);
+  let operationKey = providerOperationKey(input);
+  if (input.operation === "release" && input.milestoneId?.trim()) {
+    const prior = await prisma.providerCommand.findMany({
+      where: {
+        fundingId: input.fundingId.trim(),
+        milestoneId: input.milestoneId.trim(),
+        operation: "release",
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    const latest = prior[0];
+    if (latest?.status === "returned") {
+      operationKey = providerOperationKey({ ...input, attempt: prior.length + 1 });
+    } else if (latest) {
+      operationKey = latest.operationKey;
+    }
+  }
   const currency = input.currency.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) return { dispatch: false, reason: "The command currency is missing." };
   if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
@@ -160,6 +208,24 @@ export async function markUnknownProviderCommands(now = new Date(), afterMs?: nu
     data: { status: "unknown" },
   });
   return result.count;
+}
+
+/** Connect a confirmed payout result to the latest release command inside the ledger transaction. */
+export async function syncReleaseCommandOutcome(
+  db: Prisma.TransactionClient,
+  input: { fundingId: string; milestoneId: string; outcome: "payout_failed" | "payout_returned" },
+) {
+  const latest = await db.providerCommand.findFirst({
+    where: { fundingId: input.fundingId, milestoneId: input.milestoneId, operation: "release" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!latest) return;
+  const next = nextCommandStatus({ status: latest.status, outcome: input.outcome });
+  if (!next || next === latest.status) return;
+  await db.providerCommand.updateMany({
+    where: { id: latest.id, status: latest.status },
+    data: { status: next },
+  });
 }
 
 export async function recordProviderCommandResult(input: {

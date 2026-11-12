@@ -11,7 +11,7 @@ import {
   readRouteSnapshot,
 } from "./payment-route";
 import { deliverableFileRule, validateDeliverableFiles } from "./deliverable-files";
-import { creatorMaySubmitWork, milestoneWorkLabel, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
+import { creatorMaySubmitWork, milestonePayoutLabel, milestoneWorkLabel, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
 
 describe("payment route decision", () => {
   it("keeps collection and holding distinct and flags two answers for the same job", () => {
@@ -148,6 +148,9 @@ describe("milestone delivery", () => {
     assert.equal(milestoneWorkLabel("released"), "Done");
     assert.equal(milestoneWorkLabel("pending"), "Open");
     assert.equal(milestoneWorkLabel("submitted"), "In review");
+    assert.equal(milestonePayoutLabel("returned"), "Returned");
+    assert.equal(milestonePayoutLabel("payout_failed"), "Payout failed");
+    assert.equal(milestonePayoutLabel("release_requested"), "Pending confirmation");
   });
 
   it("keeps submit off the business and requires a version", () => {

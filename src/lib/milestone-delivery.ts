@@ -35,7 +35,8 @@ export function milestoneDeliveryLabel(status: string) {
     status === "released" ||
     status === "release_scheduled" ||
     status === "release_requested" ||
-    status === "payout_failed"
+    status === "payout_failed" ||
+    status === "returned"
   ) {
     return "Approved";
   }
@@ -46,12 +47,9 @@ export function milestoneDeliveryLabel(status: string) {
 export function milestonePayoutLabel(status: string) {
   if (status === "released") return "Paid";
   if (status === "refunded") return "Refunded";
-  if (
-    status === "approved" ||
-    status === "release_scheduled" ||
-    status === "release_requested" ||
-    status === "payout_failed"
-  ) {
+  if (status === "returned") return "Returned";
+  if (status === "payout_failed") return "Payout failed";
+  if (status === "approved" || status === "release_scheduled" || status === "release_requested") {
     return "Pending confirmation";
   }
   return "Not initiated";

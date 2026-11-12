@@ -24,6 +24,7 @@ import {
   readSignedDealMoney,
   returnedPayoutPostings,
   settlePlatformFees,
+  platformFeeEarningState,
   signedDealMoneyEvents,
   signedQuoteExpired,
   taxIsSeparateFromPlatformFees,
@@ -307,6 +308,66 @@ describe("payment engine acceptance", () => {
       alreadyReturned: false,
     });
     assert.equal(returnedPayout.ok, true);
+    if (!returnedPayout.ok) return;
+    assert.equal(returnedPayout.entries.some((row) => row.kind === "return"), true);
+    assert.equal(returnedPayout.entries.some((row) => row.reverses === "fee_earned"), true);
+    const milestoneReturn = signedDealMoneyEvents({
+      deal: { ...deal, influencerReceivesCents: 341_250 },
+      eventType: "payout.returned",
+      amountCents: 117_800,
+      operationReleasedCents: 117_800,
+      alreadyReturnedCents: 0,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(milestoneReturn.ok, true);
+    if (!milestoneReturn.ok) return;
+    assert.equal(milestoneReturn.entries[0].amountCents, 117_800);
+    assert.equal(milestoneReturn.entries.some((row) => row.kind === "reversal"), false);
+    const mismatchedReturn = signedDealMoneyEvents({
+      deal: { ...deal, influencerReceivesCents: 341_250 },
+      eventType: "payout.returned",
+      amountCents: 100_000,
+      operationReleasedCents: 117_800,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(mismatchedReturn.ok, false);
+    const overReturn = signedDealMoneyEvents({
+      deal: { ...deal, influencerReceivesCents: 341_250 },
+      eventType: "payout.returned",
+      amountCents: 400_000,
+      operationReleasedCents: 400_000,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(overReturn.ok, false);
+    const repaidReturn = signedDealMoneyEvents({
+      deal: { ...deal, influencerReceivesCents: 341_250 },
+      eventType: "payout.returned",
+      amountCents: 117_800,
+      operationReleasedCents: 117_800,
+      alreadyReturnedCents: 117_800,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(repaidReturn.ok, true);
+    assert.equal(platformFeeEarningState([{ kind: "fee_earned", amountCents: 32_000, party: "platform:business" }]).earned, true);
+    assert.equal(
+      platformFeeEarningState([
+        { kind: "fee_earned", amountCents: 32_000, party: "platform:business" },
+        { kind: "reversal", amountCents: 32_000, party: "platform:business" },
+      ]).earned,
+      false,
+    );
     const beforeWork = cancellationPostings({
       stage: cancellationStage({ releasedCents: 0, influencerReceivesCents: 343_000, feesEarned: false }),
       policyApproved: true,

@@ -86,7 +86,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
     listPaymentRiskFundings(),
     prisma.fundingMilestone.findMany({
       where: {
-        status: { in: ["approved", "release_scheduled", "release_requested", "payout_failed"] },
+        status: { in: ["approved", "release_scheduled", "release_requested", "payout_failed", "returned"] },
         funding: { status: "held" },
       },
       include: { funding: { select: { id: true, businessName: true, creatorSlug: true, currency: true, title: true, providerCode: true } } },
