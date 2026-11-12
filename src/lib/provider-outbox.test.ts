@@ -41,6 +41,7 @@ describe("provider command outbox", () => {
     assert.equal(commandMayDispatch("failed", 3), false);
     assert.equal(commandMayDispatch("unknown", 1), false);
     assert.equal(commandMayDispatch("returned", 1), false);
+    assert.equal(commandMayDispatch("external", 1), false);
     assert.equal(failedPayoutCommandAllowsRetry("failed"), true);
     assert.equal(failedPayoutCommandAllowsRetry(null), true);
     assert.equal(failedPayoutCommandAllowsRetry("dispatched"), false);

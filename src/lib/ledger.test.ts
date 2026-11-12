@@ -160,6 +160,28 @@ describe("marketplace ledger rules", () => {
     );
     assert.equal(
       marketplaceDisposition({
+        eventType: "split.settled",
+        fundingStatus: "held",
+        amountCents: 2_500,
+        expectedCents: 2_500,
+        heldCents: 5_000,
+        milestoneStatus: "release_requested",
+      }),
+      "apply",
+    );
+    assert.equal(
+      marketplaceDisposition({
+        eventType: "payout.released",
+        fundingStatus: "held",
+        amountCents: 2_500,
+        expectedCents: 2_500,
+        heldCents: 5_000,
+        milestoneStatus: "release_requested",
+      }),
+      "apply",
+    );
+    assert.equal(
+      marketplaceDisposition({
         eventType: "payout.returned",
         fundingStatus: "completed",
         amountCents: 9_000,

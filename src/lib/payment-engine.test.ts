@@ -470,10 +470,27 @@ describe("payment engine acceptance", () => {
     const charge = providerLedgerAdvance(
       JSON.stringify({
         name: "payment_intent.succeeded",
-        data: { object: { amount: 375000, currency: "USD", metadata: { fundingId: "deal-1" } } },
+        data: { object: { amount: 375000, currency: "USD", metadata: { fundingId: "deal-1", holdingAvailable: true } } },
       }),
     );
     assert.equal(charge.advance, false);
+    const missingCurrency = providerEventMayAdvance({
+      eventName: "payment_intent.succeeded",
+      holdingAvailable: true,
+      beneficiaryConfirmed: true,
+      amountCents: 375000,
+      expectedAmountCents: 375000,
+      currency: "",
+      expectedCurrency: "",
+      accountId: "acct",
+      expectedAccountId: "acct",
+      environment: "demo",
+      expectedEnvironment: "demo",
+      fundingId: "deal-1",
+      expectedFundingId: "deal-1",
+      duplicate: false,
+    });
+    assert.equal(missingCurrency.advance, false);
     const held = providerLedgerAdvance(
       JSON.stringify({
         name: "payment_intent.succeeded",

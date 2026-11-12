@@ -45,7 +45,7 @@ export interface PaymentProviderAdapter {
     amountCents: number;
     /** One release pays each party this amount. Team proposals use creator slugs. */
     shares?: { label: string; amountCents: number }[];
-  }): Promise<{ ok: true; reference: string } | { ok: false; error: string }>;
+  }): Promise<{ ok: true; reference: string; execution?: "provider" | "external" } | { ok: false; error: string }>;
   createPartialRefund(input: {
     fundingId: string;
     amountCents: number;
@@ -146,7 +146,7 @@ export function createMarketplaceSignedWebhookAdapter(deps: {
 }): PaymentProviderAdapter {
   return {
     async getCapabilities() {
-      return { code: "marketplace_signed", funding: true, release: true, partialRefund: true, webhook: true };
+      return { code: "marketplace_signed", funding: true, release: false, partialRefund: true, webhook: true };
     },
     async createFundingIntent() {
       return { ok: false, error: "Funding intents are created in-app; provider confirms via webhook." };
@@ -164,13 +164,15 @@ export function createMarketplaceSignedWebhookAdapter(deps: {
       if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
         return { ok: false, error: "Release needs a positive integer amount." };
       }
-      return queueProviderInstruction({
+      const queued = await queueProviderInstruction({
         instruction: "release",
         fundingId: input.fundingId,
         amountCents: input.amountCents,
         milestoneId: input.milestoneId,
         shares: input.shares,
       });
+      if (!queued.ok) return queued;
+      return { ok: true, reference: queued.reference, execution: "external" };
     },
     async createPartialRefund(input) {
       return queueProviderInstruction({

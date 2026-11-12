@@ -24,6 +24,13 @@ type AirwallexSource = {
   hostedFlowTemplate?: string | null;
 };
 
+/** Demo and production are different saved accounts. The event cannot choose this. */
+export function airwallexEnvironment(baseUrl: string) {
+  const host = baseUrl.trim().toLowerCase();
+  if (host.includes("api-demo") || host.includes("demo")) return "demo";
+  return "production";
+}
+
 function filled(value: string | null | undefined) {
   return value?.trim() ?? "";
 }

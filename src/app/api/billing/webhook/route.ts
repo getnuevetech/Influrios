@@ -6,7 +6,7 @@ import {
   markWebhookReceived,
 } from "@/lib/billing";
 import { completeGatewayKyc } from "@/lib/kyc-document";
-import { confirmGatewayDeposit } from "@/lib/funding-checkout";
+import { confirmGatewayDeposit, failGatewayDeposit, fundingDepositEventDecision } from "@/lib/funding-checkout";
 import { confirmMentorshipPayment } from "@/lib/mentorship";
 import { rememberStripeCustomer, stripeCredentials, stripeWebhookSecret } from "@/lib/stripe-admin";
 import { applyPlanOnce, noteWebhook, webhookDisposition } from "@/lib/webhook-idempotency";
@@ -28,6 +28,8 @@ type StripeObject = {
   subscription?: string | { id?: string } | null;
   status?: string | null;
   payment_status?: string | null;
+  amount_total?: number | null;
+  currency?: string | null;
 };
 
 function customerIdOf(object: StripeObject) {
@@ -139,17 +141,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true, kyc: decision });
     }
 
-    if (event.type === "checkout.session.completed" && object.metadata?.purpose === "funding_deposit") {
+    if (
+      (event.type === "checkout.session.completed" ||
+        event.type === "checkout.session.async_payment_succeeded" ||
+        event.type === "checkout.session.async_payment_failed") &&
+      object.metadata?.purpose === "funding_deposit"
+    ) {
       const depositId = object.metadata.depositId?.trim() ?? "";
       const fundingId = object.metadata.fundingId?.trim() ?? "";
       if (!depositId || !fundingId || !object.id) {
         return NextResponse.json({ received: false, pending: true }, { status: 503 });
+      }
+      const deposit = await prisma.fundingDeposit.findUnique({ where: { id: depositId } });
+      if (!deposit || deposit.fundingId !== fundingId) {
+        return NextResponse.json({ error: "That deposit was not found. Nothing was changed." }, { status: 409 });
+      }
+      const decision = fundingDepositEventDecision({
+        eventType: event.type,
+        paymentStatus: object.payment_status,
+        amountTotal: typeof object.amount_total === "number" ? object.amount_total : null,
+        currency: object.currency,
+        sessionId: object.id,
+        depositReference: deposit.reference,
+        depositAmountCents: deposit.amountCents,
+        depositCurrency: deposit.currency,
+      });
+      if (decision === "mismatch") {
+        return NextResponse.json({ received: true, parked: true }, { status: 200 });
+      }
+      if (decision === "wait") {
+        await noteWebhook({ provider: "stripe", eventId: event.id, eventType: event.type, result: "funding_deposit_pending" });
+        return NextResponse.json({ received: true, pending: true });
+      }
+      if (decision === "fail") {
+        const failed = await failGatewayDeposit({ depositId, fundingId, checkoutSessionId: object.id });
+        if (!failed.ok) return NextResponse.json({ error: failed.error }, { status: 409 });
+        await noteWebhook({ provider: "stripe", eventId: event.id, eventType: event.type, result: "funding_deposit_failed" });
+        return NextResponse.json({ received: true, fundingDeposit: false });
       }
       const confirmed = await confirmGatewayDeposit({
         depositId,
         fundingId,
         checkoutSessionId: object.id,
         paymentStatus: object.payment_status,
+        amountCents: typeof object.amount_total === "number" ? object.amount_total : null,
+        currency: object.currency,
       });
       if (!confirmed.ok) {
         return NextResponse.json({ error: confirmed.error }, { status: 409 });

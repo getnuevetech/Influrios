@@ -11,6 +11,8 @@ export function webhookDisposition(input: {
   if (input.duplicate) return "skip";
   if (
     input.eventType === "checkout.session.completed" ||
+    input.eventType === "checkout.session.async_payment_succeeded" ||
+    input.eventType === "checkout.session.async_payment_failed" ||
     input.eventType === "customer.subscription.deleted" ||
     input.eventType === "invoice.payment_failed" ||
     input.eventType === "identity.verification_session.verified" ||
