@@ -37,6 +37,7 @@ import {
 import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal-attribution";
 import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines, storedMinorDigits } from "@/lib/fx-share";
+import { readSettlementProposal } from "@/lib/cancellation-settlement";
 import { ensureSettlementDefaults } from "@/lib/settlement";
 import { corridorPrefundSnapshot, storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { decidePaymentRoute, freezeRouteAccounts } from "@/lib/payment-route";
@@ -2315,6 +2316,41 @@ export async function applyMarketplaceEvent(input: {
         const held = reconcileLedger(ledgerMovements(fresh), funding.grossCents);
         if (input.amountCents > held.heldCents) throw new LedgerReject("Refund is larger than the held amount.");
         if (signedDeal) {
+          const queued = await tx.auditLog.findFirst({
+            where: { objectType: "CollaborationFunding", objectId: funding.id, action: "funding_cancellation_queued" },
+            orderBy: { createdAt: "desc" },
+          });
+          const proposal = readSettlementProposal(
+            queued?.after && typeof queued.after === "object" ? (queued.after as { settlement?: unknown }).settlement : null,
+          );
+          const quote =
+            snapshotPlan && typeof snapshotPlan === "object"
+              ? (snapshotPlan as { signedQuote?: { activationFeeCents?: unknown; milestoneAllocations?: unknown } }).signedQuote
+              : null;
+          const allocationRows = Array.isArray(quote?.milestoneAllocations) ? quote.milestoneAllocations : [];
+          const collaborationTotal = allocationRows.reduce((sum, row) => {
+            const amount = row && typeof row === "object" ? (row as { businessCollaborationFeeCents?: unknown }).businessCollaborationFeeCents : null;
+            return sum + (Number.isInteger(amount) ? Number(amount) : 0);
+          }, 0);
+          const influencerTotal = allocationRows.reduce((sum, row) => {
+            const amount = row && typeof row === "object" ? (row as { influencerFeeCents?: unknown }).influencerFeeCents : null;
+            return sum + (Number.isInteger(amount) ? Number(amount) : 0);
+          }, 0);
+          const activationFee = Number.isInteger(quote?.activationFeeCents) ? Number(quote.activationFeeCents) : 0;
+          const position = eligiblePlatformFeePosition(fresh);
+          const refundFees =
+            proposal && proposal.businessRefundCents === input.amountCents && allocationRows.length > 0
+              ? {
+                  activationFeeCents: activationFee,
+                  businessCollaborationFeeCents: collaborationTotal,
+                  influencerFeeCents: influencerTotal,
+                  retainedActivationCents: proposal.retainedActivationCents,
+                  retainedBusinessCollaborationCents: proposal.retainedBusinessCollaborationCents,
+                  retainedInfluencerFeeCents: proposal.retainedInfluencerFeeCents,
+                  activationEligibleCents: position.activationEligibleCents,
+                  settledBusinessCents: position.settledBusinessCents,
+                }
+              : null;
           const refunded = signedDealMoneyEvents({
             deal: signedDeal,
             eventType: "payout.refunded",
@@ -2331,6 +2367,7 @@ export async function applyMarketplaceEvent(input: {
             alreadyRefundedCents: fresh
               .filter((entry) => entry.kind === "refund")
               .reduce((sum, entry) => sum + entry.amountCents, 0),
+            refundFees,
           });
           if (!refunded.ok) throw new LedgerReject(refunded.error);
           await writeSignedPostings(tx, {

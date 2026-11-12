@@ -484,6 +484,68 @@ describe("payment engine acceptance", () => {
     assert.equal(partialRefund.entries[0].kind, "refund");
     assert.equal(partialRefund.entries[0].amountCents, 117_800);
     assert.equal(partialRefund.entries.some((row) => row.kind === "reversal"), false);
+    const reversedRefund = signedDealMoneyEvents({
+      deal: fixture,
+      eventType: "payout.refunded",
+      amountCents: 62_400,
+      operationRefundCents: 62_400,
+      alreadyRefundedCents: 0,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+      refundFees: {
+        activationFeeCents: 1_000,
+        businessCollaborationFeeCents: 4_000,
+        influencerFeeCents: 2_500,
+        retainedActivationCents: 1_000,
+        retainedBusinessCollaborationCents: 1_600,
+        retainedInfluencerFeeCents: 1_000,
+        activationEligibleCents: 1_000,
+        settledBusinessCents: 0,
+      },
+    });
+    assert.equal(reversedRefund.ok, true);
+    if (!reversedRefund.ok) return;
+    assert.equal(reversedRefund.entries[0].kind, "refund");
+    assert.equal(reversedRefund.entries[0].amountCents, 62_400);
+    assert.deepEqual(
+      reversedRefund.entries.filter((row) => row.reverses === "fee_pending").map((row) => row.amountCents),
+      [2_400, 1_500],
+    );
+    assert.equal(reversedRefund.entries.some((row) => row.reverses === "fee_eligible"), false);
+    const exceptionRefund = signedDealMoneyEvents({
+      deal: fixture,
+      eventType: "payout.refunded",
+      amountCents: 63_400,
+      operationRefundCents: 63_400,
+      alreadyRefundedCents: 0,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: true,
+      alreadyReturned: false,
+      refundFees: {
+        activationFeeCents: 1_000,
+        businessCollaborationFeeCents: 4_000,
+        influencerFeeCents: 2_500,
+        retainedActivationCents: 0,
+        retainedBusinessCollaborationCents: 1_600,
+        retainedInfluencerFeeCents: 1_000,
+        activationEligibleCents: 1_000,
+        settledBusinessCents: 2_600,
+      },
+    });
+    assert.equal(exceptionRefund.ok, true);
+    if (!exceptionRefund.ok) return;
+    assert.equal(exceptionRefund.entries.find((row) => row.reverses === "fee_eligible")?.amountCents, 1_000);
+    assert.equal(exceptionRefund.entries.find((row) => row.reverses === "fee_settled")?.amountCents, 1_000);
+    assert.equal(
+      platformFeeEarningState([
+        { kind: "fee_earned", amountCents: 5_000, party: "platform:business" },
+        { kind: "reversal", amountCents: 2_400, party: "platform:business_pending" },
+      ]).earned,
+      true,
+    );
     const unapprovedPartial = signedDealMoneyEvents({
       deal,
       eventType: "payout.refunded",

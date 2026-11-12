@@ -190,6 +190,47 @@ export function settlementFromSnapshot(input: {
   });
 }
 
+function integerField(value: unknown) {
+  return Number.isInteger(value) && Number(value) >= 0 ? Number(value) : null;
+}
+
+/** Reads a stored settlement proposal. A partial shape is ignored. */
+export function readSettlementProposal(value: unknown): SettlementProposal | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  if (row.version !== 1) return null;
+  const influencerNetCents = integerField(row.influencerNetCents);
+  const retainedActivationCents = integerField(row.retainedActivationCents);
+  const retainedBusinessCollaborationCents = integerField(row.retainedBusinessCollaborationCents);
+  const retainedInfluencerFeeCents = integerField(row.retainedInfluencerFeeCents);
+  const platformRetainedCents = integerField(row.platformRetainedCents);
+  const businessRefundCents = integerField(row.businessRefundCents);
+  const activationRecoveryCents = integerField(row.activationRecoveryCents);
+  if (
+    influencerNetCents == null ||
+    retainedActivationCents == null ||
+    retainedBusinessCollaborationCents == null ||
+    retainedInfluencerFeeCents == null ||
+    platformRetainedCents == null ||
+    businessRefundCents == null ||
+    activationRecoveryCents == null ||
+    typeof row.automatic !== "boolean"
+  ) {
+    return null;
+  }
+  return {
+    version: 1,
+    influencerNetCents,
+    retainedActivationCents,
+    retainedBusinessCollaborationCents,
+    retainedInfluencerFeeCents,
+    platformRetainedCents,
+    businessRefundCents,
+    activationRecoveryCents,
+    automatic: row.automatic,
+  };
+}
+
 /** The platform-service failure is the activation refund exception. Other reasons keep an eligible activation. */
 export function activationExceptionForReason(reason: string) {
   return reason === "platform_cannot_serve";
