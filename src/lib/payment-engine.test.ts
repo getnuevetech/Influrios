@@ -26,6 +26,8 @@ import {
   reserveFeePostings,
   readSignedDealMoney,
   returnedPayoutPostings,
+  eligiblePlatformFeePosition,
+  settleEligiblePlatformFees,
   settlePlatformFees,
   platformFeeEarningState,
   collaborationMilestoneFees,
@@ -204,6 +206,54 @@ describe("payment engine acceptance", () => {
       providerReference: "set_staging",
     });
     assert.equal(again.ok, false);
+    const activationOnly = settleEligiblePlatformFees({
+      eligibleBusinessCents: 1_000,
+      eligibleInfluencerCents: 0,
+      settledBusinessCents: 0,
+      settledInfluencerCents: 0,
+      amountCents: 1_000,
+      providerReference: "set_activation",
+    });
+    assert.equal(activationOnly.ok, true);
+    if (!activationOnly.ok) return;
+    assert.deepEqual(
+      activationOnly.entries.map((row) => row.amountCents),
+      [1_000],
+    );
+    assert.equal(activationOnly.entries.some((row) => row.kind === "fee_earned"), false);
+    const tooSoon = settleEligiblePlatformFees({
+      eligibleBusinessCents: 1_000,
+      eligibleInfluencerCents: 0,
+      settledBusinessCents: 0,
+      settledInfluencerCents: 0,
+      amountCents: 2_600,
+      providerReference: "set_activation",
+    });
+    assert.equal(tooSoon.ok, false);
+    const afterFirst = settleEligiblePlatformFees({
+      eligibleBusinessCents: 2_600,
+      eligibleInfluencerCents: 1_000,
+      settledBusinessCents: 1_000,
+      settledInfluencerCents: 0,
+      amountCents: 2_600,
+      providerReference: "set_milestone_1",
+    });
+    assert.equal(afterFirst.ok, true);
+    if (!afterFirst.ok) return;
+    assert.deepEqual(
+      afterFirst.entries.map((row) => row.amountCents),
+      [1_600, 1_000],
+    );
+    const position = eligiblePlatformFeePosition([
+      { kind: "fee_eligible", amountCents: 1_000, party: "platform:business", milestoneId: null },
+      { kind: "fee_eligible", amountCents: 1_600, party: "platform:business", milestoneId: "m1" },
+      { kind: "fee_eligible", amountCents: 1_000, party: "platform:influencer", milestoneId: "m1" },
+      { kind: "fee_settled", amountCents: 1_000, party: "platform:business", milestoneId: null },
+      { kind: "reversal", amountCents: 1_600, party: "platform:business_eligible", milestoneId: "m1" },
+      { kind: "reversal", amountCents: 1_000, party: "platform:influencer_eligible", milestoneId: "m1" },
+    ]);
+    assert.equal(position.eligibleBusinessCents, 1_000);
+    assert.equal(position.unsettledBusinessCents + position.unsettledInfluencerCents, 0);
   });
 
   it("records a refund and a returned payout without rewriting the original amounts", () => {
