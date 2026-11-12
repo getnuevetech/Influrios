@@ -791,6 +791,20 @@ export function returnedPayoutPostings(input: {
   };
 }
 
+/** Fees stay earned only while earned rows exceed later reversals of those fees. */
+export function platformFeeEarningState(entries: { kind: string; amountCents: number; party?: string }[]) {
+  const earned = entries
+    .filter((entry) => entry.kind === "fee_earned")
+    .reduce((sum, entry) => sum + entry.amountCents, 0);
+  const reversed = entries
+    .filter((entry) => entry.kind === "reversal" && (entry.party ?? "").includes("platform"))
+    .reduce((sum, entry) => sum + entry.amountCents, 0);
+  return {
+    earned: earned > 0 && reversed < earned,
+    reversed: earned > 0 && reversed >= earned,
+  };
+}
+
 export type SignedDealMoney = {
   businessPaysCents: number;
   influencerReceivesCents: number;
@@ -834,6 +848,11 @@ export function signedDealMoneyEvents(input: {
   alreadyReturned: boolean;
   releasedCents?: number;
   payoutReturned?: boolean;
+  /** The still-open provider payout this return closes. Omit only for a full signed payout. */
+  operationReleasedCents?: number;
+  /** Returns already posted on this agreement, excluding the open payout being closed. */
+  alreadyReturnedCents?: number;
+  feesReversed?: boolean;
 }): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
   if (input.eventType === "funding.held") {
     if (input.amountCents !== input.deal.businessPaysCents) {
@@ -894,8 +913,47 @@ export function signedDealMoneyEvents(input: {
       influencerTaxCents: input.deal.influencerTaxCents,
     });
   }
-  if (input.amountCents !== input.deal.influencerReceivesCents) {
+  if (input.alreadyReturned) {
+    return { ok: false, error: "This payout return is already recorded. A retry stays blocked." };
+  }
+  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+    return { ok: false, error: "The returned amount is missing." };
+  }
+  const priorReturns = input.alreadyReturnedCents ?? 0;
+  if (!Number.isInteger(priorReturns) || priorReturns < 0 || input.amountCents > input.deal.influencerReceivesCents) {
     return { ok: false, error: "The returned amount does not match the signed influencer payout." };
   }
-  return returnedPayoutPostings({ amountCents: input.amountCents, alreadyReturned: input.alreadyReturned });
+  if (input.operationReleasedCents == null) {
+    if (input.amountCents !== input.deal.influencerReceivesCents || priorReturns > 0) {
+      return { ok: false, error: "The returned amount does not match the signed influencer payout." };
+    }
+  } else if (
+    !Number.isInteger(input.operationReleasedCents) ||
+    input.amountCents !== input.operationReleasedCents
+  ) {
+    return { ok: false, error: "The returned amount does not match this payout." };
+  }
+  const posted = returnedPayoutPostings({ amountCents: input.amountCents, alreadyReturned: false });
+  if (!posted.ok) return posted;
+  if (!input.alreadyEarned || input.feesReversed) return posted;
+  const reversals: LedgerPosting[] = [];
+  if (input.deal.businessPlatformFeeCents > 0) {
+    reversals.push({
+      kind: "reversal",
+      party: "platform",
+      side: "business",
+      amountCents: input.deal.businessPlatformFeeCents,
+      reverses: "fee_earned",
+    });
+  }
+  if (input.deal.influencerPlatformFeeCents > 0) {
+    reversals.push({
+      kind: "reversal",
+      party: "platform",
+      side: "influencer",
+      amountCents: input.deal.influencerPlatformFeeCents,
+      reverses: "fee_earned",
+    });
+  }
+  return { ok: true, entries: [...posted.entries, ...reversals] };
 }

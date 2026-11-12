@@ -267,6 +267,7 @@ export function describeDealProgress(input: {
     if (nextMilestone.status === "approved" && nextMilestone.releaseScheduledAt) delivery = "Release scheduled";
     else if (nextMilestone.status === "approved") delivery = "Release waiting on the provider";
     else if (nextMilestone.status === "payout_failed") delivery = "Release failed";
+    else if (nextMilestone.status === "returned") delivery = "Payout returned";
     else delivery = `${nextMilestone.title} ${nextMilestone.status.replaceAll("_", " ")}`;
   } else if (input.milestones.length > 0) delivery = "Release confirmed";
 

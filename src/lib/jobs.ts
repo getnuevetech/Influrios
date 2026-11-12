@@ -822,6 +822,12 @@ export async function runFailedPayoutRetrySweep(now = new Date()) {
     ) {
       continue;
     }
+    const { failedPayoutCommandAllowsRetry } = await import("@/lib/provider-outbox");
+    const command = await prisma.providerCommand.findFirst({
+      where: { fundingId: milestone.fundingId, milestoneId: milestone.id, operation: "release" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!failedPayoutCommandAllowsRetry(command?.status)) continue;
     const updated = await prisma.fundingMilestone.updateMany({
       where: { id: milestone.id, status: "payout_failed" },
       data: {

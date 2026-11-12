@@ -1822,7 +1822,7 @@ export async function scheduleMilestoneRelease(input: {
   const releaseAt = input.releaseAt && !Number.isNaN(input.releaseAt.getTime()) ? input.releaseAt : new Date();
   const launchGate = await getLaunchGate().catch(() => null);
   const updated = await prisma.fundingMilestone.updateMany({
-    where: { id: milestone.id, status: { in: ["approved", "payout_failed"] } },
+    where: { id: milestone.id, status: { in: ["approved", "payout_failed", "returned"] } },
     data: {
       status: "release_scheduled",
       releaseScheduledAt: releaseAt,
@@ -1890,9 +1890,8 @@ export async function applyMarketplaceEvent(input: {
     return { applied: false, result: "rejected" as const };
   }
   const snapshotPlan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
-  const { providerFeePosting, readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } = await import(
-    "@/lib/payment-engine"
-  );
+  const { platformFeeEarningState, providerFeePosting, readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } =
+    await import("@/lib/payment-engine");
   const signedDeal = readSignedDealMoney(snapshotPlan);
   const launchGate = signedDeal
     ? await import("@/lib/launch-gate")
@@ -1908,6 +1907,18 @@ export async function applyMarketplaceEvent(input: {
     ? await milestoneHasOpenDispute(funding.id, milestone.id)
     : false;
   const left = milestone ? releasableCents(milestone.amountCents, milestone.refundedCents) : 0;
+  const milestoneReleaseCents = milestone
+    ? funding.entries
+        .filter((entry) => entry.kind === "release" && entry.milestoneId === milestone.id)
+        .reduce((sum, entry) => sum + entry.amountCents, 0)
+    : 0;
+  const milestoneReturnCents = milestone
+    ? funding.entries
+        .filter((entry) => entry.kind === "return" && entry.milestoneId === milestone.id)
+        .reduce((sum, entry) => sum + entry.amountCents, 0)
+    : 0;
+  const openPayoutCents = milestoneReleaseCents - milestoneReturnCents;
+  const feeState = platformFeeEarningState(funding.entries);
   const refundRequest =
     milestone && input.eventType === "payout.refunded"
       ? await prisma.milestoneDispute.findFirst({
@@ -1933,7 +1944,9 @@ export async function applyMarketplaceEvent(input: {
             ? signedDeal.businessPlatformFeeCents + signedDeal.influencerPlatformFeeCents
             : -1
           : input.eventType === "payout.returned"
-            ? (milestone?.amountCents ?? -1)
+            ? openPayoutCents > 0
+              ? openPayoutCents
+              : -1
             : (milestone?.amountCents ?? -1);
   const disposition = marketplaceDisposition({
     eventType: input.eventType,
@@ -2023,6 +2036,12 @@ export async function applyMarketplaceEvent(input: {
           },
         });
         if (failed.count !== 1) throw new LedgerReject("Milestone is not approved for payout failure.");
+        const { syncReleaseCommandOutcome } = await import("@/lib/provider-outbox");
+        await syncReleaseCommandOutcome(tx, {
+          fundingId: funding.id,
+          milestoneId: milestone.id,
+          outcome: "payout_failed",
+        });
         return;
       }
       if (input.eventType === "payout.released" && milestone) {
@@ -2044,7 +2063,7 @@ export async function applyMarketplaceEvent(input: {
         const released = await tx.fundingMilestone.updateMany({
           where: {
             id: milestone.id,
-            status: { in: ["approved", "release_scheduled", "release_requested", "payout_failed"] },
+            status: { in: ["approved", "release_scheduled", "release_requested", "payout_failed", "returned"] },
             refundedCents: milestone.refundedCents,
           },
           data: {
@@ -2146,7 +2165,7 @@ export async function applyMarketplaceEvent(input: {
             releasedCents: alreadyReleasedCents + left,
             policyApproved,
             finalPayout: open === 0,
-            alreadyEarned: fresh.some((entry) => entry.kind === "fee_earned"),
+            alreadyEarned: platformFeeEarningState(fresh).earned,
             alreadyReturned: false,
           });
           if (!earned.ok) throw new LedgerReject(earned.error);
@@ -2170,11 +2189,14 @@ export async function applyMarketplaceEvent(input: {
           eventType: "payout.returned",
           amountCents: input.amountCents,
           policyApproved,
-          finalPayout: true,
-          alreadyEarned: false,
-          alreadyReturned: funding.entries.some(
-            (entry) => entry.kind === "return" && entry.milestoneId === milestone.id,
-          ),
+          finalPayout: false,
+          alreadyEarned: feeState.earned,
+          alreadyReturned: openPayoutCents <= 0,
+          operationReleasedCents: openPayoutCents,
+          alreadyReturnedCents: funding.entries
+            .filter((entry) => entry.kind === "return" && entry.milestoneId !== milestone.id)
+            .reduce((sum, entry) => sum + entry.amountCents, 0),
+          feesReversed: feeState.reversed,
         });
         if (!returned.ok) throw new LedgerReject(returned.error);
         await writeSignedPostings(tx, {
@@ -2183,6 +2205,23 @@ export async function applyMarketplaceEvent(input: {
           provider: providerKey,
           eventId,
           entries: returned.entries,
+        });
+        const reopened = await tx.fundingMilestone.updateMany({
+          where: { id: milestone.id, status: "released" },
+          data: { status: "returned", payoutFailedAt: null },
+        });
+        if (reopened.count !== 1) throw new LedgerReject("That payout is not released.");
+        if (funding.status === "completed") {
+          await tx.collaborationFunding.updateMany({
+            where: { id: funding.id, status: "completed" },
+            data: { status: "held" },
+          });
+        }
+        const { syncReleaseCommandOutcome } = await import("@/lib/provider-outbox");
+        await syncReleaseCommandOutcome(tx, {
+          fundingId: funding.id,
+          milestoneId: milestone.id,
+          outcome: "payout_returned",
         });
         return;
       }
