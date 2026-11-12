@@ -1890,7 +1890,7 @@ export async function applyMarketplaceEvent(input: {
     return { applied: false, result: "rejected" as const };
   }
   const snapshotPlan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
-  const { collaborationMilestoneFees, platformFeeEarningState, providerFeePosting, readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } =
+  const { collaborationMilestoneFees, openMilestoneCollaborationFees, platformFeeEarningState, providerFeePosting, readSignedDealMoney, settlePlatformFees, signedDealMoneyEvents } =
     await import("@/lib/payment-engine");
   const signedDeal = readSignedDealMoney(snapshotPlan);
   const launchGate = signedDeal
@@ -2184,7 +2184,10 @@ export async function applyMarketplaceEvent(input: {
             alreadyEarned: platformFeeEarningState(fresh).earned,
             alreadyReturned: false,
             milestoneFees: allocation.fees,
-            alreadyMilestoneEligible: fresh.some((entry) => entry.kind === "fee_eligible" && entry.milestoneId === milestone.id),
+            alreadyMilestoneEligible: (() => {
+              const open = openMilestoneCollaborationFees(fresh, milestone.id);
+              return open.businessCollaborationFeeCents + open.influencerFeeCents > 0;
+            })(),
           });
           if (!earned.ok) throw new LedgerReject(earned.error);
           await writeSignedPostings(tx, {
@@ -2215,6 +2218,11 @@ export async function applyMarketplaceEvent(input: {
             .filter((entry) => entry.kind === "return" && entry.milestoneId !== milestone.id)
             .reduce((sum, entry) => sum + entry.amountCents, 0),
           feesReversed: feeState.reversed,
+          milestoneFees: (() => {
+            const open = openMilestoneCollaborationFees(funding.entries, milestone.id);
+            return open.businessCollaborationFeeCents + open.influencerFeeCents > 0 ? open : null;
+          })(),
+          feesSettled: funding.entries.some((entry) => entry.kind === "fee_settled"),
         });
         if (!returned.ok) throw new LedgerReject(returned.error);
         await writeSignedPostings(tx, {

@@ -119,7 +119,7 @@ export type LedgerPosting = {
     | "reversal"
     | "provider_fee";
   party: "business" | "influencer" | "platform" | "tax" | "provider";
-  side?: "business" | "influencer";
+  side?: "business" | "influencer" | "business_eligible" | "influencer_eligible" | "recovery";
   amountCents: number;
   reverses?: string;
 };
@@ -841,13 +841,17 @@ export function returnedPayoutPostings(input: {
   };
 }
 
+function isEarnedFeeParty(party: string) {
+  return party === "platform" || party === "platform:business" || party === "platform:influencer";
+}
+
 /** Fees stay earned only while earned rows exceed later reversals of those fees. */
 export function platformFeeEarningState(entries: { kind: string; amountCents: number; party?: string }[]) {
   const earned = entries
     .filter((entry) => entry.kind === "fee_earned")
     .reduce((sum, entry) => sum + entry.amountCents, 0);
   const reversed = entries
-    .filter((entry) => entry.kind === "reversal" && (entry.party ?? "").includes("platform"))
+    .filter((entry) => entry.kind === "reversal" && isEarnedFeeParty(entry.party ?? ""))
     .reduce((sum, entry) => sum + entry.amountCents, 0);
   return {
     earned: earned > 0 && reversed < earned,
@@ -969,6 +973,8 @@ export function signedDealMoneyEvents(input: {
   /** Frozen collaboration fees for the milestone whose payout just succeeded. */
   milestoneFees?: { businessCollaborationFeeCents: number; influencerFeeCents: number } | null;
   alreadyMilestoneEligible?: boolean;
+  /** Collaboration fees for this payout already settled to operations. */
+  feesSettled?: boolean;
   releasedCents?: number;
   payoutReturned?: boolean;
   /** The still-open provider payout this return closes. Omit only for a full signed payout. */
@@ -1084,7 +1090,10 @@ export function signedDealMoneyEvents(input: {
   }
   const posted = returnedPayoutPostings({ amountCents: input.amountCents, alreadyReturned: false });
   if (!posted.ok) return posted;
-  if (!input.alreadyEarned || input.feesReversed) return posted;
+  const suspended = suspendMilestoneEligibility(input.milestoneFees, input.feesSettled === true);
+  if (!suspended.ok) return suspended;
+  const returnedEntries = [...posted.entries, ...suspended.entries];
+  if (!input.alreadyEarned || input.feesReversed) return { ok: true, entries: returnedEntries };
   const reversals: LedgerPosting[] = [];
   if (input.deal.businessPlatformFeeCents > 0) {
     reversals.push({
@@ -1104,5 +1113,70 @@ export function signedDealMoneyEvents(input: {
       reverses: "fee_earned",
     });
   }
-  return { ok: true, entries: [...posted.entries, ...reversals] };
+  return { ok: true, entries: [...returnedEntries, ...reversals] };
+}
+
+/** Open collaboration-fee eligibility for one milestone. Activation rows have no milestone and stay out. */
+export function openMilestoneCollaborationFees(
+  entries: { kind: string; amountCents: number; party?: string; milestoneId?: string | null }[],
+  milestoneId: string,
+) {
+  const net = (eligibleParty: string, reversalParty: string) => {
+    const eligible = entries
+      .filter((entry) => entry.kind === "fee_eligible" && entry.milestoneId === milestoneId && entry.party === eligibleParty)
+      .reduce((sum, entry) => sum + entry.amountCents, 0);
+    const reversed = entries
+      .filter((entry) => entry.kind === "reversal" && entry.milestoneId === milestoneId && entry.party === reversalParty)
+      .reduce((sum, entry) => sum + entry.amountCents, 0);
+    return Math.max(0, eligible - reversed);
+  };
+  return {
+    businessCollaborationFeeCents: net("platform:business", "platform:business_eligible"),
+    influencerFeeCents: net("platform:influencer", "platform:influencer_eligible"),
+  };
+}
+
+function suspendMilestoneEligibility(
+  fees: { businessCollaborationFeeCents: number; influencerFeeCents: number } | null | undefined,
+  settled: boolean,
+): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
+  if (!fees) return { ok: true, entries: [] };
+  if (
+    !Number.isInteger(fees.businessCollaborationFeeCents) ||
+    !Number.isInteger(fees.influencerFeeCents) ||
+    fees.businessCollaborationFeeCents < 0 ||
+    fees.influencerFeeCents < 0
+  ) {
+    return { ok: false, error: "The frozen milestone allocation does not reconcile." };
+  }
+  const entries: LedgerPosting[] = [];
+  if (fees.businessCollaborationFeeCents > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "platform",
+      side: "business_eligible",
+      amountCents: fees.businessCollaborationFeeCents,
+      reverses: "fee_eligible",
+    });
+  }
+  if (fees.influencerFeeCents > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "platform",
+      side: "influencer_eligible",
+      amountCents: fees.influencerFeeCents,
+      reverses: "fee_eligible",
+    });
+  }
+  const open = fees.businessCollaborationFeeCents + fees.influencerFeeCents;
+  if (settled && open > 0) {
+    entries.push({
+      kind: "reversal",
+      party: "platform",
+      side: "recovery",
+      amountCents: open,
+      reverses: "fee_settled",
+    });
+  }
+  return { ok: true, entries };
 }
