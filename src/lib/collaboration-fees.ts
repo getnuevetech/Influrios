@@ -913,6 +913,11 @@ export function feeRuleRateLabel(rule: Pick<CollaborationFeeRule, "method" | "pe
   return "an enterprise amount";
 }
 
+/** Activation is its own slot. A wildcard activation rule must not win a general quote. */
+export function excludeActivationRules(rules: CollaborationFeeRule[]) {
+  return rules.filter((rule) => rule.purpose !== "platform_activation");
+}
+
 export function pickWinningRule(rules: CollaborationFeeRule[], ctx: FeeResolveContext, asOf: string) {
   return rules
     .filter((r) => matchesRule(r, ctx, asOf))
@@ -961,7 +966,7 @@ export async function resolveFee(ctx: FeeResolveContext) {
   });
   const effectiveCtx: FeeResolveContext = { ...ctx, serviceLevel: resolvedLevel };
   const rows = await prisma.collaborationFeeRule.findMany();
-  const candidates = pickWinningRule(rows.map(ruleFromRow), effectiveCtx, asOf);
+  const candidates = pickWinningRule(excludeActivationRules(rows.map(ruleFromRow)), effectiveCtx, asOf);
 
   const winner = candidates[0] ?? null;
   if (!winner) {
