@@ -4,6 +4,7 @@ import { readSignedDealMoney } from "@/lib/payment-engine";
 import { collectionInstructionAmount } from "@/lib/provider-outbox";
 import {
   openStripeFundingCheckout,
+  expireStripeCheckoutSession,
   readStripeCheckoutSession,
   stripeCredentials,
   stripeCredentialError,
@@ -341,6 +342,105 @@ export function fundingDepositEventDecision(input: {
   if (input.paymentStatus === "paid") return "confirm";
   if (input.eventType === "checkout.session.completed" && input.paymentStatus === "unpaid") return "wait";
   return "wait";
+}
+
+/**
+ * Before funding, a cancellation expires the checkout only after the charge result is known.
+ * A confirmed or unknown charge stays open.
+ */
+export function prefundingCancellationDecision(input: {
+  fundingStatus: string;
+  deposits: { id: string; status: string; method: string; charge: "paid" | "unpaid" | "unknown" | null }[];
+}): { ok: true; expireIds: string[] } | { ok: false; error: string } {
+  if (input.fundingStatus !== "awaiting_provider") {
+    return { ok: false, error: "This funding is no longer waiting for a charge. Nothing was cancelled." };
+  }
+  const expireIds: string[] = [];
+  for (const deposit of input.deposits) {
+    if (deposit.status === "confirmed" || deposit.charge === "paid") {
+      return { ok: false, error: "A charge is already confirmed. Wait for the funding hold. Nothing was cancelled." };
+    }
+    if (deposit.status === "failed" || deposit.status === "expired") continue;
+    const gateway = deposit.method === "card" || deposit.method === "ach_online";
+    if (deposit.status === "gateway_opened" && gateway) {
+      if (deposit.charge !== "unpaid") {
+        return { ok: false, error: "A checkout result is still unknown. Nothing was cancelled." };
+      }
+      expireIds.push(deposit.id);
+      continue;
+    }
+    if (deposit.status === "manual_pending" || deposit.status === "gateway_opened") expireIds.push(deposit.id);
+  }
+  return { ok: true, expireIds };
+}
+
+/** Cancels an unfunded prefund after the open charge result is known. */
+export async function cancelUnfundedPrefund(input: { fundingId: string; actor: string }) {
+  const fundingId = input.fundingId.trim();
+  const funding = await prisma.collaborationFunding.findUnique({
+    where: { id: fundingId },
+    include: { deposits: true },
+  });
+  if (!funding) return { ok: false as const, error: "Prefund not found." };
+  const creds = await stripeCredentials().catch(() => null);
+  const charges = new Map<string, "paid" | "unpaid" | "unknown">();
+  for (const deposit of funding.deposits) {
+    if (deposit.status !== "gateway_opened") continue;
+    if (deposit.method !== "card" && deposit.method !== "ach_online") continue;
+    if (!creds?.ok) {
+      charges.set(deposit.id, "unknown");
+      continue;
+    }
+    const session = await readStripeCheckoutSession(creds.secret, deposit.reference);
+    if (!session) charges.set(deposit.id, "unknown");
+    else if (session.paymentStatus === "paid") charges.set(deposit.id, "paid");
+    else if (session.paymentStatus === "unpaid") charges.set(deposit.id, "unpaid");
+    else charges.set(deposit.id, "unknown");
+  }
+  const decision = prefundingCancellationDecision({
+    fundingStatus: funding.status,
+    deposits: funding.deposits.map((deposit) => ({
+      id: deposit.id,
+      status: deposit.status,
+      method: deposit.method,
+      charge: charges.get(deposit.id) ?? null,
+    })),
+  });
+  if (!decision.ok) return decision;
+  if (creds?.ok) {
+    for (const deposit of funding.deposits) {
+      if (!decision.expireIds.includes(deposit.id)) continue;
+      if (deposit.method !== "card" && deposit.method !== "ach_online") continue;
+      if (!deposit.reference) continue;
+      const expired = await expireStripeCheckoutSession(creds.secret, deposit.reference);
+      if (!expired) return { ok: false as const, error: "The checkout could not be expired. Nothing was cancelled." };
+    }
+  }
+  const updated = await prisma.collaborationFunding.updateMany({
+    where: { id: funding.id, status: "awaiting_provider" },
+    data: { status: "cancelled" },
+  });
+  if (updated.count !== 1) {
+    return { ok: false as const, error: "This funding is no longer waiting for a charge. Nothing was cancelled." };
+  }
+  if (decision.expireIds.length > 0) {
+    await prisma.fundingDeposit.updateMany({
+      where: { id: { in: decision.expireIds }, fundingId: funding.id, status: { in: ["gateway_opened", "manual_pending"] } },
+      data: { status: "expired" },
+    });
+  }
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: input.actor,
+        action: "funding_prefund_cancelled",
+        objectType: "CollaborationFunding",
+        objectId: funding.id,
+        after: { expireIds: decision.expireIds },
+      },
+    })
+    .catch(() => undefined);
+  return { ok: true as const };
 }
 
 /**

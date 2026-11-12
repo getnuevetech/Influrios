@@ -135,6 +135,17 @@ export function stripeCheckoutPayment(payload: Record<string, unknown> | null): 
   return { id, paymentStatus, amountTotal, currency: /^[A-Z]{3}$/.test(currency) ? currency : null, url, metadata };
 }
 
+export async function expireStripeCheckoutSession(secret: string, sessionId: string) {
+  const id = checkoutId(sessionId);
+  if (!id) return false;
+  try {
+    const payload = await stripeCall("POST", `/v1/checkout/sessions/${id}/expire`, secret);
+    return payload?.status === "expired";
+  } catch {
+    return false;
+  }
+}
+
 export async function readStripeCheckoutSession(secret: string, sessionId: string): Promise<StripeCheckoutPayment | null> {
   const id = checkoutId(sessionId);
   if (!id) return null;

@@ -485,6 +485,17 @@ export async function actionEnqueueFundingReconciliationSweep() {
   redirect("/admin/marketplace?saved=funding_recon");
 }
 
+export async function actionCancelUnfundedPrefund(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  const { cancelUnfundedPrefund } = await import("@/lib/funding-checkout");
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  if (!fundingId) redirect("/admin/marketplace?error=" + encodeURIComponent("Choose a funding record."));
+  const result = await cancelUnfundedPrefund({ fundingId, actor: session.email });
+  if (!result.ok) redirect(`/admin/marketplace?error=${encodeURIComponent(result.error)}`);
+  revalidatePath("/admin/marketplace");
+  redirect("/admin/marketplace?saved=prefund_cancelled");
+}
+
 export async function actionExecuteHeldCancellation(formData: FormData) {
   const session = await requireAdminAction("collab_finance.high_risk");
   const { requireCollabFinanceHighRisk } = await import("@/lib/admin-auth");

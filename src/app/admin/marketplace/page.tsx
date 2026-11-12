@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { actionApproveReleasePush, actionExecuteHeldCancellation, actionPushProviderRelease, actionSaveReleaseAutomation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
+import { actionApproveReleasePush, actionCancelUnfundedPrefund, actionExecuteHeldCancellation, actionPushProviderRelease, actionSaveReleaseAutomation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
 import { prisma } from "@/lib/db";
 import { getLaunchGate } from "@/lib/launch-gate";
 import { readShareSnapshot } from "@/lib/fx-share";
@@ -536,9 +536,19 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               </p>
             ))}
             {funding.status === "awaiting_provider" ? (
-              <p className="mt-2 text-[11px] text-muted">
-                This prefund stays unfunded until the provider webhook confirms it.
-              </p>
+              <div className="mt-2">
+                <p className="text-[11px] text-muted">
+                  This prefund stays unfunded until the provider webhook confirms it. A cancellation expires an unpaid checkout and waits if the charge result is unknown.
+                </p>
+                {canManage ? (
+                  <form action={actionCancelUnfundedPrefund} className="mt-2">
+                    <input type="hidden" name="fundingId" value={funding.id} />
+                    <button className="rounded-full border border-indigo px-3 py-1 text-xs font-bold text-indigo">
+                      Cancel unfunded prefund
+                    </button>
+                  </form>
+                ) : null}
+              </div>
             ) : null}
             <ul className="mt-2 space-y-1 text-indigo">
               {funding.milestones.map((milestone) => (
