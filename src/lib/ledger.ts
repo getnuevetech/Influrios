@@ -388,6 +388,28 @@ export function marketplaceDisposition(input: {
     }
     return "reject";
   }
+  if (input.eventType === "split.settled") {
+    if (input.fundingStatus !== "held") return "reject";
+    if (
+      (input.milestoneStatus === "release_scheduled" || input.milestoneStatus === "release_requested") &&
+      input.amountCents === input.expectedCents &&
+      input.amountCents > 0
+    ) {
+      return "apply";
+    }
+    return "reject";
+  }
+  if (input.eventType === "split.returned") {
+    if (input.fundingStatus !== "held") return "reject";
+    if (
+      (input.milestoneStatus === "release_scheduled" || input.milestoneStatus === "release_requested") &&
+      input.amountCents === input.expectedCents &&
+      input.amountCents > 0
+    ) {
+      return "apply";
+    }
+    return "reject";
+  }
   if (input.eventType === "payout.returned") {
     if (input.fundingStatus === "payment_risk") return "reject";
     if (input.milestoneStatus === "released" && input.amountCents === input.expectedCents && input.amountCents > 0) {

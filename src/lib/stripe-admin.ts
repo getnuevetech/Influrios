@@ -77,7 +77,13 @@ export async function stripeBillingMode(): Promise<"sandbox" | "live" | "demo" |
   return creds.mode;
 }
 
-async function stripeCall(method: "GET" | "POST", path: string, secret: string, body?: URLSearchParams) {
+async function stripeCall(
+  method: "GET" | "POST",
+  path: string,
+  secret: string,
+  body?: URLSearchParams,
+  idempotencyKey?: string,
+) {
   const response = await transport(`${STRIPE_HOST}${path}`, {
     method,
     redirect: "manual",
@@ -86,6 +92,7 @@ async function stripeCall(method: "GET" | "POST", path: string, secret: string, 
       Authorization: `Bearer ${secret}`,
       "Stripe-Version": STRIPE_VERSION,
       ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
     body,
   });
@@ -106,6 +113,8 @@ export type StripeCheckoutPayment = {
   id: string;
   paymentStatus: string;
   amountTotal: number | null;
+  currency: string | null;
+  url: string | null;
   metadata: Record<string, string>;
 };
 
@@ -116,12 +125,14 @@ export function stripeCheckoutPayment(payload: Record<string, unknown> | null): 
   const paymentStatus = typeof payload.payment_status === "string" ? payload.payment_status : "";
   if (!id || !paymentStatus) return null;
   const amountTotal = typeof payload.amount_total === "number" && Number.isInteger(payload.amount_total) ? payload.amount_total : null;
+  const currency = typeof payload.currency === "string" ? payload.currency.trim().toUpperCase() : "";
+  const url = typeof payload.url === "string" && payload.url.startsWith("https://") ? payload.url : null;
   const raw = payload.metadata && typeof payload.metadata === "object" ? (payload.metadata as Record<string, unknown>) : {};
   const metadata: Record<string, string> = {};
   for (const [key, value] of Object.entries(raw)) {
     if (typeof value === "string" && value.trim()) metadata[key] = value.trim();
   }
-  return { id, paymentStatus, amountTotal, metadata };
+  return { id, paymentStatus, amountTotal, currency: /^[A-Z]{3}$/.test(currency) ? currency : null, url, metadata };
 }
 
 export async function readStripeCheckoutSession(secret: string, sessionId: string): Promise<StripeCheckoutPayment | null> {
@@ -300,7 +311,15 @@ export async function openStripeFundingCheckout(input: {
   metadata: Record<string, string>;
 }) {
   try {
-    const payload = await stripeCall("POST", "/v1/checkout/sessions", input.secret, stripeFundingCheckoutBody(input));
+    const payload = await stripeCall(
+      "POST",
+      "/v1/checkout/sessions",
+      input.secret,
+      stripeFundingCheckoutBody(input),
+      input.metadata.fundingId
+        ? `funding-deposit:${input.metadata.fundingId}:${input.paymentMethod}`
+        : undefined,
+    );
     const id = checkoutId(payload?.id);
     const url = httpsUrl(payload?.url);
     const livemode = payload?.livemode;

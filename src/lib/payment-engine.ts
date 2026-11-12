@@ -509,20 +509,26 @@ export type ProviderAdvanceInput = {
 export function providerEventMayAdvance(input: ProviderAdvanceInput): { advance: true } | { advance: false; reason: string } {
   if (input.duplicate) return { advance: false, reason: "This provider event was already applied." };
   if (input.fundingId !== input.expectedFundingId) return { advance: false, reason: "The provider event is for a different deal." };
-  if (input.currency.trim().toUpperCase() !== input.expectedCurrency.trim().toUpperCase()) {
+  const currency = input.currency.trim().toUpperCase();
+  const expectedCurrency = input.expectedCurrency.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency) || !/^[A-Z]{3}$/.test(expectedCurrency)) {
+    return { advance: false, reason: "The provider event has no currency." };
+  }
+  if (currency !== expectedCurrency) {
     return { advance: false, reason: "The provider currency does not match the deal." };
   }
   if (input.amountCents !== input.expectedAmountCents) return { advance: false, reason: "The provider amount does not match the deal." };
-  if (input.accountId !== input.expectedAccountId) return { advance: false, reason: "The provider account does not match the route." };
-  if (input.environment !== input.expectedEnvironment) return { advance: false, reason: "The provider environment does not match the route." };
+  if (!input.accountId.trim() || input.accountId !== input.expectedAccountId) {
+    return { advance: false, reason: "The provider account does not match the route." };
+  }
+  if (!input.environment.trim() || input.environment !== input.expectedEnvironment) {
+    return { advance: false, reason: "The provider environment does not match the route." };
+  }
   if (input.eventName === "payment_intent.succeeded" && !input.holdingAvailable) {
     return {
       advance: false,
       reason: "Collection succeeded without evidence that funds are available for release. Work stays blocked.",
     };
-  }
-  if (input.eventName === "funds_split.released" && !input.beneficiaryConfirmed) {
-    return { advance: false, reason: "A split credit is not a confirmed beneficiary payout. Paid stays blocked." };
   }
   return { advance: true };
 }
@@ -556,25 +562,10 @@ export function providerLedgerAdvance(body: string, expected?: {
   const amountCents = typeof amountRaw === "number" ? Math.round(amountRaw) : Number(amountRaw);
   const currency = typeof object?.currency === "string" ? object.currency : "";
   const fundingId = typeof metadata.fundingId === "string" ? metadata.fundingId : "";
-  const accountId = typeof parsed.account_id === "string" ? parsed.account_id : String(metadata.accountId ?? "");
-  const environment = typeof parsed.environment === "string" ? parsed.environment : String(metadata.environment ?? "");
+  const accountId = typeof parsed.account_id === "string" ? parsed.account_id : "";
+  const environment = typeof parsed.environment === "string" ? parsed.environment : "";
   if (!expected) {
-    return providerEventMayAdvance({
-      eventName: name,
-      holdingAvailable,
-      beneficiaryConfirmed,
-      amountCents: Number.isInteger(amountCents) ? amountCents : -1,
-      expectedAmountCents: Number.isInteger(amountCents) ? amountCents : -1,
-      currency: currency || "USD",
-      expectedCurrency: currency || "USD",
-      accountId: accountId || "unscoped",
-      expectedAccountId: accountId || "unscoped",
-      environment: environment || "unscoped",
-      expectedEnvironment: environment || "unscoped",
-      fundingId: fundingId || "unscoped",
-      expectedFundingId: fundingId || "unscoped",
-      duplicate: false,
-    });
+    return { advance: false, reason: "Saved route facts are required before this event can move money." };
   }
   return providerEventMayAdvance({
     eventName: name,

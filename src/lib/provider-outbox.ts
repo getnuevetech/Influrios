@@ -105,7 +105,7 @@ export function commandNeedsReconciliation(input: {
 /** A claimed or completed command is not sent again. A failed command can be tried until the admin attempt limit. */
 export function commandMayDispatch(status: string, attemptCount: number, maxAttempts = 3) {
   const limit = Number.isInteger(maxAttempts) && maxAttempts > 0 ? maxAttempts : 3;
-  if (status === "dispatched" || status === "confirmed") return false;
+  if (status === "dispatched" || status === "confirmed" || status === "external") return false;
   if (status === "pending" && attemptCount > 0) return false;
   if (status === "failed" && attemptCount < limit) return true;
   if (status === "pending" && attemptCount === 0) return true;

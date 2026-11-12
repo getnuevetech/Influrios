@@ -164,6 +164,45 @@ export async function startFundingDeposit(input: {
   if (input.method === "ach_online" && funding.currency.trim().toUpperCase() !== "USD") {
     return { ok: false, error: "Online ACH collects USD. Nothing was charged." };
   }
+  const openDeposit = await prisma.fundingDeposit.findFirst({
+    where: { fundingId: funding.id, method: input.method, status: "gateway_opened" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (openDeposit?.reference) {
+    const creds = await stripeCredentials();
+    if (!creds.ok) return { ok: false, error: stripeCredentialError(creds.reason, "charged") };
+    const session = await readStripeCheckoutSession(creds.secret, openDeposit.reference);
+    if (
+      session &&
+      gatewaySessionConfirmsDeposit({
+        session,
+        depositId: openDeposit.id,
+        fundingId: funding.id,
+        amountCents: planned.amountCents,
+        currency: funding.currency,
+      })
+    ) {
+      const confirmed = await confirmGatewayDeposit({
+        depositId: openDeposit.id,
+        fundingId: funding.id,
+        checkoutSessionId: session.id,
+        paymentStatus: session.paymentStatus,
+        amountCents: session.amountTotal,
+        currency: session.currency,
+      });
+      if (!confirmed.ok) return confirmed;
+      return { ok: false, error: "This deposit is already paid. Nothing was charged." };
+    }
+    if (
+      session?.url &&
+      session.paymentStatus === "unpaid" &&
+      session.amountTotal === planned.amountCents &&
+      session.currency === funding.currency.trim().toUpperCase()
+    ) {
+      return { ok: true, kind: "gateway", url: session.url, depositId: openDeposit.id };
+    }
+    await prisma.fundingDeposit.update({ where: { id: openDeposit.id }, data: { status: "failed" } }).catch(() => undefined);
+  }
   const creds = await stripeCredentials();
   if (!creds.ok) return { ok: false, error: stripeCredentialError(creds.reason, "charged") };
   const deposit = await prisma.fundingDeposit.create({
@@ -262,15 +301,46 @@ export function gatewaySessionConfirmsDeposit(input: {
   depositId: string;
   fundingId: string;
   amountCents: number;
+  currency?: string;
 }) {
   const session = input.session;
   if (!session || session.paymentStatus !== "paid") return false;
   if (session.amountTotal != null && session.amountTotal !== input.amountCents) return false;
+  if (input.currency && session.currency && session.currency !== input.currency.trim().toUpperCase()) return false;
   const depositId = session.metadata.depositId?.trim() ?? "";
   const fundingId = session.metadata.fundingId?.trim() ?? "";
   if (depositId && depositId !== input.depositId) return false;
   if (fundingId && fundingId !== input.fundingId) return false;
   return true;
+}
+
+/** Delayed ACH stays open until Stripe reports success or failure. A missing currency does not confirm. */
+export function fundingDepositEventDecision(input: {
+  eventType: string;
+  paymentStatus: string | null | undefined;
+  amountTotal: number | null;
+  currency: string | null | undefined;
+  sessionId: string;
+  depositReference: string;
+  depositAmountCents: number;
+  depositCurrency: string;
+}): "confirm" | "fail" | "wait" | "mismatch" {
+  const currency = input.currency?.trim().toUpperCase() ?? "";
+  const expectedCurrency = input.depositCurrency.trim().toUpperCase();
+  if (
+    !input.sessionId ||
+    input.sessionId !== input.depositReference ||
+    input.amountTotal == null ||
+    input.amountTotal !== input.depositAmountCents ||
+    !/^[A-Z]{3}$/.test(currency) ||
+    currency !== expectedCurrency
+  ) {
+    return "mismatch";
+  }
+  if (input.eventType === "checkout.session.async_payment_failed") return "fail";
+  if (input.paymentStatus === "paid") return "confirm";
+  if (input.eventType === "checkout.session.completed" && input.paymentStatus === "unpaid") return "wait";
+  return "wait";
 }
 
 /**
@@ -322,6 +392,8 @@ export async function confirmGatewayDeposit(input: {
   fundingId: string;
   checkoutSessionId: string;
   paymentStatus: string | null | undefined;
+  amountCents?: number | null;
+  currency?: string | null;
 }) {
   if (input.paymentStatus !== "paid") {
     return { ok: false as const, error: "Stripe has not confirmed this payment. Nothing was changed." };
@@ -329,6 +401,15 @@ export async function confirmGatewayDeposit(input: {
   const deposit = await prisma.fundingDeposit.findUnique({ where: { id: input.depositId.trim() } });
   if (!deposit || deposit.fundingId !== input.fundingId.trim()) {
     return { ok: false as const, error: "That deposit was not found. Nothing was changed." };
+  }
+  if (deposit.reference && deposit.reference !== input.checkoutSessionId.trim()) {
+    return { ok: false as const, error: "This checkout does not match the open deposit. Nothing was changed." };
+  }
+  if (input.amountCents != null && input.amountCents !== deposit.amountCents) {
+    return { ok: false as const, error: "The paid amount does not match this deposit. Nothing was changed." };
+  }
+  if (input.currency != null && input.currency.trim().toUpperCase() !== deposit.currency.trim().toUpperCase()) {
+    return { ok: false as const, error: "The paid currency does not match this deposit. Nothing was changed." };
   }
   if (deposit.method !== "card" && deposit.method !== "ach_online") {
     return { ok: false as const, error: "This deposit is not a gateway checkout. Nothing was changed." };
@@ -356,5 +437,22 @@ export async function confirmGatewayDeposit(input: {
     return { ok: false as const, error: "The deposit is still unconfirmed. Nothing was changed." };
   }
   await markDepositConfirmed(deposit.id, "stripe", input.checkoutSessionId.trim());
+  return { ok: true as const };
+}
+
+/** A delayed ACH failure closes the checkout. It does not hold the agreement. */
+export async function failGatewayDeposit(input: { depositId: string; fundingId: string; checkoutSessionId: string }) {
+  const deposit = await prisma.fundingDeposit.findUnique({ where: { id: input.depositId.trim() } });
+  if (!deposit || deposit.fundingId !== input.fundingId.trim()) {
+    return { ok: false as const, error: "That deposit was not found. Nothing was changed." };
+  }
+  if (deposit.reference && deposit.reference !== input.checkoutSessionId.trim()) {
+    return { ok: false as const, error: "This checkout does not match the open deposit. Nothing was changed." };
+  }
+  if (deposit.status === "failed") return { ok: true as const };
+  if (deposit.status !== "gateway_opened") {
+    return { ok: false as const, error: "This checkout is not open. Nothing was changed." };
+  }
+  await prisma.fundingDeposit.update({ where: { id: deposit.id }, data: { status: "failed" } });
   return { ok: true as const };
 }

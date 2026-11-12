@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyMarketplaceSignature } from "@/lib/ledger";
 import { applyIntroFeeFromWebhook } from "@/lib/managed-matching";
 import { applyAirwallexMentorshipWebhook } from "@/lib/mentorship";
-import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
+import { airwallexEnvironment, loadAirwallexConfig } from "@/lib/providers/airwallex-config";
+import { prisma } from "@/lib/db";
+import { releasableCents } from "@/lib/ledger";
 import {
   parseAirwallexIntroFeeWebhook,
   parseAirwallexWebhook,
@@ -92,7 +94,33 @@ export async function POST(request: NextRequest) {
     }
     const fundingEvent = parseAirwallexWebhook(body);
     if (!fundingEvent.ok) return NextResponse.json({ error: fundingEvent.error }, { status: 400 });
-    const advance = providerLedgerAdvance(body);
+    const funding = await prisma.collaborationFunding.findUnique({
+      where: { id: fundingEvent.fundingId },
+      select: {
+        id: true,
+        currency: true,
+        grossCents: true,
+        milestones: { select: { id: true, amountCents: true, refundedCents: true } },
+      },
+    });
+    const milestone = fundingEvent.milestoneId
+      ? funding?.milestones.find((row) => row.id === fundingEvent.milestoneId)
+      : null;
+    const payoutEvent = fundingEvent.eventType !== "funding.held";
+    const expectedAmount = !funding
+      ? -1
+      : payoutEvent
+        ? milestone
+          ? releasableCents(milestone.amountCents, milestone.refundedCents)
+          : -1
+        : funding.grossCents;
+    const advance = providerLedgerAdvance(body, {
+      amountCents: expectedAmount,
+      currency: funding?.currency || "",
+      accountId: settings.holdingAccountId,
+      environment: airwallexEnvironment(settings.baseUrl),
+      fundingId: funding?.id || "",
+    });
     if (!advance.advance) {
       return NextResponse.json({ ok: true, parked: true, reason: advance.reason });
     }

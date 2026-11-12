@@ -1931,7 +1931,10 @@ export async function applyMarketplaceEvent(input: {
     input.eventType === "funding.failed" ||
     input.eventType === "funding.chargeback"
       ? funding.grossCents
-      : input.eventType === "payout.released" || input.eventType === "payout.failed"
+      : input.eventType === "payout.released" ||
+        input.eventType === "payout.failed" ||
+        input.eventType === "split.settled" ||
+        input.eventType === "split.returned"
         ? left > 0
           ? left
           : -1
@@ -2042,6 +2045,9 @@ export async function applyMarketplaceEvent(input: {
           milestoneId: milestone.id,
           outcome: "payout_failed",
         });
+        return;
+      }
+      if ((input.eventType === "split.settled" || input.eventType === "split.returned") && milestone) {
         return;
       }
       if (input.eventType === "payout.released" && milestone) {

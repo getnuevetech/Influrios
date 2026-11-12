@@ -33,6 +33,7 @@ const RELEASE_LOG_LABEL: Record<string, string> = {
   milestone_release_skipped: "Skipped",
   "launch_gate.release_automation": "Switches saved",
   provider_instruction_release: "Instruction recorded",
+  milestone_release_external: "Waiting for external handling",
 };
 
 function releaseWhen(value: Date) {
@@ -110,6 +111,13 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       take: 20,
     }),
   ]);
+  const externalReleases = payoutQueue.length
+    ? await prisma.providerCommand.findMany({
+        where: { operation: "release", status: "external", milestoneId: { in: payoutQueue.map((row) => row.id) } },
+        select: { milestoneId: true },
+      })
+    : [];
+  const externalMilestoneIds = new Set(externalReleases.map((row) => row.milestoneId));
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
   const sweeps = await listFundingSweepResults().catch(() => []);
   const fundingRows = fundings.rows;
@@ -198,12 +206,15 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         ) : (
           <ul className="mt-4 space-y-2">
             {payoutQueue.map((milestone) => {
-              const step = releaseQueueStep({
-                status: milestone.status,
-                releaseApprovedAt: milestone.releaseApprovedAt,
-                automaticReleaseApproval: approvalOn,
-                automaticProviderRelease: providerOn,
-              });
+              const external = externalMilestoneIds.has(milestone.id);
+              const step = external
+                ? { action: "wait_provider" as const, label: "Recorded for external handling. This route does not send the payout." }
+                : releaseQueueStep({
+                    status: milestone.status,
+                    releaseApprovedAt: milestone.releaseApprovedAt,
+                    automaticReleaseApproval: approvalOn,
+                    automaticProviderRelease: providerOn,
+                  });
               return (
                 <li key={milestone.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#E4EBFF] px-3 py-2 text-sm">
                   <div className="min-w-0">

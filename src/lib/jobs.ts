@@ -1129,6 +1129,29 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
       await recordProviderCommandResult({ commandId: claim.commandId, ok: false });
       continue;
     }
+    if (instruction.execution === "external") {
+      await prisma.providerCommand.updateMany({
+        where: { id: claim.commandId, status: "pending" },
+        data: { status: "external", providerRef: instruction.reference.slice(0, 180), dispatchedAt: new Date() },
+      });
+      await prisma.auditLog
+        .create({
+          data: {
+            actor: "system",
+            action: "milestone_release_external",
+            objectType: "FundingMilestone",
+            objectId: milestone.id,
+            after: {
+              fundingId: milestone.fundingId,
+              reference: instruction.reference,
+              amountCents: planned.amountCents,
+              at: now.toISOString(),
+            },
+          },
+        })
+        .catch(() => undefined);
+      continue;
+    }
     await recordProviderCommandResult({
       commandId: claim.commandId,
       ok: true,
@@ -1187,6 +1210,16 @@ export async function pushScheduledRelease(milestoneId: string) {
   }
   const result = await runScheduledReleaseSweep(new Date(), milestoneId);
   if (result.requested !== 1) {
+    const command = await prisma.providerCommand.findFirst({
+      where: { fundingId: milestone.fundingId, milestoneId: milestone.id, operation: "release" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (command?.status === "external") {
+      return {
+        ok: false as const,
+        error: "This route records the payout for external handling. It does not send the payout.",
+      };
+    }
     return { ok: false as const, error: "The provider did not accept the payout instruction." };
   }
   return { ok: true as const };

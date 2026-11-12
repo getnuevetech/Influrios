@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { airwallexSettingsFromSources } from "./airwallex-config";
+import { airwallexEnvironment, airwallexSettingsFromSources } from "./airwallex-config";
 
 describe("Airwallex settings", () => {
   it("reads the enabled admin row, including holding and operations accounts", () => {
+    assert.equal(airwallexEnvironment("https://api-demo.airwallex.com"), "demo");
+    assert.equal(airwallexEnvironment("https://api.airwallex.com"), "production");
     const settings = airwallexSettingsFromSources({
       env: {},
       row: {

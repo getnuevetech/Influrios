@@ -20,6 +20,8 @@ describe("webhook disposition", () => {
       "apply",
     );
     assert.equal(webhookDisposition({ duplicate: false, eventType: "customer.created" }), "ignore");
+    assert.equal(webhookDisposition({ duplicate: false, eventType: "checkout.session.async_payment_succeeded" }), "apply");
+    assert.equal(webhookDisposition({ duplicate: false, eventType: "checkout.session.async_payment_failed" }), "apply");
   });
 
   it("maps event types onto normalized subscription states", () => {

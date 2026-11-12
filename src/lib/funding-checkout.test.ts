@@ -12,6 +12,7 @@ import {
   startFundingDeposit,
   confirmManualDeposit,
   confirmGatewayDeposit,
+  fundingDepositEventDecision,
   gatewaySessionConfirmsDeposit,
 } from "./funding-checkout";
 import { stripeCheckoutPayment, stripeFundingCheckoutBody } from "./stripe-admin";
@@ -94,6 +95,58 @@ describe("funding deposit rules", () => {
       false,
     );
     assert.equal(gatewaySessionConfirmsDeposit({ session: null, depositId: "dep_1", fundingId: "fund_1", amountCents: 483000 }), false);
+    assert.equal(
+      fundingDepositEventDecision({
+        eventType: "checkout.session.async_payment_succeeded",
+        paymentStatus: "paid",
+        amountTotal: 483000,
+        currency: "usd",
+        sessionId: "cs_test_1",
+        depositReference: "cs_test_1",
+        depositAmountCents: 483000,
+        depositCurrency: "USD",
+      }),
+      "confirm",
+    );
+    assert.equal(
+      fundingDepositEventDecision({
+        eventType: "checkout.session.completed",
+        paymentStatus: "unpaid",
+        amountTotal: 483000,
+        currency: "USD",
+        sessionId: "cs_test_1",
+        depositReference: "cs_test_1",
+        depositAmountCents: 483000,
+        depositCurrency: "USD",
+      }),
+      "wait",
+    );
+    assert.equal(
+      fundingDepositEventDecision({
+        eventType: "checkout.session.async_payment_failed",
+        paymentStatus: "unpaid",
+        amountTotal: 483000,
+        currency: "USD",
+        sessionId: "cs_test_1",
+        depositReference: "cs_test_1",
+        depositAmountCents: 483000,
+        depositCurrency: "USD",
+      }),
+      "fail",
+    );
+    assert.equal(
+      fundingDepositEventDecision({
+        eventType: "checkout.session.async_payment_succeeded",
+        paymentStatus: "paid",
+        amountTotal: 483000,
+        currency: "",
+        sessionId: "cs_test_1",
+        depositReference: "cs_test_1",
+        depositAmountCents: 483000,
+        depositCurrency: "USD",
+      }),
+      "mismatch",
+    );
   });
 });
 

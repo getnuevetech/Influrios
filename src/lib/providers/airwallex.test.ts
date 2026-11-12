@@ -214,7 +214,8 @@ describe("Airwallex adapter", () => {
     });
     const releaseEvent = parseAirwallexWebhook(releaseBody);
     const duplicate = parseAirwallexWebhook(releaseBody);
-    assert.equal(releaseEvent.ok && releaseEvent.eventType, "payout.released");
+    assert.equal(releaseEvent.ok && releaseEvent.eventType, "split.settled");
+    assert.notEqual(releaseEvent.ok && releaseEvent.eventType, "payout.released");
     assert.equal(releaseEvent.ok && duplicate.ok && releaseEvent.eventId === duplicate.eventId, true);
     const seen = new Set<string>();
     if (releaseEvent.ok) seen.add(releaseEvent.eventId);
