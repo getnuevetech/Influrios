@@ -40,7 +40,7 @@ export const PAYMENT_CHARGE_SWITCHES = [
     label: "Provider checkout",
     defaultEnabled: true,
     stopped: "Nothing was charged.",
-    description: "Sends a Flutterwave, M-Pesa, or Airwallex collection instruction.",
+    description: "Sends a collection instruction through the stored collection provider.",
   },
   {
     key: "recurring_collection",
