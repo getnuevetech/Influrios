@@ -122,7 +122,7 @@ function postingParty(row: { party: string; side?: string }) {
 function postingPurpose(kind: string) {
   if (kind === "provider_fee") return "REGIONAL_SETTLEMENT";
   if (kind === "fee_settled") return "OPERATIONS";
-  if (kind === "fee_pending" || kind === "fee_earned" || kind === "reversal") return "PLATFORM_FEE_CLEARING";
+  if (kind === "fee_pending" || kind === "fee_earned" || kind === "fee_eligible" || kind === "reversal") return "PLATFORM_FEE_CLEARING";
   if (kind === "refund") return "REFUND_RESERVE";
   return "COLLABORATION_HOLDING";
 }
@@ -2000,6 +2000,7 @@ export async function applyMarketplaceEvent(input: {
             finalPayout: false,
             alreadyEarned: false,
             alreadyReturned: false,
+            alreadyActivationEligible: funding.entries.some((entry) => entry.kind === "fee_eligible"),
           });
           if (!reserved.ok) throw new LedgerReject(reserved.error);
           await writeSignedPostings(tx, {

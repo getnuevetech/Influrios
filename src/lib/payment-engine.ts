@@ -109,6 +109,7 @@ export type LedgerPosting = {
     | "influencer_payable"
     | "fee_pending"
     | "fee_earned"
+    | "fee_eligible"
     | "fee_settled"
     | "tax"
     | "release"
@@ -861,6 +862,7 @@ export type SignedDealMoney = {
   influencerPlatformFeeCents: number;
   businessTaxCents: number;
   influencerTaxCents: number;
+  activationFeeCents?: number;
 };
 
 export function readSignedDealMoney(plan: unknown): SignedDealMoney | null {
@@ -876,6 +878,8 @@ export function readSignedDealMoney(plan: unknown): SignedDealMoney | null {
     influencerTaxCents: quote.influencerTaxCents ?? 0,
   };
   if (Object.values(money).some((amount) => !Number.isInteger(amount) || Number(amount) < 0)) return null;
+  const activation = quote.activationFeeCents;
+  if (activation != null && (!Number.isInteger(activation) || Number(activation) < 0)) return null;
   return {
     businessPaysCents: Number(money.businessPaysCents),
     influencerReceivesCents: Number(money.influencerReceivesCents),
@@ -883,6 +887,7 @@ export function readSignedDealMoney(plan: unknown): SignedDealMoney | null {
     influencerPlatformFeeCents: Number(money.influencerPlatformFeeCents),
     businessTaxCents: Number(money.businessTaxCents),
     influencerTaxCents: Number(money.influencerTaxCents),
+    ...(activation == null ? {} : { activationFeeCents: Number(activation) }),
   };
 }
 
@@ -895,6 +900,7 @@ export function signedDealMoneyEvents(input: {
   finalPayout: boolean;
   alreadyEarned: boolean;
   alreadyReturned: boolean;
+  alreadyActivationEligible?: boolean;
   releasedCents?: number;
   payoutReturned?: boolean;
   /** The still-open provider payout this return closes. Omit only for a full signed payout. */
@@ -910,14 +916,16 @@ export function signedDealMoneyEvents(input: {
     if (input.amountCents !== input.deal.businessPaysCents) {
       return { ok: false, error: "The collection does not match the signed business payment." };
     }
-    return {
-      ok: true,
-      entries: [
-        { kind: "fee_pending", party: "platform", side: "business", amountCents: input.deal.businessPlatformFeeCents },
-        { kind: "fee_pending", party: "platform", side: "influencer", amountCents: input.deal.influencerPlatformFeeCents },
-        { kind: "influencer_payable", party: "influencer", amountCents: input.deal.influencerReceivesCents },
-      ],
-    };
+    const entries: LedgerPosting[] = [
+      { kind: "fee_pending", party: "platform", side: "business", amountCents: input.deal.businessPlatformFeeCents },
+      { kind: "fee_pending", party: "platform", side: "influencer", amountCents: input.deal.influencerPlatformFeeCents },
+      { kind: "influencer_payable", party: "influencer", amountCents: input.deal.influencerReceivesCents },
+    ];
+    const activation = input.deal.activationFeeCents ?? 0;
+    if (!input.alreadyActivationEligible && activation > 0) {
+      entries.push({ kind: "fee_eligible", party: "platform", side: "business", amountCents: activation });
+    }
+    return { ok: true, entries };
   }
   if (input.eventType === "payout.released") {
     const released = input.releasedCents ?? input.amountCents;

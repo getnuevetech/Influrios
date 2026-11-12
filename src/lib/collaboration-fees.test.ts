@@ -8,6 +8,7 @@ import {
   feeSimulationDraft,
   matchesRule,
   parseTierBands,
+  excludeActivationRules,
   pickWinningRule,
   feeRuleSide,
   protectedPaymentLabel,
@@ -135,6 +136,27 @@ describe("collaboration fee matching", () => {
     assert.equal(matchesRule(rule({ effectiveFrom: "2027-01-01T00:00:00.000Z" }), ctx, asOf), false);
     assert.equal(matchesRule(rule({ jurisdiction: "GB" }), ctx, asOf), false);
     assert.equal(matchesRule(rule({ serviceLevel: "discovery" }), ctx, asOf), false);
+    const activation = rule({
+      id: "rule_activation",
+      purpose: "platform_activation",
+      payer: "brand",
+      serviceLevel: "*",
+      priority: 700,
+      method: "fixed",
+      fixedCents: 0,
+    });
+    const intro = rule({
+      id: "rule_intro",
+      purpose: "legacy",
+      payer: "brand",
+      serviceLevel: "managed_intro",
+      priority: 0,
+      method: "percent_plus_fixed",
+      percentBps: 1500,
+      fixedCents: 2500,
+    });
+    assert.equal(pickWinningRule([activation, intro], ctx, asOf)[0]?.id, "rule_activation");
+    assert.equal(pickWinningRule(excludeActivationRules([activation, intro]), ctx, asOf)[0]?.id, "rule_intro");
     assert.equal(matchesRule(rule({ minGrossCents: 50_000 }), ctx, asOf), false);
     assert.equal(matchesRule(rule({ maxGrossCents: 500 }), ctx, asOf), false);
     assert.equal(matchesRule(rule({ jurisdiction: "US", serviceLevel: "managed_intro" }), ctx, asOf), true);

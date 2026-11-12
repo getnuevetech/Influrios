@@ -254,6 +254,42 @@ describe("payment engine acceptance", () => {
     assert.equal(held.ok, true);
     if (!held.ok) return;
     assert.equal(held.entries.filter((row) => row.kind === "fee_pending").length, 2);
+    assert.equal(held.entries.some((row) => row.kind === "fee_eligible"), false);
+    const activated = signedDealMoneyEvents({
+      deal: { ...deal, activationFeeCents: 1_000 },
+      eventType: "funding.held",
+      amountCents: 375_000,
+      policyApproved: false,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+    });
+    assert.equal(activated.ok, true);
+    if (!activated.ok) return;
+    const eligible = activated.entries.find((row) => row.kind === "fee_eligible");
+    assert.equal(eligible?.amountCents, 1_000);
+    assert.equal(eligible?.party, "platform");
+    assert.equal(
+      activated.entries.find((row) => row.kind === "influencer_payable")?.amountCents,
+      343_000,
+    );
+    assert.equal(
+      activated.entries.find((row) => row.kind === "fee_pending" && row.side === "business")?.amountCents,
+      25_000,
+    );
+    const activationReplay = signedDealMoneyEvents({
+      deal: { ...deal, activationFeeCents: 1_000 },
+      eventType: "funding.held",
+      amountCents: 375_000,
+      policyApproved: false,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+      alreadyActivationEligible: true,
+    });
+    assert.equal(activationReplay.ok, true);
+    if (!activationReplay.ok) return;
+    assert.equal(activationReplay.entries.some((row) => row.kind === "fee_eligible"), false);
     const milestoneSlice = signedDealMoneyEvents({
       deal,
       eventType: "payout.released",
