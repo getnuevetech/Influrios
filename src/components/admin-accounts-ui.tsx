@@ -939,6 +939,26 @@ function AccountDetailPanel({
                           className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal text-indigo"
                         />
                       </label>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+                        <input
+                          type="checkbox"
+                          name="countryVerified"
+                          value="1"
+                          defaultChecked={Boolean(row.verifiedCountryCode)}
+                        />
+                        Funding country verified
+                      </label>
+                      <label className="block text-[11px] font-bold uppercase tracking-wide text-muted">
+                        Verified funding country
+                        <input
+                          name="verifiedCountryCode"
+                          defaultValue={row.verifiedCountryCode || ""}
+                          maxLength={2}
+                          placeholder="US"
+                          className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal uppercase text-indigo"
+                        />
+                      </label>
+                      <p className="text-[11px] text-muted">The mailing country is not used for funding. Enter the two-letter country only after it is verified.</p>
                     </>
                   ) : null}
                 </>
@@ -1156,6 +1176,7 @@ function AccountFacts({ row, publicId }: { row: AccountTableRow; publicId: strin
     ["Business name", row.businessName || "Not set"],
     ["Industry", row.businessIndustry || "Not set"],
     ["Business geography", row.businessGeography || "Not set"],
+    ["Verified funding country", row.verifiedCountryCode || "Not verified"],
     ["Business contact", row.contactName || "Not set"],
     ["Business email", row.contactEmail || "Not set"],
     ["Business mobile", row.contactPhone || "Not set"],

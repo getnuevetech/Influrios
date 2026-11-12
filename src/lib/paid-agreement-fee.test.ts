@@ -19,20 +19,26 @@ function quoteSide(serviceLevel: string, side: "business" | "influencer") {
 }
 
 describe("paid agreement fee boundary", () => {
-  it("prices Discovery from the saved Discovery rule, including a $3,500 gross", () => {
+  it("prices a positive-gross Discovery agreement on the paid pilot level", () => {
     const boundary = resolvePaidAgreementFee({ statedServiceLevel: "discovery", grossCents: GROSS });
-    assert.equal(boundary.feeServiceLevel, "discovery");
     assert.equal(boundary.originServiceLevel, "discovery");
-    const business = quoteSide("discovery", "business");
-    const influencer = quoteSide("discovery", "influencer");
+    assert.equal(boundary.freeDiscovery, false);
+    assert.equal(boundary.feeServiceLevel, "contracted");
+    const business = quoteSide(boundary.feeServiceLevel, "business");
+    const influencer = quoteSide(boundary.feeServiceLevel, "influencer");
     assert.equal(business.ok, true);
     assert.equal(influencer.ok, true);
     if (!business.ok || !influencer.ok) return;
-    assert.equal(business.rule.id, "rule_pilot_discovery_business");
-    assert.equal(business.feeCents, 0);
-    assert.equal(business.totalCents, GROSS);
-    assert.equal(influencer.feeCents, 0);
-    assert.equal(influencer.totalCents, GROSS);
+    assert.equal(business.rule.id, "rule_pilot_contracted_business");
+    assert.notEqual(business.rule.id, "rule_pilot_discovery_business");
+    assert.equal(business.feeCents, 17_500);
+    assert.equal(influencer.rule.id, "rule_pilot_contracted_influencer");
+    assert.equal(influencer.feeCents, 8_750);
+    const zeroRule = quoteSide("discovery", "business");
+    assert.equal(zeroRule.ok, true);
+    if (!zeroRule.ok) return;
+    assert.equal(zeroRule.feeCents, 0);
+    assert.notEqual(business.rule.id, zeroRule.rule.id);
   });
 
   it("prices a $3,500 US agreement from Platform Match and a direct invitation at the saved rates", () => {
@@ -106,10 +112,15 @@ describe("paid agreement fee boundary", () => {
     assert.equal(free.freeDiscovery, true);
     assert.equal(free.feeServiceLevel, "discovery");
     assert.equal(free.originServiceLevel, "discovery");
-    assert.equal(feeLevelForSignedTerms({ serviceLevel: "discovery", grossCents: GROSS }), "discovery");
+    assert.equal(feeLevelForSignedTerms({ serviceLevel: "discovery", grossCents: GROSS }), "contracted");
+    assert.equal(feeLevelForSignedTerms({ serviceLevel: "discovery", grossCents: 0 }), "discovery");
     assert.equal(
-      feeLevelForSignedTerms({ serviceLevel: "discovery", feeServiceLevel: "contracted", grossCents: GROSS }),
-      "discovery",
+      feeLevelForSignedTerms({ serviceLevel: "discovery", feeServiceLevel: "discovery", grossCents: GROSS }),
+      "contracted",
+    );
+    assert.equal(
+      feeLevelForSignedTerms({ feeServiceLevel: "discovery", grossCents: GROSS }),
+      "contracted",
     );
   });
 

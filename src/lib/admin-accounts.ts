@@ -64,6 +64,7 @@ export type AccountTableRow = {
   businessName: string | null;
   businessIndustry: string | null;
   businessGeography: string | null;
+  verifiedCountryCode: string | null;
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
@@ -353,6 +354,7 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
               addressLine1: true,
               addressLine2: true,
               postalCode: true,
+              verifiedCountryCode: true,
             },
           },
           onboardingSessions: {
@@ -475,6 +477,7 @@ export async function loadAccountTable(filters: AccountListFilters): Promise<{
       businessName: user.business?.name?.trim() || null,
       businessIndustry: user.business?.industry?.trim() || null,
       businessGeography: user.business?.geography?.trim() || null,
+      verifiedCountryCode: user.business?.verifiedCountryCode?.trim().toUpperCase() || null,
       contactName: user.business?.contactName?.trim() || null,
       contactEmail: user.business?.contactEmail?.trim() || null,
       contactPhone: user.business?.contactPhone?.trim() || null,

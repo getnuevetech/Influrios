@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import type { CollaborationFeeRule } from "./collaboration-fees";
 import { liveFundingBlockReason, quoteDualPlatformFees } from "./dual-platform-fees";
@@ -10,6 +11,8 @@ import {
   collectionPostings,
   directGrossEditBlock,
   domesticCollaborationGate,
+  recordedVerifiedCountry,
+  verifiedDomesticCountry,
   earnPlatformFees,
   launchMilestoneGate,
   teamFundingGate,
@@ -517,6 +520,44 @@ describe("payment engine acceptance", () => {
       crossBorderAllowed: true,
     });
     assert.equal(abroad.ok, true);
+    const namedCountry = domesticCollaborationGate({
+      businessCountry: "United States",
+      influencerCountry: "US",
+      dealCountry: "US",
+      businessVerified: true,
+      influencerVerified: true,
+      routeActive: true,
+      currency: "USD",
+      routeCurrency: "USD",
+      payoutMethod: "bank",
+    });
+    assert.equal(namedCountry.ok, false);
+    const missingVerification = domesticCollaborationGate({
+      businessCountry: "US",
+      influencerCountry: "US",
+      dealCountry: "US",
+      businessVerified: false,
+      influencerVerified: true,
+      routeActive: true,
+      currency: "USD",
+      routeCurrency: "USD",
+      payoutMethod: "bank",
+    });
+    assert.equal(missingVerification.ok, false);
+    assert.equal(verifiedDomesticCountry("us"), "US");
+    assert.equal(verifiedDomesticCountry("United States"), null);
+    assert.equal(verifiedDomesticCountry(null), null);
+    assert.equal(recordedVerifiedCountry({ verified: false, countryCode: "US" }).ok, true);
+    const refusedName = recordedVerifiedCountry({ verified: true, countryCode: "United States" });
+    assert.equal(refusedName.ok, false);
+    const recorded = recordedVerifiedCountry({ verified: true, countryCode: "us" });
+    assert.equal(recorded.ok, true);
+    if (recorded.ok) assert.equal(recorded.country, "US");
+    const contractAction = readFileSync("src/app/collaboration/contract/actions.ts", "utf8");
+    assert.equal(contractAction.includes("businessCountry: jurisdictionCode"), false);
+    assert.equal(/businessVerified:\s*Boolean\(jurisdiction/.test(contractAction), false);
+    assert.equal(contractAction.includes("verifiedCountryCode"), true);
+    assert.equal(contractAction.includes("kyc?.status === \"verified\""), true);
     assert.match(directGrossEditBlock({ feeReservation: { status: "reserved" } }) ?? "", /signed amounts/);
     assert.equal(ordinaryDealShareSnapshot()[0].shareBps, 10_000);
     const charge = providerLedgerAdvance(
