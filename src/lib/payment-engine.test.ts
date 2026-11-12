@@ -29,6 +29,7 @@ import {
   settlePlatformFees,
   platformFeeEarningState,
   collaborationMilestoneFees,
+  openMilestoneCollaborationFees,
   signedDealMoneyEvents,
   signedQuoteExpired,
   taxIsSeparateFromPlatformFees,
@@ -495,6 +496,51 @@ describe("payment engine acceptance", () => {
     if (!milestoneReturn.ok) return;
     assert.equal(milestoneReturn.entries[0].amountCents, 117_800);
     assert.equal(milestoneReturn.entries.some((row) => row.kind === "reversal"), false);
+    const suspended = signedDealMoneyEvents({
+      deal: fixture,
+      eventType: "payout.returned",
+      amountCents: 39_000,
+      operationReleasedCents: 39_000,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+      milestoneFees: { businessCollaborationFeeCents: 1_600, influencerFeeCents: 1_000 },
+    });
+    assert.equal(suspended.ok, true);
+    if (!suspended.ok) return;
+    assert.deepEqual(
+      suspended.entries.filter((row) => row.reverses === "fee_eligible").map((row) => row.amountCents),
+      [1_600, 1_000],
+    );
+    assert.equal(suspended.entries.some((row) => row.amountCents === 1_000 && row.reverses !== "fee_eligible"), false);
+    const recovered = signedDealMoneyEvents({
+      deal: fixture,
+      eventType: "payout.returned",
+      amountCents: 39_000,
+      operationReleasedCents: 39_000,
+      policyApproved: true,
+      finalPayout: false,
+      alreadyEarned: false,
+      alreadyReturned: false,
+      milestoneFees: { businessCollaborationFeeCents: 1_600, influencerFeeCents: 1_000 },
+      feesSettled: true,
+    });
+    assert.equal(recovered.ok, true);
+    if (!recovered.ok) return;
+    assert.equal(recovered.entries.find((row) => row.reverses === "fee_settled")?.amountCents, 2_600);
+    assert.equal(recovered.entries.some((row) => row.kind === "refund" || row.kind === "hold"), false);
+    const closed = openMilestoneCollaborationFees(
+      [
+        { kind: "fee_eligible", amountCents: 1_600, party: "platform:business", milestoneId: "m1" },
+        { kind: "fee_eligible", amountCents: 1_000, party: "platform:influencer", milestoneId: "m1" },
+        { kind: "fee_eligible", amountCents: 1_000, party: "platform:business", milestoneId: null },
+        { kind: "reversal", amountCents: 1_600, party: "platform:business_eligible", milestoneId: "m1" },
+        { kind: "reversal", amountCents: 1_000, party: "platform:influencer_eligible", milestoneId: "m1" },
+      ],
+      "m1",
+    );
+    assert.equal(closed.businessCollaborationFeeCents + closed.influencerFeeCents, 0);
     const mismatchedReturn = signedDealMoneyEvents({
       deal: { ...deal, influencerReceivesCents: 341_250 },
       eventType: "payout.returned",
@@ -536,6 +582,13 @@ describe("payment engine acceptance", () => {
         { kind: "reversal", amountCents: 32_000, party: "platform:business" },
       ]).earned,
       false,
+    );
+    assert.equal(
+      platformFeeEarningState([
+        { kind: "fee_earned", amountCents: 5_000, party: "platform:business" },
+        { kind: "reversal", amountCents: 2_600, party: "platform:recovery" },
+      ]).earned,
+      true,
     );
     const beforeWork = cancellationPostings({
       stage: cancellationStage({ releasedCents: 0, influencerReceivesCents: 343_000, feesEarned: false }),
