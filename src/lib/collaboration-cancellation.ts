@@ -178,6 +178,29 @@ export async function executeHeldCancellation(input: {
   // Non-chargeback cancel: record matrix snapshot; queue provider refund for refundable remainder.
   let providerRefund: { ok: true; reference: string } | { ok: false; error: string } | null = null;
   if (calc.refundableFutureCents > 0) {
+    const { readSignedDealMoney, signedDealMoneyEvents, platformFeeEarningState } = await import("@/lib/payment-engine");
+    const plan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
+    const signed = readSignedDealMoney(plan);
+    if (signed) {
+      const { getLaunchGate } = await import("@/lib/launch-gate");
+      const launch = await getLaunchGate().catch(() => null);
+      const posted = signedDealMoneyEvents({
+        deal: signed,
+        eventType: "payout.refunded",
+        amountCents: calc.refundableFutureCents,
+        operationRefundCents: calc.refundableFutureCents,
+        alreadyRefundedCents: funding.entries
+          .filter((entry) => entry.kind === "refund")
+          .reduce((sum, entry) => sum + entry.amountCents, 0),
+        policyApproved: Boolean(launch?.earningRefundPolicyApproved),
+        finalPayout: false,
+        alreadyEarned: platformFeeEarningState(funding.entries).earned,
+        alreadyReturned: false,
+        releasedCents: reconciled.releasedCents,
+        payoutReturned: funding.entries.some((entry) => entry.kind === "return"),
+      });
+      if (!posted.ok) return { ok: false as const, error: posted.error };
+    }
     providerRefund =
       calc.refundableFutureCents >= reconciled.heldCents && reconciled.heldCents > 0
         ? await providerAdapter.createFullRefund({ fundingId: funding.id })

@@ -2278,6 +2278,10 @@ export async function applyMarketplaceEvent(input: {
               .filter((entry) => entry.kind === "release")
               .reduce((sum, entry) => sum + entry.amountCents, 0),
             payoutReturned: fresh.some((entry) => entry.kind === "return"),
+            operationRefundCents: input.amountCents,
+            alreadyRefundedCents: fresh
+              .filter((entry) => entry.kind === "refund")
+              .reduce((sum, entry) => sum + entry.amountCents, 0),
           });
           if (!refunded.ok) throw new LedgerReject(refunded.error);
           await writeSignedPostings(tx, {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { prisma } from "./db";
 import { decideDispute } from "./disputes";
@@ -50,6 +51,10 @@ describe("partial refund rules", () => {
       }),
       "apply",
     );
+    const disputes = readFileSync("src/lib/milestone-disputes.ts", "utf8");
+    const cancellation = readFileSync("src/lib/collaboration-cancellation.ts", "utf8");
+    assert.ok(disputes.indexOf("createPartialRefund") > disputes.indexOf("signedDealMoneyEvents"));
+    assert.ok(cancellation.indexOf("createPartialRefund") > cancellation.indexOf("signedDealMoneyEvents"));
     assert.equal(
       marketplaceDisposition({
         eventType: "payout.released",
