@@ -198,6 +198,9 @@ export function openMilestoneDispute(input: {
 }
 
 export async function cancelUnconfirmedFunding(fundingId: string) {
+  const { paymentChargeBlock } = await import("@/lib/payment-charge-switches");
+  const charge = await paymentChargeBlock("prefund_cancel");
+  if (!charge.ok) return charge;
   const [settings, funding] = await Promise.all([
     prisma.marketplaceSettings.findUnique({ where: { id: "default" } }),
     prisma.collaborationFunding.findUnique({ where: { id: fundingId } }),
@@ -279,6 +282,9 @@ export async function decideMilestoneDispute(input: {
     return { ok: false as const, error: "This milestone is already paid. Record the returned payout before refunding it." };
   }
   if (input.action === "refund" || input.action === "partial") {
+    const { paymentChargeBlock } = await import("@/lib/payment-charge-switches");
+    const charge = await paymentChargeBlock(input.action === "partial" ? "partial_refund" : "dispute_refund");
+    if (!charge.ok) return charge;
     const { readSignedDealMoney, signedDealMoneyEvents, platformFeeEarningState } = await import("@/lib/payment-engine");
     const plan = (dispute.funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
     const signed = readSignedDealMoney(plan);

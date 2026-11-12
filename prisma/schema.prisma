@@ -1844,6 +1844,13 @@ model CollaborationLaunchGate {
   updatedAt                   DateTime @updatedAt
 }
 
+/// On/off for one payment or charge. Fee rules stay on collaboration fee rows.
+model PaymentChargeSwitch {
+  key       String   @id
+  enabled   Boolean
+  updatedAt DateTime @updatedAt
+}
+
 /// One provider command per agreement version and operation. The row is written before any provider call.
 model ProviderCommand {
   id               String    @id @default(cuid())

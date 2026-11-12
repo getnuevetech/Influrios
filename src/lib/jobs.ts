@@ -795,6 +795,8 @@ export async function enqueueProviderHoldWarnSweep() {
  * Resets payout_failed → approved after backoff when no release ledger exists (no double-pay).
  */
 export async function runFailedPayoutRetrySweep(now = new Date()) {
+  const { paymentChargeEnabled } = await import("@/lib/payment-charge-switches");
+  if (!(await paymentChargeEnabled("payout_retry"))) return { scanned: 0, retried: 0 };
   const { shouldRetryFailedPayout } = await import("@/lib/collab-ops-jobs");
   const { loadProcessTimings } = await import("@/lib/process-timing");
   const payoutTiming = await loadProcessTimings().catch(() => null);
