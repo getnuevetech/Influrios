@@ -5,6 +5,7 @@ import { IconArrowRight, IconBuilding, IconMapPin } from "@/components/icons";
 import { actionApplyToBusinessRequest } from "@/app/collaboration/hub/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getCreatorSessionDraft } from "@/lib/claim";
+import { businessTrustLabels, loadWorkspaceBusinessVerification } from "@/lib/business-status";
 import { getPublishedBusinessRequest } from "@/lib/marketplace-listings";
 import { prisma } from "@/lib/db";
 
@@ -35,6 +36,10 @@ export default async function CreatorCampaignRequestPage({ params, searchParams 
 
   const request = await getPublishedBusinessRequest(id).catch(() => null);
   if (!request) notFound();
+  const verification = request.workspaceId
+    ? await loadWorkspaceBusinessVerification(request.workspaceId)
+    : { state: "unverified" as const };
+  const trust = businessTrustLabels({ profileComplete: false, verification: verification.state });
 
   const existing = await prisma.marketplaceApplication
     .findFirst({
@@ -86,6 +91,7 @@ export default async function CreatorCampaignRequestPage({ params, searchParams 
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet">Campaign</p>
               <h1 className="mt-1 font-display text-3xl font-bold text-indigo">{request.brand}</h1>
+              <p className="mt-2 text-xs font-semibold text-indigo">{trust.verification}</p>
               <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
                 <span>{request.category}</span>
                 {request.location ? (

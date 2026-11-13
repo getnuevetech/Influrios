@@ -5,6 +5,7 @@ import { ContactAddressFields } from "@/components/contact-address-fields";
 import { PlaceFields } from "@/components/place-fields";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace, parseLocationParts } from "@/lib/business";
+import { businessTrustLabels, loadAccountBusinessVerification, profileIsComplete } from "@/lib/business-status";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -18,10 +19,19 @@ export default async function BusinessProfilePage({
   const params = await searchParams;
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business/profile");
-  const [workspace, profile] = await Promise.all([
+  const [workspace, profile, verification] = await Promise.all([
     getWorkspace(account.id),
     prisma.businessProfile.findUnique({ where: { userId: account.id } }).catch(() => null),
+    loadAccountBusinessVerification(account.id),
   ]);
+  const trust = businessTrustLabels({
+    profileComplete: profileIsComplete({
+      name: workspace.name,
+      industry: workspace.industry,
+      contactName: profile?.contactName ?? "",
+    }),
+    verification: verification.state,
+  });
   const location = parseLocationParts(profile?.geography ?? "");
 
   return (
@@ -33,7 +43,7 @@ export default async function BusinessProfilePage({
       <p className="mt-2 text-sm text-muted">
         The workspace is listed under the <span className="font-semibold text-indigo">business name</span>. Business
         and agency accounts both keep a full contact address here. The contact person below is reference-only and is
-        not used to sign in.
+        not used to sign in. Saving these fields does not verify the business. Current status: {trust.profile}. {trust.verification}.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Company profile saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}

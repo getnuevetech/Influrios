@@ -3,6 +3,8 @@
  * Claim templates, brand-default art, and unsynced follower counts stay off the live figures.
  */
 import { getAccountSession } from "@/lib/accounts";
+import { selectedMonthWindow } from "@/lib/business-status";
+import { isInfluencerReleaseEntry } from "@/lib/earnings-measures";
 import { agreementPresentation, isCurrentCollaboration } from "@/lib/collaboration-hub";
 import { applicationIsInvitation, applicationIsOpenPipeline } from "@/lib/marketplace-listings";
 import { isPlaceholderBio } from "@/lib/onboarding";
@@ -275,9 +277,7 @@ export async function loadCreatorHome(userId: string) {
   const shortLink = creator?.shortLinks[0] ?? null;
   const since = new Date(Date.now() - 7 * 86400000);
   const since30 = new Date(Date.now() - 30 * 86400000);
-  const monthStart = new Date();
-  monthStart.setUTCDate(1);
-  monthStart.setUTCHours(0, 0, 0, 0);
+  const month = selectedMonthWindow();
 
   const [visitLoad, inquiries, hub, releaseLoad, currencyLoad, deliverables, teamProposals] = await Promise.all([
     shortLink
@@ -311,18 +311,17 @@ export async function loadCreatorHome(userId: string) {
           .findMany({
             where: {
               kind: "release",
-              party: "Influencer",
-              createdAt: { gte: monthStart },
+              createdAt: { gte: month.start, lt: month.end },
               funding: { creatorSlug: slug },
             },
-            select: { amountCents: true, createdAt: true },
+            select: { amountCents: true, createdAt: true, party: true, kind: true },
           })
           .then((rows) => ({ rows, failed: false }))
           .catch((error) => {
             console.error("earnings releases", error);
-            return { rows: [] as { amountCents: number; createdAt: Date }[], failed: true };
+            return { rows: [] as { amountCents: number; createdAt: Date; party: string; kind: string }[], failed: true };
           })
-      : Promise.resolve({ rows: [] as { amountCents: number; createdAt: Date }[], failed: false }),
+      : Promise.resolve({ rows: [] as { amountCents: number; createdAt: Date; party: string; kind: string }[], failed: false }),
     slug
       ? prisma.collaborationFunding
           .findMany({ where: { creatorSlug: slug }, select: { currency: true } })
@@ -529,7 +528,7 @@ export async function loadCreatorHome(userId: string) {
   ];
 
   const completion = draft ? completenessFor(draft) : null;
-  const monthCents = releases.reduce((sum, row) => sum + row.amountCents, 0);
+  const monthCents = releases.filter((row) => isInfluencerReleaseEntry(row)).reduce((sum, row) => sum + row.amountCents, 0);
   const currency = earningsFailed
     ? ""
     : sharedCurrency(fundingCurrencies.map((row) => row.currency)) || hub?.earnings.currency || "";
