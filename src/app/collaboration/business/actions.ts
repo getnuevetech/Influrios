@@ -21,6 +21,7 @@ import {
   addToShortlist,
   enteredNote,
 } from "@/lib/business";
+import { composerStep, composerSubmit, joinDraftRecipients, requestVisibility } from "@/lib/request-composer";
 import { contractHrefFromCampaign } from "@/lib/campaign-contract";
 import {
   businessApplicationTransitions,
@@ -154,7 +155,12 @@ export async function actionWorkspaceRequest(formData: FormData) {
   const { account, ws } = await requireBusinessAccount();
   const intent = String(formData.get("submitIntent") ?? "draft");
   const briefId = String(formData.get("briefId") ?? "").trim();
+  const step = composerStep(String(formData.get("composerStep") ?? ""));
   const back = briefId ? `/collaboration/business/request/${encodeURIComponent(briefId)}` : "/collaboration/business/request/new";
+  const slugs = [...new Set(formData.getAll("creatorSlug").map((value) => String(value).trim()).filter(Boolean))];
+  const visibility = requestVisibility(String(formData.get("distribution") ?? ""), slugs.length > 0);
+  const decision = composerSubmit({ intent, visibility, recipientCount: slugs.length });
+  if (!decision.ok) redirect(`${back}?step=${step}&error=${encodeURIComponent(decision.error)}`);
   let fields;
   try {
     const locationParts = [
@@ -178,10 +184,12 @@ export async function actionWorkspaceRequest(formData: FormData) {
       summary: String(formData.get("summary") ?? ""),
       deliverables: String(formData.get("deliverables") ?? ""),
       responseDeadline: String(formData.get("responseDeadline") ?? ""),
+      distribution: visibility,
+      draftRecipients: joinDraftRecipients(slugs),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the request.";
-    redirect(`${back}?error=${encodeURIComponent(message)}`);
+    redirect(`${back}?step=${step}&error=${encodeURIComponent(message)}`);
   }
   const mode = resolveCampaignIntentSaveMode({
     briefId,
@@ -190,15 +198,12 @@ export async function actionWorkspaceRequest(formData: FormData) {
   if (mode === "update") {
     const existing = ws.briefs.find((item) => item.id === briefId);
     if (existing?.status === "closed") {
-      redirect(`${back}?error=${encodeURIComponent("This request is under contract and can no longer be edited.")}`);
+      redirect(`${back}?step=${step}&error=${encodeURIComponent("This request is under contract and can no longer be edited.")}`);
     }
   }
   const brief = mode === "update" ? await updateBrief(briefId, fields, ws.businessId) : await createBrief(fields, ws.businessId);
-  const slugs = [...new Set(formData.getAll("creatorSlug").map((value) => String(value).trim()).filter(Boolean))];
-  if (intent === "invite") {
-    if (slugs.length < 1) {
-      redirect(`/collaboration/business/request/${encodeURIComponent(brief.id)}?error=${encodeURIComponent("Choose at least one influencer before sending invitations.")}`);
-    }
+  const saved = `/collaboration/business/request/${encodeURIComponent(brief.id)}`;
+  if (decision.action === "invite") {
     const invited = await inviteCreatorsIndependently({
       workspaceId: ws.businessId,
       actorUserId: account.id,
@@ -211,11 +216,11 @@ export async function actionWorkspaceRequest(formData: FormData) {
     });
     revalidateHub();
     if (!invited.ok) {
-      redirect(`/collaboration/business/request/${encodeURIComponent(brief.id)}?error=${encodeURIComponent(invited.error)}`);
+      redirect(`${saved}?step=${step}&error=${encodeURIComponent(invited.error)}`);
     }
-    redirect(`${HUB}?tab=requests&saved=invites`);
+    redirect(`${saved}?saved=invites&sent=${invited.ids.length}`);
   }
-  if (intent === "publish") {
+  if (decision.action === "publish") {
     try {
       const existing = (await listWorkspaceBusinessRequests(ws.businessId)).find((row) => row.briefId === brief.id);
       await upsertBusinessRequest({
@@ -239,13 +244,13 @@ export async function actionWorkspaceRequest(formData: FormData) {
       await activateBrief(brief.id, ws.businessId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not publish this request.";
-      redirect(`/collaboration/business/request/${encodeURIComponent(brief.id)}?error=${encodeURIComponent(message)}`);
+      redirect(`${saved}?step=${step}&error=${encodeURIComponent(message)}`);
     }
     revalidateHub();
-    redirect(`${HUB}?tab=requests&saved=published`);
+    redirect(`${saved}?saved=published`);
   }
   revalidateHub();
-  redirect(`/collaboration/business/request/${encodeURIComponent(brief.id)}?saved=draft`);
+  redirect(`${saved}?saved=draft&step=${step}`);
 }
 
 export async function actionPublishCampaign(formData: FormData) {
