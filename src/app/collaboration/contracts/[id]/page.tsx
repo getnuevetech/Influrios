@@ -242,7 +242,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                 <form action={actionFundSignedContract}>
                   <input type="hidden" name="contractDocumentId" value={document.id} />
                   <button type="submit" className="text-violet hover:underline">
-                    Fund collaboration
+                    Start funding
                   </button>
                 </form>
               ) : fundingCta.kind === "resume" ? (
