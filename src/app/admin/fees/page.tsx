@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireAdminPage } from "@/app/admin/guard";
+import { paymentSettingsHref, paymentSettingsParams } from "@/app/admin/payment-settings/owner";
+import { ReviewBeforeSave } from "@/components/review-before-save";
 import {
   actionDeleteFeeRule,
   actionDeleteFeeSnapshot,
@@ -36,30 +39,13 @@ import {
 export const metadata = { title: "Admin · Collaboration fees" };
 
 type Props = {
-  searchParams: Promise<{
-    simulated?: string;
-    jurisdiction?: string;
-    serviceLevel?: string;
-    grossUsd?: string;
-    feeCents?: string;
-    businessFee?: string;
-    influencerFee?: string;
-    businessPays?: string;
-    influencerReceives?: string;
-    rule?: string;
-    feeType?: string;
-    explanation?: string;
-    frozen?: string;
-    saved?: string;
-    removed?: string;
-    error?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function AdminFeesPage({ searchParams }: Props) {
+export async function AdminFeesPanel({ searchParams }: Props) {
   const session = await requireAdminPage("commerce");
   const canManage = hasPermission(session, "commerce.manage");
-  const params = await searchParams;
+  const params = paymentSettingsParams(await searchParams);
   const store = await getFeeStore();
 
   return (
@@ -449,7 +435,14 @@ function FeeRuleForm({
   }
   const isNew = !rule;
   return (
-    <form action={actionSaveFeeRule} className="grid gap-3 sm:grid-cols-3">
+    <ReviewBeforeSave
+      action={actionSaveFeeRule}
+      kind="fee-rule"
+      className="grid gap-3 sm:grid-cols-3"
+      triggerLabel={canManage ? (isNew ? "Review and create" : "Review and save") : undefined}
+      triggerClassName="btn-primary sm:col-span-3 !py-2 text-sm"
+      confirmLabel={isNew ? "Create rule" : "Save rule"}
+    >
       {rule ? <input type="hidden" name="id" value={rule.id} /> : null}
       <label className="text-xs font-semibold text-muted sm:col-span-2">
         Name
@@ -668,12 +661,7 @@ function FeeRuleForm({
           className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
         />
       </label>
-      {canManage ? (
-        <button type="submit" className="btn-primary sm:col-span-3 !py-2 text-sm">
-          {isNew ? "Create rule" : "Save rule"}
-        </button>
-      ) : null}
-    </form>
+    </ReviewBeforeSave>
   );
 }
 
@@ -705,4 +693,8 @@ function Field({
       />
     </label>
   );
+}
+
+export default async function AdminFeesPage({ searchParams }: Props) {
+  redirect(paymentSettingsHref("fees", await searchParams));
 }

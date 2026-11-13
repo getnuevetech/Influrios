@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { actionSavePaymentChargeSwitches } from "@/app/admin/payment-switches/actions";
+import { paymentSettingsHref, paymentSettingsParams } from "@/app/admin/payment-settings/owner";
 import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { listPaymentChargeSwitches } from "@/lib/payment-charge-switches";
@@ -6,24 +8,24 @@ import { listPaymentChargeSwitches } from "@/lib/payment-charge-switches";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Payment and charge switches · Admin" };
 
-export default async function PaymentSwitchesPage({
+export async function PaymentSwitchesPanel({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await requireAnyAdminModule(["marketplace", "collab_finance"]);
   const canEdit = hasPermission(session, "marketplace.manage");
-  const params = await searchParams;
+  const params = paymentSettingsParams(await searchParams);
   const switches = await listPaymentChargeSwitches().catch(() => []);
   const groups = ["Charges", "Payments", "Refunds"];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div id="payment-switches" className="mx-auto max-w-3xl scroll-mt-24 space-y-6">
       <div>
         <h1 className="font-display text-3xl font-bold text-indigo">Payment and charge switches</h1>
         <p className="mt-2 text-sm text-muted">
-          Each switch turns one payment or charge on or off. Fee amounts stay on Collaboration fees. Country routes stay
-          on Payment settings. Saving this form does not move money that is already with a provider.
+          Each switch turns one payment or charge on or off. Fee amounts stay on Fees & policies. Country routes stay
+          on Country routes. Saving this form does not move money that is already with a provider.
         </p>
       </div>
       {params.error ? (
@@ -73,4 +75,12 @@ export default async function PaymentSwitchesPage({
       )}
     </div>
   );
+}
+
+export default async function PaymentSwitchesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  redirect(paymentSettingsHref("fees", await searchParams, "payment-switches"));
 }

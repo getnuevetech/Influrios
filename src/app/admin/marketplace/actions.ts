@@ -120,7 +120,7 @@ export async function actionSaveJurisdiction(formData: FormData) {
       postedDigits !== String(existing.minorDigits) ||
       postedProvider !== existing.providerCode)
   ) {
-    redirect(`/admin/payment-settings?error=${encodeURIComponent(ROUTE_FIELDS_MESSAGE)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(ROUTE_FIELDS_MESSAGE)}`);
   }
   try {
     await saveJurisdiction({

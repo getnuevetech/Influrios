@@ -22,13 +22,13 @@ export async function actionSaveCanonicalCountryRoute(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the country route.";
-    redirect(`/admin/payment-settings?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/payment-settings");
   revalidatePath("/admin/corridors");
   revalidatePath("/admin/gateways");
   revalidatePath("/admin/marketplace/settings");
-  redirect(`/admin/payment-settings?saved=${encodeURIComponent(countryCode.trim().toUpperCase())}`);
+  redirect(`/admin/payment-settings?section=routes&saved=${encodeURIComponent(countryCode.trim().toUpperCase())}`);
 }
 
 function minorUnits(formData: FormData, name: string) {
@@ -51,10 +51,10 @@ export async function actionSaveLaunchApprovals(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the launch approvals.";
-    redirect(`/admin/payment-settings?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/payment-settings");
-  redirect("/admin/payment-settings?saved=launch-approvals");
+  redirect("/admin/payment-settings?section=routes&saved=launch-approvals");
 }
 
 export async function actionSaveDeferredFunding(formData: FormData) {
@@ -77,10 +77,10 @@ export async function actionSaveDeferredFunding(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the funding switches.";
-    redirect(`/admin/payment-settings?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/payment-settings");
-  redirect("/admin/payment-settings?saved=funding-switches");
+  redirect("/admin/payment-settings?section=routes&saved=funding-switches");
 }
 
 function whole(formData: FormData, name: string) {
@@ -114,7 +114,7 @@ export async function actionSaveProcessTimings(formData: FormData) {
     reviewDeadlineLeadHours == null ||
     teamProposalLifeDays == null
   ) {
-    redirect(`/admin/payment-settings?error=${encodeURIComponent("Enter whole numbers for every process clock.")}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent("Enter whole numbers for every process clock.")}`);
   }
   try {
     await saveProcessTimings(
@@ -135,11 +135,11 @@ export async function actionSaveProcessTimings(formData: FormData) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the process clocks.";
-    redirect(`/admin/payment-settings?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/payment-settings");
   revalidatePath("/admin/marketplace/settings");
-  redirect("/admin/payment-settings?saved=process-timing");
+  redirect("/admin/payment-settings?section=routes&saved=process-timing");
 }
 
 export async function actionRecordProviderTrace(formData: FormData) {
@@ -154,7 +154,7 @@ export async function actionRecordProviderTrace(formData: FormData) {
     platformFeesTotalCents == null ||
     taxCents == null
   ) {
-    redirect(`/admin/payment-settings?error=${encodeURIComponent("Trace amounts must be whole minor units.")}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent("Trace amounts must be whole minor units.")}`);
   }
   try {
     await recordProviderStagingTraces({
@@ -172,8 +172,8 @@ export async function actionRecordProviderTrace(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "The staging trace was not recorded.";
-    redirect(`/admin/payment-settings?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/payment-settings");
-  redirect("/admin/payment-settings?saved=provider-trace");
+  redirect("/admin/payment-settings?section=routes&saved=provider-trace");
 }

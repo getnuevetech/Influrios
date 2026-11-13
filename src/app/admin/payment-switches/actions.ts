@@ -17,8 +17,9 @@ export async function actionSavePaymentChargeSwitches(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the payment switches.";
-    redirect(`/admin/payment-switches?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}#payment-switches`);
   }
   revalidatePath("/admin/payment-switches");
-  redirect("/admin/payment-switches?saved=switches");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=fees&saved=switches#payment-switches");
 }

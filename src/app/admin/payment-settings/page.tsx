@@ -1,29 +1,45 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { AdminCorridorsPanel } from "@/app/admin/corridors/page";
+import { AdminFeesPanel } from "@/app/admin/fees/page";
+import { AdminGatewaysPanel } from "@/app/admin/gateways/page";
 import { actionRecordProviderTrace, actionSaveCanonicalCountryRoute, actionSaveDeferredFunding, actionSaveLaunchApprovals, actionSaveProcessTimings } from "@/app/admin/payment-settings/actions";
+import {
+  PAYMENT_SETTINGS_TABS,
+  normalizePaymentSettingsSection,
+  paymentSettingsHref,
+  paymentSettingsParams,
+  visiblePaymentSettingsSections,
+  type PaymentSettingsSection,
+} from "@/app/admin/payment-settings/owner";
+import { PaymentSwitchesPanel } from "@/app/admin/payment-switches/page";
+import { ReviewBeforeSave } from "@/components/review-before-save";
 import { getLaunchGate } from "@/lib/launch-gate";
 import { loadProcessTimings } from "@/lib/process-timing";
 import { requireAnyAdminModule } from "@/app/admin/guard";
-import { hasPermission } from "@/lib/admin-auth";
+import { canAccessModule, getAdminSession, hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { decidePaymentRoute } from "@/lib/payment-route";
 import { storedPayoutMethodList } from "@/lib/corridor-checkout";
-import { corridorCurrencyOptions } from "@/lib/corridor-countries";
+import { corridorCountryByCode, corridorCurrencyOptions } from "@/lib/corridor-countries";
 import { listProviders } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Payment settings · Admin" };
 
-export default async function PaymentSettingsPage({
+export async function CountryRoutesPanel({
   searchParams,
+  canAddCountry = false,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  canAddCountry?: boolean;
 }) {
   const session = await requireAnyAdminModule(["gateways", "collab_finance", "marketplace"]);
   const canEdit = hasPermission(session, "collab_finance.manage");
   const canApprove = hasPermission(session, "marketplace.manage");
   const launchGate = await getLaunchGate().catch(() => null);
   const timing = await loadProcessTimings().catch(() => null);
-  const params = await searchParams;
+  const params = paymentSettingsParams(await searchParams);
   const [corridors, jurisdictions, routes, gateways, marketplaceProviders] = await Promise.all([
     prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }),
     prisma.collaborationJurisdiction.findMany({ orderBy: { code: "asc" } }),
@@ -58,12 +74,21 @@ export default async function PaymentSettingsPage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-bold text-indigo">Payment settings</h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted">
-          This page is the only editor for a country’s currency, precision, collection provider, holding provider, and
-          payout gateway. Provider credentials stay on Providers. Fee rules stay on Fees. A deal stores the route it
-          used, so a later edit does not reroute money already in motion.
-        </p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="font-display text-2xl font-bold text-indigo">Country routes</h2>
+            <p className="mt-2 max-w-3xl text-sm text-muted">
+              Set which provider and currency to use for each creator country. This is the only editor for currency,
+              precision, collection, holding, and the payout gateway. A deal stores the route it used, so a later edit
+              does not reroute money already in motion.
+            </p>
+          </div>
+          {canAddCountry ? (
+            <a href="#add-country-route" className="rounded-full bg-[#5836D6] px-4 py-2 text-sm font-bold text-white">
+              Add country route
+            </a>
+          ) : null}
+        </div>
       </div>
       {params.error ? (
         <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{params.error}</p>
@@ -153,24 +178,10 @@ export default async function PaymentSettingsPage({
           </form>
         ) : null}
       </section>
-      <section className="grid gap-3 sm:grid-cols-3">
-        <Link href="/admin/gateways" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <p className="font-display text-lg font-bold text-indigo">Providers</p>
-          <p className="mt-1 text-xs text-muted">Gateway credentials, Connect, and health. Country assignment is here.</p>
-        </Link>
-        <Link href="/admin/payment-switches" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <p className="font-display text-lg font-bold text-indigo">Payment switches</p>
-          <p className="mt-1 text-xs text-muted">Turn each charge, payout, and refund on or off. Separate from fee rules.</p>
-        </Link>
-        <Link href="/admin/fees" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <p className="font-display text-lg font-bold text-indigo">Fees and policies</p>
-          <p className="mt-1 text-xs text-muted">Business and influencer platform fee rules, waivers, and the simulator.</p>
-        </Link>
-        <Link href="/admin/billing" className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-          <p className="font-display text-lg font-bold text-indigo">Subscription billing</p>
-          <p className="mt-1 text-xs text-muted">Plan prices and the billing portal. Separate from collaboration funding.</p>
-        </Link>
-      </section>
+      <Link href="/admin/billing" className="block rounded-2xl border border-[#E4EBFF] bg-white p-4">
+        <p className="font-display text-lg font-bold text-indigo">Subscription billing</p>
+        <p className="mt-1 text-xs text-muted">Plan prices and the billing portal. Separate from collaboration funding.</p>
+      </Link>
       {conflicts.length > 0 ? (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <h2 className="font-display text-lg font-bold text-amber-950">Route conflicts</h2>
@@ -190,26 +201,34 @@ export default async function PaymentSettingsPage({
             <tr>
               <th className="px-4 py-3">Country</th>
               <th className="px-4 py-3">Currency</th>
-              <th className="px-4 py-3">Collection</th>
-              <th className="px-4 py-3">Holding</th>
-              <th className="px-4 py-3">Gateway</th>
-              <th className="px-4 py-3">Route</th>
+              <th className="px-4 py-3">Provider</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Action</th>
             </tr>
           </thead>
           <tbody>
-            {decisions.map((row) => (
-              <tr key={row.countryCode} className="border-b border-[#E4EBFF] last:border-0">
-                <td className="px-4 py-3 font-semibold text-indigo">{row.countryCode}</td>
-                <td className="px-4 py-3">{row.currency ?? "—"}</td>
-                <td className="px-4 py-3">{row.collectionProvider ?? "—"}</td>
-                <td className="px-4 py-3">{row.holdingProvider ?? "—"}</td>
-                <td className="px-4 py-3">{row.payoutRouteProvider ?? "—"}</td>
-                <td className="px-4 py-3 text-xs">{row.blockedReason ?? `Ready · ${row.version}`}</td>
-              </tr>
-            ))}
+            {decisions.map((row) => {
+              const country = corridorCountryByCode(row.countryCode);
+              return (
+                <tr key={row.countryCode} className="border-b border-[#E4EBFF] last:border-0">
+                  <td className="px-4 py-3 font-semibold text-indigo">
+                    {country?.name ?? row.countryCode}
+                    <span className="mt-0.5 block text-xs font-normal text-muted">{row.countryCode}</span>
+                  </td>
+                  <td className="px-4 py-3">{row.currency ?? "Not configured"}</td>
+                  <td className="px-4 py-3">{row.collectionProvider ?? "Not configured"}</td>
+                  <td className="px-4 py-3 text-xs">{row.blockedReason ?? "Enabled"}</td>
+                  <td className="px-4 py-3">
+                    <a href={`#route-${row.countryCode}`} className="text-xs font-semibold text-violet hover:underline">
+                      Configure
+                    </a>
+                  </td>
+                </tr>
+              );
+            })}
             {decisions.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-muted">
+                <td colSpan={5} className="px-4 py-6 text-muted">
                   No corridors, jurisdictions, or gateway routes are saved.
                 </td>
               </tr>
@@ -225,8 +244,17 @@ export default async function PaymentSettingsPage({
           const route = routeByCode.get(code);
           if (!corridor || !jurisdiction) return null;
           return (
-            <form key={code} action={actionSaveCanonicalCountryRoute} className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-              <p className="font-display text-lg font-bold text-indigo">{code}</p>
+            <ReviewBeforeSave
+              key={code}
+              formId={`route-${code}`}
+              action={actionSaveCanonicalCountryRoute}
+              kind="country-route"
+              className="scroll-mt-24 rounded-2xl border border-[#E4EBFF] bg-white p-4"
+              triggerLabel={canEdit ? `Save ${code}` : undefined}
+              triggerClassName="btn-primary mt-3 !py-2 text-sm"
+              confirmLabel="Save route"
+            >
+              <p className="font-display text-lg font-bold text-indigo">{corridorCountryByCode(code)?.name ?? code}</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-5">
                 <input type="hidden" name="countryCode" value={code} />
                 <label className="text-xs font-semibold text-muted">
@@ -268,15 +296,90 @@ export default async function PaymentSettingsPage({
                   </select>
                 </label>
               </div>
-              {canEdit ? (
-                <button type="submit" className="btn-primary mt-3 !py-2 text-sm">Save {code}</button>
-              ) : (
+              {canEdit ? null : (
                 <p className="mt-3 text-xs text-muted">Route edits need the collaboration finance permission.</p>
               )}
-            </form>
+            </ReviewBeforeSave>
           );
         })}
       </section>
+    </div>
+  );
+}
+
+function PaymentSettingsNav({
+  section,
+  allowed,
+}: {
+  section: PaymentSettingsSection;
+  allowed: PaymentSettingsSection[];
+}) {
+  return (
+    <nav className="flex flex-wrap gap-2" aria-label="Payment settings">
+      {PAYMENT_SETTINGS_TABS.filter((tab) => allowed.includes(tab.id)).map((tab) => (
+        <Link
+          key={tab.id}
+          href={paymentSettingsHref(tab.id)}
+          className={`rounded-full px-4 py-2 text-sm font-bold ${
+            tab.id === section ? "bg-[#5836D6] text-white" : "bg-white text-indigo"
+          }`}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+export default async function PaymentSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const requestedRaw = typeof params.section === "string" ? params.section : undefined;
+  const requested = normalizePaymentSettingsSection(requestedRaw);
+  const session = await getAdminSession();
+  if (!session) {
+    const next = paymentSettingsHref(requested ?? "routes");
+    redirect(`/admin/login?next=${encodeURIComponent(next)}`);
+  }
+  const allowed = visiblePaymentSettingsSections((module) => canAccessModule(session, module));
+  const fallback = allowed.includes("routes") ? "routes" : allowed[0];
+  if (!fallback) redirect("/admin?error=forbidden");
+  if (requestedRaw && !requested) redirect(paymentSettingsHref(fallback));
+  if (requested && !allowed.includes(requested)) redirect("/admin?error=forbidden");
+  const section = requested ?? fallback;
+  const panelParams = Promise.resolve(params);
+  const canFinance = canAccessModule(session, "collab_finance");
+  const canCommerce = canAccessModule(session, "commerce");
+  const canSwitches = canAccessModule(session, "marketplace") || canFinance;
+
+  return (
+    <div className="space-y-6">
+      <div className="mx-auto max-w-5xl space-y-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-indigo">Payment settings</h1>
+          <p className="mt-2 max-w-3xl text-sm text-muted">
+            Configure payment providers, country routes and fees & policies. Saving a form does not start a charge or
+            move money that is already with a provider.
+          </p>
+        </div>
+        <PaymentSettingsNav section={section} allowed={allowed} />
+      </div>
+      {section === "providers" ? <AdminGatewaysPanel searchParams={panelParams} /> : null}
+      {section === "routes" ? (
+        <>
+          <CountryRoutesPanel searchParams={panelParams} canAddCountry={canFinance} />
+          {canFinance ? <AdminCorridorsPanel searchParams={panelParams} /> : null}
+        </>
+      ) : null}
+      {section === "fees" ? (
+        <>
+          {canCommerce ? <AdminFeesPanel searchParams={panelParams} /> : null}
+          {canSwitches ? <PaymentSwitchesPanel searchParams={panelParams} /> : null}
+        </>
+      ) : null}
     </div>
   );
 }

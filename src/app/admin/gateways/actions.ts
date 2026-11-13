@@ -36,9 +36,9 @@ export async function actionSaveGateway(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the gateway.";
-    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=providers&error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/gateways?saved=gateway");
+  redirect("/admin/payment-settings?section=providers&saved=gateway");
 }
 
 export async function actionSaveConnect(formData: FormData) {
@@ -60,16 +60,16 @@ export async function actionSaveConnect(formData: FormData) {
     await setProductSwitch("stripe_connect", formData.get("stripe_connect") === "on");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save Stripe Connect.";
-    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=providers&error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/gateways?saved=connect");
+  redirect("/admin/payment-settings?section=providers&saved=connect");
 }
 
 export async function actionAssignCountryGateway(formData: FormData) {
   await requireAdminAction("gateways.edit");
   void formData;
   redirect(
-    `/admin/payment-settings?error=${encodeURIComponent("The payout gateway for a country is edited on Payment settings.")}`,
+    `/admin/payment-settings?section=routes&error=${encodeURIComponent("The payout gateway for a country is edited on Country routes.")}`,
   );
 }
 
@@ -79,9 +79,9 @@ export async function actionSetDefaultBackupGateway(formData: FormData) {
     await setDefaultBackupGateway(clean(formData.get("providerId")));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not set the default backup gateway.";
-    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=providers&error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/gateways?saved=default");
+  redirect("/admin/payment-settings?section=providers&saved=default");
 }
 
 export async function actionGatewayRemovalImpact(providerId: string) {
@@ -107,9 +107,9 @@ export async function actionRemoveGateway(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not remove the gateway.";
-    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=providers&error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/gateways?saved=removed");
+  redirect("/admin/payment-settings?section=providers&saved=removed");
 }
 
 export async function actionSaveCountryGroup(formData: FormData) {
@@ -127,9 +127,9 @@ export async function actionSaveCountryGroup(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the country group.";
-    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=providers&error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/gateways?saved=group");
+  redirect("/admin/payment-settings?section=providers&saved=group");
 }
 
 export async function actionDeleteCountryGroup(formData: FormData) {
@@ -139,7 +139,7 @@ export async function actionDeleteCountryGroup(formData: FormData) {
     await deletePaymentCountryGroup(clean(formData.get("id")));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not remove the country group.";
-    redirect(`/admin/gateways?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=providers&error=${encodeURIComponent(message)}`);
   }
-  redirect("/admin/gateways?saved=group-removed");
+  redirect("/admin/payment-settings?section=providers&saved=group-removed");
 }

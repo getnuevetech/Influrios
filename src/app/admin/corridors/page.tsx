@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { paymentSettingsHref, paymentSettingsParams } from "@/app/admin/payment-settings/owner";
 import {
   actionCreateCorridor,
   actionDeleteCorridorGroup,
@@ -26,7 +28,7 @@ export const metadata = { title: "Country corridors · Admin" };
 
 const selectClass = "mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo";
 
-type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 type CorridorRow = Awaited<ReturnType<typeof listCorridorsForAdmin>>[number];
 type ProviderOption = { code: string; name: string };
 type MethodOption = { method: string; label: string };
@@ -122,8 +124,8 @@ function CorridorCard({
           <input type="hidden" name="countryCode" value={row.countryCode} />
           <p className="text-xs text-muted sm:col-span-2">
             Currency {row.currency}. Collection {row.collectionProviderCode ?? "not set"}.{" "}
-            <Link href="/admin/payment-settings" className="font-semibold text-violet hover:underline">
-              Edit the route on Payment settings
+            <Link href={paymentSettingsHref("routes")} className="font-semibold text-violet hover:underline">
+              Edit the route on Country routes
             </Link>
             .
           </p>
@@ -176,10 +178,10 @@ function CorridorCard({
   );
 }
 
-export default async function AdminCorridorsPage({ searchParams }: Props) {
+export async function AdminCorridorsPanel({ searchParams }: Props) {
   const session = await requireAdminPage("collab_finance");
   const canManage = hasPermission(session, "collab_finance.manage");
-  const params = await searchParams;
+  const params = paymentSettingsParams(await searchParams);
   const corridors = await listCorridorsForAdmin().catch(() => []);
   const groups = await listCorridorGroups().catch(() => []);
   const fallbackCurrency = await loadPayoutFallbackCurrency().catch(() => "USD");
@@ -202,8 +204,8 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
         <p className="mt-2 text-sm text-muted">
           Corridor currency and collection are one part of a country route. Compare them with the gateway and the
           jurisdiction on{" "}
-          <Link href="/admin/payment-settings" className="font-semibold text-violet hover:underline">
-            Payment settings
+          <Link href={paymentSettingsHref("routes")} className="font-semibold text-violet hover:underline">
+            Country routes
           </Link>
           .
         </p>
@@ -220,8 +222,8 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
             Collaboration operations
           </Link>{" "}
           and{" "}
-          <Link href="/admin/gateways" className="font-semibold text-violet hover:underline">
-            Payment gateways
+          <Link href={paymentSettingsHref("providers")} className="font-semibold text-violet hover:underline">
+            Providers
           </Link>
           .
         </p>
@@ -258,7 +260,7 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
         )}
       </article>
 
-      <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
+      <article id="add-country-route" className="scroll-mt-24 rounded-2xl border border-[#E4EBFF] bg-white p-4 shadow-sm">
         <h2 className="font-display text-lg font-bold text-indigo">Add a country</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted">
           Choose the country and a collection route. The currency in the country name is stored on the new corridor.
@@ -438,4 +440,8 @@ export default async function AdminCorridorsPage({ searchParams }: Props) {
       </AdminCollapse>
     </div>
   );
+}
+
+export default async function AdminCorridorsPage({ searchParams }: Props) {
+  redirect(paymentSettingsHref("routes", await searchParams));
 }

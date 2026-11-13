@@ -155,13 +155,13 @@ export async function actionSimulateFee(formData: FormData) {
     serviceLevel: String(formData.get("serviceLevel") ?? ""),
     grossUsd: String(formData.get("grossUsd") ?? ""),
   });
-  if (!draft.ok) redirect(`/admin/fees?error=${encodeURIComponent(draft.error)}`);
+  if (!draft.ok) redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(draft.error)}`);
   const result = await resolveDualPlatformFees({
     jurisdiction: draft.jurisdiction,
     serviceLevel: draft.serviceLevel,
     grossValueCents: draft.grossValueCents,
   });
-  if (!result.ok) redirect(`/admin/fees?error=${encodeURIComponent(result.error)}`);
+  if (!result.ok) redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(result.error)}`);
   const q = new URLSearchParams({
     simulated: "1",
     jurisdiction: draft.jurisdiction,
@@ -176,7 +176,7 @@ export async function actionSimulateFee(formData: FormData) {
     feeType: result.business.rule.feeType,
     explanation: result.explanation.slice(0, 400),
   });
-  redirect(`/admin/fees?${q.toString()}`);
+  redirect(`/admin/payment-settings?section=fees&${q.toString()}`);
 }
 
 export async function actionFreezeFeeSnapshot(formData: FormData) {
@@ -188,13 +188,13 @@ export async function actionFreezeFeeSnapshot(formData: FormData) {
     serviceLevel: String(formData.get("serviceLevel") ?? ""),
     grossUsd: String(formData.get("grossUsd") ?? ""),
   });
-  if (!draft.ok) redirect(`/admin/fees?error=${encodeURIComponent(draft.error)}`);
+  if (!draft.ok) redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(draft.error)}`);
   const quote = await resolveDualPlatformFees({
     jurisdiction: draft.jurisdiction,
     serviceLevel: draft.serviceLevel,
     grossValueCents: draft.grossValueCents,
   });
-  if (!quote.ok) redirect(`/admin/fees?error=${encodeURIComponent(quote.error)}`);
+  if (!quote.ok) redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(quote.error)}`);
   const business = await createFeeSnapshotForRule({
     rule: quote.business.rule,
     feeCents: quote.businessPlatformFeeCents,
@@ -210,7 +210,8 @@ export async function actionFreezeFeeSnapshot(formData: FormData) {
     serviceLevel: draft.serviceLevel,
   });
   revalidatePath("/admin/fees");
-  redirect(`/admin/fees?frozen=${encodeURIComponent(`${business.id} and ${influencer.id}`)}`);
+  revalidatePath("/admin/payment-settings");
+  redirect(`/admin/payment-settings?section=fees&frozen=${encodeURIComponent(`${business.id} and ${influencer.id}`)}`);
 }
 
 export async function actionSaveFeeRule(formData: FormData) {
@@ -220,7 +221,7 @@ export async function actionSaveFeeRule(formData: FormData) {
     formData.getAll("tierUpToUsd").map((value) => String(value)),
     formData.getAll("tierPercentBps").map((value) => String(value)),
   );
-  if ("error" in tierBands) redirect(`/admin/fees?error=${encodeURIComponent(tierBands.error)}`);
+  if ("error" in tierBands) redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(tierBands.error)}`);
   try {
     const { feeRuleDraft, upsertFeeRule } = await import("@/lib/collaboration-fees");
     const draft = feeRuleDraft({
@@ -243,7 +244,7 @@ export async function actionSaveFeeRule(formData: FormData) {
       active: formData.get("active") === "on",
       tierBands,
     });
-    if (!draft.ok) redirect(`/admin/fees?error=${encodeURIComponent(draft.error)}`);
+    if (!draft.ok) redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(draft.error)}`);
     await upsertFeeRule({
       id: String(formData.get("id") || "") || undefined,
       name: draft.name,
@@ -267,10 +268,11 @@ export async function actionSaveFeeRule(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the fee rule.";
-    redirect(`/admin/fees?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/fees");
-  redirect("/admin/fees?saved=rule");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=fees&saved=rule");
 }
 
 export async function actionSaveJurisdictionGate(formData: FormData) {
@@ -285,11 +287,12 @@ export async function actionSaveJurisdictionGate(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the jurisdiction.";
-    redirect(`/admin/fees?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/fees");
+  revalidatePath("/admin/payment-settings");
   revalidatePath("/admin/marketplace");
-  redirect("/admin/fees?saved=jurisdiction");
+  redirect("/admin/payment-settings?section=fees&saved=jurisdiction");
 }
 
 export async function actionDeleteJurisdictionGate(formData: FormData) {
@@ -299,11 +302,12 @@ export async function actionDeleteJurisdictionGate(formData: FormData) {
     await deleteJurisdictionGate(String(formData.get("code") || ""));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not remove the jurisdiction.";
-    redirect(`/admin/fees?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/fees");
+  revalidatePath("/admin/payment-settings");
   revalidatePath("/admin/marketplace");
-  redirect("/admin/fees?removed=jurisdiction");
+  redirect("/admin/payment-settings?section=fees&removed=jurisdiction");
 }
 
 export async function actionDeleteFeeRule(formData: FormData) {
@@ -313,10 +317,11 @@ export async function actionDeleteFeeRule(formData: FormData) {
     await deleteFeeRule(String(formData.get("id") || ""));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not remove the fee rule.";
-    redirect(`/admin/fees?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/fees");
-  redirect("/admin/fees?removed=rule");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=fees&removed=rule");
 }
 
 export async function actionUploadExamplePortrait(formData: FormData) {
@@ -351,8 +356,9 @@ export async function actionDeleteFeeSnapshot(formData: FormData) {
     await deleteFeeSnapshot(String(formData.get("id") || ""));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not remove the snapshot.";
-    redirect(`/admin/fees?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/fees");
-  redirect("/admin/fees?removed=snapshot");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=fees&removed=snapshot");
 }

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { paymentSettingsHref, paymentSettingsParams } from "@/app/admin/payment-settings/owner";
 import {
   actionDeleteCountryGroup,
   actionSaveConnect,
@@ -21,7 +23,7 @@ export const metadata = { title: "Payment gateways · Admin" };
 const inputClass = "mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal";
 const selectClass = "mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 font-normal";
 
-type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 function CountryMultiSelect({ selected }: { selected: string[] }) {
   const options = corridorCountries();
@@ -37,10 +39,10 @@ function CountryMultiSelect({ selected }: { selected: string[] }) {
   );
 }
 
-export default async function AdminGatewaysPage({ searchParams }: Props) {
+export async function AdminGatewaysPanel({ searchParams }: Props) {
   const session = await requireAdminPage("gateways");
   const canEdit = hasPermission(session, "gateways.edit");
-  const params = await searchParams;
+  const params = paymentSettingsParams(await searchParams);
   let providers: Awaited<ReturnType<typeof listProviders>> = [];
   let connectProviders: Awaited<ReturnType<typeof listProviders>> = [];
   let routes: Awaited<ReturnType<typeof paymentRoutes>> = [];
@@ -83,8 +85,8 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Payment gateways</h1>
       <p className="mt-2 text-sm text-muted">
         Credentials live here. Country collection, holding, and conflicts are on{" "}
-        <Link href="/admin/payment-settings" className="font-semibold text-violet hover:underline">
-          Payment settings
+        <Link href={paymentSettingsHref("routes")} className="font-semibold text-violet hover:underline">
+          Country routes
         </Link>
         .
       </p>
@@ -248,7 +250,7 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
                     <span className="mt-0.5 block text-xs font-normal text-muted">{route.countryCode}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href="/admin/payment-settings" className="text-xs font-semibold text-violet hover:underline">
+                    <Link href={paymentSettingsHref("routes")} className="text-xs font-semibold text-violet hover:underline">
                       {route.providerName} · edit on Payment settings
                     </Link>
                   </td>
@@ -267,7 +269,7 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
         </div>
 
         <p className="mt-4 text-sm text-muted">
-          <Link href="/admin/payment-settings" className="font-semibold text-violet hover:underline">
+          <Link href={paymentSettingsHref("routes")} className="font-semibold text-violet hover:underline">
             Assign a country’s payout gateway on Payment settings
           </Link>
           . Country groups below can still apply one gateway as a default.
@@ -463,4 +465,8 @@ export default async function AdminGatewaysPage({ searchParams }: Props) {
       </section>
     </div>
   );
+}
+
+export default async function AdminGatewaysPage({ searchParams }: Props) {
+  redirect(paymentSettingsHref("providers", await searchParams));
 }

@@ -102,9 +102,9 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { href: "/admin/corridors", title: "Corridors", blurb: "Suspend / activate country matrix" },
-          { href: "/admin/fees", title: "Fee rules", blurb: "Versioned commission matrix" },
-          { href: "/admin/gateways", title: "Provider health", blurb: "Gateway readiness by country" },
+          { href: "/admin/payment-settings?section=routes", title: "Country routes", blurb: "Suspend / activate country matrix" },
+          { href: "/admin/payment-settings?section=fees", title: "Fees & policies", blurb: "Versioned commission matrix" },
+          { href: "/admin/payment-settings?section=providers", title: "Providers", blurb: "Gateway readiness by country" },
           { href: "/admin/marketplace", title: "Financial reports", blurb: "Ledger totals & monthly report" },
           { href: "/admin/trust", title: "Risk / disputes", blurb: "Mediation & dual-approval decisions" },
           { href: "/admin/guests", title: "Guest profile gates", blurb: "Discover/profile soft & hard stops" },
