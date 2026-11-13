@@ -169,6 +169,7 @@ export async function actionAddDraftSocial(formData: FormData) {
 
 export async function actionUpdateDashboardProfile(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
+  let countryReview: string | null = null;
   try {
     const { getDraft } = await import("@/lib/claim");
     const { getInfluencerIdentity } = await import("@/lib/landing-pages");
@@ -180,7 +181,7 @@ export async function actionUpdateDashboardProfile(formData: FormData) {
     const chosen = enteredSelfDescription(String(formData.get("title") ?? ""), allowed);
     if (!chosen.ok) throw new Error(chosen.error);
 
-    await updateDraftProfile(draftId, {
+    const saved = await updateDraftProfile(draftId, {
       displayName: String(formData.get("displayName") ?? "").trim() || undefined,
       title: chosen.title,
       bio: String(formData.get("bio") ?? "").trim() || undefined,
@@ -199,10 +200,12 @@ export async function actionUpdateDashboardProfile(formData: FormData) {
         .map((s) => s.trim())
         .filter(Boolean),
     });
+    countryReview = saved.countryReview;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Save failed";
     redirect(`/dashboard/details?error=${encodeURIComponent(message)}`);
   }
+  if (countryReview) redirect("/dashboard/details?country=review");
   redirect("/dashboard/details?saved=1");
 }
 

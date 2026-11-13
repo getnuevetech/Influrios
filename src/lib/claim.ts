@@ -1028,6 +1028,46 @@ export async function addDraftSocial(draftId: string, social: SeedSocial): Promi
   return draft;
 }
 
+async function heldCountryReview(
+  draft: ClaimDraft,
+  patch: { locationCountry?: string },
+): Promise<string | null> {
+  if (patch.locationCountry === undefined) return null;
+  const creator = await prisma.creator.findUnique({
+    where: { slug: draft.slug },
+    select: { id: true, userId: true, identityVerified: true, locationCountry: true },
+  });
+  let verified = creator?.identityVerified === "VERIFIED";
+  if (creator && !verified) {
+    const { resolveCreatorIdentityVerified } = await import("@/lib/kyc-document");
+    verified = await resolveCreatorIdentityVerified({
+      creatorId: creator.id,
+      creatorSlug: draft.slug,
+      identityVerified: creator.identityVerified,
+    }).catch(() => false);
+  }
+  const { countryChangeOutcome, recordCountryChangeRequest } = await import("@/lib/country-review");
+  const current = (creator?.locationCountry || draft.locationCountry || "").trim();
+  const outcome = countryChangeOutcome({
+    identityVerified: Boolean(verified),
+    currentCountry: current,
+    requestedCountry: patch.locationCountry,
+  });
+  if (outcome.kind === "review" && creator) {
+    await recordCountryChangeRequest({
+      creatorId: creator.id,
+      actor: creator.userId || draft.slug,
+      currentCountry: current,
+      requestedCountry: outcome.requestedCountry,
+    });
+  }
+  if (outcome.kind !== "apply") {
+    delete patch.locationCountry;
+    return outcome.kind === "review" ? outcome.requestedCountry : null;
+  }
+  return null;
+}
+
 export async function updateDraftProfile(
   draftId: string,
   patch: Partial<
@@ -1054,7 +1094,7 @@ export async function updateDraftProfile(
       |       "gender"
     >
   >,
-): Promise<ClaimDraft> {
+): Promise<ClaimDraft & { countryReview: string | null }> {
   await assertCanMutateDraft(draftId);
   if (draftId.startsWith("creator_")) {
     const creator = await prisma.creator.findUnique({
@@ -1064,13 +1104,15 @@ export async function updateDraftProfile(
     if (!creator?.userId) throw new Error("Draft not found");
     const owned = await draftFromAccountUser(creator.userId);
     if (!owned) throw new Error("Draft not found");
+    const countryReview = await heldCountryReview(owned, patch);
     Object.assign(owned, patch);
     if (patch.gender) owned.gender = normalizeProfileGender(patch.gender);
     await syncPublishedCreatorProfile(owned);
-    return owned;
+    return Object.assign(owned, { countryReview });
   }
   const draft = await getDraft(draftId);
   if (!draft) throw new Error("Draft not found");
+  const countryReview = await heldCountryReview(draft, patch);
   if (patch.specialties) {
     const plan = storedCreatorPlan(draft.planTier);
     const limits = await entitlementsForPlan(plan);
@@ -1105,7 +1147,7 @@ export async function updateDraftProfile(
   if (draft.stage === "published") {
     await syncPublishedCreatorProfile(draft);
   }
-  return draft;
+  return Object.assign(draft, { countryReview });
 }
 
 async function syncPublishedCreatorProfile(draft: ClaimDraft) {

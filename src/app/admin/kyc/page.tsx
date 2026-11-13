@@ -3,6 +3,7 @@ import {
   actionAddKycRequirement,
   actionAdminSetCreatorKyc,
   actionRemoveKycRequirement,
+  actionReviewCountryChange,
   actionReviewDocumentKyc,
   actionSaveKycGateway,
 } from "@/app/admin/kyc/actions";
@@ -10,6 +11,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import { kycDetailsRecord, listKycRequirements, loadKycSettings } from "@/lib/kyc-document";
+import { listPendingCountryReviews } from "@/lib/country-review";
 import { prisma } from "@/lib/db";
 import { listProviders } from "@/lib/providers";
 
@@ -24,7 +26,7 @@ export default async function AdminKycPage({ searchParams }: Props) {
   const session = await requireAdminPage("collab_finance");
   const canManage = hasPermission(session, "collab_finance.manage");
   const params = await searchParams;
-  const [settings, requirements, providers, submissions, creators] = await Promise.all([
+  const [settings, requirements, providers, submissions, creators, countryReviews] = await Promise.all([
     loadKycSettings().catch(() => null),
     listKycRequirements().catch(() => []),
     listProviders("payment").catch(() => []),
@@ -38,6 +40,7 @@ export default async function AdminKycPage({ searchParams }: Props) {
         take: 500,
       })
       .catch(() => []),
+    listPendingCountryReviews().catch(() => []),
   ]);
   const gatewayId = settings?.gatewayProviderId ?? "";
   const gateway = providers.find((provider) => provider.id === gatewayId);
@@ -260,6 +263,43 @@ export default async function AdminKycPage({ searchParams }: Props) {
                 </li>
               );
             })}
+          </ul>
+        )}
+      </AdminCollapse>
+
+      <AdminCollapse title="Country changes" subtitle={`${countryReviews.length} awaiting review`} defaultOpen={countryReviews.length > 0}>
+        {countryReviews.length === 0 ? (
+          <p className="text-sm text-muted">No verified-country change is waiting.</p>
+        ) : (
+          <ul className="space-y-3">
+            {countryReviews.map((review) => (
+              <li key={review.creatorId} className="rounded-xl border border-border p-3 text-sm">
+                <p className="font-semibold text-indigo">
+                  {review.displayName} · {review.slug}
+                </p>
+                <p className="text-muted">
+                  {review.currentCountry || "No country"} → {review.requestedCountry}
+                </p>
+                {canManage ? (
+                  <div className="mt-3 flex gap-2">
+                    <form action={actionReviewCountryChange}>
+                      <input type="hidden" name="creatorId" value={review.creatorId} />
+                      <input type="hidden" name="decision" value="approved" />
+                      <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">
+                        Approve
+                      </button>
+                    </form>
+                    <form action={actionReviewCountryChange}>
+                      <input type="hidden" name="creatorId" value={review.creatorId} />
+                      <input type="hidden" name="decision" value="rejected" />
+                      <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
+                        Reject
+                      </button>
+                    </form>
+                  </div>
+                ) : null}
+              </li>
+            ))}
           </ul>
         )}
       </AdminCollapse>

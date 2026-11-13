@@ -26,6 +26,11 @@ const TABS = [
     label: "Media Kit",
     match: (p: string) => p.startsWith("/creator/media-kit"),
   },
+  {
+    href: "/creator/analytics",
+    label: "Analytics",
+    match: (p: string) => p.startsWith("/creator/analytics"),
+  },
 ] as const;
 
 export function CreatorProfileTabs() {

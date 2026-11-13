@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Details & Preferences" };
 
 type Props = {
-  searchParams: Promise<{ saved?: string; error?: string; published?: string; tab?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; published?: string; tab?: string; country?: string }>;
 };
 
 export default async function ProfileDetailsPage({ searchParams }: Props) {
@@ -196,6 +196,11 @@ export default async function ProfileDetailsPage({ searchParams }: Props) {
                 />
               </div>
             </div>
+            {params.country === "review" ? (
+              <p className="text-sm text-amber-800 sm:col-span-2">
+                That country change is waiting for review. The verified country on this profile was not changed.
+              </p>
+            ) : null}
             <PlaceFields
               cityName="locationCity"
               stateName="locationState"
@@ -203,8 +208,18 @@ export default async function ProfileDetailsPage({ searchParams }: Props) {
               defaultCity={draft.locationCity}
               defaultState={draft.locationState ?? ""}
               defaultCountry={draft.locationCountry}
+              lockCountry={kycVerified}
               className="contents"
             />
+            {kycVerified ? (
+              <p className="text-xs text-muted sm:col-span-2">
+                A verified country is not edited here. Request the change in{" "}
+                <a href="/account?tab=account" className="font-semibold text-violet">
+                  Settings
+                </a>
+                .
+              </p>
+            ) : null}
             <label className="text-sm sm:col-span-2">
               <span className="font-semibold text-indigo">Primary specialty</span>
               <select

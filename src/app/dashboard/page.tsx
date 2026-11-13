@@ -115,6 +115,21 @@ export default async function CreatorProfileOverviewPage({ searchParams }: Props
       kycVerified={kycVerified}
       flash={<ProfileFlash params={params} />}
     >
+      <div className="flex flex-wrap gap-3 text-sm font-semibold">
+        <Link href={publicHref} className="text-violet">
+          Public profile
+        </Link>
+        <Link href="/creator/media-kit" className="text-violet">
+          Media Kit
+        </Link>
+        <Link href="/creator/analytics" className="text-violet">
+          Profile analytics
+        </Link>
+        <Link href="/mentorship" className="text-violet">
+          Mentorship
+        </Link>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           href="/dashboard/details"

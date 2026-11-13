@@ -1,143 +1,79 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { actionLogout, actionSaveCommPreference } from "@/app/account/actions";
+import { AccountSettings } from "@/components/account-settings";
+import { accountAudience } from "@/lib/account-audience";
 import { getAccountSession } from "@/lib/accounts";
-import { getCreatorSessionDraft } from "@/lib/claim";
-import { listContractsForUser } from "@/lib/contract-document";
+import { pendingCountryForCreator } from "@/lib/country-review";
 import { prisma } from "@/lib/db";
+import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
+import { emailPreference } from "@/lib/email-live";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Account" };
+export const metadata = { title: "Account settings" };
+
+const TABS = new Set(["account", "security", "notifications", "verification", "connections", "billing"]);
 
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ tab?: string; saved?: string; error?: string; country?: string }>;
 }) {
   const session = await getAccountSession();
   if (!session) redirect("/login?next=/account");
   const params = await searchParams;
-  const draft = await getCreatorSessionDraft();
-  const [user, contracts] = await Promise.all([
+  const audience = accountAudience(session);
+  const [user, creator, prefs] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.id },
-      select: { phone: true },
+      select: { phone: true, name: true, planTier: true },
     }),
-    listContractsForUser(session.id, session.email).catch(() => []),
+    prisma.creator
+      .findUnique({
+        where: { userId: session.id },
+        select: {
+          id: true,
+          slug: true,
+          displayName: true,
+          locationCountry: true,
+          identityVerified: true,
+          planTier: true,
+        },
+      })
+      .catch(() => null),
+    emailPreference(session.email).catch(() => ({
+      collaborations: true,
+      billing: true,
+      outreach: true,
+      productNews: false,
+    })),
   ]);
+  const pendingCountry = creator ? await pendingCountryForCreator(creator.id).catch(() => null) : null;
+  const identityVerified = creator
+    ? await resolveCreatorIdentityVerified({
+        creatorId: creator.id,
+        creatorSlug: creator.slug,
+        identityVerified: creator.identityVerified,
+      }).catch(() => creator.identityVerified === "VERIFIED")
+    : false;
+  const tab = TABS.has(params.tab ?? "") ? params.tab! : "account";
+
   return (
-    <div className="mx-auto max-w-lg">
-      <p className="text-xs font-bold uppercase tracking-[0.2em] text-violet">Account</p>
-      <h1 className="mt-2 font-display text-3xl font-bold text-indigo">{session.name || "Your account"}</h1>
-      <p className="mt-2 text-sm text-muted">{session.email}</p>
-      {params.saved ? <p className="mt-3 text-sm font-semibold text-emerald-700">Preferences saved.</p> : null}
-      {params.error ? <p className="mt-3 text-sm font-semibold text-amber-800">{params.error}</p> : null}
-      <div className="card-surface mt-6 space-y-3 p-6 text-sm text-indigo">
-        <p>Email verified {session.emailVerifiedAt?.toLocaleString() ?? ""}.</p>
-        <p>
-          Password:{" "}
-          {session.hasPassword ? (
-            "Set"
-          ) : (
-            <>
-              Not set.{" "}
-              <Link href="/account/password" className="font-semibold text-violet">
-                Choose a password
-              </Link>{" "}
-              so you can log in again.
-            </>
-          )}
-        </p>
-        {draft ? (
-          <p>
-            Claim in progress for <span className="font-semibold">{draft.displayName}</span> ({draft.stage}).{" "}
-            <Link href={`/claim/preview/${draft.id}`} className="font-semibold text-violet">
-              Continue
-            </Link>
-          </p>
-        ) : (
-          <p>
-            <Link href="/claim" className="font-semibold text-violet">
-              Claim Your Influrios Profile
-            </Link>
-          </p>
-        )}
-      </div>
-
-      <section id="contracts" className="card-surface mt-4 space-y-3 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-bold text-indigo">Contracts</h2>
-          <Link href="/collaboration/contracts" className="text-sm font-semibold text-violet hover:underline">
-            Open contracts inbox →
-          </Link>
-        </div>
-        <p className="text-sm text-muted">
-          Signed and pending agreements for this account. Prefer the Contracts inbox in your sidebar for the full list.
-        </p>
-        {contracts.length === 0 ? <p className="text-sm text-muted">No contracts on this account yet.</p> : null}
-        <ul className="space-y-2 text-sm">
-          {contracts.map((contract) => {
-            const yourParty = contract.parties.find(
-              (row) =>
-                row.userId === session.id ||
-                row.email.trim().toLowerCase() === session.email.trim().toLowerCase(),
-            );
-            const needsYourSignature =
-              contract.signingChannel === "native" &&
-              (contract.status === "sent" || contract.status === "draft") &&
-              yourParty?.status === "pending";
-            return (
-              <li key={contract.id} className="flex flex-wrap items-center gap-2">
-                <Link
-                  href={`/collaboration/contracts/${contract.id}${needsYourSignature ? "#sign" : ""}`}
-                  className="font-semibold text-violet hover:underline"
-                >
-                  {contract.title}
-                </Link>
-                <span className="text-muted">· {contract.status}</span>
-                {needsYourSignature ? (
-                  <Link
-                    href={`/collaboration/contracts/${contract.id}#sign`}
-                    className="rounded-full bg-violet/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-violet"
-                  >
-                    Sign now
-                  </Link>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <p className="mt-4 text-sm">
-        <Link href="/account/notifications" className="font-semibold text-violet hover:underline">
-          Email preferences
-        </Link>
-      </p>
-      <form action={actionSaveCommPreference} className="card-surface mt-4 space-y-3 p-6">
-        <h2 className="font-display text-lg font-bold text-indigo">Communication preference</h2>
-        <p className="text-sm text-muted">
-          Influrios reaches this account by email. SMS is not sent.
-        </p>
-        <label className="block text-sm font-semibold text-indigo">
-          Phone
-          <input
-            name="phone"
-            defaultValue={user?.phone ?? ""}
-            placeholder="+15555550100"
-            className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
-          />
-        </label>
-        <button type="submit" className="btn-primary !py-2 text-sm">
-          Save preference
-        </button>
-      </form>
-
-      <form action={actionLogout} className="mt-4">
-        <button type="submit" className="btn-secondary">
-          Log out
-        </button>
-      </form>
-    </div>
+    <AccountSettings
+      audience={audience}
+      tab={tab}
+      saved={params.saved}
+      error={params.error}
+      countryReview={params.country === "review" ? "review" : undefined}
+      name={user?.name || session.name || ""}
+      displayName={creator?.displayName || ""}
+      email={session.email}
+      emailVerified={Boolean(session.emailVerifiedAt)}
+      hasPassword={session.hasPassword}
+      phone={user?.phone ?? ""}
+      country={creator?.locationCountry ?? ""}
+      identityVerified={identityVerified}
+      pendingCountry={pendingCountry}
+      planCode={creator?.planTier || user?.planTier || "STARTER"}
+      emailPrefs={prefs}
+    />
   );
 }
