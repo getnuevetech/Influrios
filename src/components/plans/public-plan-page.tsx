@@ -24,6 +24,7 @@ const WHY = {
 export function PublicPlanPage({
   audience,
   signedIn,
+  accountRole,
   currentCode,
   currentAmountCents,
   matrix,
@@ -31,6 +32,7 @@ export function PublicPlanPage({
 }: {
   audience: "creator" | "business";
   signedIn: boolean;
+  accountRole?: string | null;
   currentCode: string | null;
   currentAmountCents: number | null;
   matrix: PlanMatrix;
@@ -39,7 +41,11 @@ export function PublicPlanPage({
   const creator = audience === "creator";
   return (
     <div className="bg-[#F6F8FC] text-indigo">
-      <MarketingHeader active={creator ? "influencer" : "business"} signedIn={signedIn} />
+      <MarketingHeader
+        active={creator ? "influencer" : "business"}
+        signedIn={signedIn}
+        accountRole={accountRole}
+      />
       <section className="mx-auto grid max-w-[90rem] items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-16">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet">

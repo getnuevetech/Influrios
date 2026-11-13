@@ -2376,6 +2376,7 @@ model AgencyWorkspace {
   campaigns  AgencyCampaign[]
   portfolios AgencyPortfolio[]
   seats      AgencySeat[]
+  clients    AgencyClient[]
 }
 
 model AgencyRosterMember {
@@ -2402,10 +2403,43 @@ model AgencyCampaign {
   budgetLabel  String
   creatorSlugs Json
   summary      String          @default("")
+  clientId     String?
+  client       AgencyClient?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  links        AgencyCampaignLink[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
   @@index([workspaceId, status])
+  @@index([clientId])
+}
+
+model AgencyClient {
+  id          String           @id
+  workspaceId String
+  workspace   AgencyWorkspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  createdAt   DateTime         @default(now())
+  campaigns   AgencyCampaign[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+/// One influencer agreement slot inside an agency campaign. Money and contracts stay on the canonical records.
+model AgencyCampaignLink {
+  id                 String         @id
+  campaignId         String
+  campaign           AgencyCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  workspaceId        String
+  creatorSlug        String
+  collaborationId    String?
+  contractDocumentId String?
+  fundingId          String?
+  createdAt          DateTime       @default(now())
+
+  @@unique([campaignId, creatorSlug])
+  @@index([workspaceId])
+  @@index([collaborationId])
 }
 
 model AgencyPortfolio {

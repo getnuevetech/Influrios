@@ -76,6 +76,7 @@ function firstName(full: string | null | undefined) {
 export default async function BusinessHomePage() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business/home");
+  if (account.role === "AGENCY") redirect("/agency");
   const workspace = await getWorkspace(account.id).catch(() => null);
   const [matrix, hubResult, profile, subscription, contractLoad, verification, seats, monthly] = await Promise.all([
     loadPlanMatrix("business"),

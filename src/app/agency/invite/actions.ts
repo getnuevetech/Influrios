@@ -16,11 +16,13 @@ export async function actionAcceptAgencySeatInvite(formData: FormData) {
     token,
     accountEmail: account.email,
     accountUserId: account.id,
+    emailVerified: Boolean(account.emailVerifiedAt),
   });
   if (!result.ok) {
     redirect(`/agency/invite/${token}?error=${encodeURIComponent(result.error)}`);
   }
   revalidatePath("/agency");
   revalidatePath("/admin/agency");
-  redirect("/agency?seat=accepted");
+  const workspaceId = result.seat.workspaceId;
+  redirect(`/agency?workspace=${encodeURIComponent(workspaceId)}&seat=accepted`);
 }
