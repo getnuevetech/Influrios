@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { actionApproveMilestone, actionRequestRevision } from "@/app/payments/actions";
+import { actionRequestRevision } from "@/app/payments/actions";
 import { currentSubmittedVersion } from "@/lib/version-review";
 
 type VersionFile = { id: string; fileName: string };
@@ -90,14 +91,12 @@ export function VersionReview({
       </div>
       {canAct ? (
         <div className="space-y-3">
-          <form action={actionApproveMilestone}>
-            <input type="hidden" name="dealId" value={dealId} />
-            <input type="hidden" name="milestoneId" value={milestoneId} />
-            <input type="hidden" name="versionNumber" value={selected.version} />
-            <button type="submit" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
-              Approve submission
-            </button>
-          </form>
+          <Link
+            href={`/collaboration/work/${dealId}?release=${milestoneId}&version=${selected.version}`}
+            className="inline-flex h-11 items-center rounded-full bg-[#6D4AFF] px-4 text-sm font-semibold text-white"
+          >
+            Review submission
+          </Link>
           <form action={actionRequestRevision} className="space-y-2">
             <input type="hidden" name="dealId" value={dealId} />
             <input type="hidden" name="milestoneId" value={milestoneId} />

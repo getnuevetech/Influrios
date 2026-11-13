@@ -16,7 +16,7 @@ describe("collaboration payments list", () => {
   });
 
   it("names one next action and does not treat a returned payout as pending", () => {
-    assert.equal(paymentNextAction({ status: "awaiting_provider", role: "business", payoutPending: false, payoutReturned: false }), "Deposit funds");
+    assert.equal(paymentNextAction({ status: "awaiting_provider", role: "business", payoutPending: false, payoutReturned: false }), "Fund collaboration");
     assert.equal(paymentNextAction({ status: "held", role: "influencer", payoutPending: true, payoutReturned: false }), "Track the pending payout");
     assert.equal(paymentNextAction({ status: "held", role: "business", payoutPending: true, payoutReturned: true }), "Recover the returned payout");
   });

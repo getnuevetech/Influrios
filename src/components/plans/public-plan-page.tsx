@@ -233,6 +233,7 @@ export function PlanAction({
   current,
   label,
   emphasized,
+  taxBlocked = false,
 }: {
   plan: { code: string; sku: string; checkout: boolean; priceLabel: string };
   audience: "creator" | "business";
@@ -240,6 +241,7 @@ export function PlanAction({
   current: boolean;
   label: string;
   emphasized: boolean;
+  taxBlocked?: boolean;
 }) {
   const className = emphasized
     ? "btn-primary mt-6 w-full !py-2.5 text-sm"
@@ -249,6 +251,13 @@ export function PlanAction({
       <Link href={audience === "business" ? "/business/billing" : "/billing"} className={className}>
         Current plan
       </Link>
+    );
+  }
+  if (taxBlocked) {
+    return (
+      <p data-screen="S01" className="mt-6 text-sm text-amber-900">
+        Tax could not be calculated. Review billing details or retry calculation.
+      </p>
     );
   }
   if (!plan.checkout) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CreatorPayoutMethodsPanel } from "@/components/creator-payout-methods";
+import { EarningsPanel } from "@/app/creator/earnings/earnings-panel";
 import { Panel, StatCard, StatusPill } from "@/components/dashboard-ui";
 import { IconWallet } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
@@ -22,7 +23,7 @@ import { stripeConnectReady } from "@/lib/stripe-admin";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Earnings" };
 
-type Props = { searchParams: Promise<{ error?: string; connected?: string }> };
+type Props = { searchParams: Promise<{ error?: string; connected?: string; payout?: string }> };
 
 /** Provider/config errors that should surface on Earnings payout setup. */
 function memberFacingPayoutError(raw: string | undefined) {
@@ -159,8 +160,25 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
 
   const payoutReady = receiveView?.status === "ready";
 
+  const payoutId = params.payout;
   return (
     <div className="space-y-5">
+      <EarningsPanel
+        currency={currency || null}
+        upcomingCents={held}
+        processingCents={0}
+        paidCents={released}
+        returnedCents={0}
+        destination={hasConnectAccount ? "Bank ending hidden" : "Not added"}
+        selected={payoutId}
+        rows={pipeline.map((item) => ({
+          id: item.id,
+          title: item.title,
+          milestone: item.counterparty,
+          netCents: null,
+          status: item.stage === "Released" ? "Payout confirmed" : item.stage === "Funded" ? "Funded" : "Needs funding",
+        }))}
+      />
       <div>
         <h1 className="font-display text-3xl font-bold">Earnings</h1>
         <p className="mt-1 text-sm text-muted">

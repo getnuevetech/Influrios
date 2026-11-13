@@ -4,6 +4,7 @@ import { actionAddDeliverableFiles, actionSubmitMilestone } from "@/app/payments
 import { getAccountSession } from "@/lib/accounts";
 import { assertFundingAccess } from "@/lib/funding-access";
 import { VersionReview } from "@/components/version-review";
+import { ReleaseStep } from "@/app/collaboration/work/[fundingId]/release-step";
 import { milestoneWorkLabel, visibleSubmissions } from "@/lib/milestone-delivery";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
@@ -14,7 +15,7 @@ export const metadata = { title: "Deliverables" };
 
 type Props = {
   params: Promise<{ fundingId: string }>;
-  searchParams: Promise<{ error?: string; submitted?: string; revised?: string; approved?: string; version?: string }>;
+  searchParams: Promise<{ error?: string; submitted?: string; revised?: string; approved?: string; version?: string; release?: string }>;
 };
 
 export default async function CollaborationWorkPage({ params, searchParams }: Props) {
@@ -50,8 +51,14 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
   });
 
   const funded = funding.status === "held" || funding.status === "completed";
+  const releaseMilestone = funding.milestones.find((row) => row.id === query.release);
+  const releaseVersion = Number(query.version);
+  const quote = (funding.feeSnapshotJson as { financialPlan?: { signedQuote?: { milestoneAllocations?: { grossCents?: number; businessCollaborationFeeCents?: number }[] } } } | null)
+    ?.financialPlan?.signedQuote;
+  const releaseIndex = releaseMilestone ? funding.milestones.findIndex((row) => row.id === releaseMilestone.id) : -1;
+  const allocation = releaseIndex >= 0 ? quote?.milestoneAllocations?.[releaseIndex] : undefined;
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[18rem_minmax(0,1fr)]">
+    <div data-screen="W01" className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[18rem_minmax(0,1fr)]">
       <aside className="space-y-4">
         <div className="flex flex-wrap gap-4">
           <Link href="/payments" className="text-sm font-semibold text-violet hover:underline">
@@ -65,6 +72,12 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
         </div>
         <div>
           <h1 className="font-display text-3xl font-bold text-indigo">{funding.title}</h1>
+          <nav className="mt-3 flex flex-wrap gap-2 text-sm font-semibold" aria-label="Workspace">
+            <a href="#milestones" className="rounded-full bg-lavender px-3 py-2">Milestones</a>
+            <a href="#files" className="rounded-full px-3 py-2">Files</a>
+            <Link href={contract ? `/collaboration/contracts/${contract.id}` : "/collaboration/contracts"} className="rounded-full px-3 py-2">Brief</Link>
+            <span className="rounded-full px-3 py-2 text-muted">Messages</span>
+          </nav>
           <p className="mt-2 text-sm font-semibold text-[#6D4AFF]">{funded ? "Funded" : "Waiting for funding"}</p>
           <p className="mt-1 text-xs text-[#667085]">
             {business ? "Next actor: business reviews a submitted version." : "Next actor: influencer submits the next version."}
@@ -88,7 +101,7 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
         </p>
         <p className="mt-2 text-sm text-indigo">
           {funding.status !== "held" && funding.status !== "completed"
-            ? "Deliverables open after the deposit is confirmed."
+            ? "Deliverables open after funding is confirmed. The influencer has not been paid."
             : business
               ? "Review the exact version an influencer submitted. A revision keeps the earlier versions."
               : "Submit a link or a note for your deliverable. The review clock starts when the version is saved."}
@@ -98,6 +111,18 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
       {query.revised ? <p className="text-sm font-semibold text-emerald-700">Revision requested on the latest version.</p> : null}
       {query.approved ? <p className="text-sm font-semibold text-emerald-700">That version was approved. Payout confirmation stays separate.</p> : null}
       {query.error ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">{query.error}</p> : null}
+      {releaseMilestone && Number.isInteger(releaseVersion) ? (
+        <ReleaseStep
+          fundingId={funding.id}
+          milestoneId={releaseMilestone.id}
+          milestoneName={releaseMilestone.title}
+          version={releaseVersion}
+          currency={funding.currency}
+          grossCents={Number(allocation?.grossCents ?? releaseMilestone.amountCents)}
+          businessFeeCents={Number(allocation?.businessCollaborationFeeCents ?? 0)}
+          closeHref={`/collaboration/work/${funding.id}`}
+        />
+      ) : null}
 
       {funding.milestones.map((milestone) => {
         const rows = visibleSubmissions(milestone.submissions, access.audience, access.actorSlug);

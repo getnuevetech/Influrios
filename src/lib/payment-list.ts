@@ -22,7 +22,7 @@ export function paymentNextAction(input: {
 }) {
   if (input.status === "payment_risk") return "Review payment risk";
   if (input.status === "awaiting_provider" || input.status === "draft" || input.status === "pending") {
-    return input.role === "business" ? "Deposit funds" : "Waiting for funding";
+    return input.role === "business" ? "Fund collaboration" : "Waiting for funding";
   }
   if (input.payoutReturned) return "Recover the returned payout";
   if (input.payoutPending) return "Track the pending payout";

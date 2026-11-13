@@ -84,6 +84,7 @@ model User {
   subscriptionStates SubscriptionState[]
   referralRegistration ReferralRegistration?
   accountNotices    AccountNotice[]
+  verificationTasks PaymentVerificationTask[]
 }
 
 /// Unread events for the signed-in member. Reading a row clears the bell. The invitation itself stays pending.
@@ -113,6 +114,12 @@ model EntitlementPlan {
   amountCents   Int      @default(0)
   priceLabel    String   @default("")
   stripePriceId String?
+  /// Stripe tax code for this plan. Empty until a tax profile is chosen. Not a tax amount.
+  taxCode       String   @default("")
+  /// exclusive | inclusive | blank. Blank blocks a new subscription checkout.
+  taxBehavior   String   @default("")
+  /// TaxPolicyVersion id. A plan never stores a universal tax amount.
+  taxPolicyId   String   @default("")
   publicListing Boolean  @default(false)
   sortOrder     Int      @default(0)
   limitsJson    Json
@@ -1983,6 +1990,8 @@ model CollaborationFeeRule {
   payer         String   @default("brand")
   /// business_platform_fee | influencer_platform_fee | legacy. Legacy rules do not price a new deal.
   purpose       String   @default("legacy")
+  /// TaxPolicyVersion id. A fee rule does not store a tax amount and does not enable a route.
+  taxPolicyId   String   @default("")
   effectiveFrom DateTime
   notes         String   @default("")
   createdAt     DateTime @default(now())
@@ -2506,4 +2515,150 @@ model TeamProposalMember {
 
   @@unique([proposalId, creatorSlug])
   @@index([creatorSlug, status])
+}
+
+/// Immutable country route version. A new edit is a new version. It does not move held funds.
+model PaymentRouteVersion {
+  id                            String   @id @default(cuid())
+  countryCode                   String
+  version                       Int
+  currency                      String
+  environment                   String
+  providerCode                  String
+  providerImplementationVersion String   @default("stripe-us-4.1")
+  /// draft | validated | active | suspended
+  status                        String   @default("draft")
+  newCollectionsEnabled         Boolean  @default(false)
+  releasesEnabled               Boolean  @default(false)
+  roleMappingJson               Json
+  capabilitiesJson              Json
+  taxPolicyId                   String   @default("")
+  approvalEvidence              String   @default("")
+  allocatedFundsApproved        Boolean  @default(false)
+  effectiveFrom                 DateTime @default(now())
+  createdAt                     DateTime @default(now())
+
+  @@unique([countryCode, environment, version])
+  @@index([countryCode, status])
+}
+
+/// Versioned tax policy. Treatment is explicit. Rate is jurisdiction-specific and optional.
+model TaxPolicyVersion {
+  id             String   @id @default(cuid())
+  name           String
+  version        Int
+  liableEntity   String
+  /// taxable | exempt | non_taxable | no_collection_obligation | unresolved
+  treatment      String
+  inclusive      Boolean  @default(false)
+  classification String   @default("")
+  filingOwner    String   @default("")
+  jurisdiction   String   @default("")
+  /// business | influencer | subscriber
+  customerRole   String
+  /// Basis points for a reviewed jurisdiction rate. Null is not zero tax.
+  rateBps        Int?
+  /// draft | active
+  status         String   @default("draft")
+  effectiveFrom  DateTime @default(now())
+  notes          String   @default("")
+  createdAt      DateTime @default(now())
+
+  @@unique([name, version])
+  @@index([status, customerRole])
+}
+
+/// Separate verification checks. A return URL does not write verified.
+model PaymentVerificationTask {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String
+  checkKey    String
+  /// not_started | in_progress | in_review | action_required | verified | restricted
+  status      String   @default("not_started")
+  providerRef String   @default("")
+  ownerLabel  String   @default("")
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, role, checkKey])
+  @@index([status])
+}
+
+/// One settlement command per milestone revision. Status advances from provider facts.
+model MilestoneSettlementV4 {
+  id                 String             @id @default(cuid())
+  fundingId          String
+  milestoneId        String
+  agreementVersion   Int                @default(1)
+  revision           Int                @default(1)
+  /// planned | dispatched | payout_processing | completed | failed | unknown
+  status             String             @default("planned")
+  currency           String
+  grossCents         Int
+  businessFeeCents   Int
+  influencerFeeCents Int
+  influencerNetCents Int
+  operationsFeeCents Int
+  taxCents           Int                @default(0)
+  idempotencyKey     String             @unique
+  /// queued | pending | in_transit | paid | failed | returned | unknown
+  payoutState        String             @default("queued")
+  transferRef        String             @default("")
+  payoutRef          String             @default("")
+  restrictedFeeCents Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  legs               SettlementLegV4[]
+
+  @@unique([milestoneId, agreementVersion, revision])
+  @@index([fundingId, status])
+}
+
+model SettlementLegV4 {
+  id             String                @id @default(cuid())
+  settlementId   String
+  settlement     MilestoneSettlementV4 @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  /// influencer_net | operations_fees
+  leg            String
+  /// planned | dispatched | confirmed | failed | unknown | reversed
+  status         String                @default("planned")
+  amountCents    Int
+  instructionKey String                @default("")
+  providerRef    String                @default("")
+  evidence       String                @default("")
+  updatedAt      DateTime              @updatedAt
+
+  @@unique([settlementId, leg])
+}
+
+/// Append-only money lines. A button click does not insert a confirmed cash line.
+model PaymentJournalLine {
+  id            String   @id @default(cuid())
+  fundingId     String
+  currency      String
+  account       String
+  /// debit | credit
+  direction     String
+  amountCents   Int
+  eventKey      String
+  correlationId String   @default("")
+  createdAt     DateTime @default(now())
+
+  @@unique([fundingId, eventKey, account, direction])
+  @@index([fundingId])
+}
+
+model ReconciliationCaseV4 {
+  id                 String   @id @default(cuid())
+  fundingId          String
+  settlementId       String   @default("")
+  kind               String
+  status             String   @default("open")
+  reason             String
+  restrictedFeeCents Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([status, kind])
 }

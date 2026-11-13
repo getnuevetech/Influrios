@@ -12,6 +12,8 @@ import {
   type PaymentSettingsSection,
 } from "@/app/admin/payment-settings/owner";
 import { PaymentSwitchesPanel } from "@/app/admin/payment-switches/switches-panel";
+import { RouteDraftForm } from "@/app/admin/payment-settings/route-draft-form";
+import { TaxPoliciesPanel } from "@/app/admin/payment-settings/tax-panel";
 import { canAccessModule, getAdminSession } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +84,7 @@ export default async function PaymentSettingsPage({
         <>
           <CountryRoutesPanel searchParams={panelParams} canAddCountry={canFinance} />
           {canFinance ? <AdminCorridorsPanel searchParams={panelParams} /> : null}
+          {canFinance ? <RouteDraftForm /> : null}
         </>
       ) : null}
       {section === "fees" ? (
@@ -89,6 +92,12 @@ export default async function PaymentSettingsPage({
           {canCommerce ? <AdminFeesPanel searchParams={panelParams} /> : null}
           {canSwitches ? <PaymentSwitchesPanel searchParams={panelParams} /> : null}
         </>
+      ) : null}
+      {section === "tax" ? <TaxPoliciesPanel /> : null}
+      {section === "audit" ? (
+        <p className="mx-auto max-w-5xl text-sm text-muted">
+          Configuration edits are draft versions. They do not rewrite signed prices or historical ledger rows.
+        </p>
       ) : null}
     </div>
   );
