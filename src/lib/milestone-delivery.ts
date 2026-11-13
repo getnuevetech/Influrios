@@ -128,20 +128,20 @@ export async function submitMilestoneWork(input: {
   return { ok: true as const, id: submission.id, version: submission.version };
 }
 
-export async function markLatestSubmission(input: {
+export async function markSubmissionVersion(input: {
   milestoneId: string;
+  version: number;
   status: "revision_requested" | "approved";
   reviewNote: string;
 }) {
-  const latest = await prisma.milestoneSubmission.findFirst({
-    where: { milestoneId: input.milestoneId, status: "submitted" },
-    orderBy: { version: "desc" },
-  });
-  if (!latest) return;
-  await prisma.milestoneSubmission.update({
-    where: { id: latest.id },
+  const updated = await prisma.milestoneSubmission.updateMany({
+    where: { milestoneId: input.milestoneId, version: input.version, status: "submitted" },
     data: { status: input.status, reviewNote: input.reviewNote.trim() },
   });
+  if (updated.count !== 1) {
+    return { ok: false as const, error: "This version is no longer current. Refresh and review the latest version. Nothing was paid." };
+  }
+  return { ok: true as const };
 }
 
 export function visibleSubmissions<T extends { creatorSlug: string }>(rows: T[], audience: "business" | "creator", actorSlug: string | null) {
