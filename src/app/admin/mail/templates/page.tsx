@@ -3,6 +3,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { EMAIL_GROUP_LABELS } from "@/lib/email-catalog";
 import { listEmailTemplateRows, listRecentEmailDeliveries, loadEmailTemplateEditor } from "@/lib/email-templates";
+import { mailSettingsView } from "@/lib/mail";
 import { EmailTemplateDialog } from "@/components/email-template-dialog";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default async function EmailTemplatesPage({
   const rows = await listEmailTemplateRows({ q, group });
   const editor = params.template ? await loadEmailTemplateEditor(params.template) : null;
   const deliveries = await listRecentEmailDeliveries();
+  const fromName = (await mailSettingsView().catch(() => null))?.fromName ?? "";
   const closeHref = hrefFor({ q, group });
 
   return (
@@ -171,6 +173,7 @@ export default async function EmailTemplatesPage({
           }))}
           closeHref={closeHref}
           canEdit={canEdit}
+          fromName={fromName}
           query={{ q, group }}
         />
       ) : null}

@@ -18,6 +18,8 @@ export type MailMessage = {
   subject: string;
   text: string;
   html?: string;
+  /** Template tests only. Live mail leaves this unset and sends the address alone. */
+  fromName?: string;
 };
 
 export type MailSettingsRow = {
@@ -205,6 +207,7 @@ export async function mailSettingsView() {
     port: row?.port ?? 587,
     username: row?.username ?? "",
     fromAddress: row?.fromAddress ?? "",
+    fromName: row?.fromName ?? "",
     enabled: row?.enabled ?? false,
     hasSecret: Boolean(row?.secretCipher),
     envConfigured: Boolean(env),
@@ -220,12 +223,14 @@ export async function saveMailSettings(input: {
   port: number;
   username: string;
   fromAddress: string;
+  fromName: string;
   password: string;
   enabled: boolean;
   clearSecret: boolean;
 }) {
   const host = normalizeSmtpHost(input.host).slice(0, 200);
   const fromAddress = input.fromAddress.trim().slice(0, 200);
+  const fromName = emailFromDisplayName(input.fromName);
   const username = input.username.trim().slice(0, 200);
   const port = Number.isFinite(input.port) ? Math.min(65535, Math.max(1, Math.floor(input.port))) : 587;
   const existing = await prisma.mailSettings.findUnique({ where: { id: "default" } });
@@ -246,6 +251,7 @@ export async function saveMailSettings(input: {
       port,
       username,
       fromAddress,
+      fromName,
       secretCipher,
       enabled: input.enabled,
     },
@@ -254,10 +260,32 @@ export async function saveMailSettings(input: {
       port,
       username,
       fromAddress,
+      fromName,
       secretCipher,
       enabled: input.enabled,
     },
   });
+}
+
+/** A mailbox display name. Blank clears it. An address or quote is rejected. */
+export function emailFromDisplayName(value: string) {
+  const name = value.replace(/[\r\n\t]/g, " ").replace(/ {2,}/g, " ").trim();
+  if (!name) return "";
+  if (name.length > 80 || /[<>@"]/.test(name)) {
+    throw new Error("Enter a From name without an email address, up to 80 characters.");
+  }
+  return name;
+}
+
+/** From header for a template test. The SMTP envelope stays the bare address. */
+export function formatFromHeader(address: string, displayName: string) {
+  const mailbox = address.replace(/[\r\n<>]/g, "").trim();
+  const name = emailFromDisplayName(displayName);
+  if (!name) return mailbox;
+  if (/[^\x20-\x7E]/.test(name)) {
+    return `=?UTF-8?B?${Buffer.from(name, "utf8").toString("base64")}?= <${mailbox}>`;
+  }
+  return `"${name}" <${mailbox}>`;
 }
 
 function headerSafe(value: string) {
@@ -502,6 +530,7 @@ export async function deliverMail(
 ): Promise<{ ok: true; smtpResponse: string } | { ok: false; error: string }> {
   const to = headerSafe(message.to);
   const from = headerSafe(config.from);
+  const fromHeader = headerSafe(formatFromHeader(from, message.fromName ?? ""));
   const subject = headerSafe(message.subject);
   if (!to.includes("@") || !from.includes("@")) {
     return { ok: false, error: "A from address and a recipient are required. Nothing was sent." };
@@ -524,7 +553,7 @@ export async function deliverMail(
     await command(socket, reader, `MAIL FROM:<${from}>`, [250], "MAIL FROM");
     await command(socket, reader, `RCPT TO:<${to}>`, [250, 251], "RCPT TO");
     await command(socket, reader, "DATA", [354], "DATA");
-    const body = mailBody({ from, to, subject, message });
+    const body = mailBody({ from: fromHeader, to, subject, message });
     socket.write(`${body}\r\n.\r\n`);
     const accepted = await reader.reply();
     expectCode(accepted, [250], "message");
