@@ -44,7 +44,7 @@ export const RESERVED_SLUGS = [
   "favicon",
 ] as const;
 
-const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])$/;
 
 export function normalizeSlug(input: string): string | null {
   const slug = input.trim().toLowerCase().replace(/^@/, "").replace(/\s+/g, "");
@@ -673,7 +673,7 @@ async function provisionByPublicSlug(slug: string) {
 
 export async function changeCreatorSlug(creatorSlug: string, nextSlug: string) {
   const slug = normalizeSlug(nextSlug);
-  if (!slug) return { ok: false as const, error: "Use 3–30 letters, numbers, or single hyphens." };
+  if (!slug) return { ok: false as const, error: "Use 2–30 letters, numbers, or single hyphens." };
   if (isReservedSlug(slug) || (await prisma.reservedSlug.findUnique({ where: { slug } }))) {
     return { ok: false as const, error: "That name is reserved." };
   }

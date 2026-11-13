@@ -17,6 +17,7 @@ describe("INFLR.me phase 4 paths", () => {
     assert.deepEqual(parseShortPath("/n/tap-token"), { kind: "nfc", token: "tap-token" });
     assert.deepEqual(parseShortPath("/c/spring-launch"), { kind: "campaign", code: "spring-launch" });
     assert.deepEqual(parseShortPath("/sofia"), { kind: "slug", slug: "sofia" });
+    assert.deepEqual(parseShortPath("/ag"), { kind: "slug", slug: "ag" });
   });
 
   it("rejects short, reserved-looking, and double-hyphen campaign paths at parse time", () => {

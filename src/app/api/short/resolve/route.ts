@@ -5,7 +5,12 @@ import {
   socialPreviewInterstitialHtml,
 } from "@/lib/creator-og";
 import { getDirectoryCreator } from "@/lib/directory";
-import { isShortLinkHost } from "@/lib/short-link-hosts";
+import {
+  SHORT_RESOLVE_HOST_HEADER,
+  SHORT_RESOLVE_PATH_HEADER,
+  shortResolveHost,
+  shortResolvePath,
+} from "@/lib/short-link-hosts";
 import { withReferralParam } from "@/lib/referral-cookie";
 import { brandedFallbackHtml, publicDirectoryOrigin, resolveShortRequest } from "@/lib/short-link";
 import { recordResolverMetric } from "@/lib/short-link-resolver-metrics";
@@ -19,11 +24,18 @@ export const runtime = "nodejs";
  * Social preview bots get an Influrios-branded interstitial with canonical on influrios.com.
  * Every resolve records an ops outcome metric (INFLR.me Spec §20).
  */
-export async function GET(request: NextRequest) {
-  const hinted = request.nextUrl.searchParams.get("host") || "";
-  const headerHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
-  const host = isShortLinkHost(hinted) ? hinted : headerHost;
-  const path = request.nextUrl.searchParams.get("path") || "/";
+export async function GET(request: NextRequest, context?: { params?: Promise<{ path?: string[] }> }) {
+  const parts = context?.params ? (await context.params).path : undefined;
+  const host = shortResolveHost({
+    headerHost: request.headers.get(SHORT_RESOLVE_HOST_HEADER),
+    queryHost: request.nextUrl.searchParams.get("host"),
+    requestHost: request.headers.get("x-forwarded-host") || request.headers.get("host") || "",
+  });
+  const path = shortResolvePath({
+    parts,
+    headerPath: request.headers.get(SHORT_RESOLVE_PATH_HEADER),
+    queryPath: request.nextUrl.searchParams.get("path"),
+  });
   const userAgent = request.headers.get("user-agent");
   const hints = {
     userAgent,

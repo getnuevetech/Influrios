@@ -29,3 +29,44 @@ export function isShortLinkHost(host: string | null | undefined): boolean {
   if (!name) return false;
   return shortLinkHosts().includes(name);
 }
+
+/** Set on the rewritten request. Node route handlers do not see query params added by a rewrite. */
+export const SHORT_RESOLVE_HOST_HEADER = "x-influrios-short-host";
+export const SHORT_RESOLVE_PATH_HEADER = "x-influrios-short-path";
+
+/**
+ * Rewrite target for a short-link visit.
+ * The handle lives in the pathname (`/api/short/resolve/ag`) because a Node
+ * route handler drops search params that middleware adds (Next.js #64776).
+ * Query-only rewrites made every inflr.me/{handle} render the root page.
+ */
+export function shortResolveRewriteTarget(pathname: string): string {
+  const clean = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  if (clean === "/api/short/resolve" || clean.startsWith("/api/short/resolve/")) return clean;
+  if (clean === "/") return "/api/short/resolve";
+  return `/api/short/resolve${clean}`;
+}
+
+/** Path the resolver should open. Dynamic segments win, then the middleware header, then a direct query. */
+export function shortResolvePath(input: {
+  parts?: string[] | null;
+  headerPath?: string | null;
+  queryPath?: string | null;
+}): string {
+  if (input.parts?.length) return `/${input.parts.join("/")}`;
+  const header = (input.headerPath ?? "").trim();
+  if (header.startsWith("/")) return header.split("?")[0] || "/";
+  const query = (input.queryPath ?? "").trim();
+  if (query.startsWith("/")) return query.split("?")[0] || "/";
+  return "/";
+}
+
+export function shortResolveHost(input: {
+  headerHost?: string | null;
+  queryHost?: string | null;
+  requestHost?: string | null;
+}): string {
+  const hinted = input.headerHost || input.queryHost || "";
+  if (isShortLinkHost(hinted)) return normalizeShortHost(hinted);
+  return input.requestHost || "";
+}
