@@ -13,6 +13,8 @@ import {
   SocialIcon,
 } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
+import { syncAccountNotices } from "@/lib/account-notices";
+import { businessAttentionDrafts } from "@/lib/notice-filters";
 import { getWorkspace } from "@/lib/business";
 import { loadBusinessHub } from "@/lib/collaboration-hub";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
@@ -230,6 +232,19 @@ export default async function BusinessHomePage() {
       yours?.status === "pending"
     );
   });
+  await syncAccountNotices(
+    account.id,
+    businessAttentionDrafts({
+      pendingResponses,
+      contracts: pendingContracts.map((contract) => ({ id: contract.id, title: contract.title })),
+      funding: (hub?.pipeline ?? [])
+        .filter((item) => item.awaitingFunding)
+        .map((item) => ({ id: item.id, title: item.title, href: item.contractHref || "/payments" })),
+      reviews: (hub?.pipeline ?? [])
+        .filter((item) => item.stage === "Review")
+        .map((item) => ({ id: item.id, title: item.title, counterparty: item.counterparty, href: item.href })),
+    }),
+  ).catch(() => undefined);
 
   return (
     <div className="space-y-5">
