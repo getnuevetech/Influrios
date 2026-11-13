@@ -393,6 +393,8 @@ export type AdminUser = {
   active: boolean;
   /** Bumped when role or active changes; must match the cookie stamp. */
   permissionVersion: number;
+  /** Bound into the current setup link. A resend replaces it. */
+  setupNonce?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -619,6 +621,7 @@ function normalizeStore(store: AdminAuthStore): AdminAuthStore {
         typeof user.permissionVersion === "number" && user.permissionVersion >= 1
           ? user.permissionVersion
           : 1,
+      setupNonce: typeof user.setupNonce === "string" ? user.setupNonce : "",
     })),
   };
 }
@@ -675,6 +678,7 @@ function userFromDb(row: {
   passwordSalt: string;
   active: boolean;
   permissionVersion?: number | null;
+  setupNonce?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): AdminUser {
@@ -690,6 +694,7 @@ function userFromDb(row: {
       typeof row.permissionVersion === "number" && row.permissionVersion >= 1
         ? row.permissionVersion
         : 1,
+    setupNonce: row.setupNonce || "",
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -739,6 +744,7 @@ async function writeStoreToDb(store: AdminAuthStore) {
           passwordSalt: user.passwordSalt,
           active: user.active,
           permissionVersion: user.permissionVersion,
+          setupNonce: user.setupNonce || "",
           createdAt: new Date(user.createdAt),
           updatedAt: new Date(user.updatedAt),
         },
@@ -750,6 +756,7 @@ async function writeStoreToDb(store: AdminAuthStore) {
           passwordSalt: user.passwordSalt,
           active: user.active,
           permissionVersion: user.permissionVersion,
+          setupNonce: user.setupNonce || "",
           updatedAt: new Date(user.updatedAt),
         },
       });
@@ -837,12 +844,18 @@ export function encodeSession(session: AdminSession): string {
 const ADMIN_SETUP_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Signed link an invited admin uses once to choose a password. */
-export function issueAdminSetupToken(userId: string, permissionVersion: number, now = Date.now()) {
+export function issueAdminSetupToken(
+  userId: string,
+  permissionVersion: number,
+  now = Date.now(),
+  nonce = "",
+) {
   const payload = Buffer.from(
     JSON.stringify({
       purpose: "admin-setup",
       userId,
       permissionVersion,
+      nonce,
       exp: now + ADMIN_SETUP_MS,
     }),
   ).toString("base64url");
@@ -852,7 +865,7 @@ export function issueAdminSetupToken(userId: string, permissionVersion: number, 
 export function readAdminSetupToken(
   token: string | undefined | null,
   now = Date.now(),
-): { userId: string; permissionVersion: number } | null {
+): { userId: string; permissionVersion: number; nonce: string } | null {
   if (!token) return null;
   const [payload, sig] = token.split(".");
   if (!payload || !sig) return null;
@@ -869,13 +882,18 @@ export function readAdminSetupToken(
       purpose?: string;
       userId?: string;
       permissionVersion?: number;
+      nonce?: string;
       exp?: number;
     };
     if (data.purpose !== "admin-setup" || !data.userId || typeof data.permissionVersion !== "number") {
       return null;
     }
     if (!data.exp || now > data.exp) return null;
-    return { userId: data.userId, permissionVersion: data.permissionVersion };
+    return {
+      userId: data.userId,
+      permissionVersion: data.permissionVersion,
+      nonce: typeof data.nonce === "string" ? data.nonce : "",
+    };
   } catch {
     return null;
   }
@@ -887,12 +905,17 @@ export async function completeAdminSetup(token: string, password: string) {
   if (password.trim().length < 10) throw new Error("Use at least 10 characters.");
   const store = await ensureStore();
   const user = store.users.find((u) => u.id === parsed.userId && u.active);
-  if (!user || user.permissionVersion !== parsed.permissionVersion) {
+  if (
+    !user ||
+    user.permissionVersion !== parsed.permissionVersion ||
+    (user.setupNonce || "") !== parsed.nonce
+  ) {
     throw new Error("This setup link is invalid or expired.");
   }
   const salt = randomBytes(16).toString("hex");
   user.passwordSalt = salt;
   user.passwordHash = hashPassword(password, salt);
+  user.setupNonce = randomBytes(9).toString("base64url");
   bumpPermissionVersion(user);
   await saveStore(store);
   return { id: user.id, email: user.email };
@@ -1144,12 +1167,40 @@ export async function createAdminUser(input: {
     passwordSalt: salt,
     active: true,
     permissionVersion: 1,
+    setupNonce: randomBytes(9).toString("base64url"),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
   store.users.push(user);
   await saveStore(store);
-  return { id: user.id, email: user.email, name: user.name, roleId: user.roleId };
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    roleId: user.roleId,
+    permissionVersion: user.permissionVersion,
+    setupNonce: user.setupNonce || "",
+  };
+}
+
+/** Issue a fresh setup link and retire every earlier link for this admin. */
+export async function reissueAdminSetup(userId: string) {
+  const store = await ensureStore();
+  const user = store.users.find((u) => u.id === userId);
+  if (!user) throw new Error("User not found");
+  if (!user.active) throw new Error("Restore this admin before sending a new setup link.");
+  user.setupNonce = randomBytes(9).toString("base64url");
+  user.updatedAt = new Date().toISOString();
+  await saveStore(store);
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    roleId: user.roleId,
+    permissionVersion: user.permissionVersion,
+    setupNonce: user.setupNonce,
+    token: issueAdminSetupToken(user.id, user.permissionVersion, Date.now(), user.setupNonce),
+  };
 }
 
 function bumpPermissionVersion(user: AdminUser) {

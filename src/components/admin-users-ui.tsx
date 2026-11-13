@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   actionCreateAdminUser,
+  actionResendAdminSetup,
   actionSetAdminRole,
   actionToggleAdminActive,
 } from "@/app/admin/actions-auth";
@@ -25,6 +26,8 @@ export type AdminUsersPageUser = {
   roleName: string;
   permissionCount: number;
   active: boolean;
+  mfaLabel: string;
+  mfaDetail: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -289,7 +292,7 @@ export function AdminUsersView({
                         {user.roleName}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-muted">Unknown</td>
+                    <td className="px-4 py-3 text-muted">{user.mfaLabel}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -403,7 +406,7 @@ export function AdminUsersView({
                 <Row label="Email" value={managed.email} />
                 <Row label="Assigned role" value={managed.roleName} />
                 <Row label="Status" value={managed.active ? "Active" : "Suspended"} />
-                <Row label="MFA" value="Unknown" />
+                <Row label="MFA" value={managed.mfaLabel} />
                 <Row label="Joined" value={managed.createdAt.slice(0, 10)} />
                 <Row label="Last updated" value={relativeTime(managed.updatedAt)} />
               </dl>
@@ -441,8 +444,18 @@ export function AdminUsersView({
                     </section>
                     <section className="rounded-2xl border border-[#E4EBFF] p-3">
                       <p className="text-[13px] font-bold text-indigo">Security</p>
-                      <p className="mt-2 text-[13px] text-muted">MFA · Unknown</p>
+                      <p className="mt-2 text-[13px] text-muted">MFA · {managed.mfaLabel}</p>
+                      <p className="text-[12px] text-muted">{managed.mfaDetail}</p>
                       <p className="text-[12px] text-muted">Last updated {relativeTime(managed.updatedAt)}</p>
+                      {canManage ? (
+                        <form action={actionResendAdminSetup} className="mt-3">
+                          <input type="hidden" name="userId" value={managed.id} />
+                          <input type="hidden" name="next" value={href({ manage: managed.id, invite: undefined })} />
+                          <button type="submit" className="text-[12px] font-semibold text-violet">
+                            Send a new setup link
+                          </button>
+                        </form>
+                      ) : null}
                     </section>
                   </div>
                   <label className="block text-[13px] font-semibold text-indigo">

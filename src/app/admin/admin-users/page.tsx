@@ -6,6 +6,7 @@ import {
   getAdminSession,
   hasPermission,
 } from "@/lib/admin-auth";
+import { adminMfaPresentation } from "@/lib/admin-mfa";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   const store = await getAdminAuthStore();
   const roleById = new Map(store.roles.map((r) => [r.id, r]));
 
+  const mfa = adminMfaPresentation({ offered: false, enabled: false });
   const users = store.users.map((u) => {
     const role = roleById.get(u.roleId);
     return {
@@ -45,6 +47,8 @@ export default async function AdminUsersPage({ searchParams }: Props) {
       roleName: role?.name || "Unknown",
       permissionCount: role?.permissions.length ?? 0,
       active: u.active,
+      mfaLabel: mfa.label,
+      mfaDetail: mfa.detail,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     };

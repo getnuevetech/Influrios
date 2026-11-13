@@ -2462,6 +2462,8 @@ model AdminUser {
   active            Boolean   @default(true)
   /// Bumped on role change / deactivate so cookie sessions cannot keep old privileges.
   permissionVersion Int       @default(1)
+  /// Rotated each time a setup link is issued. An older link no longer matches.
+  setupNonce        String    @default("")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
