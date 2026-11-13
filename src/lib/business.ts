@@ -28,6 +28,8 @@ export type CampaignBrief = {
   summary: string;
   deliverables: string;
   responseDeadline: string | null;
+  distribution?: string;
+  draftRecipients?: string;
   createdAt: string;
   status: "draft" | "active" | "closed";
 };
@@ -184,6 +186,8 @@ function mapWorkspace(row: WorkspaceRow): BusinessWorkspace {
       summary: brief.summary,
       deliverables: brief.deliverables,
       responseDeadline: brief.responseDeadline ? brief.responseDeadline.toISOString().slice(0, 10) : null,
+      distribution: brief.distribution === "private" || brief.distribution === "public" ? brief.distribution : "",
+      draftRecipients: brief.draftRecipients,
       createdAt: brief.createdAt.toISOString(),
       status: asBriefStatus(brief.status),
     })),
@@ -475,6 +479,8 @@ export async function createBrief(
       summary: input.summary,
       deliverables: input.deliverables ?? "",
       responseDeadline: input.responseDeadline ? new Date(input.responseDeadline) : null,
+      distribution: input.distribution === "private" || input.distribution === "public" ? input.distribution : "",
+      draftRecipients: input.draftRecipients ?? "",
       status: input.status ?? "active",
     },
   });
@@ -506,6 +512,9 @@ export async function updateBrief(
       platform: input.platform,
       summary: input.summary,
       deliverables: input.deliverables ?? existing.deliverables,
+      distribution:
+        input.distribution === "private" || input.distribution === "public" ? input.distribution : existing.distribution,
+      draftRecipients: input.draftRecipients ?? existing.draftRecipients,
       responseDeadline:
         input.responseDeadline === undefined
           ? existing.responseDeadline
@@ -532,6 +541,8 @@ function presentBrief(brief: {
   summary: string;
   deliverables: string;
   responseDeadline: Date | null;
+  distribution: string;
+  draftRecipients: string;
   createdAt: Date;
   status: string;
 }): CampaignBrief {
@@ -549,6 +560,8 @@ function presentBrief(brief: {
     summary: brief.summary,
     deliverables: brief.deliverables,
     responseDeadline: brief.responseDeadline ? brief.responseDeadline.toISOString().slice(0, 10) : null,
+    distribution: brief.distribution === "private" || brief.distribution === "public" ? brief.distribution : "",
+    draftRecipients: brief.draftRecipients,
     createdAt: brief.createdAt.toISOString(),
     status: asBriefStatus(brief.status),
   };
@@ -595,6 +608,8 @@ export function buildCampaignIntentFields(input: {
   summary?: string;
   deliverables?: string;
   responseDeadline?: string;
+  distribution?: string;
+  draftRecipients?: string;
 }) {
   const title = (input.title ?? "").trim();
   if (!title) throw new Error("A campaign title is required.");
@@ -617,6 +632,8 @@ export function buildCampaignIntentFields(input: {
     summary,
     deliverables: (input.deliverables ?? "").trim(),
     responseDeadline: deadline ? deadline.toISOString() : null,
+    distribution: input.distribution === "private" || input.distribution === "public" ? input.distribution : "",
+    draftRecipients: (input.draftRecipients ?? "").trim(),
     status: "draft" as const,
   };
 }

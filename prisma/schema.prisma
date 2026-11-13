@@ -1070,6 +1070,10 @@ model BusinessBrief {
   deliverables    String               @default("")
   /// Response deadline entered on the campaign. Null until a date is saved.
   responseDeadline DateTime?
+  /// private | public. Empty until the business chooses a distribution.
+  distribution    String               @default("")
+  /// Influencers selected on a draft. Sending a private invitation is a separate step.
+  draftRecipients String               @default("")
   status          String               @default("active")
   /// How many influencers this campaign can accept before it stops recruiting.
   creatorSlots    Int                  @default(1)

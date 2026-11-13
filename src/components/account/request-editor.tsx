@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { actionWorkspaceRequest } from "@/app/collaboration/business/actions";
 
@@ -33,11 +33,13 @@ export function RequestEditor(props: {
   platform: string;
   creators: EditorCreator[];
   initialSlugs: string[];
+  initialStep: 0 | 1 | 2 | 3;
+  initialVisibility: "private" | "public";
 }) {
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState<number>(props.initialStep);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>(props.initialSlugs);
-  const [mode, setMode] = useState<"private" | "public">(props.initialSlugs.length > 0 ? "private" : "public");
+  const [mode, setMode] = useState<"private" | "public">(props.initialVisibility);
   const [title, setTitle] = useState(props.title);
   const [goal, setGoal] = useState(props.goal);
   const [deliverables, setDeliverables] = useState(props.deliverables);
@@ -56,6 +58,12 @@ export function RequestEditor(props: {
       })
       .slice(0, 6);
   }, [props.creators, query, selected]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("step", String(step));
+    window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+  }, [step]);
 
   function next() {
     if (step === 0 && (!title.trim() || !goal.trim() || !deliverables.trim())) {
@@ -92,9 +100,10 @@ export function RequestEditor(props: {
         <input key={slug} type="hidden" name="creatorSlug" value={slug} />
       ))}
       <input type="hidden" name="distribution" value={mode} />
+      <input type="hidden" name="composerStep" value={step} />
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-2xl font-bold text-[#1B1464]">Create request</h2>
+          <h2 id="request-composer-title" className="font-display text-2xl font-bold text-[#1B1464]">Create request</h2>
           <p className="mt-1 text-sm text-[#667085]">One brief. Private invitations or a public opportunity. Saving a draft does not send anything.</p>
         </div>
       </div>
@@ -167,6 +176,7 @@ export function RequestEditor(props: {
             ))}
           </div>
           <input
+            id="recipients"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search influencers by name, handle, or niche"
