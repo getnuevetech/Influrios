@@ -568,7 +568,9 @@ export async function paymentRoutes() {
 export async function setCountryGateway(countryCode: string, providerId: string) {
   const country = corridorCountryByCode(countryCode);
   if (!country) throw new Error("Choose a country from the list.");
-  const provider = await prisma.integrationProvider.findFirst({ where: { id: providerId, kind: "payment" } });
+  const provider = await prisma.integrationProvider.findFirst({
+    where: { id: providerId, kind: { in: ["payment", "marketplace"] } },
+  });
   if (!provider) throw new Error("Choose a payment gateway.");
   await prisma.country.upsert({
     where: { code: country.code },

@@ -34,6 +34,28 @@ function clean(value: string | null | undefined) {
   return text || null;
 }
 
+export type RouteChannelOption = { code: string; name: string };
+
+/** One option list for collection, holding, and the payout gateway. Each channel still stores its own code. */
+export function sharedRouteChannelOptions(input: {
+  payment: { code: string; name: string }[];
+  marketplace: { code: string; name: string }[];
+  selected?: Array<string | null | undefined>;
+}): RouteChannelOption[] {
+  const byCode = new Map<string, RouteChannelOption>();
+  for (const row of [...input.payment, ...input.marketplace]) {
+    const code = row.code.trim().toLowerCase();
+    if (!code || byCode.has(code)) continue;
+    byCode.set(code, { code, name: row.name.trim() || code });
+  }
+  for (const selected of input.selected ?? []) {
+    const code = (selected ?? "").trim().toLowerCase();
+    if (!code || byCode.has(code)) continue;
+    byCode.set(code, { code, name: code });
+  }
+  return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name) || a.code.localeCompare(b.code));
+}
+
 /** One route decision for a country. Collection, holding, and the gateway assignment may differ. Two currencies for one country conflict. */
 export function decidePaymentRoute(input: PaymentRouteInput): PaymentRouteDecision {
   const countryCode = input.countryCode.trim().toUpperCase();

@@ -285,7 +285,9 @@ function cleanPayoutMethods(methods: string[]): PayoutMethod[] {
 
 async function assertCollectionRoute(code: string | null, previous: string | null) {
   if (!code || code === previous) return;
-  const known = await prisma.integrationProvider.findFirst({ where: { kind: "payment", code } });
+  const known = await prisma.integrationProvider.findFirst({
+    where: { code, kind: { in: ["payment", "marketplace"] } },
+  });
   if (!known) throw new Error("Choose a collection route.");
 }
 

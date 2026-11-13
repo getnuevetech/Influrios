@@ -9,11 +9,27 @@ import {
   newCheckoutAllowed,
   readRouteAccounts,
   readRouteSnapshot,
+  sharedRouteChannelOptions,
 } from "./payment-route";
 import { deliverableFileRule, validateDeliverableFiles } from "./deliverable-files";
 import { creatorMaySubmitWork, milestonePayoutLabel, milestoneWorkLabel, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
 
 describe("payment route decision", () => {
+  it("offers the same providers on collection, holding, and the payout gateway", () => {
+    const options = sharedRouteChannelOptions({
+      payment: [{ code: "stripe", name: "Stripe Collaboration" }],
+      marketplace: [
+        { code: "demo", name: "Demo hold (swappable)" },
+        { code: "stripe", name: "Stripe" },
+      ],
+      selected: ["airwallex"],
+    });
+    assert.deepEqual(options.map((row) => row.code), ["airwallex", "demo", "stripe"]);
+    assert.equal(options.find((row) => row.code === "stripe")?.name, "Stripe Collaboration");
+    const panel = readFileSync("src/app/admin/payment-settings/country-routes-panel.tsx", "utf8");
+    assert.equal(panel.split("channelOptions.map").length - 1, 3);
+  });
+
   it("keeps collection and holding distinct and flags two answers for the same job", () => {
     const split = decidePaymentRoute({
       countryCode: "ng",

@@ -7,7 +7,7 @@ import { loadProcessTimings } from "@/lib/process-timing";
 import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
-import { decidePaymentRoute } from "@/lib/payment-route";
+import { decidePaymentRoute, sharedRouteChannelOptions } from "@/lib/payment-route";
 import { storedPayoutMethodList } from "@/lib/corridor-checkout";
 import { corridorCountryByCode, corridorCurrencyOptions } from "@/lib/corridor-countries";
 import { listProviders } from "@/lib/providers";
@@ -35,6 +35,15 @@ export async function CountryRoutesPanel({
   const corridorByCode = new Map(corridors.map((row) => [row.countryCode, row]));
   const jurisdictionByCode = new Map(jurisdictions.map((row) => [row.code, row]));
   const routeByCode = new Map(routes.map((row) => [row.countryCode, row]));
+  const channelOptions = sharedRouteChannelOptions({
+    payment: gateways.map((row) => ({ code: row.code, name: row.name })),
+    marketplace: marketplaceProviders.map((row) => ({ code: row.code, name: row.name })),
+    selected: [
+      ...corridors.map((row) => row.collectionProviderCode),
+      ...jurisdictions.map((row) => row.providerCode),
+      ...routes.map((row) => row.provider.code),
+    ],
+  });
   const codes = [...new Set([...corridorByCode.keys(), ...jurisdictionByCode.keys(), ...routeByCode.keys()])].sort();
   const decisions = codes.map((code) => {
     const corridor = corridorByCode.get(code);
@@ -256,27 +265,27 @@ export async function CountryRoutesPanel({
                 </label>
                 <label className="text-xs font-semibold text-muted">
                   Collection
-                  <select name="collectionProviderCode" defaultValue={corridor.collectionProviderCode ?? ""} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
+                  <select name="collectionProviderCode" defaultValue={(corridor.collectionProviderCode ?? "").toLowerCase()} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
                     <option value="">None</option>
-                    {gateways.map((provider) => (
-                      <option key={provider.id} value={provider.code}>{provider.name}</option>
+                    {channelOptions.map((provider) => (
+                      <option key={provider.code} value={provider.code}>{provider.name}</option>
                     ))}
                   </select>
                 </label>
                 <label className="text-xs font-semibold text-muted">
-                  Holding
-                  <select name="holdingProviderCode" defaultValue={jurisdiction.providerCode} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
-                    {marketplaceProviders.map((provider) => (
-                      <option key={provider.id} value={provider.code}>{provider.name}</option>
+                  Primary marketplace
+                  <select name="holdingProviderCode" defaultValue={jurisdiction.providerCode.toLowerCase()} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
+                    {channelOptions.map((provider) => (
+                      <option key={provider.code} value={provider.code}>{provider.name}</option>
                     ))}
                   </select>
                 </label>
                 <label className="text-xs font-semibold text-muted">
                   Payout gateway
-                  <select name="payoutGatewayCode" defaultValue={route?.provider.code ?? ""} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
+                  <select name="payoutGatewayCode" defaultValue={(route?.provider.code ?? "").toLowerCase()} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
                     <option value="">Choose</option>
-                    {gateways.map((provider) => (
-                      <option key={provider.id} value={provider.code}>{provider.name}</option>
+                    {channelOptions.map((provider) => (
+                      <option key={provider.code} value={provider.code}>{provider.name}</option>
                     ))}
                   </select>
                 </label>
