@@ -18,6 +18,7 @@ import {
   updateAdminUserRole,
   completeAdminSetup,
   issueAdminSetupToken,
+  reissueAdminSetup,
 } from "@/lib/admin-auth";
 import {
   AUTH_LOCKOUT_GENERIC_MESSAGE,
@@ -163,6 +164,36 @@ function withQuery(path: string, patch: Record<string, string | undefined>) {
   return qs ? `${pathname}?${qs}` : pathname;
 }
 
+async function mailAdminSetup(input: {
+  to: string;
+  name: string;
+  inviter: string;
+  roleName: string;
+  setupUrl: string;
+}) {
+  const { deliverCatalogEmail } = await import("@/lib/email-live");
+  const catalog = await deliverCatalogEmail({
+    templateId: "account.admin_setup",
+    to: input.to,
+    vars: {
+      first_name: input.name.split(/\s+/)[0] || input.name,
+      inviter_name: input.inviter,
+      role_name: input.roleName || "Admin",
+      expires_at: "7 days",
+      action_url: input.setupUrl,
+    },
+  }).catch(() => ({ sent: false as const, reason: "render" as const }));
+  if (catalog.sent) return { ok: true as const };
+  if (!catalog.sent && catalog.reason === "paused") {
+    return { ok: false as const, error: "Admin setup email is paused" };
+  }
+  return sendMail({
+    to: input.to,
+    subject: "Set up your Influrios admin account",
+    text: `Hi ${input.name},\n\nAn Influrios admin invited you to the operations console.\n\nSet your password with this link:\n${input.setupUrl}\n\nThe link expires in 7 days and works once. A newer invitation replaces this one.\n`,
+  }).catch(() => ({ ok: false as const, error: "Mail could not be sent" }));
+}
+
 export async function actionCreateAdminUser(formData: FormData) {
   const session = await requireAdminSession("access.manage_users");
   const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/admin-users");
@@ -172,29 +203,15 @@ export async function actionCreateAdminUser(formData: FormData) {
   const password = `Tmp-${randomBytes(9).toString("base64url")}!`;
   try {
     const user = await createAdminUser({ email, name, password, roleId });
-    const token = issueAdminSetupToken(user.id, 1);
+    const token = issueAdminSetupToken(user.id, user.permissionVersion, Date.now(), user.setupNonce);
     const setupUrl = `${appOrigin()}/admin/setup?token=${encodeURIComponent(token)}`;
-    const { deliverCatalogEmail } = await import("@/lib/email-live");
-    const catalog = await deliverCatalogEmail({
-      templateId: "account.admin_setup",
+    const mailed = await mailAdminSetup({
       to: user.email,
-      vars: {
-        first_name: user.name.split(/\s+/)[0] || user.name,
-        inviter_name: session.email,
-        role_name: roleId || "Admin",
-        expires_at: "7 days",
-        action_url: setupUrl,
-      },
-    }).catch(() => ({ sent: false as const, reason: "render" as const }));
-    const mailed = catalog.sent
-      ? { ok: true as const }
-      : !catalog.sent && catalog.reason === "paused"
-        ? { ok: false as const, error: "Admin setup email is paused" }
-        : await sendMail({
-            to: user.email,
-            subject: "Set up your Influrios admin account",
-            text: `Hi ${user.name},\n\nAn Influrios admin invited you to the operations console.\n\nSet your password with this link:\n${setupUrl}\n\nThe link expires in 7 days and works once.\n`,
-          }).catch(() => ({ ok: false as const, error: "Mail could not be sent" }));
+      name: user.name,
+      inviter: session.email,
+      roleName: roleId,
+      setupUrl,
+    });
     await writeAccessAudit(session.email, "access.admin_invite", user.id, {
       email: user.email,
       roleId,
@@ -210,6 +227,36 @@ export async function actionCreateAdminUser(formData: FormData) {
     redirect(withQuery(base, { error: message }));
   }
   redirect(withQuery(base, { created: "user" }));
+}
+
+export async function actionResendAdminSetup(formData: FormData) {
+  const session = await requireAdminSession("access.manage_users");
+  const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/admin-users");
+  const userId = String(formData.get("userId") ?? "").trim();
+  try {
+    const user = await reissueAdminSetup(userId);
+    const setupUrl = `${appOrigin()}/admin/setup?token=${encodeURIComponent(user.token)}`;
+    const mailed = await mailAdminSetup({
+      to: user.email,
+      name: user.name,
+      inviter: session.email,
+      roleName: user.roleId,
+      setupUrl,
+    });
+    await writeAccessAudit(session.email, "access.admin_invite_resend", user.id, {
+      email: user.email,
+      setupLinkIssued: true,
+      mailed: mailed.ok,
+    });
+    if (!mailed.ok) {
+      redirect(withQuery(base, { created: "link", setup: setupUrl, manage: user.id }));
+    }
+  } catch (err) {
+    if (err && typeof err === "object" && "digest" in err) throw err;
+    const message = err instanceof Error ? err.message : "Could not send a new setup link";
+    redirect(withQuery(base, { error: message, manage: userId }));
+  }
+  redirect(withQuery(base, { updated: "setup", manage: userId }));
 }
 
 export async function actionCompleteAdminSetup(formData: FormData) {

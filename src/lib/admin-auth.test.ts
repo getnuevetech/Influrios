@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { readFileSync } from "node:fs";
 import {
   ADMIN_PERMISSIONS,
   canAccessModule,
@@ -13,6 +14,7 @@ import {
   type AdminAuthStore,
   type AdminSession,
 } from "./admin-auth";
+import { adminMfaPresentation } from "./admin-mfa";
 
 function sampleSession(overrides: Partial<AdminSession> = {}): AdminSession {
   return {
@@ -98,10 +100,42 @@ describe("admin session cookie", () => {
     assert.deepEqual(readAdminSetupToken(token, now + 1000), {
       userId: "user_new",
       permissionVersion: 1,
+      nonce: "",
     });
     assert.equal(readAdminSetupToken(token, now + 8 * 24 * 60 * 60 * 1000), null);
     const [payload] = token.split(".");
     assert.equal(readAdminSetupToken(`${payload}.tampered`, now), null);
+    assert.equal(readAdminSetupToken(token, now + 1000)?.nonce, "");
+  });
+
+  it("retires an earlier setup link when a newer nonce is issued", () => {
+    const now = Date.parse("2026-11-10T00:00:00Z");
+    const first = issueAdminSetupToken("user_new", 1, now, "nonce-a");
+    const second = issueAdminSetupToken("user_new", 1, now + 1000, "nonce-b");
+    const earlier = readAdminSetupToken(first, now + 2000);
+    const current = readAdminSetupToken(second, now + 2000);
+    assert.ok(earlier);
+    assert.ok(current);
+    const user = { permissionVersion: 1, setupNonce: "nonce-b" };
+    assert.equal(earlier.nonce === user.setupNonce && earlier.permissionVersion === user.permissionVersion, false);
+    assert.equal(current.nonce === user.setupNonce && current.permissionVersion === user.permissionVersion, true);
+  });
+
+  it("names MFA enabled, not enabled, or unavailable", () => {
+    assert.equal(adminMfaPresentation({ offered: false, enabled: false }).label, "Unavailable");
+    assert.match(adminMfaPresentation({ offered: false, enabled: false }).detail, /does not offer a second factor/);
+    assert.equal(adminMfaPresentation({ offered: true, enabled: false }).label, "Not enabled");
+    assert.equal(adminMfaPresentation({ offered: true, enabled: true }).label, "Enabled");
+    const ui = readFileSync("src/components/admin-users-ui.tsx", "utf8");
+    const actions = readFileSync("src/app/admin/actions-auth.ts", "utf8");
+    const auth = readFileSync("src/lib/admin-auth.ts", "utf8");
+    assert.equal(ui.includes("Unknown"), false);
+    assert.match(ui, /user\.mfaLabel/);
+    assert.match(ui, /MFA · \{managed\.mfaLabel\}/);
+    assert.match(ui, /actionResendAdminSetup/);
+    assert.match(actions, /reissueAdminSetup/);
+    assert.match(auth, /setupNonce/);
+    assert.match(auth, /\(user\.setupNonce \|\| ""\) !== parsed\.nonce/);
   });
 });
 
