@@ -846,6 +846,75 @@ export function creatorApplicationTransitions(
   );
 }
 
+export type InviteeResponseIntent = "interested" | "question" | "decline";
+
+const INVITEE_RESPONSE_END: Record<InviteeResponseIntent, MarketplaceApplicationStatus> = {
+  interested: "RESPONDED",
+  question: "NEGOTIATING",
+  decline: "DECLINED",
+};
+
+/** Shortest legal path that records a response without accepting work or drafting a contract. */
+function responsePath(from: MarketplaceApplicationStatus, target: MarketplaceApplicationStatus) {
+  if (from === target) return [];
+  const blocked = new Set<MarketplaceApplicationStatus>(["ACCEPTED", "COLLABORATION_DRAFTED", "EXPIRED", "WITHDRAWN"]);
+  const queue: { status: MarketplaceApplicationStatus; path: MarketplaceApplicationStatus[] }[] = [{ status: from, path: [] }];
+  const seen = new Set<MarketplaceApplicationStatus>([from]);
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) break;
+    for (const next of APPLICATION_TRANSITIONS[current.status]) {
+      const path = [...current.path, next];
+      if (next === target) return path;
+      if (blocked.has(next) || seen.has(next)) continue;
+      seen.add(next);
+      queue.push({ status: next, path });
+    }
+  }
+  return null;
+}
+
+/**
+ * An invitation popup records interest, a question, or a decline.
+ * The path never accepts the work or creates a collaboration.
+ */
+export function inviteeResponsePlan(input: {
+  status: string;
+  intent: InviteeResponseIntent;
+  note?: string;
+  responseDeadline?: string | null;
+  now?: Date;
+}): { ok: true; steps: MarketplaceApplicationStatus[]; note: string | null } | { ok: false; error: string } {
+  if (!isApplicationStatus(input.status)) {
+    return { ok: false, error: "This invitation cannot be answered. Nothing was signed or funded." };
+  }
+  const now = input.now ?? new Date();
+  if (input.responseDeadline) {
+    const deadline = new Date(input.responseDeadline);
+    if (!Number.isNaN(deadline.getTime()) && deadline.getTime() < now.getTime()) {
+      return { ok: false, error: "This invitation has expired. Nothing was signed or funded." };
+    }
+  }
+  if (
+    input.status === "EXPIRED" ||
+    input.status === "DECLINED" ||
+    input.status === "WITHDRAWN" ||
+    input.status === "ACCEPTED" ||
+    input.status === "COLLABORATION_DRAFTED"
+  ) {
+    return { ok: false, error: "This invitation is no longer open. Nothing was signed or funded." };
+  }
+  const note = (input.note ?? "").trim().slice(0, 500);
+  if (input.intent === "question" && note.length < 8) {
+    return { ok: false, error: "Write the question you want the business to see. Nothing was signed or funded." };
+  }
+  const steps = responsePath(input.status, INVITEE_RESPONSE_END[input.intent]);
+  if (!steps || steps.some((step) => step === "ACCEPTED" || step === "COLLABORATION_DRAFTED")) {
+    return { ok: false, error: "This invitation cannot take that response. Nothing was signed or funded." };
+  }
+  return { ok: true, steps, note: note || null };
+}
+
 /** Human-readable kind for list/detail chrome. */
 export function applicationKindLabel(application: {
   fromSlug?: string | null;

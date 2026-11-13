@@ -14,6 +14,8 @@ import {
   creatorApplicationTransitions,
   creatorOwnsApplication,
   getMarketplaceApplication,
+  inviteeResponsePlan,
+  type InviteeResponseIntent,
   listWorkspaceBusinessRequests,
   MARKETPLACE_APPLICATION_STATUSES,
   transitionMarketplaceApplication,
@@ -130,6 +132,60 @@ export async function actionTransitionApplicationDetail(formData: FormData) {
   }
 
   redirect(`${detailPath(applicationId)}?app=${encodeURIComponent(toStatus)}`);
+}
+
+/** Invitee popup: interest, a question, or a decline. Never accepts work or funds it. */
+export async function actionRespondToInvitation(formData: FormData) {
+  await assertCollabOsV1();
+  const account = await getAccountSession().catch(() => null);
+  if (!account) redirect("/login?next=/creator");
+  const applicationId = String(formData.get("applicationId") ?? "").trim();
+  const intent = String(formData.get("intent") ?? "").trim();
+  if (intent !== "interested" && intent !== "question" && intent !== "decline") {
+    redirect("/creator?error=Choose%20a%20response.");
+  }
+  const existing = applicationId ? await getMarketplaceApplication(applicationId) : null;
+  if (!existing) redirect("/creator?error=Invitation%20not%20found.");
+  const draft = await getCreatorSessionDraft().catch(() => null);
+  const creatorRole = draft?.slug ? creatorApplicationRole(existing, draft.slug) : null;
+  if (!draft?.slug || creatorRole !== "invitee" || !creatorOwnsApplication(existing, draft.slug)) {
+    redirect(`/collaboration/applications/${applicationId}?error=${encodeURIComponent("You cannot respond to this invitation.")}`);
+  }
+  const plan = inviteeResponsePlan({
+    status: existing.status,
+    intent: intent as InviteeResponseIntent,
+    note: String(formData.get("note") ?? ""),
+    responseDeadline: existing.responseDeadline,
+  });
+  if (!plan.ok) {
+    redirect(`/creator?error=${encodeURIComponent(plan.error)}`);
+  }
+  let latestStatus: string = existing.status;
+  try {
+    for (const step of plan.steps) {
+      if (step === "ACCEPTED" || step === "COLLABORATION_DRAFTED") {
+        throw new Error("A response cannot accept this invitation.");
+      }
+      const updated = await transitionMarketplaceApplication({
+        id: applicationId,
+        toStatus: step,
+        actorUserId: account.id,
+        note: step === plan.steps[plan.steps.length - 1] ? plan.note ?? undefined : "Opened from the invitation",
+      });
+      latestStatus = updated.status;
+    }
+    revalidateApplicationSurfaces(applicationId);
+    revalidatePath("/creator");
+  } catch (error) {
+    if (isNavigationError(error)) throw error;
+    redirect(
+      `/creator?error=${encodeURIComponent(error instanceof Error ? error.message : "The response was not saved.")}`,
+    );
+  }
+  if (latestStatus === "ACCEPTED" || latestStatus === "COLLABORATION_DRAFTED") {
+    redirect("/creator?error=A%20response%20cannot%20accept%20this%20invitation.");
+  }
+  redirect(`/creator?responded=${encodeURIComponent(intent)}`);
 }
 
 function isNavigationError(error: unknown) {

@@ -375,7 +375,7 @@ export function CreatorCollaborations({
                   deliverables: row.requestDeliverables || row.deliverables || "",
                   budget: [row.requestCurrency, row.requestBudget].filter(Boolean).join(" "),
                   deadline: row.responseDeadline || "",
-                  statuses: row.nextStatuses,
+                  status: row.status,
                 }))}
               />
               <ul className="mt-3 divide-y divide-[#EEF2F7]">

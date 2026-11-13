@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { actionTransitionApplicationDetail } from "@/app/collaboration/applications/actions";
+import { actionRespondToInvitation } from "@/app/collaboration/applications/actions";
 
 export type InvitationReviewRow = {
   id: string;
@@ -11,12 +11,14 @@ export type InvitationReviewRow = {
   deliverables: string;
   budget: string;
   deadline: string;
-  statuses: string[];
+  status: string;
 };
 
 export function InvitationReview({ rows }: { rows: InvitationReviewRow[] }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
   const open = rows.find((row) => row.id === openId) ?? null;
+  const canRespond = open ? open.status === "REQUESTED" || open.status === "VIEWED" || open.status === "RESPONDED" || open.status === "NEGOTIATING" : false;
 
   return (
     <>
@@ -40,7 +42,7 @@ export function InvitationReview({ rows }: { rows: InvitationReviewRow[] }) {
                   <td className="py-3 pr-3 text-[#667085]">{row.brand}</td>
                   <td className="py-3 pr-3 text-[#667085]">{row.deadline || "—"}</td>
                   <td className="py-3">
-                    <button type="button" onClick={() => setOpenId(row.id)} className="rounded-full bg-[#6D4AFF] px-3 py-1.5 text-xs font-semibold text-white">
+                    <button type="button" onClick={() => { setAsking(false); setOpenId(row.id); }} className="rounded-full bg-[#6D4AFF] px-3 py-1.5 text-xs font-semibold text-white">
                       Review
                     </button>
                   </td>
@@ -70,33 +72,41 @@ export function InvitationReview({ rows }: { rows: InvitationReviewRow[] }) {
               Responding does not sign a contract or start a payment. You only see your own invitation.
             </p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
-              {open.statuses.includes("RESPONDED") ? (
-                <form action={actionTransitionApplicationDetail}>
+              {canRespond && (open.status === "REQUESTED" || open.status === "VIEWED") ? (
+                <form action={actionRespondToInvitation}>
                   <input type="hidden" name="applicationId" value={open.id} />
-                  <input type="hidden" name="toStatus" value="RESPONDED" />
+                  <input type="hidden" name="intent" value="interested" />
                   <button type="submit" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">Interested</button>
+                </form>
+              ) : null}
+              {canRespond && !asking ? (
+                <button type="button" onClick={() => setAsking(true)} className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#1B1464]">
+                  Ask a question
+                </button>
+              ) : null}
+              {canRespond ? (
+                <form action={actionRespondToInvitation}>
+                  <input type="hidden" name="applicationId" value={open.id} />
+                  <input type="hidden" name="intent" value="decline" />
+                  <button type="submit" className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#1B1464]">Decline</button>
                 </form>
               ) : (
                 <Link href={`/collaboration/applications/${open.id}`} className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
                   Open invitation
                 </Link>
               )}
-              {open.statuses.includes("NEGOTIATING") ? (
-                <form action={actionTransitionApplicationDetail} className="flex items-center gap-2">
-                  <input type="hidden" name="applicationId" value={open.id} />
-                  <input type="hidden" name="toStatus" value="NEGOTIATING" />
-                  <input name="note" placeholder="Ask a question" className="w-36 rounded-full border border-[#E4E9F5] px-3 py-2 text-xs" />
-                  <button type="submit" className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#1B1464]">Ask a question</button>
-                </form>
-              ) : null}
-              {open.statuses.includes("DECLINED") ? (
-                <form action={actionTransitionApplicationDetail}>
-                  <input type="hidden" name="applicationId" value={open.id} />
-                  <input type="hidden" name="toStatus" value="DECLINED" />
-                  <button type="submit" className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#1B1464]">Decline</button>
-                </form>
-              ) : null}
             </div>
+            {canRespond && asking ? (
+              <form action={actionRespondToInvitation} className="mt-3 space-y-2">
+                <input type="hidden" name="applicationId" value={open.id} />
+                <input type="hidden" name="intent" value="question" />
+                <label className="block text-xs font-semibold text-[#667085]">
+                  Question
+                  <textarea name="note" required minLength={8} rows={3} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 text-sm text-[#1B1464]" />
+                </label>
+                <button type="submit" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">Send question</button>
+              </form>
+            ) : null}
           </div>
         </div>
       ) : null}
