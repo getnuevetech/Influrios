@@ -30,11 +30,19 @@ export async function saveCanonicalCountryRoute(input: {
   if (!jurisdiction) throw new Error("Add this jurisdiction on Marketplace settings before saving its route.");
   const holding = input.holdingProviderCode.trim().toLowerCase();
   if (!holding) throw new Error("Choose a holding provider.");
-  const assigned = await ensureMarketplaceProviderForCode({ code: holding });
-  if (!assigned) throw new Error("Choose a holding provider.");
-  const payout = await prisma.integrationProvider.findFirst({
-    where: { code: input.payoutGatewayCode.trim().toLowerCase(), kind: "payment" },
-  });
+  const holdingMarketplace = await prisma.integrationProvider.findFirst({ where: { kind: "marketplace", code: holding } });
+  const holdingPayment = holdingMarketplace
+    ? null
+    : await prisma.integrationProvider.findFirst({ where: { kind: "payment", code: holding } });
+  if (!holdingMarketplace && !holdingPayment) throw new Error("Choose a holding provider.");
+  if (!holdingMarketplace) {
+    const assigned = await ensureMarketplaceProviderForCode({ code: holding, name: holdingPayment?.name });
+    if (!assigned) throw new Error("Choose a holding provider.");
+  }
+  const payoutCode = input.payoutGatewayCode.trim().toLowerCase();
+  const payout =
+    (await prisma.integrationProvider.findFirst({ where: { code: payoutCode, kind: "payment" } })) ??
+    (await prisma.integrationProvider.findFirst({ where: { code: payoutCode, kind: "marketplace" } }));
   if (!payout) throw new Error("Choose a payout gateway.");
   const methods = Array.isArray(corridor.payoutMethodsJson) ? (corridor.payoutMethodsJson as string[]) : [];
   const before = {
