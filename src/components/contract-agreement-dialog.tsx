@@ -33,6 +33,7 @@ export function ContractAgreementDialog({
   downloadLabel,
   closeHref,
   signHref,
+  primary,
 }: {
   title: string;
   status: string;
@@ -50,6 +51,7 @@ export function ContractAgreementDialog({
   downloadLabel: string;
   closeHref: string;
   signHref: string | null;
+  primary: { label: string; href: string } | null;
 }) {
   const [tab, setTab] = useState<"overview" | "fees" | "signatures" | "documents">("overview");
   const tabs = [
@@ -243,9 +245,14 @@ export function ContractAgreementDialog({
           >
             Close
           </Link>
-          <a href={downloadHref} className="inline-flex items-center gap-2 rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
+          <a href={downloadHref} className="inline-flex items-center gap-2 rounded-full border border-[#E7ECF5] px-4 py-2 text-sm font-semibold text-[#344054]">
             ↓ {downloadLabel}
           </a>
+          {primary ? (
+            <Link href={primary.href} className="inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
+              {primary.label}
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>
