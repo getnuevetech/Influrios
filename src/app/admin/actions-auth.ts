@@ -97,6 +97,7 @@ export async function actionCreateRole(formData: FormData) {
       name,
       description,
       permissions: permissions as AdminPermission[],
+      actorPermissions: session.permissions,
     });
     await writeAccessAudit(session.email, "access.role_create", role.id, { name, permissions });
   } catch (err) {
@@ -122,6 +123,7 @@ export async function actionUpdateRole(formData: FormData) {
       name,
       description,
       permissions: permissions as AdminPermission[],
+      actorPermissions: session.permissions,
     });
     await writeAccessAudit(session.email, "access.role_update", roleId, { name, permissions });
   } catch (err) {
@@ -136,7 +138,7 @@ export async function actionDuplicateRole(formData: FormData) {
   const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/access");
   const roleId = String(formData.get("roleId") ?? "").trim();
   try {
-    const role = await duplicateAdminRole(roleId);
+    const role = await duplicateAdminRole(roleId, session.permissions);
     await writeAccessAudit(session.email, "access.role_duplicate", role.id, { from: roleId });
     redirect(`${base}?created=role&edit=${role.id}`);
   } catch (err) {
@@ -202,7 +204,13 @@ export async function actionCreateAdminUser(formData: FormData) {
   const roleId = String(formData.get("roleId") ?? "").trim();
   const password = `Tmp-${randomBytes(9).toString("base64url")}!`;
   try {
-    const user = await createAdminUser({ email, name, password, roleId });
+    const user = await createAdminUser({
+      email,
+      name,
+      password,
+      roleId,
+      actorPermissions: session.permissions,
+    });
     const token = issueAdminSetupToken(user.id, user.permissionVersion, Date.now(), user.setupNonce);
     const setupUrl = `${appOrigin()}/admin/setup?token=${encodeURIComponent(token)}`;
     const mailed = await mailAdminSetup({
@@ -303,7 +311,7 @@ export async function actionSetAdminRole(formData: FormData) {
   const roleId = String(formData.get("roleId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim().slice(0, 500);
   try {
-    await updateAdminUserRole(userId, roleId);
+    await updateAdminUserRole(userId, roleId, session.permissions);
     await writeAccessAudit(session.email, "access.admin_role_change", userId, {
       roleId,
       reason: reason || undefined,

@@ -7,6 +7,7 @@ import { createHmac, timingSafeEqual, randomBytes, scryptSync } from "crypto";
 import { promises as fs } from "fs";
 import { cookies, headers } from "next/headers";
 import path from "path";
+import { lastSuperAdminRemovalBlocked, permissionsOutsideDelegation } from "@/lib/access-delegation";
 import { ADMIN_SESSION_COOKIE } from "@/lib/admin-session-edge";
 import { requireAuthSecret } from "@/lib/app-secret";
 import { prisma } from "@/lib/db";
@@ -1090,13 +1091,21 @@ export async function adminCookieOptions(maxAgeSeconds = SESSION_DAYS * 24 * 60 
   };
 }
 
+function assertDelegatedGrant(requested: readonly string[], actor: readonly string[] | undefined) {
+  if (!actor) return;
+  const outside = permissionsOutsideDelegation(expandPermissions([...requested]), expandPermissions([...actor]));
+  if (outside.length) throw new Error("You cannot grant a permission you do not hold.");
+}
+
 export async function createAdminRole(input: {
   name: string;
   description: string;
   permissions: AdminPermission[];
+  actorPermissions?: readonly string[];
 }) {
   const store = await ensureStore();
   const permissions = expandPermissions(input.permissions);
+  assertDelegatedGrant(permissions, input.actorPermissions);
   if (!permissions.length) throw new Error("Select at least one feature permission");
   const role: AdminRole = {
     id: `role_${randomBytes(4).toString("hex")}`,
@@ -1114,12 +1123,14 @@ export async function updateAdminRole(input: {
   name: string;
   description: string;
   permissions: AdminPermission[];
+  actorPermissions?: readonly string[];
 }) {
   const store = await ensureStore();
   const role = store.roles.find((r) => r.id === input.roleId);
   if (!role) throw new Error("Role not found");
   if (role.system) throw new Error("System roles cannot be renamed or have permissions rewritten here");
   const permissions = expandPermissions(input.permissions);
+  assertDelegatedGrant(permissions, input.actorPermissions);
   if (!permissions.length) throw new Error("Select at least one feature permission");
   role.name = input.name.trim();
   role.description = input.description.trim();
@@ -1132,7 +1143,7 @@ export async function updateAdminRole(input: {
   return role;
 }
 
-export async function duplicateAdminRole(roleId: string) {
+export async function duplicateAdminRole(roleId: string, actorPermissions?: readonly string[]) {
   const store = await ensureStore();
   const source = store.roles.find((r) => r.id === roleId);
   if (!source) throw new Error("Role not found");
@@ -1140,6 +1151,7 @@ export async function duplicateAdminRole(roleId: string) {
     name: `${source.name} (copy)`,
     description: source.description,
     permissions: [...source.permissions],
+    actorPermissions,
   });
 }
 
@@ -1148,15 +1160,16 @@ export async function createAdminUser(input: {
   name: string;
   password: string;
   roleId: string;
+  actorPermissions?: readonly string[];
 }) {
   const store = await ensureStore();
   const email = input.email.trim().toLowerCase();
   if (store.users.some((u) => u.email === email)) {
     throw new Error("Email already exists");
   }
-  if (!store.roles.some((r) => r.id === input.roleId)) {
-    throw new Error("Unknown role");
-  }
+  const role = store.roles.find((r) => r.id === input.roleId);
+  if (!role) throw new Error("Unknown role");
+  assertDelegatedGrant(role.permissions, input.actorPermissions);
   const salt = randomBytes(16).toString("hex");
   const user: AdminUser = {
     id: `user_${randomBytes(4).toString("hex")}`,
@@ -1212,20 +1225,28 @@ export async function setAdminUserActive(userId: string, active: boolean) {
   const store = await ensureStore();
   const user = store.users.find((u) => u.id === userId);
   if (!user) throw new Error("User not found");
-  if (user.roleId === "role_super" && !active) {
-    const supers = store.users.filter((u) => u.roleId === "role_super" && u.active);
-    if (supers.length <= 1) throw new Error("Cannot deactivate the last Super Admin");
+  if (lastSuperAdminRemovalBlocked(store.users, userId, { roleId: user.roleId, active })) {
+    throw new Error("Cannot remove the last Super Admin");
   }
   user.active = active;
   bumpPermissionVersion(user);
   await saveStore(store);
 }
 
-export async function updateAdminUserRole(userId: string, roleId: string) {
+export async function updateAdminUserRole(
+  userId: string,
+  roleId: string,
+  actorPermissions?: readonly string[],
+) {
   const store = await ensureStore();
   const user = store.users.find((u) => u.id === userId);
   if (!user) throw new Error("User not found");
-  if (!store.roles.some((r) => r.id === roleId)) throw new Error("Unknown role");
+  const role = store.roles.find((r) => r.id === roleId);
+  if (!role) throw new Error("Unknown role");
+  if (lastSuperAdminRemovalBlocked(store.users, userId, { roleId, active: user.active })) {
+    throw new Error("Cannot remove the last Super Admin");
+  }
+  assertDelegatedGrant(role.permissions, actorPermissions);
   user.roleId = roleId;
   bumpPermissionVersion(user);
   await saveStore(store);
