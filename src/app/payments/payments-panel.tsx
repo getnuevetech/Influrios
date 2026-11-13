@@ -14,6 +14,7 @@ import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketpla
 import { storedCurrencyCode } from "@/lib/money";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 import { paymentNextAction } from "@/lib/payment-list";
+import { fundingInDateRange } from "@/lib/payment-standard-v4";
 import {
   businessOverviewTotals,
   customerPaymentLabel,
@@ -39,6 +40,8 @@ type Search = {
   error?: string;
   approved?: string;
   returned?: string;
+  from?: string;
+  to?: string;
 };
 
 const FILTERS = ["all", "needs_funding", "funded", "payout_processing", "completed", "issues"] as const;
@@ -107,7 +110,8 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
     if (deal.status === "awaiting_provider" || deal.status === "draft" || deal.status === "pending") return "needs_funding";
     return "all";
   };
-  const filtered = searched.filter((deal) => status === "all" || bucketOf(deal) === status);
+  const dated = searched.filter((deal) => fundingInDateRange(deal.updatedAt, params.from ?? "", params.to ?? ""));
+  const filtered = dated.filter((deal) => status === "all" || bucketOf(deal) === status);
   const page = Math.max(1, Number(params.page) || 1);
   const pageCount = Math.max(1, Math.ceil(filtered.length / 8));
   const currentPage = Math.min(page, pageCount);
@@ -117,7 +121,14 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
   const confirmed = searched.reduce((sum, deal) => sum + deal.ledger.releasedCents, 0);
   const refunds = searched.filter((deal) => (deal.disputes?.length ?? 0) > 0 || deal.status === "refunded").length;
   const selected = fundings.find((deal) => deal.id === params.deal) ?? null;
-  const close = href({ q: params.q, status: status === "all" ? undefined : status, currency, page: currentPage > 1 ? String(currentPage) : undefined });
+  const listState = {
+    q: params.q,
+    status: status === "all" ? undefined : status,
+    currency,
+    from: params.from,
+    to: params.to,
+  };
+  const close = href({ ...listState, page: currentPage > 1 ? String(currentPage) : undefined });
   const tab = ["overview", "breakdown", "milestones", "transactions", "documents"].includes(params.tab ?? "") ? params.tab! : "overview";
 
   return (
@@ -163,17 +174,26 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
       {params.returned ? <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-950">Checkout returned. Funding stays unconfirmed until the provider confirms it.</p> : null}
       <form className="flex flex-wrap gap-2" action="/payments">
         <input type="hidden" name="currency" value={currency} />
+        {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
         <input name="q" defaultValue={params.q ?? ""} placeholder="Search collaborations, influencers, or references" className="h-11 min-w-0 flex-1 rounded-xl border border-border px-3 text-sm" />
+        <label className="text-xs font-semibold text-muted">
+          From
+          <input name="from" type="date" defaultValue={params.from ?? ""} className="ml-2 h-11 rounded-xl border border-border px-3 text-sm" />
+        </label>
+        <label className="text-xs font-semibold text-muted">
+          To
+          <input name="to" type="date" defaultValue={params.to ?? ""} className="ml-2 h-11 rounded-xl border border-border px-3 text-sm" />
+        </label>
         <button className="h-11 rounded-full bg-violet px-4 text-sm font-semibold text-white" type="submit">Search</button>
       </form>
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((item) => (
-          <Link key={item} href={href({ currency, status: item === "all" ? undefined : item, q: params.q })} className={`inline-flex h-11 items-center rounded-full px-3 text-sm font-semibold ${status === item ? "bg-violet text-white" : "bg-white text-indigo"}`}>
+          <Link key={item} href={href({ currency, status: item === "all" ? undefined : item, q: params.q, from: params.from, to: params.to })} className={`inline-flex h-11 items-center rounded-full px-3 text-sm font-semibold ${status === item ? "bg-violet text-white" : "bg-white text-indigo"}`}>
             {item.replaceAll("_", " ")}
           </Link>
         ))}
       </div>
-      {rows.length === 0 ? <EmptyPayments filtered={Boolean(q) || status !== "all"} /> : (
+      {rows.length === 0 ? <EmptyPayments filtered={Boolean(q) || status !== "all" || Boolean(params.from) || Boolean(params.to)} /> : (
         <div className="overflow-x-auto rounded-2xl border border-border bg-white">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="text-xs text-muted">
@@ -207,7 +227,7 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
                     <td className="px-4 py-3"><PaymentStatus label={statusLabel} /></td>
                     <td className="px-4 py-3">{next}</td>
                     <td className="px-4 py-3">
-                      <Link href={href({ q: params.q, status: status === "all" ? undefined : status, currency, deal: deal.id, tab: "overview" })} className="font-semibold text-violet">View payment</Link>
+                      <Link href={href({ ...listState, deal: deal.id, tab: "overview" })} className="font-semibold text-violet">View payment</Link>
                     </td>
                   </tr>
                 );
@@ -216,6 +236,13 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
           </table>
         </div>
       )}
+      {pageCount > 1 ? (
+        <nav className="flex items-center gap-3 text-sm" aria-label="Pages">
+          {currentPage > 1 ? <Link href={href({ ...listState, page: String(currentPage - 1) })} className="font-semibold text-violet">Previous</Link> : <span className="text-muted">Previous</span>}
+          <span>Page {currentPage} of {pageCount}</span>
+          {currentPage < pageCount ? <Link href={href({ ...listState, page: String(currentPage + 1) })} className="font-semibold text-violet">Next</Link> : <span className="text-muted">Next</span>}
+        </nav>
+      ) : null}
       {selected ? (
         <PaymentDetail
           deal={selected}
