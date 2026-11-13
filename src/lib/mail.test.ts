@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
+  emailFromDisplayName,
+  formatFromHeader,
   formatSmtpDeliveryError,
   mailConfigFromEnv,
   mailSettingsAppearance,
@@ -139,6 +142,22 @@ describe("mailSettingsAppearance", () => {
     const result = mailSettingsAppearance(row({ enabled: false }), false);
     assert.equal(result.ready, false);
     assert.match(result.readyError, /Enabled is off/);
+  });
+});
+
+describe("template test From name", () => {
+  it("quotes the display name and leaves the mailbox bare when the name is blank", () => {
+    assert.equal(formatFromHeader("info@nuevetech.io", "Influrios"), '"Influrios" <info@nuevetech.io>');
+    assert.equal(formatFromHeader("info@nuevetech.io", "  "), "info@nuevetech.io");
+    assert.equal(emailFromDisplayName("Influrios Team"), "Influrios Team");
+    assert.throws(() => emailFromDisplayName("info@nuevetech.io"), /From name/);
+  });
+
+  it("keeps the display name off live collaboration mail", () => {
+    const jobs = readFileSync(new URL("./jobs.ts", import.meta.url), "utf8");
+    const action = readFileSync(new URL("../app/admin/mail/templates/actions.ts", import.meta.url), "utf8");
+    assert.equal(jobs.includes("fromName"), false);
+    assert.match(action, /fromName: settings\?\.fromName/);
   });
 });
 

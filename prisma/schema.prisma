@@ -1490,6 +1490,8 @@ model MailSettings {
   port         Int      @default(587)
   username     String   @default("")
   fromAddress  String   @default("")
+  /// Display name for email template tests. Other mail keeps the address alone.
+  fromName     String   @default("")
   secretCipher String?
   enabled      Boolean  @default(false)
   updatedAt    DateTime @updatedAt

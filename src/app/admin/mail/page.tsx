@@ -131,6 +131,19 @@ export default async function AdminMailPage({ searchParams }: Props) {
               <input name="fromAddress" defaultValue={settings.fromAddress} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
             </label>
             <label className="block text-sm">
+              <span className="font-semibold text-indigo">From name</span>
+              <input
+                name="fromName"
+                defaultValue={settings.fromName}
+                placeholder="Influrios"
+                disabled={!canEdit}
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2"
+              />
+              <span className="mt-1 block text-xs text-muted">
+                Shown beside the From address on email template tests only. Account, invitation, and collaboration mail keep the address alone.
+              </span>
+            </label>
+            <label className="block text-sm">
               <span className="font-semibold text-indigo">Password</span>
               <input name="password" type="password" autoComplete="new-password" placeholder={settings.hasSecret ? "Saved. Leave blank to keep it." : "Not saved"} disabled={!canEdit} className="mt-1 w-full rounded-xl border border-border px-3 py-2" />
               <span className="mt-1 block text-xs text-muted">

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
-import { sendMail } from "@/lib/mail";
+import { mailSettingsView, sendMail } from "@/lib/mail";
 import { emailTestRecipient, parseEmailBody, previewEmailTemplate, publishEmailTemplate, rollbackEmailTemplate, saveEmailTemplateDraft } from "@/lib/email-templates";
 
 function clean(value: FormDataEntryValue | null, max: number) {
@@ -81,6 +81,7 @@ export async function actionSendEmailTemplateTest(formData: FormData) {
   const templateKey = clean(formData.get("templateKey"), 80);
   try {
     const to = emailTestRecipient(String(formData.get("to") ?? ""));
+    const settings = await mailSettingsView().catch(() => null);
     const rendered = previewEmailTemplate(templateKey, {
       subject: clean(formData.get("subject"), 200),
       preheader: clean(formData.get("preheader"), 180),
@@ -90,6 +91,7 @@ export async function actionSendEmailTemplateTest(formData: FormData) {
     });
     const sent = await sendMail({
       to,
+      fromName: settings?.fromName ?? "",
       subject: `[Test] ${rendered.subject}`.slice(0, 180),
       text: rendered.text,
       html: rendered.html,

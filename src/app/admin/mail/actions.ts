@@ -25,6 +25,7 @@ export async function actionSaveMailSettings(formData: FormData) {
       port: Number(formData.get("port") ?? 587),
       username: clean(formData.get("username"), 200),
       fromAddress: clean(formData.get("fromAddress"), 200),
+      fromName: clean(formData.get("fromName"), 80),
       password: String(formData.get("password") ?? ""),
       enabled,
       clearSecret: formData.get("clearSecret") === "on",

@@ -24,6 +24,7 @@ export function EmailTemplateDialog({
   history,
   closeHref,
   canEdit,
+  fromName,
   query,
 }: {
   template: EmailCatalogTemplate;
@@ -32,6 +33,7 @@ export function EmailTemplateDialog({
   history: HistoryRow[];
   closeHref: string;
   canEdit: boolean;
+  fromName: string;
   query: { q: string; group: string };
 }) {
   const router = useRouter();
@@ -238,7 +240,11 @@ export function EmailTemplateDialog({
                       className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
                     />
                   </label>
-                  <p className="text-muted">The test goes to this address only. It uses example links and does not move money.</p>
+                  <p className="text-muted">
+                    {fromName
+                      ? `The test goes to this address only, from ${fromName}. It uses example links and does not move money.`
+                      : "The test goes to this address only. No From name is saved, so the message shows the address alone. Set From name next to From address on Email settings. It uses example links and does not move money."}
+                  </p>
                   <button type="submit" className="rounded-full border border-[#5836D6] px-4 py-2 text-sm font-bold text-[#5836D6]">
                     Send test
                   </button>
