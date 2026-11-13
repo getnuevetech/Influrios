@@ -125,7 +125,7 @@ describe("buildPayoutFeeFxQuote", () => {
     assert.equal(payoutProfileCurrency({ countryCode: "", fallbackCurrency: null }), "USD");
     const source = readFileSync("src/lib/payout-readiness.ts", "utf8");
     assert.equal(source.includes('storedCurrencyCode(input.fallbackCurrency) ?? "USD"'), true);
-    const page = readFileSync("src/app/admin/corridors/page.tsx", "utf8");
+    const page = readFileSync("src/app/admin/corridors/corridors-panel.tsx", "utf8");
     assert.equal(page.includes("Backup currency"), true);
     assert.equal(page.includes("payoutFallbackCurrency"), true);
     const actions = readFileSync("src/app/admin/corridors/actions.ts", "utf8");

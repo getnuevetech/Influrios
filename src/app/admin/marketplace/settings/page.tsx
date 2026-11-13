@@ -173,7 +173,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
           <p className="mt-1 max-w-3xl text-sm text-muted">
             This is the ledger webhook that confirms a collaboration prefund — not Payment gateways API keys.
             The Provider list comes from{" "}
-            <Link href="/admin/gateways" className="font-semibold text-violet hover:underline">
+            <Link href="/admin/payment-settings?section=providers" className="font-semibold text-violet hover:underline">
               Payment gateways
             </Link>{" "}
             (plus Primary), so a new gateway for another country appears here automatically. Enable it, paste that

@@ -26,11 +26,12 @@ export async function actionToggleCorridor(formData: FormData) {
     await setCorridorActive({ countryCode, active, actor: session.email });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not update corridor.";
-    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/corridors");
+  revalidatePath("/admin/payment-settings");
   revalidatePath("/admin/collaboration-ops");
-  redirect(`/admin/corridors?saved=${active ? "activated" : "suspended"}`);
+  redirect(`/admin/payment-settings?section=routes&saved=${active ? "activated" : "suspended"}`);
 }
 
 export async function actionCreateCorridor(formData: FormData) {
@@ -49,10 +50,11 @@ export async function actionCreateCorridor(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not add that country.";
-    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/corridors");
-  redirect("/admin/corridors?saved=country");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=routes&saved=country");
 }
 
 export async function actionSaveCorridorGroup(formData: FormData) {
@@ -67,10 +69,11 @@ export async function actionSaveCorridorGroup(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save that country group.";
-    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/corridors");
-  redirect("/admin/corridors?saved=group");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=routes&saved=group");
 }
 
 export async function actionDeleteCorridorGroup(formData: FormData) {
@@ -79,10 +82,11 @@ export async function actionDeleteCorridorGroup(formData: FormData) {
     await deleteCorridorGroup({ id: String(formData.get("id") ?? ""), actor: session.email });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not remove that country group.";
-    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/corridors");
-  redirect("/admin/corridors?saved=group-removed");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=routes&saved=group-removed");
 }
 
 export async function actionSavePayoutFallback(formData: FormData) {
@@ -91,10 +95,11 @@ export async function actionSavePayoutFallback(formData: FormData) {
     await savePayoutFallbackCurrency(String(formData.get("payoutFallbackCurrency") ?? ""));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the backup currency.";
-    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/corridors");
-  redirect("/admin/corridors?saved=backup");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=routes&saved=backup");
 }
 
 export async function actionUpdateCorridor(formData: FormData) {
@@ -108,7 +113,7 @@ export async function actionUpdateCorridor(formData: FormData) {
     ((postedCurrency && postedCurrency !== existing.currency) ||
       (formData.has("collectionProviderCode") && postedCollection !== (existing.collectionProviderCode ?? "")))
   ) {
-    redirect(`/admin/payment-settings?error=${encodeURIComponent(ROUTE_FIELDS_MESSAGE)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(ROUTE_FIELDS_MESSAGE)}`);
   }
   const currencyField = formData.get("currency");
   const methods = formData
@@ -129,8 +134,9 @@ export async function actionUpdateCorridor(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not update corridor.";
-    redirect(`/admin/corridors?error=${encodeURIComponent(message)}`);
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/corridors");
-  redirect("/admin/corridors?saved=updated");
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=routes&saved=updated");
 }

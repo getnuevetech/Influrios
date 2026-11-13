@@ -46,7 +46,7 @@ describe("corridor countries", () => {
   });
 
   it("adds a country from a dropdown and groups corridors", () => {
-    const page = readFileSync("src/app/admin/corridors/page.tsx", "utf8");
+    const page = readFileSync("src/app/admin/corridors/corridors-panel.tsx", "utf8");
     assert.match(page, /<select name="countryCode"/);
     assert.match(page, /<select name="collectionProviderCode"/);
     assert.match(page, /<select name="payoutFallbackCurrency"/);

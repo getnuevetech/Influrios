@@ -52,7 +52,7 @@ export default async function AdminKycPage({ searchParams }: Props) {
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Countries set to KYC by Gateway use the gateway selected here. Countries set to KYC by Document Upload use
           the details and documents defined here. Choose the country type on{" "}
-          <Link href="/admin/corridors" className="font-semibold text-violet hover:underline">
+          <Link href="/admin/payment-settings?section=routes" className="font-semibold text-violet hover:underline">
             Country corridors
           </Link>
           . Approving KYC here sets the creator account to verified so payout readiness can clear.

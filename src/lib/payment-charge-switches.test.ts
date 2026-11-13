@@ -46,6 +46,6 @@ describe("payment and charge switches", () => {
     assert.ok(cancellation.lastIndexOf("cancellation_refund", refund) > 0);
     assert.ok(cancellation.lastIndexOf("cancellation_refund", refund) < refund);
     assert.equal(readFileSync("src/app/admin/deals/actions.ts", "utf8").includes('paymentChargeBlock("fee_settlement")'), true);
-    assert.equal(readFileSync("src/app/admin/fees/page.tsx", "utf8").includes("paymentChargeBlock"), false);
+    assert.equal(readFileSync("src/app/admin/fees/fees-panel.tsx", "utf8").includes("paymentChargeBlock"), false);
   });
 });
