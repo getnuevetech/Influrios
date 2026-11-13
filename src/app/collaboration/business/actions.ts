@@ -22,6 +22,10 @@ import {
   enteredNote,
 } from "@/lib/business";
 import { composerStep, composerSubmit, joinDraftRecipients, requestVisibility } from "@/lib/request-composer";
+import { domesticInviteDecision } from "@/lib/discovery-access";
+import { verifiedDomesticCountry } from "@/lib/payment-engine";
+import { getLaunchGate } from "@/lib/launch-gate";
+import { prisma } from "@/lib/db";
 import { contractHrefFromCampaign } from "@/lib/campaign-contract";
 import {
   businessApplicationTransitions,
@@ -204,6 +208,25 @@ export async function actionWorkspaceRequest(formData: FormData) {
   const brief = mode === "update" ? await updateBrief(briefId, fields, ws.businessId) : await createBrief(fields, ws.businessId);
   const saved = `/collaboration/business/request/${encodeURIComponent(brief.id)}`;
   if (decision.action === "invite") {
+    const [gate, business, kycRows] = await Promise.all([
+      getLaunchGate().catch(() => null),
+      prisma.businessProfile.findUnique({ where: { userId: account.id }, select: { verifiedCountryCode: true } }).catch(() => null),
+      prisma.creatorKycSubmission.findMany({
+        where: { creatorSlug: { in: slugs }, status: "verified" },
+        select: { creatorSlug: true, countryCode: true },
+      }).catch(() => []),
+    ]);
+    const businessCountry = verifiedDomesticCountry(business?.verifiedCountryCode);
+    for (const slug of slugs) {
+      const influencer = kycRows.find((row) => row.creatorSlug === slug);
+      const country = domesticInviteDecision({
+        businessCountry,
+        influencerCountry: verifiedDomesticCountry(influencer?.countryCode),
+        selectedCountry: String(formData.get("locationCountry") ?? ""),
+        crossBorderAllowed: gate?.crossBorderFundingEnabled === true,
+      });
+      if (!country.ok) redirect(`${saved}?step=${step}&error=${encodeURIComponent(country.error)}`);
+    }
     const invited = await inviteCreatorsIndependently({
       workspaceId: ws.businessId,
       actorUserId: account.id,

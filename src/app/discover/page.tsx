@@ -5,6 +5,8 @@ import { GuestGateBanner } from "@/components/guest-gate-banner";
 import { consumeGuestQuota } from "@/lib/guest-usage";
 import { CreatorCard } from "@/components/creator-card";
 import { DiscoverFilters, DiscoverSort } from "@/components/discover-filters";
+import { DiscoverScrollMemory } from "@/components/discover-scroll";
+import { discoverScrollKey } from "@/lib/discovery-access";
 import { IconSearch, SocialIcon } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
 import { getDirectory, recordDirectoryEvent, searchDirectory } from "@/lib/directory";
@@ -189,6 +191,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
   return (
     <div className="bg-[#F4F7FF] pb-16">
       <GuestGateBanner copy={searchGate.decision === "soft" ? searchGate.copy : ""} next={returnTo} />
+      <DiscoverScrollMemory storageKey={discoverScrollKey(returnTo)} />
       {livePages ? null : (
         <p className="mx-auto w-full max-w-[90rem] px-4 pt-4 text-sm font-semibold text-[#8A5A12] sm:px-6 lg:px-10">
           Sample directory. These profiles are not live partners and cannot be booked from this page.
@@ -304,7 +307,7 @@ export default async function DiscoverPage({ searchParams }: Props) {
                       <p className="mt-2 text-xs text-[#98A2B3]">
                         {followers > 0 ? `${formatFollowers(followers)} followers` : "Audience metrics not available"}
                       </p>
-                      <Link href={profileHref(creator.slug)} className="mt-3 inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
+                      <Link href={profileHref(creator.slug)} scroll={false} className="mt-3 inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
                         View profile
                       </Link>
                     </div>
@@ -317,11 +320,11 @@ export default async function DiscoverPage({ searchParams }: Props) {
       </section>
       {profileSlug && !profile ? (
         <div className="fixed inset-0 z-50">
-          <Link href={closeProfile} className="absolute inset-0 bg-[#1B1464]/40" aria-label="Close profile" />
+          <Link href={closeProfile} scroll={false} className="absolute inset-0 bg-[#1B1464]/40" aria-label="Close profile" />
           <div role="dialog" aria-modal="true" className="absolute left-1/2 top-1/2 w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-[28px] bg-white p-6">
             <h2 className="font-display text-xl font-bold text-[#1B1464]">Profile unavailable</h2>
             <p className="mt-2 text-sm text-[#667085]">This profile is private or not published. Private details stay hidden.</p>
-            <Link href={closeProfile} className="mt-4 inline-flex text-sm font-semibold text-[#6D4AFF]">Back to discovery</Link>
+            <Link href={closeProfile} scroll={false} className="mt-4 inline-flex text-sm font-semibold text-[#6D4AFF]">Back to discovery</Link>
           </div>
         </div>
       ) : null}
