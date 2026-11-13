@@ -7,7 +7,8 @@ import { isBusinessRole } from "@/lib/account-audience";
 import { checkoutUsesStoredCorridor } from "@/lib/corridor-checkout";
 import { newCheckoutAllowed, readRouteSnapshot } from "@/lib/payment-route";
 import { filesFromForm, saveDeliverableFiles, validateDeliverableFiles } from "@/lib/deliverable-files";
-import { markLatestSubmission, submitMilestoneWork } from "@/lib/milestone-delivery";
+import { markSubmissionVersion, submitMilestoneWork } from "@/lib/milestone-delivery";
+import { reviewVersionDecision } from "@/lib/version-review";
 import { assertFundingAccess, requireBusinessFundingAccess } from "@/lib/funding-access";
 import { openFundingCollection } from "@/lib/provider-collection";
 import { parseDepositMethod, startFundingDeposit } from "@/lib/funding-checkout";
@@ -37,6 +38,10 @@ async function requirePaymentsAccount() {
 
 function fail(message: string): never {
   redirect(`/payments?error=${encodeURIComponent(message)}`);
+}
+
+function failWork(fundingId: string, message: string): never {
+  redirect(`/collaboration/work/${fundingId}?error=${encodeURIComponent(message)}`);
 }
 
 function failDeal(dealId: string, message: string): never {
@@ -178,9 +183,27 @@ export async function actionRequestRevision(formData: FormData) {
   const files = filesFromForm(formData);
   const checked = validateDeliverableFiles(files);
   if (!checked.ok) fail(checked.error);
+  const versionNumber = Number(formData.get("versionNumber"));
+  const submissions = await prisma.milestoneSubmission.findMany({
+    where: { milestoneId, fundingId: access.funding.id },
+    select: { version: true, status: true },
+  });
+  const decision = reviewVersionDecision({
+    versions: submissions,
+    requestedVersion: versionNumber,
+    intent: "revise",
+    note: String(formData.get("note") ?? ""),
+  });
+  if (!decision.ok) failWork(access.funding.id, decision.error);
   const result = await requestFundingRevision(access.funding.id, milestoneId, String(formData.get("note") ?? ""));
-  if (!result.ok) fail(result.error);
-  await markLatestSubmission({ milestoneId, status: "revision_requested", reviewNote: String(formData.get("note") ?? "") });
+  if (!result.ok) failWork(access.funding.id, result.error);
+  const marked = await markSubmissionVersion({
+    milestoneId,
+    version: decision.version,
+    status: "revision_requested",
+    reviewNote: String(formData.get("note") ?? ""),
+  });
+  if (!marked.ok) failWork(access.funding.id, marked.error);
   if (checked.files.length > 0) {
     const latest = await prisma.milestoneSubmission.findFirst({
       where: { milestoneId, fundingId: access.funding.id },
@@ -242,9 +265,22 @@ export async function actionApproveMilestone(formData: FormData) {
   const milestoneId = String(formData.get("milestoneId") ?? "");
   const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
   if (!access.ok) fail(access.error);
+  const versionNumber = Number(formData.get("versionNumber"));
+  const submissions = await prisma.milestoneSubmission.findMany({
+    where: { milestoneId, fundingId: access.funding.id },
+    select: { version: true, status: true },
+  });
+  const decision = reviewVersionDecision({ versions: submissions, requestedVersion: versionNumber, intent: "approve" });
+  if (!decision.ok) failWork(access.funding.id, decision.error);
   const result = await approveFundingMilestone(access.funding.id, milestoneId);
-  if (!result.ok) fail(result.error);
-  await markLatestSubmission({ milestoneId, status: "approved", reviewNote: "" });
+  if (!result.ok) failWork(access.funding.id, result.error);
+  const marked = await markSubmissionVersion({
+    milestoneId,
+    version: decision.version,
+    status: "approved",
+    reviewNote: "",
+  });
+  if (!marked.ok) failWork(access.funding.id, marked.error);
   revalidatePath("/payments");
   revalidatePath(`/collaboration/work/${access.funding.id}`);
   redirect(`/collaboration/work/${access.funding.id}?approved=1`);

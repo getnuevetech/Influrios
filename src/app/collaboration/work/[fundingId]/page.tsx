@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { actionAddDeliverableFiles, actionApproveMilestone, actionRequestRevision, actionSubmitMilestone } from "@/app/payments/actions";
+import { actionAddDeliverableFiles, actionSubmitMilestone } from "@/app/payments/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { assertFundingAccess } from "@/lib/funding-access";
+import { VersionReview } from "@/components/version-review";
 import { milestoneWorkLabel, visibleSubmissions } from "@/lib/milestone-delivery";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
@@ -13,7 +14,7 @@ export const metadata = { title: "Deliverables" };
 
 type Props = {
   params: Promise<{ fundingId: string }>;
-  searchParams: Promise<{ error?: string; submitted?: string; revised?: string; approved?: string }>;
+  searchParams: Promise<{ error?: string; submitted?: string; revised?: string; approved?: string; version?: string }>;
 };
 
 export default async function CollaborationWorkPage({ params, searchParams }: Props) {
@@ -95,7 +96,8 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
       </div>
       {query.submitted ? <p className="text-sm font-semibold text-emerald-700">Version submitted.</p> : null}
       {query.revised ? <p className="text-sm font-semibold text-emerald-700">Revision requested on the latest version.</p> : null}
-      {query.approved ? <p className="text-sm font-semibold text-emerald-700">That version was approved.</p> : null}
+      {query.approved ? <p className="text-sm font-semibold text-emerald-700">That version was approved. Payout confirmation stays separate.</p> : null}
+      {query.error ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">{query.error}</p> : null}
 
       {funding.milestones.map((milestone) => {
         const rows = visibleSubmissions(milestone.submissions, access.audience, access.actorSlug);
@@ -119,35 +121,29 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
                 A dispute holds {formatMoney(milestone.amountCents, funding.currency)} on this milestone.
               </p>
             ) : null}
-            <ul className="mt-4 space-y-3">
-              {rows.map((row) => (
-                <li key={row.id} className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm">
-                  <p className="font-semibold text-indigo">
-                    Version {row.version} · {row.creatorSlug} · {row.status.replaceAll("_", " ")}
-                  </p>
-                  {row.note ? <p className="mt-1 text-indigo">{row.note}</p> : null}
-                  {row.linkUrl ? (
-                    <a href={row.linkUrl} className="mt-1 block text-violet hover:underline">
-                      {row.linkUrl}
-                    </a>
-                  ) : null}
-                  {row.reviewNote ? <p className="mt-1 text-amber-900">Review: {row.reviewNote}</p> : null}
-                  {row.files.length > 0 ? (
-                    <ul className="mt-2 space-y-1">
-                      {row.files.map((file) => (
-                        <li key={file.id}>
-                          <a href={`/api/deliverables/${file.id}`} className="font-semibold text-violet hover:underline">
-                            {file.fileName}
-                          </a>
-                          <span className="text-xs text-muted"> · {file.kind} · {file.audience}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              ))}
-              {rows.length === 0 ? <li className="text-sm text-muted">No submission yet.</li> : null}
-            </ul>
+            <VersionReview
+              dealId={funding.id}
+              milestoneId={milestone.id}
+              business={business}
+              revisionCount={milestone.revisionCount}
+              revisionLimit={milestone.revisionLimit}
+              reviewBy={
+                milestone.autoApproveAt && milestone.status === "submitted"
+                  ? `${milestone.autoApproveAt.toISOString().slice(0, 16).replace("T", " ")} UTC`
+                  : null
+              }
+              initialVersion={Number(query.version) || undefined}
+              versions={rows.map((row) => ({
+                id: row.id,
+                version: row.version,
+                status: row.status,
+                note: row.note,
+                linkUrl: row.linkUrl,
+                reviewNote: row.reviewNote,
+                creatorSlug: row.creatorSlug,
+                files: row.files.map((file) => ({ id: file.id, fileName: file.fileName })),
+              }))}
+            />
             {milestone.files.some((file) => !file.submissionId) ? (
               <ul className="mt-3 space-y-1 text-sm">
                 {milestone.files
@@ -173,26 +169,6 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
                   Submit this version
                 </button>
               </form>
-            ) : null}
-            {business && milestone.status === "submitted" ? (
-              <div className="mt-4 space-y-3">
-                <form action={actionApproveMilestone}>
-                  <input type="hidden" name="dealId" value={funding.id} />
-                  <input type="hidden" name="milestoneId" value={milestone.id} />
-                  <button type="submit" className="btn-primary !py-2 text-sm">
-                    Approve this version
-                  </button>
-                </form>
-                <form action={actionRequestRevision} className="space-y-2">
-                  <input type="hidden" name="dealId" value={funding.id} />
-                  <input type="hidden" name="milestoneId" value={milestone.id} />
-                  <textarea name="note" required minLength={8} rows={2} placeholder="What should change" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
-                  <DeliverableFileField />
-                  <button type="submit" className="btn-secondary !py-2 text-sm">
-                    Request a revision
-                  </button>
-                </form>
-              </div>
             ) : null}
             {business && funding.status === "held" ? (
               <form action={actionAddDeliverableFiles} className="mt-4 space-y-2">
