@@ -291,6 +291,13 @@ export async function ensureAccountFromClaimDraft(input: {
   return user;
 }
 
+export async function passwordResetUsable(token: string) {
+  const value = token.trim();
+  if (!value) return false;
+  const row = await prisma.passwordReset.findUnique({ where: { tokenHash: hashToken(value) } });
+  return Boolean(row && !row.usedAt && row.expiresAt >= new Date());
+}
+
 export async function resetPassword(token: string, password: string) {
   const policy = await getSiteConfig();
   const problem = passwordError(password, policy.passwordMinLength);
