@@ -43,6 +43,7 @@ export function EmailTemplateDialog({
   const [headline, setHeadline] = useState(copy.headline);
   const [body, setBody] = useState(copy.body.join("\n\n"));
   const [cta, setCta] = useState(copy.cta);
+  const [recipient, setRecipient] = useState("");
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -224,9 +225,22 @@ export function EmailTemplateDialog({
                   <input type="hidden" name="headline" value={headline} />
                   <input type="hidden" name="body" value={body} />
                   <input type="hidden" name="cta" value={cta} />
-                  <p className="text-muted">A test goes only to your admin address. It uses example links and does not move money.</p>
+                  <label className="block text-sm font-semibold text-[#1B1464]">
+                    Recipient
+                    <input
+                      name="to"
+                      type="email"
+                      required
+                      value={recipient}
+                      onChange={(event) => setRecipient(event.target.value)}
+                      placeholder="name@example.com"
+                      autoComplete="email"
+                      className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal"
+                    />
+                  </label>
+                  <p className="text-muted">The test goes to this address only. It uses example links and does not move money.</p>
                   <button type="submit" className="rounded-full border border-[#5836D6] px-4 py-2 text-sm font-bold text-[#5836D6]">
-                    Send test to me
+                    Send test
                   </button>
                 </form>
               ) : null}

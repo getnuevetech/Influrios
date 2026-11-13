@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { emailCopyProblems, listEmailCatalog } from "@/lib/email-catalog";
-import { publicEmailDelivery } from "@/lib/email-templates";
+import { emailTestRecipient, publicEmailDelivery } from "@/lib/email-templates";
 import { emailCopyFromCatalog, renderCatalogPreview, renderEmail } from "@/lib/email-render";
 
 describe("email catalog renderer", () => {
@@ -88,5 +89,18 @@ describe("email catalog renderer", () => {
     assert.equal(JSON.stringify(row).includes("482619"), false);
     assert.equal(row.subject, "Verification code");
     assert.equal(row.to, "alex@example.com");
+  });
+
+  it("accepts one typed test address and rejects a list", () => {
+    assert.equal(emailTestRecipient("  Designer@Example.com "), "Designer@Example.com");
+    assert.throws(() => emailTestRecipient("one@example.com, two@example.com"), /one email address/);
+    assert.throws(() => emailTestRecipient("not-an-email"), /one email address/);
+    assert.throws(() => emailTestRecipient("a@b.com\nBcc: x@y.com"), /one email address/);
+    const dialog = readFileSync(new URL("../components/email-template-dialog.tsx", import.meta.url), "utf8");
+    const action = readFileSync(new URL("../app/admin/mail/templates/actions.ts", import.meta.url), "utf8");
+    assert.equal(dialog.includes("Send test to me"), false);
+    assert.equal(dialog.includes("your admin address"), false);
+    assert.match(dialog, /name="to"/);
+    assert.equal(action.includes("to: session.email"), false);
   });
 });

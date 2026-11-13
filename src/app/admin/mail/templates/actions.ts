@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { sendMail } from "@/lib/mail";
-import { parseEmailBody, previewEmailTemplate, publishEmailTemplate, rollbackEmailTemplate, saveEmailTemplateDraft } from "@/lib/email-templates";
+import { emailTestRecipient, parseEmailBody, previewEmailTemplate, publishEmailTemplate, rollbackEmailTemplate, saveEmailTemplateDraft } from "@/lib/email-templates";
 
 function clean(value: FormDataEntryValue | null, max: number) {
   return String(value ?? "").trim().slice(0, max);
@@ -77,12 +77,10 @@ export async function actionRollbackEmailTemplate(formData: FormData) {
 }
 
 export async function actionSendEmailTemplateTest(formData: FormData) {
-  const session = await requireAdminAction("mail.edit");
+  await requireAdminAction("mail.edit");
   const templateKey = clean(formData.get("templateKey"), 80);
-  if (!session.email.includes("@")) {
-    redirect(back(formData, templateKey, { error: "Your admin account has no email address." }));
-  }
   try {
+    const to = emailTestRecipient(String(formData.get("to") ?? ""));
     const rendered = previewEmailTemplate(templateKey, {
       subject: clean(formData.get("subject"), 200),
       preheader: clean(formData.get("preheader"), 180),
@@ -91,7 +89,7 @@ export async function actionSendEmailTemplateTest(formData: FormData) {
       cta: clean(formData.get("cta"), 80),
     });
     const sent = await sendMail({
-      to: session.email,
+      to,
       subject: `[Test] ${rendered.subject}`.slice(0, 180),
       text: rendered.text,
       html: rendered.html,

@@ -61,7 +61,9 @@ export default async function EmailTemplatesPage({
         <p className="text-sm font-semibold text-emerald-700">Version published. Live mail is unchanged.</p>
       ) : null}
       {params.saved === "restored" ? <p className="text-sm font-semibold text-emerald-700">Earlier version restored. Live mail is unchanged.</p> : null}
-      {params.saved === "test" ? <p className="text-sm font-semibold text-emerald-700">Test sent to your admin address.</p> : null}
+      {params.saved === "test" ? (
+        <p className="text-sm font-semibold text-emerald-700">Test sent to the address you entered. Live mail is unchanged.</p>
+      ) : null}
 
       <form className="flex flex-wrap items-end gap-3" action="/admin/mail/templates">
         <label className="text-sm font-semibold text-indigo">

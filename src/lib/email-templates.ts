@@ -73,6 +73,20 @@ function copyFromRow(row: {
   };
 }
 
+export function emailTestRecipient(value: string) {
+  const to = value.trim();
+  const ok =
+    to.length > 0 &&
+    to.length <= 200 &&
+    !/[\s,;<>]/.test(to) &&
+    /^[^@]+@[^@]+\.[^@]+$/.test(to) &&
+    !to.startsWith(".") &&
+    !to.endsWith(".") &&
+    !to.includes("..");
+  if (!ok) throw new Error("Enter one email address for the test.");
+  return to;
+}
+
 export function parseEmailBody(value: string) {
   return value
     .replace(/\r\n/g, "\n")
