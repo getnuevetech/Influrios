@@ -1763,8 +1763,8 @@ export async function approveFundingMilestone(fundingId: string, milestoneId: st
     activateOn: milestone.rightsActivateOn,
     currentStatus: milestone.rightsStatus,
   });
-  await prisma.fundingMilestone.update({
-    where: { id: milestone.id },
+  const updated = await prisma.fundingMilestone.updateMany({
+    where: { id: milestone.id, status: "submitted" },
     data: {
       status: next.status,
       approvedAt: now,
@@ -1776,6 +1776,7 @@ export async function approveFundingMilestone(fundingId: string, milestoneId: st
         : {}),
     },
   });
+  if (updated.count !== 1) return { ok: false as const, error: "That milestone cannot take this step." };
   await scheduleMilestoneRelease({
     fundingId,
     milestoneId,
