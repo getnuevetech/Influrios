@@ -28,8 +28,9 @@ describe("payment settings owner", () => {
     assert.match(page, /AdminFeesPanel/);
     assert.match(page, /PaymentSwitchesPanel/);
     assert.match(page, /AdminCorridorsPanel/);
-    assert.match(page, /ReviewBeforeSave/);
-    assert.match(page, /Add country route/);
+    const routes = readFileSync("src/app/admin/payment-settings/country-routes-panel.tsx", "utf8");
+    assert.match(routes, /ReviewBeforeSave/);
+    assert.match(routes, /Add country route/);
     assert.match(readFileSync("src/components/review-before-save.tsx", "utf8"), /kind === "country-route"|countryRouteReview/);
   });
 

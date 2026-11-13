@@ -134,7 +134,7 @@ describe("entered provider names", () => {
     const search = readFileSync("src/app/admin/search/actions.ts", "utf8");
     const gateways = readFileSync("src/app/admin/gateways/actions.ts", "utf8");
     const searchPage = readFileSync("src/app/admin/search/page.tsx", "utf8");
-    const gatewayPage = readFileSync("src/app/admin/gateways/page.tsx", "utf8");
+    const gatewayPage = readFileSync("src/app/admin/gateways/gateways-panel.tsx", "utf8");
     assert.equal(search.includes('|| "Meilisearch"'), false);
     assert.equal(gateways.includes('|| "Stripe Connect"'), false);
     assert.equal(gateways.includes('|| "stripe"'), false);

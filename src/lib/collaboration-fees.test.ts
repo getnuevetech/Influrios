@@ -337,7 +337,7 @@ describe("entered fee rule facts", () => {
     assert.equal(fees.includes('relationshipSource || "*"'), false);
     assert.equal(fees.includes('promotionChannel || "*"'), false);
     const actions = readFileSync("src/app/admin/actions.ts", "utf8");
-    const page = readFileSync("src/app/admin/fees/page.tsx", "utf8");
+    const page = readFileSync("src/app/admin/fees/fees-panel.tsx", "utf8");
     const funding = readFileSync("src/app/admin/marketplace/[fundingId]/page.tsx", "utf8");
     assert.equal(actions.includes("Untitled rule"), false);
     assert.equal(funding.includes("Untitled rule"), false);
