@@ -23,6 +23,8 @@ type Props = {
     error?: string;
     approved?: string;
     returned?: string;
+    from?: string;
+    to?: string;
   }>;
 };
 

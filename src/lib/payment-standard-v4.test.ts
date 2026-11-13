@@ -19,6 +19,7 @@ import {
   fundingEvidenceAccepts,
   illustrativeAllocation,
   journalBalances,
+  fundingInDateRange,
   paymentStatusEmail,
   planCoupledSettlement,
   primaryPaymentAction,
@@ -281,6 +282,10 @@ describe("payment standard v4.1", () => {
     assert.equal(email.saysPaid, false);
     assert.equal(email.authorizesRelease, false);
     assert.equal(paymentStatusEmail({ event: "payout_confirmed", reference: "po_1" }).saysPaid, true);
+    const day = new Date("2026-06-15T12:00:00.000Z");
+    assert.equal(fundingInDateRange(day, "2026-06-01", "2026-06-30"), true);
+    assert.equal(fundingInDateRange(day, "2026-07-01", ""), false);
+    assert.equal(fundingInDateRange(day, "not-a-date", ""), true);
   });
 
   it("names the next safe action and blocks a stale tax total", () => {

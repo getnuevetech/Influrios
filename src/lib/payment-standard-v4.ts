@@ -653,6 +653,17 @@ export function subscriptionPreview(input: {
   };
 }
 
+export function fundingInDateRange(updatedAt: Date | null | undefined, from: string, to: string) {
+  const start = /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : "";
+  const end = /^\d{4}-\d{2}-\d{2}$/.test(to) ? to : "";
+  if (!start && !end) return true;
+  if (!updatedAt || Number.isNaN(updatedAt.getTime())) return false;
+  const day = updatedAt.toISOString().slice(0, 10);
+  if (start && day < start) return false;
+  if (end && day > end) return false;
+  return true;
+}
+
 export function emptyPaymentsCopy(hasFilters: boolean) {
   if (hasFilters) return { title: "No matches", action: "Clear filters" };
   return { title: "No collaboration payments yet.", action: "Open contracts" };

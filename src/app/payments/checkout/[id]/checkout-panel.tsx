@@ -26,6 +26,7 @@ export function CheckoutPanel({
   recorded,
   returned,
   cancelled,
+  readiness,
 }: {
   fundingId: string;
   title: string;
@@ -39,6 +40,12 @@ export function CheckoutPanel({
   recorded?: string;
   returned?: string;
   cancelled?: string;
+  readiness: {
+    signatures: boolean;
+    businessVerification: "ready" | "unknown" | "blocked";
+    recipientReady: boolean;
+    routeRecorded: boolean;
+  };
 }) {
   const signed = readSignedDealMoney((feeSnapshot as { financialPlan?: unknown } | null)?.financialPlan);
   const taxKnown = signed != null;
@@ -74,6 +81,24 @@ export function CheckoutPanel({
         )}
         <p className="font-display text-2xl font-bold">Total <MoneyAmount cents={total} currency={currency} /></p>
         <p className="text-xs text-muted">Influrios does not collect card numbers on this page. The approved provider hosts the card form.</p>
+      </section>
+      <section className="space-y-1 rounded-2xl border border-border bg-white p-5 text-sm">
+        <h2 className="font-display text-lg font-bold">Readiness</h2>
+        <p>Signatures {readiness.signatures ? "complete" : "still required"}.</p>
+        <p>
+          Business verification{" "}
+          {readiness.businessVerification === "ready"
+            ? "complete"
+            : readiness.businessVerification === "blocked"
+              ? "restricted"
+              : "not confirmed on this account"}.
+        </p>
+        <p>
+          {readiness.recipientReady
+            ? "Recipient payout setup is ready. That does not pay the influencer."
+            : "The influencer still needs to finish payout setup. Their private checks stay hidden."}
+        </p>
+        <p>Route {readiness.routeRecorded ? "is recorded for this agreement" : "is not recorded"}.</p>
       </section>
       {funded ? (
         <div className="space-y-3">
