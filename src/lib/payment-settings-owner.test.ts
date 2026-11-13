@@ -32,6 +32,12 @@ describe("payment settings owner", () => {
     assert.match(routes, /ReviewBeforeSave/);
     assert.match(routes, /Add country route/);
     assert.match(readFileSync("src/components/review-before-save.tsx", "utf8"), /kind === "country-route"|countryRouteReview/);
+    const popup = readFileSync("src/app/admin/payment-settings/route-version-panel.tsx", "utf8");
+    for (const label of ["Overview", "Account mapping", "Capabilities", "Verification", "Tax", "History"]) {
+      assert.match(popup, new RegExp(label));
+    }
+    assert.match(popup, /View route/);
+    assert.equal(popup.includes("mark ready"), false);
   });
 
   it("keeps old payment admin paths on the matching section", () => {

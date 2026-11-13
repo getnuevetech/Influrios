@@ -167,6 +167,9 @@ describe("milestone delivery", () => {
     assert.match(review, /Version \{row.version\}/);
     assert.match(work, /name="files"/);
     assert.match(work, /actionAddDeliverableFiles/);
+    assert.match(work, /WorkspaceMessages/);
+    assert.match(work, /id="milestones"/);
+    assert.match(readFileSync("src/app/collaboration/work/[fundingId]/messages-panel.tsx", "utf8"), /id="messages"/);
     assert.equal(deliverableFileRule("image/png", "shot.png")?.kind, "media");
     assert.equal(deliverableFileRule("application/pdf", "brief.pdf")?.kind, "document");
     assert.equal(deliverableFileRule("application/zip", "pack.zip")?.kind, "file");

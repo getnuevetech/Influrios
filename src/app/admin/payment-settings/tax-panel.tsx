@@ -64,19 +64,7 @@ export async function TaxPoliciesPanel() {
         </form>
         <p className="mt-3 text-xs text-muted">A fee rule never turns funding on. {readiness.blocker ?? "Route readiness still depends on the country route."}</p>
       </section>
-      <section data-screen="A01" className="rounded-2xl border border-border bg-white p-5">
-        <h2 className="font-display text-xl font-bold">Route versions</h2>
-        <ul className="mt-3 space-y-2 text-sm">
-          {routes.length === 0 ? <li>No v4 route version yet. Drafts stay off until provider approval.</li> : routes.map((route) => (
-            <li key={route.id}>{route.countryCode} v{route.version} · {route.environment} · {route.currency} · collections {route.newCollectionsEnabled ? "on" : "off"} · {route.allocatedFundsApproved ? "allocation approved" : "Provider approval required"}</li>
-          ))}
-        </ul>
-        <ul className="mt-4 space-y-1 text-sm">
-          {readiness.checks.map((check) => (
-            <li key={check.label}>{check.ready ? "Ready" : "Missing"} · {check.label}</li>
-          ))}
-        </ul>
-      </section>
+      <p className="text-sm text-muted">Route versions open from Country routes. {readiness.blocker ?? "A linked tax policy does not activate a route."}</p>
     </div>
   );
 }
