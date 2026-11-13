@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { isShortLinkHost, normalizeShortHost } from "./short-link-hosts";
+import {
+  isShortLinkHost,
+  normalizeShortHost,
+  shortResolvePath,
+  shortResolveRewriteTarget,
+} from "./short-link-hosts";
 import {
   brandedFallbackHtml,
   hitWhenShortStoreUnavailable,
@@ -27,6 +32,7 @@ import {
 describe("short link rules", () => {
   it("rejects reserved and malformed slugs", () => {
     assert.equal(normalizeSlug("Sofia"), "sofia");
+    assert.equal(normalizeSlug("ag"), "ag");
     assert.equal(normalizeSlug("a"), null);
     assert.equal(normalizeSlug("admin"), "admin");
     assert.equal(isReservedSlug("admin"), true);
@@ -65,11 +71,23 @@ describe("short link rules", () => {
     const page = readFileSync("src/app/q/[token]/page.tsx", "utf8");
     const middleware = readFileSync("src/middleware.ts", "utf8");
     const resolver = readFileSync("src/app/api/short/resolve/route.ts", "utf8");
+    const nested = readFileSync("src/app/api/short/resolve/[...path]/route.ts", "utf8");
     const ops = readFileSync("src/lib/short-link.ts", "utf8");
     assert.match(page, /qrLandingFromHit/);
     assert.match(page, /resolveQrToken/);
     assert.equal(page.includes("notFound()"), true);
-    assert.match(middleware, /\/api\/short\/resolve/);
+    assert.match(middleware, /shortResolveRewriteTarget/);
+    assert.equal(shortResolveRewriteTarget("/ag"), "/api/short/resolve/ag");
+    assert.equal(shortResolveRewriteTarget("/sofia"), "/api/short/resolve/sofia");
+    assert.equal(shortResolveRewriteTarget("/q/abc123"), "/api/short/resolve/q/abc123");
+    assert.equal(shortResolveRewriteTarget("/"), "/api/short/resolve");
+    assert.equal(shortResolvePath({ parts: ["ag"], headerPath: "/", queryPath: "/" }), "/ag");
+    assert.equal(shortResolvePath({ parts: ["q", "abc123"] }), "/q/abc123");
+    assert.equal(shortResolvePath({ headerPath: "/sofia" }), "/sofia");
+    assert.equal(shortResolvePath({ queryPath: "/sofia" }), "/sofia");
+    assert.equal(shortResolvePath({}), "/");
+    assert.match(resolver, /shortResolvePath/);
+    assert.match(nested, /resolveShortLink/);
     assert.equal(middleware.includes("resolveShortRequest"), false);
     assert.match(resolver, /resolveShortRequest/);
     const statusFn = ops.slice(ops.indexOf("export async function setShortLinkStatus"));

@@ -5,7 +5,13 @@ import {
   edgeAdminSessionSecret,
 } from "@/lib/admin-session-edge";
 import { REFERRAL_COOKIE, referralId } from "@/lib/referral-cookie";
-import { isShortLinkHost, normalizeShortHost } from "@/lib/short-link-hosts";
+import {
+  isShortLinkHost,
+  normalizeShortHost,
+  SHORT_RESOLVE_HOST_HEADER,
+  SHORT_RESOLVE_PATH_HEADER,
+  shortResolveRewriteTarget,
+} from "@/lib/short-link-hosts";
 
 const GUEST_COOKIE = "influrios_guest";
 
@@ -18,13 +24,17 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
   if (isShortLinkHost(host)) {
-    if (pathname === "/api/short/resolve") return NextResponse.next();
+    if (pathname === "/api/short/resolve" || pathname.startsWith("/api/short/resolve/")) {
+      return NextResponse.next();
+    }
     const url = req.nextUrl.clone();
-    url.pathname = "/api/short/resolve";
-    url.searchParams.set("path", pathname);
-    // The rewrite can replace Host. Pass the host this edge already accepted.
-    url.searchParams.set("host", normalizeShortHost(host));
-    return NextResponse.rewrite(url);
+    // Keep the visitor path in the pathname. Node handlers ignore search
+    // params added by this rewrite, so inflr.me/ag used to render the root page.
+    url.pathname = shortResolveRewriteTarget(pathname);
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set(SHORT_RESOLVE_HOST_HEADER, normalizeShortHost(host));
+    requestHeaders.set(SHORT_RESOLVE_PATH_HEADER, pathname);
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
