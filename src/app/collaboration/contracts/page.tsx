@@ -10,6 +10,7 @@ import { contractHrefFromCampaign, contractOfferReady } from "@/lib/campaign-con
 import { listContractsForUser } from "@/lib/contract-document";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatStoredMoney } from "@/lib/money";
+import { agreementFooterAction } from "@/lib/agreement-footer";
 import { readSignedTermsSnapshot } from "@/lib/signed-funding";
 import { repairSignedAgreements } from "@/lib/signed-funding-apply";
 import { prisma } from "@/lib/db";
@@ -474,6 +475,18 @@ export default async function ContractsIndexPage({
               ? `/collaboration/contracts/${selected.id}#sign`
               : null
           }
+          primary={agreementFooterAction({
+            signHref: needsYourSignature(selected, account.id, account.email, creatorSlug)
+              ? `/collaboration/contracts/${selected.id}#sign`
+              : null,
+            contractHref: `/collaboration/contracts/${selected.id}`,
+            workspaceHref: deliverablesHref(selected.fundingId),
+            depositHref: depositHref(selected.fundingId),
+            role: viewerRole(selected, creatorSlug),
+            contractStatus: selected.status,
+            fundingId: selected.fundingId,
+            fundingStatus: selected.fundingId ? fundingStatus.get(selected.fundingId) : null,
+          })}
         />
       ) : null}
 
