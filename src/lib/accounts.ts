@@ -194,12 +194,17 @@ export async function verifyAccountEmail(email: string, code: string) {
     throw new Error("That verification code is not valid. Check the latest email, or resend a new code.");
   }
   await prisma.emailChallenge.update({ where: { id: challenge.id }, data: { usedAt: new Date() } });
+  const firstVerification = !user.emailVerifiedAt;
   const verified = await prisma.user.update({
     where: { id: user.id },
     data: { emailVerifiedAt: new Date() },
   });
   await setAccountSession(verified.id);
   await attachOnboarding(verified.id);
+  if (firstVerification) {
+    const { sendWelcome } = await import("@/lib/email-live");
+    await sendWelcome({ email: verified.email, name: verified.name ?? "", role: verified.role }).catch(() => undefined);
+  }
   return verified;
 }
 

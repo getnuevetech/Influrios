@@ -125,6 +125,7 @@ const SIDE_GROUPS: SideGroup[] = [
       { href: "/admin/referrals", label: "Referrals", module: "shortlinks", icon: "invites" },
       { href: "/admin/mail", label: "Email", module: "mail", icon: "invites" },
       { href: "/admin/mail/templates", label: "Email templates", module: "mail", icon: "invites" },
+      { href: "/admin/mail/health", label: "Email health", module: "mail", icon: "invites" },
       { href: "/admin/jobs", label: "Jobs", module: "jobs", icon: "stats" },
       { href: "/admin/taxonomy", label: "Taxonomy", module: "taxonomy", icon: "cards" },
     ],

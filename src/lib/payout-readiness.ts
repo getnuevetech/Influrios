@@ -384,6 +384,19 @@ export async function computePayoutReadiness(input: {
       where: { creatorId: input.creatorId },
       data: { globalPayoutReady },
     });
+    if (globalPayoutReady) {
+      const creator = await prisma.creator.findUnique({
+        where: { id: input.creatorId },
+        include: { user: { select: { email: true } } },
+      });
+      if (creator?.user?.email) {
+        const { sendPayoutReady } = await import("@/lib/email-live");
+        await sendPayoutReady({
+          email: creator.user.email,
+          countryName: countryCode || "your country",
+        }).catch(() => undefined);
+      }
+    }
   }
 
   return {

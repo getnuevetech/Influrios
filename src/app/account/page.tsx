@@ -109,6 +109,11 @@ export default async function AccountPage({
         </ul>
       </section>
 
+      <p className="mt-4 text-sm">
+        <Link href="/account/notifications" className="font-semibold text-violet hover:underline">
+          Email preferences
+        </Link>
+      </p>
       <form action={actionSaveCommPreference} className="card-surface mt-4 space-y-3 p-6">
         <h2 className="font-display text-lg font-bold text-indigo">Communication preference</h2>
         <p className="text-sm text-muted">

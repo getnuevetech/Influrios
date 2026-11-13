@@ -10,7 +10,8 @@ import {
   shouldNotifyReviewDeadline,
 } from "@/lib/collab-notifications";
 import { renderInvitationCopy } from "@/lib/invitations";
-import { sendMail } from "@/lib/mail";
+import { catalogCollabMessage, collabCatalogVars, deliverCatalogEmail, displayMoney } from "@/lib/email-live";
+import { mailSettingsView, sendMail } from "@/lib/mail";
 
 const MAX_ATTEMPTS = 3;
 
@@ -45,11 +46,25 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
       expiry: invitation.expiresAt.toISOString().slice(0, 10),
       profile: invitation.creatorSlug,
     };
-    const result = await sendMail({
+    const catalog = await deliverCatalogEmail({
+      templateId: "account.claim",
       to: invitation.email,
-      subject: renderInvitationCopy(invitation.template.subject, vars),
-      text: renderInvitationCopy(invitation.template.body, vars),
+      vars: {
+        first_name: invitation.displayName.split(/\s+/)[0] || invitation.displayName,
+        action_url: vars.link,
+        expires_at: vars.expiry,
+      },
     });
+    if (!catalog.sent && (catalog.reason === "paused" || catalog.reason === "preference" || catalog.reason === "feature_off")) {
+      throw new Error("The claim invitation email is paused or turned off for this recipient.");
+    }
+    const result = catalog.sent
+      ? { ok: true as const, smtpResponse: "catalog" }
+      : await sendMail({
+          to: invitation.email,
+          subject: renderInvitationCopy(invitation.template.subject, vars),
+          text: renderInvitationCopy(invitation.template.body, vars),
+        });
     if (!result.ok) throw new Error(result.error);
     await prisma.invitationEvent.create({
       data: { invitationId: invitation.id, kind: "send_delivered", actor: "smtp", detail: invitation.email },
@@ -64,11 +79,25 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
   }
   if (kind === "verification_email") {
     if (!data.email || !data.code) throw new Error("Verification job is missing an address or code.");
-    const result = await sendMail({
+    const expires = new Date(Date.now() + 30 * 60 * 1000);
+    const catalog = await deliverCatalogEmail({
+      templateId: "account.verify",
       to: data.email,
-      subject: "Your Influrios verification code",
-      text: `Your Influrios verification code is ${data.code}. It expires in 30 minutes.`,
+      vars: {
+        verification_code: data.code,
+        expires_in: "30 minutes",
+        expires_at: expires.toISOString(),
+      },
+      log: false,
     });
+    if (!catalog.sent && catalog.reason === "paused") throw new Error("Verification email is paused.");
+    const result = catalog.sent
+      ? { ok: true as const, smtpResponse: "catalog" }
+      : await sendMail({
+          to: data.email,
+          subject: "Your Influrios verification code",
+          text: `Your Influrios verification code is ${data.code}. It expires in 30 minutes.`,
+        });
     if (!result.ok) throw new Error(result.error);
     const { queuePreferredSms } = await import("@/lib/sms");
     await queuePreferredSms({
@@ -81,11 +110,24 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
   }
   if (kind === "claim_verification_email") {
     if (!data.email || !data.code) throw new Error("Claim verification job is missing an address or code.");
-    const result = await sendMail({
+    const catalog = await deliverCatalogEmail({
+      templateId: "account.card_verify",
       to: data.email,
-      subject: "Verify your Influrios Influencer Card",
-      text: `Your Influrios claim verification code is ${data.code}. Enter it to continue publishing your Influencer Card. This code does not verify your social account.`,
+      vars: {
+        verification_code: data.code,
+        expires_in: "30 minutes",
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      },
+      log: false,
     });
+    if (!catalog.sent && catalog.reason === "paused") throw new Error("Claim verification email is paused.");
+    const result = catalog.sent
+      ? { ok: true as const, smtpResponse: "catalog" }
+      : await sendMail({
+          to: data.email,
+          subject: "Verify your Influrios Influencer Card",
+          text: `Your Influrios claim verification code is ${data.code}. Enter it to continue publishing your Influencer Card. This code does not verify a social account.`,
+        });
     if (!result.ok) throw new Error(result.error);
     const { queuePreferredSms } = await import("@/lib/sms");
     await queuePreferredSms({
@@ -99,11 +141,24 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
     if (!data.email || !data.token) throw new Error("Password reset job is missing an address or token.");
     const origin = getAppOrigin();
     const link = `${origin}/account/reset?token=${encodeURIComponent(data.token)}`;
-    const result = await sendMail({
+    const catalog = await deliverCatalogEmail({
+      templateId: "account.reset",
       to: data.email,
-      subject: "Reset your Influrios password",
-      text: `Reset your Influrios password: ${link}. This link expires in 30 minutes.`,
+      vars: {
+        action_url: link,
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        expires_in: "30 minutes",
+      },
+      log: false,
     });
+    if (!catalog.sent && catalog.reason === "paused") throw new Error("Password reset email is paused.");
+    const result = catalog.sent
+      ? { ok: true as const, smtpResponse: "catalog" }
+      : await sendMail({
+          to: data.email,
+          subject: "Reset your Influrios password",
+          text: `Reset your Influrios password: ${link}. This link expires in 30 minutes.`,
+        });
     if (!result.ok) throw new Error(result.error);
     return { externalId: result.smtpResponse };
   }
@@ -160,14 +215,25 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
     await applyDueShortLinkSchedules();
     return;
   }
+  if (kind === "invitation_followup_sweep") {
+    await runInvitationFollowUpSweep();
+    return;
+  }
+  if (kind === "quote_expiry_sweep") {
+    await runQuoteExpirySweep();
+    return;
+  }
   if (kind === "collab_notification") {
     if (!data.to || !data.subject || !data.text) {
       throw new Error("Collaboration notification job is missing a recipient or copy.");
     }
+    const fromName = data.catalog === "1" ? (await mailSettingsView().catch(() => null))?.fromName ?? "" : "";
     const result = await sendMail({
       to: data.to,
       subject: data.subject,
       text: data.text,
+      html: data.html || undefined,
+      fromName: data.catalog === "1" ? fromName : undefined,
     });
     if (!result.ok) throw new Error(result.error);
     const { queuePreferredSms } = await import("@/lib/sms");
@@ -437,6 +503,76 @@ async function resolveCollabRecipients(input: {
   return [...emails].filter(Boolean);
 }
 
+async function partyEmails(input: { businessName: string; creatorSlug: string; workspaceId?: string | null }) {
+  let businessEmail = "";
+  let influencerEmail = "";
+  if (input.workspaceId?.trim()) {
+    const workspace = await prisma.businessWorkspace.findUnique({
+      where: { id: input.workspaceId.trim() },
+      include: { owner: { select: { email: true } } },
+    });
+    businessEmail = workspace?.owner?.email?.trim().toLowerCase() ?? "";
+  }
+  if (!businessEmail && input.businessName.trim()) {
+    const business = await prisma.businessProfile.findFirst({
+      where: { name: { equals: input.businessName, mode: "insensitive" } },
+      include: { user: { select: { email: true } } },
+    });
+    businessEmail = business?.user.email?.trim().toLowerCase() ?? "";
+  }
+  const creator = await prisma.creator.findUnique({
+    where: { slug: input.creatorSlug },
+    include: { user: { select: { email: true } } },
+  });
+  influencerEmail = creator?.user?.email?.trim().toLowerCase() ?? "";
+  return { businessEmail, influencerEmail };
+}
+
+async function queueCollabNotices(input: {
+  kind: CollabNotificationKind;
+  recipients: string[];
+  legacy: { subject: string; text: string };
+  vars: Record<string, string>;
+  businessEmail: string;
+  influencerEmail: string;
+  fundingId?: string;
+}) {
+  let count = 0;
+  for (const to of input.recipients) {
+    const role = to === input.businessEmail ? "business" : to === input.influencerEmail ? "influencer" : "admin";
+    const catalog = await catalogCollabMessage({ kind: input.kind, role, to, vars: input.vars });
+    if (catalog && "paused" in catalog && catalog.paused) continue;
+    if (catalog && "skipped" in catalog && catalog.skipped) continue;
+    const live = catalog && "html" in catalog ? catalog : null;
+    await prisma.job.create({
+      data: {
+        kind: "collab_notification",
+        status: "queued",
+        payload: live
+          ? {
+              to,
+              subject: live.subject,
+              text: live.text,
+              html: live.html,
+              catalog: "1",
+              templateKey: live.templateId,
+              notificationKind: input.kind,
+              ...(input.fundingId ? { fundingId: input.fundingId } : {}),
+            }
+          : {
+              to,
+              subject: input.legacy.subject,
+              text: input.legacy.text,
+              notificationKind: input.kind,
+              ...(input.fundingId ? { fundingId: input.fundingId } : {}),
+            },
+      },
+    });
+    count += 1;
+  }
+  return count;
+}
+
 /**
  * W3.11 — enqueue Influencer-terminology collaboration emails for a funding event.
  * No-ops when SMTP is unset or no party emails resolve (tests stay quiet).
@@ -485,6 +621,9 @@ export async function notifyCollabFundingEvent(input: {
     input.kind === "dispute_resolved" ||
     input.kind === "dispute_sla_reminder" ||
     input.kind === "payout_failed" ||
+    input.kind === "payout_returned" ||
+    input.kind === "stale_funding" ||
+    input.kind === "ledger_mismatch" ||
     input.kind === "provider_jurisdiction_limitation" ||
     input.kind === "provider_hold_period_warning" ||
     input.kind === "preexisting_relationship_claimed"
@@ -501,23 +640,34 @@ export async function notifyCollabFundingEvent(input: {
     }
   }
 
-  for (const to of recipients) {
-    await prisma.job.create({
-      data: {
-        kind: "collab_notification",
-        status: "queued",
-        payload: {
-          to,
-          subject: rendered.subject,
-          text: rendered.text,
-          notificationKind: input.kind,
-          fundingId: funding.id,
-        },
+  const parties = await partyEmails({
+    businessName: funding.businessName,
+    creatorSlug: funding.creatorSlug,
+    workspaceId: funding.workspaceId,
+  });
+  const count = await queueCollabNotices({
+    kind: input.kind,
+    recipients,
+    legacy: rendered,
+    businessEmail: parties.businessEmail,
+    influencerEmail: parties.influencerEmail,
+    fundingId: funding.id,
+    vars: collabCatalogVars({
+      business: vars.business,
+      influencer: vars.influencer,
+      title: vars.title,
+      milestone: vars.milestone,
+      detail: vars.detail,
+      fundingId: funding.id,
+      amounts: {
+        expected: displayMoney(funding.grossCents),
+        observed: displayMoney(funding.grossCents),
+        payout: input.milestone ? displayMoney(funding.grossCents) : "—",
       },
-    });
-  }
-  if (recipients.length > 0 && input.processNow !== false) await processDueJobs();
-  return { queued: recipients.length > 0, count: recipients.length };
+    }),
+  });
+  if (count > 0 && input.processNow !== false) await processDueJobs();
+  return { queued: count > 0, count };
 }
 
 /** Notify without a funding row (pre-existing claim, jurisdiction block before create). */
@@ -565,22 +715,23 @@ export async function notifyCollabParties(input: {
       if (cleaned && !recipients.includes(cleaned)) recipients.push(cleaned);
     }
   }
-  for (const to of recipients) {
-    await prisma.job.create({
-      data: {
-        kind: "collab_notification",
-        status: "queued",
-        payload: {
-          to,
-          subject: rendered.subject,
-          text: rendered.text,
-          notificationKind: input.kind,
-        },
-      },
-    });
-  }
-  if (recipients.length > 0 && input.processNow !== false) await processDueJobs();
-  return { queued: recipients.length > 0, count: recipients.length };
+  const parties = await partyEmails({ businessName: input.businessName, creatorSlug: input.creatorSlug });
+  const count = await queueCollabNotices({
+    kind: input.kind,
+    recipients,
+    legacy: rendered,
+    businessEmail: parties.businessEmail,
+    influencerEmail: parties.influencerEmail,
+    vars: collabCatalogVars({
+      business: input.businessName,
+      influencer: creator?.displayName || input.creatorSlug,
+      title: input.title,
+      milestone: input.milestone,
+      detail: input.detail,
+    }),
+  });
+  if (count > 0 && input.processNow !== false) await processDueJobs();
+  return { queued: count > 0, count };
 }
 
 /** W3.11 — remind businesses when a review window is about to close. */
@@ -857,7 +1008,7 @@ export async function runFailedPayoutRetrySweep(now = new Date()) {
       .catch(() => undefined);
     await notifyCollabFundingEvent({
       fundingId: milestone.fundingId,
-      kind: "payout_failed",
+      kind: "payout_retry",
       milestone: milestone.title,
       detail: `Provider-safe retry #${milestone.payoutRetryCount + 1} queued (milestone back to approved; awaiting provider payout.released).`,
       processNow: false,
@@ -930,7 +1081,7 @@ export async function runFundingReconciliationSweep(now = new Date()) {
       .catch(() => undefined);
     await notifyCollabFundingEvent({
       fundingId: funding.id,
-      kind: "provider_jurisdiction_limitation",
+      kind: "stale_funding",
       detail: `Stale funding intent still awaiting provider after ${staleHours ?? "default"}h.`,
       processNow: false,
     });
@@ -967,13 +1118,111 @@ export async function runFundingReconciliationSweep(now = new Date()) {
       .catch(() => undefined);
     await notifyCollabFundingEvent({
       fundingId: funding.id,
-      kind: "provider_jurisdiction_limitation",
+      kind: "ledger_mismatch",
       detail: `Ledger/provider mismatch: held ${reconciled.heldCents}¢ / released ${reconciled.releasedCents}¢ / refunded ${reconciled.refundedCents}¢ vs gross ${funding.grossCents}¢.`,
       processNow: false,
     });
   }
   if (flagged > 0) await processDueJobs();
   return { scanned: awaiting.length + held.length, flagged };
+}
+
+export async function runInvitationFollowUpSweep(now = new Date()) {
+  const due = await prisma.creatorInvitation.findMany({
+    where: {
+      followUpAt: { lte: now },
+      claimedAt: null,
+      email: { not: null },
+      status: { in: ["queued", "sent", "opened"] },
+      expiresAt: { gt: now },
+    },
+    take: 40,
+    orderBy: { followUpAt: "asc" },
+  });
+  let sent = 0;
+  for (const invitation of due) {
+    if (!invitation.email) continue;
+    const already = await prisma.invitationEvent.findFirst({
+      where: { invitationId: invitation.id, kind: "follow_up_sent" },
+    });
+    if (already) continue;
+    const result = await deliverCatalogEmail({
+      templateId: "account.claim_followup",
+      to: invitation.email,
+      vars: {
+        first_name: invitation.displayName.split(/\s+/)[0] || invitation.displayName,
+        action_url: `${getAppOrigin().replace(/\/$/, "")}/invite/${invitation.token}`,
+        expires_at: invitation.expiresAt.toISOString().slice(0, 10),
+      },
+    });
+    if (!result.sent && result.reason !== "switch_off") continue;
+    if (!result.sent) {
+      const mailed = await sendMail({
+        to: invitation.email,
+        subject: "Your Influrios Card invitation is still open",
+        text: `Your Influrios Card invitation is still open: ${getAppOrigin().replace(/\/$/, "")}/invite/${invitation.token}`,
+      });
+      if (!mailed.ok) continue;
+    }
+    await prisma.invitationEvent.create({
+      data: { invitationId: invitation.id, kind: "follow_up_sent", actor: "smtp", detail: invitation.email },
+    });
+    sent += 1;
+  }
+  return { scanned: due.length, sent };
+}
+
+export async function runQuoteExpirySweep(now = new Date()) {
+  const horizon = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+  const documents = await prisma.contractDocument.findMany({
+    where: { status: { in: ["draft", "sent"] } },
+    include: { parties: true },
+    orderBy: { updatedAt: "desc" },
+    take: 40,
+  });
+  let sent = 0;
+  for (const document of documents) {
+    const terms = document.termsSnapshotJson;
+    const plan =
+      terms && typeof terms === "object" && "financialPlan" in terms
+        ? (terms as { financialPlan?: { signedQuote?: { validUntil?: unknown } } }).financialPlan
+        : null;
+    const raw = plan?.signedQuote?.validUntil;
+    if (typeof raw !== "string") continue;
+    const until = new Date(raw);
+    if (Number.isNaN(until.getTime()) || until <= now || until > horizon) continue;
+    const already = await prisma.auditLog.findFirst({
+      where: { action: "email_quote_expiring", objectType: "ContractDocument", objectId: document.id },
+    });
+    if (already) continue;
+    const pending = document.parties.filter((party) => party.status === "pending" && party.email.includes("@"));
+    for (const party of pending) {
+      await deliverCatalogEmail({
+        templateId: "contract.quote_expiring",
+        to: party.email,
+        vars: {
+          first_name: party.name.split(/\s+/)[0] || "",
+          collaboration_name: document.title,
+          expires_at: until.toISOString(),
+          quote_version: "signed quote",
+          action_url: `${getAppOrigin().replace(/\/$/, "")}/collaboration/contracts/${document.id}`,
+        },
+      });
+    }
+    if (pending.length) {
+      await prisma.auditLog.create({
+        data: {
+          actor: "system",
+          action: "email_quote_expiring",
+          objectType: "ContractDocument",
+          objectId: document.id,
+          after: { until: until.toISOString(), recipients: pending.length },
+        },
+      });
+      sent += pending.length;
+    }
+  }
+  return { scanned: documents.length, sent };
 }
 
 export async function enqueueFundingReconciliationSweep() {
@@ -1183,7 +1432,7 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
       .catch(() => undefined);
     await notifyCollabFundingEvent({
       fundingId: milestone.fundingId,
-      kind: "milestone_approved",
+      kind: "payout_requested",
       milestone: milestone.title,
       detail: `Provider release requested (${instruction.reference}); awaiting signed payout.released.`,
       processNow: false,

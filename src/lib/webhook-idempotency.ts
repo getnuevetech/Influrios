@@ -126,6 +126,14 @@ export async function applyPlanOnce(input: {
       const { syncCreatorSearch } = await import("@/lib/creator-search");
       await syncCreatorSearch(input.creatorSlug);
     }
+    if (input.userId) {
+      const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { email: true } });
+      if (user?.email) {
+        const { sendBillingNotice } = await import("@/lib/email-live");
+        const templateId = status === "past_due" ? "billing.failed" : status === "canceled" ? "billing.ended" : "billing.paid";
+        await sendBillingNotice({ email: user.email, templateId, planName: input.sku }).catch(() => undefined);
+      }
+    }
     return { applied: true };
   } catch (error) {
     if (isUnique(error)) return { applied: false };

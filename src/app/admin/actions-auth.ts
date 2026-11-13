@@ -174,11 +174,27 @@ export async function actionCreateAdminUser(formData: FormData) {
     const user = await createAdminUser({ email, name, password, roleId });
     const token = issueAdminSetupToken(user.id, 1);
     const setupUrl = `${appOrigin()}/admin/setup?token=${encodeURIComponent(token)}`;
-    const mailed = await sendMail({
+    const { deliverCatalogEmail } = await import("@/lib/email-live");
+    const catalog = await deliverCatalogEmail({
+      templateId: "account.admin_setup",
       to: user.email,
-      subject: "Set up your Influrios admin account",
-      text: `Hi ${user.name},\n\nAn Influrios admin invited you to the operations console.\n\nSet your password with this link:\n${setupUrl}\n\nThe link expires in 7 days and works once.\n`,
-    }).catch(() => ({ ok: false as const, error: "Mail could not be sent" }));
+      vars: {
+        first_name: user.name.split(/\s+/)[0] || user.name,
+        inviter_name: session.email,
+        role_name: roleId || "Admin",
+        expires_at: "7 days",
+        action_url: setupUrl,
+      },
+    }).catch(() => ({ sent: false as const, reason: "render" as const }));
+    const mailed = catalog.sent
+      ? { ok: true as const }
+      : !catalog.sent && catalog.reason === "paused"
+        ? { ok: false as const, error: "Admin setup email is paused" }
+        : await sendMail({
+            to: user.email,
+            subject: "Set up your Influrios admin account",
+            text: `Hi ${user.name},\n\nAn Influrios admin invited you to the operations console.\n\nSet your password with this link:\n${setupUrl}\n\nThe link expires in 7 days and works once.\n`,
+          }).catch(() => ({ ok: false as const, error: "Mail could not be sent" }));
     await writeAccessAudit(session.email, "access.admin_invite", user.id, {
       email: user.email,
       roleId,

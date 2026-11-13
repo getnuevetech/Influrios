@@ -12,6 +12,8 @@ export const SWEEP_JOB_KINDS = [
   "marketplace_application_expire_sweep",
   "recurring_cycle_sweep",
   "short_link_schedule_sweep",
+  "invitation_followup_sweep",
+  "quote_expiry_sweep",
 ] as const;
 
 export type SweepJobKind = (typeof SWEEP_JOB_KINDS)[number];

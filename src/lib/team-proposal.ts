@@ -223,13 +223,40 @@ async function writeTeamMatches(input: {
 }
 
 async function expireDueProposals(now = new Date()) {
-  await prisma.teamProposal.updateMany({
+  const due = await prisma.teamProposal.findMany({
     where: {
       status: { in: ["draft", "sent", "partial"] },
       expiresAt: { lte: now },
     },
+    include: { members: true },
+    take: 20,
+  });
+  if (!due.length) return;
+  await prisma.teamProposal.updateMany({
+    where: { id: { in: due.map((row) => row.id) } },
     data: { status: "expired" },
   });
+  const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
+  const links = liveMailLinks();
+  for (const proposal of due) {
+    for (const member of proposal.members) {
+      const creator = await prisma.creator.findUnique({
+        where: { slug: member.creatorSlug },
+        include: { user: { select: { email: true } } },
+      });
+      if (!creator?.user?.email) continue;
+      await deliverCatalogEmail({
+        templateId: "invite.team_expired",
+        to: creator.user.email,
+        vars: {
+          collaboration_name: proposal.title,
+          team_name: proposal.title,
+          expires_at: proposal.expiresAt ? proposal.expiresAt.toISOString().slice(0, 10) : "—",
+          action_url: `${links.origin}/collaboration/team/${proposal.id}`,
+        },
+      }).catch(() => undefined);
+    }
+  }
 }
 
 export async function createTeamProposal(input: {
@@ -273,6 +300,32 @@ export async function createTeamProposal(input: {
     campaignIntent,
     members: row.members,
   });
+  const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
+  const links = liveMailLinks();
+  const workspace = await prisma.businessWorkspace.findUnique({
+    where: { id: workspaceId },
+    include: { owner: { select: { name: true } } },
+  });
+  for (const member of row.members) {
+    const creator = await prisma.creator.findUnique({
+      where: { slug: member.creatorSlug },
+      include: { user: { select: { email: true } } },
+    });
+    if (!creator?.user?.email) continue;
+    await deliverCatalogEmail({
+      templateId: "invite.team_sent",
+      to: creator.user.email,
+      vars: {
+        first_name: creator.displayName.split(/\s+/)[0] || creator.displayName,
+        sender_name: workspace?.owner?.name || workspace?.name || "A business",
+        team_name: row.title,
+        collaboration_name: row.title,
+        proposed_role: "Influencer",
+        expires_at: row.expiresAt ? row.expiresAt.toISOString().slice(0, 10) : "—",
+        action_url: `${links.origin}/collaboration/team/${row.id}`,
+      },
+    }).catch(() => undefined);
+  }
   return { ok: true as const, id: row.id };
 }
 
@@ -319,6 +372,26 @@ export async function respondToTeamProposal(input: {
   const members = settled.members.map((item) =>
     item.creatorSlug === input.creatorSlug ? { ...item, status: input.decision } : item,
   );
+  const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
+  const links = liveMailLinks();
+  const workspace = await prisma.businessWorkspace.findUnique({
+    where: { id: row.workspaceId },
+    include: { owner: { select: { email: true, name: true } } },
+  });
+  if (workspace?.owner?.email) {
+    const creator = await prisma.creator.findUnique({ where: { slug: input.creatorSlug }, select: { displayName: true } });
+    await deliverCatalogEmail({
+      templateId: input.decision === "accepted" ? "invite.team_accepted" : "invite.team_declined",
+      to: workspace.owner.email,
+      vars: {
+        first_name: (workspace.owner.name ?? "").split(/\s+/)[0] || "",
+        influencer_name: creator?.displayName || input.creatorSlug,
+        collaboration_name: row.title,
+        team_name: row.title,
+        action_url: `${links.origin}/collaboration/team/${row.id}`,
+      },
+    }).catch(() => undefined);
+  }
   return {
     ok: true as const,
     status,
