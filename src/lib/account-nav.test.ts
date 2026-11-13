@@ -38,6 +38,25 @@ describe("settings split", () => {
   });
 });
 
+describe("dashboard influencer card", () => {
+  it("mounts the real card without the contact action and leaves the public card intact", () => {
+    const panel = readFileSync("src/app/creator/dashboard-card.tsx", "utf8");
+    const page = readFileSync("src/app/creator/page.tsx", "utf8");
+    const publicCard = readFileSync("src/app/c/[slug]/page.tsx", "utf8");
+    const cardView = readFileSync("src/components/influencer-card-view.tsx", "utf8");
+    assert.match(page, /DashboardInfluencerCard/);
+    assert.match(panel, /PublicInfluencerCard/);
+    assert.match(panel, /hideCta/);
+    assert.match(panel, /CardPreviewDialog/);
+    assert.equal(panel.includes("actionRecordCardCta"), false);
+    assert.equal(panel.includes("Contact"), false);
+    assert.match(publicCard, /PublicInfluencerCard/);
+    assert.equal(publicCard.includes("hideCta"), false);
+    assert.match(cardView, /actionRecordCardCta/);
+    assert.match(cardView, /hideCta/);
+  });
+});
+
 describe("payout setup label", () => {
   it("names blocked earnings Awaiting payout setup", () => {
     assert.equal(dashboardEarningsLabel(false), "Awaiting payout setup");
