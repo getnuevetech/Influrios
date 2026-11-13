@@ -285,3 +285,16 @@ export function settlementVersionDecision(input: {
 export function activationExceptionForReason(reason: string) {
   return reason === "platform_cannot_serve";
 }
+
+/** A member review stays proposed until both parties accept that same version. */
+export function memberReviewBlocksExecution(input: {
+  status: string | null;
+  proposalJson: unknown;
+  decisionKind: "propose" | "execute" | "executed";
+  sameVersion: boolean;
+}) {
+  const memberReview = Boolean(
+    input.proposalJson && typeof input.proposalJson === "object" && (input.proposalJson as { memberReview?: unknown }).memberReview === true,
+  );
+  return input.sameVersion && input.decisionKind === "execute" && input.status === "proposed" && memberReview;
+}

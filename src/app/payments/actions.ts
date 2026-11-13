@@ -19,6 +19,13 @@ import {
   stopRecurringSeries,
 } from "@/lib/marketplace-ledger";
 import { addDisputeEvidence, cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
+import {
+  acceptMemberSettlement,
+  disputeMemberSettlement,
+  questionMemberSettlement,
+  requestMemberCancellation,
+  type SettlementParty,
+} from "@/lib/member-settlement";
 
 const LOGIN = "/login?next=/payments&gate=payments";
 
@@ -30,6 +37,14 @@ async function requirePaymentsAccount() {
 
 function fail(message: string): never {
   redirect(`/payments?error=${encodeURIComponent(message)}`);
+}
+
+function failDeal(dealId: string, message: string): never {
+  redirect(`/payments?deal=${encodeURIComponent(dealId)}&tab=settlement&error=${encodeURIComponent(message)}`);
+}
+
+function settlementParty(audience: "business" | "creator"): SettlementParty {
+  return audience === "business" ? "business" : "influencer";
 }
 
 /** Public create-deal path is closed — fund only from a signed contract. */
@@ -290,6 +305,79 @@ export async function actionStopSeries(formData: FormData) {
 export async function actionConvertAmbassador() {
   await requirePaymentsAccount();
   fail("Fund from a signed collaboration contract. Open the contract and use Start funding.");
+}
+
+export async function actionRequestCancellation(formData: FormData) {
+  const account = await requirePaymentsAccount();
+  const fundingId = String(formData.get("dealId") ?? "");
+  const access = await assertFundingAccess(account, fundingId);
+  if (!access.ok) failDeal(fundingId, access.error);
+  const result = await requestMemberCancellation({
+    fundingId: access.funding.id,
+    party: settlementParty(access.audience),
+    actor: account.email,
+    reason: String(formData.get("reason") ?? ""),
+    note: String(formData.get("note") ?? ""),
+  });
+  if (!result.ok) failDeal(access.funding.id, result.error);
+  revalidatePath("/payments");
+  redirect(`/payments?deal=${access.funding.id}&tab=settlement&settlement=${result.status}`);
+}
+
+export async function actionAcceptSettlement(formData: FormData) {
+  const account = await requirePaymentsAccount();
+  const fundingId = String(formData.get("dealId") ?? "");
+  const access = await assertFundingAccess(account, fundingId);
+  if (!access.ok) failDeal(fundingId, access.error);
+  const versionNumber = Number(formData.get("versionNumber"));
+  if (!Number.isInteger(versionNumber)) failDeal(access.funding.id, "This proposal version is no longer current. Nothing was refunded.");
+  const result = await acceptMemberSettlement({
+    fundingId: access.funding.id,
+    party: settlementParty(access.audience),
+    actor: account.email,
+    versionNumber,
+  });
+  if (!result.ok) failDeal(access.funding.id, result.error);
+  revalidatePath("/payments");
+  redirect(`/payments?deal=${access.funding.id}&tab=settlement&settlement=${result.both ? "accepted" : "noted"}`);
+}
+
+export async function actionQuestionSettlement(formData: FormData) {
+  const account = await requirePaymentsAccount();
+  const fundingId = String(formData.get("dealId") ?? "");
+  const access = await assertFundingAccess(account, fundingId);
+  if (!access.ok) failDeal(fundingId, access.error);
+  const versionNumber = Number(formData.get("versionNumber"));
+  if (!Number.isInteger(versionNumber)) failDeal(access.funding.id, "This proposal version is no longer current. Nothing was refunded.");
+  const result = await questionMemberSettlement({
+    fundingId: access.funding.id,
+    party: settlementParty(access.audience),
+    actor: account.email,
+    versionNumber,
+    body: String(formData.get("body") ?? ""),
+  });
+  if (!result.ok) failDeal(access.funding.id, result.error);
+  revalidatePath("/payments");
+  redirect(`/payments?deal=${access.funding.id}&tab=settlement&settlement=question`);
+}
+
+export async function actionDisputeSettlement(formData: FormData) {
+  const account = await requirePaymentsAccount();
+  const fundingId = String(formData.get("dealId") ?? "");
+  const access = await assertFundingAccess(account, fundingId);
+  if (!access.ok) failDeal(fundingId, access.error);
+  const versionNumber = Number(formData.get("versionNumber"));
+  if (!Number.isInteger(versionNumber)) failDeal(access.funding.id, "This proposal version is no longer current. Nothing was refunded.");
+  const result = await disputeMemberSettlement({
+    fundingId: access.funding.id,
+    party: settlementParty(access.audience),
+    actor: account.email,
+    versionNumber,
+    note: String(formData.get("note") ?? ""),
+  });
+  if (!result.ok) failDeal(access.funding.id, result.error);
+  revalidatePath("/payments");
+  redirect(`/payments?deal=${access.funding.id}&tab=settlement&settlement=disputed`);
 }
 
 export async function actionOpenDispute(formData: FormData) {
