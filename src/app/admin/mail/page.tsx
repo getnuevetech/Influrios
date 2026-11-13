@@ -236,9 +236,13 @@ export default async function AdminMailPage({ searchParams }: Props) {
 
       <section className="space-y-3">
         <div>
-          <h2 className="font-display text-lg font-bold text-indigo">Templates</h2>
+          <h2 className="font-display text-lg font-bold text-indigo">Older message drafts</h2>
           <p className="mt-1 text-sm text-muted">
-            Variables:{" "}
+            The catalog of 79 emails is on{" "}
+            <Link href="/admin/mail/templates" className="font-semibold text-violet hover:underline">
+              Email templates
+            </Link>
+            . These older drafts are not the live catalog. Variables:{" "}
             {COMM_TEMPLATE_VARIABLES.map((v) => `{{${v.key}}}`).join(", ")}
           </p>
         </div>

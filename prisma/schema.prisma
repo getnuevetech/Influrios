@@ -1524,6 +1524,25 @@ model CommTemplate {
   createdAt   DateTime @default(now())
 }
 
+/// A saved copy of one catalog email. Publishing stores a version. It does not send mail.
+model EmailTemplateRecord {
+  id            String   @id @default(cuid())
+  templateKey   String
+  /// draft | published | superseded
+  kind          String
+  versionNumber Int
+  subject       String
+  preheader     String
+  headline      String
+  bodyJson      Json
+  cta           String   @default("")
+  actor         String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([templateKey, kind])
+}
+
 model ProfileCompletionRule {
   id        String   @id @default(cuid())
   key       String   @unique

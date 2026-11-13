@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import dns from "node:dns/promises";
 import net from "node:net";
 import tls from "node:tls";
@@ -16,6 +17,7 @@ export type MailMessage = {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 };
 
 export type MailSettingsRow = {
@@ -262,6 +264,29 @@ function headerSafe(value: string) {
   return value.replace(/[\r\n]/g, " ").trim().slice(0, 300);
 }
 
+function mailBody(input: { from: string; to: string; subject: string; message: MailMessage }) {
+  const headers = [`From: ${input.from}`, `To: ${input.to}`, `Subject: ${input.subject}`, "MIME-Version: 1.0"];
+  if (!input.message.html) {
+    return [...headers, "Content-Type: text/plain; charset=utf-8", "", dotStuff(input.message.text), ""].join("\r\n");
+  }
+  const boundary = `influrios_${randomBytes(12).toString("hex")}`;
+  return [
+    ...headers,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    dotStuff(input.message.text),
+    `--${boundary}`,
+    "Content-Type: text/html; charset=utf-8",
+    "",
+    dotStuff(input.message.html),
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+}
+
 class SmtpReader {
   private buf = "";
   private waiters: { resolve: (line: string) => void; reject: (error: Error) => void }[] = [];
@@ -499,16 +524,7 @@ export async function deliverMail(
     await command(socket, reader, `MAIL FROM:<${from}>`, [250], "MAIL FROM");
     await command(socket, reader, `RCPT TO:<${to}>`, [250, 251], "RCPT TO");
     await command(socket, reader, "DATA", [354], "DATA");
-    const body = [
-      `From: ${from}`,
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      "MIME-Version: 1.0",
-      "Content-Type: text/plain; charset=utf-8",
-      "",
-      dotStuff(message.text),
-      "",
-    ].join("\r\n");
+    const body = mailBody({ from, to, subject, message });
     socket.write(`${body}\r\n.\r\n`);
     const accepted = await reader.reply();
     expectCode(accepted, [250], "message");
