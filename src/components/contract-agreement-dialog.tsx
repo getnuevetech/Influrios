@@ -51,11 +51,12 @@ export function ContractAgreementDialog({
   closeHref: string;
   signHref: string | null;
 }) {
-  const [tab, setTab] = useState<"overview" | "agreement" | "deliverables">("overview");
+  const [tab, setTab] = useState<"overview" | "fees" | "signatures" | "documents">("overview");
   const tabs = [
     ["overview", "Overview"],
-    ["agreement", "Agreement"],
-    ...(showDeliverables ? [["deliverables", "Deliverables"] as const] : []),
+    ["fees", "Terms and fees"],
+    ["signatures", "Signatures"],
+    ["documents", "Documents"],
   ] as const;
 
   useEffect(() => {
@@ -163,37 +164,73 @@ export function ContractAgreementDialog({
               </section>
             </div>
           ) : null}
-          {tab === "agreement" ? (
-            <div className="rounded-2xl border border-[#E7ECF5] bg-[#FBFCFE] p-4">
-              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-[#1B1464]">
-                {body || "The agreement text is not available yet."}
-              </pre>
+          {tab === "fees" ? (
+            <section className="rounded-2xl border border-[#E7ECF5] p-4">
+              <h3 className="text-sm font-bold text-[#1B1464]">Signed amounts</h3>
+              <p className="mt-1 text-xs text-[#98A2B3]">These figures come from the signed snapshot. A later fee rule does not change them.</p>
+              {amounts.length === 0 ? (
+                <p className="mt-3 text-sm text-[#667085]">Amounts appear here after the agreement records a fee breakdown.</p>
+              ) : (
+                <dl className="mt-2">
+                  {amounts.map((line) => (
+                    <div key={line.label} className={`flex items-center justify-between gap-3 py-2.5 text-sm ${line.emphasis ? "rounded-xl bg-[#F7F4FF] px-3 font-bold text-[#1B1464]" : "text-[#344054]"}`}>
+                      <dt>{line.label}</dt>
+                      <dd>{line.amount}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {showDeliverables ? (
+                <div className="mt-4">
+                  <h3 className="text-sm font-bold text-[#1B1464]">Deliverables</h3>
+                  {deliverables.length === 0 ? (
+                    <p className="mt-2 text-sm text-[#667085]">No deliverable lines are written on this agreement.</p>
+                  ) : (
+                    <ul className="mt-2 space-y-2 text-sm text-[#1B1464]">
+                      {deliverables.map((line) => (
+                        <li key={line} className="rounded-xl bg-[#F8FAFC] px-3 py-2">{line}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+          {tab === "signatures" ? (
+            <section className="rounded-2xl border border-[#E7ECF5] p-4">
+              <h3 className="text-sm font-bold text-[#1B1464]">Signature progress</h3>
+              <p className="mt-1 text-xs text-[#98A2B3]">Fully signed describes signatures only. Funding is a separate status.</p>
+              <ul className="mt-3 space-y-2">
+                {parties.map((party) => (
+                  <li key={party.id} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${party.signed ? "bg-[#E8F8EE] text-[#178A45]" : "bg-[#FFF6E8] text-[#B86E00]"}`}>
+                    <span>{party.name || party.role}</span>
+                    <span>{party.signed ? "Signed" : "Awaiting signature"}</span>
+                  </li>
+                ))}
+              </ul>
               {signHref ? (
                 <Link href={signHref} className="mt-4 inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
-                  Review & sign →
+                  Review and sign
                 </Link>
               ) : null}
-            </div>
+            </section>
           ) : null}
-          {tab === "deliverables" ? (
-            <div className="rounded-2xl border border-[#E7ECF5] p-4">
-              {deliverables.length === 0 ? (
-                <p className="text-sm text-[#667085]">No deliverable lines are written on this agreement.</p>
-              ) : (
-                <ul className="space-y-2 text-sm text-[#1B1464]">
-                  {deliverables.map((line) => (
-                    <li key={line} className="rounded-xl bg-[#F8FAFC] px-3 py-2">
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-              )}
+          {tab === "documents" ? (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-[#E7ECF5] bg-[#FBFCFE] p-4">
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-[#1B1464]">
+                  {body || "The agreement text is not available yet."}
+                </pre>
+              </div>
+              <a href={downloadHref} className="inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
+                {downloadLabel}
+              </a>
               {deliverablesHref ? (
-                <Link href={deliverablesHref} className="mt-4 inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
-                  Open deliverables
+                <Link href={deliverablesHref} className="ml-2 inline-flex rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#6D4AFF]">
+                  Open workspace
                 </Link>
               ) : (
-                <p className="mt-3 text-xs text-[#98A2B3]">Deliverable uploads open after this agreement is funded.</p>
+                <p className="text-xs text-[#98A2B3]">Deliverable uploads open after this agreement is funded.</p>
               )}
             </div>
           ) : null}

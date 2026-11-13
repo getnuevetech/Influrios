@@ -41,7 +41,7 @@ export function MarketingHeader({
               Login
             </Link>
           )}
-          <Link href={active === "business" ? "/login?next=/business/home" : "/claim"} className="btn-primary !px-4 !py-2 text-sm">
+          <Link href={active === "business" ? "/login?next=/business/home" : "/signup"} className="btn-primary !px-4 !py-2 text-sm">
             {active === "business" ? "Start Free" : "Get Started"}
           </Link>
         </div>

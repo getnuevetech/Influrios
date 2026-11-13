@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { actionAssignAiFunction, actionSaveAiProvider } from "@/app/admin/ai/actions";
+import { actionSaveAiProvider } from "@/app/admin/ai/actions";
+import { AiFeatureTable } from "@/components/admin/ai-feature-table";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { aiFunctionRoutes, listProviders } from "@/lib/providers";
@@ -40,36 +41,19 @@ export default async function AdminAiPage({ searchParams }: Props) {
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
       {dbError ? <p className="mt-4 text-sm text-amber-800">The database is unavailable.</p> : null}
 
-      <section className="mt-6 space-y-3">
-        <h2 className="font-display text-lg font-bold text-indigo">Functions</h2>
-        {functions.map((fn) => (
-          <form key={fn.key} action={actionAssignAiFunction} className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
-            <input type="hidden" name="functionKey" value={fn.key} />
-            <p className="font-semibold text-indigo">{fn.label}</p>
-            <p className="mt-1 text-sm text-muted">{fn.description}</p>
-            <p className="mt-1 text-xs text-muted">
-              Fallback: {fn.fallback}. Now: {fn.decision.mode === "provider" ? fn.decision.providerCode : "platform fallback"}.
-            </p>
-            <label className="mt-3 block text-sm font-semibold text-indigo">
-              Assigned provider
-              <select name="providerId" defaultValue={fn.providerId} disabled={!canEdit} className={inputClass}>
-                <option value="">Platform fallback</option>
-                {providers.map((provider) => (
-                  <option key={provider.id} value={provider.id}>
-                    {provider.name} ({provider.code})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-indigo">
-              <input type="checkbox" name="enabled" value="1" defaultChecked={fn.enabled} disabled={!canEdit} />
-              Feature on
-            </label>
-            <p className="mt-1 text-xs text-muted">Saving a provider does not turn this function on. A blank model stays on the deterministic fallback.</p>
-            {canEdit ? <button type="submit" className="btn-primary mt-3 w-fit">Save assignment</button> : null}
-          </form>
-        ))}
-      </section>
+      <AiFeatureTable
+        canEdit={canEdit}
+        providers={providers.map((provider) => ({ id: provider.id, name: provider.name, code: provider.code, model: provider.model }))}
+        features={functions.map((fn) => ({
+          key: fn.key,
+          label: fn.label,
+          description: fn.description,
+          fallback: fn.fallback,
+          providerId: fn.providerId,
+          enabled: fn.enabled,
+          mode: fn.decision.mode,
+        }))}
+      />
 
       <section className="mt-8 space-y-4">
         <h2 className="font-display text-lg font-bold text-indigo">Providers</h2>

@@ -67,7 +67,7 @@ export function AdminAccessLevelsView({
       ? { mode: "view", roleId: linked.id, baseRoleId: null }
       : null,
   );
-  const [step, setStep] = useState<"permissions" | "review">("permissions");
+  const [step, setStep] = useState<"basics" | "permissions" | "review">("basics");
   const [bucketId, setBucketId] = useState(BUCKETS[0]!.id);
   const [permQuery, setPermQuery] = useState("");
   const [name, setName] = useState(linked?.name ?? "");
@@ -109,7 +109,7 @@ export function AdminAccessLevelsView({
 
   function openDialog(next: DialogState, source?: AccessRoleCard | null) {
     setDialog(next);
-    setStep("permissions");
+    setStep("basics");
     setBucketId(BUCKETS[0]!.id);
     setPermQuery("");
     setName(next.mode === "create" ? (source ? `${source.name} copy` : "") : source?.name ?? "");
@@ -316,6 +316,7 @@ export function AdminAccessLevelsView({
               </button>
             </div>
 
+            {step === "basics" ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="block text-[13px] font-semibold text-indigo">
                 Role name
@@ -337,9 +338,10 @@ export function AdminAccessLevelsView({
                 />
               </label>
             </div>
+            ) : null}
 
             <div className="mt-4 flex gap-4 border-b border-[#EEF2FF]">
-              {(["permissions", "review"] as const).map((id) => (
+              {(["basics", "permissions", "review"] as const).map((id) => (
                 <button
                   key={id}
                   type="button"
@@ -348,7 +350,7 @@ export function AdminAccessLevelsView({
                     step === id ? "border-violet text-violet" : "border-transparent text-muted"
                   }`}
                 >
-                  {id === "permissions" ? "Permissions" : "Review"}
+                  {id === "basics" ? "Basics" : id === "permissions" ? "Permissions" : "Review changes"}
                 </button>
               ))}
             </div>
@@ -488,10 +490,12 @@ export function AdminAccessLevelsView({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => (step === "review" ? setStep("permissions") : setDialog(null))}
+                  onClick={() =>
+                    step === "review" ? setStep("permissions") : step === "permissions" ? setStep("basics") : setDialog(null)
+                  }
                   className="rounded-full border border-[#E4EBFF] px-4 py-2 text-[13px] font-semibold text-indigo"
                 >
-                  {step === "review" ? "Back" : "Cancel"}
+                  {step === "basics" ? "Cancel" : "Back"}
                 </button>
                 {readOnly && canManageRoles && activeRole && !activeRole.system ? (
                   <button
@@ -509,6 +513,11 @@ export function AdminAccessLevelsView({
                     className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white"
                   >
                     Duplicate as custom role
+                  </button>
+                ) : null}
+                {!readOnly && step === "basics" ? (
+                  <button type="button" onClick={() => setStep("permissions")} className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white">
+                    Next
                   </button>
                 ) : null}
                 {!readOnly && step === "permissions" ? (

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { InvitationReview } from "@/components/account/invitation-review";
 import { IconCalendar, IconCheck, IconHandshake, IconMail } from "@/components/icons";
 import { agreementPresentation, PIPELINE_STAGES, type loadCreatorHub } from "@/lib/collaboration-hub";
 import { applicationIsInvitation, applicationIsOpenPipeline } from "@/lib/marketplace-listings";
@@ -365,17 +366,19 @@ export function CreatorCollaborations({
           {invitations.length + openProposals.length === 0 && hub.status.pending === 0 ? (
             <p className="mt-3 text-sm text-[#667085]">No invitations are waiting. Applications you send stay in Applications sent.</p>
           ) : (
-            <ul className="mt-3 divide-y divide-[#EEF2F7]">
-              {invitations.map((row) => (
-                <InviteRow
-                  key={row.id}
-                  brand={row.requestBrand || "Invitation"}
-                  title={row.opportunityLookingFor || row.note || "Review the invitation"}
-                  meta={shortDate(row.createdAt) ? `Received ${shortDate(row.createdAt)}` : "Needs your response"}
-                  href={`/collaboration/applications/${row.id}`}
-                  action="View invitation →"
-                />
-              ))}
+            <>
+              <InvitationReview
+                rows={invitations.map((row) => ({
+                  id: row.id,
+                  brand: row.requestBrand || "Invitation",
+                  title: row.opportunityLookingFor || row.note || "Review the invitation",
+                  deliverables: row.requestDeliverables || row.deliverables || "",
+                  budget: [row.requestCurrency, row.requestBudget].filter(Boolean).join(" "),
+                  deadline: row.responseDeadline || "",
+                  statuses: row.nextStatuses,
+                }))}
+              />
+              <ul className="mt-3 divide-y divide-[#EEF2F7]">
               {openProposals.map((proposal) => (
                 <InviteRow
                   key={proposal.id}
@@ -394,6 +397,7 @@ export function CreatorCollaborations({
                 </li>
               ) : null}
             </ul>
+              </>
           )}
         </section>
       ) : null}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { actionRegister } from "@/app/account/actions";
 import { actionCreateDraft } from "@/app/claim/actions";
+import { AccountAccessFrame } from "@/components/auth/access-frame";
 import { PasswordField } from "@/components/password-field";
 import { IconFacebook, IconInstagram, IconTikTok, IconYouTube, IconX } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
@@ -46,21 +47,8 @@ export default async function ClaimPage({ searchParams }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="flex items-center justify-between px-4 py-4 sm:px-8">
-        <Link href="/" className="font-display text-xl font-bold text-[#1B1464]">
-          <span className="mr-2 inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white">∞</span>
-          Influrios
-        </Link>
-        <p className="text-sm text-[#667085]">
-          Already have an account?{" "}
-          <Link href="/login?next=/creator" className="font-semibold text-[#6D4AFF]">
-            Log in
-          </Link>
-        </p>
-      </header>
-      <div className="mx-auto grid max-w-6xl items-start gap-10 px-4 py-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-8">
-        <div>
+    <AccountAccessFrame actionHref="/login?next=/creator" actionLabel="Log in">
+      <div className="order-2 lg:order-1">
           <div className="mx-auto max-w-sm rounded-[28px] bg-gradient-to-br from-[#5B4DFF] to-[#8B5CF6] p-6 text-center text-white shadow-lg">
             <span className="mx-auto inline-flex h-28 w-28 overflow-hidden rounded-full border-4 border-white/70 bg-white/20">
               {portrait ? (
@@ -120,8 +108,8 @@ export default async function ClaimPage({ searchParams }: Props) {
           {params.error ? <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">{params.error}</p> : null}
         </div>
 
-        <div>
-          <h1 className="font-display text-4xl font-bold text-[#1B1464]">Create your Influrios account</h1>
+        <div className="order-1 rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-[#E7ECF5] lg:order-2">
+          <h1 className="font-display text-4xl font-bold text-[#1B1464]">Create your account</h1>
           <p className="mt-2 text-sm text-[#667085]">Start with email. Connect your socials anytime.</p>
           {account ? (
             <div className="mt-6 space-y-3">
@@ -182,9 +170,11 @@ export default async function ClaimPage({ searchParams }: Props) {
             <Link href="/discover" className="mt-3 inline-flex text-sm font-semibold text-[#6D4AFF]">
               Browse creators
             </Link>
+            <Link href="/login?next=/creator" className="mt-3 block text-sm font-semibold text-[#6D4AFF]">
+              Log in
+            </Link>
           </div>
         </div>
-      </div>
-    </div>
+    </AccountAccessFrame>
   );
 }

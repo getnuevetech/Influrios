@@ -868,9 +868,13 @@ function PaymentDialog({
       }
       cancellation={
         <div className="space-y-3 text-sm text-[#344054]">
-          <p>Review cancellation explains the proposal. This page does not refund a funded collaboration.</p>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-display text-lg font-bold text-[#1B1464]">Review cancellation proposal</h3>
+            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">{settlementStatus ?? "No open proposal"}</span>
+          </div>
+          <p>Accepting this proposal does not confirm a refund. Cancellation status and refund status update separately.</p>
           {settlement ? (
-            <dl className="space-y-2">
+            <dl className="space-y-2 rounded-2xl border border-[#E7ECF5] p-4">
               <div className="flex justify-between gap-3">
                 <dt className="text-[#667085]">Status</dt>
                 <dd className="font-semibold text-[#1B1464]">{settlementStatus ?? "proposed"}</dd>
@@ -904,8 +908,9 @@ function PaymentDialog({
               )}
             </dl>
           ) : (
-            <p className="text-[#667085]">No cancellation proposal is open.</p>
+            <p className="text-[#667085]">No cancellation proposal is open. Requesting a review does not move money.</p>
           )}
+          <p className="text-xs text-[#98A2B3]">If a payout is still with the provider, the proposal waits for that outcome before a refund can be reserved.</p>
         </div>
       }
       documents={

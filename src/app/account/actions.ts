@@ -40,7 +40,11 @@ export async function actionRegister(formData: FormData) {
   const next = safeNextPath(String(formData.get("next") ?? ""));
   const email = String(formData.get("email") ?? "");
   const requestedReturn = String(formData.get("returnTo") ?? "");
-  const returnTo = requestedReturn === "/claim" || requestedReturn === "/register" ? requestedReturn : "/register";
+  const returnTo =
+    requestedReturn === "/claim" || requestedReturn === "/register" || requestedReturn === "/signup"
+      ? requestedReturn
+      : "/signup";
+  const role = String(formData.get("role") ?? "") === "BUSINESS" ? "BUSINESS" : "CREATOR";
   if (formData.get("consent") !== "on") {
     back(returnTo, "Consent is required to create an account.", next);
   }
@@ -55,6 +59,7 @@ export async function actionRegister(formData: FormData) {
       password: String(formData.get("password") ?? ""),
       source: "register",
       ip: ip === "unknown" ? null : ip,
+      role,
     });
     const jar = await cookies();
     const shortLinkId = jar.get(REFERRAL_COOKIE)?.value ?? "";
@@ -73,7 +78,9 @@ export async function actionRegister(formData: FormData) {
     await recordAuthFailure("register", ip, email);
     back(returnTo, error instanceof Error ? error.message : "Could not register.", next);
   }
-  redirect(`/account/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(next)}`);
+  const verifyNext =
+    role === "BUSINESS" && (next === "/creator" || next.startsWith("/creator?")) ? "/business" : next;
+  redirect(`/account/verify?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(verifyNext)}`);
 }
 
 export async function actionLogin(formData: FormData) {

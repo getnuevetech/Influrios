@@ -120,6 +120,11 @@ export function CreatorOpportunities({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 text-sm font-semibold">
+        <Link href="/collaboration/hub?view=collaborations&tab=invitations" className="rounded-full bg-white px-3 py-1.5 text-[#667085]">Invited</Link>
+        <span className="rounded-full bg-[#F3EEFF] px-3 py-1.5 text-[#6D4AFF]">Discover</span>
+        <Link href="/collaboration/hub?view=collaborations&tab=applications" className="rounded-full bg-white px-3 py-1.5 text-[#667085]">Applications</Link>
+      </div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[2rem] font-bold leading-none text-[#1B1464]">Opportunities</h1>

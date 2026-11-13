@@ -48,20 +48,39 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
     plan: funding.feeSnapshotJson,
   });
 
+  const funded = funding.status === "held" || funding.status === "completed";
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-      <div>
+    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <aside className="space-y-4">
         <div className="flex flex-wrap gap-4">
           <Link href="/payments" className="text-sm font-semibold text-violet hover:underline">
             ← Payments
           </Link>
           {contract ? (
             <Link href={`/collaboration/contracts/${contract.id}`} className="text-sm font-semibold text-violet hover:underline">
-              View contract
+              Agreement
             </Link>
           ) : null}
         </div>
-        <h1 className="mt-2 font-display text-3xl font-bold text-indigo">{funding.title}</h1>
+        <div>
+          <h1 className="font-display text-3xl font-bold text-indigo">{funding.title}</h1>
+          <p className="mt-2 text-sm font-semibold text-[#6D4AFF]">{funded ? "Funded" : "Waiting for funding"}</p>
+          <p className="mt-1 text-xs text-[#667085]">
+            {business ? "Next actor: business reviews a submitted version." : "Next actor: influencer submits the next version."}
+          </p>
+        </div>
+        <ol className="space-y-2">
+          {funding.milestones.map((milestone, index) => (
+            <li key={milestone.id} className="rounded-2xl border border-[#E7ECF5] bg-white px-3 py-2 text-sm">
+              <p className="font-semibold text-[#1B1464]">{index + 1}. {milestone.title}</p>
+              <p className="text-xs text-[#667085]">{milestoneWorkLabel(milestone.status)}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="text-xs text-[#98A2B3]">Approval and payout are separate statuses. A failed payout does not undo an approved version.</p>
+      </aside>
+      <div className="space-y-6">
+      <div>
         <p className="mt-2 text-sm text-muted">
           {funding.businessName} · {funding.status.replaceAll("_", " ")}
           {money.lines.map((line) => ` · ${line.label} ${formatMoney(line.amountCents, funding.currency)}`).join("")}
@@ -188,6 +207,7 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
           </section>
         );
       })}
+      </div>
     </div>
   );
 }

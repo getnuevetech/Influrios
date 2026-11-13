@@ -14,7 +14,7 @@ export function GuestGateBanner({ copy, next }: { copy: string; next: string }) 
             Sign in
           </Link>
           <Link
-            href={`/register?next=${encodeURIComponent(next)}`}
+            href={`/signup?next=${encodeURIComponent(next)}`}
             className="btn-primary !px-4 !py-2 text-sm"
           >
             Create account
