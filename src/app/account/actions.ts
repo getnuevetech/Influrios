@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isDefaultMemberHome, safeNextPath } from "@/lib/account-policy";
+import { loginDestination, recipientEmailForReturn } from "@/lib/invite-return";
 import {
   accountEmailMatches,
   clearAccountSession,
@@ -106,7 +107,14 @@ export async function actionLogin(formData: FormData) {
     await recordAuthFailure("account-login", ip, email);
     back("/login", coded.message || "Could not log in.", next);
   }
-  const destination = isDefaultMemberHome(next) ? homePathForRole(user?.role) : next;
+  const fallback = homePathForRole(user?.role);
+  const requested = isDefaultMemberHome(next) ? fallback : next;
+  const destination = loginDestination({
+    next: requested,
+    accountEmail: user?.email ?? email,
+    recipientEmail: await recipientEmailForReturn(requested),
+    fallback,
+  });
   redirect(destination);
 }
 
@@ -135,7 +143,14 @@ export async function actionVerifyEmail(formData: FormData) {
   if (!user?.passwordHash) {
     redirect(`/account/password?next=${encodeURIComponent(isDefaultMemberHome(next) ? homePathForRole(user?.role) : next)}`);
   }
-  const destination = isDefaultMemberHome(next) ? homePathForRole(user?.role) : next;
+  const fallback = homePathForRole(user?.role);
+  const requested = isDefaultMemberHome(next) ? fallback : next;
+  const destination = loginDestination({
+    next: requested,
+    accountEmail: user.email,
+    recipientEmail: await recipientEmailForReturn(requested),
+    fallback,
+  });
   // First verification: send incomplete profiles to edit once; login later uses the dashboard.
   if (destination === "/creator") {
     redirect(`${destination}?welcome=1`);
@@ -211,7 +226,15 @@ export async function actionSetPassword(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not save password.";
     redirect(`/account/password?next=${encodeURIComponent(next)}&error=${encodeURIComponent(message)}`);
   }
-  redirect(next);
+  const fallback = homePathForRole(session.role);
+  redirect(
+    loginDestination({
+      next,
+      accountEmail: session.email,
+      recipientEmail: await recipientEmailForReturn(next),
+      fallback,
+    }),
+  );
 }
 
 export async function actionLogout(formData?: FormData) {
