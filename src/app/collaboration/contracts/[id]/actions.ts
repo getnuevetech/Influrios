@@ -60,11 +60,18 @@ export async function actionPostContractMessage(formData: FormData) {
     viewerPartyId: party?.id,
     admin: admin ? { roleId: admin.roleId, permissions: admin.permissions } : null,
   });
+  const returnTo = String(formData.get("returnTo") ?? "");
+  const funding = await import("@/lib/db").then(({ prisma }) =>
+    prisma.contractDocument.findUnique({ where: { id: documentId }, select: { fundingId: true } }),
+  );
+  const workspace = funding?.fundingId ? `/collaboration/work/${funding.fundingId}?tab=messages` : "";
+  const back = returnTo === workspace ? workspace : `/collaboration/contracts/${documentId}`;
   if (!result.ok) {
-    redirect(`/collaboration/contracts/${documentId}?error=${encodeURIComponent(result.error)}`);
+    redirect(`${back}${back.includes("?") ? "&" : "?"}error=${encodeURIComponent(result.error)}`);
   }
   revalidatePath(`/collaboration/contracts/${documentId}`);
+  if (funding?.fundingId) revalidatePath(`/collaboration/work/${funding.fundingId}`);
   revalidatePath("/creator/messages");
   revalidatePath("/account");
-  redirect(`/collaboration/contracts/${documentId}?sent=1`);
+  redirect(`${back}${back.includes("?") ? "&" : "?"}sent=1`);
 }

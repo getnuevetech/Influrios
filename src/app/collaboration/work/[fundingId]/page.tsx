@@ -5,6 +5,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { assertFundingAccess } from "@/lib/funding-access";
 import { VersionReview } from "@/components/version-review";
 import { ReleaseStep } from "@/app/collaboration/work/[fundingId]/release-step";
+import { WorkspaceMessages } from "@/app/collaboration/work/[fundingId]/messages-panel";
 import { milestoneWorkLabel, visibleSubmissions } from "@/lib/milestone-delivery";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
@@ -15,7 +16,7 @@ export const metadata = { title: "Deliverables" };
 
 type Props = {
   params: Promise<{ fundingId: string }>;
-  searchParams: Promise<{ error?: string; submitted?: string; revised?: string; approved?: string; version?: string; release?: string }>;
+  searchParams: Promise<{ error?: string; submitted?: string; revised?: string; approved?: string; version?: string; release?: string; tab?: string; sent?: string }>;
 };
 
 export default async function CollaborationWorkPage({ params, searchParams }: Props) {
@@ -73,10 +74,10 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
         <div>
           <h1 className="font-display text-3xl font-bold text-indigo">{funding.title}</h1>
           <nav className="mt-3 flex flex-wrap gap-2 text-sm font-semibold" aria-label="Workspace">
-            <a href="#milestones" className="rounded-full bg-lavender px-3 py-2">Milestones</a>
+            <a href="#milestones" className={`rounded-full px-3 py-2 ${query.tab === "messages" ? "" : "bg-lavender"}`}>Milestones</a>
             <a href="#files" className="rounded-full px-3 py-2">Files</a>
             <Link href={contract ? `/collaboration/contracts/${contract.id}` : "/collaboration/contracts"} className="rounded-full px-3 py-2">Brief</Link>
-            <span className="rounded-full px-3 py-2 text-muted">Messages</span>
+            <a href="#messages" className={`rounded-full px-3 py-2 ${query.tab === "messages" ? "bg-lavender" : ""}`}>Messages</a>
           </nav>
           <p className="mt-2 text-sm font-semibold text-[#6D4AFF]">{funded ? "Funded" : "Waiting for funding"}</p>
           <p className="mt-1 text-xs text-[#667085]">
@@ -110,6 +111,7 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
       {query.submitted ? <p className="text-sm font-semibold text-emerald-700">Version submitted.</p> : null}
       {query.revised ? <p className="text-sm font-semibold text-emerald-700">Revision requested on the latest version.</p> : null}
       {query.approved ? <p className="text-sm font-semibold text-emerald-700">That version was approved. Payout confirmation stays separate.</p> : null}
+      {query.sent ? <p className="text-sm font-semibold text-emerald-700">Message sent. It does not move money.</p> : null}
       {query.error ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">{query.error}</p> : null}
       {releaseMilestone && Number.isInteger(releaseVersion) ? (
         <ReleaseStep
@@ -124,6 +126,7 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
         />
       ) : null}
 
+      <div id="milestones" className="space-y-6">
       {funding.milestones.map((milestone) => {
         const rows = visibleSubmissions(milestone.submissions, access.audience, access.actorSlug);
         const openDispute = funding.disputes.find((row) => row.milestoneId === milestone.id || row.milestoneId == null);
@@ -208,6 +211,9 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
           </section>
         );
       })}
+      </div>
+      <div id="files" />
+      <WorkspaceMessages fundingId={funding.id} />
       </div>
     </div>
   );

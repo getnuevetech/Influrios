@@ -2,7 +2,7 @@ import { actionSaveRouteDraft } from "@/app/admin/payment-standard/actions";
 
 export function RouteDraftForm() {
   return (
-    <form data-screen="A01" action={actionSaveRouteDraft} className="mx-auto mt-6 max-w-5xl space-y-3 rounded-2xl border border-border bg-white p-5">
+    <form action={actionSaveRouteDraft} className="space-y-3 rounded-2xl border border-border bg-white p-5">
       <h2 className="font-display text-xl font-bold text-indigo">New route version</h2>
       <p className="text-sm text-muted">This creates a draft. It does not reroute held money. Webhooks, refunds, and reconciliation stay available when collections are off.</p>
       <div className="grid gap-3 sm:grid-cols-2">

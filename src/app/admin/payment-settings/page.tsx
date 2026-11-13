@@ -12,7 +12,7 @@ import {
   type PaymentSettingsSection,
 } from "@/app/admin/payment-settings/owner";
 import { PaymentSwitchesPanel } from "@/app/admin/payment-switches/switches-panel";
-import { RouteDraftForm } from "@/app/admin/payment-settings/route-draft-form";
+import { RouteVersionPanel } from "@/app/admin/payment-settings/route-version-panel";
 import { TaxPoliciesPanel } from "@/app/admin/payment-settings/tax-panel";
 import { canAccessModule, getAdminSession } from "@/lib/admin-auth";
 
@@ -84,7 +84,7 @@ export default async function PaymentSettingsPage({
         <>
           <CountryRoutesPanel searchParams={panelParams} canAddCountry={canFinance} />
           {canFinance ? <AdminCorridorsPanel searchParams={panelParams} /> : null}
-          {canFinance ? <RouteDraftForm /> : null}
+          {canFinance ? <RouteVersionPanel routeId={typeof params.route === "string" ? params.route : undefined} routeTab={typeof params.routeTab === "string" ? params.routeTab : undefined} /> : null}
         </>
       ) : null}
       {section === "fees" ? (

@@ -25,9 +25,9 @@ export async function actionSaveRouteDraft(formData: FormData) {
     releasesEnabled: formData.get("releasesEnabled") === "on",
     evidence: String(formData.get("evidence") ?? ""),
   });
-  const error = saved.ok ? "" : saved.error;
   revalidatePath("/admin/payment-settings");
-  redirect(`/admin/payment-settings?section=routes${error ? `&error=${encodeURIComponent(error)}` : "&saved=route"}`);
+  if (!saved.ok) redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(saved.error)}`);
+  redirect(`/admin/payment-settings?section=routes&saved=route&route=${saved.id}&routeTab=overview`);
 }
 
 export async function actionSaveTaxPolicy(formData: FormData) {
