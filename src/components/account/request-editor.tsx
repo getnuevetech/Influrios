@@ -115,18 +115,18 @@ export function RequestEditor(props: {
       {props.saved === "draft" ? <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Draft saved. Nothing was sent.</p> : null}
       {block ? <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">{block}</p> : null}
 
-      <div className={step === 0 ? "mt-4 grid gap-4" : "hidden"}>
+      <div hidden={step !== 0} className="mt-4 grid gap-4">
         <label className="text-sm font-semibold text-indigo">
           Campaign title
-          <input name="title" value={title} onChange={(event) => setTitle(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
+          <input name="title" required value={title} onChange={(event) => setTitle(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
         </label>
         <label className="text-sm font-semibold text-indigo">
           Objective
-          <textarea name="goal" rows={3} value={goal} onChange={(event) => setGoal(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
+          <textarea name="goal" required rows={3} value={goal} onChange={(event) => setGoal(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
         </label>
         <label className="text-sm font-semibold text-indigo">
           Deliverables
-          <textarea name="deliverables" rows={3} value={deliverables} onChange={(event) => setDeliverables(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
+          <textarea name="deliverables" required rows={3} value={deliverables} onChange={(event) => setDeliverables(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
         </label>
         <label className="text-sm font-semibold text-indigo">
           Specialty
@@ -139,7 +139,7 @@ export function RequestEditor(props: {
         </label>
       </div>
 
-      <div className={step === 1 ? "mt-4 space-y-4" : "hidden"}>
+      <div hidden={step !== 1} className="mt-4 space-y-4">
         <fieldset className="grid gap-3 sm:grid-cols-2">
           <label className={`rounded-2xl border p-4 text-sm ${mode === "private" ? "border-[#6D4AFF] bg-[#F8F6FF]" : "border-[#E4E9F5]"}`}>
             <input type="radio" checked={mode === "private"} onChange={() => setMode("private")} className="accent-[#6D4AFF]" />
@@ -192,11 +192,11 @@ export function RequestEditor(props: {
         </div>
       </div>
 
-      <div className={step === 2 ? "mt-4 grid gap-4 sm:grid-cols-2" : "hidden"}>
+      <div hidden={step !== 2} className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="text-sm font-semibold text-indigo sm:col-span-2">
           {mode === "public" ? "Public budget (estimate)" : "Proposed gross per influencer"}
           <span className="mt-1 flex gap-2">
-            <input name="budget" inputMode="decimal" value={budget} onChange={(event) => setBudget(event.target.value)} placeholder="1,000" className="w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
+            <input name="budget" required inputMode="decimal" value={budget} onChange={(event) => setBudget(event.target.value)} placeholder="1,000" className="w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
             <select name="budgetCurrency" defaultValue={props.currency} className="rounded-xl border border-[#E4E9F5] px-2 py-2 font-normal">
               {props.currencies.map((code) => (
                 <option key={code}>{code}</option>
@@ -219,11 +219,11 @@ export function RequestEditor(props: {
         </label>
         <label className="text-sm font-semibold text-indigo">
           Respond by
-          <input name="responseDeadline" type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
+          <input name="responseDeadline" required type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
         </label>
       </div>
 
-      <div className={step === 3 ? "mt-4 space-y-3 text-sm" : "hidden"}>
+      <div hidden={step !== 3} className="mt-4 space-y-3 text-sm">
         <dl className="divide-y divide-[#EEF2F7] rounded-2xl border border-[#E7ECF5]">
           <div className="flex justify-between gap-3 px-4 py-3"><dt className="text-[#667085]">Brief</dt><dd className="font-semibold text-[#1B1464]">{title || "Untitled"}</dd></div>
           <div className="flex justify-between gap-3 px-4 py-3"><dt className="text-[#667085]">Visibility</dt><dd className="font-semibold text-[#1B1464]">{mode === "private" ? "Private invitations" : "Public opportunity"}</dd></div>
