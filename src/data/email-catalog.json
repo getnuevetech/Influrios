@@ -1,0 +1,2706 @@
+{
+  "schema_version": 1,
+  "brand": "Influrios",
+  "templates": [
+    {
+      "id": "account.verify",
+      "group": "account",
+      "audience": "Account holder",
+      "trigger": "New verification challenge or explicit resend",
+      "subject": "Your Influrios verification code",
+      "preheader": "Confirm your email address to continue.",
+      "title": "Verify your email",
+      "body": [
+        "Enter this code in Influrios to confirm your email address.",
+        "It expires in {{expires_in}}. Never share this code. Influrios will not ask you to send it by email or message.",
+        "If you did not request this code, you can ignore this email."
+      ],
+      "cta": "",
+      "cta_url": null,
+      "facts": [
+        [
+          "Verification code",
+          "{{verification_code}}"
+        ],
+        [
+          "Expires",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Current inventory says 30 minutes. Use actual challenge expiry; suppress expired or superseded codes. Email verification does not verify a social account.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "expires_at",
+        "expires_in",
+        "verification_code"
+      ]
+    },
+    {
+      "id": "account.card_verify",
+      "group": "account",
+      "audience": "Card claimant",
+      "trigger": "Card claim email challenge issued",
+      "subject": "Verify your email for your Influrios Card",
+      "preheader": "One more step to continue claiming your card.",
+      "title": "Continue claiming your card",
+      "body": [
+        "Enter this code in the card claim screen to confirm access to this email address.",
+        "This step verifies your email. It does not verify ownership of a social media account or publish your card.",
+        "If you did not start this request, you can ignore this email."
+      ],
+      "cta": "",
+      "cta_url": null,
+      "facts": [
+        [
+          "Verification code",
+          "{{verification_code}}"
+        ],
+        [
+          "Expires",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Use actual card challenge expiry; do not inherit account OTP lifetime unless implementation matches.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "expires_at",
+        "verification_code"
+      ]
+    },
+    {
+      "id": "account.reset",
+      "group": "account",
+      "audience": "Account holder",
+      "trigger": "Valid password reset request",
+      "subject": "Reset your Influrios password",
+      "preheader": "Your password reset link expires in {{expires_in}}.",
+      "title": "Choose a new password",
+      "body": [
+        "We received a request to reset your Influrios password. Use the button below to choose a new one.",
+        "If you did not request this, ignore this email. Your password will stay the same unless you complete the reset."
+      ],
+      "cta": "Reset password",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Link expires",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "30 minutes in inventory. Single-use token, rate limits, neutral request response. No automatic login or change on GET.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "expires_at",
+        "expires_in"
+      ]
+    },
+    {
+      "id": "account.admin_setup",
+      "group": "account",
+      "audience": "Invited admin",
+      "trigger": "Authorized admin invitation committed",
+      "subject": "Set up your Influrios admin account",
+      "preheader": "You have been invited to join the Influrios admin team.",
+      "title": "Your admin invitation",
+      "body": [
+        "{{inviter_name}} invited you to join the Influrios admin team with the role shown below. Set up your account to accept the invitation.",
+        "If you were not expecting this invitation, contact the person who invited you before continuing."
+      ],
+      "cta": "Set up admin account",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Assigned role",
+          "{{role_name}}"
+        ],
+        [
+          "Invitation expires",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Current lifetime 7 days; render actual expiry. Require inviter permission and assigned role validity. Never send a temporary password.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "expires_at",
+        "inviter_name",
+        "role_name"
+      ]
+    },
+    {
+      "id": "account.claim",
+      "group": "account",
+      "audience": "Invited influencer",
+      "trigger": "Approved outreach invitation",
+      "subject": "{{first_name}}, create your Influrios Card",
+      "preheader": "Review your invitation and build your influencer profile.",
+      "title": "Your influence in one place",
+      "body": [
+        "You are invited to create an Influrios Card: a shareable profile that brings your specialties and social links together.",
+        "Review any prefilled details and choose what to publish. Claiming a card does not verify a social account."
+      ],
+      "cta": "Review card invitation",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Invitation expires",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "outreach",
+      "guard": "Do not claim a ready or verified profile unless it exists. Send only under approved outreach policy; unsubscribe and suppression required.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "expires_at",
+        "first_name"
+      ]
+    },
+    {
+      "id": "account.claim_followup",
+      "group": "account",
+      "audience": "Invited influencer",
+      "trigger": "Due approved claim follow-up",
+      "subject": "Your Influrios Card invitation is still open",
+      "preheader": "You can still review your invitation before it expires.",
+      "title": "A reminder about your card",
+      "body": [
+        "Your invitation to create an Influrios Card is still available. Review the details and decide whether you would like to continue.",
+        "You choose what to publish. If this is not for you, you can stop these invitations below."
+      ],
+      "cta": "Review invitation",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Invitation expires",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "outreach",
+      "guard": "One follow-up proposed, at most; only unclaimed, unexpired, not unsubscribed, no reply or complaint. Ignore stale stored follow-up dates.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "expires_at"
+      ]
+    },
+    {
+      "id": "account.welcome_influencer",
+      "group": "account",
+      "audience": "Verified influencer",
+      "trigger": "First account email verification completed",
+      "subject": "Welcome to Influrios, {{first_name}}",
+      "preheader": "Build your profile and get ready for collaborations.",
+      "title": "Welcome to Influrios",
+      "body": [
+        "Your account is ready. Start by adding your specialty, location and a short introduction. Then preview your Influrios Card before publishing it.",
+        "You can connect your social accounts when you are ready. Email verification and social account verification are separate steps."
+      ],
+      "cta": "Build my profile",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Send once after email verification, or equivalent trusted email proof. Do not imply the profile is published or payouts enabled.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "first_name"
+      ]
+    },
+    {
+      "id": "account.welcome_business",
+      "group": "account",
+      "audience": "Verified business member",
+      "trigger": "First business account email verification completed",
+      "subject": "Welcome to Influrios, {{first_name}}",
+      "preheader": "Set up your business profile and plan your first collaboration.",
+      "title": "Meet your next collaborator",
+      "body": [
+        "Your business account is ready. Add your company details, discover influencers and prepare a collaboration request.",
+        "You can review your brief and select invitees before sending invitations. Funding becomes available only when the agreement is signed and the payment route is eligible."
+      ],
+      "cta": "Set up business profile",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Send once; feature links must exist and be authorized.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "first_name"
+      ]
+    },
+    {
+      "id": "account.password_changed",
+      "group": "account",
+      "audience": "Account holder",
+      "trigger": "Password successfully changed",
+      "subject": "Your Influrios password was changed",
+      "preheader": "Review this change if you did not make it.",
+      "title": "Password updated",
+      "body": [
+        "Your Influrios password was changed at {{changed_at}}.",
+        "If you made this change, no action is needed. If you did not, open Influrios directly and secure your account, or contact support."
+      ],
+      "cta": "Review account security",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "security",
+      "guard": "Recommended new security email. No passwords, tokens or device claims without evidence.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "changed_at"
+      ]
+    },
+    {
+      "id": "account.smtp_test",
+      "group": "account",
+      "audience": "Admin-entered test recipient",
+      "trigger": "Explicit authorized test request",
+      "subject": "[TEST] Influrios email delivery check",
+      "preheader": "This is a test message, not an account or payment notification.",
+      "title": "Your email test arrived",
+      "body": [
+        "This message was requested from Influrios admin to check outgoing email delivery. It does not confirm that a collaboration, payment or account action occurred.",
+        "If you did not expect this test, no action is needed."
+      ],
+      "cta": "",
+      "cta_url": null,
+      "facts": [
+        [
+          "Test reference",
+          "{{test_reference}}"
+        ],
+        [
+          "Requested at",
+          "{{requested_at}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "Allowlisted test recipients; rate limit; no live OTPs or real action tokens.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "requested_at",
+        "test_reference"
+      ]
+    },
+    {
+      "id": "invite.collaboration",
+      "group": "invite",
+      "audience": "Invited influencer",
+      "trigger": "Collaboration invitation sent",
+      "subject": "{{business_name}} invited you to collaborate",
+      "preheader": "Review the brief, proposed budget and timing.",
+      "title": "You have a collaboration invitation",
+      "body": [
+        "{{business_name}} would like to collaborate with you on {{collaboration_name}}. Review the brief and proposed terms before responding.",
+        "Accepting an invitation starts the discussion. It does not sign a contract or confirm funding."
+      ],
+      "cta": "Review invitation",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Collaboration",
+          "{{collaboration_name}}"
+        ],
+        [
+          "Proposed gross compensation",
+          "{{proposed_gross}}"
+        ],
+        [
+          "Respond by",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "One private recipient per send. Proposed amount label; show estimated fees only if valid quote exists. Do not include other invitees.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "business_name",
+        "collaboration_name",
+        "expires_at",
+        "proposed_gross"
+      ]
+    },
+    {
+      "id": "invite.private_campaign",
+      "group": "invite",
+      "audience": "Invited influencer",
+      "trigger": "Private campaign invitation sent",
+      "subject": "Private invitation from {{business_name}}",
+      "preheader": "You have been invited to review {{campaign_name}}.",
+      "title": "A campaign invitation for you",
+      "body": [
+        "{{business_name}} invited you to consider {{campaign_name}}. Open the invitation to review the brief, deliverables and proposed compensation.",
+        "Your response is shared with the business. Other invitees are not listed in this email."
+      ],
+      "cta": "View private invitation",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Campaign",
+          "{{campaign_name}}"
+        ],
+        [
+          "Respond by",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Use instead of collaboration invite when same invitation event is a private campaign; never send both.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "business_name",
+        "campaign_name",
+        "expires_at"
+      ]
+    },
+    {
+      "id": "invite.accepted",
+      "group": "invite",
+      "audience": "Inviting business",
+      "trigger": "Influencer accepts invitation",
+      "subject": "{{influencer_name}} accepted your invitation",
+      "preheader": "Continue the conversation and agree on the details.",
+      "title": "Your invitation was accepted",
+      "body": [
+        "{{influencer_name}} accepted the invitation for {{collaboration_name}}.",
+        "Review the next steps together and prepare the agreement when the scope, dates and compensation are confirmed. Work is not funded yet."
+      ],
+      "cta": "Open collaboration",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Collaboration",
+          "{{collaboration_name}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Invitation accepted is not contract signed or work authorized.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "influencer_name"
+      ]
+    },
+    {
+      "id": "invite.declined",
+      "group": "invite",
+      "audience": "Inviting business",
+      "trigger": "Influencer declines invitation",
+      "subject": "Invitation update for {{collaboration_name}}",
+      "preheader": "{{influencer_name}} declined this invitation.",
+      "title": "Invitation declined",
+      "body": [
+        "{{influencer_name}} declined your invitation for {{collaboration_name}}. You can update the brief or invite another influencer.",
+        "No agreement was signed or payment collected through this invitation."
+      ],
+      "cta": "View request",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Only invitation stage; suppress final sentence if any downstream agreement exists.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "influencer_name"
+      ]
+    },
+    {
+      "id": "invite.team_sent",
+      "group": "invite",
+      "audience": "Invited team member",
+      "trigger": "Team proposal sent",
+      "subject": "{{sender_name}} invited you to a team proposal",
+      "preheader": "Review your proposed role before responding.",
+      "title": "Review your team proposal",
+      "body": [
+        "{{sender_name}} invited you to join {{team_name}} for {{collaboration_name}}. Review your proposed role, responsibilities and terms.",
+        "Accepting this proposal does not authorize a payment or sign a collaboration agreement."
+      ],
+      "cta": "Review proposal",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Proposed role",
+          "{{proposed_role}}"
+        ],
+        [
+          "Respond by",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Feature-gated. Limit details to this recipient; do not enable team funding by enabling email.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "expires_at",
+        "proposed_role",
+        "sender_name",
+        "team_name"
+      ]
+    },
+    {
+      "id": "invite.team_accepted",
+      "group": "invite",
+      "audience": "Proposal sender",
+      "trigger": "Team proposal accepted",
+      "subject": "{{recipient_name}} accepted the team proposal",
+      "preheader": "The proposal response is available in Influrios.",
+      "title": "Team proposal accepted",
+      "body": [
+        "{{recipient_name}} accepted the proposal for {{team_name}}. Review the team details and any remaining responses before moving forward."
+      ],
+      "cta": "View team proposal",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Feature-gated; do not disclose other members beyond authorized team visibility.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "recipient_name",
+        "team_name"
+      ]
+    },
+    {
+      "id": "invite.team_declined",
+      "group": "invite",
+      "audience": "Proposal sender",
+      "trigger": "Team proposal declined",
+      "subject": "Team proposal declined by {{recipient_name}}",
+      "preheader": "Review the proposal and decide on the next step.",
+      "title": "Team proposal declined",
+      "body": [
+        "{{recipient_name}} declined the proposal for {{team_name}}. You can review the proposal and update your team plans."
+      ],
+      "cta": "View team proposal",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Feature-gated; optional decline reason stays in authenticated app.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "recipient_name",
+        "team_name"
+      ]
+    },
+    {
+      "id": "invite.team_expired",
+      "group": "invite",
+      "audience": "Proposal sender and invitee separately",
+      "trigger": "Team proposal expires",
+      "subject": "Team proposal expired for {{team_name}}",
+      "preheader": "The response deadline has passed.",
+      "title": "This proposal has expired",
+      "body": [
+        "The team proposal for {{team_name}} expired on {{expires_at}}. It can no longer be accepted.",
+        "Open the proposal to see its status. A new invitation is needed to continue."
+      ],
+      "cta": "View proposal",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Feature-gated; recheck pending state; no send if already accepted or declined.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "expires_at",
+        "team_name"
+      ]
+    },
+    {
+      "id": "contract.sign",
+      "group": "contract",
+      "audience": "Unsigned authorized signer",
+      "trigger": "Agreement issued for signature",
+      "subject": "Action needed: sign {{contract_name}}",
+      "preheader": "Review the agreement before signing.",
+      "title": "Your agreement is ready",
+      "body": [
+        "The agreement for {{collaboration_name}} is ready for your review. Check the deliverables, schedule, compensation and fees before signing.",
+        "All required parties must sign before funding can begin."
+      ],
+      "cta": "Review and sign",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Agreement",
+          "{{contract_name}}"
+        ],
+        [
+          "Version",
+          "{{agreement_version}}"
+        ],
+        [
+          "Sign by",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Use one sender owner for native or DocuSign request; do not duplicate provider invitations. Signing link opens correct version and recipient.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "agreement_version",
+        "collaboration_name",
+        "contract_name",
+        "expires_at"
+      ]
+    },
+    {
+      "id": "contract.progress",
+      "group": "contract",
+      "audience": "Other authorized agreement parties",
+      "trigger": "Another signer signs",
+      "subject": "Signature update for {{contract_name}}",
+      "preheader": "{{signer_name}} has signed the agreement.",
+      "title": "One step closer",
+      "body": [
+        "{{signer_name}} signed {{contract_name}}. {{remaining_signers_text}}",
+        "Funding can begin only after every required signature is complete and payment eligibility checks pass."
+      ],
+      "cta": "View signature progress",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Agreement version",
+          "{{agreement_version}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Suppress on final signature; use fully signed instead. Only parties may see signer names.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "agreement_version",
+        "contract_name",
+        "remaining_signers_text",
+        "signer_name"
+      ]
+    },
+    {
+      "id": "contract.reminder",
+      "group": "contract",
+      "audience": "Outstanding signer",
+      "trigger": "Signature reminder due",
+      "subject": "Reminder: your signature is needed",
+      "preheader": "{{contract_name}} is waiting for your review.",
+      "title": "Your signature is still needed",
+      "body": [
+        "Please review {{contract_name}} and sign if you agree with its terms. The current signature deadline is {{expires_at}}.",
+        "If the agreement needs changes, contact the other party through Influrios before signing."
+      ],
+      "cta": "Review agreement",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Only outstanding signer/current version; proposed max two reminders; provider sender owner avoids duplicates.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "contract_name",
+        "expires_at"
+      ]
+    },
+    {
+      "id": "contract.signed_business",
+      "group": "contract",
+      "audience": "Business funding contact",
+      "trigger": "All required signatures complete",
+      "subject": "Fully signed: {{contract_name}}",
+      "preheader": "Your agreement is signed. Review the funding step.",
+      "title": "Your agreement is fully signed",
+      "body": [
+        "All required parties have signed {{contract_name}}. The signed copy is available in Influrios.",
+        "Open the agreement to review funding eligibility and the amount due. The influencer should wait for funding confirmation before starting paid work."
+      ],
+      "cta": "View agreement and funding",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Agreement version",
+          "{{agreement_version}}"
+        ],
+        [
+          "Business total",
+          "{{business_total}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Use snapshot amount. Merge funding-required email when prefund is created in same transaction; do not promise eligible route.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "agreement_version",
+        "business_total",
+        "contract_name"
+      ]
+    },
+    {
+      "id": "contract.signed_influencer",
+      "group": "contract",
+      "audience": "Influencer",
+      "trigger": "All required signatures complete",
+      "subject": "Fully signed: {{contract_name}}",
+      "preheader": "The next step is business funding.",
+      "title": "Your agreement is fully signed",
+      "body": [
+        "All required parties have signed {{contract_name}}. You can view the signed agreement in Influrios.",
+        "The business now needs to complete funding. We will notify you when the required funds are confirmed and work can begin."
+      ],
+      "cta": "View signed agreement",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Gross compensation",
+          "{{gross_compensation}}"
+        ],
+        [
+          "Your collaboration fee",
+          "{{influencer_fee}}"
+        ],
+        [
+          "Your planned net compensation",
+          "{{influencer_net}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Show signed role-specific fees; legacy fee label preserved. Do not say paid.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "contract_name",
+        "gross_compensation",
+        "influencer_fee",
+        "influencer_net"
+      ]
+    },
+    {
+      "id": "contract.declined",
+      "group": "contract",
+      "audience": "Agreement parties separately",
+      "trigger": "Signer declines agreement",
+      "subject": "Agreement declined: {{contract_name}}",
+      "preheader": "The agreement has not been completed.",
+      "title": "Agreement declined",
+      "body": [
+        "{{signer_name}} declined {{contract_name}}. This version is not fully signed.",
+        "Open the agreement to review the response and discuss any changes before issuing a new version."
+      ],
+      "cta": "View agreement",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Only valid decline transition; no assumptions about refund or existing funded versions.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "contract_name",
+        "signer_name"
+      ]
+    },
+    {
+      "id": "contract.voided",
+      "group": "contract",
+      "audience": "Agreement parties separately",
+      "trigger": "Authorized void committed",
+      "subject": "Agreement voided: {{contract_name}}",
+      "preheader": "This agreement version can no longer be signed.",
+      "title": "Agreement voided",
+      "body": [
+        "Version {{agreement_version}} of {{contract_name}} has been voided. Do not use an earlier signing link for this version.",
+        "If this collaboration has payment activity, its cancellation or refund status is shown separately in Influrios."
+      ],
+      "cta": "View agreement",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Voiding does not itself refund money; expiry/void event must be authoritative.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "agreement_version",
+        "contract_name"
+      ]
+    },
+    {
+      "id": "contract.message",
+      "group": "contract",
+      "audience": "Other authorized thread participants",
+      "trigger": "New message posted",
+      "subject": "New message about {{contract_name}}",
+      "preheader": "{{sender_name}} sent you a message in Influrios.",
+      "title": "You have a new message",
+      "body": [
+        "{{sender_name}} sent a message about {{contract_name}}:",
+        "{{message_excerpt}}",
+        "Open the conversation to read the full message and reply."
+      ],
+      "cta": "Read message",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Escaped plain excerpt max 180 characters; sensitive-content mode omits excerpt. Batch bursts within 5 minutes; no reply-by-email unless inbound handling exists.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "contract_name",
+        "message_excerpt",
+        "sender_name"
+      ]
+    },
+    {
+      "id": "contract.quote_expiring",
+      "group": "contract",
+      "audience": "Outstanding signer or quote owner",
+      "trigger": "Quote expiry reminder due",
+      "subject": "Quote expiring for {{collaboration_name}}",
+      "preheader": "Review the quote before {{expires_at}}.",
+      "title": "Your quote is expiring",
+      "body": [
+        "The current quote for {{collaboration_name}} expires on {{expires_at}}. Review it and complete the required steps if you want to proceed.",
+        "After expiry, the amounts and payment eligibility must be checked again before a new quote is accepted."
+      ],
+      "cta": "Review quote",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Quote version",
+          "{{quote_version}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "No send after full signing or expiry. Suppress overlapping signature reminder; one expiry reminder by default.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "expires_at",
+        "quote_version"
+      ]
+    },
+    {
+      "id": "contract.change_requested",
+      "group": "contract",
+      "audience": "Other agreement party",
+      "trigger": "Change request submitted",
+      "subject": "Review a change to {{collaboration_name}}",
+      "preheader": "The proposed changes need your agreement.",
+      "title": "A change has been proposed",
+      "body": [
+        "{{sender_name}} proposed a change to {{collaboration_name}}.",
+        "{{change_summary}}",
+        "The existing signed terms remain in effect until the required approvals and signatures are complete."
+      ],
+      "cta": "Review proposed change",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Current agreement",
+          "{{agreement_version}}"
+        ],
+        [
+          "Proposed version",
+          "{{proposed_version}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "No direct signed-gross edits. Do not send accepted wording on draft save.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "agreement_version",
+        "change_summary",
+        "collaboration_name",
+        "proposed_version",
+        "sender_name"
+      ]
+    },
+    {
+      "id": "contract.change_accepted",
+      "group": "contract",
+      "audience": "Agreement parties separately",
+      "trigger": "Amendment fully executed",
+      "subject": "Change confirmed for {{collaboration_name}}",
+      "preheader": "Your updated agreement is available.",
+      "title": "Your agreement has been updated",
+      "body": [
+        "The required parties have accepted and signed the changes for {{collaboration_name}}. Version {{agreement_version}} is now the current agreement.",
+        "Review the updated scope, schedule and your financial breakdown. Any additional funding or refund has its own payment status."
+      ],
+      "cta": "View updated agreement",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Change",
+          "{{change_summary}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Accepted means executable signed amendment; do not imply additional funds received.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "agreement_version",
+        "change_summary",
+        "collaboration_name"
+      ]
+    },
+    {
+      "id": "funding.required",
+      "group": "funding",
+      "audience": "Business funding contact",
+      "trigger": "Signed eligible prefund created",
+      "subject": "Funding needed for {{collaboration_name}}",
+      "preheader": "Review your payment breakdown and fund the collaboration.",
+      "title": "Fund your collaboration",
+      "body": [
+        "Your agreement is signed. Complete the funding step for {{collaboration_name}} so the influencer can begin once the provider confirms the required funds.",
+        "Review the payment details before continuing."
+      ],
+      "cta": "Review and fund",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Gross compensation",
+          "{{gross_compensation}}"
+        ],
+        [
+          "Platform activation fee",
+          "{{activation_fee}}"
+        ],
+        [
+          "Business collaboration fee",
+          "{{business_collaboration_fee}}"
+        ],
+        [
+          "Tax and other approved charges",
+          "{{business_adjustments}}"
+        ],
+        [
+          "Total due",
+          "{{business_total}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Render actual signed policy labels; hide inapplicable rows. Suppress if fully-signed business email already covers same action.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "activation_fee",
+        "business_adjustments",
+        "business_collaboration_fee",
+        "business_total",
+        "collaboration_name",
+        "gross_compensation"
+      ]
+    },
+    {
+      "id": "funding.open",
+      "group": "funding",
+      "audience": "Business funding contact",
+      "trigger": "Checkout/instructions created but not completed",
+      "subject": "Complete funding for {{collaboration_name}}",
+      "preheader": "Your funding step is still open.",
+      "title": "Continue your funding",
+      "body": [
+        "Funding for {{collaboration_name}} is not yet confirmed. Open the secure payment page to continue or review the payment instructions.",
+        "If you have already submitted a payment, check its status before trying again. Do not make a second transfer."
+      ],
+      "cta": "Continue funding",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Amount due",
+          "{{business_total}}"
+        ],
+        [
+          "Payment method",
+          "{{collection_method}}"
+        ],
+        [
+          "Instructions expire",
+          "{{expires_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "One reminder only after configured delay and pending-state check. Bank instructions stay in authenticated portal; never invent bank details or initiate new checkout on email GET.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "business_total",
+        "collaboration_name",
+        "collection_method",
+        "expires_at"
+      ]
+    },
+    {
+      "id": "funding.processing",
+      "group": "funding",
+      "audience": "Business funding contact",
+      "trigger": "Provider accepts collection for asynchronous processing",
+      "subject": "Payment processing for {{collaboration_name}}",
+      "preheader": "Your payment is being checked. No second payment is needed.",
+      "title": "Your payment is processing",
+      "body": [
+        "Your payment for {{collaboration_name}} is processing. The required funds have not yet been confirmed as available for this collaboration.",
+        "Do not submit another payment. We will send a confirmation when the funding check is complete."
+      ],
+      "cta": "View payment status",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Submitted amount",
+          "{{business_total}}"
+        ],
+        [
+          "Submitted at",
+          "{{submitted_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Recommended new template for async collections; never infer hold from checkout return.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "business_total",
+        "collaboration_name",
+        "submitted_at"
+      ]
+    },
+    {
+      "id": "funding.confirmed_business",
+      "group": "funding",
+      "audience": "Business funding contact",
+      "trigger": "Approved route hold evidence verified",
+      "subject": "Funding confirmed for {{collaboration_name}}",
+      "preheader": "The required funds are confirmed and work can begin.",
+      "title": "Your collaboration is funded",
+      "body": [
+        "The payment provider has confirmed the required funds for {{collaboration_name}}. The influencer can now begin the agreed work.",
+        "Review submissions in your collaboration workspace. Milestone approval and payout confirmation are separate steps."
+      ],
+      "cta": "Open collaboration",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Confirmed funding",
+          "{{funded_amount}}"
+        ],
+        [
+          "Confirmed at",
+          "{{confirmed_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Only approved hold proof; not generic charge success. No escrow claim by default.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "confirmed_at",
+        "funded_amount"
+      ]
+    },
+    {
+      "id": "funding.confirmed_influencer",
+      "group": "funding",
+      "audience": "Influencer",
+      "trigger": "Approved route hold evidence verified",
+      "subject": "You can begin {{collaboration_name}}",
+      "preheader": "Funding is confirmed for your agreed work.",
+      "title": "Ready to begin",
+      "body": [
+        "The required funding for {{collaboration_name}} has been confirmed. You can now begin the work described in your agreement.",
+        "Check the deliverables and due dates, then submit each version through the collaboration workspace."
+      ],
+      "cta": "View your deliverables",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Next deliverable",
+          "{{milestone_name}}"
+        ],
+        [
+          "Due",
+          "{{due_at}}"
+        ],
+        [
+          "Planned net compensation",
+          "{{influencer_net}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Net is planned contract compensation, not already paid. Do not include business-only fees.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "due_at",
+        "influencer_net",
+        "milestone_name"
+      ]
+    },
+    {
+      "id": "funding.failed",
+      "group": "funding",
+      "audience": "Business funding contact",
+      "trigger": "Definitive collection failure",
+      "subject": "Funding did not complete for {{collaboration_name}}",
+      "preheader": "Review the payment status before trying again.",
+      "title": "Your funding needs attention",
+      "body": [
+        "The payment provider could not complete funding for {{collaboration_name}}. Work has not been cleared to start from this payment.",
+        "{{safe_next_step}}"
+      ],
+      "cta": "Review funding",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Amount",
+          "{{business_total}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Only definitive failure, not timeout. Next step server-selected from safe reason; no raw provider error or automatic new charge.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "business_total",
+        "collaboration_name",
+        "safe_next_step"
+      ]
+    },
+    {
+      "id": "funding.expired",
+      "group": "funding",
+      "audience": "Business funding contact",
+      "trigger": "Unpaid checkout definitively expired by admin or provider",
+      "subject": "Funding link expired for {{collaboration_name}}",
+      "preheader": "Review the collaboration to see the next available step.",
+      "title": "Your funding link has expired",
+      "body": [
+        "The unpaid funding link for {{collaboration_name}} has expired and can no longer be used.",
+        "Open the collaboration to review the current agreement and funding options. Expiring a payment link does not by itself cancel the agreement."
+      ],
+      "cta": "Review collaboration",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Reconcile pending/unknown charges first. Covers admin expiry gap; do not send collaboration-cancelled unless actually cancelled.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name"
+      ]
+    },
+    {
+      "id": "milestone.submitted",
+      "group": "milestone",
+      "audience": "Business reviewer",
+      "trigger": "Influencer submits a named delivery version",
+      "subject": "Ready for review: {{milestone_name}}",
+      "preheader": "{{influencer_name}} submitted work for {{collaboration_name}}.",
+      "title": "Your review is needed",
+      "body": [
+        "{{influencer_name}} submitted {{milestone_name}} for {{collaboration_name}}. Review the files and check them against the agreed brief.",
+        "You can approve the submission or request a revision in the workspace. If there is a problem that needs formal review, you can open a dispute there."
+      ],
+      "cta": "Review submission",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Submission version",
+          "{{submission_version}}"
+        ],
+        [
+          "Review due",
+          "{{review_due_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Delivery status only; no payment promises. Review time shown with timezone.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "influencer_name",
+        "milestone_name",
+        "review_due_at",
+        "submission_version"
+      ]
+    },
+    {
+      "id": "milestone.review_reminder",
+      "group": "milestone",
+      "audience": "Business reviewer",
+      "trigger": "Review lead-time threshold crossed",
+      "subject": "Review due soon: {{milestone_name}}",
+      "preheader": "Please review the submission by {{review_due_at}}.",
+      "title": "A review deadline is approaching",
+      "body": [
+        "{{milestone_name}} is waiting for your review. Please approve the submitted version or request a revision before {{review_due_at}}.",
+        "{{deadline_policy_text}}"
+      ],
+      "cta": "Review submission",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Collaboration",
+          "{{collaboration_name}}"
+        ],
+        [
+          "Submission version",
+          "{{submission_version}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Once per submission/version threshold. Stop on revision, approval or dispute. Policy text from signed rule; never threaten auto-approval when disabled.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "deadline_policy_text",
+        "milestone_name",
+        "review_due_at",
+        "submission_version"
+      ]
+    },
+    {
+      "id": "milestone.revision",
+      "group": "milestone",
+      "audience": "Influencer",
+      "trigger": "Business requests revision",
+      "subject": "Revision requested for {{milestone_name}}",
+      "preheader": "Review the feedback and submit an updated version.",
+      "title": "A revision is needed",
+      "body": [
+        "{{business_name}} requested a revision to {{milestone_name}}.",
+        "{{revision_note}}",
+        "Review the full feedback and submit the updated version in your collaboration workspace."
+      ],
+      "cta": "Review feedback",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Collaboration",
+          "{{collaboration_name}}"
+        ],
+        [
+          "Revision round",
+          "{{revision_round}}"
+        ],
+        [
+          "Updated due date",
+          "{{due_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Escaped excerpt; due date only if actually agreed. Link latest version, preserve history.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "business_name",
+        "collaboration_name",
+        "due_at",
+        "milestone_name",
+        "revision_note",
+        "revision_round"
+      ]
+    },
+    {
+      "id": "milestone.approved",
+      "group": "milestone",
+      "audience": "Business and influencer separately",
+      "trigger": "Authorized approval of named version",
+      "subject": "Approved: {{milestone_name}}",
+      "preheader": "The submission is approved. Payout has a separate status.",
+      "title": "Milestone approved",
+      "body": [
+        "{{milestone_name}} for {{collaboration_name}} has been approved.",
+        "Approval confirms the work review. It does not confirm that a payout has reached the influencer. Payment progress is available in Influrios."
+      ],
+      "cta": "View milestone",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Approved version",
+          "{{submission_version}}"
+        ],
+        [
+          "Approved at",
+          "{{approved_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Exactly once per approval transition. Must not be reused when only a payout request occurs.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "approved_at",
+        "collaboration_name",
+        "milestone_name",
+        "submission_version"
+      ]
+    },
+    {
+      "id": "milestone.auto_approved",
+      "group": "milestone",
+      "audience": "Business and influencer separately",
+      "trigger": "Valid automatic approval transition",
+      "subject": "Review period ended for {{milestone_name}}",
+      "preheader": "The milestone was automatically approved under the agreement.",
+      "title": "Milestone automatically approved",
+      "body": [
+        "The review period for {{milestone_name}} ended on {{review_due_at}}. Under the automatic approval terms in your agreement, this submission has been approved.",
+        "Payout has a separate status. Open the collaboration to review the timeline and available support options."
+      ],
+      "cta": "View milestone",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Submission version",
+          "{{submission_version}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Disabled unless feature AND signed policy allow auto-approval and no revision/dispute/hold blocks it. Do not enable this behavior just to send mail.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "milestone_name",
+        "review_due_at",
+        "submission_version"
+      ]
+    },
+    {
+      "id": "payout.requested",
+      "group": "payout",
+      "audience": "Influencer",
+      "trigger": "Provider accepts payout instruction",
+      "subject": "Payout processing for {{milestone_name}}",
+      "preheader": "Your payout has been submitted to the provider.",
+      "title": "Your payout is processing",
+      "body": [
+        "Your payout for {{milestone_name}} has been submitted to the payment provider. It is not yet confirmed as paid.",
+        "We will notify you when the provider confirms the outcome. You can follow its progress in Influrios."
+      ],
+      "cta": "Track payout",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Net payout",
+          "{{payout_net}}"
+        ],
+        [
+          "Destination",
+          "{{masked_destination}}"
+        ],
+        [
+          "Requested at",
+          "{{requested_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Provider acceptance, not internal queue creation. No guaranteed arrival time; separate queued state if useful.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "masked_destination",
+        "milestone_name",
+        "payout_net",
+        "requested_at"
+      ]
+    },
+    {
+      "id": "payout.requested_business",
+      "group": "payout",
+      "audience": "Business funding contact",
+      "trigger": "Provider accepts payout instruction",
+      "subject": "Payout processing for {{collaboration_name}}",
+      "preheader": "The approved milestone payout is with the provider.",
+      "title": "Milestone payout in progress",
+      "body": [
+        "The payout for {{milestone_name}} has been submitted to the provider. It has not yet been confirmed as completed.",
+        "No additional funding is requested by this email."
+      ],
+      "cta": "View payment timeline",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Milestone",
+          "{{milestone_name}}"
+        ],
+        [
+          "Requested at",
+          "{{requested_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "No influencer bank data or private fees. Optional digest for non-actionable updates.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "milestone_name",
+        "requested_at"
+      ]
+    },
+    {
+      "id": "payout.confirmed",
+      "group": "payout",
+      "audience": "Influencer",
+      "trigger": "Verified beneficiary payout success",
+      "subject": "Payout confirmed for {{milestone_name}}",
+      "preheader": "The provider confirmed your {{payout_net}} payout.",
+      "title": "Your payout is confirmed",
+      "body": [
+        "The provider confirmed the payout for {{milestone_name}} in {{collaboration_name}}. View your payment record for the breakdown.",
+        "If the payment is not visible in your account, check the payout details and contact support from that page."
+      ],
+      "cta": "View payout receipt",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Gross milestone compensation",
+          "{{milestone_gross}}"
+        ],
+        [
+          "Your collaboration fee",
+          "{{milestone_influencer_fee}}"
+        ],
+        [
+          "Withholding and approved deductions",
+          "{{payout_adjustments}}"
+        ],
+        [
+          "Net payout",
+          "{{payout_net}}"
+        ],
+        [
+          "Destination",
+          "{{masked_destination}}"
+        ],
+        [
+          "Confirmed at",
+          "{{confirmed_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Verified external beneficiary success, not wallet split. Usage-rights activation email requires separate actual rights event; do not promise automatic rights.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "confirmed_at",
+        "masked_destination",
+        "milestone_gross",
+        "milestone_influencer_fee",
+        "milestone_name",
+        "payout_adjustments",
+        "payout_net"
+      ]
+    },
+    {
+      "id": "payout.confirmed_business",
+      "group": "payout",
+      "audience": "Business funding contact",
+      "trigger": "Verified beneficiary payout success",
+      "subject": "Milestone payout completed for {{collaboration_name}}",
+      "preheader": "Payment for {{milestone_name}} is confirmed.",
+      "title": "Milestone payout completed",
+      "body": [
+        "The provider confirmed the influencer payout for {{milestone_name}}. Your payment timeline and applicable fee receipt have been updated.",
+        "Check the agreement and rights status in the workspace before using the delivered content."
+      ],
+      "cta": "View payment timeline",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Milestone",
+          "{{milestone_name}}"
+        ],
+        [
+          "Confirmed at",
+          "{{confirmed_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "No blanket usage-rights promise. Role-specific receipt uses signed fee allocation.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "confirmed_at",
+        "milestone_name"
+      ]
+    },
+    {
+      "id": "payout.failed",
+      "group": "payout",
+      "audience": "Influencer",
+      "trigger": "Definitive payout failure",
+      "subject": "Your payout needs attention",
+      "preheader": "The payout for {{milestone_name}} did not complete.",
+      "title": "Payout not completed",
+      "body": [
+        "The provider could not complete your payout for {{milestone_name}}. Your approved work remains recorded.",
+        "{{safe_next_step}}",
+        "Check the payout page before changing your details or requesting a retry."
+      ],
+      "cta": "Review payout",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Net payout",
+          "{{payout_net}}"
+        ],
+        [
+          "Payout reference",
+          "{{public_reference}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Only definitive failure. Updating bank details requires authenticated re-verification. No promise money is safe or retry scheduled without evidence.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "milestone_name",
+        "payout_net",
+        "public_reference",
+        "safe_next_step"
+      ]
+    },
+    {
+      "id": "payout.failed_admin",
+      "group": "payout",
+      "audience": "Authorized finance operators",
+      "trigger": "Definitive payout failure needing action",
+      "subject": "[Finance] Payout failed: {{public_reference}}",
+      "preheader": "Reconcile the failure before creating another attempt.",
+      "title": "Payout failure requires review",
+      "body": [
+        "A payout for {{collaboration_name}} failed. Review the provider result and reconcile the operation before retrying.",
+        "{{safe_failure_summary}}"
+      ],
+      "cta": "Open finance case",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Operation",
+          "{{public_reference}}"
+        ],
+        [
+          "Amount",
+          "{{payout_net}}"
+        ],
+        [
+          "Provider",
+          "{{provider_name}}"
+        ],
+        [
+          "Owner",
+          "{{case_owner}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "Admin-only identifiers permitted but no credentials/full bank details. Do not reuse for retry.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_owner",
+        "collaboration_name",
+        "payout_net",
+        "provider_name",
+        "public_reference",
+        "safe_failure_summary"
+      ]
+    },
+    {
+      "id": "payout.retry",
+      "group": "payout",
+      "audience": "Influencer and business separately",
+      "trigger": "Provider accepts new authorized retry attempt",
+      "subject": "Payout retry started for {{milestone_name}}",
+      "preheader": "A new payout attempt is processing.",
+      "title": "We are retrying the payout",
+      "body": [
+        "A new payout attempt for {{milestone_name}} has been submitted to the provider. The outcome is not yet confirmed.",
+        "Follow the payment timeline for updates. This retry is not a new charge to the business."
+      ],
+      "cta": "Track payout",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Collaboration",
+          "{{collaboration_name}}"
+        ],
+        [
+          "Retry started",
+          "{{requested_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Known failed/returned prior attempt reconciled. No send when merely queued. Finance receives event in case timeline; optional internal digest.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "milestone_name",
+        "requested_at"
+      ]
+    },
+    {
+      "id": "payout.returned",
+      "group": "payout",
+      "audience": "Influencer",
+      "trigger": "Verified payout return",
+      "subject": "Payout returned for {{milestone_name}}",
+      "preheader": "The provider reported that the earlier payout was returned.",
+      "title": "Your payout was returned",
+      "body": [
+        "The provider reported that the earlier payout for {{milestone_name}} was returned. The returned amount is no longer treated as successfully paid.",
+        "Your approved work remains approved. Review the payment details so the payment issue can be resolved."
+      ],
+      "cta": "Review returned payout",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Returned amount",
+          "{{returned_amount}}"
+        ],
+        [
+          "Original payout",
+          "{{public_reference}}"
+        ],
+        [
+          "Reported at",
+          "{{returned_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Support partial return amount. Reopen payment obligation, not delivery approval. No automatic request for business to fund again.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "milestone_name",
+        "public_reference",
+        "returned_amount",
+        "returned_at"
+      ]
+    },
+    {
+      "id": "payout.returned_business",
+      "group": "payout",
+      "audience": "Business funding contact",
+      "trigger": "Verified payout return",
+      "subject": "Payment update for {{collaboration_name}}",
+      "preheader": "A milestone payout was returned and needs resolution.",
+      "title": "A payout was returned",
+      "body": [
+        "The provider reported a return affecting the payout for {{milestone_name}}. The payment obligation is being reviewed; the work approval remains recorded.",
+        "Do not send an additional payment unless a reviewed funding request is shown in Influrios."
+      ],
+      "cta": "View payment update",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Milestone",
+          "{{milestone_name}}"
+        ],
+        [
+          "Reported at",
+          "{{returned_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Does not disclose bank reason/private fee. Admin uses dedicated exception below.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "milestone_name",
+        "returned_at"
+      ]
+    },
+    {
+      "id": "payout.returned_admin",
+      "group": "payout",
+      "audience": "Authorized finance operators",
+      "trigger": "Verified payout return",
+      "subject": "[Finance] Payout returned: {{public_reference}}",
+      "preheader": "Reconcile the returned amount and the remaining payment obligation.",
+      "title": "Returned payout requires review",
+      "body": [
+        "The provider reported a payout return for {{collaboration_name}}. Reconcile the returned amount against the original operation, fee adjustments and outstanding beneficiary obligation.",
+        "Do not reset approved delivery or issue a duplicate full payout."
+      ],
+      "cta": "Review return",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Returned amount",
+          "{{returned_amount}}"
+        ],
+        [
+          "Original operation",
+          "{{public_reference}}"
+        ],
+        [
+          "Provider",
+          "{{provider_name}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "Operation-scoped return; identify partial return, incident dedupe and assigned owner.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "provider_name",
+        "public_reference",
+        "returned_amount"
+      ]
+    },
+    {
+      "id": "payout.ready",
+      "group": "payout",
+      "audience": "Influencer",
+      "trigger": "Recipient eligibility changes to ready",
+      "subject": "Your payout setup is ready",
+      "preheader": "Your payout details have passed the required checks.",
+      "title": "Ready to receive payouts",
+      "body": [
+        "Your payout setup for {{country_name}} has passed the required checks. You can receive eligible collaboration payouts through the enabled route.",
+        "This confirms your setup, not a payment. Each collaboration still needs funding, work approval and provider confirmation."
+      ],
+      "cta": "View payout settings",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Define ambiguous Payout ready as recipient onboarding only. Require verified route readiness; separate payable-milestone concept.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "country_name"
+      ]
+    },
+    {
+      "id": "dispute.opened",
+      "group": "dispute",
+      "audience": "Both parties separately",
+      "trigger": "Dispute case opened and release hold applied",
+      "subject": "Dispute opened for {{collaboration_name}}",
+      "preheader": "The affected milestone release is paused.",
+      "title": "A dispute is open",
+      "body": [
+        "A dispute has been opened for {{milestone_name}}. New releases for the affected milestone are paused while the case is reviewed.",
+        "{{inflight_status_text}}",
+        "Open the case to review the issue and provide the requested information."
+      ],
+      "cta": "View dispute",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Case",
+          "{{case_reference}}"
+        ],
+        [
+          "Response due",
+          "{{response_due_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Pause must actually be applied. In-flight payment may still complete; disclose precise safe status. Admin gets case email separately.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_reference",
+        "collaboration_name",
+        "inflight_status_text",
+        "milestone_name",
+        "response_due_at"
+      ]
+    },
+    {
+      "id": "dispute.opened_admin",
+      "group": "dispute",
+      "audience": "Authorized trust and finance operators",
+      "trigger": "Dispute case created",
+      "subject": "[Action needed] New dispute: {{case_reference}}",
+      "preheader": "Assign an owner and review payment exposure.",
+      "title": "New dispute to review",
+      "body": [
+        "A dispute has been opened for {{collaboration_name}} and {{milestone_name}}. Review the case, the release hold and any in-flight payment before taking action."
+      ],
+      "cta": "Open dispute case",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Case",
+          "{{case_reference}}"
+        ],
+        [
+          "Response due",
+          "{{response_due_at}}"
+        ],
+        [
+          "Owner",
+          "{{case_owner}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "Only authorized operators; evidence and allegations stay in case.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_owner",
+        "case_reference",
+        "collaboration_name",
+        "milestone_name",
+        "response_due_at"
+      ]
+    },
+    {
+      "id": "dispute.resolved",
+      "group": "dispute",
+      "audience": "Both parties and authorized case operators separately",
+      "trigger": "Authorized resolution recorded",
+      "subject": "Dispute outcome for {{collaboration_name}}",
+      "preheader": "The decision is available in your case.",
+      "title": "Your dispute has an outcome",
+      "body": [
+        "A resolution has been recorded for {{milestone_name}}.",
+        "{{resolution_summary}}",
+        "A decision does not itself complete a payment or refund. Any required money movement will be confirmed separately."
+      ],
+      "cta": "View resolution",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Case",
+          "{{case_reference}}"
+        ],
+        [
+          "Resolved at",
+          "{{resolved_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Separate withdrawn/settled/released resolution text from safe controlled values; no automatic paid claim. Admin case log records outcome.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_reference",
+        "collaboration_name",
+        "milestone_name",
+        "resolution_summary",
+        "resolved_at"
+      ]
+    },
+    {
+      "id": "dispute.response_reminder",
+      "group": "dispute",
+      "audience": "Party currently required to respond",
+      "trigger": "Response deadline passed",
+      "subject": "Response overdue for dispute {{case_reference}}",
+      "preheader": "Please review the outstanding request in your case.",
+      "title": "Your response is overdue",
+      "body": [
+        "The requested response for dispute {{case_reference}} was due on {{response_due_at}}. Please open the case and provide the outstanding information.",
+        "{{case_next_step}}"
+      ],
+      "cta": "Respond to case",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "One per deadline/version; only owing party, not every party. Escalation separate admin alert; no invented penalties.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_next_step",
+        "case_reference",
+        "response_due_at"
+      ]
+    },
+    {
+      "id": "dispute.overdue_admin",
+      "group": "dispute",
+      "audience": "Assigned trust operator",
+      "trigger": "Dispute SLA threshold passed",
+      "subject": "[Action needed] Dispute overdue: {{case_reference}}",
+      "preheader": "The case response or review deadline has passed.",
+      "title": "Dispute needs follow-up",
+      "body": [
+        "The deadline for {{case_reference}} has passed. Check the outstanding actor, contact history and payment hold, then record the next action."
+      ],
+      "cta": "Review overdue case",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Deadline",
+          "{{response_due_at}}"
+        ],
+        [
+          "Owner",
+          "{{case_owner}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "One alert per SLA threshold; explicit escalation schedule.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_owner",
+        "case_reference",
+        "response_due_at"
+      ]
+    },
+    {
+      "id": "cancellation.review",
+      "group": "cancellation",
+      "audience": "Other party and requesting party separately",
+      "trigger": "Cancellation settlement proposal ready",
+      "subject": "Review cancellation for {{collaboration_name}}",
+      "preheader": "A settlement proposal is ready for your review.",
+      "title": "Review the cancellation proposal",
+      "body": [
+        "A cancellation has been requested for {{collaboration_name}}. The proposed settlement is ready to review in Influrios.",
+        "It shows accepted work, any retained fees, outstanding payments and the proposed refund. Nothing is marked refunded by this email."
+      ],
+      "cta": "Review settlement proposal",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Proposal version",
+          "{{settlement_version}}"
+        ],
+        [
+          "Respond by",
+          "{{response_due_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "If only request exists and no proposal, use request_received. Each party sees authorized financial breakdown in app.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "response_due_at",
+        "settlement_version"
+      ]
+    },
+    {
+      "id": "cancellation.request_received",
+      "group": "cancellation",
+      "audience": "Both parties separately",
+      "trigger": "Cancellation request recorded without proposal",
+      "subject": "Cancellation requested for {{collaboration_name}}",
+      "preheader": "The request is awaiting review.",
+      "title": "Cancellation under review",
+      "body": [
+        "A cancellation request has been recorded for {{collaboration_name}}. The request and any payment activity must be reviewed before a settlement is confirmed.",
+        "We will notify you when a settlement proposal or further action is ready."
+      ],
+      "cta": "View cancellation request",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Do not say cancellation completed or refund due yet.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name"
+      ]
+    },
+    {
+      "id": "cancellation.review_admin",
+      "group": "cancellation",
+      "audience": "Assigned finance operator",
+      "trigger": "Cancellation requires finance review",
+      "subject": "[Finance] Review cancellation: {{collaboration_name}}",
+      "preheader": "Check accepted work, fees and in-flight operations.",
+      "title": "Settlement review required",
+      "body": [
+        "Review the cancellation request for {{collaboration_name}}. Confirm accepted work, applicable fee policy, previous payments and remaining refundable funds before publishing a settlement proposal."
+      ],
+      "cta": "Review settlement case",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Case",
+          "{{case_reference}}"
+        ],
+        [
+          "Owner",
+          "{{case_owner}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "Mandatory internal queue event; do not rely on email as sole work queue.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_owner",
+        "case_reference",
+        "collaboration_name"
+      ]
+    },
+    {
+      "id": "cancellation.waiting_payout",
+      "group": "cancellation",
+      "audience": "Both parties separately",
+      "trigger": "Settlement blocked by in-flight payout",
+      "subject": "Cancellation update for {{collaboration_name}}",
+      "preheader": "We are waiting for the provider to confirm a payment outcome.",
+      "title": "Waiting for a payment update",
+      "body": [
+        "Your cancellation settlement cannot be finalized yet because a payout is still processing.",
+        "Once the provider confirms the outcome, the settlement can be recalculated. Please do not make another payment while this is being checked."
+      ],
+      "cta": "View settlement status",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Case",
+          "{{case_reference}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "One notice per blocking operation; notify finance via case queue with operation details.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_reference",
+        "collaboration_name"
+      ]
+    },
+    {
+      "id": "cancellation.completed",
+      "group": "cancellation",
+      "audience": "Both parties separately",
+      "trigger": "Cancellation effective under accepted settlement",
+      "subject": "Collaboration cancelled: {{collaboration_name}}",
+      "preheader": "Review the final settlement and any remaining payment steps.",
+      "title": "Your collaboration is cancelled",
+      "body": [
+        "{{collaboration_name}} has been cancelled under the recorded terms.",
+        "{{settlement_status_text}}",
+        "The settlement page shows any accepted work, retained fees, outstanding payout or refund. Payment completion is confirmed separately."
+      ],
+      "cta": "View cancellation settlement",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Effective date",
+          "{{cancelled_at}}"
+        ],
+        [
+          "Case",
+          "{{case_reference}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Unfunded version uses no-money-collected text only after reconciliation. Cancellation effective may precede refund success; do not conflate financial closure.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "cancelled_at",
+        "case_reference",
+        "collaboration_name",
+        "settlement_status_text"
+      ]
+    },
+    {
+      "id": "refund.processing",
+      "group": "refund",
+      "audience": "Business payer",
+      "trigger": "Provider accepts refund instruction",
+      "subject": "Refund processing for {{collaboration_name}}",
+      "preheader": "Your {{refund_amount}} refund is with the payment provider.",
+      "title": "Your refund is processing",
+      "body": [
+        "A refund of {{refund_amount}} has been submitted for {{collaboration_name}}. It has not yet been confirmed as completed.",
+        "You can review the settlement and follow the refund status in Influrios."
+      ],
+      "cta": "Track refund",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Refund amount",
+          "{{refund_amount}}"
+        ],
+        [
+          "Destination",
+          "{{masked_refund_destination}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Recommended new message; provider accepted not merely queued. No universal arrival promise.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "masked_refund_destination",
+        "refund_amount"
+      ]
+    },
+    {
+      "id": "refund.completed_business",
+      "group": "refund",
+      "audience": "Business payer",
+      "trigger": "Verified refund success",
+      "subject": "Refund confirmed for {{collaboration_name}}",
+      "preheader": "The provider confirmed a refund of {{refund_amount}}.",
+      "title": "Your refund is confirmed",
+      "body": [
+        "The provider confirmed the refund shown below for {{collaboration_name}}. Your settlement explains the accepted work and retained charges.",
+        "Your bank or payment method may take additional time to display the credit."
+      ],
+      "cta": "View refund receipt",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Refund this transaction",
+          "{{refund_amount}}"
+        ],
+        [
+          "Refunds to date",
+          "{{refunds_to_date}}"
+        ],
+        [
+          "Accepted gross work",
+          "{{accepted_gross}}"
+        ],
+        [
+          "Retained activation fee",
+          "{{retained_activation}}"
+        ],
+        [
+          "Retained business collaboration fee",
+          "{{retained_business_fee}}"
+        ],
+        [
+          "Other settlement adjustments",
+          "{{settlement_adjustments}}"
+        ],
+        [
+          "Destination",
+          "{{masked_refund_destination}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Normal currency units with code. Use signed settlement amounts; omit irrelevant rows. Partial refund is not whole deal refunded.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "accepted_gross",
+        "action_url",
+        "collaboration_name",
+        "masked_refund_destination",
+        "refund_amount",
+        "refunds_to_date",
+        "retained_activation",
+        "retained_business_fee",
+        "settlement_adjustments"
+      ]
+    },
+    {
+      "id": "refund.completed_influencer",
+      "group": "refund",
+      "audience": "Influencer",
+      "trigger": "Verified business refund relevant to own agreement",
+      "subject": "Settlement update for {{collaboration_name}}",
+      "preheader": "The business refund has been confirmed.",
+      "title": "Your settlement has been updated",
+      "body": [
+        "The provider confirmed the business refund associated with {{collaboration_name}}.",
+        "Your settlement page shows your accepted compensation, applicable fees, payments already made and any remaining amount due to you."
+      ],
+      "cta": "View my settlement",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Your accepted gross compensation",
+          "{{accepted_gross}}"
+        ],
+        [
+          "Your retained collaboration fee",
+          "{{retained_influencer_fee}}"
+        ],
+        [
+          "Your net settlement compensation",
+          "{{settlement_net}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "No business card or bank data. Show only own authorized economics; does not say influencer received refund.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "accepted_gross",
+        "action_url",
+        "collaboration_name",
+        "retained_influencer_fee",
+        "settlement_net"
+      ]
+    },
+    {
+      "id": "payment.risk",
+      "group": "payment",
+      "audience": "Affected parties separately",
+      "trigger": "Payment risk restriction applied",
+      "subject": "Payment review for {{collaboration_name}}",
+      "preheader": "Some payment actions are paused while a payment issue is reviewed.",
+      "title": "Payment actions are paused",
+      "body": [
+        "A payment issue affecting {{collaboration_name}} is being reviewed. New releases covered by the restriction are paused.",
+        "{{safe_next_step}}",
+        "This notice does not confirm a refund or decide fault between the parties."
+      ],
+      "cta": "View payment status",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Neutral safe reason; no raw fraud allegations. In-flight funds reconciled separately; notify finance risk queue.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "safe_next_step"
+      ]
+    },
+    {
+      "id": "payment.activation_receipt",
+      "group": "payment",
+      "audience": "Business payer",
+      "trigger": "Activation fee retention eligibility recorded",
+      "subject": "Activation fee update for {{collaboration_name}}",
+      "preheader": "Your activation service and fee status are recorded.",
+      "title": "Your collaboration is activated",
+      "body": [
+        "The activation service for {{collaboration_name}} has been completed. The applicable Platform Activation Fee is shown below.",
+        "{{activation_policy_text}}",
+        "Collaboration service fees follow the milestone settlement terms in your agreement."
+      ],
+      "cta": "View fee breakdown",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Platform activation fee",
+          "{{activation_fee}}"
+        ],
+        [
+          "Activated at",
+          "{{activated_at}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Optional receipt; combine with funding confirmed if same moment. Only new fee policy with funding AND activation evidence; no unconditional nonrefundable language.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "activated_at",
+        "activation_fee",
+        "activation_policy_text",
+        "collaboration_name"
+      ]
+    },
+    {
+      "id": "ops.relationship_claim",
+      "group": "ops",
+      "audience": "Authorized operations reviewers",
+      "trigger": "Relationship claim submitted",
+      "subject": "[Review needed] Relationship claim for {{collaboration_name}}",
+      "preheader": "Review the claim before applying any policy change.",
+      "title": "Relationship claim submitted",
+      "body": [
+        "A pre-existing relationship claim was submitted for {{collaboration_name}}. Review the supporting information and the applicable policy.",
+        "The claim does not automatically change signed fees or payment obligations."
+      ],
+      "cta": "Review claim",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Claim",
+          "{{case_reference}}"
+        ],
+        [
+          "Submitted by",
+          "{{sender_name}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "No automatic attribution or fee rewrite.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_reference",
+        "collaboration_name",
+        "sender_name"
+      ]
+    },
+    {
+      "id": "ops.route_blocked",
+      "group": "ops",
+      "audience": "Affected business or influencer separately",
+      "trigger": "User action blocked by unavailable route",
+      "subject": "Funding unavailable for {{collaboration_name}}",
+      "preheader": "This collaboration cannot start funded work yet.",
+      "title": "Funding is currently unavailable",
+      "body": [
+        "Funding for {{collaboration_name}} could not be started because {{safe_route_reason}}.",
+        "{{safe_next_step}}",
+        "Please wait for an eligible funding option before beginning paid work."
+      ],
+      "cta": "Review collaboration",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Use explicit country/eligibility safe reason; do not send operational ledger alerts to both parties. Repeated button clicks deduped.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "safe_next_step",
+        "safe_route_reason"
+      ]
+    },
+    {
+      "id": "ops.route_blocked_admin",
+      "group": "ops",
+      "audience": "Authorized finance configuration owners",
+      "trigger": "Route blocker requires operator attention",
+      "subject": "[Finance] Route blocked for {{country_name}}",
+      "preheader": "Review the route capability or configuration issue.",
+      "title": "Payment route needs review",
+      "body": [
+        "A funding action was blocked for {{collaboration_name}}. Review the route, country checks and provider capability evidence.",
+        "Do not bypass the holding or beneficiary verification requirements to clear this alert."
+      ],
+      "cta": "Review route issue",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Country",
+          "{{country_name}}"
+        ],
+        [
+          "Route version",
+          "{{route_version}}"
+        ],
+        [
+          "Blocker",
+          "{{blocker_code}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "One incident per route/blocker/version; config RBAC. Do not send for ordinary expected ineligibility unless threshold/action required.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "blocker_code",
+        "collaboration_name",
+        "country_name",
+        "route_version"
+      ]
+    },
+    {
+      "id": "ops.stale_funding",
+      "group": "ops",
+      "audience": "Assigned finance operators",
+      "trigger": "Unpaid funding age threshold passed",
+      "subject": "[Finance] Unpaid funding needs review",
+      "preheader": "{{collaboration_name}} has an unresolved funding attempt.",
+      "title": "Review unpaid funding",
+      "body": [
+        "The funding attempt for {{collaboration_name}} has remained unpaid beyond the configured review window. Check for an in-flight or unknown provider operation before expiring it or contacting the business."
+      ],
+      "cta": "Review funding attempt",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Created",
+          "{{created_at}}"
+        ],
+        [
+          "Operation",
+          "{{public_reference}}"
+        ],
+        [
+          "Owner",
+          "{{case_owner}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "Separate from country limitation; once per age threshold. Never auto-cancel unknown payment.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_owner",
+        "collaboration_name",
+        "created_at",
+        "public_reference"
+      ]
+    },
+    {
+      "id": "ops.ledger_mismatch",
+      "group": "ops",
+      "audience": "Authorized finance operators",
+      "trigger": "Reconciliation mismatch opened",
+      "subject": "[Urgent finance review] Payment balance mismatch",
+      "preheader": "Reconcile the affected operation before further money movement.",
+      "title": "Reconciliation needs attention",
+      "body": [
+        "A reconciliation mismatch was detected for {{collaboration_name}}. Review the internal journal and provider evidence before allowing further affected money movement."
+      ],
+      "cta": "Open reconciliation case",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Case",
+          "{{case_reference}}"
+        ],
+        [
+          "Expected amount",
+          "{{expected_amount}}"
+        ],
+        [
+          "Observed amount",
+          "{{observed_amount}}"
+        ],
+        [
+          "Provider",
+          "{{provider_name}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "No customer-facing ledger jargon. Lock actual affected operations; incident dedupe and escalation; no secrets in email.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "case_reference",
+        "collaboration_name",
+        "expected_amount",
+        "observed_amount",
+        "provider_name"
+      ]
+    },
+    {
+      "id": "ops.hold_warning",
+      "group": "ops",
+      "audience": "Assigned finance operators",
+      "trigger": "Provider holding age threshold crossed",
+      "subject": "[Finance] Held funds need review",
+      "preheader": "Review the holding timeline for {{collaboration_name}}.",
+      "title": "Review held funds",
+      "body": [
+        "Funds for {{collaboration_name}} have reached the configured holding review threshold. Review the agreement, delivery progress, disputes and provider requirements.",
+        "Do not release or refund funds automatically because this warning was sent."
+      ],
+      "cta": "Review held funds",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Held amount",
+          "{{held_amount}}"
+        ],
+        [
+          "Holding since",
+          "{{held_since}}"
+        ],
+        [
+          "Review by",
+          "{{review_due_at}}"
+        ]
+      ],
+      "category": "internal",
+      "guard": "Provider/route-specific threshold; once per threshold and incident; no invented provider limits.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "collaboration_name",
+        "held_amount",
+        "held_since",
+        "review_due_at"
+      ]
+    },
+    {
+      "id": "billing.paid",
+      "group": "billing",
+      "audience": "Billing contact",
+      "trigger": "Invoice confirmed paid",
+      "subject": "Receipt for your Influrios {{plan_name}} plan",
+      "preheader": "Your subscription payment is confirmed.",
+      "title": "Your plan payment is confirmed",
+      "body": [
+        "Your payment for the {{plan_name}} plan is confirmed. You can view the invoice and manage your subscription from Billing.",
+        "This payment is for your Influrios subscription. It does not fund a collaboration."
+      ],
+      "cta": "View invoice",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Invoice",
+          "{{invoice_number}}"
+        ],
+        [
+          "Amount paid",
+          "{{invoice_paid}}"
+        ],
+        [
+          "Billing period",
+          "{{billing_period}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Choose Stripe OR Influrios as receipt owner. Confirm paid event and actual plan state; no duplicate invoice-paid subscription message.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "billing_period",
+        "invoice_number",
+        "invoice_paid",
+        "plan_name"
+      ]
+    },
+    {
+      "id": "billing.failed",
+      "group": "billing",
+      "audience": "Billing contact",
+      "trigger": "Definitive subscription invoice failure",
+      "subject": "Action needed for your Influrios subscription",
+      "preheader": "Update your payment details to resolve the unpaid invoice.",
+      "title": "Your subscription payment failed",
+      "body": [
+        "We could not complete the payment for your {{plan_name}} subscription. Open Billing to review the invoice and update your payment method.",
+        "{{subscription_access_text}}"
+      ],
+      "cta": "Manage billing",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Invoice",
+          "{{invoice_number}}"
+        ],
+        [
+          "Amount due",
+          "{{invoice_due}}"
+        ],
+        [
+          "Next payment step",
+          "{{billing_next_step}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Single owner with Stripe; access and retry dates from actual billing state, not invented grace period.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "billing_next_step",
+        "invoice_due",
+        "invoice_number",
+        "plan_name",
+        "subscription_access_text"
+      ]
+    },
+    {
+      "id": "billing.renewal",
+      "group": "billing",
+      "audience": "Billing contact",
+      "trigger": "Upcoming subscription renewal threshold",
+      "subject": "Your Influrios plan renews on {{renewal_date}}",
+      "preheader": "Review your plan and upcoming charge.",
+      "title": "Your renewal is coming up",
+      "body": [
+        "Your {{plan_name}} plan is scheduled to renew on {{renewal_date}}. Review your upcoming invoice and manage your subscription in Billing.",
+        "{{renewal_amount_note}}"
+      ],
+      "cta": "Manage subscription",
+      "cta_url": "{{action_url}}",
+      "facts": [
+        [
+          "Upcoming amount",
+          "{{renewal_amount}}"
+        ],
+        [
+          "Renewal date",
+          "{{renewal_date}}"
+        ]
+      ],
+      "category": "transactional",
+      "guard": "Recommended addition. Label estimated amount when tax/usage unsettled. Recheck cancellation and sender owner before sending.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "plan_name",
+        "renewal_amount",
+        "renewal_amount_note",
+        "renewal_date"
+      ]
+    },
+    {
+      "id": "billing.cancel_scheduled",
+      "group": "billing",
+      "audience": "Billing contact",
+      "trigger": "Subscription cancellation scheduled",
+      "subject": "Your Influrios subscription cancellation is scheduled",
+      "preheader": "Your current plan ends on {{plan_end_at}}.",
+      "title": "Cancellation scheduled",
+      "body": [
+        "Your {{plan_name}} subscription is scheduled to end on {{plan_end_at}}. {{subscription_access_text}}",
+        "This change affects your subscription. Existing collaboration agreements and payment obligations remain separate."
+      ],
+      "cta": "View subscription",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Recommended addition. Do not say already cancelled when scheduled; no refund promise.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "plan_end_at",
+        "plan_name",
+        "subscription_access_text"
+      ]
+    },
+    {
+      "id": "billing.ended",
+      "group": "billing",
+      "audience": "Billing contact",
+      "trigger": "Subscription actually ended",
+      "subject": "Your Influrios subscription has ended",
+      "preheader": "Review your current plan and available features.",
+      "title": "Your subscription has ended",
+      "body": [
+        "Your {{plan_name}} subscription ended on {{plan_end_at}}. {{current_plan_text}}",
+        "Your existing collaboration agreements and payment obligations remain separate."
+      ],
+      "cta": "View current plan",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "Recommended addition; actual entitlement state only.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "current_plan_text",
+        "plan_end_at",
+        "plan_name"
+      ]
+    },
+    {
+      "id": "marketing.broadcast",
+      "group": "marketing",
+      "audience": "Eligible opted-in audience",
+      "trigger": "Authorized reviewed campaign scheduled",
+      "subject": "Bring your influencer profile together with Influrios",
+      "preheader": "Build a shareable card with your specialty and social links.",
+      "title": "Make your profile easier to share",
+      "body": [
+        "Your Influrios Card brings your specialty, introduction and social links into one shareable profile.",
+        "Review your details, preview your card and choose what to publish. You can update your profile as your work grows."
+      ],
+      "cta": "Explore my profile",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "marketing",
+      "guard": "Editorial template, not automatic event. Require final copy, lawful audience/consent, sender/address, unsubscribe, test and authorized send. No live sends in this handoff.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url"
+      ]
+    }
+  ]
+}
