@@ -161,8 +161,10 @@ describe("milestone delivery", () => {
     assert.equal(page.includes('type="file"'), false);
     assert.match(page, /\/collaboration\/work\/\$\{deal\.id\}/);
     const work = readFileSync("src/app/collaboration/work/[fundingId]/page.tsx", "utf8");
+    const review = readFileSync("src/components/version-review.tsx", "utf8");
     assert.match(work, /!business && funding.status === "held"/);
-    assert.match(work, /Version \{row.version\}/);
+    assert.match(work, /VersionReview/);
+    assert.match(review, /Version \{row.version\}/);
     assert.match(work, /name="files"/);
     assert.match(work, /actionAddDeliverableFiles/);
     assert.equal(deliverableFileRule("image/png", "shot.png")?.kind, "media");
