@@ -484,10 +484,10 @@ export function AdminUserAccountsView({
                           onChange={toggleAllOnPage}
                         />
                       </th>
-                      <th className="px-3 py-3">Account</th>
-                      <th className="px-3 py-3">Verification</th>
+                      <th className="px-3 py-3">Account name</th>
+                      <th className="px-3 py-3">Type</th>
+                      <th className="px-3 py-3">Plan</th>
                       <th className="px-3 py-3">Status</th>
-                      <th className="px-3 py-3">Last active</th>
                       <th className="px-3 py-3">Actions</th>
                     </tr>
                   </thead>
@@ -501,8 +501,8 @@ export function AdminUserAccountsView({
                     ) : (
                       rows.map((row) => {
                         const active = selected?.id === row.id;
-                        const kyc = kycBadge(row.identityVerified, row.kycSubmissionStatus);
                         const status = statusBadge(row.suspendedAt);
+                        const typeLabel = row.role === "BUSINESS" || row.role === "AGENCY" ? "Business" : "Influencer";
                         return (
                           <tr
                             key={row.id}
@@ -530,21 +530,17 @@ export function AdminUserAccountsView({
                                 </span>
                                 <div className="min-w-0">
                                   <p className="truncate font-semibold text-indigo">{row.displayName}</p>
-                                  <p className="truncate text-[11px] text-muted">{row.handle || row.email}</p>
+                                  <p className="truncate text-[11px] text-muted">{row.handle || "Handle on the account record"}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-3">
-                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${kyc.className}`}>
-                                {kyc.text}
-                              </span>
-                            </td>
+                            <td className="px-3 py-3 text-[#344054]">{typeLabel}</td>
+                            <td className="px-3 py-3 text-[#344054]">{row.planTier || "—"}</td>
                             <td className="px-3 py-3">
                               <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>
                                 {status.text}
                               </span>
                             </td>
-                            <td className="px-3 py-3 text-muted">{row.lastActiveLabel}</td>
                             <td className="px-3 py-3">
                               <div className="flex items-center justify-end gap-2">
                                 <button

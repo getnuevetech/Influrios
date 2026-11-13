@@ -234,9 +234,9 @@ export default async function BusinessHomePage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-3xl font-bold text-indigo">Business Account</h1>
+        <h1 className="font-display text-3xl font-bold text-indigo">Welcome back, {greetName}.</h1>
         <p className="mt-1 text-sm text-muted">
-          Welcome back, {greetName}. Here&apos;s what&apos;s happening with{" "}
+          Here&apos;s what needs a decision for{" "}
           <span className="font-semibold text-indigo">{companyName}</span>.
         </p>
       </div>
@@ -277,8 +277,60 @@ export default async function BusinessHomePage() {
         )}
       </Panel>
 
+      <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-sm sm:p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Needs your attention</h2>
+        {pendingResponses === 0 && pendingContracts.length === 0 && (hub?.pipeline.filter((item) => item.awaitingFunding || item.stage === "Review").length ?? 0) === 0 ? (
+          <p className="mt-3 text-sm text-muted">Nothing is waiting on you. New responses, signatures, and funding tasks appear here.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-[#EEF2F7]">
+            {pendingResponses > 0 ? (
+              <li className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-indigo">{pendingResponses} response{pendingResponses === 1 ? "" : "s"} to review</p>
+                  <p className="text-xs text-muted">Influencers have responded to your invites.</p>
+                </div>
+                <Link href="/collaboration/business" className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">Review</Link>
+              </li>
+            ) : null}
+            {pendingContracts.slice(0, 3).map((contract) => (
+              <li key={contract.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-indigo">1 agreement to sign</p>
+                  <p className="text-xs text-muted">{contract.title} is ready for your signature.</p>
+                </div>
+                <Link href={`/collaboration/contracts?open=${contract.id}`} className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">Review</Link>
+              </li>
+            ))}
+            {(hub?.pipeline ?? []).filter((item) => item.awaitingFunding).slice(0, 2).map((item) => (
+              <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-indigo">1 collaboration to fund</p>
+                  <p className="text-xs text-muted">{item.title} needs funding before work starts.</p>
+                </div>
+                <Link href={item.contractHref || "/payments"} className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">Review</Link>
+              </li>
+            ))}
+            {(hub?.pipeline ?? []).filter((item) => item.stage === "Review").slice(0, 2).map((item) => (
+              <li key={`review-${item.id}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-indigo">Review a submission</p>
+                  <p className="text-xs text-muted">{item.title} · {item.counterparty}</p>
+                </div>
+                <Link href={item.href} className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">Review</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-wrap items-start gap-5">
+        {setupPercent === 100 ? (
+          <p className="flex flex-wrap items-center justify-between gap-3 text-sm font-semibold text-emerald-700">
+            <span>Account ready. Profile, plan, and workspace details are set.</span>
+            <Link href="/business/profile" className="text-[#6D4AFF]">Edit profile</Link>
+          </p>
+        ) : null}
+        <div className={`${setupPercent === 100 ? "hidden" : "flex"} flex-wrap items-start gap-5`}>
           <span className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5B8CFF] to-[#6D5EF7] text-2xl font-bold text-white shadow-sm">
             {companyName.slice(0, 1).toUpperCase()}
           </span>
@@ -397,7 +449,7 @@ export default async function BusinessHomePage() {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(17.5rem,0.75fr)]">
         <div className="space-y-4">
           <Panel
-            title="Recent Collaboration Requests"
+            title="Active work"
             action={<TextLink href="/business/campaigns">View all requests →</TextLink>}
           >
             {tableRows.length === 0 ? (

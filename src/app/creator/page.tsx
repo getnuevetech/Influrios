@@ -2,8 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { ChecklistItem } from "@/components/dashboard-ui";
-import { IconArrowRight, IconEye, IconHandshake, IconMail, IconWallet } from "@/components/icons";
+import { IconArrowRight, IconHandshake, IconMail } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
+import { unreadNoticeCount } from "@/lib/account-notices";
 import { loadCreatorHome } from "@/lib/creator-home";
 import { formatMoney } from "@/lib/money";
 
@@ -23,7 +24,10 @@ export default async function CreatorHomePage({
   const params = await searchParams;
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/creator");
-  const home = await loadCreatorHome(account.id);
+  const [home, unreadMessages] = await Promise.all([
+    loadCreatorHome(account.id),
+    unreadNoticeCount(account.id),
+  ]);
   const connected = home.socials.filter((social) => social.status === "connected").length;
   const checklistOpen = home.checklist.some((item) => !item.done);
   const shareUrl = home.shortLabel
@@ -73,18 +77,34 @@ export default async function CreatorHomePage({
         </div>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat href="/collaboration/hub?view=collaborations&tab=invitations" label="Pending invitations" value={String(home.pendingInvitations)} icon={<IconMail size={16} />} />
+      {home.pendingInvitations > 0 ? (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#6D4AFF] px-4 py-4 text-white">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+              <IconMail size={18} />
+            </span>
+            <div>
+              <p className="font-semibold">
+                {home.pendingInvitations} new invitation{home.pendingInvitations === 1 ? "" : "s"}
+              </p>
+              <p className="text-sm text-white/80">Brands want to collaborate with you.</p>
+            </div>
+          </div>
+          <Link href="/collaboration/hub?view=collaborations&tab=invitations" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#6D4AFF]">
+            View invitations
+          </Link>
+        </section>
+      ) : null}
+
+      <section className="grid gap-3 sm:grid-cols-3">
         <Stat href="/collaboration/hub?view=collaborations&tab=active" label="Active collaborations" value={String(home.activeCollabs)} icon={<IconHandshake size={16} />} />
-        <Stat href="/creator/analytics" label="Profile views · 30 days" value={viewCount} note={viewNote} icon={<IconEye size={16} />} />
-        <Stat
-          href="/creator/earnings"
-          label="Released this month"
-          value={moneyLabel(home.earnings.cents, home.earnings.currency, home.earnings.failed)}
-          note={home.earnings.note}
-          icon={<IconWallet size={16} />}
-        />
+        <Stat href="/collaboration/hub?view=collaborations&tab=invitations" label="Invitations" value={String(home.pendingInvitations)} icon={<IconMail size={16} />} />
+        <Stat href="/creator/notifications" label="Unread messages" value={String(unreadMessages)} icon={<IconMail size={16} />} />
       </section>
+      <p className="text-xs text-[#98A2B3]">
+        Profile views {viewCount} · {viewNote}. Released this month {moneyLabel(home.earnings.cents, home.earnings.currency, home.earnings.failed)}
+        {home.earnings.note ? ` · ${home.earnings.note}` : ""}.
+      </p>
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]">
         <div className="space-y-4">
@@ -225,7 +245,12 @@ export default async function CreatorHomePage({
                     ))}
                 </ul>
               </div>
-            ) : null}
+            ) : (
+              <p className="mt-4 flex items-center gap-2 border-t border-[#EEF2F7] pt-3 text-sm font-semibold text-emerald-700">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#E8F8EE]">✓</span>
+                Completed setup
+              </p>
+            )}
           </section>
         </div>
       </div>

@@ -8,6 +8,8 @@ const EXACT = new Set([
   "/business/home",
   "/discover",
   "/login",
+  "/signup",
+  "/notifications",
   "/claim",
   "/register",
 ]);
