@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MoneyAmount, PaymentStatus } from "@/components/payment-journey/status";
 import { UnavailableNote } from "@/components/unavailable-note";
 import { AgreementReviewDialog, PayoutDetailDialog } from "@/app/creator/earnings/earning-dialogs";
+import { paymentStageNote, paymentStages } from "@/lib/payment-stages";
 import type { PaymentStatusLabel } from "@/lib/payment-standard-v4";
 
 export function EarningsPanel({
@@ -43,6 +44,14 @@ export function EarningsPanel({
 }) {
   const code = currency ?? "";
   const selectedRow = rows.find((row) => row.id === selected) ?? null;
+  const payoutStages = selectedRow
+    ? paymentStages({
+        fundingStatus: "recorded",
+        milestoneStatuses: [selectedRow.milestoneStatus || "pending"],
+        entryKinds: [],
+      })
+    : [];
+  const payoutNote = selectedRow ? paymentStageNote(payoutStages) : null;
   return (
     <section data-screen="I02" data-mobile="M02" className="mb-8 space-y-4">
       <div>
@@ -99,7 +108,13 @@ export function EarningsPanel({
         ))}
       </div>
       {selectedRow ? (
-        <PayoutDetailDialog row={{ ...selectedRow, milestoneStatus: selectedRow.milestoneStatus || "pending" }} destination={destination} currency={code || null} />
+        <PayoutDetailDialog
+          row={selectedRow}
+          destination={destination}
+          currency={code || null}
+          stages={payoutStages}
+          note={payoutNote}
+        />
       ) : null}
       {agreementOpen && agreement ? (
         <AgreementReviewDialog

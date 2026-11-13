@@ -1,26 +1,21 @@
-"use client";
-
 import Link from "next/link";
 import { AccountDialog } from "@/components/account-dialog";
 import { MoneyAmount, PaymentStatus } from "@/components/payment-journey/status";
-import { paymentStageNote, paymentStages } from "@/lib/payment-stages";
 import type { PaymentStatusLabel } from "@/lib/payment-standard-v4";
 
 export function PayoutDetailDialog({
   row,
   destination,
   currency,
+  stages,
+  note,
 }: {
-  row: { id: string; title: string; milestone: string; netCents: number | null; status: PaymentStatusLabel; milestoneStatus: string };
+  row: { id: string; title: string; milestone: string; netCents: number | null; status: PaymentStatusLabel };
   destination: string;
   currency: string | null;
+  stages: { id: string; label: string; status: string; detail: string }[];
+  note: string | null;
 }) {
-  const stages = paymentStages({
-    fundingStatus: "recorded",
-    milestoneStatuses: [row.milestoneStatus],
-    entryKinds: [],
-  });
-  const note = paymentStageNote(stages);
   return (
     <AccountDialog title={row.milestone || row.title} subtitle="Payout detail" closeHref="/creator/earnings">
       <div className="space-y-4">
