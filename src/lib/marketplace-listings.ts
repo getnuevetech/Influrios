@@ -629,6 +629,30 @@ export async function inviteCreatorsIndependently(input: {
     });
     ids.push(row.id);
   }
+  const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
+  const links = liveMailLinks();
+  const workspace = await prisma.businessWorkspace.findUnique({ where: { id: workspaceId }, select: { name: true } });
+  for (const id of ids) {
+    const application = await prisma.marketplaceApplication.findUnique({ where: { id } });
+    if (!application?.toSlug) continue;
+    const creator = await prisma.creator.findUnique({
+      where: { slug: application.toSlug },
+      include: { user: { select: { email: true } } },
+    });
+    if (!creator?.user?.email) continue;
+    await deliverCatalogEmail({
+      templateId: "invite.private_campaign",
+      to: creator.user.email,
+      vars: {
+        first_name: creator.displayName.split(/\s+/)[0] || creator.displayName,
+        business_name: workspace?.name || "A business",
+        campaign_name: application.note?.trim() || "a private campaign",
+        collaboration_name: application.note?.trim() || "a private campaign",
+        expires_at: application.responseDeadline ? application.responseDeadline.toISOString().slice(0, 10) : "—",
+        action_url: `${links.origin}/collaboration/hub`,
+      },
+    }).catch(() => undefined);
+  }
   return { ok: true, ids };
 }
 
@@ -655,7 +679,7 @@ export async function transitionMarketplaceApplication(input: {
   if (!allowed.includes(input.toStatus)) {
     throw new Error(`Cannot move application from ${row.status} to ${input.toStatus}.`);
   }
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.marketplaceApplication.update({
       where: { id: input.id },
       data: { status: input.toStatus },
@@ -708,6 +732,33 @@ export async function transitionMarketplaceApplication(input: {
       data: { collaborationId: collab.id },
     });
   });
+  if (input.toStatus === "ACCEPTED" && applicationIsInvitation(updated)) {
+    const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
+    const links = liveMailLinks();
+    const application = await prisma.marketplaceApplication.findUnique({ where: { id: input.id } });
+    const request = application?.businessRequestId
+      ? await prisma.marketplaceBusinessRequest.findUnique({
+          where: { id: application.businessRequestId },
+          include: { workspace: { include: { owner: { select: { email: true } } } } },
+        })
+      : null;
+    const businessEmail = request?.workspace?.owner?.email ?? "";
+    if (businessEmail) {
+      const influencer = application?.toSlug
+        ? await prisma.creator.findUnique({ where: { slug: application.toSlug }, select: { displayName: true } })
+        : null;
+      await deliverCatalogEmail({
+        templateId: "invite.accepted",
+        to: businessEmail,
+        vars: {
+          influencer_name: influencer?.displayName || application?.toSlug || "An influencer",
+          collaboration_name: application?.note?.trim() || "your collaboration",
+          action_url: `${links.origin}/collaboration/hub`,
+        },
+      }).catch(() => undefined);
+    }
+  }
+  return updated;
 }
 
 export function canTransitionApplication(from: string, to: string): boolean {

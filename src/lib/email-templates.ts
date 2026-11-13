@@ -23,6 +23,7 @@ const MAIL_LOG_KINDS = [
   "password_reset_email",
   "mail_test",
   "collab_notification",
+  "catalog_email",
 ] as const;
 
 const SENSITIVE_KINDS = new Set(["verification_email", "claim_verification_email", "password_reset_email"]);
@@ -34,6 +35,7 @@ const KIND_SUBJECT: Record<string, string> = {
   password_reset_email: "Password reset",
   mail_test: "SMTP test",
   collab_notification: "Collaboration notice",
+  catalog_email: "Catalog email",
 };
 
 function missingTable(error: unknown) {

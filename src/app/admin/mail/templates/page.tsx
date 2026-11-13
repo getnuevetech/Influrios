@@ -3,7 +3,9 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { EMAIL_GROUP_LABELS } from "@/lib/email-catalog";
 import { listEmailTemplateRows, listRecentEmailDeliveries, loadEmailTemplateEditor } from "@/lib/email-templates";
+import { ESSENTIAL_EMAIL_TEMPLATES, emailTemplatePause, templateFeature } from "@/lib/email-live";
 import { mailSettingsView } from "@/lib/mail";
+import { productSwitch } from "@/lib/product-switches";
 import { EmailTemplateDialog } from "@/components/email-template-dialog";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +43,10 @@ export default async function EmailTemplatesPage({
   const editor = params.template ? await loadEmailTemplateEditor(params.template) : null;
   const deliveries = await listRecentEmailDeliveries();
   const fromName = (await mailSettingsView().catch(() => null))?.fromName ?? "";
+  const pause = editor ? await emailTemplatePause(editor.template.id) : null;
+  const feature = editor ? templateFeature(editor.template.id) : null;
+  const featureUnavailable = feature ? !(await productSwitch(feature)) : false;
+  const teamMail = await productSwitch("collab_os_v1");
   const closeHref = hrefFor({ q, group });
 
   return (
@@ -51,8 +57,7 @@ export default async function EmailTemplatesPage({
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Email templates</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          These 79 messages are the catalog. Every one starts off. A draft, a publish, and a test stay inside this page.
-          Live account, invitation, and collaboration emails keep their current copy until a category is switched.
+          These 79 messages are the catalog. A category switch on Email health chooses the catalog or the older plain-text sender. Publishing changes the next catalog send. Tests use example links and do not move money.
         </p>
       </div>
       {params.error ? (
@@ -60,11 +65,13 @@ export default async function EmailTemplatesPage({
       ) : null}
       {params.saved === "draft" ? <p className="text-sm font-semibold text-emerald-700">Draft saved. Nothing was sent.</p> : null}
       {params.saved === "published" ? (
-        <p className="text-sm font-semibold text-emerald-700">Version published. Live mail is unchanged.</p>
+        <p className="text-sm font-semibold text-emerald-700">Version published. The next catalog send uses it.</p>
       ) : null}
-      {params.saved === "restored" ? <p className="text-sm font-semibold text-emerald-700">Earlier version restored. Live mail is unchanged.</p> : null}
+      {params.saved === "restored" ? <p className="text-sm font-semibold text-emerald-700">Earlier version restored for the next catalog send.</p> : null}
+      {params.saved === "paused" ? <p className="text-sm font-semibold text-emerald-700">Template paused. The pause is in the audit log.</p> : null}
+      {params.saved === "resumed" ? <p className="text-sm font-semibold text-emerald-700">Template resumed.</p> : null}
       {params.saved === "test" ? (
-        <p className="text-sm font-semibold text-emerald-700">Test sent to the address you entered. Live mail is unchanged.</p>
+        <p className="text-sm font-semibold text-emerald-700">Test sent to the address you entered. It is in the delivery log.</p>
       ) : null}
 
       <form className="flex flex-wrap items-end gap-3" action="/admin/mail/templates">
@@ -114,7 +121,10 @@ export default async function EmailTemplatesPage({
                 <td className="px-3 py-2">{row.category}</td>
                 <td className="px-3 py-2">{row.trigger}</td>
                 <td className="px-3 py-2">{row.version}</td>
-                <td className="px-3 py-2">{row.status}</td>
+                <td className="px-3 py-2">
+                  {row.status}
+                  {row.id.startsWith("invite.team_") && !teamMail ? " · Feature unavailable" : ""}
+                </td>
                 <td className="px-3 py-2">{row.status.startsWith("Published") ? chicago(row.updatedAt) : "—"}</td>
               </tr>
             ))}
@@ -174,6 +184,9 @@ export default async function EmailTemplatesPage({
           closeHref={closeHref}
           canEdit={canEdit}
           fromName={fromName}
+          pauseReason={pause?.reason ?? ""}
+          essential={editor ? ESSENTIAL_EMAIL_TEMPLATES.includes(editor.template.id as (typeof ESSENTIAL_EMAIL_TEMPLATES)[number]) : false}
+          featureUnavailable={featureUnavailable}
           query={{ q, group }}
         />
       ) : null}

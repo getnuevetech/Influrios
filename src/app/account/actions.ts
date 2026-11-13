@@ -221,6 +221,20 @@ export async function actionLogout(formData?: FormData) {
   redirect("/");
 }
 
+export async function actionSaveEmailPreference(formData: FormData) {
+  const session = await getAccountSession();
+  if (!session) redirect("/login?next=/account/notifications");
+  const { saveEmailPreference } = await import("@/lib/email-live");
+  await saveEmailPreference({
+    email: session.email,
+    collaborations: formData.get("collaborations") === "on",
+    billing: formData.get("billing") === "on",
+    outreach: formData.get("outreach") === "on",
+    productNews: formData.get("productNews") === "on",
+  });
+  redirect("/account/notifications?saved=1");
+}
+
 export async function actionSaveCommPreference(formData: FormData) {
   const session = await getAccountSession();
   if (!session) redirect("/login?next=/account");

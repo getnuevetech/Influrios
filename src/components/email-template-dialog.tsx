@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { actionPublishEmailTemplate, actionRollbackEmailTemplate, actionSaveEmailTemplateDraft, actionSendEmailTemplateTest } from "@/app/admin/mail/templates/actions";
+import { actionPauseEmailTemplate, actionPublishEmailTemplate, actionRollbackEmailTemplate, actionSaveEmailTemplateDraft, actionSendEmailTemplateTest } from "@/app/admin/mail/templates/actions";
 import { emailGroupLabel } from "@/lib/email-catalog";
 import { renderCatalogPreview } from "@/lib/email-render";
 import type { EmailCatalogTemplate } from "@/lib/email-catalog";
@@ -25,6 +25,9 @@ export function EmailTemplateDialog({
   closeHref,
   canEdit,
   fromName,
+  pauseReason,
+  essential,
+  featureUnavailable,
   query,
 }: {
   template: EmailCatalogTemplate;
@@ -34,6 +37,9 @@ export function EmailTemplateDialog({
   closeHref: string;
   canEdit: boolean;
   fromName: string;
+  pauseReason: string;
+  essential: boolean;
+  featureUnavailable: boolean;
   query: { q: string; group: string };
 }) {
   const router = useRouter();
@@ -206,7 +212,29 @@ export function EmailTemplateDialog({
             <div className="space-y-3 text-sm text-[#211E4E]">
               <p><span className="font-semibold">When it sends:</span> {template.trigger}</p>
               <p><span className="font-semibold">Guard:</span> {template.guard}</p>
-              <p>This template starts off. Publish uses the saved draft and stores the version. Account, invitation, and collaboration mail still use their current senders until that category is switched.</p>
+              <p>
+                {featureUnavailable
+                  ? "Feature unavailable. This message stays unsent until that product switch is on."
+                  : "When this category is on, the published copy is what the next live message uses. A paused essential template does not fall back to the older text."}
+              </p>
+              {pauseReason ? <p>Paused: {pauseReason}</p> : null}
+              {canEdit ? (
+                <form action={actionPauseEmailTemplate} className="space-y-2">
+                  <input type="hidden" name="templateKey" value={template.id} />
+                  <input type="hidden" name="q" value={query.q} />
+                  <input type="hidden" name="group" value={query.group} />
+                  {pauseReason ? <input type="hidden" name="resume" value="1" /> : null}
+                  {pauseReason ? null : (
+                    <label className="block text-sm font-semibold text-[#1B1464]">
+                      Pause reason{essential ? " (required)" : ""}
+                      <input name="reason" required={essential} className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
+                    </label>
+                  )}
+                  <button type="submit" className="rounded-full border border-[#5836D6] px-4 py-2 text-sm font-bold text-[#5836D6]">
+                    {pauseReason ? "Resume template" : "Pause template"}
+                  </button>
+                </form>
+              ) : null}
               {canEdit ? (
                 <form action={actionPublishEmailTemplate}>
                   <input type="hidden" name="templateKey" value={template.id} />

@@ -153,10 +153,10 @@ describe("template test From name", () => {
     assert.throws(() => emailFromDisplayName("info@nuevetech.io"), /From name/);
   });
 
-  it("keeps the display name off live collaboration mail", () => {
+  it("puts the display name on catalog sends and leaves older plain-text mail as the address", () => {
     const jobs = readFileSync(new URL("./jobs.ts", import.meta.url), "utf8");
     const action = readFileSync(new URL("../app/admin/mail/templates/actions.ts", import.meta.url), "utf8");
-    assert.equal(jobs.includes("fromName"), false);
+    assert.match(jobs, /fromName: data\.catalog === "1" \? fromName : undefined/);
     assert.match(action, /fromName: settings\?\.fromName/);
   });
 });

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { mailSettingsView, sendMail } from "@/lib/mail";
 import { emailTestRecipient, parseEmailBody, previewEmailTemplate, publishEmailTemplate, rollbackEmailTemplate, saveEmailTemplateDraft } from "@/lib/email-templates";
+import { pauseEmailTemplate, recordCatalogDelivery, resumeEmailTemplate } from "@/lib/email-live";
 
 function clean(value: FormDataEntryValue | null, max: number) {
   return String(value ?? "").trim().slice(0, max);
@@ -89,13 +90,21 @@ export async function actionSendEmailTemplateTest(formData: FormData) {
       body: parseEmailBody(String(formData.get("body") ?? "")),
       cta: clean(formData.get("cta"), 80),
     });
+    const subject = `[Test] ${rendered.subject}`.slice(0, 180);
     const sent = await sendMail({
       to,
       fromName: settings?.fromName ?? "",
-      subject: `[Test] ${rendered.subject}`.slice(0, 180),
+      subject,
       text: rendered.text,
       html: rendered.html,
     });
+    await recordCatalogDelivery({
+      to,
+      subject,
+      templateId: templateKey,
+      status: sent.ok ? "succeeded" : "failed",
+      error: sent.ok ? "" : sent.error,
+    }).catch(() => undefined);
     if (!sent.ok) throw new Error(sent.error);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not send the test.";
@@ -103,4 +112,25 @@ export async function actionSendEmailTemplateTest(formData: FormData) {
   }
   revalidatePath("/admin/mail/templates");
   redirect(back(formData, templateKey, { saved: "test" }));
+}
+
+export async function actionPauseEmailTemplate(formData: FormData) {
+  const session = await requireAdminAction("mail.edit");
+  const templateKey = clean(formData.get("templateKey"), 80);
+  try {
+    if (formData.get("resume") === "1") {
+      await resumeEmailTemplate({ templateId: templateKey, actor: session.email });
+    } else {
+      await pauseEmailTemplate({
+        templateId: templateKey,
+        reason: clean(formData.get("reason"), 240),
+        actor: session.email,
+      });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not update the pause.";
+    redirect(back(formData, templateKey, { error: message }));
+  }
+  revalidatePath("/admin/mail/templates");
+  redirect(back(formData, templateKey, { saved: formData.get("resume") === "1" ? "resumed" : "paused" }));
 }

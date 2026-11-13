@@ -140,7 +140,7 @@ export default async function AdminMailPage({ searchParams }: Props) {
                 className="mt-1 w-full rounded-xl border border-border px-3 py-2"
               />
               <span className="mt-1 block text-xs text-muted">
-                Shown beside the From address on email template tests only. Account, invitation, and collaboration mail keep the address alone.
+                Shown beside the From address on catalog mail, including template tests and live catalog sends. Older plain-text mail keeps the address alone.
               </span>
             </label>
             <label className="block text-sm">
@@ -255,7 +255,7 @@ export default async function AdminMailPage({ searchParams }: Props) {
             <Link href="/admin/mail/templates" className="font-semibold text-violet hover:underline">
               Email templates
             </Link>
-            . These older drafts are not the live catalog. Variables:{" "}
+            . Account, invitation, and collaboration messages use that catalog when the category is on. These older drafts are not sent. Variables:{" "}
             {COMM_TEMPLATE_VARIABLES.map((v) => `{{${v.key}}}`).join(", ")}
           </p>
         </div>

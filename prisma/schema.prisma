@@ -1490,11 +1490,36 @@ model MailSettings {
   port         Int      @default(587)
   username     String   @default("")
   fromAddress  String   @default("")
-  /// Display name for email template tests. Other mail keeps the address alone.
+  /// Display name for catalog mail, including template tests and live catalog sends.
   fromName     String   @default("")
   secretCipher String?
   enabled      Boolean  @default(false)
   updatedAt    DateTime @updatedAt
+}
+
+/// When on, live mail for this catalog group uses the catalog. When off, the older plain-text sender is used.
+model EmailCategorySwitch {
+  key       String   @id
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+/// Emergency stop for one template. Essential templates require a reason.
+model EmailTemplatePause {
+  templateKey String   @id
+  reason      String
+  actor       String   @default("")
+  updatedAt   DateTime @updatedAt
+}
+
+/// Member choices for optional email. Security mail stays on.
+model EmailPreference {
+  email            String   @id
+  collaborations   Boolean  @default(true)
+  billing          Boolean  @default(true)
+  outreach         Boolean  @default(true)
+  productNews      Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
 }
 
 /// Which outreach channels the platform may use (admin control plane).

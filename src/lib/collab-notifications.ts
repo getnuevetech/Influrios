@@ -14,6 +14,11 @@ export const COLLAB_NOTIFICATION_KINDS = [
   "milestone_auto_approved",
   "payout_completed",
   "payout_failed",
+  "payout_requested",
+  "payout_retry",
+  "payout_returned",
+  "stale_funding",
+  "ledger_mismatch",
   "dispute_opened",
   "dispute_resolved",
   "collaboration_cancelled",
@@ -98,6 +103,36 @@ export const COLLAB_NOTIFICATION_TEMPLATES: Record<CollabNotificationKind, Colla
     audience: "admin",
     subject: "Payout failed — {{title}}",
     body: "A payout failed for {{title}} ({{influencer}}). Detail: {{detail}}",
+  },
+  payout_requested: {
+    kind: "payout_requested",
+    audience: "both",
+    subject: "Payout requested — {{milestone}}",
+    body: "A payout for “{{milestone}}” on {{title}} was requested for the Influencer. It is not confirmed as paid. Detail: {{detail}}",
+  },
+  payout_retry: {
+    kind: "payout_retry",
+    audience: "both",
+    subject: "Payout retry — {{milestone}}",
+    body: "A new Influencer payout attempt started for “{{milestone}}” on {{title}}. This is not a new charge. Detail: {{detail}}",
+  },
+  payout_returned: {
+    kind: "payout_returned",
+    audience: "both",
+    subject: "Payout returned — {{milestone}}",
+    body: "The provider returned the Influencer payout for “{{milestone}}” on {{title}}. Approved work stays approved. Detail: {{detail}}",
+  },
+  stale_funding: {
+    kind: "stale_funding",
+    audience: "admin",
+    subject: "Unpaid funding needs review — {{title}}",
+    body: "Funding for {{title}} ({{business}} ↔ {{influencer}}) is still unpaid. Detail: {{detail}}",
+  },
+  ledger_mismatch: {
+    kind: "ledger_mismatch",
+    audience: "admin",
+    subject: "Payment balance mismatch — {{title}}",
+    body: "The ledger for {{title}} ({{business}} ↔ {{influencer}}) does not balance. Detail: {{detail}}",
   },
   dispute_opened: {
     kind: "dispute_opened",
@@ -242,6 +277,8 @@ export function collabKindForMarketplaceEvent(
       return "refund_completed";
     case "payout.failed":
       return "payout_failed";
+    case "payout.returned":
+      return "payout_returned";
     default:
       return null;
   }

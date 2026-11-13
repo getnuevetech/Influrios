@@ -38,17 +38,19 @@ export function fillTemplate(value: string, context: Record<string, string>, ske
   });
 }
 
-export function assertHttpsAllowlisted(url: string, hosts: string[]) {
+export function assertHttpsAllowlisted(url: string, hosts: string[], allowHttpHosts: string[] = []) {
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
     throw new Error("Action links must be https URLs.");
   }
-  if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
+  if (parsed.username || parsed.password) throw new Error("Action links must be https URLs.");
+  const httpOk = parsed.protocol === "http:" && allowHttpHosts.includes(parsed.hostname);
+  if (!httpOk && parsed.protocol !== "https:") throw new Error("Action links must be https URLs.");
+  if (parsed.port && parsed.port !== "443" && !(httpOk && (parsed.port === "80" || parsed.port === "3000"))) {
     throw new Error("Action links must be https URLs.");
   }
-  if (parsed.port && parsed.port !== "443") throw new Error("Action links must be https URLs.");
   if (!hosts.includes(parsed.hostname)) throw new Error("Action link host is not allowed.");
 }
 
@@ -81,6 +83,7 @@ export function renderEmail(input: {
   copy: EmailCopy;
   context: Record<string, string>;
   hosts?: string[];
+  allowHttpHosts?: string[];
   skeleton?: boolean;
 }) {
   const skeleton = input.skeleton ?? false;
@@ -98,7 +101,7 @@ export function renderEmail(input: {
   let action = "";
   if (copy.cta && copy.cta_url) {
     const url = fillTemplate(copy.cta_url, context, skeleton);
-    if (!skeleton) assertHttpsAllowlisted(url, hosts);
+    if (!skeleton) assertHttpsAllowlisted(url, hosts, input.allowHttpHosts ?? []);
     const label = escapeHtml(fillTemplate(copy.cta, context, skeleton));
     const safeUrl = escapeHtml(url);
     action =
