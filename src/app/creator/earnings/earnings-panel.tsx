@@ -11,6 +11,7 @@ export function EarningsPanel({
   destination,
   rows,
   selected,
+  processingLabel = "Payouts processing",
 }: {
   currency: string | null;
   upcomingCents: number;
@@ -20,6 +21,7 @@ export function EarningsPanel({
   destination: string;
   rows: { id: string; title: string; milestone: string; netCents: number | null; status: PaymentStatusLabel }[];
   selected?: string;
+  processingLabel?: string;
 }) {
   const code = currency ?? "";
   return (
@@ -32,7 +34,7 @@ export function EarningsPanel({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             ["Upcoming net", upcomingCents],
-            ["Payouts processing", processingCents],
+            [processingLabel, processingCents],
             ["Confirmed paid", paidCents],
             ["Returned / needs attention", returnedCents],
           ].map(([label, amount]) => (

@@ -11,6 +11,7 @@ import {
   homePathForRole,
   loginAccount,
   registerAccount,
+  verifyAccountPassword,
   requestPasswordReset,
   resendAccountVerification,
   resetPassword,
@@ -262,7 +263,7 @@ export async function actionSaveEmailPreference(formData: FormData) {
     outreach: formData.get("outreach") === "on",
     productNews: formData.get("productNews") === "on",
   });
-  redirect("/account/notifications?saved=1");
+  redirect("/account?tab=notifications&saved=1");
 }
 
 export async function actionSaveCommPreference(formData: FormData) {
@@ -276,7 +277,61 @@ export async function actionSaveCommPreference(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save preference.";
-    redirect(`/account?error=${encodeURIComponent(message)}`);
+    redirect(`/account?tab=notifications&error=${encodeURIComponent(message)}`);
   }
-  redirect("/account?saved=1");
+  redirect("/account?tab=notifications&saved=1");
+}
+
+export async function actionSavePersonalDetails(formData: FormData) {
+  const session = await getAccountSession();
+  if (!session) redirect("/login?next=/account?tab=account");
+  const name = String(formData.get("name") ?? "").trim();
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  if (!name) redirect("/account?tab=account&error=Name%20is%20required.");
+  const { prisma } = await import("@/lib/db");
+  await prisma.user.update({ where: { id: session.id }, data: { name } });
+  const { getCreatorSessionDraft, updateDraftProfile } = await import("@/lib/claim");
+  const draft = await getCreatorSessionDraft().catch(() => null);
+  if (draft && displayName) await updateDraftProfile(draft.id, { displayName });
+  redirect("/account?tab=account&saved=details");
+}
+
+export async function actionSaveCountry(formData: FormData) {
+  const session = await getAccountSession();
+  if (!session) redirect("/login?next=/account?tab=account");
+  const country = String(formData.get("country") ?? "").trim();
+  if (!country) redirect(`/account?tab=account&error=${encodeURIComponent("Enter a country.")}`);
+  const { getCreatorSessionDraft, updateDraftProfile } = await import("@/lib/claim");
+  const draft = await getCreatorSessionDraft().catch(() => null);
+  if (!draft) {
+    redirect(`/account?tab=account&error=${encodeURIComponent("Create your Influencer Card before changing country.")}`);
+  }
+  const saved = await updateDraftProfile(draft.id, { locationCountry: country });
+  if (saved.countryReview) redirect("/account?tab=account&country=review");
+  redirect("/account?tab=account&saved=country");
+}
+
+export async function actionReplacePassword(formData: FormData) {
+  const session = await getAccountSession();
+  if (!session) redirect("/login?next=/account?tab=security");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password !== confirm) {
+    redirect(`/account?tab=security&error=${encodeURIComponent("Passwords do not match.")}`);
+  }
+  if (session.hasPassword) {
+    const { prisma } = await import("@/lib/db");
+    const user = await prisma.user.findUnique({ where: { id: session.id }, select: { passwordHash: true } });
+    const current = String(formData.get("current") ?? "");
+    if (!user?.passwordHash || !verifyAccountPassword(current, user.passwordHash)) {
+      redirect(`/account?tab=security&error=${encodeURIComponent("Current password is incorrect.")}`);
+    }
+  }
+  try {
+    await setAccountPassword(session.id, password);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save password.";
+    redirect(`/account?tab=security&error=${encodeURIComponent(message)}`);
+  }
+  redirect("/account?tab=security&saved=password");
 }

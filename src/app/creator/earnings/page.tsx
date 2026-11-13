@@ -170,6 +170,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         paidCents={released}
         returnedCents={0}
         destination={hasConnectAccount ? "Bank ending hidden" : "Not added"}
+        processingLabel={payoutReady ? "Payouts processing" : "Awaiting payout setup"}
         selected={payoutId}
         rows={pipeline.map((item) => ({
           id: item.id,
@@ -203,7 +204,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         />
         <StatCard
           label="Payout status"
-          value={receiveView?.statusLabel ?? (payoutReady ? "Ready" : "Setup needed")}
+          value={payoutReady ? (receiveView?.statusLabel ?? "Ready") : "Awaiting payout setup"}
           note={
             receiveView?.summary ??
             (payoutReady ? "Identity and payout method on file" : "Finish setup to receive funds")
@@ -230,6 +231,28 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
           </Link>
         </section>
       )}
+
+      <Panel title="Collaboration payment status">
+        <p className="text-sm text-muted">
+          Status for each collaboration payment, including what is still held, lives with the payment record.
+        </p>
+        <Link href="/payments" className="mt-2 inline-block text-sm font-semibold text-violet">
+          Collaboration Payments
+        </Link>
+      </Panel>
+
+      <Panel title="Deductions">
+        <p className="text-sm text-muted">Platform fees on a funded collaboration are the deductions. They are not part of the net payout.</p>
+      </Panel>
+
+      <Panel title="Statements">
+        <p className="text-sm text-muted">
+          Statement lines use the frozen gross and deductions. Open a payout above for that record, or the payment list for the full set.
+        </p>
+        <Link href="/payments" className="mt-2 inline-block text-sm font-semibold text-violet">
+          Open statements
+        </Link>
+      </Panel>
 
       <Panel title="Collaboration payouts">
         {pipeline.length === 0 ? (

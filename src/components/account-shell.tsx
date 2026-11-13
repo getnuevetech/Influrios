@@ -4,14 +4,11 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   IconBell,
-  IconBriefcase,
   IconBuilding,
-  IconCrown,
   IconFileText,
   IconHandshake,
   IconHome,
   IconIdCard,
-  IconImage,
   IconIntelligence,
   IconLogout,
   IconMail,
@@ -31,24 +28,17 @@ import { loadCreatorHome } from "@/lib/creator-home";
 import { sidebarBadgeCounts, sidebarBadgeFor, sidebarBadgeLabel } from "@/lib/sidebar-badges";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
-import { isPlanCode, planLabel, type PlanCode } from "@/lib/entitlements";
+import { planLabel } from "@/lib/entitlements";
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 
 const CREATOR_NAV: NavItem[] = [
-  { href: "/creator", label: "Home", icon: <IconHome size={18} /> },
+  { href: "/creator", label: "Dashboard", icon: <IconHome size={18} /> },
   { href: "/dashboard", label: "My Profile", icon: <IconUser size={18} /> },
-  { href: "/collaboration/hub?view=opportunities", label: "Opportunities", icon: <IconBriefcase size={18} /> },
   { href: "/collaboration/hub?view=collaborations", label: "Collaborations", icon: <IconHandshake size={18} /> },
   { href: "/collaboration/contracts", label: "Contracts", icon: <IconFileText size={18} /> },
-  { href: "/payments", label: "Collaboration Payments", icon: <IconShieldPay size={18} /> },
-  { href: "/account/verification", label: "Verification", icon: <IconIdCard size={18} /> },
-  { href: "/creator/media-kit", label: "Media Kit", icon: <IconImage size={18} /> },
-  { href: "/creator/analytics", label: "Analytics", icon: <IconIntelligence size={18} /> },
+  { href: "/creator/earnings", label: "Earnings & Payouts", icon: <IconWallet size={18} /> },
   { href: "/creator/messages", label: "Messages", icon: <IconMail size={18} /> },
-  { href: "/creator/earnings", label: "Earnings", icon: <IconWallet size={18} /> },
-  { href: "/billing", label: "Billing & Plan", icon: <IconIdCard size={18} /> },
-  { href: "/mentorship", label: "Mentorship", icon: <IconUsers size={18} /> },
   { href: "/account", label: "Settings", icon: <IconSettings size={18} /> },
 ];
 
@@ -66,24 +56,13 @@ const BUSINESS_NAV: NavItem[] = [
   { href: "/account?audience=business", label: "Settings", icon: <IconSettings size={18} /> },
 ];
 
-const PLAN_ORDER: PlanCode[] = ["STARTER", "PLUS", "PRO"];
-
-function nextCreatorUpgrade(plan: string): { code: PlanCode; label: string; blurb: string } | null {
-  const current = isPlanCode(plan) ? plan : "STARTER";
-  const index = PLAN_ORDER.indexOf(current);
-  if (index < 0 || index >= PLAN_ORDER.length - 1) return null;
-  const code = PLAN_ORDER[index + 1]!;
-  if (code === "PLUS") {
-    return { code, label: "Upgrade to Plus", blurb: "Unlock short links, QR, and richer card tools." };
-  }
-  return { code, label: "Upgrade to Pro", blurb: "Dynamic destinations, deeper analytics, and priority tools." };
-}
-
 function active(href: string, path: string, search = "") {
   const url = new URL(href, "http://local.invalid");
   const base = url.pathname;
   if (base === "/creator" || base === "/business/home") return path === base;
+  if (base === "/creator/earnings" && (path === "/payments" || path.startsWith("/payments/"))) return true;
   if (!(path === base || path.startsWith(`${base}/`))) return false;
+  if (base === "/collaboration/hub") return true;
   const wantView = url.searchParams.get("view");
   if (wantView) {
     const current = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("view");
@@ -181,7 +160,6 @@ export async function MemberFrame({
       payments: (hub?.pipeline ?? []).filter((item) => item.awaitingFunding).length,
     });
   }
-  const upgrade = audience === "creator" ? nextCreatorUpgrade(creatorPlan) : null;
   const nav = audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
   const home = audience === "business" ? "/business/home" : "/creator";
   // Approved business chrome: signed-in contact person first, company name second.
@@ -224,25 +202,14 @@ export async function MemberFrame({
             );
           })}
         </nav>
-        {upgrade ? (
-          <div className="mx-3 mb-2 shrink-0 rounded-2xl bg-gradient-to-br from-[#6D5EF7] to-[#8B5CF6] p-3 text-white">
-            <div className="flex items-center gap-2 text-sm font-bold">
-              <IconCrown size={16} />
-              {upgrade.label}
-            </div>
-            <p className="mt-1 text-[11px] leading-snug text-white/85">{upgrade.blurb}</p>
-            <p className="mt-1 text-[10px] text-white/70">Current: {planLabel(creatorPlan)}</p>
-            <Link
-              href="/billing"
-              className="ink-on-light-violet mt-2 inline-flex items-center justify-center rounded-full bg-white px-3 py-1.5 text-xs font-bold hover:bg-[#F5F3FF]"
-            >
-              Upgrade now
-            </Link>
-          </div>
-        ) : audience === "creator" ? (
-          <div className="mx-3 mb-2 shrink-0 rounded-2xl border border-[#E6ECF7] bg-[#F8F6FF] px-3 py-2.5 text-xs font-semibold text-violet">
-            You’re on {planLabel(creatorPlan)}
-          </div>
+        {audience === "creator" ? (
+          <Link
+            href="/account?tab=billing"
+            className="mx-3 mb-2 flex shrink-0 items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-violet hover:bg-[#F7F5FF]"
+          >
+            <span>{planLabel(creatorPlan) || "Plan"}</span>
+            <span>Billing & Plan</span>
+          </Link>
         ) : null}
         <div className="shrink-0 border-t border-[#E6ECF7] p-4 text-[11px] text-muted">
           <form action={actionLogout}>

@@ -38,6 +38,7 @@ export function PlaceFields({
   countryLabel = "Country",
   stateLabel = "State / region",
   className = "",
+  lockCountry = false,
 }: {
   cityName: string;
   countryName: string;
@@ -49,6 +50,7 @@ export function PlaceFields({
   countryLabel?: string;
   stateLabel?: string;
   className?: string;
+  lockCountry?: boolean;
 }) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -157,20 +159,25 @@ export function PlaceFields({
     <div ref={rootRef} className={className}>
       <label className="relative block text-sm">
         <span className="font-semibold text-indigo">{countryLabel}</span>
+        {lockCountry ? <input type="hidden" name={countryName} value={shown(defaultCountry)} /> : null}
         <input
-          name={countryName}
-          value={country}
+          name={lockCountry ? undefined : countryName}
+          value={lockCountry ? shown(defaultCountry) : country}
+          readOnly={lockCountry}
           autoComplete="off"
           role="combobox"
-          aria-expanded={open === "country"}
+          aria-expanded={lockCountry ? false : open === "country"}
           aria-controls={`${listId}-country`}
           placeholder="Search countries"
           onChange={(event) => {
+            if (lockCountry) return;
             setCountry(event.target.value);
             setCountryPicked(false);
             setOpen("country");
           }}
-          onFocus={() => setOpen("country")}
+          onFocus={() => {
+            if (!lockCountry) setOpen("country");
+          }}
           className={inputClass}
         />
         {open === "country" && countryHits.length > 0 ? (

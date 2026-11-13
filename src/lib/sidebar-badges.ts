@@ -23,9 +23,12 @@ export function sidebarBadgeCounts(input: {
 }
 
 export function sidebarBadgeFor(href: string, counts: { collaborations: number; contracts: number; payments: number }) {
-  if (href === CREATOR_COLLABORATIONS || href === BUSINESS_COLLABORATIONS) return counts.collaborations;
+  const path = href.split("?")[0] ?? href;
+  if (href === CREATOR_COLLABORATIONS || href === BUSINESS_COLLABORATIONS || path === "/collaboration/hub") {
+    return counts.collaborations;
+  }
   if (href === CONTRACTS_HREF) return counts.contracts;
-  if (href === PAYMENTS_HREF) return counts.payments;
+  if (href === PAYMENTS_HREF || path === "/creator/earnings") return counts.payments;
   return 0;
 }
 

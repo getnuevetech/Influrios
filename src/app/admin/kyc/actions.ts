@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
+import { decideCountryReview } from "@/lib/country-review";
 import {
   addKycRequirement,
   adminSetCreatorKyc,
@@ -17,6 +18,8 @@ function revalidateKycSurfaces() {
   revalidatePath("/dashboard/kyc");
   revalidatePath("/creator");
   revalidatePath("/creator/earnings");
+  revalidatePath("/account");
+  revalidatePath("/dashboard/details");
   revalidatePath("/collaboration/hub");
   revalidatePath("/collaboration/contract");
 }
@@ -100,4 +103,24 @@ export async function actionAdminSetCreatorKyc(formData: FormData) {
   }
   revalidateKycSurfaces();
   redirect(`/admin/kyc?saved=account-${decision}`);
+}
+
+export async function actionReviewCountryChange(formData: FormData) {
+  const session = await requireAdminAction("collab_finance.manage");
+  const decision = String(formData.get("decision") ?? "");
+  if (decision !== "approved" && decision !== "rejected") {
+    redirect("/admin/kyc?error=Choose%20approved%20or%20rejected.");
+  }
+  try {
+    await decideCountryReview({
+      creatorId: String(formData.get("creatorId") ?? ""),
+      actor: session.email,
+      decision,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not review that country change.";
+    redirect(`/admin/kyc?error=${encodeURIComponent(message)}`);
+  }
+  revalidateKycSurfaces();
+  redirect(`/admin/kyc?saved=country-${decision}`);
 }

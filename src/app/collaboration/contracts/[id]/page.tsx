@@ -261,7 +261,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
             ) : (
               <span className="text-muted">Funding waits until every party has signed.</span>
             )}
-            <Link href="/account#contracts" className="text-violet hover:underline">
+            <Link href="/creator" className="text-violet hover:underline">
               Your account
             </Link>
           </div>
