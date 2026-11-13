@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { listPublishedClaimCreators } from "@/lib/claim";
+import { publicProfileAllowed } from "@/lib/discovery-access";
 import { prisma } from "@/lib/db";
 import { COMMERCIAL_MODE, CONTENT_STYLE, ensureDiscoveryFacets } from "@/lib/discovery-facets";
 import { rethrowIfNextDynamicError } from "@/lib/next-dynamic";
@@ -288,7 +289,10 @@ async function readDirectory(): Promise<Cache> {
   await ensureDirectory();
   const [rows, specialties, synonymRows, sections, menus] = await Promise.all([
     prisma.creator.findMany({
-      where: { profileState: { not: "RESTRICTED" } },
+      where: {
+        profileState: { not: "RESTRICTED" },
+        OR: [{ card: { is: null } }, { card: { is: { published: true } } }],
+      },
       include: {
         specialties: { include: { specialty: true } },
         socialAccounts: true,
@@ -392,9 +396,10 @@ export async function loadPublicCreator(slug: string): Promise<SeedCreator | nul
       discoveryFacets: { include: { facet: true } },
       collabOffers: true,
       collabNeeds: true,
+      card: { select: { published: true } },
     },
   });
-  if (!row || row.profileState === "RESTRICTED") return null;
+  if (!row || !publicProfileAllowed({ profileState: row.profileState, cardPublished: row.card?.published ?? null })) return null;
   return mergeCreator(row);
 }
 
