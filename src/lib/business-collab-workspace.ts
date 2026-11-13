@@ -1,7 +1,10 @@
+import { statusCountsAsOpenRequest } from "@/lib/business-status";
+
 export type RequestQueueRow = {
   id: string;
   title: string;
   facts: Array<"Draft" | "Public listing" | "Private" | "Closed">;
+  open: boolean;
   activity: string;
   updatedLabel: string;
   actionLabel: string;
@@ -67,6 +70,7 @@ export function requestQueueRow(input: {
     id: input.id,
     title: input.title || "Untitled request",
     facts,
+    open: statusCountsAsOpenRequest(input.briefStatus),
     activity,
     updatedLabel: input.updatedLabel,
     actionLabel,
@@ -125,7 +129,9 @@ export function activeRowForApplication(input: {
 export function requestMatchesFilter(
   facts: RequestQueueRow["facts"],
   filter: string,
+  open = false,
 ): boolean {
+  if (filter === "open") return open;
   if (!filter || filter === "all") return true;
   if (filter === "drafts") return facts.includes("Draft");
   if (filter === "published") return facts.includes("Public listing");

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { actionRespondToInvitation } from "@/app/collaboration/applications/actions";
+import { AccountDialog } from "@/components/account-dialog";
 
 export type InvitationReviewRow = {
   id: string;
@@ -53,17 +54,8 @@ export function InvitationReview({ rows }: { rows: InvitationReviewRow[] }) {
         </div>
       )}
       {open ? (
-        <div className="fixed inset-0 z-50">
-          <button type="button" aria-label="Close invitation" className="absolute inset-0 bg-[#1B1464]/40" onClick={() => setOpenId(null)} />
-          <div role="dialog" aria-modal="true" aria-labelledby="invite-title" className="absolute left-1/2 top-1/2 w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-[28px] bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[#6D4AFF]">{open.brand}</p>
-                <h2 id="invite-title" className="font-display text-2xl font-bold text-[#1B1464]">{open.title}</h2>
-              </div>
-              <button type="button" aria-label="Close" onClick={() => setOpenId(null)} className="text-xl text-[#667085]">×</button>
-            </div>
-            <dl className="mt-4 space-y-2 text-sm">
+        <AccountDialog title={open.title} subtitle={open.brand} onClose={() => { setAsking(false); setOpenId(null); }}>
+            <dl className="space-y-2 text-sm">
               <div className="flex justify-between gap-3"><dt className="text-[#667085]">Proposed gross</dt><dd className="font-semibold text-[#1B1464]">{open.budget || "Shown in the quote"}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-[#667085]">Respond by</dt><dd className="font-semibold text-[#1B1464]">{open.deadline || "—"}</dd></div>
             </dl>
@@ -107,8 +99,7 @@ export function InvitationReview({ rows }: { rows: InvitationReviewRow[] }) {
                 <button type="submit" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">Send question</button>
               </form>
             ) : null}
-          </div>
-        </div>
+        </AccountDialog>
       ) : null}
     </>
   );

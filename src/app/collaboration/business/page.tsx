@@ -10,7 +10,7 @@ import { getDirectory } from "@/lib/directory";
 import { prisma } from "@/lib/db";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { loadBusinessHub } from "@/lib/collaboration-hub";
-import { newIncidentReference } from "@/lib/business-status";
+import { dashboardOpenRequests, newIncidentReference } from "@/lib/business-status";
 import { UnavailableNote } from "@/components/unavailable-note";
 import { formatStoredMoney } from "@/lib/money";
 
@@ -103,6 +103,10 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
       return { hub: null, incident };
     });
   const hub = hubResult.hub;
+  const openRequests = dashboardOpenRequests({
+    briefs: workspace.briefs,
+    requests: hub?.ownRequests ?? [],
+  });
   const creators = (directory?.creators ?? []).slice(0, 40).map((creator) => ({
     slug: creator.slug,
     name: creator.displayName,
@@ -164,6 +168,8 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
       })}
       creators={creators}
       requestsForInvite={workspace.briefs.filter((brief) => brief.status !== "closed").map((brief) => ({ id: brief.id, title: brief.title || "Untitled request" }))}
+      openBriefIds={openRequests.briefIds}
+      orphanRequests={openRequests.orphanRequests}
     />
     </>
   );

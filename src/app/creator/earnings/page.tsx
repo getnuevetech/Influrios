@@ -251,8 +251,14 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         />
         <StatCard
           label="Paid"
-          value={shownMoney(summary?.paidCents ?? 0)}
-          note={measures.ok ? "Confirmed bank payout" : "Earnings could not be loaded. This is not zero."}
+          value={summary?.unknown && (summary.paidCents ?? 0) === 0 ? "—" : shownMoney(summary?.paidCents ?? 0)}
+          note={
+            !measures.ok
+              ? "Earnings could not be loaded. This is not zero."
+              : summary?.unknown
+                ? "A bank payout is missing on at least one record. This is not a complete total."
+                : "Confirmed bank payout"
+          }
           tone="amber"
           icon={<IconWallet size={16} />}
         />

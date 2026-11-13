@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { UnavailableNote } from "@/components/unavailable-note";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { getCreatorSessionDraft } from "@/lib/claim";
-import { invitationStillListed } from "@/lib/collaboration-hub";
+import { countedActiveFundingIds, invitationStillListed } from "@/lib/collaboration-hub";
 import { listCollaborations } from "@/lib/collaborations";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { getDirectory, indexCreatorsBySlug } from "@/lib/directory";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/marketplace-listings";
 import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketplace-ledger";
 import { prisma } from "@/lib/db";
+import { newIncidentReference } from "@/lib/business-status";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Active Collaborations" };
@@ -30,7 +32,13 @@ type ActiveRow = {
   href: string;
 };
 
-export default async function CollaborationRecordsPage() {
+export default async function CollaborationRecordsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ scope?: string }>;
+}) {
+  const params = await searchParams;
+  const activeOnly = params.scope === "active";
   const account = await getAccountSession().catch(() => null);
   if (!account) redirect("/login?next=/collaboration/records");
 
@@ -46,13 +54,23 @@ export default async function CollaborationRecordsPage() {
   const bySlug = indexCreatorsBySlug(directory?.creators ?? []);
 
   const rows: ActiveRow[] = [];
+  let fundingIncident = "";
 
   if (isBusiness && ws && ws.businessId !== "public") {
-    const [fundings, ownRequests, contracts] = await Promise.all([
-      listFundingsForBusiness(ws.businessId).catch(() => []),
+    const [fundingLoad, ownRequests, contracts] = await Promise.all([
+      listFundingsForBusiness(ws.businessId)
+        .then((rows) => ({ rows, incident: "" }))
+        .catch((error) => {
+          const incident = newIncidentReference();
+          console.error("active collaborations", incident, error);
+          return { rows: [], incident };
+        }),
       listWorkspaceBusinessRequests(ws.businessId).catch(() => []),
       listContractsForUser(account.id, account.email).catch(() => []),
     ]);
+    fundingIncident = fundingLoad.incident;
+    const activeIds = new Set(countedActiveFundingIds(fundingLoad.rows));
+    const fundings = activeOnly ? fundingLoad.rows.filter((row) => activeIds.has(row.id)) : fundingLoad.rows;
     const applications = ownRequests.length
       ? await listMarketplaceApplications({
           businessRequestIds: ownRequests.map((row) => row.id),
@@ -73,40 +91,42 @@ export default async function CollaborationRecordsPage() {
       });
     }
 
-    const liveContracts = contracts.filter((row) => row.status !== "voided" && row.status !== "declined");
-    const contractedApplicationIds = new Set(
-      liveContracts.map((row) => row.applicationId).filter((id): id is string => Boolean(id)),
-    );
-    const contractedCollaborationIds = new Set(
-      liveContracts.map((row) => row.collaborationId).filter((id): id is string => Boolean(id)),
-    );
-    for (const app of applications.filter(
-      (row) =>
-        invitationStillListed(row, contractedApplicationIds, contractedCollaborationIds) &&
-        (applicationIsAcceptedPipeline(row.status) || row.status === "RESPONDED" || row.status === "NEGOTIATING"),
-    )) {
-      const creatorRow = app.creatorSlug ? bySlug.get(app.creatorSlug) : null;
-      rows.push({
-        id: `app-${app.id}`,
-        kind: "application",
-        title: app.requestBrand ?? applicationKindLabel(app),
-        status: app.status,
-        counterparty: creatorRow?.displayName ?? app.creatorSlug ?? "Creator",
-        meta: applicationKindLabel(app),
-        href: `/collaboration/applications/${app.id}`,
-      });
-    }
+    if (!activeOnly) {
+      const liveContracts = contracts.filter((row) => row.status !== "voided" && row.status !== "declined");
+      const contractedApplicationIds = new Set(
+        liveContracts.map((row) => row.applicationId).filter((id): id is string => Boolean(id)),
+      );
+      const contractedCollaborationIds = new Set(
+        liveContracts.map((row) => row.collaborationId).filter((id): id is string => Boolean(id)),
+      );
+      for (const app of applications.filter(
+        (row) =>
+          invitationStillListed(row, contractedApplicationIds, contractedCollaborationIds) &&
+          (applicationIsAcceptedPipeline(row.status) || row.status === "RESPONDED" || row.status === "NEGOTIATING"),
+      )) {
+        const creatorRow = app.creatorSlug ? bySlug.get(app.creatorSlug) : null;
+        rows.push({
+          id: `app-${app.id}`,
+          kind: "application",
+          title: app.requestBrand ?? applicationKindLabel(app),
+          status: app.status,
+          counterparty: creatorRow?.displayName ?? app.creatorSlug ?? "Creator",
+          meta: applicationKindLabel(app),
+          href: `/collaboration/applications/${app.id}`,
+        });
+      }
 
-    for (const contract of contracts) {
-      const progress = contractPartyProgress(contract.parties);
-      rows.push({
-        id: `contract-${contract.id}`,
-        kind: "contract",
-        title: contract.title,
-        status: contract.status,
-        counterparty: progress.label,
-        href: `/collaboration/contracts/${contract.id}`,
-      });
+      for (const contract of contracts) {
+        const progress = contractPartyProgress(contract.parties);
+        rows.push({
+          id: `contract-${contract.id}`,
+          kind: "contract",
+          title: contract.title,
+          status: contract.status,
+          counterparty: progress.label,
+          href: `/collaboration/contracts/${contract.id}`,
+        });
+      }
     }
   } else if (creatorSlug) {
     const [collaborations, fundings, applications, contracts] = await Promise.all([
@@ -201,11 +221,15 @@ export default async function CollaborationRecordsPage() {
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Active Collaborations</h1>
         <p className="mt-2 text-sm text-muted">
-          Funded work, accepted invitations, proposals, and contracts on this account.
+          {activeOnly
+            ? `${fundingIncident ? "—" : rows.length} active collaboration${rows.length === 1 ? "" : "s"}. Released work is not included.`
+            : "Funded work, accepted invitations, proposals, and contracts on this account."}
         </p>
       </div>
 
-      {rows.length === 0 ? (
+      {fundingIncident ? <UnavailableNote label="Active collaborations" incident={fundingIncident} href="/collaboration/records?scope=active" /> : null}
+
+      {fundingIncident ? null : rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#C9D3EA] bg-white px-4 py-10 text-center">
           <p className="text-sm font-semibold text-indigo">No active collaborations yet</p>
           <p className="mt-2 text-sm text-muted">

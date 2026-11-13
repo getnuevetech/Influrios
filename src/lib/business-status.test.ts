@@ -5,6 +5,7 @@ import {
   activeCollaborationIds,
   activeRequestIds,
   businessTrustLabels,
+  dashboardOpenRequests,
   formatPeriodFunding,
   occupiedSeatCount,
   presentBusinessVerification,
@@ -24,6 +25,14 @@ describe("business verification badge", () => {
     assert.equal(labels.profile, "Profile complete");
     assert.equal(labels.showVerifiedBadge, false);
     assert.equal(labels.verification, "Business verification not started");
+    assert.equal(
+      businessTrustLabels({ profileComplete: true, profileUnavailable: true, verification: "unverified" }).profile,
+      "Profile unavailable",
+    );
+    assert.equal(
+      businessTrustLabels({ profileComplete: true, profileUnavailable: true, verification: "unverified" }).showVerifiedBadge,
+      false,
+    );
     assert.equal(
       presentBusinessVerification([
         { role: "paying_business", checkKey: "entity", status: "verified" },
@@ -79,6 +88,20 @@ describe("seats and request counters", () => {
       ],
     });
     assert.deepEqual(ids, ["brief:brief-1", "request:request-2"]);
+    const open = dashboardOpenRequests({
+      briefs: [
+        { id: "brief-1", status: "active", title: "Launch" },
+        { id: "brief-2", status: "draft", title: "Draft" },
+      ],
+      requests: [
+        { id: "request-1", briefId: "brief-1", status: "published", brand: "Launch" },
+        { id: "request-2", briefId: null, status: "published", brand: "Standalone" },
+        { id: "request-3", briefId: "brief-9", status: "closed", brand: "Closed" },
+      ],
+    });
+    assert.equal(open.count, 2);
+    assert.deepEqual(open.briefIds, ["brief-1"]);
+    assert.deepEqual(open.orphanRequests, [{ id: "request-2", title: "Standalone" }]);
     assert.deepEqual(
       activeCollaborationIds([
         { id: "funding-1", stage: "Funded" },

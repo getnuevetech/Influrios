@@ -19,8 +19,8 @@ import { businessAttentionDrafts } from "@/lib/notice-filters";
 import { getWorkspace, leadIsOpen } from "@/lib/business";
 import {
   activeCollaborationIds,
-  activeRequestIds,
   businessTrustLabels,
+  dashboardOpenRequests,
   formatPeriodFunding,
   loadAccountBusinessVerification,
   loadMonthlyBusinessFunding,
@@ -78,7 +78,7 @@ export default async function BusinessHomePage() {
   if (!account) redirect("/login?next=/business/home");
   if (account.role === "AGENCY") redirect("/agency");
   const workspace = await getWorkspace(account.id).catch(() => null);
-  const [matrix, hubResult, profile, subscription, contractLoad, verification, seats, monthly] = await Promise.all([
+  const [matrix, hubResult, profileLoad, subscriptionLoad, contractLoad, verification, seats, monthly] = await Promise.all([
     loadPlanMatrix("business"),
     loadBusinessHub({ userId: account.id })
       .then((hub) => ({ hub, incident: "" }))
@@ -92,10 +92,20 @@ export default async function BusinessHomePage() {
         where: { userId: account.id },
         select: { contactName: true, contactEmail: true, contactPhone: true, geography: true },
       })
-      .catch(() => null),
+      .then((row) => ({ row, incident: "" }))
+      .catch((error) => {
+        const incident = newIncidentReference();
+        console.error("business profile", incident, error);
+        return { row: null, incident };
+      }),
     prisma.subscriptionState
       .findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } })
-      .catch(() => null),
+      .then((row) => ({ row, incident: "" }))
+      .catch((error) => {
+        const incident = newIncidentReference();
+        console.error("business subscription", incident, error);
+        return { row: null, incident };
+      }),
     listContractsForUser(account.id, account.email)
       .then((rows) => ({ rows, incident: "" }))
       .catch((error) => {
@@ -108,6 +118,8 @@ export default async function BusinessHomePage() {
     workspace ? loadMonthlyBusinessFunding(workspace.businessId) : Promise.resolve({ ok: false as const, incident: newIncidentReference() }),
   ]);
   const hub = hubResult.hub;
+  const profile = profileLoad.row;
+  const subscription = subscriptionLoad.row;
   const contracts = contractLoad.rows;
   if (!workspace) {
     return (
@@ -151,9 +163,10 @@ export default async function BusinessHomePage() {
   const requestsUnavailable = !hub || hub.sections.requests === "unavailable";
   const fundingsUnavailable = !hub || hub.sections.fundings === "unavailable";
   const applicationsUnavailable = !hub || hub.sections.applications === "unavailable";
-  const activeRequests = requestsUnavailable
+  const openRequests = requestsUnavailable
     ? null
-    : activeRequestIds({ briefs: workspace.briefs, requests: hub.ownRequests }).length;
+    : dashboardOpenRequests({ briefs: workspace.briefs, requests: hub.ownRequests });
+  const activeRequests = openRequests ? openRequests.count : null;
   const pendingResponses = workspace.inquiries.filter((inquiry) => leadIsOpen(inquiry.status)).length;
   const activeCollabs = fundingsUnavailable ? null : activeCollaborationIds(hub.pipeline).length;
   const contentInReview = fundingsUnavailable ? null : hub.pipeline.filter((item) => item.stage === "Review").length;
@@ -166,6 +179,7 @@ export default async function BusinessHomePage() {
       industry: workspace.industry,
       contactName: contactName ?? "",
     }),
+    profileUnavailable: Boolean(profileLoad.incident),
     verification: verification.state,
   });
   const bio =
@@ -413,7 +427,6 @@ export default async function BusinessHomePage() {
                   trust.profile === "Profile complete" ? "bg-emerald-50 text-emerald-700" : "bg-[#EEF2FA] text-muted"
                 }`}
               >
-                {trust.profile === "Profile complete" ? <IconVerified size={12} /> : null}
                 {trust.profile}
               </span>
               {trust.showVerifiedBadge ? (
@@ -431,6 +444,11 @@ export default async function BusinessHomePage() {
                 </Link>
               )}
             </div>
+            {profileLoad.incident ? (
+              <div className="mt-3">
+                <UnavailableNote label="Profile" incident={profileLoad.incident} href="/business/home" />
+              </div>
+            ) : null}
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#4E5872]">{bio}</p>
 
             <div className="mt-4 flex flex-wrap items-end gap-4">
@@ -486,7 +504,7 @@ export default async function BusinessHomePage() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Link href="/collaboration/business" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
+        <Link href="/collaboration/business?tab=requests&filter=open" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
           <StatCard
             label="Active Requests"
             value={activeRequests === null ? "—" : String(activeRequests)}
@@ -495,14 +513,16 @@ export default async function BusinessHomePage() {
             icon={<IconFileText size={16} />}
           />
         </Link>
-        <StatCard
-          label="Saved Creators"
-          value={String(workspace.shortlist.length)}
-          note="On this workspace shortlist"
-          tone="blue"
-          icon={<IconBookmark size={16} />}
-        />
-        <Link href="/collaboration/records" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
+        <Link href="#shortlist" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
+          <StatCard
+            label="Saved Creators"
+            value={String(workspace.shortlist.length)}
+            note="On this workspace shortlist"
+            tone="blue"
+            icon={<IconBookmark size={16} />}
+          />
+        </Link>
+        <Link href="/collaboration/records?scope=active" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
           <StatCard
             label="Active Collaborations"
             value={activeCollabs === null ? "—" : String(activeCollabs)}
@@ -774,7 +794,29 @@ export default async function BusinessHomePage() {
             </ul>
           </Panel>
 
+          <div id="shortlist">
+          <Panel title="Saved creators" action={<TextLink href="/discover">Find creators →</TextLink>}>
+            {workspace.shortlist.length === 0 ? (
+              <p className="text-sm text-muted">No saved creators yet. This is not a failed load.</p>
+            ) : (
+              <ul className="space-y-2">
+                {workspace.shortlist.map((item) => (
+                  <li key={item.creatorSlug}>
+                    <Link href={`/creators/${item.creatorSlug}`} className="text-sm font-semibold text-indigo hover:text-violet hover:underline">
+                      {item.creatorSlug}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 text-xs text-muted">{workspace.shortlist.length} saved creator{workspace.shortlist.length === 1 ? "" : "s"}</p>
+          </Panel>
+          </div>
+
           <Panel title="Billing & Subscription" action={<TextLink href="/business/billing">Manage plan →</TextLink>}>
+            {subscriptionLoad.incident ? (
+              <UnavailableNote label="Subscription" incident={subscriptionLoad.incident} href="/business/home" />
+            ) : null}
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-bold text-indigo">{planName}</p>
