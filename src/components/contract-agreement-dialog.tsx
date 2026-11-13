@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useRef, useState, type ReactNode } from "react";
+import { useAccountDialogBehavior } from "@/components/account-dialog";
+import { nextTabIndex } from "@/lib/dialog-behavior";
 
 export type ContractDialogParty = {
   id: string;
@@ -60,19 +63,16 @@ export function ContractAgreementDialog({
     ["signatures", "Signatures"],
     ["documents", "Documents"],
   ] as const;
-
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
+  const router = useRouter();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useAccountDialogBehavior(panelRef, () => router.push(closeHref, { scroll: false }));
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div data-account-dialog-root className="fixed inset-0 z-50">
       <Link href={closeHref} scroll={false} aria-label="Close agreement" className="absolute inset-0 bg-[#1B1464]/35" />
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="agreement-dialog-title"
@@ -97,11 +97,29 @@ export function ContractAgreementDialog({
             ×
           </Link>
         </div>
-        <div className="flex gap-5 border-b border-[#EEF2F7] px-5 text-sm font-semibold sm:px-6">
+        <div
+          role="tablist"
+          aria-label="Agreement sections"
+          className="flex gap-5 border-b border-[#EEF2F7] px-5 text-sm font-semibold sm:px-6"
+          onKeyDown={(event) => {
+            const index = tabs.findIndex(([id]) => id === tab);
+            const next = nextTabIndex(tabs.length, index, event.key);
+            if (next == null) return;
+            event.preventDefault();
+            const item = tabs[next];
+            if (!item) return;
+            setTab(item[0]);
+          }}
+        >
           {tabs.map(([id, label]) => (
             <button
               key={id}
               type="button"
+              role="tab"
+              id={`agreement-tab-${id}`}
+              aria-selected={tab === id}
+              aria-controls={`agreement-panel-${id}`}
+              tabIndex={tab === id ? 0 : -1}
               onClick={() => setTab(id)}
               className={`border-b-2 py-3 ${tab === id ? "border-[#6D4AFF] text-[#6D4AFF]" : "border-transparent text-[#667085]"}`}
             >
@@ -109,7 +127,7 @@ export function ContractAgreementDialog({
             </button>
           ))}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+        <div id={`agreement-panel-${tab}`} role="tabpanel" aria-labelledby={`agreement-tab-${tab}`} className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
           {tab === "overview" ? (
             <div className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2">

@@ -137,14 +137,25 @@ export async function actionDuplicateRole(formData: FormData) {
   const session = await requireAdminSession("access.manage_roles");
   const base = safeAdminPath(String(formData.get("next") ?? ""), "/admin/access");
   const roleId = String(formData.get("roleId") ?? "").trim();
+  let role: { id: string };
   try {
-    const role = await duplicateAdminRole(roleId, session.permissions);
+    role = await duplicateAdminRole(roleId, session.permissions);
     await writeAccessAudit(session.email, "access.role_duplicate", role.id, { from: roleId });
-    redirect(`${base}?created=role&edit=${role.id}`);
   } catch (err) {
+    if (isNavigationError(err)) throw err;
     const message = err instanceof Error ? err.message : "Failed to duplicate role";
     redirect(`${base}?error=${encodeURIComponent(message)}`);
   }
+  redirect(`${base}?created=role&edit=${role.id}`);
+}
+
+function isNavigationError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")
+  );
 }
 
 function appOrigin() {

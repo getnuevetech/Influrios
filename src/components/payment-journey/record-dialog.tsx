@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { useAccountDialogBehavior } from "@/components/account-dialog";
 
 export function RecordDialog({
   title,
@@ -17,27 +18,11 @@ export function RecordDialog({
 }) {
   const router = useRouter();
   const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const body = document.body;
-    const overflow = body.style.overflow;
-    body.style.overflow = "hidden";
-    panelRef.current?.focus();
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") router.push(closeHref, { scroll: false });
-    }
-    window.addEventListener("keydown", onKey);
-    return () => {
-      body.style.overflow = overflow;
-      window.removeEventListener("keydown", onKey);
-      previous?.focus();
-    };
-  }, [closeHref, router]);
+  useAccountDialogBehavior(panelRef, () => router.push(closeHref, { scroll: false }));
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-[#111a5a]/40" />
+    <div data-account-dialog-root className="fixed inset-0 z-50">
+      <Link href={closeHref} scroll={false} aria-label="Close" className="absolute inset-0 bg-[#111a5a]/40" />
       <div
         ref={panelRef}
         tabIndex={-1}
@@ -55,7 +40,7 @@ export function RecordDialog({
           <Link
             href={closeHref}
             scroll={false}
-            aria-label="Close"
+            aria-label="Close dialog"
             className="inline-flex h-11 min-w-11 items-center justify-center rounded-full text-indigo hover:bg-lavender"
           >
             ×

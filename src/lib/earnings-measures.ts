@@ -28,6 +28,7 @@ export type EarningRow = {
   milestone: string;
   netCents: number;
   status: PaymentStatusLabel;
+  milestoneStatus: string;
 };
 
 export type EarningSummary = {
@@ -148,6 +149,7 @@ export function summarizeEarningFacts(facts: EarningFact[], window: { start: Dat
       milestone: fact.milestone,
       netCents: fact.amountCents,
       status: earningsRowStatus(fact),
+      milestoneStatus: fact.milestoneStatus,
     });
   }
   return summary;

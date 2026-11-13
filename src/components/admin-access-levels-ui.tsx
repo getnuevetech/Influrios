@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { actionCreateRole, actionUpdateRole } from "@/app/admin/actions-auth";
+import { useMemo, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { actionCreateRole, actionDuplicateRole, actionUpdateRole } from "@/app/admin/actions-auth";
+import { useAccountDialogBehavior } from "@/components/account-dialog";
 import { IconDots, IconPlus, IconSearch } from "@/components/icons";
+import { nextTabIndex } from "@/lib/dialog-behavior";
 
 export type AccessRoleCard = {
   id: string;
@@ -50,6 +53,7 @@ export function AdminAccessLevelsView({
   editRoleId,
   adminCount,
   flash,
+  actorPermissions,
 }: {
   roles: AccessRoleCard[];
   groups: AccessModuleGroup[];
@@ -58,6 +62,7 @@ export function AdminAccessLevelsView({
   editRoleId?: string;
   adminCount: number;
   flash: { error?: string; created?: string; updated?: string };
+  actorPermissions: string[];
 }) {
   const [q, setQ] = useState("");
   const [type, setType] = useState<"all" | "system" | "custom">("all");
@@ -73,6 +78,8 @@ export function AdminAccessLevelsView({
   const [name, setName] = useState(linked?.name ?? "");
   const [description, setDescription] = useState(linked?.description ?? "");
   const [checked, setChecked] = useState<string[]>(linked ? [...linked.permissions] : []);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -115,16 +122,26 @@ export function AdminAccessLevelsView({
     setName(next.mode === "create" ? (source ? `${source.name} copy` : "") : source?.name ?? "");
     setDescription(next.mode === "view" || next.mode === "edit" ? source?.description ?? "" : source?.description ?? "");
     setChecked(source ? [...source.permissions] : []);
+    setConfirmClose(false);
   }
 
-  useEffect(() => {
-    if (!dialog) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [dialog]);
+  function requestClose() {
+    const dirty =
+      Boolean(dialog) &&
+      !readOnly &&
+      (name.trim() !== (dialog?.mode === "edit" ? activeRole?.name ?? "" : "") ||
+        description.trim() !== (activeRole?.description ?? "") ||
+        added.length > 0 ||
+        removed.length > 0);
+    if (dirty && !confirmClose) {
+      setConfirmClose(true);
+      return;
+    }
+    setConfirmClose(false);
+    setDialog(null);
+  }
+
+  useAccountDialogBehavior(panelRef, requestClose, Boolean(dialog));
 
   function toggle(id: string) {
     setChecked((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
@@ -253,15 +270,11 @@ export function AdminAccessLevelsView({
                           </summary>
                           <div className="absolute right-0 z-10 mt-1 w-48 rounded-xl border border-[#E4EBFF] bg-white p-1 shadow-lg">
                             {canManageRoles ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openDialog({ mode: "create", roleId: null, baseRoleId: role.id }, role)
-                                }
-                                className="block w-full rounded-lg px-3 py-2 text-left text-[12px] font-semibold text-indigo hover:bg-[#F7F8FF]"
-                              >
-                                Duplicate as custom role
-                              </button>
+                              <form action={actionDuplicateRole}>
+                                <input type="hidden" name="next" value="/admin/access" />
+                                <input type="hidden" name="roleId" value={role.id} />
+                                <DuplicateRoleButton />
+                              </form>
                             ) : null}
                             {canManageRoles && !role.system ? (
                               <button
@@ -291,33 +304,36 @@ export function AdminAccessLevelsView({
       </section>
 
       {dialog ? (
-        <div className="fixed inset-0 z-50">
-          <button type="button" aria-label="Close role" className="absolute inset-0 bg-[#0E1440]/45" onClick={() => setDialog(null)} />
+        <div data-account-dialog-root className="fixed inset-0 z-50">
+          <button type="button" aria-label="Close role" className="absolute inset-0 bg-[#0E1440]/45" onClick={requestClose} />
           <div
+            ref={panelRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
-            className="absolute inset-0 flex flex-col overflow-y-auto bg-white p-5 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(90vh,820px)] sm:w-[min(920px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(17,26,90,0.18)]"
+            aria-labelledby="role-dialog-title"
+            className="absolute inset-0 flex flex-col overflow-y-auto bg-white p-5 outline-none sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(90vh,820px)] sm:w-[min(920px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(17,26,90,0.18)]"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-display text-xl font-bold text-indigo">
+                <h2 id="role-dialog-title" className="font-display text-xl font-bold text-indigo">
                   {dialog.mode === "create" ? "Create custom role" : dialog.mode === "edit" ? "Edit role" : activeRole?.name || "Role"}
                 </h2>
                 <p className="mt-1 text-[13px] text-muted">
-                  {dialog.mode === "create" && baseRole
-                    ? `Based on ${baseRole.name}`
-                    : dialog.mode === "view"
-                      ? "System roles are read-only. Duplicate to create a custom role."
-                      : "Choose the permissions this role can use."}
+                  {activeRole?.system
+                    ? "System roles are read-only. Duplicate to create a custom role."
+                    : dialog.mode === "create" && baseRole
+                      ? `Based on ${baseRole.name}`
+                      : "Review changes before saving."}
                 </p>
               </div>
-              <button type="button" onClick={() => setDialog(null)} aria-label="Close dialog" className="px-2 text-lg text-muted">
+              <button type="button" onClick={requestClose} aria-label="Close dialog" className="px-2 text-lg text-muted">
                 ×
               </button>
             </div>
 
             {step === "basics" ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2" id="role-panel-basics" role="tabpanel" aria-labelledby="role-tab-basics">
               <label className="block text-[13px] font-semibold text-indigo">
                 Role name
                 <input
@@ -340,23 +356,41 @@ export function AdminAccessLevelsView({
             </div>
             ) : null}
 
-            <div className="mt-4 flex gap-4 border-b border-[#EEF2FF]">
+            <div
+              role="tablist"
+              aria-label="Role sections"
+              className="mt-4 flex gap-4 border-b border-[#EEF2FF]"
+              onKeyDown={(event) => {
+                const tabs = ["basics", "permissions", "review"] as const;
+                const index = tabs.indexOf(step);
+                const next = nextTabIndex(tabs.length, index, event.key);
+                if (next == null) return;
+                event.preventDefault();
+                const item = tabs[next];
+                if (item) setStep(item);
+              }}
+            >
               {(["basics", "permissions", "review"] as const).map((id) => (
                 <button
                   key={id}
                   type="button"
+                  role="tab"
+                  id={`role-tab-${id}`}
+                  aria-controls={`role-panel-${id}`}
+                  aria-selected={step === id}
+                  tabIndex={step === id ? 0 : -1}
                   onClick={() => setStep(id)}
                   className={`border-b-2 pb-2 text-[13px] font-semibold capitalize ${
                     step === id ? "border-violet text-violet" : "border-transparent text-muted"
                   }`}
                 >
-                  {id === "basics" ? "Basics" : id === "permissions" ? "Permissions" : "Review changes"}
+                  {id === "basics" ? "Overview" : id === "permissions" ? "Permissions" : "Review changes"}
                 </button>
               ))}
             </div>
 
             {step === "permissions" ? (
-              <div className="mt-4 grid min-h-0 gap-4 md:grid-cols-[200px_minmax(0,1fr)]">
+              <div id="role-panel-permissions" role="tabpanel" aria-labelledby="role-tab-permissions" className="mt-4 grid min-h-0 gap-4 md:grid-cols-[200px_minmax(0,1fr)]">
                 <div className="space-y-1">
                   {BUCKETS.map((bucket) => {
                     const count = groups
@@ -398,9 +432,13 @@ export function AdminAccessLevelsView({
                       className="w-full rounded-xl border border-[#E4EBFF] py-2 pl-9 pr-3 text-[13px] outline-none focus:border-violet"
                     />
                   </label>
+                  <p className="mb-3 text-[12px] text-muted">Only permissions you can delegate are available.</p>
                   <div className="space-y-3">
                     {visibleGroups.map((group) => {
                       const perms = group.permissions.filter((perm) => {
+                        const held = actorPermissions.includes(perm.id);
+                        const alreadyOnRole = Boolean(activeRole?.permissions.includes(perm.id));
+                        if (!held && !(readOnly && alreadyOnRole)) return false;
                         if (!query) return true;
                         return (
                           perm.label.toLowerCase().includes(query) ||
@@ -424,8 +462,11 @@ export function AdminAccessLevelsView({
                                   <input
                                     type="checkbox"
                                     checked={selected.has(perm.id)}
-                                    disabled={readOnly}
-                                    onChange={() => toggle(perm.id)}
+                                    disabled={readOnly || !actorPermissions.includes(perm.id)}
+                                    onChange={() => {
+                                      if (!actorPermissions.includes(perm.id)) return;
+                                      toggle(perm.id);
+                                    }}
                                     className="mt-0.5 accent-[#633CFF]"
                                   />
                                   <span>
@@ -442,8 +483,8 @@ export function AdminAccessLevelsView({
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="mt-4 space-y-4 text-[13px]">
+            ) : step === "review" ? (
+              <div id="role-panel-review" role="tabpanel" aria-labelledby="role-tab-review" className="mt-4 space-y-4 text-[13px]">
                 <section className="rounded-2xl border border-[#E4EBFF] p-4">
                   <p className="font-bold text-indigo">Permission changes</p>
                   <p className="mt-2 text-muted">
@@ -481,22 +522,40 @@ export function AdminAccessLevelsView({
                   )}
                 </section>
               </div>
-            )}
+            ) : null}
 
             <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#EEF2FF] pt-4">
               <p className="text-[12px] text-muted">
-                {dialog.mode === "create" ? "Custom role · Not yet saved" : readOnly ? "Read only" : "Custom role"}
+                {confirmClose
+                  ? "Discard unsaved changes?"
+                  : dialog.mode === "create"
+                    ? "Custom role · Not yet saved"
+                    : readOnly
+                      ? "System roles are read-only. Duplicate to customize."
+                      : `Changes: ${added.length} added · ${removed.length} removed · Affects ${activeRole?.assignedCount ?? 0} admins`}
               </p>
               <div className="flex gap-2">
+                {confirmClose ? (
+                  <>
+                    <button type="button" onClick={() => setConfirmClose(false)} className="rounded-full border border-[#E4EBFF] px-4 py-2 text-[13px] font-semibold text-indigo">
+                      Keep editing
+                    </button>
+                    <button type="button" onClick={() => { setConfirmClose(false); setDialog(null); }} className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white">
+                      Discard
+                    </button>
+                  </>
+                ) : null}
+                {confirmClose ? null : (
                 <button
                   type="button"
                   onClick={() =>
-                    step === "review" ? setStep("permissions") : step === "permissions" ? setStep("basics") : setDialog(null)
+                    step === "review" ? setStep("permissions") : step === "permissions" ? setStep("basics") : requestClose()
                   }
                   className="rounded-full border border-[#E4EBFF] px-4 py-2 text-[13px] font-semibold text-indigo"
                 >
                   {step === "basics" ? "Cancel" : "Back"}
                 </button>
+                )}
                 {readOnly && canManageRoles && activeRole && !activeRole.system ? (
                   <button
                     type="button"
@@ -507,13 +566,11 @@ export function AdminAccessLevelsView({
                   </button>
                 ) : null}
                 {readOnly && canManageRoles && activeRole ? (
-                  <button
-                    type="button"
-                    onClick={() => openDialog({ mode: "create", roleId: null, baseRoleId: activeRole.id }, activeRole)}
-                    className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white"
-                  >
-                    Duplicate as custom role
-                  </button>
+                  <form action={actionDuplicateRole}>
+                    <input type="hidden" name="next" value="/admin/access" />
+                    <input type="hidden" name="roleId" value={activeRole.id} />
+                    <DuplicateRoleButton prominent />
+                  </form>
                 ) : null}
                 {!readOnly && step === "basics" ? (
                   <button type="button" onClick={() => setStep("permissions")} className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white">
@@ -529,7 +586,7 @@ export function AdminAccessLevelsView({
                     Review changes
                   </button>
                 ) : null}
-                {!readOnly && step === "review" ? (
+                {!readOnly && step === "review" && !confirmClose ? (
                   <form action={dialog.mode === "edit" ? actionUpdateRole : actionCreateRole}>
                     <input type="hidden" name="next" value="/admin/access" />
                     {dialog.mode === "edit" && dialog.roleId ? (
@@ -542,7 +599,7 @@ export function AdminAccessLevelsView({
                     ))}
                     <button
                       type="submit"
-                      disabled={!name.trim() || checked.length === 0}
+                      disabled={!name.trim() || checked.length === 0 || checked.some((id) => !actorPermissions.includes(id))}
                       className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
                     >
                       {dialog.mode === "edit" ? "Save role" : "Create role"}
@@ -564,5 +621,22 @@ function Kpi({ label, value }: { label: string; value: string }) {
       <p className="text-[12px] font-semibold text-muted">{label}</p>
       <p className="mt-1 font-display text-2xl font-bold text-indigo">{value}</p>
     </div>
+  );
+}
+
+function DuplicateRoleButton({ prominent = false }: { prominent?: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className={
+        prominent
+          ? "rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
+          : "block w-full rounded-lg px-3 py-2 text-left text-[12px] font-semibold text-indigo hover:bg-[#F7F8FF] disabled:opacity-40"
+      }
+    >
+      {pending ? "Duplicating…" : "Duplicate as custom role"}
+    </button>
   );
 }
