@@ -21,9 +21,9 @@ async function requireDb(t: { skip: (msg?: string) => void }) {
 }
 
 describe("homePathForRole", () => {
-  it("routes BUSINESS and AGENCY to the business home, everyone else to the creator dashboard", () => {
+  it("routes BUSINESS to the business home and AGENCY to the selected agency workspace", () => {
     assert.equal(homePathForRole("BUSINESS"), "/business/home");
-    assert.equal(homePathForRole("AGENCY"), "/business/home");
+    assert.equal(homePathForRole("AGENCY"), "/agency");
     assert.equal(homePathForRole("CREATOR"), "/creator");
     assert.equal(homePathForRole(null), "/creator");
     assert.equal(homePathForRole(undefined), "/creator");

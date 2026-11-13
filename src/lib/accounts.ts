@@ -20,7 +20,8 @@ export type AccountSession = {
 
 /** Post-login / post-verify home by role. Creators land on the dashboard, not edit profile. */
 export function homePathForRole(role: string | null | undefined): string {
-  if (role === "BUSINESS" || role === "AGENCY") return "/business/home";
+  if (role === "AGENCY") return "/agency";
+  if (role === "BUSINESS") return "/business/home";
   return "/creator";
 }
 

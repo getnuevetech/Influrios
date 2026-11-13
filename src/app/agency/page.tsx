@@ -4,19 +4,26 @@ import {
   actionAddRoster,
   actionCreateCampaign,
   actionCreatePortfolio,
+  actionLinkCampaignAgreement,
   actionSetCampaignStatus,
   actionTogglePortfolio,
 } from "@/app/agency/actions";
+import { AgencyActionContext } from "@/app/agency/context-fields";
+import { AgencyWorkspaceBar } from "@/app/agency/workspace-bar";
+import { MemberFrame } from "@/components/account-shell";
 import {
   agencyStats,
   agencyWorkspaceIdForOwner,
   getAgencyStore,
+  listAgencySeats,
   listPublishedPortfolios,
+  loadAgencyCampaignFacts,
 } from "@/lib/agency";
 import { resolveAgencyAccess } from "@/lib/agency-auth";
+import { agencyActionAllowed, nextCampaignStatus, sealAgencyActionContext, summarizeCampaignRecords } from "@/lib/agency-context";
 import { getWorkspace } from "@/lib/business";
-import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
+import { prisma } from "@/lib/db";
 import { productSwitch } from "@/lib/product-switches";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +39,9 @@ type Props = {
     status?: string;
     toggled?: string;
     seat?: string;
+    workspace?: string;
+    client?: string;
+    view?: string;
   }>;
 };
 
@@ -44,30 +54,76 @@ const CAMP_COLOR: Record<string, string> = {
 
 export default async function AgencyPage({ searchParams }: Props) {
   const params = await searchParams;
-  const access = await resolveAgencyAccess();
+  const access = await resolveAgencyAccess(params.workspace);
   const [ws, seatsOn] = await Promise.all([
     getWorkspace(access.ok ? access.account?.id : null),
     productSwitch("agency_seats"),
   ]);
-  const entitlements = await businessEntitlementsForPlan(ws.plan);
-  const unlocked = seatsOn ? access.ok : entitlements.agencyWorkspace;
+  const role =
+    access.ok && access.mode === "seat"
+      ? access.role
+      : access.ok && access.mode === "plan"
+        ? "owner"
+        : null;
   const workspaceId =
     access.ok && access.mode === "seat"
       ? access.seat.workspaceId
-      : access.ok && access.account?.id
+      : access.ok && access.mode === "plan" && access.account?.id
         ? agencyWorkspaceIdForOwner(access.account.id)
         : null;
+  const unlocked = Boolean(workspaceId);
   const store = await getAgencyStore(workspaceId);
   const stats = agencyStats(store);
   const published = listPublishedPortfolios(store);
   const directoryCreators = await listDirectoryCreators();
   const bySlug = indexCreatorsBySlug(directoryCreators);
-  const seatLabel =
-    access.ok && access.mode === "seat"
-      ? `${access.account.email} · ${access.role}`
-      : null;
+  const clients = workspaceId
+    ? await prisma.agencyClient.findMany({ where: { workspaceId }, orderBy: { name: "asc" } })
+    : [];
+  const selectedClient = clients.find((client) => client.id === params.client) ?? null;
+  const facts = workspaceId ? await loadAgencyCampaignFacts(workspaceId) : [];
+  const team = workspaceId
+    ? (await listAgencySeats(workspaceId)).map((seat) => ({
+        id: seat.id,
+        email: seat.email,
+        role: seat.role,
+        inviteStatus: seat.inviteStatus,
+      }))
+    : [];
+  const accountId = access.ok ? access.account?.id ?? "" : "";
+  const token =
+    workspaceId && accountId
+      ? sealAgencyActionContext({
+          userId: accountId,
+          workspaceId,
+          clientId: selectedClient?.id ?? "",
+        })
+      : "";
+  const canRoster = agencyActionAllowed(role, "manage_roster");
+  const canCampaign = agencyActionAllowed(role, "manage_campaign");
+  const canStatus = agencyActionAllowed(role, "set_campaign_status");
+  const canPortfolio = agencyActionAllowed(role, "manage_portfolio");
+  const canClients = agencyActionAllowed(role, "act_for_client");
+  const canTeam = agencyActionAllowed(role, "manage_team");
+  const view = params.view ?? "";
+  const showRoster = view === "" || view === "overview" || view === "roster";
+  const showCampaigns = view === "" || view === "overview" || view === "campaigns" || view === "contracts" || view === "payments";
+  const showPortfolios = view === "" || view === "overview";
+  const visibleCampaigns = selectedClient
+    ? store.campaigns.filter(
+        (campaign) => campaign.clientId === selectedClient.id || (!campaign.clientId && campaign.clientName === selectedClient.name),
+      )
+    : store.campaigns;
+  const switcher =
+    access.ok && access.mode !== "plan"
+      ? access.seats.map((seat) => ({ id: seat.workspaceId, name: seat.workspaceName }))
+      : workspaceId
+        ? [{ id: workspaceId, name: store.name }]
+        : [];
+  const seatLabel = role ? `${role}` : null;
+  const denial = access.ok ? access.denial : null;
 
-  return (
+  const body = (
     <div className="bg-[#F7FAFF]">
       <section className="hero-atmosphere text-white">
         <div className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6">
@@ -106,9 +162,28 @@ export default async function AgencyPage({ searchParams }: Props) {
 
         {params.seat === "accepted" ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            Seat invite accepted. You can mutate this agency workspace while seats are on.
+            Seat invite accepted for this workspace.
           </div>
         ) : null}
+        {denial ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {denial}
+          </div>
+        ) : null}
+
+        <AgencyWorkspaceBar
+          workspaces={switcher}
+          workspaceId={workspaceId ?? ""}
+          workspaceName={store.name}
+          clients={clients.map((client) => ({ id: client.id, name: client.name }))}
+          clientId={selectedClient?.id ?? ""}
+          view={view}
+          roleLabel={seatLabel}
+          token={token}
+          canManageClients={canClients}
+          canManageTeam={canTeam}
+          seats={team}
+        />
 
         {params.error === "agency_plan_required" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -160,6 +235,7 @@ export default async function AgencyPage({ searchParams }: Props) {
           </section>
         ) : null}
 
+        {showRoster ? (
         <section className="space-y-4">
           <h2 className="font-display text-2xl font-bold text-indigo">Talent roster</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -201,8 +277,9 @@ export default async function AgencyPage({ searchParams }: Props) {
             })}
           </div>
 
-          {unlocked ? (
+          {canRoster && token ? (
             <form action={actionAddRoster} className="card-surface mt-2 grid gap-3 p-5 sm:grid-cols-2">
+              <AgencyActionContext token={token} workspaceId={workspaceId ?? ""} clientId={selectedClient?.id ?? ""} />
               <h3 className="font-display text-lg font-bold text-indigo sm:col-span-2">
                 Add to roster
               </h3>
@@ -256,61 +333,95 @@ export default async function AgencyPage({ searchParams }: Props) {
             </form>
           ) : null}
         </section>
+        ) : null}
 
+        {showCampaigns ? (
         <section className="space-y-4">
           <h2 className="font-display text-2xl font-bold text-indigo">Campaigns</h2>
-          {store.campaigns.map((camp) => (
-            <article key={camp.id} className="card-surface p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-violet">
-                    {camp.clientName}
-                  </p>
-                  <h3 className="mt-1 font-display text-lg font-bold text-indigo">{camp.title}</h3>
-                  {[camp.summary, camp.budgetLabel].filter(Boolean).length > 0 ? (
-                    <p className="mt-1 text-sm text-muted">
-                      {[camp.summary, camp.budgetLabel].filter(Boolean).join(" · ")}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 text-xs text-muted">
-                    Cast:{" "}
-                    {camp.creatorSlugs
-                      .map((s) => bySlug.get(s)?.displayName ?? s)
-                      .join(", ")}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${CAMP_COLOR[camp.status]}`}
-                >
-                  {camp.status}
-                </span>
-              </div>
-              {unlocked ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(["briefing", "casting", "live", "wrapped"] as const).map((st) => (
-                    <form key={st} action={actionSetCampaignStatus}>
-                      <input type="hidden" name="id" value={camp.id} />
-                      <input type="hidden" name="status" value={st} />
-                      <button
-                        type="submit"
-                        className="rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-indigo hover:bg-lavender"
-                      >
-                        {st}
-                      </button>
-                    </form>
-                  ))}
-                </div>
-              ) : null}
-            </article>
-          ))}
-
-          {unlocked ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[40rem] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-muted">
+                <tr>
+                  <th className="px-3 py-2">Campaign</th>
+                  <th className="px-3 py-2">Client</th>
+                  <th className="px-3 py-2">Contract</th>
+                  <th className="px-3 py-2">Payment</th>
+                  <th className="px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleCampaigns.map((camp) => {
+                  const campFacts = facts.filter((fact) => fact.campaignId === camp.id);
+                  const record = summarizeCampaignRecords(
+                    campFacts.length > 0
+                      ? campFacts
+                      : camp.creatorSlugs.map(() => ({
+                          contractStatus: null,
+                          payoutState: null,
+                          milestoneStatus: null,
+                        })),
+                  );
+                  const nextStatus = nextCampaignStatus(camp.status);
+                  return (
+                    <tr key={camp.id} className="border-t border-border">
+                      <td className="px-3 py-3 font-semibold text-indigo">{camp.title}</td>
+                      <td className="px-3 py-3">{camp.clientName}</td>
+                      <td className="px-3 py-3">{record.contract}</td>
+                      <td className="px-3 py-3">{record.payment}</td>
+                      <td className="px-3 py-3">
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${CAMP_COLOR[camp.status]}`}>
+                          {camp.status}
+                        </span>
+                        {canStatus && token && nextStatus ? (
+                          <form action={actionSetCampaignStatus} className="mt-2">
+                            <AgencyActionContext token={token} workspaceId={workspaceId ?? ""} clientId={selectedClient?.id ?? ""} />
+                            <input type="hidden" name="id" value={camp.id} />
+                            <input type="hidden" name="status" value={nextStatus} />
+                            <button
+                              type="submit"
+                              className="rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-indigo hover:bg-lavender"
+                            >
+                              Move to {nextStatus}
+                            </button>
+                          </form>
+                        ) : null}
+                        {canCampaign && token && camp.creatorSlugs.length > 0 ? (
+                          <form action={actionLinkCampaignAgreement} className="mt-2 grid gap-1">
+                            <AgencyActionContext token={token} workspaceId={workspaceId ?? ""} clientId={selectedClient?.id ?? ""} />
+                            <input type="hidden" name="id" value={camp.id} />
+                            <select name="creatorSlug" className="rounded-lg border border-border bg-white px-2 py-1 text-xs">
+                              {camp.creatorSlugs.map((slug) => (
+                                <option key={slug} value={slug}>
+                                  {bySlug.get(slug)?.displayName ?? slug}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              name="collaborationId"
+                              required
+                              placeholder="Existing agreement"
+                              className="rounded-lg border border-border bg-white px-2 py-1 text-xs"
+                            />
+                            <button type="submit" className="text-left text-xs font-semibold text-violet hover:underline">
+                              Link agreement
+                            </button>
+                          </form>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {canCampaign && token && selectedClient ? (
             <form
               action={actionCreateCampaign}
               className="card-surface grid gap-3 p-5 sm:grid-cols-2"
             >
+              <AgencyActionContext token={token} workspaceId={workspaceId ?? ""} clientId={selectedClient.id} />
               <h3 className="font-display text-lg font-bold text-indigo sm:col-span-2">
-                New campaign
+                New campaign for {selectedClient.name}
               </h3>
               <label className="text-sm">
                 <span className="font-semibold text-indigo">Title</span>
@@ -321,15 +432,9 @@ export default async function AgencyPage({ searchParams }: Props) {
                   className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
                 />
               </label>
-              <label className="text-sm">
-                <span className="font-semibold text-indigo">Client</span>
-                <input
-                  name="clientName"
-                  required
-                  placeholder="Client name"
-                  className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2"
-                />
-              </label>
+              <p className="text-sm text-muted sm:col-span-2">
+                This creates a campaign container. It does not sign a contract or move a payment. Each influencer keeps a separate agreement.
+              </p>
               <label className="text-sm">
                 <span className="font-semibold text-indigo">Specialty</span>
                 <input
@@ -371,7 +476,9 @@ export default async function AgencyPage({ searchParams }: Props) {
             </form>
           ) : null}
         </section>
+        ) : null}
 
+        {showPortfolios ? (
         <section className="space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -401,8 +508,9 @@ export default async function AgencyPage({ searchParams }: Props) {
                       {p.specialty}
                       {!p.published ? " · draft" : ""}
                     </p>
-                    {unlocked ? (
+                    {canPortfolio && token ? (
                       <form action={actionTogglePortfolio}>
+                        <AgencyActionContext token={token} workspaceId={workspaceId ?? ""} clientId={selectedClient?.id ?? ""} />
                         <input type="hidden" name="id" value={p.id} />
                         <input
                           type="hidden"
@@ -439,11 +547,12 @@ export default async function AgencyPage({ searchParams }: Props) {
             })}
           </div>
 
-          {unlocked ? (
+          {canPortfolio && token ? (
             <form
               action={actionCreatePortfolio}
               className="card-surface grid gap-3 p-5 sm:grid-cols-2"
             >
+              <AgencyActionContext token={token} workspaceId={workspaceId ?? ""} clientId={selectedClient?.id ?? ""} />
               <h3 className="font-display text-lg font-bold text-indigo sm:col-span-2">
                 New joint case study
               </h3>
@@ -550,18 +659,17 @@ export default async function AgencyPage({ searchParams }: Props) {
             <p className="text-sm text-muted">No published case studies yet.</p>
           ) : null}
         </section>
+        ) : null}
 
         <p className="text-center text-sm text-muted">
-          Admin:{" "}
-          <Link href="/admin/agency" className="font-semibold text-violet hover:underline">
-            Agency console
-          </Link>
-          {" · "}
-          <Link href="/business" className="font-semibold text-violet hover:underline">
-            Business workspace
-          </Link>
+          Every action retains its client and workspace. Permissions follow the selected membership. Campaigns link to the same contracts, deliveries, and payments.
         </p>
       </div>
     </div>
   );
+
+  if (access.ok && access.account?.role === "AGENCY") {
+    return <MemberFrame>{body}</MemberFrame>;
+  }
+  return body;
 }

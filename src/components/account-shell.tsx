@@ -42,6 +42,17 @@ const CREATOR_NAV: NavItem[] = [
   { href: "/account", label: "Settings", icon: <IconSettings size={18} /> },
 ];
 
+const AGENCY_NAV: NavItem[] = [
+  { href: "/agency", label: "Agency overview", icon: <IconHome size={18} /> },
+  { href: "/agency?view=clients", label: "Clients", icon: <IconBuilding size={18} /> },
+  { href: "/agency?view=roster", label: "Influencer roster", icon: <IconUsers size={18} /> },
+  { href: "/agency?view=campaigns", label: "Campaigns", icon: <IconHandshake size={18} /> },
+  { href: "/collaboration/contracts", label: "Contracts", icon: <IconFileText size={18} /> },
+  { href: "/payments", label: "Payments", icon: <IconWallet size={18} /> },
+  { href: "/agency?view=team", label: "Team & access", icon: <IconIdCard size={18} /> },
+  { href: "/account", label: "Settings", icon: <IconSettings size={18} /> },
+];
+
 const BUSINESS_NAV: NavItem[] = [
   { href: "/business/home", label: "Dashboard", icon: <IconHome size={18} /> },
   { href: "/business/profile", label: "Company Profile", icon: <IconBuilding size={18} /> },
@@ -60,6 +71,13 @@ function active(href: string, path: string, search = "") {
   const url = new URL(href, "http://local.invalid");
   const base = url.pathname;
   if (base === "/creator" || base === "/business/home") return path === base;
+  if (base === "/agency") {
+    if (path !== "/agency") return false;
+    const wantView = url.searchParams.get("view");
+    const current = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("view");
+    if (wantView) return current === wantView;
+    return !current;
+  }
   if (base === "/creator/earnings" && (path === "/payments" || path.startsWith("/payments/"))) return true;
   if (!(path === base || path.startsWith(`${base}/`))) return false;
   if (base === "/collaboration/hub") return true;
@@ -96,7 +114,7 @@ export async function MemberFrame({
   }
   if (account && !account.hasPassword && !path.startsWith("/account/password")) {
     redirect(
-      `/account/password?next=${encodeURIComponent(path || (audience === "business" ? "/business/home" : "/creator"))}`,
+      `/account/password?next=${encodeURIComponent(path || homePathForRole(account.role))}`,
     );
   }
   const name = account?.name || account?.email || "Account";
@@ -160,11 +178,12 @@ export async function MemberFrame({
       payments: (hub?.pipeline ?? []).filter((item) => item.awaitingFunding).length,
     });
   }
-  const nav = audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
-  const home = audience === "business" ? "/business/home" : "/creator";
+  const agencyAccount = account?.role === "AGENCY";
+  const nav = agencyAccount ? AGENCY_NAV : audience === "business" ? BUSINESS_NAV : CREATOR_NAV;
+  const home = agencyAccount ? "/agency" : audience === "business" ? "/business/home" : "/creator";
   // Approved business chrome: signed-in contact person first, company name second.
   const primaryName = audience === "business" ? contactPerson || company || name : name;
-  const secondaryName = audience === "business" ? company || "Business" : "Influencer";
+  const secondaryName = agencyAccount ? "Agency" : audience === "business" ? company || "Business" : "Influencer";
   const searchPlaceholder =
     audience === "business"
       ? "Search creators, campaigns, or anything..."
@@ -280,7 +299,7 @@ export async function MemberFrame({
               key={item.href}
               href={item.href}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                active(item.href, path) ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872]"
+                active(item.href, path, search) ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872]"
               }`}
             >
               {item.label}

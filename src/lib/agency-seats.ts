@@ -148,8 +148,12 @@ export async function acceptAgencySeatInvite(input: {
   token: string;
   accountEmail: string;
   accountUserId: string;
+  emailVerified: boolean;
   now?: Date;
 }) {
+  if (!input.emailVerified) {
+    return { ok: false as const, error: "Verify your email before accepting this seat." };
+  }
   if (!(await productSwitch("agency_seats"))) {
     return { ok: false as const, error: "Agency seats are turned off." };
   }
@@ -190,22 +194,40 @@ export async function acceptAgencySeatInvite(input: {
   return { ok: true as const, seat: updated, alreadyAccepted: false as const };
 }
 
-export async function resolveAgencySeatForEmail(email: string) {
-  const seatsEnabled = await productSwitch("agency_seats");
-  if (!seatsEnabled) return null;
-  const seat = await prisma.agencySeat.findFirst({
+export async function listAgencyMemberships(input: { userId: string; email: string }) {
+  if (!(await productSwitch("agency_seats"))) return [];
+  const userId = input.userId.trim();
+  const email = normalizeSeatEmail(input.email);
+  if (!userId || !email) return [];
+  const rows = await prisma.agencySeat.findMany({
     where: {
-      email: normalizeSeatEmail(email),
       inviteStatus: "accepted",
       active: true,
+      OR: [{ acceptedUserId: userId }, { email, acceptedUserId: null }],
     },
-    orderBy: { acceptedAt: "desc" },
+    include: { workspace: { select: { name: true } } },
+    orderBy: { workspaceId: "asc" },
   });
-  if (!seat) return null;
-  if (!canUseAgencySeatSession({ seatsEnabled: true, inviteStatus: seat.inviteStatus, active: seat.active })) {
-    return null;
-  }
-  return seat;
+  return rows.filter((row) =>
+    canUseAgencySeatSession({
+      seatsEnabled: true,
+      inviteStatus: row.inviteStatus,
+      active: row.active,
+    }),
+  );
+}
+
+/** One membership for the workspace the form or selector named. Never the newest seat. */
+export async function resolveAgencySeatForWorkspace(input: {
+  userId: string;
+  email: string;
+  workspaceId: string;
+}) {
+  const workspaceId = input.workspaceId.trim();
+  if (!workspaceId) return null;
+  const seats = await listAgencyMemberships(input);
+  const matches = seats.filter((seat) => seat.workspaceId === workspaceId);
+  return matches.length === 1 ? matches[0] : null;
 }
 
 export async function revokeAgencySeatInvite(email: string, workspaceId: string) {

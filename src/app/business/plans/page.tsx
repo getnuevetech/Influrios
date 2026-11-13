@@ -20,6 +20,7 @@ export default async function BusinessPlansPage() {
     <PublicPlanPage
       audience="business"
       signedIn={Boolean(account)}
+      accountRole={account?.role}
       currentCode={currentCode}
       currentAmountCents={matrix.plans.find((plan) => plan.code === currentCode)?.amountCents ?? null}
       matrix={matrix}

@@ -4,6 +4,11 @@
  */
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
+import {
+  campaignStatusTransition,
+  isolatedCreatorLinks,
+  type CampaignRecordFact,
+} from "@/lib/agency-context";
 import { directoryHasCreator } from "@/lib/directory";
 import { productSwitch } from "@/lib/product-switches";
 
@@ -19,6 +24,7 @@ export type AgencyCampaign = {
   id: string;
   title: string;
   clientName: string;
+  clientId: string | null;
   status: "briefing" | "casting" | "live" | "wrapped";
   specialty: string;
   budgetLabel: string;
@@ -155,6 +161,7 @@ async function ensureStore(workspaceId: string): Promise<AgencyStore> {
       id: campaign.id,
       title: campaign.title,
       clientName: campaign.clientName,
+      clientId: campaign.clientId,
       status: campaign.status === "casting" || campaign.status === "live" || campaign.status === "wrapped" ? campaign.status : "briefing",
       specialty: campaign.specialty,
       budgetLabel: campaign.budgetLabel,
@@ -263,9 +270,24 @@ export async function removeRosterMember(creatorSlug: string, workspaceId?: stri
   return ensureStore(id);
 }
 
+export async function createAgencyClient(input: { workspaceId: string; name: string }) {
+  const workspaceId = resolveWorkspaceId(input.workspaceId);
+  const name = input.name.trim().slice(0, 120);
+  if (!name) throw new Error("A client name is required.");
+  await ensureWorkspace(workspaceId);
+  const existing = await prisma.agencyClient.findUnique({
+    where: { workspaceId_name: { workspaceId, name } },
+  });
+  if (existing) return existing;
+  return prisma.agencyClient.create({
+    data: { id: `client_${randomBytes(4).toString("hex")}`, workspaceId, name },
+  });
+}
+
 export async function createAgencyCampaign(input: {
   title: string;
   clientName: string;
+  clientId?: string;
   specialty: string;
   budgetLabel: string;
   summary: string;
@@ -274,33 +296,74 @@ export async function createAgencyCampaign(input: {
 }) {
   const workspaceId = resolveWorkspaceId(input.workspaceId);
   await ensureWorkspace(workspaceId);
+  const title = input.title.trim();
+  const requestedClientId = input.clientId?.trim() || "";
+  const requestedName = input.clientName.trim();
+  if (!title || (!requestedClientId && !requestedName)) throw new Error("Title and client required");
+  const links = isolatedCreatorLinks(input.creatorSlugs);
   const ts = now();
+  const campaignId = `camp_${randomBytes(4).toString("hex")}`;
+  const client = await prisma.$transaction(async (tx) => {
+    const bound = requestedClientId
+      ? await tx.agencyClient.findUnique({ where: { id: requestedClientId } })
+      : await tx.agencyClient.findUnique({
+          where: { workspaceId_name: { workspaceId, name: requestedName } },
+        });
+    if (requestedClientId && (!bound || bound.workspaceId !== workspaceId)) {
+      throw new Error("That client is not in this workspace.");
+    }
+    const row =
+      bound ??
+      (await tx.agencyClient.create({
+        data: {
+          id: `client_${randomBytes(4).toString("hex")}`,
+          workspaceId,
+          name: requestedName,
+        },
+      }));
+    if (row.workspaceId !== workspaceId) throw new Error("That client is not in this workspace.");
+    await tx.agencyCampaign.create({
+      data: {
+        id: campaignId,
+        workspaceId,
+        title,
+        clientName: row.name,
+        clientId: row.id,
+        status: "briefing",
+        specialty: input.specialty.trim(),
+        budgetLabel: input.budgetLabel.trim(),
+        creatorSlugs: links.map((link) => link.creatorSlug),
+        summary: input.summary.trim(),
+      },
+    });
+    if (links.length > 0) {
+      await tx.agencyCampaignLink.createMany({
+        data: links.map((link) => ({
+          id: `link_${randomBytes(4).toString("hex")}`,
+          campaignId,
+          workspaceId,
+          creatorSlug: link.creatorSlug,
+          collaborationId: link.collaborationId,
+          contractDocumentId: link.contractDocumentId,
+          fundingId: link.fundingId,
+        })),
+      });
+    }
+    return row;
+  });
   const campaign: AgencyCampaign = {
-    id: `camp_${randomBytes(4).toString("hex")}`,
-    title: input.title.trim(),
-    clientName: input.clientName.trim(),
+    id: campaignId,
+    title,
+    clientName: client.name,
+    clientId: client.id,
     status: "briefing",
     specialty: input.specialty.trim(),
     budgetLabel: input.budgetLabel.trim(),
-    creatorSlugs: input.creatorSlugs.filter(Boolean),
+    creatorSlugs: links.map((link) => link.creatorSlug),
     summary: input.summary.trim(),
     createdAt: ts,
     updatedAt: ts,
   };
-  if (!campaign.title || !campaign.clientName) throw new Error("Title and client required");
-  await prisma.agencyCampaign.create({
-    data: {
-      id: campaign.id,
-      workspaceId,
-      title: campaign.title,
-      clientName: campaign.clientName,
-      status: campaign.status,
-      specialty: campaign.specialty,
-      budgetLabel: campaign.budgetLabel,
-      creatorSlugs: campaign.creatorSlugs,
-      summary: campaign.summary,
-    },
-  });
   return campaign;
 }
 
@@ -312,10 +375,141 @@ export async function setCampaignStatus(
   const store = await ensureStore(resolveWorkspaceId(workspaceId));
   const camp = store.campaigns.find((c) => c.id === id);
   if (!camp) throw new Error("Campaign not found");
-  await prisma.agencyCampaign.update({ where: { id }, data: { status } });
-  camp.status = status;
+  const next = campaignStatusTransition(camp.status, status);
+  if (!next.ok) throw new Error(next.error);
+  const updated = await prisma.agencyCampaign.updateMany({
+    where: { id, workspaceId: store.agencyId },
+    data: { status: next.status },
+  });
+  if (updated.count !== 1) throw new Error("Campaign not found");
+  camp.status = next.status;
   camp.updatedAt = now();
   return camp;
+}
+
+export async function linkAgencyCampaignCollaboration(input: {
+  workspaceId: string;
+  campaignId: string;
+  creatorSlug: string;
+  collaborationId: string;
+}) {
+  const workspaceId = resolveWorkspaceId(input.workspaceId);
+  const creatorSlug = input.creatorSlug.trim();
+  const collaborationId = input.collaborationId.trim();
+  if (!creatorSlug || !collaborationId) throw new Error("Choose an influencer and an existing agreement.");
+  const collaboration = await prisma.collaboration.findUnique({ where: { id: collaborationId } });
+  if (!collaboration) throw new Error("That agreement was not found.");
+  if (collaboration.initiatorSlug !== creatorSlug && collaboration.recipientSlug !== creatorSlug) {
+    throw new Error("That agreement is not for this influencer.");
+  }
+  const updated = await prisma.agencyCampaignLink.updateMany({
+    where: { campaignId: input.campaignId, workspaceId, creatorSlug },
+    data: { collaborationId: collaboration.id },
+  });
+  if (updated.count !== 1) throw new Error("That influencer is not on this campaign.");
+}
+
+export type AgencyCampaignFact = CampaignRecordFact & {
+  campaignId: string;
+  creatorSlug: string;
+};
+
+/** Read contract and payout facts from the canonical records linked to each influencer slot. */
+export async function loadAgencyCampaignFacts(workspaceId: string): Promise<AgencyCampaignFact[]> {
+  const id = workspaceId.trim();
+  if (!id) return [];
+  const links = await prisma.agencyCampaignLink.findMany({ where: { workspaceId: id } });
+  if (links.length === 0) return [];
+  const collaborationIds = uniqueIds(links.map((link) => link.collaborationId));
+  const contractIds = uniqueIds(links.map((link) => link.contractDocumentId));
+  const fundingIds = uniqueIds(links.map((link) => link.fundingId));
+  const [directContracts, collabContracts, directFundings, collabFundings] = await Promise.all([
+    contractIds.length
+      ? prisma.contractDocument.findMany({
+          where: { id: { in: contractIds } },
+          select: { id: true, collaborationId: true, status: true },
+        })
+      : [],
+    collaborationIds.length
+      ? prisma.contractDocument.findMany({
+          where: { collaborationId: { in: collaborationIds } },
+          select: { id: true, collaborationId: true, status: true },
+        })
+      : [],
+    fundingIds.length
+      ? prisma.collaborationFunding.findMany({
+          where: { id: { in: fundingIds } },
+          select: { id: true, collaborationId: true },
+        })
+      : [],
+    collaborationIds.length
+      ? prisma.collaborationFunding.findMany({
+          where: { collaborationId: { in: collaborationIds } },
+          select: { id: true, collaborationId: true },
+        })
+      : [],
+  ]);
+  const fundings = [...directFundings, ...collabFundings];
+  const allFundingIds = uniqueIds(fundings.map((funding) => funding.id));
+  const [milestones, settlements] = await Promise.all([
+    allFundingIds.length
+      ? prisma.fundingMilestone.findMany({
+          where: { fundingId: { in: allFundingIds } },
+          select: { fundingId: true, status: true },
+        })
+      : [],
+    allFundingIds.length
+      ? prisma.milestoneSettlementV4.findMany({
+          where: { fundingId: { in: allFundingIds } },
+          select: { fundingId: true, payoutState: true },
+        })
+      : [],
+  ]);
+  return links.map((link) => {
+    const contracts = [
+      ...directContracts.filter((contract) => contract.id === link.contractDocumentId),
+      ...collabContracts.filter((contract) => contract.collaborationId && contract.collaborationId === link.collaborationId),
+    ];
+    const contractStatus = preferredContractStatus(contracts.map((contract) => contract.status));
+    const relatedFundingIds = fundings
+      .filter(
+        (funding) =>
+          funding.id === link.fundingId ||
+          (link.collaborationId && funding.collaborationId === link.collaborationId),
+      )
+      .map((funding) => funding.id);
+    const payouts = settlements
+      .filter((settlement) => relatedFundingIds.includes(settlement.fundingId))
+      .map((settlement) => settlement.payoutState);
+    const milestoneStatuses = milestones
+      .filter((milestone) => relatedFundingIds.includes(milestone.fundingId))
+      .map((milestone) => milestone.status);
+    const paid = payouts.includes("paid") || milestoneStatuses.includes("released");
+    const pending =
+      !paid &&
+      (payouts.some((state) => state === "pending" || state === "in_transit" || state === "queued") ||
+        milestoneStatuses.some(
+          (state) => state === "approved" || state === "release_scheduled" || state === "release_requested",
+        ));
+    return {
+      campaignId: link.campaignId,
+      creatorSlug: link.creatorSlug,
+      contractStatus,
+      payoutState: paid ? "paid" : pending ? "pending" : null,
+      milestoneStatus: paid ? "released" : pending ? "approved" : null,
+    };
+  });
+}
+
+function uniqueIds(values: (string | null | undefined)[]) {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function preferredContractStatus(statuses: string[]): string | null {
+  if (statuses.includes("signed")) return "signed";
+  if (statuses.includes("sent")) return "sent";
+  if (statuses.includes("draft")) return "draft";
+  return null;
 }
 
 export async function createJointPortfolio(input: {

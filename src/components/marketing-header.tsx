@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { homePathForRole } from "@/lib/accounts";
 
 export function MarketingHeader({
   active,
   signedIn,
+  accountRole,
 }: {
   active: "influencer" | "business";
   signedIn: boolean;
+  accountRole?: string | null;
 }) {
   const links = [
     { href: "/discover", label: "Discover" },
@@ -33,7 +36,10 @@ export function MarketingHeader({
         </nav>
         <div className="flex items-center gap-2">
           {signedIn ? (
-            <Link href={active === "business" ? "/business/home" : "/creator"} className="text-sm font-semibold text-indigo">
+            <Link
+              href={accountRole ? homePathForRole(accountRole) : active === "business" ? "/business/home" : "/creator"}
+              className="text-sm font-semibold text-indigo"
+            >
               Your account
             </Link>
           ) : (

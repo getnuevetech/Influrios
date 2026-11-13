@@ -26,6 +26,7 @@ export default async function PricingPage() {
     <PublicPlanPage
       audience="creator"
       signedIn={Boolean(account)}
+      accountRole={account?.role}
       currentCode={currentCode}
       currentAmountCents={matrix.plans.find((plan) => plan.code === currentCode)?.amountCents ?? null}
       matrix={matrix}
