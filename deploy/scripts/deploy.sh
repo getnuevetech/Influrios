@@ -58,7 +58,9 @@ else
 fi
 
 if command -v git >/dev/null 2>&1 && [[ -d .git ]]; then
+  export INFLURIOS_REVISION="$(git rev-parse HEAD)"
   echo "==> Building from git $(git rev-parse --short HEAD) ($(git rev-parse --abbrev-ref HEAD))"
+  echo "==> INFLURIOS_REVISION ${INFLURIOS_REVISION}"
   if ! grep -q 'DOCKER_BUILD=1' Dockerfile 2>/dev/null; then
     echo "WARN: Dockerfile is missing DOCKER_BUILD=1 — pull origin/main before rebuilding."
   fi

@@ -30,6 +30,8 @@ ENV DATABASE_URL="postgresql://influrios:influrios@postgres:5432/influrios?schem
 # deploy.sh writes one key into .env and passes it here on later builds.
 ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+ARG INFLURIOS_REVISION=
+ENV INFLURIOS_REVISION=${INFLURIOS_REVISION}
 # NEXT_PUBLIC_* is inlined into the client bundle at build. The server reads
 # the runtime env via computed process.env access; this ARG keeps the bundle aligned.
 ARG NEXT_PUBLIC_APP_URL=https://influrios.com
@@ -64,6 +66,9 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+# Full git SHA from deploy.sh. Empty when the image was built without a checkout.
+ARG INFLURIOS_REVISION=
+ENV INFLURIOS_REVISION=${INFLURIOS_REVISION}
 
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs

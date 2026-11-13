@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authSecretConfigured } from "@/lib/app-secret";
 import { prisma } from "@/lib/db";
+import { readDeploymentRevision } from "@/lib/deployment-revision";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -8,6 +9,7 @@ export const runtime = "nodejs";
 /**
  * Public liveness/readiness. Does not expose secrets or provider details.
  * 200 when web + DB are ok; 503 when DB is unreachable.
+ * revision is the git SHA baked into the image, or null when the image has none.
  */
 export async function GET() {
   const ts = new Date().toISOString();
@@ -31,6 +33,7 @@ export async function GET() {
       db: dbOk ? { ok: true, latencyMs } : { ok: false },
     },
     secrets: { authConfigured: authSecretConfigured() },
+    revision: readDeploymentRevision(process.env["INFLURIOS_REVISION"]),
     ts,
   };
 
