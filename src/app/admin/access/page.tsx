@@ -59,6 +59,7 @@ export default async function AdminAccessPage({ searchParams }: Props) {
       editRoleId={params.edit}
       adminCount={store.users.length}
       flash={{ error: params.error, created: params.created, updated: params.updated }}
+      actorPermissions={[...session.permissions]}
     />
   );
 }

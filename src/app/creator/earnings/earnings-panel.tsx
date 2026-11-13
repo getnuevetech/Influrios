@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MoneyAmount, PaymentStatus } from "@/components/payment-journey/status";
 import { UnavailableNote } from "@/components/unavailable-note";
+import { AgreementReviewDialog, PayoutDetailDialog } from "@/app/creator/earnings/earning-dialogs";
 import type { PaymentStatusLabel } from "@/lib/payment-standard-v4";
 
 export function EarningsPanel({
@@ -15,6 +16,8 @@ export function EarningsPanel({
   processingLabel = "Processing",
   unavailable,
   unknown,
+  agreement,
+  agreementOpen,
 }: {
   currency: string | null;
   upcomingCents: number;
@@ -22,13 +25,24 @@ export function EarningsPanel({
   paidCents: number;
   returnedCents: number;
   destination: string;
-  rows: { id: string; title: string; milestone: string; netCents: number | null; status: PaymentStatusLabel }[];
+  rows: { id: string; title: string; milestone: string; netCents: number | null; status: PaymentStatusLabel; milestoneStatus?: string }[];
   selected?: string;
   processingLabel?: string;
   unavailable?: { incident: string } | null;
   unknown?: boolean;
+  agreement?: {
+    id: string;
+    title: string;
+    company: string;
+    signHref: string;
+    lines: { label: string; amountCents: number }[];
+    milestones: { title: string; shareLabel: string }[];
+    currency: string | null;
+  } | null;
+  agreementOpen?: boolean;
 }) {
   const code = currency ?? "";
+  const selectedRow = rows.find((row) => row.id === selected) ?? null;
   return (
     <section data-screen="I02" data-mobile="M02" className="mb-8 space-y-4">
       <div>
@@ -58,10 +72,16 @@ export function EarningsPanel({
       )}
       {returnedCents > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <p>Payout returned — update your bank details. We will confirm the next attempt.</p>
-          <Link href="/creator/earnings#payouts" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
+          <p>Payout returned — update your bank details. We will confirm the next attempt. This does not refund the business.</p>
+          <Link href={`/creator/earnings?payout=${rows.find((row) => row.status === "Payout returned")?.id ?? ""}`} className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
             Review payout
           </Link>
+        </div>
+      ) : null}
+      {agreement ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white px-4 py-3 text-sm">
+          <p>Agreement awaiting your signature: {agreement.title}</p>
+          <Link href={`/creator/earnings?agreement=${agreement.id}`} className="font-semibold text-violet">Review agreement</Link>
         </div>
       ) : null}
       <p className="text-sm">Payout destination {destination}. Updating it does not retry a payout by itself.</p>
@@ -78,16 +98,18 @@ export function EarningsPanel({
           </article>
         ))}
       </div>
-      {selected ? (
-        <div className="rounded-2xl border border-border bg-white p-4 text-sm">
-          <h2 className="font-display text-xl font-bold">Payout detail</h2>
-          <ol className="mt-3 space-y-2">
-            <li>Approval is recorded on the collaboration.</li>
-            <li>Transfer and bank payout are separate.</li>
-            <li>A returned payout keeps the net owed. The fee is not charged again.</li>
-          </ol>
-          <p className="mt-3 text-xs text-muted">Statement lines use the frozen gross and deductions. Bank amount alone is not the statement.</p>
-        </div>
+      {selectedRow ? (
+        <PayoutDetailDialog row={{ ...selectedRow, milestoneStatus: selectedRow.milestoneStatus || "pending" }} destination={destination} currency={code || null} />
+      ) : null}
+      {agreementOpen && agreement ? (
+        <AgreementReviewDialog
+          title={agreement.title}
+          company={agreement.company}
+          signHref={agreement.signHref}
+          lines={agreement.lines}
+          milestones={agreement.milestones}
+          currency={agreement.currency}
+        />
       ) : null}
     </section>
   );

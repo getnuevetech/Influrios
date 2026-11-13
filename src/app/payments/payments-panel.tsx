@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { SettlementReview } from "@/components/settlement-review";
 import { EmptyPayments, MoneyAmount, PaymentStatus } from "@/components/payment-journey/status";
 import { RecordDialog } from "@/components/payment-journey/record-dialog";
+import { UnavailableNote } from "@/components/unavailable-note";
 import { isBusinessRole } from "@/lib/account-audience";
 import { getAccountSession } from "@/lib/accounts";
+import { newIncidentReference } from "@/lib/business-status";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { indexCreatorsBySlug, listDirectoryCreators } from "@/lib/directory";
@@ -14,6 +16,7 @@ import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketpla
 import { storedCurrencyCode } from "@/lib/money";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 import { paymentNextAction } from "@/lib/payment-list";
+import { paymentStageNote, paymentStages } from "@/lib/payment-stages";
 import { fundingInDateRange } from "@/lib/payment-standard-v4";
 import {
   businessOverviewTotals,
@@ -75,12 +78,28 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
     ? null
     : await prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } }).catch(() => null);
   const workspace = businessViewer ? await getWorkspace(account.id).catch(() => null) : null;
-  let fundings =
-    businessViewer && workspace?.businessId && workspace.businessId !== "public"
-      ? await listFundingsForBusiness(workspace.businessId).catch(() => [])
-      : creator?.slug
-        ? await listFundingsForCreator(creator.slug).catch(() => [])
-        : [];
+  let fundings: Awaited<ReturnType<typeof listFundingsForBusiness>> = [];
+  let unavailable: { incident: string } | null = null;
+  try {
+    fundings =
+      businessViewer && workspace?.businessId && workspace.businessId !== "public"
+        ? await listFundingsForBusiness(workspace.businessId)
+        : creator?.slug
+          ? await listFundingsForCreator(creator.slug)
+          : [];
+  } catch (error) {
+    unavailable = { incident: newIncidentReference() };
+    console.error("payments list", unavailable.incident, error);
+    fundings = [];
+  }
+  if (unavailable) {
+    return (
+      <div data-screen="B03" className="space-y-4">
+        <h1 className="font-display text-3xl font-bold text-indigo">Collaboration payments</h1>
+        <UnavailableNote label="Payment data" incident={unavailable.incident} href="/payments" />
+      </div>
+    );
+  }
   if (businessViewer) {
     const waiting = fundings.filter((row) => row.status === "awaiting_provider");
     const changed = await Promise.all(waiting.map((row) => syncOpenGatewayDeposits(row.id).catch(() => false)));
@@ -279,6 +298,12 @@ async function PaymentDetail({
   const signed = readSignedDealMoney((deal.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan);
   const payouts = deal.milestones.map((row) => milestonePayoutLabel(row.status));
   const statusLabel = labelFor(deal.status, payouts.find((item) => item !== "Not initiated") ?? "Not initiated");
+  const stages = paymentStages({
+    fundingStatus: deal.status,
+    milestoneStatuses: deal.milestones.map((row) => row.status),
+    entryKinds: deal.entries.map((entry) => entry.kind),
+  });
+  const stageNote = paymentStageNote(stages);
   const action = primaryPaymentAction({
     signed: true,
     funded: deal.status === "held" || deal.status === "completed",
@@ -319,6 +344,7 @@ async function PaymentDetail({
       <div data-screen={caseOpen ? "R01" : "B04"} data-mobile="M01" className="space-y-4 pb-24 md:pb-0">
         <p className="text-sm text-muted">{deal.businessName} · {influencer}</p>
         <PaymentStatus label={statusLabel} />
+        {stageNote ? <p className="rounded-2xl bg-[#F4F0FF] px-4 py-3 text-sm text-indigo">{stageNote}</p> : null}
         {caseOpen ? (
           <div className="space-y-3">
             <h3 className="font-display text-xl font-bold text-indigo">Cancellation case</h3>
@@ -380,17 +406,7 @@ async function PaymentDetail({
                 ))}
               </ol>
             ) : null}
-            {tab === "transactions" ? (
-              <div className="space-y-2">
-                {deal.entries.length === 0 ? <p className="text-sm text-muted">No confirmed provider transactions yet.</p> : deal.entries.map((entry, index) => (
-                  <article key={`${entry.kind}-${index}`} className="rounded-2xl border border-border p-3 text-sm">
-                    <p className="font-semibold capitalize">{entry.kind.replaceAll("_", " ")}</p>
-                    <p><MoneyAmount cents={entry.amountCents} currency={code} /></p>
-                    <p className="text-xs text-muted">Shown only when a ledger row exists. Refresh does not create a payment.</p>
-                  </article>
-                ))}
-              </div>
-            ) : null}
+            {tab === "transactions" ? <PaymentStageList stages={stages} /> : null}
             {tab === "documents" ? (
               <Link href="/collaboration/contracts" className="font-semibold text-violet">Signed agreements</Link>
             ) : null}
@@ -401,5 +417,34 @@ async function PaymentDetail({
         )}
       </div>
     </RecordDialog>
+  );
+}
+
+function PaymentStageList({ stages }: { stages: ReturnType<typeof paymentStages> }) {
+  const note = paymentStageNote(stages);
+  return (
+    <div className="space-y-3">
+      {note ? <p className="rounded-2xl bg-[#F4F0FF] px-4 py-3 text-sm text-indigo">{note}</p> : null}
+      <table className="w-full text-left text-sm">
+        <thead className="text-xs text-muted">
+          <tr>
+            <th className="py-2">Transaction</th>
+            <th className="py-2">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stages.map((stage) => (
+            <tr key={stage.id} className="border-t border-border">
+              <td className="py-3">
+                <p className="font-semibold text-indigo">{stage.label}</p>
+                <p className="text-xs text-muted">{stage.detail}</p>
+              </td>
+              <td className="py-3">{stage.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="text-xs text-muted">Paid appears only after the provider confirms the bank payout. A return does not refund the business.</p>
+    </div>
   );
 }

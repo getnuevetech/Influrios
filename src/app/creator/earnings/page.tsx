@@ -8,6 +8,9 @@ import { getAccountSession } from "@/lib/accounts";
 import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
 import { emptyEarningSummary, loadInfluencerEarningFacts } from "@/lib/earnings-measures";
+import { listContractsForUser } from "@/lib/contract-document";
+import { memberDealView } from "@/lib/member-deal-money";
+import { readSignedTermsSnapshot } from "@/lib/signed-funding";
 import { newIncidentReference } from "@/lib/business-status";
 import { UnavailableNote } from "@/components/unavailable-note";
 import { formatStoredMoney } from "@/lib/money";
@@ -27,7 +30,7 @@ import { stripeConnectReady } from "@/lib/stripe-admin";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Earnings" };
 
-type Props = { searchParams: Promise<{ error?: string; connected?: string; payout?: string }> };
+type Props = { searchParams: Promise<{ error?: string; connected?: string; payout?: string; agreement?: string }> };
 
 /** Provider/config errors that should surface on Earnings payout setup. */
 function memberFacingPayoutError(raw: string | undefined) {
@@ -56,6 +59,43 @@ function asKycSubmissionState(status: string | null | undefined): KycSubmissionS
     return value;
   }
   return "none";
+}
+
+async function loadPendingAgreement(userId: string, email: string) {
+  try {
+    const docs = await listContractsForUser(userId, email);
+    const emailNorm = email.trim().toLowerCase();
+    const doc = docs.find((item) => {
+      if (item.status !== "sent") return false;
+      return item.parties.some(
+        (party) => party.status === "pending" && (party.userId === userId || party.email.trim().toLowerCase() === emailNorm),
+      );
+    });
+    if (!doc) return { record: null, incident: null as string | null };
+    const terms = readSignedTermsSnapshot(doc.termsSnapshotJson);
+    const view = terms
+      ? memberDealView({ role: "influencer", grossCents: terms.grossCents, feeCents: 0, plan: terms.financialPlan })
+      : null;
+    return {
+      incident: null as string | null,
+      record: {
+        id: doc.id,
+        title: terms?.title || doc.title,
+        company: terms?.businessName || "",
+        signHref: `/collaboration/contracts/${doc.id}#sign`,
+        lines: view?.feeReady ? view.lines : [],
+        milestones: (terms?.milestones ?? []).map((milestone) => ({
+          title: milestone.title,
+          shareLabel: `${milestone.shareBps / 100}%`,
+        })),
+        currency: view?.feeReady ? terms?.currency || null : null,
+      },
+    };
+  } catch (error) {
+    const incident = newIncidentReference();
+    console.error("earnings agreement", incident, error);
+    return { record: null, incident };
+  }
 }
 
 export default async function CreatorEarningsPage({ searchParams }: Props) {
@@ -176,8 +216,10 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
   const payoutReady = receiveView?.status === "ready";
 
   const payoutId = params.payout;
+  const agreement = await loadPendingAgreement(account.id, account.email);
   return (
     <div className="space-y-5">
+      {agreement.incident ? <UnavailableNote label="Agreement data" incident={agreement.incident} href="/creator/earnings" /> : null}
       <EarningsPanel
         currency={summary?.currency || null}
         upcomingCents={summary?.upcomingCents ?? 0}
@@ -189,6 +231,8 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         unknown={summary?.unknown ?? false}
         selected={payoutId}
         rows={summary?.rows ?? []}
+        agreement={agreement.record}
+        agreementOpen={Boolean(agreement.record && params.agreement === agreement.record.id && !payoutId)}
       />
       <div>
         <h1 className="font-display text-3xl font-bold">Earnings</h1>
