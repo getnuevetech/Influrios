@@ -36,6 +36,20 @@ describe("business collaboration workspace", () => {
     assert.equal(row.actionLabel, "View responses");
     assert.equal(requestMatchesFilter(row.facts, "published"), true);
     assert.equal(requestMatchesFilter(row.facts, "drafts"), false);
+    assert.equal(row.open, true);
+    assert.equal(requestMatchesFilter(row.facts, "open", row.open), true);
+    const draft = requestQueueRow({
+      id: "brief-3",
+      title: "Draft",
+      briefStatus: "draft",
+      published: false,
+      inviteCount: 0,
+      applicationCount: 0,
+      acceptedCount: 0,
+      updatedLabel: "Today",
+    });
+    assert.equal(draft.open, false);
+    assert.equal(requestMatchesFilter(draft.facts, "open", draft.open), false);
   });
 
   it("leaves an unanswered invite off the active queue", () => {

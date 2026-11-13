@@ -64,6 +64,8 @@ export function BusinessCollaborations(props: {
   applications: WorkspaceApplication[];
   creators: WorkspaceCreatorCard[];
   requestsForInvite: { id: string; title: string }[];
+  openBriefIds?: string[];
+  orphanRequests?: { id: string; title: string }[];
 }) {
   const rows = props.briefs.map((brief) => {
     const related = props.applications.filter(
@@ -86,8 +88,11 @@ export function BusinessCollaborations(props: {
   const visible = rows.filter((row) => {
     const q = props.query.trim().toLowerCase();
     if (q && !row.title.toLowerCase().includes(q)) return false;
-    return requestMatchesFilter(row.facts, props.filter);
+    if (props.filter === "open") return (props.openBriefIds ?? []).includes(row.id);
+    return requestMatchesFilter(row.facts, props.filter, row.open);
   });
+  const orphanRequests = props.filter === "open" ? props.orphanRequests ?? [] : [];
+  const listedCount = visible.length + orphanRequests.length;
   const activeRows = props.applications
     .map((application) =>
       activeRowForApplication({
@@ -143,6 +148,7 @@ export function BusinessCollaborations(props: {
             <input type="hidden" name="tab" value="requests" />
             {[
               ["all", "All requests"],
+              ["open", "Open"],
               ["drafts", "Drafts"],
               ["published", "Published"],
               ["invites", "Invites sent"],
@@ -154,7 +160,7 @@ export function BusinessCollaborations(props: {
             ))}
             <input name="q" defaultValue={props.query} placeholder="Search requests" className="ml-auto min-w-48 rounded-full border border-[#E6ECF7] px-3 py-1.5 text-sm" />
           </form>
-          {visible.length === 0 ? (
+          {listedCount === 0 ? (
             <div className="mt-8 text-center">
               <p className="text-sm text-[#667085]">{props.filter && props.filter !== "all" ? "No requests match this filter." : "Create a request to invite influencers or publish a listing."}</p>
               {props.filter && props.filter !== "all" ? (
@@ -192,10 +198,19 @@ export function BusinessCollaborations(props: {
                     </td>
                   </tr>
                 ))}
+                {orphanRequests.map((row) => (
+                  <tr key={row.id} className="border-t border-[#F0F3FA]">
+                    <td className="py-4 font-bold text-[#1B1464]">{row.title}</td>
+                    <td className="py-4 text-[#4E5872]">Open request</td>
+                    <td className="py-4 text-[#4E5872]">No brief on file</td>
+                    <td className="py-4 text-[#667085]">—</td>
+                    <td className="py-4 text-[#667085]">—</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
-          <p className="mt-3 text-xs text-[#667085]">{visible.length} request{visible.length === 1 ? "" : "s"}</p>
+          <p className="mt-3 text-xs text-[#667085]">{listedCount} request{listedCount === 1 ? "" : "s"}</p>
           {props.requestId ? (
             <RequestReadout brief={props.briefs.find((brief) => brief.id === props.requestId) ?? null} applications={props.applications.filter((application) => application.briefId === props.requestId)} />
           ) : null}

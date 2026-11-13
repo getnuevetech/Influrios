@@ -2,7 +2,7 @@
  * Collaboration OS P2 — creator hub data helpers (status counts, pipeline, saved matches).
  * P2b — business hub loaders (requests, suggestions, spend from ledger).
  */
-import { newIncidentReference, type SectionState } from "@/lib/business-status";
+import { activeCollaborationIds, newIncidentReference, type SectionState } from "@/lib/business-status";
 import { prisma } from "@/lib/db";
 import {
   getWorkspace,
@@ -317,6 +317,22 @@ export function invitationStillListed(
   const collaborationId = row.collaborationId?.trim();
   if (collaborationId && contractedCollaborationIds.has(collaborationId)) return false;
   return true;
+}
+
+/** Active collaborations are the pipeline rows that are not Released. */
+export function countedActiveFundingIds(
+  rows: { id: string; status: string; milestones?: { status: string }[] }[],
+) {
+  return activeCollaborationIds(
+    rows.map((row) => ({
+      id: row.id,
+      stage: derivePipelineStage({
+        collaborationStatus: "accepted",
+        fundingStatus: row.status,
+        milestoneStatuses: row.milestones?.map((milestone) => milestone.status) ?? [],
+      }),
+    })),
+  );
 }
 
 /** Map collaboration + funding state onto the Figure 2 pipeline stepper. */

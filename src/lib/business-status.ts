@@ -44,6 +44,7 @@ export function presentBusinessVerification(
 
 export function businessTrustLabels(input: {
   profileComplete: boolean;
+  profileUnavailable?: boolean;
   verification: BusinessVerificationState | "unavailable";
 }) {
   const verification =
@@ -59,7 +60,11 @@ export function businessTrustLabels(input: {
               ? "Business verification unavailable"
               : "Business verification not started";
   return {
-    profile: input.profileComplete ? "Profile complete" : "Profile incomplete",
+    profile: input.profileUnavailable
+      ? "Profile unavailable"
+      : input.profileComplete
+        ? "Profile complete"
+        : "Profile incomplete",
     verification,
     showVerifiedBadge: input.verification === "verified",
   };
@@ -74,6 +79,27 @@ export function occupiedSeatCount(input: { ownerPresent: boolean; seats: SeatRec
 }
 
 /** Open requests, one canonical id each. A collaboration id is not a request. */
+export function statusCountsAsOpenRequest(status: string) {
+  return OPEN_REQUEST.has(status);
+}
+
+/** The same request ids the Open filter lists. A collaboration id is not included. */
+export function dashboardOpenRequests(input: {
+  briefs: { id: string; status: string; title?: string }[];
+  requests: { id: string; briefId?: string | null; status: string; title?: string; brand?: string }[];
+}) {
+  const ids = activeRequestIds(input);
+  const briefIds = ids.filter((id) => id.startsWith("brief:")).map((id) => id.slice("brief:".length));
+  const requestIds = new Set(ids.filter((id) => id.startsWith("request:")).map((id) => id.slice("request:".length)));
+  return {
+    count: ids.length,
+    briefIds,
+    orphanRequests: input.requests
+      .filter((request) => requestIds.has(request.id))
+      .map((request) => ({ id: request.id, title: request.title?.trim() || request.brand?.trim() || "Request" })),
+  };
+}
+
 export function activeRequestIds(input: {
   briefs: { id: string; status: string }[];
   requests: { id: string; briefId?: string | null; status: string }[];
