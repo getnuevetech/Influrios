@@ -58,12 +58,17 @@ describe("dashboard influencer card", () => {
 });
 
 describe("payout setup label", () => {
-  it("names blocked earnings Awaiting payout setup", () => {
-    assert.equal(dashboardEarningsLabel(false), "Awaiting payout setup");
+  it("keeps released earnings separate from payout setup", () => {
+    assert.equal(dashboardEarningsLabel(false), "Released this month");
+    assert.equal(dashboardEarningsLabel(true), "Released this month");
     assert.notEqual(dashboardEarningsLabel(false), "Payouts processing");
-    assert.equal(dashboardEarningsLabel(true), "Payouts processing");
+    assert.notEqual(dashboardEarningsLabel(true), "Payouts processing");
+    assert.notEqual(dashboardEarningsLabel(true), "Awaiting payout setup");
     const earnings = readFileSync("src/app/creator/earnings/page.tsx", "utf8");
     assert.match(earnings, /Awaiting payout setup/);
+    assert.equal(earnings.includes("processingCents={0}"), false);
+    assert.equal(earnings.includes("returnedCents={0}"), false);
+    assert.equal(earnings.includes('item.stage === "Released" ? "Payout confirmed"'), false);
     const open = openSetupReminders({
       emailVerified: true,
       published: true,

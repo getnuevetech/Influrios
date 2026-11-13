@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Panel, StatCard, StatusPill, TextLink } from "@/components/dashboard-ui";
+import { UnavailableNote } from "@/components/unavailable-note";
 import {
   IconBookmark,
   IconFileText,
@@ -15,11 +16,21 @@ import {
 import { getAccountSession } from "@/lib/accounts";
 import { syncAccountNotices } from "@/lib/account-notices";
 import { businessAttentionDrafts } from "@/lib/notice-filters";
-import { getWorkspace } from "@/lib/business";
+import { getWorkspace, leadIsOpen } from "@/lib/business";
+import {
+  activeCollaborationIds,
+  activeRequestIds,
+  businessTrustLabels,
+  formatPeriodFunding,
+  loadAccountBusinessVerification,
+  loadMonthlyBusinessFunding,
+  loadOccupiedSeats,
+  newIncidentReference,
+  profileIsComplete,
+} from "@/lib/business-status";
 import { loadBusinessHub } from "@/lib/collaboration-hub";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
-import { formatMoney } from "@/lib/money";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { syncedFollowerTotal } from "@/lib/social-sync";
@@ -65,10 +76,16 @@ function firstName(full: string | null | undefined) {
 export default async function BusinessHomePage() {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/business/home");
-  const [workspace, matrix, hub, profile, subscription, contracts] = await Promise.all([
-    getWorkspace(account.id).catch(() => null),
+  const workspace = await getWorkspace(account.id).catch(() => null);
+  const [matrix, hubResult, profile, subscription, contractLoad, verification, seats, monthly] = await Promise.all([
     loadPlanMatrix("business"),
-    loadBusinessHub({ userId: account.id }).catch(() => null),
+    loadBusinessHub({ userId: account.id })
+      .then((hub) => ({ hub, incident: "" }))
+      .catch((error) => {
+        const incident = newIncidentReference();
+        console.error("business hub", incident, error);
+        return { hub: null, incident };
+      }),
     prisma.businessProfile
       .findUnique({
         where: { userId: account.id },
@@ -78,8 +95,19 @@ export default async function BusinessHomePage() {
     prisma.subscriptionState
       .findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } })
       .catch(() => null),
-    listContractsForUser(account.id, account.email).catch(() => []),
+    listContractsForUser(account.id, account.email)
+      .then((rows) => ({ rows, incident: "" }))
+      .catch((error) => {
+        const incident = newIncidentReference();
+        console.error("business contracts", incident, error);
+        return { rows: [], incident };
+      }),
+    loadAccountBusinessVerification(account.id),
+    loadOccupiedSeats(account.id),
+    workspace ? loadMonthlyBusinessFunding(workspace.businessId) : Promise.resolve({ ok: false as const, incident: newIncidentReference() }),
   ]);
+  const hub = hubResult.hub;
+  const contracts = contractLoad.rows;
   if (!workspace) {
     return (
       <div>
@@ -119,16 +147,26 @@ export default async function BusinessHomePage() {
   const marketplaceRequests = hub?.ownRequests ?? [];
   const suggestions = hub?.suggestions ?? [];
   const applications = hub?.applications ?? [];
-  const spend = hub?.spend;
-  const activeBriefCount = workspace.briefs.filter((b) => b.status === "active").length;
-  const activeRequests = Math.max(activeBriefCount, hub?.status.active ?? 0);
-  const pendingResponses = hub?.status.pendingReview ?? 0;
-  const activeCollabs = hub?.pipeline.filter((item) => item.stage !== "Released").length ?? 0;
-  const contentInReview = hub?.pipeline.filter((item) => item.stage === "Review").length ?? 0;
-  const monthlySpend = spend ? formatMoney(spend.fundedCents, spend.currency || "USD") : "$0";
-  const teamSeats = entitlements?.teamSeats ?? 1;
-  const seatsUsed = Math.min(1, teamSeats);
-  const verifiedBusiness = Boolean(workspace.name.trim() && workspace.industry.trim() && contactName);
+  const requestsUnavailable = !hub || hub.sections.requests === "unavailable";
+  const fundingsUnavailable = !hub || hub.sections.fundings === "unavailable";
+  const applicationsUnavailable = !hub || hub.sections.applications === "unavailable";
+  const activeRequests = requestsUnavailable
+    ? null
+    : activeRequestIds({ briefs: workspace.briefs, requests: hub.ownRequests }).length;
+  const pendingResponses = workspace.inquiries.filter((inquiry) => leadIsOpen(inquiry.status)).length;
+  const activeCollabs = fundingsUnavailable ? null : activeCollaborationIds(hub.pipeline).length;
+  const contentInReview = fundingsUnavailable ? null : hub.pipeline.filter((item) => item.stage === "Review").length;
+  const periodFunding = monthly.ok ? formatPeriodFunding(monthly.rows) : null;
+  const teamSeats = entitlements?.teamSeats ?? null;
+  const seatsUsed = seats.ok ? seats.used : null;
+  const trust = businessTrustLabels({
+    profileComplete: profileIsComplete({
+      name: workspace.name,
+      industry: workspace.industry,
+      contactName: contactName ?? "",
+    }),
+    verification: verification.state,
+  });
   const bio =
     workspace.industry.trim()
       ? `${companyName} works in ${workspace.industry}. Discover creators, publish requests, and manage collaborations from one place.`
@@ -137,8 +175,11 @@ export default async function BusinessHomePage() {
   const responded = applications.filter((app) =>
     ["RESPONDED", "NEGOTIATING", "ACCEPTED", "COLLABORATION_DRAFTED"].includes(app.status),
   ).length;
-  const responseRate =
-    applications.length > 0 ? Math.round((responded / applications.length) * 100) : null;
+  const responseRate = applicationsUnavailable
+    ? null
+    : applications.length > 0
+      ? Math.round((responded / applications.length) * 100)
+      : null;
 
   const appsByRequest = new Map<string, typeof applications>();
   for (const app of applications) {
@@ -260,7 +301,9 @@ export default async function BusinessHomePage() {
         title="Contracts"
         action={<TextLink href="/collaboration/contracts">View all →</TextLink>}
       >
-        {contracts.length === 0 ? (
+        {contractLoad.incident ? (
+          <UnavailableNote label="Contracts" incident={contractLoad.incident} href="/business/home" />
+        ) : contracts.length === 0 ? (
           <p className="text-sm text-muted">No contracts yet. Sent agreements appear here for every party.</p>
         ) : (
           <ul className="space-y-2 text-sm">
@@ -294,8 +337,19 @@ export default async function BusinessHomePage() {
 
       <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-sm sm:p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Needs your attention</h2>
-        {pendingResponses === 0 && pendingContracts.length === 0 && (hub?.pipeline.filter((item) => item.awaitingFunding || item.stage === "Review").length ?? 0) === 0 ? (
-          <p className="mt-3 text-sm text-muted">Nothing is waiting on you. New responses, signatures, and funding tasks appear here.</p>
+        {hubResult.incident || fundingsUnavailable ? (
+          <div className="mt-3">
+            <UnavailableNote
+              label="Funding tasks"
+              incident={hubResult.incident || hub?.incidents.fundings || "inc-unknown"}
+              href="/business/home"
+            />
+          </div>
+        ) : null}
+        {pendingResponses === 0 && pendingContracts.length === 0 && (fundingsUnavailable || (hub?.pipeline.filter((item) => item.awaitingFunding || item.stage === "Review").length ?? 0) === 0) ? (
+          fundingsUnavailable || hubResult.incident ? null : (
+            <p className="mt-3 text-sm text-muted">Nothing is waiting on you. New responses, signatures, and funding tasks appear here.</p>
+          )
         ) : (
           <ul className="mt-3 divide-y divide-[#EEF2F7]">
             {pendingResponses > 0 ? (
@@ -353,14 +407,27 @@ export default async function BusinessHomePage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-display text-2xl font-bold text-indigo">{companyName}</h2>
-              {verifiedBusiness ? (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  trust.profile === "Profile complete" ? "bg-emerald-50 text-emerald-700" : "bg-[#EEF2FA] text-muted"
+                }`}
+              >
+                {trust.profile === "Profile complete" ? <IconVerified size={12} /> : null}
+                {trust.profile}
+              </span>
+              {trust.showVerifiedBadge ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                  <IconVerified size={12} /> Verified Business
+                  <IconVerified size={12} /> {trust.verification}
                 </span>
               ) : (
-                <span className="rounded-full bg-[#EEF2FA] px-2.5 py-1 text-[11px] font-semibold text-muted">
-                  Profile incomplete
+                <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+                  {trust.verification}
                 </span>
+              )}
+              {trust.showVerifiedBadge ? null : (
+                <Link href="/account/verification" className="text-xs font-semibold text-violet hover:underline">
+                  Complete verification
+                </Link>
               )}
             </div>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#4E5872]">{bio}</p>
@@ -418,13 +485,15 @@ export default async function BusinessHomePage() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard
-          label="Active Requests"
-          value={String(activeRequests)}
-          note={`${pendingResponses} pending responses`}
-          tone="violet"
-          icon={<IconFileText size={16} />}
-        />
+        <Link href="/collaboration/business" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
+          <StatCard
+            label="Active Requests"
+            value={activeRequests === null ? "—" : String(activeRequests)}
+            note={requestsUnavailable ? "Requests could not be loaded. This is not zero." : `${pendingResponses} pending responses`}
+            tone="violet"
+            icon={<IconFileText size={16} />}
+          />
+        </Link>
         <StatCard
           label="Saved Creators"
           value={String(workspace.shortlist.length)}
@@ -435,26 +504,38 @@ export default async function BusinessHomePage() {
         <Link href="/collaboration/records" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
           <StatCard
             label="Active Collaborations"
-            value={String(activeCollabs)}
-            note={`${contentInReview} content in review · Open inbox →`}
+            value={activeCollabs === null ? "—" : String(activeCollabs)}
+            note={
+              fundingsUnavailable
+                ? "Collaborations could not be loaded. This is not zero."
+                : `${contentInReview ?? 0} content in review · Open inbox →`
+            }
             tone="emerald"
             icon={<IconUsers size={16} />}
           />
         </Link>
-        <StatCard
-          label="Monthly Spend"
-          value={monthlySpend}
-          note="Funded collaboration totals"
-          tone="emerald"
-          icon={<IconWallet size={16} />}
-        />
+        <Link href="/payments" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
+          <StatCard
+            label="Funded this month"
+            value={periodFunding ? periodFunding.value : "—"}
+            note={
+              periodFunding
+                ? periodFunding.note
+                : `Funding could not be loaded. This is not zero. Reference ${monthly.ok ? "" : monthly.incident}`
+            }
+            tone="emerald"
+            icon={<IconWallet size={16} />}
+          />
+        </Link>
         <StatCard
           label="Response Rate"
-          value={responseRate === null ? "—" : `${responseRate}%`}
+          value={applicationsUnavailable || responseRate === null ? "—" : `${responseRate}%`}
           note={
-            responseRate === null
-              ? "Appears after creators apply to your requests"
-              : "Across applications on your requests"
+            applicationsUnavailable
+              ? "Applications could not be loaded. This is not zero."
+              : responseRate === null
+                ? "Appears after creators apply to your requests"
+                : "Across applications on your requests"
           }
           tone="amber"
           icon={<IconIntelligence size={16} />}
@@ -467,7 +548,9 @@ export default async function BusinessHomePage() {
             title="Active work"
             action={<TextLink href="/business/campaigns">View all requests →</TextLink>}
           >
-            {tableRows.length === 0 ? (
+            {requestsUnavailable && tableRows.length === 0 ? (
+              <UnavailableNote label="Requests" incident={hubResult.incident || hub?.incidents.requests || "inc-unknown"} href="/business/home" />
+            ) : tableRows.length === 0 ? (
               <p className="text-sm text-muted">
                 No published requests yet.{" "}
                 <Link href="/collaboration/business?intent=new" className="font-semibold text-violet hover:underline">
@@ -568,7 +651,9 @@ export default async function BusinessHomePage() {
           ) : null}
 
           <Panel title="Suggested Creators for You" action={<TextLink href="/discover">View more creators →</TextLink>}>
-            {suggestions.length === 0 ? (
+            {hubResult.incident ? (
+              <UnavailableNote label="Suggestions" incident={hubResult.incident} href="/business/home" />
+            ) : suggestions.length === 0 ? (
               <p className="text-sm text-muted">
                 Suggestions appear after you save a brief. This list does not invent creators.
               </p>
@@ -635,9 +720,13 @@ export default async function BusinessHomePage() {
 
         <div className="space-y-4">
           <Panel title="Team Members" action={<TextLink href="/collaboration/team">Manage Team</TextLink>}>
-            <p className="mb-3 text-xs font-semibold text-muted">
-              {seatsUsed} of {teamSeats} seat{teamSeats === 1 ? "" : "s"} used
-            </p>
+            <div className="mb-3 text-xs font-semibold text-muted">
+              {seatsUsed === null || teamSeats === null ? (
+                <UnavailableNote label="Team seats" incident={seats.ok ? hubResult.incident || "inc-unknown" : seats.incident} href="/business/home" />
+              ) : (
+                `${seatsUsed} of ${teamSeats} seat${teamSeats === 1 ? "" : "s"} used`
+              )}
+            </div>
             <ul className="space-y-3">
               <li className="flex items-center gap-3">
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EDE7FF] text-sm font-bold text-violet">
@@ -648,7 +737,20 @@ export default async function BusinessHomePage() {
                   <span className="text-xs text-muted">Owner</span>
                 </span>
               </li>
-              {teamSeats > 1 ? (
+              {seats.ok
+                ? seats.members.map((member) => (
+                    <li key={member.email} className="flex items-center gap-3">
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EDE7FF] text-sm font-bold text-violet">
+                        {member.email.slice(0, 1).toUpperCase()}
+                      </span>
+                      <span>
+                        <span className="block text-sm font-semibold">{member.email}</span>
+                        <span className="text-xs capitalize text-muted">{member.role}</span>
+                      </span>
+                    </li>
+                  ))
+                : null}
+              {seatsUsed === null || teamSeats === null ? null : teamSeats > seatsUsed ? (
                 <li>
                   <Link
                     href="/collaboration/team"
@@ -702,7 +804,9 @@ export default async function BusinessHomePage() {
           </Panel>
 
           <Panel title="Recent Activity" action={<TextLink href="/collaboration/business">View all activity →</TextLink>}>
-            {activity.length === 0 ? (
+            {hubResult.incident && activity.length === 0 ? (
+              <UnavailableNote label="Recent activity" incident={hubResult.incident} href="/business/home" />
+            ) : activity.length === 0 ? (
               <p className="text-sm text-muted">
                 Activity from requests, applications, and collaborations will show here.
               </p>

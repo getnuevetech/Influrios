@@ -7,6 +7,10 @@ import { IconWallet } from "@/components/icons";
 import { getAccountSession } from "@/lib/accounts";
 import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
+import { emptyEarningSummary, loadInfluencerEarningFacts } from "@/lib/earnings-measures";
+import { newIncidentReference } from "@/lib/business-status";
+import { UnavailableNote } from "@/components/unavailable-note";
+import { formatStoredMoney } from "@/lib/money";
 import { countryCodeFromLocation } from "@/lib/contract-wizard";
 import { prisma } from "@/lib/db";
 import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
@@ -91,14 +95,17 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
   ]);
 
   const seed = draft ? draftToSeedCreator(draft) : null;
-  const hub =
+  const hubResult =
     creator && seed
-      ? await loadCreatorHub({ userId: account.id, creator: seed }).catch(() => null)
-      : null;
-
-  const released = hub?.earnings.releasedCents ?? 0;
-  const held = hub?.earnings.heldCents ?? 0;
-  const currency = hub?.earnings.currency || "USD";
+      ? await loadCreatorHub({ userId: account.id, creator: seed })
+          .then((hub) => ({ hub, failed: false as const, incident: "" }))
+          .catch((error) => {
+            const incident = newIncidentReference();
+            console.error("creator hub", incident, error);
+            return { hub: null, failed: true as const, incident };
+          })
+      : { hub: null, failed: false as const, incident: "" };
+  const hub = hubResult.hub;
   const pipeline = hub?.pipeline ?? [];
 
   const locationCountry = identity?.creator?.locationCountry ?? null;
@@ -107,6 +114,14 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
     (identity?.creator?.payoutProfile?.primaryCountryCode ?? "").trim().toUpperCase() ||
     null;
   const creatorSlug = identity?.creator?.slug || creator?.slug || draft?.slug || null;
+  const measures = creatorSlug ? await loadInfluencerEarningFacts(creatorSlug) : { ok: true as const, summary: emptyEarningSummary() };
+  const summary = measures.ok ? measures.summary : null;
+  const mixedCurrency = Boolean(summary && !summary.currency && summary.rows.length > 0);
+  const shownMoney = (cents: number) => {
+    if (!measures.ok || mixedCurrency) return "—";
+    if (!summary?.currency) return cents === 0 ? "0" : formatStoredMoney(cents, "");
+    return formatStoredMoney(cents, summary.currency);
+  };
 
   const [corridor, kycSubmission] = await Promise.all([
     countryCode
@@ -164,21 +179,16 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
   return (
     <div className="space-y-5">
       <EarningsPanel
-        currency={currency || null}
-        upcomingCents={held}
-        processingCents={0}
-        paidCents={released}
-        returnedCents={0}
+        currency={summary?.currency || null}
+        upcomingCents={summary?.upcomingCents ?? 0}
+        processingCents={summary?.processingCents ?? 0}
+        paidCents={summary?.paidCents ?? 0}
+        returnedCents={summary?.returnedCents ?? 0}
         destination={hasConnectAccount ? "Bank ending hidden" : "Not added"}
-        processingLabel={payoutReady ? "Payouts processing" : "Awaiting payout setup"}
+        unavailable={measures.ok ? null : { incident: measures.incident }}
+        unknown={summary?.unknown ?? false}
         selected={payoutId}
-        rows={pipeline.map((item) => ({
-          id: item.id,
-          title: item.title,
-          milestone: item.counterparty,
-          netCents: null,
-          status: item.stage === "Released" ? "Payout confirmed" : item.stage === "Funded" ? "Funded" : "Needs funding",
-        }))}
+        rows={summary?.rows ?? []}
       />
       <div>
         <h1 className="font-display text-3xl font-bold">Earnings</h1>
@@ -189,16 +199,16 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
 
       <section className="grid gap-3 sm:grid-cols-3">
         <StatCard
-          label="Released"
-          value={formatMoney(released, currency)}
-          note="Paid out or cleared to you"
+          label="Released this month"
+          value={shownMoney(summary?.releasedThisMonthCents ?? 0)}
+          note={measures.ok ? "Ledger releases this month. A bank payout is separate." : "Earnings could not be loaded. This is not zero."}
           tone="emerald"
           icon={<IconWallet size={16} />}
         />
         <StatCard
-          label="Held"
-          value={formatMoney(held, currency)}
-          note="Your net payout still in holding"
+          label="Paid"
+          value={shownMoney(summary?.paidCents ?? 0)}
+          note={measures.ok ? "Confirmed bank payout" : "Earnings could not be loaded. This is not zero."}
           tone="amber"
           icon={<IconWallet size={16} />}
         />
@@ -255,7 +265,9 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
       </Panel>
 
       <Panel title="Collaboration payouts">
-        {pipeline.length === 0 ? (
+        {hubResult.failed ? (
+          <UnavailableNote label="Collaboration payouts" incident={hubResult.incident} href="/creator/earnings" />
+        ) : pipeline.length === 0 ? (
           <p className="text-sm text-muted">
             No collaboration pipeline items yet. When brands fund a deal, released and held amounts show here.
           </p>

@@ -10,6 +10,8 @@ import { getDirectory } from "@/lib/directory";
 import { prisma } from "@/lib/db";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { loadBusinessHub } from "@/lib/collaboration-hub";
+import { newIncidentReference } from "@/lib/business-status";
+import { UnavailableNote } from "@/components/unavailable-note";
 import { formatStoredMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +95,14 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
   const fundingStatusById = new Map(fundingRows.map((row) => [row.id, row.status]));
   const bySlug = new Map((directory?.creators ?? []).map((creator) => [creator.slug, creator]));
   const tab = params.tab === "opportunities" || params.tab === "active" ? params.tab : "requests";
-  const hub = await loadBusinessHub({ userId: account.id }).catch(() => null);
+  const hubResult = await loadBusinessHub({ userId: account.id })
+    .then((hub) => ({ hub, incident: "" }))
+    .catch((error) => {
+      const incident = newIncidentReference();
+      console.error("business collaborations", incident, error);
+      return { hub: null, incident };
+    });
+  const hub = hubResult.hub;
   const creators = (directory?.creators ?? []).slice(0, 40).map((creator) => ({
     slug: creator.slug,
     name: creator.displayName,
@@ -108,11 +117,19 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
 
   return (
     <>
-    {hub ? (
+    {!hub ? (
+      <div className="px-6 pt-6">
+        <UnavailableNote label="Funding totals" incident={hubResult.incident} href="/collaboration/business" />
+      </div>
+    ) : hub.sections.fundings === "unavailable" || !hub.spend ? (
+      <div className="px-6 pt-6">
+        <UnavailableNote label="Funding totals" incident={hub.incidents.fundings ?? hubResult.incident} href="/collaboration/business" />
+      </div>
+    ) : (
       <p className="px-6 pt-6 text-sm text-muted">
-        Funded {formatStoredMoney(hub.spend.fundedCents, hub.spend.currency)}
+        Funded to date {formatStoredMoney(hub.spend.fundedCents, hub.spend.currency)}
       </p>
-    ) : null}
+    )}
     <BusinessCollaborations
       tab={tab}
       view={params.view === "applications" ? "applications" : "recommended"}

@@ -2,6 +2,7 @@
  * Collaboration OS P2 — creator hub data helpers (status counts, pipeline, saved matches).
  * P2b — business hub loaders (requests, suggestions, spend from ledger).
  */
+import { newIncidentReference, type SectionState } from "@/lib/business-status";
 import { prisma } from "@/lib/db";
 import {
   getWorkspace,
@@ -470,14 +471,27 @@ export async function listSavedMatchesForUser(userId: string): Promise<HubSavedM
   }));
 }
 
-async function settle<T>(label: string, work: Promise<T>, fallback: T, degraded: string[]): Promise<T> {
+async function settle<T>(
+  label: string,
+  work: Promise<T>,
+  fallback: T,
+  degraded: string[],
+  incidents?: Record<string, string>,
+): Promise<T> {
   try {
     return await work;
   } catch (error) {
-    console.error(label, error);
+    const incident = newIncidentReference();
+    if (incidents) incidents[label] = incident;
+    console.error(label, incident, error);
     degraded.push(label);
     return fallback;
   }
+}
+
+function sectionState(failed: boolean, count: number): SectionState {
+  if (failed) return "unavailable";
+  return count === 0 ? "empty" : "ready";
 }
 
 export async function loadCreatorHub(input: {
@@ -882,16 +896,28 @@ export async function loadCreatorHub(input: {
 export async function loadBusinessHub(input?: { intentBriefId?: string; userId?: string }) {
   const ws = await getWorkspace(input?.userId);
   const entitlements = await businessEntitlementsForPlan(ws.plan);
+  const degraded: string[] = [];
+  const incidents: Record<string, string> = {};
   const [fundings, opportunities, collaborations] = await Promise.all([
-    listFundingsForBusiness(ws.businessId).catch(() => []),
-    listPublishedCreatorOpportunities().catch(() => [] as MarketplaceCreatorOpportunityRow[]),
-    (ws.ownerUserId
-      ? prisma.collaboration.count({ where: { initiatorUserId: ws.ownerUserId, status: "accepted" } }).catch(() => 0)
-      : Promise.resolve(0)),
+    settle("fundings", listFundingsForBusiness(ws.businessId), [], degraded, incidents),
+    settle("opportunities", listPublishedCreatorOpportunities(), [] as MarketplaceCreatorOpportunityRow[], degraded, incidents),
+    ws.ownerUserId
+      ? settle(
+          "collaborations",
+          prisma.collaboration.count({ where: { initiatorUserId: ws.ownerUserId, status: "accepted" } }),
+          0,
+          degraded,
+          incidents,
+        )
+      : Promise.resolve(0),
   ]);
 
-  const ownRequests = await listWorkspaceBusinessRequests(ws.businessId).catch(
-    () => [] as MarketplaceBusinessRequestRow[],
+  const ownRequests = await settle(
+    "requests",
+    listWorkspaceBusinessRequests(ws.businessId),
+    [] as MarketplaceBusinessRequestRow[],
+    degraded,
+    incidents,
   );
   const draftRequests = ws.briefs.filter((brief) => brief.status === "draft").length;
   const activeBriefs = ws.briefs.filter((brief) => brief.status === "active").length;
@@ -906,7 +932,8 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
     completed,
   };
 
-  const spend = summarizeBusinessSpend(fundings);
+  const fundingsFailed = degraded.includes("fundings");
+  const spend = fundingsFailed ? null : summarizeBusinessSpend(fundings);
 
   // #13/#15 — the Campaign Intent form is not auto-filled with the latest draft on every visit.
   // It only loads a brief when the caller explicitly asks for one by id (an Edit link), and
@@ -925,11 +952,17 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
   const ownRequestIds = ownRequests.map((row) => row.id);
   const ownBriefIds = ws.briefs.map((brief) => brief.id);
   const applications = ownRequestIds.length || ownBriefIds.length
-    ? await listMarketplaceApplications({
-        businessRequestIds: ownRequestIds,
-        briefIds: ownBriefIds,
-        limit: 20,
-      }).catch(() => [])
+    ? await settle(
+        "applications",
+        listMarketplaceApplications({
+          businessRequestIds: ownRequestIds,
+          briefIds: ownBriefIds,
+          limit: 20,
+        }),
+        [],
+        degraded,
+        incidents,
+      )
     : [];
 
   const applicationIds = applications.map((row) => row.id);
@@ -991,11 +1024,21 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
     };
   });
 
+  const sections = {
+    fundings: sectionState(fundingsFailed, fundings.length),
+    opportunities: sectionState(degraded.includes("opportunities"), opportunities.length),
+    collaborations: sectionState(degraded.includes("collaborations"), collaborations),
+    requests: sectionState(degraded.includes("requests"), ownRequests.length),
+    applications: sectionState(degraded.includes("applications"), applications.length),
+  };
+
   return {
     workspace: ws as BusinessWorkspace,
     entitlements,
     status,
     spend,
+    sections,
+    incidents,
     suggestions,
     intentBrief,
     ownRequests: ownRequests.slice(0, 8),

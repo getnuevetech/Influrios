@@ -1,8 +1,10 @@
 /** Influencer account landing. Your account, login, and Dashboard share this path. */
 export const CREATOR_DASHBOARD = "/creator";
 
+/** Released earnings keep this name. Payout setup is a separate reminder and does not relabel them. */
 export function dashboardEarningsLabel(payoutReady: boolean) {
-  return payoutReady ? "Payouts processing" : "Awaiting payout setup";
+  void payoutReady;
+  return "Released this month";
 }
 
 export type SetupReminder = {
