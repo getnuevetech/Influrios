@@ -11,6 +11,7 @@ import { BUSINESS_FEATURE_KEYS } from "@/lib/business-entitlements";
 import { EDITABLE_FEATURE_KEYS } from "@/lib/entitlements";
 import { PLAN_FEATURE_META } from "@/lib/plan-presentation";
 import { listPlanCatalog, listPlanFeatures, type PlanFeatureEditorRow } from "@/lib/entitlements-db";
+import { PlanTaxPanel } from "@/app/admin/plans/plan-tax-panel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Plan entitlements · Admin" };
@@ -278,6 +279,7 @@ function FeatureMatrix({
           </tbody>
         </table>
       </div>
+      <PlanTaxPanel canEdit={canEdit} />
     </section>
   );
 }

@@ -4,6 +4,8 @@ export const PAYMENT_SETTINGS_TABS = [
   { id: "providers", label: "Providers", modules: ["gateways"] },
   { id: "routes", label: "Country routes", modules: ["gateways", "collab_finance", "marketplace"] },
   { id: "fees", label: "Fees & policies", modules: ["commerce", "marketplace", "collab_finance"] },
+  { id: "tax", label: "Tax policies", modules: ["collab_finance"] },
+  { id: "audit", label: "Audit", modules: ["collab_finance"] },
 ] as const;
 
 export type PaymentSettingsSection = (typeof PAYMENT_SETTINGS_TABS)[number]["id"];
@@ -15,6 +17,8 @@ const SECTION_ALIASES: Record<string, PaymentSettingsSection> = {
   corridors: "routes",
   fees: "fees",
   switches: "fees",
+  tax: "tax",
+  audit: "audit",
 };
 
 export function normalizePaymentSettingsSection(value: string | undefined): PaymentSettingsSection | undefined {

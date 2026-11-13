@@ -31,6 +31,11 @@ export default async function BusinessBillingPage({ searchParams }: Props) {
     prisma.subscriptionState.findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } }).catch(() => null),
   ]);
   const currentCode = workspace?.plan ?? null;
+  const taxPlans = await prisma.entitlementPlan.findMany({
+    where: { audience: "business", active: true },
+    select: { taxBehavior: true, taxCode: true },
+  }).catch(() => []);
+  const taxBlocked = taxPlans.length === 0 || taxPlans.some((plan) => !plan.taxBehavior || !plan.taxCode);
   const names = new Map(matrix.plans.flatMap((plan) => [[plan.sku, plan.name], [plan.code, plan.name]] as const));
   return (
     <MemberPlanPage
@@ -48,6 +53,7 @@ export default async function BusinessBillingPage({ searchParams }: Props) {
       }))}
       portalOn={portalOn}
       hasCustomer={Boolean(user?.stripeCustomerId)}
+      taxBlocked={taxBlocked}
       subscriptionStatus={subscription?.status ?? null}
       error={params.error}
       payout={

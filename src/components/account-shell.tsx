@@ -42,6 +42,7 @@ const CREATOR_NAV: NavItem[] = [
   { href: "/collaboration/hub?view=collaborations", label: "Collaborations", icon: <IconHandshake size={18} /> },
   { href: "/collaboration/contracts", label: "Contracts", icon: <IconFileText size={18} /> },
   { href: "/payments", label: "Collaboration Payments", icon: <IconShieldPay size={18} /> },
+  { href: "/account/verification", label: "Verification", icon: <IconIdCard size={18} /> },
   { href: "/creator/media-kit", label: "Media Kit", icon: <IconImage size={18} /> },
   { href: "/creator/analytics", label: "Analytics", icon: <IconIntelligence size={18} /> },
   { href: "/creator/messages", label: "Messages", icon: <IconMail size={18} /> },
@@ -61,6 +62,7 @@ const BUSINESS_NAV: NavItem[] = [
   { href: "/collaboration/team", label: "Team", icon: <IconUsers size={18} /> },
   { href: "/business/billing", label: "Billing & Plans", icon: <IconIdCard size={18} /> },
   { href: "/payments", label: "Collaboration Payments", icon: <IconShieldPay size={18} /> },
+  { href: "/account/verification", label: "Verification", icon: <IconIdCard size={18} /> },
   { href: "/account?audience=business", label: "Settings", icon: <IconSettings size={18} /> },
 ];
 

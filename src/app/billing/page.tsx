@@ -57,6 +57,11 @@ export default async function BillingPage({ searchParams }: Props) {
     prisma.subscriptionState.findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } }).catch(() => null),
   ]);
   const currentCode = identity?.creator?.planTier || identity?.planTier || null;
+  const taxPlans = await prisma.entitlementPlan.findMany({
+    where: { audience: "creator", active: true },
+    select: { taxBehavior: true, taxCode: true },
+  }).catch(() => []);
+  const taxBlocked = taxPlans.length === 0 || taxPlans.some((plan) => !plan.taxBehavior || !plan.taxCode);
   const names = new Map(matrix.plans.flatMap((plan) => [[plan.sku, plan.name], [plan.code, plan.name]] as const));
 
   return (
@@ -76,6 +81,7 @@ export default async function BillingPage({ searchParams }: Props) {
       portalOn={portalOn}
       hasCustomer={Boolean(identity?.stripeCustomerId)}
       subscriptionStatus={subscription?.status ?? null}
+      taxBlocked={taxBlocked}
       error={memberFacingBillingError(params.error)}
       notice={params.connected ? "Payout setup moved to Earnings." : undefined}
       payout={

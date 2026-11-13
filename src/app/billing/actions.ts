@@ -20,6 +20,13 @@ export async function actionStartCheckout(formData: FormData) {
   if (formData.get("acceptSubscription") !== "on") {
     redirect(`${returnTo}?error=` + encodeURIComponent("Agree to the subscription terms at checkout."));
   }
+  const taxed = await prisma.entitlementPlan.findFirst({
+    where: { OR: [{ code: sku }, { id: sku }] },
+    select: { taxBehavior: true, taxCode: true },
+  });
+  if (!taxed?.taxBehavior || !taxed.taxCode) {
+    redirect(`${returnTo}?error=` + encodeURIComponent("Tax could not be calculated. Review billing details or retry calculation. Nothing was charged."));
+  }
   const account = await getAccountSession();
   if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=checkout`);
 

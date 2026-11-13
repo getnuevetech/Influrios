@@ -214,10 +214,18 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
           )}
           <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
             {showSign ? (
-              <a href="#sign" className="btn-primary !py-2 text-sm">
-                Sign this agreement →
+              <a href="#sign" data-screen={viewerRole === "influencer" ? "I01" : "B01"} className="btn-primary !py-2 text-sm">
+                Review and sign
               </a>
-            ) : null}
+            ) : document.status === "signed" ? (
+              <span data-screen={viewerRole === "influencer" ? "I01" : "B01"} className="text-sm font-semibold text-emerald-700">
+                View signed agreement
+              </span>
+            ) : (
+              <span data-screen={viewerRole === "influencer" ? "I01" : "B01"} className="text-sm text-muted">
+                Awaiting signatures
+              </span>
+            )}
             <Link
               href={`/collaboration/contracts/${document.id}/pdf?v=chrome-v1`}
               className="btn-secondary !py-2 text-sm"
@@ -265,7 +273,10 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
           <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4">
             <h2 className="font-display text-lg font-bold text-indigo">Your fee breakdown</h2>
             <p className="mt-1 text-xs text-muted">
-              Service level {serviceLabel || "not recorded"}. This is your platform fee for the agreement.
+              Service level {serviceLabel || "not recorded"}.{" "}
+              {viewerRole === "business"
+                ? "The influencer fee is deducted from their compensation and is not a second charge to you."
+                : "Your fee is deducted from gross compensation. The business fee is not deducted again here."}
             </p>
             <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               {dealView.lines.map((line) => (

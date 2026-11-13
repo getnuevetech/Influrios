@@ -25,6 +25,7 @@ export function MemberPlanPage({
   error,
   notice,
   payout,
+  taxBlocked = false,
 }: {
   audience: "creator" | "business";
   eyebrow: string;
@@ -39,11 +40,12 @@ export function MemberPlanPage({
   error?: string;
   notice?: string;
   payout?: React.ReactNode;
+  taxBlocked?: boolean;
 }) {
   const current = matrix.plans.find((plan) => plan.code === currentCode) ?? null;
   const returnTo = audience === "business" ? "/business/billing" : "/billing";
   return (
-    <div>
+    <div data-screen="S01">
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet">{eyebrow}</p>
       <h1 className="mt-1 font-display text-3xl font-bold">{title}</h1>
       <p className="mt-1 text-sm text-muted">
@@ -53,6 +55,11 @@ export function MemberPlanPage({
       </p>
       {error ? <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{error}</p> : null}
       {notice ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{notice}</p> : null}
+      <p className="mt-4 text-sm text-muted">
+        {taxBlocked
+          ? "Tax could not be calculated. Review billing details or retry calculation. Checkout stays closed."
+          : "Tax is calculated for each invoice. The first month is not saved as a fixed tax rate."}
+      </p>
 
       <section className="mt-6 flex flex-col gap-4 rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -120,6 +127,7 @@ export function MemberPlanPage({
                 current={isCurrent}
                 label={label}
                 emphasized={emphasized}
+                taxBlocked={taxBlocked}
               />
             </article>
           );
