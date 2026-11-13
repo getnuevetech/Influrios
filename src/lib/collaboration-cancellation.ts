@@ -17,7 +17,7 @@ import {
   type ChargebackEvidencePack,
 } from "@/lib/chargeback-evidence";
 import { ledgerMovements, reconcileLedger, verifyMarketplaceSignature } from "@/lib/ledger";
-import { activationExceptionForReason, readSettlementProposal, settlementFromSnapshot, settlementVersionDecision } from "@/lib/cancellation-settlement";
+import { activationExceptionForReason, memberReviewBlocksExecution, readSettlementProposal, settlementFromSnapshot, settlementVersionDecision } from "@/lib/cancellation-settlement";
 import { adapterForProvider } from "@/lib/payment-provider-adapter";
 
 const CHARGEBACK_REASONS = new Set<CancellationReason>(["chargeback"]);
@@ -210,6 +210,41 @@ export async function executeHeldCancellation(input: {
     });
     if (decision.kind === "executed") {
       return { ok: false as const, error: "This settlement was already sent. Nothing was refunded again." };
+    }
+    if (
+      latestRow &&
+      memberReviewBlocksExecution({
+        status: latestRow.status,
+        proposalJson: latestRow.proposalJson,
+        decisionKind: decision.kind,
+        sameVersion: !decision.create,
+      })
+    ) {
+      await prisma.auditLog
+        .create({
+          data: {
+            actor: input.actor,
+            action: "funding_settlement_review",
+            objectType: "CollaborationFunding",
+            objectId: funding.id,
+            after: {
+              reason: input.reason,
+              versionNumber: latestRow.versionNumber,
+              memberReview: true,
+              refunded: false,
+              note: input.note?.trim().slice(0, 500) || null,
+            },
+          },
+        })
+        .catch(() => undefined);
+      return {
+        ok: true as const,
+        paymentRisk: false as const,
+        calculation: calc,
+        providerRefund: null,
+        settlement: latestProposal ?? proposal,
+        evidence: null as ChargebackEvidencePack | null,
+      };
     }
     if (decision.supersede) {
       await prisma.fundingSettlement.updateMany({

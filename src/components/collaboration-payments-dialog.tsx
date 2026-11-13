@@ -17,6 +17,7 @@ export function PaymentDetailsDialog({
   milestones,
   cancellation,
   documents,
+  initialTab = "overview",
 }: {
   closeHref: string;
   title: string;
@@ -30,10 +31,11 @@ export function PaymentDetailsDialog({
   milestones: ReactNode;
   cancellation: ReactNode;
   documents: ReactNode;
+  initialTab?: "overview" | "cancellation";
 }) {
   const router = useRouter();
   const panelRef = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<"overview" | "fees" | "timeline" | "milestones" | "cancellation" | "documents">("overview");
+  const [tab, setTab] = useState<"overview" | "fees" | "timeline" | "milestones" | "cancellation" | "documents">(initialTab);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;

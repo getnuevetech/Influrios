@@ -1,11 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  actionCancelPrefund,
-  actionOpenFundingCheckout,
-  actionRequestChangeOrder,
-  actionStopSeries,
-} from "@/app/payments/actions";
+import { actionOpenFundingCheckout, actionRequestChangeOrder, actionStopSeries } from "@/app/payments/actions";
 import { PaymentDetailsDialog } from "@/components/collaboration-payments-dialog";
 import { ContractRowMenu } from "@/components/contract-agreement-dialog";
 import { IconSearch } from "@/components/icons";
@@ -18,6 +13,14 @@ import { syncOpenGatewayDeposits } from "@/lib/funding-checkout";
 import { eligiblePlatformFeePosition, readSignedDealMoney } from "@/lib/payment-engine";
 import { currencyPaymentTotals, paymentNextAction } from "@/lib/payment-list";
 import { readSettlementProposal } from "@/lib/cancellation-settlement";
+import {
+  memberCancellationReasons,
+  readPartyAcceptances,
+  readSettlementDisputeNote,
+  readSettlementDisputed,
+  readSettlementQuestions,
+} from "@/lib/member-settlement";
+import { SettlementReview } from "@/components/settlement-review";
 import { collectionCheckoutFields } from "@/lib/provider-collection";
 import { listFundingsForBusiness, listFundingsForCreator, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { influencerLedgerShare, ledgerEntryVisibleTo, memberDealView } from "@/lib/member-deal-money";
@@ -45,6 +48,8 @@ type Props = {
     currency?: string;
     page?: string;
     deal?: string;
+    tab?: string;
+    settlement?: string;
   }>;
 };
 
@@ -129,13 +134,14 @@ function ledgerEntries(deal: Deal, role: "business" | "influencer") {
   });
 }
 
-function listHref(input: { q?: string; status?: string; currency?: string; page?: number; deal?: string }) {
+function listHref(input: { q?: string; status?: string; currency?: string; page?: number; deal?: string; tab?: string }) {
   const params = new URLSearchParams();
   if (input.q) params.set("q", input.q);
   if (input.status && input.status !== "all") params.set("status", input.status);
   if (input.currency && input.currency !== "all") params.set("currency", input.currency);
   if (input.page && input.page > 1) params.set("page", String(input.page));
   if (input.deal) params.set("deal", input.deal);
+  if (input.tab) params.set("tab", input.tab);
   const query = params.toString();
   return query ? `/payments?${query}` : "/payments";
 }
@@ -282,7 +288,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
       {params.error ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{params.error}</div>
       ) : null}
-      {params.created || params.changed || params.submitted || params.approved || params.revised || params.evidence || params.cancelled || params.disputed ? (
+      {params.created || params.changed || params.submitted || params.approved || params.revised || params.evidence || params.cancelled || params.disputed || params.settlement ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           {params.created ? `Prefund ${params.created} is waiting for the provider.` : ""}
           {params.changed ? " Change order recorded. The earlier fee snapshot stays on that record. Nothing was held." : ""}
@@ -292,6 +298,11 @@ export default async function PaymentsPage({ searchParams }: Props) {
           {params.evidence ? " Evidence saved. Nothing was released or refunded." : ""}
           {params.cancelled ? " Unconfirmed prefund cancelled. Nothing was held." : ""}
           {params.disputed ? " Dispute opened. Release waits until it is resolved." : ""}
+          {params.settlement === "proposed" ? " A cancellation proposal is open. Accepting it does not confirm a refund." : ""}
+          {params.settlement === "noted" ? " Your acceptance was recorded. The other party still needs to accept this version. Nothing was refunded." : ""}
+          {params.settlement === "accepted" ? " Both parties accepted this version. A refund is not confirmed until finance executes it." : ""}
+          {params.settlement === "question" ? " Your question was added to this proposal. Nothing was refunded." : ""}
+          {params.settlement === "disputed" ? " This proposal is disputed. Nothing was refunded." : ""}
         </div>
       ) : null}
 
@@ -476,6 +487,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         <ContractRowMenu
                           items={[
                             { href: `/collaboration/work/${deal.id}`, label: "Open collaboration" },
+                            { href: listHref({ q: params.q, status, currency, page: currentPage, deal: deal.id, tab: "settlement" }), label: "Review cancellation" },
                             ...(contractByFunding.get(deal.id)
                               ? [{ href: `/collaboration/contracts/${contractByFunding.get(deal.id)}`, label: "View contract" }]
                               : []),
@@ -535,6 +547,9 @@ export default async function PaymentsPage({ searchParams }: Props) {
           changeOrdersEnabled={config?.changeOrdersEnabled !== false}
           settlement={openSettlement ? readSettlementProposal(openSettlement.proposalJson) : null}
           settlementStatus={openSettlement?.status ?? null}
+          settlementVersion={openSettlement?.versionNumber ?? null}
+          settlementJson={openSettlement?.proposalJson ?? null}
+          initialTab={params.tab === "settlement" ? "cancellation" : "overview"}
         />
       ) : null}
     </div>
@@ -561,6 +576,9 @@ function PaymentDialog({
   changeOrdersEnabled,
   settlement,
   settlementStatus,
+  settlementVersion,
+  settlementJson,
+  initialTab,
 }: {
   deal: Deal;
   businessViewer: boolean;
@@ -572,6 +590,9 @@ function PaymentDialog({
   changeOrdersEnabled: boolean;
   settlement: ReturnType<typeof readSettlementProposal>;
   settlementStatus: string | null;
+  settlementVersion: number | null;
+  settlementJson: unknown;
+  initialTab: "overview" | "cancellation";
 }) {
   const pill = statusPill(deal.status);
   const money = memberDealView({
@@ -616,6 +637,8 @@ function PaymentDialog({
 
   return (
     <PaymentDetailsDialog
+      key={`${deal.id}-${initialTab}`}
+      initialTab={initialTab}
       closeHref={closeHref}
       title={deal.title}
       company={`${deal.businessName} · ${creatorName}`}
@@ -742,14 +765,6 @@ function PaymentDialog({
               </div>
             </details>
           ) : null}
-          {businessViewer && deal.status === "awaiting_provider" ? (
-            <form action={actionCancelPrefund}>
-              <input type="hidden" name="dealId" value={deal.id} />
-              <button type="submit" className="text-xs font-semibold text-[#667085] underline">
-                Cancel prefund
-              </button>
-            </form>
-          ) : null}
           {businessViewer && deal.scheduleKind === "recurring" && deal.scheduleId && !deal.seriesStopped ? (
             <form action={actionStopSeries}>
               <input type="hidden" name="scheduleId" value={deal.scheduleId} />
@@ -867,51 +882,23 @@ function PaymentDialog({
         )
       }
       cancellation={
-        <div className="space-y-3 text-sm text-[#344054]">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="font-display text-lg font-bold text-[#1B1464]">Review cancellation proposal</h3>
-            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">{settlementStatus ?? "No open proposal"}</span>
-          </div>
-          <p>Accepting this proposal does not confirm a refund. Cancellation status and refund status update separately.</p>
-          {settlement ? (
-            <dl className="space-y-2 rounded-2xl border border-[#E7ECF5] p-4">
-              <div className="flex justify-between gap-3">
-                <dt className="text-[#667085]">Status</dt>
-                <dd className="font-semibold text-[#1B1464]">{settlementStatus ?? "proposed"}</dd>
-              </div>
-              {businessViewer ? (
-                <>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[#667085]">Retained activation</dt>
-                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.retainedActivationCents, deal.currency)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[#667085]">Retained collaboration fee</dt>
-                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.retainedBusinessCollaborationCents, deal.currency)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[#667085]">Business refund</dt>
-                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.businessRefundCents, deal.currency)}</dd>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[#667085]">Accepted net</dt>
-                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.influencerNetCents, deal.currency)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-[#667085]">Retained collaboration fee</dt>
-                    <dd className="font-semibold text-[#1B1464]">{moneyLabel(settlement.retainedInfluencerFeeCents, deal.currency)}</dd>
-                  </div>
-                </>
-              )}
-            </dl>
-          ) : (
-            <p className="text-[#667085]">No cancellation proposal is open. Requesting a review does not move money.</p>
-          )}
-          <p className="text-xs text-[#98A2B3]">If a payout is still with the provider, the proposal waits for that outcome before a refund can be reserved.</p>
-        </div>
+        <SettlementReview
+          dealId={deal.id}
+          currency={storedCurrencyCode(deal.currency) ?? deal.currency}
+          fundingStatus={deal.status}
+          party={businessViewer ? "business" : "influencer"}
+          reasons={memberCancellationReasons(businessViewer ? "business" : "influencer")}
+          collectedCents={collectedCents}
+          releasedCents={releasedCents}
+          proposal={settlement}
+          versionNumber={settlementVersion}
+          settlementStatus={settlementStatus}
+          acceptedByBusiness={Boolean(readPartyAcceptances(settlementJson).business)}
+          acceptedByInfluencer={Boolean(readPartyAcceptances(settlementJson).influencer)}
+          disputed={readSettlementDisputed(settlementJson)}
+          disputeNote={readSettlementDisputeNote(settlementJson)}
+          questions={readSettlementQuestions(settlementJson)}
+        />
       }
       documents={
         <div className="space-y-3 text-sm">
