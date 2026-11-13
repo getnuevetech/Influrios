@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CardPreviewDialog } from "@/components/card-preview-dialog";
+import { DashboardInfluencerCard } from "@/app/creator/dashboard-card";
 import { IconHandshake, IconMail, IconWallet } from "@/components/icons";
 import { dashboardEarningsLabel, openSetupReminders } from "@/lib/account-nav";
 import { getAccountSession } from "@/lib/accounts";
@@ -133,7 +133,7 @@ export default async function CreatorHomePage({
         </section>
       ))}
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,22rem)]">
         <div className="space-y-4">
           <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-sm sm:p-5">
             <div className="flex items-center justify-between gap-3">
@@ -220,42 +220,15 @@ export default async function CreatorHomePage({
         </div>
 
         <div className="space-y-4">
-          <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-sm">
-            <h2 className="font-display text-lg font-bold text-[#1B1464]">Influencer Card</h2>
-            {home.slug ? (
-              <div className="mt-3 overflow-hidden rounded-2xl border border-[#E7ECF5]">
-                <div className="flex h-36 items-center justify-center bg-[#F3EEFF]">
-                  {home.avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={home.avatar} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="font-display text-3xl font-bold text-[#6D4AFF]">{home.displayName.slice(0, 1)}</span>
-                  )}
-                </div>
-                <div className="p-3">
-                  <p className="truncate font-semibold text-[#1B1464]">{home.displayName}</p>
-                  {home.title ? <p className="truncate text-xs text-[#667085]">{home.title}</p> : null}
-                </div>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-[#667085]">Create your card to get a share link. The full portrait stays on its own page.</p>
-            )}
-            <div className="mt-3 flex gap-2">
-              {home.slug ? (
-                <CardPreviewDialog
-                  name={home.displayName}
-                  title={home.title}
-                  image={home.avatar}
-                  href={home.cardHref}
-                  shareUrl={shareUrl}
-                />
-              ) : (
-                <Link href={home.cardHref} className="inline-flex flex-1 items-center justify-center rounded-full bg-[#6D4AFF] px-3 py-2 text-sm font-semibold text-white">
-                  View card
-                </Link>
-              )}
-            </div>
-          </section>
+          <DashboardInfluencerCard
+            slug={home.slug}
+            cardHref={home.cardHref}
+            shareUrl={shareUrl}
+            name={home.displayName}
+            title={home.title}
+            image={home.avatar}
+            identityVerified={home.identityVerified}
+          />
         </div>
       </div>
     </div>
