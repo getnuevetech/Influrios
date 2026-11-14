@@ -20,9 +20,10 @@ export async function actionSaveRouteDraft(formData: FormData) {
     environment: String(formData.get("environment") ?? "") === "live" ? "live" : "sandbox",
     currency: String(formData.get("currency") ?? ""),
     providerCode: String(formData.get("providerCode") ?? "stripe"),
-    allocatedFundsApproved: formData.get("allocatedFundsApproved") === "on",
-    newCollectionsEnabled: formData.get("newCollectionsEnabled") === "on",
+    allocatedFundsApproved: false,
+    newCollectionsEnabled: false,
     releasesEnabled: formData.get("releasesEnabled") === "on",
+    bankPayoutControl: formData.get("bankPayoutControl") === "on",
     evidence: String(formData.get("evidence") ?? ""),
   });
   revalidatePath("/admin/payment-settings");

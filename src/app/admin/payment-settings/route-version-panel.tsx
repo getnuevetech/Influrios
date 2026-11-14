@@ -2,6 +2,7 @@ import Link from "next/link";
 import { RouteDraftForm } from "@/app/admin/payment-settings/route-draft-form";
 import { RecordDialog } from "@/components/payment-journey/record-dialog";
 import { prisma } from "@/lib/db";
+import { maskAccountId } from "@/lib/payment-account-routing";
 import { routeReadiness } from "@/lib/payment-standard-v4";
 
 const TABS = [
@@ -15,7 +16,16 @@ const TABS = [
 
 type TabId = (typeof TABS)[number][0];
 
-type RoleRow = { role?: string; owner?: string; providerAccount?: string; operations?: string[] };
+type RoleRow = {
+  role?: string;
+  owner?: string;
+  providerAccount?: string;
+  externalAccountId?: string;
+  financialAccountId?: string;
+  environment?: string;
+  verified?: boolean;
+  operations?: string[];
+};
 type CapabilityRow = {
   methods?: string[];
   ach?: boolean;
@@ -134,6 +144,10 @@ function RouteTab({
     taxPolicyId: string;
     approvalEvidence: string;
     allocatedFundsApproved: boolean;
+    topology?: string;
+    proofState?: string;
+    bankPayoutControl?: boolean;
+    operationsWithdrawalEnabled?: boolean;
     effectiveFrom: Date;
     createdAt: Date;
   };
@@ -142,18 +156,19 @@ function RouteTab({
   history: { id: string; version: number; status: string; createdAt: Date; newCollectionsEnabled: boolean }[];
 }) {
   const capabilities = capabilitiesOf(route.capabilitiesJson);
+  const topologyProven = route.proofState === "sandbox_proven" || route.proofState === "live_approved";
   const readiness = routeReadiness({
     domesticRule: /^[A-Z]{2}$/.test(route.countryCode),
     currency: /^[A-Z]{3}$/.test(route.currency),
     cardMethod: (capabilities.methods ?? []).includes("card"),
-    holdingEvidence: route.allocatedFundsApproved,
+    holdingEvidence: route.allocatedFundsApproved || topologyProven,
     payoutMethod: route.providerCode.trim().length > 0,
     refundSupport: capabilities.refunds !== false && capabilities.reversals !== false,
-    bankPayoutControl: capabilities.bankPayoutControl === true,
+    bankPayoutControl: route.bankPayoutControl === true || capabilities.bankPayoutControl === true,
     verificationWorkflow: capabilities.verificationWorkflow === true,
     taxOwner: policies.some((policy) => policy.id === route.taxPolicyId && policy.filingOwner.trim().length > 0),
     productionApproval: route.status === "active" && route.environment === "live",
-    allocatedFundsApproved: route.allocatedFundsApproved,
+    allocatedFundsApproved: route.allocatedFundsApproved || topologyProven,
   });
   const policy = policies.find((row) => row.id === route.taxPolicyId) ?? null;
   if (tab === "mapping") {
@@ -165,7 +180,9 @@ function RouteTab({
           <article key={role.role} className="rounded-2xl border border-border p-3">
             <p className="font-semibold">{role.role}</p>
             <p>Owner {role.owner}</p>
-            <p>Provider account {role.providerAccount}</p>
+            <p>Account {maskAccountId(role.externalAccountId || role.providerAccount || "") || "Unverified"}</p>
+            <p>Financial account {maskAccountId(role.financialAccountId || "") || "None"}</p>
+            <p>{role.verified ? "Capability verified" : "Not verified"}. Environment {role.environment || route.environment}.</p>
             <p>Operations {(role.operations ?? []).join(", ") || "None recorded"}</p>
           </article>
         ))}
@@ -214,14 +231,15 @@ function RouteTab({
             <li key={row.id}>v{row.version} · {row.status} · {row.createdAt.toISOString().slice(0, 10)} · new funding {row.newCollectionsEnabled ? "open" : "blocked"}</li>
           ))}
         </ul>
-        <p>Evidence: {route.approvalEvidence || "None recorded"}.</p>
+        <p>Notes: {route.approvalEvidence || "None recorded"}. A note is not capability evidence.</p>
       </div>
     );
   }
   return (
     <div className="space-y-2">
-      <p>Status {route.status}. Effective {route.effectiveFrom.toISOString().slice(0, 10)}. Version v{route.version}.</p>
-      <p>New collections {route.newCollectionsEnabled ? "open" : "blocked"}. Releases {route.releasesEnabled ? "open" : "blocked"}.</p>
+      <p>Status {route.status}. Proof {route.proofState || "draft"}. Topology {route.topology || "unavailable"}. Effective {route.effectiveFrom.toISOString().slice(0, 10)}. Version v{route.version}.</p>
+      <p>New collections {route.newCollectionsEnabled ? "open" : "blocked"}. Releases {route.releasesEnabled ? "open" : "blocked"}. Operations withdrawal {route.operationsWithdrawalEnabled ? "open" : "blocked"}.</p>
+      <p>Draft, sandbox-proven, and live-approved are different. This screen does not mark any of them from a note.</p>
       <p>{readiness.blocker ?? "Allocated funds are recorded as approved. That does not collect money from this screen."}</p>
       <p>Provider unavailable means new funding is blocked. Held money is not rerouted.</p>
       <ul className="space-y-1">

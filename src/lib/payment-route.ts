@@ -36,14 +36,20 @@ function clean(value: string | null | undefined) {
 
 export type RouteChannelOption = { code: string; name: string };
 
-/** One option list for collection, holding, and the payout gateway. Each channel still stores its own code. */
+/**
+ * One provider registry for collection, holding, and payout.
+ * The marketplace catalog is not a second provider identity. A code already stored on a route stays visible.
+ */
 export function sharedRouteChannelOptions(input: {
-  payment: { code: string; name: string }[];
-  marketplace: { code: string; name: string }[];
+  payment?: { code: string; name: string }[];
+  marketplace?: { code: string; name: string }[];
+  registry?: { code: string; name: string }[];
   selected?: Array<string | null | undefined>;
 }): RouteChannelOption[] {
   const byCode = new Map<string, RouteChannelOption>();
-  for (const row of [...input.payment, ...input.marketplace]) {
+  const registry = input.registry ?? input.payment ?? [];
+  void input.marketplace;
+  for (const row of registry) {
     const code = row.code.trim().toLowerCase();
     if (!code || byCode.has(code)) continue;
     byCode.set(code, { code, name: row.name.trim() || code });

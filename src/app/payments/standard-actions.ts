@@ -8,8 +8,10 @@ import { prisma } from "@/lib/db";
 import { assertFundingAccess } from "@/lib/funding-access";
 import { approveFundingMilestone } from "@/lib/marketplace-ledger";
 import { queueProviderInstruction } from "@/lib/payment-provider-adapter";
-import { recordMilestoneSettlement } from "@/lib/payment-standard-store";
+import { readAgreementVersion, readMilestoneAllocation } from "@/lib/payment-account-routing";
+import { commitMilestoneReleasePlan } from "@/lib/payment-standard-store";
 import { readSignedDealMoney } from "@/lib/payment-engine";
+import { getLaunchGate } from "@/lib/launch-gate";
 
 function fail(fundingId: string, message: string): never {
   redirect(`/collaboration/work/${fundingId}?error=${encodeURIComponent(message)}`);
@@ -56,34 +58,38 @@ export async function actionApproveAndRelease(formData: FormData) {
   if (!payoutReady) {
     fail(funding.id, "Work was not approved. Payout setup still needs attention, so release stays blocked.");
   }
-  const quote = (funding.feeSnapshotJson as { financialPlan?: { signedQuote?: { milestoneAllocations?: unknown } } } | null)?.financialPlan
-    ?.signedQuote;
+  const quote = (funding.feeSnapshotJson as { financialPlan?: { signedQuote?: { milestoneAllocations?: unknown; agreementVersion?: unknown } } } | null)
+    ?.financialPlan?.signedQuote;
   const signed = readSignedDealMoney((funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan);
-  const allocations = Array.isArray(quote?.milestoneAllocations) ? quote.milestoneAllocations : null;
-  const index = funding.milestones.findIndex((row) => row.id === milestone.id);
-  const row = allocations?.[index] as
-    | { grossCents?: number; businessCollaborationFeeCents?: number; influencerFeeCents?: number }
-    | undefined;
-  if (!row || !Number.isInteger(row.grossCents) || !Number.isInteger(row.businessCollaborationFeeCents) || !Number.isInteger(row.influencerFeeCents)) {
-    fail(funding.id, "This agreement has no frozen milestone allocation. Nothing was released.");
-  }
   if (!signed) fail(funding.id, "The signed total is missing. Nothing was released.");
-  const recorded = await recordMilestoneSettlement({
-    fundingId: funding.id,
-    milestoneId: milestone.id,
-    agreementVersion: 1,
-    currency: funding.currency,
-    grossCents: Number(row.grossCents),
-    businessFeeCents: Number(row.businessCollaborationFeeCents),
-    influencerFeeCents: Number(row.influencerFeeCents),
-  });
-  if (!recorded.ok) fail(funding.id, recorded.error);
-  const approved = await approveFundingMilestone(funding.id, milestone.id);
-  if (!approved.ok) fail(funding.id, approved.error);
-  await prisma.milestoneSubmission.updateMany({
-    where: { milestoneId: milestone.id, version },
-    data: { status: "approved" },
-  });
+  const allocation = readMilestoneAllocation({ allocations: quote?.milestoneAllocations, milestoneId: milestone.id });
+  if (allocation.kind === "reject") fail(funding.id, allocation.error);
+  if (allocation.kind === "legacy") {
+    const approved = await approveFundingMilestone(funding.id, milestone.id);
+    if (!approved.ok) fail(funding.id, approved.error);
+    await prisma.milestoneSubmission.updateMany({
+      where: { milestoneId: milestone.id, version },
+      data: { status: "approved" },
+    });
+  } else {
+    const agreement = readAgreementVersion(quote);
+    if (!agreement.ok) fail(funding.id, agreement.error);
+    const gate = await getLaunchGate().catch(() => null);
+    const committed = await commitMilestoneReleasePlan({
+      fundingId: funding.id,
+      milestoneId: milestone.id,
+      submissionVersion: version,
+      agreementVersion: agreement.version,
+      currency: funding.currency,
+      grossCents: allocation.row.grossCents,
+      businessFeeCents: allocation.row.businessCollaborationFeeCents,
+      influencerFeeCents: allocation.row.influencerFeeCents,
+      rightsActivateOn: milestone.rightsActivateOn,
+      rightsStatus: milestone.rightsStatus,
+      releaseApproved: gate?.automaticReleaseApprovalEnabled === true,
+    });
+    if (!committed.ok) fail(funding.id, committed.error);
+  }
   revalidatePath(`/collaboration/work/${funding.id}`);
   revalidatePath("/payments");
   redirect(`/collaboration/work/${funding.id}?approved=1`);

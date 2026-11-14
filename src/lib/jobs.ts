@@ -1289,6 +1289,15 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
       },
     });
     if (openDispute) continue;
+    const ownedSettlement = await prisma.milestoneSettlementV4.findFirst({
+      where: { milestoneId: milestone.id },
+      select: { id: true },
+    });
+    if (ownedSettlement) {
+      const { executeOwnedSettlement } = await import("@/lib/payment-settlement-executor");
+      await executeOwnedSettlement(ownedSettlement.id);
+      continue;
+    }
     if (!onlyMilestoneId && !providerOn) continue;
     if (
       !releasePushAuthorized({
