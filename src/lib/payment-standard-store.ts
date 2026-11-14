@@ -217,6 +217,18 @@ export async function saveTaxConfiguration(input: {
   };
 }
 
+function carriedTaxFields(taxCents: number | null | undefined, taxReason: string | undefined) {
+  if (taxCents == null) return { ok: true as const, taxCents: null, taxReason: "" };
+  if (!Number.isInteger(taxCents) || taxCents < 0) {
+    return { ok: false as const, error: "The carried tax amount is unreadable. Nothing was stored as zero." };
+  }
+  const reason = (taxReason ?? "").trim();
+  if (!reason) {
+    return { ok: false as const, error: "A carried tax amount needs its original reason. Nothing was stored as zero." };
+  }
+  return { ok: true as const, taxCents, taxReason: reason };
+}
+
 export async function recordMilestoneSettlement(input: {
   fundingId: string;
   milestoneId: string;
@@ -225,6 +237,8 @@ export async function recordMilestoneSettlement(input: {
   grossCents: number;
   businessFeeCents: number;
   influencerFeeCents: number;
+  taxCents?: number | null;
+  taxReason?: string;
 }) {
   const plan = planCoupledSettlement({
     grossCents: input.grossCents,
@@ -236,6 +250,8 @@ export async function recordMilestoneSettlement(input: {
     payoutState: "queued",
   });
   if (!plan.ok) return plan;
+  const carriedTax = carriedTaxFields(input.taxCents, input.taxReason);
+  if (!carriedTax.ok) return carriedTax;
   const idempotencyKey = settlementCommandKey({ milestoneId: input.milestoneId, agreementVersion: input.agreementVersion });
   const existing = await prisma.milestoneSettlementV4.findUnique({ where: { idempotencyKey } });
   if (existing) return { ok: true as const, id: existing.id, reused: true };
@@ -251,6 +267,8 @@ export async function recordMilestoneSettlement(input: {
         influencerFeeCents: input.influencerFeeCents,
         influencerNetCents: plan.influencerNetCents,
         operationsFeeCents: plan.operationsFeeCents,
+        taxCents: carriedTax.taxCents,
+        taxReason: carriedTax.taxReason,
         idempotencyKey,
         commandKey: idempotencyKey,
         status: "planned",
@@ -285,6 +303,8 @@ export async function commitMilestoneReleasePlan(input: {
   rightsActivateOn: string;
   rightsStatus: string;
   releaseApproved: boolean;
+  taxCents?: number | null;
+  taxReason?: string;
 }) {
   const plan = planCoupledSettlement({
     grossCents: input.grossCents,
@@ -296,6 +316,8 @@ export async function commitMilestoneReleasePlan(input: {
     payoutState: "queued",
   });
   if (!plan.ok) return plan;
+  const carriedTax = carriedTaxFields(input.taxCents, input.taxReason);
+  if (!carriedTax.ok) return carriedTax;
   const idempotencyKey = settlementCommandKey({ milestoneId: input.milestoneId, agreementVersion: input.agreementVersion });
   const operationKey = providerOperationKey({
     agreementVersion: input.agreementVersion,
@@ -333,6 +355,8 @@ export async function commitMilestoneReleasePlan(input: {
           influencerFeeCents: input.influencerFeeCents,
           influencerNetCents: plan.influencerNetCents,
           operationsFeeCents: plan.operationsFeeCents,
+          taxCents: carriedTax.taxCents,
+          taxReason: carriedTax.taxReason,
           idempotencyKey,
           commandKey: operationKey,
           status: "planned",

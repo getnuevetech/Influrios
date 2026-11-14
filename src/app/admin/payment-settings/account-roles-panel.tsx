@@ -27,7 +27,14 @@ export async function AccountRolesPanel() {
         <p className="font-semibold text-indigo">Stripe capability check · {status.checkedAt}</p>
         <p className="mt-2">{status.reason}</p>
         <p className="mt-2">Allocated funds: {status.allocatedFunds}. Treasury: {status.treasury}. New collaboration funding: {status.newCollaborationFunding}.</p>
-        <p className="mt-2 text-muted">Draft, sandbox-proven, and live-approved stay separate. Ordinary card checkout is not allocated-funds collection.</p>
+        <ul className="mt-3 space-y-2">
+          {status.unproven.map((row) => (
+            <li key={row.id}>
+              <span className="font-semibold">{row.label}</span>: {row.status}. {row.note}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-muted">A sandbox checkbox does not prove these capabilities. Ordinary card checkout is not allocated-funds collection. Paid is recorded only after a confirmed bank payout.</p>
       </div>
       <div className="overflow-x-auto rounded-2xl border border-border bg-white">
         <table className="w-full min-w-[880px] text-left text-sm">

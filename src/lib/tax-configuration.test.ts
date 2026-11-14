@@ -127,6 +127,8 @@ describe("tax configuration planning", () => {
     assert.equal(planned.planned.rateBps, null);
     assert.equal(planned.planned.providerCode, "");
     assert.equal(planned.planned.providerAccountId, "");
+    assert.equal(planned.planned.filingArrangement, "");
+    assert.equal(planned.planned.filingOwner, "");
     assert.deepEqual(configurationGaps(readyPolicy), []);
     const effects = activationEffects("business_fee");
     assert.equal(effects.fundingEnabled, false);
@@ -137,6 +139,7 @@ describe("tax configuration planning", () => {
     const labels = adminTaxFieldLabels().join(" ");
     assert.doesNotMatch(labels, /basis|bps|customer/i);
     assert.doesNotMatch(labels, /Payment integration|Provider account/);
+    assert.doesNotMatch(labels, /Filing/);
     assert.match(labels, /Tax rate \(%\)/);
     const planned = planTaxConfiguration({
       ...base,

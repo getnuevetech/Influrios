@@ -10,6 +10,7 @@ import { approveFundingMilestone } from "@/lib/marketplace-ledger";
 import { queueProviderInstruction } from "@/lib/payment-provider-adapter";
 import { readAgreementVersion, readMilestoneAllocation } from "@/lib/payment-account-routing";
 import { commitMilestoneReleasePlan } from "@/lib/payment-standard-store";
+import { carriedSettlementTax } from "@/lib/tax-determination";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 import { getLaunchGate } from "@/lib/launch-gate";
 
@@ -74,6 +75,8 @@ export async function actionApproveAndRelease(formData: FormData) {
   } else {
     const agreement = readAgreementVersion(quote);
     if (!agreement.ok) fail(funding.id, agreement.error);
+    const carried = carriedSettlementTax({ quote, milestoneId: milestone.id });
+    if (!carried.ok) fail(funding.id, carried.error);
     const gate = await getLaunchGate().catch(() => null);
     const committed = await commitMilestoneReleasePlan({
       fundingId: funding.id,
@@ -87,6 +90,8 @@ export async function actionApproveAndRelease(formData: FormData) {
       rightsActivateOn: milestone.rightsActivateOn,
       rightsStatus: milestone.rightsStatus,
       releaseApproved: gate?.automaticReleaseApprovalEnabled === true,
+      taxCents: carried.taxCents,
+      taxReason: carried.taxReason,
     });
     if (!committed.ok) fail(funding.id, committed.error);
   }

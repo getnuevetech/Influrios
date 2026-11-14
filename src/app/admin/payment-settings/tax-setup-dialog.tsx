@@ -6,18 +6,18 @@ import { actionPreviewTaxConfiguration, actionSaveTaxConfiguration, actionSyncTa
 import { actionCountryRegions } from "@/app/billing/actions";
 import { AccountDialog } from "@/components/account-dialog";
 import {
-  CALCULATION_METHODS,
-  FILING_ARRANGEMENTS,
   PRICE_DISPLAY,
   RESPONSIBLE_ENTITIES,
   TAX_CATEGORIES,
   TAX_COPY,
   TAX_SUBJECTS,
+  calculationChoices,
   entityLabel,
   regionRequired,
   registrationLabel,
   reviewChecks,
   reviewSummary,
+  scopeAccountLabel,
 } from "@/lib/tax-configuration";
 
 function money(cents: number) {
@@ -176,7 +176,6 @@ export function TaxSetupDialog({
   const [priceDisplay, setPriceDisplay] = useState(record?.inclusive ? "inclusive" : "exclusive");
   const [liableEntity, setLiableEntity] = useState(record?.liableEntity ?? "");
   const [registrationStatus, setRegistrationStatus] = useState(record?.registrationStatus || "not_synced");
-  const [filingArrangement, setFilingArrangement] = useState(record?.filingArrangement ?? "");
   const [ratePercent, setRatePercent] = useState(record?.ratePercent ?? "");
   const [jurisdiction, setJurisdiction] = useState(record?.jurisdiction ?? "");
   const [effectiveFrom, setEffectiveFrom] = useState(record?.effectiveFrom ?? "");
@@ -240,7 +239,6 @@ export function TaxSetupDialog({
     data.set("priceDisplay", priceDisplay);
     data.set("liableEntity", liableEntity);
     data.set("registrationStatus", registrationStatus);
-    data.set("filingArrangement", filingArrangement);
     if (calculationMethod === "manual") data.set("ratePercent", ratePercent);
     data.set("jurisdiction", jurisdiction);
     data.set("effectiveFrom", effectiveFrom);
@@ -338,7 +336,7 @@ export function TaxSetupDialog({
           <label className="block text-sm">Calculation method
             <select value={calculationMethod} onChange={(event) => setCalculationMethod(event.target.value === "manual" ? "manual" : event.target.value === "automatic" ? "automatic" : "")} className="mt-1 w-full rounded-xl border px-3 py-2">
               <option value="">Select a method</option>
-              {CALCULATION_METHODS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              {calculationChoices("stripe").map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </label>
           <div className="text-sm">
@@ -354,6 +352,7 @@ export function TaxSetupDialog({
               {PRICE_DISPLAY.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </label>
+          <p className="text-xs text-muted">{scopeAccountLabel(appliesTo, environment)}</p>
           <label className="block text-sm">Tax-responsible entity
             <select value={liableEntity} onChange={(event) => setLiableEntity(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
               <option value="">Select approved legal entity</option>
@@ -370,13 +369,6 @@ export function TaxSetupDialog({
               {canEdit ? <button type="button" className="mt-1 font-semibold text-violet underline" onClick={() => void syncRegistration()}>Check provider registrations</button> : null}
             </div>
           )}
-          <details className="rounded-xl border px-3 py-2 text-sm">
-            <summary className="cursor-pointer font-medium">Filing arrangement (optional)</summary>
-            <select value={filingArrangement} onChange={(event) => setFilingArrangement(event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-2">
-              <option value="">Not selected</option>
-              {FILING_ARRANGEMENTS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-            </select>
-          </details>
           {calculationMethod === "manual" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="text-sm">Tax rate (%)
@@ -478,7 +470,7 @@ export function TaxSetupDialog({
         <div className="flex gap-2">
           {canEdit ? <button type="button" disabled={pending} className="rounded-full border px-4 py-2 text-sm font-semibold" onClick={() => void save("draft")}>Save draft</button> : null}
           {step < 3 ? (
-            <button type="button" className="rounded-full bg-violet px-4 py-2 text-sm font-semibold text-white" onClick={() => setStep(step + 1)}>Continue</button>
+            <button type="button" className="rounded-full bg-violet px-4 py-2 text-sm font-semibold text-white" onClick={() => setStep(step + 1)}>{step === 1 ? "Continue to test" : step === 2 ? "Continue to review" : "Continue"}</button>
           ) : canEdit ? (
             <button type="button" disabled={pending} className="rounded-full bg-violet px-4 py-2 text-sm font-semibold text-white" onClick={() => void save("activate")}>{environment === "sandbox" ? "Activate in sandbox" : "Activate configuration"}</button>
           ) : null}

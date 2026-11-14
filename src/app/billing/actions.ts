@@ -128,14 +128,44 @@ export async function actionPreviewSubscriptionTax(formData: FormData) {
     requireStreet: true,
     subjectSelected: true,
   });
+  if (!preview.ok || preview.taxCents == null || preview.kind !== "calculated") {
+    return {
+      ok: false as const,
+      kind: preview.kind,
+      message: preview.customerMessage,
+      taxCents: null,
+      totalCents: null,
+      subtotalCents: null,
+      reason: "",
+    };
+  }
+  const { determineSaleTax } = await import("@/lib/tax-determination");
+  const determined = determineSaleTax({
+    event: "subscription_invoice",
+    subjectId: sku || tax.plan?.code || "subscription",
+    baseCents: preview.subtotalCents ?? tax.amountCents,
+    inclusive: tax.policy.inclusive,
+    result: { state: "calculated", taxCents: preview.taxCents, reason: preview.reason },
+  });
+  if (!determined.ok) {
+    return {
+      ok: false as const,
+      kind: "provider" as const,
+      message: determined.error,
+      taxCents: null,
+      totalCents: null,
+      subtotalCents: null,
+      reason: "",
+    };
+  }
   return {
-    ok: preview.ok,
-    kind: preview.kind,
-    message: preview.customerMessage,
-    taxCents: preview.taxCents,
-    totalCents: preview.totalCents,
+    ok: true as const,
+    kind: "calculated" as const,
+    message: determined.line.taxCents === 0 ? "Tax $0.00" : preview.customerMessage,
+    taxCents: determined.line.taxCents,
+    totalCents: determined.line.collection === "added" ? determined.line.collectedCents : preview.totalCents,
     subtotalCents: preview.subtotalCents,
-    reason: preview.reason,
+    reason: determined.line.reason,
   };
 }
 
