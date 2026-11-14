@@ -480,6 +480,7 @@ export async function startCheckout(input: {
   creatorSlug?: string;
   userId?: string;
   automaticTax?: boolean;
+  taxPercent?: number | null;
 }): Promise<StartCheckoutResult> {
   const product = getProduct(input.sku);
   const { findActivePlan } = await import("@/lib/entitlements-db");
@@ -527,6 +528,13 @@ export async function startCheckout(input: {
   if (creds.ok) {
     const priceId = product ? await billingPriceId(product.sku, product.stripePriceEnv) : customPrice;
     const origin = getAppOrigin();
+    let taxRateId = "";
+    if (input.taxPercent != null && input.taxPercent > 0) {
+      const { exclusiveStripeTaxRate } = await import("@/lib/stripe-admin");
+      const rate = await exclusiveStripeTaxRate(creds.secret, input.taxPercent);
+      if (!rate.ok) return { ok: false, error: rate.error };
+      taxRateId = rate.id;
+    }
     const opened = await openStripeCheckout({
       secret: creds.secret,
       mode: creds.mode,
@@ -543,7 +551,8 @@ export async function startCheckout(input: {
         creatorSlug: input.creatorSlug ?? "",
         userId: input.userId ?? "",
       },
-      automaticTax: input.automaticTax === true,
+      automaticTax: input.automaticTax === true && !taxRateId,
+      taxRateId,
     });
     if (!opened.ok) return opened;
     await upsertAttempt({

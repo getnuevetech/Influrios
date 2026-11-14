@@ -11,7 +11,10 @@ import { BUSINESS_FEATURE_KEYS } from "@/lib/business-entitlements";
 import { EDITABLE_FEATURE_KEYS } from "@/lib/entitlements";
 import { PLAN_FEATURE_META } from "@/lib/plan-presentation";
 import { listPlanCatalog, listPlanFeatures, type PlanFeatureEditorRow } from "@/lib/entitlements-db";
+import { PlanPricePreview } from "@/app/admin/plans/plan-price-preview";
 import { PlanTaxPanel } from "@/app/admin/plans/plan-tax-panel";
+import { flagRuleConflicts, mapStoredPolicy } from "@/lib/country-tax";
+import { loadTaxCatalog } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Plan entitlements · Admin" };
@@ -29,6 +32,9 @@ export default async function AdminPlansPage({ searchParams }: Props) {
   let rows: PlanFeatureEditorRow[] = [];
   let plans: Awaited<ReturnType<typeof listPlanCatalog>> = [];
   let dbError = false;
+  const catalog = await loadTaxCatalog().catch(() => null);
+  const taxRules = flagRuleConflicts((catalog?.records ?? []).map((record) => mapStoredPolicy(record)).filter((rule) => rule != null));
+  const taxCountries = catalog?.countries ?? [];
   try {
     [rows, plans] = await Promise.all([listPlanFeatures(), listPlanCatalog()]);
   } catch (error) {
@@ -128,10 +134,7 @@ export default async function AdminPlansPage({ searchParams }: Props) {
               Description
               <input name="description" defaultValue={plan.description} disabled={!canEdit} className={inputClass} />
             </label>
-            <label className="text-xs font-semibold text-indigo">
-              Cents
-              <input name="amountCents" type="number" min={0} defaultValue={plan.amountCents} disabled={!canEdit} className={inputClass} />
-            </label>
+            <PlanPricePreview planId={plan.code} defaultCents={plan.amountCents} currency="USD" countries={taxCountries} rules={taxRules} disabled={!canEdit} />
             <label className="text-xs font-semibold text-indigo">
               Price label
               <input name="priceLabel" defaultValue={plan.priceLabel} disabled={!canEdit} className={inputClass} />
@@ -151,7 +154,7 @@ export default async function AdminPlansPage({ searchParams }: Props) {
               </label>
               {canEdit ? (
                 <button type="submit" className="text-xs font-bold text-violet hover:underline">
-                  Save plan
+                  Save price
                 </button>
               ) : null}
             </div>

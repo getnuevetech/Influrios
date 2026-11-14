@@ -4,6 +4,7 @@ import { ContractMilestones } from "@/components/contract-milestones";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions";
+import { CollaborationTaxBox } from "@/app/collaboration/contract/collaboration-tax-box";
 import { requireBusinessSession } from "@/lib/account-audience";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace, type CampaignBrief } from "@/lib/business";
@@ -682,6 +683,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 {agreement && !agreement.ok ? (
                   <p className="mt-2 font-semibold text-amber-800">{agreement.error}</p>
                 ) : quote?.ok && plan ? (
+                  <>
                   <dl className="mt-2 grid gap-2 sm:grid-cols-2">
                     <div>
                       <dt className="text-xs text-muted">Your fee rule</dt>
@@ -697,6 +699,14 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                       <dd className="font-bold text-indigo">{formatMoney(quote.totalCents, plan.contractCurrency)}</dd>
                     </div>
                   </dl>
+                  <CollaborationTaxBox
+                    country={jurisdictionCode}
+                    currency={plan.contractCurrency || "USD"}
+                    compensationCents={quote.grossInfluencerCompensationCents}
+                    businessFeeCents={quote.feeCents}
+                    influencerFeeCents={agreement?.ok ? agreement.influencerPlatformFeeCents : 0}
+                  />
+                  </>
                 ) : quote && !quote.ok ? (
                   <p className="mt-2 font-semibold text-amber-800">{quote.error}</p>
                 ) : (

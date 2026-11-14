@@ -22,14 +22,6 @@ export async function actionStartCheckout(formData: FormData) {
   if (formData.get("acceptSubscription") !== "on") {
     redirect(`${returnTo}?error=` + encodeURIComponent("Agree to the subscription terms at checkout."));
   }
-  const tax = await subscriptionCheckoutContext(sku);
-  if (tax.gate.kind === "free") {
-    redirect(`${returnTo}?error=` + encodeURIComponent("This plan has no charge. Cancelling a paid subscription is a separate billing step. Nothing was charged."));
-  }
-  if (tax.gate.kind === "unavailable") {
-    await notifyTaxGap({ planCode: tax.plan?.code || sku, missing: tax.gate.missing });
-    redirect(`${returnTo}?error=` + encodeURIComponent(tax.gate.message));
-  }
   const address = {
     country: String(formData.get("country") ?? ""),
     region: String(formData.get("region") ?? ""),
@@ -41,6 +33,14 @@ export async function actionStartCheckout(formData: FormData) {
   if (!billingAddressReady(address)) {
     redirect(`${returnTo}?error=` + encodeURIComponent("Add your billing address to calculate tax."));
   }
+  const tax = await subscriptionCheckoutContext(sku, address.country);
+  if (tax.gate.kind === "free") {
+    redirect(`${returnTo}?error=` + encodeURIComponent("This plan has no charge. Cancelling a paid subscription is a separate billing step. Nothing was charged."));
+  }
+  if (tax.gate.kind === "unavailable") {
+    await notifyTaxGap({ planCode: tax.plan?.code || sku, missing: tax.gate.missing });
+    redirect(`${returnTo}?error=` + encodeURIComponent(tax.gate.message));
+  }
   const account = await getAccountSession();
   if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=checkout`);
   const policy = tax.policy;
@@ -51,11 +51,11 @@ export async function actionStartCheckout(formData: FormData) {
   const preview = await previewConfiguredTax({
     audience: "customer",
     phase: "calculate",
-    method: policy.calculationMethod,
+    method: tax.rule?.method ?? policy.calculationMethod,
     amountCents: tax.amountCents,
-    inclusive: policy.inclusive,
+    inclusive: tax.rule?.inclusive ?? policy.inclusive,
     taxCategory: policy.taxCategory,
-    rateBps: policy.rateBps,
+    rateBps: tax.rule?.method === "percentage" && tax.rule.ratePercent != null ? Math.round(tax.rule.ratePercent * 100) : policy.rateBps,
     jurisdiction: policy.jurisdiction,
     liableEntity: policy.liableEntity,
     country: address.country,
@@ -83,7 +83,8 @@ export async function actionStartCheckout(formData: FormData) {
     customerEmail: email || account.email,
     creatorSlug: creator?.slug,
     userId: account.id,
-    automaticTax: policy.calculationMethod === "automatic",
+    automaticTax: (tax.rule?.method ?? policy.calculationMethod) === "location" || (tax.rule?.method ?? policy.calculationMethod) === "automatic",
+    taxPercent: (tax.rule?.method ?? policy.calculationMethod) === "percentage" ? tax.rule?.ratePercent ?? null : null,
   });
   if (!result.ok) {
     redirect(`${returnTo}?error=${encodeURIComponent(result.error)}`);
@@ -101,7 +102,7 @@ export async function actionPreviewSubscriptionTax(formData: FormData) {
     return { ok: false as const, kind: "configuration" as const, message: "Sign in to calculate tax. Nothing was charged.", taxCents: null, totalCents: null, subtotalCents: null, reason: "" };
   }
   const sku = String(formData.get("sku") ?? "").trim();
-  const tax = await subscriptionCheckoutContext(sku);
+  const tax = await subscriptionCheckoutContext(sku, String(formData.get("country") ?? ""));
   if (tax.gate.kind === "free") {
     return { ok: true as const, kind: "free" as const, message: "This plan has no charge.", taxCents: null, totalCents: null, subtotalCents: null, reason: "" };
   }
@@ -113,11 +114,11 @@ export async function actionPreviewSubscriptionTax(formData: FormData) {
   const preview = await previewConfiguredTax({
     audience: "customer",
     phase: "calculate",
-    method: tax.policy.calculationMethod,
+    method: tax.rule?.method ?? tax.policy.calculationMethod,
     amountCents: tax.amountCents,
-    inclusive: tax.policy.inclusive,
+    inclusive: tax.rule?.inclusive ?? tax.policy.inclusive,
     taxCategory: tax.policy.taxCategory,
-    rateBps: tax.policy.rateBps,
+    rateBps: tax.rule?.method === "percentage" && tax.rule.ratePercent != null ? Math.round(tax.rule.ratePercent * 100) : tax.policy.rateBps,
     jurisdiction: tax.policy.jurisdiction,
     liableEntity: tax.policy.liableEntity,
     country: String(formData.get("country") ?? ""),

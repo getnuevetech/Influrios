@@ -473,9 +473,36 @@ export async function actionSubmitContractWizard(formData: FormData) {
   }
   const { loadProcessTimings } = await import("@/lib/process-timing");
   const quoteHours = (await loadProcessTimings().catch(() => null))?.quoteValidHours ?? 168;
+  const { collaborationCheckout, checkoutTaxLines } = await import("@/lib/country-tax");
+  const { loadCountryRules } = await import("@/lib/tax-settings");
+  const countryRules = await loadCountryRules().catch(() => []);
+  const fundedTax = collaborationCheckout({
+    rules: countryRules,
+    countryCode: jurisdictionCode,
+    currency,
+    compensationCents: quote.grossInfluencerCompensationCents,
+    businessFeeCents: quote.feeCents,
+    influencerFeeCents: influencerQuote?.ok ? influencerQuote.feeCents : 0,
+    at: new Date().toISOString(),
+  });
+  const tax = fundedTax.ok
+    ? {
+        status: checkoutTaxLines(fundedTax).every((line) => line.amountCents === 0) ? "approved_zero" as const : "approved" as const,
+        lines: checkoutTaxLines(fundedTax).map((line) => ({
+          type: line.type,
+          ruleVersion: "country",
+          basisCents: line.basisCents,
+          amountCents: line.amountCents,
+          currency,
+          liableParty: line.liableParty,
+          disposition: line.disposition,
+        })),
+      }
+    : undefined;
   const signedQuote = buildBusinessCommercialSnapshot({
     quote,
     influencer: influencerQuote?.ok ? influencerQuote : null,
+    tax,
     currency,
     minorDigits,
     milestoneCount: drafts.length,

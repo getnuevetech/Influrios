@@ -237,6 +237,7 @@ export async function openStripeCheckout(input: {
   customerEmail?: string;
   metadata: Record<string, string>;
   automaticTax?: boolean;
+  taxRateId?: string;
 }) {
   const body = new URLSearchParams({
     mode: "subscription",
@@ -255,7 +256,9 @@ export async function openStripeCheckout(input: {
   }
   for (const [key, value] of Object.entries(input.metadata)) body.set(`metadata[${key}]`, value);
   if (input.customerEmail) body.set("customer_email", input.customerEmail);
-  if (input.automaticTax) {
+  if (input.taxRateId) {
+    body.set("line_items[0][tax_rates][0]", input.taxRateId);
+  } else if (input.automaticTax) {
     body.set("automatic_tax[enabled]", "true");
     body.set("billing_address_collection", "required");
   }
@@ -603,6 +606,29 @@ async function stripeJson(method: "GET" | "POST", path: string, secret: string, 
   });
   const payload = (await response.json().catch(() => null)) as unknown;
   return { status: response.status, payload };
+}
+
+/** One exclusive percentage for a checkout line. A failure does not invent a zero rate. */
+export async function exclusiveStripeTaxRate(secret: string, percent: number) {
+  if (!Number.isFinite(percent) || percent <= 0 || percent > 100) {
+    return { ok: false as const, error: "The tax rate could not be attached. Nothing was charged." };
+  }
+  const listed = await stripeJson("GET", "/v1/tax_rates?active=true&inclusive=false&limit=100", secret);
+  const rows = listed.payload && typeof listed.payload === "object" && "data" in listed.payload ? (listed.payload as { data?: unknown }).data : null;
+  if (Array.isArray(rows)) {
+    const found = rows.find((row) => row && typeof row === "object" && Number((row as { percentage?: unknown }).percentage) === percent && typeof (row as { id?: unknown }).id === "string");
+    const id = found && typeof found === "object" ? String((found as { id: string }).id) : "";
+    if (id.startsWith("txr_")) return { ok: true as const, id };
+  }
+  const created = await stripeJson("POST", "/v1/tax_rates", secret, new URLSearchParams({
+    display_name: "Tax",
+    inclusive: "false",
+    percentage: String(percent),
+    description: `Exclusive ${percent}%`,
+  }));
+  const id = created.payload && typeof created.payload === "object" && "id" in created.payload ? String((created.payload as { id?: unknown }).id ?? "") : "";
+  if (!id.startsWith("txr_")) return { ok: false as const, error: "The tax rate could not be attached. Nothing was charged." };
+  return { ok: true as const, id };
 }
 
 /** Asks Stripe Tax for a calculation. A failed call has no tax amount. */
