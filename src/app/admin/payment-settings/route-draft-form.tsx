@@ -16,10 +16,10 @@ export function RouteDraftForm() {
         </label>
         <label className="text-sm">Provider<input name="providerCode" defaultValue="stripe" className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
       </div>
-      <label className="flex gap-2 text-sm"><input type="checkbox" name="allocatedFundsApproved" /> Allocated funds approved by the provider</label>
-      <label className="flex gap-2 text-sm"><input type="checkbox" name="newCollectionsEnabled" /> Allow new collections</label>
-      <label className="flex gap-2 text-sm"><input type="checkbox" name="releasesEnabled" /> Allow releases</label>
-      <label className="block text-sm">Evidence<textarea name="evidence" className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
+      <p className="text-sm text-muted">New collaboration collections stay off. A checkbox or a note does not prove allocated funds or Treasury, and it does not charge anyone.</p>
+      <label className="flex gap-2 text-sm"><input type="checkbox" name="bankPayoutControl" /> Manual bank payout control is recorded for this draft</label>
+      <label className="flex gap-2 text-sm"><input type="checkbox" name="releasesEnabled" /> Allow release scheduling after funding is confirmed</label>
+      <label className="block text-sm">Notes<textarea name="evidence" className="mt-1 w-full rounded-xl border px-3 py-2" placeholder="Notes are not capability evidence." /></label>
       <button type="submit" className="h-11 rounded-full bg-violet px-4 text-sm font-semibold text-white">Save route draft</button>
     </form>
   );

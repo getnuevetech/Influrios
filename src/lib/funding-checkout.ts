@@ -210,6 +210,9 @@ export async function startFundingDeposit(input: {
     }
     await prisma.fundingDeposit.update({ where: { id: openDeposit.id }, data: { status: "failed" } }).catch(() => undefined);
   }
+  const { collaborationCollectionGate } = await import("@/lib/payment-account-routing");
+  const collection = collaborationCollectionGate({ allocatedFunds: false, treasury: false });
+  if (!collection.ok) return collection;
   const creds = await stripeCredentials();
   if (!creds.ok) return { ok: false, error: stripeCredentialError(creds.reason, "charged") };
   const deposit = await prisma.fundingDeposit.create({
@@ -295,7 +298,13 @@ export async function confirmManualDeposit(input: { depositId: string; actor: st
         action: "funding.deposit.confirmed",
         objectType: "FundingDeposit",
         objectId: deposit.id,
-        after: { fundingId: deposit.fundingId, method: deposit.method, amountCents: deposit.amountCents },
+        after: {
+          fundingId: deposit.fundingId,
+          method: deposit.method,
+          amountCents: deposit.amountCents,
+          routeEvidence: "manual_finance_confirmation",
+          allocatedFunds: false,
+        },
       },
     })
     .catch(() => undefined);

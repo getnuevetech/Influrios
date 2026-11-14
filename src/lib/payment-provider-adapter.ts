@@ -133,9 +133,15 @@ export async function adapterForProvider(
     verifySignature: (body: string, secret: string, signature: string | null | undefined) => boolean;
   },
 ): Promise<PaymentProviderAdapter> {
-  if ((providerCode ?? "").trim().toLowerCase() === "airwallex") {
+  const code = (providerCode ?? "").trim().toLowerCase();
+  if (!code) return createClosedAdapter("unassigned");
+  if (code === "airwallex") {
     const { createAirwallexPaymentAdapter } = await import("@/lib/providers/airwallex-runtime");
     return createAirwallexPaymentAdapter();
+  }
+  if (code === "stripe") {
+    const { createStripePaymentAdapter } = await import("@/lib/stripe-payment-adapter");
+    return createStripePaymentAdapter();
   }
   return createMarketplaceSignedWebhookAdapter(deps);
 }
@@ -219,8 +225,50 @@ export function createMarketplaceSignedWebhookAdapter(deps: {
         return { error: "Invalid JSON." };
       }
     },
+    async reconcileTransaction(reference) {
+      if (!reference.trim()) {
+        return { ok: false, error: "Reconciliation needs a provider reference. The balance was not treated as zero." };
+      }
+      return { ok: false, error: "No provider object was retrieved for this reference. Reconciliation stays unknown." };
+    },
+  };
+}
+
+function createClosedAdapter(providerCode: string): PaymentProviderAdapter {
+  const error = `${providerCode || "This provider"} cannot move collaboration funds. Nothing was sent.`;
+  return {
+    async getCapabilities() {
+      return { code: providerCode || "closed", funding: false, release: false, partialRefund: false, webhook: false };
+    },
+    async createFundingIntent() {
+      return { ok: false, error };
+    },
+    async getFundingStatus() {
+      return { error };
+    },
+    async cancelFunding() {
+      return { ok: false, error };
+    },
+    async createReleaseOrTransfer() {
+      return { ok: false, error };
+    },
+    async createPartialRefund() {
+      return { ok: false, error };
+    },
+    async createFullRefund() {
+      return { ok: false, error };
+    },
+    async getPayoutStatus() {
+      return { error };
+    },
+    verifyWebhook() {
+      return false;
+    },
+    parseWebhook() {
+      return { error };
+    },
     async reconcileTransaction() {
-      return { ok: true };
+      return { ok: false, error: "Reconciliation stays unknown. Nothing was marked settled." };
     },
   };
 }

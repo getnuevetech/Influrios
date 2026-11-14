@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AdminCorridorsPanel } from "@/app/admin/corridors/corridors-panel";
 import { AdminFeesPanel } from "@/app/admin/fees/fees-panel";
 import { AdminGatewaysPanel } from "@/app/admin/gateways/gateways-panel";
+import { AccountRolesPanel } from "@/app/admin/payment-settings/account-roles-panel";
 import { CountryRoutesPanel } from "@/app/admin/payment-settings/country-routes-panel";
 import {
   PAYMENT_SETTINGS_TABS,
@@ -73,13 +74,14 @@ export default async function PaymentSettingsPage({
         <div>
           <h1 className="font-display text-3xl font-bold text-indigo">Payment settings</h1>
           <p className="mt-2 max-w-3xl text-sm text-muted">
-            Configure payment providers, country routes and fees & policies. Saving a form does not start a charge or
-            move money that is already with a provider.
+            Providers and Connections, account roles, country routes, and fees and tax policies. Saving a form does not
+            start a charge or move money that is already with a provider.
           </p>
         </div>
         <PaymentSettingsNav section={section} allowed={allowed} />
       </div>
       {section === "providers" ? <AdminGatewaysPanel searchParams={panelParams} /> : null}
+      {section === "roles" ? <AccountRolesPanel /> : null}
       {section === "routes" ? (
         <>
           <CountryRoutesPanel searchParams={panelParams} canAddCountry={canFinance} />

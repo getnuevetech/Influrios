@@ -2569,8 +2569,16 @@ model PaymentRouteVersion {
   taxPolicyId                   String   @default("")
   approvalEvidence              String   @default("")
   allocatedFundsApproved        Boolean  @default(false)
+  /// connect_allocated_funds | treasury_financial_accounts | unavailable
+  topology                      String   @default("unavailable")
+  /// draft | sandbox_proven | live_approved. A note is not proof.
+  proofState                    String   @default("draft")
+  operationsWithdrawalEnabled   Boolean  @default(false)
+  bankPayoutControl             Boolean  @default(false)
+  connectionId                  String   @default("")
   effectiveFrom                 DateTime @default(now())
   createdAt                     DateTime @default(now())
+  bindings                      PaymentRoleBinding[]
 
   @@unique([countryCode, environment, version])
   @@index([countryCode, status])
@@ -2641,6 +2649,8 @@ model MilestoneSettlementV4 {
   transferRef        String             @default("")
   payoutRef          String             @default("")
   restrictedFeeCents Int                @default(0)
+  commandKey         String             @default("")
+  sourceAccountId    String             @default("")
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   legs               SettlementLegV4[]
@@ -2659,9 +2669,11 @@ model SettlementLegV4 {
   status         String                @default("planned")
   amountCents    Int
   instructionKey String                @default("")
-  providerRef    String                @default("")
-  evidence       String                @default("")
-  updatedAt      DateTime              @updatedAt
+  providerRef          String                @default("")
+  evidence             String                @default("")
+  sourceAccountId      String                @default("")
+  destinationAccountId String                @default("")
+  updatedAt            DateTime              @updatedAt
 
   @@unique([settlementId, leg])
 }
@@ -2695,4 +2707,80 @@ model ReconciliationCaseV4 {
   updatedAt          DateTime @updatedAt
 
   @@index([status, kind])
+}
+
+/// One provider connection can serve several roles. The credential itself stays in the gateway secret store.
+model ProviderConnection {
+  id                 String            @id @default(cuid())
+  providerCode       String
+  environment        String
+  platformAccountId  String            @default("")
+  credentialRef      String            @default("")
+  apiVersion         String            @default("2025-02-24.acacia")
+  webhookEndpointRef String            @default("")
+  /// unknown | healthy | unproven | restricted
+  health             String            @default("unknown")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  accounts           ProviderAccount[]
+
+  @@unique([providerCode, environment, platformAccountId], map: "ProviderConnection_provider_env_platform_key")
+  @@index([providerCode, health])
+}
+
+/// An acct id and a financial account id are different. Verification is a retrieved capability, not a label.
+model ProviderAccount {
+  id                 String             @id @default(cuid())
+  connectionId       String
+  connection         ProviderConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  externalAccountId  String             @default("")
+  financialAccountId String             @default("")
+  /// platform | connected | merchant | financial
+  accountKind        String             @default("connected")
+  parentPlatformId   String             @default("")
+  legalOwnerRef      String             @default("")
+  country            String             @default("")
+  currencies         String             @default("")
+  capabilityEvidence Json?
+  payoutSchedule     String             @default("")
+  environment        String
+  verifiedAt         DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([connectionId])
+  @@index([externalAccountId])
+}
+
+model PaymentRoleBinding {
+  id                 String              @id @default(cuid())
+  routeVersionId     String
+  routeVersion       PaymentRouteVersion @relation(fields: [routeVersionId], references: [id], onDelete: Cascade)
+  /// SUBSCRIPTIONS | COLLABORATION_FUNDS | OPERATIONS | RECIPIENT
+  role               String
+  providerAccountId  String              @default("")
+  financialAccountId String              @default("")
+  operationsJson     Json
+  balanceScope       String              @default("")
+
+  @@unique([routeVersionId, role])
+}
+
+/// Verified provider events. A webhook row is evidence of a message, not of cash movement.
+model ProviderEventInbox {
+  id             String   @id @default(cuid())
+  providerCode   String
+  environment    String
+  accountContext String
+  eventId        String
+  eventType      String
+  livemode       Boolean
+  payloadHash    String   @default("")
+  fundingId      String   @default("")
+  /// received | processed | unknown | ignored
+  status         String   @default("received")
+  createdAt      DateTime @default(now())
+
+  @@unique([providerCode, environment, accountContext, eventId], map: "ProviderEventInbox_context_event_key")
+  @@index([fundingId])
 }

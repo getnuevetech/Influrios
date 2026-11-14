@@ -2,6 +2,7 @@ import type { AdminModule } from "@/lib/admin-auth";
 
 export const PAYMENT_SETTINGS_TABS = [
   { id: "providers", label: "Providers", modules: ["gateways"] },
+  { id: "roles", label: "Account roles", modules: ["collab_finance"] },
   { id: "routes", label: "Country routes", modules: ["gateways", "collab_finance", "marketplace"] },
   { id: "fees", label: "Fees & policies", modules: ["commerce", "marketplace", "collab_finance"] },
   { id: "tax", label: "Tax policies", modules: ["collab_finance"] },
@@ -13,6 +14,8 @@ export type PaymentSettingsSection = (typeof PAYMENT_SETTINGS_TABS)[number]["id"
 const SECTION_ALIASES: Record<string, PaymentSettingsSection> = {
   providers: "providers",
   gateways: "providers",
+  connections: "providers",
+  roles: "roles",
   routes: "routes",
   corridors: "routes",
   fees: "fees",

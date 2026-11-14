@@ -25,19 +25,17 @@ export async function CountryRoutesPanel({
   const launchGate = await getLaunchGate().catch(() => null);
   const timing = await loadProcessTimings().catch(() => null);
   const params = paymentSettingsParams(await searchParams);
-  const [corridors, jurisdictions, routes, gateways, marketplaceProviders] = await Promise.all([
+  const [corridors, jurisdictions, routes, gateways] = await Promise.all([
     prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }),
     prisma.collaborationJurisdiction.findMany({ orderBy: { code: "asc" } }),
     prisma.paymentCountryRoute.findMany({ include: { provider: { select: { code: true, enabled: true, name: true } } } }),
     listProviders("payment").catch(() => []),
-    prisma.integrationProvider.findMany({ where: { kind: "marketplace" }, orderBy: { code: "asc" } }),
   ]);
   const corridorByCode = new Map(corridors.map((row) => [row.countryCode, row]));
   const jurisdictionByCode = new Map(jurisdictions.map((row) => [row.code, row]));
   const routeByCode = new Map(routes.map((row) => [row.countryCode, row]));
   const channelOptions = sharedRouteChannelOptions({
-    payment: gateways.map((row) => ({ code: row.code, name: row.name })),
-    marketplace: marketplaceProviders.map((row) => ({ code: row.code, name: row.name })),
+    registry: gateways.map((row) => ({ code: row.code, name: row.name })),
     selected: [
       ...corridors.map((row) => row.collectionProviderCode),
       ...jurisdictions.map((row) => row.providerCode),

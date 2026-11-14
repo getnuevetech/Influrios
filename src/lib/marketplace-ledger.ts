@@ -998,7 +998,16 @@ export async function requestPrefund(input: {
             })),
           },
         },
+        include: { milestones: { orderBy: { sortOrder: "asc" } } },
       });
+      const { stampAllocationMilestoneIds } = await import("@/lib/payment-account-routing");
+      const stamped = stampAllocationMilestoneIds(
+        row.feeSnapshotJson,
+        row.milestones.map((milestone) => milestone.id),
+      );
+      if (stamped) {
+        await tx.collaborationFunding.update({ where: { id: row.id }, data: { feeSnapshotJson: stamped } });
+      }
       ids.push(row.id);
     }
     if (input.teamProposalId) {

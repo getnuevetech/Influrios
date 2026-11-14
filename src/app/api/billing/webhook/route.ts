@@ -1,5 +1,9 @@
+import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { webhookAttachesToDeal } from "@/lib/payment-account-routing";
+import { readRouteAccounts } from "@/lib/payment-route";
+import { recordProviderEvent } from "@/lib/payment-standard-store";
 import {
   completeCheckout,
   ensureStripeAttemptFromMetadata,
@@ -92,6 +96,19 @@ export async function POST(req: NextRequest) {
   }
 
   await markWebhookReceived();
+  const accountContext = typeof event.account === "string" && event.account.trim() ? event.account.trim() : "platform";
+  const storedEvent = await recordProviderEvent({
+    providerCode: "stripe",
+    environment: event.livemode ? "live" : "sandbox",
+    accountContext,
+    eventId: event.id,
+    eventType: event.type,
+    livemode: event.livemode,
+    payloadHash: createHash("sha256").update(body).digest("hex"),
+  });
+  if (!storedEvent.ok) {
+    return NextResponse.json({ error: "The event was not stored. Nothing was changed." }, { status: 500 });
+  }
   const object = event.data.object as StripeObject;
   const existing = await prisma.processedWebhook.findUnique({
     where: { provider_eventId: { provider: "stripe", eventId: event.id } },
@@ -155,6 +172,22 @@ export async function POST(req: NextRequest) {
       const deposit = await prisma.fundingDeposit.findUnique({ where: { id: depositId } });
       if (!deposit || deposit.fundingId !== fundingId) {
         return NextResponse.json({ error: "That deposit was not found. Nothing was changed." }, { status: 409 });
+      }
+      const funding = await prisma.collaborationFunding.findUnique({
+        where: { id: fundingId },
+        select: { routeSnapshotJson: true },
+      });
+      const holdingAccount = readRouteAccounts(funding?.routeSnapshotJson)?.holdingAccountId ?? "";
+      const eventAccount = typeof event.account === "string" ? event.account : "";
+      if (eventAccount && holdingAccount) {
+        const attach = webhookAttachesToDeal({
+          signatureValid: true,
+          eventAccount,
+          dealAccount: holdingAccount,
+          eventFundingId: fundingId,
+          dealFundingId: fundingId,
+        });
+        if (!attach.attach) return NextResponse.json({ received: true, parked: true });
       }
       const decision = fundingDepositEventDecision({
         eventType: event.type,

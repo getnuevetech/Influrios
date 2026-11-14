@@ -4,6 +4,7 @@
  * Illustrative fixtures are tests and labels, never stored rates.
  */
 import { allocateAgreementMilestones } from "@/lib/agreement-fee-engine";
+import { buildRoleMapping } from "@/lib/payment-account-routing";
 
 export const PAYMENT_SCREENS = [
   "B01",
@@ -370,36 +371,32 @@ export type StripeRoleMapping = {
   role: AccountRole;
   owner: string;
   providerAccount: string;
+  externalAccountId: string;
+  financialAccountId: string;
+  environment: "sandbox" | "live";
+  verified: boolean;
+  capabilities: string[];
   operations: string[];
 };
 
-export function stripeUsRoleMapping(input: { environment: "sandbox" | "live"; allocatedFundsApproved: boolean }): StripeRoleMapping[] {
-  return [
-    {
-      role: "SUBSCRIPTIONS",
-      owner: "Influrios billing",
-      providerAccount: `stripe-billing-${input.environment}`,
-      operations: ["collect_subscription", "invoice_tax", "subscription_refund"],
-    },
-    {
-      role: "COLLABORATION_FUNDS",
-      owner: "Influrios collaboration platform",
-      providerAccount: `stripe-connect-platform-${input.environment}`,
-      operations: input.allocatedFundsApproved ? ["collect_once", "allocate", "partial_transfer"] : ["blocked_until_provider_approval"],
-    },
-    {
-      role: "OPERATIONS",
-      owner: "Influrios platform balance",
-      providerAccount: `stripe-platform-payments-balance-${input.environment}`,
-      operations: ["receive_application_fee"],
-    },
-    {
-      role: "RECIPIENT",
-      owner: "Influencer connected account",
-      providerAccount: "connected-account",
-      operations: ["receive_transfer", "external_payout"],
-    },
-  ];
+/**
+ * Validator input for a US Stripe route. A true result only means the flags allow a later call.
+ * It does not submit anything to Stripe. Provider submission requires an object id from Stripe.
+ */
+export function stripeUsRoleMapping(input: {
+  environment: "sandbox" | "live";
+  allocatedFundsApproved: boolean;
+  accounts?: Partial<
+    Record<AccountRole, { externalAccountId: string; financialAccountId?: string; owner: string; capabilities: string[] }>
+  >;
+}): StripeRoleMapping[] {
+  // The boolean is not retrieved capability evidence, so collection stays blocked.
+  void input.allocatedFundsApproved;
+  return buildRoleMapping({
+    environment: input.environment,
+    accounts: input.accounts,
+    collaborationReady: false,
+  });
 }
 
 const STRIPE_US_METHODS = [
@@ -417,13 +414,14 @@ const STRIPE_US_METHODS = [
   "reconcile",
 ] as const;
 
-export function stripeUsInvoke(input: {
+/** Route-flag validator. Success means the call is allowed to be attempted. It is not a provider submission. */
+export function validateStripeUsRoute(input: {
   method: string;
   allocatedFundsApproved: boolean;
   bankPayoutControl: boolean;
   methodAllowed: "card" | "ach" | "unknown";
   webhookSignatureValid?: boolean;
-}): AdapterResult<{ method: string; simulated: false }> {
+}): AdapterResult<{ method: string; simulated: false; submitted: false }> {
   if (!STRIPE_US_METHODS.includes(input.method as (typeof STRIPE_US_METHODS)[number])) {
     return { ok: false, blocker: "That provider method is not part of the US Stripe route." };
   }
@@ -440,7 +438,11 @@ export function stripeUsInvoke(input: {
   if (input.method === "createPayout" && !input.bankPayoutControl) {
     return { ok: false, blocker: "Bank payout control is not approved. A competing automatic schedule stays off." };
   }
-  return { ok: true, value: { method: input.method, simulated: false } };
+  return { ok: true, value: { method: input.method, simulated: false, submitted: false } };
+}
+
+export function stripeUsInvoke(input: Parameters<typeof validateStripeUsRoute>[0]) {
+  return validateStripeUsRoute(input);
 }
 
 export type JournalLine = { account: string; direction: "debit" | "credit"; amountCents: number; currency: string };

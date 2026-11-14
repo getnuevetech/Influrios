@@ -322,6 +322,9 @@ async function PaymentDetail({
     influencerPaidCents: deal.ledger.releasedCents,
     feesReleasedCents: 0,
   });
+  const milestoneSettlements = await prisma.milestoneSettlementV4
+    .findMany({ where: { fundingId: deal.id }, include: { legs: true } })
+    .catch(() => []);
   const settlement = caseOpen
     ? await prisma.fundingSettlement.findFirst({
         where: { fundingId: deal.id, status: { in: ["proposed", "accepted", "executed"] } },
@@ -397,13 +400,28 @@ async function PaymentDetail({
             ) : null}
             {tab === "milestones" ? (
               <ol className="space-y-3">
-                {deal.milestones.map((milestone, index) => (
+                {deal.milestones.map((milestone, index) => {
+                  const settlementRow = milestoneSettlements.find((row) => row.milestoneId === milestone.id);
+                  const bankPaid = settlementRow?.payoutState === "paid";
+                  return (
                   <li key={milestone.id} className="rounded-2xl border border-border p-4">
                     <p className="font-semibold text-indigo">{index + 1}. {milestone.title}</p>
-                    <p className="text-sm text-muted">{milestoneDeliveryLabel(milestone.status)} · {milestonePayoutLabel(milestone.status) === "Paid" ? "Payout confirmed" : milestonePayoutLabel(milestone.status)}</p>
+                    <p className="text-sm text-muted">{milestoneDeliveryLabel(milestone.status)} · {bankPaid ? "Payout confirmed" : milestonePayoutLabel(milestone.status) === "Paid" ? "Payout confirmed" : milestonePayoutLabel(milestone.status)}</p>
                     <p className="text-sm"><MoneyAmount cents={milestone.amountCents} currency={code} /></p>
+                    {settlementRow ? (
+                      <div className="mt-2 space-y-1 text-sm">
+                        <p>Provider allocation and the bank payout are separate.</p>
+                        {settlementRow.legs.map((leg) => (
+                          <p key={leg.id}>
+                            {leg.leg === "influencer_net" ? "Influencer allocation" : "Operations allocation"} · {leg.status} · <MoneyAmount cents={leg.amountCents} currency={code} />
+                          </p>
+                        ))}
+                        <p>Bank payout {bankPaid ? "confirmed" : settlementRow.payoutState}. Paid is only a confirmed bank payout.</p>
+                      </div>
+                    ) : null}
                   </li>
-                ))}
+                  );
+                })}
               </ol>
             ) : null}
             {tab === "transactions" ? <PaymentStageList stages={stages} /> : null}

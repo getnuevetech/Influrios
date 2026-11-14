@@ -77,20 +77,32 @@ export async function stripeBillingMode(): Promise<"sandbox" | "live" | "demo" |
   return creds.mode;
 }
 
+export const STRIPE_STABLE_API_VERSION = STRIPE_VERSION;
+
 async function stripeCall(
   method: "GET" | "POST",
   path: string,
   secret: string,
   body?: URLSearchParams,
   idempotencyKey?: string,
+  context?: { stripeAccount?: string; apiVersion?: string },
 ) {
+  const version = context?.apiVersion?.trim() || STRIPE_VERSION;
+  const account = context?.stripeAccount?.trim() ?? "";
+  if (account && !/^acct_[A-Za-z0-9]+$/.test(account)) return null;
+  if (body && version === STRIPE_VERSION) {
+    for (const key of body.keys()) {
+      if (key.startsWith("allocated_funds")) return null;
+    }
+  }
   const response = await transport(`${STRIPE_HOST}${path}`, {
     method,
     redirect: "manual",
     signal: AbortSignal.timeout(8000),
     headers: {
       Authorization: `Bearer ${secret}`,
-      "Stripe-Version": STRIPE_VERSION,
+      "Stripe-Version": version,
+      ...(account ? { "Stripe-Account": account } : {}),
       ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
       ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
@@ -527,6 +539,47 @@ export async function openCustomerPortal(input: { customerId: string; returnUrl:
     return { ok: true as const, url: payload.url };
   } catch {
     return { ok: false as const, error: "Stripe did not open the billing portal. Nothing was opened." };
+  }
+}
+
+/** A provider object id is the only submission. A timeout stays unknown and is not sent again from this call. */
+export async function stripeApiRequest(input: {
+  method: "GET" | "POST";
+  path: string;
+  secret: string;
+  body?: URLSearchParams;
+  idempotencyKey?: string;
+  stripeAccount?: string;
+  apiVersion?: string;
+}): Promise<
+  | { ok: true; submitted: true; id: string; payload: Record<string, unknown> }
+  | { ok: false; submitted: false; state: "unknown" | "blocked"; error: string }
+> {
+  const version = input.apiVersion?.trim() || STRIPE_VERSION;
+  if (input.body && version === STRIPE_VERSION) {
+    for (const key of input.body.keys()) {
+      if (key.startsWith("allocated_funds")) {
+        return {
+          ok: false,
+          submitted: false,
+          state: "blocked",
+          error: "Preview allocated-funds fields are not sent on the 2025-02-24.acacia client. Nothing was sent.",
+        };
+      }
+    }
+  }
+  try {
+    const payload = await stripeCall(input.method, input.path, input.secret, input.body, input.idempotencyKey, {
+      stripeAccount: input.stripeAccount,
+      apiVersion: version,
+    });
+    const id = typeof payload?.id === "string" ? payload.id.trim() : "";
+    if (!payload || !id) {
+      return { ok: false, submitted: false, state: "unknown", error: "Stripe did not return an object id. Nothing was marked submitted." };
+    }
+    return { ok: true, submitted: true, id, payload };
+  } catch {
+    return { ok: false, submitted: false, state: "unknown", error: "The provider result is unknown. Nothing was marked submitted." };
   }
 }
 

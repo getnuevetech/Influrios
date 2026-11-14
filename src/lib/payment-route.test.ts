@@ -15,8 +15,9 @@ import { deliverableFileRule, validateDeliverableFiles } from "./deliverable-fil
 import { creatorMaySubmitWork, milestonePayoutLabel, milestoneWorkLabel, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
 
 describe("payment route decision", () => {
-  it("offers the same providers on collection, holding, and the payout gateway", () => {
+  it("uses one provider registry and does not add the marketplace catalog as a second identity", () => {
     const options = sharedRouteChannelOptions({
+      registry: [{ code: "stripe", name: "Stripe" }],
       payment: [{ code: "stripe", name: "Stripe Collaboration" }],
       marketplace: [
         { code: "demo", name: "Demo hold (swappable)" },
@@ -24,10 +25,12 @@ describe("payment route decision", () => {
       ],
       selected: ["airwallex"],
     });
-    assert.deepEqual(options.map((row) => row.code), ["airwallex", "demo", "stripe"]);
-    assert.equal(options.find((row) => row.code === "stripe")?.name, "Stripe Collaboration");
+    assert.deepEqual(options.map((row) => row.code), ["airwallex", "stripe"]);
+    assert.equal(options.find((row) => row.code === "stripe")?.name, "Stripe");
+    assert.equal(options.some((row) => row.code === "demo"), false);
     const panel = readFileSync("src/app/admin/payment-settings/country-routes-panel.tsx", "utf8");
     assert.equal(panel.split("channelOptions.map").length - 1, 3);
+    assert.equal(panel.includes("marketplaceProviders"), false);
   });
 
   it("keeps collection and holding distinct and flags two answers for the same job", () => {
