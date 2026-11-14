@@ -105,8 +105,6 @@ export function adminTaxFieldLabels() {
     "Fee rules",
     "Country",
     "State or region",
-    "Payment integration",
-    "Provider account",
     "Environment",
     "Calculation method",
     "Product tax category",
@@ -153,9 +151,8 @@ export function rowAction(status: TaxDisplayStatus) {
   return "Continue setup";
 }
 
-export function calculationLabel(method: string, providerCode: string) {
-  if (method === "automatic" && providerCode === "stripe") return "Stripe Tax";
-  if (method === "automatic") return "Automatic provider calculation";
+export function calculationLabel(method: string) {
+  if (method === "automatic") return "Tax added to the price";
   if (method === "manual") return "Approved manual rate";
   return "Not configured";
 }
@@ -243,8 +240,6 @@ export function configurationGaps(policy: {
   linkedIds: string[];
   countryCode: string;
   regionCode: string;
-  providerCode: string;
-  providerAccountId: string;
   calculationMethod: string;
   taxCategory: string;
   liableEntity: string;
@@ -257,8 +252,6 @@ export function configurationGaps(policy: {
   if (policy.linkedIds.length === 0) gaps.push(policy.appliesTo === "subscription" ? "Products" : "Product or fee rule");
   if (!/^[A-Z]{2}$/.test(policy.countryCode.trim().toUpperCase())) gaps.push("Country");
   if (regionRequired(policy.countryCode) && !policy.regionCode.trim()) gaps.push("State or region");
-  if (!policy.providerCode.trim()) gaps.push("Payment integration");
-  if (!policy.providerAccountId.trim()) gaps.push("Provider account");
   if (policy.calculationMethod !== "automatic" && policy.calculationMethod !== "manual") gaps.push("Calculation method");
   if (!categoryLabel(policy.taxCategory)) gaps.push("Product tax category");
   if (!isApprovedEntity(policy.liableEntity)) gaps.push("Tax-responsible entity");
@@ -314,7 +307,7 @@ export function buildTaxRows(records: {
       id: record.id,
       appliesTo: record.appliesTo,
       appliesLabel,
-      calculation: calculationLabel(record.calculationMethod, record.providerCode),
+      calculation: calculationLabel(record.calculationMethod),
       account: record.accountLabel.trim() || "Not selected",
       status,
       action: rowAction(status),
@@ -488,14 +481,6 @@ export function planTaxConfiguration(input: TaxDraftInput): { ok: true; planned:
   const countryCode = input.countryCode.trim().toUpperCase();
   if (countryCode && !/^[A-Z]{2}$/.test(countryCode)) return { ok: false, error: "Choose a country." };
   const environment = input.environment === "live" ? "live" : "sandbox";
-  const providerCode = input.providerCode.trim();
-  if (providerCode && !input.eligibleProviders.includes(providerCode)) {
-    return { ok: false, error: "Choose a configured payment integration." };
-  }
-  const providerAccountId = input.providerAccountId.trim();
-  if (providerAccountId && !input.eligibleAccountIds.includes(providerAccountId)) {
-    return { ok: false, error: "Choose a provider account for this integration and environment." };
-  }
   const calculationMethod = input.calculationMethod.trim();
   if (calculationMethod && calculationMethod !== "automatic" && calculationMethod !== "manual") {
     return { ok: false, error: "Choose a calculation method." };
@@ -527,8 +512,6 @@ export function planTaxConfiguration(input: TaxDraftInput): { ok: true; planned:
     linkedIds,
     countryCode,
     regionCode: input.regionCode.trim(),
-    providerCode,
-    providerAccountId,
     calculationMethod,
     taxCategory,
     liableEntity,
@@ -555,8 +538,8 @@ export function planTaxConfiguration(input: TaxDraftInput): { ok: true; planned:
       countryCode,
       regionCode: input.regionCode.trim(),
       environment,
-      providerCode,
-      providerAccountId,
+      providerCode: "",
+      providerAccountId: "",
       calculationMethod: calculationMethod === "automatic" || calculationMethod === "manual" ? calculationMethod : "",
       taxCategory,
       inclusive: priceDisplay === "inclusive",
@@ -818,7 +801,7 @@ export function reviewSummary(input: {
 }) {
   const subject = subjectLabel(input.appliesTo);
   const method = input.method === "automatic"
-    ? `${input.providerLabel || "Provider"} automatic calculation`
+    ? "Tax added to the price"
     : input.method === "manual"
       ? "Approved manual configuration"
       : "Not chosen";
@@ -827,7 +810,6 @@ export function reviewSummary(input: {
       { label: "Applies to", value: subject },
       { label: "Country", value: input.countryName || "Not selected" },
       { label: "Method", value: method },
-      { label: "Account", value: input.accountLabel || "Not selected" },
       { label: "Environment", value: input.environment === "live" ? "Live" : "Sandbox" },
       { label: "Category", value: categoryLabel(input.category) || "Not selected" },
       { label: "Price display", value: PRICE_DISPLAY.find((item) => item.id === input.priceDisplay)?.label ?? "Tax added at checkout" },
