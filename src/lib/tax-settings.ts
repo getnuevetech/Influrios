@@ -218,7 +218,7 @@ export async function previewConfiguredTax(input: {
     requireStreet: input.requireStreet,
   });
   let providerResult: { ok: true; taxCents: number; totalCents: number; reason: string } | { ok: false; detail: string } | null = null;
-  if (input.phase === "calculate" && input.method === "automatic" && addressReady && input.subjectSelected && input.liableEntity) {
+  if (input.phase === "calculate" && input.method === "automatic" && addressReady && input.subjectSelected) {
     const creds = await stripeCredentials();
     if (!creds.ok) {
       providerResult = { ok: false, detail: "The tax provider is not configured. Nothing was charged." };

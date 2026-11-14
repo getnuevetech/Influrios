@@ -133,6 +133,9 @@ describe("tax configuration planning", () => {
     assert.equal(live.ok, true);
     if (live.ok) assert.equal(live.planned.fundingEnabled, false);
     assert.deepEqual(configurationGaps(readyPolicy), []);
+    assert.deepEqual(configurationGaps({ ...readyPolicy, liableEntity: "" }).filter((gap) => gap === "Tax-responsible entity"), []);
+    const withoutEntity = planTaxConfiguration({ ...base, liableEntity: "" });
+    assert.equal(withoutEntity.ok, true);
     const effects = activationEffects("business_fee");
     assert.equal(effects.fundingEnabled, false);
     assert.equal(effects.scope, "business_fee");
@@ -142,7 +145,7 @@ describe("tax configuration planning", () => {
     const labels = adminTaxFieldLabels().join(" ");
     assert.doesNotMatch(labels, /basis|bps|customer/i);
     assert.doesNotMatch(labels, /Payment integration|Provider account/);
-    assert.doesNotMatch(labels, /Filing|Registration/);
+    assert.doesNotMatch(labels, /Filing|Registration|Tax-responsible entity/);
     assert.match(labels, /Tax rate \(%\)/);
     const planned = planTaxConfiguration({
       ...base,
@@ -231,6 +234,22 @@ describe("tax preview decisions", () => {
     assert.equal(shown.ok, true);
     assert.equal(shown.taxCents, 0);
     assert.match(shown.reason, /not collecting/i);
+    const unassigned = decidePreview({
+      audience: "admin",
+      phase: "calculate",
+      method: "automatic",
+      addressReady: true,
+      amountCents: 2900,
+      rateBps: null,
+      inclusive: false,
+      jurisdiction: "",
+      liableEntity: "",
+      subjectSelected: true,
+      providerResult: { ok: true, taxCents: 190, totalCents: 3090, reason: "Calculated." },
+    });
+    assert.equal(unassigned.ok, true);
+    assert.equal(unassigned.taxCents, 190);
+    assert.doesNotMatch(unassigned.correction, /responsible entity|registration/i);
     assert.match(shown.legalNote, /does not establish/i);
 
     const unread = parseProviderTaxCalculation({ error: { message: "Calculation failed." } });
@@ -327,8 +346,9 @@ describe("tax settings list", () => {
     assert.equal(customerCheckoutNotice({ ok: false, kind: "configuration", taxCents: null, subtotalCents: null, totalCents: null }), "unavailable");
     assert.equal(customerCheckoutNotice({ ok: true, kind: "calculated", taxCents: 0, subtotalCents: 2900, totalCents: 2900 }), "zero");
     assert.equal(customerCheckoutNotice({ ok: false, kind: "calculated", taxCents: 0, subtotalCents: 2900, totalCents: 2900 }), "pending");
-    const checks = reviewChecks({ productSelected: true, entity: "platform", previewPassed: false });
-    assert.equal(checks[2]?.done, false);
+    const checks = reviewChecks({ productSelected: true, previewPassed: false });
+    assert.equal(checks[1]?.done, false);
+    assert.doesNotMatch(checks.map((check) => check.label).join(" "), /Responsibility|entity/i);
     assert.doesNotMatch(routeTaxNote(false), /blocks a new quote|basis point|bps/i);
     const summary = reviewSummary({
       appliesTo: "business_fee",
@@ -337,11 +357,11 @@ describe("tax settings list", () => {
       providerLabel: "Stripe",
       accountLabel: "Platform account",
       environment: "sandbox",
-      entity: "platform",
       priceDisplay: "exclusive",
       category: "txcd_20030000",
       gaps: [],
     });
+    assert.doesNotMatch(summary.lines.map((line) => line.label).join(" "), /Responsible entity|Tax-responsible/);
     assert.doesNotMatch(summary.notes.join(" "), /registration|Check provider/i);
     assert.match(summary.notes.join(" "), /does not enable collaboration funding/i);
     assert.match(summary.notes.join(" "), /does not set tax on the influencer/i);

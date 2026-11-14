@@ -7,12 +7,10 @@ import { actionCountryRegions } from "@/app/billing/actions";
 import { AccountDialog } from "@/components/account-dialog";
 import {
   PRICE_DISPLAY,
-  RESPONSIBLE_ENTITIES,
   TAX_CATEGORIES,
   TAX_COPY,
   TAX_SUBJECTS,
   calculationChoices,
-  entityLabel,
   regionRequired,
   reviewChecks,
   reviewSummary,
@@ -171,9 +169,8 @@ export function TaxSetupDialog({
   const [environment, setEnvironment] = useState<"sandbox" | "live">(record?.environment ?? "sandbox");
   const [calculationMethod, setCalculationMethod] = useState(record?.calculationMethod ?? "");
   const [taxCategory, setTaxCategory] = useState(record?.taxCategory ?? "");
-  const [categoryQuery, setCategoryQuery] = useState("");
   const [priceDisplay, setPriceDisplay] = useState(record?.inclusive ? "inclusive" : "exclusive");
-  const [liableEntity, setLiableEntity] = useState(record?.liableEntity ?? "");
+  const liableEntity = record?.liableEntity ?? "";
   const registrationStatus = record?.registrationStatus || "not_synced";
   const [ratePercent, setRatePercent] = useState(record?.ratePercent ?? "");
   const [jurisdiction, setJurisdiction] = useState(record?.jurisdiction ?? "");
@@ -195,7 +192,6 @@ export function TaxSetupDialog({
   }, [previewCountry]);
 
   const scopeOptions = optionsFor(appliesTo, catalog);
-  const categories = TAX_CATEGORIES.filter((item) => item.label.toLowerCase().includes(categoryQuery.trim().toLowerCase()));
   const countryName = catalog.countries.find((country) => country.code === countryCode)?.name ?? countryCode;
   const summary = useMemo(() => reviewSummary({
     appliesTo,
@@ -204,11 +200,10 @@ export function TaxSetupDialog({
     providerLabel: "",
     accountLabel: "",
     environment,
-    entity: liableEntity,
     priceDisplay,
     category: taxCategory,
     gaps: [],
-  }), [appliesTo, calculationMethod, countryName, environment, liableEntity, priceDisplay, taxCategory]);
+  }), [appliesTo, calculationMethod, countryName, environment, priceDisplay, taxCategory]);
 
   async function loadRegions(next: string, which: "scope" | "preview") {
     const rows = await actionCountryRegions(next).catch(() => []);
@@ -322,34 +317,24 @@ export function TaxSetupDialog({
       ) : null}
       {step === 1 ? (
         <div className="space-y-3">
-          <h3 className="font-display text-lg font-bold">{calculationMethod === "manual" ? "Set up an approved manual rate" : calculationMethod === "automatic" ? "Set up automatic calculation" : "Choose how tax is calculated"}</h3>
           <label className="block text-sm">Calculation method
             <select value={calculationMethod} onChange={(event) => setCalculationMethod(event.target.value === "manual" ? "manual" : event.target.value === "automatic" ? "automatic" : "")} className="mt-1 w-full rounded-xl border px-3 py-2">
               <option value="">Select a method</option>
               {calculationChoices("stripe").map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </label>
-          <div className="text-sm">
-            <span>Product tax category</span>
-            <input value={categoryQuery} onChange={(event) => setCategoryQuery(event.target.value)} placeholder="Search categories" className="mt-1 w-full rounded-xl border px-3 py-2" />
-            <select value={taxCategory} onChange={(event) => setTaxCategory(event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-2">
+          <label className="block text-sm">Product tax category
+            <select value={taxCategory} onChange={(event) => setTaxCategory(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
               <option value="">Select a category</option>
-              {categories.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              {TAX_CATEGORIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
-          </div>
+          </label>
           <label className="block text-sm">Price display
             <select value={priceDisplay} onChange={(event) => setPriceDisplay(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
               {PRICE_DISPLAY.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </label>
           <p className="text-xs text-muted">{scopeAccountLabel(appliesTo, environment)}</p>
-          <label className="block text-sm">Tax-responsible entity
-            <select value={liableEntity} onChange={(event) => setLiableEntity(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
-              <option value="">Select approved legal entity</option>
-              {RESPONSIBLE_ENTITIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-            </select>
-          </label>
-          <p className="text-xs text-muted">This records whether the platform or the connected account has the collection and reporting obligation. It cannot be typed in just to make checkout work.</p>
           {calculationMethod === "manual" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="text-sm">Tax rate (%)
@@ -369,9 +354,7 @@ export function TaxSetupDialog({
                 <input type="date" value={effectiveTo} onChange={(event) => setEffectiveTo(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" />
               </label>
             </div>
-          ) : (
-            <p className="text-xs text-muted">{calculationMethod === "automatic" ? "Tax is calculated and added to the price." : "Choose automatic calculation or an approved manual rate. The manual rate stays hidden until that method is selected."}</p>
-          )}
+          ) : null}
         </div>
       ) : null}
       {step === 2 ? (
@@ -409,7 +392,6 @@ export function TaxSetupDialog({
               <div className="flex justify-between"><dt>Subtotal</dt><dd>{money(preview.subtotalCents)}</dd></div>
               <div className="flex justify-between"><dt>Tax</dt><dd>{money(preview.taxCents)}</dd></div>
               <div className="flex justify-between font-semibold"><dt>Total</dt><dd>{money(preview.totalCents)}</dd></div>
-              <p className="mt-2 text-xs text-muted">Responsible entity: {preview.liableEntityLabel || entityLabel(liableEntity)}</p>
               {preview.taxCents === 0 ? <p className="mt-1 text-xs text-indigo">{preview.reason}</p> : null}
               <p className="mt-2 text-xs text-muted">{preview.legalNote || TAX_COPY.legalNote}</p>
             </dl>
@@ -433,7 +415,7 @@ export function TaxSetupDialog({
             ))}
           </dl>
           <ul className="space-y-1 text-sm">
-            {reviewChecks({ productSelected: linkedIds.length > 0, entity: liableEntity, previewPassed: preview?.ok === true && preview.kind === "calculated" }).map((check) => (
+            {reviewChecks({ productSelected: linkedIds.length > 0, previewPassed: preview?.ok === true && preview.kind === "calculated" }).map((check) => (
               <li key={check.label} className={check.done ? "text-emerald-800" : "text-amber-900"}>
                 {check.done ? "✓" : "○"} {check.label}
               </li>
