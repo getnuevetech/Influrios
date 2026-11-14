@@ -6,14 +6,13 @@ import { actionPreviewTaxConfiguration, actionSaveTaxConfiguration, actionSyncTa
 import { actionCountryRegions } from "@/app/billing/actions";
 import { AccountDialog } from "@/components/account-dialog";
 import {
+  CALCULATION_METHODS,
   FILING_ARRANGEMENTS,
   PRICE_DISPLAY,
   RESPONSIBLE_ENTITIES,
   TAX_CATEGORIES,
   TAX_COPY,
   TAX_SUBJECTS,
-  accountsFor,
-  calculationChoices,
   entityLabel,
   regionRequired,
   registrationLabel,
@@ -171,8 +170,6 @@ export function TaxSetupDialog({
   const [regions, setRegions] = useState<{ code: string; name: string }[]>([]);
   const [previewRegions, setPreviewRegions] = useState<{ code: string; name: string }[]>([]);
   const [environment, setEnvironment] = useState<"sandbox" | "live">(record?.environment ?? "sandbox");
-  const [providerCode, setProviderCode] = useState(record?.providerCode ?? "");
-  const [providerAccountId, setProviderAccountId] = useState(record?.providerAccountId ?? "");
   const [calculationMethod, setCalculationMethod] = useState(record?.calculationMethod ?? "");
   const [taxCategory, setTaxCategory] = useState(record?.taxCategory ?? "");
   const [categoryQuery, setCategoryQuery] = useState("");
@@ -200,23 +197,21 @@ export function TaxSetupDialog({
   }, [previewCountry]);
 
   const scopeOptions = optionsFor(appliesTo, catalog);
-  const accountOptions = accountsFor(catalog.accounts, providerCode, environment);
-  const methodChoices = calculationChoices(providerCode);
   const categories = TAX_CATEGORIES.filter((item) => item.label.toLowerCase().includes(categoryQuery.trim().toLowerCase()));
   const countryName = catalog.countries.find((country) => country.code === countryCode)?.name ?? countryCode;
   const summary = useMemo(() => reviewSummary({
     appliesTo,
     countryName,
     method: calculationMethod,
-    providerLabel: catalog.integrations.find((item) => item.id === providerCode)?.label ?? "",
-    accountLabel: accountOptions.find((account) => account.id === providerAccountId)?.label ?? record?.accountLabel ?? "",
+    providerLabel: "",
+    accountLabel: "",
     environment,
     entity: liableEntity,
     priceDisplay,
     category: taxCategory,
     gaps: [],
     registrationStatus,
-  }), [accountOptions, appliesTo, calculationMethod, catalog.integrations, countryName, environment, liableEntity, priceDisplay, providerAccountId, providerCode, record?.accountLabel, registrationStatus, taxCategory]);
+  }), [appliesTo, calculationMethod, countryName, environment, liableEntity, priceDisplay, registrationStatus, taxCategory]);
 
   async function loadRegions(next: string, which: "scope" | "preview") {
     const rows = await actionCountryRegions(next).catch(() => []);
@@ -240,8 +235,6 @@ export function TaxSetupDialog({
     data.set("countryCode", countryCode);
     data.set("regionCode", regionCode);
     data.set("environment", environment);
-    data.set("providerCode", providerCode);
-    data.set("providerAccountId", providerAccountId);
     data.set("calculationMethod", calculationMethod);
     data.set("taxCategory", taxCategory);
     data.set("priceDisplay", priceDisplay);
@@ -330,25 +323,13 @@ export function TaxSetupDialog({
               </select>
             </label>
           ) : null}
-          <label className="block text-sm">Payment integration
-            <select value={providerCode} onChange={(event) => { setProviderCode(event.target.value); setProviderAccountId(""); }} className="mt-1 w-full rounded-xl border px-3 py-2">
-              <option value="">Select an integration</option>
-              {catalog.integrations.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm">Provider account
-            <select value={providerAccountId} onChange={(event) => setProviderAccountId(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
-              <option value="">Select an account</option>
-              {accountOptions.map((account) => <option key={account.id} value={account.id}>{account.label}</option>)}
-            </select>
-          </label>
           <label className="block text-sm">Environment
-            <select value={environment} onChange={(event) => { setEnvironment(event.target.value === "live" ? "live" : "sandbox"); setProviderAccountId(""); }} className="mt-1 w-full rounded-xl border px-3 py-2">
+            <select value={environment} onChange={(event) => setEnvironment(event.target.value === "live" ? "live" : "sandbox")} className="mt-1 w-full rounded-xl border px-3 py-2">
               <option value="sandbox">Sandbox</option>
               <option value="live">Live</option>
             </select>
           </label>
-          <p className="rounded-2xl bg-[#F6F7FB] px-3 py-2 text-xs text-muted">Only compatible accounts are listed. {scopeNote}</p>
+          <p className="rounded-2xl bg-[#F6F7FB] px-3 py-2 text-xs text-muted">{scopeNote} Tax is calculated and added to the price.</p>
         </div>
       ) : null}
       {step === 1 ? (
@@ -357,7 +338,7 @@ export function TaxSetupDialog({
           <label className="block text-sm">Calculation method
             <select value={calculationMethod} onChange={(event) => setCalculationMethod(event.target.value === "manual" ? "manual" : event.target.value === "automatic" ? "automatic" : "")} className="mt-1 w-full rounded-xl border px-3 py-2">
               <option value="">Select a method</option>
-              {methodChoices.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              {CALCULATION_METHODS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </label>
           <div className="text-sm">
@@ -416,7 +397,7 @@ export function TaxSetupDialog({
               </label>
             </div>
           ) : (
-            <p className="text-xs text-muted">{calculationMethod === "automatic" ? "Automatic calculation uses the product category, registrations, and the customer location." : "Choose automatic calculation or an approved manual rate. The manual rate stays hidden until that method is selected."}</p>
+            <p className="text-xs text-muted">{calculationMethod === "automatic" ? "Tax is calculated and added to the price." : "Choose automatic calculation or an approved manual rate. The manual rate stays hidden until that method is selected."}</p>
           )}
         </div>
       ) : null}

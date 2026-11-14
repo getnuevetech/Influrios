@@ -114,7 +114,6 @@ export function TaxSettingsClient({
                 <tr>
                   <th className="px-4 py-3 font-semibold">Applies to</th>
                   <th className="px-4 py-3 font-semibold">Calculation</th>
-                  <th className="px-4 py-3 font-semibold">Account</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-4 py-3 font-semibold">Action</th>
                 </tr>
@@ -124,7 +123,6 @@ export function TaxSettingsClient({
                   <tr key={row.id} className="border-t">
                     <td className="px-4 py-3 font-semibold">{row.appliesLabel}</td>
                     <td className="px-4 py-3">{row.calculation}</td>
-                    <td className="px-4 py-3">{row.account}</td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_CLASS[row.status]}`}>
                         {row.status === "ready" ? "Ready" : row.status === "draft" ? "Draft" : "Needs review"}
@@ -136,7 +134,7 @@ export function TaxSettingsClient({
                   </tr>
                 ))}
                 {visible.length === 0 ? (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-muted">No configurations match.</td></tr>
+                  <tr><td colSpan={4} className="px-4 py-8 text-center text-muted">No configurations match.</td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -144,7 +142,7 @@ export function TaxSettingsClient({
           <div className="rounded-2xl border bg-white px-4 py-3 text-sm">
             <p className="font-semibold">Setup checklist</p>
             <ol className="mt-2 flex flex-wrap gap-4 text-muted">
-              <li>1. Select products and account</li>
+              <li>1. Select products and country</li>
               <li>2. Confirm tax category and responsibility</li>
               <li>3. Test and activate</li>
             </ol>

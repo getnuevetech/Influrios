@@ -6,6 +6,7 @@ import {
   adminTaxFieldLabels,
   buildTaxRows,
   calculationChoices,
+  configurationGaps,
   customerCheckoutNotice,
   decidePreview,
   feeRuleChoiceLabel,
@@ -124,6 +125,9 @@ describe("tax configuration planning", () => {
     assert.deepEqual(planned.planned.feeRuleIds, []);
     assert.deepEqual(planned.planned.serviceIds, []);
     assert.equal(planned.planned.rateBps, null);
+    assert.equal(planned.planned.providerCode, "");
+    assert.equal(planned.planned.providerAccountId, "");
+    assert.deepEqual(configurationGaps(readyPolicy), []);
     const effects = activationEffects("business_fee");
     assert.equal(effects.fundingEnabled, false);
     assert.equal(effects.scope, "business_fee");
@@ -132,6 +136,7 @@ describe("tax configuration planning", () => {
   it("keeps a manual rate off the screen's basis-point vocabulary", () => {
     const labels = adminTaxFieldLabels().join(" ");
     assert.doesNotMatch(labels, /basis|bps|customer/i);
+    assert.doesNotMatch(labels, /Payment integration|Provider account/);
     assert.match(labels, /Tax rate \(%\)/);
     const planned = planTaxConfiguration({
       ...base,
@@ -278,7 +283,7 @@ describe("tax settings list", () => {
     const subscription = rows.find((row) => row.appliesTo === "subscription");
     const services = rows.find((row) => row.appliesTo === "influencer_services");
     assert.equal(subscription?.action, "View setup");
-    assert.equal(subscription?.calculation, "Stripe Tax");
+    assert.equal(subscription?.calculation, "Tax added to the price");
     assert.equal(services?.status, "needs_review");
     assert.equal(services?.action, "Review treatment");
     assert.equal(services?.calculation, "Not configured");
