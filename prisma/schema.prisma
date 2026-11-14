@@ -2684,7 +2684,9 @@ model MilestoneSettlementV4 {
   influencerFeeCents Int
   influencerNetCents Int
   operationsFeeCents Int
-  taxCents           Int                @default(0)
+  /// Null until the original determination is carried. Null is not zero tax.
+  taxCents           Int?
+  taxReason          String             @default("")
   idempotencyKey     String             @unique
   /// queued | pending | in_transit | paid | failed | returned | unknown
   payoutState        String             @default("queued")

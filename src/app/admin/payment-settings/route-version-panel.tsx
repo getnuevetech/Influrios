@@ -88,8 +88,8 @@ export async function RouteVersionPanel({ routeId, routeTab }: { routeId?: strin
                 <td className="px-4 py-3">{route.currency}</td>
                 <td className="px-4 py-3">{route.providerCode}</td>
                 <td className="px-4 py-3">{route.environment}</td>
-                <td className="px-4 py-3">{route.allocatedFundsApproved ? route.status : "Provider approval required"}</td>
-                <td className="px-4 py-3">{route.newCollectionsEnabled ? "Open" : "Blocked"}</td>
+                <td className="px-4 py-3">Unproven</td>
+                <td className="px-4 py-3">Blocked</td>
                 <td className="px-4 py-3">v{route.version}</td>
                 <td className="px-4 py-3">
                   <Link href={`${closeHref}&route=${route.id}&routeTab=overview`} className="font-semibold text-violet">View route</Link>
@@ -157,19 +157,18 @@ function RouteTab({
   history: { id: string; version: number; status: string; createdAt: Date; newCollectionsEnabled: boolean }[];
 }) {
   const capabilities = capabilitiesOf(route.capabilitiesJson);
-  const topologyProven = route.proofState === "sandbox_proven" || route.proofState === "live_approved";
   const readiness = routeReadiness({
     domesticRule: /^[A-Z]{2}$/.test(route.countryCode),
     currency: /^[A-Z]{3}$/.test(route.currency),
     cardMethod: (capabilities.methods ?? []).includes("card"),
-    holdingEvidence: route.allocatedFundsApproved || topologyProven,
+    holdingEvidence: false,
     payoutMethod: route.providerCode.trim().length > 0,
     refundSupport: capabilities.refunds !== false && capabilities.reversals !== false,
     bankPayoutControl: route.bankPayoutControl === true || capabilities.bankPayoutControl === true,
     verificationWorkflow: capabilities.verificationWorkflow === true,
-    taxOwner: policies.some((policy) => policy.id === route.taxPolicyId && policy.filingOwner.trim().length > 0),
+    taxOwner: Boolean(route.taxPolicyId) && policies.some((policy) => policy.id === route.taxPolicyId),
     productionApproval: route.status === "active" && route.environment === "live",
-    allocatedFundsApproved: route.allocatedFundsApproved || topologyProven,
+    allocatedFundsApproved: false,
   });
   const policy = policies.find((row) => row.id === route.taxPolicyId) ?? null;
   if (tab === "mapping") {
@@ -199,6 +198,7 @@ function RouteTab({
         <p>Reversals {capabilities.reversals === false ? "are off on this version" : "stay available"}.</p>
         <p>Turning new collections off does not disable refunds, webhook intake, or reconciliation.</p>
         <p>Bank payout control {capabilities.bankPayoutControl ? "is recorded" : "is not approved"}.</p>
+        <p>Connect allocated funds, Treasury, and a confirmed bank payout on this account are unproven. A saved flag does not move money.</p>
       </div>
     );
   }
@@ -226,7 +226,7 @@ function RouteTab({
         <p>Earlier versions stay readable. A funded agreement keeps the route it already stored.</p>
         <ul className="space-y-2">
           {history.map((row) => (
-            <li key={row.id}>v{row.version} · {row.status} · {row.createdAt.toISOString().slice(0, 10)} · new funding {row.newCollectionsEnabled ? "open" : "blocked"}</li>
+            <li key={row.id}>v{row.version} · {row.status} · {row.createdAt.toISOString().slice(0, 10)} · new funding blocked until a sandbox movement is proven</li>
           ))}
         </ul>
         <p>Notes: {route.approvalEvidence || "None recorded"}. A note is not capability evidence.</p>

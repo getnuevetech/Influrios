@@ -421,7 +421,7 @@ export function validateStripeUsRoute(input: {
   bankPayoutControl: boolean;
   methodAllowed: "card" | "ach" | "unknown";
   webhookSignatureValid?: boolean;
-}): AdapterResult<{ method: string; simulated: false; submitted: false }> {
+}): AdapterResult<{ method: string; simulated: false; submitted: false; capabilityProven: false; moneyMoved: false }> {
   if (!STRIPE_US_METHODS.includes(input.method as (typeof STRIPE_US_METHODS)[number])) {
     return { ok: false, blocker: "That provider method is not part of the US Stripe route." };
   }
@@ -438,7 +438,7 @@ export function validateStripeUsRoute(input: {
   if (input.method === "createPayout" && !input.bankPayoutControl) {
     return { ok: false, blocker: "Bank payout control is not approved. A competing automatic schedule stays off." };
   }
-  return { ok: true, value: { method: input.method, simulated: false, submitted: false } };
+  return { ok: true, value: { method: input.method, simulated: false, submitted: false, capabilityProven: false, moneyMoved: false } };
 }
 
 export function stripeUsInvoke(input: Parameters<typeof validateStripeUsRoute>[0]) {

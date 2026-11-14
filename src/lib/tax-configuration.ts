@@ -37,7 +37,7 @@ export const CALCULATION_METHODS = [
 
 /** The method dropdown uses the provider name when that is what the list already calls the calculation. */
 export function calculationChoices(providerCode: string) {
-  const automatic = providerCode === "stripe" ? "Stripe Tax (automatic)" : "Automatic provider calculation";
+  const automatic = providerCode === "stripe" ? "Stripe Tax" : "Automatic provider calculation";
   return [
     { id: "automatic" as const, label: automatic },
     { id: "manual" as const, label: "Approved manual configuration" },
@@ -66,12 +66,6 @@ export const RESPONSIBLE_ENTITIES = [
 ] as const;
 
 export type ResponsibleEntity = (typeof RESPONSIBLE_ENTITIES)[number]["id"];
-
-export const FILING_ARRANGEMENTS = [
-  { id: "provider_files", label: "Provider files the returns" },
-  { id: "platform_files", label: "Platform files the returns" },
-  { id: "connected_account_files", label: "Connected account files the returns" },
-] as const;
 
 /** Provider product tax categories. Labels follow Stripe's published tax codes. */
 export const TAX_CATEGORIES = [
@@ -111,7 +105,6 @@ export function adminTaxFieldLabels() {
     "Price display",
     "Tax-responsible entity",
     "Registration status",
-    "Filing arrangement",
     "Tax rate (%)",
     "Jurisdiction",
     "Effective date",
@@ -149,6 +142,12 @@ export function rowAction(status: TaxDisplayStatus) {
   if (status === "ready") return "View setup";
   if (status === "needs_review") return "Review treatment";
   return "Continue setup";
+}
+
+/** A role label for the selected scope. It is not a payment-integration or provider-account choice. */
+export function scopeAccountLabel(appliesTo: string, environment: string) {
+  const role = appliesTo === "subscription" ? "Subscription account" : "Collaboration account";
+  return `${role} · ${environment === "live" ? "Live" : "Sandbox"}`;
 }
 
 export function calculationLabel(method: string) {
@@ -491,10 +490,7 @@ export function planTaxConfiguration(input: TaxDraftInput): { ok: true; planned:
   if (liableEntity && !isApprovedEntity(liableEntity)) {
     return { ok: false, error: "Choose an approved tax-responsible entity. It cannot be typed in to finish checkout." };
   }
-  const filingArrangement = input.filingArrangement.trim();
-  if (filingArrangement && !FILING_ARRANGEMENTS.some((item) => item.id === filingArrangement)) {
-    return { ok: false, error: "Choose a configured filing arrangement." };
-  }
+  void input.filingArrangement;
   const percent = parseTaxPercent(input.ratePercent);
   if (input.ratePercent.trim() && percent == null) return { ok: false, error: "Enter a tax rate as a percent." };
   if (calculationMethod === "automatic" && percent != null) {
@@ -545,8 +541,8 @@ export function planTaxConfiguration(input: TaxDraftInput): { ok: true; planned:
       inclusive: priceDisplay === "inclusive",
       liableEntity,
       registrationStatus: input.registrationStatus.trim() || "not_synced",
-      filingArrangement,
-      filingOwner: filingArrangement,
+      filingArrangement: "",
+      filingOwner: "",
       rateBps,
       jurisdiction: input.jurisdiction.trim(),
       effectiveFrom,
@@ -808,8 +804,9 @@ export function reviewSummary(input: {
   return {
     lines: [
       { label: "Applies to", value: subject },
+      { label: "Method", value: input.method === "automatic" ? "Stripe Tax" : method },
+      { label: "Account", value: scopeAccountLabel(input.appliesTo, input.environment) },
       { label: "Country", value: input.countryName || "Not selected" },
-      { label: "Method", value: method },
       { label: "Environment", value: input.environment === "live" ? "Live" : "Sandbox" },
       { label: "Category", value: categoryLabel(input.category) || "Not selected" },
       { label: "Price display", value: PRICE_DISPLAY.find((item) => item.id === input.priceDisplay)?.label ?? "Tax added at checkout" },

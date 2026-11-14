@@ -131,6 +131,9 @@ export async function startFundingDeposit(input: {
     if (!charge.ok) return charge;
   }
   const plan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
+  const { collaborationTaxBeforeCollection } = await import("@/lib/tax-determination");
+  const taxReady = collaborationTaxBeforeCollection(plan);
+  if (!taxReady.ok) return { ok: false, error: taxReady.error };
   const signed = readSignedDealMoney(plan);
   const planned = collectionInstructionAmount({
     fundingGrossCents: funding.grossCents,

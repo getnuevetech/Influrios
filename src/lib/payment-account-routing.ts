@@ -52,6 +52,39 @@ const ACCOUNT_ID = /^acct_[A-Za-z0-9]+$/;
 const FINANCIAL_ACCOUNT_ID = /^fa_[A-Za-z0-9]+$/;
 const PROVIDER_OBJECT_ID = /^(pi|ch|tr|po|re|py|fa|obp|obt|cs|acct)_[A-Za-z0-9]+$/;
 
+/** Capabilities the payment plan marks for sandbox verification. None of these are treated as working. */
+export const UNPROVEN_STRIPE_CAPABILITIES = [
+  {
+    id: "connect_allocated_funds",
+    label: "Connect allocated funds",
+    note: "Preview access. A retrieved flag or a sandbox checkbox is not a proven charge-to-hold movement.",
+  },
+  {
+    id: "treasury_financial_accounts",
+    label: "Treasury financial accounts",
+    note: "Private preview. The charge-to-financial-account bridge and ownership mapping are unproven.",
+  },
+  {
+    id: "allocated_release_with_application_fee",
+    label: "Allocated-funds release with an application fee",
+    note: "Ordinary transfers are not this preview parameter. Exact debits and credits are unproven.",
+  },
+  {
+    id: "manual_payouts_on_this_account",
+    label: "Manual payouts on the Influrios account",
+    note: "Stripe documents manual payouts. This account has no confirmed bank payout.",
+  },
+  {
+    id: "account_debit_sibling_transfer",
+    label: "Account-debit sibling transfer",
+    note: "Not an approved way to move collaboration funds between accounts.",
+  },
+] as const;
+
+export function unprovenStripeCapabilities() {
+  return UNPROVEN_STRIPE_CAPABILITIES.map((row) => ({ ...row, status: "unproven" as const, proven: false as const }));
+}
+
 export function stripeCapabilityStatus(input?: { secretPresent?: boolean }) {
   const secretPresent = input?.secretPresent ?? Boolean(process.env.STRIPE_SECRET_KEY?.trim());
   const reason = secretPresent
@@ -63,6 +96,7 @@ export function stripeCapabilityStatus(input?: { secretPresent?: boolean }) {
     allocatedFunds: "unproven" as const,
     treasury: "unproven" as const,
     newCollaborationFunding: "disabled" as const,
+    unproven: unprovenStripeCapabilities(),
     reason,
   };
 }
@@ -144,9 +178,10 @@ export function acceptCapabilityEvidence(
 }
 
 export function proofStateFor(evidence: CapabilityEvidence | null, environment: "sandbox" | "live"): RouteProofState {
-  if (!evidence) return "draft";
-  if (evidence.environment !== environment) return "draft";
-  return environment === "live" ? "live_approved" : "sandbox_proven";
+  void evidence;
+  void environment;
+  // A retrieved capability is still on the unproven list until a sandbox movement is confirmed.
+  return "draft";
 }
 
 export function selectStripeTopology(input: {
@@ -161,10 +196,12 @@ export function selectStripeTopology(input: {
       blocker: "New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.",
     };
   }
-  if (input.evidence.capability === "allocated_funds") {
-    return { topology: "connect_allocated_funds", newCollectionsEnabled: true, blocker: null };
-  }
-  return { topology: "treasury_financial_accounts", newCollectionsEnabled: true, blocker: null };
+  const topology = input.evidence.capability === "allocated_funds" ? "connect_allocated_funds" : "treasury_financial_accounts";
+  return {
+    topology,
+    newCollectionsEnabled: false,
+    blocker: "Retrieved Stripe capability is not a proven sandbox movement. New collaboration funding stays disabled.",
+  };
 }
 
 export function collaborationCollectionGate(proof: { allocatedFunds: boolean; treasury: boolean }) {

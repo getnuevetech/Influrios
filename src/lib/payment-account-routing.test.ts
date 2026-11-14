@@ -74,6 +74,9 @@ describe("payment account routing", () => {
     assert.equal(status.allocatedFunds, "unproven");
     assert.equal(status.treasury, "unproven");
     assert.equal(status.newCollaborationFunding, "disabled");
+    assert.equal(status.unproven.every((row) => row.proven === false && row.status === "unproven"), true);
+    assert.equal(status.unproven.some((row) => row.id === "connect_allocated_funds"), true);
+    assert.equal(status.unproven.some((row) => row.id === "treasury_financial_accounts"), true);
     assert.equal(interpretStripeAccountPayload({ id: "acct_123", capabilities: { card_payments: "active" } }).allocatedFunds, false);
     assert.equal(interpretStripeAccountPayload({ id: "acct_123", capabilities: { card_payments: "active" } }).treasury, false);
     assert.equal(acceptCapabilityEvidence("approved by email", "sandbox").ok, false);
