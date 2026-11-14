@@ -3,7 +3,7 @@
  * basis points, gateway, and tax-responsible entity are not part of pricing.
  * A failed calculation is never stored as zero. A valid zero keeps its reason.
  */
-import { allocateByLargestRemainder } from "@/lib/agreement-fee-engine";
+import { allocateByLargestRemainder } from "@/lib/largest-remainder";
 import { parseTaxPercent, percentToStoredRate, storedRateToPercent } from "@/lib/tax-configuration";
 import {
   carryOriginalTaxThroughPayouts,
