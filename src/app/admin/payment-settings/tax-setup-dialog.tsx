@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { actionPreviewTaxConfiguration, actionSaveTaxConfiguration, actionSyncTaxRegistration } from "@/app/admin/payment-standard/actions";
+import { actionPreviewTaxConfiguration, actionSaveTaxConfiguration } from "@/app/admin/payment-standard/actions";
 import { actionCountryRegions } from "@/app/billing/actions";
 import { AccountDialog } from "@/components/account-dialog";
 import {
@@ -14,7 +14,6 @@ import {
   calculationChoices,
   entityLabel,
   regionRequired,
-  registrationLabel,
   reviewChecks,
   reviewSummary,
   scopeAccountLabel,
@@ -175,7 +174,7 @@ export function TaxSetupDialog({
   const [categoryQuery, setCategoryQuery] = useState("");
   const [priceDisplay, setPriceDisplay] = useState(record?.inclusive ? "inclusive" : "exclusive");
   const [liableEntity, setLiableEntity] = useState(record?.liableEntity ?? "");
-  const [registrationStatus, setRegistrationStatus] = useState(record?.registrationStatus || "not_synced");
+  const registrationStatus = record?.registrationStatus || "not_synced";
   const [ratePercent, setRatePercent] = useState(record?.ratePercent ?? "");
   const [jurisdiction, setJurisdiction] = useState(record?.jurisdiction ?? "");
   const [effectiveFrom, setEffectiveFrom] = useState(record?.effectiveFrom ?? "");
@@ -209,8 +208,7 @@ export function TaxSetupDialog({
     priceDisplay,
     category: taxCategory,
     gaps: [],
-    registrationStatus,
-  }), [appliesTo, calculationMethod, countryName, environment, liableEntity, priceDisplay, registrationStatus, taxCategory]);
+  }), [appliesTo, calculationMethod, countryName, environment, liableEntity, priceDisplay, taxCategory]);
 
   async function loadRegions(next: string, which: "scope" | "preview") {
     const rows = await actionCountryRegions(next).catch(() => []);
@@ -271,14 +269,6 @@ export function TaxSetupDialog({
     setPreview(result);
     setPending(false);
     if ("error" in result && result.error && !("kind" in result)) setError(result.error);
-  }
-
-  async function syncRegistration() {
-    const data = new FormData();
-    if (record?.id && !record.id.startsWith("missing:")) data.set("policyId", record.id);
-    const result = await actionSyncTaxRegistration(data);
-    setRegistrationStatus(result.status);
-    router.refresh();
   }
 
   const scopeNote = appliesTo === "influencer_services"
@@ -360,15 +350,6 @@ export function TaxSetupDialog({
             </select>
           </label>
           <p className="text-xs text-muted">This records whether the platform or the connected account has the collection and reporting obligation. It cannot be typed in just to make checkout work.</p>
-          {registrationStatus === "active" ? (
-            <p className="rounded-2xl bg-[#F6F7FB] px-3 py-2 text-sm text-indigo">Registration status: {registrationLabel(registrationStatus)}.</p>
-          ) : (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-              <p className="font-semibold">Review required</p>
-              <p>Verify your tax registrations with your payment provider before going live. Status: {registrationLabel(registrationStatus)}.</p>
-              {canEdit ? <button type="button" className="mt-1 font-semibold text-violet underline" onClick={() => void syncRegistration()}>Check provider registrations</button> : null}
-            </div>
-          )}
           {calculationMethod === "manual" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="text-sm">Tax rate (%)

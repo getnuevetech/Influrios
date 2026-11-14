@@ -129,6 +129,9 @@ describe("tax configuration planning", () => {
     assert.equal(planned.planned.providerAccountId, "");
     assert.equal(planned.planned.filingArrangement, "");
     assert.equal(planned.planned.filingOwner, "");
+    const live = planTaxConfiguration({ ...base, environment: "live", registrationStatus: "not_synced" });
+    assert.equal(live.ok, true);
+    if (live.ok) assert.equal(live.planned.fundingEnabled, false);
     assert.deepEqual(configurationGaps(readyPolicy), []);
     const effects = activationEffects("business_fee");
     assert.equal(effects.fundingEnabled, false);
@@ -139,7 +142,7 @@ describe("tax configuration planning", () => {
     const labels = adminTaxFieldLabels().join(" ");
     assert.doesNotMatch(labels, /basis|bps|customer/i);
     assert.doesNotMatch(labels, /Payment integration|Provider account/);
-    assert.doesNotMatch(labels, /Filing/);
+    assert.doesNotMatch(labels, /Filing|Registration/);
     assert.match(labels, /Tax rate \(%\)/);
     const planned = planTaxConfiguration({
       ...base,
@@ -338,8 +341,8 @@ describe("tax settings list", () => {
       priceDisplay: "exclusive",
       category: "txcd_20030000",
       gaps: [],
-      registrationStatus: "not_synced",
     });
+    assert.doesNotMatch(summary.notes.join(" "), /registration|Check provider/i);
     assert.match(summary.notes.join(" "), /does not enable collaboration funding/i);
     assert.match(summary.notes.join(" "), /does not set tax on the influencer/i);
   });
