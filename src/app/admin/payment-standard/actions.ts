@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminSession, hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
-import { saveRouteDraft, saveTaxPolicyDraft } from "@/lib/payment-standard-store";
+import { saveRouteDraft, saveTaxConfiguration } from "@/lib/payment-standard-store";
+import { planTaxConfiguration, parseMoneyToCents, parseTaxPercent, percentToStoredRate, type PreviewDecision } from "@/lib/tax-configuration";
+import { accountsForSelection, countryRegions, loadTaxCatalog, previewConfiguredTax } from "@/lib/tax-settings";
+import { requestStripeTaxRegistrations, stripeCredentials } from "@/lib/stripe-admin";
+import { BILLING_CATALOG } from "@/lib/billing";
 
 function gate(next: string) {
   return getAdminSession().then((session) => {
@@ -31,35 +35,188 @@ export async function actionSaveRouteDraft(formData: FormData) {
   redirect(`/admin/payment-settings?section=routes&saved=route&route=${saved.id}&routeTab=overview`);
 }
 
-export async function actionSaveTaxPolicy(formData: FormData) {
-  await gate("/admin/payment-settings?section=tax");
-  const rateRaw = String(formData.get("rateBps") ?? "").trim();
-  const saved = await saveTaxPolicyDraft({
-    name: String(formData.get("name") ?? ""),
-    liableEntity: String(formData.get("liableEntity") ?? ""),
-    treatment: String(formData.get("treatment") ?? ""),
-    customerRole: String(formData.get("customerRole") ?? "business"),
-    jurisdiction: String(formData.get("jurisdiction") ?? ""),
-    classification: String(formData.get("classification") ?? ""),
-    filingOwner: String(formData.get("filingOwner") ?? ""),
-    inclusive: formData.get("inclusive") === "on",
-    rateBps: rateRaw ? Number(rateRaw) : null,
-    notes: String(formData.get("notes") ?? ""),
-  });
-  revalidatePath("/admin/payment-settings");
-  redirect(
-    `/admin/payment-settings?section=tax${saved.ok ? "&saved=tax" : `&error=${encodeURIComponent(saved.error)}`}`,
-  );
+function skuForPlanCode(code: string) {
+  return BILLING_CATALOG.find((product) => product.creatorPlan === code || product.businessPlan === code)?.sku ?? "";
 }
 
-export async function actionLinkFeeTaxPolicy(formData: FormData) {
+function taxForm(formData: FormData) {
+  return {
+    seriesName: String(formData.get("seriesName") ?? ""),
+    appliesTo: String(formData.get("appliesTo") ?? ""),
+    linkedIds: formData.getAll("linkedId").map((value) => String(value)),
+    countryCode: String(formData.get("countryCode") ?? ""),
+    regionCode: String(formData.get("regionCode") ?? ""),
+    environment: String(formData.get("environment") ?? "sandbox"),
+    providerCode: String(formData.get("providerCode") ?? ""),
+    providerAccountId: String(formData.get("providerAccountId") ?? ""),
+    calculationMethod: String(formData.get("calculationMethod") ?? ""),
+    taxCategory: String(formData.get("taxCategory") ?? ""),
+    priceDisplay: String(formData.get("priceDisplay") ?? "exclusive"),
+    liableEntity: String(formData.get("liableEntity") ?? ""),
+    registrationStatus: String(formData.get("registrationStatus") ?? "not_synced"),
+    filingArrangement: String(formData.get("filingArrangement") ?? ""),
+    ratePercent: String(formData.get("ratePercent") ?? ""),
+    jurisdiction: String(formData.get("jurisdiction") ?? ""),
+    effectiveFrom: String(formData.get("effectiveFrom") ?? ""),
+    effectiveTo: String(formData.get("effectiveTo") ?? ""),
+  };
+}
+
+export async function actionSaveTaxPolicy() {
   await gate("/admin/payment-settings?section=tax");
-  const ruleId = String(formData.get("ruleId") ?? "").trim();
-  const taxPolicyId = String(formData.get("taxPolicyId") ?? "").trim();
-  if (!ruleId) redirect("/admin/payment-settings?section=tax&error=" + encodeURIComponent("Choose a fee rule."));
-  await prisma.collaborationFeeRule.update({ where: { id: ruleId }, data: { taxPolicyId } });
+  redirect("/admin/payment-settings?section=tax&error=" + encodeURIComponent("Open the tax configuration and save it from the setup steps."));
+}
+
+export async function actionLinkFeeTaxPolicy() {
+  await gate("/admin/payment-settings?section=tax");
+  redirect("/admin/payment-settings?section=tax&error=" + encodeURIComponent("Choose the fee rule in the tax setup scope step."));
+}
+
+export async function actionTaxRegions(countryCode: string) {
+  const session = await getAdminSession();
+  if (!session || !hasPermission(session, "collab_finance.manage")) return [];
+  return countryRegions(countryCode);
+}
+
+export async function actionSaveTaxConfiguration(formData: FormData): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const session = await getAdminSession();
+  if (!session || !hasPermission(session, "collab_finance.manage")) {
+    return { ok: false, error: "You do not have access to tax settings." };
+  }
+  const form = taxForm(formData);
+  const intent = String(formData.get("intent") ?? "") === "activate" ? "activate" : "draft";
+  const catalog = await loadTaxCatalog();
+  const allowedIds = form.appliesTo === "subscription"
+    ? catalog.plans.map((plan) => plan.id)
+    : form.appliesTo === "influencer_services"
+      ? catalog.services.map((service) => service.id)
+      : catalog.feeRules.filter((rule) => rule.purpose === form.appliesTo).map((rule) => rule.id);
+  const eligibleAccounts = accountsForSelection(catalog.accounts, form.providerCode, form.environment === "live" ? "live" : "sandbox");
+  const planned = planTaxConfiguration({
+    ...form,
+    allowedIds,
+    eligibleProviders: catalog.integrations.map((item) => item.id),
+    eligibleAccountIds: eligibleAccounts.map((account) => account.id),
+    intent,
+  });
+  if (!planned.ok) return planned;
+  let activationPreview: PreviewDecision | null = null;
+  const previewAmount = parseMoneyToCents(String(formData.get("previewAmount") ?? ""));
+  if (intent === "activate") {
+    activationPreview = await previewConfiguredTax({
+      audience: "admin",
+      phase: "calculate",
+      method: planned.planned.calculationMethod,
+      amountCents: previewAmount ?? 0,
+      inclusive: planned.planned.inclusive,
+      taxCategory: planned.planned.taxCategory,
+      rateBps: planned.planned.rateBps,
+      jurisdiction: planned.planned.jurisdiction,
+      liableEntity: planned.planned.liableEntity,
+      country: String(formData.get("previewCountry") ?? form.countryCode),
+      region: String(formData.get("previewRegion") ?? form.regionCode),
+      postalCode: String(formData.get("previewPostal") ?? ""),
+      line1: "",
+      city: "",
+      requireStreet: false,
+      subjectSelected: planned.planned.linkedIds.includes(String(formData.get("previewSubject") ?? "").trim()),
+    });
+    if (!activationPreview.ok || activationPreview.taxCents == null) {
+      return { ok: false, error: activationPreview.correction || activationPreview.customerMessage };
+    }
+  }
+  const selectedPlans = catalog.plans.filter((plan) => planned.planned.planIds.includes(plan.id));
+  const linkedIds = planned.planned.appliesTo === "subscription"
+    ? [...new Set(selectedPlans.flatMap((plan) => [plan.id, plan.code, skuForPlanCode(plan.code)].filter(Boolean)))]
+    : planned.planned.linkedIds;
+  const saved = await saveTaxConfiguration({
+    ...planned.planned,
+    linkedIds,
+    planIds: selectedPlans.map((plan) => plan.id),
+    activate: intent === "activate",
+  });
+  if (activationPreview) {
+    await prisma.taxPreviewRun.create({
+      data: {
+        policyName: planned.planned.name,
+        appliesTo: planned.planned.appliesTo,
+        subjectId: planned.planned.linkedIds[0] ?? "",
+        amountCents: previewAmount ?? 0,
+        taxCents: activationPreview.taxCents,
+        totalCents: activationPreview.totalCents,
+        countryCode: String(formData.get("previewCountry") ?? ""),
+        regionCode: String(formData.get("previewRegion") ?? ""),
+        postalCode: String(formData.get("previewPostal") ?? ""),
+        ok: true,
+        reason: activationPreview.reason,
+        correction: "",
+        liableEntity: planned.planned.liableEntity,
+      },
+    }).catch(() => null);
+  }
   revalidatePath("/admin/payment-settings");
-  redirect("/admin/payment-settings?section=tax&saved=link");
+  revalidatePath("/admin/plans");
+  return { ok: true, id: saved.id };
+}
+
+export async function actionPreviewTaxConfiguration(formData: FormData) {
+  const session = await getAdminSession();
+  if (!session || !hasPermission(session, "collab_finance.manage")) {
+    return { ok: false as const, error: "You do not have access to tax settings." };
+  }
+  const form = taxForm(formData);
+  const amountCents = parseMoneyToCents(String(formData.get("previewAmount") ?? ""));
+  const percent = parseTaxPercent(form.ratePercent);
+  const decision = await previewConfiguredTax({
+    audience: "admin",
+    phase: "calculate",
+    method: form.calculationMethod,
+    amountCents: amountCents ?? 0,
+    inclusive: form.priceDisplay === "inclusive",
+    taxCategory: form.taxCategory,
+    rateBps: form.calculationMethod === "manual" && percent != null ? percentToStoredRate(percent) : null,
+    jurisdiction: form.jurisdiction,
+    liableEntity: form.liableEntity,
+    country: String(formData.get("previewCountry") ?? ""),
+    region: String(formData.get("previewRegion") ?? ""),
+    postalCode: String(formData.get("previewPostal") ?? ""),
+    line1: "",
+    city: "",
+    requireStreet: false,
+    subjectSelected: form.linkedIds.includes(String(formData.get("previewSubject") ?? "").trim()),
+  });
+  await prisma.taxPreviewRun.create({
+    data: {
+      policyName: form.seriesName,
+      appliesTo: form.appliesTo,
+      subjectId: form.linkedIds[0] ?? "",
+      amountCents: amountCents ?? 0,
+      taxCents: decision.kind === "calculated" ? decision.taxCents : null,
+      totalCents: decision.kind === "calculated" ? decision.totalCents : null,
+      countryCode: String(formData.get("previewCountry") ?? ""),
+      regionCode: String(formData.get("previewRegion") ?? ""),
+      postalCode: String(formData.get("previewPostal") ?? ""),
+      ok: decision.ok,
+      reason: decision.reason,
+      correction: decision.correction,
+      liableEntity: form.liableEntity,
+    },
+  }).catch(() => null);
+  revalidatePath("/admin/payment-settings");
+  return decision;
+}
+
+export async function actionSyncTaxRegistration(formData: FormData) {
+  const session = await getAdminSession();
+  if (!session || !hasPermission(session, "collab_finance.manage")) return { status: "unavailable" as const };
+  const id = String(formData.get("policyId") ?? "").trim();
+  const creds = await stripeCredentials();
+  const status = creds.ok ? await requestStripeTaxRegistrations(creds.secret) : "unavailable";
+  if (id && !id.startsWith("missing:")) {
+    await prisma.taxPolicyVersion.update({ where: { id }, data: { registrationStatus: status } }).catch(() => null);
+  }
+  revalidatePath("/admin/payment-settings");
+  return { status };
 }
 
 export async function actionSavePlanTax(formData: FormData) {

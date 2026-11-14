@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { actionStartCheckout } from "@/app/billing/actions";
 import { MarketingHeader } from "@/components/marketing-header";
+import { PlanCheckout } from "@/components/plans/plan-checkout";
 import type { PlanMatrix } from "@/lib/plan-matrix";
 import { displayPrice, planActionLabel } from "@/lib/plan-presentation";
+import type { PlanTaxGate } from "@/lib/tax-configuration";
 
 type Faq = { id: string; question: string; answer: string };
 
@@ -29,6 +30,8 @@ export function PublicPlanPage({
   currentAmountCents,
   matrix,
   faqs,
+  taxByCode = {},
+  countries = [],
 }: {
   audience: "creator" | "business";
   signedIn: boolean;
@@ -37,6 +40,8 @@ export function PublicPlanPage({
   currentAmountCents: number | null;
   matrix: PlanMatrix;
   faqs: Faq[];
+  taxByCode?: Record<string, PlanTaxGate>;
+  countries?: { code: string; name: string }[];
 }) {
   const creator = audience === "creator";
   return (
@@ -105,6 +110,9 @@ export function PublicPlanPage({
               returnTo={creator ? "/pricing" : "/business/plans"}
               current={currentCode === plan.code}
               currentAmountCents={currentAmountCents}
+              taxGate={taxByCode[plan.code]}
+              countries={countries}
+              signedIn={signedIn}
             />
           ))}
         </div>
@@ -172,6 +180,9 @@ function PlanCard({
   returnTo,
   current,
   currentAmountCents,
+  taxGate,
+  countries,
+  signedIn,
 }: {
   plan: PlanMatrix["plans"][number];
   index: number;
@@ -180,6 +191,9 @@ function PlanCard({
   returnTo: string;
   current: boolean;
   currentAmountCents: number | null;
+  taxGate?: PlanTaxGate;
+  countries: { code: string; name: string }[];
+  signedIn: boolean;
 }) {
   const label = planActionLabel({
     name: plan.name,
@@ -227,6 +241,10 @@ function PlanCard({
         current={current}
         label={label}
         emphasized={emphasized}
+        taxGate={taxGate}
+        countries={countries}
+        currentAmountCents={currentAmountCents}
+        signedIn={signedIn}
       />
     </article>
   );
@@ -239,15 +257,21 @@ export function PlanAction({
   current,
   label,
   emphasized,
-  taxBlocked = false,
+  taxGate,
+  countries = [],
+  currentAmountCents = null,
+  signedIn = true,
 }: {
-  plan: { code: string; sku: string; checkout: boolean; priceLabel: string };
+  plan: { code: string; sku: string; name: string; checkout: boolean; priceLabel: string; amountCents: number };
   audience: "creator" | "business";
   returnTo: string;
   current: boolean;
   label: string;
   emphasized: boolean;
-  taxBlocked?: boolean;
+  taxGate?: PlanTaxGate;
+  countries?: { code: string; name: string }[];
+  currentAmountCents?: number | null;
+  signedIn?: boolean;
 }) {
   const className = emphasized
     ? "btn-primary mt-6 w-full !py-2.5 text-sm"
@@ -259,39 +283,46 @@ export function PlanAction({
       </Link>
     );
   }
-  if (taxBlocked) {
+  if (!plan.checkout || plan.amountCents <= 0) {
+    const href = audience === "creator" ? "/claim" : "/login?next=/business/home";
+    return (
+      <div className="mt-6">
+        <Link href={href} className={emphasized ? "btn-primary w-full !py-2.5 text-sm" : "btn-secondary w-full !py-2.5 text-sm"}>
+          {label}
+        </Link>
+        {currentAmountCents != null && currentAmountCents > 0 ? (
+          <p className="mt-2 text-xs text-muted">Cancelling a paid subscription stays in billing and is separate from this plan.</p>
+        ) : null}
+      </div>
+    );
+  }
+  if (taxGate?.kind === "unavailable") {
     return (
       <p data-screen="S01" className="mt-6 text-sm text-amber-900">
-        Tax could not be calculated. Review billing details or retry calculation.
+        This plan is temporarily unavailable.
       </p>
     );
   }
-  if (!plan.checkout) {
-    const href = audience === "creator" ? "/claim" : "/login?next=/business/home";
+  if (!signedIn) {
+    const next = audience === "business" ? "/business/billing" : "/billing";
     return (
-      <Link href={href} className={className}>
-        {label}
-      </Link>
+      <div className="mt-6">
+        <p className="text-xs font-semibold text-muted">Tax calculated at checkout</p>
+        <Link href={`/login?next=${encodeURIComponent(next)}`} className={emphasized ? "btn-primary mt-2 w-full !py-2.5 text-sm" : "btn-secondary mt-2 w-full !py-2.5 text-sm"}>
+          {label}
+        </Link>
+      </div>
     );
   }
   return (
-    <form action={actionStartCheckout} className="mt-6 space-y-3">
-      <input type="hidden" name="sku" value={plan.sku} />
-      <input type="hidden" name="returnTo" value={returnTo} />
-      <label className="flex items-start gap-2 text-xs text-indigo">
-        <input type="checkbox" name="acceptSubscription" required className="mt-0.5 accent-violet" />
-        <span>
-          I agree to the{" "}
-          <Link href="/legal/subscription-terms" className="font-semibold underline" target="_blank">
-            subscription terms
-          </Link>
-          . {plan.priceLabel || "This plan"} renews until cancelled.
-        </span>
-      </label>
-      <button type="submit" className={emphasized ? "btn-primary w-full !py-2.5 text-sm" : "btn-secondary w-full !py-2.5 text-sm"}>
-        {label}
-      </button>
-    </form>
+    <PlanCheckout
+      plan={plan}
+      audience={audience}
+      returnTo={returnTo}
+      label={label}
+      emphasized={emphasized}
+      countries={countries}
+    />
   );
 }
 

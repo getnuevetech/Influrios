@@ -297,6 +297,20 @@ describe("payment standard v4.1", () => {
     assert.match(release.note, /does not charge/i);
     const preview = subscriptionPreview({ priceCents: 2_000, treatment: "unresolved", rateBps: null, addressReady: true, consented: true });
     assert.equal(preview.ok, false);
+    if (!preview.ok) {
+      assert.equal(preview.kind, "configuration_missing");
+      assert.equal(preview.error, "This plan is temporarily unavailable.");
+      assert.equal(preview.totalCents, null);
+    }
+    const address = subscriptionPreview({ priceCents: 2_000, treatment: "exempt", rateBps: null, addressReady: false, consented: true });
+    assert.equal(address.ok, false);
+    if (!address.ok) assert.equal(address.error, "Add your billing address to calculate tax.");
+    const provider = subscriptionPreview({ priceCents: 2_000, treatment: "taxable", rateBps: 1000, addressReady: true, consented: true, provider: "unavailable" });
+    assert.equal(provider.ok, false);
+    if (!provider.ok) assert.equal("taxCents" in provider, false);
+    const waiting = subscriptionPreview({ priceCents: 2_000, treatment: "taxable", rateBps: 1000, addressReady: true, consented: true, provider: "not_called" });
+    assert.equal(waiting.ok && waiting.taxCents, null);
+    if (waiting.ok) assert.equal(waiting.reason, "Tax calculated at checkout");
     const ready = subscriptionPreview({ priceCents: 2_000, treatment: "exempt", rateBps: null, addressReady: true, consented: false });
     assert.equal(ready.ok && ready.taxCents, 0);
     assert.equal(ready.ok && ready.canSubmit, false);

@@ -218,7 +218,7 @@ function RouteTab({
           <p>No tax policy is linked. Unresolved tax blocks a new quote. It is not stored as zero.</p>
         )}
         <p>A fee rule never enables this country route. There is no universal tax amount on this screen.</p>
-        <Link href="/admin/payment-settings?section=tax" className="font-semibold text-violet">Open tax policies</Link>
+        <Link href="/admin/payment-settings?section=tax" className="font-semibold text-violet">Open Tax Settings</Link>
       </div>
     );
   }

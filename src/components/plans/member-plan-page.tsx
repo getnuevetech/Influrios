@@ -3,6 +3,7 @@ import { actionOpenPortal } from "@/app/billing/actions";
 import { ComparisonTable, PlanAction } from "@/components/plans/public-plan-page";
 import type { PlanMatrix } from "@/lib/plan-matrix";
 import { displayPrice, planActionLabel } from "@/lib/plan-presentation";
+import type { PlanTaxGate } from "@/lib/tax-configuration";
 
 export type BillingHistoryRow = {
   id: string;
@@ -25,7 +26,8 @@ export function MemberPlanPage({
   error,
   notice,
   payout,
-  taxBlocked = false,
+  taxByCode = {},
+  countries = [],
 }: {
   audience: "creator" | "business";
   eyebrow: string;
@@ -40,7 +42,8 @@ export function MemberPlanPage({
   error?: string;
   notice?: string;
   payout?: React.ReactNode;
-  taxBlocked?: boolean;
+  taxByCode?: Record<string, PlanTaxGate>;
+  countries?: { code: string; name: string }[];
 }) {
   const current = matrix.plans.find((plan) => plan.code === currentCode) ?? null;
   const returnTo = audience === "business" ? "/business/billing" : "/billing";
@@ -55,11 +58,7 @@ export function MemberPlanPage({
       </p>
       {error ? <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{error}</p> : null}
       {notice ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{notice}</p> : null}
-      <p className="mt-4 text-sm text-muted">
-        {taxBlocked
-          ? "Tax could not be calculated. Review billing details or retry calculation. Checkout stays closed."
-          : "Tax is calculated for each invoice. The first month is not saved as a fixed tax rate."}
-      </p>
+      <p className="mt-4 text-sm text-muted">Tax is calculated at checkout for a paid plan. A free plan stays available. A zero tax result is shown as Tax $0.00.</p>
 
       <section className="mt-6 flex flex-col gap-4 rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -127,7 +126,9 @@ export function MemberPlanPage({
                 current={isCurrent}
                 label={label}
                 emphasized={emphasized}
-                taxBlocked={taxBlocked}
+                taxGate={taxByCode[plan.code]}
+                countries={countries}
+                currentAmountCents={currentAmountCents}
               />
             </article>
           );

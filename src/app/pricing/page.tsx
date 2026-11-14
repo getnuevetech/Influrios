@@ -3,6 +3,8 @@ import { getAccountSession } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
 import { listPublishedFaq } from "@/lib/faq";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
+import { corridorCountries } from "@/lib/corridor-countries";
+import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Influencer plans" };
@@ -22,6 +24,13 @@ export default async function PricingPage() {
     : null;
   const currentCode = identity?.creator?.planTier || identity?.planTier || null;
   const faqs = await publishedFaqs("creator");
+  const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
+  await Promise.all(
+    matrix.plans.map((plan) => {
+      const gate = taxByCode[plan.code];
+      return gate?.kind === "unavailable" ? notifyTaxGap({ planCode: plan.code, missing: gate.missing }) : null;
+    }),
+  );
   return (
     <PublicPlanPage
       audience="creator"
@@ -31,6 +40,8 @@ export default async function PricingPage() {
       currentAmountCents={matrix.plans.find((plan) => plan.code === currentCode)?.amountCents ?? null}
       matrix={matrix}
       faqs={faqs}
+      taxByCode={taxByCode}
+      countries={corridorCountries().map((country) => ({ code: country.code, name: country.name }))}
     />
   );
 }

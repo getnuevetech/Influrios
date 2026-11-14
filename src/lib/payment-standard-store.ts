@@ -103,7 +103,7 @@ export async function saveTaxPolicyDraft(input: {
   if (input.treatment === "taxable") {
     if (!input.jurisdiction.trim()) return { ok: false as const, error: "A taxable policy needs a jurisdiction." };
     if (input.rateBps == null || !Number.isInteger(input.rateBps) || input.rateBps < 0) {
-      return { ok: false as const, error: "A taxable policy needs a jurisdiction rate in basis points, not a flat amount." };
+      return { ok: false as const, error: "A taxable policy needs a jurisdiction rate, not a flat amount." };
     }
   }
   const name = input.name.trim();
@@ -126,6 +126,95 @@ export async function saveTaxPolicyDraft(input: {
     },
   });
   return { ok: true as const, id: row.id, version: row.version };
+}
+
+export async function saveTaxConfiguration(input: {
+  name: string;
+  appliesTo: string;
+  customerRole: string;
+  linkedIds: string[];
+  countryCode: string;
+  regionCode: string;
+  environment: "sandbox" | "live";
+  providerCode: string;
+  providerAccountId: string;
+  calculationMethod: string;
+  taxCategory: string;
+  inclusive: boolean;
+  liableEntity: string;
+  registrationStatus: string;
+  filingArrangement: string;
+  filingOwner: string;
+  rateBps: number | null;
+  jurisdiction: string;
+  effectiveFrom: Date | null;
+  effectiveTo: Date | null;
+  treatment: string;
+  status: string;
+  planIds: string[];
+  feeRuleIds: string[];
+  serviceIds: string[];
+  activate: boolean;
+}) {
+  const latest = await prisma.taxPolicyVersion.findFirst({ where: { name: input.name }, orderBy: { version: "desc" } });
+  const version = (latest?.version ?? 0) + 1;
+  const linkedIds = input.linkedIds.join(",");
+  const row = await prisma.$transaction(async (tx) => {
+    const created = await tx.taxPolicyVersion.create({
+      data: {
+        name: input.name,
+        version,
+        liableEntity: input.liableEntity,
+        treatment: input.treatment,
+        inclusive: input.inclusive,
+        classification: input.taxCategory,
+        filingOwner: input.filingOwner,
+        jurisdiction: input.jurisdiction,
+        customerRole: input.customerRole,
+        rateBps: input.rateBps,
+        status: input.status,
+        effectiveFrom: input.effectiveFrom ?? new Date(),
+        effectiveTo: input.effectiveTo,
+        notes: "",
+        appliesTo: input.appliesTo,
+        countryCode: input.countryCode,
+        regionCode: input.regionCode,
+        environment: input.environment,
+        providerCode: input.providerCode,
+        providerAccountId: input.providerAccountId,
+        calculationMethod: input.calculationMethod,
+        taxCategory: input.taxCategory,
+        registrationStatus: input.registrationStatus,
+        filingArrangement: input.filingArrangement,
+        linkedIds,
+      },
+    });
+    if (input.activate && input.planIds.length > 0) {
+      await tx.entitlementPlan.updateMany({
+        where: { id: { in: input.planIds } },
+        data: {
+          taxPolicyId: created.id,
+          taxCode: input.taxCategory,
+          taxBehavior: input.inclusive ? "inclusive" : "exclusive",
+        },
+      });
+    }
+    if (input.activate && input.feeRuleIds.length > 0) {
+      await tx.collaborationFeeRule.updateMany({
+        where: { id: { in: input.feeRuleIds } },
+        data: { taxPolicyId: created.id },
+      });
+    }
+    return created;
+  });
+  return {
+    ok: true as const,
+    id: row.id,
+    version: row.version,
+    fundingEnabled: false as const,
+    signedRecordsChanged: false as const,
+    serviceIds: input.serviceIds,
+  };
 }
 
 export async function recordMilestoneSettlement(input: {

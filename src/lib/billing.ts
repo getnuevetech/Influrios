@@ -479,6 +479,7 @@ export async function startCheckout(input: {
   customerEmail?: string;
   creatorSlug?: string;
   userId?: string;
+  automaticTax?: boolean;
 }): Promise<StartCheckoutResult> {
   const product = getProduct(input.sku);
   const { findActivePlan } = await import("@/lib/entitlements-db");
@@ -542,6 +543,7 @@ export async function startCheckout(input: {
         creatorSlug: input.creatorSlug ?? "",
         userId: input.userId ?? "",
       },
+      automaticTax: input.automaticTax === true,
     });
     if (!opened.ok) return opened;
     await upsertAttempt({

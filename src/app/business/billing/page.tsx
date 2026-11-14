@@ -6,6 +6,8 @@ import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { productSwitch } from "@/lib/product-switches";
+import { corridorCountries } from "@/lib/corridor-countries";
+import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business billing & plans" };
@@ -31,11 +33,13 @@ export default async function BusinessBillingPage({ searchParams }: Props) {
     prisma.subscriptionState.findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } }).catch(() => null),
   ]);
   const currentCode = workspace?.plan ?? null;
-  const taxPlans = await prisma.entitlementPlan.findMany({
-    where: { audience: "business", active: true },
-    select: { taxBehavior: true, taxCode: true },
-  }).catch(() => []);
-  const taxBlocked = taxPlans.length === 0 || taxPlans.some((plan) => !plan.taxBehavior || !plan.taxCode);
+  const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
+  await Promise.all(
+    matrix.plans.map((plan) => {
+      const gate = taxByCode[plan.code];
+      return gate?.kind === "unavailable" ? notifyTaxGap({ planCode: plan.code, missing: gate.missing }) : null;
+    }),
+  );
   const names = new Map(matrix.plans.flatMap((plan) => [[plan.sku, plan.name], [plan.code, plan.name]] as const));
   return (
     <MemberPlanPage
@@ -53,7 +57,8 @@ export default async function BusinessBillingPage({ searchParams }: Props) {
       }))}
       portalOn={portalOn}
       hasCustomer={Boolean(user?.stripeCustomerId)}
-      taxBlocked={taxBlocked}
+      taxByCode={taxByCode}
+      countries={corridorCountries().map((country) => ({ code: country.code, name: country.name }))}
       subscriptionStatus={subscription?.status ?? null}
       error={params.error}
       payout={

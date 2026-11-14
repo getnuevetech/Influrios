@@ -5,7 +5,7 @@ export const PAYMENT_SETTINGS_TABS = [
   { id: "roles", label: "Account roles", modules: ["collab_finance"] },
   { id: "routes", label: "Country routes", modules: ["gateways", "collab_finance", "marketplace"] },
   { id: "fees", label: "Fees & policies", modules: ["commerce", "marketplace", "collab_finance"] },
-  { id: "tax", label: "Tax policies", modules: ["collab_finance"] },
+  { id: "tax", label: "Tax", modules: ["collab_finance"] },
   { id: "audit", label: "Audit", modules: ["collab_finance"] },
 ] as const;
 
