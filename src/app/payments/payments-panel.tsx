@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SettlementReview } from "@/components/settlement-review";
 import { EmptyPayments, MoneyAmount, PaymentStatus } from "@/components/payment-journey/status";
 import { RecordDialog } from "@/components/payment-journey/record-dialog";
+import { UnavailableNote } from "@/components/unavailable-note";
 import { isBusinessRole } from "@/lib/account-audience";
 import { getAccountSession } from "@/lib/accounts";
 import { newIncidentReference } from "@/lib/business-status";
@@ -97,14 +98,8 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
     return (
       <div data-screen="B03" className="space-y-4">
         <h1 className="font-display text-3xl font-bold text-indigo">Collaboration payments</h1>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <p className="font-semibold">{recovery?.title}</p>
-          <p className="mt-1">{recovery?.detail}</p>
-          <p className="mt-1">This is not zero. Reference {unavailable.incident}.</p>
-          <Link href="/payments" className="mt-2 inline-flex font-semibold text-violet">
-            Retry
-          </Link>
-        </div>
+        <UnavailableNote label="Payment data" incident={unavailable.incident} href="/payments" />
+        {recovery?.kind === "unavailable" ? <p className="text-sm text-amber-950">{recovery.detail}</p> : null}
       </div>
     );
   }
