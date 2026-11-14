@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   agencyActionAllowed,
+  agencySeatChoiceRole,
+  authorizeAgencyWorkspaceAction,
+  campaignBoundToSealedClient,
   campaignStatusTransition,
   clientBelongsToWorkspace,
   inviteRoleAllowed,
@@ -110,6 +113,136 @@ describe("agency permissions", () => {
     assert.equal(inviteRoleAllowed("owner", "manager"), true);
     assert.equal(inviteRoleAllowed("manager", "member"), false);
     assert.equal(inviteRoleAllowed("owner", "talent"), false);
+  });
+
+  it("does not turn roster talent into a company seat", () => {
+    assert.equal(agencySeatChoiceRole("talent"), null);
+    assert.equal(agencySeatChoiceRole("lead"), null);
+    assert.equal(agencySeatChoiceRole("member"), "member");
+    assert.equal(agencySeatChoiceRole("manager"), "manager");
+    assert.equal(agencySeatChoiceRole("owner"), "owner");
+  });
+
+  it("rejects a client-supplied workspace the account does not hold", () => {
+    const memberships = [
+      seat({ workspaceId: "workspace-a", role: "manager" }),
+      seat({ workspaceId: "workspace-b", role: "owner", acceptedAt: "2026-11-01T00:00:00.000Z" }),
+    ];
+    const actor = { userId: "user-1", email: "ops@agency.demo" };
+    const denied = authorizeAgencyWorkspaceAction({
+      action: "manage_campaign",
+      sealed: { workspaceId: "workspace-c", clientId: "" },
+      posted: { workspaceId: "workspace-c", clientId: "" },
+      seatsEnabled: true,
+      actor,
+      ownerWorkspaceId: "agency_owner_user-1",
+      memberships,
+      client: null,
+    });
+    assert.equal(denied.ok, false);
+    const swapped = authorizeAgencyWorkspaceAction({
+      action: "manage_campaign",
+      sealed: { workspaceId: "workspace-a", clientId: "client-a" },
+      posted: { workspaceId: "workspace-b", clientId: "client-a" },
+      seatsEnabled: true,
+      actor,
+      ownerWorkspaceId: "agency_owner_user-1",
+      memberships,
+      client: { id: "client-a", workspaceId: "workspace-a" },
+    });
+    assert.equal(swapped.ok, false);
+    if (!swapped.ok) assert.match(swapped.error, /workspace and client/);
+  });
+
+  it("enforces owner, manager, and member on the server and withholds talent authority", () => {
+    const actor = { userId: "user-1", email: "ops@agency.demo" };
+    const base = {
+      sealed: { workspaceId: "workspace-a", clientId: "client-a" },
+      posted: { workspaceId: "workspace-a", clientId: "client-a" },
+      seatsEnabled: true,
+      actor,
+      ownerWorkspaceId: "agency_owner_user-1",
+      client: { id: "client-a", workspaceId: "workspace-a" },
+    };
+    const owner = authorizeAgencyWorkspaceAction({
+      ...base,
+      action: "manage_team",
+      memberships: [seat({ workspaceId: "workspace-a", role: "owner" })],
+    });
+    assert.equal(owner.ok, true);
+    const manager = authorizeAgencyWorkspaceAction({
+      ...base,
+      action: "manage_campaign",
+      memberships: [seat({ workspaceId: "workspace-a", role: "manager" })],
+    });
+    assert.equal(manager.ok, true);
+    const managerTeam = authorizeAgencyWorkspaceAction({
+      ...base,
+      action: "manage_team",
+      memberships: [seat({ workspaceId: "workspace-a", role: "manager" })],
+    });
+    assert.equal(managerTeam.ok, false);
+    const member = authorizeAgencyWorkspaceAction({
+      ...base,
+      action: "manage_campaign",
+      memberships: [seat({ workspaceId: "workspace-a", role: "member" })],
+    });
+    assert.equal(member.ok, false);
+    const talent = authorizeAgencyWorkspaceAction({
+      ...base,
+      action: "act_for_client",
+      memberships: [seat({ workspaceId: "workspace-a", role: "talent" })],
+    });
+    assert.equal(talent.ok, false);
+    const talentPay = authorizeAgencyWorkspaceAction({
+      ...base,
+      action: "manage_campaign",
+      memberships: [seat({ workspaceId: "workspace-a", role: "talent" })],
+    });
+    assert.equal(talentPay.ok, false);
+  });
+
+  it("rejects a client or campaign that is not the one the form was opened for", () => {
+    const actor = { userId: "user-1", email: "ops@agency.demo" };
+    const foreignClient = authorizeAgencyWorkspaceAction({
+      action: "act_for_client",
+      sealed: { workspaceId: "workspace-a", clientId: "client-b" },
+      posted: { workspaceId: "workspace-a", clientId: "client-b" },
+      seatsEnabled: true,
+      actor,
+      ownerWorkspaceId: "agency_owner_user-1",
+      memberships: [seat({ workspaceId: "workspace-a", role: "manager" })],
+      client: { id: "client-b", workspaceId: "workspace-b" },
+    });
+    assert.equal(foreignClient.ok, false);
+    assert.equal(
+      campaignBoundToSealedClient(
+        { workspaceId: "workspace-a", clientId: "client-a" },
+        { workspaceId: "workspace-a", clientId: "client-b" },
+      ).ok,
+      false,
+    );
+    assert.equal(
+      campaignBoundToSealedClient(
+        { workspaceId: "workspace-a", clientId: "" },
+        { workspaceId: "workspace-a", clientId: "client-a" },
+      ).ok,
+      false,
+    );
+    assert.equal(
+      campaignBoundToSealedClient(
+        { workspaceId: "workspace-a", clientId: "client-a" },
+        { workspaceId: "workspace-b", clientId: "client-a" },
+      ).ok,
+      false,
+    );
+    assert.equal(
+      campaignBoundToSealedClient(
+        { workspaceId: "workspace-a", clientId: "client-a" },
+        { workspaceId: "workspace-a", clientId: "client-a" },
+      ).ok,
+      true,
+    );
   });
 
   it("rejects a client that is not in the selected workspace", () => {
