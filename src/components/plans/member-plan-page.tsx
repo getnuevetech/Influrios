@@ -58,7 +58,7 @@ export function MemberPlanPage({
       </p>
       {error ? <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{error}</p> : null}
       {notice ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{notice}</p> : null}
-      <p className="mt-4 text-sm text-muted">Tax is calculated at checkout for a paid plan. A free plan stays available. A zero tax result is shown as Tax $0.00.</p>
+      <p className="mt-4 text-sm text-muted">A paid plan calculates tax at checkout. A free plan does not wait on that calculation.</p>
 
       <section className="mt-6 flex flex-col gap-4 rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">

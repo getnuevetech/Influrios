@@ -4,6 +4,7 @@ import { RecordDialog } from "@/components/payment-journey/record-dialog";
 import { prisma } from "@/lib/db";
 import { maskAccountId } from "@/lib/payment-account-routing";
 import { routeReadiness } from "@/lib/payment-standard-v4";
+import { routeTaxNote } from "@/lib/tax-configuration";
 
 const TABS = [
   ["overview", "Overview"],
@@ -212,11 +213,8 @@ function RouteTab({
   if (tab === "tax") {
     return (
       <div className="space-y-2">
-        {policy ? (
-          <p>{policy.name} v{policy.version} · {policy.treatment} · {policy.status}. Filing owner {policy.filingOwner || "not set"}.</p>
-        ) : (
-          <p>No tax policy is linked. Unresolved tax blocks a new quote. It is not stored as zero.</p>
-        )}
+        <p>{routeTaxNote(Boolean(policy))}</p>
+        {policy ? <p>{policy.name} is recorded on this route. Its status is {policy.status}.</p> : null}
         <p>A fee rule never enables this country route. There is no universal tax amount on this screen.</p>
         <Link href="/admin/payment-settings?section=tax" className="font-semibold text-violet">Open Tax Settings</Link>
       </div>

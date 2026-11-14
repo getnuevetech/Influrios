@@ -6,7 +6,6 @@ import { actionPreviewTaxConfiguration, actionSaveTaxConfiguration, actionSyncTa
 import { actionCountryRegions } from "@/app/billing/actions";
 import { AccountDialog } from "@/components/account-dialog";
 import {
-  CALCULATION_METHODS,
   FILING_ARRANGEMENTS,
   PRICE_DISPLAY,
   RESPONSIBLE_ENTITIES,
@@ -14,10 +13,12 @@ import {
   TAX_COPY,
   TAX_SUBJECTS,
   accountsFor,
+  calculationChoices,
   entityLabel,
+  regionRequired,
   registrationLabel,
+  reviewChecks,
   reviewSummary,
-  subjectLabel,
 } from "@/lib/tax-configuration";
 
 function money(cents: number) {
@@ -89,39 +90,61 @@ function MultiSelect({
   selected: string[];
   onChange: (ids: string[]) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const shown = options.filter((option) => option.label.toLowerCase().includes(query.trim().toLowerCase()));
   return (
     <div className="text-sm">
       <span className="font-medium text-indigo">{label}</span>
-      <div className="mt-1 rounded-xl border border-[#E4E9F5] px-2 py-2">
-        <div className="flex flex-wrap gap-1">
-          {selected.map((id) => {
-            const option = options.find((item) => item.id === id);
-            if (!option) return null;
-            return (
-              <button key={id} type="button" className="rounded-full bg-[#F1ECFF] px-2 py-0.5 text-xs font-semibold text-violet" onClick={() => onChange(selected.filter((item) => item !== id))}>
-                {option.label} ×
-              </button>
-            );
-          })}
-        </div>
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" className="mt-1 w-full bg-transparent py-1 text-sm outline-none" />
-        <ul className="max-h-32 overflow-auto">
-          {shown.map((option) => (
-            <li key={option.id}>
-              <label className="flex items-center gap-2 py-1">
-                <input
-                  type="checkbox"
-                  checked={selected.includes(option.id)}
-                  onChange={() => onChange(selected.includes(option.id) ? selected.filter((item) => item !== option.id) : [...selected, option.id])}
-                />
-                {option.label}
-              </label>
-            </li>
-          ))}
-          {shown.length === 0 ? <li className="py-1 text-xs text-muted">Nothing matches.</li> : null}
-        </ul>
+      <div className="relative mt-1">
+        <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-left">
+          <span className="flex flex-wrap gap-1">
+            {selected.length === 0 ? <span className="text-muted">Select</span> : null}
+            {selected.map((id) => {
+              const option = options.find((item) => item.id === id);
+              if (!option) return null;
+              return (
+                <span key={id} className="inline-flex items-center gap-1 rounded-full bg-[#F1ECFF] px-2 py-0.5 text-xs font-semibold text-violet">
+                  {option.label}
+                  <span
+                    aria-label={`Remove ${option.label}`}
+                    className="cursor-pointer"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onChange(selected.filter((item) => item !== id));
+                    }}
+                  >
+                    ×
+                  </span>
+                </span>
+              );
+            })}
+          </span>
+          <span className="text-muted" aria-hidden>▾</span>
+        </button>
+        {open ? (
+          <div className="absolute z-10 mt-1 w-full rounded-xl border bg-white p-2 shadow-lg">
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" className="w-full rounded-lg border px-2 py-1.5 text-sm" />
+            <ul className="mt-1 max-h-40 overflow-auto">
+              {shown.map((option) => {
+                const checked = selected.includes(option.id);
+                return (
+                  <li key={option.id}>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-[#F6F4FF]"
+                      onClick={() => onChange(checked ? selected.filter((item) => item !== option.id) : [...selected, option.id])}
+                    >
+                      <span className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${checked ? "border-violet bg-violet text-white" : "border-[#D5DCEB]"}`}>{checked ? "✓" : ""}</span>
+                      {option.label}
+                    </button>
+                  </li>
+                );
+              })}
+              {shown.length === 0 ? <li className="px-2 py-1.5 text-xs text-muted">Nothing matches.</li> : null}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -139,7 +162,7 @@ export function TaxSetupDialog({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(record?.appliesTo && !record.calculationMethod ? 1 : 0);
+  const [step, setStep] = useState(0);
   const [appliesTo, setAppliesTo] = useState(record?.appliesTo || "subscription");
   const initialOptions = optionsFor(record?.appliesTo || "subscription", catalog);
   const [linkedIds, setLinkedIds] = useState((record?.linkedIds ?? []).filter((id) => initialOptions.some((option) => option.id === id)));
@@ -172,9 +195,13 @@ export function TaxSetupDialog({
   useEffect(() => {
     void actionCountryRegions(countryCode).then(setRegions).catch(() => setRegions([]));
   }, [countryCode]);
+  useEffect(() => {
+    void actionCountryRegions(previewCountry).then(setPreviewRegions).catch(() => setPreviewRegions([]));
+  }, [previewCountry]);
 
   const scopeOptions = optionsFor(appliesTo, catalog);
   const accountOptions = accountsFor(catalog.accounts, providerCode, environment);
+  const methodChoices = calculationChoices(providerCode);
   const categories = TAX_CATEGORIES.filter((item) => item.label.toLowerCase().includes(categoryQuery.trim().toLowerCase()));
   const countryName = catalog.countries.find((country) => country.code === countryCode)?.name ?? countryCode;
   const summary = useMemo(() => reviewSummary({
@@ -295,12 +322,14 @@ export function TaxSetupDialog({
               {catalog.countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}
             </select>
           </label>
-          <label className="block text-sm">State or region
-            <select value={regionCode} onChange={(event) => setRegionCode(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
-              <option value="">Select state or region</option>
-              {regions.map((region) => <option key={region.code} value={region.code}>{region.name}</option>)}
-            </select>
-          </label>
+          {regionRequired(countryCode) ? (
+            <label className="block text-sm">State or region
+              <select value={regionCode} onChange={(event) => setRegionCode(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+                <option value="">Select state or region</option>
+                {regions.map((region) => <option key={region.code} value={region.code}>{region.name}</option>)}
+              </select>
+            </label>
+          ) : null}
           <label className="block text-sm">Payment integration
             <select value={providerCode} onChange={(event) => { setProviderCode(event.target.value); setProviderAccountId(""); }} className="mt-1 w-full rounded-xl border px-3 py-2">
               <option value="">Select an integration</option>
@@ -324,11 +353,11 @@ export function TaxSetupDialog({
       ) : null}
       {step === 1 ? (
         <div className="space-y-3">
-          <h3 className="font-display text-lg font-bold">{calculationMethod === "manual" ? "Set up an approved manual rate" : "Set up automatic calculation"}</h3>
+          <h3 className="font-display text-lg font-bold">{calculationMethod === "manual" ? "Set up an approved manual rate" : calculationMethod === "automatic" ? "Set up automatic calculation" : "Choose how tax is calculated"}</h3>
           <label className="block text-sm">Calculation method
             <select value={calculationMethod} onChange={(event) => setCalculationMethod(event.target.value === "manual" ? "manual" : event.target.value === "automatic" ? "automatic" : "")} className="mt-1 w-full rounded-xl border px-3 py-2">
               <option value="">Select a method</option>
-              {CALCULATION_METHODS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              {methodChoices.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </label>
           <div className="text-sm">
@@ -351,11 +380,15 @@ export function TaxSetupDialog({
             </select>
           </label>
           <p className="text-xs text-muted">This records whether the platform or the connected account has the collection and reporting obligation. It cannot be typed in just to make checkout work.</p>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-            <p className="font-semibold">Review required</p>
-            <p>Registration status: {registrationLabel(registrationStatus)}.</p>
-            {canEdit ? <button type="button" className="mt-1 font-semibold text-violet underline" onClick={() => void syncRegistration()}>Check provider registrations</button> : null}
-          </div>
+          {registrationStatus === "active" ? (
+            <p className="rounded-2xl bg-[#F6F7FB] px-3 py-2 text-sm text-indigo">Registration status: {registrationLabel(registrationStatus)}.</p>
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              <p className="font-semibold">Review required</p>
+              <p>Verify your tax registrations with your payment provider before going live. Status: {registrationLabel(registrationStatus)}.</p>
+              {canEdit ? <button type="button" className="mt-1 font-semibold text-violet underline" onClick={() => void syncRegistration()}>Check provider registrations</button> : null}
+            </div>
+          )}
           <details className="rounded-xl border px-3 py-2 text-sm">
             <summary className="cursor-pointer font-medium">Filing arrangement (optional)</summary>
             <select value={filingArrangement} onChange={(event) => setFilingArrangement(event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-2">
@@ -383,7 +416,7 @@ export function TaxSetupDialog({
               </label>
             </div>
           ) : (
-            <p className="text-xs text-muted">Automatic calculation uses the product category, registrations, and the customer location. A manual rate stays hidden.</p>
+            <p className="text-xs text-muted">{calculationMethod === "automatic" ? "Automatic calculation uses the product category, registrations, and the customer location." : "Choose automatic calculation or an approved manual rate. The manual rate stays hidden until that method is selected."}</p>
           )}
         </div>
       ) : null}
@@ -405,12 +438,14 @@ export function TaxSetupDialog({
                 {catalog.countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}
               </select>
             </label>
-            <label className="text-sm">State
-              <select value={previewRegion} onChange={(event) => setPreviewRegion(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
-                <option value="">Select state</option>
-                {previewRegions.map((region) => <option key={region.code} value={region.code}>{region.name}</option>)}
-              </select>
-            </label>
+            {regionRequired(previewCountry) ? (
+              <label className="text-sm">State
+                <select value={previewRegion} onChange={(event) => setPreviewRegion(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+                  <option value="">Select state</option>
+                  {previewRegions.map((region) => <option key={region.code} value={region.code}>{region.name}</option>)}
+                </select>
+              </label>
+            ) : <span />}
           </div>
           <label className="block text-sm">Postal code
             <input value={previewPostal} onChange={(event) => setPreviewPostal(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" />
@@ -427,9 +462,9 @@ export function TaxSetupDialog({
           ) : preview && preview.ok === false ? (
             <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">{preview.correction || preview.customerMessage}</p>
           ) : (
-            <p className="rounded-2xl border border-dashed px-3 py-6 text-center text-sm text-muted">Run a preview to see subtotal, tax, and total.</p>
+            <p className="rounded-2xl border border-dashed px-3 py-6 text-center text-sm text-muted">Enter a test address to see subtotal, tax, and total.</p>
           )}
-          <button type="button" disabled={!canEdit || pending} onClick={() => void runPreview()} className="w-full rounded-full bg-violet py-2.5 text-sm font-semibold text-white disabled:opacity-50">Run tax preview</button>
+          <button type="button" disabled={!canEdit || pending} onClick={() => void runPreview()} className="w-full rounded-full bg-violet py-2.5 text-sm font-semibold text-white disabled:opacity-50">Run preview</button>
         </div>
       ) : null}
       {step === 3 ? (
@@ -444,10 +479,17 @@ export function TaxSetupDialog({
             ))}
           </dl>
           <ul className="space-y-1 text-sm">
-            {summary.notes.map((note) => <li key={note} className="text-muted">{note}</li>)}
+            {reviewChecks({ productSelected: linkedIds.length > 0, entity: liableEntity, previewPassed: preview?.ok === true && preview.kind === "calculated" }).map((check) => (
+              <li key={check.label} className={check.done ? "text-emerald-800" : "text-amber-900"}>
+                {check.done ? "✓" : "○"} {check.label}
+              </li>
+            ))}
           </ul>
-          {preview?.ok ? <p className="text-sm text-emerald-800">Test passed. {TAX_COPY.legalNote}</p> : <p className="text-sm text-amber-900">Outstanding: run a successful tax preview before activation.</p>}
-          <p className="text-xs text-muted">{subjectLabel(appliesTo)} · {entityLabel(liableEntity)}</p>
+          <ul className="space-y-1 text-sm text-muted">
+            {summary.notes.map((note) => <li key={note}>{note}</li>)}
+          </ul>
+          {preview?.ok === true && preview.kind === "calculated" ? null : <p className="text-sm text-amber-900">Outstanding: run a successful tax preview before activation. A failed preview is not stored as zero.</p>}
+          {environment === "live" ? <p className="text-xs text-muted">Live activation requires its own checks.</p> : null}
         </div>
       ) : null}
       <div className="mt-5 flex flex-wrap justify-between gap-2">
@@ -457,7 +499,7 @@ export function TaxSetupDialog({
           {step < 3 ? (
             <button type="button" className="rounded-full bg-violet px-4 py-2 text-sm font-semibold text-white" onClick={() => setStep(step + 1)}>Continue</button>
           ) : canEdit ? (
-            <button type="button" disabled={pending} className="rounded-full bg-violet px-4 py-2 text-sm font-semibold text-white" onClick={() => void save("activate")}>Activate configuration</button>
+            <button type="button" disabled={pending} className="rounded-full bg-violet px-4 py-2 text-sm font-semibold text-white" onClick={() => void save("activate")}>{environment === "sandbox" ? "Activate in sandbox" : "Activate configuration"}</button>
           ) : null}
         </div>
       </div>

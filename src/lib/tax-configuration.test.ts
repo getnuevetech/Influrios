@@ -5,14 +5,19 @@ import {
   activationEffects,
   adminTaxFieldLabels,
   buildTaxRows,
+  calculationChoices,
+  customerCheckoutNotice,
   decidePreview,
+  feeRuleChoiceLabel,
   filterTaxRows,
   manualTaxAmount,
   parseProviderTaxCalculation,
   parseRegistrationList,
   planTaxConfiguration,
   planTaxGate,
+  reviewChecks,
   reviewSummary,
+  routeTaxNote,
   storedRateToPercent,
   subjectCovers,
   subscriptionGaps,
@@ -279,6 +284,41 @@ describe("tax settings list", () => {
     assert.equal(services?.calculation, "Not configured");
     const filtered = filterTaxRows(rows, { country: "US", status: "ready" });
     assert.equal(filtered.length, 1);
+    const withLegacy = buildTaxRows([
+      {
+        id: "legacy",
+        name: "business_platform_fee · brand",
+        appliesTo: "customer",
+        calculationMethod: "",
+        providerCode: "",
+        accountLabel: "",
+        status: "draft",
+        countryCode: "",
+      },
+      {
+        id: "1",
+        name: "Subscription · US",
+        appliesTo: "subscription",
+        calculationMethod: "automatic",
+        providerCode: "stripe",
+        accountLabel: "Platform account",
+        status: "ready",
+        countryCode: "US",
+      },
+    ]);
+    assert.equal(withLegacy.some((row) => row.appliesTo === "customer"), false);
+    assert.equal(withLegacy.filter((row) => row.appliesTo === "subscription").length, 1);
+    assert.equal(feeRuleChoiceLabel("business_platform_fee · brand", "business_fee"), "Business fee");
+    assert.doesNotMatch(calculationChoices("stripe").map((item) => item.label).join(" "), /basis|bps/i);
+    assert.equal(customerCheckoutNotice(null), "pending");
+    assert.equal(customerCheckoutNotice({ ok: false, kind: "address", taxCents: null, subtotalCents: null, totalCents: null }), "address");
+    assert.equal(customerCheckoutNotice({ ok: false, kind: "provider", taxCents: 0, subtotalCents: null, totalCents: null }), "provider");
+    assert.equal(customerCheckoutNotice({ ok: false, kind: "configuration", taxCents: null, subtotalCents: null, totalCents: null }), "unavailable");
+    assert.equal(customerCheckoutNotice({ ok: true, kind: "calculated", taxCents: 0, subtotalCents: 2900, totalCents: 2900 }), "zero");
+    assert.equal(customerCheckoutNotice({ ok: false, kind: "calculated", taxCents: 0, subtotalCents: 2900, totalCents: 2900 }), "pending");
+    const checks = reviewChecks({ productSelected: true, entity: "platform", previewPassed: false });
+    assert.equal(checks[2]?.done, false);
+    assert.doesNotMatch(routeTaxNote(false), /blocks a new quote|basis point|bps/i);
     const summary = reviewSummary({
       appliesTo: "business_fee",
       countryName: "United States",

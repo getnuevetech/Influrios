@@ -74,7 +74,7 @@ export default async function PaymentSettingsPage({
         <div>
           <h1 className="font-display text-3xl font-bold text-indigo">Payment settings</h1>
           <p className="mt-2 max-w-3xl text-sm text-muted">
-            Providers and Connections, account roles, country routes, and fees and tax policies. Saving a form does not
+            Providers and connections, account roles, country routes, fees, and tax settings. Saving a form does not
             start a charge or move money that is already with a provider.
           </p>
         </div>

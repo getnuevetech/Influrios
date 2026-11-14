@@ -11,6 +11,7 @@ import {
   billingAddressReady,
   decidePreview,
   eligiblePaymentIntegrations,
+  feeRuleChoiceLabel,
   planTaxGate,
   registrationLabel,
   storedRateToPercent,
@@ -99,7 +100,7 @@ export async function loadTaxCatalog() {
       .filter((rule) => rule.purpose === "business_platform_fee" || rule.purpose === "influencer_platform_fee")
       .map((rule) => ({
         id: rule.id,
-        label: rule.name.trim() || "Fee rule",
+        label: feeRuleChoiceLabel(rule.name, rule.purpose === "business_platform_fee" ? "business_fee" : "influencer_fee"),
         purpose: rule.purpose === "business_platform_fee" ? "business_fee" as const : "influencer_fee" as const,
       })),
     services: INFLUENCER_SERVICE_SUBJECTS.map((item) => ({ id: item.id, label: item.label })),
