@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { isDefaultMemberHome } from "./account-policy";
-import { CREATOR_DASHBOARD, dashboardEarningsLabel, openSetupReminders } from "./account-nav";
+import { CREATOR_DASHBOARD, accountDestination, dashboardEarningsLabel, openSetupReminders } from "./account-nav";
 import { homePathForRole } from "./accounts";
 
 describe("influencer landing", () => {
@@ -16,6 +16,21 @@ describe("influencer landing", () => {
     assert.match(header, /Your account/);
     assert.match(header, /active === "business" \? "\/business\/home" : "\/creator"/);
     assert.equal(shell.includes("Upgrade now"), false);
+  });
+});
+
+describe("account destination", () => {
+  it("keeps a deep link and refuses another role's dashboard", () => {
+    assert.equal(accountDestination("CREATOR", "/collaboration/contracts/deal-1"), "/collaboration/contracts/deal-1");
+    assert.equal(accountDestination("CREATOR", "/creator"), "/creator");
+    assert.equal(accountDestination("BUSINESS", "/creator"), "/business/home");
+    assert.equal(accountDestination("AGENCY", "/"), "/agency");
+    assert.equal(accountDestination("CREATOR", "/business/home"), "/creator");
+    assert.equal(accountDestination("CREATOR", "/agency"), "/creator");
+    assert.equal(accountDestination("BUSINESS", "/agency?workspace=other"), "/business/home");
+    assert.equal(accountDestination("AGENCY", "/agency/invite/seat-token"), "/agency/invite/seat-token");
+    assert.equal(accountDestination("CREATOR", "https://evil.example/payments"), "/creator");
+    assert.equal(accountDestination("BUSINESS", "/%2F%2Fevil.example"), "/business/home");
   });
 });
 

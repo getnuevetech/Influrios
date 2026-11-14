@@ -33,6 +33,9 @@ describe("return path", () => {
     assert.equal(safeNextPath("/dashboard/details"), "/dashboard/details");
     assert.equal(safeNextPath("/business/home"), "/business/home");
     assert.equal(safeNextPath("//evil.example", "/admin"), "/admin");
+    assert.equal(safeNextPath("/%2F%2Fevil.example"), "/creator");
+    assert.equal(safeNextPath("/%252F%252Fevil.example"), "/creator");
+    assert.equal(safeNextPath("/collaboration/contracts/deal-1?next=sign"), "/collaboration/contracts/deal-1?next=sign");
   });
 });
 

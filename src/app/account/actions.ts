@@ -2,7 +2,8 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { isDefaultMemberHome, safeNextPath } from "@/lib/account-policy";
+import { accountDestination } from "@/lib/account-nav";
+import { safeNextPath } from "@/lib/account-policy";
 import { loginDestination, recipientEmailForReturn } from "@/lib/invite-return";
 import {
   accountEmailMatches,
@@ -109,7 +110,7 @@ export async function actionLogin(formData: FormData) {
     back("/login", coded.message || "Could not log in.", next);
   }
   const fallback = homePathForRole(user?.role);
-  const requested = isDefaultMemberHome(next) ? fallback : next;
+  const requested = accountDestination(user?.role, next);
   const destination = loginDestination({
     next: requested,
     accountEmail: user?.email ?? email,
@@ -142,10 +143,10 @@ export async function actionVerifyEmail(formData: FormData) {
     );
   }
   if (!user?.passwordHash) {
-    redirect(`/account/password?next=${encodeURIComponent(isDefaultMemberHome(next) ? homePathForRole(user?.role) : next)}`);
+    redirect(`/account/password?next=${encodeURIComponent(accountDestination(user?.role, next))}`);
   }
   const fallback = homePathForRole(user?.role);
-  const requested = isDefaultMemberHome(next) ? fallback : next;
+  const requested = accountDestination(user?.role, next);
   const destination = loginDestination({
     next: requested,
     accountEmail: user.email,

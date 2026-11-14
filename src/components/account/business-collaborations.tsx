@@ -8,6 +8,7 @@ import {
   type ActiveQueueRow,
 } from "@/lib/business-collab-workspace";
 import type { CampaignBrief } from "@/lib/business";
+import { recordStatusAxes } from "@/lib/record-status";
 
 export type WorkspaceApplication = {
   id: string;
@@ -372,6 +373,11 @@ function RequestReadout(props: { brief: CampaignBrief | null; applications: Work
 
 function ActiveDetail(props: { application: WorkspaceApplication; row: ActiveQueueRow; briefs: CampaignBrief[] }) {
   const brief = props.briefs.find((item) => item.id === props.application.briefId) ?? null;
+  const axes = recordStatusAxes({
+    invitation: props.application.status,
+    agreement: props.application.hasContract ? "signed" : null,
+    fundingStatus: props.application.fundingStatus,
+  });
   const agreementHref = props.application.creatorSlug
     ? contractHrefFromCampaign({
         creatorSlug: props.application.creatorSlug,
@@ -391,8 +397,11 @@ function ActiveDetail(props: { application: WorkspaceApplication; row: ActiveQue
         <span className="rounded-full bg-[#F1ECFF] px-2 py-1 text-[11px] font-bold text-[#6D4AFF]">{props.row.badge}</span>
       </div>
       <ol className="mt-4 space-y-2 text-sm text-[#4E5872]">
-        <li>Agreement {props.application.hasContract ? "signed" : "not signed yet"}</li>
-        <li>Funds {props.row.stage === "Content production" || props.row.bucket === "completed" ? "confirmed" : "not confirmed"}</li>
+        <li>Invitation {axes.invitation}</li>
+        <li>Agreement {axes.agreement}</li>
+        <li>Funding {axes.funding}</li>
+        <li>Delivery {axes.delivery}</li>
+        <li>Bank payout {axes.payout}</li>
         <li>{props.row.stage}. Next actor: {props.row.nextActor}.</li>
       </ol>
       <div className="mt-4 flex flex-wrap gap-3 text-sm font-bold">

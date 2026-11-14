@@ -32,6 +32,30 @@ describe("shared popup behavior", () => {
     );
   });
 
+  it("uses one dialog behavior for payments, admin records, notices, and card preview", () => {
+    const payments = readFileSync("src/components/collaboration-payments-dialog.tsx", "utf8");
+    const admins = readFileSync("src/components/admin-users-ui.tsx", "utf8");
+    const accounts = readFileSync("src/components/admin-accounts-ui.tsx", "utf8");
+    const card = readFileSync("src/components/card-preview-dialog.tsx", "utf8");
+    const notice = readFileSync("src/components/notice-dialog.tsx", "utf8");
+    const centre = readFileSync("src/components/notification-centre.tsx", "utf8");
+    const read = readFileSync("src/lib/account-notices.ts", "utf8");
+    assert.match(payments, /useAccountDialogBehavior/);
+    assert.match(payments, /data-account-dialog-root/);
+    assert.match(payments, /role="tablist"/);
+    assert.match(admins, /useAccountDialogBehavior/);
+    assert.match(accounts, /useAccountDialogBehavior/);
+    assert.match(card, /AccountDialog/);
+    assert.match(notice, /AccountDialog/);
+    assert.match(centre, /NoticeDialog/);
+    assert.equal(centre.includes('role="dialog"'), false);
+    const mark = read.slice(read.indexOf("export async function markNoticeRead"));
+    assert.match(mark, /readAt: new Date\(\)/);
+    assert.equal(mark.includes("inviteStatus"), false);
+    assert.equal(mark.includes("collaboration.update"), false);
+    assert.equal(mark.includes("funding"), false);
+  });
+
   it("keeps a successful role duplicate out of the error catch", () => {
     const source = readFileSync("src/app/admin/actions-auth.ts", "utf8");
     const start = source.indexOf("export async function actionDuplicateRole");
