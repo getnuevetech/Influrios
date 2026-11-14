@@ -2585,10 +2585,12 @@ model PaymentRouteVersion {
 }
 
 /// Versioned tax policy. Treatment is explicit. Rate is jurisdiction-specific and optional.
+/// A row covers one subject. A fee configuration does not cover influencer services.
 model TaxPolicyVersion {
   id             String   @id @default(cuid())
   name           String
   version        Int
+  /// platform | connected_account | empty. An approved obligation, never a typed name.
   liableEntity   String
   /// taxable | exempt | non_taxable | no_collection_obligation | unresolved
   treatment      String
@@ -2596,18 +2598,58 @@ model TaxPolicyVersion {
   classification String   @default("")
   filingOwner    String   @default("")
   jurisdiction   String   @default("")
-  /// business | influencer | subscriber
+  /// Stored subject key: subscriber | business | influencer | services. Not a customer label.
   customerRole   String
-  /// Basis points for a reviewed jurisdiction rate. Null is not zero tax.
+  /// Basis points for an approved manual rate. Null is not zero tax. Automatic calculation leaves this null.
   rateBps        Int?
-  /// draft | active
+  /// draft | ready | needs_review | active (legacy ready)
   status         String   @default("draft")
   effectiveFrom  DateTime @default(now())
   notes          String   @default("")
+  /// subscription | business_fee | influencer_fee | influencer_services
+  appliesTo          String    @default("")
+  countryCode        String    @default("")
+  regionCode         String    @default("")
+  environment        String    @default("sandbox")
+  providerCode       String    @default("")
+  providerAccountId  String    @default("")
+  /// automatic | manual | empty
+  calculationMethod  String    @default("")
+  taxCategory        String    @default("")
+  /// not_synced | active | pending | none | unavailable
+  registrationStatus String    @default("not_synced")
+  filingArrangement  String    @default("")
+  effectiveTo        DateTime?
+  /// Selected product, fee rule, or service ids. Comma-separated. Not a second form.
+  linkedIds          String    @default("")
   createdAt      DateTime @default(now())
 
   @@unique([name, version])
   @@index([status, customerRole])
+  @@index([appliesTo, status])
+}
+
+/// A tax preview. A successful row is an integration response, not a legal ruling, and not a charge.
+model TaxPreviewRun {
+  id           String   @id @default(cuid())
+  policyName   String   @default("")
+  appliesTo    String   @default("")
+  subjectId    String   @default("")
+  amountCents  Int
+  /// Null when the provider did not calculate. Null is not zero tax.
+  taxCents     Int?
+  totalCents   Int?
+  currency     String   @default("USD")
+  countryCode  String   @default("")
+  regionCode   String   @default("")
+  postalCode   String   @default("")
+  ok           Boolean
+  reason       String   @default("")
+  correction   String   @default("")
+  liableEntity String   @default("")
+  createdAt    DateTime @default(now())
+
+  @@index([appliesTo, createdAt])
 }
 
 /// Separate verification checks. A return URL does not write verified.

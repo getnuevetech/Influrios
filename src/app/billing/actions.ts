@@ -7,6 +7,8 @@ import { getAppOrigin, isBillingSku, startCheckout } from "@/lib/billing";
 import { findActivePlan } from "@/lib/entitlements-db";
 import { planPageReturn } from "@/lib/plan-presentation";
 import { openCreatorConnectOnboarding, openCustomerPortal } from "@/lib/stripe-admin";
+import { billingAddressReady } from "@/lib/tax-configuration";
+import { countryRegions, notifyTaxGap, previewConfiguredTax, subscriptionCheckoutContext } from "@/lib/tax-settings";
 
 export async function actionStartCheckout(formData: FormData) {
   const sku = String(formData.get("sku") ?? "").trim();
@@ -20,15 +22,53 @@ export async function actionStartCheckout(formData: FormData) {
   if (formData.get("acceptSubscription") !== "on") {
     redirect(`${returnTo}?error=` + encodeURIComponent("Agree to the subscription terms at checkout."));
   }
-  const taxed = await prisma.entitlementPlan.findFirst({
-    where: { OR: [{ code: sku }, { id: sku }] },
-    select: { taxBehavior: true, taxCode: true },
-  });
-  if (!taxed?.taxBehavior || !taxed.taxCode) {
-    redirect(`${returnTo}?error=` + encodeURIComponent("Tax could not be calculated. Review billing details or retry calculation. Nothing was charged."));
+  const tax = await subscriptionCheckoutContext(sku);
+  if (tax.gate.kind === "free") {
+    redirect(`${returnTo}?error=` + encodeURIComponent("This plan has no charge. Cancelling a paid subscription is a separate billing step. Nothing was charged."));
+  }
+  if (tax.gate.kind === "unavailable") {
+    await notifyTaxGap({ planCode: tax.plan?.code || sku, missing: tax.gate.missing });
+    redirect(`${returnTo}?error=` + encodeURIComponent(tax.gate.message));
+  }
+  const address = {
+    country: String(formData.get("country") ?? ""),
+    region: String(formData.get("region") ?? ""),
+    postalCode: String(formData.get("postalCode") ?? ""),
+    line1: String(formData.get("line1") ?? ""),
+    city: String(formData.get("city") ?? ""),
+    requireStreet: true,
+  };
+  if (!billingAddressReady(address)) {
+    redirect(`${returnTo}?error=` + encodeURIComponent("Add your billing address to calculate tax."));
   }
   const account = await getAccountSession();
   if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}&gate=checkout`);
+  const policy = tax.policy;
+  if (!policy) {
+    await notifyTaxGap({ planCode: tax.plan?.code || sku, missing: "Tax configuration for this plan" });
+    redirect(`${returnTo}?error=` + encodeURIComponent("This plan is temporarily unavailable."));
+  }
+  const preview = await previewConfiguredTax({
+    audience: "customer",
+    phase: "calculate",
+    method: policy.calculationMethod,
+    amountCents: tax.amountCents,
+    inclusive: policy.inclusive,
+    taxCategory: policy.taxCategory,
+    rateBps: policy.rateBps,
+    jurisdiction: policy.jurisdiction,
+    liableEntity: policy.liableEntity,
+    country: address.country,
+    region: address.region,
+    postalCode: address.postalCode,
+    line1: address.line1,
+    city: address.city,
+    requireStreet: true,
+    subjectSelected: true,
+  });
+  if (!preview.ok || preview.taxCents == null) {
+    redirect(`${returnTo}?error=` + encodeURIComponent(preview.customerMessage || "We couldn't calculate tax. Nothing was charged."));
+  }
 
   const { recordLegalEvent } = await import("@/lib/legal");
   await recordLegalEvent({
@@ -43,11 +83,60 @@ export async function actionStartCheckout(formData: FormData) {
     customerEmail: email || account.email,
     creatorSlug: creator?.slug,
     userId: account.id,
+    automaticTax: policy.calculationMethod === "automatic",
   });
   if (!result.ok) {
     redirect(`${returnTo}?error=${encodeURIComponent(result.error)}`);
   }
   redirect(result.url);
+}
+
+export async function actionCountryRegions(countryCode: string) {
+  return countryRegions(countryCode);
+}
+
+export async function actionPreviewSubscriptionTax(formData: FormData) {
+  const account = await getAccountSession();
+  if (!account) {
+    return { ok: false as const, kind: "configuration" as const, message: "Sign in to calculate tax. Nothing was charged.", taxCents: null, totalCents: null, subtotalCents: null, reason: "" };
+  }
+  const sku = String(formData.get("sku") ?? "").trim();
+  const tax = await subscriptionCheckoutContext(sku);
+  if (tax.gate.kind === "free") {
+    return { ok: true as const, kind: "free" as const, message: "This plan has no charge.", taxCents: null, totalCents: null, subtotalCents: null, reason: "" };
+  }
+  if (tax.gate.kind === "unavailable" || !tax.policy) {
+    const missing = tax.gate.kind === "unavailable" ? tax.gate.missing : "Tax configuration for this plan";
+    await notifyTaxGap({ planCode: tax.plan?.code || sku, missing });
+    return { ok: false as const, kind: "configuration" as const, message: "This plan is temporarily unavailable.", taxCents: null, totalCents: null, subtotalCents: null, reason: "" };
+  }
+  const preview = await previewConfiguredTax({
+    audience: "customer",
+    phase: "calculate",
+    method: tax.policy.calculationMethod,
+    amountCents: tax.amountCents,
+    inclusive: tax.policy.inclusive,
+    taxCategory: tax.policy.taxCategory,
+    rateBps: tax.policy.rateBps,
+    jurisdiction: tax.policy.jurisdiction,
+    liableEntity: tax.policy.liableEntity,
+    country: String(formData.get("country") ?? ""),
+    region: String(formData.get("region") ?? ""),
+    postalCode: String(formData.get("postalCode") ?? ""),
+    line1: String(formData.get("line1") ?? ""),
+    city: String(formData.get("city") ?? ""),
+    requireStreet: true,
+    subjectSelected: true,
+  });
+  return {
+    ok: preview.ok,
+    kind: preview.kind,
+    message: preview.customerMessage,
+    taxCents: preview.taxCents,
+    totalCents: preview.totalCents,
+    subtotalCents: preview.subtotalCents,
+    reason: preview.reason,
+  };
 }
 
 export async function actionOpenPortal(formData?: FormData) {

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/provider-secrets";
 import { productSwitch } from "@/lib/product-switches";
+import { parseProviderTaxCalculation, parseRegistrationList } from "@/lib/tax-configuration";
 
 const STRIPE_HOST = "https://api.stripe.com";
 const STRIPE_VERSION = "2025-02-24.acacia";
@@ -235,6 +236,7 @@ export async function openStripeCheckout(input: {
   cancelUrl: string;
   customerEmail?: string;
   metadata: Record<string, string>;
+  automaticTax?: boolean;
 }) {
   const body = new URLSearchParams({
     mode: "subscription",
@@ -253,6 +255,10 @@ export async function openStripeCheckout(input: {
   }
   for (const [key, value] of Object.entries(input.metadata)) body.set(`metadata[${key}]`, value);
   if (input.customerEmail) body.set("customer_email", input.customerEmail);
+  if (input.automaticTax) {
+    body.set("automatic_tax[enabled]", "true");
+    body.set("billing_address_collection", "required");
+  }
   try {
     const payload = await stripeCall("POST", "/v1/checkout/sessions", input.secret, body);
     const id = checkoutId(payload?.id);
@@ -580,6 +586,66 @@ export async function stripeApiRequest(input: {
     return { ok: true, submitted: true, id, payload };
   } catch {
     return { ok: false, submitted: false, state: "unknown", error: "The provider result is unknown. Nothing was marked submitted." };
+  }
+}
+
+async function stripeJson(method: "GET" | "POST", path: string, secret: string, body?: URLSearchParams) {
+  const response = await transport(`${STRIPE_HOST}${path}`, {
+    method,
+    redirect: "manual",
+    signal: AbortSignal.timeout(8000),
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Stripe-Version": STRIPE_VERSION,
+      ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+    },
+    body,
+  });
+  const payload = (await response.json().catch(() => null)) as unknown;
+  return { status: response.status, payload };
+}
+
+/** Asks Stripe Tax for a calculation. A failed call has no tax amount. */
+export async function requestStripeTaxCalculation(input: {
+  secret: string;
+  amountCents: number;
+  currency: string;
+  taxCode: string;
+  country: string;
+  region: string;
+  postalCode: string;
+  inclusive: boolean;
+}) {
+  const body = new URLSearchParams({
+    currency: input.currency.trim().toLowerCase() || "usd",
+    "line_items[0][amount]": String(input.amountCents),
+    "line_items[0][reference]": "tax-preview",
+    "line_items[0][tax_code]": input.taxCode,
+    "line_items[0][tax_behavior]": input.inclusive ? "inclusive" : "exclusive",
+    "customer_details[address][country]": input.country.trim().toUpperCase(),
+    "customer_details[address][postal_code]": input.postalCode.trim(),
+    "customer_details[address_source]": "billing",
+  });
+  if (input.region.trim()) body.set("customer_details[address][state]", input.region.trim());
+  try {
+    const result = await stripeJson("POST", "/v1/tax/calculations", input.secret, body);
+    if (result.status < 200 || result.status >= 300) {
+      const parsed = parseProviderTaxCalculation(result.payload);
+      return parsed.ok ? { ok: false as const, detail: "The tax provider did not return a calculation." } : parsed;
+    }
+    return parseProviderTaxCalculation(result.payload);
+  } catch {
+    return { ok: false as const, detail: "The tax provider did not respond." };
+  }
+}
+
+export async function requestStripeTaxRegistrations(secret: string) {
+  try {
+    const result = await stripeJson("GET", "/v1/tax/registrations?limit=20", secret);
+    if (result.status < 200 || result.status >= 300) return "unavailable" as const;
+    return parseRegistrationList(result.payload);
+  } catch {
+    return "unavailable" as const;
   }
 }
 

@@ -111,7 +111,7 @@ function supplyTax(supply: Supply, label: string): { ok: true; amountCents: numb
     return {
       ok: true,
       amountCents: Math.round((supply.baseCents * supply.rateBps) / 10_000),
-      reason: `Taxable at ${supply.rateBps} basis points.`,
+      reason: `Taxable at ${(supply.rateBps / 100).toFixed(2).replace(/\.?0+$/, "")}%.`,
     };
   }
   const reason =
@@ -639,14 +639,50 @@ export function subscriptionPreview(input: {
   rateBps: number | null;
   addressReady: boolean;
   consented: boolean;
+  /** local uses the recorded treatment. not_called is not a failure and is not zero. */
+  provider?: "local" | "unavailable" | "not_called";
 }) {
+  if (input.provider === "not_called") {
+    return {
+      ok: true as const,
+      kind: "not_calculated" as const,
+      error: null,
+      taxCents: null,
+      totalCents: null,
+      reason: "Tax calculated at checkout",
+      canSubmit: false,
+    };
+  }
+  if (input.provider === "unavailable") {
+    return {
+      ok: false as const,
+      kind: "provider_unavailable" as const,
+      error: "We couldn't calculate tax. Nothing was charged.",
+      totalCents: null,
+    };
+  }
   if (!input.addressReady) {
-    return { ok: false as const, error: "Tax could not be calculated. Review billing details or retry calculation.", totalCents: null };
+    return {
+      ok: false as const,
+      kind: "address_needed" as const,
+      error: "Add your billing address to calculate tax.",
+      totalCents: null,
+    };
+  }
+  if (input.treatment === "unresolved") {
+    return {
+      ok: false as const,
+      kind: "configuration_missing" as const,
+      error: "This plan is temporarily unavailable.",
+      missing: "Tax treatment",
+      totalCents: null,
+    };
   }
   const tax = supplyTax({ treatment: input.treatment, rateBps: input.rateBps, baseCents: input.priceCents }, "Subscription");
-  if (!tax.ok) return { ok: false as const, error: tax.error, totalCents: null };
+  if (!tax.ok) return { ok: false as const, kind: "calculation_failed" as const, error: tax.error, totalCents: null };
   return {
     ok: true as const,
+    kind: "calculated" as const,
     priceCents: input.priceCents,
     taxCents: tax.amountCents,
     reason: tax.reason,

@@ -5,6 +5,8 @@ import { getAccountSession } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { productSwitch } from "@/lib/product-switches";
+import { corridorCountries } from "@/lib/corridor-countries";
+import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Billing & plan" };
@@ -57,11 +59,13 @@ export default async function BillingPage({ searchParams }: Props) {
     prisma.subscriptionState.findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } }).catch(() => null),
   ]);
   const currentCode = identity?.creator?.planTier || identity?.planTier || null;
-  const taxPlans = await prisma.entitlementPlan.findMany({
-    where: { audience: "creator", active: true },
-    select: { taxBehavior: true, taxCode: true },
-  }).catch(() => []);
-  const taxBlocked = taxPlans.length === 0 || taxPlans.some((plan) => !plan.taxBehavior || !plan.taxCode);
+  const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
+  await Promise.all(
+    matrix.plans.map((plan) => {
+      const gate = taxByCode[plan.code];
+      return gate?.kind === "unavailable" ? notifyTaxGap({ planCode: plan.code, missing: gate.missing }) : null;
+    }),
+  );
   const names = new Map(matrix.plans.flatMap((plan) => [[plan.sku, plan.name], [plan.code, plan.name]] as const));
 
   return (
@@ -81,7 +85,8 @@ export default async function BillingPage({ searchParams }: Props) {
       portalOn={portalOn}
       hasCustomer={Boolean(identity?.stripeCustomerId)}
       subscriptionStatus={subscription?.status ?? null}
-      taxBlocked={taxBlocked}
+      taxByCode={taxByCode}
+      countries={corridorCountries().map((country) => ({ code: country.code, name: country.name }))}
       error={memberFacingBillingError(params.error)}
       notice={params.connected ? "Payout setup moved to Earnings." : undefined}
       payout={
