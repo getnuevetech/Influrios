@@ -7,20 +7,24 @@ import { AccountDialog } from "@/components/account-dialog";
 import {
   CHARGE_FAMILIES,
   COUNTRY_TAX_FIELDS,
-  familyLabel,
+  countryRuleSelection,
+  dedupeCountryRules,
   flagRuleConflicts,
   mapStoredPolicy,
+  parseCountryProduct,
+  presentCountryCharge,
   taxCalculationLabel,
-  type ChargeFamily,
   type CountryTaxRule,
 } from "@/lib/country-tax";
 
 type Catalog = {
-  plans: { id: string; name: string }[];
+  plans: { id: string; name: string; keys?: string[] }[];
   feeRules: { id: string; label: string; purpose: string }[];
   services: { id: string; label: string }[];
   countries: { code: string; name: string }[];
 };
+
+type ListedRule = CountryTaxRule & { linkedIds: string[] };
 
 type RecordRow = {
   id: string;
@@ -50,12 +54,23 @@ export function TaxSettingsClient({
   canEdit: boolean;
 }) {
   const router = useRouter();
-  const rules = useMemo(() => flagRuleConflicts(records.map((record) => mapStoredPolicy({
-    ...record,
-    chargeLabel: record.name,
-  })).filter((rule): rule is CountryTaxRule => Boolean(rule))), [records]);
+  const rules = useMemo(() => {
+    const mapped = records
+      .filter((record) => record.status !== "replaced")
+      .map((record) => {
+        const rule = mapStoredPolicy(record);
+        if (!rule) return null;
+        return { ...rule, linkedIds: record.linkedIds };
+      })
+      .filter((rule): rule is ListedRule => Boolean(rule));
+    const linkedById = new Map(mapped.map((rule) => [rule.id, rule.linkedIds]));
+    return flagRuleConflicts(dedupeCountryRules(mapped)).map((rule) => ({
+      ...rule,
+      linkedIds: linkedById.get(rule.id) ?? [],
+    }));
+  }, [records]);
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<CountryTaxRule | null>(null);
+  const [editing, setEditing] = useState<ListedRule | null>(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
@@ -65,7 +80,7 @@ export function TaxSettingsClient({
     setOpen(true);
   }
 
-  function startEdit(rule: CountryTaxRule) {
+  function startEdit(rule: ListedRule) {
     setEditing(rule);
     setError("");
     setOpen(true);
@@ -98,7 +113,7 @@ export function TaxSettingsClient({
             {rules.map((rule) => (
               <tr key={rule.id} className="border-t">
                 <td className="px-4 py-3 font-semibold">{countryName(catalog.countries, rule.countryCode)}</td>
-                <td className="px-4 py-3">{rule.chargeLabel || familyLabel(rule.family)}</td>
+                <td className="px-4 py-3">{presentCountryCharge({ family: rule.family, linkedIds: rule.linkedIds, plans: catalog.plans, fees: catalog.feeRules })}</td>
                 <td className="px-4 py-3">
                   {taxCalculationLabel(rule)}
                   {rule.conflict ? <span className="mt-1 block text-xs font-semibold text-amber-800">Conflicting rule for this country and product.</span> : null}
@@ -141,17 +156,22 @@ function RuleDialog({
   onError,
 }: {
   catalog: Catalog;
-  rule: CountryTaxRule | null;
+  rule: ListedRule | null;
   canEdit: boolean;
   error: string;
   onClose: () => void;
   onSaved: (summary: string) => void;
   onError: (message: string) => void;
 }) {
+  const selection = countryRuleSelection({
+    family: rule?.family ?? "",
+    linkedIds: rule?.linkedIds?.length ? rule.linkedIds : (rule?.chargeId ? [rule.chargeId] : []),
+    plans: catalog.plans,
+  });
   const [countryQuery, setCountryQuery] = useState("");
   const [countryCode, setCountryCode] = useState(rule?.countryCode ?? "");
-  const [product, setProduct] = useState(productValue(rule));
-  const [appliesTo, setAppliesTo] = useState(rule?.family === "subscription" ? (rule.chargeId || "all") : "all");
+  const [product, setProduct] = useState(selection.product);
+  const [appliesTo, setAppliesTo] = useState(selection.appliesTo);
   const [method, setMethod] = useState(rule?.method ?? "");
   const [rate, setRate] = useState(rule?.ratePercent == null ? "" : String(rule.ratePercent));
   const [pending, setPending] = useState(false);
@@ -160,7 +180,7 @@ function RuleDialog({
     if (!query) return true;
     return country.name.toLowerCase().includes(query) || country.code.toLowerCase().includes(query);
   });
-  const parsed = parseProduct(product, appliesTo);
+  const parsed = parseCountryProduct({ product, appliesTo, plans: catalog.plans, fees: catalog.feeRules });
   const subscriptionChoice = parsed.family === "subscription";
 
   async function save() {
@@ -168,6 +188,7 @@ function RuleDialog({
     onError("");
     const data = new FormData();
     data.set("ruleModel", "country");
+    data.set("policyId", rule?.id ?? "");
     data.set("countryCode", countryCode);
     data.set("family", parsed.family);
     data.set("chargeId", parsed.chargeId);
@@ -195,7 +216,12 @@ function RuleDialog({
           </select>
         </label>
         <label className="block text-sm">{COUNTRY_TAX_FIELDS.productOrCharge}
-          <select value={product} onChange={(event) => setProduct(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+          <select value={product} onChange={(event) => {
+            const value = event.target.value;
+            setProduct(value);
+            if (value.startsWith("subscription:")) setAppliesTo(value.slice("subscription:".length));
+            else if (value === "family:subscription") setAppliesTo("all");
+          }} className="mt-1 w-full rounded-xl border px-3 py-2">
             <option value="">Select a product or charge</option>
             {CHARGE_FAMILIES.map((family) => (
               <optgroup key={family.id} label={family.group}>
@@ -208,7 +234,11 @@ function RuleDialog({
         </label>
         {subscriptionChoice ? (
           <label className="block text-sm">{COUNTRY_TAX_FIELDS.appliesTo}
-            <select value={appliesTo} onChange={(event) => setAppliesTo(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+            <select value={appliesTo} onChange={(event) => {
+              const value = event.target.value;
+              setAppliesTo(value);
+              setProduct(value === "all" ? "family:subscription" : `subscription:${value}`);
+            }} className="mt-1 w-full rounded-xl border px-3 py-2">
               <option value="all">{COUNTRY_TAX_FIELDS.allPlans}</option>
               {catalog.plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
             </select>
@@ -235,30 +265,4 @@ function RuleDialog({
       </div>
     </AccountDialog>
   );
-}
-
-function productValue(rule: CountryTaxRule | null) {
-  if (!rule) return "";
-  if (rule.family === "subscription" && rule.chargeId) return `subscription:${rule.chargeId}`;
-  if (rule.family === "other" && rule.chargeId) return `other:${rule.chargeId}`;
-  return `family:${rule.family}`;
-}
-
-function parseProduct(value: string, appliesTo: string): { family: ChargeFamily | ""; chargeId: string; label: string } {
-  if (value.startsWith("subscription:")) {
-    const chargeId = appliesTo !== "all" ? appliesTo : value.slice("subscription:".length);
-    return { family: "subscription", chargeId, label: chargeId };
-  }
-  if (value.startsWith("other:")) {
-    return { family: "other", chargeId: value.slice("other:".length), label: value.slice("other:".length) };
-  }
-  if (value.startsWith("family:")) {
-    const family = value.slice("family:".length);
-    if (family === "subscription") {
-      return { family: "subscription", chargeId: appliesTo === "all" ? "" : appliesTo, label: appliesTo === "all" ? "Subscriptions" : appliesTo };
-    }
-    const known = CHARGE_FAMILIES.find((item) => item.id === family);
-    return { family: known?.id ?? "", chargeId: "", label: known?.label ?? "" };
-  }
-  return { family: "", chargeId: "", label: "" };
 }

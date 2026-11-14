@@ -2,10 +2,10 @@
  * Loads tax settings and runs a preview. A preview does not open a charge.
  */
 import { State } from "country-state-city";
-import { getProduct } from "@/lib/billing";
+import { BILLING_CATALOG, getProduct } from "@/lib/billing";
 import { corridorCountries } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
-import { calculateCountryTax, flagRuleConflicts, mapLegacyInclusivePrice, mapStoredPolicy, matchCountryRule, paidPlanAvailability } from "@/lib/country-tax";
+import { calculateCountryTax, dedupeCountryRules, flagRuleConflicts, mapLegacyInclusivePrice, mapStoredPolicy, matchCountryRule, paidPlanAvailability } from "@/lib/country-tax";
 import {
   INFLUENCER_SERVICE_SUBJECTS,
   accountsFor,
@@ -32,8 +32,15 @@ function splitIds(value: string) {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
-function asMethod(value: string): "" | "automatic" | "manual" {
-  return value === "automatic" || value === "manual" ? value : "";
+function asMethod(value: string): "" | "automatic" | "manual" | "percentage" | "location" {
+  if (value === "automatic" || value === "manual" || value === "percentage" || value === "location") return value;
+  return "";
+}
+
+/** Ids that can round-trip a saved subscription plan: catalog id, plan code, and billing sku. */
+export function planMatchKeys(plan: { id: string; code: string }) {
+  const sku = BILLING_CATALOG.find((product) => product.creatorPlan === plan.code || product.businessPlan === plan.code)?.sku ?? "";
+  return [...new Set([plan.id, plan.code, sku].map((key) => key.trim()).filter(Boolean))];
 }
 
 export async function loadTaxCatalog() {
@@ -161,7 +168,8 @@ export async function subscriptionTaxGates(plans: { code: string; sku: string; a
 
 export async function loadCountryRules() {
   const catalog = await loadTaxCatalog().catch(() => null);
-  return flagRuleConflicts((catalog?.records ?? []).map((record) => mapStoredPolicy(record)).filter((rule) => rule != null));
+  const mapped = (catalog?.records ?? []).map((record) => mapStoredPolicy(record)).filter((rule) => rule != null);
+  return flagRuleConflicts(dedupeCountryRules(mapped));
 }
 
 export async function subscriptionCheckoutContext(sku: string, countryCode = "") {

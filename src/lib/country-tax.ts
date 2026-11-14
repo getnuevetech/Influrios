@@ -183,6 +183,12 @@ export function flagRuleConflicts(rules: CountryTaxRule[]): CountryTaxRule[] {
   });
 }
 
+function visibleChargeLabel(family: string, chargeId: string, label: string) {
+  const text = label.trim();
+  if (text && !/unlinked/i.test(text)) return text;
+  return chargeId ? chargeId : familyLabel(family);
+}
+
 export function planCountryTaxRule(input: {
   countryCode: string;
   family: string;
@@ -191,6 +197,8 @@ export function planCountryTaxRule(input: {
   method: string;
   ratePercent: string;
   existing: CountryTaxRule[];
+  /** The rule being edited. It is not a second copy of itself. */
+  exceptId?: string;
 }): { ok: true; rule: CountryTaxRule; summary: string } | { ok: false; error: string } {
   const country = countryCode(input.countryCode);
   if (!country) return { ok: false, error: "Choose a country." };
@@ -200,13 +208,14 @@ export function planCountryTaxRule(input: {
   const rate = method === "percentage" ? parseTaxPercent(input.ratePercent) : null;
   if (method === "percentage" && rate == null) return { ok: false, error: "Enter a rate (%). An empty rate is incomplete." };
   const chargeId = input.chargeId.trim();
+  const exceptId = input.exceptId?.trim() ?? "";
   const draft: CountryTaxRule = {
     id: "",
     version: 1,
     countryCode: country,
     family: input.family,
     chargeId,
-    chargeLabel: input.chargeLabel.trim() || (chargeId ? chargeId : familyLabel(input.family)),
+    chargeLabel: visibleChargeLabel(input.family, chargeId, input.chargeLabel),
     method,
     ratePercent: rate,
     inclusive: false,
@@ -215,6 +224,7 @@ export function planCountryTaxRule(input: {
   };
   const overlap = input.existing.find((rule) =>
     rule.effective &&
+    (!exceptId || rule.id !== exceptId) &&
     rule.countryCode === draft.countryCode &&
     rule.family === draft.family &&
     rule.chargeId === draft.chargeId &&
@@ -225,6 +235,138 @@ export function planCountryTaxRule(input: {
   }
   const summary = `${country} · ${draft.chargeLabel} · ${taxCalculationLabel(draft)}`;
   return { ok: true, rule: draft, summary };
+}
+
+export type CatalogPlanRef = { id: string; name: string; keys?: string[] };
+
+/** Match a stored id, plan code, or catalog sku to the plan the dropdown lists. */
+export function matchCatalogPlan(plans: CatalogPlanRef[], ids: string[]): CatalogPlanRef | null {
+  const wanted = new Set(ids.map((id) => id.trim()).filter(Boolean));
+  if (wanted.size === 0) return null;
+  for (const plan of plans) {
+    const keys = [plan.id, ...(plan.keys ?? [])].map((key) => key.trim()).filter(Boolean);
+    if (keys.some((key) => wanted.has(key))) return plan;
+  }
+  return null;
+}
+
+export function countryRuleSelection(input: {
+  family: string;
+  linkedIds: string[];
+  plans: CatalogPlanRef[];
+}): { product: string; appliesTo: string } {
+  if (input.family === "subscription") {
+    const plan = matchCatalogPlan(input.plans, input.linkedIds);
+    if (plan) return { product: `subscription:${plan.id}`, appliesTo: plan.id };
+    return { product: "family:subscription", appliesTo: "all" };
+  }
+  const chargeId = input.linkedIds.map((id) => id.trim()).filter(Boolean)[0] ?? "";
+  if (input.family === "other" && chargeId) return { product: `other:${chargeId}`, appliesTo: "all" };
+  if (isChargeFamily(input.family)) return { product: `family:${input.family}`, appliesTo: "all" };
+  return { product: "", appliesTo: "all" };
+}
+
+/** Product column and dialog label. A missing plan is the family name, never "unlinked". */
+export function presentCountryCharge(input: {
+  family: string;
+  linkedIds: string[];
+  storedLabel?: string;
+  plans: CatalogPlanRef[];
+  fees?: { id: string; label: string }[];
+}): string {
+  if (input.family === "subscription") {
+    const plan = matchCatalogPlan(input.plans, input.linkedIds);
+    if (plan?.name.trim()) return plan.name.trim();
+  }
+  const chargeId = input.linkedIds.map((id) => id.trim()).filter(Boolean)[0] ?? "";
+  const fee = input.fees?.find((item) => item.id === chargeId);
+  if (fee?.label.trim()) return fee.label.trim();
+  const stored = input.storedLabel?.trim() ?? "";
+  if (stored && !/unlinked/i.test(stored) && !stored.includes(" · ") && stored !== chargeId) return stored;
+  return familyLabel(input.family);
+}
+
+export function parseCountryProduct(input: {
+  product: string;
+  appliesTo: string;
+  plans: CatalogPlanRef[];
+  fees?: { id: string; label: string }[];
+}): { family: ChargeFamily | ""; chargeId: string; label: string } {
+  const product = input.product.trim();
+  const appliesTo = input.appliesTo.trim();
+  if (product === "family:subscription" || product.startsWith("subscription:")) {
+    const picked = appliesTo && appliesTo !== "all"
+      ? appliesTo
+      : product.startsWith("subscription:")
+        ? product.slice("subscription:".length)
+        : "";
+    if (!picked || appliesTo === "all") {
+      return { family: "subscription", chargeId: "", label: familyLabel("subscription") };
+    }
+    const plan = matchCatalogPlan(input.plans, [picked]);
+    if (!plan) return { family: "subscription", chargeId: "", label: familyLabel("subscription") };
+    return { family: "subscription", chargeId: plan.id, label: plan.name.trim() || familyLabel("subscription") };
+  }
+  if (product.startsWith("other:")) {
+    const chargeId = product.slice("other:".length).trim();
+    const fee = input.fees?.find((item) => item.id === chargeId);
+    if (!chargeId) return { family: "other", chargeId: "", label: familyLabel("other") };
+    return { family: "other", chargeId, label: fee?.label.trim() || familyLabel("other") };
+  }
+  if (product.startsWith("family:")) {
+    const family = product.slice("family:".length);
+    if (!isChargeFamily(family)) return { family: "", chargeId: "", label: "" };
+    return { family, chargeId: "", label: familyLabel(family) };
+  }
+  return { family: "", chargeId: "", label: "" };
+}
+
+/** Newest identical rule wins. A different rate stays so a real conflict is still visible. */
+export function dedupeCountryRules<T extends {
+  countryCode: string;
+  family: string;
+  chargeId: string;
+  method: string;
+  ratePercent: number | null;
+  effective: boolean;
+}>(rules: T[]): T[] {
+  const kept = new Map<string, T>();
+  for (const rule of rules) {
+    const key = `${rule.countryCode}|${rule.family}|${rule.chargeId}|${rule.method}|${rule.ratePercent ?? "none"}`;
+    const existing = kept.get(key);
+    if (!existing || (!existing.effective && rule.effective)) kept.set(key, rule);
+  }
+  return [...kept.values()];
+}
+
+/** Other copies of the rule being edited are replaced, not treated as a second product. */
+export function countrySaveBlockers(input: { editingId: string; rules: CountryTaxRule[] }): CountryTaxRule[] {
+  const editingId = input.editingId.trim();
+  const editing = editingId ? input.rules.find((rule) => rule.id === editingId) : undefined;
+  return input.rules.filter((rule) => {
+    if (!rule.effective) return false;
+    if (editingId && rule.id === editingId) return false;
+    if (editing && rule.countryCode === editing.countryCode && rule.family === editing.family && rule.chargeId === editing.chargeId) return false;
+    return true;
+  });
+}
+
+export function countryRulesToRetire(input: {
+  keepId: string;
+  countryCode: string;
+  family: string;
+  chargeIds: string[];
+  rules: CountryTaxRule[];
+}): string[] {
+  const charges = new Set(input.chargeIds.map((id) => id.trim()));
+  return input.rules
+    .filter((rule) =>
+      rule.id !== input.keepId &&
+      rule.effective &&
+      rule.countryCode === input.countryCode &&
+      rule.family === input.family &&
+      charges.has(rule.chargeId))
+    .map((rule) => rule.id);
 }
 
 export function matchCountryRule(rules: CountryTaxRule[], input: { countryCode: string; family: ChargeFamily; chargeId: string }):

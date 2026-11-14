@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminSession, hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
-import { saveRouteDraft, saveTaxConfiguration } from "@/lib/payment-standard-store";
-import { planCountryTaxRule, storedFamily, type ChargeFamily } from "@/lib/country-tax";
+import { replaceTaxConfiguration, retireTaxPolicies, saveRouteDraft, saveTaxConfiguration } from "@/lib/payment-standard-store";
+import { countryRulesToRetire, countrySaveBlockers, mapStoredPolicy, matchCatalogPlan, planCountryTaxRule, storedFamily, type ChargeFamily, type CountryTaxRule } from "@/lib/country-tax";
 import { planTaxConfiguration, parseMoneyToCents, parseTaxPercent, percentToStoredRate, type PreviewDecision } from "@/lib/tax-configuration";
-import { accountsForSelection, countryRegions, loadTaxCatalog, previewConfiguredTax } from "@/lib/tax-settings";
+import { accountsForSelection, countryRegions, loadTaxCatalog, planMatchKeys, previewConfiguredTax } from "@/lib/tax-settings";
 import { requestStripeTaxRegistrations, stripeCredentials } from "@/lib/stripe-admin";
 import { BILLING_CATALOG } from "@/lib/billing";
 
@@ -94,30 +94,47 @@ export async function actionSaveTaxConfiguration(formData: FormData): Promise<{ 
   }
   if (String(formData.get("ruleModel") ?? "") === "country") {
     const catalog = await loadTaxCatalog();
-    const { flagRuleConflicts, mapStoredPolicy } = await import("@/lib/country-tax");
-    const existing = flagRuleConflicts(catalog.records.map((record) => mapStoredPolicy(record)).filter((rule) => rule != null));
+    const policyId = String(formData.get("policyId") ?? "").trim();
+    const mapped = catalog.records
+      .filter((record) => record.status !== "replaced")
+      .map((record) => mapStoredPolicy(record))
+      .filter((rule): rule is CountryTaxRule => rule != null);
     const family = storedFamily(String(formData.get("family") ?? "")) || String(formData.get("family") ?? "");
+    const plans = catalog.plans.map((plan) => ({ id: plan.id, name: plan.name, keys: planMatchKeys(plan) }));
+    let chargeId = String(formData.get("chargeId") ?? "").trim();
+    let chargeLabel = String(formData.get("chargeLabel") ?? "");
+    if (family === "subscription") {
+      const plan = matchCatalogPlan(plans, chargeId ? [chargeId] : []);
+      if (plan) {
+        chargeId = plan.id;
+        chargeLabel = plan.name;
+      } else {
+        chargeId = "";
+        chargeLabel = "Subscriptions";
+      }
+    }
     const planned = planCountryTaxRule({
       countryCode: String(formData.get("countryCode") ?? ""),
       family,
-      chargeId: String(formData.get("chargeId") ?? ""),
-      chargeLabel: String(formData.get("chargeLabel") ?? ""),
+      chargeId,
+      chargeLabel,
       method: String(formData.get("calculationMethod") ?? ""),
       ratePercent: String(formData.get("ratePercent") ?? ""),
-      existing,
+      existing: countrySaveBlockers({ editingId: policyId, rules: mapped }),
+      exceptId: policyId,
     });
     if (!planned.ok) return planned;
     const rule = planned.rule;
     const appliesTo = rule.family === "influencer_service" ? "influencer_services" : rule.family;
     const percent = rule.ratePercent == null ? null : percentToStoredRate(rule.ratePercent);
-    const saved = await saveTaxConfiguration({
+    const payload = {
       name: planned.summary,
       appliesTo,
       customerRole: CUSTOMER_ROLE[rule.family],
       linkedIds: rule.chargeId ? [rule.chargeId] : [],
       countryCode: rule.countryCode,
       regionCode: "",
-      environment: "sandbox",
+      environment: "sandbox" as const,
       providerCode: "",
       providerAccountId: "",
       calculationMethod: rule.method,
@@ -135,9 +152,20 @@ export async function actionSaveTaxConfiguration(formData: FormData): Promise<{ 
       status: "ready",
       planIds: rule.family === "subscription" && rule.chargeId ? [rule.chargeId] : [],
       feeRuleIds: rule.family === "business_fee" || rule.family === "influencer_fee" || rule.family === "other" ? (rule.chargeId ? [rule.chargeId] : []) : [],
-      serviceIds: [],
+      serviceIds: [] as string[],
       activate: true,
+    };
+    const editing = mapped.find((item) => item.id === policyId);
+    const replaced = policyId ? await replaceTaxConfiguration(policyId, payload) : null;
+    const saved = replaced ?? await saveTaxConfiguration(payload);
+    const retireIds = countryRulesToRetire({
+      keepId: saved.id,
+      countryCode: rule.countryCode,
+      family: rule.family,
+      chargeIds: editing ? [rule.chargeId, editing.chargeId] : [rule.chargeId],
+      rules: mapped,
     });
+    await retireTaxPolicies(retireIds);
     await prisma.auditLog.create({
       data: {
         actor: session.email,

@@ -1,5 +1,5 @@
 import { getAdminSession, hasPermission } from "@/lib/admin-auth";
-import { loadTaxCatalog } from "@/lib/tax-settings";
+import { loadTaxCatalog, planMatchKeys } from "@/lib/tax-settings";
 import { TaxSettingsClient } from "@/app/admin/payment-settings/tax-settings-client";
 
 export async function TaxPoliciesPanel() {
@@ -11,7 +11,7 @@ export async function TaxPoliciesPanel() {
       canEdit={canEdit}
       records={catalog.records}
       catalog={{
-        plans: catalog.plans.map((plan) => ({ id: plan.id, name: `${plan.name}` })),
+        plans: catalog.plans.map((plan) => ({ id: plan.id, name: plan.name, keys: planMatchKeys(plan) })),
         feeRules: catalog.feeRules,
         services: catalog.services,
         countries: catalog.countries,
