@@ -34,6 +34,7 @@ type NavItem = { href: string; label: string; icon: ReactNode };
 
 const CREATOR_NAV: NavItem[] = [
   { href: "/creator", label: "Dashboard", icon: <IconHome size={18} /> },
+  { href: "/collaboration/inbox", label: "Action inbox", icon: <IconBell size={18} /> },
   { href: "/dashboard", label: "My Profile", icon: <IconUser size={18} /> },
   { href: "/collaboration/hub?view=collaborations", label: "Collaborations", icon: <IconHandshake size={18} /> },
   { href: "/collaboration/contracts", label: "Contracts", icon: <IconFileText size={18} /> },
@@ -44,6 +45,7 @@ const CREATOR_NAV: NavItem[] = [
 
 const AGENCY_NAV: NavItem[] = [
   { href: "/agency", label: "Agency overview", icon: <IconHome size={18} /> },
+  { href: "/collaboration/inbox", label: "Action inbox", icon: <IconBell size={18} /> },
   { href: "/agency?view=clients", label: "Clients", icon: <IconBuilding size={18} /> },
   { href: "/agency?view=roster", label: "Influencer roster", icon: <IconUsers size={18} /> },
   { href: "/agency?view=campaigns", label: "Campaigns", icon: <IconHandshake size={18} /> },
@@ -55,6 +57,7 @@ const AGENCY_NAV: NavItem[] = [
 
 const BUSINESS_NAV: NavItem[] = [
   { href: "/business/home", label: "Dashboard", icon: <IconHome size={18} /> },
+  { href: "/collaboration/inbox", label: "Action inbox", icon: <IconBell size={18} /> },
   { href: "/business/profile", label: "Company Profile", icon: <IconBuilding size={18} /> },
   { href: "/discover", label: "Discover Creators", icon: <IconSearch size={18} /> },
   { href: "/collaboration/business", label: "Collaborations", icon: <IconHandshake size={18} /> },
@@ -260,7 +263,7 @@ export async function MemberFrame({
           </form>
           <div className="ml-auto flex items-center gap-3">
             <Link
-              href={audience === "creator" ? "/creator/notifications" : "/creator/messages"}
+              href={audience === "creator" ? "/creator/notifications" : "/collaboration/inbox"}
               aria-label={unreadNotices > 0 ? `Notifications, ${unreadNotices} unread` : "Notifications"}
               className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#E6ECF7] text-[#4E5872]"
             >
