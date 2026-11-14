@@ -103,7 +103,6 @@ export function adminTaxFieldLabels() {
     "Calculation method",
     "Product tax category",
     "Price display",
-    "Tax-responsible entity",
     "Tax rate (%)",
     "Jurisdiction",
     "Effective date",
@@ -252,7 +251,6 @@ export function configurationGaps(policy: {
   if (regionRequired(policy.countryCode) && !policy.regionCode.trim()) gaps.push("State or region");
   if (policy.calculationMethod !== "automatic" && policy.calculationMethod !== "manual") gaps.push("Calculation method");
   if (!categoryLabel(policy.taxCategory)) gaps.push("Product tax category");
-  if (!isApprovedEntity(policy.liableEntity)) gaps.push("Tax-responsible entity");
   if (policy.calculationMethod === "manual") {
     if (policy.rateBps == null) gaps.push("Tax rate (%)");
     if (!policy.jurisdiction.trim()) gaps.push("Jurisdiction");
@@ -346,10 +344,9 @@ export function routeTaxNote(linked: boolean) {
   return "No tax configuration is linked here. Set each product in Tax Settings. A missing setup does not block other products or the free plan, and an unresolved calculation is not stored as zero.";
 }
 
-export function reviewChecks(input: { productSelected: boolean; entity: string; previewPassed: boolean }) {
+export function reviewChecks(input: { productSelected: boolean; previewPassed: boolean }) {
   return [
     { label: "Product mapping complete", done: input.productSelected },
-    { label: "Responsibility confirmed", done: isApprovedEntity(input.entity) },
     { label: "Test passed", done: input.previewPassed },
   ];
 }
@@ -704,15 +701,6 @@ export function decidePreview(input: {
   if (input.method !== "automatic" && input.method !== "manual") {
     return { ...base, ok: false, kind: "configuration", customerMessage: TAX_COPY.unavailable, correction: "Choose a calculation method." };
   }
-  if (!isApprovedEntity(input.liableEntity)) {
-    return {
-      ...base,
-      ok: false,
-      kind: "configuration",
-      customerMessage: TAX_COPY.unavailable,
-      correction: "Select the approved tax-responsible entity. Responsibility cannot be assigned only to finish checkout.",
-    };
-  }
   if (input.method === "manual") {
     const manual = manualTaxAmount({
       amountCents: input.amountCents,
@@ -785,7 +773,6 @@ export function reviewSummary(input: {
   providerLabel: string;
   accountLabel: string;
   environment: string;
-  entity: string;
   priceDisplay: string;
   category: string;
   gaps: string[];
@@ -805,7 +792,6 @@ export function reviewSummary(input: {
       { label: "Environment", value: input.environment === "live" ? "Live" : "Sandbox" },
       { label: "Category", value: categoryLabel(input.category) || "Not selected" },
       { label: "Price display", value: PRICE_DISPLAY.find((item) => item.id === input.priceDisplay)?.label ?? "Tax added at checkout" },
-      { label: "Responsible entity", value: entityLabel(input.entity) },
     ],
     outstanding: input.gaps,
     notes: [
