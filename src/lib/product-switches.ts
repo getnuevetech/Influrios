@@ -34,6 +34,12 @@ export const PRODUCT_SWITCHES = [
       "Collaboration OS hubs and contract wizard. Turned off, signed-in users stay on the public landing plus propose/records.",
   },
   {
+    key: "journey_funding",
+    enabled: true,
+    description:
+      "New collaboration funding initiation. Turned off, new deposits stay closed. Existing records can still be reconciled, refunded, or paid.",
+  },
+  {
     key: "public_pages_live",
     enabled: false,
     description:
