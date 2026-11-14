@@ -104,7 +104,6 @@ export function adminTaxFieldLabels() {
     "Product tax category",
     "Price display",
     "Tax-responsible entity",
-    "Registration status",
     "Tax rate (%)",
     "Jurisdiction",
     "Effective date",
@@ -518,9 +517,6 @@ export function planTaxConfiguration(input: TaxDraftInput): { ok: true; planned:
   if (input.intent === "activate" && gaps.length > 0) {
     return { ok: false, error: `Add ${gaps[0]} before activation.` };
   }
-  if (input.intent === "activate" && environment === "live" && input.registrationStatus !== "active") {
-    return { ok: false, error: "Live activation needs a synced active registration. Check provider registrations first." };
-  }
   const status: TaxDisplayStatus =
     input.intent === "activate" ? "ready" : !calculationMethod || !taxCategory ? "needs_review" : "draft";
   const name = input.seriesName.trim() || `${subjectLabel(input.appliesTo)} · ${countryCode || "unspecified"} · ${linkedIds.slice().sort().join("+") || "unlinked"}`;
@@ -793,7 +789,6 @@ export function reviewSummary(input: {
   priceDisplay: string;
   category: string;
   gaps: string[];
-  registrationStatus: string;
 }) {
   const subject = subjectLabel(input.appliesTo);
   const method = input.method === "automatic"
@@ -816,7 +811,6 @@ export function reviewSummary(input: {
     notes: [
       TAX_COPY.activationLimit,
       TAX_COPY.legalNote,
-      input.registrationStatus === "active" ? "Provider registration is active." : "Registration status still needs a provider check before live activation.",
       input.appliesTo === "influencer_services"
         ? "This covers tax on the influencer’s services. It does not change tax on Influrios fees."
         : input.appliesTo === "business_fee" || input.appliesTo === "influencer_fee"

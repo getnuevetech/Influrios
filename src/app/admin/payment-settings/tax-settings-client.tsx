@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { buildTaxRows, filterTaxRows, registrationLabel, statusCounts, subjectLabel } from "@/lib/tax-configuration";
+import { buildTaxRows, filterTaxRows, statusCounts, subjectLabel } from "@/lib/tax-configuration";
 import { TaxSetupDialog, type TaxDialogCatalog, type TaxDialogRecord } from "@/app/admin/payment-settings/tax-setup-dialog";
 
 const STATUS_CLASS = {
@@ -21,7 +21,7 @@ export function TaxSettingsClient({
   previews: { id: string; appliesTo: string; ok: boolean; reason: string; correction: string; taxCents: number | null; totalCents: number | null; amountCents: number; createdAt: string }[];
   canEdit: boolean;
 }) {
-  const [tab, setTab] = useState<"configurations" | "registrations" | "history">("configurations");
+  const [tab, setTab] = useState<"configurations" | "history">("configurations");
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("ALL");
   const [status, setStatus] = useState("all");
@@ -80,7 +80,6 @@ export function TaxSettingsClient({
       <div className="flex gap-4 border-b text-sm font-semibold">
         {([
           ["configurations", "Configurations"],
-          ["registrations", "Registrations"],
           ["history", "Test history"],
         ] as const).map(([id, label]) => (
           <button key={id} type="button" onClick={() => setTab(id)} className={`border-b-2 pb-2 ${tab === id ? "border-violet text-violet" : "border-transparent text-muted"}`}>{label}</button>
@@ -148,29 +147,6 @@ export function TaxSettingsClient({
             </ol>
           </div>
         </>
-      ) : null}
-      {tab === "registrations" ? (
-        <div className="overflow-hidden rounded-2xl border bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[#F7F8FC] text-xs uppercase text-muted">
-              <tr>
-                <th className="px-4 py-3">Applies to</th>
-                <th className="px-4 py-3">Country</th>
-                <th className="px-4 py-3">Registration</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((record) => (
-                <tr key={record.id} className="border-t">
-                  <td className="px-4 py-3">{subjectLabel(record.appliesTo)}</td>
-                  <td className="px-4 py-3">{record.countryCode || "Not selected"}</td>
-                  <td className="px-4 py-3">{registrationLabel(record.registrationStatus)}</td>
-                </tr>
-              ))}
-              {records.length === 0 ? <tr><td colSpan={3} className="px-4 py-6 text-muted">No registrations synced yet. Open a configuration and check provider registrations.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
       ) : null}
       {tab === "history" ? (
         <ul className="space-y-2">
