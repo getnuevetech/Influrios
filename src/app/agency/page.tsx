@@ -362,6 +362,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                         })),
                   );
                   const nextStatus = nextCampaignStatus(camp.status);
+                  const campaignClientMatches = Boolean(selectedClient && camp.clientId === selectedClient.id);
                   return (
                     <tr key={camp.id} className="border-t border-border">
                       <td className="px-3 py-3 font-semibold text-indigo">{camp.title}</td>
@@ -372,7 +373,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${CAMP_COLOR[camp.status]}`}>
                           {camp.status}
                         </span>
-                        {canStatus && token && nextStatus ? (
+                        {canStatus && token && campaignClientMatches && nextStatus ? (
                           <form action={actionSetCampaignStatus} className="mt-2">
                             <AgencyActionContext token={token} workspaceId={workspaceId ?? ""} clientId={selectedClient?.id ?? ""} />
                             <input type="hidden" name="id" value={camp.id} />
@@ -385,7 +386,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                             </button>
                           </form>
                         ) : null}
-                        {canCampaign && token && camp.creatorSlugs.length > 0 ? (
+                        {canCampaign && token && campaignClientMatches && camp.creatorSlugs.length > 0 ? (
                           <form action={actionLinkCampaignAgreement} className="mt-2 grid gap-1">
                             <AgencyActionContext token={token} workspaceId={workspaceId ?? ""} clientId={selectedClient?.id ?? ""} />
                             <input type="hidden" name="id" value={camp.id} />

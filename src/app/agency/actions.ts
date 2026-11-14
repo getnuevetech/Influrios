@@ -16,10 +16,9 @@ import {
   type AgencyCampaign,
 } from "@/lib/agency";
 import {
-  agencyActionAllowed,
-  clientBelongsToWorkspace,
+  authorizeAgencyWorkspaceAction,
+  campaignBoundToSealedClient,
   inviteRoleAllowed,
-  postedContextMatches,
   readAgencyActionContext,
   type AgencyPermission,
 } from "@/lib/agency-context";
@@ -44,55 +43,62 @@ async function requireAgencyAction(formData: FormData, action: AgencyPermission)
     redirect("/agency?error=" + encodeURIComponent("Sign in with a verified email to continue."));
   }
   const sealed = readAgencyActionContext(String(formData.get("context") ?? ""), account.id);
-  if (!sealed) {
-    redirect("/agency?error=" + encodeURIComponent("This form is no longer valid. Reopen the workspace and try again."));
-  }
   const posted = {
     workspaceId: String(formData.get("workspaceId") ?? "").trim(),
     clientId: String(formData.get("clientId") ?? "").trim(),
   };
-  if (!postedContextMatches(sealed, posted)) {
-    redirect(
-      agencyReturn(sealed.workspaceId, sealed.clientId, {
-        error: "This form stays on the workspace and client it was opened for.",
-      }),
-    );
-  }
   const seatsOn = await productSwitch("agency_seats");
-  let role: string | null = null;
-  if (seatsOn) {
-    const seat = await resolveAgencySeatForWorkspace({
-      userId: account.id,
-      email: account.email,
-      workspaceId: sealed.workspaceId,
-    });
-    if (!seat) {
-      redirect(
-        "/agency?error=" + encodeURIComponent("This membership cannot act on that workspace."),
-      );
+  const seat = seatsOn
+    ? await resolveAgencySeatForWorkspace({
+        userId: account.id,
+        email: account.email,
+        workspaceId: sealed?.workspaceId ?? "",
+      })
+    : null;
+  const client = sealed?.clientId
+    ? await prisma.agencyClient.findUnique({ where: { id: sealed.clientId } })
+    : null;
+  const decision = authorizeAgencyWorkspaceAction({
+    action,
+    sealed,
+    posted,
+    seatsEnabled: seatsOn,
+    actor: { userId: account.id, email: account.email },
+    ownerWorkspaceId: agencyWorkspaceIdForOwner(account.id),
+    memberships: seat
+      ? [
+          {
+            workspaceId: seat.workspaceId,
+            role: seat.role,
+            inviteStatus: seat.inviteStatus,
+            active: seat.active,
+            acceptedUserId: seat.acceptedUserId,
+            email: seat.email,
+          },
+        ]
+      : [],
+    client,
+  });
+  if (!decision.ok) {
+    if (!decision.workspaceId) {
+      redirect("/agency?error=" + encodeURIComponent(decision.error));
     }
-    role = seat.role === "owner" || seat.role === "manager" || seat.role === "member" ? seat.role : null;
-  } else if (sealed.workspaceId === agencyWorkspaceIdForOwner(account.id)) {
-    role = "owner";
+    redirect(agencyReturn(decision.workspaceId, decision.clientId, { error: decision.error }));
   }
-  if (!agencyActionAllowed(role, action)) {
-    redirect(
-      agencyReturn(sealed.workspaceId, sealed.clientId, {
-        error: "Your role on this workspace cannot do that.",
-      }),
-    );
+  return { account, workspaceId: decision.workspaceId, clientId: decision.clientId, role: decision.role };
+}
+
+async function requireCampaignForClient(ctx: { workspaceId: string; clientId: string }, campaignId: string) {
+  const campaign = campaignId
+    ? await prisma.agencyCampaign.findUnique({
+        where: { id: campaignId },
+        select: { workspaceId: true, clientId: true },
+      })
+    : null;
+  const bound = campaignBoundToSealedClient(ctx, campaign);
+  if (!bound.ok) {
+    redirect(agencyReturn(ctx.workspaceId, ctx.clientId, { error: bound.error }));
   }
-  if (sealed.clientId) {
-    const client = await prisma.agencyClient.findUnique({ where: { id: sealed.clientId } });
-    if (!clientBelongsToWorkspace(client, sealed.workspaceId)) {
-      redirect(
-        agencyReturn(sealed.workspaceId, "", {
-          error: "That client is not in this workspace.",
-        }),
-      );
-    }
-  }
-  return { account, workspaceId: sealed.workspaceId, clientId: sealed.clientId, role };
 }
 
 export async function actionAddClient(formData: FormData) {
@@ -161,6 +167,7 @@ export async function actionCreateCampaign(formData: FormData) {
 
 export async function actionLinkCampaignAgreement(formData: FormData) {
   const ctx = await requireAgencyAction(formData, "manage_campaign");
+  await requireCampaignForClient(ctx, String(formData.get("id") ?? ""));
   try {
     await linkAgencyCampaignCollaboration({
       workspaceId: ctx.workspaceId,
@@ -179,6 +186,7 @@ export async function actionLinkCampaignAgreement(formData: FormData) {
 export async function actionSetCampaignStatus(formData: FormData) {
   const ctx = await requireAgencyAction(formData, "set_campaign_status");
   const id = String(formData.get("id") ?? "");
+  await requireCampaignForClient(ctx, id);
   const status = String(formData.get("status") ?? "") as AgencyCampaign["status"];
   try {
     await setCampaignStatus(id, status, ctx.workspaceId);

@@ -93,6 +93,101 @@ export function clientBelongsToWorkspace(
   return client.id.trim() !== "" && client.workspaceId === workspaceId;
 }
 
+/** A stored roster or unknown role is not a company seat. */
+export function agencySeatChoiceRole(role: string | null | undefined): AgencySeatRoleName | null {
+  return isAgencySeatRole(role) ? role : null;
+}
+
+/**
+ * Server decision for one submitted agency action.
+ * A posted workspace id is ignored unless it is the sealed workspace and the account holds that seat.
+ */
+export function authorizeAgencyWorkspaceAction(input: {
+  action: AgencyPermission;
+  sealed: { workspaceId: string; clientId: string } | null;
+  posted: { workspaceId: string; clientId: string };
+  seatsEnabled: boolean;
+  actor: { userId: string; email: string };
+  ownerWorkspaceId: string;
+  memberships: readonly AgencyMembershipRecord[];
+  client: { id: string; workspaceId: string } | null;
+}):
+  | { ok: true; workspaceId: string; clientId: string; role: AgencySeatRoleName }
+  | { ok: false; error: string; workspaceId: string; clientId: string } {
+  if (!input.sealed) {
+    return {
+      ok: false,
+      error: "This form is no longer valid. Reopen the workspace and try again.",
+      workspaceId: "",
+      clientId: "",
+    };
+  }
+  const sealed = input.sealed;
+  if (!postedContextMatches(sealed, input.posted)) {
+    return {
+      ok: false,
+      error: "This form stays on the workspace and client it was opened for.",
+      workspaceId: sealed.workspaceId,
+      clientId: sealed.clientId,
+    };
+  }
+  let role: AgencySeatRoleName | null = null;
+  if (input.seatsEnabled) {
+    const held = membershipForWorkspace(input.memberships, {
+      workspaceId: sealed.workspaceId,
+      userId: input.actor.userId,
+      email: input.actor.email,
+    });
+    if (!held || !isAgencySeatRole(held.role)) {
+      return {
+        ok: false,
+        error: held
+          ? "Your role on this workspace cannot do that."
+          : "This membership cannot act on that workspace.",
+        workspaceId: sealed.workspaceId,
+        clientId: sealed.clientId,
+      };
+    }
+    role = held.role;
+  } else if (sealed.workspaceId === input.ownerWorkspaceId) {
+    role = "owner";
+  }
+  if (!isAgencySeatRole(role) || !agencyActionAllowed(role, input.action)) {
+    return {
+      ok: false,
+      error: "Your role on this workspace cannot do that.",
+      workspaceId: sealed.workspaceId,
+      clientId: sealed.clientId,
+    };
+  }
+  if (sealed.clientId && !clientBelongsToWorkspace(input.client, sealed.workspaceId)) {
+    return {
+      ok: false,
+      error: "That client is not in this workspace.",
+      workspaceId: sealed.workspaceId,
+      clientId: "",
+    };
+  }
+  return { ok: true, workspaceId: sealed.workspaceId, clientId: sealed.clientId, role };
+}
+
+/** A campaign change stays on the client the form was opened for. */
+export function campaignBoundToSealedClient(
+  sealed: { workspaceId: string; clientId: string },
+  campaign: { workspaceId: string; clientId: string | null } | null,
+): { ok: true } | { ok: false; error: string } {
+  if (!sealed.clientId.trim()) {
+    return { ok: false, error: "Choose a client before changing this campaign." };
+  }
+  if (!campaign || campaign.workspaceId !== sealed.workspaceId) {
+    return { ok: false, error: "That campaign is not in this workspace." };
+  }
+  if (campaign.clientId !== sealed.clientId) {
+    return { ok: false, error: "That campaign is not for this client." };
+  }
+  return { ok: true };
+}
+
 export function sealAgencyActionContext(
   input: { userId: string; workspaceId: string; clientId: string },
   secret = requireAuthSecret("account"),

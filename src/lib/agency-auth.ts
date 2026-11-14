@@ -5,12 +5,8 @@
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
-import {
-  listAgencyMemberships,
-  type AgencySeatRole,
-  asAgencySeatRole,
-} from "@/lib/agency-seats";
-import { agencyActionAllowed, type AgencyPermission } from "@/lib/agency-context";
+import { listAgencyMemberships, type AgencySeatRole } from "@/lib/agency-seats";
+import { agencyActionAllowed, agencySeatChoiceRole, type AgencyPermission } from "@/lib/agency-context";
 import { productSwitch } from "@/lib/product-switches";
 
 export type AgencySeatChoice = {
@@ -59,12 +55,14 @@ export type AgencyAccess =
 
 function toChoice(
   seat: Awaited<ReturnType<typeof listAgencyMemberships>>[number],
-): AgencySeatChoice {
+): AgencySeatChoice | null {
+  const role = agencySeatChoiceRole(seat.role);
+  if (!role) return null;
   return {
     id: seat.id,
     workspaceId: seat.workspaceId,
     workspaceName: seat.workspace.name,
-    role: asAgencySeatRole(seat.role),
+    role,
     email: seat.email,
   };
 }
@@ -80,7 +78,9 @@ export async function resolveAgencyAccess(requestedWorkspaceId?: string | null):
     if (!account) {
       return { ok: false, error: "Sign in with your agency seat email to continue.", seatsEnabled: true };
     }
-    const seats = (await listAgencyMemberships({ userId: account.id, email: account.email })).map(toChoice);
+    const seats = (await listAgencyMemberships({ userId: account.id, email: account.email }))
+      .map(toChoice)
+      .filter((seat): seat is AgencySeatChoice => seat !== null);
     const requested = (requestedWorkspaceId ?? "").trim();
     if (requested) {
       const seat = seats.find((item) => item.workspaceId === requested) ?? null;
