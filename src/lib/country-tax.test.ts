@@ -1,17 +1,24 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   COUNTRY_TAX_FIELDS,
   calculateCountryTax,
   collaborationCheckout,
+  countryRuleSelection,
+  countryRulesToRetire,
+  countrySaveBlockers,
+  dedupeCountryRules,
   flagRuleConflicts,
   mapLegacyInclusivePrice,
   mapStoredPolicy,
   matchCountryRule,
   milestoneTaxReplay,
   paidPlanAvailability,
+  parseCountryProduct,
   partialRefundTax,
   planCountryTaxRule,
+  presentCountryCharge,
   renewalUsesSameTax,
   stripeTaxMode,
   subscriptionPricePreview,
@@ -314,6 +321,198 @@ describe("collaboration checkout fixture", () => {
     const blank = partialRefundTax({ originalBaseCents: 5_000, refundBaseCents: 2_500, taxCents: 0, reason: " " });
     assert.equal(blank.ok, false);
     if (!blank.ok) assert.equal(blank.storedAsZero, false);
+  });
+});
+
+describe("saved tax rule identity", () => {
+  const plans = [{ id: "plan_starter", name: "Starter", keys: ["plan_starter", "STARTER", "creator_starter"] }];
+  const fees = [{ id: "fee_addon", label: "Setup fee" }];
+
+  it("reopens a chosen plan in both selects and lists that plan", () => {
+    const selection = countryRuleSelection({ family: "subscription", linkedIds: ["STARTER", "creator_starter"], plans });
+    assert.deepEqual(selection, { product: "subscription:plan_starter", appliesTo: "plan_starter" });
+    const parsed = parseCountryProduct({ product: selection.product, appliesTo: selection.appliesTo, plans, fees });
+    assert.deepEqual(parsed, { family: "subscription", chargeId: "plan_starter", label: "Starter" });
+    const label = presentCountryCharge({
+      family: "subscription",
+      linkedIds: ["STARTER"],
+      storedLabel: "Subscription · US · unlinked",
+      plans,
+      fees,
+    });
+    assert.equal(label, "Starter");
+    assert.equal(/unlinked/i.test(label), false);
+    const stored = mapStoredPolicy({
+      id: "rule_starter",
+      appliesTo: "subscription",
+      linkedIds: ["plan_starter"],
+      countryCode: "US",
+      calculationMethod: "percentage",
+      rateBps: 800,
+      status: "ready",
+    });
+    assert.equal(stored?.chargeId, "plan_starter");
+    assert.equal(stored?.method, "percentage");
+    assert.equal(stored?.ratePercent, 8);
+    const again = countryRuleSelection({ family: "subscription", linkedIds: ["plan_starter"], plans });
+    assert.equal(again.product, "subscription:plan_starter");
+    assert.equal(again.appliesTo, "plan_starter");
+  });
+
+  it("keeps all equivalent plans labeled Subscriptions and never says unlinked", () => {
+    const label = presentCountryCharge({
+      family: "subscription",
+      linkedIds: [],
+      storedLabel: "Subscription · US · unlinked",
+      plans,
+    });
+    assert.equal(label, "Subscriptions");
+    assert.equal(/unlinked/i.test(`${label} ${COUNTRY_TAX_FIELDS.allPlans}`), false);
+    const selection = countryRuleSelection({ family: "subscription", linkedIds: [], plans });
+    assert.deepEqual(selection, { product: "family:subscription", appliesTo: "all" });
+    const parsed = parseCountryProduct({ product: "family:subscription", appliesTo: "all", plans });
+    assert.deepEqual(parsed, { family: "subscription", chargeId: "", label: "Subscriptions" });
+    const cleared = parseCountryProduct({ product: "subscription:plan_starter", appliesTo: "all", plans });
+    assert.equal(cleared.chargeId, "");
+    assert.equal(cleared.label, "Subscriptions");
+    const planned = planCountryTaxRule({
+      countryCode: "US",
+      family: "subscription",
+      chargeId: "",
+      chargeLabel: "Subscription · US · unlinked",
+      method: "percentage",
+      ratePercent: "8",
+      existing: [],
+    });
+    assert.equal(planned.ok, true);
+    if (!planned.ok) return;
+    assert.equal(planned.rule.chargeLabel, "Subscriptions");
+    assert.equal(/unlinked/i.test(planned.summary), false);
+    assert.equal(planned.rule.ratePercent, 8);
+  });
+
+  it("keeps a real product and the saved calculation", () => {
+    const service = parseCountryProduct({ product: "family:influencer_service", appliesTo: "all", plans });
+    assert.equal(service.family, "influencer_service");
+    assert.equal(service.label, "Influencer service");
+    assert.equal(countryRuleSelection({ family: "influencer_service", linkedIds: [], plans }).product, "family:influencer_service");
+    const listed = presentCountryCharge({
+      family: "influencer_service",
+      linkedIds: [],
+      storedLabel: "Influencer services · US · unlinked",
+      plans,
+    });
+    assert.equal(listed, "Influencer service");
+    const addon = parseCountryProduct({ product: "other:fee_addon", appliesTo: "all", plans, fees });
+    assert.deepEqual(addon, { family: "other", chargeId: "fee_addon", label: "Setup fee" });
+    assert.equal(presentCountryCharge({ family: "other", linkedIds: ["fee_addon"], plans, fees }), "Setup fee");
+    const location = planCountryTaxRule({
+      countryCode: "US",
+      family: "subscription",
+      chargeId: "plan_starter",
+      chargeLabel: "Starter",
+      method: "location",
+      ratePercent: "",
+      existing: [],
+    });
+    assert.equal(location.ok, true);
+    if (!location.ok) return;
+    assert.equal(location.rule.method, "location");
+    assert.equal(location.rule.ratePercent, null);
+    const reopened = mapStoredPolicy({
+      id: "rule_location",
+      appliesTo: "subscription",
+      linkedIds: ["plan_starter"],
+      countryCode: "US",
+      calculationMethod: "location",
+      status: "ready",
+    });
+    assert.equal(reopened?.method, "location");
+    assert.equal(reopened?.ratePercent, null);
+    const priced = calculateCountryTax({
+      rules: [rule({ countryCode: "US", family: "subscription", chargeId: "plan_starter", method: "percentage", ratePercent: 8, chargeLabel: "Starter" })],
+      chargeId: "plan_starter",
+      family: "subscription",
+      countryCode: "US",
+      baseCents: 1900,
+      currency: "USD",
+      at,
+    });
+    assert.equal(priced.taxCents, 152);
+    assert.equal(priced.ok, true);
+  });
+
+  it("updates the edited rule and drops the duplicate unlinked row", () => {
+    const unlinked = rule({ id: "old", countryCode: "US", family: "subscription", method: "percentage", ratePercent: 8, chargeLabel: "Subscriptions" });
+    const copy = rule({ id: "copy", countryCode: "US", family: "subscription", method: "percentage", ratePercent: 8, chargeLabel: "Subscriptions" });
+    const starter = rule({ id: "starter", countryCode: "US", family: "subscription", chargeId: "plan_starter", method: "percentage", ratePercent: 5, chargeLabel: "Starter" });
+    const blockers = countrySaveBlockers({ editingId: "old", rules: [unlinked, copy, starter] });
+    assert.deepEqual(blockers.map((item) => item.id), ["starter"]);
+    const moved = planCountryTaxRule({
+      countryCode: "US",
+      family: "subscription",
+      chargeId: "plan_starter",
+      chargeLabel: "Starter",
+      method: "percentage",
+      ratePercent: "8",
+      existing: countrySaveBlockers({ editingId: "old", rules: [unlinked, copy] }),
+      exceptId: "old",
+    });
+    assert.equal(moved.ok, true);
+    if (!moved.ok) return;
+    assert.equal(moved.rule.chargeId, "plan_starter");
+    assert.equal(moved.rule.chargeLabel, "Starter");
+    assert.equal(moved.rule.ratePercent, 8);
+    const retire = countryRulesToRetire({
+      keepId: "old",
+      countryCode: "US",
+      family: "subscription",
+      chargeIds: ["plan_starter", ""],
+      rules: [unlinked, copy],
+    });
+    assert.deepEqual(retire, ["copy"]);
+    const shown = dedupeCountryRules([copy, unlinked]);
+    assert.equal(shown.length, 1);
+    assert.equal(shown[0]?.id, "copy");
+    const taxed = calculateCountryTax({
+      rules: shown,
+      chargeId: "PLUS",
+      family: "subscription",
+      countryCode: "US",
+      baseCents: 1900,
+      currency: "USD",
+      at,
+    });
+    assert.equal(taxed.ok, true);
+    assert.equal(taxed.taxCents, 152);
+    const conflicted = flagRuleConflicts(dedupeCountryRules([
+      rule({ id: "a", countryCode: "US", family: "subscription", method: "percentage", ratePercent: 8 }),
+      rule({ id: "b", countryCode: "US", family: "subscription", method: "percentage", ratePercent: 10 }),
+    ]));
+    assert.equal(conflicted.length, 2);
+    assert.equal(conflicted.every((item) => item.conflict), true);
+    const sameRule = planCountryTaxRule({
+      countryCode: "US",
+      family: "subscription",
+      chargeId: "",
+      chargeLabel: "Subscriptions",
+      method: "location",
+      ratePercent: "",
+      existing: [unlinked],
+      exceptId: "old",
+    });
+    assert.equal(sameRule.ok, true);
+    if (sameRule.ok) assert.equal(sameRule.rule.method, "location");
+  });
+
+  it("wires edit to the saved policy instead of the series title", () => {
+    const client = readFileSync("src/app/admin/payment-settings/tax-settings-client.tsx", "utf8");
+    const action = readFileSync("src/app/admin/payment-standard/actions.ts", "utf8");
+    assert.equal(client.includes("chargeLabel: record.name"), false);
+    assert.equal(client.includes("unlinked"), false);
+    assert.match(client, /policyId/);
+    assert.match(action, /replaceTaxConfiguration/);
+    assert.match(action, /policyId/);
   });
 });
 

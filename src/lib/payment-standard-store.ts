@@ -217,6 +217,87 @@ export async function saveTaxConfiguration(input: {
   };
 }
 
+/** Update the rule the admin is editing. A new version row would leave the previous product in the list. */
+export async function replaceTaxConfiguration(id: string, input: Parameters<typeof saveTaxConfiguration>[0]) {
+  const current = await prisma.taxPolicyVersion.findUnique({ where: { id }, select: { id: true } });
+  if (!current) return null;
+  const names = [input.name.trim(), `${input.name.trim()} · ${id}`];
+  let lastError: unknown;
+  for (const name of names) {
+    try {
+      const row = await prisma.$transaction(async (tx) => {
+        const updated = await tx.taxPolicyVersion.update({
+          where: { id },
+          data: {
+            name,
+            liableEntity: input.liableEntity,
+            treatment: input.treatment,
+            inclusive: input.inclusive,
+            classification: input.taxCategory,
+            filingOwner: input.filingOwner,
+            jurisdiction: input.jurisdiction,
+            customerRole: input.customerRole,
+            rateBps: input.rateBps,
+            status: input.status,
+            effectiveTo: input.effectiveTo,
+            notes: "",
+            appliesTo: input.appliesTo,
+            countryCode: input.countryCode,
+            regionCode: input.regionCode,
+            environment: input.environment,
+            providerCode: input.providerCode,
+            providerAccountId: input.providerAccountId,
+            calculationMethod: input.calculationMethod,
+            taxCategory: input.taxCategory,
+            registrationStatus: input.registrationStatus,
+            filingArrangement: input.filingArrangement,
+            linkedIds: input.linkedIds.join(","),
+          },
+        });
+        if (input.activate && input.planIds.length > 0) {
+          await tx.entitlementPlan.updateMany({
+            where: { id: { in: input.planIds } },
+            data: {
+              taxPolicyId: updated.id,
+              taxCode: input.taxCategory,
+              taxBehavior: input.inclusive ? "inclusive" : "exclusive",
+            },
+          });
+        }
+        if (input.activate && input.feeRuleIds.length > 0) {
+          await tx.collaborationFeeRule.updateMany({
+            where: { id: { in: input.feeRuleIds } },
+            data: { taxPolicyId: updated.id },
+          });
+        }
+        return updated;
+      });
+      return {
+        ok: true as const,
+        id: row.id,
+        version: row.version,
+        fundingEnabled: false as const,
+        signedRecordsChanged: false as const,
+        serviceIds: input.serviceIds,
+      };
+    } catch (error) {
+      if (!isUnique(error)) throw error;
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
+/** Hide a previous copy so the list and the calculation keep one rule for that country and product. */
+export async function retireTaxPolicies(ids: string[]) {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (unique.length === 0) return;
+  await prisma.taxPolicyVersion.updateMany({
+    where: { id: { in: unique } },
+    data: { status: "replaced" },
+  });
+}
+
 function carriedTaxFields(taxCents: number | null | undefined, taxReason: string | undefined) {
   if (taxCents == null) return { ok: true as const, taxCents: null, taxReason: "" };
   if (!Number.isInteger(taxCents) || taxCents < 0) {

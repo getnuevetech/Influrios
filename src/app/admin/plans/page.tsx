@@ -13,7 +13,7 @@ import { PLAN_FEATURE_META } from "@/lib/plan-presentation";
 import { listPlanCatalog, listPlanFeatures, type PlanFeatureEditorRow } from "@/lib/entitlements-db";
 import { PlanPricePreview } from "@/app/admin/plans/plan-price-preview";
 import { PlanTaxPanel } from "@/app/admin/plans/plan-tax-panel";
-import { flagRuleConflicts, mapStoredPolicy } from "@/lib/country-tax";
+import { dedupeCountryRules, flagRuleConflicts, mapStoredPolicy } from "@/lib/country-tax";
 import { loadTaxCatalog } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export default async function AdminPlansPage({ searchParams }: Props) {
   let plans: Awaited<ReturnType<typeof listPlanCatalog>> = [];
   let dbError = false;
   const catalog = await loadTaxCatalog().catch(() => null);
-  const taxRules = flagRuleConflicts((catalog?.records ?? []).map((record) => mapStoredPolicy(record)).filter((rule) => rule != null));
+  const taxRules = flagRuleConflicts(dedupeCountryRules((catalog?.records ?? []).map((record) => mapStoredPolicy(record)).filter((rule) => rule != null)));
   const taxCountries = catalog?.countries ?? [];
   try {
     [rows, plans] = await Promise.all([listPlanFeatures(), listPlanCatalog()]);
