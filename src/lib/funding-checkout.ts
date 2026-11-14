@@ -114,6 +114,16 @@ export async function startFundingDeposit(input: {
   if (!funding || funding.status !== "awaiting_provider") {
     return { ok: false, error: "This funding is not waiting for a deposit. Nothing was charged." };
   }
+  const { journeyFundingInitiation } = await import("@/lib/four-account-journey");
+  const { productSwitch } = await import("@/lib/product-switches");
+  let rolloutEnabled = true;
+  try {
+    rolloutEnabled = await productSwitch("journey_funding");
+  } catch {
+    rolloutEnabled = true;
+  }
+  const rollout = journeyFundingInitiation({ rolloutEnabled, intent: "start_funding" });
+  if (!rollout.ok) return rollout;
   const { paymentChargeBlock, paymentChargeKeyForDeposit } = await import("@/lib/payment-charge-switches");
   const chargeKey = paymentChargeKeyForDeposit(input.method);
   if (chargeKey) {

@@ -16,6 +16,7 @@ import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketpla
 import { storedCurrencyCode } from "@/lib/money";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 import { paymentNextAction } from "@/lib/payment-list";
+import { paymentRecoveryView } from "@/lib/payment-recovery";
 import { paymentStageNote, paymentStages } from "@/lib/payment-stages";
 import { fundingInDateRange } from "@/lib/payment-standard-v4";
 import {
@@ -93,10 +94,12 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
     fundings = [];
   }
   if (unavailable) {
+    const recovery = paymentRecoveryView({ audience: "business", stages: [], unavailable: true });
     return (
       <div data-screen="B03" className="space-y-4">
         <h1 className="font-display text-3xl font-bold text-indigo">Collaboration payments</h1>
         <UnavailableNote label="Payment data" incident={unavailable.incident} href="/payments" />
+        {recovery?.kind === "unavailable" ? <p className="text-sm text-amber-950">{recovery.detail}</p> : null}
       </div>
     );
   }
@@ -333,14 +336,23 @@ async function PaymentDetail({
     : null;
   const settlementJson = settlement?.proposalJson;
   const tabs = ["overview", "breakdown", "milestones", "transactions", "documents"] as const;
+  const recovery = paymentRecoveryView({
+    audience: businessViewer ? "business" : "influencer",
+    stages,
+  });
   const actionHref =
-    action.label === "Fund collaboration"
-      ? `/payments/checkout/${deal.id}`
-      : action.label === "View cancellation case"
-        ? `${listHref}&case=refund`
-        : action.label === "Review submission" || action.label === "Open collaboration"
-          ? `/collaboration/work/${deal.id}`
-          : `${listHref}&tab=transactions`;
+    recovery?.kind === "influencer"
+      ? "/creator/earnings#payouts"
+      : recovery?.kind === "business"
+        ? `${listHref}&tab=transactions`
+        : action.label === "Fund collaboration"
+          ? `/payments/checkout/${deal.id}`
+          : action.label === "View cancellation case"
+            ? `${listHref}&case=refund`
+            : action.label === "Review submission" || action.label === "Open collaboration"
+              ? `/collaboration/work/${deal.id}`
+              : `${listHref}&tab=transactions`;
+  const actionLabel = recovery && recovery.kind !== "unavailable" ? recovery.cta : action.label;
 
   return (
     <RecordDialog title={deal.title} closeHref={closeHref}>
@@ -348,6 +360,20 @@ async function PaymentDetail({
         <p className="text-sm text-muted">{deal.businessName} · {influencer}</p>
         <PaymentStatus label={statusLabel} />
         {stageNote ? <p className="rounded-2xl bg-[#F4F0FF] px-4 py-3 text-sm text-indigo">{stageNote}</p> : null}
+        {recovery && recovery.kind !== "unavailable" ? (
+          <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="font-semibold">{recovery.title}</p>
+            <p>{recovery.detail}</p>
+            {recovery.kind === "influencer" ? (
+              <ul className="space-y-1">
+                {recovery.rows.map((row) => (
+                  <li key={row.label}>{row.label}</li>
+                ))}
+              </ul>
+            ) : null}
+            <p>{recovery.note}</p>
+          </div>
+        ) : null}
         {caseOpen ? (
           <div className="space-y-3">
             <h3 className="font-display text-xl font-bold text-indigo">Cancellation case</h3>
@@ -429,7 +455,7 @@ async function PaymentDetail({
               <Link href="/collaboration/contracts" className="font-semibold text-violet">Signed agreements</Link>
             ) : null}
             <div className="sticky bottom-0 border-t border-border bg-white py-3 md:static">
-              <Link href={actionHref} className="inline-flex h-11 items-center rounded-full bg-violet px-4 text-sm font-semibold text-white">{action.label}</Link>
+              <Link href={actionHref} className="inline-flex h-11 items-center rounded-full bg-violet px-4 text-sm font-semibold text-white">{actionLabel}</Link>
             </div>
           </>
         )}

@@ -89,13 +89,16 @@ export function VersionReview({
           </ul>
         ) : null}
       </div>
+      {business && current ? (
+        <p className="text-sm font-semibold text-[#1B1464]">Your decision applies to version {current.version} only.</p>
+      ) : null}
       {canAct ? (
         <div className="space-y-3">
           <Link
             href={`/collaboration/work/${dealId}?release=${milestoneId}&version=${selected.version}`}
             className="inline-flex h-11 items-center rounded-full bg-[#6D4AFF] px-4 text-sm font-semibold text-white"
           >
-            Review submission
+            Review approval
           </Link>
           <form action={actionRequestRevision} className="space-y-2">
             <input type="hidden" name="dealId" value={dealId} />
@@ -103,14 +106,14 @@ export function VersionReview({
             <input type="hidden" name="versionNumber" value={selected.version} />
             <textarea name="note" required minLength={8} rows={2} placeholder="What should change" className="w-full rounded-xl border border-[#E4E9F5] px-3 py-2 text-sm" />
             <button type="submit" className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#1B1464]">
-              Request revision
+              Request changes
             </button>
           </form>
-          <p className="text-xs text-[#98A2B3]">Approving this version does not confirm the payout.</p>
         </div>
       ) : business && current && selected.version !== current.version ? (
-        <p className="text-xs text-[#667085]">This version stays on the record. Review the latest submitted version to approve it or request a revision.</p>
+        <p className="text-xs text-[#667085]">This version stays on the record. Review the latest submitted version to approve it or request changes.</p>
       ) : null}
+      <p className="text-xs text-[#98A2B3]">Approval starts the release workflow. Bank payout is tracked separately.</p>
     </div>
   );
 }

@@ -144,6 +144,9 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
               {milestone.releaseScheduledAt ? ` · release scheduled ${milestone.releaseScheduledAt.toISOString().slice(0, 16).replace("T", " ")} UTC` : ""}
               {milestone.status === "released" ? " · payout confirmed" : ""}
             </p>
+            <p className="mt-1 text-sm text-indigo">
+              Approval binds to the submitted version. A bank payout is tracked separately from delivery approval and from a transfer to the influencer account.
+            </p>
             {openDispute ? (
               <p className="mt-2 text-sm text-amber-800">
                 A dispute holds {formatMoney(milestone.amountCents, funding.currency)} on this milestone.
