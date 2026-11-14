@@ -4,7 +4,7 @@
  * for a valid zero. Milestone payouts carry those original records and do not
  * calculate tax again. A failed calculation is never stored as zero.
  */
-import { allocateByLargestRemainder } from "@/lib/agreement-fee-engine";
+import { allocateByLargestRemainder } from "@/lib/largest-remainder";
 
 export const TAX_SALE_EVENTS = [
   "subscription_invoice",
