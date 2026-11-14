@@ -24,11 +24,15 @@ export async function PlanTaxPanel({ canEdit }: { canEdit: boolean }) {
       <ul className="space-y-2 text-sm">
         {plans.map((plan) => {
           const gate = gates[plan.code];
-          const label = plan.amountCents <= 0 ? "No charge" : gate?.kind === "checkout" ? "Tax calculated at checkout" : gate?.kind === "unavailable" ? `Temporarily unavailable · ${gate.missing}` : "Not configured";
+          const unavailable = gate?.kind === "unavailable";
+          const label = plan.amountCents <= 0 ? "No charge" : gate?.kind === "checkout" ? "Tax calculated at checkout" : unavailable ? "This plan is temporarily unavailable." : "Not configured";
           return (
             <li key={plan.code} className="flex items-center justify-between gap-3 rounded-2xl border bg-white px-4 py-3">
               <span className="font-semibold">{plan.name}</span>
-              <span className="text-muted">{label}</span>
+              <span className="text-right text-muted">
+                {label}
+                {gate?.kind === "unavailable" ? <span className="mt-1 block text-xs">Missing setting: {gate.missing}</span> : null}
+              </span>
             </li>
           );
         })}

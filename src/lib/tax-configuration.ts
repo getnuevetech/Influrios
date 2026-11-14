@@ -35,6 +35,24 @@ export const CALCULATION_METHODS = [
   { id: "manual", label: "Approved manual configuration" },
 ] as const;
 
+/** The method dropdown uses the provider name when that is what the list already calls the calculation. */
+export function calculationChoices(providerCode: string) {
+  const automatic = providerCode === "stripe" ? "Stripe Tax (automatic)" : "Automatic provider calculation";
+  return [
+    { id: "automatic" as const, label: automatic },
+    { id: "manual" as const, label: "Approved manual configuration" },
+  ];
+}
+
+/** Fee rules are chosen by their name. An internal purpose code is not a label. */
+export function feeRuleChoiceLabel(name: string, purpose: "business_fee" | "influencer_fee") {
+  const text = name.trim().replace(/\s+·\s+(brand|influencer|business|payer)$/i, "");
+  if (!text || text === "business_platform_fee" || text === "influencer_platform_fee") {
+    return purpose === "business_fee" ? "Business fee" : "Influencer fee";
+  }
+  return text;
+}
+
 export type CalculationMethod = (typeof CALCULATION_METHODS)[number]["id"];
 
 export const PRICE_DISPLAY = [
@@ -279,13 +297,19 @@ export function buildTaxRows(records: {
   countryCode: string;
   name: string;
 }[]): TaxListRow[] {
-  const latest = new Map<string, (typeof records)[number]>();
+  const chosen: (typeof records)[number][] = [];
+  const seen = new Set<string>();
   for (const record of records) {
-    if (!latest.has(record.name)) latest.set(record.name, record);
+    if (!isTaxSubject(record.appliesTo)) continue;
+    const key = `${record.appliesTo}:${record.countryCode.trim().toUpperCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    chosen.push(record);
   }
-  const rows: TaxListRow[] = [...latest.values()].map((record) => {
-    const status = isTaxSubject(record.appliesTo) ? displayStatus(record.status) : "needs_review";
+  const rows: TaxListRow[] = chosen.map((record) => {
+    const status = displayStatus(record.status);
     const appliesLabel = subjectLabel(record.appliesTo);
+    const countryCode = record.countryCode.trim().toUpperCase();
     return {
       id: record.id,
       appliesTo: record.appliesTo,
@@ -294,8 +318,8 @@ export function buildTaxRows(records: {
       account: record.accountLabel.trim() || "Not selected",
       status,
       action: rowAction(status),
-      countryCode: record.countryCode.trim().toUpperCase(),
-      search: `${appliesLabel} ${record.accountLabel} ${record.countryCode}`.toLowerCase(),
+      countryCode,
+      search: `${appliesLabel} ${record.accountLabel} ${countryCode}`.toLowerCase(),
     };
   });
   for (const subject of TAX_SUBJECTS) {
@@ -312,8 +336,52 @@ export function buildTaxRows(records: {
       search: subject.label.toLowerCase(),
     });
   }
+  const counts = new Map<string, number>();
+  for (const row of rows) counts.set(row.appliesTo, (counts.get(row.appliesTo) ?? 0) + 1);
+  for (const row of rows) {
+    if ((counts.get(row.appliesTo) ?? 0) < 2 || !row.countryCode) continue;
+    row.appliesLabel = `${subjectLabel(row.appliesTo)} · ${row.countryCode}`;
+    row.search = `${row.appliesLabel} ${row.account} ${row.countryCode}`.toLowerCase();
+  }
   const order = new Map(TAX_SUBJECTS.map((subject, index) => [subject.id, index]));
-  return rows.sort((a, b) => (order.get(a.appliesTo as TaxSubject) ?? 9) - (order.get(b.appliesTo as TaxSubject) ?? 9) || a.appliesLabel.localeCompare(b.appliesLabel));
+  return rows.sort((a, b) => (order.get(a.appliesTo as TaxSubject) ?? 9) - (order.get(b.appliesTo as TaxSubject) ?? 9) || a.countryCode.localeCompare(b.countryCode));
+}
+
+/** A country route is not a second tax setup. Missing tax there does not block every product. */
+export function routeTaxNote(linked: boolean) {
+  if (linked) {
+    return "This route records one tax configuration. Other products keep their own setup. Linking it does not enable collaboration funding.";
+  }
+  return "No tax configuration is linked here. Set each product in Tax Settings. A missing setup does not block other products or the free plan, and an unresolved calculation is not stored as zero.";
+}
+
+export function reviewChecks(input: { productSelected: boolean; entity: string; previewPassed: boolean }) {
+  return [
+    { label: "Product mapping complete", done: input.productSelected },
+    { label: "Responsibility confirmed", done: isApprovedEntity(input.entity) },
+    { label: "Test passed", done: input.previewPassed },
+  ];
+}
+
+export type CheckoutNoticeKind = "pending" | "address" | "unavailable" | "provider" | "zero" | "calculated" | "free";
+
+/** One customer state at a time. A failed calculation is never the zero state. */
+export function customerCheckoutNotice(preview: {
+  ok: boolean;
+  kind: string;
+  taxCents: number | null;
+  subtotalCents: number | null;
+  totalCents: number | null;
+} | null): CheckoutNoticeKind {
+  if (!preview) return "pending";
+  if (preview.kind === "free") return "free";
+  if (preview.kind === "address") return "address";
+  if (preview.kind === "provider") return "provider";
+  if (preview.kind === "configuration") return "unavailable";
+  const ready = preview.ok && preview.taxCents != null && preview.subtotalCents != null && preview.totalCents != null;
+  if (ready && preview.taxCents === 0) return "zero";
+  if (ready) return "calculated";
+  return "pending";
 }
 
 export function filterTaxRows(rows: TaxListRow[], input: { query?: string; country?: string; status?: string }) {
