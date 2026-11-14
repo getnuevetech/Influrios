@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAdminSession, hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { saveRouteDraft, saveTaxConfiguration } from "@/lib/payment-standard-store";
+import { planCountryTaxRule, storedFamily, type ChargeFamily } from "@/lib/country-tax";
 import { planTaxConfiguration, parseMoneyToCents, parseTaxPercent, percentToStoredRate, type PreviewDecision } from "@/lib/tax-configuration";
 import { accountsForSelection, countryRegions, loadTaxCatalog, previewConfiguredTax } from "@/lib/tax-settings";
 import { requestStripeTaxRegistrations, stripeCredentials } from "@/lib/stripe-admin";
@@ -78,10 +79,77 @@ export async function actionTaxRegions(countryCode: string) {
   return countryRegions(countryCode);
 }
 
-export async function actionSaveTaxConfiguration(formData: FormData): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+const CUSTOMER_ROLE: Record<ChargeFamily, string> = {
+  subscription: "subscriber",
+  business_fee: "business",
+  influencer_fee: "influencer",
+  influencer_service: "services",
+  other: "business",
+};
+
+export async function actionSaveTaxConfiguration(formData: FormData): Promise<{ ok: true; id: string; summary?: string } | { ok: false; error: string }> {
   const session = await getAdminSession();
   if (!session || !hasPermission(session, "collab_finance.manage")) {
     return { ok: false, error: "You do not have access to tax settings." };
+  }
+  if (String(formData.get("ruleModel") ?? "") === "country") {
+    const catalog = await loadTaxCatalog();
+    const { flagRuleConflicts, mapStoredPolicy } = await import("@/lib/country-tax");
+    const existing = flagRuleConflicts(catalog.records.map((record) => mapStoredPolicy(record)).filter((rule) => rule != null));
+    const family = storedFamily(String(formData.get("family") ?? "")) || String(formData.get("family") ?? "");
+    const planned = planCountryTaxRule({
+      countryCode: String(formData.get("countryCode") ?? ""),
+      family,
+      chargeId: String(formData.get("chargeId") ?? ""),
+      chargeLabel: String(formData.get("chargeLabel") ?? ""),
+      method: String(formData.get("calculationMethod") ?? ""),
+      ratePercent: String(formData.get("ratePercent") ?? ""),
+      existing,
+    });
+    if (!planned.ok) return planned;
+    const rule = planned.rule;
+    const appliesTo = rule.family === "influencer_service" ? "influencer_services" : rule.family;
+    const percent = rule.ratePercent == null ? null : percentToStoredRate(rule.ratePercent);
+    const saved = await saveTaxConfiguration({
+      name: planned.summary,
+      appliesTo,
+      customerRole: CUSTOMER_ROLE[rule.family],
+      linkedIds: rule.chargeId ? [rule.chargeId] : [],
+      countryCode: rule.countryCode,
+      regionCode: "",
+      environment: "sandbox",
+      providerCode: "",
+      providerAccountId: "",
+      calculationMethod: rule.method,
+      taxCategory: "",
+      inclusive: false,
+      liableEntity: "",
+      registrationStatus: "not_synced",
+      filingArrangement: "",
+      filingOwner: "",
+      rateBps: rule.method === "percentage" ? percent : null,
+      jurisdiction: "",
+      effectiveFrom: new Date(),
+      effectiveTo: null,
+      treatment: rule.ratePercent === 0 ? "exempt" : "taxable",
+      status: "ready",
+      planIds: rule.family === "subscription" && rule.chargeId ? [rule.chargeId] : [],
+      feeRuleIds: rule.family === "business_fee" || rule.family === "influencer_fee" || rule.family === "other" ? (rule.chargeId ? [rule.chargeId] : []) : [],
+      serviceIds: [],
+      activate: true,
+    });
+    await prisma.auditLog.create({
+      data: {
+        actor: session.email,
+        action: "tax.rule_saved",
+        objectType: "TaxPolicyVersion",
+        objectId: saved.id,
+        after: { summary: planned.summary, countryCode: rule.countryCode, family: rule.family, method: rule.method, ratePercent: rule.ratePercent },
+      },
+    }).catch(() => null);
+    revalidatePath("/admin/payment-settings");
+    revalidatePath("/admin/plans");
+    return { ok: true, id: saved.id, summary: planned.summary };
   }
   const form = taxForm(formData);
   const intent = String(formData.get("intent") ?? "") === "activate" ? "activate" : "draft";

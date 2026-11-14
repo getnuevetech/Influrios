@@ -5,6 +5,7 @@ import { State } from "country-state-city";
 import { getProduct } from "@/lib/billing";
 import { corridorCountries } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
+import { calculateCountryTax, flagRuleConflicts, mapLegacyInclusivePrice, mapStoredPolicy, matchCountryRule, paidPlanAvailability } from "@/lib/country-tax";
 import {
   INFLUENCER_SERVICE_SUBJECTS,
   accountsFor,
@@ -158,7 +159,12 @@ export async function subscriptionTaxGates(plans: { code: string; sku: string; a
   return gates;
 }
 
-export async function subscriptionCheckoutContext(sku: string) {
+export async function loadCountryRules() {
+  const catalog = await loadTaxCatalog().catch(() => null);
+  return flagRuleConflicts((catalog?.records ?? []).map((record) => mapStoredPolicy(record)).filter((rule) => rule != null));
+}
+
+export async function subscriptionCheckoutContext(sku: string, countryCode = "") {
   const product = getProduct(sku);
   const code = product?.creatorPlan || product?.businessPlan || sku;
   const plan = await prisma.entitlementPlan.findFirst({
@@ -167,11 +173,16 @@ export async function subscriptionCheckoutContext(sku: string) {
   }).catch(() => null);
   const amountCents = plan?.amountCents ?? product?.amountCents ?? 0;
   const checkout = amountCents > 0;
-  const gates = await subscriptionTaxGates([{ code: plan?.code ?? code, sku, amountCents, checkout }]);
-  const gate = gates[plan?.code ?? code] ?? planTaxGate({ amountCents, checkout, gaps: checkout ? ["Tax configuration for this plan"] : [] });
+  const rules = await loadCountryRules().catch(() => []);
+  const planId = plan?.id || plan?.code || code;
+  const gate = countryCode
+    ? paidPlanAvailability({ amountCents, checkout, countryCode, planId, rules })
+    : planTaxGate({ amountCents, checkout, gaps: [] });
+  const matched = countryCode ? matchCountryRule(rules, { countryCode, family: "subscription", chargeId: planId }) : null;
+  const rule = matched && matched.ok ? matched.rule : null;
   const catalog = await loadTaxCatalog().catch(() => null);
-  const policy = catalog?.records.find((row) => row.id === plan?.taxPolicyId && (row.status === "ready" || row.status === "active") && row.appliesTo === "subscription") ?? null;
-  return { gate, plan, amountCents, policy };
+  const policy = catalog?.records.find((row) => row.id === rule?.id) ?? catalog?.records.find((row) => row.id === plan?.taxPolicyId && (row.status === "ready" || row.status === "active") && row.appliesTo === "subscription") ?? null;
+  return { gate, plan, amountCents, policy, rule };
 }
 
 export async function notifyTaxGap(input: { planCode: string; missing: string }) {
@@ -209,6 +220,75 @@ export async function previewConfiguredTax(input: {
   requireStreet: boolean;
   subjectSelected: boolean;
 }): Promise<PreviewDecision> {
+  if (input.inclusive) {
+    const mapped = mapLegacyInclusivePrice({
+      storedCents: input.amountCents,
+      inclusive: true,
+      ratePercent: input.rateBps == null ? null : Number(storedRateToPercent(input.rateBps)),
+    });
+    return {
+      ok: true,
+      kind: "calculated",
+      customerMessage: mapped.taxIncludedCents === 0 ? "Tax $0.00" : "",
+      correction: "",
+      subtotalCents: mapped.baseCents,
+      taxCents: mapped.taxIncludedCents,
+      totalCents: mapped.customerTotalCents,
+      reason: mapped.reason,
+      liableEntityLabel: "",
+      legalNote: "",
+    };
+  }
+  if (input.method === "percentage" && input.rateBps != null && input.subjectSelected && Number.isInteger(input.amountCents) && input.amountCents >= 0) {
+    const calculated = calculateCountryTax({
+      rules: [{
+        id: "percentage",
+        version: 1,
+        countryCode: input.country.trim().toUpperCase() || "US",
+        family: "subscription",
+        chargeId: "",
+        chargeLabel: "Subscriptions",
+        method: "percentage",
+        ratePercent: Number(storedRateToPercent(input.rateBps)),
+        inclusive: false,
+        effective: true,
+        conflict: false,
+      }],
+      chargeId: "subscription",
+      family: "subscription",
+      countryCode: input.country || "US",
+      baseCents: input.amountCents,
+      currency: "USD",
+      at: new Date().toISOString(),
+    });
+    if (!calculated.ok || calculated.taxCents == null || calculated.totalCents == null || calculated.subtotalCents == null) {
+      return {
+        ok: false,
+        kind: calculated.status === "missing_location" ? "address" : "configuration",
+        customerMessage: calculated.status === "failed" ? "We couldn't calculate tax. Nothing was charged." : "This plan is temporarily unavailable.",
+        correction: calculated.reason,
+        subtotalCents: null,
+        taxCents: null,
+        totalCents: null,
+        reason: "",
+        liableEntityLabel: "",
+        legalNote: "",
+      };
+    }
+    return {
+      ok: true,
+      kind: "calculated",
+      customerMessage: calculated.taxCents === 0 ? "Tax $0.00" : "",
+      correction: "",
+      subtotalCents: calculated.subtotalCents,
+      taxCents: calculated.taxCents,
+      totalCents: calculated.totalCents,
+      reason: calculated.reason,
+      liableEntityLabel: "",
+      legalNote: "",
+    };
+  }
+  const method = input.method === "location" ? "automatic" : input.method;
   const addressReady = billingAddressReady({
     country: input.country,
     region: input.region,
@@ -218,7 +298,7 @@ export async function previewConfiguredTax(input: {
     requireStreet: input.requireStreet,
   });
   let providerResult: { ok: true; taxCents: number; totalCents: number; reason: string } | { ok: false; detail: string } | null = null;
-  if (input.phase === "calculate" && input.method === "automatic" && addressReady && input.subjectSelected) {
+  if (input.phase === "calculate" && method === "automatic" && addressReady && input.subjectSelected) {
     const creds = await stripeCredentials();
     if (!creds.ok) {
       providerResult = { ok: false, detail: "The tax provider is not configured. Nothing was charged." };
@@ -238,7 +318,7 @@ export async function previewConfiguredTax(input: {
   return decidePreview({
     audience: input.audience,
     phase: input.phase,
-    method: input.method,
+    method,
     addressReady,
     amountCents: input.amountCents,
     rateBps: input.rateBps,

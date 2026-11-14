@@ -18,7 +18,7 @@ export async function PlanTaxPanel({ canEdit }: { canEdit: boolean }) {
     <section data-screen="S01" className="space-y-3">
       <h2 className="font-display text-2xl font-bold text-indigo">Tax</h2>
       <p className="text-sm text-muted">
-        Each plan has its own tax setup. A missing setting on one plan does not block the others, and a free plan stays available.
+        Each paid plan adds applicable tax at checkout. A missing rate on one plan does not block the free plan or the others.
         {canEdit ? " Edit the setup in Tax Settings." : ""}
       </p>
       <ul className="space-y-2 text-sm">

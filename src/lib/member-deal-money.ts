@@ -32,6 +32,8 @@ function signedQuote(plan: unknown) {
   }
   const influencerTaxCents = integer(row.influencerTaxCents) ?? 0;
   const withholdingCents = integer(row.withholdingCents) ?? 0;
+  const businessTaxCents = integer(row.businessTaxCents);
+  const taxStatus = typeof row.taxStatus === "string" ? row.taxStatus : "";
   return {
     businessPaysCents,
     influencerReceivesCents,
@@ -39,6 +41,8 @@ function signedQuote(plan: unknown) {
     influencerPlatformFeeCents,
     grossInfluencerCompensationCents,
     otherDeductionsCents: influencerTaxCents + withholdingCents,
+    businessTaxCents,
+    taxStatus,
   };
 }
 
@@ -83,16 +87,26 @@ export function memberDealView(input: {
 }): MemberDealView {
   const quote = signedQuote(input.plan);
   if (quote && input.role === "business") {
+    const taxed = quote.businessTaxCents != null && (quote.businessTaxCents > 0 || quote.taxStatus === "approved" || quote.taxStatus === "approved_zero");
+    const lines = taxed
+      ? [
+          { label: "Influencer compensation", amountCents: quote.grossInfluencerCompensationCents },
+          { label: "Business collaboration fee", amountCents: quote.businessPlatformFeeCents },
+          { label: "Subtotal", amountCents: quote.grossInfluencerCompensationCents + quote.businessPlatformFeeCents },
+          { label: "Tax", amountCents: quote.businessTaxCents ?? 0 },
+          { label: "Total to fund", amountCents: quote.businessPaysCents },
+        ]
+      : [
+          { label: "Gross compensation", amountCents: quote.grossInfluencerCompensationCents },
+          { label: "Your platform fee", amountCents: quote.businessPlatformFeeCents },
+          { label: "You pay", amountCents: quote.businessPaysCents },
+        ];
     return {
       role: "business",
       headlineCents: quote.businessPaysCents,
       feeCents: quote.businessPlatformFeeCents,
       grossCents: quote.businessPaysCents,
-      lines: [
-        { label: "Gross compensation", amountCents: quote.grossInfluencerCompensationCents },
-        { label: "Your platform fee", amountCents: quote.businessPlatformFeeCents },
-        { label: "You pay", amountCents: quote.businessPaysCents },
-      ],
+      lines,
       signed: true,
       feeReady: true,
     };

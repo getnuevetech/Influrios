@@ -9,19 +9,13 @@ export async function TaxPoliciesPanel() {
   return (
     <TaxSettingsClient
       canEdit={canEdit}
-      records={catalog.records.map((record) => ({
-        ...record,
-        calculationMethod: record.calculationMethod,
-      }))}
+      records={catalog.records}
       catalog={{
-        plans: catalog.plans.map((plan) => ({ id: plan.id, name: plan.name })),
+        plans: catalog.plans.map((plan) => ({ id: plan.id, name: `${plan.name}` })),
         feeRules: catalog.feeRules,
         services: catalog.services,
         countries: catalog.countries,
-        integrations: catalog.integrations,
-        accounts: catalog.accounts,
       }}
-      previews={catalog.previews}
     />
   );
 }

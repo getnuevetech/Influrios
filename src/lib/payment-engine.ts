@@ -469,9 +469,13 @@ export function buildBusinessCommercialSnapshot(input: {
     return { ok: false, error: "Unresolved tax treatment cannot add a tax line." };
   }
   const businessTax = tax.lines.filter((line) => line.type === "business_fee_tax").reduce((sum, line) => sum + line.amountCents, 0);
+  const influencerTax = tax.lines.filter((line) => line.type === "influencer_fee_tax").reduce((sum, line) => sum + line.amountCents, 0);
   const influencer = input.influencer;
   const influencerLocked =
     influencer != null && influencer.grossInfluencerCompensationCents === input.quote.grossInfluencerCompensationCents;
+  if (influencerLocked && influencer.totalCents - influencerTax < 0) {
+    return { ok: false, error: "Influencer fee tax reduces the payout below zero. Nothing was stored." };
+  }
   if (
     input.activation &&
     input.activation.activationFeeCents + input.activation.businessCollaborationFeeCents !== input.quote.feeCents
@@ -492,10 +496,10 @@ export function buildBusinessCommercialSnapshot(input: {
     businessPlatformFeeCents: input.quote.feeCents,
     influencerPlatformFeeCents: influencerLocked ? influencer.feeCents : null,
     businessTaxCents: businessTax,
-    influencerTaxCents: 0,
+    influencerTaxCents: influencerTax,
     withholdingCents: 0,
     businessPaysCents: input.quote.totalCents + businessTax,
-    influencerReceivesCents: influencerLocked ? influencer.totalCents : null,
+    influencerReceivesCents: influencerLocked ? influencer.totalCents - influencerTax : null,
     platformFeesTotalCents: input.quote.feeCents + (influencerLocked ? influencer.feeCents : 0),
     businessRuleId: input.quote.rule.id,
     businessRuleVersion: input.quote.rule.version,

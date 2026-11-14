@@ -108,7 +108,7 @@ export function MemberPlanPage({
               <h2 className="mt-4 font-display text-xl font-bold">{plan.name}</h2>
               <p className="mt-2 font-display text-4xl font-bold">
                 {displayPrice(plan.amountCents, plan.priceLabel)}
-                <span className="text-sm font-semibold text-muted"> / month</span>
+                <span className="text-sm font-semibold text-muted"> / month{plan.amountCents > 0 ? " + applicable tax" : ""}</span>
               </p>
               <p className="mt-2 text-sm text-muted">{plan.description}</p>
               <ul className="mt-4 flex-1 space-y-2 text-sm">

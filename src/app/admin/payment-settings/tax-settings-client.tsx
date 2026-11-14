@@ -1,169 +1,264 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { buildTaxRows, filterTaxRows, statusCounts, subjectLabel } from "@/lib/tax-configuration";
-import { TaxSetupDialog, type TaxDialogCatalog, type TaxDialogRecord } from "@/app/admin/payment-settings/tax-setup-dialog";
+import { useRouter } from "next/navigation";
+import { actionSaveTaxConfiguration } from "@/app/admin/payment-standard/actions";
+import { AccountDialog } from "@/components/account-dialog";
+import {
+  CHARGE_FAMILIES,
+  COUNTRY_TAX_FIELDS,
+  familyLabel,
+  flagRuleConflicts,
+  mapStoredPolicy,
+  taxCalculationLabel,
+  type ChargeFamily,
+  type CountryTaxRule,
+} from "@/lib/country-tax";
 
-const STATUS_CLASS = {
-  ready: "bg-emerald-50 text-emerald-700",
-  draft: "bg-[#F1ECFF] text-violet",
-  needs_review: "bg-orange-50 text-orange-700",
-} as const;
+type Catalog = {
+  plans: { id: string; name: string }[];
+  feeRules: { id: string; label: string; purpose: string }[];
+  services: { id: string; label: string }[];
+  countries: { code: string; name: string }[];
+};
+
+type RecordRow = {
+  id: string;
+  version?: number;
+  appliesTo: string;
+  linkedIds: string[];
+  countryCode: string;
+  calculationMethod: string;
+  rateBps?: number | null;
+  ratePercent?: string;
+  inclusive?: boolean;
+  status?: string;
+  name?: string;
+};
+
+function countryName(countries: { code: string; name: string }[], code: string) {
+  return countries.find((country) => country.code === code)?.name ?? code;
+}
 
 export function TaxSettingsClient({
   records,
   catalog,
-  previews,
   canEdit,
 }: {
-  records: (TaxDialogRecord & { calculationMethod: "" | "automatic" | "manual"; providerCode: string; accountLabel: string; status: string; name: string })[];
-  catalog: TaxDialogCatalog;
-  previews: { id: string; appliesTo: string; ok: boolean; reason: string; correction: string; taxCents: number | null; totalCents: number | null; amountCents: number; createdAt: string }[];
+  records: RecordRow[];
+  catalog: Catalog;
   canEdit: boolean;
 }) {
-  const [tab, setTab] = useState<"configurations" | "history">("configurations");
-  const [query, setQuery] = useState("");
-  const [country, setCountry] = useState("ALL");
-  const [status, setStatus] = useState("all");
-  const [openId, setOpenId] = useState<string | null>(null);
-  const rows = useMemo(() => buildTaxRows(records.map((record) => ({
-    id: record.id,
-    name: record.name,
-    appliesTo: record.appliesTo,
-    calculationMethod: record.calculationMethod,
-    providerCode: record.providerCode,
-    accountLabel: record.accountLabel,
-    status: record.status,
-    countryCode: record.countryCode,
-  }))), [records]);
-  const counts = statusCounts(rows);
-  const visible = filterTaxRows(rows, { query, country, status });
-  const openRecord = records.find((record) => record.id === openId) ?? null;
-  const creating = openId?.startsWith("missing:") || openId === "new";
-  const draftRecord: TaxDialogRecord | null = creating
-    ? {
-        id: openId ?? "new",
-        name: "",
-        appliesTo: openId?.startsWith("missing:") ? openId.slice("missing:".length) : "subscription",
-        linkedIds: [],
-        countryCode: "US",
-        regionCode: "",
-        environment: "sandbox",
-        providerCode: catalog.integrations[0]?.id ?? "",
-        providerAccountId: "",
-        accountLabel: "",
-        calculationMethod: "",
-        taxCategory: "",
-        inclusive: false,
-        liableEntity: "",
-        registrationStatus: "not_synced",
-        filingArrangement: "",
-        ratePercent: "",
-        jurisdiction: "",
-        effectiveFrom: "",
-        effectiveTo: "",
-      }
-    : openRecord;
+  const router = useRouter();
+  const rules = useMemo(() => flagRuleConflicts(records.map((record) => mapStoredPolicy({
+    ...record,
+    chargeLabel: record.name,
+  })).filter((rule): rule is CountryTaxRule => Boolean(rule))), [records]);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<CountryTaxRule | null>(null);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+
+  function startCreate() {
+    setEditing(null);
+    setError("");
+    setOpen(true);
+  }
+
+  function startEdit(rule: CountryTaxRule) {
+    setEditing(rule);
+    setError("");
+    setOpen(true);
+  }
 
   return (
-    <div data-screen="A02" className="mx-auto max-w-6xl space-y-4 px-4">
+    <div className="mx-auto max-w-6xl space-y-4 px-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-muted">Payment Settings / Tax</p>
           <h2 className="font-display text-3xl font-bold text-indigo">Tax Settings</h2>
-          <p className="mt-1 text-sm text-muted">Configure tax by product, country, and provider account.</p>
+          <p className="mt-1 text-sm text-muted">Choose a country and a product or charge, set the calculation, and save it once.</p>
         </div>
         {canEdit ? (
-          <button type="button" onClick={() => setOpenId("new")} className="rounded-full bg-violet px-4 py-2.5 text-sm font-semibold text-white">+ Add configuration</button>
+          <button type="button" onClick={startCreate} className="rounded-full bg-violet px-4 py-2.5 text-sm font-semibold text-white">{COUNTRY_TAX_FIELDS.add}</button>
         ) : null}
       </div>
-      <div className="flex gap-4 border-b text-sm font-semibold">
-        {([
-          ["configurations", "Configurations"],
-          ["history", "Test history"],
-        ] as const).map(([id, label]) => (
-          <button key={id} type="button" onClick={() => setTab(id)} className={`border-b-2 pb-2 ${tab === id ? "border-violet text-violet" : "border-transparent text-muted"}`}>{label}</button>
-        ))}
+      {notice ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{notice}</p> : null}
+      <div className="overflow-hidden rounded-2xl border bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-[#F7F8FC] text-xs uppercase tracking-wide text-muted">
+            <tr>
+              <th className="px-4 py-3 font-semibold">{COUNTRY_TAX_FIELDS.country}</th>
+              <th className="px-4 py-3 font-semibold">{COUNTRY_TAX_FIELDS.productOrCharge}</th>
+              <th className="px-4 py-3 font-semibold">{COUNTRY_TAX_FIELDS.taxCalculation}</th>
+              <th className="px-4 py-3 font-semibold">{COUNTRY_TAX_FIELDS.edit}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rules.map((rule) => (
+              <tr key={rule.id} className="border-t">
+                <td className="px-4 py-3 font-semibold">{countryName(catalog.countries, rule.countryCode)}</td>
+                <td className="px-4 py-3">{rule.chargeLabel || familyLabel(rule.family)}</td>
+                <td className="px-4 py-3">
+                  {taxCalculationLabel(rule)}
+                  {rule.conflict ? <span className="mt-1 block text-xs font-semibold text-amber-800">Conflicting rule for this country and product.</span> : null}
+                </td>
+                <td className="px-4 py-3">
+                  <button type="button" onClick={() => startEdit(rule)} className="rounded-full border px-3 py-1.5 text-xs font-semibold text-violet">{COUNTRY_TAX_FIELDS.edit}</button>
+                </td>
+              </tr>
+            ))}
+            {rules.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-muted">No tax rules yet.</td></tr> : null}
+          </tbody>
+        </table>
       </div>
-      {tab === "configurations" ? (
-        <>
-          <p className="rounded-2xl bg-[#F6F4FF] px-4 py-2 text-sm">
-            <span className="font-semibold text-emerald-700">{counts.ready} ready</span>
-            <span className="mx-2 text-muted">·</span>
-            <span className="font-semibold text-violet">{counts.draft} drafts</span>
-            <span className="mx-2 text-muted">·</span>
-            <span className="font-semibold text-orange-700">{counts.needsReview} needs review</span>
-          </p>
-          <div className="grid gap-2 md:grid-cols-[1fr_14rem_12rem]">
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search configurations" className="rounded-xl border bg-white px-3 py-2 text-sm" />
-            <select value={country} onChange={(event) => setCountry(event.target.value)} className="rounded-xl border bg-white px-3 py-2 text-sm">
-              <option value="ALL">All countries</option>
-              {catalog.countries.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
-            </select>
-            <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-xl border bg-white px-3 py-2 text-sm">
-              <option value="all">All statuses</option>
-              <option value="ready">Ready</option>
-              <option value="draft">Draft</option>
-              <option value="needs_review">Needs review</option>
-            </select>
-          </div>
-          <div className="overflow-hidden rounded-2xl border bg-white">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-[#F7F8FC] text-xs uppercase tracking-wide text-muted">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Applies to</th>
-                  <th className="px-4 py-3 font-semibold">Calculation</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((row) => (
-                  <tr key={row.id} className="border-t">
-                    <td className="px-4 py-3 font-semibold">{row.appliesLabel}</td>
-                    <td className="px-4 py-3">{row.calculation}</td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_CLASS[row.status]}`}>
-                        {row.status === "ready" ? "Ready" : row.status === "draft" ? "Draft" : "Needs review"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button type="button" onClick={() => setOpenId(row.id)} className="rounded-full border px-3 py-1.5 text-xs font-semibold text-violet">{row.action}</button>
-                    </td>
-                  </tr>
-                ))}
-                {visible.length === 0 ? (
-                  <tr><td colSpan={4} className="px-4 py-8 text-center text-muted">No configurations match.</td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-          <div className="rounded-2xl border bg-white px-4 py-3 text-sm">
-            <p className="font-semibold">Setup checklist</p>
-            <ol className="mt-2 flex flex-wrap gap-4 text-muted">
-              <li>1. Select products and country</li>
-              <li>2. Confirm tax category and responsibility</li>
-              <li>3. Test and activate</li>
-            </ol>
-          </div>
-        </>
-      ) : null}
-      {tab === "history" ? (
-        <ul className="space-y-2">
-          {previews.map((preview) => (
-            <li key={preview.id} className="rounded-2xl border bg-white px-4 py-3 text-sm">
-              <p className="font-semibold">{preview.ok ? "Preview succeeded" : "Preview failed"} · {subjectLabel(preview.appliesTo)}</p>
-              {preview.ok && preview.taxCents != null ? <p className="text-muted">Tax {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(preview.taxCents / 100)}. {preview.reason}</p> : null}
-              {!preview.ok ? <p className="text-amber-900">{preview.correction || preview.reason}</p> : null}
-              {preview.ok ? <p className="text-xs text-muted">This preview validated the integration response. It does not establish that the legal classification is correct.</p> : null}
-            </li>
-          ))}
-          {previews.length === 0 ? <li className="text-sm text-muted">No tax previews yet.</li> : null}
-        </ul>
-      ) : null}
-      {openId && draftRecord ? (
-        <TaxSetupDialog record={openId === "new" ? { ...draftRecord, appliesTo: "subscription" } : draftRecord} catalog={catalog} canEdit={canEdit} onClose={() => setOpenId(null)} />
+      {open ? (
+        <RuleDialog
+          catalog={catalog}
+          rule={editing}
+          canEdit={canEdit}
+          error={error}
+          onClose={() => setOpen(false)}
+          onSaved={(summary) => {
+            setNotice(`Saved. ${summary}`);
+            setOpen(false);
+            router.refresh();
+          }}
+          onError={setError}
+        />
       ) : null}
     </div>
   );
+}
+
+function RuleDialog({
+  catalog,
+  rule,
+  canEdit,
+  error,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  catalog: Catalog;
+  rule: CountryTaxRule | null;
+  canEdit: boolean;
+  error: string;
+  onClose: () => void;
+  onSaved: (summary: string) => void;
+  onError: (message: string) => void;
+}) {
+  const [countryQuery, setCountryQuery] = useState("");
+  const [countryCode, setCountryCode] = useState(rule?.countryCode ?? "");
+  const [product, setProduct] = useState(productValue(rule));
+  const [appliesTo, setAppliesTo] = useState(rule?.family === "subscription" ? (rule.chargeId || "all") : "all");
+  const [method, setMethod] = useState(rule?.method ?? "");
+  const [rate, setRate] = useState(rule?.ratePercent == null ? "" : String(rule.ratePercent));
+  const [pending, setPending] = useState(false);
+  const countries = catalog.countries.filter((country) => {
+    const query = countryQuery.trim().toLowerCase();
+    if (!query) return true;
+    return country.name.toLowerCase().includes(query) || country.code.toLowerCase().includes(query);
+  });
+  const parsed = parseProduct(product, appliesTo);
+  const subscriptionChoice = parsed.family === "subscription";
+
+  async function save() {
+    setPending(true);
+    onError("");
+    const data = new FormData();
+    data.set("ruleModel", "country");
+    data.set("countryCode", countryCode);
+    data.set("family", parsed.family);
+    data.set("chargeId", parsed.chargeId);
+    data.set("chargeLabel", parsed.label);
+    data.set("calculationMethod", method);
+    data.set("ratePercent", method === "percentage" ? rate : "");
+    const result = await actionSaveTaxConfiguration(data);
+    setPending(false);
+    if (!result.ok) {
+      onError(result.error);
+      return;
+    }
+    onSaved(result.summary ?? parsed.label);
+  }
+
+  return (
+    <AccountDialog title={rule ? "Edit rule" : "Add rule"} onClose={onClose}>
+      <div className="space-y-3">
+        {error ? <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">{error}</p> : null}
+        <label className="block text-sm">{COUNTRY_TAX_FIELDS.country}
+          <input value={countryQuery} onChange={(event) => setCountryQuery(event.target.value)} placeholder="Search countries" className="mt-1 w-full rounded-xl border px-3 py-2" />
+          <select value={countryCode} onChange={(event) => setCountryCode(event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-2">
+            <option value="">Select a country</option>
+            {countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}
+          </select>
+        </label>
+        <label className="block text-sm">{COUNTRY_TAX_FIELDS.productOrCharge}
+          <select value={product} onChange={(event) => setProduct(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+            <option value="">Select a product or charge</option>
+            {CHARGE_FAMILIES.map((family) => (
+              <optgroup key={family.id} label={family.group}>
+                <option value={`family:${family.id}`}>{family.label}</option>
+                {family.id === "subscription" ? catalog.plans.map((plan) => <option key={plan.id} value={`subscription:${plan.id}`}>{plan.name}</option>) : null}
+                {family.id === "other" ? catalog.feeRules.filter((item) => item.purpose !== "business_fee" && item.purpose !== "influencer_fee").map((item) => <option key={item.id} value={`other:${item.id}`}>{item.label}</option>) : null}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+        {subscriptionChoice ? (
+          <label className="block text-sm">{COUNTRY_TAX_FIELDS.appliesTo}
+            <select value={appliesTo} onChange={(event) => setAppliesTo(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">
+              <option value="all">{COUNTRY_TAX_FIELDS.allPlans}</option>
+              {catalog.plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
+            </select>
+          </label>
+        ) : (
+          <p className="text-sm text-muted">{COUNTRY_TAX_FIELDS.appliesTo}: {parsed.label || "Choose a product or charge."}</p>
+        )}
+        <label className="block text-sm">{COUNTRY_TAX_FIELDS.taxCalculation}
+          <select value={method} onChange={(event) => setMethod(event.target.value === "percentage" || event.target.value === "location" ? event.target.value : "")} className="mt-1 w-full rounded-xl border px-3 py-2">
+            <option value="">Select a calculation</option>
+            <option value="percentage">{COUNTRY_TAX_FIELDS.percentage}</option>
+            <option value="location">{COUNTRY_TAX_FIELDS.location}</option>
+          </select>
+        </label>
+        {method === "percentage" ? (
+          <label className="block text-sm">{COUNTRY_TAX_FIELDS.rate}
+            <input value={rate} onChange={(event) => setRate(event.target.value)} inputMode="decimal" className="mt-1 w-full rounded-xl border px-3 py-2" />
+          </label>
+        ) : null}
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" className="rounded-full border px-4 py-2 text-sm font-semibold" onClick={onClose}>{COUNTRY_TAX_FIELDS.cancel}</button>
+          {canEdit ? <button type="button" disabled={pending} className="rounded-full bg-violet px-4 py-2 text-sm font-semibold text-white" onClick={() => void save()}>{COUNTRY_TAX_FIELDS.save}</button> : null}
+        </div>
+      </div>
+    </AccountDialog>
+  );
+}
+
+function productValue(rule: CountryTaxRule | null) {
+  if (!rule) return "";
+  if (rule.family === "subscription" && rule.chargeId) return `subscription:${rule.chargeId}`;
+  if (rule.family === "other" && rule.chargeId) return `other:${rule.chargeId}`;
+  return `family:${rule.family}`;
+}
+
+function parseProduct(value: string, appliesTo: string): { family: ChargeFamily | ""; chargeId: string; label: string } {
+  if (value.startsWith("subscription:")) {
+    const chargeId = appliesTo !== "all" ? appliesTo : value.slice("subscription:".length);
+    return { family: "subscription", chargeId, label: chargeId };
+  }
+  if (value.startsWith("other:")) {
+    return { family: "other", chargeId: value.slice("other:".length), label: value.slice("other:".length) };
+  }
+  if (value.startsWith("family:")) {
+    const family = value.slice("family:".length);
+    if (family === "subscription") {
+      return { family: "subscription", chargeId: appliesTo === "all" ? "" : appliesTo, label: appliesTo === "all" ? "Subscriptions" : appliesTo };
+    }
+    const known = CHARGE_FAMILIES.find((item) => item.id === family);
+    return { family: known?.id ?? "", chargeId: "", label: known?.label ?? "" };
+  }
+  return { family: "", chargeId: "", label: "" };
 }
