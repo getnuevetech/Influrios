@@ -1,5 +1,23 @@
+import { homePathForRole } from "@/lib/accounts";
+import { isDefaultMemberHome, safeNextPath } from "@/lib/account-policy";
+
 /** Influencer account landing. Your account, login, and Dashboard share this path. */
 export const CREATOR_DASHBOARD = "/creator";
+
+/**
+ * Post-login destination. External URLs are dropped. A generic home follows the account role.
+ * Another role's dashboard is not used as a silent upgrade. Other in-app paths stay so the page can re-check access.
+ */
+export function accountDestination(role: string | null | undefined, next: string | null | undefined): string {
+  const fallback = homePathForRole(role);
+  const safe = safeNextPath(next, fallback);
+  if (isDefaultMemberHome(safe)) return fallback;
+  const path = (safe.split("?")[0] ?? safe).split("#")[0] || safe;
+  if (path === "/business/home" && role !== "BUSINESS" && role !== "AGENCY") return fallback;
+  if (path === "/agency" && role !== "AGENCY") return fallback;
+  if (path === "/creator" && role && role !== "CREATOR") return fallback;
+  return safe;
+}
 
 /** Released earnings keep this name. Payout setup is a separate reminder and does not relabel them. */
 export function dashboardEarningsLabel(payoutReady: boolean) {

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useAccountDialogBehavior } from "@/components/account-dialog";
 import {
   actionAddAccountNote,
   actionBulkAccountUpdate,
@@ -158,6 +159,13 @@ export function AdminUserAccountsView({
       router.push(buildHref(basePath, { ...currentQuery, ...patch }), { scroll: false });
     });
   }
+
+  const accountPanelRef = useRef<HTMLDivElement>(null);
+  useAccountDialogBehavior(
+    accountPanelRef,
+    () => go({ view: undefined, mode: undefined }),
+    Boolean(selected && detail),
+  );
 
   useEffect(() => {
     setEditing(initialEditing);
@@ -609,7 +617,7 @@ export function AdminUserAccountsView({
           </div>
 
       {selected && detail ? (
-        <div className="fixed inset-0 z-50">
+        <div data-account-dialog-root className="fixed inset-0 z-50">
           <button
             type="button"
             aria-label="Close account"
@@ -617,10 +625,12 @@ export function AdminUserAccountsView({
             onClick={() => go({ view: undefined, mode: undefined })}
           />
           <div
+            ref={accountPanelRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby="account-edit-title"
-            className="absolute inset-0 flex flex-col overflow-hidden bg-white sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(90vh,840px)] sm:w-[min(880px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(17,26,90,0.18)]"
+            className="absolute inset-0 flex flex-col overflow-hidden bg-white outline-none sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(90vh,840px)] sm:w-[min(880px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(17,26,90,0.18)]"
           >
             <AccountDetailPanel
               row={selected}

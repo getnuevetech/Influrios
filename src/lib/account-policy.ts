@@ -31,13 +31,30 @@ export function decideGuestGate(
   return "allow";
 }
 
+function sameSitePath(value: string) {
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("://")) return false;
+  if (/[\u0000-\u001f\u007f]/.test(value)) return false;
+  let decoded = value;
+  for (let pass = 0; pass < 2; pass += 1) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    } catch {
+      return false;
+    }
+  }
+  if (!decoded.startsWith("/") || decoded.startsWith("//") || decoded.includes("\\") || decoded.includes("://")) {
+    return false;
+  }
+  return !/[\u0000-\u001f\u007f]/.test(decoded);
+}
+
 /** Only same-site paths may be used as a post-login return URL. */
 export function safeNextPath(raw: string | undefined | null, fallback = "/creator"): string {
   if (!raw) return fallback;
   const value = raw.trim();
-  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("://")) {
-    return fallback;
-  }
+  if (!sameSitePath(value)) return fallback;
   // Legacy bare "/" sent callers to edit-profile; prefer creator Home.
   // /dashboard is My Profile and must remain a valid return path.
   if (value === "/") return fallback;

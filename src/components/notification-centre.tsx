@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NoticeDialog } from "@/components/notice-dialog";
 import { listAccountNotices, markNoticeRead } from "@/lib/account-notices";
 import {
   PAYOUT_RETURNED_NOTE,
@@ -90,19 +91,13 @@ export async function NotificationCentre({
         </ul>
       )}
       {open && destination ? (
-        <div className="fixed inset-0 z-50">
-          <Link href={href(filter)} aria-label="Close notification" className="absolute inset-0 bg-[#1B1464]/40" />
-          <div role="dialog" aria-modal="true" aria-labelledby="notice-title" className="absolute left-1/2 top-1/2 w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-[28px] bg-white p-6 shadow-2xl">
-            <h2 id="notice-title" className="font-display text-2xl font-bold text-[#1B1464]">{open.title}</h2>
-            <p className="mt-2 text-sm text-[#344054]">{open.detail}</p>
-            <p className="mt-3 text-xs text-[#667085]">This notice is now read. The invitation, signature, or payment task stays open until you finish it.</p>
-            {noticeKeepsWorkApproved(open.kind) ? <p className="mt-2 text-xs text-[#667085]">{PAYOUT_RETURNED_NOTE}</p> : null}
-            <div className="mt-5 flex justify-end gap-2">
-              <Link href={href(filter)} className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#344054]">Close</Link>
-              <Link href={destination} className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">Open</Link>
-            </div>
-          </div>
-        </div>
+        <NoticeDialog
+          title={open.title}
+          detail={open.detail}
+          note={noticeKeepsWorkApproved(open.kind) ? PAYOUT_RETURNED_NOTE : null}
+          closeHref={href(filter)}
+          destination={destination}
+        />
       ) : null}
     </div>
   );

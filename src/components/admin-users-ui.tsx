@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useAccountDialogBehavior } from "@/components/account-dialog";
 import {
   actionCreateAdminUser,
   actionResendAdminSetup,
@@ -613,14 +614,18 @@ function Popup({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useAccountDialogBehavior(panelRef, onClose);
   return (
-    <div className="fixed inset-0 z-50">
+    <div data-account-dialog-root className="fixed inset-0 z-50">
       <button type="button" aria-label="Close" className="absolute inset-0 bg-[#0E1440]/45" onClick={onClose} />
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="absolute inset-0 flex flex-col overflow-y-auto bg-white p-5 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(90vh,760px)] sm:w-[min(560px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(17,26,90,0.18)]"
+        className="absolute inset-0 flex flex-col overflow-y-auto bg-white p-5 outline-none sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(90vh,760px)] sm:w-[min(560px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(17,26,90,0.18)]"
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <h2 className="font-display text-xl font-bold text-indigo">{title}</h2>

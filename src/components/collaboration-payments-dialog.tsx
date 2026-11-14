@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { useAccountDialogBehavior } from "@/components/account-dialog";
+import { nextTabIndex } from "@/lib/dialog-behavior";
 
 export function PaymentDetailsDialog({
   closeHref,
@@ -36,22 +38,7 @@ export function PaymentDetailsDialog({
   const router = useRouter();
   const panelRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<"overview" | "fees" | "timeline" | "milestones" | "cancellation" | "documents">(initialTab);
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    document.body.style.overflow = "hidden";
-    panelRef.current?.focus();
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") router.push(closeHref, { scroll: false });
-    }
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKey);
-      previousFocus?.focus();
-    };
-  }, [closeHref, router]);
+  useAccountDialogBehavior(panelRef, () => router.push(closeHref, { scroll: false }));
 
   const tabs = [
     ["overview", "Overview"],
@@ -63,7 +50,7 @@ export function PaymentDetailsDialog({
   ] as const;
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div data-account-dialog-root className="fixed inset-0 z-50">
       <Link href={closeHref} scroll={false} aria-label="Close payment details" className="absolute inset-0 bg-[#1B1464]/40" />
       <div
         ref={panelRef}
@@ -95,11 +82,25 @@ export function PaymentDetailsDialog({
             ×
           </Link>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2 px-5 sm:px-7">
+        <div
+          role="tablist"
+          aria-label="Payment sections"
+          className="mt-4 flex flex-wrap gap-2 px-5 sm:px-7"
+          onKeyDown={(event) => {
+            const index = tabs.findIndex(([id]) => id === tab);
+            const next = nextTabIndex(tabs.length, index, event.key);
+            if (next == null) return;
+            event.preventDefault();
+            const item = tabs[next];
+            if (item) setTab(item[0]);
+          }}
+        >
           {tabs.map(([id, label]) => (
             <button
               key={id}
               type="button"
+              role="tab"
+              aria-selected={tab === id}
               onClick={() => setTab(id)}
               className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
                 tab === id ? "bg-[#F4F0FF] text-[#6D4AFF]" : "text-[#667085] hover:bg-[#F7F8FC]"
