@@ -1,58 +1,88 @@
-import {
-  actionCreatePlan,
-  actionDeletePlan,
-  actionUpdatePlanFeature,
-  actionUpdatePlanMeta,
-} from "@/app/admin/plans/actions";
+import { PlansFeatures, type PlanFeatureEditor, type PricedPlanRow } from "@/app/admin/plans/plans-features";
+import { SubscriptionsShell } from "@/app/admin/subscriptions/shell";
 import { requireAdminPage } from "@/app/admin/guard";
-import { AdminCollapse } from "@/components/admin-collapse";
-import { hasPermission } from "@/lib/admin-auth";
+import { canAccessModule, hasPermission } from "@/lib/admin-auth";
+import { estimatePlanPrice, presentPlanPrice, previewRateChip } from "@/lib/admin-subscription-view";
 import { BUSINESS_FEATURE_KEYS } from "@/lib/business-entitlements";
-import { EDITABLE_FEATURE_KEYS } from "@/lib/entitlements";
-import { PLAN_FEATURE_META } from "@/lib/plan-presentation";
-import { listPlanCatalog, listPlanFeatures, type PlanFeatureEditorRow } from "@/lib/entitlements-db";
-import { PlanPricePreview } from "@/app/admin/plans/plan-price-preview";
-import { PlanTaxPanel } from "@/app/admin/plans/plan-tax-panel";
 import { dedupeCountryRules, flagRuleConflicts, mapStoredPolicy } from "@/lib/country-tax";
-import { loadTaxCatalog } from "@/lib/tax-settings";
+import { EDITABLE_FEATURE_KEYS } from "@/lib/entitlements";
+import { listPlanCatalog, listPlanFeatures, type PlanCatalogRow, type PlanFeatureEditorRow } from "@/lib/entitlements-db";
+import { PLAN_FEATURE_META, presentFeature } from "@/lib/plan-presentation";
+import { loadTaxCatalog, planMatchKeys } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Plan entitlements · Admin" };
+export const metadata = { title: "Plans & features · Admin" };
 
-const LABELS = PLAN_FEATURE_META;
-
-const inputClass = "mt-1 w-full rounded-lg border border-[#E4EBFF] px-2 py-1 text-sm font-normal";
-
-type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
+type Props = { searchParams: Promise<{ saved?: string; error?: string; audience?: string; country?: string }> };
 
 export default async function AdminPlansPage({ searchParams }: Props) {
   const session = await requireAdminPage("plans");
   const query = await searchParams;
   const canEdit = hasPermission(session, "plans.edit");
+  const showBilling = canAccessModule(session, "billing");
   let rows: PlanFeatureEditorRow[] = [];
-  let plans: Awaited<ReturnType<typeof listPlanCatalog>> = [];
+  let plans: PlanCatalogRow[] = [];
   let dbError = false;
   const catalog = await loadTaxCatalog().catch(() => null);
-  const taxRules = flagRuleConflicts(dedupeCountryRules((catalog?.records ?? []).map((record) => mapStoredPolicy(record)).filter((rule) => rule != null)));
-  const taxCountries = catalog?.countries ?? [];
+  const rules = flagRuleConflicts(
+    dedupeCountryRules((catalog?.records ?? []).map((record) => mapStoredPolicy(record)).filter((rule) => rule != null)),
+  );
+  const countries = catalog?.countries ?? [];
+  const keysByCode = new Map((catalog?.plans ?? []).map((plan) => [plan.code, planMatchKeys(plan)]));
   try {
     [rows, plans] = await Promise.all([listPlanFeatures(), listPlanCatalog()]);
   } catch (error) {
     console.error("admin plans", error);
     dbError = true;
   }
-  const creatorPlans = plans.filter((plan) => plan.audience === "creator");
-  const businessPlans = plans.filter((plan) => plan.audience === "business");
+
+  const audience = query.audience === "business" || query.audience === "creator"
+    ? query.audience
+    : plans.some((plan) => plan.audience === "creator")
+      ? "creator"
+      : "business";
+  const requested = (query.country ?? "").trim().toUpperCase();
+  const country = countries.some((item) => item.code === requested)
+    ? requested
+    : countries.some((item) => item.code === "US")
+      ? "US"
+      : countries[0]?.code ?? "";
+  const visible = plans.filter((plan) => plan.audience === audience);
+  const keys = audience === "business" ? BUSINESS_FEATURE_KEYS : EDITABLE_FEATURE_KEYS;
+  const estimates = visible.map((plan) =>
+    estimatePlanPrice({
+      amountCents: plan.amountCents,
+      countryCode: country,
+      keys: keysByCode.get(plan.code) ?? [plan.code],
+      rules,
+    }),
+  );
+  const priced: PricedPlanRow[] = visible.map((plan, index) => {
+    const estimate = estimates[index]!;
+    const price = presentPlanPrice(estimate);
+    return {
+      code: plan.code,
+      name: plan.name,
+      description: plan.description,
+      audience: plan.audience,
+      amountCents: plan.amountCents,
+      priceLabel: plan.priceLabel,
+      stripePriceId: plan.stripePriceId,
+      publicListing: plan.publicListing,
+      active: plan.active,
+      assigned: plan.assigned,
+      base: price.base,
+      tax: price.tax,
+      total: price.total,
+      note: price.note,
+      awaitingRule: estimate.method === "missing",
+      features: featureEditors(plan.code, keys, rows),
+    };
+  });
+  const chip = previewRateChip(estimates);
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <h1 className="font-display text-2xl font-bold text-indigo">Plans</h1>
-      <p className="mt-2 max-w-3xl text-sm text-muted">
-        Each plan is a code plus a set of features. Change a number, turn a feature on or off, add a plan, or remove a
-        plan that nobody is using and create that code again. Campaign links are their own count of inflr.me/c/{"{code}"}{" "}
-        addresses. They are not leftover short-link slots. NFC is its own switch: it mints inflr.me/n/{"{token}"}, and
-        the creator writes that URL onto a physical tag. The FAQ explains how.
-      </p>
+    <SubscriptionsShell active="plans" showPlans showBilling={showBilling}>
       {query.saved ? (
         <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Saved.</p>
       ) : null}
@@ -60,229 +90,38 @@ export default async function AdminPlansPage({ searchParams }: Props) {
         <p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{query.error}</p>
       ) : null}
       {dbError ? <p className="mt-4 text-sm text-amber-800">Plans are unavailable.</p> : null}
-
-      {canEdit ? (
-        <form action={actionCreatePlan} className="card-surface mt-6 grid gap-3 p-5 sm:grid-cols-2">
-          <h2 className="font-display text-lg font-bold text-indigo sm:col-span-2">New plan</h2>
-          <label className="text-sm font-semibold text-indigo">
-            Code
-            <input name="code" placeholder="STUDIO" className={inputClass} />
-          </label>
-          <label className="text-sm font-semibold text-indigo">
-            Name
-            <input name="name" placeholder="Studio" className={inputClass} />
-          </label>
-          <label className="text-sm font-semibold text-indigo">
-            Audience
-            <select name="audience" className={inputClass}>
-              <option value="creator">Creator</option>
-              <option value="business">Business</option>
-            </select>
-          </label>
-          <label className="text-sm font-semibold text-indigo">
-            Copy features from
-            <select name="copyFrom" className={inputClass}>
-              <option value="">Empty</option>
-              {plans.map((plan) => (
-                <option key={plan.code} value={plan.code}>
-                  {plan.name} ({plan.code})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm font-semibold text-indigo sm:col-span-2">
-            Description
-            <input name="description" className={inputClass} />
-          </label>
-          <label className="text-sm font-semibold text-indigo">
-            Monthly price (cents)
-            <input name="amountCents" type="number" min={0} defaultValue={0} className={inputClass} />
-          </label>
-          <label className="text-sm font-semibold text-indigo">
-            Price label
-            <input name="priceLabel" placeholder="$49/mo" className={inputClass} />
-          </label>
-          <label className="text-sm font-semibold text-indigo">
-            Stripe price id
-            <input name="stripePriceId" placeholder="price_..." className={inputClass} />
-          </label>
-          <label className="flex items-end gap-2 pb-2 text-sm font-semibold text-indigo">
-            <input type="checkbox" name="publicListing" value="1" />
-            Show on pricing
-          </label>
-          <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
-            Create plan
-          </button>
-        </form>
-      ) : null}
-
-      <div className="mt-6 space-y-4">
-        {plans.map((plan) => (
-          <AdminCollapse
-            key={plan.code}
-            title={`${plan.name} (${plan.code})`}
-            subtitle={`${plan.audience} · ${plan.assigned} assigned · ${plan.active ? "active" : "hidden"}`}
-          >
-          <form action={actionUpdatePlanMeta} className="grid gap-3 sm:grid-cols-4">
-            <input type="hidden" name="code" value={plan.code} />
-            {plan.code === "STARTER" ? <input type="hidden" name="active" value="1" /> : null}
-            <label className="text-xs font-semibold text-indigo">
-              Name
-              <input name="name" defaultValue={plan.name} disabled={!canEdit} className={inputClass} />
-            </label>
-            <label className="text-xs font-semibold text-indigo sm:col-span-3">
-              Description
-              <input name="description" defaultValue={plan.description} disabled={!canEdit} className={inputClass} />
-            </label>
-            <PlanPricePreview planId={plan.code} defaultCents={plan.amountCents} currency="USD" countries={taxCountries} rules={taxRules} disabled={!canEdit} />
-            <label className="text-xs font-semibold text-indigo">
-              Price label
-              <input name="priceLabel" defaultValue={plan.priceLabel} disabled={!canEdit} className={inputClass} />
-            </label>
-            <label className="text-xs font-semibold text-indigo">
-              Stripe price id
-              <input name="stripePriceId" defaultValue={plan.stripePriceId} disabled={!canEdit} className={inputClass} />
-            </label>
-            <div className="flex flex-wrap items-end gap-3 pb-1 text-sm font-semibold text-indigo">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="publicListing" value="1" defaultChecked={plan.publicListing} disabled={!canEdit} />
-                Public
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="active" value="1" defaultChecked={plan.active} disabled={!canEdit || plan.code === "STARTER"} />
-                Active
-              </label>
-              {canEdit ? (
-                <button type="submit" className="text-xs font-bold text-violet hover:underline">
-                  Save price
-                </button>
-              ) : null}
-            </div>
-            {canEdit && plan.code !== "STARTER" ? (
-              <div className="sm:col-span-4">
-                <button formAction={actionDeletePlan} className="text-xs font-bold text-rose-700 hover:underline">
-                  Remove {plan.code}
-                  {plan.assigned ? " (blocked while someone is on it)" : ""}
-                </button>
-              </div>
-            ) : null}
-          </form>
-          </AdminCollapse>
-        ))}
-      </div>
-
-      <FeatureMatrix title="Creator features" keys={EDITABLE_FEATURE_KEYS} plans={creatorPlans} rows={rows} canEdit={canEdit} />
-      <FeatureMatrix title="Business features" keys={BUSINESS_FEATURE_KEYS} plans={businessPlans} rows={rows} canEdit={canEdit} />
-    </div>
+      <PlansFeatures
+        canEdit={canEdit}
+        audience={audience}
+        country={country}
+        countries={countries}
+        chip={chip}
+        plans={priced}
+        copyFrom={plans.map((plan) => ({ code: plan.code, name: plan.name }))}
+      />
+    </SubscriptionsShell>
   );
 }
 
-function FeatureMatrix({
-  title,
-  keys,
-  plans,
-  rows,
-  canEdit,
-}: {
-  title: string;
-  keys: readonly string[];
-  plans: Awaited<ReturnType<typeof listPlanCatalog>>;
-  rows: PlanFeatureEditorRow[];
-  canEdit: boolean;
-}) {
-  const byKey = new Map<string, Map<string, PlanFeatureEditorRow>>();
-  for (const row of rows) {
-    const bucket = byKey.get(row.featureKey) ?? new Map();
-    bucket.set(row.planCode, row);
-    byKey.set(row.featureKey, bucket);
+function featureEditors(planCode: string, keys: readonly string[], rows: PlanFeatureEditorRow[]): PlanFeatureEditor[] {
+  const editors: PlanFeatureEditor[] = [];
+  for (const key of keys) {
+    const meta = PLAN_FEATURE_META[key];
+    if (!meta) continue;
+    const row = rows.find((item) => item.planCode === planCode && item.featureKey === key);
+    const value = row ?? { featureKey: key, enabled: false, limitInt: null, valueText: null };
+    const presented = presentFeature(key, value);
+    editors.push({
+      key,
+      label: meta.label,
+      kind: meta.kind,
+      hint: meta.hint,
+      options: meta.options,
+      limitInt: row?.limitInt ?? 0,
+      enabled: Boolean(row?.enabled),
+      valueText: row?.valueText ?? meta.options?.[0] ?? "",
+      display: presented.included ? presented.text : "—",
+    });
   }
-  if (!plans.length) return null;
-  return (
-    <section className="mt-8">
-      <h2 className="font-display text-lg font-bold text-indigo">{title}</h2>
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-[#E4EBFF] bg-white">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-[#E4EBFF] text-xs uppercase tracking-wide text-muted">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Feature</th>
-              {plans.map((plan) => (
-                <th key={plan.code} className="px-4 py-3 font-semibold">
-                  {plan.name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {keys.map((key) => {
-              const meta = LABELS[key];
-              if (!meta) return null;
-              return (
-                <tr key={key} className="border-b border-[#F0F3FA]">
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-indigo">{meta.label}</div>
-                    <div className="text-[11px] text-muted">{key}</div>
-                    {meta.hint ? <div className="mt-1 max-w-xs text-[11px] text-muted">{meta.hint}</div> : null}
-                  </td>
-                  {plans.map((plan) => {
-                    const row = byKey.get(key)?.get(plan.code);
-                    return (
-                      <td key={plan.code} className="px-4 py-3 align-top">
-                        <form action={actionUpdatePlanFeature} className="flex items-center gap-2">
-                          <input type="hidden" name="planCode" value={plan.code} />
-                          <input type="hidden" name="featureKey" value={key} />
-                          <input type="hidden" name="kind" value={meta.kind} />
-                          {meta.kind === "int" ? (
-                            <input
-                              name="limitInt"
-                              type="number"
-                              min={0}
-                              max={10000}
-                              defaultValue={row?.limitInt ?? 0}
-                              disabled={!canEdit}
-                              className="w-24 rounded-lg border border-[#E4EBFF] px-2 py-1"
-                            />
-                          ) : null}
-                          {meta.kind === "bool" ? (
-                            <select
-                              name="enabled"
-                              defaultValue={row?.enabled ? "true" : "false"}
-                              disabled={!canEdit}
-                              className="rounded-lg border border-[#E4EBFF] px-2 py-1"
-                            >
-                              <option value="true">On</option>
-                              <option value="false">Off</option>
-                            </select>
-                          ) : null}
-                          {meta.kind === "text" ? (
-                            <select
-                              name="valueText"
-                              defaultValue={row?.valueText ?? meta.options?.[0]}
-                              disabled={!canEdit}
-                              className="rounded-lg border border-[#E4EBFF] px-2 py-1"
-                            >
-                              {meta.options?.map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </select>
-                          ) : null}
-                          {canEdit ? (
-                            <button type="submit" className="text-xs font-bold text-violet hover:underline">
-                              Save
-                            </button>
-                          ) : null}
-                        </form>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <PlanTaxPanel canEdit={canEdit} />
-    </section>
-  );
+  return editors;
 }

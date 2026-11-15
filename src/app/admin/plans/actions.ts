@@ -10,9 +10,21 @@ import {
   updatePlanFeature,
 } from "@/lib/entitlements-db";
 
-function fail(error: unknown) {
+function plansRedirect(formData: FormData | undefined, key: "saved" | "error", value: string) {
+  const params = new URLSearchParams();
+  params.set(key, value);
+  const returned = String(formData?.get("returnAudience") ?? "");
+  const chosen = String(formData?.get("audience") ?? "");
+  const audience = returned === "creator" || returned === "business" ? returned : chosen;
+  const country = String(formData?.get("returnCountry") ?? "").trim().toUpperCase();
+  if (audience === "creator" || audience === "business") params.set("audience", audience);
+  if (/^[A-Z]{2}$/.test(country)) params.set("country", country);
+  return `/admin/plans?${params.toString()}`;
+}
+
+function fail(error: unknown, formData?: FormData) {
   const message = error instanceof Error ? error.message : "Could not save";
-  redirect(`/admin/plans?error=${encodeURIComponent(message)}`);
+  redirect(plansRedirect(formData, "error", message));
 }
 
 export async function actionUpdatePlanFeature(formData: FormData) {
@@ -20,7 +32,7 @@ export async function actionUpdatePlanFeature(formData: FormData) {
   const planCode = normalizePlanCode(String(formData.get("planCode") ?? ""));
   const featureKey = String(formData.get("featureKey") ?? "");
   const kind = String(formData.get("kind") ?? "");
-  if (!planCode) redirect("/admin/plans?error=Unknown+plan");
+  if (!planCode) redirect(plansRedirect(formData, "error", "Unknown plan"));
 
   try {
     if (kind === "int") {
@@ -54,9 +66,9 @@ export async function actionUpdatePlanFeature(formData: FormData) {
       });
     }
   } catch (error) {
-    fail(error);
+    fail(error, formData);
   }
-  redirect("/admin/plans?saved=1");
+  redirect(plansRedirect(formData, "saved", "1"));
 }
 
 export async function actionCreatePlan(formData: FormData) {
@@ -76,9 +88,9 @@ export async function actionCreatePlan(formData: FormData) {
       copyFrom: String(formData.get("copyFrom") ?? ""),
     });
   } catch (error) {
-    fail(error);
+    fail(error, formData);
   }
-  redirect("/admin/plans?saved=1");
+  redirect(plansRedirect(formData, "saved", "1"));
 }
 
 export async function actionUpdatePlanMeta(formData: FormData) {
@@ -96,9 +108,9 @@ export async function actionUpdatePlanMeta(formData: FormData) {
       active: formData.get("active") === "1",
     });
   } catch (error) {
-    fail(error);
+    fail(error, formData);
   }
-  redirect("/admin/plans?saved=1");
+  redirect(plansRedirect(formData, "saved", "1"));
 }
 
 export async function actionDeletePlan(formData: FormData) {
@@ -106,7 +118,7 @@ export async function actionDeletePlan(formData: FormData) {
   try {
     await deleteEntitlementPlan({ actor: session.email, code: String(formData.get("code") ?? "") });
   } catch (error) {
-    fail(error);
+    fail(error, formData);
   }
-  redirect("/admin/plans?saved=1");
+  redirect(plansRedirect(formData, "saved", "1"));
 }

@@ -57,10 +57,10 @@ const SIDE_GROUPS: SideGroup[] = [
     ],
   },
   {
-    name: "Plans & billing",
+    name: "Subscriptions",
     links: [
-      { href: "/admin/billing", label: "Billing", module: "billing", icon: "billing" },
-      { href: "/admin/plans", label: "Plan entitlements", module: "plans", icon: "plans" },
+      { href: "/admin/plans", label: "Plans & features", module: "plans", icon: "plans" },
+      { href: "/admin/billing", label: "Billing activity", module: "billing", icon: "billing" },
     ],
   },
   {
