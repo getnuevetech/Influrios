@@ -22,6 +22,10 @@ export const COUNTRY_TAX_FIELDS = {
   cancel: "Cancel",
   add: "Add rule",
   edit: "Edit",
+  delete: "Delete",
+  deleteRule: "Delete rule",
+  confirmDelete: "Delete this tax rule?",
+  confirmDeleteDetail: "It will no longer apply to new calculations. Other rules, plans, and fees stay. Charges, payouts, and refunds keep the tax already stored on them.",
   previewCountry: "Preview country",
   basePrice: "Base price",
   estimatedTax: "Estimated tax",
@@ -319,6 +323,13 @@ export function parseCountryProduct(input: {
     return { family, chargeId: "", label: familyLabel(family) };
   }
   return { family: "", chargeId: "", label: "" };
+}
+
+/** Drop one saved rule. Every other rule keeps its country, product, and calculation. */
+export function countryRulesAfterDelete<T extends { id: string }>(rules: T[], id: string): T[] {
+  const target = id.trim();
+  if (!target) return rules;
+  return rules.filter((rule) => rule.id !== target);
 }
 
 /** Newest identical rule wins. A different rate stays so a real conflict is still visible. */

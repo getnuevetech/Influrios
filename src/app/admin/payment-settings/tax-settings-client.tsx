@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { actionSaveTaxConfiguration } from "@/app/admin/payment-standard/actions";
+import { actionDeleteTaxRule, actionSaveTaxConfiguration } from "@/app/admin/payment-standard/actions";
 import { AccountDialog } from "@/components/account-dialog";
 import {
   CHARGE_FAMILIES,
@@ -71,8 +71,13 @@ export function TaxSettingsClient({
   }, [records]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ListedRule | null>(null);
+  const [confirming, setConfirming] = useState<ListedRule | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
+  const [pendingDelete, setPendingDelete] = useState(false);
+  const deleting = useRef(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const visible = rules.filter((rule) => !hiddenIds.includes(rule.id));
 
   function startCreate() {
     setEditing(null);
@@ -82,8 +87,47 @@ export function TaxSettingsClient({
 
   function startEdit(rule: ListedRule) {
     setEditing(rule);
+    setConfirming(null);
     setError("");
     setOpen(true);
+  }
+
+  function askDelete(rule: ListedRule) {
+    setConfirming(rule);
+    setError("");
+  }
+
+  function ruleSummary(rule: ListedRule) {
+    const country = countryName(catalog.countries, rule.countryCode);
+    const product = presentCountryCharge({ family: rule.family, linkedIds: rule.linkedIds, plans: catalog.plans, fees: catalog.feeRules });
+    return `${country} · ${product} · ${taxCalculationLabel(rule)}`;
+  }
+
+  async function removeRule(id: string) {
+    if (deleting.current) return;
+    deleting.current = true;
+    setPendingDelete(true);
+    setError("");
+    try {
+      const data = new FormData();
+      data.set("policyId", id);
+      const result = await actionDeleteTaxRule(data);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setHiddenIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+      setNotice("Deleted. This rule will not apply to new calculations.");
+      setConfirming(null);
+      setOpen(false);
+      setEditing(null);
+      router.refresh();
+    } catch {
+      setError("That tax rule could not be deleted.");
+    } finally {
+      deleting.current = false;
+      setPendingDelete(false);
+    }
   }
 
   return (
@@ -110,7 +154,7 @@ export function TaxSettingsClient({
             </tr>
           </thead>
           <tbody>
-            {rules.map((rule) => (
+            {visible.map((rule) => (
               <tr key={rule.id} className="border-t">
                 <td className="px-4 py-3 font-semibold">{countryName(catalog.countries, rule.countryCode)}</td>
                 <td className="px-4 py-3">{presentCountryCharge({ family: rule.family, linkedIds: rule.linkedIds, plans: catalog.plans, fees: catalog.feeRules })}</td>
@@ -119,11 +163,14 @@ export function TaxSettingsClient({
                   {rule.conflict ? <span className="mt-1 block text-xs font-semibold text-amber-800">Conflicting rule for this country and product.</span> : null}
                 </td>
                 <td className="px-4 py-3">
-                  <button type="button" onClick={() => startEdit(rule)} className="rounded-full border px-3 py-1.5 text-xs font-semibold text-violet">{COUNTRY_TAX_FIELDS.edit}</button>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => startEdit(rule)} className="rounded-full border px-3 py-1.5 text-xs font-semibold text-violet">{COUNTRY_TAX_FIELDS.edit}</button>
+                    {canEdit ? <button type="button" onClick={() => askDelete(rule)} className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700">{COUNTRY_TAX_FIELDS.delete}</button> : null}
+                  </div>
                 </td>
               </tr>
             ))}
-            {rules.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-muted">No tax rules yet.</td></tr> : null}
+            {visible.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-muted">No tax rules yet.</td></tr> : null}
           </tbody>
         </table>
       </div>
@@ -139,10 +186,53 @@ export function TaxSettingsClient({
             setOpen(false);
             router.refresh();
           }}
+          onDelete={() => {
+            if (!editing) return;
+            void removeRule(editing.id);
+          }}
+          pendingDelete={pendingDelete}
           onError={setError}
         />
       ) : null}
+      {confirming ? (
+        <DeleteRuleConfirm
+          summary={ruleSummary(confirming)}
+          error={error}
+          pending={pendingDelete}
+          onCancel={() => { setConfirming(null); setError(""); }}
+          onConfirm={() => void removeRule(confirming.id)}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function DeleteRuleConfirm({
+  summary,
+  error,
+  pending,
+  onCancel,
+  onConfirm,
+}: {
+  summary: string;
+  error: string;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AccountDialog title={COUNTRY_TAX_FIELDS.deleteRule} onClose={onCancel}>
+      <div className="space-y-3">
+        <p className="text-sm">{COUNTRY_TAX_FIELDS.confirmDelete}</p>
+        <p className="text-sm font-semibold">{summary}</p>
+        <p className="text-sm text-muted">{COUNTRY_TAX_FIELDS.confirmDeleteDetail}</p>
+        {error ? <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">{error}</p> : null}
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" disabled={pending} className="rounded-full border px-4 py-2 text-sm font-semibold" onClick={onCancel}>{COUNTRY_TAX_FIELDS.cancel}</button>
+          <button type="button" disabled={pending} className="rounded-full bg-rose-700 px-4 py-2 text-sm font-semibold text-white" onClick={onConfirm}>{COUNTRY_TAX_FIELDS.deleteRule}</button>
+        </div>
+      </div>
+    </AccountDialog>
   );
 }
 
@@ -151,16 +241,20 @@ function RuleDialog({
   rule,
   canEdit,
   error,
+  pendingDelete,
   onClose,
   onSaved,
+  onDelete,
   onError,
 }: {
   catalog: Catalog;
   rule: ListedRule | null;
   canEdit: boolean;
   error: string;
+  pendingDelete: boolean;
   onClose: () => void;
   onSaved: (summary: string) => void;
+  onDelete: () => void;
   onError: (message: string) => void;
 }) {
   const selection = countryRuleSelection({
@@ -175,6 +269,7 @@ function RuleDialog({
   const [method, setMethod] = useState(rule?.method ?? "");
   const [rate, setRate] = useState(rule?.ratePercent == null ? "" : String(rule.ratePercent));
   const [pending, setPending] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const countries = catalog.countries.filter((country) => {
     const query = countryQuery.trim().toLowerCase();
     if (!query) return true;
@@ -202,6 +297,20 @@ function RuleDialog({
       return;
     }
     onSaved(result.summary ?? parsed.label);
+  }
+
+  if (confirmingDelete && rule) {
+    const country = catalog.countries.find((item) => item.code === rule.countryCode)?.name ?? rule.countryCode;
+    const product = presentCountryCharge({ family: rule.family, linkedIds: rule.linkedIds, plans: catalog.plans, fees: catalog.feeRules });
+    return (
+      <DeleteRuleConfirm
+        summary={`${country} · ${product} · ${taxCalculationLabel(rule)}`}
+        error={error}
+        pending={pendingDelete}
+        onCancel={() => { setConfirmingDelete(false); onError(""); }}
+        onConfirm={onDelete}
+      />
+    );
   }
 
   return (
@@ -258,7 +367,8 @@ function RuleDialog({
             <input value={rate} onChange={(event) => setRate(event.target.value)} inputMode="decimal" className="mt-1 w-full rounded-xl border px-3 py-2" />
           </label>
         ) : null}
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+          {canEdit && rule ? <button type="button" className="mr-auto rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700" onClick={() => { onError(""); setConfirmingDelete(true); }}>{COUNTRY_TAX_FIELDS.delete}</button> : null}
           <button type="button" className="rounded-full border px-4 py-2 text-sm font-semibold" onClick={onClose}>{COUNTRY_TAX_FIELDS.cancel}</button>
           {canEdit ? <button type="button" disabled={pending} className="rounded-full bg-violet px-4 py-2 text-sm font-semibold text-white" onClick={() => void save()}>{COUNTRY_TAX_FIELDS.save}</button> : null}
         </div>

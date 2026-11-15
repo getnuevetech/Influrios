@@ -6,6 +6,7 @@ import {
   calculateCountryTax,
   collaborationCheckout,
   countryRuleSelection,
+  countryRulesAfterDelete,
   countryRulesToRetire,
   countrySaveBlockers,
   dedupeCountryRules,
@@ -22,6 +23,7 @@ import {
   renewalUsesSameTax,
   stripeTaxMode,
   subscriptionPricePreview,
+  taxCalculationLabel,
   type CountryTaxRule,
 } from "@/lib/country-tax";
 
@@ -514,7 +516,113 @@ describe("saved tax rule identity", () => {
     assert.match(action, /replaceTaxConfiguration/);
     assert.match(action, /policyId/);
   });
+
+  it("deletes one saved rule and leaves the others in the list and in new calculations", () => {
+    const plans = [{ id: "plan_starter", name: "Starter", keys: ["plan_starter", "STARTER"] }, { id: "plan_plus", name: "Plus" }];
+    const starter = rule({ id: "starter", countryCode: "US", family: "subscription", chargeId: "plan_starter", method: "percentage", ratePercent: 8, chargeLabel: "Starter" });
+    const plus = rule({ id: "plus", countryCode: "GB", family: "subscription", chargeId: "plan_plus", method: "location", ratePercent: null, chargeLabel: "Plus" });
+    const fee = rule({ id: "fee", countryCode: "US", family: "business_fee", method: "percentage", ratePercent: 5, chargeLabel: "Business collaboration fee" });
+    const blank = countryRulesAfterDelete([starter, plus, fee], " ");
+    assert.deepEqual(blank.map((item) => item.id), ["starter", "plus", "fee"]);
+    const remaining = countryRulesAfterDelete([starter, plus, fee], "starter");
+    assert.deepEqual(remaining.map((item) => item.id), ["plus", "fee"]);
+    assert.equal(remaining[0]?.countryCode, "GB");
+    assert.equal(remaining[0]?.method, "location");
+    assert.equal(presentCountryCharge({ family: "subscription", linkedIds: ["plan_plus"], plans }), "Plus");
+    assert.equal(taxCalculationLabel(remaining[0]!), COUNTRY_TAX_FIELDS.location);
+    assert.equal(/unlinked/i.test(presentCountryCharge({ family: "subscription", linkedIds: ["plan_starter"], plans, storedLabel: "Subscription · US · unlinked" })), false);
+    const still = calculateCountryTax({
+      rules: remaining,
+      chargeId: "fee",
+      family: "business_fee",
+      countryCode: "US",
+      baseCents: 1_000,
+      currency: "USD",
+      at,
+    });
+    assert.equal(still.ok, true);
+    assert.equal(still.taxCents, 50);
+    const gone = calculateCountryTax({
+      rules: remaining,
+      chargeId: "plan_starter",
+      family: "subscription",
+      countryCode: "US",
+      baseCents: 1_900,
+      currency: "USD",
+      at,
+    });
+    assert.equal(gone.ok, false);
+    assert.equal(gone.status, "missing_rule");
+    const retired = mapStoredPolicy({
+      id: "starter",
+      appliesTo: "subscription",
+      linkedIds: ["plan_starter"],
+      countryCode: "US",
+      calculationMethod: "percentage",
+      rateBps: 800,
+      status: "replaced",
+    });
+    assert.equal(retired?.effective, false);
+    const ignored = calculateCountryTax({
+      rules: retired ? [retired, fee] : [fee],
+      chargeId: "plan_starter",
+      family: "subscription",
+      countryCode: "US",
+      baseCents: 1_900,
+      currency: "USD",
+      at,
+    });
+    assert.equal(ignored.status, "missing_rule");
+    const keptFee = calculateCountryTax({
+      rules: [fee],
+      chargeId: "business_fee",
+      family: "business_fee",
+      countryCode: "US",
+      baseCents: 1_000,
+      currency: "USD",
+      at,
+    });
+    assert.equal(keptFee.taxCents, 50);
+    const refund = partialRefundTax({ originalBaseCents: 1_000, refundBaseCents: 500, taxCents: 50, reason: "5% on the base price." });
+    assert.equal(refund.ok, true);
+    if (refund.ok) assert.equal(refund.taxCents, 25);
+
+    const client = readFileSync("src/app/admin/payment-settings/tax-settings-client.tsx", "utf8");
+    const action = readFileSync("src/app/admin/payment-standard/actions.ts", "utf8");
+    const store = readFileSync("src/lib/payment-standard-store.ts", "utf8");
+    const page = readFileSync("src/app/admin/payment-settings/page.tsx", "utf8");
+    const settings = readFileSync("src/lib/tax-settings.ts", "utf8");
+    assert.equal(client.includes("unlinked"), false);
+    assert.match(client, /actionDeleteTaxRule/);
+    assert.match(client, /COUNTRY_TAX_FIELDS\.confirmDelete/);
+    assert.match(client, /canEdit \? <button/);
+    const actionBody = sourceOf(action, "export async function actionDeleteTaxRule");
+    assert.match(actionBody, /hasPermission\(session, "collab_finance\.manage"\)/);
+    assert.ok(actionBody.indexOf("collab_finance.manage") < actionBody.indexOf("deleteTaxRule"));
+    assert.equal(actionBody.includes("entitlementPlan"), false);
+    assert.equal(actionBody.includes("collaborationFeeRule"), false);
+    assert.equal(actionBody.includes("milestoneSettlement"), false);
+    assert.match(actionBody, /deleteTaxRule\(policyId\)/);
+    const storeBody = sourceOf(store, "export async function deleteTaxRule");
+    assert.match(storeBody, /taxPolicyVersion\.update/);
+    assert.match(storeBody, /where: \{ id: policyId \}/);
+    assert.equal(storeBody.includes("entitlementPlan"), false);
+    assert.equal(storeBody.includes("collaborationFeeRule"), false);
+    assert.equal(storeBody.includes("deleteMany"), false);
+    assert.match(settings, /status !== "replaced"/);
+    assert.match(page, /export default async function PaymentSettingsPage/);
+    assert.equal(page.includes("export {"), false);
+    assert.equal(page.includes("export function"), false);
+    assert.equal(page.includes("export async function"), false);
+  });
 });
+
+function sourceOf(file: string, signature: string) {
+  const start = file.indexOf(signature);
+  assert.ok(start >= 0, signature);
+  const next = file.indexOf("\nexport ", start + signature.length);
+  return file.slice(start, next === -1 ? undefined : next);
+}
 
 describe("legacy inclusive prices", () => {
   it("keeps the stored customer total and does not add tax again", () => {
