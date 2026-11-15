@@ -288,6 +288,24 @@ export async function replaceTaxConfiguration(id: string, input: Parameters<type
   throw lastError;
 }
 
+/** Stop one saved tax rule from applying to new calculations. Plans, fee rules, and stored tax amounts stay. */
+export async function deleteTaxRule(id: string) {
+  const policyId = id.trim();
+  if (!policyId) return { ok: false as const, error: "Choose a tax rule." };
+  const current = await prisma.taxPolicyVersion.findUnique({
+    where: { id: policyId },
+    select: { id: true, status: true },
+  });
+  if (!current || current.status === "replaced") {
+    return { ok: false as const, error: "That tax rule is no longer available." };
+  }
+  await prisma.taxPolicyVersion.update({
+    where: { id: policyId },
+    data: { status: "replaced", effectiveTo: new Date() },
+  });
+  return { ok: true as const, id: policyId };
+}
+
 /** Hide a previous copy so the list and the calculation keep one rule for that country and product. */
 export async function retireTaxPolicies(ids: string[]) {
   const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];

@@ -168,7 +168,10 @@ export async function subscriptionTaxGates(plans: { code: string; sku: string; a
 
 export async function loadCountryRules() {
   const catalog = await loadTaxCatalog().catch(() => null);
-  const mapped = (catalog?.records ?? []).map((record) => mapStoredPolicy(record)).filter((rule) => rule != null);
+  const mapped = (catalog?.records ?? [])
+    .filter((record) => record.status !== "replaced")
+    .map((record) => mapStoredPolicy(record))
+    .filter((rule) => rule != null);
   return flagRuleConflicts(dedupeCountryRules(mapped));
 }
 

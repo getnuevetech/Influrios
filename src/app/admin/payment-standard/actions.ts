@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAdminSession, hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
-import { replaceTaxConfiguration, retireTaxPolicies, saveRouteDraft, saveTaxConfiguration } from "@/lib/payment-standard-store";
+import { deleteTaxRule, replaceTaxConfiguration, retireTaxPolicies, saveRouteDraft, saveTaxConfiguration } from "@/lib/payment-standard-store";
 import { countryRulesToRetire, countrySaveBlockers, mapStoredPolicy, matchCatalogPlan, planCountryTaxRule, storedFamily, type ChargeFamily, type CountryTaxRule } from "@/lib/country-tax";
 import { planTaxConfiguration, parseMoneyToCents, parseTaxPercent, percentToStoredRate, type PreviewDecision } from "@/lib/tax-configuration";
 import { accountsForSelection, countryRegions, loadTaxCatalog, planMatchKeys, previewConfiguredTax } from "@/lib/tax-settings";
@@ -253,6 +253,40 @@ export async function actionSaveTaxConfiguration(formData: FormData): Promise<{ 
   revalidatePath("/admin/payment-settings");
   revalidatePath("/admin/plans");
   return { ok: true, id: saved.id };
+}
+
+export async function actionDeleteTaxRule(formData: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getAdminSession();
+  if (!session || !hasPermission(session, "collab_finance.manage")) {
+    return { ok: false, error: "You do not have access to tax settings." };
+  }
+  const policyId = String(formData.get("policyId") ?? "").trim();
+  if (!policyId) return { ok: false, error: "Choose a tax rule." };
+  const catalog = await loadTaxCatalog();
+  const record = catalog.records.find((row) => row.id === policyId && row.status !== "replaced");
+  const mapped = record ? mapStoredPolicy(record) : null;
+  if (!record || !mapped) return { ok: false, error: "That tax rule is no longer available." };
+  const removed = await deleteTaxRule(policyId);
+  if (!removed.ok) return removed;
+  await prisma.auditLog.create({
+    data: {
+      actor: session.email,
+      action: "tax.rule_deleted",
+      objectType: "TaxPolicyVersion",
+      objectId: policyId,
+      before: {
+        countryCode: mapped.countryCode,
+        family: mapped.family,
+        chargeId: mapped.chargeId,
+        method: mapped.method,
+        ratePercent: mapped.ratePercent,
+      },
+      after: { status: "replaced" },
+    },
+  }).catch(() => null);
+  revalidatePath("/admin/payment-settings");
+  revalidatePath("/admin/plans");
+  return { ok: true };
 }
 
 export async function actionPreviewTaxConfiguration(formData: FormData) {
