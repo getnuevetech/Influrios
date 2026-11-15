@@ -5,9 +5,10 @@ import { State } from "country-state-city";
 import { BILLING_CATALOG, getProduct } from "@/lib/billing";
 import { corridorCountries } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
-import { calculateCountryTax, dedupeCountryRules, flagRuleConflicts, mapLegacyInclusivePrice, mapStoredPolicy, matchCountryRule, paidPlanAvailability } from "@/lib/country-tax";
+import { calculateCountryTax, dedupeCountryRules, flagRuleConflicts, mapLegacyInclusivePrice, mapStoredPolicy, matchCountryRule, paidPlanAvailability, subscriptionOffers } from "@/lib/country-tax";
 import {
   INFLUENCER_SERVICE_SUBJECTS,
+  TAX_COPY,
   accountsFor,
   billingAddressReady,
   decidePreview,
@@ -16,7 +17,7 @@ import {
   planTaxGate,
   registrationLabel,
   storedRateToPercent,
-  subscriptionGaps,
+  type PlanTaxGate,
   type PreviewDecision,
   type TaxDisplayStatus,
 } from "@/lib/tax-configuration";
@@ -130,38 +131,53 @@ export async function loadTaxCatalog() {
   };
 }
 
-export async function subscriptionTaxGates(plans: { code: string; sku: string; amountCents: number; checkout: boolean }[]) {
+export async function subscriptionTaxGates(
+  plans: { code: string; sku: string; amountCents: number; checkout: boolean }[],
+  countryCode = "US",
+): Promise<Record<string, PlanTaxGate>> {
   const catalog = await loadTaxCatalog().catch(() => null);
-  const policies = (catalog?.records ?? []).map((policy) => ({
-    id: policy.id,
-    appliesTo: policy.appliesTo,
-    status: policy.status,
-    linkedIds: policy.linkedIds,
-    countryCode: policy.countryCode,
-    regionCode: policy.regionCode,
-    providerCode: policy.providerCode,
-    providerAccountId: policy.providerAccountId,
-    calculationMethod: policy.calculationMethod,
-    taxCategory: policy.taxCategory,
-    liableEntity: policy.liableEntity,
-    rateBps: policy.rateBps,
-    jurisdiction: policy.jurisdiction,
-    hasEffectiveFrom: policy.hasEffectiveFrom,
-  }));
   const saved = catalog?.rawPlans ?? [];
-  const gates: Record<string, ReturnType<typeof planTaxGate>> = {};
-  for (const plan of plans) {
-    const product = getProduct(plan.sku);
-    const code = product?.creatorPlan || product?.businessPlan || plan.code;
-    const row = saved.find((item) => item.code === code || item.code === plan.code || item.id === plan.code);
-    const gaps = plan.amountCents <= 0 || !plan.checkout
-      ? []
-      : subscriptionGaps({
-          planKeys: [plan.code, plan.sku, code, row?.id ?? ""].filter(Boolean),
-          taxPolicyId: row?.taxPolicyId,
-          policies,
-        });
-    gates[plan.code] = planTaxGate({ amountCents: plan.amountCents, checkout: plan.checkout, gaps });
+  const rules = await loadCountryRules().catch(() => []);
+  const offers = subscriptionOffers({
+    countryCode,
+    rules,
+    plans: plans.map((plan) => {
+      const product = getProduct(plan.sku);
+      const code = product?.creatorPlan || product?.businessPlan || plan.code;
+      const row = saved.find((item) => item.code === code || item.code === plan.code || item.id === plan.code);
+      return {
+        code: plan.code,
+        amountCents: plan.amountCents,
+        checkout: plan.checkout,
+        keys: [plan.code, plan.sku, code, row?.id ?? "", row?.code ?? ""].filter(Boolean),
+      };
+    }),
+  });
+  const gates: Record<string, PlanTaxGate> = {};
+  for (const offer of offers) {
+    if (offer.kind === "free") {
+      gates[offer.code] = {
+        kind: "free",
+        cancelsPaidSubscription: false,
+        baseCents: offer.baseCents,
+        taxCents: 0,
+        totalCents: offer.totalCents,
+        ratePercent: null,
+      };
+      continue;
+    }
+    if (offer.kind === "unavailable") {
+      gates[offer.code] = { kind: "unavailable", message: TAX_COPY.unavailable, missing: offer.missing };
+      continue;
+    }
+    gates[offer.code] = {
+      kind: "checkout",
+      message: TAX_COPY.atCheckout,
+      baseCents: offer.baseCents,
+      taxCents: offer.taxCents,
+      totalCents: offer.totalCents,
+      ratePercent: offer.ratePercent,
+    };
   }
   return gates;
 }
@@ -186,10 +202,11 @@ export async function subscriptionCheckoutContext(sku: string, countryCode = "")
   const checkout = amountCents > 0;
   const rules = await loadCountryRules().catch(() => []);
   const planId = plan?.id || plan?.code || code;
+  const chargeKeys = [plan?.id ?? "", plan?.code ?? "", sku, code].filter(Boolean);
   const gate = countryCode
-    ? paidPlanAvailability({ amountCents, checkout, countryCode, planId, rules })
+    ? paidPlanAvailability({ amountCents, checkout, countryCode, planId, chargeKeys, rules })
     : planTaxGate({ amountCents, checkout, gaps: [] });
-  const matched = countryCode ? matchCountryRule(rules, { countryCode, family: "subscription", chargeId: planId }) : null;
+  const matched = countryCode ? matchCountryRule(rules, { countryCode, family: "subscription", chargeId: planId, chargeKeys }) : null;
   const rule = matched && matched.ok ? matched.rule : null;
   const catalog = await loadTaxCatalog().catch(() => null);
   const policy = catalog?.records.find((row) => row.id === rule?.id) ?? catalog?.records.find((row) => row.id === plan?.taxPolicyId && (row.status === "ready" || row.status === "active") && row.appliesTo === "subscription") ?? null;

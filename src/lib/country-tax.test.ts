@@ -21,7 +21,9 @@ import {
   planCountryTaxRule,
   presentCountryCharge,
   renewalUsesSameTax,
+  statedChargePrice,
   stripeTaxMode,
+  subscriptionOffers,
   subscriptionPricePreview,
   taxCalculationLabel,
   type CountryTaxRule,
@@ -285,6 +287,10 @@ describe("collaboration checkout fixture", () => {
     assert.deepEqual(checkout.receipt, checkout.lines);
     assert.equal(checkout.lines.find((line) => line.label === "Total to fund")?.amountCents, 105_400);
     assert.equal(checkout.lines.find((line) => line.label === "Tax")?.amountCents, 400);
+    const subtotal = checkout.lines.find((line) => line.label === "Subtotal")?.amountCents ?? 0;
+    const tax = checkout.lines.find((line) => line.label === "Tax")?.amountCents ?? 0;
+    assert.equal(subtotal + tax, checkout.businessPaysCents);
+    assert.equal(checkout.chargedAgain, false);
     assert.equal(checkout.showDetails, true);
     assert.match(checkout.details[0]?.reason ?? "", /Approved 0%/);
   });
@@ -374,9 +380,12 @@ describe("saved tax rule identity", () => {
     assert.deepEqual(selection, { product: "family:subscription", appliesTo: "all" });
     const parsed = parseCountryProduct({ product: "family:subscription", appliesTo: "all", plans });
     assert.deepEqual(parsed, { family: "subscription", chargeId: "", label: "Subscriptions" });
-    const cleared = parseCountryProduct({ product: "subscription:plan_starter", appliesTo: "all", plans });
-    assert.equal(cleared.chargeId, "");
-    assert.equal(cleared.label, "Subscriptions");
+    const productWins = parseCountryProduct({ product: "subscription:plan_starter", appliesTo: "all", plans });
+    assert.equal(productWins.chargeId, "plan_starter");
+    assert.equal(productWins.label, "Starter");
+    const familyWins = parseCountryProduct({ product: "family:subscription", appliesTo: "plan_starter", plans });
+    assert.equal(familyWins.chargeId, "");
+    assert.equal(familyWins.label, "Subscriptions");
     const planned = planCountryTaxRule({
       countryCode: "US",
       family: "subscription",
@@ -515,6 +524,9 @@ describe("saved tax rule identity", () => {
     assert.match(client, /policyId/);
     assert.match(action, /replaceTaxConfiguration/);
     assert.match(action, /policyId/);
+    assert.equal(client.includes("COUNTRY_TAX_FIELDS.appliesTo"), false);
+    assert.match(client, /COUNTRY_TAX_FIELDS\.productOrCharge/);
+    assert.match(client, /actionDeleteTaxRule/);
   });
 
   it("deletes one saved rule and leaves the others in the list and in new calculations", () => {
@@ -623,6 +635,127 @@ function sourceOf(file: string, signature: string) {
   const next = file.indexOf("\nexport ", start + signature.length);
   return file.slice(start, next === -1 ? undefined : next);
 }
+
+describe("country subscription prices", () => {
+  const plans = [
+    { code: "STARTER", amountCents: 0, checkout: false, keys: ["STARTER"] },
+    { code: "PLUS", amountCents: 1900, checkout: true, keys: ["PLUS", "creator_plus", "plan_plus"] },
+    { code: "PRO", amountCents: 2900, checkout: true, keys: ["PRO", "creator_pro", "plan_pro"] },
+  ];
+
+  it("shows 10% on Plus and Pro when a family rule covers every subscription", () => {
+    const rules = [
+      rule({ id: "family", countryCode: "US", family: "subscription", method: "percentage", ratePercent: 10, chargeLabel: "Subscriptions" }),
+      rule({ id: "plus", countryCode: "US", family: "subscription", chargeId: "plan_plus", method: "percentage", ratePercent: 10, chargeLabel: "Plus" }),
+    ];
+    const offers = subscriptionOffers({ countryCode: "US", rules, plans });
+    const starter = offers.find((item) => item.code === "STARTER");
+    const plus = offers.find((item) => item.code === "PLUS");
+    const pro = offers.find((item) => item.code === "PRO");
+    assert.equal(starter?.kind, "free");
+    assert.equal(starter?.taxCents, 0);
+    assert.equal(starter?.totalCents, 0);
+    assert.equal(plus?.kind, "checkout");
+    assert.equal(plus?.taxCents, 190);
+    assert.equal(plus?.totalCents, 2090);
+    assert.equal(plus?.ratePercent, 10);
+    assert.equal(pro?.kind, "checkout");
+    assert.equal(pro?.taxCents, 290);
+    assert.equal(pro?.totalCents, 3190);
+    assert.equal(pro?.ratePercent, 10);
+    assert.notEqual(pro?.kind, "unavailable");
+  });
+
+  it("lets a Plus rule cover only Plus and leaves Pro on the family rate", () => {
+    const rules = [
+      rule({ id: "family", countryCode: "US", family: "subscription", method: "percentage", ratePercent: 8, chargeLabel: "Subscriptions" }),
+      rule({ id: "plus", countryCode: "US", family: "subscription", chargeId: "plan_plus", method: "percentage", ratePercent: 10, chargeLabel: "Plus" }),
+    ];
+    const offers = subscriptionOffers({ countryCode: "US", rules, plans });
+    const plus = offers.find((item) => item.code === "PLUS");
+    const pro = offers.find((item) => item.code === "PRO");
+    assert.equal(plus?.taxCents, 190);
+    assert.equal(plus?.totalCents, 2090);
+    assert.equal(pro?.kind, "checkout");
+    assert.equal(pro?.taxCents, 232);
+    assert.equal(pro?.totalCents, 3132);
+    const plusOnly = subscriptionOffers({
+      countryCode: "US",
+      rules: [rule({ countryCode: "US", family: "subscription", chargeId: "plan_plus", method: "percentage", ratePercent: 10 })],
+      plans,
+    });
+    assert.equal(plusOnly.find((item) => item.code === "PLUS")?.kind, "checkout");
+    assert.equal(plusOnly.find((item) => item.code === "PRO")?.kind, "unavailable");
+  });
+
+  it("states an other charge's tax and adds it once", () => {
+    const priced = statedChargePrice({
+      rules: [rule({ countryCode: "US", family: "other", chargeId: "addon", method: "percentage", ratePercent: 10, chargeLabel: "Add-on" })],
+      chargeId: "addon",
+      family: "other",
+      countryCode: "US",
+      baseCents: 1_000,
+      currency: "USD",
+      at,
+      label: "Add-on",
+    });
+    assert.equal(priced.ok, true);
+    if (!priced.ok) return;
+    assert.equal(priced.taxCents, 100);
+    assert.equal(priced.totalCents, 1_100);
+    assert.match(priced.statement, /10%/);
+    assert.equal(priced.chargedAgain, false);
+    assert.equal(priced.lines.reduce((sum, line) => line.label === "Total to fund" ? sum : sum + line.amountCents, 0), priced.totalCents);
+    const again = statedChargePrice({
+      rules: [rule({ countryCode: "US", family: "other", chargeId: "addon", method: "percentage", ratePercent: 10 })],
+      chargeId: "addon",
+      family: "other",
+      countryCode: "US",
+      baseCents: 1_000,
+      currency: "USD",
+      at,
+    });
+    assert.equal(again.ok && again.totalCents, 1_100);
+  });
+
+  it("adds collaboration service tax to the breakdown once", () => {
+    const checkout = collaborationCheckout({
+      rules: [
+        rule({ countryCode: "US", family: "influencer_service", method: "percentage", ratePercent: 10 }),
+        rule({ countryCode: "US", family: "business_fee", method: "percentage", ratePercent: 10 }),
+        rule({ countryCode: "US", family: "influencer_fee", method: "percentage", ratePercent: 10 }),
+      ],
+      countryCode: "US",
+      currency: "USD",
+      compensationCents: 10_000,
+      businessFeeCents: 500,
+      influencerFeeCents: 200,
+      at,
+    });
+    assert.equal(checkout.ok, true);
+    if (!checkout.ok) return;
+    const tax = checkout.lines.find((line) => line.label === "Tax")?.amountCents;
+    const total = checkout.lines.find((line) => line.label === "Total to fund")?.amountCents;
+    assert.equal(tax, 1_000 + 50);
+    assert.equal(total, 10_000 + 500 + 1_050);
+    assert.equal(checkout.businessPaysCents, total);
+    assert.equal(checkout.influencerTaxCents, 20);
+    assert.match(checkout.lines.find((line) => line.label === "Tax")?.reason ?? "", /10%/);
+    const replay = milestoneTaxReplay({
+      lines: checkout.determinations.map((line) => ({
+        event: line.event,
+        subjectId: line.subjectId,
+        taxCents: line.taxCents,
+        reason: line.reason,
+      })),
+      weightsBps: [10_000],
+    });
+    assert.equal(replay.ok, true);
+    if (!replay.ok) return;
+    assert.equal(replay.chargedAgain, false);
+    assert.equal(replay.payouts[0]?.taxCents, 1_000 + 50 + 20);
+  });
+});
 
 describe("legacy inclusive prices", () => {
   it("keeps the stored customer total and does not add tax again", () => {

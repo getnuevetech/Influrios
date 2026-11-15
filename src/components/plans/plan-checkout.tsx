@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { actionCountryRegions, actionPreviewSubscriptionTax, actionStartCheckout } from "@/app/billing/actions";
 import { AccountDialog } from "@/components/account-dialog";
-import { TAX_COPY, customerCheckoutNotice, regionRequired } from "@/lib/tax-configuration";
+import { TAX_COPY, customerCheckoutNotice, formatUsd, regionRequired } from "@/lib/tax-configuration";
 
 type Preview = {
   ok: boolean;
@@ -27,6 +27,7 @@ export function PlanCheckout({
   label,
   emphasized,
   countries,
+  quote = null,
 }: {
   plan: { code: string; sku: string; name: string; priceLabel: string; amountCents: number };
   audience: "creator" | "business";
@@ -34,6 +35,7 @@ export function PlanCheckout({
   label: string;
   emphasized: boolean;
   countries: { code: string; name: string }[];
+  quote?: { taxCents: number; totalCents: number; ratePercent: number | null } | null;
 }) {
   const lineRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -73,7 +75,11 @@ export function PlanCheckout({
 
   return (
     <div className="mt-6">
-      <p className="text-xs font-semibold text-muted">Tax calculated at checkout</p>
+      {quote ? (
+        <p className="text-xs font-semibold text-muted">Tax {formatUsd(quote.taxCents)}{quote.ratePercent != null ? ` (${quote.ratePercent}%)` : ""} · Total {formatUsd(quote.totalCents)}</p>
+      ) : (
+        <p className="text-xs font-semibold text-muted">Tax calculated at checkout</p>
+      )}
       <button
         type="button"
         className={buttonClass}
@@ -86,6 +92,13 @@ export function PlanCheckout({
       </button>
       {open ? (
         <AccountDialog title="Confirm your plan" subtitle={`${plan.name} · ${plan.priceLabel || money(plan.amountCents)}/month`} onClose={() => setOpen(false)}>
+          {quote ? (
+            <dl className="mb-4 space-y-1 rounded-2xl bg-[#F6F7FB] px-4 py-3 text-sm">
+              <div className="flex justify-between"><dt>Base</dt><dd>{money(plan.amountCents)}</dd></div>
+              <div className="flex justify-between"><dt>Tax</dt><dd>{formatUsd(quote.taxCents)}</dd></div>
+              <div className="flex justify-between font-semibold"><dt>Total</dt><dd>{formatUsd(quote.totalCents)}</dd></div>
+            </dl>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-sm sm:col-span-1">Country
               <select value={country} onChange={(event) => void loadRegions(event.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2">

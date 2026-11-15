@@ -60,6 +60,13 @@ export type TaxDetermination = {
   lines: TaxLine[];
 };
 
+/** Tax added to the business price once: the business fee and any other business-liable charge. Influencer fee tax stays on the influencer. */
+export function businessPriceTaxCents(lines: { type: string; liableParty?: string; amountCents: number }[]) {
+  return lines
+    .filter((line) => line.type === "business_fee_tax" || (line.type === "other" && line.liableParty === "business"))
+    .reduce((sum, line) => sum + line.amountCents, 0);
+}
+
 export type SignedCommercialSnapshot = {
   agreementVersion: number;
   amountInputMode: "gross_influencer_compensation" | "all_in_budget";
@@ -369,7 +376,7 @@ export function buildSignedCommercialSnapshot(input: {
   if (tax.status === "unresolved" && tax.lines.length > 0) {
     return { ok: false, error: "Unresolved tax treatment cannot add a tax line." };
   }
-  const businessTax = tax.lines.filter((line) => line.type === "business_fee_tax").reduce((sum, line) => sum + line.amountCents, 0);
+  const businessTax = businessPriceTaxCents(tax.lines);
   const influencerTax = tax.lines
     .filter((line) => line.type === "influencer_fee_tax")
     .reduce((sum, line) => sum + line.amountCents, 0);
@@ -468,7 +475,7 @@ export function buildBusinessCommercialSnapshot(input: {
   if (tax.status === "unresolved" && tax.lines.length > 0) {
     return { ok: false, error: "Unresolved tax treatment cannot add a tax line." };
   }
-  const businessTax = tax.lines.filter((line) => line.type === "business_fee_tax").reduce((sum, line) => sum + line.amountCents, 0);
+  const businessTax = businessPriceTaxCents(tax.lines);
   const influencerTax = tax.lines.filter((line) => line.type === "influencer_fee_tax").reduce((sum, line) => sum + line.amountCents, 0);
   const influencer = input.influencer;
   const influencerLocked =

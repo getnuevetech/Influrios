@@ -5,6 +5,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions";
 import { CollaborationTaxBox } from "@/app/collaboration/contract/collaboration-tax-box";
+import { collaborationCheckout } from "@/lib/country-tax";
+import { loadCountryRules } from "@/lib/tax-settings";
 import { requireBusinessSession } from "@/lib/account-audience";
 import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace, type CampaignBrief } from "@/lib/business";
@@ -412,6 +414,20 @@ export default async function ContractWizardPage({ searchParams }: Props) {
         ).catch(() => null)
       : null;
   const shownQuote = agreement && !agreement.ok ? agreement : quote;
+  const countryRules = jurisdictionCode ? await loadCountryRules().catch(() => []) : [];
+  const fundedTax =
+    quote?.ok && jurisdictionCode
+      ? collaborationCheckout({
+          rules: countryRules,
+          countryCode: jurisdictionCode,
+          currency: jurisdiction?.currency || "USD",
+          compensationCents: quote.grossInfluencerCompensationCents,
+          businessFeeCents: quote.feeCents,
+          influencerFeeCents: agreement?.ok ? agreement.influencerPlatformFeeCents : 0,
+          at: new Date().toISOString(),
+        })
+      : null;
+  const priceWithTax = fundedTax?.ok ? fundedTax.businessPaysCents : null;
 
   const plan =
     shownQuote?.ok && agreement?.ok && jurisdictionCode && effectiveServiceLevel && milestoneGate.ok
@@ -696,7 +712,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     </div>
                     <div>
                       <dt className="text-xs text-muted">You pay</dt>
-                      <dd className="font-bold text-indigo">{formatMoney(quote.totalCents, plan.contractCurrency)}</dd>
+                      <dd className="font-bold text-indigo">{formatMoney(priceWithTax ?? quote.totalCents, plan.contractCurrency)}</dd>
                     </div>
                   </dl>
                   <CollaborationTaxBox
@@ -876,10 +892,19 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                       </dd>
                     </div>
                   ) : null}
+                  {fundedTax?.ok ? (
+                    <div>
+                      <dt className="text-muted">Tax</dt>
+                      <dd className="font-bold text-indigo">
+                        {formatMoney(fundedTax.lines.find((line) => line.label === "Tax")?.amountCents ?? 0, plan.contractCurrency)}
+                        {fundedTax.lines.find((line) => line.label === "Tax")?.reason ? ` · ${fundedTax.lines.find((line) => line.label === "Tax")?.reason}` : ""}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt className="text-muted">You pay</dt>
                     <dd className="font-bold text-indigo">
-                      {formatMoney(plan.businessPaysCents ?? plan.grossContractValueCents, plan.contractCurrency)}
+                      {formatMoney(priceWithTax ?? plan.businessPaysCents ?? plan.grossContractValueCents, plan.contractCurrency)}
                     </dd>
                   </div>
                   <div>

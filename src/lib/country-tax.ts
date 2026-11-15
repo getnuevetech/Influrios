@@ -15,7 +15,6 @@ import {
 export const COUNTRY_TAX_FIELDS = {
   country: "Country",
   productOrCharge: "Product or charge",
-  appliesTo: "Applies to",
   taxCalculation: "Tax calculation",
   rate: "Rate (%)",
   save: "Save rule",
@@ -292,22 +291,15 @@ export function presentCountryCharge(input: {
 
 export function parseCountryProduct(input: {
   product: string;
-  appliesTo: string;
+  /** Ignored. The product or charge field is the coverage. */
+  appliesTo?: string;
   plans: CatalogPlanRef[];
   fees?: { id: string; label: string }[];
 }): { family: ChargeFamily | ""; chargeId: string; label: string } {
   const product = input.product.trim();
-  const appliesTo = input.appliesTo.trim();
-  if (product === "family:subscription" || product.startsWith("subscription:")) {
-    const picked = appliesTo && appliesTo !== "all"
-      ? appliesTo
-      : product.startsWith("subscription:")
-        ? product.slice("subscription:".length)
-        : "";
-    if (!picked || appliesTo === "all") {
-      return { family: "subscription", chargeId: "", label: familyLabel("subscription") };
-    }
-    const plan = matchCatalogPlan(input.plans, [picked]);
+  if (product.startsWith("subscription:")) {
+    const picked = product.slice("subscription:".length).trim();
+    const plan = picked ? matchCatalogPlan(input.plans, [picked]) : null;
     if (!plan) return { family: "subscription", chargeId: "", label: familyLabel("subscription") };
     return { family: "subscription", chargeId: plan.id, label: plan.name.trim() || familyLabel("subscription") };
   }
@@ -380,13 +372,13 @@ export function countryRulesToRetire(input: {
     .map((rule) => rule.id);
 }
 
-export function matchCountryRule(rules: CountryTaxRule[], input: { countryCode: string; family: ChargeFamily; chargeId: string }):
+export function matchCountryRule(rules: CountryTaxRule[], input: { countryCode: string; family: ChargeFamily; chargeId: string; chargeKeys?: string[] }):
   | { ok: true; rule: CountryTaxRule }
   | { ok: false; status: "missing_rule" | "conflict"; error: string } {
   const country = countryCode(input.countryCode);
-  const chargeId = input.chargeId.trim();
+  const keys = new Set([input.chargeId, ...(input.chargeKeys ?? [])].map((id) => id.trim()).filter(Boolean));
   const scoped = flagRuleConflicts(rules).filter((rule) => rule.effective && rule.countryCode === country && rule.family === input.family);
-  const exact = scoped.filter((rule) => rule.chargeId === chargeId && chargeId);
+  const exact = scoped.filter((rule) => rule.chargeId && keys.has(rule.chargeId));
   const family = scoped.filter((rule) => !rule.chargeId);
   const chosen = exact.length > 0 ? exact : family;
   if (chosen.some((rule) => rule.conflict) || chosen.length > 1) {
@@ -395,7 +387,7 @@ export function matchCountryRule(rules: CountryTaxRule[], input: { countryCode: 
   const rule = chosen[0];
   if (!rule) {
     if (input.family === "subscription") return { ok: false, status: "missing_rule", error: COUNTRY_TAX_FIELDS.missingRule };
-    const item = chargeId || familyLabel(input.family);
+    const item = input.chargeId.trim() || familyLabel(input.family);
     return { ok: false, status: "missing_rule", error: `Add tax rule for ${item} in ${country || "this country"}.` };
   }
   return { ok: true, rule };
@@ -420,6 +412,7 @@ export function calculateCountryTax(input: {
   baseCents: number;
   currency: string;
   at: string;
+  chargeKeys?: string[];
   location?: { country?: string; region?: string; postalCode?: string };
   providerResult?: { ok: true; taxCents: number; reason: string } | { ok: false; detail: string } | null;
 }): TaxCalculation {
@@ -437,7 +430,12 @@ export function calculateCountryTax(input: {
   if (!Number.isInteger(input.baseCents) || input.baseCents < 0) {
     return { ...base, ok: false, status: "failed", subtotalCents: null, taxCents: null, totalCents: null, reason: "The taxable amount is not a valid minor amount.", stripe: { automaticTax: false, exclusiveRate: false } };
   }
-  const matched = matchCountryRule(input.rules, input);
+  const matched = matchCountryRule(input.rules, {
+    countryCode: input.countryCode,
+    family: input.family,
+    chargeId: input.chargeId,
+    chargeKeys: input.chargeKeys,
+  });
   if (!matched.ok) {
     return { ...base, ok: false, status: matched.status, subtotalCents: null, taxCents: null, totalCents: null, reason: matched.error, stripe: { automaticTax: false, exclusiveRate: false } };
   }
@@ -508,10 +506,12 @@ export function subscriptionPricePreview(input: {
   baseCents: number;
   currency: string;
   at?: string;
+  chargeKeys?: string[];
 }) {
   const calculated = calculateCountryTax({
     rules: input.rules,
     chargeId: input.planId,
+    chargeKeys: input.chargeKeys,
     family: "subscription",
     countryCode: input.countryCode,
     baseCents: input.baseCents,
@@ -532,15 +532,139 @@ export function subscriptionPricePreview(input: {
   };
 }
 
-export function paidPlanAvailability(input: { amountCents: number; checkout: boolean; countryCode: string; planId: string; rules: CountryTaxRule[] }) {
+export function paidPlanAvailability(input: { amountCents: number; checkout: boolean; countryCode: string; planId: string; chargeKeys?: string[]; rules: CountryTaxRule[] }) {
   if (input.amountCents <= 0 || input.checkout === false) {
     return { kind: "free" as const, cancelsPaidSubscription: false as const };
   }
-  const matched = matchCountryRule(input.rules, { countryCode: input.countryCode, family: "subscription", chargeId: input.planId });
+  const matched = matchCountryRule(input.rules, { countryCode: input.countryCode, family: "subscription", chargeId: input.planId, chargeKeys: input.chargeKeys });
   if (!matched.ok) {
     return { kind: "unavailable" as const, message: "This plan is temporarily unavailable.", missing: matched.error };
   }
   return { kind: "checkout" as const, message: "Tax calculated at checkout" };
+}
+
+export type SubscriptionOffer = {
+  code: string;
+  kind: "free" | "unavailable" | "checkout";
+  message: string;
+  missing: string;
+  baseCents: number;
+  taxCents: number | null;
+  totalCents: number | null;
+  ratePercent: number | null;
+  cancelsPaidSubscription: false;
+};
+
+/** Price each plan from the country rule that covers it. A family rule covers every plan. A plan rule covers only that plan. */
+export function subscriptionOffers(input: {
+  countryCode: string;
+  rules: CountryTaxRule[];
+  plans: { code: string; amountCents: number; checkout: boolean; keys?: string[] }[];
+}): SubscriptionOffer[] {
+  return input.plans.map((plan) => {
+    const keys = [...new Set([plan.code, ...(plan.keys ?? [])].map((key) => key.trim()).filter(Boolean))];
+    const availability = paidPlanAvailability({
+      amountCents: plan.amountCents,
+      checkout: plan.checkout,
+      countryCode: input.countryCode,
+      planId: plan.code,
+      chargeKeys: keys,
+      rules: input.rules,
+    });
+    if (availability.kind === "free") {
+      return {
+        code: plan.code,
+        kind: "free" as const,
+        message: "",
+        missing: "",
+        baseCents: plan.amountCents,
+        taxCents: 0,
+        totalCents: plan.amountCents,
+        ratePercent: null,
+        cancelsPaidSubscription: false as const,
+      };
+    }
+    if (availability.kind === "unavailable") {
+      return {
+        code: plan.code,
+        kind: "unavailable" as const,
+        message: availability.message,
+        missing: availability.missing,
+        baseCents: plan.amountCents,
+        taxCents: null,
+        totalCents: null,
+        ratePercent: null,
+        cancelsPaidSubscription: false as const,
+      };
+    }
+    const preview = subscriptionPricePreview({
+      rules: input.rules,
+      planId: plan.code,
+      chargeKeys: keys,
+      countryCode: input.countryCode,
+      baseCents: plan.amountCents,
+      currency: "USD",
+    });
+    const rated = preview.status === "calculated" || preview.status === "zero";
+    const matched = matchCountryRule(input.rules, {
+      countryCode: input.countryCode,
+      family: "subscription",
+      chargeId: plan.code,
+      chargeKeys: keys,
+    });
+    return {
+      code: plan.code,
+      kind: "checkout" as const,
+      message: "Tax calculated at checkout",
+      missing: "",
+      baseCents: plan.amountCents,
+      taxCents: rated ? preview.taxCents : null,
+      totalCents: rated ? preview.totalCents : null,
+      ratePercent: matched.ok && matched.rule.method === "percentage" ? matched.rule.ratePercent : null,
+      cancelsPaidSubscription: false as const,
+    };
+  });
+}
+
+/** State the tax on one charge, show it beside the base, and add it once. */
+export function statedChargePrice(input: {
+  rules: CountryTaxRule[];
+  chargeId: string;
+  family: ChargeFamily;
+  countryCode: string;
+  baseCents: number;
+  currency: string;
+  at: string;
+  label?: string;
+}) {
+  const calculated = calculateCountryTax({
+    rules: input.rules,
+    chargeId: input.chargeId,
+    family: input.family,
+    countryCode: input.countryCode,
+    baseCents: input.baseCents,
+    currency: input.currency,
+    at: input.at,
+  });
+  if (!calculated.ok || calculated.taxCents == null || calculated.totalCents == null || calculated.subtotalCents == null) {
+    return { ok: false as const, error: calculated.reason, storedAsZero: false as const, chargedAgain: false as const };
+  }
+  if (calculated.totalCents !== calculated.subtotalCents + calculated.taxCents) {
+    return { ok: false as const, error: "The tax determination does not reconcile. Nothing was stored.", storedAsZero: false as const, chargedAgain: false as const };
+  }
+  const lines: CheckoutLine[] = [
+    { label: input.label?.trim() || familyLabel(input.family), amountCents: calculated.subtotalCents },
+    { label: COUNTRY_TAX_FIELDS.tax, amountCents: calculated.taxCents, reason: calculated.reason },
+    { label: COUNTRY_TAX_FIELDS.totalToFund, amountCents: calculated.totalCents },
+  ];
+  return {
+    ok: true as const,
+    lines,
+    statement: calculated.reason,
+    taxCents: calculated.taxCents,
+    totalCents: calculated.totalCents,
+    chargedAgain: false as const,
+  };
 }
 
 export function mapLegacyInclusivePrice(input: { storedCents: number; inclusive: boolean; ratePercent: number | null }) {
@@ -660,11 +784,17 @@ export function collaborationCheckout(input: {
   }
   const combined = combineCollaborationTax({ sale: sale.line, businessFee: businessLine.line, influencerFee: influencerLine.line });
   if (!combined.ok) return { ok: false as const, error: combined.error, storedAsZero: false as const, moneyMoved: false as const };
+  const subtotalCents = input.compensationCents + input.businessFeeCents;
+  const addedTaxCents = service.taxCents + business.taxCents;
+  if (combined.businessPaysCents !== subtotalCents + addedTaxCents) {
+    return { ok: false as const, error: "The tax determination does not reconcile. Nothing was stored.", storedAsZero: false as const, moneyMoved: false as const };
+  }
+  const taxReason = [service.reason, business.reason].filter((reason, index, list) => Boolean(reason) && list.indexOf(reason) === index).join(" ");
   const lines: CheckoutLine[] = [
     { label: COUNTRY_TAX_FIELDS.compensation, amountCents: input.compensationCents },
     { label: COUNTRY_TAX_FIELDS.businessFee, amountCents: input.businessFeeCents },
-    { label: COUNTRY_TAX_FIELDS.subtotal, amountCents: input.compensationCents + input.businessFeeCents },
-    { label: COUNTRY_TAX_FIELDS.tax, amountCents: business.taxCents, reason: business.reason },
+    { label: COUNTRY_TAX_FIELDS.subtotal, amountCents: subtotalCents },
+    { label: COUNTRY_TAX_FIELDS.tax, amountCents: addedTaxCents, reason: taxReason },
     { label: COUNTRY_TAX_FIELDS.totalToFund, amountCents: combined.businessPaysCents },
   ];
   const details = [

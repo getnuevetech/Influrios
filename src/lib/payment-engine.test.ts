@@ -5,8 +5,10 @@ import type { CollaborationFeeRule } from "./collaboration-fees";
 import { liveFundingBlockReason, quoteDualPlatformFees } from "./dual-platform-fees";
 import {
   providerLedgerAdvance,
+  buildBusinessCommercialSnapshot,
   buildProviderStagingTrace,
   buildSignedCommercialSnapshot,
+  businessPriceTaxCents,
   collaborationLaunchBlockers,
   collectionPostings,
   directGrossEditBlock,
@@ -943,6 +945,63 @@ describe("payment engine acceptance", () => {
     };
     assert.match(liveFundingBlockReason(plan, { approvals: open, traceReady: false }) ?? "", /staging trace/);
     assert.equal(liveFundingBlockReason(plan, { approvals: open, traceReady: true }), null);
+    const taxed = buildBusinessCommercialSnapshot({
+      quote: {
+        grossInfluencerCompensationCents: 10_000,
+        feeCents: 500,
+        totalCents: 10_500,
+        rule: { id: "fee", version: 1, method: "percent", percentBps: 500 },
+        floorApplied: false,
+        capApplied: false,
+      },
+      currency: "USD",
+      minorDigits: 2,
+      milestoneCount: 1,
+      tax: {
+        status: "approved",
+        lines: [
+          { type: "other", ruleVersion: "country", basisCents: 10_000, amountCents: 1_000, currency: "USD", liableParty: "business", disposition: "10% on the base price." },
+          { type: "business_fee_tax", ruleVersion: "country", basisCents: 500, amountCents: 50, currency: "USD", liableParty: "business", disposition: "10% on the base price." },
+          { type: "influencer_fee_tax", ruleVersion: "country", basisCents: 200, amountCents: 20, currency: "USD", liableParty: "influencer", disposition: "10% on the base price." },
+        ],
+      },
+    });
+    assert.equal("ok" in taxed, false);
+    if ("ok" in taxed) return;
+    assert.equal(businessPriceTaxCents(taxed.taxLines), 1_050);
+    assert.equal(taxed.businessPaysCents, 11_550);
+    assert.equal(taxed.businessTaxCents, 1_050);
+    assert.notEqual(taxed.businessPaysCents, 11_570);
+    const paid = readSignedCollection(
+      {
+        signedQuote: {
+          currency: "USD",
+          businessPaysCents: 375_000,
+          influencerReceivesCents: 343_000,
+          platformFeesTotalCents: 32_000,
+          businessTaxCents: 0,
+          influencerTaxCents: 0,
+          withholdingCents: 0,
+        },
+      },
+      "USD",
+    );
+    assert.equal(paid && "error" in paid, false);
+    const blocked = readSignedCollection(
+      {
+        signedQuote: {
+          currency: "USD",
+          businessPaysCents: taxed.businessPaysCents,
+          influencerReceivesCents: 9_800,
+          platformFeesTotalCents: 700,
+          businessTaxCents: taxed.businessTaxCents,
+          influencerTaxCents: 20,
+          withholdingCents: 0,
+        },
+      },
+      "USD",
+    );
+    assert.equal(blocked && "error" in blocked && blocked.error, "Tax collection is not part of this route.");
     assert.equal(
       readSignedCollection(
         {
