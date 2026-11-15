@@ -13,6 +13,7 @@ import { commitMilestoneReleasePlan } from "@/lib/payment-standard-store";
 import { carriedSettlementTax } from "@/lib/tax-determination";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 import { getLaunchGate } from "@/lib/launch-gate";
+import { workspaceMutationAllowed, workspaceTab } from "@/lib/workspace-decision";
 
 function fail(fundingId: string, message: string): never {
   redirect(`/collaboration/work/${fundingId}?error=${encodeURIComponent(message)}`);
@@ -31,7 +32,7 @@ export async function actionApproveAndRelease(formData: FormData) {
     where: { id: access.funding.id },
     include: {
       milestones: { orderBy: { sortOrder: "asc" } },
-      disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } } },
+      disputes: { where: { status: { in: ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"] } } },
     },
   });
   if (!funding) fail(fundingId, "This collaboration was not found.");
@@ -43,6 +44,26 @@ export async function actionApproveAndRelease(formData: FormData) {
   if (funding.disputes.some((row) => row.milestoneId == null || row.milestoneId === milestone.id)) {
     fail(funding.id, "A dispute is open. Release stays paused.");
   }
+  const submissions = await prisma.milestoneSubmission.findMany({
+    where: { milestoneId: milestone.id },
+    select: { version: true, status: true, note: true, linkUrl: true, reviewNote: true },
+  });
+  const allowed = workspaceMutationAllowed(
+    {
+      fundingStatus: funding.status,
+      milestoneStatus: milestone.status,
+      revisionCount: milestone.revisionCount,
+      revisionLimit: milestone.revisionLimit,
+      disputeOpen: false,
+      payoutConfirmed: false,
+      bankPayoutConfirmed: false,
+      submissions,
+    },
+    { audience: "business", assigned: false },
+    "approve",
+    version,
+  );
+  if (!allowed.ok) fail(funding.id, allowed.error);
   const submission = await prisma.milestoneSubmission.findFirst({
     where: { milestoneId: milestone.id, version },
   });
@@ -95,9 +116,20 @@ export async function actionApproveAndRelease(formData: FormData) {
     });
     if (!committed.ok) fail(funding.id, committed.error);
   }
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: account.email,
+        action: "milestone_version_approved",
+        objectType: "FundingMilestone",
+        objectId: milestone.id,
+        after: { fundingId: funding.id, version, payoutConfirmed: false },
+      },
+    })
+    .catch(() => undefined);
   revalidatePath(`/collaboration/work/${funding.id}`);
   revalidatePath("/payments");
-  redirect(`/collaboration/work/${funding.id}?approved=1`);
+  redirect(`/collaboration/work/${funding.id}?tab=${workspaceTab(String(formData.get("tab") ?? ""))}&approved=1`);
 }
 
 export async function actionExecuteApprovedRefund(formData: FormData) {

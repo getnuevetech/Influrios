@@ -9,6 +9,7 @@ import { newCheckoutAllowed, readRouteSnapshot } from "@/lib/payment-route";
 import { filesFromForm, saveDeliverableFiles, validateDeliverableFiles } from "@/lib/deliverable-files";
 import { markSubmissionVersion, submitMilestoneWork } from "@/lib/milestone-delivery";
 import { reviewVersionDecision } from "@/lib/version-review";
+import { recordsDisagree, workspaceMutationAllowed, workspaceTab, type WorkspaceMilestoneState } from "@/lib/workspace-decision";
 import { assertFundingAccess, requireBusinessFundingAccess } from "@/lib/funding-access";
 import { openFundingCollection } from "@/lib/provider-collection";
 import { parseDepositMethod, startFundingDeposit } from "@/lib/funding-checkout";
@@ -42,6 +43,44 @@ function fail(message: string): never {
 
 function failWork(fundingId: string, message: string): never {
   redirect(`/collaboration/work/${fundingId}?error=${encodeURIComponent(message)}`);
+}
+
+const OPEN_DISPUTE = ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"];
+
+function workspaceReturn(fundingId: string, formData: FormData, flag: string) {
+  const tab = workspaceTab(String(formData.get("tab") ?? ""));
+  return `/collaboration/work/${fundingId}?tab=${tab}&${flag}=1`;
+}
+
+async function loadWorkspaceState(fundingId: string, milestoneId: string, fundingStatus: string): Promise<WorkspaceMilestoneState | null> {
+  const milestone = await prisma.fundingMilestone.findFirst({
+    where: { id: milestoneId, fundingId },
+    select: {
+      status: true,
+      revisionCount: true,
+      revisionLimit: true,
+      submissions: { select: { version: true, status: true, note: true, linkUrl: true, reviewNote: true } },
+    },
+  });
+  if (!milestone) return null;
+  const dispute = await prisma.milestoneDispute.findFirst({
+    where: {
+      fundingId,
+      status: { in: OPEN_DISPUTE },
+      OR: [{ milestoneId }, { milestoneId: null }],
+    },
+    select: { id: true },
+  });
+  return {
+    fundingStatus,
+    milestoneStatus: milestone.status,
+    revisionCount: milestone.revisionCount,
+    revisionLimit: milestone.revisionLimit,
+    disputeOpen: Boolean(dispute),
+    payoutConfirmed: false,
+    bankPayoutConfirmed: false,
+    submissions: milestone.submissions,
+  };
 }
 
 function failDeal(dealId: string, message: string): never {
@@ -159,6 +198,10 @@ export async function actionSubmitMilestone(formData: FormData) {
   const files = filesFromForm(formData);
   const checked = validateDeliverableFiles(files);
   if (!checked.ok) fail(checked.error);
+  const workspaceState = await loadWorkspaceState(access.funding.id, milestoneId, access.funding.status);
+  if (!workspaceState) failWork(access.funding.id, "Milestone not found.");
+  const allowed = workspaceMutationAllowed(workspaceState, { audience: "creator", assigned: true }, "submit");
+  if (!allowed.ok) failWork(access.funding.id, allowed.error);
   const result = await submitMilestoneWork({
     fundingId: access.funding.id,
     milestoneId,
@@ -171,7 +214,7 @@ export async function actionSubmitMilestone(formData: FormData) {
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   revalidatePath(`/collaboration/work/${access.funding.id}`);
-  redirect(`/collaboration/work/${access.funding.id}?submitted=1`);
+  redirect(workspaceReturn(access.funding.id, formData, "submitted"));
 }
 
 export async function actionRequestRevision(formData: FormData) {
@@ -195,6 +238,10 @@ export async function actionRequestRevision(formData: FormData) {
     note: String(formData.get("note") ?? ""),
   });
   if (!decision.ok) failWork(access.funding.id, decision.error);
+  const workspaceState = await loadWorkspaceState(access.funding.id, milestoneId, access.funding.status);
+  if (!workspaceState) failWork(access.funding.id, "Milestone not found.");
+  const allowed = workspaceMutationAllowed(workspaceState, { audience: "business", assigned: false }, "revise", decision.version);
+  if (!allowed.ok) failWork(access.funding.id, allowed.error);
   const result = await requestFundingRevision(access.funding.id, milestoneId, String(formData.get("note") ?? ""));
   if (!result.ok) failWork(access.funding.id, result.error);
   const marked = await markSubmissionVersion({
@@ -222,7 +269,7 @@ export async function actionRequestRevision(formData: FormData) {
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   revalidatePath(`/collaboration/work/${access.funding.id}`);
-  redirect(`/collaboration/work/${access.funding.id}?revised=1`);
+  redirect(workspaceReturn(access.funding.id, formData, "revised"));
 }
 
 export async function actionAddDeliverableFiles(formData: FormData) {
@@ -241,6 +288,10 @@ export async function actionAddDeliverableFiles(formData: FormData) {
     select: { id: true },
   });
   if (!milestone) fail("Milestone not found.");
+  const workspaceState = await loadWorkspaceState(access.funding.id, milestoneId, access.funding.status);
+  if (workspaceState && recordsDisagree(workspaceState).disagree) {
+    failWork(access.funding.id, "These records disagree. Nothing was added.");
+  }
   const latest = await prisma.milestoneSubmission.findFirst({
     where: { milestoneId, fundingId: access.funding.id },
     orderBy: { version: "desc" },
@@ -256,7 +307,7 @@ export async function actionAddDeliverableFiles(formData: FormData) {
   if (!stored.ok) fail(stored.error);
   revalidatePath("/payments");
   revalidatePath(`/collaboration/work/${access.funding.id}`);
-  redirect(`/collaboration/work/${access.funding.id}?submitted=1`);
+  redirect(workspaceReturn(access.funding.id, formData, "added"));
 }
 
 export async function actionApproveMilestone(formData: FormData) {
@@ -272,6 +323,10 @@ export async function actionApproveMilestone(formData: FormData) {
   });
   const decision = reviewVersionDecision({ versions: submissions, requestedVersion: versionNumber, intent: "approve" });
   if (!decision.ok) failWork(access.funding.id, decision.error);
+  const workspaceState = await loadWorkspaceState(access.funding.id, milestoneId, access.funding.status);
+  if (!workspaceState) failWork(access.funding.id, "Milestone not found.");
+  const allowed = workspaceMutationAllowed(workspaceState, { audience: "business", assigned: false }, "approve", decision.version);
+  if (!allowed.ok) failWork(access.funding.id, allowed.error);
   const result = await approveFundingMilestone(access.funding.id, milestoneId);
   if (!result.ok) failWork(access.funding.id, result.error);
   const marked = await markSubmissionVersion({
@@ -281,9 +336,18 @@ export async function actionApproveMilestone(formData: FormData) {
     reviewNote: "",
   });
   if (!marked.ok) failWork(access.funding.id, marked.error);
+  await prisma.auditLog.create({
+    data: {
+      actor: account.email,
+      action: "milestone_version_approved",
+      objectType: "FundingMilestone",
+      objectId: milestoneId,
+      after: { fundingId: access.funding.id, version: decision.version, payoutConfirmed: false },
+    },
+  }).catch(() => undefined);
   revalidatePath("/payments");
   revalidatePath(`/collaboration/work/${access.funding.id}`);
-  redirect(`/collaboration/work/${access.funding.id}?approved=1`);
+  redirect(workspaceReturn(access.funding.id, formData, "approved"));
 }
 
 export async function actionCancelPrefund(formData: FormData) {

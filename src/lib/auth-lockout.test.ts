@@ -50,6 +50,7 @@ describe("auth lockout", () => {
       "src/app/collaboration/applications/layout.tsx",
       "src/app/collaboration/contracts/layout.tsx",
       "src/app/collaboration/team/layout.tsx",
+      "src/app/collaboration/work/[fundingId]/layout.tsx",
     ]) {
       const text = readFileSync(file, "utf8");
       assert.match(text, /getAccountSession/);

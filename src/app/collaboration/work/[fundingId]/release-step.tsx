@@ -13,6 +13,7 @@ export function ReleaseStep({
   grossCents,
   businessFeeCents,
   closeHref,
+  tab = "milestones",
 }: {
   fundingId: string;
   milestoneId: string;
@@ -22,6 +23,7 @@ export function ReleaseStep({
   grossCents: number;
   businessFeeCents: number;
   closeHref: string;
+  tab?: string;
 }) {
   const copy = approvalCopy({
     amountCents: grossCents + businessFeeCents,
@@ -35,6 +37,7 @@ export function ReleaseStep({
         <input type="hidden" name="dealId" value={fundingId} />
         <input type="hidden" name="milestoneId" value={milestoneId} />
         <input type="hidden" name="versionNumber" value={version} />
+        <input type="hidden" name="tab" value={tab} />
         <p className="text-sm text-muted">{copy.note}</p>
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between gap-3"><dt>Milestone</dt><dd className="font-semibold">{milestoneName}</dd></div>

@@ -1,29 +1,34 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { actionAddDeliverableFiles, actionSubmitMilestone } from "@/app/payments/actions";
+import { WorkspacePanel } from "@/app/collaboration/work/[fundingId]/workspace-panel";
 import { getAccountSession } from "@/lib/accounts";
 import { assertFundingAccess } from "@/lib/funding-access";
-import { VersionReview } from "@/components/version-review";
-import { ReleaseStep } from "@/app/collaboration/work/[fundingId]/release-step";
-import { WorkspaceMessages } from "@/app/collaboration/work/[fundingId]/messages-panel";
-import { milestoneWorkLabel, visibleSubmissions } from "@/lib/milestone-delivery";
 import { memberDealView } from "@/lib/member-deal-money";
+import { visibleSubmissions } from "@/lib/milestone-delivery";
 import { formatMoney } from "@/lib/money";
+import { readSignedDealMoney } from "@/lib/payment-engine";
 import { prisma } from "@/lib/db";
+import {
+  milestoneAmountColumnLabel,
+  orderedByAgreement,
+  workspaceSummaryLines,
+  workspaceTab,
+  type WorkspaceMilestoneState,
+} from "@/lib/workspace-decision";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Deliverables" };
+export const metadata = { title: "Workspace" };
 
 type Props = {
   params: Promise<{ fundingId: string }>;
-  searchParams: Promise<{ error?: string; submitted?: string; revised?: string; approved?: string; version?: string; release?: string; tab?: string; sent?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+const OPEN_DISPUTE = ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"];
 
 export default async function CollaborationWorkPage({ params, searchParams }: Props) {
   const account = await getAccountSession().catch(() => null);
   if (!account) redirect("/login?next=/collaboration/hub");
   const { fundingId } = await params;
-  const query = await searchParams;
   const access = await assertFundingAccess(account, fundingId);
   if (!access.ok) notFound();
   const funding = await prisma.collaborationFunding.findUnique({
@@ -36,204 +41,116 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
           files: { orderBy: { createdAt: "asc" } },
         },
       },
-      disputes: { where: { status: { in: ["open", "under_review", "refund_requested"] } } },
+      entries: { where: { kind: "release" }, select: { milestoneId: true, kind: true } },
+      disputes: { where: { status: { in: OPEN_DISPUTE } } },
     },
   });
   if (!funding) notFound();
-  const contract = await prisma.contractDocument
-    .findFirst({ where: { fundingId: funding.id }, select: { id: true, title: true } })
-    .catch(() => null);
+  const [contract, creator, settlements] = await Promise.all([
+    prisma.contractDocument.findFirst({
+      where: { fundingId: funding.id },
+      select: { id: true, sourceJson: true },
+    }).catch(() => null),
+    prisma.creator.findUnique({ where: { slug: funding.creatorSlug }, select: { displayName: true } }).catch(() => null),
+    prisma.milestoneSettlementV4.findMany({
+      where: { fundingId: funding.id },
+      select: { milestoneId: true, payoutState: true },
+    }).catch(() => []),
+  ]);
   const business = access.audience === "business";
+  const plan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
   const money = memberDealView({
     role: business ? "business" : "influencer",
     grossCents: funding.grossCents,
     feeCents: funding.feeCents,
-    plan: funding.feeSnapshotJson,
+    plan,
   });
+  const signed = readSignedDealMoney(plan);
+  const quote = plan && typeof plan === "object" && "signedQuote" in plan
+    ? (plan as { signedQuote?: { milestoneAllocations?: { grossCents?: number; businessCollaborationFeeCents?: number; influencerNetCents?: number }[] } }).signedQuote
+    : null;
+  const allocations = Array.isArray(quote?.milestoneAllocations) ? quote.milestoneAllocations : [];
+  const allocationNets = allocations.every((row) => Number.isInteger(row?.influencerNetCents))
+    ? allocations.map((row) => Number(row.influencerNetCents))
+    : null;
+  const ordered = orderedByAgreement(funding.milestones);
+  const amountHeading = milestoneAmountColumnLabel({
+    amountCents: ordered.map((milestone) => milestone.amountCents),
+    influencerReceivesCents: signed?.influencerReceivesCents ?? null,
+    allocationNetCents: allocationNets && allocationNets.length === ordered.length ? allocationNets : null,
+  });
+  const query = Object.fromEntries(
+    Object.entries(await searchParams).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]),
+  );
+  const collaborationsHref = account.role === "AGENCY"
+    ? "/agency?view=campaigns"
+    : business
+      ? "/collaboration/business"
+      : "/collaboration/hub?view=collaborations";
+  const notices = [
+    query.submitted ? { tone: "ok" as const, text: "Version submitted. The review window has started." } : null,
+    query.added ? { tone: "ok" as const, text: "Files added. Nothing was paid." } : null,
+    query.revised ? { tone: "ok" as const, text: "Revision requested on that version." } : null,
+    query.approved ? { tone: "ok" as const, text: "That version was approved. Bank payout stays unconfirmed." } : null,
+    query.sent ? { tone: "ok" as const, text: "Message sent. It does not move money." } : null,
+    query.error ? { tone: "error" as const, text: query.error } : null,
+  ].filter((notice): notice is { tone: "ok" | "error"; text: string } => Boolean(notice));
 
-  const funded = funding.status === "held" || funding.status === "completed";
-  const releaseMilestone = funding.milestones.find((row) => row.id === query.release);
-  const releaseVersion = Number(query.version);
-  const quote = (funding.feeSnapshotJson as { financialPlan?: { signedQuote?: { milestoneAllocations?: { grossCents?: number; businessCollaborationFeeCents?: number }[] } } } | null)
-    ?.financialPlan?.signedQuote;
-  const releaseIndex = releaseMilestone ? funding.milestones.findIndex((row) => row.id === releaseMilestone.id) : -1;
-  const allocation = releaseIndex >= 0 ? quote?.milestoneAllocations?.[releaseIndex] : undefined;
   return (
-    <div data-screen="W01" className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[18rem_minmax(0,1fr)]">
-      <aside className="space-y-4">
-        <div className="flex flex-wrap gap-4">
-          <Link href="/payments" className="text-sm font-semibold text-violet hover:underline">
-            ← Payments
-          </Link>
-          {contract ? (
-            <Link href={`/collaboration/contracts/${contract.id}`} className="text-sm font-semibold text-violet hover:underline">
-              Agreement
-            </Link>
-          ) : null}
-        </div>
-        <div>
-          <h1 className="font-display text-3xl font-bold text-indigo">{funding.title}</h1>
-          <nav className="mt-3 flex flex-wrap gap-2 text-sm font-semibold" aria-label="Workspace">
-            <a href="#milestones" className={`rounded-full px-3 py-2 ${query.tab === "messages" ? "" : "bg-lavender"}`}>Milestones</a>
-            <a href="#files" className="rounded-full px-3 py-2">Files</a>
-            <Link href={contract ? `/collaboration/contracts/${contract.id}` : "/collaboration/contracts"} className="rounded-full px-3 py-2">Brief</Link>
-            <a href="#messages" className={`rounded-full px-3 py-2 ${query.tab === "messages" ? "bg-lavender" : ""}`}>Messages</a>
-          </nav>
-          <p className="mt-2 text-sm font-semibold text-[#6D4AFF]">{funded ? "Funded" : "Waiting for funding"}</p>
-          <p className="mt-1 text-xs text-[#667085]">
-            {business ? "Next actor: business reviews a submitted version." : "Next actor: influencer submits the next version."}
-          </p>
-        </div>
-        <ol className="space-y-2">
-          {funding.milestones.map((milestone, index) => (
-            <li key={milestone.id} className="rounded-2xl border border-[#E7ECF5] bg-white px-3 py-2 text-sm">
-              <p className="font-semibold text-[#1B1464]">{index + 1}. {milestone.title}</p>
-              <p className="text-xs text-[#667085]">{milestoneWorkLabel(milestone.status)}</p>
-            </li>
-          ))}
-        </ol>
-        <p className="text-xs text-[#98A2B3]">Approval and payout are separate statuses. A failed payout does not undo an approved version.</p>
-      </aside>
-      <div className="space-y-6">
-      <div>
-        <p className="mt-2 text-sm text-muted">
-          {funding.businessName} · {funding.status.replaceAll("_", " ")}
-          {money.lines.map((line) => ` · ${line.label} ${formatMoney(line.amountCents, funding.currency)}`).join("")}
-        </p>
-        <p className="mt-2 text-sm text-indigo">
-          {funding.status !== "held" && funding.status !== "completed"
-            ? "Deliverables open after funding is confirmed. The influencer has not been paid."
-            : business
-              ? "Review the exact version an influencer submitted. A revision keeps the earlier versions."
-              : "Submit a link or a note for your deliverable. The review clock starts when the version is saved."}
-        </p>
-      </div>
-      {query.submitted ? <p className="text-sm font-semibold text-emerald-700">Version submitted.</p> : null}
-      {query.revised ? <p className="text-sm font-semibold text-emerald-700">Revision requested on the latest version.</p> : null}
-      {query.approved ? <p className="text-sm font-semibold text-emerald-700">That version was approved. Payout confirmation stays separate.</p> : null}
-      {query.sent ? <p className="text-sm font-semibold text-emerald-700">Message sent. It does not move money.</p> : null}
-      {query.error ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">{query.error}</p> : null}
-      {releaseMilestone && Number.isInteger(releaseVersion) ? (
-        <ReleaseStep
-          fundingId={funding.id}
-          milestoneId={releaseMilestone.id}
-          milestoneName={releaseMilestone.title}
-          version={releaseVersion}
-          currency={funding.currency}
-          grossCents={Number(allocation?.grossCents ?? releaseMilestone.amountCents)}
-          businessFeeCents={Number(allocation?.businessCollaborationFeeCents ?? 0)}
-          closeHref={`/collaboration/work/${funding.id}`}
-        />
-      ) : null}
-
-      <div id="milestones" className="space-y-6">
-      {funding.milestones.map((milestone) => {
-        const rows = visibleSubmissions(milestone.submissions, access.audience, access.actorSlug);
+    <WorkspacePanel
+      funding={{ id: funding.id, status: funding.status, title: funding.title, currency: funding.currency }}
+      business={business}
+      actor={{ audience: business ? "business" : "creator", assigned: !business }}
+      counterparty={business ? creator?.displayName || funding.creatorSlug : funding.businessName}
+      collaborationsHref={collaborationsHref}
+      contractHref={contract ? `/collaboration/contracts/${contract.id}` : null}
+      summary={workspaceSummaryLines(money).map((line) => ({
+        label: line.label,
+        amount: formatMoney(line.amountCents, funding.currency),
+      }))}
+      amountHeading={amountHeading}
+      milestones={ordered.map((milestone, index) => {
         const openDispute = funding.disputes.find((row) => row.milestoneId === milestone.id || row.milestoneId == null);
-        return (
-          <section key={milestone.id} className="rounded-2xl border border-[#E4EBFF] bg-white p-5">
-            <h2 className="font-display text-xl font-bold text-indigo">{milestone.title}</h2>
-            <p className="mt-1 text-sm text-muted">
-              {formatMoney(milestone.amountCents, funding.currency)} · {milestoneWorkLabel(milestone.status)}
-              {milestone.deliverableDueAt ? ` · deliver by ${milestone.deliverableDueAt.toISOString().slice(0, 10)}` : ""}
-              {milestone.autoApproveAt && milestone.status === "submitted"
-                ? ` · review by ${milestone.autoApproveAt.toISOString().slice(0, 16).replace("T", " ")} UTC`
-                : milestone.reviewWindowHours
-                  ? ` · ${milestone.reviewWindowHours}h review window`
-                  : ""}
-              {milestone.releaseScheduledAt ? ` · release scheduled ${milestone.releaseScheduledAt.toISOString().slice(0, 16).replace("T", " ")} UTC` : ""}
-              {milestone.status === "released" ? " · payout confirmed" : ""}
-            </p>
-            <p className="mt-1 text-sm text-indigo">
-              Approval binds to the submitted version. A bank payout is tracked separately from delivery approval and from a transfer to the influencer account.
-            </p>
-            {openDispute ? (
-              <p className="mt-2 text-sm text-amber-800">
-                A dispute holds {formatMoney(milestone.amountCents, funding.currency)} on this milestone.
-              </p>
-            ) : null}
-            <VersionReview
-              dealId={funding.id}
-              milestoneId={milestone.id}
-              business={business}
-              revisionCount={milestone.revisionCount}
-              revisionLimit={milestone.revisionLimit}
-              reviewBy={
-                milestone.autoApproveAt && milestone.status === "submitted"
-                  ? `${milestone.autoApproveAt.toISOString().slice(0, 16).replace("T", " ")} UTC`
-                  : null
-              }
-              initialVersion={Number(query.version) || undefined}
-              versions={rows.map((row) => ({
-                id: row.id,
-                version: row.version,
-                status: row.status,
-                note: row.note,
-                linkUrl: row.linkUrl,
-                reviewNote: row.reviewNote,
-                creatorSlug: row.creatorSlug,
-                files: row.files.map((file) => ({ id: file.id, fileName: file.fileName })),
-              }))}
-            />
-            {milestone.files.some((file) => !file.submissionId) ? (
-              <ul className="mt-3 space-y-1 text-sm">
-                {milestone.files
-                  .filter((file) => !file.submissionId)
-                  .map((file) => (
-                    <li key={file.id}>
-                      <a href={`/api/deliverables/${file.id}`} className="font-semibold text-violet hover:underline">
-                        {file.fileName}
-                      </a>
-                      <span className="text-xs text-muted"> · {file.kind} · {file.audience}</span>
-                    </li>
-                  ))}
-              </ul>
-            ) : null}
-            {!business && funding.status === "held" && milestone.status === "pending" ? (
-              <form action={actionSubmitMilestone} className="mt-4 space-y-2">
-                <input type="hidden" name="dealId" value={funding.id} />
-                <input type="hidden" name="milestoneId" value={milestone.id} />
-                <input name="linkUrl" placeholder="https:// link to the work" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
-                <textarea name="note" rows={3} placeholder="What this version includes" className="w-full rounded-xl border border-border px-3 py-2 text-sm" />
-                <DeliverableFileField />
-                <button type="submit" className="btn-primary !py-2 text-sm">
-                  Submit this version
-                </button>
-              </form>
-            ) : null}
-            {business && funding.status === "held" ? (
-              <form action={actionAddDeliverableFiles} className="mt-4 space-y-2">
-                <input type="hidden" name="dealId" value={funding.id} />
-                <input type="hidden" name="milestoneId" value={milestone.id} />
-                <DeliverableFileField />
-                <button type="submit" className="btn-secondary !py-2 text-sm">
-                  Add files
-                </button>
-              </form>
-            ) : null}
-          </section>
-        );
+        const allocation = allocations[index];
+        const visible = visibleSubmissions(milestone.submissions, access.audience, access.actorSlug);
+        const milestoneState: WorkspaceMilestoneState = {
+          fundingStatus: funding.status,
+          milestoneStatus: milestone.status,
+          revisionCount: milestone.revisionCount,
+          revisionLimit: milestone.revisionLimit,
+          disputeOpen: Boolean(openDispute),
+          payoutConfirmed: funding.entries.some((entry) => entry.milestoneId === milestone.id),
+          bankPayoutConfirmed: settlements.some((row) => row.milestoneId === milestone.id && row.payoutState === "paid"),
+          submissions: visible.map((row) => ({
+            version: row.version,
+            status: row.status,
+            note: row.note,
+            linkUrl: row.linkUrl,
+            reviewNote: row.reviewNote,
+          })),
+        };
+        return {
+          id: milestone.id,
+          title: milestone.title,
+          amountLabel: formatMoney(milestone.amountCents, funding.currency),
+          state: milestoneState,
+          disputeNote: openDispute ? `A dispute holds ${formatMoney(milestone.amountCents, funding.currency)} on this milestone.` : null,
+          grossCents: Number(allocation?.grossCents ?? milestone.amountCents),
+          businessFeeCents: Number(allocation?.businessCollaborationFeeCents ?? 0),
+        };
       })}
-      </div>
-      <div id="files" />
-      <WorkspaceMessages fundingId={funding.id} />
-      </div>
-    </div>
+      files={ordered.flatMap((milestone) =>
+        milestone.files.map((file) => ({ id: file.id, fileName: file.fileName, milestoneTitle: milestone.title })),
+      )}
+      briefScope={readScope(contract?.sourceJson)}
+      query={{ ...query, tab: workspaceTab(query.tab) }}
+      notices={notices}
+    />
   );
 }
 
-function DeliverableFileField() {
-  return (
-    <label className="block text-xs font-semibold text-muted">
-      Documents, media, or files
-      <input
-        name="files"
-        type="file"
-        multiple
-        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.zip"
-        className="mt-1 block w-full text-sm font-normal text-indigo"
-      />
-      <span className="mt-1 block font-normal">Up to 4 files, 8 MB each. Documents, photos, video, audio, or a zip.</span>
-    </label>
-  );
+function readScope(source: unknown) {
+  if (!source || typeof source !== "object" || !("scope" in source)) return null;
+  const scope = (source as { scope?: unknown }).scope;
+  return typeof scope === "string" && scope.trim() ? scope.trim() : null;
 }

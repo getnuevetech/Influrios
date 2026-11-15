@@ -27,6 +27,7 @@ export function hidesMarketingChrome(pathname: string): boolean {
   if (pathname.startsWith("/collaboration/team")) return true;
   if (pathname.startsWith("/collaboration/records")) return true;
   if (pathname.startsWith("/collaboration/contract")) return true;
+  if (pathname.startsWith("/collaboration/work")) return true;
   if (pathname.startsWith("/business/billing/")) return true;
   if (pathname.startsWith("/business/home/")) return true;
   if (pathname.startsWith("/business/campaigns")) return true;
