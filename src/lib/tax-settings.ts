@@ -105,13 +105,17 @@ export async function loadTaxCatalog() {
   return {
     records,
     plans: plans.map((plan) => ({ id: plan.id, code: plan.code, name: plan.name, amountCents: plan.amountCents, taxPolicyId: plan.taxPolicyId })),
-    feeRules: rules
-      .filter((rule) => rule.purpose === "business_platform_fee" || rule.purpose === "influencer_platform_fee")
-      .map((rule) => ({
-        id: rule.id,
-        label: feeRuleChoiceLabel(rule.name, rule.purpose === "business_platform_fee" ? "business_fee" : "influencer_fee"),
-        purpose: rule.purpose === "business_platform_fee" ? "business_fee" as const : "influencer_fee" as const,
-      })),
+    feeRules: [
+      ...rules
+        .filter((rule) => rule.purpose === "business_platform_fee" || rule.purpose === "influencer_platform_fee")
+        .map((rule) => {
+          const purpose = rule.purpose === "business_platform_fee" ? "business_fee" as const : "influencer_fee" as const;
+          return { id: rule.id, label: feeRuleChoiceLabel(rule.name, purpose), purpose };
+        }),
+      ...rules
+        .filter((rule) => rule.purpose !== "business_platform_fee" && rule.purpose !== "influencer_platform_fee" && rule.name.trim())
+        .map((rule) => ({ id: rule.id, label: rule.name.trim(), purpose: "other" as const })),
+    ],
     services: INFLUENCER_SERVICE_SUBJECTS.map((item) => ({ id: item.id, label: item.label })),
     countries: corridorCountries().map((country) => ({ code: country.code, name: country.name })),
     integrations,

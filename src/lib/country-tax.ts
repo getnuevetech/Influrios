@@ -14,9 +14,9 @@ import {
 
 export const COUNTRY_TAX_FIELDS = {
   country: "Country",
-  productOrCharge: "Product or charge",
+  productOrCharge: "Product / charge",
   taxCalculation: "Tax calculation",
-  rate: "Rate (%)",
+  rate: "Tax rate (%)",
   save: "Save rule",
   cancel: "Cancel",
   add: "Add rule",
@@ -37,16 +37,16 @@ export const COUNTRY_TAX_FIELDS = {
   tax: "Tax",
   totalToFund: "Total to fund",
   viewDetails: "View tax details",
-  allPlans: "All equivalent subscription plans",
+  allPlans: "All subscription plans",
   percentage: "Percentage",
-  location: "Calculate by customer location",
+  location: "By customer location",
 } as const;
 
 export const CHARGE_FAMILIES = [
-  { id: "subscription", label: "Subscriptions", group: "Subscriptions" },
+  { id: "subscription", label: "All subscription plans", group: "Subscriptions" },
   { id: "influencer_service", label: "Influencer service", group: "Collaborations" },
   { id: "business_fee", label: "Business collaboration fee", group: "Collaborations" },
-  { id: "influencer_fee", label: "Influencer fee", group: "Collaborations" },
+  { id: "influencer_fee", label: "Influencer collaboration fee", group: "Collaborations" },
   { id: "other", label: "Other charge", group: "Other charges" },
 ] as const;
 
@@ -315,6 +315,35 @@ export function parseCountryProduct(input: {
     return { family, chargeId: "", label: familyLabel(family) };
   }
   return { family: "", chargeId: "", label: "" };
+}
+
+/** One catalog list. The selected value is the whole coverage of the rule. */
+export function countryProductOptions(input: {
+  plans: { id: string; name: string }[];
+  fees?: { id: string; label: string; purpose?: string }[];
+}): { value: string; label: string; group: string }[] {
+  const options: { value: string; label: string; group: string }[] = [
+    { value: "family:subscription", label: familyLabel("subscription"), group: "Subscriptions" },
+  ];
+  for (const plan of input.plans) {
+    const name = plan.name.trim();
+    const id = plan.id.trim();
+    if (!name || !id) continue;
+    options.push({ value: `subscription:${id}`, label: name, group: "Subscriptions" });
+  }
+  options.push(
+    { value: "family:influencer_service", label: familyLabel("influencer_service"), group: "Collaborations" },
+    { value: "family:business_fee", label: familyLabel("business_fee"), group: "Collaborations" },
+    { value: "family:influencer_fee", label: familyLabel("influencer_fee"), group: "Collaborations" },
+  );
+  for (const fee of input.fees ?? []) {
+    if (fee.purpose === "business_fee" || fee.purpose === "influencer_fee") continue;
+    const id = fee.id.trim();
+    const label = fee.label.trim();
+    if (!id || !label) continue;
+    options.push({ value: `other:${id}`, label, group: "Other charges" });
+  }
+  return options;
 }
 
 /** Drop one saved rule. Every other rule keeps its country, product, and calculation. */

@@ -5,6 +5,7 @@ import {
   COUNTRY_TAX_FIELDS,
   calculateCountryTax,
   collaborationCheckout,
+  countryProductOptions,
   countryRuleSelection,
   countryRulesAfterDelete,
   countryRulesToRetire,
@@ -81,9 +82,9 @@ describe("country tax rules", () => {
     assert.equal(reopened?.chargeId, "");
     const labels = Object.values(COUNTRY_TAX_FIELDS).join(" ");
     assert.match(labels, /Country/);
-    assert.match(labels, /Product or charge/);
+    assert.match(labels, /Product \/ charge/);
     assert.match(labels, /Tax calculation/);
-    assert.match(labels, /Rate \(%\)/);
+    assert.match(labels, /Tax rate \(%\)/);
     assert.doesNotMatch(labels, /Product tax category|Payment integration|Provider account|Filing|Registration|Tax-responsible/);
   });
 
@@ -367,25 +368,25 @@ describe("saved tax rule identity", () => {
     assert.equal(again.appliesTo, "plan_starter");
   });
 
-  it("keeps all equivalent plans labeled Subscriptions and never says unlinked", () => {
+  it("keeps all subscription plans on the country default and never says unlinked", () => {
     const label = presentCountryCharge({
       family: "subscription",
       linkedIds: [],
       storedLabel: "Subscription · US · unlinked",
       plans,
     });
-    assert.equal(label, "Subscriptions");
+    assert.equal(label, "All subscription plans");
     assert.equal(/unlinked/i.test(`${label} ${COUNTRY_TAX_FIELDS.allPlans}`), false);
     const selection = countryRuleSelection({ family: "subscription", linkedIds: [], plans });
     assert.deepEqual(selection, { product: "family:subscription", appliesTo: "all" });
     const parsed = parseCountryProduct({ product: "family:subscription", appliesTo: "all", plans });
-    assert.deepEqual(parsed, { family: "subscription", chargeId: "", label: "Subscriptions" });
+    assert.deepEqual(parsed, { family: "subscription", chargeId: "", label: "All subscription plans" });
     const productWins = parseCountryProduct({ product: "subscription:plan_starter", appliesTo: "all", plans });
     assert.equal(productWins.chargeId, "plan_starter");
     assert.equal(productWins.label, "Starter");
     const familyWins = parseCountryProduct({ product: "family:subscription", appliesTo: "plan_starter", plans });
     assert.equal(familyWins.chargeId, "");
-    assert.equal(familyWins.label, "Subscriptions");
+    assert.equal(familyWins.label, "All subscription plans");
     const planned = planCountryTaxRule({
       countryCode: "US",
       family: "subscription",
@@ -397,7 +398,7 @@ describe("saved tax rule identity", () => {
     });
     assert.equal(planned.ok, true);
     if (!planned.ok) return;
-    assert.equal(planned.rule.chargeLabel, "Subscriptions");
+    assert.equal(planned.rule.chargeLabel, "All subscription plans");
     assert.equal(/unlinked/i.test(planned.summary), false);
     assert.equal(planned.rule.ratePercent, 8);
   });
@@ -527,6 +528,29 @@ describe("saved tax rule identity", () => {
     assert.equal(client.includes("COUNTRY_TAX_FIELDS.appliesTo"), false);
     assert.match(client, /COUNTRY_TAX_FIELDS\.productOrCharge/);
     assert.match(client, /actionDeleteTaxRule/);
+    assert.match(client, /fixed inset-0 z-50 flex items-center justify-center/);
+    assert.match(client, /Edit tax rule/);
+    assert.match(client, /Add tax rule/);
+    assert.equal(client.includes("<AccountDialog"), false);
+    assert.match(client, /countryProductOptions/);
+    assert.equal(client.includes("setAppliesTo"), false);
+    const options = countryProductOptions({
+      plans: [{ id: "plan_plus", name: "Plus" }, { id: "plan_pro", name: "Pro" }],
+      fees: [
+        { id: "fee_biz", label: "Business fee", purpose: "business_fee" },
+        { id: "fee_setup", label: "Setup fee", purpose: "other" },
+      ],
+    });
+    assert.deepEqual(options.map((item) => item.label), [
+      "All subscription plans",
+      "Plus",
+      "Pro",
+      "Influencer service",
+      "Business collaboration fee",
+      "Influencer collaboration fee",
+      "Setup fee",
+    ]);
+    assert.equal(options.filter((item) => item.value.startsWith("subscription:")).length, 2);
   });
 
   it("deletes one saved rule and leaves the others in the list and in new calculations", () => {
