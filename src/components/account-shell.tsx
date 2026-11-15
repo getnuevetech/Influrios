@@ -73,6 +73,9 @@ const BUSINESS_NAV: NavItem[] = [
 function active(href: string, path: string, search = "") {
   const url = new URL(href, "http://local.invalid");
   const base = url.pathname;
+  if (path === "/collaboration/work" || path.startsWith("/collaboration/work/")) {
+    return base === "/collaboration/hub" || base === "/collaboration/business";
+  }
   if (base === "/creator" || base === "/business/home") return path === base;
   if (base === "/agency") {
     if (path !== "/agency") return false;
