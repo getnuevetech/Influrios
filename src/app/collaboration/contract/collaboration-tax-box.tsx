@@ -37,7 +37,7 @@ export async function CollaborationTaxBox({
         {checkout.lines.map((line) => (
           <div key={line.label}>
             <dt className="text-xs text-muted">{line.label}</dt>
-            <dd className="font-semibold text-indigo">{money(line.amountCents, currency)}{line.reason && line.amountCents === 0 ? ` · ${line.reason}` : ""}</dd>
+            <dd className="font-semibold text-indigo">{money(line.amountCents, currency)}{line.reason ? ` · ${line.reason}` : ""}</dd>
           </div>
         ))}
       </dl>

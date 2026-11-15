@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { actionDeleteTaxRule, actionSaveTaxConfiguration } from "@/app/admin/payment-standard/actions";
-import { AccountDialog } from "@/components/account-dialog";
+import { useAccountDialogBehavior } from "@/components/account-dialog";
 import {
-  CHARGE_FAMILIES,
   COUNTRY_TAX_FIELDS,
+  countryProductOptions,
   countryRuleSelection,
   dedupeCountryRules,
   flagRuleConflicts,
@@ -40,8 +40,121 @@ type RecordRow = {
   name?: string;
 };
 
+type Choice = { value: string; label: string; group?: string };
+
 function countryName(countries: { code: string; name: string }[], code: string) {
   return countries.find((country) => country.code === code)?.name ?? code;
+}
+
+function CenteredPopup({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  useAccountDialogBehavior(panelRef, onClose);
+  useEffect(() => {
+    const y = window.scrollY;
+    return () => {
+      requestAnimationFrame(() => window.scrollTo(0, y));
+    };
+  }, []);
+
+  return (
+    <div data-account-dialog-root className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-[#111a5a]/45" onClick={onClose} />
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative z-10 flex max-h-[min(90vh,640px)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_80px_rgba(17,26,90,0.28)] outline-none"
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-[#EEF2F7] px-5 py-4">
+          <h2 id={titleId} className="font-display text-xl font-bold text-indigo">{title}</h2>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-xl leading-none text-indigo hover:bg-lavender">×</button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function SearchableSelect({
+  label,
+  value,
+  options,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Choice[];
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  const selected = options.find((option) => option.value === value);
+  const needle = query.trim().toLowerCase();
+  const shown = options.filter((option) => {
+    if (!needle) return true;
+    return option.label.toLowerCase().includes(needle) || (option.group ?? "").toLowerCase().includes(needle);
+  });
+  const groups = [...new Set(shown.map((option) => option.group ?? ""))];
+
+  return (
+    <label className="relative block text-sm font-semibold text-indigo">
+      {label}
+      <input
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        value={open ? query : (selected?.label ?? "")}
+        placeholder={selected ? selected.label : placeholder}
+        onFocus={() => {
+          setQuery("");
+          setOpen(true);
+        }}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setOpen(true);
+        }}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        className="mt-1 w-full rounded-xl border border-[#E6ECF7] bg-white px-3 py-2 font-medium"
+      />
+      {open ? (
+        <ul id={listId} role="listbox" className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-[#E6ECF7] bg-white py-1 shadow-lg">
+          {groups.map((group) => (
+            <li key={group || "items"}>
+              {group ? <p className="px-3 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted">{group}</p> : null}
+              <ul>
+                {shown.filter((option) => (option.group ?? "") === group).map((option) => (
+                  <li key={option.value}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={option.value === value}
+                      className="block w-full px-3 py-2 text-left text-sm font-medium hover:bg-lavender"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        onChange(option.value);
+                        setQuery("");
+                        setOpen(false);
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+          {shown.length === 0 ? <li className="px-3 py-2 text-sm text-muted">No matches</li> : null}
+        </ul>
+      ) : null}
+    </label>
+  );
 }
 
 export function TaxSettingsClient({
@@ -69,6 +182,10 @@ export function TaxSettingsClient({
       linkedIds: linkedById.get(rule.id) ?? [],
     }));
   }, [records]);
+  const [countryFilter, setCountryFilter] = useState(() => {
+    if (catalog.countries.some((country) => country.code === "US")) return "US";
+    return catalog.countries[0]?.code ?? "";
+  });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ListedRule | null>(null);
   const [confirming, setConfirming] = useState<ListedRule | null>(null);
@@ -77,7 +194,7 @@ export function TaxSettingsClient({
   const deleting = useRef(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-  const visible = rules.filter((rule) => !hiddenIds.includes(rule.id));
+  const visible = rules.filter((rule) => !hiddenIds.includes(rule.id) && rule.countryCode === countryFilter);
 
   function startCreate() {
     setEditing(null);
@@ -90,6 +207,11 @@ export function TaxSettingsClient({
     setConfirming(null);
     setError("");
     setOpen(true);
+  }
+
+  function closeEditor() {
+    setOpen(false);
+    setError("");
   }
 
   function askDelete(rule: ListedRule) {
@@ -134,43 +256,46 @@ export function TaxSettingsClient({
     <div className="mx-auto max-w-6xl space-y-4 px-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-muted">Payment Settings / Tax</p>
-          <h2 className="font-display text-3xl font-bold text-indigo">Tax Settings</h2>
-          <p className="mt-1 text-sm text-muted">Choose a country and a product or charge, set the calculation, and save it once.</p>
+          <p className="text-xs font-semibold text-muted">Payment settings / Tax</p>
+          <h2 className="font-display text-3xl font-bold text-indigo">Country tax rules</h2>
         </div>
         {canEdit ? (
-          <button type="button" onClick={startCreate} className="rounded-full bg-violet px-4 py-2.5 text-sm font-semibold text-white">{COUNTRY_TAX_FIELDS.add}</button>
+          <button type="button" onClick={startCreate} className="rounded-full bg-violet px-4 py-2.5 text-sm font-semibold text-white">+ {COUNTRY_TAX_FIELDS.add}</button>
         ) : null}
       </div>
       {notice ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{notice}</p> : null}
+      <label className="flex items-center gap-3 text-sm font-semibold text-indigo">
+        {COUNTRY_TAX_FIELDS.country}
+        <select value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)} className="rounded-xl border border-[#E6ECF7] bg-white px-3 py-2 font-medium">
+          {catalog.countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}
+        </select>
+      </label>
       <div className="overflow-hidden rounded-2xl border bg-white">
         <table className="w-full text-left text-sm">
-          <thead className="bg-[#F7F8FC] text-xs uppercase tracking-wide text-muted">
+          <thead className="bg-[#F4F1FF] text-xs uppercase tracking-wide text-muted">
             <tr>
-              <th className="px-4 py-3 font-semibold">{COUNTRY_TAX_FIELDS.country}</th>
-              <th className="px-4 py-3 font-semibold">{COUNTRY_TAX_FIELDS.productOrCharge}</th>
-              <th className="px-4 py-3 font-semibold">{COUNTRY_TAX_FIELDS.taxCalculation}</th>
-              <th className="px-4 py-3 font-semibold">{COUNTRY_TAX_FIELDS.edit}</th>
+              <th className="px-4 py-3 font-semibold">Charge</th>
+              <th className="px-4 py-3 font-semibold">Calculation</th>
+              <th className="px-4 py-3 font-semibold">Action</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((rule) => (
               <tr key={rule.id} className="border-t">
-                <td className="px-4 py-3 font-semibold">{countryName(catalog.countries, rule.countryCode)}</td>
-                <td className="px-4 py-3">{presentCountryCharge({ family: rule.family, linkedIds: rule.linkedIds, plans: catalog.plans, fees: catalog.feeRules })}</td>
+                <td className="px-4 py-3 font-medium">{presentCountryCharge({ family: rule.family, linkedIds: rule.linkedIds, plans: catalog.plans, fees: catalog.feeRules })}</td>
                 <td className="px-4 py-3">
                   {taxCalculationLabel(rule)}
                   {rule.conflict ? <span className="mt-1 block text-xs font-semibold text-amber-800">Conflicting rule for this country and product.</span> : null}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => startEdit(rule)} className="rounded-full border px-3 py-1.5 text-xs font-semibold text-violet">{COUNTRY_TAX_FIELDS.edit}</button>
-                    {canEdit ? <button type="button" onClick={() => askDelete(rule)} className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700">{COUNTRY_TAX_FIELDS.delete}</button> : null}
+                    <button type="button" onClick={() => startEdit(rule)} className="rounded-lg bg-[#F3EEFF] px-3 py-1.5 text-xs font-semibold text-violet">{COUNTRY_TAX_FIELDS.edit}</button>
+                    {canEdit ? <button type="button" onClick={() => askDelete(rule)} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-700">{COUNTRY_TAX_FIELDS.delete}</button> : null}
                   </div>
                 </td>
               </tr>
             ))}
-            {visible.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-muted">No tax rules yet.</td></tr> : null}
+            {visible.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-muted">No tax rules for this country.</td></tr> : null}
           </tbody>
         </table>
       </div>
@@ -178,19 +303,15 @@ export function TaxSettingsClient({
         <RuleDialog
           catalog={catalog}
           rule={editing}
+          defaultCountry={countryFilter}
           canEdit={canEdit}
           error={error}
-          onClose={() => setOpen(false)}
+          onClose={closeEditor}
           onSaved={(summary) => {
             setNotice(`Saved. ${summary}`);
             setOpen(false);
             router.refresh();
           }}
-          onDelete={() => {
-            if (!editing) return;
-            void removeRule(editing.id);
-          }}
-          pendingDelete={pendingDelete}
           onError={setError}
         />
       ) : null}
@@ -221,7 +342,7 @@ function DeleteRuleConfirm({
   onConfirm: () => void;
 }) {
   return (
-    <AccountDialog title={COUNTRY_TAX_FIELDS.deleteRule} onClose={onCancel}>
+    <CenteredPopup title={COUNTRY_TAX_FIELDS.deleteRule} onClose={onCancel}>
       <div className="space-y-3">
         <p className="text-sm">{COUNTRY_TAX_FIELDS.confirmDelete}</p>
         <p className="text-sm font-semibold">{summary}</p>
@@ -232,29 +353,27 @@ function DeleteRuleConfirm({
           <button type="button" disabled={pending} className="rounded-full bg-rose-700 px-4 py-2 text-sm font-semibold text-white" onClick={onConfirm}>{COUNTRY_TAX_FIELDS.deleteRule}</button>
         </div>
       </div>
-    </AccountDialog>
+    </CenteredPopup>
   );
 }
 
 function RuleDialog({
   catalog,
   rule,
+  defaultCountry,
   canEdit,
   error,
-  pendingDelete,
   onClose,
   onSaved,
-  onDelete,
   onError,
 }: {
   catalog: Catalog;
   rule: ListedRule | null;
+  defaultCountry: string;
   canEdit: boolean;
   error: string;
-  pendingDelete: boolean;
   onClose: () => void;
   onSaved: (summary: string) => void;
-  onDelete: () => void;
   onError: (message: string) => void;
 }) {
   const selection = countryRuleSelection({
@@ -262,21 +381,14 @@ function RuleDialog({
     linkedIds: rule?.linkedIds?.length ? rule.linkedIds : (rule?.chargeId ? [rule.chargeId] : []),
     plans: catalog.plans,
   });
-  const [countryQuery, setCountryQuery] = useState("");
-  const [countryCode, setCountryCode] = useState(rule?.countryCode ?? "");
+  const [countryCode, setCountryCode] = useState(rule?.countryCode || defaultCountry);
   const [product, setProduct] = useState(selection.product);
-  const [appliesTo, setAppliesTo] = useState(selection.appliesTo);
   const [method, setMethod] = useState(rule?.method ?? "");
   const [rate, setRate] = useState(rule?.ratePercent == null ? "" : String(rule.ratePercent));
   const [pending, setPending] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const countries = catalog.countries.filter((country) => {
-    const query = countryQuery.trim().toLowerCase();
-    if (!query) return true;
-    return country.name.toLowerCase().includes(query) || country.code.toLowerCase().includes(query);
-  });
-  const parsed = parseCountryProduct({ product, appliesTo, plans: catalog.plans, fees: catalog.feeRules });
-  const subscriptionChoice = parsed.family === "subscription";
+  const countries = catalog.countries.map((country) => ({ value: country.code, label: country.name }));
+  const products = countryProductOptions({ plans: catalog.plans, fees: catalog.feeRules });
+  const parsed = parseCountryProduct({ product, plans: catalog.plans, fees: catalog.feeRules });
 
   async function save() {
     setPending(true);
@@ -299,80 +411,29 @@ function RuleDialog({
     onSaved(result.summary ?? parsed.label);
   }
 
-  if (confirmingDelete && rule) {
-    const country = catalog.countries.find((item) => item.code === rule.countryCode)?.name ?? rule.countryCode;
-    const product = presentCountryCharge({ family: rule.family, linkedIds: rule.linkedIds, plans: catalog.plans, fees: catalog.feeRules });
-    return (
-      <DeleteRuleConfirm
-        summary={`${country} · ${product} · ${taxCalculationLabel(rule)}`}
-        error={error}
-        pending={pendingDelete}
-        onCancel={() => { setConfirmingDelete(false); onError(""); }}
-        onConfirm={onDelete}
-      />
-    );
-  }
-
   return (
-    <AccountDialog title={rule ? "Edit rule" : "Add rule"} onClose={onClose}>
+    <CenteredPopup title={rule ? "Edit tax rule" : "Add tax rule"} onClose={onClose}>
       <div className="space-y-3">
         {error ? <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">{error}</p> : null}
-        <label className="block text-sm">{COUNTRY_TAX_FIELDS.country}
-          <input value={countryQuery} onChange={(event) => setCountryQuery(event.target.value)} placeholder="Search countries" className="mt-1 w-full rounded-xl border px-3 py-2" />
-          <select value={countryCode} onChange={(event) => setCountryCode(event.target.value)} className="mt-2 w-full rounded-xl border px-3 py-2">
-            <option value="">Select a country</option>
-            {countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}
-          </select>
-        </label>
-        <label className="block text-sm">{COUNTRY_TAX_FIELDS.productOrCharge}
-          <select value={product} onChange={(event) => {
-            const value = event.target.value;
-            setProduct(value);
-            if (value.startsWith("subscription:")) setAppliesTo(value.slice("subscription:".length));
-            else if (value === "family:subscription") setAppliesTo("all");
-          }} className="mt-1 w-full rounded-xl border px-3 py-2">
-            <option value="">Select a product or charge</option>
-            {CHARGE_FAMILIES.map((family) => (
-              <optgroup key={family.id} label={family.group}>
-                <option value={`family:${family.id}`}>{family.label}</option>
-                {family.id === "subscription" ? catalog.plans.map((plan) => <option key={plan.id} value={`subscription:${plan.id}`}>{plan.name}</option>) : null}
-                {family.id === "other" ? catalog.feeRules.filter((item) => item.purpose !== "business_fee" && item.purpose !== "influencer_fee").map((item) => <option key={item.id} value={`other:${item.id}`}>{item.label}</option>) : null}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-        {subscriptionChoice ? (
-          <label className="block text-sm">{COUNTRY_TAX_FIELDS.appliesTo}
-            <select value={appliesTo} onChange={(event) => {
-              const value = event.target.value;
-              setAppliesTo(value);
-              setProduct(value === "all" ? "family:subscription" : `subscription:${value}`);
-            }} className="mt-1 w-full rounded-xl border px-3 py-2">
-              <option value="all">{COUNTRY_TAX_FIELDS.allPlans}</option>
-              {catalog.plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
-            </select>
-          </label>
-        ) : (
-          <p className="text-sm text-muted">{COUNTRY_TAX_FIELDS.appliesTo}: {parsed.label || "Choose a product or charge."}</p>
-        )}
-        <label className="block text-sm">{COUNTRY_TAX_FIELDS.taxCalculation}
-          <select value={method} onChange={(event) => setMethod(event.target.value === "percentage" || event.target.value === "location" ? event.target.value : "")} className="mt-1 w-full rounded-xl border px-3 py-2">
+        <SearchableSelect label={COUNTRY_TAX_FIELDS.country} value={countryCode} options={countries} placeholder="Select a country" onChange={setCountryCode} />
+        <SearchableSelect label={COUNTRY_TAX_FIELDS.productOrCharge} value={product} options={products} placeholder="Select a product or charge" onChange={setProduct} />
+        <label className="block text-sm font-semibold text-indigo">{COUNTRY_TAX_FIELDS.taxCalculation}
+          <select value={method} onChange={(event) => setMethod(event.target.value === "percentage" || event.target.value === "location" ? event.target.value : "")} className="mt-1 w-full rounded-xl border border-[#E6ECF7] px-3 py-2 font-medium">
             <option value="">Select a calculation</option>
             <option value="percentage">{COUNTRY_TAX_FIELDS.percentage}</option>
             <option value="location">{COUNTRY_TAX_FIELDS.location}</option>
           </select>
         </label>
         {method === "percentage" ? (
-          <label className="block text-sm">{COUNTRY_TAX_FIELDS.rate}
-            <input value={rate} onChange={(event) => setRate(event.target.value)} inputMode="decimal" className="mt-1 w-full rounded-xl border px-3 py-2" />
+          <label className="block text-sm font-semibold text-indigo">{COUNTRY_TAX_FIELDS.rate}
+            <input value={rate} onChange={(event) => setRate(event.target.value)} inputMode="decimal" className="mt-1 w-full rounded-xl border border-[#E6ECF7] px-3 py-2 font-medium" />
           </label>
         ) : null}
-        <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
-          {canEdit && rule ? <button type="button" className="mr-auto rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700" onClick={() => { onError(""); setConfirmingDelete(true); }}>{COUNTRY_TAX_FIELDS.delete}</button> : null}
+        <div className="flex items-center justify-end gap-2 pt-2">
           <button type="button" className="rounded-full border px-4 py-2 text-sm font-semibold" onClick={onClose}>{COUNTRY_TAX_FIELDS.cancel}</button>
           {canEdit ? <button type="button" disabled={pending} className="rounded-full bg-violet px-4 py-2 text-sm font-semibold text-white" onClick={() => void save()}>{COUNTRY_TAX_FIELDS.save}</button> : null}
         </div>
       </div>
-    </AccountDialog>
+    </CenteredPopup>
   );
 }

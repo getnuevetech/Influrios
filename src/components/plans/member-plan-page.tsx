@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { actionOpenPortal } from "@/app/billing/actions";
-import { ComparisonTable, PlanAction } from "@/components/plans/public-plan-page";
+import { ComparisonTable, PlanAction, PlanPrice } from "@/components/plans/public-plan-page";
 import type { PlanMatrix } from "@/lib/plan-matrix";
-import { displayPrice, planActionLabel } from "@/lib/plan-presentation";
-import type { PlanTaxGate } from "@/lib/tax-configuration";
+import { planActionLabel } from "@/lib/plan-presentation";
+import { quotedPlanTax, type PlanTaxGate } from "@/lib/tax-configuration";
 
 export type BillingHistoryRow = {
   id: string;
@@ -71,10 +71,11 @@ export function MemberPlanPage({
           </div>
         </div>
         <div className="text-left sm:text-right">
-          <p className="font-display text-2xl font-bold">
-            {current ? displayPrice(current.amountCents, current.priceLabel) : "$0"}
-            <span className="text-sm font-semibold text-muted"> / month</span>
-          </p>
+          {current ? (
+            <PlanPrice amountCents={current.amountCents} priceLabel={current.priceLabel} gate={currentCode ? taxByCode[currentCode] : undefined} size="compact" />
+          ) : (
+            <p className="font-display text-2xl font-bold">$0<span className="text-sm font-semibold text-muted"> / month</span></p>
+          )}
           <Link href={audience === "business" ? "/business/plans" : "/pricing"} className="mt-1 inline-block text-sm font-semibold text-violet hover:underline">
             View public plans
           </Link>
@@ -106,10 +107,7 @@ export function MemberPlanPage({
                 {isCurrent ? <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">Current plan</span> : null}
               </div>
               <h2 className="mt-4 font-display text-xl font-bold">{plan.name}</h2>
-              <p className="mt-2 font-display text-4xl font-bold">
-                {displayPrice(plan.amountCents, plan.priceLabel)}
-                <span className="text-sm font-semibold text-muted"> / month{plan.amountCents > 0 ? " + applicable tax" : ""}</span>
-              </p>
+              <PlanPrice amountCents={plan.amountCents} priceLabel={plan.priceLabel} gate={taxByCode[plan.code]} />
               <p className="mt-2 text-sm text-muted">{plan.description}</p>
               <ul className="mt-4 flex-1 space-y-2 text-sm">
                 {plan.highlights.map((line) => (
@@ -129,6 +127,7 @@ export function MemberPlanPage({
                 taxGate={taxByCode[plan.code]}
                 countries={countries}
                 currentAmountCents={currentAmountCents}
+                quote={quotedPlanTax(taxByCode[plan.code])}
               />
             </article>
           );
@@ -136,7 +135,7 @@ export function MemberPlanPage({
       </section>
 
       <section className="mt-8 grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <ComparisonTable title={audience === "creator" ? "Compare influencer plan features" : "Compare plan features"} matrix={matrix} />
+        <ComparisonTable title={audience === "creator" ? "Compare influencer plan features" : "Compare plan features"} matrix={matrix} taxByCode={taxByCode} />
         <div className="space-y-4">
           <div className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm">
             <h2 className="font-display text-base font-bold">Payment method</h2>

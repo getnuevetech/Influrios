@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { PlanTaxGate } from "@/lib/tax-configuration";
+import { formatUsd, quotedPlanTax, type PlanTaxGate } from "@/lib/tax-configuration";
 import { subscriptionTaxGates } from "@/lib/tax-settings";
 import { prisma } from "@/lib/db";
 
@@ -18,14 +18,23 @@ export async function PlanTaxPanel({ canEdit }: { canEdit: boolean }) {
     <section data-screen="S01" className="space-y-3">
       <h2 className="font-display text-2xl font-bold text-indigo">Tax</h2>
       <p className="text-sm text-muted">
-        Each paid plan adds applicable tax at checkout. A missing rate on one plan does not block the free plan or the others.
+        A percentage rule shows the tax on that plan. A missing rate on one plan does not block the free plan or the others.
         {canEdit ? " Edit the setup in Tax Settings." : ""}
       </p>
       <ul className="space-y-2 text-sm">
         {plans.map((plan) => {
           const gate = gates[plan.code];
           const unavailable = gate?.kind === "unavailable";
-          const label = plan.amountCents <= 0 ? "No charge" : gate?.kind === "checkout" ? "Tax calculated at checkout" : unavailable ? "This plan is temporarily unavailable." : "Not configured";
+          const quote = quotedPlanTax(gate);
+          const label = plan.amountCents <= 0
+            ? "No charge"
+            : quote
+              ? `Tax ${formatUsd(quote.taxCents)}${quote.ratePercent != null ? ` (${quote.ratePercent}%)` : ""} · Total ${formatUsd(quote.totalCents)}`
+              : gate?.kind === "checkout"
+                ? "Tax calculated at checkout"
+                : unavailable
+                  ? "This plan is temporarily unavailable."
+                  : "Not configured";
           return (
             <li key={plan.code} className="flex items-center justify-between gap-3 rounded-2xl border bg-white px-4 py-3">
               <span className="font-semibold">{plan.name}</span>

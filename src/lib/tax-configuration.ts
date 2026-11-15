@@ -186,10 +186,26 @@ export function parseMoneyToCents(value: string): number | null {
   return cents;
 }
 
+export type PlanPriceQuote = {
+  baseCents?: number;
+  taxCents?: number | null;
+  totalCents?: number | null;
+  ratePercent?: number | null;
+};
+
 export type PlanTaxGate =
-  | { kind: "free"; cancelsPaidSubscription: false }
+  | ({ kind: "free"; cancelsPaidSubscription: false } & PlanPriceQuote)
   | { kind: "unavailable"; message: typeof TAX_COPY.unavailable; missing: string }
-  | { kind: "checkout"; message: typeof TAX_COPY.atCheckout };
+  | ({ kind: "checkout"; message: typeof TAX_COPY.atCheckout } & PlanPriceQuote);
+
+export function quotedPlanTax(gate?: PlanTaxGate): { taxCents: number; totalCents: number; ratePercent: number | null } | null {
+  if (!gate || gate.kind !== "checkout" || gate.taxCents == null || gate.totalCents == null) return null;
+  return { taxCents: gate.taxCents, totalCents: gate.totalCents, ratePercent: gate.ratePercent ?? null };
+}
+
+export function formatUsd(cents: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
 
 /** Each plan is judged on its own. A free plan never waits on another plan's tax setup. */
 export function planTaxGate(input: { amountCents: number; checkout: boolean; gaps: string[] }): PlanTaxGate {

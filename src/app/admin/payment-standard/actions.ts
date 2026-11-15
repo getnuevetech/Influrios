@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getAdminSession, hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { deleteTaxRule, replaceTaxConfiguration, retireTaxPolicies, saveRouteDraft, saveTaxConfiguration } from "@/lib/payment-standard-store";
-import { countryRulesToRetire, countrySaveBlockers, mapStoredPolicy, matchCatalogPlan, planCountryTaxRule, storedFamily, type ChargeFamily, type CountryTaxRule } from "@/lib/country-tax";
+import { countryRulesToRetire, countrySaveBlockers, familyLabel, mapStoredPolicy, matchCatalogPlan, planCountryTaxRule, storedFamily, type ChargeFamily, type CountryTaxRule } from "@/lib/country-tax";
 import { planTaxConfiguration, parseMoneyToCents, parseTaxPercent, percentToStoredRate, type PreviewDecision } from "@/lib/tax-configuration";
 import { accountsForSelection, countryRegions, loadTaxCatalog, planMatchKeys, previewConfiguredTax } from "@/lib/tax-settings";
 import { requestStripeTaxRegistrations, stripeCredentials } from "@/lib/stripe-admin";
@@ -110,7 +110,7 @@ export async function actionSaveTaxConfiguration(formData: FormData): Promise<{ 
         chargeLabel = plan.name;
       } else {
         chargeId = "";
-        chargeLabel = "Subscriptions";
+        chargeLabel = familyLabel("subscription");
       }
     }
     const planned = planCountryTaxRule({

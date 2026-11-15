@@ -3,7 +3,7 @@ import { MarketingHeader } from "@/components/marketing-header";
 import { PlanCheckout } from "@/components/plans/plan-checkout";
 import type { PlanMatrix } from "@/lib/plan-matrix";
 import { displayPrice, planActionLabel } from "@/lib/plan-presentation";
-import type { PlanTaxGate } from "@/lib/tax-configuration";
+import { formatUsd, quotedPlanTax, type PlanTaxGate } from "@/lib/tax-configuration";
 
 type Faq = { id: string; question: string; answer: string };
 
@@ -119,7 +119,7 @@ export function PublicPlanPage({
       </section>
 
       <section id="compare" className="mx-auto grid max-w-[90rem] gap-5 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:px-10">
-        <ComparisonTable title={creator ? "Compare influencer plan features" : "Compare plan features"} matrix={matrix} />
+        <ComparisonTable title={creator ? "Compare influencer plan features" : "Compare plan features"} matrix={matrix} taxByCode={taxByCode} />
         <aside className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm">
           <h2 className="font-display text-lg font-bold">{creator ? "Why creators upgrade" : "Why brands and agencies choose Influrios"}</h2>
           <ul className="mt-4 space-y-3">
@@ -221,10 +221,7 @@ function PlanCard({
         {current ? <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">Current plan</span> : null}
       </div>
       <h2 className="mt-4 font-display text-xl font-bold">{plan.name}</h2>
-      <p className="mt-2 font-display text-4xl font-bold">
-        {displayPrice(plan.amountCents, plan.priceLabel)}
-        <span className="text-sm font-semibold text-muted"> / month{plan.amountCents > 0 ? " + applicable tax" : ""}</span>
-      </p>
+      <PlanPrice amountCents={plan.amountCents} priceLabel={plan.priceLabel} gate={taxGate} />
       <p className="mt-2 min-h-10 text-sm text-muted">{plan.description}</p>
       <ul className="mt-4 flex-1 space-y-2 text-sm">
         {plan.highlights.map((line) => (
@@ -245,6 +242,7 @@ function PlanCard({
         countries={countries}
         currentAmountCents={currentAmountCents}
         signedIn={signedIn}
+        quote={quotedPlanTax(taxGate)}
       />
     </article>
   );
@@ -261,6 +259,7 @@ export function PlanAction({
   countries = [],
   currentAmountCents = null,
   signedIn = true,
+  quote = null,
 }: {
   plan: { code: string; sku: string; name: string; checkout: boolean; priceLabel: string; amountCents: number };
   audience: "creator" | "business";
@@ -272,6 +271,7 @@ export function PlanAction({
   countries?: { code: string; name: string }[];
   currentAmountCents?: number | null;
   signedIn?: boolean;
+  quote?: { taxCents: number; totalCents: number; ratePercent: number | null } | null;
 }) {
   const className = emphasized
     ? "btn-primary mt-6 w-full !py-2.5 text-sm"
@@ -307,7 +307,7 @@ export function PlanAction({
     const next = audience === "business" ? "/business/billing" : "/billing";
     return (
       <div className="mt-6">
-        <p className="text-xs font-semibold text-muted">Tax calculated at checkout</p>
+        <TaxNote quote={quote} />
         <Link href={`/login?next=${encodeURIComponent(next)}`} className={emphasized ? "btn-primary mt-2 w-full !py-2.5 text-sm" : "btn-secondary mt-2 w-full !py-2.5 text-sm"}>
           {label}
         </Link>
@@ -315,18 +315,57 @@ export function PlanAction({
     );
   }
   return (
-    <PlanCheckout
+      <PlanCheckout
       plan={plan}
       audience={audience}
       returnTo={returnTo}
       label={label}
       emphasized={emphasized}
       countries={countries}
+      quote={quote}
     />
   );
 }
 
-export function ComparisonTable({ title, matrix }: { title: string; matrix: PlanMatrix }) {
+export function PlanPrice({
+  amountCents,
+  priceLabel,
+  gate,
+  size = "card",
+}: {
+  amountCents: number;
+  priceLabel: string;
+  gate?: PlanTaxGate;
+  size?: "card" | "compact";
+}) {
+  const quote = quotedPlanTax(gate);
+  const priceClass = size === "card" ? "mt-2 font-display text-4xl font-bold" : "font-display text-2xl font-bold";
+  return (
+    <div>
+      <p className={priceClass}>
+        {displayPrice(amountCents, priceLabel)}
+        <span className="text-sm font-semibold text-muted"> / month</span>
+      </p>
+      {quote ? (
+        <p className="mt-1 text-sm text-muted">
+          Base {displayPrice(amountCents, priceLabel)} · Tax {formatUsd(quote.taxCents)}
+          {quote.ratePercent != null ? ` (${quote.ratePercent}%)` : ""} · Total {formatUsd(quote.totalCents)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function TaxNote({ quote }: { quote?: { taxCents: number; totalCents: number; ratePercent: number | null } | null }) {
+  if (!quote) return <p className="text-xs font-semibold text-muted">Tax calculated at checkout</p>;
+  return (
+    <p className="text-xs font-semibold text-muted">
+      Tax {formatUsd(quote.taxCents)}{quote.ratePercent != null ? ` (${quote.ratePercent}%)` : ""} · Total {formatUsd(quote.totalCents)}
+    </p>
+  );
+}
+
+export function ComparisonTable({ title, matrix, taxByCode }: { title: string; matrix: PlanMatrix; taxByCode?: Record<string, PlanTaxGate> }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-[#E6ECF7] bg-white shadow-sm">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#E6ECF7] px-5 py-4">
@@ -348,6 +387,7 @@ export function ComparisonTable({ title, matrix }: { title: string; matrix: Plan
                   {plan.name}
                   <span className="mt-1 block text-[11px] font-medium normal-case text-muted">
                     {displayPrice(plan.amountCents, plan.priceLabel)}/mo
+                    {quotedPlanTax(taxByCode?.[plan.code]) ? ` · Tax ${formatUsd(quotedPlanTax(taxByCode?.[plan.code])!.taxCents)} · Total ${formatUsd(quotedPlanTax(taxByCode?.[plan.code])!.totalCents)}` : ""}
                   </span>
                 </th>
               ))}
