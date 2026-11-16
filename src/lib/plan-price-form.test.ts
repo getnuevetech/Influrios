@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { displayPrice } from "./plan-presentation";
 import {
   annualOfferKey,
+  annualOfferViews,
   annualPricingCents,
   centsFromMonthlyDollarInput,
   planPriceFieldsFromStored,
@@ -79,6 +80,104 @@ describe("admin plan dollar prices", () => {
       annual: null,
     });
     assert.equal(unpublished.ok, false);
+    assert.deepEqual(annualOfferViews(cleared.store), { amounts: {}, checkout: {} });
+  });
+
+  it("saves 190.00 with no yearly price id and does not offer annual checkout", () => {
+    const written = writeSharedAnnualOffer({}, "PLUS", {
+      amount: "190.00",
+      priceId: "",
+      monthlyPriceIds: ["price_1MonthPlus"],
+    });
+    assert.equal(written.ok, true);
+    if (!written.ok) return;
+    assert.equal(written.offer?.amountCents, 19000);
+    assert.equal(written.offer?.priceId, "");
+    assert.equal(annualPricingCents(written.store, "PLUS"), 19000);
+    assert.deepEqual(sharedAnnualFields(written.store, "PLUS"), { amount: "190.00", priceId: "" });
+    const views = annualOfferViews(written.store);
+    assert.equal(views.amounts.creator_plus, 19000);
+    assert.equal(views.checkout.creator_plus, undefined);
+    const checkout = resolveRecurringOffer({
+      sku: "creator_plus",
+      interval: "year",
+      monthly: { amountCents: 1900, priceId: "price_1MonthPlus", currency: "USD" },
+      annual: written.offer,
+    });
+    assert.equal(checkout.ok, false);
+    if (checkout.ok) return;
+    assert.match(checkout.reason, /not available/);
+    const fromBilling = writeBillingAnnualOffers(
+      {},
+      {
+        creator_plus: { amount: "190.00", priceId: "" },
+        creator_pro: { amount: "", priceId: "" },
+        business_pro: { amount: "", priceId: "" },
+        agency: { amount: "", priceId: "" },
+      },
+      { creator_plus: "price_1MonthPlus" },
+      BILLING_SKUS,
+    );
+    assert.equal(fromBilling.ok, true);
+    if (!fromBilling.ok) return;
+    assert.equal(fromBilling.store.creator_plus?.amountCents, 19000);
+    assert.equal(fromBilling.store.creator_plus?.priceId, "");
+    assert.equal(annualPricingCents(fromBilling.store, "creator_plus"), 19000);
+    assert.equal(annualOfferViews(fromBilling.store).checkout.creator_plus, undefined);
+  });
+
+  it("saves the annual amount and the yearly price id, and checkout uses that price id", () => {
+    const written = writeSharedAnnualOffer({}, "PLUS", {
+      amount: "190.00",
+      priceId: "price_1YearPlus",
+      monthlyPriceIds: ["price_1MonthPlus"],
+    });
+    assert.equal(written.ok, true);
+    if (!written.ok) return;
+    assert.equal(written.offer?.amountCents, 19000);
+    assert.equal(written.offer?.priceId, "price_1YearPlus");
+    assert.equal(annualOfferViews(written.store).checkout.creator_plus, true);
+    const checkout = resolveRecurringOffer({
+      sku: "creator_plus",
+      interval: "year",
+      monthly: { amountCents: 1900, priceId: "price_1MonthPlus", currency: "USD" },
+      annual: written.offer,
+    });
+    assert.equal(checkout.ok, true);
+    if (!checkout.ok) return;
+    assert.equal(checkout.offer.amountCents, 19000);
+    assert.equal(checkout.offer.priceId, "price_1YearPlus");
+  });
+
+  it("rejects a yearly price id that matches the monthly id and keeps the previous annual amount", () => {
+    const saved = writeSharedAnnualOffer({}, "PLUS", {
+      amount: "190.00",
+      priceId: "",
+      monthlyPriceIds: ["price_1MonthPlus"],
+    });
+    assert.equal(saved.ok, true);
+    if (!saved.ok) return;
+    const before = structuredClone(saved.store);
+    const sameId = writeSharedAnnualOffer(saved.store, "PLUS", {
+      amount: "180.00",
+      priceId: "price_1MonthPlus",
+      monthlyPriceIds: ["price_1MonthPlus"],
+    });
+    assert.equal(sameId.ok, false);
+    if (sameId.ok) return;
+    assert.match(sameId.error, /annual Stripe price id/);
+    assert.deepEqual(saved.store, before);
+    assert.equal(saved.store.creator_plus.amountCents, 19000);
+    const badPrefix = writeSharedAnnualOffer(saved.store, "PLUS", {
+      amount: "190.00",
+      priceId: "year_plus",
+      monthlyPriceIds: ["price_1MonthPlus"],
+    });
+    assert.equal(badPrefix.ok, false);
+    if (badPrefix.ok) return;
+    assert.match(badPrefix.error, /annual Stripe price id/);
+    assert.match(badPrefix.error, /price_/);
+    assert.equal(saved.store.creator_plus.amountCents, 19000);
   });
 
   it("keeps the plan form and billing.annualOffers on the same record", () => {
@@ -166,5 +265,23 @@ describe("admin plan dollar prices", () => {
     assert.match(billing, /writeSharedAnnualOffer/);
     assert.match(billing, /writeBillingAnnualOffers/);
     assert.match(activity, /dollarInputFromCents\(offer\.amountCents\)/);
+    const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
+    const businessPlans = readFileSync("src/app/business/plans/page.tsx", "utf8");
+    const memberBilling = readFileSync("src/app/billing/page.tsx", "utf8");
+    const businessBilling = readFileSync("src/app/business/billing/page.tsx", "utf8");
+    const publicPage = readFileSync("src/components/plans/public-plan-page.tsx", "utf8");
+    const member = readFileSync("src/components/plans/member-plan-page.tsx", "utf8");
+    for (const source of [pricing, businessPlans, memberBilling, businessBilling]) {
+      assert.match(source, /annualOfferViews/);
+      assert.match(source, /annualBySku=\{views\.amounts\}/);
+      assert.match(source, /annualCheckoutBySku=\{views\.checkout\}/);
+      assert.equal(source.includes("export {"), false);
+    }
+    assert.match(publicPage, /annualCheckoutBySku/);
+    assert.match(member, /annualCheckoutBySku/);
+    assert.equal(publicPage.includes('from "@/lib/billing"'), false);
+    assert.equal(member.includes('from "@/lib/billing"'), false);
+    assert.equal(publicPage.includes('from "@/lib/db"'), false);
+    assert.equal(member.includes('from "@/lib/db"'), false);
   });
 });

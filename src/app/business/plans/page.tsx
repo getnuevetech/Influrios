@@ -2,7 +2,7 @@ import { PublicPlanPage } from "@/components/plans/public-plan-page";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
 import { listAnnualOffers } from "@/lib/billing";
-import { parseBillingInterval } from "@/lib/billing-interval";
+import { annualOfferViews, parseBillingInterval } from "@/lib/billing-interval";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 
@@ -20,6 +20,7 @@ export default async function BusinessPlansPage({ searchParams }: Props) {
   ]);
   const workspace = account ? await getWorkspace(account.id).catch(() => null) : null;
   const currentCode = workspace?.plan ?? null;
+  const views = annualOfferViews(annual);
   const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
   await Promise.all(
     matrix.plans.map((plan) => {
@@ -36,7 +37,8 @@ export default async function BusinessPlansPage({ searchParams }: Props) {
       currentAmountCents={matrix.plans.find((plan) => plan.code === currentCode)?.amountCents ?? null}
       matrix={matrix}
       interval={parseBillingInterval(params.interval)}
-      annualBySku={Object.fromEntries(Object.entries(annual).flatMap(([sku, offer]) => offer ? [[sku, offer.amountCents]] : []))}
+      annualBySku={views.amounts}
+      annualCheckoutBySku={views.checkout}
       taxByCode={taxByCode}
     />
   );
