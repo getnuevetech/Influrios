@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { actionApplyDocumentDiscount, actionPreviewCollaborationDiscount, actionRemoveDocumentDiscount } from "@/app/collaboration/discount-actions";
-import { formatMinor } from "@/lib/payment-standard-v4";
+function formatMinor(cents: number, currency: string) {
+  const code = /^[A-Z]{3}$/.test(currency) ? currency : "USD";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: code, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
+}
 
 type Line = { label: string; amountCents: number; tone?: "discount" | "savings"; emphasis?: boolean };
 
