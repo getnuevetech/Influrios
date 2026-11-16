@@ -75,7 +75,9 @@ export async function applyPlanOnce(input: {
   creatorSlug?: string | null;
   externalId?: string | null;
   billingInterval?: "month" | "year" | null;
+  currentPeriodStart?: Date | null;
   currentPeriodEnd?: Date | null;
+  cancelAtPeriodEnd?: boolean;
   providerStatus?: string | null;
 }): Promise<{ applied: boolean }> {
   const disposition = webhookDisposition({ duplicate: false, eventType: input.eventType });
@@ -123,7 +125,9 @@ export async function applyPlanOnce(input: {
           userId: input.userId || null,
           creatorSlug: input.creatorSlug || null,
           billingInterval: input.billingInterval === "year" ? "year" : "month",
+          ...(input.currentPeriodStart ? { currentPeriodStart: input.currentPeriodStart } : {}),
           ...(input.currentPeriodEnd ? { currentPeriodEnd: input.currentPeriodEnd } : {}),
+          ...(typeof input.cancelAtPeriodEnd === "boolean" ? { cancelAtPeriodEnd: input.cancelAtPeriodEnd } : {}),
         },
         update: {
           sku: input.sku,
@@ -131,7 +135,9 @@ export async function applyPlanOnce(input: {
           userId: input.userId || undefined,
           creatorSlug: input.creatorSlug || undefined,
           ...(input.billingInterval ? { billingInterval: input.billingInterval } : {}),
+          ...(input.currentPeriodStart ? { currentPeriodStart: input.currentPeriodStart } : {}),
           ...(input.currentPeriodEnd ? { currentPeriodEnd: input.currentPeriodEnd } : {}),
+          ...(typeof input.cancelAtPeriodEnd === "boolean" ? { cancelAtPeriodEnd: input.cancelAtPeriodEnd } : {}),
           ...(input.billingInterval === "year"
             ? { pendingInterval: "", pendingPriceId: "", pendingEffectiveAt: null, scheduleId: "" }
             : {}),

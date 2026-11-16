@@ -6,6 +6,7 @@ import { pendingCountryForCreator } from "@/lib/country-review";
 import { prisma } from "@/lib/db";
 import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
 import { emailPreference } from "@/lib/email-live";
+import { loadAccountBillingView } from "@/lib/subscription-renewal-run";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Account settings" };
@@ -55,6 +56,8 @@ export default async function AccountPage({
       }).catch(() => creator.identityVerified === "VERIFIED")
     : false;
   const tab = TABS.has(params.tab ?? "") ? params.tab! : "account";
+  const planCode = creator?.planTier || user?.planTier || "STARTER";
+  const billing = await loadAccountBillingView({ userId: session.id, planCode });
 
   return (
     <AccountSettings
@@ -72,8 +75,8 @@ export default async function AccountPage({
       country={creator?.locationCountry ?? ""}
       identityVerified={identityVerified}
       pendingCountry={pendingCountry}
-      planCode={creator?.planTier || user?.planTier || "STARTER"}
       emailPrefs={prefs}
+      billing={billing}
     />
   );
 }

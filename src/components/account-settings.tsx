@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { actionReplacePassword, actionSaveCountry, actionSavePersonalDetails, actionSaveCommPreference, actionSaveEmailPreference } from "@/app/account/actions";
+import { actionSetAutoRenew } from "@/app/account/billing-actions";
+import { BillingPlanPanel } from "@/components/billing-plan-panel";
 import { SettingsEditors } from "@/components/settings-editors";
 import type { AccountAudience } from "@/lib/account-audience";
-import { planLabel } from "@/lib/entitlements";
+import type { BillingPlanView } from "@/lib/subscription-renewal";
 
 const CREATOR_TABS = ["account", "security", "notifications", "verification", "connections", "billing"] as const;
 const BUSINESS_TABS = ["account", "security", "notifications", "billing"] as const;
@@ -31,8 +33,8 @@ export function AccountSettings({
   country,
   identityVerified,
   pendingCountry,
-  planCode,
   emailPrefs,
+  billing,
 }: {
   audience: AccountAudience;
   tab: string;
@@ -48,13 +50,12 @@ export function AccountSettings({
   country: string;
   identityVerified: boolean;
   pendingCountry: string | null;
-  planCode: string;
   emailPrefs: { collaborations: boolean; billing: boolean; outreach: boolean; productNews: boolean };
+  billing: BillingPlanView;
 }) {
   const tabs: string[] = audience === "business" ? [...BUSINESS_TABS] : [...CREATOR_TABS];
   const current = tabs.includes(tab) ? tab : "account";
   const billingHref = audience === "business" ? "/business/billing" : "/billing";
-  const plan = planLabel(planCode) || planCode || "Starter";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -215,18 +216,7 @@ export function AccountSettings({
         </section>
       ) : null}
 
-      {current === "billing" ? (
-        <section className="mt-6 space-y-3 text-sm text-indigo">
-          <h2 className="font-display text-lg font-bold">Billing & Plan</h2>
-          <p>Current plan: {plan}</p>
-          <p className="text-muted">Payout setup stays on Earnings & Payouts. This page is the subscription.</p>
-          <p>
-            <Link href={billingHref} className="font-semibold text-violet">
-              Manage Billing & Plan
-            </Link>
-          </p>
-        </section>
-      ) : null}
+      {current === "billing" ? <BillingPlanPanel view={billing} manageHref={billingHref} action={actionSetAutoRenew} /> : null}
     </div>
   );
 }

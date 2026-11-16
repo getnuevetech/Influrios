@@ -35,7 +35,9 @@ type StripeObject = {
   payment_status?: string | null;
   amount_total?: number | null;
   currency?: string | null;
+  current_period_start?: number | null;
   current_period_end?: number | null;
+  cancel_at_period_end?: boolean | null;
   items?: { data?: { price?: { recurring?: { interval?: string } } }[] } | null;
 };
 
@@ -47,8 +49,16 @@ function confirmedInterval(object: StripeObject): "month" | "year" | null {
   return null;
 }
 
+function periodStart(object: StripeObject) {
+  return typeof object.current_period_start === "number" ? new Date(object.current_period_start * 1000) : null;
+}
+
 function periodEnd(object: StripeObject) {
   return typeof object.current_period_end === "number" ? new Date(object.current_period_end * 1000) : null;
+}
+
+function scheduledEnd(object: StripeObject) {
+  return typeof object.cancel_at_period_end === "boolean" ? object.cancel_at_period_end : undefined;
 }
 
 function customerIdOf(object: StripeObject) {
@@ -286,7 +296,9 @@ export async function POST(req: NextRequest) {
         creatorSlug: object.metadata?.creatorSlug || local.creatorSlug,
         externalId: subscriptionId(object, event.type) || local.stripeSessionId || local.id,
         billingInterval: confirmedInterval(object),
+        currentPeriodStart: periodStart(object),
         currentPeriodEnd: periodEnd(object),
+        cancelAtPeriodEnd: scheduledEnd(object),
         providerStatus: object.status,
       });
       await rememberStripeCustomer(local.userId || object.metadata?.userId, customerIdOf(object));
@@ -311,7 +323,9 @@ export async function POST(req: NextRequest) {
         creatorSlug: object.metadata?.creatorSlug || state?.creatorSlug,
         externalId,
         billingInterval: confirmedInterval(object),
+        currentPeriodStart: periodStart(object),
         currentPeriodEnd: periodEnd(object),
+        cancelAtPeriodEnd: scheduledEnd(object),
         providerStatus: object.status,
       });
     }

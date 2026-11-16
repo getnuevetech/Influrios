@@ -223,6 +223,11 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
     await runQuoteExpirySweep();
     return;
   }
+  if (kind === "subscription_renewal_sweep") {
+    const { runSubscriptionRenewalSweep } = await import("@/lib/subscription-renewal-run");
+    await runSubscriptionRenewalSweep();
+    return;
+  }
   if (kind === "collab_notification") {
     if (!data.to || !data.subject || !data.text) {
       throw new Error("Collaboration notification job is missing a recipient or copy.");

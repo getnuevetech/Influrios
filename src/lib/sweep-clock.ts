@@ -14,6 +14,7 @@ export const SWEEP_JOB_KINDS = [
   "short_link_schedule_sweep",
   "invitation_followup_sweep",
   "quote_expiry_sweep",
+  "subscription_renewal_sweep",
 ] as const;
 
 export type SweepJobKind = (typeof SWEEP_JOB_KINDS)[number];
