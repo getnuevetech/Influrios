@@ -1,4 +1,6 @@
 "use client";
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 
 import { Fragment, useRef, useState } from "react";
 import { AccountDialog } from "@/components/account-dialog";

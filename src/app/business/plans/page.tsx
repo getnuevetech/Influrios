@@ -4,7 +4,8 @@ import { getWorkspace } from "@/lib/business";
 import { listAnnualOffers } from "@/lib/billing";
 import { annualOfferViews, parseBillingInterval } from "@/lib/billing-interval";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
-import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
+import { prisma } from "@/lib/db";
+import { loadSubscriptionTaxInputs, memberBillingCountry, notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business plans" };
@@ -13,15 +14,26 @@ type Props = { searchParams: Promise<{ interval?: string }> };
 
 export default async function BusinessPlansPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [account, matrix, annual] = await Promise.all([
+  const [account, matrix, annual, taxInputs] = await Promise.all([
     getAccountSession().catch(() => null),
     loadPlanMatrix("business"),
     listAnnualOffers().catch(() => ({})),
+    loadSubscriptionTaxInputs(),
   ]);
   const workspace = account ? await getWorkspace(account.id).catch(() => null) : null;
+  const profile = account
+    ? await prisma.businessProfile.findUnique({
+        where: { userId: account.id },
+        select: { verifiedCountryCode: true, geography: true },
+      }).catch(() => null)
+    : null;
   const currentCode = workspace?.plan ?? null;
+  const billingCountry = memberBillingCountry({
+    location: profile?.geography,
+    verifiedCountryCode: profile?.verifiedCountryCode,
+  });
   const views = annualOfferViews(annual);
-  const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
+  const taxByCode = await subscriptionTaxGates(matrix.plans, billingCountry || "US").catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
   await Promise.all(
     matrix.plans.map((plan) => {
       const gate = taxByCode[plan.code];
@@ -40,6 +52,9 @@ export default async function BusinessPlansPage({ searchParams }: Props) {
       annualBySku={views.amounts}
       annualCheckoutBySku={views.checkout}
       taxByCode={taxByCode}
+      billingCountry={billingCountry}
+      taxRules={taxInputs.rules}
+      taxKeysByCode={taxInputs.keysByCode}
     />
   );
 }

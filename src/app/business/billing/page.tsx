@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { productSwitch } from "@/lib/product-switches";
 import { corridorCountries } from "@/lib/corridor-countries";
-import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
+import { loadSubscriptionTaxInputs, memberBillingCountry, notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business billing & plans" };
@@ -24,7 +24,7 @@ export default async function BusinessBillingPage({ searchParams }: Props) {
     const next = interval === "year" ? "/business/billing?interval=year" : "/business/billing";
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }
-  const [matrix, workspace, portalOn, user, attempts, subscription, annual] = await Promise.all([
+  const [matrix, workspace, portalOn, user, attempts, subscription, annual, profile, taxInputs] = await Promise.all([
     loadPlanMatrix("business"),
     getWorkspace(account.id).catch(() => null),
     productSwitch("customer_portal").catch(() => false),
@@ -38,10 +38,19 @@ export default async function BusinessBillingPage({ searchParams }: Props) {
       .catch(() => []),
     prisma.subscriptionState.findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } }).catch(() => null),
     listAnnualOffers().catch(() => ({})),
+    prisma.businessProfile.findUnique({
+      where: { userId: account.id },
+      select: { verifiedCountryCode: true, geography: true },
+    }).catch(() => null),
+    loadSubscriptionTaxInputs(),
   ]);
   const currentCode = workspace?.plan ?? null;
+  const billingCountry = memberBillingCountry({
+    location: profile?.geography,
+    verifiedCountryCode: profile?.verifiedCountryCode,
+  });
   const views = annualOfferViews(annual);
-  const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
+  const taxByCode = await subscriptionTaxGates(matrix.plans, billingCountry || "US").catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
   await Promise.all(
     matrix.plans.map((plan) => {
       const gate = taxByCode[plan.code];
@@ -74,6 +83,9 @@ export default async function BusinessBillingPage({ searchParams }: Props) {
       portalOn={portalOn}
       hasCustomer={Boolean(user?.stripeCustomerId)}
       taxByCode={taxByCode}
+      billingCountry={billingCountry}
+      taxRules={taxInputs.rules}
+      taxKeysByCode={taxInputs.keysByCode}
       countries={corridorCountries().map((country) => ({ code: country.code, name: country.name }))}
       subscriptionStatus={subscription?.status ?? null}
       error={params.error}

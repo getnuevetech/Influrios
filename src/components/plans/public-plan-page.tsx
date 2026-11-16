@@ -1,12 +1,15 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 import Link from "next/link";
 import { MarketingHeader } from "@/components/marketing-header";
 import { CompareFeatures } from "@/components/plans/compare-features";
 import { PlanCheckout } from "@/components/plans/plan-checkout";
-import { carryPlanSelection, type BillingInterval } from "@/lib/billing-interval";
+import { intervalTaxLine } from "@/lib/admin-subscription-view";
+import { annualCardState, annualSavingsCents, carryPlanSelection, CHECKOUT_TAX_NOTE, displayedChargeCents, formatOfferAmount, MISSING_YEARLY_STRIPE_PRICE_ID, type BillingInterval } from "@/lib/billing-interval";
+import type { CountryTaxRule } from "@/lib/country-tax";
 import type { PlanMatrix } from "@/lib/plan-matrix";
-import { annualSavingsCents, CHECKOUT_TAX_NOTE, displayedPriceBreakdown, formatOfferAmount } from "@/lib/billing-interval";
 import { displayPrice, planActionLabel } from "@/lib/plan-presentation";
-import { formatUsd, quotedPlanTax, type PlanTaxGate } from "@/lib/tax-configuration";
+import { formatUsd, type PlanTaxGate } from "@/lib/tax-configuration";
 
 export function PublicPlanPage({
   audience,
@@ -19,6 +22,9 @@ export function PublicPlanPage({
   annualBySku = {},
   annualCheckoutBySku,
   taxByCode = {},
+  billingCountry = "",
+  taxRules = [],
+  taxKeysByCode = {},
 }: {
   audience: "creator" | "business";
   signedIn: boolean;
@@ -31,6 +37,9 @@ export function PublicPlanPage({
   annualCheckoutBySku?: Record<string, boolean>;
   taxByCode?: Record<string, PlanTaxGate>;
   countries?: { code: string; name: string }[];
+  billingCountry?: string;
+  taxRules?: CountryTaxRule[];
+  taxKeysByCode?: Record<string, string[]>;
 }) {
   const creator = audience === "creator";
   const basePath = creator ? "/pricing" : "/business/plans";
@@ -60,6 +69,9 @@ export function PublicPlanPage({
               current={currentCode === plan.code}
               currentAmountCents={currentAmountCents}
               taxGate={taxByCode[plan.code]}
+              billingCountry={billingCountry}
+              taxRules={taxRules}
+              taxKeys={taxKeysByCode[plan.code] ?? [plan.code, plan.sku]}
             />
           ))}
         </div>
@@ -95,6 +107,9 @@ function PlanCard({
   current,
   currentAmountCents,
   taxGate,
+  billingCountry,
+  taxRules,
+  taxKeys,
 }: {
   plan: PlanMatrix["plans"][number];
   audience: "creator" | "business";
@@ -105,9 +120,18 @@ function PlanCard({
   current: boolean;
   currentAmountCents: number | null;
   taxGate?: PlanTaxGate;
+  billingCountry: string;
+  taxRules: CountryTaxRule[];
+  taxKeys: string[];
 }) {
   const priced = annualAmountCents != null && annualAmountCents > 0;
   const annualReady = annualCheckout ?? priced;
+  const state = annualCardState({
+    interval,
+    monthlyAmountCents: plan.amountCents,
+    annualAmountCents,
+    checkoutReady: annualReady,
+  });
   const label = planActionLabel({
     name: plan.name,
     amountCents: plan.amountCents,
@@ -125,7 +149,6 @@ function PlanCard({
     interval,
   });
   const href = signedIn ? review : `/login?next=${encodeURIComponent(review)}`;
-  const unavailable = interval === "year" && plan.amountCents > 0 && !annualReady;
   return (
     <article className={`relative flex flex-col rounded-3xl border bg-white p-6 shadow-sm ${emphasized ? "border-violet shadow-[0_16px_40px_rgba(99,60,255,0.15)]" : "border-[#E6ECF7]"}`}>
       {plan.recommended ? (
@@ -137,13 +160,12 @@ function PlanCard({
         priceLabel={plan.priceLabel}
         interval={interval}
         annualAmountCents={annualAmountCents}
-        locationKnown={false}
-        gate={taxGate}
+        billingCountry={billingCountry}
+        taxRules={taxRules}
+        taxKeys={taxKeys}
       />
-      {unavailable ? (
-        <p className="mt-2 text-sm text-amber-900">
-          {priced ? "Annual checkout is not available for this plan yet." : "Annual billing is not available for this plan yet."}
-        </p>
+      {state === "unpublished" ? (
+        <p className="mt-2 text-sm text-amber-900">Annual billing is not available for this plan yet.</p>
       ) : null}
       <ul className="mt-4 flex-1 space-y-2 text-sm">
         {plan.highlights.slice(0, 3).map((line) => (
@@ -153,7 +175,9 @@ function PlanCard({
           </li>
         ))}
       </ul>
-      {unavailable ? (
+      {state === "missing-yearly-price" ? (
+        <p className="mt-6 text-sm font-semibold text-amber-900">{MISSING_YEARLY_STRIPE_PRICE_ID}</p>
+      ) : state === "unpublished" ? (
         <Link href={audience === "business" ? "/business/plans" : "/pricing"} className="btn-secondary mt-6 w-full !py-2.5 text-sm">View monthly</Link>
       ) : plan.amountCents <= 0 ? (
         <Link href={audience === "creator" ? "/claim" : "/login?next=/business/home"} className="btn-secondary mt-6 w-full !py-2.5 text-sm">{label}</Link>
@@ -181,6 +205,7 @@ export function PlanAction({
   mode = "checkout",
   annualAmountCents = null,
   renewalLabel = null,
+  intervalTaxCents = null,
 }: {
   plan: { code: string; sku: string; name: string; checkout: boolean; priceLabel: string; amountCents: number };
   audience: "creator" | "business";
@@ -197,6 +222,7 @@ export function PlanAction({
   mode?: "checkout" | "schedule" | "tier";
   annualAmountCents?: number | null;
   renewalLabel?: string | null;
+  intervalTaxCents?: number | null;
 }) {
   const className = emphasized
     ? "btn-primary mt-6 w-full !py-2.5 text-sm"
@@ -253,25 +279,28 @@ export function PlanAction({
       mode={mode}
       annualAmountCents={annualAmountCents}
       renewalLabel={renewalLabel}
+      intervalTaxCents={intervalTaxCents}
     />
   );
 }
 
 export function PlanPrice({
   amountCents,
-  gate,
   size = "card",
   interval = "month",
   annualAmountCents = null,
-  locationKnown = false,
+  billingCountry = "",
+  taxRules = [],
+  taxKeys = [],
 }: {
   amountCents: number;
   priceLabel: string;
-  gate?: PlanTaxGate;
   size?: "card" | "compact";
   interval?: BillingInterval;
   annualAmountCents?: number | null;
-  locationKnown?: boolean;
+  billingCountry?: string;
+  taxRules?: CountryTaxRule[];
+  taxKeys?: string[];
 }) {
   const priceClass = size === "card" ? "mt-2 font-display text-4xl font-bold" : "font-display text-2xl font-bold";
   if (amountCents <= 0) {
@@ -283,19 +312,16 @@ export function PlanPrice({
     monthlyCurrency: "USD",
     annualCurrency: "USD",
   }) : null;
-  const quote = quotedPlanTax(gate);
-  const breakdown = locationKnown
-    ? displayedPriceBreakdown({
-        locationKnown: true,
-        baseCents: interval === "year" && annualAmountCents != null ? annualAmountCents : amountCents,
-        taxCents: quote?.taxCents,
-        ratePercent: quote?.ratePercent,
-        claimedTotalCents: quote?.totalCents,
-      })
-    : displayedPriceBreakdown({ locationKnown: false, baseCents: amountCents });
+  const chargeCents = displayedChargeCents({ monthlyAmountCents: amountCents, interval, annualAmountCents });
+  const taxLine = intervalTaxLine({
+    amountCents: chargeCents,
+    countryCode: billingCountry,
+    keys: taxKeys,
+    rules: taxRules,
+  });
   return (
     <div>
-      {interval === "year" && annualAmountCents != null ? (
+      {interval === "year" && annualAmountCents != null && annualAmountCents > 0 ? (
         <>
           <p className={priceClass}>{formatOfferAmount(annualAmountCents)}<span className="text-sm font-semibold text-muted">/year</span></p>
           <p className="mt-1 text-sm text-muted">
@@ -309,9 +335,9 @@ export function PlanPrice({
           <span className="text-sm font-semibold text-muted">/month</span>
         </p>
       )}
-      {breakdown.kind === "exclusive" || breakdown.kind === "inclusive" ? (
+      {taxLine.taxLineCount === 1 && taxLine.taxCents != null && taxLine.totalCents != null ? (
         <p className="mt-1 text-sm text-muted">
-          Tax {formatUsd(breakdown.taxCents)}{breakdown.ratePercent != null ? ` (${breakdown.ratePercent}%)` : ""} · Total {formatUsd(breakdown.totalCents)}
+          Tax {formatUsd(taxLine.taxCents)}{taxLine.ratePercent != null ? ` (${taxLine.ratePercent}%)` : ""} · Total {formatUsd(taxLine.totalCents)}
         </p>
       ) : null}
     </div>

@@ -4,7 +4,7 @@ import { listAnnualOffers } from "@/lib/billing";
 import { annualOfferViews, parseBillingInterval } from "@/lib/billing-interval";
 import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
-import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
+import { loadSubscriptionTaxInputs, memberBillingCountry, notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Influencer plans" };
@@ -13,22 +13,24 @@ type Props = { searchParams: Promise<{ interval?: string }> };
 
 export default async function PricingPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [account, matrix, annual] = await Promise.all([
+  const [account, matrix, annual, taxInputs] = await Promise.all([
     getAccountSession().catch(() => null),
     loadPlanMatrix("creator"),
     listAnnualOffers().catch(() => ({})),
+    loadSubscriptionTaxInputs(),
   ]);
   const identity = account
     ? await prisma.user
         .findUnique({
           where: { id: account.id },
-          select: { planTier: true, creator: { select: { planTier: true } } },
+          select: { planTier: true, creator: { select: { planTier: true, locationCountry: true } } },
         })
         .catch(() => null)
     : null;
   const currentCode = identity?.creator?.planTier || identity?.planTier || null;
+  const billingCountry = memberBillingCountry({ location: identity?.creator?.locationCountry });
   const views = annualOfferViews(annual);
-  const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
+  const taxByCode = await subscriptionTaxGates(matrix.plans, billingCountry || "US").catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
   await Promise.all(
     matrix.plans.map((plan) => {
       const gate = taxByCode[plan.code];
@@ -47,6 +49,9 @@ export default async function PricingPage({ searchParams }: Props) {
       annualBySku={views.amounts}
       annualCheckoutBySku={views.checkout}
       taxByCode={taxByCode}
+      billingCountry={billingCountry}
+      taxRules={taxInputs.rules}
+      taxKeysByCode={taxInputs.keysByCode}
     />
   );
 }

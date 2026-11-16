@@ -7,6 +7,7 @@
 export type BillingInterval = "month" | "year";
 
 export const CHECKOUT_TAX_NOTE = "Applicable tax shown at checkout.";
+export const MISSING_YEARLY_STRIPE_PRICE_ID = "The yearly Stripe price id is missing.";
 
 const PLAN_ALIASES: Record<string, string> = {
   plus: "plus",
@@ -118,6 +119,36 @@ export function resolveRecurringOffer(input: {
     },
     usedMonthlyFallback: false as const,
   };
+}
+
+/** The cents the selected interval displays. A free plan stays at zero. Annual uses the saved annual amount. */
+export function displayedChargeCents(input: {
+  monthlyAmountCents: number;
+  interval: BillingInterval;
+  annualAmountCents: number | null;
+}) {
+  if (input.monthlyAmountCents <= 0) return 0;
+  if (input.interval === "year" && input.annualAmountCents != null && input.annualAmountCents > 0) {
+    return input.annualAmountCents;
+  }
+  return input.monthlyAmountCents;
+}
+
+/**
+ * Annual with a yearly price id can be purchased.
+ * A saved amount without that id still displays, and the action names the missing id.
+ * No saved amount stays unpublished.
+ */
+export function annualCardState(input: {
+  interval: BillingInterval;
+  monthlyAmountCents: number;
+  annualAmountCents: number | null;
+  checkoutReady: boolean;
+}): "monthly" | "annual-ready" | "missing-yearly-price" | "unpublished" {
+  if (input.interval !== "year" || input.monthlyAmountCents <= 0) return "monthly";
+  if (input.checkoutReady) return "annual-ready";
+  if (input.annualAmountCents != null && input.annualAmountCents > 0) return "missing-yearly-price";
+  return "unpublished";
 }
 
 export function annualSavingsCents(input: {

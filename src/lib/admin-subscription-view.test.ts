@@ -4,6 +4,8 @@ import { describe, it } from "node:test";
 import type { CountryTaxRule } from "@/lib/country-tax";
 import {
   estimatePlanPrice,
+  formatPlanMoney,
+  intervalTaxLine,
   filterCheckoutActivity,
   previewRateChip,
   presentCheckoutSession,
@@ -85,6 +87,33 @@ describe("plan price estimates", () => {
     assert.equal(plus.method, "location");
     assert.equal(plus.taxCents, null);
     assert.equal(previewRateChip([plus]), "Location rule");
+  });
+});
+
+describe("interval tax line", () => {
+  const seven = rule({ countryCode: "US", family: "subscription", method: "percentage", ratePercent: 7 });
+
+  it("taxes the interval price once and adds that line to the base", () => {
+    const monthly = intervalTaxLine({ amountCents: 2500, countryCode: "US", keys: ["PLUS"], rules: [seven] });
+    const annual = intervalTaxLine({ amountCents: 30000, countryCode: "US", keys: ["PLUS"], rules: [seven] });
+    const fromEstimate = estimatePlanPrice({ amountCents: 2500, countryCode: "US", keys: ["PLUS"], rules: [seven] });
+    assert.equal(monthly.taxLineCount, 1);
+    assert.equal(monthly.taxCents, fromEstimate.taxCents);
+    assert.equal(monthly.totalCents, monthly.baseCents + (monthly.taxCents ?? 0));
+    assert.equal(annual.taxLineCount, 1);
+    assert.equal(annual.totalCents, annual.baseCents + (annual.taxCents ?? 0));
+    assert.notEqual(annual.taxCents, monthly.taxCents);
+    assert.equal(monthly.taxCents, 175);
+    assert.equal(annual.taxCents, 2100);
+    const free = intervalTaxLine({ amountCents: 0, countryCode: "US", keys: ["STARTER"], rules: [seven] });
+    assert.equal(free.free, true);
+    assert.equal(free.totalCents, 0);
+    assert.equal(free.taxLineCount, 0);
+    const unknown = intervalTaxLine({ amountCents: 30000, countryCode: "", keys: ["PLUS"], rules: [seven] });
+    assert.equal(unknown.taxLineCount, 0);
+    assert.equal(unknown.taxCents, null);
+    assert.equal(unknown.baseCents, 30000);
+    assert.equal(formatPlanMoney(annual.totalCents ?? 0), "$321.00");
   });
 });
 

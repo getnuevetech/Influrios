@@ -5,7 +5,8 @@ import { State } from "country-state-city";
 import { BILLING_CATALOG, getProduct } from "@/lib/billing";
 import { corridorCountries } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
-import { calculateCountryTax, dedupeCountryRules, flagRuleConflicts, mapLegacyInclusivePrice, mapStoredPolicy, matchCountryRule, paidPlanAvailability, subscriptionOffers } from "@/lib/country-tax";
+import { calculateCountryTax, dedupeCountryRules, flagRuleConflicts, mapLegacyInclusivePrice, mapStoredPolicy, matchCountryRule, paidPlanAvailability, subscriptionOffers, type CountryTaxRule } from "@/lib/country-tax";
+import { countryCodeFromLocation } from "@/lib/contract-wizard";
 import {
   INFLUENCER_SERVICE_SUBJECTS,
   TAX_COPY,
@@ -184,6 +185,29 @@ export async function subscriptionTaxGates(
     };
   }
   return gates;
+}
+
+/** A profile country, or a verified billing country. Blank when the location is unknown. */
+export function memberBillingCountry(input: { location?: string | null; verifiedCountryCode?: string | null }) {
+  const verified = (input.verifiedCountryCode ?? "").trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(verified)) return verified;
+  return countryCodeFromLocation(input.location) ?? "";
+}
+
+/** Country rules and the ids that match each plan. Card tax uses these with the interval price. */
+export async function loadSubscriptionTaxInputs(): Promise<{
+  rules: CountryTaxRule[];
+  keysByCode: Record<string, string[]>;
+}> {
+  const [rules, catalog] = await Promise.all([
+    loadCountryRules().catch(() => [] as CountryTaxRule[]),
+    loadTaxCatalog().catch(() => null),
+  ]);
+  const keysByCode: Record<string, string[]> = {};
+  for (const plan of catalog?.plans ?? []) {
+    keysByCode[plan.code] = planMatchKeys(plan);
+  }
+  return { rules, keysByCode };
 }
 
 export async function loadCountryRules() {

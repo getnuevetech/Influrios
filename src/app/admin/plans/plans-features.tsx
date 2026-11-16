@@ -8,6 +8,7 @@ import {
   actionUpdatePlanFeature,
   actionUpdatePlanMeta,
 } from "@/app/admin/plans/actions";
+import { AnnualPlanPrices } from "@/app/admin/plans/annual-plan-prices";
 import { SubscriptionsDialog } from "@/app/admin/subscriptions/dialog";
 import { IconPlus } from "@/components/icons";
 
@@ -42,6 +43,9 @@ export type PricedPlanRow = {
   base: string;
   tax: string;
   total: string;
+  annualBase: string;
+  annualTax: string;
+  annualTotal: string;
   note: string;
   awaitingRule: boolean;
   features: PlanFeatureEditor[];
@@ -166,6 +170,8 @@ export function PlansFeatures({
           </tbody>
         </table>
       </div>
+
+      <AnnualPlanPrices plans={plans} />
 
       <h2 className="mt-8 font-display text-lg font-bold text-indigo">Compare features</h2>
       <div className="mt-3 overflow-x-auto rounded-2xl border border-[#E4EBFF] bg-white">
