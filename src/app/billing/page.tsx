@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { productSwitch } from "@/lib/product-switches";
 import { corridorCountries } from "@/lib/corridor-countries";
-import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
+import { loadSubscriptionTaxInputs, memberBillingCountry, notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Billing & plan" };
@@ -38,7 +38,7 @@ export default async function BillingPage({ searchParams }: Props) {
     const next = interval === "year" ? "/billing?interval=year" : "/billing";
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }
-  const [matrix, identity, portalOn, attempts, subscription, annual] = await Promise.all([
+  const [matrix, identity, portalOn, attempts, subscription, annual, taxInputs] = await Promise.all([
     loadPlanMatrix("creator"),
     prisma.user
       .findUnique({
@@ -49,6 +49,7 @@ export default async function BillingPage({ searchParams }: Props) {
           creator: {
             select: {
               planTier: true,
+              locationCountry: true,
             },
           },
         },
@@ -64,10 +65,12 @@ export default async function BillingPage({ searchParams }: Props) {
       .catch(() => []),
     prisma.subscriptionState.findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } }).catch(() => null),
     listAnnualOffers().catch(() => ({})),
+    loadSubscriptionTaxInputs(),
   ]);
   const currentCode = identity?.creator?.planTier || identity?.planTier || null;
+  const billingCountry = memberBillingCountry({ location: identity?.creator?.locationCountry });
   const views = annualOfferViews(annual);
-  const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
+  const taxByCode = await subscriptionTaxGates(matrix.plans, billingCountry || "US").catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
   await Promise.all(
     matrix.plans.map((plan) => {
       const gate = taxByCode[plan.code];
@@ -102,6 +105,9 @@ export default async function BillingPage({ searchParams }: Props) {
       hasCustomer={Boolean(identity?.stripeCustomerId)}
       subscriptionStatus={subscription?.status ?? null}
       taxByCode={taxByCode}
+      billingCountry={billingCountry}
+      taxRules={taxInputs.rules}
+      taxKeysByCode={taxInputs.keysByCode}
       countries={corridorCountries().map((country) => ({ code: country.code, name: country.name }))}
       error={memberFacingBillingError(params.error)}
       notice={params.notice || (params.connected ? "Payout setup moved to Earnings." : undefined)}

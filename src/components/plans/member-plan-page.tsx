@@ -1,8 +1,12 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 import Link from "next/link";
 import { actionCancelScheduledChange, actionOpenPortal } from "@/app/billing/actions";
 import { CompareFeatures } from "@/components/plans/compare-features";
 import { PlanAction, PlanPrice } from "@/components/plans/public-plan-page";
-import { CHECKOUT_TAX_NOTE, formatOfferAmount, type BillingInterval } from "@/lib/billing-interval";
+import { intervalTaxLine } from "@/lib/admin-subscription-view";
+import { annualCardState, CHECKOUT_TAX_NOTE, displayedChargeCents, formatOfferAmount, MISSING_YEARLY_STRIPE_PRICE_ID, type BillingInterval } from "@/lib/billing-interval";
+import type { CountryTaxRule } from "@/lib/country-tax";
 import type { ReactNode } from "react";
 import type { PlanMatrix } from "@/lib/plan-matrix";
 import { planActionLabel } from "@/lib/plan-presentation";
@@ -39,6 +43,9 @@ export function MemberPlanPage({
   payout,
   taxByCode = {},
   countries = [],
+  billingCountry = "",
+  taxRules = [],
+  taxKeysByCode = {},
 }: {
   audience: "creator" | "business";
   eyebrow: string;
@@ -63,6 +70,9 @@ export function MemberPlanPage({
   payout?: ReactNode;
   taxByCode?: Record<string, PlanTaxGate>;
   countries?: { code: string; name: string }[];
+  billingCountry?: string;
+  taxRules?: CountryTaxRule[];
+  taxKeysByCode?: Record<string, string[]>;
 }) {
   const current = matrix.plans.find((plan) => plan.code === currentCode || plan.sku === subscriptionSku) ?? null;
   const returnTo = audience === "business" ? "/business/billing" : "/billing";
@@ -138,6 +148,12 @@ export function MemberPlanPage({
           const annualAmountCents = annualBySku[plan.sku] ?? null;
           const priced = annualAmountCents != null && annualAmountCents > 0;
           const annualReady = annualCheckoutBySku ? annualCheckoutBySku[plan.sku] === true : priced;
+          const state = annualCardState({
+            interval,
+            monthlyAmountCents: plan.amountCents,
+            annualAmountCents,
+            checkoutReady: annualReady,
+          });
           const sameTier = plan.code === currentCode || plan.sku === subscriptionSku;
           const viewingCurrent = sameTier && interval === (subscribedInterval ?? "month");
           const label = sameTier && interval === "year" && subscribedInterval === "month"
@@ -153,11 +169,18 @@ export function MemberPlanPage({
                 currentInterval: subscribedInterval,
                 annualReady,
               });
-          const mode = active && sameTier && interval === "year" && subscribedInterval === "month"
+          const mode = active && sameTier && interval === "year" && subscribedInterval === "month" && state === "annual-ready"
             ? "schedule"
             : active && !viewingCurrent && plan.amountCents > 0
               ? "tier"
               : "checkout";
+          const taxKeys = taxKeysByCode[plan.code] ?? [plan.code, plan.sku];
+          const taxLine = intervalTaxLine({
+            amountCents: displayedChargeCents({ monthlyAmountCents: plan.amountCents, interval, annualAmountCents }),
+            countryCode: billingCountry,
+            keys: taxKeys,
+            rules: taxRules,
+          });
           return (
             <article key={plan.code} className={`relative flex flex-col rounded-3xl border bg-white p-6 shadow-sm ${sameTier ? "border-violet" : "border-[#E6ECF7]"}`}>
               {sameTier && subscribedInterval ? (
@@ -166,11 +189,17 @@ export function MemberPlanPage({
                 </span>
               ) : null}
               <h2 className="font-display text-xl font-bold">{plan.name}</h2>
-              <PlanPrice amountCents={plan.amountCents} priceLabel={plan.priceLabel} interval={interval} annualAmountCents={annualAmountCents} locationKnown={false} />
-              {interval === "year" && plan.amountCents > 0 && !annualReady ? (
-                <p className="mt-2 text-sm text-amber-900">
-                  {priced ? "Annual checkout is not available for this plan yet." : "Annual billing is not available for this plan yet."}
-                </p>
+              <PlanPrice
+                amountCents={plan.amountCents}
+                priceLabel={plan.priceLabel}
+                interval={interval}
+                annualAmountCents={annualAmountCents}
+                billingCountry={billingCountry}
+                taxRules={taxRules}
+                taxKeys={taxKeys}
+              />
+              {state === "unpublished" ? (
+                <p className="mt-2 text-sm text-amber-900">Annual billing is not available for this plan yet.</p>
               ) : null}
               <ul className="mt-4 flex-1 space-y-2 text-sm">
                 {plan.highlights.slice(0, 3).map((line) => (
@@ -179,7 +208,9 @@ export function MemberPlanPage({
               </ul>
               {pastDue || (active && !hasSubscriptionReference) ? (
                 <p className="mt-6 text-sm text-muted">The current subscription stays in place.</p>
-              ) : interval === "year" && plan.amountCents > 0 && !annualReady ? (
+              ) : state === "missing-yearly-price" ? (
+                <p className="mt-6 text-sm font-semibold text-amber-900">{MISSING_YEARLY_STRIPE_PRICE_ID}</p>
+              ) : state === "unpublished" ? (
                 <Link href={href("month")} className="btn-secondary mt-6 w-full !py-2.5 text-sm">View monthly</Link>
               ) : (
                 <PlanAction
@@ -196,6 +227,7 @@ export function MemberPlanPage({
                   mode={mode}
                   annualAmountCents={annualAmountCents}
                   renewalLabel={renewalLabel}
+                  intervalTaxCents={taxLine.taxLineCount === 1 ? taxLine.taxCents : null}
                 />
               )}
             </article>

@@ -4,6 +4,8 @@ import { describe, it } from "node:test";
 import { safeNextPath } from "./account-policy";
 import {
   CHECKOUT_TAX_NOTE,
+  MISSING_YEARLY_STRIPE_PRICE_ID,
+  annualCardState,
   annualCodeOnMonthly,
   carryPlanSelection,
   displayedPriceBreakdown,
@@ -236,6 +238,30 @@ describe("selection survives sign-in", () => {
     assert.match(safe, /interval=year/);
     assert.match(safe, /sku=creator_pro/);
     assert.match(safe, /plan=PRO/);
+  });
+});
+
+describe("annual card when the yearly price id is missing", () => {
+  it("keeps the saved amount purchasable only after a yearly price id is saved", () => {
+    assert.equal(
+      annualCardState({ interval: "year", monthlyAmountCents: 2500, annualAmountCents: 30000, checkoutReady: false }),
+      "missing-yearly-price",
+    );
+    assert.equal(
+      annualCardState({ interval: "year", monthlyAmountCents: 2500, annualAmountCents: 30000, checkoutReady: true }),
+      "annual-ready",
+    );
+    assert.equal(
+      annualCardState({ interval: "year", monthlyAmountCents: 2500, annualAmountCents: null, checkoutReady: false }),
+      "unpublished",
+    );
+    assert.equal(MISSING_YEARLY_STRIPE_PRICE_ID.includes("price id"), true);
+    const member = readFileSync(new URL("../components/plans/member-plan-page.tsx", import.meta.url), "utf8");
+    const publicPage = readFileSync(new URL("../components/plans/public-plan-page.tsx", import.meta.url), "utf8");
+    assert.equal(member.includes("Annual checkout is not available for this plan yet."), false);
+    assert.equal(publicPage.includes("Annual checkout is not available for this plan yet."), false);
+    assert.match(member, /MISSING_YEARLY_STRIPE_PRICE_ID/);
+    assert.match(publicPage, /MISSING_YEARLY_STRIPE_PRICE_ID/);
   });
 });
 

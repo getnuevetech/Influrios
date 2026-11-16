@@ -1,4 +1,6 @@
 "use client";
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 
 import { useState } from "react";
 import Link from "next/link";
@@ -48,6 +50,7 @@ export function PlanCheckout({
   mode = "checkout",
   annualAmountCents = null,
   renewalLabel = null,
+  intervalTaxCents = null,
 }: {
   plan: { code: string; sku: string; name: string; priceLabel: string; amountCents: number };
   audience: "creator" | "business";
@@ -59,6 +62,7 @@ export function PlanCheckout({
   mode?: "checkout" | "schedule" | "tier";
   annualAmountCents?: number | null;
   renewalLabel?: string | null;
+  intervalTaxCents?: number | null;
 }) {
   const [open, setOpen] = useState(false);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(interval);
@@ -169,9 +173,18 @@ export function PlanCheckout({
             <dl className="space-y-2 rounded-2xl bg-[#F6F7FB] px-4 py-3 text-sm">
               <div className="flex justify-between"><dt>Due today</dt><dd className="font-semibold">$0</dd></div>
               <div className="flex justify-between"><dt>Starts</dt><dd>{renewalLabel ?? "the end of the current paid period"}</dd></div>
-              <div className="flex justify-between"><dt>First annual price</dt><dd>{annualAmountCents != null ? money(annualAmountCents) : "The saved annual price"}</dd></div>
+              {intervalTaxCents != null ? (
+                <div className="flex justify-between"><dt>Tax</dt><dd>{money(intervalTaxCents)}</dd></div>
+              ) : null}
+              <div className="flex justify-between">
+                <dt>First annual charge</dt>
+                <dd>{annualAmountCents != null ? money(intervalTaxCents != null ? annualAmountCents + intervalTaxCents : annualAmountCents) : "The saved annual price"}</dd>
+              </div>
             </dl>
-            <p className="mt-3 text-xs text-muted">{CHECKOUT_TAX_NOTE} Browsing annual does not change the subscription.</p>
+            <p className="mt-3 text-xs text-muted">
+              {intervalTaxCents == null ? `${CHECKOUT_TAX_NOTE} ` : ""}
+              Nothing is charged today. Browsing annual does not change the subscription.
+            </p>
             <form action={actionScheduleIntervalChange} className="mt-4">
               <input type="hidden" name="sku" value={plan.sku} />
               <input type="hidden" name="interval" value="year" />
@@ -309,7 +322,7 @@ export function PlanCheckout({
               <div className="flex justify-between"><dt>{billingInterval === "year" ? "Annual price" : "Subtotal"}</dt><dd>{money(discountCode && preview?.discountCents ? chargeCents : lines.baseCents)}</dd></div>
               {preview?.discountCents ? <div className="flex justify-between text-emerald-700"><dt>Code {discountCode}</dt><dd>−{money(preview.discountCents)}</dd></div> : null}
               <div className="flex justify-between"><dt>Tax{lines.ratePercent != null ? ` (${lines.ratePercent}%)` : ""}</dt><dd>{money(lines.taxCents)}</dd></div>
-              <div className="flex justify-between font-semibold"><dt>Due today</dt><dd>{money(lines.totalCents)}</dd></div>
+              <div className="flex justify-between font-semibold"><dt>Amount due</dt><dd>{money(lines.totalCents)}</dd></div>
               {billingInterval === "year" ? (
                 <p className="pt-1 text-xs text-muted">
                   {preview?.renewalOn && preview.renewalPriceCents != null
@@ -319,6 +332,13 @@ export function PlanCheckout({
               ) : preview?.renewalOn && preview.renewalPriceCents != null ? (
                 <p className="pt-1 text-xs text-muted">Renews {preview.renewalOn} at {money(preview.renewalPriceCents)}/month.</p>
               ) : null}
+            </dl>
+          ) : notice === "pending" && intervalTaxCents != null ? (
+            <dl className="mt-4 space-y-1 rounded-2xl bg-[#F6F7FB] px-4 py-3 text-sm">
+              <div className="flex justify-between"><dt>{billingInterval === "year" ? "Annual price" : "Subtotal"}</dt><dd>{money(chargeCents)}</dd></div>
+              <div className="flex justify-between"><dt>Tax</dt><dd>{money(intervalTaxCents)}</dd></div>
+              <div className="flex justify-between font-semibold"><dt>Amount due</dt><dd>{money(chargeCents + intervalTaxCents)}</dd></div>
+              <p className="pt-1 text-xs text-muted">Nothing is charged until the payment provider confirms it.</p>
             </dl>
           ) : notice === "pending" ? (
             <p className="mt-4 text-xs text-muted">{CHECKOUT_TAX_NOTE} Nothing is charged until the payment provider confirms it.</p>

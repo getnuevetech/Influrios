@@ -3,6 +3,7 @@
  * Estimates read a saved country rule. Checkout rows are labels only:
  * nothing here starts, completes, or cancels a charge.
  */
+import { displayedPriceBreakdown } from "@/lib/billing-interval";
 import { subscriptionPricePreview, type CountryTaxRule } from "@/lib/country-tax";
 
 export type PlanEstimateMethod = "free" | "percentage" | "location" | "missing" | "conflict";
@@ -74,6 +75,72 @@ export function estimatePlanPrice(input: {
     ratePercent: rule.method === "percentage" ? rule.ratePercent : null,
     method: rule.method === "location" ? "location" : "percentage",
   };
+}
+
+export type IntervalTaxLine = {
+  baseCents: number;
+  taxCents: number | null;
+  totalCents: number | null;
+  ratePercent: number | null;
+  /** One calculated line, or none when the plan is free or the location cannot be taxed. */
+  taxLineCount: 0 | 1;
+  note: string;
+  free: boolean;
+};
+
+/**
+ * Tax for the price of one interval. The amount comes from the country tax
+ * calculation. An unknown location keeps the base price and does not invent a rate.
+ */
+export function intervalTaxLine(input: {
+  amountCents: number;
+  countryCode: string;
+  keys: string[];
+  rules: CountryTaxRule[];
+}): IntervalTaxLine {
+  const amount = Number.isInteger(input.amountCents) && input.amountCents > 0 ? input.amountCents : 0;
+  if (amount <= 0) {
+    return { baseCents: 0, taxCents: 0, totalCents: 0, ratePercent: null, taxLineCount: 0, note: "", free: true };
+  }
+  const country = input.countryCode.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(country)) {
+    return untaxed(amount);
+  }
+  const estimate = estimatePlanPrice({
+    amountCents: amount,
+    countryCode: country,
+    keys: input.keys,
+    rules: input.rules,
+  });
+  if (estimate.taxCents == null || estimate.totalCents == null) {
+    return untaxed(amount);
+  }
+  const shown = displayedPriceBreakdown({
+    locationKnown: true,
+    baseCents: estimate.baseCents,
+    taxCents: estimate.taxCents,
+    ratePercent: estimate.ratePercent,
+    inclusive: false,
+    claimedTotalCents: estimate.totalCents,
+  });
+  if (shown.kind === "exclusive" || shown.kind === "inclusive") {
+    return {
+      baseCents: shown.baseCents,
+      taxCents: shown.taxCents,
+      totalCents: shown.totalCents,
+      ratePercent: shown.ratePercent,
+      taxLineCount: 1,
+      note: "",
+      free: false,
+    };
+  }
+  return untaxed(amount);
+}
+
+function untaxed(baseCents: number): IntervalTaxLine {
+  const shown = displayedPriceBreakdown({ locationKnown: false, baseCents });
+  const note = shown.kind === "unknown" || shown.kind === "unavailable" ? shown.note : "";
+  return { baseCents, taxCents: null, totalCents: null, ratePercent: null, taxLineCount: 0, note, free: false };
 }
 
 /** The purple rate chip. Empty when this country has no single saved percentage. */

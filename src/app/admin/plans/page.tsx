@@ -2,7 +2,7 @@ import { PlansFeatures, type PlanFeatureEditor, type PricedPlanRow } from "@/app
 import { SubscriptionsShell } from "@/app/admin/subscriptions/shell";
 import { requireAdminPage } from "@/app/admin/guard";
 import { canAccessModule, hasPermission } from "@/lib/admin-auth";
-import { estimatePlanPrice, presentPlanPrice, previewRateChip } from "@/lib/admin-subscription-view";
+import { estimatePlanPrice, formatPlanMoney, intervalTaxLine, presentPlanPrice, previewRateChip } from "@/lib/admin-subscription-view";
 import { listAnnualOffers } from "@/lib/billing";
 import { annualOfferKey, planPriceFieldsFromStored } from "@/lib/billing-interval";
 import { BUSINESS_FEATURE_KEYS } from "@/lib/business-entitlements";
@@ -63,11 +63,29 @@ export default async function AdminPlansPage({ searchParams }: Props) {
   const priced: PricedPlanRow[] = visible.map((plan, index) => {
     const estimate = estimates[index]!;
     const price = presentPlanPrice(estimate);
+    const taxKeys = keysByCode.get(plan.code) ?? [plan.code];
+    const monthlyLine = intervalTaxLine({
+      amountCents: plan.amountCents,
+      countryCode: country,
+      keys: taxKeys,
+      rules,
+    });
+    const shownMonthly = monthlyLine.taxLineCount === 1 && monthlyLine.taxCents != null && monthlyLine.totalCents != null
+      ? {
+          base: formatPlanMoney(monthlyLine.baseCents),
+          tax: formatPlanMoney(monthlyLine.taxCents),
+          total: formatPlanMoney(monthlyLine.totalCents),
+        }
+      : { base: price.base, tax: price.tax, total: price.total };
     const offer = annual[annualOfferKey(plan.code)] ?? null;
     const dollars = planPriceFieldsFromStored({
       amountCents: plan.amountCents,
       annual: offer ? { amountCents: offer.amountCents, priceId: offer.priceId } : null,
     });
+    const annualCents = offer && offer.amountCents > 0 ? offer.amountCents : null;
+    const annualLine = annualCents == null
+      ? null
+      : intervalTaxLine({ amountCents: annualCents, countryCode: country, keys: taxKeys, rules });
     return {
       code: plan.code,
       name: plan.name,
@@ -82,9 +100,12 @@ export default async function AdminPlansPage({ searchParams }: Props) {
       publicListing: plan.publicListing,
       active: plan.active,
       assigned: plan.assigned,
-      base: price.base,
-      tax: price.tax,
-      total: price.total,
+      base: shownMonthly.base,
+      tax: shownMonthly.tax,
+      total: shownMonthly.total,
+      annualBase: annualLine ? formatPlanMoney(annualLine.baseCents) : "",
+      annualTax: annualLine?.taxLineCount === 1 && annualLine.taxCents != null ? formatPlanMoney(annualLine.taxCents) : "",
+      annualTotal: annualLine?.taxLineCount === 1 && annualLine.totalCents != null ? formatPlanMoney(annualLine.totalCents) : "",
       note: price.note,
       awaitingRule: estimate.method === "missing",
       features: featureEditors(plan.code, keys, rows),
