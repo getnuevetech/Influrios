@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { MemberPlanPage } from "@/components/plans/member-plan-page";
 import { getAccountSession } from "@/lib/accounts";
 import { listAnnualOffers } from "@/lib/billing";
-import { formatRenewalDate, parseBillingInterval } from "@/lib/billing-interval";
+import { annualOfferViews, formatRenewalDate, parseBillingInterval } from "@/lib/billing-interval";
 import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { productSwitch } from "@/lib/product-switches";
@@ -66,6 +66,7 @@ export default async function BillingPage({ searchParams }: Props) {
     listAnnualOffers().catch(() => ({})),
   ]);
   const currentCode = identity?.creator?.planTier || identity?.planTier || null;
+  const views = annualOfferViews(annual);
   const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
   await Promise.all(
     matrix.plans.map((plan) => {
@@ -88,7 +89,8 @@ export default async function BillingPage({ searchParams }: Props) {
       subscriptionSku={subscription?.sku ?? null}
       hasSubscriptionReference={Boolean(subscription?.externalId)}
       interval={interval}
-      annualBySku={Object.fromEntries(Object.entries(annual).flatMap(([sku, offer]) => offer ? [[sku, offer.amountCents]] : []))}
+      annualBySku={views.amounts}
+      annualCheckoutBySku={views.checkout}
       matrix={matrix}
       history={attempts.map((row) => ({
         id: row.id,

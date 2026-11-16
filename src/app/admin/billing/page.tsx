@@ -4,7 +4,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { canAccessModule, hasPermission } from "@/lib/admin-auth";
 import { presentCheckoutSession } from "@/lib/admin-subscription-view";
 import { BILLING_CATALOG, getBillingStore, getProduct, listAnnualOffers, listBillingPriceIds } from "@/lib/billing";
-import { annualCodesMissingPrice, dollarInputFromCents } from "@/lib/billing-interval";
+import { annualCodesMissingPrice, annualOfferViews, dollarInputFromCents } from "@/lib/billing-interval";
 import { prisma } from "@/lib/db";
 import { listDiscountOffers } from "@/lib/discount-store";
 import { listPlanCatalog } from "@/lib/entitlements-db";
@@ -31,6 +31,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
     listAnnualOffers().catch(() => ({})),
     listDiscountOffers().catch(() => ({ ok: false as const, offers: [] })),
   ]);
+  const views = annualOfferViews(annual);
   const unpricedAnnualCodes = annualCodesMissingPrice({
     offers: discounts.offers.map((offer) => ({
       id: offer.id,
@@ -40,7 +41,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
       billingInterval: offer.billingInterval,
       lifecycle: offer.lifecycle,
     })),
-    pricedSkus: Object.keys(annual),
+    pricedSkus: Object.keys(views.checkout),
   });
   const planName = new Map(plans.map((plan) => [plan.code, plan.name]));
   const userIds = [...new Set(store.sessions.map((item) => item.userId).filter((id): id is string => Boolean(id)))];

@@ -387,21 +387,22 @@ export function annualCodeOnMonthly(input: {
 }
 
 const PRICE_ID = /^price_[A-Za-z0-9]+$/;
+const ANNUAL_PRICE_ID_FORMAT_ERROR = "The annual Stripe price id starts with price_.";
+const ANNUAL_PRICE_ID_MONTHLY_ERROR =
+  "The annual Stripe price id has to be a yearly Stripe price, not the monthly Stripe price id.";
 
 export function parseAnnualOfferInput(input: { amount: string; priceId: string; monthlyPriceId?: string }) {
   const amount = input.amount.trim();
   const priceId = input.priceId.trim();
   if (!amount && !priceId) return { ok: true as const, offer: null };
-  if (!amount || !priceId) return { ok: false as const, error: "Save both the annual amount and the yearly Stripe price." };
-  if (!/^\d+(\.\d{1,2})?$/.test(amount.replace(/^\$/, "").replace(/,/g, ""))) {
-    return { ok: false as const, error: "Enter the annual amount in dollars." };
+  if (priceId && !PRICE_ID.test(priceId)) return { ok: false as const, error: ANNUAL_PRICE_ID_FORMAT_ERROR };
+  if (priceId && input.monthlyPriceId && priceId === input.monthlyPriceId.trim()) {
+    return { ok: false as const, error: ANNUAL_PRICE_ID_MONTHLY_ERROR };
   }
-  const cents = Math.round(Number(amount.replace(/^\$/, "").replace(/,/g, "")) * 100);
+  const cleaned = amount.replace(/^\$/, "").replace(/,/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return { ok: false as const, error: "Enter the annual amount in dollars." };
+  const cents = Math.round(Number(cleaned) * 100);
   if (!Number.isInteger(cents) || cents <= 0) return { ok: false as const, error: "Enter an annual amount above zero." };
-  if (!PRICE_ID.test(priceId)) return { ok: false as const, error: "A Stripe price id starts with price_." };
-  if (input.monthlyPriceId && priceId === input.monthlyPriceId.trim()) {
-    return { ok: false as const, error: "The annual price has to be a yearly Stripe price, not the monthly price." };
-  }
   return { ok: true as const, offer: { amountCents: cents, priceId, currency: "USD" as const } };
 }
 
@@ -455,7 +456,7 @@ export function parsePlanAnnualDraft(input: { amount: string; priceId: string; m
   if (!parsed.ok || !parsed.offer) return parsed;
   for (const id of ids.slice(1)) {
     if (parsed.offer.priceId === id) {
-      return { ok: false as const, error: "The annual price has to be a yearly Stripe price, not the monthly price." };
+      return { ok: false as const, error: ANNUAL_PRICE_ID_MONTHLY_ERROR };
     }
   }
   return parsed;
@@ -474,7 +475,7 @@ export function applyAnnualOffer(
   return next;
 }
 
-/** Write one plan's annual draft onto the shared billing.annualOffers record. A blank draft removes it. */
+/** Write one plan's annual draft onto the shared billing.annualOffers record. A blank draft removes it. An amount with a blank price id is saved. */
 export function writeSharedAnnualOffer(
   store: Record<string, AnnualOfferRecord>,
   planOrSku: string,
@@ -529,11 +530,25 @@ export function sharedAnnualFields(store: Record<string, AnnualOfferRecord>, pla
   return { amount: dollarInputFromCents(offer.amountCents), priceId: offer.priceId };
 }
 
-/** Cents public annual pricing reads, or null when that plan has no published annual offer. */
+/** Cents public annual pricing reads. Null when that plan has no saved annual amount. A blank yearly price id still returns the cents. */
 export function annualPricingCents(store: Record<string, AnnualOfferRecord>, planOrSku: string): number | null {
   const offer = store[annualOfferKey(planOrSku)];
-  if (!offer || offer.amountCents <= 0 || !offer.priceId) return null;
+  if (!offer || offer.amountCents <= 0) return null;
   return offer.amountCents;
+}
+
+/** Public amounts, and which of those yearly prices can be charged. A saved amount with a blank price id is shown and stays out of checkout. */
+export function annualOfferViews(
+  store: Partial<Record<string, Pick<AnnualOfferRecord, "amountCents" | "priceId"> | null | undefined>>,
+) {
+  const amounts: Record<string, number> = {};
+  const checkout: Record<string, boolean> = {};
+  for (const [sku, offer] of Object.entries(store)) {
+    if (!offer || typeof offer.amountCents !== "number" || offer.amountCents <= 0) continue;
+    amounts[sku] = offer.amountCents;
+    if (typeof offer.priceId === "string" && offer.priceId.trim()) checkout[sku] = true;
+  }
+  return { amounts, checkout };
 }
 
 export function annualCodesMissingPrice(input: {

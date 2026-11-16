@@ -17,6 +17,7 @@ export function PublicPlanPage({
   matrix,
   interval = "month",
   annualBySku = {},
+  annualCheckoutBySku,
   taxByCode = {},
 }: {
   audience: "creator" | "business";
@@ -27,6 +28,7 @@ export function PublicPlanPage({
   matrix: PlanMatrix;
   interval?: BillingInterval;
   annualBySku?: Record<string, number>;
+  annualCheckoutBySku?: Record<string, boolean>;
   taxByCode?: Record<string, PlanTaxGate>;
   countries?: { code: string; name: string }[];
 }) {
@@ -53,6 +55,7 @@ export function PublicPlanPage({
               audience={audience}
               interval={interval}
               annualAmountCents={annualBySku[plan.sku] ?? null}
+              annualCheckout={annualCheckoutBySku ? annualCheckoutBySku[plan.sku] === true : undefined}
               signedIn={signedIn}
               current={currentCode === plan.code}
               currentAmountCents={currentAmountCents}
@@ -87,6 +90,7 @@ function PlanCard({
   audience,
   interval,
   annualAmountCents,
+  annualCheckout,
   signedIn,
   current,
   currentAmountCents,
@@ -96,12 +100,14 @@ function PlanCard({
   audience: "creator" | "business";
   interval: BillingInterval;
   annualAmountCents: number | null;
+  annualCheckout?: boolean;
   signedIn: boolean;
   current: boolean;
   currentAmountCents: number | null;
   taxGate?: PlanTaxGate;
 }) {
-  const annualReady = annualAmountCents != null && annualAmountCents > 0;
+  const priced = annualAmountCents != null && annualAmountCents > 0;
+  const annualReady = annualCheckout ?? priced;
   const label = planActionLabel({
     name: plan.name,
     amountCents: plan.amountCents,
@@ -134,7 +140,11 @@ function PlanCard({
         locationKnown={false}
         gate={taxGate}
       />
-      {unavailable ? <p className="mt-2 text-sm text-amber-900">Annual billing is not available for this plan yet.</p> : null}
+      {unavailable ? (
+        <p className="mt-2 text-sm text-amber-900">
+          {priced ? "Annual checkout is not available for this plan yet." : "Annual billing is not available for this plan yet."}
+        </p>
+      ) : null}
       <ul className="mt-4 flex-1 space-y-2 text-sm">
         {plan.highlights.slice(0, 3).map((line) => (
           <li key={line} className="flex gap-2">

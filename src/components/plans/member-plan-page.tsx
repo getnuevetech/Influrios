@@ -33,6 +33,7 @@ export function MemberPlanPage({
   hasSubscriptionReference = false,
   interval = "month",
   annualBySku = {},
+  annualCheckoutBySku,
   error,
   notice,
   payout,
@@ -56,6 +57,7 @@ export function MemberPlanPage({
   hasSubscriptionReference?: boolean;
   interval?: BillingInterval;
   annualBySku?: Record<string, number>;
+  annualCheckoutBySku?: Record<string, boolean>;
   error?: string;
   notice?: string;
   payout?: ReactNode;
@@ -133,7 +135,9 @@ export function MemberPlanPage({
 
       <section className={`mt-6 grid gap-5 ${matrix.plans.length > 2 ? "xl:grid-cols-3" : "md:grid-cols-2"}`}>
         {matrix.plans.map((plan) => {
-          const annualReady = annualBySku[plan.sku] != null && annualBySku[plan.sku] > 0;
+          const annualAmountCents = annualBySku[plan.sku] ?? null;
+          const priced = annualAmountCents != null && annualAmountCents > 0;
+          const annualReady = annualCheckoutBySku ? annualCheckoutBySku[plan.sku] === true : priced;
           const sameTier = plan.code === currentCode || plan.sku === subscriptionSku;
           const viewingCurrent = sameTier && interval === (subscribedInterval ?? "month");
           const label = sameTier && interval === "year" && subscribedInterval === "month"
@@ -162,9 +166,11 @@ export function MemberPlanPage({
                 </span>
               ) : null}
               <h2 className="font-display text-xl font-bold">{plan.name}</h2>
-              <PlanPrice amountCents={plan.amountCents} priceLabel={plan.priceLabel} interval={interval} annualAmountCents={annualBySku[plan.sku] ?? null} locationKnown={false} />
+              <PlanPrice amountCents={plan.amountCents} priceLabel={plan.priceLabel} interval={interval} annualAmountCents={annualAmountCents} locationKnown={false} />
               {interval === "year" && plan.amountCents > 0 && !annualReady ? (
-                <p className="mt-2 text-sm text-amber-900">Annual billing is not available for this plan yet.</p>
+                <p className="mt-2 text-sm text-amber-900">
+                  {priced ? "Annual checkout is not available for this plan yet." : "Annual billing is not available for this plan yet."}
+                </p>
               ) : null}
               <ul className="mt-4 flex-1 space-y-2 text-sm">
                 {plan.highlights.slice(0, 3).map((line) => (
@@ -188,7 +194,7 @@ export function MemberPlanPage({
                   currentAmountCents={currentAmountCents}
                   interval={interval}
                   mode={mode}
-                  annualAmountCents={annualBySku[plan.sku] ?? null}
+                  annualAmountCents={annualAmountCents}
                   renewalLabel={renewalLabel}
                 />
               )}

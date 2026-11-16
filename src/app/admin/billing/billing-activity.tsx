@@ -285,7 +285,7 @@ export function BillingActivity({
           )}
           <form action={canEdit ? actionSaveBillingPrices : undefined} className="mt-6 grid gap-3 sm:grid-cols-2">
             <p className="text-sm font-normal text-muted sm:col-span-2">
-              Existing subscriptions stay on the price they already use. A blank monthly field keeps the current mapping. Leave both annual fields blank to keep annual unpublished. The annual price id has to differ from the monthly price id.
+              Existing subscriptions stay on the price they already use. A blank monthly field keeps the current mapping. An annual amount can be saved before the annual price id. Public pricing can show that amount, and checkout stays unpublished until the annual price id is saved. Leave both annual fields blank to keep annual unpublished. The annual price id has to differ from the monthly price id.
             </p>
             {unpricedAnnualCodes.length > 0 ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-normal text-amber-950 sm:col-span-2">

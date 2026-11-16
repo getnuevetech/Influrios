@@ -354,7 +354,7 @@ function PlanPriceFields({
   return (
     <>
       <p className="text-sm font-normal text-muted sm:col-span-2">
-        Enter dollars. A stored value of 2500 cents opens here as 25.00. Leave the annual price and annual Stripe price id blank to keep annual unpublished. The annual Stripe price id has to differ from the monthly Stripe price id. Existing subscribers stay on the price they already use.
+        Enter dollars. A stored value of 2500 cents opens here as 25.00. An annual amount can be saved before the annual Stripe price id. Public pricing can show that amount, and checkout stays unpublished until the annual Stripe price id is saved. Leave both blank to keep annual unpublished. The annual Stripe price id has to differ from the monthly Stripe price id. Existing subscribers stay on the price they already use.
       </p>
       <label className="text-sm font-semibold text-indigo">
         Monthly price (USD)
