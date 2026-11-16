@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MemberPlanPage } from "@/components/plans/member-plan-page";
 import { getAccountSession } from "@/lib/accounts";
+import { listAnnualOffers } from "@/lib/billing";
+import { formatRenewalDate, parseBillingInterval } from "@/lib/billing-interval";
 import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { productSwitch } from "@/lib/product-switches";
@@ -11,7 +13,7 @@ import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Billing & plan" };
 
-type Props = { searchParams: Promise<{ error?: string; connected?: string }> };
+type Props = { searchParams: Promise<{ error?: string; connected?: string; interval?: string; notice?: string }> };
 
 /** Plan/checkout errors only — payout setup lives on Earnings. */
 function memberFacingBillingError(raw: string | undefined) {
@@ -29,10 +31,14 @@ function memberFacingBillingError(raw: string | undefined) {
 }
 
 export default async function BillingPage({ searchParams }: Props) {
-  const account = await getAccountSession();
-  if (!account) redirect("/login?next=/billing");
   const params = await searchParams;
-  const [matrix, identity, portalOn, attempts, subscription] = await Promise.all([
+  const interval = parseBillingInterval(params.interval);
+  const account = await getAccountSession();
+  if (!account) {
+    const next = interval === "year" ? "/billing?interval=year" : "/billing";
+    redirect(`/login?next=${encodeURIComponent(next)}`);
+  }
+  const [matrix, identity, portalOn, attempts, subscription, annual] = await Promise.all([
     loadPlanMatrix("creator"),
     prisma.user
       .findUnique({
@@ -57,6 +63,7 @@ export default async function BillingPage({ searchParams }: Props) {
       })
       .catch(() => []),
     prisma.subscriptionState.findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } }).catch(() => null),
+    listAnnualOffers().catch(() => ({})),
   ]);
   const currentCode = identity?.creator?.planTier || identity?.planTier || null;
   const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
@@ -75,6 +82,13 @@ export default async function BillingPage({ searchParams }: Props) {
       title="Billing & plan"
       currentCode={currentCode}
       currentAmountCents={matrix.plans.find((plan) => plan.code === currentCode)?.amountCents ?? null}
+      currentInterval={subscription?.billingInterval === "year" ? "year" : subscription ? "month" : null}
+      renewalLabel={subscription?.currentPeriodEnd ? formatRenewalDate(subscription.currentPeriodEnd.toISOString()) : null}
+      pendingLabel={subscription?.pendingInterval === "year" && subscription.pendingEffectiveAt ? `Annual starts ${formatRenewalDate(subscription.pendingEffectiveAt.toISOString())}` : null}
+      subscriptionSku={subscription?.sku ?? null}
+      hasSubscriptionReference={Boolean(subscription?.externalId)}
+      interval={interval}
+      annualBySku={Object.fromEntries(Object.entries(annual).flatMap(([sku, offer]) => offer ? [[sku, offer.amountCents]] : []))}
       matrix={matrix}
       history={attempts.map((row) => ({
         id: row.id,
@@ -88,7 +102,7 @@ export default async function BillingPage({ searchParams }: Props) {
       taxByCode={taxByCode}
       countries={corridorCountries().map((country) => ({ code: country.code, name: country.name }))}
       error={memberFacingBillingError(params.error)}
-      notice={params.connected ? "Payout setup moved to Earnings." : undefined}
+      notice={params.notice || (params.connected ? "Payout setup moved to Earnings." : undefined)}
       payout={
         <div id="payouts" className="mt-3">
           <p className="text-xs text-amber-900/80">

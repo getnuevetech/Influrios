@@ -24,7 +24,13 @@ export function webhookDisposition(input: {
   return "ignore";
 }
 
-export function subscriptionStatusForEvent(eventType: string): "active" | "canceled" | "past_due" | null {
+export function subscriptionStatusForEvent(eventType: string, providerStatus?: string | null): "active" | "canceled" | "past_due" | null {
+  if (eventType === "customer.subscription.updated" || eventType === "customer.subscription.created") {
+    if (providerStatus === "active" || providerStatus === "trialing") return "active";
+    if (providerStatus === "past_due" || providerStatus === "unpaid") return "past_due";
+    if (providerStatus === "canceled" || providerStatus === "incomplete_expired") return "canceled";
+    return null;
+  }
   if (eventType === "checkout.session.completed") return "active";
   if (eventType === "customer.subscription.deleted") return "canceled";
   if (eventType === "invoice.payment_failed") return "past_due";
@@ -68,10 +74,13 @@ export async function applyPlanOnce(input: {
   userId?: string | null;
   creatorSlug?: string | null;
   externalId?: string | null;
+  billingInterval?: "month" | "year" | null;
+  currentPeriodEnd?: Date | null;
+  providerStatus?: string | null;
 }): Promise<{ applied: boolean }> {
   const disposition = webhookDisposition({ duplicate: false, eventType: input.eventType });
   const product = getProduct(input.sku);
-  const status = subscriptionStatusForEvent(input.eventType);
+  const status = subscriptionStatusForEvent(input.eventType, input.providerStatus);
   const stored = product
     ? null
     : await prisma.entitlementPlan.findUnique({ where: { code: input.sku } });
@@ -113,12 +122,19 @@ export async function applyPlanOnce(input: {
           status,
           userId: input.userId || null,
           creatorSlug: input.creatorSlug || null,
+          billingInterval: input.billingInterval === "year" ? "year" : "month",
+          ...(input.currentPeriodEnd ? { currentPeriodEnd: input.currentPeriodEnd } : {}),
         },
         update: {
           sku: input.sku,
           status,
           userId: input.userId || undefined,
           creatorSlug: input.creatorSlug || undefined,
+          ...(input.billingInterval ? { billingInterval: input.billingInterval } : {}),
+          ...(input.currentPeriodEnd ? { currentPeriodEnd: input.currentPeriodEnd } : {}),
+          ...(input.billingInterval === "year"
+            ? { pendingInterval: "", pendingPriceId: "", pendingEffectiveAt: null, scheduleId: "" }
+            : {}),
         },
       });
     });

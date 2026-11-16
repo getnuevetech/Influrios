@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/provider-secrets";
 import { productSwitch } from "@/lib/product-switches";
+import { renewalScheduleFields, tierPreviewQuery, tierUpdateFields } from "@/lib/billing-interval";
 import { parseProviderTaxCalculation, parseRegistrationList } from "@/lib/tax-configuration";
 
 const STRIPE_HOST = "https://api.stripe.com";
@@ -274,6 +275,7 @@ export async function openStripeCheckout(input: {
   secret: string;
   mode: StripeKeyMode;
   priceId: string;
+  interval?: "month" | "year";
   amountCents: number;
   name: string;
   description: string;
@@ -285,18 +287,24 @@ export async function openStripeCheckout(input: {
   taxRateId?: string;
   couponId?: string;
 }) {
+  const interval = input.interval === "year" ? "year" : "month";
+  if (interval === "year" && !input.priceId) {
+    return { ok: false as const, error: "Annual billing is not available for this plan. Nothing was charged." };
+  }
   const body = new URLSearchParams({
     mode: "subscription",
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
     "line_items[0][quantity]": "1",
   });
+  body.set("metadata[billingInterval]", interval);
+  body.set("subscription_data[metadata][billingInterval]", interval);
   if (input.priceId) {
     body.set("line_items[0][price]", input.priceId);
   } else {
     body.set("line_items[0][price_data][currency]", "usd");
     body.set("line_items[0][price_data][unit_amount]", String(input.amountCents));
-    body.set("line_items[0][price_data][recurring][interval]", "month");
+    body.set("line_items[0][price_data][recurring][interval]", interval);
     body.set("line_items[0][price_data][product_data][name]", input.name);
     body.set("line_items[0][price_data][product_data][description]", input.description);
   }
@@ -324,6 +332,155 @@ export async function openStripeCheckout(input: {
     return { ok: true as const, id, url };
   } catch {
     return { ok: false as const, error: "Stripe did not open checkout. Nothing was charged." };
+  }
+}
+
+function asStripeRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+export function parseStripeSubscription(payload: Record<string, unknown> | null) {
+  if (!payload || typeof payload.id !== "string" || !/^sub_[A-Za-z0-9]+$/.test(payload.id)) return null;
+  const items = asStripeRecord(payload.items);
+  const data = Array.isArray(items?.data) ? items.data : [];
+  const first = asStripeRecord(data[0]);
+  const price = asStripeRecord(first?.price);
+  const recurring = asStripeRecord(price?.recurring);
+  return {
+    id: payload.id,
+    itemId: typeof first?.id === "string" ? first.id : "",
+    priceId: typeof price?.id === "string" ? price.id : "",
+    interval: recurring?.interval === "year" ? ("year" as const) : recurring?.interval === "month" ? ("month" as const) : null,
+    quantity: typeof first?.quantity === "number" && first.quantity > 0 ? first.quantity : 1,
+    periodStart: typeof payload.current_period_start === "number" ? payload.current_period_start : null,
+    periodEnd: typeof payload.current_period_end === "number" ? payload.current_period_end : null,
+    scheduleId: typeof payload.schedule === "string" ? payload.schedule : "",
+    status: typeof payload.status === "string" ? payload.status : "",
+  };
+}
+
+export async function readStripeSubscription(secret: string, subscriptionId: string) {
+  if (!/^sub_[A-Za-z0-9]+$/.test(subscriptionId)) {
+    return { ok: false as const, error: "Stripe did not return the current subscription. Nothing was changed." };
+  }
+  try {
+    const subscription = parseStripeSubscription(await stripeCall("GET", `/v1/subscriptions/${subscriptionId}`, secret));
+    if (!subscription) return { ok: false as const, error: "Stripe did not return the current subscription. Nothing was changed." };
+    return { ok: true as const, subscription };
+  } catch {
+    return { ok: false as const, error: "Stripe did not return the current subscription. Nothing was changed." };
+  }
+}
+
+/** Same-tier monthly to annual: the current item stays until period end, then the yearly price renews. */
+export async function schedulePriceAtRenewal(input: {
+  secret: string;
+  subscriptionId: string;
+  nextPriceId: string;
+  idempotencyKey: string;
+}) {
+  const current = await readStripeSubscription(input.secret, input.subscriptionId);
+  if (!current.ok || !current.subscription.itemId || !current.subscription.priceId || current.subscription.periodStart == null || current.subscription.periodEnd == null) {
+    return { ok: false as const, error: "Stripe did not return the current subscription. Nothing was changed." };
+  }
+  if (current.subscription.priceId === input.nextPriceId) {
+    return { ok: false as const, error: "That price is already on the subscription. Nothing was changed." };
+  }
+  let scheduleId = current.subscription.scheduleId;
+  try {
+    if (!scheduleId) {
+      const created = await stripeCall(
+        "POST",
+        "/v1/subscription_schedules",
+        input.secret,
+        new URLSearchParams({ from_subscription: input.subscriptionId }),
+        input.idempotencyKey,
+      );
+      scheduleId = typeof created?.id === "string" ? created.id : "";
+    }
+    if (!/^sub_sched_[A-Za-z0-9]+$/.test(scheduleId)) {
+      return { ok: false as const, error: "Stripe did not schedule the change. Nothing was changed." };
+    }
+    const updated = await stripeCall(
+      "POST",
+      `/v1/subscription_schedules/${scheduleId}`,
+      input.secret,
+      new URLSearchParams(
+        renewalScheduleFields({
+          currentPriceId: current.subscription.priceId,
+          nextPriceId: input.nextPriceId,
+          phaseStart: current.subscription.periodStart,
+          phaseEnd: current.subscription.periodEnd,
+          quantity: current.subscription.quantity,
+        }),
+      ),
+      `${input.idempotencyKey}:phases`,
+    );
+    if (!updated || updated.id !== scheduleId) {
+      return { ok: false as const, error: "Stripe did not schedule the change. Nothing was changed." };
+    }
+    return {
+      ok: true as const,
+      scheduleId,
+      effectiveAt: new Date(current.subscription.periodEnd * 1000).toISOString(),
+      currentPriceId: current.subscription.priceId,
+    };
+  } catch {
+    return { ok: false as const, error: "Stripe did not schedule the change. Nothing was changed." };
+  }
+}
+
+export async function releaseSubscriptionSchedule(input: { secret: string; scheduleId: string }) {
+  if (!/^sub_sched_[A-Za-z0-9]+$/.test(input.scheduleId)) {
+    return { ok: false as const, error: "Stripe did not cancel the scheduled change. Nothing was changed." };
+  }
+  try {
+    const released = await stripeCall("POST", `/v1/subscription_schedules/${input.scheduleId}/release`, input.secret, new URLSearchParams());
+    if (!released) return { ok: false as const, error: "Stripe did not cancel the scheduled change. Nothing was changed." };
+    return { ok: true as const };
+  } catch {
+    return { ok: false as const, error: "Stripe did not cancel the scheduled change. Nothing was changed." };
+  }
+}
+
+export async function previewSubscriptionUpdate(input: { secret: string; subscriptionId: string; itemId: string; priceId: string }) {
+  const query = new URLSearchParams(tierPreviewQuery(input));
+  try {
+    const payload = await stripeCall("GET", `/v1/invoices/upcoming?${query.toString()}`, input.secret);
+    const amount = payload?.amount_due;
+    if (!payload || typeof amount !== "number" || !Number.isInteger(amount) || amount < 0) {
+      return { ok: false as const, error: "Stripe did not preview this change. Nothing was changed." };
+    }
+    return { ok: true as const, amountDueCents: amount };
+  } catch {
+    return { ok: false as const, error: "Stripe did not preview this change. Nothing was changed." };
+  }
+}
+
+export async function updateSubscriptionPrice(input: {
+  secret: string;
+  subscriptionId: string;
+  itemId: string;
+  priceId: string;
+  quantity: number;
+  idempotencyKey: string;
+}) {
+  if (!/^sub_[A-Za-z0-9]+$/.test(input.subscriptionId)) {
+    return { ok: false as const, error: "Stripe did not update the subscription. Nothing was changed." };
+  }
+  try {
+    const payload = await stripeCall(
+      "POST",
+      `/v1/subscriptions/${input.subscriptionId}`,
+      input.secret,
+      new URLSearchParams(tierUpdateFields({ itemId: input.itemId, priceId: input.priceId, quantity: input.quantity })),
+      input.idempotencyKey,
+    );
+    const subscription = parseStripeSubscription(payload);
+    if (!payload || !subscription) return { ok: false as const, error: "Stripe did not update the subscription. Nothing was changed." };
+    return { ok: true as const, pending: Boolean(payload.pending_update), priceId: subscription.priceId };
+  } catch {
+    return { ok: false as const, error: "Stripe did not update the subscription. Nothing was changed." };
   }
 }
 

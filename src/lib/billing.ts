@@ -11,6 +11,7 @@ import { prisma } from "@/lib/db";
 import { confirmStripeCheckout, openStripeCheckout, stripeCredentials } from "@/lib/stripe-admin";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import { storedCreatorPlan, type PlanCode } from "@/lib/entitlements";
+import { parseAnnualOfferInput, recordChangeDecision, resolveRecurringOffer, type BillingInterval } from "@/lib/billing-interval";
 
 export type BillingAudience = "creator" | "business";
 
@@ -120,6 +121,7 @@ export type CheckoutSessionRecord = {
   userId?: string;
   creatorSlug?: string;
   stripeSessionId?: string;
+  billingInterval: BillingInterval;
   createdAt: string;
   completedAt?: string;
 };
@@ -158,6 +160,7 @@ function sessionFromRow(row: {
   userId: string | null;
   creatorSlug: string | null;
   stripeSessionId: string | null;
+  billingInterval?: string | null;
   createdAt: Date;
   completedAt: Date | null;
 }): CheckoutSessionRecord | null {
@@ -177,6 +180,7 @@ function sessionFromRow(row: {
     userId: row.userId ?? undefined,
     creatorSlug: row.creatorSlug ?? undefined,
     stripeSessionId: row.stripeSessionId ?? undefined,
+    billingInterval: row.billingInterval === "year" ? "year" : "month",
     createdAt: row.createdAt.toISOString(),
     completedAt: row.completedAt?.toISOString(),
   };
@@ -194,6 +198,7 @@ async function upsertAttempt(session: CheckoutSessionRecord) {
       userId: session.userId,
       creatorSlug: session.creatorSlug,
       stripeSessionId: session.stripeSessionId,
+      billingInterval: session.billingInterval,
       createdAt: new Date(session.createdAt),
       completedAt: session.completedAt ? new Date(session.completedAt) : null,
     },
@@ -205,6 +210,7 @@ async function upsertAttempt(session: CheckoutSessionRecord) {
       userId: session.userId,
       creatorSlug: session.creatorSlug,
       stripeSessionId: session.stripeSessionId,
+      billingInterval: session.billingInterval,
       completedAt: session.completedAt ? new Date(session.completedAt) : null,
     },
   });
@@ -224,6 +230,7 @@ async function readLegacyBilling(): Promise<{
         return {
           ...session,
           sku,
+          billingInterval: session.billingInterval === "year" ? ("year" as const) : ("month" as const),
           mode: session.mode === "stripe" ? ("stripe" as const) : ("demo" as const),
           status:
             session.status === "completed" || session.status === "canceled"
@@ -349,6 +356,59 @@ export async function listBillingPriceIds(): Promise<Record<BillingSku, string>>
     prices[product.sku] = typeof stored === "string" ? stored : "";
   }
   return prices;
+}
+
+const ANNUAL_KEY = "billing.annualOffers";
+
+export type AnnualOffer = { amountCents: number; priceId: string; currency: "USD" };
+
+export async function listAnnualOffers(): Promise<Partial<Record<BillingSku, AnnualOffer>>> {
+  const row = await prisma.platformSetting.findUnique({ where: { key: ANNUAL_KEY } }).catch(() => null);
+  const value = row?.value && typeof row.value === "object" && !Array.isArray(row.value) ? (row.value as Record<string, unknown>) : {};
+  const offers: Partial<Record<BillingSku, AnnualOffer>> = {};
+  for (const product of BILLING_CATALOG) {
+    const stored = value[product.sku];
+    if (!stored || typeof stored !== "object" || Array.isArray(stored)) continue;
+    const amountCents = (stored as { amountCents?: unknown }).amountCents;
+    const priceId = (stored as { priceId?: unknown }).priceId;
+    if (typeof amountCents !== "number" || typeof priceId !== "string") continue;
+    const parsed = parseAnnualOfferInput({ amount: (amountCents / 100).toFixed(2), priceId });
+    if (parsed.ok && parsed.offer) offers[product.sku] = parsed.offer;
+  }
+  return offers;
+}
+
+export async function saveAnnualOffers(
+  drafts: Partial<Record<BillingSku, { amount: string; priceId: string }>>,
+  monthlyPriceIds: Partial<Record<BillingSku, string>> = {},
+) {
+  const next: Record<string, AnnualOffer> = {};
+  for (const product of BILLING_CATALOG) {
+    const draft = drafts[product.sku] ?? { amount: "", priceId: "" };
+    const parsed = parseAnnualOfferInput({ ...draft, monthlyPriceId: monthlyPriceIds[product.sku] });
+    if (!parsed.ok) throw new Error(parsed.error);
+    if (parsed.offer) next[product.sku] = parsed.offer;
+  }
+  await prisma.platformSetting.upsert({
+    where: { key: ANNUAL_KEY },
+    update: { value: next },
+    create: { key: ANNUAL_KEY, value: next },
+  });
+}
+
+export async function recurringOfferFor(sku: string, interval: BillingInterval) {
+  const product = getProduct(sku);
+  const { findActivePlan } = await import("@/lib/entitlements-db");
+  const custom = product ? null : await findActivePlan(sku);
+  const monthlyAmount = product?.amountCents ?? custom?.amountCents ?? 0;
+  const monthlyPrice = product ? await billingPriceId(product.sku, product.stripePriceEnv) : custom?.stripePriceId ?? "";
+  const annual = product ? (await listAnnualOffers())[product.sku] ?? null : null;
+  return resolveRecurringOffer({
+    sku,
+    interval,
+    monthly: monthlyAmount > 0 ? { amountCents: monthlyAmount, priceId: monthlyPrice, currency: "USD" } : null,
+    annual,
+  });
 }
 
 export async function saveBillingPriceIds(prices: Partial<Record<BillingSku, string>>) {
@@ -480,6 +540,7 @@ export async function startCheckout(input: {
   creatorSlug?: string;
   userId?: string;
   automaticTax?: boolean;
+  interval?: BillingInterval;
   taxPercent?: number | null;
   discount?: {
     code: string;
@@ -537,7 +598,14 @@ export async function startCheckout(input: {
   const createdAt = new Date().toISOString();
 
   if (creds.ok) {
-    const priceId = product ? await billingPriceId(product.sku, product.stripePriceEnv) : customPrice;
+    const interval: BillingInterval = input.interval === "year" ? "year" : "month";
+    const resolved = await recurringOfferFor(input.sku, interval);
+    if (!resolved.ok) return { ok: false, error: `${resolved.reason} Nothing was charged.` };
+    if (interval === "year" && resolved.offer.priceId === "") {
+      return { ok: false, error: "Annual billing is not available for this plan. Nothing was charged." };
+    }
+    const priceId = interval === "year" ? resolved.offer.priceId : product ? await billingPriceId(product.sku, product.stripePriceEnv) : customPrice;
+    const amountCents = resolved.offer.amountCents;
     const origin = getAppOrigin();
     let taxRateId = "";
     if (input.taxPercent != null && input.taxPercent > 0) {
@@ -547,6 +615,9 @@ export async function startCheckout(input: {
       taxRateId = rate.id;
     }
     let couponId = "";
+    if (input.discount && input.discount.billingInterval !== interval) {
+      return { ok: false, error: "This code does not match the selected billing period. Nothing was charged." };
+    }
     if (input.discount && input.discount.discountCents > 0) {
       const { createStripeOnceCoupon } = await import("@/lib/stripe-admin");
       const { findDiscountOffer, releaseDiscountReservation, reserveDiscountUse } = await import("@/lib/discount-store");
@@ -587,7 +658,8 @@ export async function startCheckout(input: {
         secret: creds.secret,
         mode: creds.mode,
         priceId,
-        amountCents: product?.amountCents ?? custom!.amountCents,
+        interval,
+        amountCents,
         name: product?.name ?? custom!.name,
         description: product?.description ?? custom!.description ?? custom!.name,
         successUrl: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}&local=${sessionId}`,
@@ -595,6 +667,7 @@ export async function startCheckout(input: {
         customerEmail: input.customerEmail,
         metadata: {
           sku: product?.sku ?? custom!.code,
+          billingInterval: interval,
           localSessionId: sessionId,
           creatorSlug: input.creatorSlug ?? "",
           userId: input.userId ?? "",
@@ -619,6 +692,7 @@ export async function startCheckout(input: {
         userId: input.userId,
         creatorSlug: input.creatorSlug,
         stripeSessionId: openedAttempt.id,
+        billingInterval: interval,
         createdAt,
       });
       return { ok: true, mode: "stripe", url: openedAttempt.url, sessionId };
@@ -627,7 +701,8 @@ export async function startCheckout(input: {
       secret: creds.secret,
       mode: creds.mode,
       priceId,
-      amountCents: product?.amountCents ?? custom!.amountCents,
+      interval,
+      amountCents,
       name: product?.name ?? custom!.name,
       description: product?.description ?? custom!.description ?? custom!.name,
       successUrl: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}&local=${sessionId}`,
@@ -635,6 +710,7 @@ export async function startCheckout(input: {
       customerEmail: input.customerEmail,
       metadata: {
         sku: product?.sku ?? custom!.code,
+        billingInterval: interval,
         localSessionId: sessionId,
         creatorSlug: input.creatorSlug ?? "",
         userId: input.userId ?? "",
@@ -652,6 +728,7 @@ export async function startCheckout(input: {
       userId: input.userId,
       creatorSlug: input.creatorSlug,
       stripeSessionId: opened.id,
+      billingInterval: interval,
       createdAt,
     });
     return { ok: true, mode: "stripe", url: opened.url, sessionId };
@@ -699,6 +776,7 @@ export async function completeCheckout(sessionId: string, opts?: {
       userId: session.userId,
       creatorSlug: slug,
       externalId: session.stripeSessionId || session.id,
+      billingInterval: session.billingInterval,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not record the subscription.";
@@ -735,6 +813,7 @@ export async function ensureStripeAttemptFromMetadata(input: {
   userId?: string;
   creatorSlug?: string;
   stripeSessionId?: string;
+  billingInterval?: BillingInterval;
 }): Promise<CheckoutSessionRecord | null> {
   const sku = asSku(input.sku);
   if (!sku) return null;
@@ -748,6 +827,7 @@ export async function ensureStripeAttemptFromMetadata(input: {
     userId: input.userId || undefined,
     creatorSlug: input.creatorSlug || undefined,
     stripeSessionId: input.stripeSessionId,
+    billingInterval: input.billingInterval === "year" ? "year" : "month",
     createdAt: new Date().toISOString(),
   };
   await upsertAttempt(session);
@@ -782,6 +862,36 @@ export async function getCreatorPlanOverride(slug: string): Promise<string | nul
   const plan = storedCreatorPlan(creator.planTier);
   if (plan === "STARTER") return null;
   return plan;
+}
+
+/** Pending schedule only. The current price and plan stay until Stripe confirms the new period. */
+export async function recordScheduledInterval(input: {
+  providerConfirmed: boolean;
+  externalId: string;
+  pendingPriceId: string;
+  pendingEffectiveAt: string;
+  scheduleId: string;
+}) {
+  if (!recordChangeDecision({ providerConfirmed: input.providerConfirmed }).recorded) return { recorded: false as const };
+  await prisma.subscriptionState.update({
+    where: { provider_externalId: { provider: "stripe", externalId: input.externalId } },
+    data: {
+      pendingInterval: "year",
+      pendingPriceId: input.pendingPriceId,
+      pendingEffectiveAt: new Date(input.pendingEffectiveAt),
+      scheduleId: input.scheduleId,
+    },
+  });
+  return { recorded: true as const };
+}
+
+export async function clearScheduledInterval(input: { providerConfirmed: boolean; externalId: string }) {
+  if (!recordChangeDecision({ providerConfirmed: input.providerConfirmed }).recorded) return { recorded: false as const };
+  await prisma.subscriptionState.update({
+    where: { provider_externalId: { provider: "stripe", externalId: input.externalId } },
+    data: { pendingInterval: "", pendingPriceId: "", pendingEffectiveAt: null, scheduleId: "" },
+  });
+  return { recorded: true as const };
 }
 
 export async function markWebhookReceived() {

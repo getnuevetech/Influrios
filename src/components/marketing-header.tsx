@@ -5,15 +5,18 @@ export function MarketingHeader({
   active,
   signedIn,
   accountRole,
+  planInterval = "month",
 }: {
   active: "influencer" | "business";
   signedIn: boolean;
   accountRole?: string | null;
+  planInterval?: "month" | "year";
 }) {
+  const intervalQuery = planInterval === "year" ? "?interval=year" : "";
   const links = [
     { href: "/discover", label: "Discover" },
-    { href: "/pricing", label: "Influencer Plans", key: "influencer" as const },
-    { href: "/business/plans", label: "Business Plans", key: "business" as const },
+    { href: `/pricing${intervalQuery}`, label: "Influencer Plans", key: "influencer" as const },
+    { href: `/business/plans${intervalQuery}`, label: "Business Plans", key: "business" as const },
     { href: "/faq", label: "Resources" },
   ];
   return (

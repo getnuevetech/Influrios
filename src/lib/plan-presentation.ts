@@ -178,14 +178,54 @@ export function comparisonRows(
   return rows;
 }
 
+export type ComparisonGroup = "Profile" | "Discovery" | "Collaboration" | "Analytics";
+
+export function comparisonGroup(featureKey: string): ComparisonGroup {
+  if (featureKey.startsWith("card.analytics") || featureKey === "business.intelligence" || featureKey === "business.exports") {
+    return "Analytics";
+  }
+  if (
+    featureKey.startsWith("collaboration.") ||
+    featureKey.startsWith("business.inquiry") ||
+    featureKey === "business.managed_matching" ||
+    featureKey === "business.custom_milestones" ||
+    featureKey === "card.collaboration.enabled"
+  ) {
+    return "Collaboration";
+  }
+  if (
+    featureKey.startsWith("business.shortlist") ||
+    featureKey === "business.advanced_filters" ||
+    featureKey === "business.fit_insights" ||
+    featureKey === "business.saved_alerts"
+  ) {
+    return "Discovery";
+  }
+  return "Profile";
+}
+
 export function planActionLabel(input: {
   name: string;
   amountCents: number;
   current: boolean;
   currentAmountCents: number | null;
+  viewingInterval?: "month" | "year";
+  currentInterval?: "month" | "year" | null;
+  annualReady?: boolean;
 }): string {
-  if (input.current) return "Current plan";
-  if (input.amountCents <= 0) return "Get started free";
+  const viewing = input.viewingInterval ?? "month";
+  const currentInterval = input.currentInterval ?? (input.current ? "month" : null);
+  if (input.current && viewing === currentInterval) return "Current plan";
+  if (input.current && viewing === "year" && currentInterval === "month") {
+    return input.annualReady ? `Switch ${input.name} to annual` : `${input.name} annual is not available yet`;
+  }
+  if (input.amountCents <= 0) {
+    return input.currentAmountCents != null && input.currentAmountCents > 0 ? "Manage downgrade" : "Start free";
+  }
+  if (viewing === "year") {
+    if (input.currentAmountCents != null && input.currentAmountCents > 0 && !input.current) return `Review ${input.name} annual`;
+    return `Choose ${input.name} annual`;
+  }
   if (input.currentAmountCents != null && input.amountCents > input.currentAmountCents) {
     return `Upgrade to ${input.name}`;
   }

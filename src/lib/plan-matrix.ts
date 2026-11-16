@@ -69,7 +69,7 @@ function decorate(audience: "creator" | "business", plans: Omit<PlanColumn, "hig
   const columns: PlanColumn[] = plans.map((plan) => ({
     ...plan,
     recommended: plan.code === recommended,
-        highlights: cardHighlights(plans, plans.indexOf(plan), keys),
+        highlights: cardHighlights(plans, plans.indexOf(plan), keys, 3),
   }));
   return {
     plans: columns,
