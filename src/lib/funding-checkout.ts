@@ -545,7 +545,17 @@ export async function confirmGatewayDeposit(input: {
   if (deposit.method !== "card" && deposit.method !== "ach_online") {
     return { ok: false as const, error: "This deposit is not a gateway checkout. Nothing was changed." };
   }
-  if (deposit.status === "confirmed") return { ok: true as const };
+  if (deposit.status === "confirmed") {
+    const funding = await prisma.collaborationFunding.findUnique({
+      where: { id: deposit.fundingId },
+      select: { contractDocumentId: true },
+    });
+    if (funding?.contractDocumentId) {
+      const { consumeAgreementDiscountReservations } = await import("@/lib/discount-store");
+      await consumeAgreementDiscountReservations(funding.contractDocumentId, input.checkoutSessionId.trim()).catch(() => null);
+    }
+    return { ok: true as const };
+  }
   if (deposit.status !== "gateway_opened") {
     return { ok: false as const, error: "This checkout is not open. Nothing was changed." };
   }
@@ -562,12 +572,16 @@ export async function confirmGatewayDeposit(input: {
   }
   const funding = await prisma.collaborationFunding.findUnique({
     where: { id: deposit.fundingId },
-    select: { status: true },
+    select: { status: true, contractDocumentId: true },
   });
   if (funding?.status === "awaiting_provider") {
     return { ok: false as const, error: "The deposit is still unconfirmed. Nothing was changed." };
   }
   await markDepositConfirmed(deposit.id, "stripe", input.checkoutSessionId.trim());
+  if (funding?.contractDocumentId) {
+    const { consumeAgreementDiscountReservations } = await import("@/lib/discount-store");
+    await consumeAgreementDiscountReservations(funding.contractDocumentId, input.checkoutSessionId.trim()).catch(() => null);
+  }
   return { ok: true as const };
 }
 

@@ -34,6 +34,11 @@ function signedQuote(plan: unknown) {
   const withholdingCents = integer(row.withholdingCents) ?? 0;
   const businessTaxCents = integer(row.businessTaxCents);
   const taxStatus = typeof row.taxStatus === "string" ? row.taxStatus : "";
+  const adjustments = Array.isArray(row.discountAdjustments)
+    ? row.discountAdjustments.filter((item): item is { charge?: string; code?: string; originalCents?: number; discountCents?: number } => Boolean(item) && typeof item === "object")
+    : [];
+  const businessDiscount = adjustments.find((item) => item.charge === "business_collaboration_fee");
+  const influencerDiscount = adjustments.find((item) => item.charge === "influencer_collaboration_fee");
   return {
     businessPaysCents,
     influencerReceivesCents,
@@ -43,6 +48,12 @@ function signedQuote(plan: unknown) {
     otherDeductionsCents: influencerTaxCents + withholdingCents,
     businessTaxCents,
     taxStatus,
+    businessDiscountCents: integer(businessDiscount?.discountCents) ?? 0,
+    businessDiscountCode: typeof businessDiscount?.code === "string" ? businessDiscount.code : "",
+    businessFeeBeforeDiscountCents: integer(businessDiscount?.originalCents),
+    influencerSavingsCents: integer(influencerDiscount?.discountCents) ?? 0,
+    influencerDiscountCode: typeof influencerDiscount?.code === "string" ? influencerDiscount.code : "",
+    influencerFeeBeforeDiscountCents: integer(influencerDiscount?.originalCents),
   };
 }
 
@@ -88,17 +99,21 @@ export function memberDealView(input: {
   const quote = signedQuote(input.plan);
   if (quote && input.role === "business") {
     const taxed = quote.businessTaxCents != null && (quote.businessTaxCents > 0 || quote.taxStatus === "approved" || quote.taxStatus === "approved_zero");
+    const shownFee = quote.businessFeeBeforeDiscountCents ?? quote.businessPlatformFeeCents;
+    const discountLine = quote.businessDiscountCents > 0 ? [{ label: "Fee discount", amountCents: quote.businessDiscountCents }] : [];
     const lines = taxed
       ? [
           { label: "Influencer compensation", amountCents: quote.grossInfluencerCompensationCents },
-          { label: "Business collaboration fee", amountCents: quote.businessPlatformFeeCents },
-          { label: "Subtotal", amountCents: quote.grossInfluencerCompensationCents + quote.businessPlatformFeeCents },
+          { label: "Business collaboration fee", amountCents: shownFee },
+          ...discountLine,
+          { label: "Subtotal", amountCents: quote.grossInfluencerCompensationCents + shownFee - quote.businessDiscountCents },
           { label: "Tax", amountCents: quote.businessTaxCents ?? 0 },
           { label: "Total to fund", amountCents: quote.businessPaysCents },
         ]
       : [
           { label: "Gross compensation", amountCents: quote.grossInfluencerCompensationCents },
-          { label: "Your platform fee", amountCents: quote.businessPlatformFeeCents },
+          { label: "Your platform fee", amountCents: shownFee },
+          ...discountLine,
           { label: "You pay", amountCents: quote.businessPaysCents },
         ];
     return {
@@ -112,10 +127,14 @@ export function memberDealView(input: {
     };
   }
   if (quote && quote.influencerPlatformFeeCents != null && quote.influencerReceivesCents != null) {
+    const shownInfluencerFee = quote.influencerFeeBeforeDiscountCents ?? quote.influencerPlatformFeeCents;
     const lines: MemberDealLine[] = [
       { label: "Gross influencer compensation", amountCents: quote.grossInfluencerCompensationCents },
-      { label: "Your platform fee", amountCents: quote.influencerPlatformFeeCents },
+      { label: "Your platform fee", amountCents: shownInfluencerFee },
     ];
+    if (quote.influencerSavingsCents > 0) {
+      lines.push({ label: "Fee savings", amountCents: quote.influencerSavingsCents });
+    }
     if (quote.otherDeductionsCents > 0) {
       lines.push({ label: "Other deductions", amountCents: quote.otherDeductionsCents });
     }

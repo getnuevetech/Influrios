@@ -1217,6 +1217,10 @@ export async function applyContractEnvelopeEvent(input: {
           }),
         ]),
   ]);
+  if (input.status === "declined" || input.status === "voided") {
+    const { releaseAgreementDiscountReservations } = await import("@/lib/discount-store");
+    await releaseAgreementDiscountReservations(document.id).catch(() => null);
+  }
   if (input.status === "completed" || input.status === "declined" || input.status === "voided") {
     await notifyContractStage({
       documentId: document.id,

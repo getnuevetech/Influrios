@@ -14,6 +14,7 @@ import {
 } from "@/app/admin/payment-settings/owner";
 import { PaymentSwitchesPanel } from "@/app/admin/payment-switches/switches-panel";
 import { RouteVersionPanel } from "@/app/admin/payment-settings/route-version-panel";
+import { DiscountCodesPanel } from "@/app/admin/payment-settings/discount-codes-panel";
 import { TaxPoliciesPanel } from "@/app/admin/payment-settings/tax-panel";
 import { canAccessModule, getAdminSession } from "@/lib/admin-auth";
 
@@ -96,6 +97,7 @@ export default async function PaymentSettingsPage({
         </>
       ) : null}
       {section === "tax" ? <TaxPoliciesPanel /> : null}
+      {section === "discounts" ? <DiscountCodesPanel /> : null}
       {section === "audit" ? (
         <p className="mx-auto max-w-5xl text-sm text-muted">
           Configuration edits are draft versions. They do not rewrite signed prices or historical ledger rows.

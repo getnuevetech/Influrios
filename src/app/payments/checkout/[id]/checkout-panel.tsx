@@ -3,6 +3,7 @@ import { actionStartFundingDeposit } from "@/app/payments/actions";
 import { BlockedNote, MoneyAmount, PaymentStatus } from "@/components/payment-journey/status";
 import { DEPOSIT_METHOD_LABELS, DEPOSIT_METHODS, type DepositMethod } from "@/lib/funding-checkout";
 import { formatMinor } from "@/lib/payment-standard-v4";
+import { SignedDiscountNote } from "@/components/signed-discount-note";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 
 type Deposit = {
@@ -47,7 +48,8 @@ export function CheckoutPanel({
     routeRecorded: boolean;
   };
 }) {
-  const signed = readSignedDealMoney((feeSnapshot as { financialPlan?: unknown } | null)?.financialPlan);
+  const signedPlan = (feeSnapshot as { financialPlan?: unknown } | null)?.financialPlan;
+  const signed = readSignedDealMoney(signedPlan);
   const taxKnown = signed != null;
   const total = signed?.businessPaysCents ?? grossCents;
   const openDeposit = deposits.find((row) => row.status === "gateway_opened" || row.status === "manual_pending");
@@ -74,6 +76,7 @@ export function CheckoutPanel({
             <p>Gross work <MoneyAmount cents={signed.businessPaysCents - signed.businessPlatformFeeCents - (signed.activationFeeCents ?? 0) - signed.businessTaxCents} currency={currency} /></p>
             <p>Business collaboration fee <MoneyAmount cents={signed.businessPlatformFeeCents} currency={currency} /></p>
             <p>Tax <MoneyAmount cents={signed.businessTaxCents} currency={currency} /></p>
+            <SignedDiscountNote plan={signedPlan} currency={currency} />
             {signed.activationFeeCents ? <p>Activation <MoneyAmount cents={signed.activationFeeCents} currency={currency} /></p> : <p>Activation is disabled for this agreement.</p>}
           </>
         ) : (

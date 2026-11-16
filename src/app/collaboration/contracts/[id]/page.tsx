@@ -20,6 +20,7 @@ import {
 import { resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import { feeLevelForSignedTerms } from "@/lib/paid-agreement-fee";
 import { prisma } from "@/lib/db";
+import { ContractDiscountReview } from "@/app/collaboration/contracts/[id]/discount-review";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
 import { contractFundingCta, readSignedTermsSnapshot, signedFundingNotice } from "@/lib/signed-funding";
@@ -286,6 +287,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                 </div>
               ))}
             </dl>
+            {viewerRole ? <ContractDiscountReview viewerRole={viewerRole} terms={terms} signedCount={signedCount} documentId={document.id} /> : null}
           </section>
         ) : influencerQuote?.ok && terms ? (
           <section className="rounded-2xl border border-[#E4E9F5] bg-white p-4">

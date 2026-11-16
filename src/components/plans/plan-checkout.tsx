@@ -14,6 +14,11 @@ type Preview = {
   totalCents: number | null;
   subtotalCents: number | null;
   reason: string;
+  typedDiscount?: string;
+  discountCents?: number | null;
+  discountReason?: string;
+  renewalOn?: string;
+  renewalPriceCents?: number | null;
 };
 
 function money(cents: number) {
@@ -48,6 +53,9 @@ export function PlanCheckout({
   const [postalCode, setPostalCode] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [pending, setPending] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [discountTyped, setDiscountTyped] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
   const buttonClass = emphasized ? "btn-primary mt-2 w-full !py-2.5 text-sm" : "btn-secondary mt-2 w-full !py-2.5 text-sm";
 
   async function loadRegions(nextCountry: string) {
@@ -66,8 +74,16 @@ export function PlanCheckout({
     data.set("line1", line1);
     data.set("city", city);
     data.set("postalCode", postalCode);
+    data.set("discountCode", discountCode || discountTyped);
     const result = await actionPreviewSubscriptionTax(data);
     setPreview(result);
+    const discountReason = "discountReason" in result ? result.discountReason : "";
+    const discountCents = "discountCents" in result ? result.discountCents : null;
+    if (discountReason) setDiscountCode("");
+    else if (discountCents != null && (discountCode || discountTyped).trim()) {
+      setDiscountCode((discountCode || discountTyped).trim());
+      setDiscountOpen(false);
+    }
     setPending(false);
   }
 
@@ -144,11 +160,32 @@ export function PlanCheckout({
           {notice === "free" ? (
             <p className="mt-4 text-sm text-muted">This plan has no charge.</p>
           ) : null}
+          <div className="mt-4">
+            {discountCode ? (
+              <p className="flex flex-wrap items-center gap-2 text-sm">
+                <span>Applied code</span>
+                <span className="rounded-full bg-[#F4F0FF] px-2 py-1 font-semibold text-violet">{discountCode}</span>
+                <button type="button" className="font-semibold text-violet" onClick={() => { setDiscountCode(""); setDiscountTyped(""); setPreview(null); }}>Remove</button>
+              </p>
+            ) : discountOpen ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input value={discountTyped} onChange={(event) => setDiscountTyped(event.target.value)} className="h-11 min-w-40 flex-1 rounded-xl border px-3 text-sm" aria-label="Discount code" />
+                <button type="button" disabled={pending} onClick={() => void runPreview()} className="h-11 rounded-full bg-violet px-4 text-sm font-semibold text-white">{pending ? "Applying" : "Apply"}</button>
+              </div>
+            ) : (
+              <button type="button" className="text-sm font-semibold text-violet" onClick={() => setDiscountOpen(true)}>Add discount code</button>
+            )}
+            {preview?.discountReason ? <p className="mt-2 text-sm font-semibold text-amber-800">{preview.discountReason}</p> : null}
+          </div>
           {notice === "zero" || notice === "calculated" ? (
             <dl className="mt-4 space-y-1 rounded-2xl bg-[#F6F7FB] px-4 py-3 text-sm">
               <div className="flex justify-between"><dt>Subtotal</dt><dd>{money(preview?.subtotalCents ?? 0)}</dd></div>
+              {preview?.discountCents ? <div className="flex justify-between text-emerald-700"><dt>Discount</dt><dd>−{money(preview.discountCents)}</dd></div> : null}
               <div className="flex justify-between"><dt>Tax</dt><dd>{money(preview?.taxCents ?? 0)}</dd></div>
-              <div className="flex justify-between font-semibold"><dt>Total</dt><dd>{money(preview?.totalCents ?? 0)}</dd></div>
+              <div className="flex justify-between font-semibold"><dt>Due today</dt><dd>{money(preview?.totalCents ?? 0)}</dd></div>
+              {preview?.renewalOn && preview.renewalPriceCents != null ? (
+                <p className="pt-1 text-xs text-muted">Renews {preview.renewalOn} at {money(preview.renewalPriceCents)}. That renewal is the regular price.</p>
+              ) : null}
               {notice === "zero" ? <p className="pt-1 text-xs text-muted">{preview?.reason}</p> : null}
             </dl>
           ) : null}
@@ -166,6 +203,7 @@ export function PlanCheckout({
                 <input type="hidden" name="line1" value={line1} />
                 <input type="hidden" name="city" value={city} />
                 <input type="hidden" name="postalCode" value={postalCode} />
+                {discountCode ? <input type="hidden" name="discountCode" value={discountCode} /> : null}
                 <label className="mb-3 flex items-start gap-2 text-xs text-indigo">
                   <input type="checkbox" name="acceptSubscription" required className="mt-0.5 accent-violet" />
                   <span>I agree to the <Link href="/legal/subscription-terms" className="font-semibold underline" target="_blank">subscription terms</Link>. {plan.priceLabel || "This plan"} renews until cancelled.</span>

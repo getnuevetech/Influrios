@@ -476,12 +476,76 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const { collaborationCheckout, checkoutTaxLines } = await import("@/lib/country-tax");
   const { loadCountryRules } = await import("@/lib/tax-settings");
   const countryRules = await loadCountryRules().catch(() => []);
+  const typedBusinessCode = String(formData.get("businessDiscountCode") ?? "");
+  let planBusinessFeeCents = quote.feeCents;
+  let planBusinessPaysCents = agreement.businessPaysCents;
+  let planActivationFeeCents = agreement.activationFeeCents;
+  let planCollaborationFeeCents = agreement.businessCollaborationFeeCents;
+  let planPlatformTotal = agreement.platformFeesTotalCents;
+  let discountAdjustments: import("@/lib/discount-codes").DiscountAdjustment[] = [];
+  let discountOffer: Awaited<ReturnType<typeof import("@/lib/discount-store").findDiscountOffer>> = null;
+  let discountedAllocations: {
+    grossCents: number;
+    businessCollaborationFeeCents: number;
+    influencerFeeCents: number;
+    influencerNetCents: number;
+  }[] | null = null;
+  if (typedBusinessCode.trim()) {
+    const { priceCollaboration } = await import("@/lib/discount-codes");
+    const { customerUseCount, findDiscountOffer } = await import("@/lib/discount-store");
+    discountOffer = await findDiscountOffer(typedBusinessCode);
+    const prior = discountOffer ? await customerUseCount(discountOffer.id, account.id) : 0;
+    const priced = priceCollaboration({
+      grossCents: quote.grossInfluencerCompensationCents,
+      businessFeeCents: quote.feeCents,
+      influencerFeeCents: influencerQuote?.ok ? influencerQuote.feeCents : 0,
+      weightsBps: drafts.map((row) => row.shareBps),
+      businessTyped: typedBusinessCode,
+      businessOffer: discountOffer,
+      influencerOffer: null,
+      countryCode: jurisdictionCode,
+      currency,
+      serviceLevel: feeServiceLevel,
+      accountId: account.id,
+      at: new Date().toISOString(),
+      rules: countryRules,
+      priorBusinessUses: prior,
+    });
+    if (!priced.ok || !discountOffer) {
+      qs.set("step", "preview");
+      redirectError(priced.ok ? "This code is not valid." : "reason" in priced ? priced.reason : priced.error, qs);
+    }
+    const saved = quote.feeCents - priced.netBusinessFeeCents;
+    planCollaborationFeeCents = Math.max(0, agreement.businessCollaborationFeeCents - saved);
+    planActivationFeeCents = priced.netBusinessFeeCents - planCollaborationFeeCents;
+    planBusinessFeeCents = priced.netBusinessFeeCents;
+    planBusinessPaysCents = priced.beforeTaxBusinessPaysCents;
+    planPlatformTotal = priced.netBusinessFeeCents + (influencerQuote?.ok ? influencerQuote.feeCents : 0);
+    discountAdjustments = priced.adjustments.filter((row) => row.charge === "business_collaboration_fee");
+    const { discountedMilestoneTransfers } = await import("@/lib/discount-codes");
+    const transfers = discountedMilestoneTransfers({
+      grossCents: quote.grossInfluencerCompensationCents,
+      netBusinessFeeCents: planBusinessFeeCents,
+      netInfluencerFeeCents: influencerQuote?.ok ? influencerQuote.feeCents : 0,
+      weightsBps: drafts.map((row) => row.shareBps),
+    });
+    if (!transfers.ok) {
+      qs.set("step", "preview");
+      redirectError(transfers.error, qs);
+    }
+    discountedAllocations = transfers.rows.map((row) => ({
+      grossCents: row.grossCents,
+      businessCollaborationFeeCents: row.businessFeeCents,
+      influencerFeeCents: row.influencerFeeCents,
+      influencerNetCents: row.influencerNetCents,
+    }));
+  }
   const fundedTax = collaborationCheckout({
     rules: countryRules,
     countryCode: jurisdictionCode,
     currency,
     compensationCents: quote.grossInfluencerCompensationCents,
-    businessFeeCents: quote.feeCents,
+    businessFeeCents: planBusinessFeeCents,
     influencerFeeCents: influencerQuote?.ok ? influencerQuote.feeCents : 0,
     at: new Date().toISOString(),
   });
@@ -500,7 +564,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
       }
     : undefined;
   const signedQuote = buildBusinessCommercialSnapshot({
-    quote,
+    quote: { ...quote, feeCents: planBusinessFeeCents, totalCents: planBusinessPaysCents },
     influencer: influencerQuote?.ok ? influencerQuote : null,
     tax,
     currency,
@@ -509,17 +573,18 @@ export async function actionSubmitContractWizard(formData: FormData) {
     amountInputMode: amountMode === "all_in" ? "all_in_budget" : "gross_influencer_compensation",
     validForMs: quoteHours * 60 * 60 * 1000,
     activation: {
-      activationFeeCents: agreement.activationFeeCents,
-      businessCollaborationFeeCents: agreement.businessCollaborationFeeCents,
+      activationFeeCents: planActivationFeeCents,
+      businessCollaborationFeeCents: planCollaborationFeeCents,
       activationRuleId: agreement.activationRule.id,
       activationRuleVersion: agreement.activationRule.version,
-      allocations: agreement.allocations,
+      allocations: discountedAllocations ?? agreement.allocations,
     },
   });
   if ("ok" in signedQuote) {
     qs.set("step", "preview");
     redirectError(signedQuote.error, qs);
   }
+  if (discountAdjustments.length > 0) signedQuote.discountAdjustments = discountAdjustments;
   const plan = buildFinancialPlan({
     grossCents: quote.grossInfluencerCompensationCents,
     currency,
@@ -528,11 +593,11 @@ export async function actionSubmitContractWizard(formData: FormData) {
     feeMethod: quote.rule.method,
     feePercentBps: quote.rule.percentBps,
     feeFixedCents: quote.rule.fixedCents,
-    totalPlatformFeeCents: agreement.platformFeesTotalCents,
-    businessPlatformFeeCents: agreement.businessPlatformFeeCents,
+    totalPlatformFeeCents: planPlatformTotal,
+    businessPlatformFeeCents: planBusinessFeeCents,
     influencerPlatformFeeCents: agreement.influencerPlatformFeeCents,
-    activationFeeCents: agreement.activationFeeCents,
-    businessPaysCents: agreement.businessPaysCents,
+    activationFeeCents: planActivationFeeCents,
+    businessPaysCents: planBusinessPaysCents,
     feePayer: "brand",
     fundingCountry: jurisdictionCode,
     creatorCountry: creatorCountry ?? jurisdictionCode,
@@ -543,6 +608,19 @@ export async function actionSubmitContractWizard(formData: FormData) {
     revisionLimit: lifecycle.revisionLimit,
   });
   if (!plan) redirectError("Could not build a financial plan for those milestones.", qs);
+  if (discountedAllocations) {
+    plan.milestones = plan.milestones.map((row, index) => {
+      const share = discountedAllocations?.[index];
+      if (!share) return row;
+      return {
+        ...row,
+        grossCents: share.grossCents,
+        businessPlatformFeeCents: share.businessCollaborationFeeCents,
+        platformFeeCents: share.influencerFeeCents,
+        creatorCents: share.influencerNetCents,
+      };
+    });
+  }
 
   const locked = lockFinancialPlan({
     ...plan,
@@ -571,6 +649,111 @@ export async function actionSubmitContractWizard(formData: FormData) {
       : [{ creatorSlug, shareBps: 10_000 }];
     const creators = await resolveCreatorParties(members);
     if (!creators.ok) redirectError(creators.error, qs);
+    let reservationId = "";
+    if (discountOffer && discountAdjustments[0]) {
+      const { reserveDiscountUse, releaseDiscountReservation } = await import("@/lib/discount-store");
+      const reserved = await reserveDiscountUse({
+        offer: discountOffer,
+        accountId: account.id,
+        idempotencyKey: `collaboration-sign:${account.id}:${crypto.randomUUID()}`,
+        now: new Date().toISOString(),
+        amountCents: discountAdjustments[0].discountCents,
+        baseCents: quote.feeCents,
+        subjectKind: "collaboration_agreement",
+        subjectId: account.id,
+        context: {
+          charge: "business_collaboration_fee",
+          countryCode: jurisdictionCode,
+          currency: plan.contractCurrency,
+          serviceLevel: feeServiceLevel,
+        },
+      });
+      if (!reserved.ok) redirectError(reserved.reason, qs);
+      reservationId = reserved.reservation.id;
+      signedQuote.discountReservationKeys = [reserved.reservation.idempotencyKey];
+      const sentAttempt = await sendCollaborationContract({
+        workspaceId: ws.businessId,
+        collaborationId: linkedCollaborationId,
+        teamProposalId: teamProposalId || null,
+        applicationId: applicationId || null,
+        createdByUserId: account.id,
+        source: Object.fromEntries(qs.entries()),
+        render: {
+          title,
+          scope,
+          commercial,
+          jurisdiction: jurisdictionCode,
+          serviceLevel,
+          currency: plan.contractCurrency,
+          grossLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
+          platformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
+          creatorCompensationLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
+          businessName,
+          businessEmail: account.email,
+          parties: [
+            {
+              role: "business",
+              name: account.name || businessName,
+              email: account.email,
+              userId: account.id,
+            },
+            ...creators.parties,
+          ],
+          milestones: plan.milestones.map((milestone) => {
+            const shares = teamShares
+              ? creatorAmountsForMilestone(
+                  milestone.creatorCents,
+                  teamShares.map((row) => ({ creatorSlug: row.label, shareBps: row.shareBps })),
+                )
+              : [{ creatorSlug, amountCents: milestone.creatorCents }];
+            return {
+              title: milestone.title,
+              shareLabel: `${(milestone.shareBps / 100).toFixed(0)}%`,
+              grossLabel: formatMoney(milestone.grossCents, plan.contractCurrency),
+              feeLabel: "Your fee breakdown",
+              creatorShares:
+                shares?.map((share) => `${share.creatorSlug} ${formatMoney(share.amountCents, plan.contractCurrency)}`).join(", ") ??
+                "",
+            };
+          }),
+          feeDisclosure: buildFeeDisclosureSummary(disclosureGate.record),
+          generatedAt: new Date().toISOString(),
+        },
+        termsSnapshot: {
+          version: 1 as const,
+          title,
+          businessName,
+          jurisdictionCode,
+          currency: plan.contractCurrency,
+          grossCents: plan.grossContractValueCents,
+          serviceLevel,
+          originServiceLevel: feeBoundary.originServiceLevel,
+          feeServiceLevel,
+          workspaceId: ws.businessId,
+          collaborationId: linkedCollaborationId,
+          applicationId: applicationId || null,
+          teamProposalId: teamProposalId || null,
+          creators: creators.parties
+            .filter((party) => party.role === "creator" && party.creatorSlug)
+            .map((party) => ({ slug: party.creatorSlug as string, shareBps: party.shareBps ?? 0 })),
+          milestones: plan.milestones.map((milestone) => ({ title: milestone.title, shareBps: milestone.shareBps })),
+          financialPlan: locked as unknown as Record<string, unknown>,
+          payoutMethod: String(formData.get("payoutMethod") ?? ""),
+          lockedAt: locked.lockedAt ?? new Date().toISOString(),
+        },
+      });
+      if (!sentAttempt.ok) {
+        await releaseDiscountReservation(reservationId, "abandoned");
+        if ("existingId" in sentAttempt && sentAttempt.existingId) {
+          redirect(`/collaboration/contracts/${sentAttempt.existingId}?error=${encodeURIComponent(sentAttempt.error)}`);
+        }
+        redirectError(sentAttempt.error, qs);
+      }
+      if (briefId) {
+        await closeBriefForContract(briefId, ws.businessId, "deal").catch(() => undefined);
+      }
+      redirect(`/collaboration/contracts/${sentAttempt.id}`);
+    }
     const sent = await sendCollaborationContract({
       workspaceId: ws.businessId,
       collaborationId: linkedCollaborationId,

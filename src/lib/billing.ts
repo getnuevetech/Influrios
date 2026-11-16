@@ -481,6 +481,17 @@ export async function startCheckout(input: {
   userId?: string;
   automaticTax?: boolean;
   taxPercent?: number | null;
+  discount?: {
+    code: string;
+    discountCents: number;
+    baseCents: number;
+    countryCode: string;
+    planCode: string;
+    billingInterval: "month" | "year";
+    percentBps: number | null;
+    amountOffCents: number | null;
+    version: number;
+  } | null;
 }): Promise<StartCheckoutResult> {
   const product = getProduct(input.sku);
   const { findActivePlan } = await import("@/lib/entitlements-db");
@@ -534,6 +545,83 @@ export async function startCheckout(input: {
       const rate = await exclusiveStripeTaxRate(creds.secret, input.taxPercent);
       if (!rate.ok) return { ok: false, error: rate.error };
       taxRateId = rate.id;
+    }
+    let couponId = "";
+    if (input.discount && input.discount.discountCents > 0) {
+      const { createStripeOnceCoupon } = await import("@/lib/stripe-admin");
+      const { findDiscountOffer, releaseDiscountReservation, reserveDiscountUse } = await import("@/lib/discount-store");
+      const offer = await findDiscountOffer(input.discount.code);
+      if (!offer || offer.version !== input.discount.version) {
+        return { ok: false, error: "This code is not valid. Nothing was charged." };
+      }
+      const coupon = await createStripeOnceCoupon({
+        secret: creds.secret,
+        code: input.discount.code,
+        version: offer.version,
+        currency: "USD",
+        percentBps: input.discount.percentBps,
+        amountOffCents: input.discount.amountOffCents,
+        idempotencyKey: `subscription-coupon:${sessionId}`,
+      });
+      if (!coupon.ok) return { ok: false, error: coupon.error };
+      couponId = coupon.id;
+      const reserved = await reserveDiscountUse({
+        offer,
+        accountId: input.userId || "",
+        idempotencyKey: `subscription:${sessionId}`,
+        now: createdAt,
+        amountCents: input.discount.discountCents,
+        baseCents: input.discount.baseCents,
+        subjectKind: "subscription_checkout",
+        subjectId: sessionId,
+        context: {
+          charge: "subscription",
+          countryCode: input.discount.countryCode,
+          currency: "USD",
+          planCode: input.discount.planCode,
+          billingInterval: input.discount.billingInterval,
+        },
+      });
+      if (!reserved.ok) return { ok: false, error: reserved.reason };
+      const openedAttempt = await openStripeCheckout({
+        secret: creds.secret,
+        mode: creds.mode,
+        priceId,
+        amountCents: product?.amountCents ?? custom!.amountCents,
+        name: product?.name ?? custom!.name,
+        description: product?.description ?? custom!.description ?? custom!.name,
+        successUrl: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}&local=${sessionId}`,
+        cancelUrl: `${origin}/billing/cancel?local=${sessionId}`,
+        customerEmail: input.customerEmail,
+        metadata: {
+          sku: product?.sku ?? custom!.code,
+          localSessionId: sessionId,
+          creatorSlug: input.creatorSlug ?? "",
+          userId: input.userId ?? "",
+          discountCode: input.discount.code,
+          discountReservationKey: `subscription:${sessionId}`,
+          discountCents: String(input.discount.discountCents),
+        },
+        couponId,
+        automaticTax: input.automaticTax === true && !taxRateId,
+        taxRateId,
+      });
+      if (!openedAttempt.ok) {
+        await releaseDiscountReservation(reserved.reservation.id, "abandoned");
+        return openedAttempt;
+      }
+      await upsertAttempt({
+        id: sessionId,
+        sku: product?.sku ?? custom!.code,
+        mode: "stripe",
+        status: "open",
+        customerEmail: input.customerEmail,
+        userId: input.userId,
+        creatorSlug: input.creatorSlug,
+        stripeSessionId: openedAttempt.id,
+        createdAt,
+      });
+      return { ok: true, mode: "stripe", url: openedAttempt.url, sessionId };
     }
     const opened = await openStripeCheckout({
       secret: creds.secret,
@@ -620,6 +708,12 @@ export async function completeCheckout(sessionId: string, opts?: {
   session.status = "completed";
   session.completedAt = new Date().toISOString();
   await upsertAttempt(session);
+  const { consumeDiscountReservation } = await import("@/lib/discount-store");
+  await consumeDiscountReservation({
+    idempotencyKey: `subscription:${session.id}`,
+    settlementId: session.stripeSessionId || session.id,
+    providerConfirmed: true,
+  }).catch(() => null);
 
   const businessPlan = product?.businessPlan ?? (plan?.audience === "business" ? plan.code : undefined);
   if (businessPlan && session.userId) {
@@ -665,6 +759,17 @@ export async function cancelCheckout(sessionId: string) {
   if (session && session.status === "open") {
     session.status = "canceled";
     await upsertAttempt(session);
+    if (session.stripeSessionId) {
+      const creds = await stripeCredentials();
+      if (creds.ok) {
+        const { readStripeCheckoutStatus } = await import("@/lib/stripe-admin");
+        const state = await readStripeCheckoutStatus({ secret: creds.secret, checkoutSessionId: session.stripeSessionId });
+        if (state.ok && state.status === "expired" && state.paymentStatus !== "paid" && state.paymentStatus !== "no_payment_required") {
+          const { releaseDiscountByKey } = await import("@/lib/discount-store");
+          await releaseDiscountByKey(`subscription:${session.id}`, "abandoned");
+        }
+      }
+    }
   }
 }
 
