@@ -1,126 +1,49 @@
-import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Panel } from "@/components/dashboard-ui";
-import { IconMail } from "@/components/icons";
+import { ConversationPopup } from "@/app/creator/messages/conversation-popup";
+import { MessagesInbox } from "@/app/creator/messages/messages-inbox";
 import { getAccountSession } from "@/lib/accounts";
-import { loadCreatorHub } from "@/lib/collaboration-hub";
-import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
-import { listContractsForUser } from "@/lib/contract-document";
-import { prisma } from "@/lib/db";
+import { inboxFilter, loadMessageInbox, messagesHref, openMessageThread, queryValue } from "@/lib/message-inbox";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Messages" };
 
-export default async function CreatorMessagesPage() {
+type Props = {
+  searchParams: Promise<{ filter?: string | string[]; q?: string | string[]; thread?: string | string[] }>;
+};
+
+export default async function CreatorMessagesPage({ searchParams }: Props) {
   const account = await getAccountSession();
   if (!account) redirect("/login?next=/creator/messages");
-
-  const [creator, draft, contracts] = await Promise.all([
-    prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } }).catch(() => null),
-    getCreatorSessionDraft().catch(() => null),
-    listContractsForUser(account.id, account.email).catch(() => []),
-  ]);
-  const seed = draft ? draftToSeedCreator(draft) : null;
-  const hub =
-    creator && seed
-      ? await loadCreatorHub({ userId: account.id, creator: seed }).catch(() => null)
-      : null;
-  const pipeline = hub?.pipeline ?? [];
-
+  const params = await searchParams;
+  const filter = inboxFilter(queryValue(params.filter));
+  const q = queryValue(params.q);
+  const threadId = queryValue(params.thread);
+  const headerList = await headers();
+  const prefetch =
+    headerList.get("next-router-prefetch") === "1" || headerList.get("purpose") === "prefetch";
+  const inbox = await loadMessageInbox(account);
+  let opened: Awaited<ReturnType<typeof openMessageThread>> | null = null;
+  if (threadId) {
+    try {
+      opened = await openMessageThread(account, threadId, new Date(), { markRead: !prefetch });
+    } catch {
+      opened = { ok: false, error: "This conversation could not be loaded." };
+    }
+  }
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <div>
-        <Link href="/creator" className="text-sm font-semibold text-violet hover:underline">
-          ← Creator account
-        </Link>
-        <h1 className="mt-2 font-display text-3xl font-bold">Messages</h1>
-        <p className="mt-1 text-sm text-muted">
-          Brand conversations live on your collaboration contracts. Open a contract thread to read and reply — messages
-          sent to all parties are email-notified and shown there.
-        </p>
-      </div>
-
-      <Panel title="Contract conversations">
-        {contracts.length === 0 ? (
-          <p className="text-sm text-muted">No contract threads on this account yet.</p>
-        ) : (
-          <ul className="space-y-3">
-            {contracts.map((contract) => {
-              const partyStatus = contract.parties.find(
-                (row) =>
-                  row.userId === account.id || row.email.trim().toLowerCase() === account.email.trim().toLowerCase(),
-              );
-              const needsYourSignature =
-                contract.signingChannel === "native" &&
-                (contract.status === "sent" || contract.status === "draft") &&
-                partyStatus?.status === "pending";
-              return (
-                <li key={contract.id}>
-                  <Link
-                    href={`/collaboration/contracts/${contract.id}${needsYourSignature ? "#sign" : ""}`}
-                    className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 hover:bg-[#F7F8FC] ${
-                      needsYourSignature ? "border-violet/40 bg-[#F4F0FF]" : "border-[#F0F3FA]"
-                    }`}
-                  >
-                    <span>
-                      <span className="block text-sm font-semibold">{contract.title}</span>
-                      <span className="text-xs text-muted">
-                        {contract.status}
-                        {partyStatus ? ` · you: ${partyStatus.status}` : ""}
-                        {" · "}
-                        {contract.parties.length} parties
-                        {needsYourSignature ? " · signature required" : ""}
-                      </span>
-                    </span>
-                    <span className="text-xs font-semibold text-violet">
-                      {needsYourSignature ? "Sign now →" : "Open thread →"}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Panel>
-
-      <Panel title="Collaboration pipeline">
-        {pipeline.length === 0 ? (
-          <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-[#C9D3EA] bg-[#F7F8FC] p-6">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F1ECFF] text-violet">
-              <IconMail size={22} />
-            </span>
-            <div>
-              <p className="font-semibold text-indigo">No active pipeline items yet</p>
-              <p className="mt-1 text-sm text-muted">
-                When brands invite you or you accept a collaboration, deals appear here. Contract messages stay on each
-                agreement above.
-              </p>
-            </div>
-            <Link href="/collaboration/hub?view=opportunities" className="btn-primary !py-2 text-sm">
-              View opportunities
-            </Link>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {pipeline.slice(0, 8).map((item) => (
-              <li key={item.id}>
-                <Link
-                  href={item.href || "/collaboration/hub?view=collaborations#pipeline"}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-[#F0F3FA] px-4 py-3 hover:bg-[#F7F8FC]"
-                >
-                  <span>
-                    <span className="block text-sm font-semibold">{item.title}</span>
-                    <span className="text-xs text-muted">
-                      {item.counterparty} · {item.stage}
-                    </span>
-                  </span>
-                  <span className="text-xs font-semibold text-violet">Open →</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
-    </div>
+    <>
+      <MessagesInbox
+        threads={inbox.ok ? inbox.threads : []}
+        failed={!inbox.ok}
+        filter={filter}
+        q={q}
+        activeThreadId={opened?.ok ? opened.view.thread.id : ""}
+        dimmed={Boolean(threadId)}
+      />
+      {threadId && opened ? (
+        <ConversationPopup closeHref={messagesHref({ filter, q })} state={opened} />
+      ) : null}
+    </>
   );
 }

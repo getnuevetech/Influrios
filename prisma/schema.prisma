@@ -85,6 +85,7 @@ model User {
   referralRegistration ReferralRegistration?
   accountNotices    AccountNotice[]
   verificationTasks PaymentVerificationTask[]
+  messageThreadReads MessageThreadRead[]
 }
 
 /// Unread events for the signed-in member. Reading a row clears the bell. The invitation itself stays pending.
@@ -102,6 +103,18 @@ model AccountNotice {
 
   @@unique([userId, kind, sourceId])
   @@index([userId, readAt])
+}
+
+/// Last time this member opened a conversation. A newer message from someone else is unread.
+model MessageThreadRead {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  threadId  String
+  readAt    DateTime @default(now())
+
+  @@unique([userId, threadId])
+  @@index([userId])
 }
 
 model EntitlementPlan {
