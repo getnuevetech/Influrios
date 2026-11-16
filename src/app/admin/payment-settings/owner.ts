@@ -6,6 +6,7 @@ export const PAYMENT_SETTINGS_TABS = [
   { id: "routes", label: "Country routes", modules: ["gateways", "collab_finance", "marketplace"] },
   { id: "fees", label: "Fees & policies", modules: ["commerce", "marketplace", "collab_finance"] },
   { id: "tax", label: "Tax", modules: ["collab_finance"] },
+  { id: "discounts", label: "Discount codes", modules: ["commerce", "collab_finance"] },
   { id: "audit", label: "Audit", modules: ["collab_finance"] },
 ] as const;
 
@@ -21,6 +22,8 @@ const SECTION_ALIASES: Record<string, PaymentSettingsSection> = {
   fees: "fees",
   switches: "fees",
   tax: "tax",
+  discounts: "discounts",
+  "discount-codes": "discounts",
   audit: "audit",
 };
 

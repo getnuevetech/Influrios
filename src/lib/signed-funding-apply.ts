@@ -292,6 +292,8 @@ export async function voidContractDocument(input: { id: string; actor: string; r
     where: { id: document.id },
     data: { status: "voided", voidReason: reason, voidedAt: new Date() },
   });
+  const { releaseAgreementDiscountReservations } = await import("@/lib/discount-store");
+  await releaseAgreementDiscountReservations(document.id).catch(() => null);
   await prisma.auditLog.create({
     data: {
       actor: input.actor,

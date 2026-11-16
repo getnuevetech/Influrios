@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SettlementReview } from "@/components/settlement-review";
+import { SignedDiscountNote } from "@/components/signed-discount-note";
 import { EmptyPayments, MoneyAmount, PaymentStatus } from "@/components/payment-journey/status";
 import { RecordDialog } from "@/components/payment-journey/record-dialog";
 import { UnavailableNote } from "@/components/unavailable-note";
@@ -419,6 +420,7 @@ async function PaymentDetail({
               <div className="space-y-2 text-sm">
                 <p>Gross compensation <MoneyAmount cents={signed ? signed.businessPaysCents - signed.businessPlatformFeeCents - (signed.activationFeeCents ?? 0) : deal.grossCents} currency={code} /></p>
                 <p>Business collaboration fee <MoneyAmount cents={signed?.businessPlatformFeeCents ?? 0} currency={code} /></p>
+                <SignedDiscountNote plan={(deal.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan} currency={code} />
                 {signed?.activationFeeCents ? <p>Activation <MoneyAmount cents={signed.activationFeeCents} currency={code} /></p> : <p>Activation is not enabled on this agreement.</p>}
                 <p>The influencer fee is deducted from influencer compensation. It is not a second business charge.</p>
                 {customerPaymentLabel({ collection: deal.status === "held" ? "succeeded" : "created", funds: deal.status === "held" ? "allocated_available" : "unconfirmed", payout: "none", refund: "none" }) ? null : null}

@@ -225,6 +225,51 @@ export async function probeStripeSandbox() {
   }
 }
 
+/** A first-invoice coupon. The plan price stays the renewal price. */
+export function stripeOnceCouponBody(input: {
+  code: string;
+  version: number;
+  currency: string;
+  percentBps: number | null;
+  amountOffCents: number | null;
+}) {
+  const body = new URLSearchParams({
+    duration: "once",
+    name: input.code.slice(0, 40),
+  });
+  body.set("metadata[influrios_code]", input.code);
+  body.set("metadata[influrios_version]", String(input.version));
+  if (input.percentBps != null) body.set("percent_off", (input.percentBps / 100).toFixed(2));
+  else if (input.amountOffCents != null) {
+    body.set("amount_off", String(input.amountOffCents));
+    body.set("currency", input.currency.toLowerCase());
+  }
+  return body;
+}
+
+export async function createStripeOnceCoupon(input: {
+  secret: string;
+  code: string;
+  version: number;
+  currency: string;
+  percentBps: number | null;
+  amountOffCents: number | null;
+  idempotencyKey: string;
+}) {
+  const payload = await stripeCall(
+    "POST",
+    "/v1/coupons",
+    input.secret,
+    stripeOnceCouponBody(input),
+    input.idempotencyKey,
+  );
+  const id = typeof payload?.id === "string" ? payload.id : "";
+  if (!id || payload?.duration !== "once") {
+    return { ok: false as const, error: "The subscription discount could not be mapped to the provider. Nothing was charged." };
+  }
+  return { ok: true as const, id };
+}
+
 export async function openStripeCheckout(input: {
   secret: string;
   mode: StripeKeyMode;
@@ -238,6 +283,7 @@ export async function openStripeCheckout(input: {
   metadata: Record<string, string>;
   automaticTax?: boolean;
   taxRateId?: string;
+  couponId?: string;
 }) {
   const body = new URLSearchParams({
     mode: "subscription",
@@ -256,6 +302,7 @@ export async function openStripeCheckout(input: {
   }
   for (const [key, value] of Object.entries(input.metadata)) body.set(`metadata[${key}]`, value);
   if (input.customerEmail) body.set("customer_email", input.customerEmail);
+  if (input.couponId) body.set("discounts[0][coupon]", input.couponId);
   if (input.taxRateId) {
     body.set("line_items[0][tax_rates][0]", input.taxRateId);
   } else if (input.automaticTax) {
@@ -474,6 +521,21 @@ export async function openCreatorConnectOnboarding(input: {
     });
   }
   return openConnectLink({ accountId, refreshUrl: input.refreshUrl, returnUrl: input.returnUrl });
+}
+
+export async function readStripeCheckoutStatus(input: { secret: string; checkoutSessionId: string }) {
+  if (!checkoutId(input.checkoutSessionId)) {
+    return { ok: false as const, error: "Stripe has not confirmed this payment. Nothing was changed." };
+  }
+  try {
+    const payload = await stripeCall("GET", `/v1/checkout/sessions/${input.checkoutSessionId}`, input.secret);
+    const status = payload?.status === "complete" || payload?.status === "expired" || payload?.status === "open" ? payload.status : "";
+    const paymentStatus = typeof payload?.payment_status === "string" ? payload.payment_status : "";
+    if (!status) return { ok: false as const, error: "Stripe has not confirmed this payment. Nothing was changed." };
+    return { ok: true as const, status, paymentStatus };
+  } catch {
+    return { ok: false as const, error: "Stripe has not confirmed this payment. Nothing was changed." };
+  }
 }
 
 export async function confirmStripeCheckout(input: {

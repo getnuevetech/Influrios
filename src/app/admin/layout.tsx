@@ -100,6 +100,12 @@ const SIDE_GROUPS: SideGroup[] = [
         anyModules: ["gateways", "collab_finance", "marketplace", "commerce"],
         icon: "billing",
       },
+      {
+        href: "/admin/payment-settings?section=discounts",
+        label: "Discount codes",
+        anyModules: ["commerce", "collab_finance"],
+        icon: "billing",
+      },
       { href: "/admin/search", label: "Meilisearch", module: "gateways", icon: "stats" },
       { href: "/admin/kyc", label: "KYC", module: "collab_finance", icon: "cards" },
       { href: "/admin/finance", label: "Finance", module: "collab_finance", icon: "billing" },

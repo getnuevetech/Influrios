@@ -107,6 +107,20 @@ export type SignedCommercialSnapshot = {
     influencerFeeCents: number;
     influencerNetCents: number;
   }[];
+  discountAdjustments?: {
+    charge: string;
+    code: string;
+    offerId: string;
+    version: number;
+    currency: string;
+    payerAccountId: string;
+    originalCents: number;
+    discountCents: number;
+    netCents: number;
+    quoteRef: string;
+    line: string;
+  }[];
+  discountReservationKeys?: string[];
 };
 
 export type LedgerPosting = {

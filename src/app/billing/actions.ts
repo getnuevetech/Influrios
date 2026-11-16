@@ -8,7 +8,53 @@ import { findActivePlan } from "@/lib/entitlements-db";
 import { planPageReturn } from "@/lib/plan-presentation";
 import { openCreatorConnectOnboarding, openCustomerPortal } from "@/lib/stripe-admin";
 import { billingAddressReady } from "@/lib/tax-configuration";
+import { discountCents, ineligibilityReason, normalizeDiscountCode, renewalOn, type BillingInterval, type DiscountOffer } from "@/lib/discount-codes";
+import { customerUseCount, findDiscountOffer } from "@/lib/discount-store";
 import { countryRegions, notifyTaxGap, previewConfiguredTax, subscriptionCheckoutContext } from "@/lib/tax-settings";
+
+function subscriptionCodeQuote(input: {
+  typedCode: string;
+  offer: DiscountOffer | null;
+  planCode: string;
+  planName: string;
+  amountCents: number;
+  interval: BillingInterval;
+  countryCode: string;
+  accountId: string;
+  priorUses: number;
+  now: string;
+}) {
+  if (!input.offer || input.offer.normalizedCode !== normalizeDiscountCode(input.typedCode)) {
+    return { ok: false as const, reason: "This code is not valid." };
+  }
+  const reason = ineligibilityReason(input.offer, {
+    charge: "subscription",
+    countryCode: input.countryCode,
+    currency: "USD",
+    planCode: input.planCode,
+    planName: input.planName,
+    billingInterval: input.interval,
+    accountId: input.accountId,
+    now: input.now,
+    priorUses: input.priorUses,
+  });
+  if (reason) return { ok: false as const, reason };
+  const discount = discountCents({
+    kind: input.offer.kind,
+    percentBps: input.offer.percentBps,
+    fixedCents: input.offer.fixedCents,
+    baseCents: input.amountCents,
+  });
+  if (!discount.ok) return { ok: false as const, reason: discount.error };
+  return {
+    ok: true as const,
+    code: input.offer.normalizedCode,
+    discountCents: discount.discountCents,
+    subtotalCents: input.amountCents - discount.discountCents,
+    renewalOn: renewalOn(input.now, input.interval),
+    renewalPriceCents: input.amountCents,
+  };
+}
 
 export async function actionStartCheckout(formData: FormData) {
   const sku = String(formData.get("sku") ?? "").trim();
@@ -48,11 +94,57 @@ export async function actionStartCheckout(formData: FormData) {
     await notifyTaxGap({ planCode: tax.plan?.code || sku, missing: "Tax configuration for this plan" });
     redirect(`${returnTo}?error=` + encodeURIComponent("This plan is temporarily unavailable."));
   }
+  const typedDiscount = String(formData.get("discountCode") ?? "");
+  const discountCode = normalizeDiscountCode(typedDiscount);
+  let chargeCents = tax.amountCents;
+  let checkoutDiscount: {
+    code: string;
+    discountCents: number;
+    baseCents: number;
+    countryCode: string;
+    planCode: string;
+    billingInterval: BillingInterval;
+    percentBps: number | null;
+    amountOffCents: number | null;
+    version: number;
+  } | null = null;
+  if (discountCode) {
+    const offer = await findDiscountOffer(discountCode);
+    const interval: BillingInterval = /annual|yearly|year/i.test(tax.plan?.name ?? "") ? "year" : "month";
+    const prior = offer ? await customerUseCount(offer.id, account.id) : 0;
+    const quoted = subscriptionCodeQuote({
+      typedCode: typedDiscount,
+      offer,
+      planCode: tax.plan?.code || sku,
+      planName: tax.plan?.name || sku,
+      amountCents: tax.amountCents,
+      interval,
+      countryCode: address.country,
+      accountId: account.id,
+      priorUses: prior,
+      now: new Date().toISOString(),
+    });
+    if (!quoted.ok || !offer) {
+      redirect(`${returnTo}?error=${encodeURIComponent(quoted.ok ? "This code is not valid." : quoted.reason)}&discount=${encodeURIComponent(typedDiscount)}`);
+    }
+    chargeCents = quoted.subtotalCents;
+    checkoutDiscount = {
+      code: quoted.code,
+      discountCents: quoted.discountCents,
+      baseCents: tax.amountCents,
+      countryCode: address.country,
+      planCode: tax.plan?.code || sku,
+      billingInterval: interval,
+      percentBps: offer.kind === "percentage" ? offer.percentBps : null,
+      amountOffCents: offer.kind === "fixed" ? quoted.discountCents : null,
+      version: offer.version,
+    };
+  }
   const preview = await previewConfiguredTax({
     audience: "customer",
     phase: "calculate",
     method: tax.rule?.method ?? policy.calculationMethod,
-    amountCents: tax.amountCents,
+    amountCents: chargeCents,
     inclusive: tax.rule?.inclusive ?? policy.inclusive,
     taxCategory: policy.taxCategory,
     rateBps: tax.rule?.method === "percentage" && tax.rule.ratePercent != null ? Math.round(tax.rule.ratePercent * 100) : policy.rateBps,
@@ -85,9 +177,10 @@ export async function actionStartCheckout(formData: FormData) {
     userId: account.id,
     automaticTax: (tax.rule?.method ?? policy.calculationMethod) === "location" || (tax.rule?.method ?? policy.calculationMethod) === "automatic",
     taxPercent: (tax.rule?.method ?? policy.calculationMethod) === "percentage" ? tax.rule?.ratePercent ?? null : null,
+    discount: checkoutDiscount,
   });
   if (!result.ok) {
-    redirect(`${returnTo}?error=${encodeURIComponent(result.error)}`);
+    redirect(`${returnTo}?error=${encodeURIComponent(result.error)}&discount=${encodeURIComponent(typedDiscount)}`);
   }
   redirect(result.url);
 }
@@ -111,11 +204,41 @@ export async function actionPreviewSubscriptionTax(formData: FormData) {
     await notifyTaxGap({ planCode: tax.plan?.code || sku, missing });
     return { ok: false as const, kind: "configuration" as const, message: "This plan is temporarily unavailable.", taxCents: null, totalCents: null, subtotalCents: null, reason: "" };
   }
+  const typedDiscount = String(formData.get("discountCode") ?? "");
+  let previewAmountCents = tax.amountCents;
+  let discountCents: number | null = null;
+  let discountReason = "";
+  let renewalOnDate = "";
+  let renewalPriceCents: number | null = null;
+  if (normalizeDiscountCode(typedDiscount)) {
+    const offer = await findDiscountOffer(typedDiscount);
+    const interval: BillingInterval = /annual|yearly|year/i.test(tax.plan?.name ?? "") ? "year" : "month";
+    const prior = offer ? await customerUseCount(offer.id, account.id) : 0;
+    const quoted = subscriptionCodeQuote({
+      typedCode: typedDiscount,
+      offer,
+      planCode: tax.plan?.code || sku,
+      planName: tax.plan?.name || sku,
+      amountCents: tax.amountCents,
+      interval,
+      countryCode: String(formData.get("country") ?? ""),
+      accountId: account.id,
+      priorUses: prior,
+      now: new Date().toISOString(),
+    });
+    if (!quoted.ok) discountReason = quoted.reason;
+    else {
+      previewAmountCents = quoted.subtotalCents;
+      discountCents = quoted.discountCents;
+      renewalOnDate = quoted.renewalOn;
+      renewalPriceCents = quoted.renewalPriceCents;
+    }
+  }
   const preview = await previewConfiguredTax({
     audience: "customer",
     phase: "calculate",
     method: tax.rule?.method ?? tax.policy.calculationMethod,
-    amountCents: tax.amountCents,
+    amountCents: previewAmountCents,
     inclusive: tax.rule?.inclusive ?? tax.policy.inclusive,
     taxCategory: tax.policy.taxCategory,
     rateBps: tax.rule?.method === "percentage" && tax.rule.ratePercent != null ? Math.round(tax.rule.ratePercent * 100) : tax.policy.rateBps,
@@ -167,6 +290,11 @@ export async function actionPreviewSubscriptionTax(formData: FormData) {
     totalCents: determined.line.collection === "added" ? determined.line.collectedCents : preview.totalCents,
     subtotalCents: preview.subtotalCents,
     reason: determined.line.reason,
+    typedDiscount,
+    discountCents,
+    discountReason,
+    renewalOn: renewalOnDate,
+    renewalPriceCents,
   };
 }
 

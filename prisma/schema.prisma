@@ -2841,3 +2841,103 @@ model ProviderEventInbox {
   @@unique([providerCode, environment, accountContext, eventId], map: "ProviderEventInbox_context_event_key")
   @@index([fundingId])
 }
+
+/// A versioned discount. Redeemed versions stay when a later version is issued.
+model DiscountOffer {
+  id               String   @id @default(cuid())
+  normalizedCode   String
+  displayCode      String
+  version          Int
+  /// subscription | business_collaboration_fee | influencer_collaboration_fee
+  productCharge    String
+  /// percentage | fixed
+  discountKind     String
+  percentBps       Int?
+  fixedCents       Int?
+  currency         String
+  countryCode      String
+  planCode         String   @default("")
+  planName         String   @default("")
+  /// month | year | blank. Monthly and annual first invoices are different offers.
+  billingInterval  String   @default("")
+  serviceLevel     String   @default("")
+  startsAt         DateTime
+  endsAt           DateTime
+  totalUses        Int
+  usesPerCustomer  Int      @default(1)
+  /// draft | active | paused. Scheduled, expired, and exhausted are derived.
+  lifecycle        String   @default("draft")
+  reservedCount    Int      @default(0)
+  redeemedCount    Int      @default(0)
+  refundedCount    Int      @default(0)
+  createdById      String   @default("")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  audits           DiscountOfferAudit[]
+  reservations     DiscountReservation[]
+
+  @@unique([normalizedCode, version])
+  @@index([normalizedCode, lifecycle])
+}
+
+model DiscountOfferAudit {
+  id          String        @id @default(cuid())
+  offerId     String
+  offer       DiscountOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  actorId     String
+  action      String
+  changesJson Json
+  createdAt   DateTime      @default(now())
+
+  @@index([offerId, createdAt])
+}
+
+/// A use reserved for one checkout or agreement version. Consumed only after provider confirmation.
+model DiscountReservation {
+  id              String        @id @default(cuid())
+  offerId         String
+  offer           DiscountOffer @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  offerVersion    Int
+  payerAccountId  String
+  /// subscription_checkout | collaboration_agreement
+  subjectKind     String
+  subjectId       String
+  idempotencyKey  String        @unique
+  /// reserved | consumed | released
+  status          String
+  charge          String
+  currency        String
+  amountCents     Int
+  baseCents       Int
+  quoteRef        String        @default("")
+  lineLabel       String        @default("")
+  settlementId    String        @default("")
+  /// none | unknown | abandoned | confirmed | cancelled
+  providerOutcome String        @default("none")
+  expiresAt       DateTime?
+  createdAt       DateTime      @default(now())
+  consumedAt      DateTime?
+  releasedAt      DateTime?
+  refundedAt      DateTime?
+  adjustment      DiscountAdjustment?
+
+  @@index([offerId, status])
+  @@index([payerAccountId, offerId])
+  @@index([subjectKind, subjectId])
+}
+
+/// Immutable adjustment. It records the quote, line, payer, version, currency, and amount.
+model DiscountAdjustment {
+  id              String               @id @default(cuid())
+  reservationId   String               @unique
+  reservation     DiscountReservation  @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  quoteRef        String
+  lineLabel       String
+  payerAccountId  String
+  offerId         String
+  offerVersion    Int
+  currency        String
+  amountCents     Int
+  baseCents       Int
+  createdAt       DateTime             @default(now())
+}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionSubmitContractWizard } from "@/app/collaboration/contract/actions";
 import { CollaborationTaxBox } from "@/app/collaboration/contract/collaboration-tax-box";
+import { QuoteDiscountBox } from "@/components/quote-discount-box";
 import { collaborationCheckout } from "@/lib/country-tax";
 import { loadCountryRules } from "@/lib/tax-settings";
 import { requireBusinessSession } from "@/lib/account-audience";
@@ -92,6 +93,7 @@ type Props = {
     contractDocument?: string;
     payoutMethod?: string;
     error?: string;
+    businessDiscountCode?: string;
   }>;
 };
 
@@ -706,15 +708,20 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                       <dd className="font-semibold text-indigo">{quote.rule.name} · v{quote.rule.version}</dd>
                       <dd className="text-xs text-muted">{feeRuleRateLabel(quote.rule)} · {formatMoney(quote.feeCents, plan.contractCurrency)} added on top</dd>
                     </div>
-                    <div>
-                      <dt className="text-xs text-muted">Gross compensation</dt>
-                      <dd className="font-bold text-indigo">{formatMoney(quote.grossInfluencerCompensationCents, plan.contractCurrency)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted">You pay</dt>
-                      <dd className="font-bold text-indigo">{formatMoney(priceWithTax ?? quote.totalCents, plan.contractCurrency)}</dd>
-                    </div>
                   </dl>
+                  <QuoteDiscountBox
+                    role="business"
+                    currency={plan.contractCurrency || "USD"}
+                    grossCents={quote.grossInfluencerCompensationCents}
+                    feeCents={quote.feeCents}
+                    taxCents={priceWithTax == null ? null : priceWithTax - quote.totalCents}
+                    totalCents={priceWithTax ?? quote.totalCents}
+                    countryCode={jurisdictionCode}
+                    serviceLevel={effectiveServiceLevel || quote.rule.serviceLevel}
+                    readOnly={false}
+                    inputName="businessDiscountCode"
+                    initialTyped={params.businessDiscountCode ?? ""}
+                  />
                   <CollaborationTaxBox
                     country={jurisdictionCode}
                     currency={plan.contractCurrency || "USD"}
