@@ -24,6 +24,7 @@ type StripeObject = {
     creator_slug?: string;
     sku?: string;
     userId?: string;
+    billingInterval?: string;
     purpose?: string;
     requestId?: string;
     depositId?: string;
@@ -34,7 +35,21 @@ type StripeObject = {
   payment_status?: string | null;
   amount_total?: number | null;
   currency?: string | null;
+  current_period_end?: number | null;
+  items?: { data?: { price?: { recurring?: { interval?: string } } }[] } | null;
 };
+
+function confirmedInterval(object: StripeObject): "month" | "year" | null {
+  const fromItem = object.items?.data?.[0]?.price?.recurring?.interval;
+  if (fromItem === "year" || fromItem === "month") return fromItem;
+  const meta = object.metadata?.billingInterval;
+  if (meta === "year" || meta === "month") return meta;
+  return null;
+}
+
+function periodEnd(object: StripeObject) {
+  return typeof object.current_period_end === "number" ? new Date(object.current_period_end * 1000) : null;
+}
 
 function customerIdOf(object: StripeObject) {
   const raw = typeof object.customer === "string" ? object.customer : object.customer?.id;
@@ -257,6 +272,7 @@ export async function POST(req: NextRequest) {
         userId: object.metadata?.userId || undefined,
         creatorSlug: object.metadata?.creatorSlug || undefined,
         stripeSessionId: object.id,
+        billingInterval: confirmedInterval(object) ?? undefined,
       });
       if (!local) {
         return NextResponse.json({ received: false, pending: true }, { status: 503 });
@@ -269,6 +285,9 @@ export async function POST(req: NextRequest) {
         userId: local.userId || object.metadata?.userId,
         creatorSlug: object.metadata?.creatorSlug || local.creatorSlug,
         externalId: subscriptionId(object, event.type) || local.stripeSessionId || local.id,
+        billingInterval: confirmedInterval(object),
+        currentPeriodEnd: periodEnd(object),
+        providerStatus: object.status,
       });
       await rememberStripeCustomer(local.userId || object.metadata?.userId, customerIdOf(object));
       await completeCheckout(local.id, { creatorSlug: object.metadata?.creatorSlug || local.creatorSlug });
@@ -291,6 +310,9 @@ export async function POST(req: NextRequest) {
         userId: object.metadata?.userId || state?.userId,
         creatorSlug: object.metadata?.creatorSlug || state?.creatorSlug,
         externalId,
+        billingInterval: confirmedInterval(object),
+        currentPeriodEnd: periodEnd(object),
+        providerStatus: object.status,
       });
     }
     await prisma.job

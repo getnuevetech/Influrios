@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { actionCheckStripeSandbox, actionSaveBillingPrices, actionSaveBillingSwitches } from "@/app/admin/billing/actions";
+import { actionCheckStripeSandbox, actionPauseAnnualCode, actionSaveBillingPrices, actionSaveBillingSwitches } from "@/app/admin/billing/actions";
 import { SubscriptionsDialog } from "@/app/admin/subscriptions/dialog";
 import { IconCalendar, IconCheck, IconCopy, IconSearch, IconSettings, IconX } from "@/components/icons";
 import {
@@ -35,6 +35,8 @@ export function BillingActivity({
   portalOn,
   paidMentoringOn,
   prices,
+  annual = {},
+  unpricedAnnualCodes = [],
   catalog,
   sessions,
   overrides,
@@ -47,6 +49,8 @@ export function BillingActivity({
   portalOn: boolean;
   paidMentoringOn: boolean;
   prices: Record<string, string>;
+  annual?: Record<string, { amount: string; priceId: string }>;
+  unpricedAnnualCodes?: { id: string; code: string; planName: string }[];
   catalog: CatalogRow[];
   sessions: CheckoutActivityRow[];
   overrides: OverrideRow[];
@@ -280,11 +284,41 @@ export function BillingActivity({
             <p className="mt-3 text-sm text-muted">Saving these needs the gateways edit permission.</p>
           )}
           <form action={canEdit ? actionSaveBillingPrices : undefined} className="mt-6 grid gap-3 sm:grid-cols-2">
+            <p className="text-sm font-normal text-muted sm:col-span-2">
+              Existing subscriptions stay on the price they already use. A blank monthly field keeps the current mapping. Leave both annual fields blank to keep annual unpublished. The annual price id has to differ from the monthly price id.
+            </p>
+            {unpricedAnnualCodes.length > 0 ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-normal text-amber-950 sm:col-span-2">
+                <p className="font-semibold">Annual codes without a saved annual price</p>
+                <ul className="mt-2 space-y-2">
+                  {unpricedAnnualCodes.map((code) => (
+                    <li key={code.id} className="flex flex-wrap items-center justify-between gap-2">
+                      <span>{code.code} is active for {code.planName} annual, and that price is not saved.</span>
+                      {canEdit ? (
+                        <button type="submit" formAction={actionPauseAnnualCode} name="offerId" value={code.id} className="rounded-full border border-amber-400 px-3 py-1 text-xs font-semibold">
+                          Pause code
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             {catalog.map((product) => (
-              <label key={product.sku} className="text-xs font-semibold text-muted">
-                {product.name} price id
-                <input name={product.sku} defaultValue={prices[product.sku] ?? ""} disabled={!canEdit} className={fieldClass} />
-              </label>
+              <div key={product.sku} className="text-xs font-semibold text-muted">
+                <label>
+                  {product.name} monthly price id
+                  <input name={product.sku} defaultValue={prices[product.sku] ?? ""} disabled={!canEdit} className={fieldClass} />
+                </label>
+                <label className="mt-2 block">
+                  Annual amount (USD)
+                  <input name={`${product.sku}_annual_amount`} defaultValue={annual[product.sku]?.amount ?? ""} disabled={!canEdit} placeholder="0.00" className={fieldClass} />
+                </label>
+                <label className="mt-2 block">
+                  Annual price id
+                  <input name={`${product.sku}_annual_price`} defaultValue={annual[product.sku]?.priceId ?? ""} disabled={!canEdit} placeholder="price_..." className={fieldClass} />
+                </label>
+              </div>
             ))}
             {canEdit ? (
               <button type="submit" className="btn-secondary w-fit !py-2 text-sm sm:col-span-2">

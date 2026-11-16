@@ -3,12 +3,13 @@
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
-import { getAppOrigin, isBillingSku, startCheckout } from "@/lib/billing";
+import { clearScheduledInterval, getAppOrigin, isBillingSku, recordScheduledInterval, recurringOfferFor, startCheckout } from "@/lib/billing";
 import { findActivePlan } from "@/lib/entitlements-db";
 import { planPageReturn } from "@/lib/plan-presentation";
 import { openCreatorConnectOnboarding, openCustomerPortal } from "@/lib/stripe-admin";
 import { billingAddressReady } from "@/lib/tax-configuration";
-import { discountCents, ineligibilityReason, normalizeDiscountCode, renewalOn, type BillingInterval, type DiscountOffer } from "@/lib/discount-codes";
+import { annualCodeOnMonthly, displayedPriceBreakdown, formatOfferAmount, formatRenewalDate, parseBillingInterval, samePlan, type BillingInterval } from "@/lib/billing-interval";
+import { discountCents, ineligibilityReason, normalizeDiscountCode, renewalOn, type DiscountOffer } from "@/lib/discount-codes";
 import { customerUseCount, findDiscountOffer } from "@/lib/discount-store";
 import { countryRegions, notifyTaxGap, previewConfiguredTax, subscriptionCheckoutContext } from "@/lib/tax-settings";
 
@@ -94,9 +95,23 @@ export async function actionStartCheckout(formData: FormData) {
     await notifyTaxGap({ planCode: tax.plan?.code || sku, missing: "Tax configuration for this plan" });
     redirect(`${returnTo}?error=` + encodeURIComponent("This plan is temporarily unavailable."));
   }
+  const interval = parseBillingInterval(formData.get("interval"));
+  const offerForInterval = await recurringOfferFor(sku, interval);
+  if (!offerForInterval.ok) {
+    redirect(`${returnTo}?interval=${interval}&error=${encodeURIComponent(`${offerForInterval.reason} Nothing was charged.`)}&discount=${encodeURIComponent(String(formData.get("discountCode") ?? ""))}`);
+  }
+  const subscription = await prisma.subscriptionState.findFirst({ where: { userId: account.id }, orderBy: { updatedAt: "desc" } });
+  if (subscription && (subscription.status === "active" || subscription.status === "trialing" || subscription.status === "past_due")) {
+    const message = subscription.status === "past_due"
+      ? "Update the payment method before changing this plan. Nothing was charged."
+      : subscription.externalId
+        ? "This account already has a subscription. Confirm the change on Billing & plan. Nothing was charged."
+        : "Resolve the subscription reference before starting another subscription. Nothing was changed.";
+    redirect(`${returnTo}?interval=${interval}&error=${encodeURIComponent(message)}`);
+  }
   const typedDiscount = String(formData.get("discountCode") ?? "");
   const discountCode = normalizeDiscountCode(typedDiscount);
-  let chargeCents = tax.amountCents;
+  let chargeCents = offerForInterval.offer.amountCents;
   let checkoutDiscount: {
     code: string;
     discountCents: number;
@@ -110,14 +125,18 @@ export async function actionStartCheckout(formData: FormData) {
   } | null = null;
   if (discountCode) {
     const offer = await findDiscountOffer(discountCode);
-    const interval: BillingInterval = /annual|yearly|year/i.test(tax.plan?.name ?? "") ? "year" : "month";
+    const planCode = tax.plan?.code || sku;
+    const planName = tax.plan?.name || sku;
+    if (offer && offer.billingInterval === "year" && interval === "month" && samePlan(offer.planCode, planCode)) {
+      redirect(`${returnTo}?interval=month&discount=${encodeURIComponent(typedDiscount)}&error=${encodeURIComponent(`${typedDiscount.trim()} is valid for ${planName} annual. Review annual billing or continue monthly without the code. Nothing was charged.`)}`);
+    }
     const prior = offer ? await customerUseCount(offer.id, account.id) : 0;
     const quoted = subscriptionCodeQuote({
       typedCode: typedDiscount,
       offer,
-      planCode: tax.plan?.code || sku,
-      planName: tax.plan?.name || sku,
-      amountCents: tax.amountCents,
+      planCode: offer && samePlan(offer.planCode, planCode) ? offer.planCode : planCode,
+      planName,
+      amountCents: offerForInterval.offer.amountCents,
       interval,
       countryCode: address.country,
       accountId: account.id,
@@ -131,7 +150,7 @@ export async function actionStartCheckout(formData: FormData) {
     checkoutDiscount = {
       code: quoted.code,
       discountCents: quoted.discountCents,
-      baseCents: tax.amountCents,
+      baseCents: offerForInterval.offer.amountCents,
       countryCode: address.country,
       planCode: tax.plan?.code || sku,
       billingInterval: interval,
@@ -175,6 +194,7 @@ export async function actionStartCheckout(formData: FormData) {
     customerEmail: email || account.email,
     creatorSlug: creator?.slug,
     userId: account.id,
+    interval,
     automaticTax: (tax.rule?.method ?? policy.calculationMethod) === "location" || (tax.rule?.method ?? policy.calculationMethod) === "automatic",
     taxPercent: (tax.rule?.method ?? policy.calculationMethod) === "percentage" ? tax.rule?.ratePercent ?? null : null,
     discount: checkoutDiscount,
@@ -205,33 +225,76 @@ export async function actionPreviewSubscriptionTax(formData: FormData) {
     return { ok: false as const, kind: "configuration" as const, message: "This plan is temporarily unavailable.", taxCents: null, totalCents: null, subtotalCents: null, reason: "" };
   }
   const typedDiscount = String(formData.get("discountCode") ?? "");
-  let previewAmountCents = tax.amountCents;
+  const interval = parseBillingInterval(formData.get("interval"));
+  const priced = await recurringOfferFor(sku, interval);
+  if (!priced.ok) {
+    return { ok: false as const, kind: "configuration" as const, message: `${priced.reason} Nothing was charged.`, taxCents: null, totalCents: null, subtotalCents: null, reason: "", typedDiscount, discountReason: priced.reason, recovery: null };
+  }
+  let previewAmountCents = priced.offer.amountCents;
   let discountCents: number | null = null;
   let discountReason = "";
   let renewalOnDate = "";
   let renewalPriceCents: number | null = null;
+  let recovery: { typedCode: string; message: string; offerReviewAnnual: boolean; offerContinueMonthly: boolean } | null = null;
+  const planCode = tax.plan?.code || sku;
+  const planName = tax.plan?.name || sku;
   if (normalizeDiscountCode(typedDiscount)) {
     const offer = await findDiscountOffer(typedDiscount);
-    const interval: BillingInterval = /annual|yearly|year/i.test(tax.plan?.name ?? "") ? "year" : "month";
-    const prior = offer ? await customerUseCount(offer.id, account.id) : 0;
-    const quoted = subscriptionCodeQuote({
+    const annual = await recurringOfferFor(sku, "year");
+    const annualForPlan = Boolean(offer && offer.productCharge === "subscription" && offer.billingInterval === "year" && samePlan(offer.planCode, planCode));
+    const annualBlock = annualForPlan && offer
+      ? ineligibilityReason(offer, {
+          charge: "subscription",
+          countryCode: String(formData.get("country") ?? ""),
+          currency: "USD",
+          planCode: offer.planCode,
+          planName: offer.planName || planName,
+          billingInterval: "year",
+          accountId: account.id,
+          now: new Date().toISOString(),
+          priorUses: await customerUseCount(offer.id, account.id),
+        })
+      : null;
+    const choice = annualCodeOnMonthly({
       typedCode: typedDiscount,
-      offer,
-      planCode: tax.plan?.code || sku,
-      planName: tax.plan?.name || sku,
-      amountCents: tax.amountCents,
-      interval,
-      countryCode: String(formData.get("country") ?? ""),
-      accountId: account.id,
-      priorUses: prior,
-      now: new Date().toISOString(),
+      planCode,
+      planName,
+      annualPurchasable: annual.ok,
+      offer: offer && offer.productCharge === "subscription"
+        ? { planCode: offer.planCode, planName: offer.planName, billingInterval: offer.billingInterval === "year" ? "year" : "month", eligible: annualForPlan ? !annualBlock : true }
+        : null,
+      choice: null,
     });
-    if (!quoted.ok) discountReason = quoted.reason;
-    else {
-      previewAmountCents = quoted.subtotalCents;
-      discountCents = quoted.discountCents;
-      renewalOnDate = quoted.renewalOn;
-      renewalPriceCents = quoted.renewalPriceCents;
+    if (annualForPlan && annualBlock && interval === "month") {
+      discountReason = annualBlock;
+    } else if (interval === "month" && (choice.offerReviewAnnual || choice.offerContinueMonthly)) {
+      recovery = {
+        typedCode: choice.typedCode,
+        message: choice.message,
+        offerReviewAnnual: choice.offerReviewAnnual,
+        offerContinueMonthly: choice.offerContinueMonthly,
+      };
+    } else {
+      const prior = offer ? await customerUseCount(offer.id, account.id) : 0;
+      const quoted = subscriptionCodeQuote({
+        typedCode: typedDiscount,
+        offer,
+        planCode: offer && samePlan(offer.planCode, planCode) ? offer.planCode : planCode,
+        planName,
+        amountCents: priced.offer.amountCents,
+        interval,
+        countryCode: String(formData.get("country") ?? ""),
+        accountId: account.id,
+        priorUses: prior,
+        now: new Date().toISOString(),
+      });
+      if (!quoted.ok) discountReason = quoted.reason;
+      else {
+        previewAmountCents = quoted.subtotalCents;
+        discountCents = quoted.discountCents;
+        renewalOnDate = quoted.renewalOn;
+        renewalPriceCents = quoted.renewalPriceCents;
+      }
     }
   }
   const preview = await previewConfiguredTax({
@@ -267,7 +330,7 @@ export async function actionPreviewSubscriptionTax(formData: FormData) {
   const determined = determineSaleTax({
     event: "subscription_invoice",
     subjectId: sku || tax.plan?.code || "subscription",
-    baseCents: preview.subtotalCents ?? tax.amountCents,
+    baseCents: preview.subtotalCents ?? previewAmountCents,
     inclusive: tax.policy.inclusive,
     result: { state: "calculated", taxCents: preview.taxCents, reason: preview.reason },
   });
@@ -282,20 +345,190 @@ export async function actionPreviewSubscriptionTax(formData: FormData) {
       reason: "",
     };
   }
+  const configuredRate = tax.rule && typeof tax.rule.ratePercent === "number" ? tax.rule.ratePercent : null;
+  const breakdown = displayedPriceBreakdown({
+    locationKnown: true,
+    baseCents: preview.subtotalCents ?? previewAmountCents,
+    taxCents: determined.line.taxCents,
+    ratePercent: configuredRate,
+    inclusive: determined.line.collection !== "added",
+    inclusiveTotalCents: determined.line.collection === "added" ? undefined : determined.line.collectedCents,
+  });
+  if (breakdown.kind === "unknown" || breakdown.kind === "unavailable") {
+    return { ok: false as const, kind: "provider" as const, message: breakdown.note, taxCents: null, totalCents: null, subtotalCents: null, reason: "", typedDiscount, discountReason, recovery };
+  }
   return {
     ok: true as const,
     kind: "calculated" as const,
-    message: determined.line.taxCents === 0 ? "Tax $0.00" : preview.customerMessage,
-    taxCents: determined.line.taxCents,
-    totalCents: determined.line.collection === "added" ? determined.line.collectedCents : preview.totalCents,
-    subtotalCents: preview.subtotalCents,
+    message: breakdown.taxCents === 0 ? "Tax $0.00" : preview.customerMessage,
+    taxCents: breakdown.taxCents,
+    totalCents: breakdown.totalCents,
+    subtotalCents: breakdown.baseCents,
+    ratePercent: breakdown.ratePercent,
     reason: determined.line.reason,
     typedDiscount,
     discountCents,
     discountReason,
     renewalOn: renewalOnDate,
     renewalPriceCents,
+    interval,
+    recovery,
   };
+}
+
+export async function actionScheduleIntervalChange(formData: FormData) {
+  const returnTo = planPageReturn(formData.get("returnTo"));
+  const account = await getAccountSession();
+  if (!account) redirect(`/login?next=${encodeURIComponent(`${returnTo}?interval=year`)}`);
+  if (formData.get("acceptSubscription") !== "on") {
+    redirect(`${returnTo}?interval=year&error=${encodeURIComponent("Agree to the subscription terms before scheduling the change. Nothing was changed.")}`);
+  }
+  const sku = String(formData.get("sku") ?? "").trim();
+  const subscription = await prisma.subscriptionState.findFirst({
+    where: { userId: account.id, status: { in: ["active", "trialing"] } },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (!subscription?.externalId) {
+    redirect(`${returnTo}?interval=year&error=${encodeURIComponent("Resolve the subscription reference before changing it. Nothing was changed.")}`);
+  }
+  if (subscription.sku !== sku) {
+    redirect(`${returnTo}?interval=year&error=${encodeURIComponent("Confirm a same-plan annual switch here. Nothing was changed.")}`);
+  }
+  if (subscription.billingInterval === "year") {
+    redirect(`${returnTo}?interval=year&error=${encodeURIComponent("This subscription is already annual. Nothing was changed.")}`);
+  }
+  const annual = await recurringOfferFor(sku, "year");
+  if (!annual.ok || !annual.offer.priceId) {
+    redirect(`${returnTo}?interval=year&error=${encodeURIComponent("Annual billing is not available for this plan. Nothing was changed.")}`);
+  }
+  const { schedulePriceAtRenewal, stripeCredentials } = await import("@/lib/stripe-admin");
+  const creds = await stripeCredentials();
+  if (!creds.ok) redirect(`${returnTo}?interval=year&error=${encodeURIComponent("Stripe is not ready. Nothing was changed.")}`);
+  const scheduled = await schedulePriceAtRenewal({
+    secret: creds.secret,
+    subscriptionId: subscription.externalId,
+    nextPriceId: annual.offer.priceId,
+    idempotencyKey: `interval-switch:${subscription.externalId}:${annual.offer.priceId}`,
+  });
+  if (!scheduled.ok) redirect(`${returnTo}?interval=year&error=${encodeURIComponent(scheduled.error)}`);
+  const recorded = await recordScheduledInterval({
+    providerConfirmed: true,
+    externalId: subscription.externalId,
+    pendingPriceId: annual.offer.priceId,
+    pendingEffectiveAt: scheduled.effectiveAt,
+    scheduleId: scheduled.scheduleId,
+  });
+  if (!recorded.recorded) {
+    redirect(`${returnTo}?interval=year&error=${encodeURIComponent("Stripe scheduled the change, but it was not recorded. Nothing is marked paid.")}`);
+  }
+  const when = formatRenewalDate(scheduled.effectiveAt) ?? "the next renewal";
+  redirect(`${returnTo}?interval=year&notice=${encodeURIComponent(`Scheduled. Due today is $0. Annual billing starts ${when} at ${formatOfferAmount(annual.offer.amountCents)} plus tax. Nothing is charged today.`)}`);
+}
+
+export async function actionCancelScheduledChange(formData: FormData) {
+  const returnTo = planPageReturn(formData.get("returnTo"));
+  const account = await getAccountSession();
+  if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
+  const subscription = await prisma.subscriptionState.findFirst({
+    where: { userId: account.id },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (!subscription?.externalId || !subscription.scheduleId) {
+    redirect(`${returnTo}?error=${encodeURIComponent("There is no scheduled change to cancel. Nothing was changed.")}`);
+  }
+  const { releaseSubscriptionSchedule, stripeCredentials } = await import("@/lib/stripe-admin");
+  const creds = await stripeCredentials();
+  if (!creds.ok) redirect(`${returnTo}?error=${encodeURIComponent("Stripe is not ready. Nothing was changed.")}`);
+  const released = await releaseSubscriptionSchedule({ secret: creds.secret, scheduleId: subscription.scheduleId });
+  if (!released.ok) redirect(`${returnTo}?error=${encodeURIComponent(released.error)}`);
+  const cleared = await clearScheduledInterval({ providerConfirmed: true, externalId: subscription.externalId });
+  if (!cleared.recorded) redirect(`${returnTo}?error=${encodeURIComponent("Stripe released the schedule, but the account was not updated. Nothing is marked paid.")}`);
+  redirect(`${returnTo}?notice=${encodeURIComponent("The scheduled change is cancelled. The current plan stays in place.")}`);
+}
+
+export async function actionPreviewTierChange(formData: FormData) {
+  const account = await getAccountSession();
+  if (!account) return { ok: false as const, message: "Sign in to review this change. Nothing was changed.", amountDueCents: null };
+  const sku = String(formData.get("sku") ?? "").trim();
+  const interval = parseBillingInterval(formData.get("interval"));
+  const subscription = await prisma.subscriptionState.findFirst({
+    where: { userId: account.id, status: { in: ["active", "trialing"] } },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (!subscription?.externalId) {
+    return { ok: false as const, message: "Resolve the subscription reference before changing it. Nothing was changed.", amountDueCents: null };
+  }
+  if (subscription.sku === sku && interval === "year" && subscription.billingInterval !== "year") {
+    return { ok: false as const, message: "Switching the same plan to annual happens at the next renewal.", amountDueCents: null };
+  }
+  const target = await recurringOfferFor(sku, interval);
+  if (!target.ok || !target.offer.priceId) {
+    return { ok: false as const, message: target.ok ? "Save a Stripe price before this change. Nothing was changed." : `${target.reason} Nothing was changed.`, amountDueCents: null };
+  }
+  const { previewSubscriptionUpdate, readStripeSubscription, stripeCredentials } = await import("@/lib/stripe-admin");
+  const creds = await stripeCredentials();
+  if (!creds.ok) return { ok: false as const, message: "Stripe is not ready. Nothing was changed.", amountDueCents: null };
+  const current = await readStripeSubscription(creds.secret, subscription.externalId);
+  if (!current.ok || !current.subscription.itemId) {
+    return { ok: false as const, message: current.ok ? "Stripe did not return the subscription item. Nothing was changed." : current.error, amountDueCents: null };
+  }
+  const preview = await previewSubscriptionUpdate({
+    secret: creds.secret,
+    subscriptionId: subscription.externalId,
+    itemId: current.subscription.itemId,
+    priceId: target.offer.priceId,
+  });
+  if (!preview.ok) return { ok: false as const, message: preview.error, amountDueCents: null };
+  return { ok: true as const, message: "", amountDueCents: preview.amountDueCents };
+}
+
+export async function actionChangeSubscriptionPrice(formData: FormData) {
+  const returnTo = planPageReturn(formData.get("returnTo"));
+  const account = await getAccountSession();
+  if (!account) redirect(`/login?next=${encodeURIComponent(returnTo)}`);
+  if (formData.get("acceptSubscription") !== "on") {
+    redirect(`${returnTo}?error=${encodeURIComponent("Agree to the subscription terms before changing the plan. Nothing was changed.")}`);
+  }
+  const sku = String(formData.get("sku") ?? "").trim();
+  const interval = parseBillingInterval(formData.get("interval"));
+  const subscription = await prisma.subscriptionState.findFirst({
+    where: { userId: account.id, status: { in: ["active", "trialing"] } },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (!subscription?.externalId) {
+    redirect(`${returnTo}?error=${encodeURIComponent("Resolve the subscription reference before changing it. Nothing was changed.")}`);
+  }
+  if (subscription.sku === sku && interval === "year" && subscription.billingInterval !== "year") {
+    redirect(`${returnTo}?interval=year&error=${encodeURIComponent("Switching the same plan to annual happens at the next renewal. Nothing was changed.")}`);
+  }
+  const target = await recurringOfferFor(sku, interval);
+  if (!target.ok || !target.offer.priceId) {
+    redirect(`${returnTo}?error=${encodeURIComponent("That price is not available. Nothing was changed.")}`);
+  }
+  const { previewSubscriptionUpdate, readStripeSubscription, stripeCredentials, updateSubscriptionPrice } = await import("@/lib/stripe-admin");
+  const creds = await stripeCredentials();
+  if (!creds.ok) redirect(`${returnTo}?error=${encodeURIComponent("Stripe is not ready. Nothing was changed.")}`);
+  const current = await readStripeSubscription(creds.secret, subscription.externalId);
+  if (!current.ok || !current.subscription.itemId) {
+    redirect(`${returnTo}?error=${encodeURIComponent("Stripe did not return the subscription item. Nothing was changed.")}`);
+  }
+  const preview = await previewSubscriptionUpdate({
+    secret: creds.secret,
+    subscriptionId: subscription.externalId,
+    itemId: current.subscription.itemId,
+    priceId: target.offer.priceId,
+  });
+  if (!preview.ok) redirect(`${returnTo}?error=${encodeURIComponent(preview.error)}`);
+  const updated = await updateSubscriptionPrice({
+    secret: creds.secret,
+    subscriptionId: subscription.externalId,
+    itemId: current.subscription.itemId,
+    priceId: target.offer.priceId,
+    quantity: current.subscription.quantity,
+    idempotencyKey: `tier-change:${subscription.externalId}:${target.offer.priceId}`,
+  });
+  if (!updated.ok) redirect(`${returnTo}?error=${encodeURIComponent(updated.error)}`);
+  redirect(`${returnTo}?notice=${encodeURIComponent("Stripe accepted the subscription update. The plan changes when Stripe confirms it. Nothing is marked paid here.")}`);
 }
 
 export async function actionOpenPortal(formData?: FormData) {

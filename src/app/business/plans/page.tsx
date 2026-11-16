@@ -1,23 +1,25 @@
 import { PublicPlanPage } from "@/components/plans/public-plan-page";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace } from "@/lib/business";
-import { listPublishedFaq } from "@/lib/faq";
+import { listAnnualOffers } from "@/lib/billing";
+import { parseBillingInterval } from "@/lib/billing-interval";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
-import { corridorCountries } from "@/lib/corridor-countries";
 import { notifyTaxGap, subscriptionTaxGates } from "@/lib/tax-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Business plans" };
 
-export default async function BusinessPlansPage() {
-  const [account, matrix] = await Promise.all([
+type Props = { searchParams: Promise<{ interval?: string }> };
+
+export default async function BusinessPlansPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const [account, matrix, annual] = await Promise.all([
     getAccountSession().catch(() => null),
     loadPlanMatrix("business"),
+    listAnnualOffers().catch(() => ({})),
   ]);
   const workspace = account ? await getWorkspace(account.id).catch(() => null) : null;
   const currentCode = workspace?.plan ?? null;
-  const primary = await listPublishedFaq("business").catch(() => []);
-  const extra = primary.length >= 4 ? [] : await listPublishedFaq("general").catch(() => []);
   const taxByCode = await subscriptionTaxGates(matrix.plans).catch(() => ({} as Record<string, import("@/lib/tax-configuration").PlanTaxGate>));
   await Promise.all(
     matrix.plans.map((plan) => {
@@ -33,13 +35,9 @@ export default async function BusinessPlansPage() {
       currentCode={currentCode}
       currentAmountCents={matrix.plans.find((plan) => plan.code === currentCode)?.amountCents ?? null}
       matrix={matrix}
-      faqs={[...primary, ...extra].slice(0, 4).map((entry) => ({
-        id: entry.id,
-        question: entry.question,
-        answer: entry.answer,
-      }))}
+      interval={parseBillingInterval(params.interval)}
+      annualBySku={Object.fromEntries(Object.entries(annual).flatMap(([sku, offer]) => offer ? [[sku, offer.amountCents]] : []))}
       taxByCode={taxByCode}
-      countries={corridorCountries().map((country) => ({ code: country.code, name: country.name }))}
     />
   );
 }

@@ -1,26 +1,12 @@
 import Link from "next/link";
 import { MarketingHeader } from "@/components/marketing-header";
+import { CompareFeatures } from "@/components/plans/compare-features";
 import { PlanCheckout } from "@/components/plans/plan-checkout";
+import { carryPlanSelection, type BillingInterval } from "@/lib/billing-interval";
 import type { PlanMatrix } from "@/lib/plan-matrix";
+import { annualSavingsCents, CHECKOUT_TAX_NOTE, displayedPriceBreakdown, formatOfferAmount } from "@/lib/billing-interval";
 import { displayPrice, planActionLabel } from "@/lib/plan-presentation";
 import { formatUsd, quotedPlanTax, type PlanTaxGate } from "@/lib/tax-configuration";
-
-type Faq = { id: string; question: string; answer: string };
-
-const WHY = {
-  creator: [
-    { title: "Get discovered", body: "A public card, specialties, and a short link when the plan includes one." },
-    { title: "Show your work", body: "QR, NFC, a media kit, and analytics follow the features saved on the plan." },
-    { title: "Take collaborations", body: "Brands reach you through the collaboration tools included on the plan." },
-    { title: "Keep payouts separate", body: "The subscription is not a collaboration payout. Payout setup stays on your account." },
-  ],
-  business: [
-    { title: "Find creators", body: "Search the directory and save creators up to the shortlist on the plan." },
-    { title: "Run requests", body: "Briefs, inquiries, and fit tools follow the features saved on the plan." },
-    { title: "See the work", body: "Intelligence and exports appear when those features are turned on for the plan." },
-    { title: "Pay creators separately", body: "Collaboration funding is not the workspace subscription. It is released on the contract." },
-  ],
-} as const;
 
 export function PublicPlanPage({
   audience,
@@ -29,9 +15,9 @@ export function PublicPlanPage({
   currentCode,
   currentAmountCents,
   matrix,
-  faqs,
+  interval = "month",
+  annualBySku = {},
   taxByCode = {},
-  countries = [],
 }: {
   audience: "creator" | "business";
   signedIn: boolean;
@@ -39,211 +25,133 @@ export function PublicPlanPage({
   currentCode: string | null;
   currentAmountCents: number | null;
   matrix: PlanMatrix;
-  faqs: Faq[];
+  interval?: BillingInterval;
+  annualBySku?: Record<string, number>;
   taxByCode?: Record<string, PlanTaxGate>;
   countries?: { code: string; name: string }[];
 }) {
   const creator = audience === "creator";
+  const basePath = creator ? "/pricing" : "/business/plans";
   return (
     <div className="bg-[#F6F8FC] text-indigo">
       <MarketingHeader
         active={creator ? "influencer" : "business"}
         signedIn={signedIn}
         accountRole={accountRole}
+        planInterval={interval}
       />
-      <section className="mx-auto grid max-w-[90rem] items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-16">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet">
-            {creator ? "Built for creators" : "Business plans"}
-          </p>
-          <h1 className="mt-3 max-w-xl font-display text-4xl font-bold leading-tight sm:text-5xl">
-            {creator ? (
-              <>
-                Plans for every <span className="text-violet">creator</span> journey
-              </>
-            ) : (
-              "Plans for brands, teams, and agencies"
-            )}
-          </h1>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-muted sm:text-base">
-            {creator
-              ? "Publish your card, get discovered, and use the collaboration tools included on your plan. The price and the feature list are the ones saved for that plan."
-              : "Discover creators, manage collaborations, and scale the workspace. Seats, shortlists, and intelligence are whatever is saved on each plan."}
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href={creator ? "/claim" : "/login?next=/business/home"} className="btn-primary">
-              {creator ? "Get started free" : "Start free"}
-            </Link>
-            <a href="#compare" className="btn-secondary">
-              See all features
-            </a>
-          </div>
+      <section className="mx-auto max-w-[90rem] px-4 pb-16 pt-10 sm:px-6 lg:px-10">
+        <div className="text-center">
+          <h1 className="font-display text-4xl font-bold">{creator ? "Influencer plans" : "Business plans"}</h1>
+          <IntervalLinks basePath={basePath} interval={interval} />
         </div>
-        <div className="relative hidden min-h-[280px] lg:block">
-          <div className="absolute right-6 top-6 h-56 w-56 rounded-full bg-[#E4DBFF] blur-2xl" />
-          <div className="absolute bottom-4 left-8 h-40 w-40 rounded-full bg-[#D9E8FF] blur-2xl" />
-          <div className="relative ml-auto max-w-sm rounded-3xl border border-white/80 bg-white/80 p-5 shadow-lg">
-            <p className="text-xs font-bold uppercase tracking-wide text-violet">{creator ? "On your card" : "On the workspace"}</p>
-            <ul className="mt-3 space-y-2 text-sm text-indigo">
-              {(creator
-                ? ["Public influencer card", "Short link, QR, and NFC when the plan includes them", "Collaborations and payouts stay on the account"]
-                : ["Creator search and shortlists", "Briefs and inquiries within the plan limits", "Collaboration payments stay separate from the subscription"]
-              ).map((line) => (
-                <li key={line} className="rounded-2xl bg-[#F6F8FC] px-3 py-2">
-                  {line}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-[90rem] px-4 pb-6 sm:px-6 lg:px-10">
-        <div className={`grid gap-5 ${matrix.plans.length > 2 ? "lg:grid-cols-3" : "md:grid-cols-2"}`}>
-          {matrix.plans.map((plan, index) => (
+        <div className={`mt-8 grid gap-5 ${matrix.plans.length > 2 ? "lg:grid-cols-3" : "md:grid-cols-2"}`}>
+          {matrix.plans.map((plan) => (
             <PlanCard
               key={plan.code}
               plan={plan}
-              index={index}
-              count={matrix.plans.length}
               audience={audience}
-              returnTo={creator ? "/pricing" : "/business/plans"}
+              interval={interval}
+              annualAmountCents={annualBySku[plan.sku] ?? null}
+              signedIn={signedIn}
               current={currentCode === plan.code}
               currentAmountCents={currentAmountCents}
               taxGate={taxByCode[plan.code]}
-              countries={countries}
-              signedIn={signedIn}
             />
           ))}
         </div>
+        <CompareFeatures plans={matrix.plans.map((plan) => ({ code: plan.code, name: plan.name }))} rows={matrix.rows} />
+        <p className="mt-4 text-center text-sm text-muted">{CHECKOUT_TAX_NOTE}</p>
+        <p className="mt-2 text-center text-sm">
+          <Link href="/faq" className="font-semibold text-violet hover:underline">Resources</Link>
+        </p>
       </section>
+    </div>
+  );
+}
 
-      <section id="compare" className="mx-auto grid max-w-[90rem] gap-5 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:px-10">
-        <ComparisonTable title={creator ? "Compare influencer plan features" : "Compare plan features"} matrix={matrix} taxByCode={taxByCode} />
-        <aside className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm">
-          <h2 className="font-display text-lg font-bold">{creator ? "Why creators upgrade" : "Why brands and agencies choose Influrios"}</h2>
-          <ul className="mt-4 space-y-3">
-            {WHY[audience].map((item) => (
-              <li key={item.title} className="rounded-2xl bg-[#F6F8FC] p-3">
-                <p className="text-sm font-bold">{item.title}</p>
-                <p className="mt-1 text-xs leading-5 text-muted">{item.body}</p>
-              </li>
-            ))}
-          </ul>
-        </aside>
-      </section>
-
-      {faqs.length ? (
-        <section className="mx-auto max-w-[90rem] px-4 pb-10 sm:px-6 lg:px-10">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <h2 className="font-display text-2xl font-bold">Frequently asked questions</h2>
-              <p className="mt-1 text-sm text-muted">Answers published for this audience.</p>
-            </div>
-            <Link href={`/faq?audience=${creator ? "creator" : "business"}`} className="text-sm font-semibold text-violet hover:underline">
-              View all FAQs
-            </Link>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {faqs.map((entry) => (
-              <details key={entry.id} className="rounded-2xl border border-[#E6ECF7] bg-white px-4 py-3">
-                <summary className="cursor-pointer text-sm font-semibold">{entry.question}</summary>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted">{entry.answer}</p>
-              </details>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="mx-auto max-w-[90rem] px-4 pb-14 sm:px-6 lg:px-10">
-        <div className="flex flex-col items-start justify-between gap-4 rounded-3xl bg-gradient-to-r from-[#EEF2FF] to-[#F3E9FF] px-6 py-6 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="font-display text-xl font-bold">
-              {creator ? "Ready to publish your card?" : "Ready to open a workspace?"}
-            </h2>
-            <p className="mt-1 text-sm text-muted">A paid plan changes only after Stripe confirms checkout.</p>
-          </div>
-          <Link href={creator ? "/claim" : "/login?next=/business/home"} className="btn-primary">
-            {creator ? "Get started free" : "Start free"}
-          </Link>
-        </div>
-      </section>
+function IntervalLinks({ basePath, interval }: { basePath: string; interval: BillingInterval }) {
+  const href = (next: BillingInterval) => (next === "year" ? `${basePath}?interval=year` : basePath);
+  const item = (next: BillingInterval) =>
+    `rounded-full px-4 py-2 text-sm font-semibold ${interval === next ? "bg-violet text-white" : "text-indigo"}`;
+  return (
+    <div role="group" aria-label="Billing period" className="mx-auto mt-6 inline-flex rounded-full bg-[#F1ECFF] p-1">
+      <Link href={href("month")} aria-pressed={interval === "month"} className={item("month")}>Monthly</Link>
+      <Link href={href("year")} aria-pressed={interval === "year"} className={item("year")}>Annual</Link>
     </div>
   );
 }
 
 function PlanCard({
   plan,
-  index,
-  count,
   audience,
-  returnTo,
+  interval,
+  annualAmountCents,
+  signedIn,
   current,
   currentAmountCents,
   taxGate,
-  countries,
-  signedIn,
 }: {
   plan: PlanMatrix["plans"][number];
-  index: number;
-  count: number;
   audience: "creator" | "business";
-  returnTo: string;
+  interval: BillingInterval;
+  annualAmountCents: number | null;
+  signedIn: boolean;
   current: boolean;
   currentAmountCents: number | null;
   taxGate?: PlanTaxGate;
-  countries: { code: string; name: string }[];
-  signedIn: boolean;
 }) {
+  const annualReady = annualAmountCents != null && annualAmountCents > 0;
   const label = planActionLabel({
     name: plan.name,
     amountCents: plan.amountCents,
-    current,
+    current: current && interval === "month",
     currentAmountCents,
+    viewingInterval: interval,
+    currentInterval: current ? "month" : null,
+    annualReady,
   });
-  const emphasized = plan.recommended && !current;
-  const mark = index === 0 ? "★" : plan.recommended ? "♛" : index === count - 1 ? "◆" : "●";
+  const emphasized = plan.recommended && !(current && interval === "month");
+  const review = carryPlanSelection({
+    returnTo: audience === "business" ? "/business/billing" : "/billing",
+    sku: plan.sku,
+    planCode: plan.code,
+    interval,
+  });
+  const href = signedIn ? review : `/login?next=${encodeURIComponent(review)}`;
+  const unavailable = interval === "year" && plan.amountCents > 0 && !annualReady;
   return (
-    <article
-      className={`relative flex flex-col rounded-3xl border bg-white p-6 shadow-sm ${
-        emphasized ? "border-violet shadow-[0_16px_40px_rgba(99,60,255,0.15)]" : "border-[#E6ECF7]"
-      }`}
-    >
+    <article className={`relative flex flex-col rounded-3xl border bg-white p-6 shadow-sm ${emphasized ? "border-violet shadow-[0_16px_40px_rgba(99,60,255,0.15)]" : "border-[#E6ECF7]"}`}>
       {plan.recommended ? (
-        <span className="absolute -top-3 right-5 rounded-full bg-violet px-3 py-1 text-[11px] font-bold text-white">
-          Recommended
-        </span>
+        <span className="absolute -top-3 right-5 rounded-full bg-violet px-3 py-1 text-[11px] font-bold text-white">Most popular</span>
       ) : null}
-      <div className="flex items-start justify-between gap-3">
-        <span className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl text-lg ${emphasized ? "bg-violet text-white" : "bg-[#F1ECFF] text-violet"}`}>
-          {mark}
-        </span>
-        {current ? <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">Current plan</span> : null}
-      </div>
-      <h2 className="mt-4 font-display text-xl font-bold">{plan.name}</h2>
-      <PlanPrice amountCents={plan.amountCents} priceLabel={plan.priceLabel} gate={taxGate} />
-      <p className="mt-2 min-h-10 text-sm text-muted">{plan.description}</p>
+      <h2 className="font-display text-xl font-bold">{plan.name}</h2>
+      <PlanPrice
+        amountCents={plan.amountCents}
+        priceLabel={plan.priceLabel}
+        interval={interval}
+        annualAmountCents={annualAmountCents}
+        locationKnown={false}
+        gate={taxGate}
+      />
+      {unavailable ? <p className="mt-2 text-sm text-amber-900">Annual billing is not available for this plan yet.</p> : null}
       <ul className="mt-4 flex-1 space-y-2 text-sm">
-        {plan.highlights.map((line) => (
+        {plan.highlights.slice(0, 3).map((line) => (
           <li key={line} className="flex gap-2">
-            <span className="mt-0.5 text-violet">✓</span>
+            <span className="text-violet">✓</span>
             <span>{line}</span>
           </li>
         ))}
       </ul>
-      <PlanAction
-        plan={plan}
-        audience={audience}
-        returnTo={returnTo}
-        current={current}
-        label={label}
-        emphasized={emphasized}
-        taxGate={taxGate}
-        countries={countries}
-        currentAmountCents={currentAmountCents}
-        signedIn={signedIn}
-        quote={quotedPlanTax(taxGate)}
-      />
+      {unavailable ? (
+        <Link href={audience === "business" ? "/business/plans" : "/pricing"} className="btn-secondary mt-6 w-full !py-2.5 text-sm">View monthly</Link>
+      ) : plan.amountCents <= 0 ? (
+        <Link href={audience === "creator" ? "/claim" : "/login?next=/business/home"} className="btn-secondary mt-6 w-full !py-2.5 text-sm">{label}</Link>
+      ) : taxGate?.kind === "unavailable" ? (
+        <p className="mt-6 text-sm text-amber-900">This plan is temporarily unavailable.</p>
+      ) : (
+        <Link href={href} className={emphasized ? "btn-primary mt-6 w-full !py-2.5 text-sm" : "btn-secondary mt-6 w-full !py-2.5 text-sm"}>{label}</Link>
+      )}
     </article>
   );
 }
@@ -259,7 +167,10 @@ export function PlanAction({
   countries = [],
   currentAmountCents = null,
   signedIn = true,
-  quote = null,
+  interval = "month",
+  mode = "checkout",
+  annualAmountCents = null,
+  renewalLabel = null,
 }: {
   plan: { code: string; sku: string; name: string; checkout: boolean; priceLabel: string; amountCents: number };
   audience: "creator" | "business";
@@ -272,6 +183,10 @@ export function PlanAction({
   currentAmountCents?: number | null;
   signedIn?: boolean;
   quote?: { taxCents: number; totalCents: number; ratePercent: number | null } | null;
+  interval?: BillingInterval;
+  mode?: "checkout" | "schedule" | "tier";
+  annualAmountCents?: number | null;
+  renewalLabel?: string | null;
 }) {
   const className = emphasized
     ? "btn-primary mt-6 w-full !py-2.5 text-sm"
@@ -304,68 +219,96 @@ export function PlanAction({
     );
   }
   if (!signedIn) {
-    const next = audience === "business" ? "/business/billing" : "/billing";
+    const next = carryPlanSelection({
+      returnTo: audience === "business" ? "/business/billing" : "/billing",
+      sku: plan.sku,
+      planCode: plan.code,
+      interval,
+    });
     return (
-      <div className="mt-6">
-        <TaxNote quote={quote} />
-        <Link href={`/login?next=${encodeURIComponent(next)}`} className={emphasized ? "btn-primary mt-2 w-full !py-2.5 text-sm" : "btn-secondary mt-2 w-full !py-2.5 text-sm"}>
-          {label}
-        </Link>
-      </div>
+      <Link href={`/login?next=${encodeURIComponent(next)}`} className={emphasized ? "btn-primary mt-6 w-full !py-2.5 text-sm" : "btn-secondary mt-6 w-full !py-2.5 text-sm"}>
+        {label}
+      </Link>
     );
   }
   return (
-      <PlanCheckout
+    <PlanCheckout
       plan={plan}
       audience={audience}
       returnTo={returnTo}
       label={label}
       emphasized={emphasized}
       countries={countries}
-      quote={quote}
+      interval={interval}
+      mode={mode}
+      annualAmountCents={annualAmountCents}
+      renewalLabel={renewalLabel}
     />
   );
 }
 
 export function PlanPrice({
   amountCents,
-  priceLabel,
   gate,
   size = "card",
+  interval = "month",
+  annualAmountCents = null,
+  locationKnown = false,
 }: {
   amountCents: number;
   priceLabel: string;
   gate?: PlanTaxGate;
   size?: "card" | "compact";
+  interval?: BillingInterval;
+  annualAmountCents?: number | null;
+  locationKnown?: boolean;
 }) {
-  const quote = quotedPlanTax(gate);
   const priceClass = size === "card" ? "mt-2 font-display text-4xl font-bold" : "font-display text-2xl font-bold";
+  if (amountCents <= 0) {
+    return <p className={priceClass}>Free</p>;
+  }
+  const savings = interval === "year" ? annualSavingsCents({
+    monthlyAmountCents: amountCents,
+    annualAmountCents,
+    monthlyCurrency: "USD",
+    annualCurrency: "USD",
+  }) : null;
+  const quote = quotedPlanTax(gate);
+  const breakdown = locationKnown
+    ? displayedPriceBreakdown({
+        locationKnown: true,
+        baseCents: interval === "year" && annualAmountCents != null ? annualAmountCents : amountCents,
+        taxCents: quote?.taxCents,
+        ratePercent: quote?.ratePercent,
+        claimedTotalCents: quote?.totalCents,
+      })
+    : displayedPriceBreakdown({ locationKnown: false, baseCents: amountCents });
   return (
     <div>
-      <p className={priceClass}>
-        {displayPrice(amountCents, priceLabel)}
-        <span className="text-sm font-semibold text-muted"> / month</span>
-      </p>
-      {quote ? (
+      {interval === "year" && annualAmountCents != null ? (
+        <>
+          <p className={priceClass}>{formatOfferAmount(annualAmountCents)}<span className="text-sm font-semibold text-muted">/year</span></p>
+          <p className="mt-1 text-sm text-muted">
+            {formatOfferAmount(amountCents)} monthly
+            {savings != null ? <span className="font-semibold text-violet"> · Save {formatOfferAmount(savings)}/year</span> : null}
+          </p>
+        </>
+      ) : (
+        <p className={priceClass}>
+          {formatOfferAmount(amountCents)}
+          <span className="text-sm font-semibold text-muted">/month</span>
+        </p>
+      )}
+      {breakdown.kind === "exclusive" || breakdown.kind === "inclusive" ? (
         <p className="mt-1 text-sm text-muted">
-          Base {displayPrice(amountCents, priceLabel)} · Tax {formatUsd(quote.taxCents)}
-          {quote.ratePercent != null ? ` (${quote.ratePercent}%)` : ""} · Total {formatUsd(quote.totalCents)}
+          Tax {formatUsd(breakdown.taxCents)}{breakdown.ratePercent != null ? ` (${breakdown.ratePercent}%)` : ""} · Total {formatUsd(breakdown.totalCents)}
         </p>
       ) : null}
     </div>
   );
 }
 
-function TaxNote({ quote }: { quote?: { taxCents: number; totalCents: number; ratePercent: number | null } | null }) {
-  if (!quote) return <p className="text-xs font-semibold text-muted">Tax calculated at checkout</p>;
-  return (
-    <p className="text-xs font-semibold text-muted">
-      Tax {formatUsd(quote.taxCents)}{quote.ratePercent != null ? ` (${quote.ratePercent}%)` : ""} · Total {formatUsd(quote.totalCents)}
-    </p>
-  );
-}
-
-export function ComparisonTable({ title, matrix, taxByCode }: { title: string; matrix: PlanMatrix; taxByCode?: Record<string, PlanTaxGate> }) {
+export function ComparisonTable({ title, matrix }: { title: string; matrix: PlanMatrix }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-[#E6ECF7] bg-white shadow-sm">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#E6ECF7] px-5 py-4">
@@ -387,7 +330,6 @@ export function ComparisonTable({ title, matrix, taxByCode }: { title: string; m
                   {plan.name}
                   <span className="mt-1 block text-[11px] font-medium normal-case text-muted">
                     {displayPrice(plan.amountCents, plan.priceLabel)}/mo
-                    {quotedPlanTax(taxByCode?.[plan.code]) ? ` · Tax ${formatUsd(quotedPlanTax(taxByCode?.[plan.code])!.taxCents)} · Total ${formatUsd(quotedPlanTax(taxByCode?.[plan.code])!.totalCents)}` : ""}
                   </span>
                 </th>
               ))}

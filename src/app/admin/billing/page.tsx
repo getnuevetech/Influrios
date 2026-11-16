@@ -3,8 +3,10 @@ import { SubscriptionsShell } from "@/app/admin/subscriptions/shell";
 import { requireAdminPage } from "@/app/admin/guard";
 import { canAccessModule, hasPermission } from "@/lib/admin-auth";
 import { presentCheckoutSession } from "@/lib/admin-subscription-view";
-import { BILLING_CATALOG, getBillingStore, getProduct, listBillingPriceIds } from "@/lib/billing";
+import { BILLING_CATALOG, getBillingStore, getProduct, listAnnualOffers, listBillingPriceIds } from "@/lib/billing";
+import { annualCodesMissingPrice } from "@/lib/billing-interval";
 import { prisma } from "@/lib/db";
+import { listDiscountOffers } from "@/lib/discount-store";
 import { listPlanCatalog } from "@/lib/entitlements-db";
 import { productSwitch } from "@/lib/product-switches";
 import { stripeBillingMode } from "@/lib/stripe-admin";
@@ -20,13 +22,26 @@ export default async function AdminBillingPage({ searchParams }: Props) {
   const showPlans = canAccessModule(session, "plans");
   const params = await searchParams;
   const store = await getBillingStore();
-  const [portalOn, paidMentoringOn, prices, stripeMode, plans] = await Promise.all([
+  const [portalOn, paidMentoringOn, prices, stripeMode, plans, annual, discounts] = await Promise.all([
     productSwitch("customer_portal"),
     productSwitch("paid_mentoring"),
     listBillingPriceIds(),
     stripeBillingMode(),
     listPlanCatalog().catch(() => []),
+    listAnnualOffers().catch(() => ({})),
+    listDiscountOffers().catch(() => ({ ok: false as const, offers: [] })),
   ]);
+  const unpricedAnnualCodes = annualCodesMissingPrice({
+    offers: discounts.offers.map((offer) => ({
+      id: offer.id,
+      code: offer.displayCode,
+      planCode: offer.planCode,
+      planName: offer.planName,
+      billingInterval: offer.billingInterval,
+      lifecycle: offer.lifecycle,
+    })),
+    pricedSkus: Object.keys(annual),
+  });
   const planName = new Map(plans.map((plan) => [plan.code, plan.name]));
   const userIds = [...new Set(store.sessions.map((item) => item.userId).filter((id): id is string => Boolean(id)))];
   const slugs = [...new Set(store.sessions.map((item) => item.creatorSlug).filter((id): id is string => Boolean(id)))];
@@ -66,6 +81,8 @@ export default async function AdminBillingPage({ searchParams }: Props) {
         portalOn={portalOn}
         paidMentoringOn={paidMentoringOn}
         prices={prices}
+        annual={Object.fromEntries(Object.entries(annual).flatMap(([sku, offer]) => offer ? [[sku, { amount: (offer.amountCents / 100).toFixed(2), priceId: offer.priceId }]] : []))}
+        unpricedAnnualCodes={unpricedAnnualCodes}
         catalog={BILLING_CATALOG.map((product) => ({
           sku: product.sku,
           name: product.name,

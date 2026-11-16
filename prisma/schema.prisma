@@ -1482,6 +1482,13 @@ model SubscriptionState {
   status     String
   provider   String
   externalId String
+  /// month until Stripe confirms a yearly price. Browsing annual does not write this.
+  billingInterval   String    @default("month")
+  currentPeriodEnd  DateTime?
+  pendingInterval   String    @default("")
+  pendingPriceId    String    @default("")
+  pendingEffectiveAt DateTime?
+  scheduleId        String    @default("")
   updatedAt  DateTime @updatedAt
   createdAt  DateTime @default(now())
 
@@ -1499,6 +1506,8 @@ model CheckoutAttempt {
   userId          String?
   creatorSlug     String?
   stripeSessionId String?
+  /// month or year. The checkout uses this price; it is not inferred from the plan name.
+  billingInterval String    @default("month")
   completedAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
