@@ -4,7 +4,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { canAccessModule, hasPermission } from "@/lib/admin-auth";
 import { presentCheckoutSession } from "@/lib/admin-subscription-view";
 import { BILLING_CATALOG, getBillingStore, getProduct, listAnnualOffers, listBillingPriceIds } from "@/lib/billing";
-import { annualCodesMissingPrice } from "@/lib/billing-interval";
+import { annualCodesMissingPrice, dollarInputFromCents } from "@/lib/billing-interval";
 import { prisma } from "@/lib/db";
 import { listDiscountOffers } from "@/lib/discount-store";
 import { listPlanCatalog } from "@/lib/entitlements-db";
@@ -81,7 +81,7 @@ export default async function AdminBillingPage({ searchParams }: Props) {
         portalOn={portalOn}
         paidMentoringOn={paidMentoringOn}
         prices={prices}
-        annual={Object.fromEntries(Object.entries(annual).flatMap(([sku, offer]) => offer ? [[sku, { amount: (offer.amountCents / 100).toFixed(2), priceId: offer.priceId }]] : []))}
+        annual={Object.fromEntries(Object.entries(annual).flatMap(([sku, offer]) => offer ? [[sku, { amount: dollarInputFromCents(offer.amountCents), priceId: offer.priceId }]] : []))}
         unpricedAnnualCodes={unpricedAnnualCodes}
         catalog={BILLING_CATALOG.map((product) => ({
           sku: product.sku,

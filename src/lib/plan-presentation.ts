@@ -232,8 +232,11 @@ export function planActionLabel(input: {
   return `Choose ${input.name}`;
 }
 
+/** Stored cents are the price. The admin price label is not a second amount. */
 export function displayPrice(amountCents: number, priceLabel: string): string {
+  void priceLabel;
   if (amountCents <= 0) return "$0";
-  const trimmed = priceLabel.replace(/\s*\/\s*mo(nth)?/i, "").trim();
-  return trimmed || `$${(amountCents / 100).toFixed(0)}`;
+  const dollars = amountCents / 100;
+  const digits = Number.isInteger(dollars) ? 0 : 2;
+  return `$${dollars.toFixed(digits)}`;
 }

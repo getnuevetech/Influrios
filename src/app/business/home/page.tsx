@@ -32,6 +32,7 @@ import { loadBusinessHub } from "@/lib/collaboration-hub";
 import { contractPartyProgress, listContractsForUser } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 import { loadPlanMatrix } from "@/lib/plan-matrix";
+import { displayPrice } from "@/lib/plan-presentation";
 import { formatFollowers, specialtyLabel } from "@/lib/seed-data";
 import { syncedFollowerTotal } from "@/lib/social-sync";
 
@@ -136,13 +137,8 @@ export default async function BusinessHomePage() {
   const entitlements = hub?.entitlements ?? null;
   const planColumn = matrix.plans.find((plan) => plan.code === workspace.plan);
   const planName = planColumn?.name ?? workspace.plan;
-  const planPrice = (planColumn?.priceLabel || "Free").trim();
   const planPriceDisplay =
-    !planPrice || planPrice.toLowerCase() === "free"
-      ? null
-      : planPrice.includes("/") || /mo(nth)?/i.test(planPrice)
-        ? planPrice
-        : `${planPrice} / month`;
+    planColumn && planColumn.amountCents > 0 ? `${displayPrice(planColumn.amountCents, planColumn.priceLabel)}/mo` : null;
   const planBadgeLabel = planPriceDisplay ? `${planName} ${planPriceDisplay}` : planName;
   const checks = [
     { label: "Company name", done: Boolean(workspace.name.trim()) },
