@@ -1484,16 +1484,38 @@ model SubscriptionState {
   externalId String
   /// month until Stripe confirms a yearly price. Browsing annual does not write this.
   billingInterval   String    @default("month")
+  /// Start of the current subscription period. Empty until Stripe or the stored row has it.
+  currentPeriodStart DateTime?
   currentPeriodEnd  DateTime?
+  /// When true, the subscription stays active and ends at currentPeriodEnd.
+  cancelAtPeriodEnd Boolean   @default(false)
   pendingInterval   String    @default("")
   pendingPriceId    String    @default("")
   pendingEffectiveAt DateTime?
   scheduleId        String    @default("")
+  renewalNotices    SubscriptionRenewalNotice[]
   updatedAt  DateTime @updatedAt
   createdAt  DateTime @default(now())
 
   @@unique([provider, externalId])
   @@index([userId])
+}
+
+/// One reminder per subscription, renewal instant, and notice kind. A new renewal instant gets its own rows.
+model SubscriptionRenewalNotice {
+  id             String            @id @default(cuid())
+  subscriptionId String
+  subscription   SubscriptionState @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  renewsAt       DateTime
+  /// 7d | 3d | day
+  kind           String
+  /// sent | unsent
+  status         String
+  reason         String            @default("")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([subscriptionId, renewsAt, kind])
 }
 
 /// Local checkout attempt (demo or Stripe). Replaces data/billing.json sessions.

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/provider-secrets";
 import { productSwitch } from "@/lib/product-switches";
 import { renewalScheduleFields, tierPreviewQuery, tierUpdateFields } from "@/lib/billing-interval";
+import { subscriptionRenewalUpdateFields } from "@/lib/subscription-renewal";
 import { parseProviderTaxCalculation, parseRegistrationList } from "@/lib/tax-configuration";
 
 const STRIPE_HOST = "https://api.stripe.com";
@@ -354,6 +355,7 @@ export function parseStripeSubscription(payload: Record<string, unknown> | null)
     quantity: typeof first?.quantity === "number" && first.quantity > 0 ? first.quantity : 1,
     periodStart: typeof payload.current_period_start === "number" ? payload.current_period_start : null,
     periodEnd: typeof payload.current_period_end === "number" ? payload.current_period_end : null,
+    cancelAtPeriodEnd: payload.cancel_at_period_end === true,
     scheduleId: typeof payload.schedule === "string" ? payload.schedule : "",
     status: typeof payload.status === "string" ? payload.status : "",
   };
@@ -479,6 +481,45 @@ export async function updateSubscriptionPrice(input: {
     const subscription = parseStripeSubscription(payload);
     if (!payload || !subscription) return { ok: false as const, error: "Stripe did not update the subscription. Nothing was changed." };
     return { ok: true as const, pending: Boolean(payload.pending_update), priceId: subscription.priceId };
+  } catch {
+    return { ok: false as const, error: "Stripe did not update the subscription. Nothing was changed." };
+  }
+}
+
+/**
+ * Turn renewal off or on. Off sets cancel_at_period_end. On clears it.
+ * The current price is left alone. An immediate cancel is not requested.
+ */
+export async function updateSubscriptionCancelAtPeriodEnd(input: {
+  secret: string;
+  subscriptionId: string;
+  cancelAtPeriodEnd: boolean;
+  idempotencyKey: string;
+}) {
+  if (!/^sub_[A-Za-z0-9]+$/.test(input.subscriptionId)) {
+    return { ok: false as const, error: "Stripe did not update the subscription. Nothing was changed." };
+  }
+  try {
+    const payload = await stripeCall(
+      "POST",
+      `/v1/subscriptions/${input.subscriptionId}`,
+      input.secret,
+      new URLSearchParams(subscriptionRenewalUpdateFields({ cancelAtPeriodEnd: input.cancelAtPeriodEnd })),
+      input.idempotencyKey,
+    );
+    const subscription = parseStripeSubscription(payload);
+    if (!payload || !subscription || subscription.cancelAtPeriodEnd !== input.cancelAtPeriodEnd) {
+      return { ok: false as const, error: "Stripe did not update the subscription. Nothing was changed." };
+    }
+    if (subscription.status === "canceled" || subscription.status === "incomplete_expired") {
+      return { ok: false as const, error: "Stripe did not keep the subscription until the renewal date. Nothing was changed." };
+    }
+    return {
+      ok: true as const,
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      periodStart: subscription.periodStart,
+      periodEnd: subscription.periodEnd,
+    };
   } catch {
     return { ok: false as const, error: "Stripe did not update the subscription. Nothing was changed." };
   }
