@@ -25,6 +25,7 @@ import { unreadNoticeCount } from "@/lib/account-notices";
 import { getAccountSession, homePathForRole } from "@/lib/accounts";
 import { loadBusinessHub } from "@/lib/collaboration-hub";
 import { loadCreatorHome } from "@/lib/creator-home";
+import { memberNavActive } from "@/lib/member-nav";
 import { sidebarBadgeCounts, sidebarBadgeFor, sidebarBadgeLabel } from "@/lib/sidebar-badges";
 import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
@@ -69,32 +70,6 @@ const BUSINESS_NAV: NavItem[] = [
   { href: "/account/verification", label: "Verification", icon: <IconIdCard size={18} /> },
   { href: "/account?audience=business", label: "Settings", icon: <IconSettings size={18} /> },
 ];
-
-function active(href: string, path: string, search = "") {
-  const url = new URL(href, "http://local.invalid");
-  const base = url.pathname;
-  if (path === "/collaboration/work" || path.startsWith("/collaboration/work/")) {
-    return base === "/collaboration/hub" || base === "/collaboration/business";
-  }
-  if (base === "/creator" || base === "/business/home") return path === base;
-  if (base === "/agency") {
-    if (path !== "/agency") return false;
-    const wantView = url.searchParams.get("view");
-    const current = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("view");
-    if (wantView) return current === wantView;
-    return !current;
-  }
-  if (base === "/creator/earnings" && (path === "/payments" || path.startsWith("/payments/"))) return true;
-  if (!(path === base || path.startsWith(`${base}/`))) return false;
-  if (base === "/collaboration/hub") return true;
-  const wantView = url.searchParams.get("view");
-  if (wantView) {
-    const current = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("view");
-    // Default hub view is opportunities when no ?view= is present.
-    return (current ?? "opportunities") === wantView;
-  }
-  return true;
-}
 
 export async function MemberFrame({
   audience: audienceHint,
@@ -206,11 +181,12 @@ export async function MemberFrame({
         </Link>
         <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-3">
           {nav.map((item) => {
-            const on = active(item.href, path, search);
+            const on = memberNavActive(item.href, path, search);
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={on ? "page" : undefined}
                 className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold ${
                   on ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872] hover:bg-[#F7F8FC]"
                 }`}
@@ -300,22 +276,26 @@ export async function MemberFrame({
         </header>
 
         <nav className="flex gap-2 overflow-x-auto border-b border-[#E6ECF7] bg-white px-3 py-2 lg:hidden">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                active(item.href, path, search) ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872]"
-              }`}
-            >
-              {item.label}
-              {sidebarBadgeLabel(sidebarBadgeFor(item.href, badgeCounts)) ? (
-                <span className="ml-1 rounded-full bg-[#6D4AFF] px-1.5 text-[10px] font-bold text-white">
-                  {sidebarBadgeLabel(sidebarBadgeFor(item.href, badgeCounts))}
-                </span>
-              ) : null}
-            </Link>
-          ))}
+          {nav.map((item) => {
+            const on = memberNavActive(item.href, path, search);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={on ? "page" : undefined}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  on ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872]"
+                }`}
+              >
+                {item.label}
+                {sidebarBadgeLabel(sidebarBadgeFor(item.href, badgeCounts)) ? (
+                  <span className="ml-1 rounded-full bg-[#6D4AFF] px-1.5 text-[10px] font-bold text-white">
+                    {sidebarBadgeLabel(sidebarBadgeFor(item.href, badgeCounts))}
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="px-4 py-6 sm:px-6 lg:px-8">{children}</div>

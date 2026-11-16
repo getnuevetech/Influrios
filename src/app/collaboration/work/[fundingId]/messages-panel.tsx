@@ -1,8 +1,9 @@
 import { actionPostContractMessage } from "@/app/collaboration/contracts/[id]/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getAdminSession } from "@/lib/admin-auth";
-import { adminCanOpenContractMessages, messageVisible, resolveContractPartyForAccount } from "@/lib/contract-document";
+import { adminCanOpenContractMessages, resolveContractPartyForAccount } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
+import { asInboxDocument, readableContractMessages } from "@/lib/message-inbox";
 
 export async function WorkspaceMessages({ fundingId }: { fundingId: string }) {
   const [account, admin, document] = await Promise.all([
@@ -32,13 +33,17 @@ export async function WorkspaceMessages({ fundingId }: { fundingId: string }) {
       ? ({ kind: "admin" as const, userId: admin.userId, roleId: admin.roleId, permissions: admin.permissions })
       : null;
   const messages = viewer
-    ? document.messages.filter((message) => messageVisible({
-        audience: message.audience,
-        recipientPartyId: message.recipientPartyId,
-        senderUserId: message.senderUserId,
-        senderAdminId: message.senderAdminId,
+    ? readableContractMessages(
+        asInboxDocument({
+          id: document.id,
+          title: document.title,
+          fundingId: document.fundingId,
+          collaborationId: document.collaborationId,
+          parties: document.parties,
+          messages: document.messages,
+        }),
         viewer,
-      }))
+      )
     : [];
   const canMessage = Boolean(party || (admin && adminCanOpenContractMessages(admin)));
   const returnTo = `/collaboration/work/${fundingId}?tab=messages`;
@@ -49,7 +54,7 @@ export async function WorkspaceMessages({ fundingId }: { fundingId: string }) {
       {messages.length === 0 ? <p className="mt-3 text-sm text-muted">No messages you can read yet.</p> : (
         <ul className="mt-3 space-y-3">
           {messages.map((message) => (
-            <li key={message.id} className="rounded-xl bg-[#F4F7FF] px-3 py-2 text-sm">
+            <li key={message.id} data-thread-id={message.threadId} className="rounded-xl bg-[#F4F7FF] px-3 py-2 text-sm">
               <p className="font-semibold text-indigo">{message.senderName} · {message.audience.replaceAll("_", " ")} · {message.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC</p>
               <p className="mt-1 whitespace-pre-wrap text-indigo">{message.body}</p>
             </li>
