@@ -405,6 +405,137 @@ export function parseAnnualOfferInput(input: { amount: string; priceId: string; 
   return { ok: true as const, offer: { amountCents: cents, priceId, currency: "USD" as const } };
 }
 
+const PLAN_ANNUAL_SKU: Record<string, string> = {
+  PLUS: "creator_plus",
+  PRO: "creator_pro",
+  BUSINESS_PRO: "business_pro",
+  AGENCY: "agency",
+};
+
+const BILLING_ANNUAL_SKUS = new Set(Object.values(PLAN_ANNUAL_SKU));
+
+/** Catalog plans and billing SKUs share one annual-offer key. A new plan uses its own code. */
+export function annualOfferKey(planOrSku: string): string {
+  const trimmed = planOrSku.trim();
+  if (!trimmed) return "";
+  const upper = trimmed.toUpperCase().replace(/[\s-]+/g, "_");
+  if (PLAN_ANNUAL_SKU[upper]) return PLAN_ANNUAL_SKU[upper];
+  const lower = trimmed.toLowerCase();
+  if (BILLING_ANNUAL_SKUS.has(lower)) return lower;
+  return upper;
+}
+
+export function dollarInputFromCents(cents: number): string {
+  if (!Number.isFinite(cents)) return "";
+  return (Math.round(cents) / 100).toFixed(2);
+}
+
+export function centsFromMonthlyDollarInput(amount: string): { ok: true; cents: number } | { ok: false; error: string } {
+  const cleaned = amount.trim().replace(/^\$/, "").replace(/,/g, "");
+  if (!cleaned) return { ok: false, error: "Enter the monthly price in dollars." };
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) {
+    return { ok: false, error: "Enter the monthly price in dollars, such as 19.00." };
+  }
+  const cents = Math.round(Number(cleaned) * 100);
+  if (!Number.isInteger(cents) || cents < 0 || cents > 10_000_000) {
+    return { ok: false, error: "Enter the monthly price in dollars." };
+  }
+  return { ok: true, cents };
+}
+
+export type AnnualOfferRecord = { amountCents: number; priceId: string; currency: "USD" };
+
+export function parsePlanAnnualDraft(input: { amount: string; priceId: string; monthlyPriceIds?: string[] }) {
+  const ids = (input.monthlyPriceIds ?? []).map((id) => id.trim()).filter(Boolean);
+  const parsed = parseAnnualOfferInput({
+    amount: input.amount,
+    priceId: input.priceId,
+    monthlyPriceId: ids[0],
+  });
+  if (!parsed.ok || !parsed.offer) return parsed;
+  for (const id of ids.slice(1)) {
+    if (parsed.offer.priceId === id) {
+      return { ok: false as const, error: "The annual price has to be a yearly Stripe price, not the monthly price." };
+    }
+  }
+  return parsed;
+}
+
+export function applyAnnualOffer(
+  store: Record<string, AnnualOfferRecord>,
+  key: string,
+  offer: AnnualOfferRecord | null,
+): Record<string, AnnualOfferRecord> {
+  const next: Record<string, AnnualOfferRecord> = {};
+  for (const [sku, saved] of Object.entries(store)) {
+    if (sku !== key && saved) next[sku] = saved;
+  }
+  if (offer) next[key] = offer;
+  return next;
+}
+
+/** Write one plan's annual draft onto the shared billing.annualOffers record. A blank draft removes it. */
+export function writeSharedAnnualOffer(
+  store: Record<string, AnnualOfferRecord>,
+  planOrSku: string,
+  draft: { amount: string; priceId: string; monthlyPriceIds?: string[] },
+) {
+  const key = annualOfferKey(planOrSku);
+  if (!key) return { ok: false as const, error: "Unknown plan" };
+  const parsed = parsePlanAnnualDraft(draft);
+  if (!parsed.ok) return parsed;
+  return {
+    ok: true as const,
+    key,
+    offer: parsed.offer,
+    store: applyAnnualOffer(store, key, parsed.offer),
+  };
+}
+
+export function writeBillingAnnualOffers(
+  store: Record<string, AnnualOfferRecord>,
+  drafts: Partial<Record<string, { amount: string; priceId: string }>>,
+  monthlyPriceIds: Partial<Record<string, string>>,
+  skus: readonly string[],
+) {
+  let next = store;
+  for (const sku of skus) {
+    const draft = drafts[sku] ?? { amount: "", priceId: "" };
+    const written = writeSharedAnnualOffer(next, sku, {
+      amount: draft.amount,
+      priceId: draft.priceId,
+      monthlyPriceIds: monthlyPriceIds[sku] ? [monthlyPriceIds[sku]] : [],
+    });
+    if (!written.ok) return written;
+    next = written.store;
+  }
+  return { ok: true as const, store: next };
+}
+
+export function planPriceFieldsFromStored(input: {
+  amountCents: number;
+  annual: { amountCents: number; priceId: string } | null;
+}) {
+  return {
+    monthlyDollars: dollarInputFromCents(input.amountCents),
+    annualDollars: input.annual ? dollarInputFromCents(input.annual.amountCents) : "",
+    annualPriceId: input.annual?.priceId ?? "",
+  };
+}
+
+export function sharedAnnualFields(store: Record<string, AnnualOfferRecord>, planOrSku: string) {
+  const offer = store[annualOfferKey(planOrSku)];
+  if (!offer) return { amount: "", priceId: "" };
+  return { amount: dollarInputFromCents(offer.amountCents), priceId: offer.priceId };
+}
+
+/** Cents public annual pricing reads, or null when that plan has no published annual offer. */
+export function annualPricingCents(store: Record<string, AnnualOfferRecord>, planOrSku: string): number | null {
+  const offer = store[annualOfferKey(planOrSku)];
+  if (!offer || offer.amountCents <= 0 || !offer.priceId) return null;
+  return offer.amountCents;
+}
+
 export function annualCodesMissingPrice(input: {
   offers: { id: string; code: string; planCode: string; planName: string; billingInterval: string; lifecycle?: string }[];
   pricedSkus: string[];
@@ -413,6 +544,9 @@ export function annualCodesMissingPrice(input: {
     if (offer.billingInterval !== "year") return false;
     if (offer.lifecycle === "paused" || offer.lifecycle === "expired") return false;
     const sku = skuForPlanCode(offer.planCode);
-    return !sku || !input.pricedSkus.includes(sku);
+    const candidates = [sku, offer.planCode.trim(), offer.planCode.trim().toUpperCase()].filter(
+      (key): key is string => Boolean(key),
+    );
+    return !candidates.some((key) => input.pricedSkus.includes(key));
   });
 }

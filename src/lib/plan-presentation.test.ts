@@ -127,6 +127,7 @@ describe("plan presentation", () => {
     );
     assert.equal(displayPrice(0, "Free"), "$0");
     assert.equal(displayPrice(1900, "$19/mo"), "$19");
+    assert.equal(displayPrice(2500, "$19/mo"), "$25");
   });
 
   it("hides the marketing header on plan pages and signed-in account screens", () => {

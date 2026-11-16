@@ -3,6 +3,8 @@ import { SubscriptionsShell } from "@/app/admin/subscriptions/shell";
 import { requireAdminPage } from "@/app/admin/guard";
 import { canAccessModule, hasPermission } from "@/lib/admin-auth";
 import { estimatePlanPrice, presentPlanPrice, previewRateChip } from "@/lib/admin-subscription-view";
+import { listAnnualOffers } from "@/lib/billing";
+import { annualOfferKey, planPriceFieldsFromStored } from "@/lib/billing-interval";
 import { BUSINESS_FEATURE_KEYS } from "@/lib/business-entitlements";
 import { dedupeCountryRules, flagRuleConflicts, mapStoredPolicy } from "@/lib/country-tax";
 import { EDITABLE_FEATURE_KEYS } from "@/lib/entitlements";
@@ -29,8 +31,9 @@ export default async function AdminPlansPage({ searchParams }: Props) {
   );
   const countries = catalog?.countries ?? [];
   const keysByCode = new Map((catalog?.plans ?? []).map((plan) => [plan.code, planMatchKeys(plan)]));
+  let annual: Awaited<ReturnType<typeof listAnnualOffers>> = {};
   try {
-    [rows, plans] = await Promise.all([listPlanFeatures(), listPlanCatalog()]);
+    [rows, plans, annual] = await Promise.all([listPlanFeatures(), listPlanCatalog(), listAnnualOffers()]);
   } catch (error) {
     console.error("admin plans", error);
     dbError = true;
@@ -60,12 +63,20 @@ export default async function AdminPlansPage({ searchParams }: Props) {
   const priced: PricedPlanRow[] = visible.map((plan, index) => {
     const estimate = estimates[index]!;
     const price = presentPlanPrice(estimate);
+    const offer = annual[annualOfferKey(plan.code)] ?? null;
+    const dollars = planPriceFieldsFromStored({
+      amountCents: plan.amountCents,
+      annual: offer ? { amountCents: offer.amountCents, priceId: offer.priceId } : null,
+    });
     return {
       code: plan.code,
       name: plan.name,
       description: plan.description,
       audience: plan.audience,
       amountCents: plan.amountCents,
+      monthlyDollars: dollars.monthlyDollars,
+      annualDollars: dollars.annualDollars,
+      annualStripePriceId: dollars.annualPriceId,
       priceLabel: plan.priceLabel,
       stripePriceId: plan.stripePriceId,
       publicListing: plan.publicListing,

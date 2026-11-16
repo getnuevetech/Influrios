@@ -11,7 +11,17 @@ import { prisma } from "@/lib/db";
 import { confirmStripeCheckout, openStripeCheckout, stripeCredentials } from "@/lib/stripe-admin";
 import type { BusinessPlanCode } from "@/lib/business-entitlements";
 import { storedCreatorPlan, type PlanCode } from "@/lib/entitlements";
-import { parseAnnualOfferInput, recordChangeDecision, resolveRecurringOffer, type BillingInterval } from "@/lib/billing-interval";
+import {
+  annualOfferKey,
+  parseAnnualOfferInput,
+  parsePlanAnnualDraft,
+  recordChangeDecision,
+  resolveRecurringOffer,
+  writeBillingAnnualOffers,
+  writeSharedAnnualOffer,
+  type AnnualOfferRecord,
+  type BillingInterval,
+} from "@/lib/billing-interval";
 
 export type BillingAudience = "creator" | "business";
 
@@ -359,50 +369,112 @@ export async function listBillingPriceIds(): Promise<Record<BillingSku, string>>
 }
 
 const ANNUAL_KEY = "billing.annualOffers";
+const ANNUAL_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,40}$/;
 
-export type AnnualOffer = { amountCents: number; priceId: string; currency: "USD" };
+export type AnnualOffer = AnnualOfferRecord;
 
-export async function listAnnualOffers(): Promise<Partial<Record<BillingSku, AnnualOffer>>> {
+function annualOfferFromStored(stored: unknown): AnnualOffer | null {
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) return null;
+  const amountCents = (stored as { amountCents?: unknown }).amountCents;
+  const priceId = (stored as { priceId?: unknown }).priceId;
+  if (typeof amountCents !== "number" || typeof priceId !== "string") return null;
+  const parsed = parseAnnualOfferInput({ amount: (amountCents / 100).toFixed(2), priceId });
+  return parsed.ok ? parsed.offer : null;
+}
+
+export async function listAnnualOffers(): Promise<Partial<Record<string, AnnualOffer>>> {
   const row = await prisma.platformSetting.findUnique({ where: { key: ANNUAL_KEY } }).catch(() => null);
   const value = row?.value && typeof row.value === "object" && !Array.isArray(row.value) ? (row.value as Record<string, unknown>) : {};
-  const offers: Partial<Record<BillingSku, AnnualOffer>> = {};
-  for (const product of BILLING_CATALOG) {
-    const stored = value[product.sku];
-    if (!stored || typeof stored !== "object" || Array.isArray(stored)) continue;
-    const amountCents = (stored as { amountCents?: unknown }).amountCents;
-    const priceId = (stored as { priceId?: unknown }).priceId;
-    if (typeof amountCents !== "number" || typeof priceId !== "string") continue;
-    const parsed = parseAnnualOfferInput({ amount: (amountCents / 100).toFixed(2), priceId });
-    if (parsed.ok && parsed.offer) offers[product.sku] = parsed.offer;
+  const offers: Partial<Record<string, AnnualOffer>> = {};
+  for (const [sku, stored] of Object.entries(value)) {
+    if (!ANNUAL_KEY_PATTERN.test(sku)) continue;
+    const offer = annualOfferFromStored(stored);
+    if (offer) offers[sku] = offer;
   }
   return offers;
+}
+
+async function readAnnualOfferStore(): Promise<Record<string, AnnualOffer>> {
+  const offers = await listAnnualOffers();
+  const store: Record<string, AnnualOffer> = {};
+  for (const [sku, offer] of Object.entries(offers)) {
+    if (offer) store[sku] = offer;
+  }
+  return store;
+}
+
+async function persistAnnualOffers(store: Record<string, AnnualOffer>) {
+  await prisma.platformSetting.upsert({
+    where: { key: ANNUAL_KEY },
+    update: { value: store },
+    create: { key: ANNUAL_KEY, value: store },
+  });
+}
+
+async function monthlyPriceIdsForAnnual(planOrSku: string, formMonthlyPriceId: string) {
+  const ids = [formMonthlyPriceId.trim()].filter(Boolean);
+  const key = annualOfferKey(planOrSku);
+  if (!isBillingSku(key)) return ids;
+  const product = getProduct(key);
+  if (!product) return ids;
+  const checkoutId = await billingPriceId(product.sku, product.stripePriceEnv);
+  if (checkoutId && !ids.includes(checkoutId)) ids.push(checkoutId);
+  return ids;
 }
 
 export async function saveAnnualOffers(
   drafts: Partial<Record<BillingSku, { amount: string; priceId: string }>>,
   monthlyPriceIds: Partial<Record<BillingSku, string>> = {},
 ) {
-  const next: Record<string, AnnualOffer> = {};
-  for (const product of BILLING_CATALOG) {
-    const draft = drafts[product.sku] ?? { amount: "", priceId: "" };
-    const parsed = parseAnnualOfferInput({ ...draft, monthlyPriceId: monthlyPriceIds[product.sku] });
-    if (!parsed.ok) throw new Error(parsed.error);
-    if (parsed.offer) next[product.sku] = parsed.offer;
-  }
-  await prisma.platformSetting.upsert({
-    where: { key: ANNUAL_KEY },
-    update: { value: next },
-    create: { key: ANNUAL_KEY, value: next },
+  const written = writeBillingAnnualOffers(
+    await readAnnualOfferStore(),
+    drafts,
+    monthlyPriceIds,
+    BILLING_CATALOG.map((product) => product.sku),
+  );
+  if (!written.ok) throw new Error(written.error);
+  await persistAnnualOffers(written.store);
+}
+
+export async function validatePlanAnnualOffer(input: {
+  planCode: string;
+  amount: string;
+  priceId: string;
+  monthlyPriceId: string;
+}) {
+  const monthlyPriceIds = await monthlyPriceIdsForAnnual(input.planCode, input.monthlyPriceId);
+  const parsed = parsePlanAnnualDraft({ amount: input.amount, priceId: input.priceId, monthlyPriceIds });
+  if (!parsed.ok) throw new Error(parsed.error);
+}
+
+export async function savePlanAnnualOffer(input: {
+  planCode: string;
+  amount: string;
+  priceId: string;
+  monthlyPriceId: string;
+}) {
+  await validatePlanAnnualOffer(input);
+  const monthlyPriceIds = await monthlyPriceIdsForAnnual(input.planCode, input.monthlyPriceId);
+  const written = writeSharedAnnualOffer(await readAnnualOfferStore(), input.planCode, {
+    amount: input.amount,
+    priceId: input.priceId,
+    monthlyPriceIds,
   });
+  if (!written.ok) throw new Error(written.error);
+  await persistAnnualOffers(written.store);
+  return written.offer;
 }
 
 export async function recurringOfferFor(sku: string, interval: BillingInterval) {
   const product = getProduct(sku);
   const { findActivePlan } = await import("@/lib/entitlements-db");
-  const custom = product ? null : await findActivePlan(sku);
-  const monthlyAmount = product?.amountCents ?? custom?.amountCents ?? 0;
-  const monthlyPrice = product ? await billingPriceId(product.sku, product.stripePriceEnv) : custom?.stripePriceId ?? "";
-  const annual = product ? (await listAnnualOffers())[product.sku] ?? null : null;
+  const planCode = product?.creatorPlan ?? product?.businessPlan ?? sku;
+  const saved = planCode ? await findActivePlan(planCode) : null;
+  const monthlyAmount = saved ? saved.amountCents : product?.amountCents ?? 0;
+  const monthlyPrice = product ? await billingPriceId(product.sku, product.stripePriceEnv) : saved?.stripePriceId ?? "";
+  const offers = await listAnnualOffers();
+  const annualKey = annualOfferKey(product?.sku ?? planCode);
+  const annual = annualKey ? offers[annualKey] ?? null : null;
   return resolveRecurringOffer({
     sku,
     interval,

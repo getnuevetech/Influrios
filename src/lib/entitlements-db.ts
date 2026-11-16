@@ -433,7 +433,7 @@ export async function createEntitlementPlan(input: {
   const name = input.name.trim().slice(0, 80);
   if (!name) throw new Error("A plan name is required.");
   if (!Number.isFinite(input.amountCents) || input.amountCents < 0 || input.amountCents > 10_000_000) {
-    throw new Error("Monthly price must be zero or a positive amount in cents.");
+    throw new Error("Monthly price must be zero or a positive amount.");
   }
   const stripePriceId = input.stripePriceId.trim();
   if (stripePriceId && !/^price_[A-Za-z0-9]+$/.test(stripePriceId)) {
@@ -518,7 +518,7 @@ export async function updateEntitlementPlanMeta(input: {
   const name = input.name.trim().slice(0, 80);
   if (!name) throw new Error("A plan name is required.");
   if (!Number.isFinite(input.amountCents) || input.amountCents < 0 || input.amountCents > 10_000_000) {
-    throw new Error("Monthly price must be zero or a positive amount in cents.");
+    throw new Error("Monthly price must be zero or a positive amount.");
   }
   const stripePriceId = input.stripePriceId.trim();
   if (stripePriceId && !/^price_[A-Za-z0-9]+$/.test(stripePriceId)) {

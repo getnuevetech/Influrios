@@ -31,6 +31,9 @@ export type PricedPlanRow = {
   description: string;
   audience: "creator" | "business";
   amountCents: number;
+  monthlyDollars: string;
+  annualDollars: string;
+  annualStripePriceId: string;
   priceLabel: string;
   stripePriceId: string;
   publicListing: boolean;
@@ -232,18 +235,7 @@ export function PlansFeatures({
               Description
               <input name="description" className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-indigo">
-              Monthly price (cents)
-              <input name="amountCents" type="number" min={0} defaultValue={0} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-indigo">
-              Price label
-              <input name="priceLabel" placeholder="$49/mo" className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-indigo">
-              Stripe price id
-              <input name="stripePriceId" placeholder="price_..." className={fieldClass} />
-            </label>
+            <PlanPriceFields />
             <label className="flex items-end gap-2 pb-2 text-sm font-semibold text-indigo">
               <input type="checkbox" name="publicListing" value="1" />
               Show on pricing
@@ -269,18 +261,13 @@ export function PlansFeatures({
               Description
               <input name="description" defaultValue={editingPlan.description} className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-indigo">
-              Monthly price (cents)
-              <input name="amountCents" type="number" min={0} defaultValue={editingPlan.amountCents} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-indigo">
-              Price label
-              <input name="priceLabel" defaultValue={editingPlan.priceLabel} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-indigo sm:col-span-2">
-              Stripe price id
-              <input name="stripePriceId" defaultValue={editingPlan.stripePriceId} className={fieldClass} />
-            </label>
+            <PlanPriceFields
+              monthlyDollars={editingPlan.monthlyDollars}
+              annualDollars={editingPlan.annualDollars}
+              priceLabel={editingPlan.priceLabel}
+              stripePriceId={editingPlan.stripePriceId}
+              annualStripePriceId={editingPlan.annualStripePriceId}
+            />
             <div className="flex flex-wrap items-center gap-4 text-sm font-semibold text-indigo sm:col-span-2">
               <label className="flex items-center gap-2">
                 <input type="checkbox" name="publicListing" value="1" defaultChecked={editingPlan.publicListing} />
@@ -347,6 +334,49 @@ export function PlansFeatures({
           </div>
         </SubscriptionsDialog>
       ) : null}
+    </>
+  );
+}
+
+function PlanPriceFields({
+  monthlyDollars = "0.00",
+  annualDollars = "",
+  priceLabel = "",
+  stripePriceId = "",
+  annualStripePriceId = "",
+}: {
+  monthlyDollars?: string;
+  annualDollars?: string;
+  priceLabel?: string;
+  stripePriceId?: string;
+  annualStripePriceId?: string;
+}) {
+  return (
+    <>
+      <p className="text-sm font-normal text-muted sm:col-span-2">
+        Enter dollars. A stored value of 2500 cents opens here as 25.00. Leave the annual price and annual Stripe price id blank to keep annual unpublished. The annual Stripe price id has to differ from the monthly Stripe price id. Existing subscribers stay on the price they already use.
+      </p>
+      <label className="text-sm font-semibold text-indigo">
+        Monthly price (USD)
+        <input name="monthlyPrice" inputMode="decimal" defaultValue={monthlyDollars} placeholder="0.00" autoComplete="off" className={fieldClass} />
+      </label>
+      <label className="text-sm font-semibold text-indigo">
+        Annual price (USD)
+        <input name="annualPrice" inputMode="decimal" defaultValue={annualDollars} placeholder="Leave blank to keep annual unpublished" autoComplete="off" className={fieldClass} />
+      </label>
+      <label className="text-sm font-semibold text-indigo">
+        Price label
+        <input name="priceLabel" defaultValue={priceLabel} placeholder="$49/mo" className={fieldClass} />
+        <span className="mt-1 block text-xs font-normal text-muted">Admin label only. Checkout uses the dollar amounts.</span>
+      </label>
+      <label className="text-sm font-semibold text-indigo">
+        Stripe price id
+        <input name="stripePriceId" defaultValue={stripePriceId} placeholder="price_..." className={fieldClass} />
+      </label>
+      <label className="text-sm font-semibold text-indigo sm:col-span-2">
+        Annual Stripe price id
+        <input name="annualStripePriceId" defaultValue={annualStripePriceId} placeholder="price_..." className={fieldClass} />
+      </label>
     </>
   );
 }
