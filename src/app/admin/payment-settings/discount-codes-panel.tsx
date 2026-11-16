@@ -2,6 +2,7 @@ import { Country } from "country-state-city";
 import { DiscountCodesClient } from "@/app/admin/payment-settings/discount-codes-client";
 import { getAdminSession, hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { SERVICE_LEVEL_LABELS, SERVICE_LEVELS } from "@/lib/collaboration-fees";
 import { listDiscountAudits, listDiscountOffers } from "@/lib/discount-store";
 
 export async function DiscountCodesPanel() {
@@ -36,6 +37,7 @@ export async function DiscountCodesPanel() {
       canViewRedemptions={canViewRedemptions}
       audits={audits}
       databaseError={listed.ok ? "" : listed.error}
+      serviceLevels={SERVICE_LEVELS.map((level) => ({ id: level, label: SERVICE_LEVEL_LABELS[level] }))}
     />
   );
 }

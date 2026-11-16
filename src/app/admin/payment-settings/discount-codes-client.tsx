@@ -4,9 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AccountDialog } from "@/components/account-dialog";
 import { actionPauseDiscountCode, actionPreviewDiscountSample, actionSaveDiscountCode } from "@/app/admin/payment-settings/discount-actions";
-import { LAUNCH_APPLIES_TO, statusLabel, type DiscountOffer, type DiscountStatus } from "@/lib/discount-codes";
-import { SERVICE_LEVELS, SERVICE_LEVEL_LABELS } from "@/lib/collaboration-fees";
-import { formatMinor } from "@/lib/payment-standard-v4";
+import type { DiscountOffer, DiscountStatus } from "@/lib/discount-codes";
 
 type AuditRow = { id: string; actorId: string; action: string; createdAt: string };
 
@@ -16,8 +14,20 @@ const CHARGE_LABEL = {
   influencer_collaboration_fee: "Influencer collaboration fee",
 } as const;
 
+const LAUNCH_APPLIES_TO = "First invoice only";
+
+const STATUS_LABEL: Record<DiscountStatus, string> = {
+  draft: "Draft",
+  scheduled: "Scheduled",
+  active: "Active",
+  paused: "Paused",
+  expired: "Expired",
+  exhausted: "Exhausted",
+};
+
 function money(cents: number, currency: string) {
-  return formatMinor(cents, currency || "USD");
+  const code = /^[A-Z]{3}$/.test(currency) ? currency : "USD";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: code, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
 }
 
 export function DiscountCodesClient({
@@ -28,6 +38,7 @@ export function DiscountCodesClient({
   canViewRedemptions,
   audits,
   databaseError,
+  serviceLevels,
 }: {
   offers: DiscountOffer[];
   plans: { code: string; name: string; amountCents: number }[];
@@ -36,6 +47,7 @@ export function DiscountCodesClient({
   canViewRedemptions: boolean;
   audits: Record<string, AuditRow[]>;
   databaseError: string;
+  serviceLevels: { id: string; label: string }[];
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -48,7 +60,7 @@ export function DiscountCodesClient({
   const rows = useMemo(() => {
     const needle = query.trim().toUpperCase();
     return offers.filter((offer) => {
-      const label = statusLabel(offer.lifecycle === "draft" ? "draft" : offer.lifecycle === "paused" ? "paused" : offer.reservedCount + offer.redeemedCount >= offer.totalUses ? "exhausted" : now < offer.startsAt ? "scheduled" : now > offer.endsAt ? "expired" : "active");
+      const label = STATUS_LABEL[offer.lifecycle === "draft" ? "draft" : offer.lifecycle === "paused" ? "paused" : offer.reservedCount + offer.redeemedCount >= offer.totalUses ? "exhausted" : now < offer.startsAt ? "scheduled" : now > offer.endsAt ? "expired" : "active"];
       if (status !== "all" && label.toLowerCase() !== status) return false;
       if (!needle) return true;
       return offer.normalizedCode.includes(needle) || CHARGE_LABEL[offer.productCharge].toUpperCase().includes(needle);
@@ -129,7 +141,7 @@ export function DiscountCodesClient({
                   <td className="px-4 py-3">{canViewRedemptions ? `${offer.redeemedCount} of ${offer.totalUses}` : "Hidden"}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-1 text-xs font-semibold ${current === "active" ? "bg-emerald-100 text-emerald-800" : current === "draft" ? "bg-[#EEF2F7] text-muted" : "bg-amber-100 text-amber-900"}`}>
-                      {statusLabel(current)}
+                      {STATUS_LABEL[current]}
                     </span>
                   </td>
                 </tr>
@@ -143,6 +155,7 @@ export function DiscountCodesClient({
           offer={open === "new" ? null : open}
           plans={plans}
           countries={countries}
+          serviceLevels={serviceLevels}
           canIssue={canIssue}
           canViewRedemptions={canViewRedemptions}
           audits={open === "new" ? [] : audits[open.id] ?? []}
@@ -162,6 +175,7 @@ function DiscountDialog({
   offer,
   plans,
   countries,
+  serviceLevels,
   canIssue,
   canViewRedemptions,
   audits,
@@ -175,6 +189,7 @@ function DiscountDialog({
   offer: DiscountOffer | null;
   plans: { code: string; name: string; amountCents: number }[];
   countries: { code: string; name: string }[];
+  serviceLevels: { id: string; label: string }[];
   canIssue: boolean;
   canViewRedemptions: boolean;
   audits: AuditRow[];
@@ -246,7 +261,7 @@ function DiscountDialog({
         ) : (
           <label className="text-sm font-semibold text-indigo sm:col-span-2">Eligible service level
             <select name="serviceLevel" defaultValue={offer?.serviceLevel || "contracted"} className="mt-1 w-full rounded-xl border px-3 py-2 font-normal">
-              {SERVICE_LEVELS.map((level) => <option key={level} value={level}>{SERVICE_LEVEL_LABELS[level]}</option>)}
+              {serviceLevels.map((level) => <option key={level.id} value={level.id}>{level.label}</option>)}
             </select>
           </label>
         )}
