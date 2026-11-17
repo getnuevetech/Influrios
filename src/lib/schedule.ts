@@ -76,3 +76,57 @@ export function scheduleLabel(input: {
   }
   return "";
 }
+
+/** When the next recurring tranche may open after this hold. Null when no more tranches are due. */
+export function nextRecurrenceDueAt(input: {
+  scheduleKind: string;
+  seriesStopped?: boolean;
+  trancheIndex: number;
+  trancheCount: number;
+  intervalDays: number;
+  holdAt: Date | null;
+}): Date | null {
+  if (input.scheduleKind !== "recurring") return null;
+  if (input.seriesStopped) return null;
+  if (input.trancheIndex >= input.trancheCount) return null;
+  if (!input.holdAt || input.intervalDays < 1) return null;
+  return new Date(input.holdAt.getTime() + input.intervalDays * 24 * 60 * 60 * 1000);
+}
+
+export function recurringSeriesSummary(input: {
+  scheduleKind: string;
+  seriesStopped?: boolean;
+  trancheIndex: number;
+  trancheCount: number;
+  intervalDays: number;
+  holdAt: Date | null;
+  now?: Date;
+}): {
+  label: string;
+  remaining: number;
+  nextDueLabel: string | null;
+  canStop: boolean;
+} | null {
+  if (input.scheduleKind !== "recurring") return null;
+  const remaining = Math.max(0, input.trancheCount - input.trancheIndex);
+  const due = nextRecurrenceDueAt(input);
+  const now = input.now ?? new Date();
+  let nextDueLabel: string | null = null;
+  if (input.seriesStopped) {
+    nextDueLabel = "Series stopped — later tranches will not open.";
+  } else if (remaining === 0) {
+    nextDueLabel = "Final tranche in this series.";
+  } else if (due) {
+    nextDueLabel = recurrenceIsDue({ holdAt: input.holdAt, intervalDays: input.intervalDays, now })
+      ? "Next tranche is due — waiting on the recurring sweep."
+      : `Next tranche due ${due.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} UTC.`;
+  } else {
+    nextDueLabel = "Next tranche opens after this one is held.";
+  }
+  return {
+    label: scheduleLabel(input),
+    remaining,
+    nextDueLabel,
+    canStop: !input.seriesStopped && remaining > 0,
+  };
+}

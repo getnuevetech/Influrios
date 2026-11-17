@@ -3,8 +3,15 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { prisma } from "./db";
 import { listAttributionSources } from "./deal-attribution";
-import { applyMarketplaceEvent, recurringTrancheFeeCents, requestPrefund, saveFundingSchedule, sweepDueRecurrences } from "./marketplace-ledger";
-import { planSchedule, recurrenceIsDue, splitTranches } from "./schedule";
+import {
+  applyMarketplaceEvent,
+  recurringTrancheFeeCents,
+  requestPrefund,
+  saveFundingSchedule,
+  stopRecurringSeries,
+  sweepDueRecurrences,
+} from "./marketplace-ledger";
+import { nextRecurrenceDueAt, planSchedule, recurrenceIsDue, recurringSeriesSummary, splitTranches } from "./schedule";
 
 describe("funding schedule rules", () => {
   it("copies the original tranche fee instead of resolving a new one", () => {
@@ -86,6 +93,53 @@ describe("funding schedule rules", () => {
     assert.equal(recurrenceIsDue({ holdAt, intervalDays: 30, now: new Date("2026-09-30T00:00:00.000Z") }), false);
     assert.equal(recurrenceIsDue({ holdAt, intervalDays: 30, now: new Date("2026-10-01T00:00:00.000Z") }), true);
     assert.equal(recurrenceIsDue({ holdAt: null, intervalDays: 30, now: new Date("2026-10-01T00:00:00.000Z") }), false);
+  });
+
+  it("summarizes a recurring series for the payments UI", () => {
+    const holdAt = new Date("2026-09-01T00:00:00.000Z");
+    assert.equal(nextRecurrenceDueAt({
+      scheduleKind: "recurring",
+      trancheIndex: 1,
+      trancheCount: 2,
+      intervalDays: 1,
+      holdAt,
+    })?.toISOString(), "2026-09-02T00:00:00.000Z");
+    assert.equal(nextRecurrenceDueAt({
+      scheduleKind: "recurring",
+      seriesStopped: true,
+      trancheIndex: 1,
+      trancheCount: 2,
+      intervalDays: 1,
+      holdAt,
+    }), null);
+    const open = recurringSeriesSummary({
+      scheduleKind: "recurring",
+      trancheIndex: 1,
+      trancheCount: 2,
+      intervalDays: 1,
+      holdAt,
+      now: new Date("2026-09-01T12:00:00.000Z"),
+    });
+    assert.equal(open?.remaining, 1);
+    assert.equal(open?.canStop, true);
+    assert.match(open?.label ?? "", /Recurring 1 of 2/);
+    const stopped = recurringSeriesSummary({
+      scheduleKind: "recurring",
+      seriesStopped: true,
+      trancheIndex: 1,
+      trancheCount: 2,
+      intervalDays: 1,
+      holdAt,
+    });
+    assert.equal(stopped?.canStop, false);
+    assert.match(stopped?.nextDueLabel ?? "", /stopped/i);
+    const payments = readFileSync("src/app/payments/payments-panel.tsx", "utf8");
+    assert.match(payments, /actionStopSeries/);
+    assert.match(payments, /recurringSeriesSummary/);
+    assert.match(payments, /Stop later tranches/);
+    assert.match(readFileSync("src/app/payments/actions.ts", "utf8"), /stopRecurringSeries/);
+    assert.match(readFileSync("scripts/staging-e8-recurring-evidence.sh", "utf8"), /prove-chain/);
+    assert.match(readFileSync("package.json", "utf8"), /staging:e8-prove-chain/);
   });
 });
 
@@ -294,6 +348,50 @@ describe("staged and recurring prefunds", () => {
         occurrenceCount: 2,
       });
       assert.equal(blocked.ok, false);
+
+      await saveFundingSchedule({
+        stagedFundingEnabled: true,
+        recurringFundingEnabled: true,
+        maxStages: settings.maxStages,
+        recurringIntervalDays: settings.recurringIntervalDays,
+        maxRecurrences: settings.maxRecurrences,
+      });
+      const stopSeries = await requestPrefund({
+        jurisdictionCode: "US",
+        businessName: "Harbor Co",
+        creatorSlug: "sofia-martinez",
+        title: "Stop later retain",
+        grossCents: 12_000,
+        serviceLevel: "contracted",
+        sourceId: source.id,
+        scheduleKind: "recurring",
+        occurrenceCount: 3,
+      });
+      assert.equal(stopSeries.ok, true);
+      if (!stopSeries.ok) return;
+      ids.push(stopSeries.id);
+      const stopFirst = await prisma.collaborationFunding.findUnique({ where: { id: stopSeries.id } });
+      const stopHold = await applyMarketplaceEvent({
+        provider: "primary",
+        eventId: `hold-${stopSeries.id}`,
+        eventType: "funding.held",
+        fundingId: stopSeries.id,
+        amountCents: 12_000,
+      });
+      assert.equal(stopHold.applied, true);
+      const stopHoldAt = await prisma.ledgerEntry.findFirst({
+        where: { fundingId: stopSeries.id, kind: "hold" },
+        orderBy: { createdAt: "asc" },
+      });
+      if (!stopHoldAt || !stopFirst?.scheduleId) throw new Error("stop series hold missing");
+      const stopped = await stopRecurringSeries(stopFirst.scheduleId);
+      assert.equal(stopped.ok, true);
+      await sweepDueRecurrences(
+        new Date(stopHoldAt.createdAt.getTime() + (settings.recurringIntervalDays + 1) * 24 * 60 * 60 * 1000),
+      );
+      assert.equal(await prisma.collaborationFunding.count({ where: { scheduleId: stopFirst.scheduleId } }), 1);
+      const stoppedRow = await prisma.collaborationFunding.findUnique({ where: { id: stopSeries.id } });
+      assert.equal(stoppedRow?.seriesStopped, true);
     } finally {
       const unique = [...new Set(ids)];
       if (unique.length) {
@@ -303,7 +401,7 @@ describe("staged and recurring prefunds", () => {
         await prisma.collaborationFunding.deleteMany({ where: { id: { in: unique } } });
       }
       await prisma.collaborationFunding.deleteMany({
-        where: { title: { in: ["Launch stages", "Monthly retain", "Blocked schedule"] } },
+        where: { title: { in: ["Launch stages", "Monthly retain", "Blocked schedule", "Stop later retain"] } },
       });
       await saveFundingSchedule({
         stagedFundingEnabled: settings.stagedFundingEnabled,
