@@ -33,6 +33,8 @@ import {
   readSettlementDisputed,
   readSettlementQuestions,
 } from "@/lib/member-settlement";
+import { recurringSeriesSummary, scheduleLabel } from "@/lib/schedule";
+import { actionStopSeries } from "@/app/payments/actions";
 
 type Search = {
   q?: string;
@@ -45,6 +47,7 @@ type Search = {
   error?: string;
   approved?: string;
   returned?: string;
+  stopped?: string;
   from?: string;
   to?: string;
 };
@@ -195,6 +198,7 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
       </div>
       {params.error ? <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-800">{params.error}</p> : null}
       {params.returned ? <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-950">Checkout returned. Funding stays unconfirmed until the provider confirms it.</p> : null}
+      {params.stopped ? <p className="rounded-2xl bg-[#F4F0FF] px-4 py-3 text-sm text-indigo">Recurring series stopped. Later tranches will not open.</p> : null}
       <form className="flex flex-wrap gap-2" action="/payments">
         <input type="hidden" name="currency" value={currency} />
         {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
@@ -241,9 +245,13 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
                   payoutReturned: payout.includes("Returned") || payout.includes("Payout failed"),
                 });
                 const code = storedCurrencyCode(deal.currency) ?? currency;
+                const series = scheduleLabel(deal);
                 return (
                   <tr key={deal.id} className="border-t border-[#f0f3fa]">
-                    <td className="px-4 py-3 font-semibold text-indigo">{deal.title}</td>
+                    <td className="px-4 py-3 font-semibold text-indigo">
+                      <span className="block">{deal.title}</span>
+                      {series ? <span className="mt-0.5 block text-xs font-medium text-muted">{series}{deal.seriesStopped ? " · stopped" : ""}</span> : null}
+                    </td>
                     <td className="px-4 py-3">{nameOf(deal.creatorSlug)}</td>
                     <td className="px-4 py-3"><MoneyAmount cents={deal.status === "held" || deal.status === "completed" ? deal.ledger.heldCents + deal.ledger.releasedCents : 0} currency={code} /></td>
                     <td className="px-4 py-3"><MoneyAmount cents={deal.ledger.heldCents} currency={code} /></td>
@@ -354,12 +362,39 @@ async function PaymentDetail({
               ? `/collaboration/work/${deal.id}`
               : `${listHref}&tab=transactions`;
   const actionLabel = recovery && recovery.kind !== "unavailable" ? recovery.cta : action.label;
+  const holdAtRaw = deal.entries.find((entry) => entry.kind === "hold")?.createdAt ?? null;
+  const holdAt = holdAtRaw ? new Date(holdAtRaw) : null;
+  const series = recurringSeriesSummary({
+    scheduleKind: deal.scheduleKind,
+    seriesStopped: deal.seriesStopped,
+    trancheIndex: deal.trancheIndex,
+    trancheCount: deal.trancheCount,
+    intervalDays: deal.intervalDays,
+    holdAt,
+  });
 
   return (
     <RecordDialog title={deal.title} closeHref={closeHref}>
       <div data-screen={caseOpen ? "R01" : "B04"} data-mobile="M01" className="space-y-4 pb-24 md:pb-0">
         <p className="text-sm text-muted">{deal.businessName} · {influencer}</p>
         <PaymentStatus label={statusLabel} />
+        {series ? (
+          <div className="space-y-2 rounded-2xl border border-border bg-white px-4 py-3 text-sm text-indigo">
+            <p className="font-semibold">{series.label}</p>
+            <p className="text-muted">{series.nextDueLabel}</p>
+            {series.remaining > 0 ? (
+              <p className="text-muted">{series.remaining} later tranche{series.remaining === 1 ? "" : "s"} still on this series.</p>
+            ) : null}
+            {businessViewer && series.canStop && deal.scheduleId ? (
+              <form action={actionStopSeries} className="pt-1">
+                <input type="hidden" name="scheduleId" value={deal.scheduleId} />
+                <button type="submit" className="inline-flex h-11 items-center rounded-full border border-border px-4 text-sm font-semibold text-indigo">
+                  Stop later tranches
+                </button>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
         {stageNote ? <p className="rounded-2xl bg-[#F4F0FF] px-4 py-3 text-sm text-indigo">{stageNote}</p> : null}
         {recovery && recovery.kind !== "unavailable" ? (
           <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">

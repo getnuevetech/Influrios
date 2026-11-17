@@ -439,6 +439,24 @@ Operator path:
 3. Paste the printed evidence pack into this section + the §5 table (also `tmp/e6-evidence-ids.env` on the host).
 4. Optional manual path: `staging:e6-check-ready`, business prefund UI, `--prove-hold` / UI approve / `--prove-release` / `--prove-duplicate`.
 
+### E8 progress (Recurring tranche 2) — **product path ready** (host evidence blank)
+
+**Goal:** 2+ tranche series · tranche 1 held · sweep opens tranche 2 `awaiting_provider` · stop → no tranche 3 · business payments UI shows series label + **Stop later tranches**.
+
+| Check | Result |
+|-------|--------|
+| Schedule label on `/payments` list + detail | ☑ code (`scheduleLabel` / `recurringSeriesSummary`) |
+| Business can stop later tranches | ☑ `actionStopSeries` → `stopRecurringSeries` on payment detail |
+| Unit: stop blocks next sweep tranche | ☑ `src/lib/schedule.test.ts` |
+| Host: tranche 1 held → sweep → tranche 2 | ☐ `CRON_SECRET=… npm run staging:e8-prove-chain` |
+| Host: stop → no tranche 3 | ☐ paste scheduleId + ids from `tmp/e8-evidence-ids.env` |
+
+```bash
+cd /var/www/influrios
+npm run staging:e8-recurring-evidence
+CRON_SECRET=… npm run staging:e8-prove-chain
+```
+
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
@@ -447,7 +465,7 @@ Operator path:
 | Social OAuth | YouTube Connection `cmv7wsjww001qs2015kbcssy4` · Account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` (`2026-10-14T10:03:39Z`) | 2026-10-14 | host + cloud-agent |
 | Meilisearch counts | job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · health 200 · Discover 200 (`2026-10-14T11:55:09Z`) | 2026-10-14 | host + cloud-agent |
 | Airwallex hold and release | **in progress** — post-#323 deploy had unsigned **401** (2026-11-02) · **2026-11-17 probe: unsigned → 503 Airwallex not ready** · use `staging:e6-prove-chain` once gateway secret restored | 2026-11-17 | host + cloud-agent |
-| Recurring tranche 2 | | | |
+| Recurring tranche 2 | **product path ready** — payments series label + Stop · `npm run staging:e8-recurring-evidence` / `staging:e8-prove-chain` · paste scheduleId + tranche 2 id when host prove runs | | |
 | Team proposal | | | |
 | DocuSign completed | | | |
 | Flutterwave or M-Pesa | | | |

@@ -1648,7 +1648,7 @@ function presentFunding(row: {
     revisionNote: string;
     reviewWindowHours?: number | null;
   }[];
-  entries: { kind: string; amountCents: number }[];
+  entries: { kind: string; amountCents: number; createdAt?: Date }[];
   disputes?: {
     id: string;
     milestoneId: string | null;
