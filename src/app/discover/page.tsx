@@ -193,9 +193,12 @@ export default async function DiscoverPage({ searchParams }: Props) {
       <GuestGateBanner copy={searchGate.decision === "soft" ? searchGate.copy : ""} next={returnTo} />
       <DiscoverScrollMemory storageKey={discoverScrollKey(returnTo)} />
       {livePages ? null : (
-        <p className="mx-auto w-full max-w-[90rem] px-4 pt-4 text-sm font-semibold text-[#8A5A12] sm:px-6 lg:px-10">
-          Sample directory. These profiles are not live partners and cannot be booked from this page.
-        </p>
+        <div className="mx-auto w-full max-w-[90rem] px-4 pt-4 sm:px-6 lg:px-10">
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <span className="font-semibold">Sample directory.</span> These profiles are presentation demos, not live partners,
+            and cannot be booked from this page. An admin turns on live public profiles when the directory is ready.
+          </p>
+        </div>
       )}
       <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
         <h1 className="font-display text-4xl font-bold text-indigo">Find your next collaboration</h1>
@@ -261,7 +264,10 @@ export default async function DiscoverPage({ searchParams }: Props) {
           </div>
         </details>
         <div className="mt-4 flex items-center justify-between gap-3">
-          <p className="text-sm text-indigo">Showing <strong>{organic.length.toLocaleString()}</strong> influencers</p>
+          <p className="text-sm text-indigo">
+            Showing <strong>{organic.length.toLocaleString()}</strong>{" "}
+            {livePages ? "influencers" : "sample profiles"}
+          </p>
           <DiscoverSort defaultValue={sort} />
         </div>
         {sponsored.length ? (

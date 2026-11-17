@@ -91,9 +91,15 @@ export default async function BusinessBillingPage({ searchParams }: Props) {
       error={params.error}
       notice={params.notice}
       payout={
-        <Link href="/collaboration/business" className="mt-3 inline-block text-sm font-semibold underline">
-          Open collaboration payments
-        </Link>
+        <div className="mt-3 rounded-2xl border border-[#E4EBFF] bg-[#F8F6FF] px-4 py-3">
+          <p className="text-sm font-semibold text-indigo">Collaboration payments</p>
+          <p className="mt-1 text-sm text-muted">
+            Funded deals and milestone releases live in your collaboration workspace. This page is only for your Influrios plan subscription.
+          </p>
+          <Link href="/collaboration/business" className="mt-2 inline-block text-sm font-semibold text-violet hover:underline">
+            Open collaboration payments
+          </Link>
+        </div>
       }
     />
   );
