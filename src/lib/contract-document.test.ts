@@ -399,8 +399,10 @@ Creator compensation: $900.00
     assert.match(raw, /^%PDF-1.4/);
     assert.match(raw, /\(Influrios\)/);
     assert.match(raw, /Collaboration Agreement/);
-    assert.match(raw, /COMMERCIAL SUMMARY/);
-    assert.match(raw, /Page endorsement/);
+    assert.match(raw, /1\. PARTIES/);
+    assert.match(raw, /3\. COMPENSATION/);
+    assert.match(raw, /EXECUTION/);
+    assert.match(raw, /Agreement preview/);
   });
 
   it("shows each message only to the chosen readers", () => {

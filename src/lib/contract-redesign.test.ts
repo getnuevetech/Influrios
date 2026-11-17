@@ -248,8 +248,11 @@ describe("contracts UI redesign surfaces", () => {
     const pdfRoute = readFileSync("src/app/collaboration/contracts/[id]/pdf/route.ts", "utf8");
     assert.match(pdfRoute, /attachment; filename=/);
     assert.equal(pdfRoute.includes("inline; filename="), false);
-    const pdfLib = readFileSync("src/lib/contract-pdf.ts", "utf8");
-    assert.match(pdfLib, /formalLayout/);
-    assert.match(pdfLib, /sectionBarCommands/);
+    const formalPdf = readFileSync("src/lib/formal-agreement-pdf.ts", "utf8");
+    assert.match(formalPdf, /renderFormalAgreementPdf/);
+    assert.match(formalPdf, /Schedule A/);
+    assert.match(formalPdf, /Execution/);
+    const chrome = readFileSync("src/lib/contract-document.ts", "utf8");
+    assert.match(chrome, /renderFormalAgreementPdf/);
   });
 });
