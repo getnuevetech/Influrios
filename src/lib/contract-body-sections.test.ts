@@ -56,14 +56,14 @@ describe("agreement body sections", () => {
     assert.match(trimmed, /18\.\s+Amendments/);
     assert.match(stripLeadingChrome(trimmed), /Agreement purpose/);
     const sections = parseAgreementBodySections(body);
-    const headings = sections.map((section) => section.heading).filter(Boolean);
-    assert.ok(headings.some((heading) => /^1\.\s+Parties/i.test(heading!)));
-    assert.ok(headings.some((heading) => /^2\.\s+Campaign Scope/i.test(heading!)));
-    assert.ok(headings.some((heading) => /^5\.\s+Influencer Share/i.test(heading!)));
-    assert.ok(headings.some((heading) => /^8\.\s+Content Rights/i.test(heading!)));
-    assert.ok(headings.some((heading) => /^14\.\s+Platform Role/i.test(heading!)));
-    assert.ok(headings.some((heading) => /^18\.\s+Amendments/i.test(heading!)));
-    assert.equal(headings.some((heading) => /^19\.\s+Electronic Signature/i.test(heading!)), false);
+    const headings = sections.map((section) => section.heading).filter(Boolean) as string[];
+    for (let clause = 1; clause <= 18; clause += 1) {
+      assert.ok(
+        headings.some((heading) => new RegExp(`^${clause}\\.\\s+`).test(heading)),
+        `expected clause ${clause} in Document reader sections`,
+      );
+    }
+    assert.equal(headings.some((heading) => /^19\.\s+Electronic Signature/i.test(heading)), false);
     const formal = readFileSync("src/components/formal-agreement-document.tsx", "utf8");
     assert.match(formal, /body:/);
     assert.match(formal, /parseAgreementBodySections/);
