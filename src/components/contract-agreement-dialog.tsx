@@ -254,7 +254,11 @@ export function ContractAgreementDialog({
           <Link href={closeHref} scroll={false} className="rounded-full border border-[#E7ECF5] px-4 py-2 text-sm font-semibold text-[#344054]">
             Close
           </Link>
-          <a href={downloadHref} className="inline-flex items-center gap-2 rounded-full border border-[#6D4AFF] px-4 py-2 text-sm font-semibold text-[#6D4AFF]">
+          <a
+            href={downloadHref}
+            download
+            className="inline-flex items-center gap-2 rounded-full border border-[#6D4AFF] px-4 py-2 text-sm font-semibold text-[#6D4AFF]"
+          >
             {downloadLabel}
           </a>
           {primary ? (

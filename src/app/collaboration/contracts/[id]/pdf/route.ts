@@ -5,7 +5,6 @@ import {
   adoptUnboundContractParty,
   agreementForParty,
   buildContractChromePdf,
-  contractTermsAreFrozen,
   resolveContractPartyForAccount,
 } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
@@ -14,6 +13,19 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type Props = { params: Promise<{ id: string }> };
+
+function pdfDownloadHeaders(documentId: string, agreementRef: string | null | undefined, chrome: string) {
+  const safeRef = (agreementRef || documentId).replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 48);
+  const filename = `influrios-contract-${safeRef}.pdf`;
+  return {
+    "content-type": "application/pdf",
+    // Force download instead of opening the PDF in the browser tab.
+    "content-disposition": `attachment; filename="${filename}"`,
+    "cache-control": "private, no-store, no-cache, must-revalidate",
+    pragma: "no-cache",
+    "x-influrios-contract-chrome": chrome,
+  };
+}
 
 export async function GET(_request: Request, { params }: Props) {
   const { id } = await params;
@@ -54,57 +66,28 @@ export async function GET(_request: Request, { params }: Props) {
     return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
   }
 
-  if (party) {
-    const renderedBody = await agreementForParty({
-      body: document.renderedBody || "Collaboration agreement",
-      role: party.role,
-      termsSnapshotJson: document.termsSnapshotJson,
-    });
-    const { pdf } = buildContractChromePdf({
-      id: document.id,
-      title: document.title,
-      status: document.status,
-      renderedBody,
-      signingChannel: document.signingChannel,
-      createdAt: document.createdAt,
-      parties: document.parties,
-    });
-    return new NextResponse(new Uint8Array(pdf), {
-      headers: {
-        "content-type": "application/pdf",
-        "content-disposition": `inline; filename="influrios-contract-${document.id}.pdf"`,
-        "cache-control": "private, no-store, no-cache, must-revalidate",
-        pragma: "no-cache",
-        "x-influrios-contract-chrome": "party",
-      },
-    });
-  }
-
-  const frozen = contractTermsAreFrozen(document);
-  const storedPdf = document.pdfBytes ? Buffer.from(document.pdfBytes) : Buffer.alloc(0);
-  if (frozen && storedPdf.length > 0) {
-    return new NextResponse(new Uint8Array(storedPdf), {
-      headers: {
-        "content-type": "application/pdf",
-        "content-disposition": `inline; filename="influrios-contract-${document.id}.pdf"`,
-        "cache-control": "private, no-store, no-cache, must-revalidate",
-        pragma: "no-cache",
-        "x-influrios-contract-chrome": "stored",
-      },
-    });
-  }
+  const renderedBody = party
+    ? await agreementForParty({
+        body: document.renderedBody || "Collaboration agreement",
+        role: party.role,
+        termsSnapshotJson: document.termsSnapshotJson,
+      })
+    : document.renderedBody || "Collaboration agreement";
 
   const { body, upgraded, pdf } = buildContractChromePdf({
     id: document.id,
     title: document.title,
     status: document.status,
-    renderedBody: document.renderedBody || "Collaboration agreement",
+    renderedBody,
     signingChannel: document.signingChannel,
     createdAt: document.createdAt,
+    agreementRef: document.agreementRef,
+    versionLabel: document.versionLabel,
     parties: document.parties,
   });
 
-  if (!frozen) {
+  // Persist chrome upgrades only while the agreement is still editable.
+  if (!party && (document.status === "draft" || document.status === "sent") && upgraded) {
     await prisma.contractDocument
       .update({
         where: { id: document.id, status: { in: ["draft", "sent"] } },
@@ -118,11 +101,7 @@ export async function GET(_request: Request, { params }: Props) {
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
-      "content-type": "application/pdf",
-      "content-disposition": `inline; filename="influrios-contract-${document.id}.pdf"`,
-      "cache-control": "private, no-store, no-cache, must-revalidate",
-      pragma: "no-cache",
-      "x-influrios-contract-chrome": upgraded ? "upgraded" : "current",
+      ...pdfDownloadHeaders(document.id, document.agreementRef, party ? "party" : upgraded ? "upgraded" : "formal"),
       "x-influrios-contract-template": "influrios-collab-v1",
     },
   });

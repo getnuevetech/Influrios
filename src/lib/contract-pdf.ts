@@ -60,12 +60,20 @@ export type ContractPdfEndorsementSlot = {
 
 export type ContractPdfOptions = {
   agreementId?: string;
+  /** Public agreement reference shown in the formal header (e.g. IC-9BMTKC2J). */
+  agreementRef?: string;
+  versionLabel?: string;
   title?: string;
   signatures?: ContractPdfSignature[];
   /** All parties (signed + pending) for the page endorsement strip. */
   endorsementSlots?: ContractPdfEndorsementSlot[];
   /** When true, stamp initials endorsement strip on every content page. */
   pageEndorsements?: boolean;
+  /**
+   * Formal layout matches the on-screen Document reader (wordmark header + navy section bars).
+   * Defaults to true.
+   */
+  formalLayout?: boolean;
 };
 
 const PDF_LINE_WIDTH: Record<ContractPdfLineStyle, number> = {
@@ -106,7 +114,9 @@ export function wrapContractLines(text: string, width = 88): string[] {
 }
 
 function isSectionHeading(line: string): boolean {
-  return /^\d+\.\s+\S/.test(line.trim());
+  const trimmed = line.trim();
+  if (/^\d+\.\s+\S/.test(trimmed)) return true;
+  return /^(Agreement purpose|Commercial Summary|Schedule A\b.*|Execution)$/i.test(trimmed);
 }
 
 function isTitleLine(line: string, seenBody: boolean): boolean {
@@ -145,7 +155,7 @@ export function classifyContractPdfLines(text: string): ContractPdfLine[] {
       seenBody = true;
       continue;
     }
-    if (/^Commercial Summary|^Signature Audit Record|^END OF /i.test(line.trim())) {
+    if (/^Signature Audit Record|^END OF /i.test(line.trim())) {
       out.push({ text: line.trim(), style: "subtitle" });
       seenBody = true;
       continue;
@@ -193,11 +203,12 @@ export function classifyContractPdfLines(text: string): ContractPdfLine[] {
 function pdfFontAndSize(style: ContractPdfLineStyle): { font: "F1" | "F2" | "F3"; size: number; leading: number } {
   switch (style) {
     case "title":
-      return { font: "F2", size: 16, leading: 22 };
+      return { font: "F2", size: 18, leading: 26 };
     case "subtitle":
-      return { font: "F2", size: 11, leading: 16 };
+      return { font: "F3", size: 11, leading: 16 };
     case "heading":
-      return { font: "F2", size: 11, leading: 18 };
+      // Extra leading for the navy section bar drawn behind the heading.
+      return { font: "F2", size: 9, leading: 26 };
     case "meta":
       return { font: "F3", size: 9, leading: 12 };
     case "table_header":
@@ -217,18 +228,27 @@ function pdfFontAndSize(style: ContractPdfLineStyle): { font: "F1" | "F2" | "F3"
   }
 }
 
-function paginateContractLines(lines: ContractPdfLine[]): ContractPdfLine[][] {
+function pageContentTop(pageIndex: number, formalLayout: boolean): number {
+  if (!formalLayout) return 720;
+  return pageIndex === 0 ? 688 : 718;
+}
+
+function paginateContractLines(
+  lines: ContractPdfLine[],
+  formalLayout: boolean,
+): ContractPdfLine[][] {
   const pages: ContractPdfLine[][] = [];
-  const top = 720;
   const bottom = 88;
   let current: ContractPdfLine[] = [];
-  let y = top;
+  let pageIndex = 0;
+  let y = pageContentTop(pageIndex, formalLayout);
   for (const line of lines) {
     const { leading } = pdfFontAndSize(line.style);
     if (current.length > 0 && y - leading < bottom) {
       pages.push(current);
       current = [];
-      y = top;
+      pageIndex += 1;
+      y = pageContentTop(pageIndex, formalLayout);
     }
     current.push(line);
     y -= leading;
@@ -254,24 +274,122 @@ function drawInk(commands: string[], signature: RenderedSignature, x: number, y:
   commands.push("Q");
 }
 
-function headerCommands(pageIndex: number, title?: string): string[] {
+function headerCommands(input: {
+  pageIndex: number;
+  title?: string;
+  agreementRef?: string;
+  versionLabel?: string;
+  formalLayout: boolean;
+}): string[] {
   const commands: string[] = [];
-  // Solid brand bar so every downloaded page clearly uses Influrios chrome.
+  if (!input.formalLayout) {
+    // Legacy solid brand bar.
+    commands.push("q");
+    commands.push("0.12 0.16 0.42 rg");
+    commands.push("0 760 612 32 re");
+    commands.push("f");
+    commands.push("Q");
+    commands.push("BT");
+    commands.push("/F2 9 Tf");
+    commands.push("1 1 1 rg");
+    commands.push("50 771 Td");
+    const label =
+      input.pageIndex === 0
+        ? "INFLURIOS  |  COLLABORATION AGREEMENT"
+        : `INFLURIOS  |  COLLABORATION AGREEMENT  |  ${(input.title ?? "GENERATED CONTRACT").slice(0, 40).toUpperCase()}`;
+    commands.push(`(${pdfEscape(label)}) Tj`);
+    commands.push("0 0 0 rg");
+    commands.push("ET");
+    return commands;
+  }
+
+  // Formal Document reader chrome: brand mark + agreement meta, then a rule.
+  const indigo = "0.106 0.078 0.392"; // #1B1464
+  const blue = "0.161 0.475 1"; // #2979FF
+  // Brand circle (site wordmark mark).
   commands.push("q");
-  commands.push("0.12 0.16 0.42 rg");
-  commands.push("0 760 612 32 re");
+  commands.push(`${blue} rg`);
+  commands.push("50 762 16 16 re");
+  commands.push("f");
+  commands.push("Q");
+  commands.push("BT");
+  commands.push("/F2 8 Tf");
+  commands.push("1 1 1 rg");
+  commands.push("54.5 767 Td");
+  commands.push("(oo) Tj");
+  commands.push("ET");
+  commands.push("BT");
+  commands.push("/F2 12 Tf");
+  commands.push(`${indigo} rg`);
+  commands.push("72 766 Td");
+  commands.push("(Influrios) Tj");
+  commands.push("ET");
+
+  const ref = (input.agreementRef || input.title || "").trim().slice(0, 28) || "Pending assignment";
+  const version = (input.versionLabel || "v1.0").trim();
+  commands.push("BT");
+  commands.push("/F1 8 Tf");
+  commands.push("0.4 0.44 0.52 rg");
+  commands.push("420 774 Td");
+  commands.push(`(${pdfEscape(`Agreement ID: ${ref}`)}) Tj`);
+  commands.push("0 -11 Td");
+  commands.push(`(${pdfEscape(`Version: ${version}`)}) Tj`);
+  commands.push("ET");
+
+  commands.push("q");
+  commands.push("0.106 0.078 0.392 RG");
+  commands.push("1 w");
+  commands.push("50 752 m 562 752 l S");
+  commands.push("Q");
+
+  if (input.pageIndex === 0) {
+    commands.push("BT");
+    commands.push("/F2 18 Tf");
+    commands.push(`${indigo} rg`);
+    const title = "Collaboration Agreement";
+    const approxChar = 18 * 0.48;
+    const textWidth = title.length * approxChar;
+    const shift = Math.max(50, Math.floor((612 - textWidth) / 2));
+    commands.push(`${shift} 728 Td`);
+    commands.push(`(${pdfEscape(title)}) Tj`);
+    commands.push("ET");
+    if (input.title?.trim()) {
+      commands.push("BT");
+      commands.push("/F3 11 Tf");
+      commands.push("0.2 0.25 0.33 rg");
+      const campaign = asciiForPdf(input.title.trim()).slice(0, 72);
+      const cWidth = campaign.length * 11 * 0.42;
+      const cShift = Math.max(50, Math.floor((612 - cWidth) / 2));
+      commands.push(`${cShift} 710 Td`);
+      commands.push(`(${pdfEscape(campaign)}) Tj`);
+      commands.push("ET");
+    }
+  } else {
+    commands.push("BT");
+    commands.push("/F2 9 Tf");
+    commands.push(`${indigo} rg`);
+    commands.push("50 732 Td");
+    commands.push(`(${pdfEscape(`Collaboration Agreement  |  ${(input.title ?? "").slice(0, 42)}`)}) Tj`);
+    commands.push("ET");
+  }
+  return commands;
+}
+
+/** Draw a navy section bar with white uppercase label (matches FormalAgreementDocument). */
+function sectionBarCommands(y: number, label: string): string[] {
+  const barTop = y + 6;
+  const barHeight = 18;
+  const commands: string[] = [];
+  commands.push("q");
+  commands.push("0.067 0.102 0.353 rg"); // #111A5A
+  commands.push(`50 ${barTop - barHeight} 512 ${barHeight} re`);
   commands.push("f");
   commands.push("Q");
   commands.push("BT");
   commands.push("/F2 9 Tf");
   commands.push("1 1 1 rg");
-  commands.push("50 771 Td");
-  const label =
-    pageIndex === 0
-      ? "INFLURIOS  |  COLLABORATION AGREEMENT"
-      : `INFLURIOS  |  COLLABORATION AGREEMENT  |  ${(title ?? "GENERATED CONTRACT").slice(0, 40).toUpperCase()}`;
-  commands.push(`(${pdfEscape(label)}) Tj`);
-  commands.push("0 0 0 rg");
+  commands.push(`58 ${barTop - 13} Td`);
+  commands.push(`(${pdfEscape(asciiForPdf(label).toUpperCase())}) Tj`);
   commands.push("ET");
   return commands;
 }
@@ -358,8 +476,15 @@ function footerCommands(input: {
 
 /** Multi-page Helvetica PDF with cursive signature ink and page endorsements. */
 export function renderContractPdf(text: string, options: ContractPdfOptions = {}): Buffer {
-  const classified = classifyContractPdfLines(text);
-  const pages = paginateContractLines(classified);
+  const formalLayout = options.formalLayout !== false;
+  const classified = classifyContractPdfLines(text).filter((line) => {
+    if (!formalLayout) return true;
+    // Formal header already shows the document title / campaign / agreement meta.
+    if (line.style === "title") return false;
+    if (line.style === "meta" && /^Agreement (ID|Hash)|Generated:/i.test(line.text)) return false;
+    return true;
+  });
+  const pages = paginateContractLines(classified, formalLayout);
   const fontRegularId = 3 + pages.length * 2;
   const fontBoldId = fontRegularId + 1;
   const fontObliqueId = fontRegularId + 2;
@@ -373,9 +498,17 @@ export function renderContractPdf(text: string, options: ContractPdfOptions = {}
     const pageId = 3 + index * 2;
     const contentId = pageId + 1;
     kids.push(pageId);
-    const commands: string[] = [...headerCommands(index, options.title)];
+    const commands: string[] = [
+      ...headerCommands({
+        pageIndex: index,
+        title: options.title,
+        agreementRef: options.agreementRef,
+        versionLabel: options.versionLabel,
+        formalLayout,
+      }),
+    ];
     commands.push("BT");
-    let y = 720;
+    let y = pageContentTop(index, formalLayout);
     let currentFont: string | null = null;
     let currentSize: number | null = null;
     let textOpen = true;
@@ -412,6 +545,20 @@ export function renderContractPdf(text: string, options: ContractPdfOptions = {}
           commands.push(`56 ${inkY + 8} m 280 ${inkY + 8} l S`);
           commands.push("Q");
         }
+        y -= leading;
+        ensureText();
+        commands.push(`/${font} ${size} Tf`);
+        commands.push(`50 ${y} Td`);
+        currentFont = font;
+        currentSize = size;
+        commands.push(`() Tj`);
+        return;
+      }
+
+      if (line.style === "heading" && formalLayout) {
+        endText();
+        if (lineIndex > 0) y -= 8;
+        commands.push(...sectionBarCommands(y, line.text));
         y -= leading;
         ensureText();
         commands.push(`/${font} ${size} Tf`);
@@ -462,7 +609,7 @@ export function renderContractPdf(text: string, options: ContractPdfOptions = {}
       ...footerCommands({
         pageIndex: index,
         pageCount: pages.length,
-        agreementId: options.agreementId,
+        agreementId: options.agreementRef || options.agreementId,
         signatures,
         endorsementSlots,
         pageEndorsements,
