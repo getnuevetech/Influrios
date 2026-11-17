@@ -112,11 +112,12 @@ export default async function BillingPage({ searchParams }: Props) {
       error={memberFacingBillingError(params.error)}
       notice={params.notice || (params.connected ? "Payout setup moved to Earnings." : undefined)}
       payout={
-        <div id="payouts" className="mt-3">
-          <p className="text-xs text-amber-900/80">
-            Set up Stripe Connect or your corridor connected account under Earnings — not on this plan page.
+        <div id="payouts" className="mt-3 rounded-2xl border border-[#E4EBFF] bg-[#F8F6FF] px-4 py-3">
+          <p className="text-sm font-semibold text-indigo">Collaboration payouts</p>
+          <p className="mt-1 text-sm text-muted">
+            Stripe Connect and corridor payout setup live on Earnings. This page is only for your Influrios plan subscription.
           </p>
-          <Link href="/creator/earnings#payouts" className="mt-2 inline-block text-sm font-semibold underline">
+          <Link href="/creator/earnings#payouts" className="mt-2 inline-block text-sm font-semibold text-violet hover:underline">
             Open Earnings → Payout methods
           </Link>
         </div>

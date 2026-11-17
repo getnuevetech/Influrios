@@ -40,7 +40,7 @@ export async function DashboardInfluencerCard({
         {shareUrl ? <CopyTextButton value={shareUrl} /> : null}
         {creator ? null : (
           <Link href={cardHref} className="inline-flex flex-1 items-center justify-center rounded-full bg-[#6D4AFF] px-3 py-2 text-sm font-semibold text-white">
-            View card
+            Create card
           </Link>
         )}
       </div>

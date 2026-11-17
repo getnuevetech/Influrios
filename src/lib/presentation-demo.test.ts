@@ -77,6 +77,8 @@ describe("presentation demo catalog", () => {
     const discover = source("src/app/discover/page.tsx");
     assert.match(discover, /publicPagesUseLive/);
     assert.match(discover, /demoCreators\(\)/);
+    assert.match(discover, /Sample directory/);
+    assert.match(discover, /sample profiles/);
     assert.ok(discover.indexOf("if (livePages)") < discover.indexOf("await recordDirectoryEvent"));
     const admin = source("src/app/admin/homepage/page.tsx");
     assert.match(admin, /public_pages_live|Show live profiles/);

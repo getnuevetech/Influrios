@@ -218,9 +218,78 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
   const payoutId = params.payout;
   const agreement = await loadPendingAgreement(account.id, account.email);
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {agreement.incident ? <UnavailableNote label="Agreement data" incident={agreement.incident} href="/creator/earnings" /> : null}
+
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-indigo">Earnings</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted">
+            Your net collaboration payouts. Platform fees stay on the business deposit and are not shown in these totals.
+            Plan billing is separate under Billing &amp; plan.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="#payouts" className="btn-secondary !py-2 text-sm">
+            Receive payments
+          </Link>
+          <Link href="/billing" className="btn-secondary !py-2 text-sm">
+            Billing &amp; plan
+          </Link>
+        </div>
+      </div>
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Released this month"
+          value={shownMoney(summary?.releasedThisMonthCents ?? 0)}
+          note={measures.ok ? "Ledger releases this month. A bank payout is separate." : "Earnings could not be loaded. This is not zero."}
+          tone="emerald"
+          icon={<IconWallet size={16} />}
+        />
+        <StatCard
+          label="Upcoming net"
+          value={shownMoney(summary?.upcomingCents ?? 0)}
+          note={
+            measures.ok
+              ? (summary?.processingCents ?? 0) > 0
+                ? `${shownMoney(summary?.processingCents ?? 0)} also processing to your bank.`
+                : "Approved or scheduled — not withdrawable yet."
+              : "Earnings could not be loaded. This is not zero."
+          }
+          tone="blue"
+          icon={<IconWallet size={16} />}
+        />
+        <StatCard
+          label="Paid to bank"
+          value={summary?.unknown && (summary.paidCents ?? 0) === 0 ? "—" : shownMoney(summary?.paidCents ?? 0)}
+          note={
+            !measures.ok
+              ? "Earnings could not be loaded. This is not zero."
+              : summary?.unknown
+                ? "A bank payout is missing on at least one record. This is not a complete total."
+                : "Confirmed bank payout"
+          }
+          tone="amber"
+          icon={<IconWallet size={16} />}
+        />
+        <StatCard
+          label="Payout setup"
+          value={payoutReady ? (receiveView?.statusLabel ?? "Ready") : "Awaiting payout setup"}
+          note={
+            receiveView?.summary ??
+            (payoutReady ? "Identity and payout method on file" : "Finish setup to receive funds")
+          }
+          tone={
+            receiveView?.status === "ready" ? "violet" : receiveView?.status === "unavailable" ? "amber" : "blue"
+          }
+          icon={<IconWallet size={16} />}
+        />
+      </section>
+
       <EarningsPanel
+        showHeadline={false}
+        showSummaryCards={false}
         currency={summary?.currency || null}
         upcomingCents={summary?.upcomingCents ?? 0}
         processingCents={summary?.processingCents ?? 0}
@@ -234,47 +303,6 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         agreement={agreement.record}
         agreementOpen={Boolean(agreement.record && params.agreement === agreement.record.id && !payoutId)}
       />
-      <div>
-        <h1 className="font-display text-3xl font-bold">Earnings</h1>
-        <p className="mt-1 text-sm text-muted">
-          Your net collaboration payout. The amount the business deposited includes platform fees, so it is not shown here.
-        </p>
-      </div>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        <StatCard
-          label="Released this month"
-          value={shownMoney(summary?.releasedThisMonthCents ?? 0)}
-          note={measures.ok ? "Ledger releases this month. A bank payout is separate." : "Earnings could not be loaded. This is not zero."}
-          tone="emerald"
-          icon={<IconWallet size={16} />}
-        />
-        <StatCard
-          label="Paid"
-          value={summary?.unknown && (summary.paidCents ?? 0) === 0 ? "—" : shownMoney(summary?.paidCents ?? 0)}
-          note={
-            !measures.ok
-              ? "Earnings could not be loaded. This is not zero."
-              : summary?.unknown
-                ? "A bank payout is missing on at least one record. This is not a complete total."
-                : "Confirmed bank payout"
-          }
-          tone="amber"
-          icon={<IconWallet size={16} />}
-        />
-        <StatCard
-          label="Payout status"
-          value={payoutReady ? (receiveView?.statusLabel ?? "Ready") : "Awaiting payout setup"}
-          note={
-            receiveView?.summary ??
-            (payoutReady ? "Identity and payout method on file" : "Finish setup to receive funds")
-          }
-          tone={
-            receiveView?.status === "ready" ? "violet" : receiveView?.status === "unavailable" ? "amber" : "blue"
-          }
-          icon={<IconWallet size={16} />}
-        />
-      </section>
 
       {receiveView ? (
         <CreatorPayoutMethodsPanel
@@ -292,29 +320,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         </section>
       )}
 
-      <Panel title="Collaboration payment status">
-        <p className="text-sm text-muted">
-          Status for each collaboration payment, including what is still held, lives with the payment record.
-        </p>
-        <Link href="/payments" className="mt-2 inline-block text-sm font-semibold text-violet">
-          Collaboration Payments
-        </Link>
-      </Panel>
-
-      <Panel title="Deductions">
-        <p className="text-sm text-muted">Platform fees on a funded collaboration are the deductions. They are not part of the net payout.</p>
-      </Panel>
-
-      <Panel title="Statements">
-        <p className="text-sm text-muted">
-          Statement lines use the frozen gross and deductions. Open a payout above for that record, or the payment list for the full set.
-        </p>
-        <Link href="/payments" className="mt-2 inline-block text-sm font-semibold text-violet">
-          Open statements
-        </Link>
-      </Panel>
-
-      <Panel title="Collaboration payouts">
+      <Panel title="Collaboration pipeline">
         {hubResult.failed ? (
           <UnavailableNote label="Collaboration payouts" incident={hubResult.incident} href="/creator/earnings" />
         ) : pipeline.length === 0 ? (
@@ -350,16 +356,15 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
             ))}
           </ul>
         )}
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-[#F0F3FA] pt-3 text-sm">
+          <Link href="/payments" className="font-semibold text-violet">
+            Collaboration payments &amp; statements
+          </Link>
+          <Link href="/collaboration/hub?view=collaborations#pipeline" className="font-semibold text-violet">
+            Open collaboration hub
+          </Link>
+        </div>
       </Panel>
-
-      <div className="flex flex-wrap gap-2">
-        <Link href="/creator/earnings#payouts" className="btn-secondary !py-2 text-sm">
-          Jump to receive payments
-        </Link>
-        <Link href="/collaboration/hub?view=collaborations#pipeline" className="btn-secondary !py-2 text-sm">
-          Collaboration pipeline
-        </Link>
-      </div>
     </div>
   );
 }

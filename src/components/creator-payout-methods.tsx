@@ -75,7 +75,7 @@ export function CreatorPayoutMethodsPanel({
       <div>
         <h2 className="font-display text-base font-bold">Receive payments</h2>
         <p className="mt-1 text-sm text-muted">
-          Collaboration milestone releases are separate from your Influrios plan subscription.
+          Finish identity and bank setup so released collaboration payouts can reach you. Your Influrios plan subscription is billed separately.
         </p>
       </div>
 

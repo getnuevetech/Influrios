@@ -86,9 +86,17 @@ describe("payout setup label", () => {
     assert.notEqual(dashboardEarningsLabel(true), "Awaiting payout setup");
     const earnings = readFileSync("src/app/creator/earnings/page.tsx", "utf8");
     assert.match(earnings, /Awaiting payout setup/);
+    assert.match(earnings, /showHeadline=\{false\}/);
+    assert.match(earnings, /showSummaryCards=\{false\}/);
+    assert.match(earnings, /Billing &amp; plan/);
+    assert.equal(earnings.includes('title="Deductions"'), false);
+    assert.equal(earnings.includes('title="Statements"'), false);
     assert.equal(earnings.includes("processingCents={0}"), false);
     assert.equal(earnings.includes("returnedCents={0}"), false);
     assert.equal(earnings.includes('item.stage === "Released" ? "Payout confirmed"'), false);
+    const panel = readFileSync("src/app/creator/earnings/earnings-panel.tsx", "utf8");
+    assert.match(panel, /showSummaryCards/);
+    assert.match(panel, /Payout activity/);
     const open = openSetupReminders({
       emailVerified: true,
       published: true,
