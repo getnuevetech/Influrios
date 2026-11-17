@@ -2,7 +2,7 @@
  * Split a stored collaboration agreement body into readable sections for the formal Document tab.
  * Preserves the approved 19-section content; does not invent clauses.
  */
-import { stripSignatureTokens } from "@/lib/contract-reader";
+import { stripSignatureTokens } from "@/lib/contract-signature-text";
 
 export type AgreementBodySection = {
   id: string;
