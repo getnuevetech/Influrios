@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAccountDialogBehavior } from "@/components/account-dialog";
+import { FormalAgreementDocument, type FormalAgreementProps } from "@/components/formal-agreement-document";
 import { nextTabIndex } from "@/lib/dialog-behavior";
 
 export type ContractDialogParty = {
@@ -11,61 +12,78 @@ export type ContractDialogParty = {
   name: string;
   role: string;
   signed: boolean;
+  capacity?: string;
+  entityName?: string;
+  signedAtLabel?: string;
 };
 
 export type ContractDialogAmount = {
   label: string;
   amount: string;
   emphasis: boolean;
+  negative?: boolean;
+};
+
+export type ContractDialogActivity = {
+  id: string;
+  atLabel: string;
+  label: string;
+  detail?: string;
 };
 
 export function ContractAgreementDialog({
   title,
-  status,
-  statusClass,
-  company,
-  influencer,
-  updated,
-  parties,
+  subtitle,
+  signatureProgress,
+  fundingLabel,
   amounts,
-  body,
-  deliverables,
+  formal,
+  bodyFallback,
+  activities,
+  parties,
   showDeliverables,
   deliverablesHref,
   downloadHref,
   downloadLabel,
   closeHref,
   signHref,
+  signingAs,
   primary,
+  initialTab = "overview",
 }: {
   title: string;
-  status: string;
-  statusClass: string;
-  company: string;
-  influencer: string;
-  updated: string;
-  parties: ContractDialogParty[];
+  subtitle: string;
+  signatureProgress: string;
+  fundingLabel: string | null;
   amounts: ContractDialogAmount[];
-  body: string;
-  deliverables: string[];
+  formal: FormalAgreementProps | null;
+  bodyFallback: string;
+  activities: ContractDialogActivity[];
+  parties: ContractDialogParty[];
   showDeliverables: boolean;
   deliverablesHref: string | null;
   downloadHref: string;
   downloadLabel: string;
   closeHref: string;
   signHref: string | null;
+  signingAs: string | null;
   primary: { label: string; href: string } | null;
+  initialTab?: "overview" | "document" | "signers" | "activity";
 }) {
-  const [tab, setTab] = useState<"overview" | "fees" | "signatures" | "documents">("overview");
+  const [tab, setTab] = useState(initialTab);
   const tabs = [
     ["overview", "Overview"],
-    ["fees", "Terms and fees"],
-    ["signatures", "Signatures"],
-    ["documents", "Documents"],
+    ["document", "Document"],
+    ["signers", "Signers"],
+    ["activity", "Activity"],
   ] as const;
   const router = useRouter();
   const panelRef = useRef<HTMLDivElement>(null);
   useAccountDialogBehavior(panelRef, () => router.push(closeHref, { scroll: false }));
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   return (
     <div data-account-dialog-root className="fixed inset-0 z-50">
@@ -76,16 +94,19 @@ export function ContractAgreementDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="agreement-dialog-title"
-        className="absolute inset-0 flex flex-col bg-white sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(90vh,840px)] sm:w-[min(920px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(27,20,100,0.28)]"
+        className="absolute inset-0 flex flex-col bg-white sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[min(92vh,900px)] sm:w-[min(920px,calc(100%-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(27,20,100,0.28)]"
       >
         <div className="flex items-start justify-between gap-3 border-b border-[#EEF2F7] px-5 py-4 sm:px-6">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3]">Agreement details</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <h2 id="agreement-dialog-title" className="font-display text-xl font-bold text-[#1B1464] sm:text-2xl">
-                {title}
-              </h2>
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass}`}>{status}</span>
+            <h2 id="agreement-dialog-title" className="font-display text-xl font-bold text-[#1B1464] sm:text-2xl">
+              {title}
+            </h2>
+            <p className="mt-1 text-sm text-[#667085]">{subtitle}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+              <span className="rounded-full bg-[#E8F8EE] px-2.5 py-1 text-[#178A45]">Signatures: {signatureProgress}</span>
+              {fundingLabel ? (
+                <span className="rounded-full bg-[#EEF3FF] px-2.5 py-1 text-[#2F6BFF]">Funding: {fundingLabel}</span>
+              ) : null}
             </div>
           </div>
           <Link
@@ -129,159 +150,124 @@ export function ContractAgreementDialog({
         </div>
         <div id={`agreement-panel-${tab}`} role="tabpanel" aria-labelledby={`agreement-tab-${tab}`} className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
           {tab === "overview" ? (
-            <div className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-2">
-                <section className="rounded-2xl border border-[#E7ECF5] p-4">
-                  <h3 className="text-sm font-bold text-[#1B1464]">Agreement summary</h3>
-                  <dl className="mt-3 space-y-3 text-sm">
-                    <SummaryRow label="Company" value={company} />
-                    <SummaryRow label="Influencer" value={influencer} />
-                    <SummaryRow label="Updated" value={updated} />
-                  </dl>
-                </section>
-                <section className="rounded-2xl border border-[#E7ECF5] p-4">
-                  <h3 className="text-sm font-bold text-[#1B1464]">Signature progress</h3>
-                  <p className="mt-1 text-xs text-[#98A2B3]">Fully signed describes signatures only.</p>
-                  <ul className="mt-3 space-y-2">
-                    {parties.map((party) => (
-                      <li
-                        key={party.id}
-                        className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${
-                          party.signed ? "bg-[#E8F8EE] text-[#178A45]" : "bg-[#FFF6E8] text-[#B86E00]"
-                        }`}
-                      >
-                        <span className="inline-flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/70 text-[11px]">
-                            {(party.name || party.role).slice(0, 1).toUpperCase()}
-                          </span>
-                          {party.name || party.role}
-                        </span>
-                        <span>{party.signed ? "✓ Signed" : "Pending"}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              </div>
-              <section className="rounded-2xl border border-[#E7ECF5] p-4">
-                <h3 className="text-sm font-bold text-[#1B1464]">Agreed amounts</h3>
-                {amounts.length === 0 ? (
-                  <p className="mt-3 text-sm text-[#667085]">Amounts appear here after the agreement records a fee breakdown.</p>
-                ) : (
-                  <dl className="mt-2">
-                    {amounts.map((line) => (
-                      <div
-                        key={line.label}
-                        className={`flex items-center justify-between gap-3 py-2.5 text-sm ${
-                          line.emphasis ? "rounded-xl bg-[#F7F4FF] px-3 font-bold text-[#1B1464]" : "text-[#344054]"
-                        }`}
-                      >
-                        <dt>{line.label}</dt>
-                        <dd>{line.amount}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-              </section>
-            </div>
-          ) : null}
-          {tab === "fees" ? (
             <section className="rounded-2xl border border-[#E7ECF5] p-4">
-              <h3 className="text-sm font-bold text-[#1B1464]">Signed amounts</h3>
-              <p className="mt-1 text-xs text-[#98A2B3]">These figures come from the signed snapshot. A later fee rule does not change them.</p>
+              <h3 className="text-sm font-bold text-[#1B1464]">Financial summary</h3>
+              <p className="mt-1 text-xs text-[#98A2B3]">One breakdown for this viewer. Signature status and funding status stay separate.</p>
               {amounts.length === 0 ? (
                 <p className="mt-3 text-sm text-[#667085]">Amounts appear here after the agreement records a fee breakdown.</p>
               ) : (
                 <dl className="mt-2">
                   {amounts.map((line) => (
-                    <div key={line.label} className={`flex items-center justify-between gap-3 py-2.5 text-sm ${line.emphasis ? "rounded-xl bg-[#F7F4FF] px-3 font-bold text-[#1B1464]" : "text-[#344054]"}`}>
+                    <div
+                      key={line.label}
+                      className={`flex items-center justify-between gap-3 py-2.5 text-sm ${
+                        line.emphasis ? "rounded-xl bg-[#F7F4FF] px-3 font-bold text-[#1B1464]" : "text-[#344054]"
+                      }`}
+                    >
                       <dt>{line.label}</dt>
-                      <dd>{line.amount}</dd>
+                      <dd className={line.negative ? "text-[#D14343]" : undefined}>
+                        {line.negative && !line.amount.trim().startsWith("−") && !line.amount.trim().startsWith("-")
+                          ? `− ${line.amount}`
+                          : line.amount}
+                      </dd>
                     </div>
                   ))}
                 </dl>
               )}
-              {showDeliverables ? (
-                <div className="mt-4">
-                  <h3 className="text-sm font-bold text-[#1B1464]">Deliverables</h3>
-                  {deliverables.length === 0 ? (
-                    <p className="mt-2 text-sm text-[#667085]">No deliverable lines are written on this agreement.</p>
-                  ) : (
-                    <ul className="mt-2 space-y-2 text-sm text-[#1B1464]">
-                      {deliverables.map((line) => (
-                        <li key={line} className="rounded-xl bg-[#F8FAFC] px-3 py-2">{line}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ) : null}
             </section>
           ) : null}
-          {tab === "signatures" ? (
-            <section className="rounded-2xl border border-[#E7ECF5] p-4">
-              <h3 className="text-sm font-bold text-[#1B1464]">Signature progress</h3>
-              <p className="mt-1 text-xs text-[#98A2B3]">Fully signed describes signatures only. Funding is a separate status.</p>
-              <ul className="mt-3 space-y-2">
+
+          {tab === "document" ? (
+            <div className="space-y-3">
+              {formal ? (
+                <div className="overflow-hidden rounded-2xl border border-[#E7ECF5] bg-[#F8FAFC] p-3 sm:p-4">
+                  <FormalAgreementDocument {...formal} footerNote="Agreement preview" />
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-[#E7ECF5] bg-[#FBFCFE] p-4">
+                  <pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed text-[#1B1464]">
+                    {bodyFallback || "The agreement text is not available yet."}
+                  </pre>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {tab === "signers" ? (
+            <section className="space-y-3">
+              <p className="text-xs text-[#98A2B3]">Each contracting party, its authorized signer, capacity, and recorded signing time.</p>
+              <ul className="space-y-2">
                 {parties.map((party) => (
-                  <li key={party.id} className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${party.signed ? "bg-[#E8F8EE] text-[#178A45]" : "bg-[#FFF6E8] text-[#B86E00]"}`}>
-                    <span>{party.name || party.role}</span>
-                    <span>{party.signed ? "Signed" : "Awaiting signature"}</span>
+                  <li
+                    key={party.id}
+                    className={`rounded-2xl border px-4 py-3 text-sm ${
+                      party.signed ? "border-[#C6EBD5] bg-[#E8F8EE] text-[#178A45]" : "border-[#F3D7A1] bg-[#FFF8EC] text-[#8A5A12]"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-bold text-[#1B1464]">{party.entityName || party.name}</p>
+                        <p className="mt-1 text-xs text-[#667085]">
+                          Signer: {party.name}
+                          {party.capacity ? ` · ${party.capacity}` : ""}
+                        </p>
+                        {party.signedAtLabel ? <p className="mt-1 text-xs text-[#667085]">Signed {party.signedAtLabel}</p> : null}
+                      </div>
+                      <span className="font-semibold">{party.signed ? "Signed" : "Awaiting signature"}</span>
+                    </div>
                   </li>
                 ))}
               </ul>
               {signHref ? (
-                <Link href={signHref} className="mt-4 inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
-                  Review and sign
-                </Link>
+                <div className="rounded-2xl border border-[#E7ECF5] bg-[#FBFCFE] p-4">
+                  {signingAs ? <p className="mb-3 text-sm font-semibold text-[#1B1464]">{signingAs}</p> : null}
+                  <Link href={signHref} className="inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
+                    Review and sign
+                  </Link>
+                </div>
               ) : null}
             </section>
           ) : null}
-          {tab === "documents" ? (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-[#E7ECF5] bg-[#FBFCFE] p-4">
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-[#1B1464]">
-                  {body || "The agreement text is not available yet."}
-                </pre>
-              </div>
-              <a href={downloadHref} className="inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
-                {downloadLabel}
-              </a>
-              {deliverablesHref ? (
-                <Link href={deliverablesHref} className="ml-2 inline-flex rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#6D4AFF]">
-                  Open workspace
-                </Link>
+
+          {tab === "activity" ? (
+            <section>
+              {activities.length === 0 ? (
+                <p className="text-sm text-[#667085]">No activity recorded yet.</p>
               ) : (
-                <p className="text-xs text-[#98A2B3]">Deliverable uploads open after this agreement is funded.</p>
+                <ul className="space-y-4">
+                  {activities.map((event) => (
+                    <li key={event.id} className="flex gap-3">
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#6D4AFF]" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-[#1B1464]">{event.label}</p>
+                        {event.detail ? <p className="text-sm text-[#667085]">{event.detail}</p> : null}
+                      </div>
+                      <span className="text-xs text-[#98A2B3]">{event.atLabel}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </div>
+            </section>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#EEF2F7] px-5 py-4 sm:px-6">
-          <Link
-            href={closeHref}
-            scroll={false}
-            className="rounded-full border border-[#E7ECF5] px-4 py-2 text-sm font-semibold text-[#344054]"
-          >
+          <Link href={closeHref} scroll={false} className="rounded-full border border-[#E7ECF5] px-4 py-2 text-sm font-semibold text-[#344054]">
             Close
           </Link>
-          <a href={downloadHref} className="inline-flex items-center gap-2 rounded-full border border-[#E7ECF5] px-4 py-2 text-sm font-semibold text-[#344054]">
-            ↓ {downloadLabel}
+          <a href={downloadHref} className="inline-flex items-center gap-2 rounded-full border border-[#6D4AFF] px-4 py-2 text-sm font-semibold text-[#6D4AFF]">
+            {downloadLabel}
           </a>
           {primary ? (
             <Link href={primary.href} className="inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
               {primary.label}
             </Link>
+          ) : showDeliverables && deliverablesHref ? (
+            <Link href={deliverablesHref} className="inline-flex rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
+              Open deliverables
+            </Link>
           ) : null}
         </div>
       </div>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="text-[#98A2B3]">{label}</dt>
-      <dd className="text-right font-semibold text-[#1B1464]">{value || "—"}</dd>
     </div>
   );
 }

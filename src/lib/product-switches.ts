@@ -45,6 +45,12 @@ export const PRODUCT_SWITCHES = [
     description:
       "Public homepage (except the influencer card strip), Discover, collaboration landing, and business landing use stored profiles. Off shows the demo set. The homepage influencer card strip always shows the demo set.",
   },
+  {
+    key: "contract_ai_tailor",
+    enabled: false,
+    description:
+      "AI wording suggestions on contract drafts (Tailor this draft / Save as workspace template). Off keeps templates, manual edits, preview, and send. Suggestions never grant authority to sign.",
+  },
 ] as const;
 
 export type ProductSwitchKey = (typeof PRODUCT_SWITCHES)[number]["key"];

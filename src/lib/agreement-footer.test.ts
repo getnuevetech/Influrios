@@ -48,7 +48,7 @@ describe("agreement popup footer", () => {
       fundingId: "f1",
       fundingStatus: "held",
     });
-    assert.deepEqual(action, { label: "Open workspace", href: "/collaboration/work/f1" });
+    assert.deepEqual(action, { label: "Open deliverables", href: "/collaboration/work/f1" });
     const deposit = agreementFooterAction({
       signHref: null,
       contractHref: "/collaboration/contracts/c1",
