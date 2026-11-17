@@ -492,7 +492,7 @@ export default async function BusinessHomePage() {
                 Discover Creators
               </Link>
               <Link href="/collaboration/team" className="text-sm font-semibold text-violet hover:underline">
-                Invite Team
+                Coordinated proposal
               </Link>
             </div>
           </div>
@@ -736,7 +736,10 @@ export default async function BusinessHomePage() {
         </div>
 
         <div className="space-y-4">
-          <Panel title="Team Members" action={<TextLink href="/collaboration/team">Manage Team</TextLink>}>
+          <Panel title="Company seats" action={<TextLink href="/business/billing">Plan seats →</TextLink>}>
+            <p className="mb-3 text-xs text-muted">
+              People on this company workspace. Coordinated influencer proposals are separate.
+            </p>
             <div className="mb-3 text-xs font-semibold text-muted">
               {seatsUsed === null || teamSeats === null ? (
                 <UnavailableNote label="Team seats" incident={seats.ok ? hubResult.incident || "inc-unknown" : seats.incident} href="/business/home" />
@@ -768,21 +771,11 @@ export default async function BusinessHomePage() {
                   ))
                 : null}
               {seatsUsed === null || teamSeats === null ? null : teamSeats > seatsUsed ? (
-                <li>
-                  <Link
-                    href="/collaboration/team"
-                    className="flex items-center gap-3 rounded-xl border border-dashed border-[#C9D3EA] px-2 py-2 hover:bg-[#F7F8FC]"
-                  >
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#F1ECFF] text-violet">
-                      <IconPlus size={16} />
-                    </span>
-                    <span>
-                      <span className="block text-sm font-semibold">Invite Member</span>
-                      <span className="text-xs text-muted">
-                        {teamSeats - seatsUsed} seat{teamSeats - seatsUsed === 1 ? "" : "s"} open
-                      </span>
-                    </span>
-                  </Link>
+                <li className="text-xs text-muted">
+                  <Link href="/business/billing" className="font-semibold text-violet hover:underline">
+                    Open billing
+                  </Link>{" "}
+                  · {teamSeats - seatsUsed} seat{teamSeats - seatsUsed === 1 ? "" : "s"} open on this plan
                 </li>
               ) : (
                 <li className="text-xs text-muted">Upgrade for more seats from Billing & Plans.</li>
@@ -791,7 +784,25 @@ export default async function BusinessHomePage() {
           </Panel>
 
           <div id="shortlist">
-          <Panel title="Saved creators" action={<TextLink href="/discover">Find creators →</TextLink>}>
+          <Panel
+            title="Saved creators"
+            action={
+              workspace.shortlist.length >= 2 ? (
+                <TextLink
+                  href={`/collaboration/team?creators=${encodeURIComponent(
+                    workspace.shortlist
+                      .slice(0, 8)
+                      .map((item) => item.creatorSlug)
+                      .join(","),
+                  )}`}
+                >
+                  Coordinated proposal →
+                </TextLink>
+              ) : (
+                <TextLink href="/discover">Find creators →</TextLink>
+              )
+            }
+          >
             {workspace.shortlist.length === 0 ? (
               <p className="text-sm text-muted">No saved creators yet. This is not a failed load.</p>
             ) : (
@@ -805,7 +816,12 @@ export default async function BusinessHomePage() {
                 ))}
               </ul>
             )}
-            <p className="mt-3 text-xs text-muted">{workspace.shortlist.length} saved creator{workspace.shortlist.length === 1 ? "" : "s"}</p>
+            <p className="mt-3 text-xs text-muted">
+              {workspace.shortlist.length} saved creator{workspace.shortlist.length === 1 ? "" : "s"}
+              {workspace.shortlist.length >= 2
+                ? ". Select two or more on Coordinated proposals to send one invite."
+                : ""}
+            </p>
           </Panel>
           </div>
 
