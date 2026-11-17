@@ -48,6 +48,9 @@ export async function GET(_request: Request, { params }: Props) {
             signedAt: true,
             creatorSlug: true,
             shareBps: true,
+            legalEntityName: true,
+            capacity: true,
+            handle: true,
           },
         },
       },
@@ -83,6 +86,7 @@ export async function GET(_request: Request, { params }: Props) {
     createdAt: document.createdAt,
     agreementRef: document.agreementRef,
     versionLabel: document.versionLabel,
+    termsSnapshotJson: document.termsSnapshotJson,
     parties: document.parties,
   });
 
@@ -101,7 +105,7 @@ export async function GET(_request: Request, { params }: Props) {
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
-      ...pdfDownloadHeaders(document.id, document.agreementRef, party ? "party" : upgraded ? "upgraded" : "formal"),
+      ...pdfDownloadHeaders(document.id, document.agreementRef, party ? "party-formal" : upgraded ? "upgraded-formal" : "formal"),
       "x-influrios-contract-template": "influrios-collab-v1",
     },
   });

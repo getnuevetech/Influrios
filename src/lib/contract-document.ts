@@ -10,6 +10,8 @@ import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
 import { readSignedTermsSnapshot } from "@/lib/signed-funding";
 import { stripLeadingChrome } from "@/lib/contract-body-sections";
+import { buildMilestoneSchedule } from "@/lib/contract-milestone-schedule";
+import { overviewAmountLines } from "@/lib/contract-overview-money";
 import {
   asciiForPdf as asciiForPdfImpl,
   classifyContractPdfLines as classifyContractPdfLinesImpl,
@@ -22,6 +24,7 @@ import {
   type ContractPdfOptions,
   type ContractPdfSignature,
 } from "@/lib/contract-pdf";
+import { renderFormalAgreementPdf } from "@/lib/formal-agreement-pdf";
 import {
   applyNativeSignatureAnchor,
   formatNativeAttestation,
@@ -518,6 +521,7 @@ export type ContractChromeDocument = {
   createdAt?: Date | string | null;
   agreementRef?: string | null;
   versionLabel?: string | null;
+  termsSnapshotJson?: unknown;
   parties: {
     role: string;
     name: string;
@@ -528,6 +532,9 @@ export type ContractChromeDocument = {
     status: string;
     attestation?: string | null;
     signedAt?: Date | string | null;
+    legalEntityName?: string | null;
+    capacity?: string | null;
+    handle?: string | null;
   }[];
 };
 
@@ -643,9 +650,22 @@ export function resolveContractBodyForChrome(document: ContractChromeDocument): 
   return { body: upgradeLegacyContractBody(document), upgraded: true };
 }
 
+function influencerFeeCentsFromTerms(termsSnapshotJson: unknown): number {
+  const terms = readSignedTermsSnapshot(termsSnapshotJson);
+  if (!terms?.financialPlan || typeof terms.financialPlan !== "object") return 0;
+  const plan = terms.financialPlan as Record<string, unknown>;
+  const quote =
+    plan.signedQuote && typeof plan.signedQuote === "object"
+      ? (plan.signedQuote as Record<string, unknown>)
+      : plan;
+  const fee = quote.influencerPlatformFeeCents;
+  return typeof fee === "number" && Number.isInteger(fee) && fee >= 0 ? fee : 0;
+}
+
 /**
- * Build the downloadable chrome PDF for any contract (legacy or new).
- * Always upgrades legacy bodies and always stamps page endorsements / signature ink.
+ * Build the downloadable PDF so it matches the on-screen Document tab
+ * (FormalAgreementDocument): wordmark header, navy section bars, structured
+ * parties / compensation / Schedule A, and Execution signatures.
  */
 export function buildContractChromePdf(document: ContractChromeDocument): {
   body: string;
@@ -653,8 +673,6 @@ export function buildContractChromePdf(document: ContractChromeDocument): {
   pdf: Buffer;
 } {
   const { body, upgraded } = resolveContractBodyForChrome(document);
-  // Match the Document tab: drop duplicated title chrome; keep signature ink for PDF overlays.
-  const pdfBody = stripLeadingChrome(body);
   const storedRef = document.agreementRef?.trim();
   const agreementRef =
     storedRef ||
@@ -663,36 +681,79 @@ export function buildContractChromePdf(document: ContractChromeDocument): {
       return compact ? `IC-${compact}` : `IC-${document.id.slice(0, 8).toUpperCase()}`;
     })();
   const versionLabel = document.versionLabel?.trim() || "v1.0";
-  const pdf = renderContractPdf(pdfBody, {
-    title: document.title,
-    agreementId: document.id,
+  const terms = readSignedTermsSnapshot(document.termsSnapshotJson);
+  const amounts = overviewAmountLines({ termsSnapshotJson: document.termsSnapshotJson, role: "influencer" });
+  const feeCents = influencerFeeCentsFromTerms(document.termsSnapshotJson);
+  const schedule =
+    terms && terms.milestones.length
+      ? buildMilestoneSchedule({
+          currency: terms.currency,
+          grossCents: terms.grossCents,
+          influencerFeeCents: feeCents,
+          milestones: terms.milestones.map((row) => ({ title: row.title, shareBps: row.shareBps })),
+        })
+      : null;
+  const grossLabel =
+    amounts.find((row) => /gross/i.test(row.label))?.amount ||
+    schedule?.totals.grossLabel ||
+    "—";
+  const feeLabel =
+    amounts.find((row) => /fee/i.test(row.label))?.amount || schedule?.totals.feeLabel || "$0.00";
+  const netLabel =
+    amounts.find((row) => /net/i.test(row.label))?.amount || schedule?.totals.netLabel || "—";
+  const taxLabel = amounts.find((row) => /tax/i.test(row.label))?.amount;
+  const business = document.parties.find((party) => party.role === "business");
+  const influencers = document.parties.filter((party) => party.role === "creator" || party.role === "influencer");
+  const businessLegalName =
+    (terms?.businessName || "").trim() ||
+    business?.legalEntityName?.trim() ||
+    business?.name ||
+    "—";
+
+  const pdf = renderFormalAgreementPdf({
+    title: "Collaboration Agreement",
+    campaign: document.title,
     agreementRef,
     versionLabel,
-    formalLayout: true,
-    signatures: signaturesFromParties(
-      document.parties.map((party) => ({
-        role: party.role,
-        email: party.email,
-        attestation: party.attestation ?? null,
-        signedAt:
-          party.signedAt instanceof Date
-            ? party.signedAt
-            : party.signedAt
-              ? new Date(party.signedAt)
-              : null,
-        status: party.status,
-        name: party.name,
+    body: stripLeadingChrome(body),
+    draft: document.status === "draft",
+    footerNote: "Agreement preview",
+    compensation: {
+      grossLabel,
+      feeLabel,
+      taxLabel,
+      netLabel,
+    },
+    milestones: schedule
+      ? schedule.rows.map((row) => ({
+          title: row.title,
+          shareLabel: row.shareLabel,
+          grossLabel: row.grossLabel,
+          feeLabel: row.feeLabel,
+          netLabel: row.netLabel,
+        }))
+      : [],
+    parties: [
+      {
+        role: "business",
+        legalName: businessLegalName,
+        signerName: business?.attestation?.trim() || business?.name,
+        capacity: business?.capacity || "Authorized representative",
+        signed: business?.status === "signed",
+        signedAtLabel: business?.signedAt ? formatContractDisplayDate(business.signedAt) : undefined,
+      },
+      ...influencers.map((party) => ({
+        role: "influencer" as const,
+        legalName: party.legalEntityName?.trim() || party.name,
+        handle:
+          party.handle?.trim() ||
+          (party.creatorSlug ? `@${party.creatorSlug}` : undefined),
+        signerName: party.attestation?.trim() || party.name,
+        capacity: party.capacity || "Influencer",
+        signed: party.status === "signed",
+        signedAtLabel: party.signedAt ? formatContractDisplayDate(party.signedAt) : undefined,
       })),
-    ),
-    endorsementSlots: endorsementSlotsFromParties(
-      document.parties.map((party) => ({
-        role: party.role,
-        attestation: party.attestation ?? null,
-        status: party.status,
-        name: party.name,
-      })),
-    ),
-    pageEndorsements: true,
+    ],
   });
   return { body, upgraded, pdf };
 }
