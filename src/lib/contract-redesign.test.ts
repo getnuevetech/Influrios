@@ -244,5 +244,12 @@ describe("contracts UI redesign surfaces", () => {
     assert.match(wordmark, /∞/);
     assert.match(page, /Collaboration Agreement/);
     assert.match(page, /documentBody/);
+    assert.match(dialog, /\bdownload\b/);
+    const pdfRoute = readFileSync("src/app/collaboration/contracts/[id]/pdf/route.ts", "utf8");
+    assert.match(pdfRoute, /attachment; filename=/);
+    assert.equal(pdfRoute.includes("inline; filename="), false);
+    const pdfLib = readFileSync("src/lib/contract-pdf.ts", "utf8");
+    assert.match(pdfLib, /formalLayout/);
+    assert.match(pdfLib, /sectionBarCommands/);
   });
 });

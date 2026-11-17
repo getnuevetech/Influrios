@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
 import { readSignedTermsSnapshot } from "@/lib/signed-funding";
+import { stripLeadingChrome } from "@/lib/contract-body-sections";
 import {
   asciiForPdf as asciiForPdfImpl,
   classifyContractPdfLines as classifyContractPdfLinesImpl,
@@ -515,6 +516,8 @@ export type ContractChromeDocument = {
   renderedBody: string;
   signingChannel?: string | null;
   createdAt?: Date | string | null;
+  agreementRef?: string | null;
+  versionLabel?: string | null;
   parties: {
     role: string;
     name: string;
@@ -650,9 +653,22 @@ export function buildContractChromePdf(document: ContractChromeDocument): {
   pdf: Buffer;
 } {
   const { body, upgraded } = resolveContractBodyForChrome(document);
-  const pdf = renderContractPdf(body, {
+  // Match the Document tab: drop duplicated title chrome; keep signature ink for PDF overlays.
+  const pdfBody = stripLeadingChrome(body);
+  const storedRef = document.agreementRef?.trim();
+  const agreementRef =
+    storedRef ||
+    (() => {
+      const compact = document.id.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase();
+      return compact ? `IC-${compact}` : `IC-${document.id.slice(0, 8).toUpperCase()}`;
+    })();
+  const versionLabel = document.versionLabel?.trim() || "v1.0";
+  const pdf = renderContractPdf(pdfBody, {
     title: document.title,
     agreementId: document.id,
+    agreementRef,
+    versionLabel,
+    formalLayout: true,
     signatures: signaturesFromParties(
       document.parties.map((party) => ({
         role: party.role,

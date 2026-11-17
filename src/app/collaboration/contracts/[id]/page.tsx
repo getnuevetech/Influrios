@@ -227,12 +227,13 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
                 Awaiting signatures
               </span>
             )}
-            <Link
-              href={`/collaboration/contracts/${document.id}/pdf?v=chrome-v1`}
+            <a
+              href={`/collaboration/contracts/${document.id}/pdf`}
+              download
               className="btn-secondary !py-2 text-sm"
             >
               {document.status === "signed" ? "Download signed contract" : "Download contract"}
-            </Link>
+            </a>
             {deliverablesOpen && linkedFunding ? (
               <Link href={`/collaboration/work/${linkedFunding.id}`} className="btn-primary !py-2 text-sm">
                 Deliverables

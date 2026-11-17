@@ -165,8 +165,8 @@ describe("contract documents", () => {
     assert.ok(classified.some((line) => line.style === "heading" && line.text.startsWith("1. Parties")));
     const pdf = renderContractPdf(sample);
     const raw = pdf.toString("latin1");
-    assert.match(raw, /COLLABORATION AGREEMENT/);
-    assert.match(raw, /1\. Parties/);
+    assert.match(raw, /Collaboration Agreement/);
+    assert.match(raw, /1\. PARTIES/);
     assert.equal(/\?\?/.test(raw.replace(/%PDF[\s\S]*?obj/g, "")), false);
   });
 
@@ -222,7 +222,8 @@ describe("contract documents", () => {
     });
     const raw = pdf.toString("latin1");
     assert.match(raw, /Page endorsement/);
-    assert.match(raw, /\(INFLURIOS/);
+    assert.match(raw, /\(Influrios\)/);
+    assert.match(raw, /Collaboration Agreement/);
     assert.match(raw, /Page endorsement \/ initials/);
     assert.ok(/[\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ c/.test(raw));
   });
@@ -396,9 +397,10 @@ Creator compensation: $900.00
     assert.match(chromePdf.body, /Commercial Summary/);
     const raw = chromePdf.pdf.toString("latin1");
     assert.match(raw, /^%PDF-1.4/);
-    assert.match(raw, /\(INFLURIOS/);
+    assert.match(raw, /\(Influrios\)/);
+    assert.match(raw, /Collaboration Agreement/);
+    assert.match(raw, /COMMERCIAL SUMMARY/);
     assert.match(raw, /Page endorsement/);
-    assert.match(raw, /Commercial Summary/);
   });
 
   it("shows each message only to the chosen readers", () => {
