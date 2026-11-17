@@ -59,11 +59,17 @@ RUN echo "builder: DOCKER_BUILD=$DOCKER_BUILD NODE_OPTIONS=$NODE_OPTIONS" \
 
 FROM node:22-alpine AS runner
 WORKDIR /app
-RUN apk add --no-cache libc6-compat openssl curl su-exec
+# Chromium prints the formal agreement HTML so downloaded PDFs match the Document tab.
+RUN apk add --no-cache libc6-compat openssl curl su-exec \
+    chromium nss freetype harfbuzz ca-certificates ttf-freefont font-noto-emoji
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# Alpine packages expose `chromium`; some images also ship chromium-browser.
+ENV CHROME_PATH=/usr/bin/chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
 # Full git SHA from deploy.sh. Empty when the image was built without a checkout.
@@ -74,6 +80,8 @@ RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
+# Brand fonts for Chrome print-to-PDF of collaboration agreements.
+COPY --from=builder /app/src/fonts ./src/fonts
 # Files placed in src/app/myfiles (for example tik.pdf) are served at /myfiles/<name>.
 COPY --from=builder --chown=nextjs:nodejs /app/src/app/myfiles ./src/app/myfiles
 COPY --from=builder /app/package.json ./package.json

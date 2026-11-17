@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
 import { renderFormalAgreementPdf } from "./formal-agreement-pdf";
+import { renderFormalAgreementDocumentHtml } from "./formal-agreement-html";
 import { DEFAULT_CONTRACT_TEMPLATE, renderContractBody } from "./contract-document";
 
 describe("formal agreement PDF", () => {
@@ -119,10 +120,67 @@ describe("formal agreement PDF", () => {
     assert.equal(raw.includes("INFLURIOS  |  COLLABORATION AGREEMENT"), false);
     assert.equal(raw.includes("Page endorsement"), false);
 
+    const formalInput = {
+      title: "Collaboration Agreement",
+      campaign: "4th Test Campaign After Pay Engine Rebuilt",
+      agreementRef: "IC-9BMTKC2J",
+      versionLabel: "v1.0",
+      body,
+      compensation: {
+        grossLabel: "$4,200.00",
+        feeLabel: "$630.00",
+        netLabel: "$3,570.00",
+      },
+      milestones: [
+        {
+          title: "Kickoff",
+          shareLabel: "34%",
+          grossLabel: "$1,428.00",
+          feeLabel: "$214.20",
+          netLabel: "$1,213.80",
+        },
+      ],
+      parties: [
+        {
+          role: "business" as const,
+          legalName: "ABC Holdings",
+          signerName: "Agboola Olomola",
+          capacity: "Authorized representative",
+          signed: true,
+          signedAtLabel: "November 10, 2026 at 12:27 AM UTC",
+        },
+        {
+          role: "influencer" as const,
+          legalName: "Ag Olomola",
+          handle: "@ag-olomola-2",
+          signerName: "Ag Olomola",
+          capacity: "Influencer",
+          signed: true,
+          signedAtLabel: "November 10, 2026 at 12:27 AM UTC",
+        },
+      ],
+    };
+    const html = renderFormalAgreementDocumentHtml(formalInput);
+    assert.match(html, /influrios-wordmark/);
+    assert.match(html, /Influrios/);
+    assert.match(html, /#2979FF/);
+    assert.match(html, /∞|&#8734;|&infin;/);
+    assert.match(html, /Collaboration Agreement/);
+    assert.match(html, /IC-9BMTKC2J/);
+    assert.match(html, /1\. Parties/);
+    assert.match(html, /3\. Compensation/);
+    assert.match(html, /Execution/);
+    assert.match(html, /execution-grid/);
+    assert.match(html, /Plus Jakarta Sans/);
+
     const formalUi = readFileSync("src/components/formal-agreement-document.tsx", "utf8");
     assert.match(formalUi, /FormalAgreementDocument/);
+    assert.match(formalUi, /formal-agreement-markup/);
+    assert.match(formalUi, /renderFormalAgreementArticleHtml/);
     const pdfRoute = readFileSync("src/app/collaboration/contracts/[id]/pdf/route.ts", "utf8");
     assert.match(pdfRoute, /attachment; filename=/);
     assert.match(pdfRoute, /buildContractChromePdf/);
+    const contractDoc = readFileSync("src/lib/contract-document.ts", "utf8");
+    assert.match(contractDoc, /htmlDocumentToPdf|renderFormalAgreementDocumentHtml/);
   });
 });

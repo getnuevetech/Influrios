@@ -24,7 +24,9 @@ import {
   type ContractPdfOptions,
   type ContractPdfSignature,
 } from "@/lib/contract-pdf";
-import { renderFormalAgreementPdf } from "@/lib/formal-agreement-pdf";
+import { renderFormalAgreementDocumentHtml } from "@/lib/formal-agreement-html";
+import { renderFormalAgreementPdf, type FormalPdfInput } from "@/lib/formal-agreement-pdf";
+import { chromeAvailableForPdf, htmlDocumentToPdf } from "@/lib/html-to-pdf";
 import {
   applyNativeSignatureAnchor,
   formatNativeAttestation,
@@ -662,17 +664,7 @@ function influencerFeeCentsFromTerms(termsSnapshotJson: unknown): number {
   return typeof fee === "number" && Number.isInteger(fee) && fee >= 0 ? fee : 0;
 }
 
-/**
- * Build the downloadable PDF so it matches the on-screen Document tab
- * (FormalAgreementDocument): wordmark header, navy section bars, structured
- * parties / compensation / Schedule A, and Execution signatures.
- */
-export function buildContractChromePdf(document: ContractChromeDocument): {
-  body: string;
-  upgraded: boolean;
-  pdf: Buffer;
-} {
-  const { body, upgraded } = resolveContractBodyForChrome(document);
+function formalPdfInputFromDocument(document: ContractChromeDocument, body: string): FormalPdfInput {
   const storedRef = document.agreementRef?.trim();
   const agreementRef =
     storedRef ||
@@ -694,9 +686,7 @@ export function buildContractChromePdf(document: ContractChromeDocument): {
         })
       : null;
   const grossLabel =
-    amounts.find((row) => /gross/i.test(row.label))?.amount ||
-    schedule?.totals.grossLabel ||
-    "—";
+    amounts.find((row) => /gross/i.test(row.label))?.amount || schedule?.totals.grossLabel || "—";
   const feeLabel =
     amounts.find((row) => /fee/i.test(row.label))?.amount || schedule?.totals.feeLabel || "$0.00";
   const netLabel =
@@ -710,7 +700,7 @@ export function buildContractChromePdf(document: ContractChromeDocument): {
     business?.name ||
     "—";
 
-  const pdf = renderFormalAgreementPdf({
+  return {
     title: "Collaboration Agreement",
     campaign: document.title,
     agreementRef,
@@ -745,16 +735,38 @@ export function buildContractChromePdf(document: ContractChromeDocument): {
       ...influencers.map((party) => ({
         role: "influencer" as const,
         legalName: party.legalEntityName?.trim() || party.name,
-        handle:
-          party.handle?.trim() ||
-          (party.creatorSlug ? `@${party.creatorSlug}` : undefined),
+        handle: party.handle?.trim() || (party.creatorSlug ? `@${party.creatorSlug}` : undefined),
         signerName: party.attestation?.trim() || party.name,
         capacity: party.capacity || "Influencer",
         signed: party.status === "signed",
         signedAtLabel: party.signedAt ? formatContractDisplayDate(party.signedAt) : undefined,
       })),
     ],
-  });
+  };
+}
+
+/**
+ * Build the downloadable PDF from the same HTML the Document tab renders.
+ * Prefers Chrome/Chromium print-to-PDF for exact visual parity (fonts, logo, spacing).
+ */
+export async function buildContractChromePdf(document: ContractChromeDocument): Promise<{
+  body: string;
+  upgraded: boolean;
+  pdf: Buffer;
+}> {
+  const { body, upgraded } = resolveContractBodyForChrome(document);
+  const formal = formalPdfInputFromDocument(document, body);
+  if (chromeAvailableForPdf()) {
+    try {
+      const html = renderFormalAgreementDocumentHtml(formal);
+      const pdf = await htmlDocumentToPdf(html);
+      return { body, upgraded, pdf };
+    } catch {
+      // Fall through to the structured PDF renderer when Chrome fails at runtime.
+    }
+  }
+  // Fallback when Chrome is unavailable (local unit tests / constrained hosts).
+  const pdf = renderFormalAgreementPdf(formal);
   return { body, upgraded, pdf };
 }
 

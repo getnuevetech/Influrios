@@ -77,7 +77,7 @@ export async function GET(_request: Request, { params }: Props) {
       })
     : document.renderedBody || "Collaboration agreement";
 
-  const { body, upgraded, pdf } = buildContractChromePdf({
+  const { body, upgraded, pdf } = await buildContractChromePdf({
     id: document.id,
     title: document.title,
     status: document.status,
