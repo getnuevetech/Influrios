@@ -238,6 +238,10 @@ describe("contracts UI redesign surfaces", () => {
     assert.match(formal, /parseAgreementBodySections/);
     assert.match(formal, /Schedule A/);
     assert.match(formal, /not a contracting party/i);
+    assert.match(formal, /InfluriosWordmark/);
+    const wordmark = readFileSync("src/components/influrios-wordmark.tsx", "utf8");
+    assert.match(wordmark, /brand-gradient/);
+    assert.match(wordmark, /∞/);
     assert.match(page, /Collaboration Agreement/);
     assert.match(page, /documentBody/);
   });

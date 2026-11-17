@@ -19,6 +19,7 @@ import {
   IconUsers,
   IconWallet,
 } from "@/components/icons";
+import { InfluriosWordmark } from "@/components/influrios-wordmark";
 import { actionLogout } from "@/app/account/actions";
 import { accountAudience, type AccountAudience } from "@/lib/account-audience";
 import { unreadNoticeCount } from "@/lib/account-notices";
@@ -173,11 +174,8 @@ export async function MemberFrame({
   return (
     <div className="flex min-h-screen bg-[#F5F7FB] text-indigo">
       <aside className="sticky top-0 hidden h-screen w-[15.5rem] shrink-0 flex-col border-r border-[#E6ECF7] bg-white lg:flex">
-        <Link href={home} className="flex shrink-0 items-center gap-2 px-5 py-5 font-display text-lg font-bold">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white">
-            ∞
-          </span>
-          Influrios
+        <Link href={home} className="flex shrink-0 items-center px-5 py-5 text-indigo">
+          <InfluriosWordmark markClassName="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white" />
         </Link>
         <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-3">
           {nav.map((item) => {

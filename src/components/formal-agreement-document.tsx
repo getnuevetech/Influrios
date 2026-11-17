@@ -3,6 +3,7 @@
  * while preserving the full stored agreement body (all numbered clauses).
  */
 import type { ReactNode } from "react";
+import { InfluriosWordmark } from "@/components/influrios-wordmark";
 import {
   isFieldRow,
   parseAgreementBodySections,
@@ -312,7 +313,7 @@ export function FormalAgreementDocument({
     >
       <header className="border-b border-[#1B1464] pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3 text-[11px] uppercase tracking-wide text-[#667085]">
-          <span className="font-sans font-bold text-[#1B1464]">Influrios</span>
+          <InfluriosWordmark className="inline-flex items-center gap-2 font-display text-lg font-bold normal-case tracking-normal text-indigo" />
           <span className="font-sans text-right">
             Agreement ID: {agreementRef}
             <br />
