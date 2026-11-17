@@ -17,6 +17,7 @@ import {
   IconX,
   IconYouTube,
 } from "@/components/icons";
+import { InfluriosWordmark } from "@/components/influrios-wordmark";
 
 const NAV = [
   { href: "/", label: "Home" },
@@ -61,11 +62,8 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-[90rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8 xl:px-10">
-        <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold text-indigo">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white shadow-md shadow-violet/30">
-            ∞
-          </span>
-          Influrios
+        <Link href="/" className="text-indigo">
+          <InfluriosWordmark />
         </Link>
         <nav className="hidden items-center gap-5 text-sm font-medium text-muted lg:flex">
           {links.map((item) => (
@@ -156,12 +154,10 @@ export async function SiteFooter() {
 
       <div className="mx-auto grid w-full max-w-[90rem] gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-5 lg:px-10">
         <div className="lg:col-span-1">
-          <div className="flex items-center gap-2 font-display text-lg font-bold">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm">
-              ∞
-            </span>
-            Influrios
-          </div>
+          <InfluriosWordmark
+            className="inline-flex items-center gap-2 font-display text-lg font-bold text-white"
+            markClassName="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm"
+          />
           <p className="mt-3 text-sm text-white/70">Influencers. Collaborations. Real Opportunities.</p>
           <div className="mt-5 flex items-center gap-3 text-white/80">
             <a href="https://instagram.com" aria-label="Instagram" className="hover:text-white">

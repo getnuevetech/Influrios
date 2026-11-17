@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InfluriosWordmark } from "@/components/influrios-wordmark";
 import { homePathForRole } from "@/lib/accounts";
 
 export function MarketingHeader({
@@ -22,9 +23,8 @@ export function MarketingHeader({
   return (
     <header className="sticky top-0 z-40 border-b border-[#E6ECF7] bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-[90rem] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold text-indigo">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white">∞</span>
-          Influrios
+        <Link href="/" className="text-indigo">
+          <InfluriosWordmark markClassName="inline-flex h-8 w-8 items-center justify-center rounded-full brand-gradient text-sm text-white" />
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-semibold text-[#5C657F] md:flex">
           {links.map((item) => (
