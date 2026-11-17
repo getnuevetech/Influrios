@@ -247,7 +247,7 @@ node scripts/staging-evidence-probe.mjs https://influrios.com
 | **E4 Stripe** | ~~Done~~ `cs_mv6jqy02_g3n8vb` / `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · duplicate unique blocked `checkout:cs_mv6jqy02_g3n8vb` | Next: finish **E6** |
 | **E3 Social OAuth** | ~~Done~~ YouTube `cmv7wsjww001qs2015kbcssy4` · account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` | Next: finish **E6** |
 | **E5 Meilisearch** | ~~Done~~ health 200 · job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · Discover 200 | Next: finish **E6** |
-| **E6 Marketplace hold→release** | Airwallex ready · US jurisdiction · funding held · milestone released · duplicate skipped | funding + event ids |
+| **E6 Marketplace hold→release** | **Blocked 2026-11-17** — Airwallex unsigned → 503 · restore gateway secret · then `staging:e6-prove-chain` for funding + event ids | funding + event ids |
 
 **Recovered:** probes green through **2026-10-13T16:16:25Z** (8/8 auto). E1–E5 complete. **Next: E6 Airwallex hold → release.** **`CRON_SECRET` rotated** (operator confirmed).
 
@@ -400,13 +400,15 @@ Do not start Phase O product polish until this exit table is signed.
 
 **Goal:** Airwallex webhook secret ready · US jurisdiction · `funding.held` · milestone `payout.released` · duplicate event skipped.
 
-**Prefund path (post-#317):** do **not** use `/payments` Create deal (removed). Business signs the contract, then **Start funding** on `/collaboration/contracts/[id]` → `/collaboration/contract` wizard until `awaiting_provider`.
+**Prefund path (post-#317):** do **not** use `/payments` Create deal (removed). Business signs the contract, then **Start funding** on `/collaboration/contracts/[id]` → `/collaboration/contract` wizard until `awaiting_provider`. For closeout drills, `staging:e6-prove-chain` may seed a tagged awaiting funding instead.
+
+**Live probe (2026-11-17T23:38Z):** `GET /api/health` → **200**. Unsigned Airwallex webhook → **503** `Airwallex is not ready.` (regressed from **401** on 2026-11-02). Primary marketplace webhook also **503**. **Blocker:** re-enable Airwallex (and/or primary) webhook secret on Admin → Gateways before prove-chain.
 
 | Check | Result |
 |-------|--------|
-| Airwallex gateway Ready (client + key + base URL + webhook secret) | ☑ inferred — unsigned webhook returns **401** (not 503) |
-| Unsigned webhook → 401 (or 503 until Ready) | ☑ `POST /api/marketplace/webhook` + `x-influrios-provider: airwallex` → **401** `Signature did not match.` · reconfirmed `2026-11-02T10:47Z` |
-| US jurisdiction protected + APPROVED | ☐ `npm run staging:e6-check-ready` on host |
+| Airwallex gateway Ready (client + key + base URL + webhook secret) | ☐ **blocked** — unsigned webhook → **503** (was 401 on 2026-11-02) |
+| Unsigned webhook → 401 (or 503 until Ready) | ☐ restore Ready so prove-chain can run |
+| US jurisdiction protected + APPROVED | ☐ `npm run staging:e6-ensure-us` or `staging:e6-check-ready` |
 | Funding `awaiting_provider` → `held` | ☐ funding id · held event id |
 | Milestone approved then `payout.released` | ☐ milestone id · release event id |
 | Duplicate release skipped | ☐ |
@@ -414,12 +416,17 @@ Do not start Phase O product polish until this exit table is signed.
 
 ```bash
 cd /var/www/influrios
+git pull origin main && bash deploy/scripts/deploy.sh   # if host is behind
 # Closeout gate — exit 0 only when health + Airwallex 401 + US protected + APPROVED:
 npm run staging:e6-check-ready
-npm run staging:e6-marketplace-evidence
-# After Airwallex secret is known on the host:
+# One-shot after Airwallex Ready (unsigned → 401) and secret known on host:
+AIRWALLEX_WEBHOOK_SECRET=… npm run staging:e6-prove-chain
+# Prints paste-ready evidence ids + writes tmp/e6-evidence-ids.env
+# Manual steps remain available:
+npm run staging:e6-ensure-us
+npm run staging:e6-seed-awaiting
 AIRWALLEX_WEBHOOK_SECRET=… FUNDING_ID=… npm run staging:e6-marketplace-evidence -- --prove-hold
-# Approve milestone in UI, then:
+# Approve milestone in UI (or prove-chain SQL-approves), then:
 AIRWALLEX_WEBHOOK_SECRET=… FUNDING_ID=… MILESTONE_ID=… AMOUNT_CENTS=… \
   npm run staging:e6-marketplace-evidence -- --prove-release
 AIRWALLEX_WEBHOOK_SECRET=… FUNDING_ID=… MILESTONE_ID=… AMOUNT_CENTS=… EVENT_ID=… \
@@ -427,14 +434,10 @@ AIRWALLEX_WEBHOOK_SECRET=… FUNDING_ID=… MILESTONE_ID=… AMOUNT_CENTS=… EV
 ```
 
 Operator path:
-1. Admin → **Gateways → Airwallex** → save demo credentials + webhook secret → Enabled.
-2. Admin → **Marketplace** → US: protected payments + legal APPROVED.
-3. Host: `npm run staging:e6-check-ready` (must exit 0).
-4. As a business, create a collaboration prefund that reaches `awaiting_provider`.
-5. Host: `--prove-hold` with `AIRWALLEX_WEBHOOK_SECRET` + `FUNDING_ID` (or pick latest awaiting).
-6. Approve first milestone in the collab UI.
-7. Host: `--prove-release` then `--prove-duplicate` with the same `EVENT_ID`.
-8. Re-run `staging:e6-marketplace-evidence` and paste ids into this section + the §5 table.
+1. Admin → **Gateways → Airwallex** → save demo credentials + webhook secret → Enabled (unsigned POST must return **401**, not 503).
+2. Host: `AIRWALLEX_WEBHOOK_SECRET=… npm run staging:e6-prove-chain` (ensures US jurisdiction, seeds awaiting funding, hold → approve → release → duplicate).
+3. Paste the printed evidence pack into this section + the §5 table (also `tmp/e6-evidence-ids.env` on the host).
+4. Optional manual path: `staging:e6-check-ready`, business prefund UI, `--prove-hold` / UI approve / `--prove-release` / `--prove-duplicate`.
 
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
@@ -443,7 +446,7 @@ Operator path:
 | Stripe checkout, duplicate skip, portal, Connect | Attempt `cs_mv6jqy02_g3n8vb` · `cs_test_a1FGJzv…` · `creator_plus`/`PLUS` · webhook `checkout:cs_mv6jqy02_g3n8vb` · duplicate unique blocked (`2026-10-14T01:30:38Z`) | 2026-10-13/14 | host + cloud-agent |
 | Social OAuth | YouTube Connection `cmv7wsjww001qs2015kbcssy4` · Account `cmv6f0ebj0065od017gutjrq5` · `@argboboy20` · 6 / 2531 · `PROVIDER_SYNCED` (`2026-10-14T10:03:39Z`) | 2026-10-14 | host + cloud-agent |
 | Meilisearch counts | job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · health 200 · Discover 200 (`2026-10-14T11:55:09Z`) | 2026-10-14 | host + cloud-agent |
-| Airwallex hold and release | **in progress** — post-#323 deploy 8/8 at 10:47Z · unsigned webhook **401** · still need US jurisdiction + held/release/duplicate ids via `staging:e6-marketplace-evidence --prove-*` | 2026-11-02 | host + cloud-agent |
+| Airwallex hold and release | **in progress** — post-#323 deploy had unsigned **401** (2026-11-02) · **2026-11-17 probe: unsigned → 503 Airwallex not ready** · use `staging:e6-prove-chain` once gateway secret restored | 2026-11-17 | host + cloud-agent |
 | Recurring tranche 2 | | | |
 | Team proposal | | | |
 | DocuSign completed | | | |
